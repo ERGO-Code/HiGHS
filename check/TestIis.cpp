@@ -57,6 +57,8 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   REQUIRE(iis.row_index_.size() == 0);
   REQUIRE(iis.col_index_[0] == 2);
   REQUIRE(iis.col_bound_[0] == kIisBoundStatusBoxed);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("lp-empty-infeasible-row", "[iis]") {
@@ -93,6 +95,8 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusUpper);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("lp-get-iis", "[iis]") {
@@ -123,6 +127,8 @@ TEST_CASE("lp-get-iis", "[iis]") {
   REQUIRE(iis.col_index_[0] == 0);
   REQUIRE(iis.col_index_[1] == 1);
   REQUIRE(iis.row_index_[0] == 2);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-woodinfe", "[iis]") {
@@ -294,6 +300,8 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   testFeasibilityRelaxation(model, 1, 1, 1, 15.0);
   model = "avgas";
   testFeasibilityRelaxation(model, 1, 1, 1, 0);
+
+  h.resetGlobalScheduler(true);
 }
 
 void testIis(const std::string& model, const HighsIis& iis) {
@@ -414,6 +422,8 @@ void testIis(const std::string& model, const HighsIis& iis) {
     REQUIRE(model_status == HighsModelStatus::kOptimal);
     REQUIRE(highs.changeRowBounds(iRow, lower, upper) == HighsStatus::kOk);
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 void testMps(std::string& model, const HighsInt iis_strategy,

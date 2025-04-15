@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
-version = "1.8.0"
+version = "1.10.0"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
@@ -25,6 +25,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Typing :: Typed",
 ]
 
@@ -39,21 +40,21 @@ wheel.expand-macos-universal-tags = true
 # default to the first of ``src/<package>``, ``python/<package>``, or
 # ``<package>`` if they exist.  The prefix(s) will be stripped from the package
 # name inside the wheel.
-wheel.packages = ["src/highspy"]
+wheel.packages = ["highs/highspy"]
 
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.
 sdist.include = [
-  "src/highspy/highs.py",
-  "src/highspy/__init__.py",
-  "src/highspy/__init__.pyi",
-  "src/highspy/_core/*.pyi",
+  "highs/highspy/highs.py",
+  "highs/highspy/__init__.py",
+  "highs/highspy/__init__.pyi",
+  "highs/highspy/_core/*.pyi",
   "tests/test_highspy.py",
   "Version.txt",
   "LICENSE",
   "README.md",
-  "src/HConfig.h.in",
-  "src",
+  "highs/HConfig.h.in",
+  "highs",
   "external",
   "cmake",
 ]
@@ -73,9 +74,17 @@ sdist.exclude = [
   ".clang-format",
   "__setup.py",
   "BUILD.bazel",
-  "meson*",
+  "**meson**",
   "MODS.md",
   "WORKSPACE",
+  "nuget/",
+  "nuget/README.md",
+  "highs/*.bazel*",
+  "highs/*.meson*",
+  "interfaces/*csharp*",
+  "interfaces/*fortran*",
+  "flake.*",
+  "highs.pc.in"
 ]
 
 
@@ -89,9 +98,9 @@ sdist.exclude = [
 # # The versions of Ninja to allow. If Ninja is not present on the system or does
 # # not pass this specifier, it will be downloaded via PyPI if possible. An empty
 # # string will disable this check.
-# ninja.version = ">=1.5"
+# ninja.version = ">=1.5"
 
-# # If CMake is not present on the system or is older required, it will be
+# # If Ninja is not present on the system or is older required, it will be
 # # downloaded via PyPI if possible. An empty string will disable this check.
 # ninja.make-fallback = true
 
@@ -194,6 +203,9 @@ testpaths = ["tests"]
 [tool.cibuildwheel]
 build = "*"
 skip = "cp3{6,7}-*"
+
+# Enable free-threaded support
+free-threaded-support = true
 
 test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
