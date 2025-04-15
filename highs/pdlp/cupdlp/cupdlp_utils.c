@@ -337,6 +337,9 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
   CUPDLPtimers *timers = w->timers;
   CUPDLPscaling *scaling = w->scaling;
 
+  if (timers) {
+    timers_clear(w->settings->nLogLevel, timers);
+  }
 
   cupdlp_float begin = getTimeStamp();
 #ifndef CUPDLP_CPU
@@ -396,9 +399,7 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
   if (stepsize) {
     stepsize_clear(stepsize);
   }
-  if (timers) {
-  timers_clear(w->settings->nLogLevel, timers);
-  }
+
   if (scaling) {
     // scaling_clear(scaling);
     // if (scaling->colScale) {
