@@ -39,14 +39,15 @@ void HighsCallback::clearHighsCallbackOutput() {
 }
 
 void HighsCallback::clearHighsCallbackInput() {
-  this->data_in.user_interrupt = false;
+  size_t num_col = highs != nullptr ? highs->getNumCol() : 0;
 
   // make sure buffer size is correct and reset the contents if previously used
   if (this->data_in.user_has_solution ||
-      highs->getNumCol() != this->data_in.user_solution.size()) {
-    this->data_in.user_solution.assign(highs->getNumCol(), kHighsUndefined);
+      num_col != this->data_in.user_solution.size()) {
+    this->data_in.user_solution.assign(num_col, kHighsUndefined);
   }
 
+  this->data_in.user_interrupt = false;
   this->data_in.user_has_solution = false;
 }
 
@@ -261,17 +262,24 @@ HighsStatus HighsCallbackInput::repairSolution() {
     }
 
     // set callback to stop at first feasible solution
+    bool user_interrupt = false;
+
     HighsCallbackFunctionType mip_callback =
-        [](int callback_type, const std::string& message,
-           const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
-           void* user_callback_data) {
+        [&](int callback_type, const std::string& message,
+            const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+            void* user_callback_data) {
           if (callback_type == kCallbackMipSolution) {
-            data_in->user_interrupt = true;
+            user_interrupt = true;
+          } else {
+            data_in->user_interrupt = user_interrupt;
           }
         };
 
     clone.setCallback(mip_callback);
     clone.startCallback(kCallbackMipSolution);
+    clone.startCallback(kCallbackMipInterrupt);
+    clone.startCallback(kCallbackSimplexInterrupt);
+    clone.startCallback(kCallbackIpmInterrupt);
     clone.run();
 
     auto status = clone.getModelStatus();
