@@ -10,7 +10,7 @@ set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers}
 # Configure the config windows version file
 if(MSVC)
   string(REPLACE "." ","  PROJECT_RC_VERSION "${PROJECT_VERSION}")
-  configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
+  configure_file(${PROJECT_SOURCE_DIR}/version.rc.in
     "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
   set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
 else()
@@ -96,20 +96,20 @@ if(NOT FAST_BUILD)
     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
   # Configure the config file for the build tree:
-  # Either list all the src/* directories here, or put explicit paths in all the
+  # Either list all the highs/* directories here, or put explicit paths in all the
   # include statements.
   # M reckons that the latter is more transparent, and I'm inclined to agree.
-  set(CONF_INCLUDE_DIRS "${HIGHS_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
-  configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+  set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/highs" "${HIGHS_BINARY_DIR}")
+  configure_file(${PROJECT_SOURCE_DIR}/cmake/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
   # Configure the config file for the install
   set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}/highs")
-  configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+  configure_file(${PROJECT_SOURCE_DIR}/cmake/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
   # Configure the pkg-config file for the install
-  configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
+  configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
 
   # Install the targets of the highs export group, the config file so that other
@@ -148,51 +148,14 @@ else()
       set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
   endif()
 
-  target_include_directories(highs PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-    # $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
-  )
-
-
-  # target_include_directories(highs PRIVATE
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/pdlp>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/pdlp/cupdlp>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/parallel>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/qpsolver>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/simplex>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>)
-
-  # target_include_directories(highs PRIVATE
-  #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
-  #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
-  #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>)
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
   
   # Optional Cuda 
   if (CUPDLP_GPU)
-  #   enable_language(CXX CUDA)
-  #   target_sources(highs PRIVATE ${cuda_sources})
 
-  #   set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-  #   target_link_libraries(highs ${CUDA_LIBRARY} m)
-  
-    # target_include_directories(highs PUBLIC "/usr/local/include")
-
-    target_include_directories(highs PUBLIC "${CMAKE_CUDA_PATH}/include")
-    set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp/")
+    target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
+    set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
 
     add_subdirectory(pdlp/cupdlp/cuda)
 
@@ -254,29 +217,11 @@ else()
 
   if(ZLIB AND ZLIB_FOUND)
     target_include_directories(highs PRIVATE
-      $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
     )
     target_link_libraries(highs ZLIB::ZLIB)
-    set(CONF_DEPS 
-      "include(CMakeFindDependencyMacro)\nfind_dependency(Threads)\nfind_dependency(ZLIB)")
-    set(CONF_DEPENDENCIES ${CONF_DEPS})
-  else() 
-    set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(Threads)")
   endif()
     
-
-  # # on UNIX system the 'lib' prefix is automatically added
-  # set_target_properties(highs PROPERTIES
-  # OUTPUT_NAME "highs"
-  # MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-
-  # if (UNIX)
-  # set_target_properties(highs PROPERTIES
-  # LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
-  # endif()
-  
-  # set_target_properties(highs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
-
   # install the header files of highs
   foreach(file ${headers})
     get_filename_component(dir ${file} DIRECTORY)
@@ -300,31 +245,10 @@ else()
     target_compile_options(highs PUBLIC "-Wno-invalid-offsetof")
   endif()
 
-  # Configure the config file for the build tree:
-  # Either list all the src/* directories here, or put explicit paths in all the
-  # include statements.
-  # M reckons that the latter is more transparent, and I'm inclined to agree.
-  set(CONF_INCLUDE_DIRS "${HIGHS_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
-  configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
-    "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
-
-  # Configure the config file for the install
-  set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
-  configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
-    "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
-
-  # Configure the pkg-config file for the install
-  configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
-    "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
-
-  # Install the targets of the highs export group, the config file so that other
-  # cmake-projects can link easily against highs, and the pkg-config flie so that
-  # other projects can easily build against highs
-  install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
-  install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-
+  check_cxx_compiler_flag("-Wno-invalid-offsetof" COMPILER_SUPPORTS_INVALID_OFFSET)
+  if(COMPILER_SUPPORTS_INVALID_OFFSET)
+      target_compile_options(highs PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:-Wno-invalid-offsetof>")
+  endif()
 
   if (BUILD_DOTNET)
   

@@ -25,7 +25,7 @@
 #include "mip/HighsObjectiveFunction.h"
 #include "mip/MipTimer.h"
 #include "presolve/HighsPostsolveStack.h"
-#include "test/DevKkt.h"
+#include "test_kkt/DevKkt.h"
 #include "util/HFactor.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"

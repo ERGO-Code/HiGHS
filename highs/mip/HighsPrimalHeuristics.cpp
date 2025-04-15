@@ -862,11 +862,21 @@ retry:
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                             const int solution_source) {
   auto localdom = mipsolver.mipdata_->domain;
+  bool integerFeasible = true;
 
   HighsInt numintcols = intcols.size();
   for (HighsInt i = 0; i != numintcols; ++i) {
     HighsInt col = intcols[i];
     double intval = point[col];
+    double rounded;
+    // check if solution value of integer-constrained variable is actually
+    // integral
+    bool feasible =
+        fractionality(intval, &rounded) <= mipsolver.mipdata_->feastol;
+    integerFeasible = integerFeasible && feasible;
+    if (!feasible) continue;
+    // use rounded solution value and check against bounds
+    intval = rounded;
     intval = std::min(localdom.col_upper_[col], intval);
     intval = std::max(localdom.col_lower_[col], intval);
 
@@ -914,10 +924,17 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
       }
       return false;
     } else if (lprelax.unscaledPrimalFeasible(st)) {
-      mipsolver.mipdata_->addIncumbent(
-          lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
-          solution_source);
-      return true;
+      const auto& lpsol = lprelax.getLpSolver().getSolution().col_value;
+      if (!integerFeasible) {
+        // there may be fractional integer variables -> try ziRound heuristic
+        ziRound(lpsol);
+        return mipsolver.mipdata_->trySolution(lpsol, solution_source);
+      } else {
+        // all integer variables are fixed -> add incumbent
+        mipsolver.mipdata_->addIncumbent(lpsol, lprelax.getObjective(),
+                                         solution_source);
+        return true;
+      }
     }
   }
 
@@ -1051,6 +1068,372 @@ void HighsPrimalHeuristics::randomizedRounding(
     mipsolver.mipdata_->trySolution(localdom.col_lower_,
                                     kSolutionSourceRandomizedRounding);
   }
+}
+
+void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
+
+  std::vector<double> current_relax_solution = relaxationsol;
+  HighsInt t = 0;
+  const HighsLp& currentLp = *mipsolver.model_;
+  HighsLpRelaxation lprelax(mipsolver.mipdata_->lp);
+  std::vector<std::pair<HighsInt, double>> current_fractional_integers =
+      lprelax.getFractionalIntegers();
+  std::vector<std::tuple<HighsInt, HighsInt, double>> current_infeasible_rows =
+      mipsolver.mipdata_->getInfeasibleRows(current_relax_solution);
+  size_t previous_infeasible_rows_size = current_infeasible_rows.size();
+  bool hasInfeasibleConstraints = current_infeasible_rows.size() != 0;
+  HighsInt iterationsWithoutReductions = 0;
+  HighsInt maxIterationsWithoutReductions = 5;
+  std::unordered_map<HighsInt, std::vector<HighsInt>> shift_iterations_set;
+  std::vector<HighsInt> shifts;
+
+  auto findPairByIndex = [](std::vector<std::pair<HighsInt, double>>& vec,
+                            HighsInt k) {
+    return std::find_if(
+        vec.begin(), vec.end(),
+        [k](const std::pair<HighsInt, double>& p) { return p.first == k; });
+  };
+
+  auto findShiftsByIndex =
+      [](const std::unordered_map<HighsInt, std::vector<HighsInt>>& shifts,
+         HighsInt k) -> std::vector<HighsInt> {
+    auto it = shifts.find(k);
+    if (it != shifts.end()) {
+      return it->second;
+    }
+    return {};
+  };
+
+  while ((current_fractional_integers.size() > 0 || hasInfeasibleConstraints) &&
+         iterationsWithoutReductions <= maxIterationsWithoutReductions &&
+         t <= mipsolver.mipdata_->integer_cols.size()) {
+    t++;
+    bool fractionalIntegersReduced = false;
+    iterationsWithoutReductions++;
+    if (hasInfeasibleConstraints) {
+      // find an infeasible row that has a non-zero coefficient a(row,col) where
+      // col in currentFractInt
+      bool fractionalIntegerFound = false;
+      HighsInt rIndex = 0;
+      while (!fractionalIntegerFound &&
+             rIndex != current_infeasible_rows.size()) {
+        HighsInt r = std::get<0>(current_infeasible_rows[rIndex]);
+        HighsInt start = mipsolver.mipdata_->ARstart_[r];
+        HighsInt end = mipsolver.mipdata_->ARstart_[r + 1];
+        for (HighsInt jInd = start; jInd != end; ++jInd) {
+          auto it = findPairByIndex(current_fractional_integers,
+                                    mipsolver.mipdata_->ARindex_[jInd]);
+          fractionalIntegerFound = it != current_fractional_integers.end();
+          if (fractionalIntegerFound) break;
+        }
+        rIndex++;
+      }
+      HighsInt row_index = rIndex - 1;
+      if (!fractionalIntegerFound) {
+        // otherwise select a random infeasible row
+        row_index = randgen.integer(current_infeasible_rows.size());
+      }
+
+      HighsInt row = std::get<0>(current_infeasible_rows[row_index]);
+      HighsInt row_sense = std::get<1>(current_infeasible_rows[row_index]);
+      double infeasibility = std::get<2>(current_infeasible_rows[row_index]);
+      double score_min = kHighsInf;
+      HighsInt j_min = std::numeric_limits<HighsInt>::max();
+      double x_j_min = kHighsInf;
+      double aij_min = 0.0;
+      bool moveValueUp = false;
+      HighsInt start = mipsolver.mipdata_->ARstart_[row];
+      HighsInt end = mipsolver.mipdata_->ARstart_[row + 1];
+      for (HighsInt jInd = start; jInd != end; ++jInd) {
+        HighsInt j = mipsolver.mipdata_->ARindex_[jInd];
+
+        // skip fixed variables
+        if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
+
+        // lambda for finding best shift
+        auto repair = [this, &findPairByIndex, &current_fractional_integers,
+                       &findShiftsByIndex, &shift_iterations_set, &t,
+                       &score_min, &j_min, &aij_min, &x_j_min,
+                       &current_relax_solution, &moveValueUp](
+                          HighsInt col, HighsInt direction, HighsInt row_sense,
+                          HighsInt numLocks, double coef, double cost,
+                          bool isMaximization, bool isInteger, bool isAtBound) {
+          if ((row_sense < 0 || direction * coef > 0) &&
+              (row_sense > 0 || direction * coef < 0))
+            return;
+
+          // skip variables at bounds
+          if (isAtBound) return;
+
+          // search for column
+          auto it = findPairByIndex(current_fractional_integers, col);
+
+          // add data
+          bool found = it != current_fractional_integers.end();
+
+          double score = kHighsInf;
+          if (found) {
+            score = -1.0 + 1.0 / static_cast<double>(numLocks + 1);
+          } else {
+            const auto& shifts = findShiftsByIndex(shift_iterations_set, col);
+            if (shifts.empty())
+              score = direction * (isMaximization ? -cost : cost);
+            else {
+              score = 0.0;
+              for (size_t s = 0; s != shifts.size(); ++s) {
+                if (direction * shifts[s] > 0)
+                  score += pow(1.1, direction * shifts[s] - t);
+              }
+            }
+            if (isInteger) score += 1;
+          }
+
+          if (score < score_min) {
+            score_min = score;
+            j_min = col;
+            aij_min = coef;
+            x_j_min = current_relax_solution[col];
+            moveValueUp = direction > 0;
+          }
+        };
+
+        // repair with up-rounding
+        repair(j, HighsInt{1}, row_sense, mipsolver.mipdata_->downlocks[j],
+               mipsolver.mipdata_->ARvalue_[jInd], currentLp.col_cost_[j],
+               mipsolver.orig_model_->sense_ == ObjSense::kMaximize,
+               currentLp.integrality_[j] == HighsVarType::kInteger,
+               std::abs(currentLp.col_upper_[j] - current_relax_solution[j]) <=
+                   mipsolver.mipdata_->feastol);
+
+        // repair with down-rounding
+        repair(j, HighsInt{-1}, row_sense, mipsolver.mipdata_->uplocks[j],
+               mipsolver.mipdata_->ARvalue_[jInd], currentLp.col_cost_[j],
+               mipsolver.orig_model_->sense_ == ObjSense::kMaximize,
+               currentLp.integrality_[j] == HighsVarType::kInteger,
+               std::abs(current_relax_solution[j] - currentLp.col_lower_[j]) <=
+                   mipsolver.mipdata_->feastol);
+      }
+
+      if (j_min != std::numeric_limits<HighsInt>::max()) {
+        // Update current_fractional_integers
+        auto it = findPairByIndex(current_fractional_integers, j_min);
+        if (it != current_fractional_integers.end()) {
+          current_fractional_integers.erase(it);
+          fractionalIntegersReduced = true;
+        }
+        // Update current_relax_solution and shift_iterations_set (for not
+        // fractional integers)
+        if (moveValueUp) {
+          if (fractionalIntegersReduced) {
+            current_relax_solution[j_min] =
+                std::ceil(x_j_min - mipsolver.mipdata_->feastol);
+          } else {
+            if (currentLp.integrality_[j_min] == HighsVarType::kInteger) {
+              // variable is integer and not at the upper bound, so increment
+              // by 1.
+              current_relax_solution[j_min] = x_j_min + 1.0;
+            } else {
+              current_relax_solution[j_min] = std::min(
+                  x_j_min + infeasibility / std::abs(aij_min),
+                  currentLp.col_upper_[j_min] + mipsolver.mipdata_->feastol);
+            }
+            shift_iterations_set[j_min].push_back(t);
+          }
+        } else {
+          if (fractionalIntegersReduced) {
+            current_relax_solution[j_min] =
+                std::floor(x_j_min + mipsolver.mipdata_->feastol);
+          } else {
+            if (currentLp.integrality_[j_min] == HighsVarType::kInteger) {
+              // variable is integer and not at the lower bound, so decrement
+              // by 1.
+              current_relax_solution[j_min] = x_j_min - 1.0;
+            } else {
+              current_relax_solution[j_min] = std::max(
+                  x_j_min - infeasibility / std::abs(aij_min),
+                  currentLp.col_lower_[j_min] - mipsolver.mipdata_->feastol);
+            }
+
+            shift_iterations_set[j_min].push_back(-t);
+          }
+        }
+      }
+    } else {
+      double xi_max = -1;
+      double delta_c_min = kHighsInf;
+      HighsInt pind_j_min = std::numeric_limits<HighsInt>::max();
+      HighsInt j_min = std::numeric_limits<HighsInt>::max();
+      double x_j_min = kHighsInf;
+      HighsInt sigma = 0;
+      for (HighsInt i = 0; i != current_fractional_integers.size(); ++i) {
+        std::pair<HighsInt, double> it = current_fractional_integers[i];
+        HighsInt col = it.first;
+        assert(col >= 0);
+        assert(col < mipsolver.numCol());
+
+        auto isBetter = [this, &currentLp, &it, &xi_max, &delta_c_min,
+                         &pind_j_min, &j_min, &x_j_min, &sigma,
+                         &i](double col, double xi, double roundedval,
+                             HighsInt direction) {
+          double c_min = currentLp.col_cost_[col] * (roundedval - it.second);
+          if (xi > xi_max || (xi == xi_max && c_min < delta_c_min)) {
+            xi_max = xi;
+            delta_c_min = c_min;
+            pind_j_min = i;
+            j_min = col;
+            x_j_min = roundedval;
+            sigma = direction;
+          }
+        };
+
+        isBetter(col, mipsolver.mipdata_->uplocks[col],
+                 std::floor(it.second + mipsolver.mipdata_->feastol),
+                 HighsInt{-1});
+        isBetter(col, mipsolver.mipdata_->downlocks[col],
+                 std::ceil(it.second - mipsolver.mipdata_->feastol),
+                 HighsInt{1});
+      }
+      if (sigma != 0) {
+        current_relax_solution[j_min] = x_j_min;
+      }
+      if (pind_j_min != std::numeric_limits<HighsInt>::max()) {
+        current_fractional_integers.erase(current_fractional_integers.begin() +
+                                          pind_j_min);
+        fractionalIntegersReduced = true;
+      }
+    }
+    current_infeasible_rows =
+        mipsolver.mipdata_->getInfeasibleRows(current_relax_solution);
+    hasInfeasibleConstraints = current_infeasible_rows.size() != 0;
+    if (current_infeasible_rows.size() < previous_infeasible_rows_size ||
+        fractionalIntegersReduced)
+      iterationsWithoutReductions = 0;
+    previous_infeasible_rows_size = current_infeasible_rows.size();
+  }
+  // re-check for feasibility and add incumbent
+  if (hasInfeasibleConstraints) {
+    tryRoundedPoint(current_relax_solution, kSolutionSourceShifting);
+  } else {
+    if (current_fractional_integers.size() > 0)
+      ziRound(current_relax_solution);
+    else
+      mipsolver.mipdata_->trySolution(current_relax_solution,
+                                      kSolutionSourceShifting);
+  }
+}
+
+void HighsPrimalHeuristics::ziRound(const std::vector<double>& relaxationsol) {
+  // if (mipsolver.submip) return;
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
+
+  std::vector<double> current_relax_solution = relaxationsol;
+
+  auto zi = [this](double x) {
+    return std::min(std::ceil(x - mipsolver.mipdata_->feastol) - x,
+                    x - std::floor(x + mipsolver.mipdata_->feastol));
+  };
+
+  // auto localdom = mipsolver.mipdata_->domain;
+
+  HighsCDouble zi_total = 0.0;
+  for (HighsInt i : intcols) {
+    zi_total += zi(current_relax_solution[i]);
+  }
+
+  if (zi_total <= mipsolver.mipdata_->feastol) return;
+
+  const HighsLp& currentLp = *mipsolver.model_;
+
+  std::vector<double> rowActivities;
+  std::vector<double> XrowLower;
+  std::vector<double> XrowUpper;
+  rowActivities.resize(currentLp.num_row_);
+  XrowLower.resize(currentLp.num_row_);
+  XrowUpper.resize(currentLp.num_row_);
+
+  HighsInt loop_count = 0;
+  HighsInt max_loop_count = 5;
+  HighsCDouble previous_zi_total;
+  HighsCDouble improvement_in_feasibility = kHighsInf;
+
+  while (zi_total > mipsolver.mipdata_->feastol &&
+         improvement_in_feasibility > mipsolver.mipdata_->feastol &&
+         loop_count <= max_loop_count) {
+    previous_zi_total = zi_total;
+    loop_count++;
+
+    if (currentLp.num_row_ > 0)
+      getLpRowBounds(currentLp, 0, currentLp.num_row_ - 1, XrowLower.data(),
+                     XrowUpper.data());
+
+    for (HighsInt j : intcols) {
+      double relax_solution = current_relax_solution[j];
+      if (fractionality(relax_solution) <= mipsolver.mipdata_->feastol)
+        continue;
+
+      rowActivities.assign(currentLp.num_row_, 0.0);
+      calculateRowValuesQuad(currentLp, current_relax_solution, rowActivities);
+
+      double min_row_ratio_for_upper = kHighsInf;
+      double min_row_ratio_for_lower = kHighsInf;
+
+      for (HighsInt el = currentLp.a_matrix_.start_[j];
+           el < currentLp.a_matrix_.start_[j + 1]; el++) {
+        HighsInt i = currentLp.a_matrix_.index_[el];
+        double aij = currentLp.a_matrix_.value_[el];
+
+        double slack_upper = XrowUpper[i] - rowActivities[i];
+        double slack_lower = rowActivities[i] - XrowLower[i];
+        min_row_ratio_for_upper =
+            std::min(min_row_ratio_for_upper,
+                     (aij > 0 ? slack_upper : -slack_lower) / aij);
+        min_row_ratio_for_lower =
+            std::min(min_row_ratio_for_lower,
+                     (aij > 0 ? slack_lower : -slack_upper) / aij);
+      }
+
+      double upper_bound = std::min(currentLp.col_upper_[j] - relax_solution,
+                                    min_row_ratio_for_upper);
+      double lower_bound = std::min(relax_solution - currentLp.col_lower_[j],
+                                    min_row_ratio_for_lower);
+
+      auto performUpdates = [&](HighsInt col, double change) {
+        double old_relax_solution = current_relax_solution[col];
+        current_relax_solution[col] += change;
+        zi_total =
+            zi_total - zi(old_relax_solution) + zi(current_relax_solution[col]);
+      };
+
+      if (std::abs(zi(relax_solution + upper_bound) -
+                   zi(relax_solution - lower_bound)) <=
+              mipsolver.mipdata_->feastol &&
+          zi(relax_solution + upper_bound) < zi(relax_solution)) {
+        double XcolCost = currentLp.col_cost_[j];
+        bool ubObjChangeSmaller = XcolCost * (relax_solution + upper_bound) <=
+                                  XcolCost * (relax_solution - lower_bound);
+        bool isMinimization = currentLp.sense_ == ObjSense::kMinimize;
+        if ((isMinimization && ubObjChangeSmaller) ||
+            (!isMinimization && !ubObjChangeSmaller)) {
+          performUpdates(j, upper_bound);
+        } else {
+          performUpdates(j, -lower_bound);
+        }
+      } else if (zi(relax_solution + upper_bound) <
+                     zi(relax_solution - lower_bound) &&
+                 zi(relax_solution + upper_bound) < zi(relax_solution)) {
+        performUpdates(j, upper_bound);
+      } else if (zi(relax_solution + upper_bound) >
+                     zi(relax_solution - lower_bound) &&
+                 zi(relax_solution - lower_bound) < zi(relax_solution)) {
+        performUpdates(j, -lower_bound);
+      }
+    }
+    improvement_in_feasibility = previous_zi_total - zi_total;
+  }
+  // re-check for feasibility and add incumbent
+  mipsolver.mipdata_->trySolution(current_relax_solution,
+                                  kSolutionSourceZiRound);
 }
 
 void HighsPrimalHeuristics::feasibilityPump() {

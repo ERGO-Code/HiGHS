@@ -82,7 +82,7 @@ configure_file(
   @ONLY)
 
 file(COPY
-  ${PROJECT_SOURCE_DIR}/src/interfaces/highs_csharp_api.cs
+  ${PROJECT_SOURCE_DIR}/highs/interfaces/highs_csharp_api.cs
   DESTINATION ${DOTNET_PROJECT_DIR})
 
 file(COPY

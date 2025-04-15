@@ -281,15 +281,19 @@ restart:
           }
 
           if (mipdata_->incumbent.empty()) {
-            analysis_.mipTimerStart(kMipClockDiveRens);
-            mipdata_->heuristics.RENS(
-                mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockDiveRens);
+            if (options_mip_->mip_heuristic_run_rens) {
+              analysis_.mipTimerStart(kMipClockDiveRens);
+              mipdata_->heuristics.RENS(
+                  mipdata_->lp.getLpSolver().getSolution().col_value);
+              analysis_.mipTimerStop(kMipClockDiveRens);
+            }
           } else {
-            analysis_.mipTimerStart(kMipClockDiveRins);
-            mipdata_->heuristics.RINS(
-                mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockDiveRins);
+            if (options_mip_->mip_heuristic_run_rins) {
+              analysis_.mipTimerStart(kMipClockDiveRins);
+              mipdata_->heuristics.RINS(
+                  mipdata_->lp.getLpSolver().getSolution().col_value);
+              analysis_.mipTimerStop(kMipClockDiveRins);
+            }
           }
 
           mipdata_->heuristics.flushStatistics();
