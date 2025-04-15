@@ -341,7 +341,7 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
     timers_clear(w->settings->nLogLevel, timers);
   }
 
-  cupdlp_float begin = getTimeStamp();
+  // cupdlp_float begin = getTimeStamp();
 #ifndef CUPDLP_CPU
 
   // CUDAmv *MV = w->MV;
@@ -389,9 +389,9 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
     resobj_clear(resobj);
   }
 
-#ifndef CUPDLP_CPU
-  timers->FreeDeviceMemTime += getTimeStamp() - begin;
-#endif
+// #ifndef CUPDLP_CPU
+//   timers->FreeDeviceMemTime += getTimeStamp() - begin;
+// #endif
 
   if (settings) {
     settings_clear(settings);
