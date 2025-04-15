@@ -25,7 +25,7 @@ const uint8_t kHighsSolutionLo = -1;
 const uint8_t kHighsSolutionNo = 0;
 const uint8_t kHighsSolutionUp = 1;
 
-const bool printf_kkt = true;
+const bool printf_kkt = false;
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
