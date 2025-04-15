@@ -41,9 +41,6 @@ jobs:
           -DALL_TESTS=ON \
           -DIntelDPCPP_DIR="/opt/intel/oneapi/compiler/latest/linux/cmake/SYCL" \
 
-        # -DMKL_ROOT="/opt/intel/oneapi/mkl/latest" \
-        # -DTBB_ROOT="/opt/intel/oneapi/tbb/latest"
-      
       - name: Build
         shell: bash
         run: |
