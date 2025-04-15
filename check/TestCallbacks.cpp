@@ -27,10 +27,10 @@ using std::strlen;
 using std::strncmp;
 using std::strstr;
 
-// struct MipData {
-//   HighsInt num_col;
-//   HighsVarType* integrality;
-// };
+struct MipData {
+  HighsInt num_col;
+  HighsVarType* integrality;
+};
 
 struct UserMipSolution {
   double optimal_objective_value;
@@ -44,57 +44,57 @@ HighsCallbackFunctionType myLogCallback =
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) { strcpy(printed_log, message.c_str()); };
 
-// HighsCallbackFunctionType userMipSolutionCallback =
-//     [](int callback_type, const std::string& message,
-//        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
-//        void* user_callback_data) {
-//       if (dev_run) {
-//         printf(
-//             "MipSolutionCallback with objective = %15.8g and bounds [%15.8g, "
-//             "%15.8g]",
-//             data_out->objective_function_value, data_out->mip_dual_bound,
-//             data_out->mip_primal_bound);
-//         MipData callback_data = *(static_cast<MipData*>(user_callback_data));
-//         HighsInt num_col = callback_data.num_col;
-//         HighsVarType* integrality = callback_data.integrality;
-//         HighsInt num_integer = 0;
-//         for (HighsInt iCol = 0; iCol < num_col; iCol++)
-//           if (integrality[iCol] == HighsVarType::kInteger) num_integer++;
-//         if (num_integer < 50) {
-//           printf(" and solution [");
-//           for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-//             if (integrality[iCol] != HighsVarType::kInteger) continue;
-//             double value = data_out->mip_solution[iCol];
-//             if (std::abs(value) < 1e-5) {
-//               printf("0");
-//             } else if (std::abs(value - 1) < 1e-5) {
-//               printf("1");
-//             } else {
-//               bool printed = false;
-//               for (HighsInt k = 2; k < 10; k++) {
-//                 if (std::abs(value - k) < 1e-5) {
-//                   printf("%1d", int(k));
-//                   printed = true;
-//                 }
-//               }
-//               if (printed) continue;
-//               for (HighsInt k = 10; k < 999; k++) {
-//                 if (std::abs(value - k) < 1e-5) {
-//                   printf(" %d ", int(k));
-//                   printed = true;
-//                 }
-//               }
-//               if (printed) continue;
-//               printf("*");
-//             }
-//           }
-//           printf("]\n");
-//         } else {
-//           printf("\n");
-//         }
-//         fflush(stdout);
-//       }
-//     };
+HighsCallbackFunctionType userMipSolutionCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       void* user_callback_data) {
+      if (dev_run) {
+        printf(
+            "MipSolutionCallback with objective = %15.8g and bounds [%15.8g, "
+            "%15.8g]",
+            data_out->objective_function_value, data_out->mip_dual_bound,
+            data_out->mip_primal_bound);
+        MipData callback_data = *(static_cast<MipData*>(user_callback_data));
+        HighsInt num_col = callback_data.num_col;
+        HighsVarType* integrality = callback_data.integrality;
+        HighsInt num_integer = 0;
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          if (integrality[iCol] == HighsVarType::kInteger) num_integer++;
+        if (num_integer < 50) {
+          printf(" and solution [");
+          for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+            if (integrality[iCol] != HighsVarType::kInteger) continue;
+            double value = data_out->mip_solution[iCol];
+            if (std::abs(value) < 1e-5) {
+              printf("0");
+            } else if (std::abs(value - 1) < 1e-5) {
+              printf("1");
+            } else {
+              bool printed = false;
+              for (HighsInt k = 2; k < 10; k++) {
+                if (std::abs(value - k) < 1e-5) {
+                  printf("%1d", int(k));
+                  printed = true;
+                }
+              }
+              if (printed) continue;
+              for (HighsInt k = 10; k < 999; k++) {
+                if (std::abs(value - k) < 1e-5) {
+                  printf(" %d ", int(k));
+                  printed = true;
+                }
+              }
+              if (printed) continue;
+              printf("*");
+            }
+          }
+          printf("]\n");
+        } else {
+          printf("\n");
+        }
+        fflush(stdout);
+      }
+    };
 
 HighsCallbackFunctionType userInterruptCallback =
     [](int callback_type, const std::string& message,
@@ -167,24 +167,24 @@ HighsCallbackFunctionType userInterruptCallback =
       }
     };
 
-// HighsCallbackFunctionType userMipCutPoolCallback =
-//     [](int callback_type, const std::string& message,
-//        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
-//        void* user_callback_data) {
-//       if (dev_run) {
-//         printf("userMipCutPoolCallback: dim(%2d, %2d, %2d)\n",
-//                int(data_out->cutpool_num_col), int(data_out->cutpool_num_cut),
-//                int(data_out->cutpool_num_nz));
-//         for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
-//           printf("Cut %d\n", int(iCut));
-//           for (HighsInt iEl = data_out->cutpool_start[iCut];
-//                iEl < data_out->cutpool_start[iCut + 1]; iEl++) {
-//             printf("   %2d %11.5g\n", int(data_out->cutpool_index[iEl]),
-//                    data_out->cutpool_value[iEl]);
-//           }
-//         }
-//       }
-//     };
+HighsCallbackFunctionType userMipCutPoolCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       void* user_callback_data) {
+      if (dev_run) {
+        printf("userMipCutPoolCallback: dim(%2d, %2d, %2d)\n",
+               int(data_out->cutpool_num_col), int(data_out->cutpool_num_cut),
+               int(data_out->cutpool_num_nz));
+        for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
+          printf("Cut %d\n", int(iCut));
+          for (HighsInt iEl = data_out->cutpool_start[iCut];
+               iEl < data_out->cutpool_start[iCut + 1]; iEl++) {
+            printf("   %2d %11.5g\n", int(data_out->cutpool_index[iEl]),
+                   data_out->cutpool_value[iEl]);
+          }
+        }
+      }
+    };
 
 HighsCallbackFunctionType userkMipUserSolution =
     [](int callback_type, const std::string& message,
@@ -244,42 +244,42 @@ TEST_CASE("my-callback-logging", "[highs_callback]") {
   log_options.user_callback = myLogCallback;
   log_options.user_callback_active = true;
 
-//   highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
-//   if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
-//   REQUIRE(strcmp(printed_log, "Hi HiGHS!") == 0);
+  highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
+  if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
+  REQUIRE(strcmp(printed_log, "Hi HiGHS!") == 0);
 
-//   // Check that nothing is printed if the type is VERBOSE when
-//   // log_dev_level is kHighsLogDevLevelInfo;
-//   *printed_log = '\0';
-//   highsLogDev(log_options, HighsLogType::kVerbose, "Hi %s!", "HiGHS");
-//   REQUIRE(*printed_log == '\0');
+  // Check that nothing is printed if the type is VERBOSE when
+  // log_dev_level is kHighsLogDevLevelInfo;
+  *printed_log = '\0';
+  highsLogDev(log_options, HighsLogType::kVerbose, "Hi %s!", "HiGHS");
+  REQUIRE(*printed_log == '\0');
 
-//   {
-//     char long_message[sizeof(printed_log)];
-//     memset(long_message, 'H', sizeof(long_message));
-//     long_message[sizeof(long_message) - 2] = '\0';
-//     long_message[sizeof(long_message) - 1] = '\n';
-//     highsLogDev(log_options, HighsLogType::kInfo, long_message);
-//     if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
-//     REQUIRE(strncmp(printed_log, "HHHH", 4) == 0);
-//     REQUIRE(strlen(printed_log) <= sizeof(printed_log));
-//   }
+  {
+    char long_message[sizeof(printed_log)];
+    memset(long_message, 'H', sizeof(long_message));
+    long_message[sizeof(long_message) - 2] = '\0';
+    long_message[sizeof(long_message) - 1] = '\n';
+    highsLogDev(log_options, HighsLogType::kInfo, long_message);
+    if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
+    REQUIRE(strncmp(printed_log, "HHHH", 4) == 0);
+    REQUIRE(strlen(printed_log) <= sizeof(printed_log));
+  }
 
-//   highsLogUser(log_options, HighsLogType::kInfo, "Hello %s!\n", "HiGHS");
-//   REQUIRE(strlen(printed_log) > 9);
-//   REQUIRE(strcmp(printed_log, "Hello HiGHS!\n") == 0);
+  highsLogUser(log_options, HighsLogType::kInfo, "Hello %s!\n", "HiGHS");
+  REQUIRE(strlen(printed_log) > 9);
+  REQUIRE(strcmp(printed_log, "Hello HiGHS!\n") == 0);
 
-//   {
-//     char long_message[sizeof(printed_log)];
-//     memset(long_message, 'H', sizeof(long_message));
-//     long_message[sizeof(long_message) - 2] = '\0';
-//     long_message[sizeof(long_message) - 1] = '\n';
-//     highsLogUser(log_options, HighsLogType::kWarning, long_message);
-//     if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
-//     REQUIRE(strstr(printed_log, "HHHH") != nullptr);
-//     REQUIRE(strlen(printed_log) <= sizeof(printed_log));
-//   }
-// }
+  {
+    char long_message[sizeof(printed_log)];
+    memset(long_message, 'H', sizeof(long_message));
+    long_message[sizeof(long_message) - 2] = '\0';
+    long_message[sizeof(long_message) - 1] = '\n';
+    highsLogUser(log_options, HighsLogType::kWarning, long_message);
+    if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
+    REQUIRE(strstr(printed_log, "HHHH") != nullptr);
+    REQUIRE(strlen(printed_log) <= sizeof(printed_log));
+  }
+}
 
 TEST_CASE("highs-callback-logging", "[highs_callback]") {
   // Uses userInterruptCallback to start logging lines with
