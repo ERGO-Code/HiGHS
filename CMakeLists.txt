@@ -525,17 +525,11 @@ configure_file(${PROJECT_SOURCE_DIR}/highs/HConfig.h.in ${HIGHS_BINARY_DIR}/HCon
 
 if (NOT DEBUG_MEMORY STREQUAL "Off")
   if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # add_compile_options($<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<$<COMPILE_LANGUAGE:CXX, C>>:-fno-sanitize=function,vptr>>)
     add_compile_options($<$<AND:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>,$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>>:-fno-sanitize=function,vptr>)
   endif()
 endif()
 
 if (DEBUG_MEMORY STREQUAL "Address")
-  # add_compile_options($<$<CONFIG:Debug,RelWithDebInfo>:$<$<COMPILE_LANGUAGE:CXX, C>:-fsanitize=address,undefined>>)
-  # $<$<CONFIG:Debug>:DEBUG_MODE>
-  # $<$<CONFIG:Debug>:DEBUG_MODE> 
-
-
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
@@ -545,28 +539,19 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
 
-  add_compile_options("-fsanitize=address,undefined")
-  add_compile_options("-fno-omit-frame-pointer")
-  add_link_options("-fsanitize=address,undefined")
-  add_link_options("-lubsan")
+  # add_compile_options("-fsanitize=address,undefined")
+  # add_compile_options("-fno-omit-frame-pointer")
+  # add_link_options("-fsanitize=address,undefined")
+  # add_link_options("-lubsan")
 
-  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
-  #     -fsanitize=address,undefined \
-  #     -fno-omit-frame-pointer \
-  #     -fsanitize-address-use-after-scope")
-  # set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
-  #     -fsanitize=address,undefined \
-  #     -fno-omit-frame-pointer \
-  #     -fsanitize-address-use-after-scope")
-
-  # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
-  #     -fsanitize=address,undefined \
-  #     -fno-omit-frame-pointer \
-  #     -fno-optimize-sibling-calls ")
-  # set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
-  #     -fsanitize=address,undefined \
-  #     -fno-omit-frame-pointer \
-  #     -fno-optimize-sibling-calls ")
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
 
 elseif (DEBUG_MEMORY STREQUAL "Thread")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
