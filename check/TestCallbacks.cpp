@@ -512,7 +512,7 @@ static void runMipUserSolutionTest(
 
     UserMipSolution user_callback_data;
     user_callback_data.optimal_objective_value = objective_function_value0;
-    user_callback_data.optimal_solution = std::move(optimal_solution);
+    user_callback_data.optimal_solution = optimal_solution;
     user_callback_data.require_user_solution_callback_origin =
         require_origin[iModel];
     void* p_user_callback_data = (void*)(&user_callback_data);
@@ -579,7 +579,7 @@ static void cstyle_userCallback(const int callback_type, const char* message,
 
   if (cbType == HighsCallbackType::kCallbackMipLogging ||
       cbType == HighsCallbackType::kCallbackMipInterrupt) {
-    data_in->user_interrupt = 1;
+    data_in->user_interrupt = true;
   }
 }
 
