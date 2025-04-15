@@ -521,8 +521,6 @@ set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
 configure_file(${PROJECT_SOURCE_DIR}/highs/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
-# -fno-sanitize=function,vptr \
-
 if (NOT DEBUG_MEMORY STREQUAL "Off")
   if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options($<$<AND:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>,$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>>:-fno-sanitize=function,vptr>)
