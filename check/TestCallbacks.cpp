@@ -253,8 +253,6 @@ HighsCallbackFunctionType userkMipUserSetPartialSolution =
         // get every other index
         std::vector<HighsInt> index;
         std::vector<double> value;
-        index.reserve(callback_data.optimal_solution.size() / 2);
-        value.reserve(callback_data.optimal_solution.size() / 2);
 
         for (HighsInt i = 0; i < callback_data.optimal_solution.size(); i++) {
           if (i % 2 == 0) {
