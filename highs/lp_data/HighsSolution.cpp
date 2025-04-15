@@ -496,20 +496,21 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           pdlp_dual_residual += dual_residual_error * dual_residual_error;
         }
       }
+      if (pass == 1 && iVar == lp.num_col_ - 1) {
+        max_col_primal_infeasibility = max_primal_infeasibility;
+        max_col_dual_infeasibility = max_dual_infeasibility;
+
+        pdlp_col_primal_infeasibility = pdlp_primal_infeasibility;
+        pdlp_col_dual_infeasibility = pdlp_dual_infeasibility;
+
+        max_primal_infeasibility = 0;
+        max_dual_infeasibility = 0;
+
+        pdlp_primal_infeasibility = 0;
+        pdlp_dual_infeasibility = 0;
+      }
     }
     if (pass == 0) {
-      max_col_primal_infeasibility = max_primal_infeasibility;
-      max_col_dual_infeasibility = max_dual_infeasibility;
-
-      pdlp_col_primal_infeasibility = pdlp_primal_infeasibility;
-      pdlp_col_dual_infeasibility = pdlp_dual_infeasibility;
-
-      max_primal_infeasibility = 0;
-      max_dual_infeasibility = 0;
-
-      pdlp_primal_infeasibility = 0;
-      pdlp_dual_infeasibility = 0;
-
       pdlp_norm_costs = std::sqrt(pdlp_norm_costs);
       pdlp_norm_bounds = std::sqrt(pdlp_norm_bounds);
 
