@@ -81,7 +81,7 @@ using HighsCallbackFunctionType =
                        HighsCallbackInput*, void*)>;
 
 struct HighsCallback {
-  HighsCallback(Highs* highs) : highs(highs) { 
+  HighsCallback(Highs* highs) : highs(highs) {
     data_out.highs = highs;
     data_in.highs = highs;
     clear();
