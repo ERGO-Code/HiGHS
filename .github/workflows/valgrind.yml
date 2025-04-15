@@ -1,4 +1,4 @@
-ame: valgrind
+name: valgrind
 
 on: [push, pull_request]
 
