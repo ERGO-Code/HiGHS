@@ -1,0 +1,128 @@
+name: build-intel-windows
+
+on:
+  push:
+    # branches:
+    #   - main
+
+  pull_request:
+
+env:
+  WINDOWS_BASEKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/487fd8c3-a3d8-4c22-a903-f8d54c2c57be/intel-oneapi-base-toolkit-2025.1.0.650_offline.exe 
+
+jobs:
+  build_windows_cpp:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v4
+
+    # - name: Install wget for Windows
+    #   run: choco install wget --no-progress
+
+    - name: Cache oneAPI
+      id: cache-oneapi
+      uses: actions/cache@v4
+      with:
+        # path: oneinstall
+        path: C:\Program Files (x86)\Intel\oneAPI
+        key: oneapiinstall
+
+    # - name: download
+    #   if: steps.cache-oneapi.outputs.cache-hit != 'true'
+    #   run: |
+    #     wget $WINDOWS_BASEKIT_URL 
+    #     pwd
+    #     ls
+    #     ./intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept 
+
+    - name: install
+      if: steps.cache-oneapi.outputs.cache-hit != 'true'
+      run: .github/install_windows.bat $WINDOWS_BASEKIT_URL 
+
+    # - name: ls
+    #   run: |
+    #     pwd
+    #     ls
+
+    # - name: install 
+    #   run: mkdir oneinstall
+
+    # - name: cache install
+    #   id: cache-install
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: C:\Program Files (x86)\Intel\oneAPI\compiler
+    #     key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_CPP_COMPONENTS }}-compiler-${{ hashFiles('**/.github/cache_exclude_windows.sh') }}
+
+    # - name: install
+    #   if: steps.cache-install.outputs.cache-hit != 'true'
+
+    # - name: install 
+    #   run: |
+    #     intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept --install-dir=oneinstall
+
+    # - name: ls
+    #   run: |
+    #     pwd
+    #     ls oneinstall
+
+
+
+
+# env:
+#   WINDOWS_BASEKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18497/w_BaseKit_p_2022.1.2.154_offline.exe
+#   WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18529/w_HPCKit_p_2022.1.2.116_offline.exe
+#   LINUX_BASEKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18487/l_BaseKit_p_2022.1.2.146_offline.sh
+#   LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18479/l_HPCKit_p_2022.1.2.117_offline.sh
+#   MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18341/m_HPCKit_p_2022.1.0.86_offline.dmg
+#   WINDOWS_CPP_COMPONENTS: intel.oneapi.win.cpp-compiler
+#   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
+#   WINDOWS_DPCPP_COMPONENTS: intel.oneapi.win.dpcpp-compiler
+#   LINUX_CPP_COMPONENTS: intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+#   LINUX_FORTRAN_COMPONENTS: intel-oneapi-compiler-fortran
+#   LINUX_DPCPP_COMPONENTS: intel-oneapi-compiler-dpcpp-cpp
+#   LINUX_CPP_COMPONENTS_WEB: intel.oneapi.lin.dpcpp-cpp-compiler-pro
+#   LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
+#   LINUX_DPCPP_COMPONENTS_WEB: intel.oneapi.lin.dpcpp-cpp-compiler
+#   MACOS_CPP_COMPONENTS: intel.oneapi.mac.cpp-compiler
+#   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
+#   SAMPLES_TAG: 2022.1.0
+
+# jobs:
+#   build_windows_cpp:
+#     runs-on: windows-latest
+#     defaults:
+#       run:
+#         shell: bash
+#     steps:
+#     - uses: actions/checkout@v4
+
+#     - name: cache install
+#       id: cache-install
+#       uses: actions/cache@v4
+#       with:
+#         path: C:\Program Files (x86)\Intel\oneAPI\compiler
+#         key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_CPP_COMPONENTS }}-compiler-${{ hashFiles('**/.github/cache_exclude_windows.sh') }}
+
+#     - name: install
+#       if: steps.cache-install.outputs.cache-hit != 'true'
+#       run: .github/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_CPP_COMPONENTS
+
+#     - name: build
+#       run: .github/build_windows.bat c++ "" $SAMPLES_TAG
+
+#     - name: exclude unused files from cache
+#       if: steps.cache-install.outputs.cache-hit != 'true'
+#       shell: bash
+#       run: .github/cache_exclude_windows.sh
+
+
+
+    - name: Check compiler
+      run: |
+        "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
+        icx.exe --version
+      # icpx --version

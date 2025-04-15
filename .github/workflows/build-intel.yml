@@ -1,0 +1,97 @@
+name: build-intel
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: add oneAPI to apt
+        shell: bash
+        run: |
+          cd /tmp
+          wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
+      
+      - name: install oneAPI basekit
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install intel-basekit
+         
+      - name: Check compiler
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          icpx --version
+          icx --version
+
+      # - name: install oneAPI MKL library
+      #   shell: bash
+      #   run: |
+      #     sudo apt install intel-oneapi-mkl-devel
+
+      - name: configure
+        shell: bash
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+          -DCMAKE_INSTALL_PREFIX=install \
+          -DCMAKE_CXX_COMPILER=icpx \
+          -DCMAKE_C_COMPILER=icx \
+          -DALL_TESTS=ON \
+          -DIntelDPCPP_DIR="/opt/intel/oneapi/compiler/latest/linux/cmake/SYCL" \
+
+        # -DMKL_ROOT="/opt/intel/oneapi/mkl/latest" \
+        # -DTBB_ROOT="/opt/intel/oneapi/tbb/latest"
+      
+      - name: build
+        shell: bash
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          cmake --build build --parallel
+
+      - name: test
+        shell: bash
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          export SYCL_DEVICE_FILTER=opencl.cpu
+          ctest --test-dir build --output-on-failure
+
+
+
+# jobs:
+#   debug:
+#     runs-on: ${{ matrix.os }}
+#     strategy:
+#       matrix:
+#         os: [ubuntu-latest]
+
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Create Build Environment
+#         run: cmake -E make_directory ${{runner.workspace}}/build
+
+#       - name: Configure CMake
+#         shell: bash
+#         working-directory: ${{runner.workspace}}/build
+#         run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=OFF
+
+#       - name: Build
+#         working-directory: ${{runner.workspace}}/build
+#         shell: bash
+#         # Execute the build.  You can specify a specific target with "--target <NAME>"
+#         run: |
+#           cmake --build . --parallel --config Debug
+
+#       - name: Test
+#         working-directory: ${{runner.workspace}}/build
+#         shell: bash
+#         # Execute tests defined by the CMake configuration.
+#         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+#         run: ctest --parallel --timeout 300 --output-on-failure 
