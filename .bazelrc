@@ -1,7 +1,14 @@
 build:asan --strip=never
 build:asan --copt -fsanitize=address
-build:asan --copt -DADDRESS_SANITIZER
+build:asan --copt -daddress_sanitizer
 build:asan --copt -O1
 build:asan --copt -g
 build:asan --copt -fno-omit-frame-pointer
 build:asan --linkopt -fsanitize=address
+
+build:tsan --strip=never
+build:tsan --copt -fsanitize=thread
+build:tsan --copt -O1
+build:tsan --copt -g
+build:tsan --copt -fno-omit-frame-pointer
+build:tsan --linkopt -fsanitize=thread
