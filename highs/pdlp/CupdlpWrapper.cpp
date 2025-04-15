@@ -291,10 +291,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
     scaling_clear(scaling);
   }
 
-  // if (w->timers) {
-  //   timers_clear(0,w->timers);
-  // }
-
   if (cost != NULL) cupdlp_free(cost);
   if (csc_beg != NULL) cupdlp_free(csc_beg);
   if (csc_idx != NULL) cupdlp_free(csc_idx);

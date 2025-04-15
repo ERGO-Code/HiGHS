@@ -337,11 +337,8 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
   CUPDLPtimers *timers = w->timers;
   CUPDLPscaling *scaling = w->scaling;
 
-  if (timers) {
-    timers_clear(w->settings->nLogLevel, timers);
-  }
 
-  // cupdlp_float begin = getTimeStamp();
+  cupdlp_float begin = getTimeStamp();
 #ifndef CUPDLP_CPU
 
   // CUDAmv *MV = w->MV;
@@ -389,9 +386,9 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
     resobj_clear(resobj);
   }
 
-// #ifndef CUPDLP_CPU
-//   timers->FreeDeviceMemTime += getTimeStamp() - begin;
-// #endif
+#ifndef CUPDLP_CPU
+  timers->FreeDeviceMemTime += getTimeStamp() - begin;
+#endif
 
   if (settings) {
     settings_clear(settings);
@@ -399,7 +396,9 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
   if (stepsize) {
     stepsize_clear(stepsize);
   }
-
+  if (timers) {
+  timers_clear(w->settings->nLogLevel, timers);
+  }
   if (scaling) {
     // scaling_clear(scaling);
     // if (scaling->colScale) {
