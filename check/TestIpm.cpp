@@ -162,5 +162,4 @@ TEST_CASE("test-2087", "[highs_ipm]") {
   REQUIRE(first_ipm_iteration_count == h.getInfo().ipm_iteration_count);
 
   h.resetGlobalScheduler(true);
-
 }
