@@ -531,9 +531,6 @@ if (NOT DEBUG_MEMORY STREQUAL "Off")
 endif()
 
 if (DEBUG_MEMORY STREQUAL "Address")
-<<<<<<< HEAD
-  message(STATUS "DEBUG_MEMORY is set to Address")
-=======
   # add_compile_options($<$<CONFIG:Debug,RelWithDebInfo>:$<$<COMPILE_LANGUAGE:CXX, C>:-fsanitize=address,undefined>>)
   # $<$<CONFIG:Debug>:DEBUG_MODE>
   # $<$<CONFIG:Debug>:DEBUG_MODE> 
@@ -547,7 +544,6 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
->>>>>>> workflows
 
   add_compile_options("-fsanitize=address,undefined")
   add_compile_options("-fno-omit-frame-pointer")
@@ -573,58 +569,6 @@ if (DEBUG_MEMORY STREQUAL "Address")
   #     -fno-optimize-sibling-calls ")
 
 elseif (DEBUG_MEMORY STREQUAL "Thread")
-<<<<<<< HEAD
-  message(STATUS "DEBUG_MEMORY is set to Thread")
-
-  add_compile_options("-fsanitize=thread,undefined")
-  add_compile_options("-fno-omit-frame-pointer")
-  add_link_options("-fsanitize=thread,undefined")
-  add_link_options("-lubsan")
-
-  set(SANITIZE_THREAD ON)
-
-  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
-  #     -fsanitize=thread,undefined \
-  #     -fno-omit-frame-pointer")
-  # set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
-  #     -fsanitize=thread,undefined \
-  #     -fno-omit-frame-pointer")
-
-  # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
-  #     -fsanitize=thread,undefined \
-  #     -fno-omit-frame-pointer ")
-  # set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
-  #     -fsanitize=thread,undefined \
-  #     -fno-omit-frame-pointer ")
-
-elseif (DEBUG_MEMORY STREQUAL "Leak")
-  message(STATUS "DEBUG_MEMORY is set to Leak")
-
-  add_compile_options("-fsanitize=leak,undefined")
-  add_compile_options("-fno-omit-frame-pointer")
-  add_link_options("-fsanitize=leak,undefined")
-  add_link_options("-lubsan")
-
-  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
-  #     -fsanitize=leak,undefined \
-  #     -fno-omit-frame-pointer")
-  # set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
-  #     -fsanitize=leak,undefined \
-  #     -fno-omit-frame-pointer")
-
-  # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
-  #     -fsanitize=leak,undefined \
-  #     -fno-omit-frame-pointer ")
-  # set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
-  #     -fsanitize=leak,undefined \
-  #     -fno-omit-frame-pointer ")
-
-# elseif (DEBUG_MEMORY STREQUAL "Undefined")
-#   message(STATUS "DEBUG_MEMORY is set to Undefined")
-
-#   add_compile_options("-fsanitize=undefined")
-#   add_link_options("-fsanitize=undefined")
-=======
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
       -fno-omit-frame-pointer")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
@@ -659,7 +603,6 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
         -fno-omit-frame-pointer ")
   endif()
->>>>>>> workflows
 
 endif()
 
