@@ -8,6 +8,8 @@
 #include "lp_data/HighsStatus.h"
 #include "parallel/HighsParallel.h"
 
+#include "Highs.h"
+
 // Example for using IPX from its C++ interface. The program solves the Netlib
 // problem afiro.
 
@@ -45,6 +47,7 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   ipx::Parameters parameters;
   if (!dev_run) parameters.display = 0;
   parameters.highs_logging = false;
+  parameters.timeless_log = false;
   lps.SetParameters(parameters);
 
   // Solve the LP.
@@ -87,4 +90,8 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   REQUIRE(fabs(ipx_col_value[11] - 339.9) < 1);
 
   (void)(info);  // surpress unused variable.
+
+  // hack to reset global scheduler
+  Highs h;
+  h.resetGlobalScheduler(true);
 }
