@@ -19,7 +19,8 @@ template <typename T>
 using dense_array_t = py::array_t<T, py::array::c_style | py::array::forcecast>;
 
 template <typename Base, typename T>
-auto make_readonly_ptr(std::vector<T> Base::* member) {
+std::function<dense_array_t<T>(const Base&)> make_readonly_ptr(
+    std::vector<T> Base::* member) {
   return [member](const Base& self) -> dense_array_t<T> {
     // last parameter means we keep ownership
     return dense_array_t<T>((self.*member).size(), (self.*member).data(),
