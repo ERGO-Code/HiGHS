@@ -454,6 +454,16 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           }
         }
 
+        if (primal_infeasibility > 0 || dual_infeasibility > 0) {
+          if (options.log_dev_level)
+            printf(
+                "getKktErrors: %s %3d: Primal [%9.3g, %9.3g, %9.3g] Dual "
+                "%9.3g: Ifs Primal %9.3g, Dual %9.3g\n",
+                is_col ? "Col" : "Row",
+                is_col ? int(iVar) : int(iVar - lp.num_col_), lower, value,
+                upper, dual, primal_infeasibility, dual_infeasibility);
+        }
+
         if (!is_col && get_residuals) {
           HighsInt iRow = iVar - lp.num_col_;
           assert(iRow >= 0);

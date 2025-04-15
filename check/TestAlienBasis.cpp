@@ -432,12 +432,6 @@ void testAlienBasis(const bool avgas, const HighsInt seed) {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
 
-  highs.setOptionValue("output_flag", true);
-  highs.setOptionValue("log_dev_level", 3);
-  highs.setOptionValue("highs_analysis_level",
-                       kHighsAnalysisLevelSolverRuntimeData);
-  printf("\n\n!!!! testAlienBasis: avgas = %d; seed = %d\n", avgas, int(seed));
-
   highs.readModel(filename);
   HighsLp lp = highs.getLp();
   HighsInt num_col = lp.num_col_;
@@ -593,6 +587,13 @@ void testAlienBasis(const bool avgas, const HighsInt seed) {
   }
   const bool run_dual_random_test = true;
   if (run_dual_random_test) {
+    if (!avgas && seed == 1) {
+      highs.setOptionValue("output_flag", true);
+      highs.setOptionValue("log_dev_level", 1);
+      printf("\n\n!!!! testAlienBasis: avgas = %d; seed = %d\n", avgas,
+             int(seed));
+    }
+
     // Create a rectangular basis using random selection of num_col variables
     basis.col_status.assign(num_col, HighsBasisStatus::kNonbasic);
     basis.row_status.assign(num_row, HighsBasisStatus::kNonbasic);
