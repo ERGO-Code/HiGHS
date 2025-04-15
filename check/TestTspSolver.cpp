@@ -14,4 +14,6 @@ TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
   highs.readModel(filename);
   highs.run();
   REQUIRE(highs.getObjectiveValue() == optimal_obective_value);
+
+  highs.resetGlobalScheduler(true);
 }

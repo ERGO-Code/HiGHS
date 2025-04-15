@@ -561,8 +561,6 @@ void fullApi() {
   HighsInt ck_num_col;
   HighsInt ck_num_row;
   HighsInt ck_num_nz;
-  HighsInt ck_hessian_num_nz;
-  HighsInt ck_rowwise;
   HighsInt ck_sense;
   double ck_offset;
   double ck_cc[2];
@@ -620,7 +618,6 @@ void fullApi() {
   // Define all column names to be different
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     const char suffix = iCol + '0';
-    const char* suffix_p = &suffix;
     char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", col_prefix, iCol);
     const char* name_p = name;
@@ -654,7 +651,6 @@ void fullApi() {
   // Define all row names to be different
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     const char suffix = iRow + '0';
-    const char* suffix_p = &suffix;
     char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", row_prefix, iRow);
     const char* name_p = name;
@@ -1092,7 +1088,6 @@ void fullApiMip() {
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   double* row_value = (double*)malloc(sizeof(double) * num_row);
 
-  HighsInt model_status;
   HighsInt return_status;
 
   void* highs = Highs_create();
@@ -1793,7 +1788,6 @@ void testGetModel() {
   HighsInt num_row = 2;
   HighsInt num_nz = 4;
   HighsInt sense = -1;
-  double offset;
   double col_cost[2] = {8, 10};
   double col_lower[2] = {0, 0};
   double col_upper[2] = {inf, inf};
@@ -1874,7 +1868,6 @@ void testMultiObjective() {
   HighsInt a_start[3] = {0, 3, 6};
   HighsInt a_index[6] = {0, 1, 2, 0, 1, 2};
   double a_value[6] = {3, 1, 1, 1, 1, 2};
-  HighsInt integrality[2] = {kHighsVarTypeInteger, kHighsVarTypeInteger};
 
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   HighsInt return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense,

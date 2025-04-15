@@ -116,4 +116,6 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   //  return_status = highs.writeModel("");
+
+  highs.resetGlobalScheduler(true);
 }

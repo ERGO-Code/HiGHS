@@ -9,30 +9,18 @@ if (FORTRAN AND NOT BUILD_EXTRA_UNIT_ONLY)
         target_link_libraries(fortrantest highs FortranHighs)
     endif()
     target_include_directories(fortrantest PUBLIC 
-        ${HIGHS_SOURCE_DIR}/src/interfaces
-        ${HIGHS_SOURCE_DIR}/check)
+        ${PROJECT_SOURCE_DIR}/highs/interfaces
+        ${PROJECT_SOURCE_DIR}/check)
 endif()
 
-# if (CUPLDP_GPU AND BUILD_CXX)
-#     # add a test
-#     add_executable(testcudalin ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cuda_linalg.c)
-#     add_executable(testcublas ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cublas.c)
-
-#     set_target_properties(testcudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-#     #target_include_directories(cudalinalg PRIVATE ${CUPDLP_INCLUDE_DIR}/cuda)
-#     target_link_libraries(testcudalin PRIVATE highs ${CUDA_LIBRARY})
-
-#     set_target_properties(testcublas PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-#     target_link_libraries(testcublas PRIVATE highs ${CUDA_LIBRARY})
-# endif()
 
 if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # prepare Catch library
-  set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/extern)
+  set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern)
   add_library(Catch INTERFACE)
   target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
-  configure_file(${HIGHS_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
+  configure_file(${PROJECT_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
 
   FILE(WRITE ${CMAKE_BINARY_DIR}/testoptions.txt
   "mip_rel_gap=0.0
@@ -40,57 +28,57 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   # Make test executable
   set(TEST_SOURCES
-      TestHighsVersion.cpp
       TestAlienBasis.cpp
-      TestDualize.cpp
-      TestCallbacks.cpp
-      TestCheckSolution.cpp
-      TestEkk.cpp
-      TestFactor.cpp
-      TestMain.cpp
-      TestNames.cpp
-      TestOptions.cpp
-      TestIO.cpp
-      TestSort.cpp
-      TestSetup.cpp
-      TestFilereader.cpp
-      TestHighsGFkSolve.cpp
-      TestInfo.cpp
       TestBasis.cpp
       TestBasisSolves.cpp
+      TestCallbacks.cpp
+      TestCheckSolution.cpp
       TestCrossover.cpp
+      TestDualize.cpp
+      TestEkk.cpp
+      TestFactor.cpp
+      TestFilereader.cpp
       TestHighsCDouble.cpp
+      TestHighsGFkSolve.cpp
       TestHighsHash.cpp
+      TestHighsHessian.cpp
       TestHighsIntegers.cpp
+      TestHighsModel.cpp
       TestHighsParallel.cpp
       TestHighsRbTree.cpp
-      TestHighsHessian.cpp
-      TestHighsModel.cpp
       TestHighsSparseMatrix.cpp
+      TestHighsVersion.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
+      TestInfo.cpp
+      TestIO.cpp
       TestIpm.cpp
       TestIpx.cpp
       TestLogging.cpp
       TestLPFileFormat.cpp
-      TestLpValidation.cpp
       TestLpModification.cpp
       TestLpOrientation.cpp
+      TestLpSolvers.cpp
+      TestLpValidation.cpp
+      TestMain.cpp
+      TestMipSolver.cpp
       TestModelProperties.cpp
       TestMultiObjective.cpp
+      TestNames.cpp
+      TestOptions.cpp
       TestPdlp.cpp
       TestPresolve.cpp
       TestQpSolver.cpp
-      TestRays.cpp
       TestRanging.cpp
+      TestRays.cpp
       TestSemiVariables.cpp
+      TestSetup.cpp
+      TestSort.cpp
+      TestSpecialLps.cpp
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
-      TestSpecialLps.cpp
-      TestLpSolvers.cpp
-      TestMipSolver.cpp
       Avgas.cpp)
 
   set(OPT_LEVEL_CHANGED OFF)
@@ -108,8 +96,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
   if (BUILD_EXTRA_UNIT_TESTS)
-      list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
-      message(STATUS "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
+      list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
+      message(STATUS "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
       include(highs-unit-tests)
 
       set(TEST_SOURCES ${TEST_SOURCES} ${HIGHS_EXTRA_UNIT_TESTS})
@@ -132,7 +120,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         else()
             target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY} m)
         endif()
-        target_include_directories(unit_tests PRIVATE ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda)
+        target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/cuda)
         set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
     endif()
   else()
@@ -416,10 +404,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       endif()
 
       # specify the instance and the settings load command
-      if(ZLIB AND ZLIB_FOUND AND EXISTS "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
-        set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
+      if(ZLIB AND ZLIB_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps.gz")
+        set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps.gz")
       else()
-        set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+        set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
       endif()
 
       # loop over all settings
@@ -476,7 +464,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       list(GET instance 0 name)
       list(GET instance 1 optval)
       # specify the instance and the settings load command
-      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+      set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
 
       foreach(setting ${settings})
           if (FAST_BUILD)
@@ -506,7 +494,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         list(GET instance_pdlp 0 name_pdlp)
         list(GET instance_pdlp 1 optval)
 
-        set(inst_pdlp "${HIGHS_SOURCE_DIR}/check/instances/${name_pdlp}.mps")
+        set(inst_pdlp "${PROJECT_SOURCE_DIR}/check/instances/${name_pdlp}.mps")
 
         add_test(NAME ${name_pdlp}-pdlp-no-presolve COMMAND $<TARGET_FILE:highs-bin> "--solver=pdlp"
             "--presolve=off" ${inst_pdlp})
@@ -524,20 +512,20 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 endif()
 
 if (BUILD_EXTRA_PROBLEM_SET)
-    list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-problem-set")
-    message(STATUS "${HIGHS_SOURCE_DIR}/check/highs-problem-set")
+    list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/check/highs-problem-set")
+    message(STATUS "${PROJECT_SOURCE_DIR}/check/highs-problem-set")
     include(highs-problem-set)
 endif()
 
 if (BUILD_EXTRA_UNIT_TESTS AND BUILD_EXTRA_UNIT_ONLY)
     # prepare Catch library
-    set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/extern)
+    set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern)
     add_library(Catch INTERFACE)
     target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
 
-    list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
-    message(STATUS "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
+    list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
+    message(STATUS "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
     include(highs-unit-tests)
 
     set(TEST_SOURCES TestMain.cpp ${HIGHS_EXTRA_UNIT_TESTS})
@@ -547,7 +535,7 @@ if (BUILD_EXTRA_UNIT_TESTS AND BUILD_EXTRA_UNIT_ONLY)
     target_link_libraries(unit_tests_extra Catch)
 
     if (BUILD_CXX)
-        configure_file(${HIGHS_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
+        configure_file(${PROJECT_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
         target_link_libraries(unit_tests_extra highs)
     endif()
 

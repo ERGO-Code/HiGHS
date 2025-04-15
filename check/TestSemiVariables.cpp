@@ -85,6 +85,8 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   REQUIRE(!highs.getLp().hasMods());
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {
@@ -135,6 +137,8 @@ TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {
                optimal_objective_function_value) < double_equal_tolerance);
   // Check that the lower bound of the semi-variable has been restored
   REQUIRE(highs.getLp().col_lower_[semi_col] == semi_col_lower);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
@@ -200,6 +204,8 @@ TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
@@ -239,6 +245,8 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
@@ -270,9 +278,13 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   highs.passModel(lp);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string test_mps = test_name + ".mps";
   // Introduced due to a semi-variable possibly having an infinite
   // upper bound that needs to be written to MPS in order to define
   // variable type
@@ -287,7 +299,6 @@ TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
   if (dev_run) printf("Optimum at first run: %g\n", obj0);
 
   // now write out to MPS and load again
-  const std::string test_mps = "test.mps";
   highs.writeModel(test_mps);
   highs.readModel(test_mps);
   highs.run();
@@ -297,6 +308,8 @@ TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
            obj1);
   REQUIRE(obj0 == obj1);
   std::remove(test_mps.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 void semiModel0(HighsLp& lp) {

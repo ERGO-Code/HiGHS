@@ -186,7 +186,7 @@ endif
 
 # --------------------- Library
 
-subdir('src') # defines highslib
+subdir('highs') # defines highslib
 
 # --------------------- Tests
 
@@ -196,4 +196,4 @@ if get_option('with_tests')
 endif
 
 # --------------------- Bindings
-# now in src/
+# now in highs/
