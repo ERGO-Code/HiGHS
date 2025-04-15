@@ -775,7 +775,7 @@ void HighsMipSolverData::runSetup() {
     if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
         mipsolver.callback_->active[kCallbackMipSolution]) {
       assert(!mipsolver.submip);
-      mipsolver.callback_->clearHighsCallbackDataOut();
+      mipsolver.callback_->clearHighsCallbackOutput();
       mipsolver.callback_->data_out.mip_solution = mipsolver.solution_;
       const bool interrupt = interruptFromCallbackWithData(
           kCallbackMipSolution, mipsolver.solution_objective_,
@@ -1116,7 +1116,7 @@ try_again:
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
-    mipsolver.callback_->clearHighsCallbackDataOut();
+    mipsolver.callback_->clearHighsCallbackOutput();
     mipsolver.callback_->data_out.mip_solution = solution.col_value;
     const bool interrupt = interruptFromCallbackWithData(
         kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
@@ -1650,7 +1650,7 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
   assert(gap == mip_rel_gap);
 
   // Possibly interrupt from MIP logging callback
-  mipsolver.callback_->clearHighsCallbackDataOut();
+  mipsolver.callback_->clearHighsCallbackOutput();
   const bool interrupt = interruptFromCallbackWithData(
       kCallbackMipLogging, mipsolver.solution_objective_, "MIP logging");
   assert(!interrupt);
@@ -2389,7 +2389,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
 
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
-    mipsolver.callback_->clearHighsCallbackDataOut();
+    mipsolver.callback_->clearHighsCallbackOutput();
     if (interruptFromCallbackWithData(kCallbackMipInterrupt,
                                       mipsolver.solution_objective_,
                                       "MIP check limits")) {
@@ -2518,7 +2518,7 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
 
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
-      mipsolver.callback_->clearHighsCallbackDataOut();
+      mipsolver.callback_->clearHighsCallbackOutput();
       mipsolver.callback_->data_out.mip_solution = mipsolver.solution_;
       const bool interrupt = interruptFromCallbackWithData(
           kCallbackMipImprovingSolution, mipsolver.solution_objective_,
@@ -2593,13 +2593,12 @@ void HighsMipSolverData::callbackUserSolution(
   setCallbackDataOut(mipsolver_objective_value);
   mipsolver.callback_->data_out.user_solution_callback_origin =
       user_solution_callback_origin;
+  mipsolver.callback_->clearHighsCallbackInput();
 
-  mipsolver.callback_->clearHighsCallbackDataIn();
   const bool interrupt = mipsolver.callback_->callbackAction(
       kCallbackMipUserSolution, "MIP User solution");
   assert(!interrupt);
-  if (mipsolver.callback_->data_in.user_solution.size() ==
-      mipsolver.orig_model_->num_col_) {
+  if (mipsolver.callback_->data_in.user_has_solution) {
     const auto& user_solution = mipsolver.callback_->data_in.user_solution;
     double bound_violation_ = 0;
     double row_violation_ = 0;

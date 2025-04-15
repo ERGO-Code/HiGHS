@@ -13,6 +13,10 @@
 
 #include <functional>
 
+// forward declaration to avoid circular dependency
+enum class HighsStatus;
+class Highs;
+
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsCallbackStruct.h"
 
@@ -29,7 +33,8 @@ enum userMipSolutionCallbackOrigin {
 /**
  * Struct to handle callback output data
  */
-struct HighsCallbackDataOut {
+struct HighsCallbackOutput {
+  Highs* highs = nullptr;
   HighsLogType log_type;
   double running_time;
   HighsInt simplex_iteration_count;
@@ -51,32 +56,49 @@ struct HighsCallbackDataOut {
   std::vector<double> cutpool_upper;
   userMipSolutionCallbackOrigin user_solution_callback_origin;
 
-  operator HighsCCallbackDataOut() const;
+  operator HighsCallbackDataOut() const;
 };
 
-struct HighsCallbackDataIn {
+struct HighsCallbackInput {
+  Highs* highs = nullptr;
   bool user_interrupt = false;
+  bool user_has_solution = false;
   std::vector<double> user_solution;
 
-  HighsCallbackDataIn operator=(const HighsCCallbackDataIn& data_in);
+  HighsStatus setSolution(HighsInt num_entries, const double* value);
+
+  HighsStatus setSolution(HighsInt num_entries, const HighsInt* index,
+                          const double* value);
+
+  HighsStatus repairSolution();
+
+  operator HighsCallbackDataIn() const;
+  HighsCallbackInput operator=(const HighsCallbackDataIn& data_in);
 };
 
 using HighsCallbackFunctionType =
-    std::function<void(int, const std::string&, const HighsCallbackDataOut*,
-                       HighsCallbackDataIn*, void*)>;
+    std::function<void(int, const std::string&, const HighsCallbackOutput*,
+                       HighsCallbackInput*, void*)>;
 
 struct HighsCallback {
+  HighsCallback(Highs* highs) : highs(highs) { 
+    data_out.highs = highs;
+    data_in.highs = highs;
+    clear();
+  }
+
   // Function pointers cannot be used for Pybind11, so use std::function
   HighsCallbackFunctionType user_callback = nullptr;
   HighsCCallbackType c_callback = nullptr;
   void* user_callback_data = nullptr;
+  Highs* highs = nullptr;
   std::vector<bool> active;
-  HighsCallbackDataOut data_out;
-  HighsCallbackDataIn data_in;
+  HighsCallbackOutput data_out;
+  HighsCallbackInput data_in;
   bool callbackActive(const int callback_type);
   bool callbackAction(const int callback_type, std::string message = "");
-  void clearHighsCallbackDataOut();
-  void clearHighsCallbackDataIn();
+  void clearHighsCallbackOutput();
+  void clearHighsCallbackInput();
   void clear();
 };
 #endif /* LP_DATA_HIGHSCALLBACK_H_ */

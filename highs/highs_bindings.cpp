@@ -18,27 +18,14 @@ using namespace pybind11::literals;
 template <typename T>
 using dense_array_t = py::array_t<T, py::array::c_style | py::array::forcecast>;
 
-// wrapper for raw pointers
-template <class T>
-class readonly_ptr_wrapper {
- public:
-  readonly_ptr_wrapper() : ptr(nullptr) {}
-  readonly_ptr_wrapper(T* ptr) : ptr(ptr) {}
-  readonly_ptr_wrapper(const readonly_ptr_wrapper& other) : ptr(other.ptr) {}
-  T& operator*() const { return *ptr; }
-  T* operator->() const { return ptr; }
-  T* get() const { return ptr; }
-  T& operator[](std::size_t idx) const { return ptr[idx]; }
-  bool is_valid() { return ptr != nullptr; }
-
-  py::array_t<T, py::array::c_style> to_array(std::size_t size) {
-    return py::array_t<T, py::array::c_style>(py::buffer_info(
-        ptr, sizeof(T), py::format_descriptor<T>::format(), 1, {size}, { sizeof(double) }));
-  }
-
- private:
-  T* ptr;
-};
+template <typename Base, typename T>
+auto make_readonly_ptr(std::vector<T> Base::* member) {
+  return [member](const Base& self) -> dense_array_t<T> {
+    // last parameter means we keep ownership
+    return dense_array_t<T>((self.*member).size(), (self.*member).data(),
+                            py::cast(self));
+  };
+}
 
 HighsStatus highs_passModel(Highs* h, HighsModel& model) {
   return h->passModel(model);
@@ -159,7 +146,8 @@ HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim,
                         q_value_ptr);
 }
 
-HighsStatus highs_addLinearObjective(Highs* h, const HighsLinearObjective& linear_objective) {
+HighsStatus highs_addLinearObjective(
+    Highs* h, const HighsLinearObjective& linear_objective) {
   return h->addLinearObjective(linear_objective, -1);
 }
 
@@ -187,19 +175,20 @@ std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h) {
   return std::make_tuple(status, ranging);
 }
 
-std::tuple<HighsStatus, dense_array_t<HighsInt>>
-highs_getBasicVariables(Highs* h) {
+std::tuple<HighsStatus, dense_array_t<HighsInt>> highs_getBasicVariables(
+    Highs* h) {
   HighsInt num_row = h->getNumRow();
-  
+
   HighsStatus status = HighsStatus::kOk;
   std::vector<HighsInt> basic_variables(num_row);
-  HighsInt* basic_variables_ptr = static_cast<HighsInt*>(basic_variables.data());
+  HighsInt* basic_variables_ptr =
+      static_cast<HighsInt*>(basic_variables.data());
   if (num_row > 0) status = h->getBasicVariables(basic_variables_ptr);
   return std::make_tuple(status, py::cast(basic_variables));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>>
-highs_getBasisInverseRow(Highs* h, HighsInt row) {
+std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisInverseRow(
+    Highs* h, HighsInt row) {
   HighsInt num_row = h->getNumRow();
 
   HighsStatus status = HighsStatus::kOk;
@@ -210,7 +199,8 @@ highs_getBasisInverseRow(Highs* h, HighsInt row) {
   return std::make_tuple(status, py::cast(solution_vector));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
+           dense_array_t<HighsInt>>
 highs_getBasisInverseRowSparse(Highs* h, HighsInt row) {
   HighsInt num_row = h->getNumRow();
 
@@ -221,12 +211,15 @@ highs_getBasisInverseRowSparse(Highs* h, HighsInt row) {
   double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
   HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
 
-  if (num_row > 0) status = h->getBasisInverseRow(row, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
-  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+  if (num_row > 0)
+    status = h->getBasisInverseRow(row, solution_vector_ptr, &solution_num_nz,
+                                   solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz,
+                         py::cast(solution_index));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>>
-highs_getBasisInverseCol(Highs* h, HighsInt col) {
+std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisInverseCol(
+    Highs* h, HighsInt col) {
   HighsInt num_row = h->getNumRow();
 
   HighsStatus status = HighsStatus::kOk;
@@ -237,7 +230,8 @@ highs_getBasisInverseCol(Highs* h, HighsInt col) {
   return std::make_tuple(status, py::cast(solution_vector));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
+           dense_array_t<HighsInt>>
 highs_getBasisInverseColSparse(Highs* h, HighsInt col) {
   HighsInt num_row = h->getNumRow();
 
@@ -248,17 +242,20 @@ highs_getBasisInverseColSparse(Highs* h, HighsInt col) {
   double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
   HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
 
-  if (num_row > 0) status = h->getBasisInverseCol(col, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
-  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+  if (num_row > 0)
+    status = h->getBasisInverseCol(col, solution_vector_ptr, &solution_num_nz,
+                                   solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz,
+                         py::cast(solution_index));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>>
-highs_getBasisSolve(Highs* h, dense_array_t<double> rhs) {
+std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisSolve(
+    Highs* h, dense_array_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   py::buffer_info rhs_info = rhs.request();
   double* rhs_ptr = static_cast<double*>(rhs_info.ptr);
-  
+
   HighsStatus status = HighsStatus::kOk;
   std::vector<double> solution_vector(num_row);
   double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
@@ -267,7 +264,8 @@ highs_getBasisSolve(Highs* h, dense_array_t<double> rhs) {
   return std::make_tuple(status, py::cast(solution_vector));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
+           dense_array_t<HighsInt>>
 highs_getBasisSolveSparse(Highs* h, dense_array_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
@@ -281,31 +279,37 @@ highs_getBasisSolveSparse(Highs* h, dense_array_t<double> rhs) {
   double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
   HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
 
-  if (num_row > 0) status = h->getBasisSolve(rhs_ptr, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
-  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+  if (num_row > 0)
+    status = h->getBasisSolve(rhs_ptr, solution_vector_ptr, &solution_num_nz,
+                              solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz,
+                         py::cast(solution_index));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisTransposeSolve(Highs* h, dense_array_t<double> rhs) {
+std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisTransposeSolve(
+    Highs* h, dense_array_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   py::buffer_info rhs_info = rhs.request();
   double* rhs_ptr = static_cast<double*>(rhs_info.ptr);
-  
+
   HighsStatus status = HighsStatus::kOk;
   std::vector<double> solution_vector(num_row);
   double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
 
-  if (num_row > 0) status = h->getBasisTransposeSolve(rhs_ptr, solution_vector_ptr);
+  if (num_row > 0)
+    status = h->getBasisTransposeSolve(rhs_ptr, solution_vector_ptr);
   return std::make_tuple(status, py::cast(solution_vector));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
+           dense_array_t<HighsInt>>
 highs_getBasisTransposeSolveSparse(Highs* h, dense_array_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   py::buffer_info rhs_info = rhs.request();
   double* rhs_ptr = static_cast<double*>(rhs_info.ptr);
-  
+
   HighsStatus status = HighsStatus::kOk;
   HighsInt solution_num_nz = 0;
   std::vector<double> solution_vector(num_row);
@@ -313,12 +317,15 @@ highs_getBasisTransposeSolveSparse(Highs* h, dense_array_t<double> rhs) {
   double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
   HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
 
-  if (num_row > 0) status = h->getBasisTransposeSolve(rhs_ptr, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
-  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+  if (num_row > 0)
+    status = h->getBasisTransposeSolve(rhs_ptr, solution_vector_ptr,
+                                       &solution_num_nz, solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz,
+                         py::cast(solution_index));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>>
-highs_getReducedRow(Highs* h, HighsInt row) {
+std::tuple<HighsStatus, dense_array_t<double>> highs_getReducedRow(
+    Highs* h, HighsInt row) {
   HighsInt num_col = h->getNumCol();
   HighsInt num_row = h->getNumRow();
 
@@ -330,7 +337,8 @@ highs_getReducedRow(Highs* h, HighsInt row) {
   return std::make_tuple(status, py::cast(solution_vector));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
+           dense_array_t<HighsInt>>
 highs_getReducedRowSparse(Highs* h, HighsInt row) {
   HighsInt num_col = h->getNumCol();
   HighsInt num_row = h->getNumRow();
@@ -342,12 +350,15 @@ highs_getReducedRowSparse(Highs* h, HighsInt row) {
   double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
   HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
 
-  if (num_row > 0) status = h->getReducedRow(row, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
-  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+  if (num_row > 0)
+    status = h->getReducedRow(row, solution_vector_ptr, &solution_num_nz,
+                              solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz,
+                         py::cast(solution_index));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>>
-highs_getReducedColumn(Highs* h, HighsInt col) {
+std::tuple<HighsStatus, dense_array_t<double>> highs_getReducedColumn(
+    Highs* h, HighsInt col) {
   HighsInt num_row = h->getNumRow();
 
   HighsStatus status = HighsStatus::kOk;
@@ -358,7 +369,8 @@ highs_getReducedColumn(Highs* h, HighsInt col) {
   return std::make_tuple(status, py::cast(solution_vector));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
+           dense_array_t<HighsInt>>
 highs_getReducedColumnSparse(Highs* h, HighsInt col) {
   HighsInt num_row = h->getNumRow();
 
@@ -369,8 +381,11 @@ highs_getReducedColumnSparse(Highs* h, HighsInt col) {
   double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
   HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
 
-  if (num_row > 0) status = h->getReducedColumn(col, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
-  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+  if (num_row > 0)
+    status = h->getReducedColumn(col, solution_vector_ptr, &solution_num_nz,
+                                 solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz,
+                         py::cast(solution_index));
 }
 
 std::tuple<HighsStatus, bool> highs_getDualRayExist(Highs* h) {
@@ -379,7 +394,8 @@ std::tuple<HighsStatus, bool> highs_getDualRayExist(Highs* h) {
   return std::make_tuple(status, has_dual_ray);
 }
 
-std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getDualRay(Highs* h) {
+std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getDualRay(
+    Highs* h) {
   HighsInt num_row = h->getNumRow();
   bool has_dual_ray;
   HighsStatus status = HighsStatus::kOk;
@@ -389,20 +405,26 @@ std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getDualRay(Highs* h) 
   return std::make_tuple(status, has_dual_ray, py::cast(value));
 }
 
-std::tuple<HighsStatus, bool> highs_getDualUnboundednessDirectionExist(Highs* h) {
+std::tuple<HighsStatus, bool> highs_getDualUnboundednessDirectionExist(
+    Highs* h) {
   bool has_dual_unboundedness_direction;
-  HighsStatus status = h->getDualUnboundednessDirection(has_dual_unboundedness_direction);
+  HighsStatus status =
+      h->getDualUnboundednessDirection(has_dual_unboundedness_direction);
   return std::make_tuple(status, has_dual_unboundedness_direction);
 }
 
-std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getDualUnboundednessDirection(Highs* h) {
+std::tuple<HighsStatus, bool, dense_array_t<double>>
+highs_getDualUnboundednessDirection(Highs* h) {
   HighsInt num_col = h->getNumCol();
   bool has_dual_unboundedness_direction;
   HighsStatus status = HighsStatus::kOk;
   std::vector<double> value(num_col);
   double* value_ptr = static_cast<double*>(value.data());
-  if (num_col > 0) status = h->getDualUnboundednessDirection(has_dual_unboundedness_direction, value_ptr);
-  return std::make_tuple(status, has_dual_unboundedness_direction, py::cast(value));
+  if (num_col > 0)
+    status = h->getDualUnboundednessDirection(has_dual_unboundedness_direction,
+                                              value_ptr);
+  return std::make_tuple(status, has_dual_unboundedness_direction,
+                         py::cast(value));
 }
 
 std::tuple<HighsStatus, bool> highs_getPrimalRayExist(Highs* h) {
@@ -411,7 +433,8 @@ std::tuple<HighsStatus, bool> highs_getPrimalRayExist(Highs* h) {
   return std::make_tuple(status, has_primal_ray);
 }
 
-std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getPrimalRay(Highs* h) {
+std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getPrimalRay(
+    Highs* h) {
   HighsInt num_col = h->getNumCol();
   bool has_primal_ray;
   HighsStatus status = HighsStatus::kOk;
@@ -775,8 +798,8 @@ highs_getColsEntries(Highs* h, HighsInt num_set_entries,
                          py::cast(value));
 }
 
-std::tuple<HighsStatus, HighsVarType>
-highs_getColIntegrality(Highs* h, HighsInt col) {
+std::tuple<HighsStatus, HighsVarType> highs_getColIntegrality(Highs* h,
+                                                              HighsInt col) {
   HighsInt col_ = static_cast<HighsInt>(col);
   HighsVarType integrality;
   HighsStatus status = h->getColIntegrality(col_, integrality);
@@ -859,21 +882,47 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 // Wrap the setCallback function to appropriately handle user data.
-// pybind11 automatically ensures GIL is re-acquired when the callback is called.
+// pybind11 automatically ensures GIL is re-acquired when the callback is
+// called.
 HighsStatus highs_setCallback(
     Highs* h,
-    std::function<void(int, const std::string&, const HighsCallbackDataOut*, HighsCallbackDataIn*, py::handle)> fn,
+    std::function<void(int, const std::string&, const HighsCallbackOutput*,
+                       HighsCallbackInput*, py::handle)>
+        fn,
     py::handle data) {
   if (static_cast<bool>(fn) == false)
     return h->setCallback((HighsCallbackFunctionType) nullptr, nullptr);
   else
     return h->setCallback(
         [fn](int callbackType, const std::string& msg,
-                   const HighsCallbackDataOut* dataOut,
-                   HighsCallbackDataIn* dataIn, void* d) {
-          return fn(callbackType, msg, dataOut, dataIn, py::handle(reinterpret_cast<PyObject*>(d)));
+             const HighsCallbackOutput* dataOut, HighsCallbackInput* dataIn,
+             void* d) {
+          return fn(callbackType, msg, dataOut, dataIn,
+                    py::handle(reinterpret_cast<PyObject*>(d)));
         },
         data.ptr());
+}
+
+HighsStatus highs_setcbSolution(HighsCallbackInput* cb,
+                                const dense_array_t<double> value) {
+  py::buffer_info value_info = value.request();
+  const auto* value_ptr = static_cast<double*>(value_info.ptr);
+  return cb->setSolution(value_info.size, value_ptr);
+}
+
+HighsStatus highs_setcbSparseSolution(HighsCallbackInput* cb,
+                                      const dense_array_t<HighsInt> index,
+                                      const dense_array_t<double> value) {
+  py::buffer_info index_info = index.request();
+  py::buffer_info value_info = value.request();
+
+  const auto* index_ptr = static_cast<HighsInt*>(index_info.ptr);
+  const auto* value_ptr = static_cast<double*>(value_info.ptr);
+
+  if (index_info.size == value_info.size) {
+    return cb->setSolution(index_info.size, index_ptr, value_ptr);
+  } else
+    return HighsStatus::kError;
 }
 
 PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
@@ -988,7 +1037,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kHighsDebugLevelNone", HighsDebugLevel::kHighsDebugLevelNone)
       .value("kHighsDebugLevelCheap", HighsDebugLevel::kHighsDebugLevelCheap)
       .value("kHighsDebugLevelCostly", HighsDebugLevel::kHighsDebugLevelCostly)
-      .value("kHighsDebugLevelExpensive", HighsDebugLevel::kHighsDebugLevelExpensive)
+      .value("kHighsDebugLevelExpensive",
+             HighsDebugLevel::kHighsDebugLevelExpensive)
       .value("kHighsDebugLevelMin", HighsDebugLevel::kHighsDebugLevelMin)
       .value("kHighsDebugLevelMax", HighsDebugLevel::kHighsDebugLevelMax)
       .export_values();
@@ -1072,8 +1122,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("sum_complementarity_violations",
                      &HighsInfo::sum_complementarity_violations)
-      .def_readwrite("primal_dual_integral",
-                     &HighsInfo::primal_dual_integral);
+      .def_readwrite("primal_dual_integral", &HighsInfo::primal_dual_integral);
   py::class_<HighsOptions>(m, "HighsOptions", py::module_local())
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
@@ -1223,7 +1272,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
           py::arg("local_upper_penalty") = py::none(),
           py::arg("local_rhs_penalty") = py::none())
       .def("getIis", &Highs::getIis)
-      .def("presolve", &Highs::presolve, py::call_guard<py::gil_scoped_release>())
+      .def("presolve", &Highs::presolve,
+           py::call_guard<py::gil_scoped_release>())
       .def("writeSolution", &highs_writeSolution)
       .def("readSolution", &Highs::readSolution)
       .def("setOptionValue",
@@ -1287,8 +1337,10 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getReducedColumnSparse", &highs_getReducedColumnSparse)
       .def("getDualRayExist", &highs_getDualRayExist)
       .def("getDualRay", &highs_getDualRay)
-      .def("getDualUnboundednessDirectionExist", &highs_getDualUnboundednessDirectionExist)
-      .def("getDualUnboundednessDirection", &highs_getDualUnboundednessDirection)
+      .def("getDualUnboundednessDirectionExist",
+           &highs_getDualUnboundednessDirectionExist)
+      .def("getDualUnboundednessDirection",
+           &highs_getDualUnboundednessDirection)
       .def("getPrimalRayExist", &highs_getPrimalRayExist)
       .def("getPrimalRay", &highs_getPrimalRay)
       .def("getNumCol", &Highs::getNumCol)
@@ -1378,7 +1430,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("col_dual", &HighsSolution::col_dual)
       .def_readwrite("row_value", &HighsSolution::row_value)
       .def_readwrite("row_dual", &HighsSolution::row_dual);
-  py::class_<HighsObjectiveSolution>(m, "HighsObjectiveSolution", py::module_local())
+  py::class_<HighsObjectiveSolution>(m, "HighsObjectiveSolution",
+                                     py::module_local())
       .def(py::init<>())
       .def_readwrite("objective", &HighsObjectiveSolution::objective)
       .def_readwrite("col_value", &HighsObjectiveSolution::col_value);
@@ -1411,7 +1464,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def(py::init<>())
       .def_readwrite("simplex_time", &HighsIisInfo::simplex_time)
       .def_readwrite("simplex_iterations", &HighsIisInfo::simplex_iterations);
-  py::class_<HighsLinearObjective>(m, "HighsLinearObjective", py::module_local())
+  py::class_<HighsLinearObjective>(m, "HighsLinearObjective",
+                                   py::module_local())
       .def(py::init<>())
       .def_readwrite("weight", &HighsLinearObjective::weight)
       .def_readwrite("offset", &HighsLinearObjective::offset)
@@ -1422,6 +1476,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
   // constants
   m.attr("kHighsInf") = kHighsInf;
   m.attr("kHighsIInf") = kHighsIInf;
+  m.attr("kHighsUndefined") = kHighsUndefined;
 
   m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;
   m.attr("HIGHS_VERSION_MINOR") = HIGHS_VERSION_MINOR;
@@ -1431,7 +1486,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
   py::module_ simplex_constants =
       m.def_submodule("simplex_constants", "Submodule for simplex constants");
 
-  py::enum_<SimplexStrategy>(simplex_constants, "SimplexStrategy", py::module_local())
+  py::enum_<SimplexStrategy>(simplex_constants, "SimplexStrategy",
+                             py::module_local())
       .value("kSimplexStrategyMin", SimplexStrategy::kSimplexStrategyMin)
       .value("kSimplexStrategyChoose", SimplexStrategy::kSimplexStrategyChoose)
       .value("kSimplexStrategyDual", SimplexStrategy::kSimplexStrategyDual)
@@ -1445,8 +1501,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kSimplexStrategyMax", SimplexStrategy::kSimplexStrategyMax)
       .value("kSimplexStrategyNum", SimplexStrategy::kSimplexStrategyNum)
       .export_values();
-  py::enum_<SimplexUnscaledSolutionStrategy>(simplex_constants,
-                                             "SimplexUnscaledSolutionStrategy", py::module_local())
+  py::enum_<SimplexUnscaledSolutionStrategy>(
+      simplex_constants, "SimplexUnscaledSolutionStrategy", py::module_local())
       .value(
           "kSimplexUnscaledSolutionStrategyMin",
           SimplexUnscaledSolutionStrategy::kSimplexUnscaledSolutionStrategyMin)
@@ -1466,7 +1522,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
           "kSimplexUnscaledSolutionStrategyNum",
           SimplexUnscaledSolutionStrategy::kSimplexUnscaledSolutionStrategyNum)
       .export_values();
-  py::enum_<SimplexSolvePhase>(simplex_constants, "SimplexSolvePhase", py::module_local())
+  py::enum_<SimplexSolvePhase>(simplex_constants, "SimplexSolvePhase",
+                               py::module_local())
       .value("kSolvePhaseMin", SimplexSolvePhase::kSolvePhaseMin)
       .value("kSolvePhaseError", SimplexSolvePhase::kSolvePhaseError)
       .value("kSolvePhaseExit", SimplexSolvePhase::kSolvePhaseExit)
@@ -1481,8 +1538,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kSolvePhaseTabooBasis", SimplexSolvePhase::kSolvePhaseTabooBasis)
       .value("kSolvePhaseMax", SimplexSolvePhase::kSolvePhaseMax)
       .export_values();
-  py::enum_<SimplexEdgeWeightStrategy>(simplex_constants,
-                                       "SimplexEdgeWeightStrategy", py::module_local())
+  py::enum_<SimplexEdgeWeightStrategy>(
+      simplex_constants, "SimplexEdgeWeightStrategy", py::module_local())
       .value("kSimplexEdgeWeightStrategyMin",
              SimplexEdgeWeightStrategy::kSimplexEdgeWeightStrategyMin)
       .value("kSimplexEdgeWeightStrategyChoose",
@@ -1496,7 +1553,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kSimplexEdgeWeightStrategyMax",
              SimplexEdgeWeightStrategy::kSimplexEdgeWeightStrategyMax)
       .export_values();
-  py::enum_<SimplexPriceStrategy>(simplex_constants, "SimplexPriceStrategy", py::module_local())
+  py::enum_<SimplexPriceStrategy>(simplex_constants, "SimplexPriceStrategy",
+                                  py::module_local())
       .value("kSimplexPriceStrategyMin",
              SimplexPriceStrategy::kSimplexPriceStrategyMin)
       .value("kSimplexPriceStrategyCol",
@@ -1511,7 +1569,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
              SimplexPriceStrategy::kSimplexPriceStrategyMax)
       .export_values();
   py::enum_<SimplexPivotalRowRefinementStrategy>(
-      simplex_constants, "SimplexPivotalRowRefinementStrategy", py::module_local())
+      simplex_constants, "SimplexPivotalRowRefinementStrategy",
+      py::module_local())
       .value("kSimplexInfeasibilityProofRefinementMin",
              SimplexPivotalRowRefinementStrategy::
                  kSimplexInfeasibilityProofRefinementMin)
@@ -1528,8 +1587,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
              SimplexPivotalRowRefinementStrategy::
                  kSimplexInfeasibilityProofRefinementMax)
       .export_values();
-  py::enum_<SimplexPrimalCorrectionStrategy>(simplex_constants,
-                                             "SimplexPrimalCorrectionStrategy", py::module_local())
+  py::enum_<SimplexPrimalCorrectionStrategy>(
+      simplex_constants, "SimplexPrimalCorrectionStrategy", py::module_local())
       .value(
           "kSimplexPrimalCorrectionStrategyNone",
           SimplexPrimalCorrectionStrategy::kSimplexPrimalCorrectionStrategyNone)
@@ -1540,7 +1599,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
              SimplexPrimalCorrectionStrategy::
                  kSimplexPrimalCorrectionStrategyAlways)
       .export_values();
-  py::enum_<SimplexNlaOperation>(simplex_constants, "SimplexNlaOperation", py::module_local())
+  py::enum_<SimplexNlaOperation>(simplex_constants, "SimplexNlaOperation",
+                                 py::module_local())
       .value("kSimplexNlaNull", SimplexNlaOperation::kSimplexNlaNull)
       .value("kSimplexNlaBtranFull", SimplexNlaOperation::kSimplexNlaBtranFull)
       .value("kSimplexNlaPriceFull", SimplexNlaOperation::kSimplexNlaPriceFull)
@@ -1557,14 +1617,16 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kNumSimplexNlaOperation",
              SimplexNlaOperation::kNumSimplexNlaOperation)
       .export_values();
-  py::enum_<EdgeWeightMode>(simplex_constants, "EdgeWeightMode", py::module_local())
+  py::enum_<EdgeWeightMode>(simplex_constants, "EdgeWeightMode",
+                            py::module_local())
       .value("kDantzig", EdgeWeightMode::kDantzig)
       .value("kDevex", EdgeWeightMode::kDevex)
       .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
       .value("kCount", EdgeWeightMode::kCount);
   py::module_ callbacks = m.def_submodule("cb", "Callback interface submodule");
   // Types for interface
-  py::enum_<HighsCallbackType>(callbacks, "HighsCallbackType", py::module_local())
+  py::enum_<HighsCallbackType>(callbacks, "HighsCallbackType",
+                               py::module_local())
       .value("kCallbackMin", HighsCallbackType::kCallbackMin)
       .value("kCallbackLogging", HighsCallbackType::kCallbackLogging)
       .value("kCallbackSimplexInterrupt",
@@ -1585,34 +1647,50 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();
   // Classes
-  py::class_<HighsCallbackDataOut>(callbacks, "HighsCallbackDataOut",
-                                   py::module_local())
+  py::class_<HighsCallbackOutput>(callbacks, "HighsCallbackOutput",
+                                  py::module_local())
       .def(py::init<>())
-      .def_readwrite("log_type", &HighsCallbackDataOut::log_type)
-      .def_readwrite("running_time", &HighsCallbackDataOut::running_time)
+      .def_readwrite("log_type", &HighsCallbackOutput::log_type)
+      .def_readwrite("running_time", &HighsCallbackOutput::running_time)
       .def_readwrite("simplex_iteration_count",
-                     &HighsCallbackDataOut::simplex_iteration_count)
+                     &HighsCallbackOutput::simplex_iteration_count)
       .def_readwrite("ipm_iteration_count",
-                     &HighsCallbackDataOut::ipm_iteration_count)
+                     &HighsCallbackOutput::ipm_iteration_count)
       .def_readwrite("pdlp_iteration_count",
-                     &HighsCallbackDataOut::pdlp_iteration_count)
+                     &HighsCallbackOutput::pdlp_iteration_count)
       .def_readwrite("objective_function_value",
-                     &HighsCallbackDataOut::objective_function_value)
-      .def_readwrite("mip_node_count", &HighsCallbackDataOut::mip_node_count)
-      .def_readwrite("mip_primal_bound",
-                     &HighsCallbackDataOut::mip_primal_bound)
-      .def_readwrite("mip_dual_bound", &HighsCallbackDataOut::mip_dual_bound)
-      .def_readwrite("mip_gap", &HighsCallbackDataOut::mip_gap)
-      .def_readwrite("mip_solution", &HighsCallbackDataOut::mip_solution)
-      .def_readwrite("cutpool_num_col", &HighsCallbackDataOut::cutpool_num_col)
-      .def_readwrite("cutpool_num_cut", &HighsCallbackDataOut::cutpool_num_cut)
-      .def_readwrite("cutpool_index", &HighsCallbackDataOut::cutpool_index)
-      .def_readwrite("cutpool_value", &HighsCallbackDataOut::cutpool_value)
-      .def_readwrite("cutpool_lower", &HighsCallbackDataOut::cutpool_lower)
-      .def_readwrite("cutpool_upper", &HighsCallbackDataOut::cutpool_upper);
+                     &HighsCallbackOutput::objective_function_value)
+      .def_readwrite("mip_node_count", &HighsCallbackOutput::mip_node_count)
+      .def_readwrite("mip_primal_bound", &HighsCallbackOutput::mip_primal_bound)
+      .def_readwrite("mip_dual_bound", &HighsCallbackOutput::mip_dual_bound)
+      .def_readwrite("mip_gap", &HighsCallbackOutput::mip_gap)
+      .def_property_readonly(
+          "mip_solution", make_readonly_ptr(&HighsCallbackOutput::mip_solution))
+      .def_readwrite("cutpool_num_col", &HighsCallbackOutput::cutpool_num_col)
+      .def_readwrite("cutpool_num_cut", &HighsCallbackOutput::cutpool_num_cut)
+      .def_property_readonly(
+          "cutpool_index",
+          make_readonly_ptr(&HighsCallbackOutput::cutpool_index))
+      .def_property_readonly(
+          "cutpool_value",
+          make_readonly_ptr(&HighsCallbackOutput::cutpool_value))
+      .def_property_readonly(
+          "cutpool_lower",
+          make_readonly_ptr(&HighsCallbackOutput::cutpool_lower))
+      .def_property_readonly(
+          "cutpool_upper",
+          make_readonly_ptr(&HighsCallbackOutput::cutpool_upper));
 
-  py::class_<HighsCallbackDataIn>(callbacks, "HighsCallbackDataIn", py::module_local())
+  py::class_<HighsCallbackInput>(callbacks, "HighsCallbackInput",
+                                 py::module_local())
       .def(py::init<>())
-      .def_readwrite("user_interrupt", &HighsCallbackDataIn::user_interrupt)
-      .def_readwrite("user_solution", &HighsCallbackDataIn::user_solution);
+      .def_readwrite("user_interrupt", &HighsCallbackInput::user_interrupt)
+      .def_readwrite("user_has_solution",
+                     &HighsCallbackInput::user_has_solution)
+      .def_property_readonly(
+          "user_solution",
+          make_readonly_ptr(&HighsCallbackInput::user_solution))
+      .def("setSolution", highs_setcbSolution)
+      .def("setSolution", highs_setcbSparseSolution)
+      .def("repairSolution", &HighsCallbackInput::repairSolution);
 }

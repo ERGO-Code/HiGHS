@@ -22,6 +22,7 @@ extern "C" {
  *
  */
 typedef struct {
+  void* cbdata;  // cast of HighsCallbackOutput
   int log_type;  // cast of HighsLogType
   double running_time;
   HighsInt simplex_iteration_count;
@@ -44,18 +45,20 @@ typedef struct {
   double* cutpool_lower;
   double* cutpool_upper;
   HighsInt user_solution_callback_origin;
-} HighsCCallbackDataOut;
+} HighsCallbackDataOut;
 
 typedef struct {
+  void* cbdata;  // cast of HighsCallbackInput
   int user_interrupt;
+  int user_has_solution;
   HighsInt user_solution_size;
   double* user_solution;
-} HighsCCallbackDataIn;
+} HighsCallbackDataIn;
 
 // Additional callback handling
 typedef void (*HighsCCallbackType)(int, const char*,
-                                   const HighsCCallbackDataOut*,
-                                   HighsCCallbackDataIn*, void*);
+                                   const HighsCallbackDataOut*,
+                                   HighsCallbackDataIn*, void*);
 
 #ifdef __cplusplus
 }

@@ -14,6 +14,7 @@ from ._core import (
     cb,  # type: ignore
     _Highs,  # type: ignore
     kHighsInf,
+    kHighsUndefined
 )
 
 # backwards typing support information for HighspyArray
@@ -1195,8 +1196,8 @@ class Highs(_Highs):
     def __internal_callback(
         callback_type: cb.HighsCallbackType,
         message: str,
-        data_out: cb.HighsCallbackDataOut,
-        data_in: Optional[cb.HighsCallbackDataIn],
+        data_out: cb.HighsCallbackOutput,
+        data_in: Optional[cb.HighsCallbackInput],
         user_callback_data: Any,
     ):
         user_callback_data.callbacks[int(callback_type)].fire(callback_type, message, data_out, data_in)
@@ -1307,7 +1308,7 @@ class Highs(_Highs):
         return self.callbacks[int(cb.HighsCallbackType.kCallbackMipDefineLazyConstraints)]
 
     @property
-    def cbkMipUserSolution(self):
+    def cbMipUserSolution(self):
         return self.callbacks[int(cb.HighsCallbackType.kCallbackMipUserSolution)]
 
     # callback setters are required for +=/-= syntax
@@ -1357,6 +1358,12 @@ class Highs(_Highs):
         if self.cbMipDefineLazyConstraints is not value:
             raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
 
+    @cbMipUserSolution.setter
+    def cbMipUserSolution(self, value: HighsCallback):
+        if self.cbMipUserSolution is not value:
+            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
+
+
 
 ##
 ## Callback support
@@ -1368,8 +1375,8 @@ class HighsCallbackEvent(object):
         self,
         callback_type: cb.HighsCallbackType,
         message: str,
-        data_out: cb.HighsCallbackDataOut,
-        data_in: Optional[cb.HighsCallbackDataIn],
+        data_out: cb.HighsCallbackOutput,
+        data_in: Optional[cb.HighsCallbackInput],
         user_data: Optional[Any]
     ):
         self.callback_type = callback_type
@@ -1482,8 +1489,8 @@ class HighsCallback(object):
         self,
         callback_type: cb.HighsCallbackType,
         message: str,
-        data_out: cb.HighsCallbackDataOut,
-        data_in: cb.HighsCallbackDataIn,
+        data_out: cb.HighsCallbackOutput,
+        data_in: cb.HighsCallbackInput,
     ):
         """
         Fires the event, executing all subscribed callbacks.
