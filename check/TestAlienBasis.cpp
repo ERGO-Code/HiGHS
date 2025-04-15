@@ -587,13 +587,6 @@ void testAlienBasis(const bool avgas, const HighsInt seed) {
   }
   const bool run_dual_random_test = true;
   if (run_dual_random_test) {
-    if (!avgas && seed == 1) {
-      highs.setOptionValue("output_flag", true);
-      highs.setOptionValue("log_dev_level", 1);
-      printf("\n\n!!!! testAlienBasis: avgas = %d; seed = %d\n", avgas,
-             int(seed));
-    }
-
     // Create a rectangular basis using random selection of num_col variables
     basis.col_status.assign(num_col, HighsBasisStatus::kNonbasic);
     basis.row_status.assign(num_row, HighsBasisStatus::kNonbasic);

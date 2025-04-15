@@ -1131,8 +1131,10 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   const HighsOptions& options = highs.getOptions();
   const HighsInfo& info = highs.getInfo();
 
-  highs.setOptionValue("log_to_console", true);
-  highs.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+  if (dev_run) {
+    highs.setOptionValue("log_to_console", true);
+    highs.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+  }
 
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
