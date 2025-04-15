@@ -399,16 +399,17 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
                 mid_status == kHighsSolutionLo) {
               // Bound interval is short, or variable is below the
               // midpoint (which is only possible lower is finite)
-              updateRelativeMeasure(lower, relative_bound_measure);
+              if (lower) updateRelativeMeasure(lower, relative_bound_measure);
             } else {
               assert(mid_status == kHighsSolutionUp);
               // Variable is above the midpoint of the bound interval
               // (which is only possible upper is finite)
-              relative_bound_measure =
-                  std::max(std::fabs(upper), relative_bound_measure);
+              if (upper)
+                relative_bound_measure =
+                    std::max(std::fabs(upper), relative_bound_measure);
             }
-            assert(0 < relative_bound_measure &&
-                   relative_bound_measure < kHighsInf);
+            // 2251
+            assert(relative_bound_measure < kHighsInf);
           }
           double relative_primal_infeasibility =
               primal_infeasibility / (1.0 + relative_bound_measure);
@@ -434,7 +435,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
             // Determine the denominator for the relative dual
             // infeasiblilty
             double relative_cost_measure = highs_norm_costs;
-            if (is_col && dual * dual >= dual_feasibility_tolerance) {
+            if (is_col && cost && dual * dual >= dual_feasibility_tolerance) {
               // Dual value is infeasible, but not close to zero:
               // unusual, but possible if absolute dual infeasiblities
               // are not small. hence the cost has not been included in
@@ -442,8 +443,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               // infeasiblility.
               updateRelativeMeasure(cost, relative_cost_measure);
             }
-            assert(0 < relative_cost_measure &&
-                   relative_cost_measure < kHighsInf);
+            // 2251
+            assert(relative_cost_measure < kHighsInf);
             double relative_dual_infeasibility =
                 dual_infeasibility / (1.0 + relative_cost_measure);
             if (relative_dual_infeasibility > dual_feasibility_tolerance)
