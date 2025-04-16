@@ -1,0 +1,55 @@
+name: build-intel
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Add oneAPI to apt
+        shell: bash
+        run: |
+          cd /tmp
+          wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
+      
+      - name: Install oneAPI basekit
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install intel-basekit
+         
+      - name: Check compiler
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          icpx --version
+          icx --version
+
+      - name: Configure
+        shell: bash
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+          -DCMAKE_INSTALL_PREFIX=install \
+          -DCMAKE_CXX_COMPILER=icpx \
+          -DCMAKE_C_COMPILER=icx \
+          -DALL_TESTS=ON \
+          -DIntelDPCPP_DIR="/opt/intel/oneapi/compiler/latest/linux/cmake/SYCL" \
+
+      - name: Build
+        shell: bash
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          cmake --build build --parallel
+
+      - name: Test
+        shell: bash
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          export SYCL_DEVICE_FILTER=opencl.cpu
+          ctest --test-dir build --output-on-failure --timeout 300 
