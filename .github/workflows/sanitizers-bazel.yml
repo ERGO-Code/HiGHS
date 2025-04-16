@@ -1,4 +1,4 @@
-name: build-bazel
+name: sanitizers-bazel
 
 on: [push, pull_request]
 
@@ -7,24 +7,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: bazelbuild/setup-bazelisk@v3
 
-      - name: bazel clean
+      - name: Bazel clean
         run: bazel clean
       
-      - name: build bazel
-        run: bazel build //...
+      - name: Bazel build
+        run: bazel build -c dbg --config=tsan //...
       
-      - name: test all
-        run: bazel test --test_output=all //...
-
-      - name: test example
-        run: ./bazel-bin/call-highs-example
+      - name: Bazel test
+        run: bazel test -c dbg --config=tsan //...
 
       - name: Upload bazel-testlogs
         uses: actions/upload-artifact@v4
