@@ -126,7 +126,6 @@ option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 # Only Debug is theted atm 
 # See below for RelWithDeb info, todo test wip
 set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
-option(SANITIZE_THREAD "TSAN" OFF)
 
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)

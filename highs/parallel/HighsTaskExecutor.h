@@ -28,12 +28,14 @@
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
 
-#if defined(SANITIZE_THREAD)
-#define TSAN_ENABLED
-#elif defined(__has_feature) 
+#ifdef __has_feature
 #if __has_feature(thread_sanitizer)
 #define TSAN_ENABLED
 #endif
+#endif
+
+#ifdef __SANITIZE_THREAD__
+#define TSAN_ENABLED
 #endif
 
 #ifdef TSAN_ENABLED
@@ -144,9 +146,20 @@ class HighsTaskExecutor {
 
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
+#ifdef __has_feature
+std::cout << "__has_feature is ON" << std::endl;
+#else
+std::cout << "__has_feature is OFF" << std::endl;
+#endif
+#ifdef TSAN_ENABLED
+std::cout << "TSAN is ON" << std::endl;
+#else
+std::cout << "TSAN is OFF" << std::endl;
+#endif
     for (int i = 0; i < numThreads; ++i) {
       workerDeques[i] = cache_aligned::make_unique<HighsSplitDeque>(
           workerBunk, workerDeques.data(), i, numThreads);
+
 
       // TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk);
     }
