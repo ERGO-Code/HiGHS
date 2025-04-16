@@ -156,9 +156,6 @@ class HighsSplitDeque {
 
     void publishWork(HighsSplitDeque* localDeque) {
       HighsSplitDeque* sleeper = popSleeper(localDeque);
-
-      // TSAN_ANNOTATE_HAPPENS_BEFORE(sleeper);
-
       while (sleeper) {
         uint32_t t = localDeque->selfStealAndGetTail();
         if (t == localDeque->ownerData.splitCopy) {
@@ -168,7 +165,6 @@ class HighsSplitDeque {
                                                     std::memory_order_relaxed);
             haveJobs.fetch_add(-1, std::memory_order_release);
           }
-          // TSAN_ANNOTATE_HAPPENS_AFTER(sleeper);
           pushSleeper(sleeper);
           return;
         } else {
@@ -185,7 +181,6 @@ class HighsSplitDeque {
           return;
         }
 
-        // TSAN_ANNOTATE_HAPPENS_AFTER(sleeper);
         sleeper = popSleeper(localDeque);
       }
     }
@@ -193,14 +188,12 @@ class HighsSplitDeque {
     HighsTask* waitForNewTask(HighsSplitDeque* localDeque) {
       pushSleeper(localDeque);
       localDeque->stealerData.semaphore.acquire();
-      // std::cout << " return injected task read " << &localDeque->stealerData.injectedTask << std::endl;
+
+      TSAN_ANNOTATE_HAPPENS_AFTER(&localDeque->stealerData.injectedTask);
+
       return localDeque->stealerData.injectedTask;
     }
   };
-
-  // const HighsTask * getInjectedTask() {
-  //   return stealerData.injectedTask;
-  // }
 
  private:
   static_assert(sizeof(OwnerData) <= 64,
@@ -472,11 +465,7 @@ class HighsSplitDeque {
   void injectTaskAndNotify(HighsTask* t) {
     stealerData.injectedTask = t;
 
-    // std::cout << "     injected task write " << &stealerData.injectedTask << std::endl;
-
-
-    // TSAN_ANNOTATE_HAPPENS_BEFORE(&stealerData.injectedTask);
-    // TSAN_ANNOTATE_HAPPENS_AFTER(&stealerData);
+    TSAN_ANNOTATE_HAPPENS_BEFORE(&stealerData.injectedTask);
 
     stealerData.semaphore.release();
   }

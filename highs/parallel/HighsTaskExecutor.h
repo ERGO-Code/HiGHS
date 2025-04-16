@@ -20,14 +20,11 @@
 #include <thread>
 #include <vector>
 
-#include <iostream>
-
 #include "parallel/HighsCacheAlign.h"
 #include "parallel/HighsSchedulerConstants.h"
 #include "parallel/HighsSplitDeque.h"
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
-
 
 class HighsTaskExecutor {
  public:
@@ -37,11 +34,7 @@ class HighsTaskExecutor {
     bool isMain{false};
 
     void dispose();
-    ~ExecutorHandle() { 
-
-      // TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk)
-      // dispose(); 
-      }
+    ~ExecutorHandle() { dispose(); }
   };
 
  private:
@@ -106,16 +99,8 @@ class HighsTaskExecutor {
       threadLocalWorkerDeque() = localDeque;
 
       HighsTask* currentTask = ptr->workerBunk->waitForNewTask(localDeque);
-
-      // auto ptr = localDeque->getInjectedTask();
-      // TSAN_ANNOTATE_HAPPENS_BEFORE(localDeque->getInjectedTask());
-
       while (currentTask != nullptr) {
         localDeque->runStolenTask(currentTask);
-        // TSAN_ANNOTATE_HAPPENS_BEFORE(currentTask);
-
-        // TSAN_ANNOTATE_HAPPENS_AFTER(currentTask);
-
 
         currentTask = ptr->random_steal_loop(localDeque);
         if (currentTask != nullptr) continue;
@@ -133,23 +118,9 @@ class HighsTaskExecutor {
 
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
-#ifdef __has_feature
-std::cout << "__has_feature is ON" << std::endl;
-#else
-std::cout << "__has_feature is OFF" << std::endl;
-#endif
-#ifdef TSAN_ENABLED
-std::cout << "TSAN is ON" << std::endl;
-#else
-std::cout << "TSAN is OFF" << std::endl;
-#endif
-    for (int i = 0; i < numThreads; ++i) {
+    for (int i = 0; i < numThreads; ++i)
       workerDeques[i] = cache_aligned::make_unique<HighsSplitDeque>(
           workerBunk, workerDeques.data(), i, numThreads);
-
-
-      // TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk);
-    }
 
     threadLocalWorkerDeque() = workerDeques[0].get();
     workerThreads.reserve(numThreads - 1);
@@ -158,10 +129,7 @@ std::cout << "TSAN is OFF" << std::endl;
     for (int i = 1, numThreads = static_cast<int>(workerDeques.size());
          i < numThreads; ++i) {
       workerThreads.emplace_back(&HighsTaskExecutor::run_worker, i, this);
-      // TSAN_ANNOTATE_HAPPENS_BEFORE(&workerThreads[i]);
-      // std::cout <<"happens before thread " << i << ": " << &workerThreads[i] << std::endl;
     }
-
   }
 
   void stopWorkerThreads(bool blocking = false) {
@@ -172,21 +140,15 @@ std::cout << "TSAN is OFF" << std::endl;
     // now inject the null task as termination signal to every worker
     for (auto& workerDeque : workerDeques) {
       workerDeque->injectTaskAndNotify(nullptr);
-      // TSAN_ANNOTATE_HAPPENS_AFTER(workerDeque->getInjectedTask());
     }
 
     // only block if called on main thread, otherwise deadlock may occur
     if (blocking && executorHandle.isMain) {
       for (auto& workerThread : workerThreads) {
-        // TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
-        // std::cout <<"happens after thread blocking and isMain" << ": " << &workerThread << std::endl;
         workerThread.join();
-        // std::cout <<"happens after join" << std::endl;
       }
     } else {
       for (auto& workerThread : workerThreads) {
-        // TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
-        // std::cout <<"happens after thread " << ": " << &workerThread << std::endl;
         workerThread.detach();
       }
     }
