@@ -5,8 +5,6 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include <climits>
-
 #include "mip/HighsMipSolverData.h"
 #include "mip/feasibilityjump.hh"
 #include "util/HighsSparseMatrix.h"
