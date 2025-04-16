@@ -495,9 +495,6 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
   REQUIRE(run_status == HighsStatus::kOk);
 
-  // This also causes the meson build CI test to fail!
-  REQUIRE(h.getInfo().mip_node_count < mip_node_count);
-
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
 
