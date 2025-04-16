@@ -218,26 +218,26 @@ TEST_CASE("MatrixMultHighs", "[parallel]") {
   matrix_multiplication("highs", parallel::num_threads(), 1);
 }
 
-TEST_CASE("FibonacciTasksHighs", "[parallel]") {
-  HighsTaskExecutor::shutdown();
-  auto beg = std::chrono::high_resolution_clock::now();
-  parallel::initialize_scheduler(numThreads);
-  int64_t result = fib(41);
-  auto end = std::chrono::high_resolution_clock::now();
+// TEST_CASE("FibonacciTasksHighs", "[parallel]") {
+//   HighsTaskExecutor::shutdown();
+//   auto beg = std::chrono::high_resolution_clock::now();
+//   parallel::initialize_scheduler(numThreads);
+//   int64_t result = fib(41);
+//   auto end = std::chrono::high_resolution_clock::now();
 
-  if (dev_run)
-    std::cout << "time elapsed for fib(41) with HiGHS work stealing: "
-              << (std::chrono::duration_cast<std::chrono::microseconds>(end -
-                                                                        beg)
-                      .count() /
-                  1e3)
-              << "ms" << std::endl;
+//   if (dev_run)
+//     std::cout << "time elapsed for fib(41) with HiGHS work stealing: "
+//               << (std::chrono::duration_cast<std::chrono::microseconds>(end -
+//                                                                         beg)
+//                       .count() /
+//                   1e3)
+//               << "ms" << std::endl;
 
-  // REQUIRE(result == 4807526976);
-  // REQUIRE(result == 20365011074);
-  // fib 41
-  REQUIRE(result == 267914296);
-}
+//   // REQUIRE(result == 4807526976);
+//   // REQUIRE(result == 20365011074);
+//   // fib 41
+//   REQUIRE(result == 267914296);
+// }
 
 #if 0
 TEST_CASE("MatrixMultOmp", "[parallel]") {

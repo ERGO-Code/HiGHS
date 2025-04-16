@@ -28,27 +28,6 @@
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
 
-#ifdef __has_feature
-#if __has_feature(thread_sanitizer)
-#define TSAN_ENABLED
-#endif
-#endif
-
-#ifdef __SANITIZE_THREAD__
-#define TSAN_ENABLED
-#endif
-
-#ifdef TSAN_ENABLED
-#define TSAN_ANNOTATE_HAPPENS_BEFORE(addr) \
-    AnnotateHappensBefore(__FILE__, __LINE__, (void*)(addr))
-#define TSAN_ANNOTATE_HAPPENS_AFTER(addr) \
-    AnnotateHappensAfter(__FILE__, __LINE__, (void*)(addr))
-extern "C" void AnnotateHappensBefore(const char* f, int l, void* addr);
-extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
-#else
-#define TSAN_ANNOTATE_HAPPENS_BEFORE(addr)
-#define TSAN_ANNOTATE_HAPPENS_AFTER(addr)
-#endif
 
 class HighsTaskExecutor {
  public:
@@ -127,8 +106,16 @@ class HighsTaskExecutor {
       threadLocalWorkerDeque() = localDeque;
 
       HighsTask* currentTask = ptr->workerBunk->waitForNewTask(localDeque);
+
+      // auto ptr = localDeque->getInjectedTask();
+      // TSAN_ANNOTATE_HAPPENS_BEFORE(localDeque->getInjectedTask());
+
       while (currentTask != nullptr) {
         localDeque->runStolenTask(currentTask);
+        // TSAN_ANNOTATE_HAPPENS_BEFORE(currentTask);
+
+        // TSAN_ANNOTATE_HAPPENS_AFTER(currentTask);
+
 
         currentTask = ptr->random_steal_loop(localDeque);
         if (currentTask != nullptr) continue;
@@ -185,6 +172,7 @@ std::cout << "TSAN is OFF" << std::endl;
     // now inject the null task as termination signal to every worker
     for (auto& workerDeque : workerDeques) {
       workerDeque->injectTaskAndNotify(nullptr);
+      // TSAN_ANNOTATE_HAPPENS_AFTER(workerDeque->getInjectedTask());
     }
 
     // only block if called on main thread, otherwise deadlock may occur
@@ -193,6 +181,7 @@ std::cout << "TSAN is OFF" << std::endl;
         // TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
         // std::cout <<"happens after thread blocking and isMain" << ": " << &workerThread << std::endl;
         workerThread.join();
+        // std::cout <<"happens after join" << std::endl;
       }
     } else {
       for (auto& workerThread : workerThreads) {
