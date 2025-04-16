@@ -306,10 +306,10 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
     REQUIRE(run_status == HighsStatus::kWarning);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
   }
-  
+
   if (dev_run) h.writeSolution("", 1);
   HighsSolution solution = h.getSolution();
-  
+
   std::vector<HighsInt> index = {0, 1, 2};
   std::vector<double> value = {1, 1, 1};
   h.addRow(-kHighsInf, 2, 3, index.data(), value.data());
@@ -319,5 +319,4 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   h.setSolution(solution);
   run_status = h.run();
   if (dev_run) h.writeSolution("", 1);
-
 }

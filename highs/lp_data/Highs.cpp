@@ -1369,6 +1369,10 @@ HighsStatus Highs::optimizeModel() {
     bool have_optimal_solution = false;
     // ToDo Put solution of presolved problem in a separate method
 
+    // Record the number of iterations when PDLP is used to solve the
+    // presolved problem, since the iteration count is reset to zero
+    // if PDLP is used to clean up after postsolve
+    HighsInt presolved_lp_pdlp_iteration_count = 0;
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
@@ -1446,6 +1450,7 @@ HighsStatus Highs::optimizeModel() {
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
           return returnFromOptimizeModel(return_status, undo_mods);
+        presolved_lp_pdlp_iteration_count = info_.pdlp_iteration_count;
         have_optimal_solution = model_status_ == HighsModelStatus::kOptimal;
         no_incumbent_lp_solution_or_basis =
             model_status_ == HighsModelStatus::kInfeasible ||
@@ -1601,18 +1606,27 @@ HighsStatus Highs::optimizeModel() {
           // and IPX determined optimality
           solution_.dual_valid = true;
           basis_.invalidate();
-          /*
-          if (options_.solver == kPdlpString) {
-                this->lpKktCheck("After postsolve");
-             solveLp(incumbent_lp,
-                     "Solving the original LP from the solution after
-          postsolve", this_solve_original_lp_time); return_status =
-          HighsStatus::kOk; return_status =
-          interpretCallStatus(options_.log_options, call_status, return_status,
-          "callSolveLp");
-
+          this->lpKktCheck("After postsolve");
+          if (options_.solver == kPdlpString &&
+              model_status_ == HighsModelStatus::kUnknown) {
+            // Primal/dual infeasibilities/residuals can be magnified
+            // in postsolve, leading to a loss of optimality, so run
+            // PDLP on the original problem, starting from the
+            // solution obtained from postsolve
+            solveLp(incumbent_lp,
+                    "Solving the original LP from the solution after postsolve",
+                    this_solve_original_lp_time);
+            return_status = HighsStatus::kOk;
+            return_status =
+                interpretCallStatus(options_.log_options, call_status,
+                                    return_status, "callSolveLp");
+            if (return_status == HighsStatus::kError)
+              return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+            // Update the number of PDLP, iterations, since the
+            // iteration count is reset to zero if PDLP is used to
+            // clean up after postsolve
+            info_.pdlp_iteration_count += presolved_lp_pdlp_iteration_count;
           }
-          */
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP
