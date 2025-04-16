@@ -164,6 +164,8 @@ class HighsInfo : public HighsInfoStruct {
 
   void invalidate();
   void invalidateKkt();
+  void invalidatePrimalKkt();
+  void invalidateDualKkt();
 
  private:
   void deleteRecords() {

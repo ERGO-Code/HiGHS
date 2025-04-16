@@ -129,14 +129,6 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   double& primal_dual_objective_error = highs_info.primal_dual_objective_error;
 
-  num_complementarity_violation = kHighsIllegalComplementarityCount;
-  max_complementarity_violation = kHighsIllegalComplementarityViolation;
-
-  primal_dual_objective_error = kHighsIllegalComplementarityViolation;
-
-  highs_info.primal_solution_status = kSolutionStatusNone;
-  highs_info.dual_solution_status = kSolutionStatusNone;
-
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
   const bool have_integrality = (lp.integrality_.size() != 0);
@@ -834,18 +826,14 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
     // infeasibility counts
     assert((int)solution.col_value.size() >= lp.num_col_);
     assert((int)solution.row_value.size() >= lp.num_row_);
-    //    num_primal_infeasibility = 0;
     max_primal_infeasibility = 0;
-    //    sum_primal_infeasibility = 0;
     primal_dual_errors.glpsol_max_primal_infeasibility.reset();
     if (have_dual_solution) {
       // There's a dual solution, so check its size and initialise the
       // infeasibility counts
       assert((int)solution.col_dual.size() >= lp.num_col_);
       assert((int)solution.row_dual.size() >= lp.num_row_);
-      //      num_dual_infeasibility = 0;
       max_dual_infeasibility = 0;
-      //      sum_dual_infeasibility = 0;
       primal_dual_errors.glpsol_max_dual_infeasibility.reset();
     }
   }
@@ -853,37 +841,24 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
   if (have_primal_solution) {
     num_primal_residual_error = 0;
     max_primal_residual_error = 0;
-    //    sum_primal_residual_error = 0;
-    //    num_relative_primal_residual_error = 0;
     max_relative_primal_residual_error = 0;
-    //    sum_relative_primal_residual_error = 0;
     primal_dual_errors.glpsol_max_primal_residual.reset();
 
   } else {
     num_primal_residual_error = kHighsIllegalResidualCount;
     max_primal_residual_error = kHighsIllegalResidualMeasure;
-    //    sum_primal_residual_error = kHighsIllegalResidualMeasure;
-    //    num_relative_primal_residual_error = kHighsIllegalResidualCount;
     max_relative_primal_residual_error = kHighsIllegalResidualMeasure;
-    //    sum_relative_primal_residual_error =
-    //    kHighsIllegalResidualMeasure;
     primal_dual_errors.glpsol_max_primal_residual.invalidate();
   }
   if (have_dual_solution) {
     num_dual_residual_error = 0;
     max_dual_residual_error = 0;
-    //    sum_dual_residual_error = 0;
-    //    num_relative_dual_residual_error = 0;
     max_relative_dual_residual_error = 0;
-    //    sum_relative_dual_residual_error = 0;
     primal_dual_errors.glpsol_max_dual_residual.reset();
   } else {
     num_dual_residual_error = kHighsIllegalResidualCount;
     max_dual_residual_error = kHighsIllegalResidualMeasure;
-    //    sum_dual_residual_error = kHighsIllegalResidualMeasure;
-    //    num_relative_dual_residual_error = kHighsIllegalResidualCount;
     max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
-    //    sum_relative_dual_residual_error = kHighsIllegalResidualMeasure;
     primal_dual_errors.glpsol_max_dual_residual.invalidate();
   }
   // Without a primal solution, nothing can be done!
@@ -949,10 +924,6 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
           primal_infeasibility / (1 + std::fabs(lower));
     }
 
-    // Accumulate primal infeasibilities
-    if (primal_infeasibility > primal_feasibility_tolerance) {
-      //      num_primal_infeasibility++;
-    }
     if (max_primal_infeasibility < primal_infeasibility) {
       max_primal_infeasibility = primal_infeasibility;
       max_primal_infeasibility_index = iVar;
@@ -961,18 +932,13 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
       max_relative_primal_infeasibility = relative_primal_infeasibility;
       max_relative_primal_infeasibility_index = iVar;
     }
-    //    sum_primal_infeasibility += primal_infeasibility;
 
     if (have_dual_solution) {
       // Accumulate dual infeasibilities
-      if (dual_infeasibility > dual_feasibility_tolerance) {
-        //        num_dual_infeasibility++;
-      }
       if (max_dual_infeasibility < dual_infeasibility) {
         max_dual_infeasibility = dual_infeasibility;
         max_dual_infeasibility_index = iVar;
       }
-      //      sum_dual_infeasibility += dual_infeasibility;
     }
     if (iVar < lp.num_col_) {
       HighsInt iCol = iVar;
@@ -1007,13 +973,11 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
   }
 
   // Relative dual infeasiblities are same as absolute
-  // clang-format off
   primal_dual_errors.glpsol_max_dual_infeasibility.relative_value =
   primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value;
 
   primal_dual_errors.glpsol_max_dual_infeasibility.relative_index =
   primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
-  // clang-format on
 }
 
 void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,

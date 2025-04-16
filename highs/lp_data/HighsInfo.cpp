@@ -22,8 +22,6 @@ void HighsInfo::invalidate() {
   crossover_iteration_count = -1;
   pdlp_iteration_count = -1;
   qp_iteration_count = -1;
-  primal_solution_status = kSolutionStatusNone;
-  dual_solution_status = kSolutionStatusNone;
   basis_validity = kBasisValidityInvalid;
   objective_function_value = 0;
   mip_dual_bound = 0;
@@ -34,22 +32,35 @@ void HighsInfo::invalidate() {
 }
 
 void HighsInfo::invalidateKkt() {
+  this->invalidatePrimalKkt();
+  this->invalidateDualKkt();
+}
+
+void HighsInfo::invalidatePrimalKkt() {
+  primal_solution_status = kSolutionStatusNone;
   num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  num_relative_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  max_relative_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  num_primal_residual_errors = kHighsIllegalResidualCount;
+  max_primal_residual_error = kHighsIllegalResidualMeasure;
+  num_relative_primal_residual_errors = kHighsIllegalResidualCount;
+  max_relative_primal_residual_error = kHighsIllegalResidualMeasure;
+  num_complementarity_violations = kHighsIllegalComplementarityCount;
+  max_complementarity_violation = kHighsIllegalComplementarityViolation;
+  primal_dual_objective_error = kHighsIllegalComplementarityViolation;
+}
+
+void HighsInfo::invalidateDualKkt() {
+  dual_solution_status = kSolutionStatusNone;
   num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  num_relative_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-  max_relative_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   num_relative_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   max_relative_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  num_primal_residual_errors = kHighsIllegalResidualCount;
-  max_primal_residual_error = kHighsIllegalResidualMeasure;
   num_dual_residual_errors = kHighsIllegalResidualCount;
   max_dual_residual_error = kHighsIllegalResidualMeasure;
-  num_relative_primal_residual_errors = kHighsIllegalResidualCount;
-  max_relative_primal_residual_error = kHighsIllegalResidualMeasure;
   num_relative_dual_residual_errors = kHighsIllegalResidualCount;
   max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
   num_complementarity_violations = kHighsIllegalComplementarityCount;

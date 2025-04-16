@@ -1711,19 +1711,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     // Modify the objective-related information
     this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
     this->info_.objective_function_value = 0;
-    this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-    this->info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    this->info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-    this->info_.num_primal_residual_errors = kHighsIllegalInfeasibilityCount;
-    this->info_.max_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
-    this->info_.num_dual_residual_errors = kHighsIllegalInfeasibilityCount;
-    this->info_.max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
-    this->info_.num_complementarity_violations =
-        kHighsIllegalComplementarityCount;
-    this->info_.max_complementarity_violation =
-        kHighsIllegalComplementarityViolation;
-    this->info_.primal_dual_objective_error =
-        kHighsIllegalComplementarityViolation;
+    this->info_.invalidateDualKkt();
     if (has_dual_ray) {
       assert(this->info_.num_primal_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
@@ -3737,19 +3725,7 @@ HighsStatus Highs::returnFromLexicographicOptimization(
     this->info_ = info;
     info_.objective_function_value = 0;
     info_.basis_validity = kBasisValidityInvalid;
-    info_.dual_solution_status = kSolutionStatusNone;
-    info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-    info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-    info_.num_relative_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-    info_.max_relative_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    info.num_dual_residual_errors = kHighsIllegalResidualCount;
-    info.max_dual_residual_error = kHighsIllegalResidualMeasure;
-    info.num_relative_dual_residual_errors = kHighsIllegalResidualCount;
-    info.max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
-    info.num_complementarity_violations = kHighsIllegalComplementarityCount;
-    info.max_complementarity_violation = kHighsIllegalComplementarityViolation;
-    info.primal_dual_objective_error = kHighsIllegalComplementarityViolation;
+    info_.invalidateDualKkt();
     this->solution_.value_valid = true;
     this->model_.lp_.col_cost_.assign(this->model_.lp_.num_col_, 0);
   }
