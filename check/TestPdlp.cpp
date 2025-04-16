@@ -26,7 +26,7 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
   highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
   HighsStatus run_status = HighsStatus::kOk;
-  bool optimal = false;//true;
+  bool optimal = false;  // true;
 
   const HighsInt pdlp_iteration_count_optimal = 240;
   run_status = highs.run();
@@ -233,6 +233,18 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
   }
 
   highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("pdlp-restart", "[pdlp]") {
+  Highs h;
+  // h.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  HighsStatus run_status = h.run();
+  h.setOptionValue("presolve", kHighsOffString);
+  run_status = h.run();
 }
 
 /*

@@ -49,7 +49,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
 
 void PDHG_Compute_Infeas_Residuals(CUPDLPwork *work);
 
-void PDHG_Init_Variables(CUPDLPwork *work);
+void PDHG_Init_Variables(const cupdlp_int* has_variables, CUPDLPwork *work);
 
 void PDHG_Check_Data(CUPDLPwork *work);
 
@@ -74,7 +74,7 @@ void PDHG_Print_Iter_Average(CUPDLPwork *pdhg);
 
 void PDHG_Compute_SolvingTime(CUPDLPwork *pdhg);
 
-cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg);
+cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg);
 
 cupdlp_retcode PDHG_PostSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
                               cupdlp_int *constraint_new_idx,
@@ -82,6 +82,13 @@ cupdlp_retcode PDHG_PostSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
                               cupdlp_float *col_value, cupdlp_float *col_dual,
                               cupdlp_float *row_value, cupdlp_float *row_dual,
                               cupdlp_int *value_valid, cupdlp_int *dual_valid);
+
+cupdlp_retcode PDHG_PreSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
+			     cupdlp_int *constraint_new_idx,
+			     cupdlp_int *constraint_type,
+			     cupdlp_float *col_value, cupdlp_float *col_dual,
+			     cupdlp_float *row_value, cupdlp_float *row_dual,
+			     cupdlp_int *value_valid, cupdlp_int *dual_valid);
 
 cupdlp_retcode LP_SolvePDHG(
     CUPDLPwork *pdhg, cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,

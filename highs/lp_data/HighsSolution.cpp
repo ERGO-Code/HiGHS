@@ -25,7 +25,7 @@ const uint8_t kHighsSolutionLo = -1;
 const uint8_t kHighsSolutionNo = 0;
 const uint8_t kHighsSolutionUp = 1;
 
-const bool printf_kkt = true;//false;//
+const bool printf_kkt = false;  // true;//
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
@@ -974,10 +974,10 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
 
   // Relative dual infeasiblities are same as absolute
   primal_dual_errors.glpsol_max_dual_infeasibility.relative_value =
-  primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value;
+      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value;
 
   primal_dual_errors.glpsol_max_dual_infeasibility.relative_index =
-  primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
+      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
 }
 
 void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
@@ -1799,7 +1799,8 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
 }
 
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
-  resetModelStatusAndHighsInfo(solver_object.model_status_, solver_object.highs_info_);
+  resetModelStatusAndHighsInfo(solver_object.model_status_,
+                               solver_object.highs_info_);
 }
 
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,

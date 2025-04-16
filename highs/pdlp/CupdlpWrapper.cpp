@@ -194,8 +194,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   highs_solution.row_value.resize(lp.num_row_);
   highs_solution.col_dual.resize(lp.num_col_);
   highs_solution.row_dual.resize(lp.num_row_);
-  int value_valid = 0;
-  int dual_valid = 0;
+  int value_valid = highs_solution.value_valid;
+  int dual_valid = highs_solution.dual_valid;
   int pdlp_model_status = 0;
   cupdlp_int pdlp_num_iter = 0;
 
@@ -224,8 +224,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
       model_status = HighsModelStatus::kUnboundedOrInfeasible;
     } else if (pdlp_model_status == TIMELIMIT_OR_ITERLIMIT) {
       model_status = pdlp_num_iter >= intParam[N_ITER_LIM] - 1
-	? HighsModelStatus::kIterationLimit
-	: HighsModelStatus::kTimeLimit;
+                         ? HighsModelStatus::kIterationLimit
+                         : HighsModelStatus::kTimeLimit;
     } else if (pdlp_model_status == FEASIBLE) {
       assert(111 == 666);
       model_status = HighsModelStatus::kUnknown;
