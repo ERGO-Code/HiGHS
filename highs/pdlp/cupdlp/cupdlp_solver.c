@@ -1176,10 +1176,22 @@ cupdlp_retcode PDHG_PreSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
   CUPDLPvec *x = iterates->x[0];
   CUPDLPvec *y = iterates->y[0];
 
-  for (int iCol = 0; iCol < problem->nCols; iCol++)
+  assert(constraint_new_idx);
+  assert(constraint_type);
+  int iCol = 0;
+  for (; iCol < nCols_origin; iCol++)
     x->data[iCol] = col_value[iCol];
-  for (int iRow = 0; iRow < problem->nRows; iRow++)
-    y->data[iRow] = sense * row_dual[iRow];
+
+  for (int iRow = 0; iRow < problem->nRows; iRow++) {
+    const double mu = constraint_type[iRow] == 1 ? -1 : 1;
+    /*
+    printf("Row %2d: constraint_new_idx = %d; constraint_type = %d; mu = %g\n",
+	   iRow, constraint_new_idx[iRow], constraint_type[iRow], mu);
+    */
+    y->data[constraint_new_idx[iRow]] = sense * mu * row_dual[iRow];
+    if (constraint_type[iRow] == 3) 
+      x->data[iCol++] = row_value[iRow];
+  }
 
    // Scale
   if (scaling->ifScaled) {
@@ -1188,11 +1200,12 @@ cupdlp_retcode PDHG_PreSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
   }
 
  
+  /*
   for (int iCol = 0; iCol < problem->nCols; iCol++)
     printf("PDHG_PreSolve:  Col %d primal value = %9.3g\n", iCol, x->data[iCol]);
   for (int iRow = 0; iRow < problem->nRows; iRow++)
     printf("PDHG_PreSolve:  Row %d   dual value = %9.3g\n", iRow, y->data[iRow]);
-
+  */
 
 
 exit_cleanup:
@@ -1237,11 +1250,13 @@ cupdlp_retcode PDHG_PostSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
   CUPDLPvec *ax = iterates->ax[iter % 2];
   CUPDLPvec *aty = iterates->aty[iter % 2];
 
-  for (int iCol = 0; iCol < problem->nCols; iCol++)
+  /*
+    for (int iCol = 0; iCol < problem->nCols; iCol++)
     printf("PDHG_PostSolve: Col %d primal value = %9.3g\n", iCol, x->data[iCol]);
-  for (int iRow = 0; iRow < problem->nRows; iRow++)
+    for (int iRow = 0; iRow < problem->nRows; iRow++)
     printf("PDHG_PostSolve: Row %d   dual value = %9.3g\n", iRow, y->data[iRow]);
-
+  */
+  
   // unscale
   if (scaling->ifScaled) {
     cupdlp_ediv(x->data, pdhg->colScale, problem->nCols);
@@ -1383,8 +1398,8 @@ cupdlp_retcode LP_SolvePDHG(
 
   cupdlp_int has_variables = (*value_valid + *dual_valid) != 0;
 
-  printf("LP_SolvePDHG: *value_valid = %d, *dual_valid = %d, has_variables = %d\n",
-         *value_valid, *dual_valid, has_variables);
+ if (pdhg->settings->nLogLevel>0 && has_variables)
+   cupdlp_printf("Hot starting with given column primal values and row dual values\n");
 
   CUPDLP_CALL(PDHG_Solve(&has_variables, pdhg));
 

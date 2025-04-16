@@ -235,20 +235,50 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("pdlp-restart", "[pdlp]") {
+void pdlpRestart(const std::string& model) {
   Highs h;
-  // h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("kkt_tolerance", 1e-4);
   HighsStatus run_status = h.run();
+  const bool was_optimal = h.getModelStatus() == HighsModelStatus::kOptimal;
   h.setOptionValue("presolve", kHighsOffString);
   run_status = h.run();
 }
 
-/*
-TEST_CASE("pdlp-hot-start", "[pdlp]") {
+TEST_CASE("pdlp-restart", "[pdlp]") {
+  pdlpRestart("adlittle");
+  //  pdlpRestart("shell");
+  //  pdlpRestart("25fv47");
+}
+
+TEST_CASE("pdlp-restart-lp", "[pdlp]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {1, 3, 5};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf};
+  lp.row_lower_ = {1, 3, 2, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 3, 10, 5};
+  lp.sense_ = ObjSense::kMaximize;
+  lp.a_matrix_.start_ = {0, 4, 8, 12};
+  lp.a_matrix_.index_ = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 2, 1, 2, 2, 4, 3, 2, 3};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  HighsStatus run_status = h.run();
+
+  h.setOptionValue("presolve", kHighsOffString);
+  run_status = h.run();
+}
+
+TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   SpecialLps special_lps;
   HighsLp lp;
 
@@ -257,31 +287,37 @@ TEST_CASE("pdlp-hot-start", "[pdlp]") {
   special_lps.ThreeDLp(lp, require_model_status, optimal_objective);
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = h.getInfo();
   const HighsOptions& options = h.getOptions();
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
   h.setOptionValue("presolve", kHighsOffString);
-  h.setOptionValue("primal_feasibility_tolerance", 1e-4);
-  h.setOptionValue("dual_feasibility_tolerance", 1e-4);
+  h.setOptionValue("kkt_tolerance", 1e-4);
   HighsStatus run_status = h.run();
   if (dev_run) h.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
-  const bool not_optimal = false;
-  if (not_optimal) {
-    REQUIRE(run_status == HighsStatus::kWarning);
-    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
-  } else {
+  const bool optimal = true;
+  if (optimal) {
     REQUIRE(run_status == HighsStatus::kOk);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  } else {
+    REQUIRE(run_status == HighsStatus::kWarning);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
   }
-  h.writeSolution("", 1);
+  
+  if (dev_run) h.writeSolution("", 1);
+  HighsSolution solution = h.getSolution();
+  
   std::vector<HighsInt> index = {0, 1, 2};
   std::vector<double> value = {1, 1, 1};
   h.addRow(-kHighsInf, 2, 3, index.data(), value.data());
+
+  solution.row_dual.push_back(0);
+
+  h.setSolution(solution);
   run_status = h.run();
-  h.writeSolution("", 1);
+  if (dev_run) h.writeSolution("", 1);
+
 }
-*/
