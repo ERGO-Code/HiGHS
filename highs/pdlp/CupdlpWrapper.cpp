@@ -32,10 +32,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
                           HighsSolution& highs_solution,
                           HighsModelStatus& model_status, HighsInfo& highs_info,
                           HighsCallback& callback) {
-  // Indicate that there is no valid primal solution, dual solution or basis
-  highs_basis.valid = false;
-  highs_solution.value_valid = false;
-  highs_solution.dual_valid = false;
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
@@ -213,83 +209,36 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   highs_info.pdlp_iteration_count = pdlp_num_iter;
 
   model_status = HighsModelStatus::kUnknown;
-  if (retcode != RETCODE_OK) return HighsStatus::kError;
-
   highs_solution.value_valid = value_valid;
   highs_solution.dual_valid = dual_valid;
+  highs_basis.valid = false;
 
-  if (pdlp_model_status == OPTIMAL) {
-    model_status = HighsModelStatus::kOptimal;
-  } else if (pdlp_model_status == INFEASIBLE) {
-    model_status = HighsModelStatus::kInfeasible;
-  } else if (pdlp_model_status == UNBOUNDED) {
-    model_status = HighsModelStatus::kUnbounded;
-  } else if (pdlp_model_status == INFEASIBLE_OR_UNBOUNDED) {
-    model_status = HighsModelStatus::kUnboundedOrInfeasible;
-  } else if (pdlp_model_status == TIMELIMIT_OR_ITERLIMIT) {
-    model_status = pdlp_num_iter >= intParam[N_ITER_LIM] - 1
-                       ? HighsModelStatus::kIterationLimit
-                       : HighsModelStatus::kTimeLimit;
-  } else if (pdlp_model_status == FEASIBLE) {
-    assert(111 == 666);
-    model_status = HighsModelStatus::kUnknown;
-  } else {
-    assert(111 == 777);
-  }
+  if (retcode == RETCODE_OK) {
+    if (pdlp_model_status == OPTIMAL) {
+      model_status = HighsModelStatus::kOptimal;
+    } else if (pdlp_model_status == INFEASIBLE) {
+      model_status = HighsModelStatus::kInfeasible;
+    } else if (pdlp_model_status == UNBOUNDED) {
+      model_status = HighsModelStatus::kUnbounded;
+    } else if (pdlp_model_status == INFEASIBLE_OR_UNBOUNDED) {
+      model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    } else if (pdlp_model_status == TIMELIMIT_OR_ITERLIMIT) {
+      model_status = pdlp_num_iter >= intParam[N_ITER_LIM] - 1
+	? HighsModelStatus::kIterationLimit
+	: HighsModelStatus::kTimeLimit;
+    } else if (pdlp_model_status == FEASIBLE) {
+      assert(111 == 666);
+      model_status = HighsModelStatus::kUnknown;
+    } else {
+      assert(111 == 777);
+    }
 #if CUPDLP_DEBUG
-  analysePdlpSolution(options, lp, highs_solution);
+    analysePdlpSolution(options, lp, highs_solution);
 #endif
-
-  // free(cost);
-  // free(lower);
-  // free(upper);
-  // free(csc_beg);
-  // free(csc_idx);
-  // free(csc_val);
-  // free(rhs);
-  // free(constraint_new_idx);
-
-  // Scaling
-  // #ifdef CUPDLP_CPU
-
-  //   if (scaling->rowScale != nullptr) free(scaling->rowScale);
-  //   if (scaling->colScale != nullptr) free(scaling->colScale);
-  //   free(scaling);
-
-  // #else
-
-  // #endif
-
-  // #ifdef CUPDLP_CPU
-  // free(prob->cost);
-  // free(prob->lower);
-  // free(prob->upper);
-  // free(prob->rhs);
-
-  // free(prob->hasLower);
-  // free(prob->hasUpper);
-
-  // free(prob->data->csr_matrix->rowMatBeg);
-  // free(prob->data->csr_matrix->rowMatIdx);
-  // free(prob->data->csr_matrix->rowMatElem);
-  // free(prob->data->csr_matrix);
-
-  // free(prob->data->csc_matrix->colMatBeg);
-  // free(prob->data->csc_matrix->colMatIdx);
-  // free(prob->data->csc_matrix->colMatElem);
-  // free(prob->data->csc_matrix);
-
-  // free(prob->data);
-
-  // free(prob);
-
-  // free(csc_cpu->colMatBeg);
-  // free(csc_cpu->colMatIdx);
-  // free(csc_cpu->colMatElem);
-
-  // free(csc_cpu);
-  // #endif
-
+  } else {
+    // Failure return from LP_SolvePDHG
+    model_status = HighsModelStatus::kSolveError;
+  }
   // free problem
   if (scaling) {
     scaling_clear(scaling);
@@ -309,12 +258,13 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   csc_clear_host(csc_cpu);
   problem_clear(prob);
 #if !defined(CUPDLP_CPU)
-  if (check_cuda_call(cudaDeviceReset(), __FILE__, __LINE__) != cudaSuccess)
+  if (check_cuda_call(cudaDeviceReset(), __FILE__, __LINE__) != cudaSuccess) {
+    model_status = HighsModelStatus::kSolveError;
     return HighsStatus::kError;
     // CHECK_CUDA(cudaDeviceReset())
+  }
 #endif
-
-  return HighsStatus::kOk;
+  return retcode == RETCODE_OK ? HighsStatus::kOk : HighsStatus::kError;
 }
 
 int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,

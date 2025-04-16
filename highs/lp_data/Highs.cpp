@@ -1601,7 +1601,6 @@ HighsStatus Highs::optimizeModel() {
           // and IPX determined optimality
           solution_.dual_valid = true;
           basis_.invalidate();
-	  /*
 	  if (options_.solver == kPdlpString) {
 	        this->lpKktCheck("After postsolve");
 	     solveLp(incumbent_lp,
@@ -1612,7 +1611,6 @@ HighsStatus Highs::optimizeModel() {
 						 return_status, "callSolveLp");
 
 	  }
-	  */
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP
