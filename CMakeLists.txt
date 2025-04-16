@@ -585,7 +585,22 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
         -fno-omit-frame-pointer ")
   endif()
+elseif (DEBUG_MEMORY STREQUAL "Memory")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=memory \
+        -fno-omit-frame-pointer")
+    set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=memory \
+        -fno-omit-frame-pointer")
+    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=memory \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=memory \
+        -fno-omit-frame-pointer ")
 
+  else()
+    message(FATAL_ERROR "Memory sanitizer only available with clang.")
+  endif()
 endif()
 
 # HiGHS coverage update in progress

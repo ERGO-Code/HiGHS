@@ -3,7 +3,33 @@ name: sanitizers-bazel
 on: [push, pull_request]
 
 jobs:
-  bazel:
+  asan:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Bazel clean
+        run: bazel clean
+      
+      - name: Bazel build
+        run: bazel build -c dbg --config=asan //...
+      
+      - name: Bazel test
+        run: bazel test -c dbg --config=asan --runs_per_test 100 //...
+
+      - name: Upload bazel-testlogs
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazel-testlogs-asan
+          path: bazel-testlogs/
+
+  tsan:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,5 +52,57 @@ jobs:
       - name: Upload bazel-testlogs
         uses: actions/upload-artifact@v4
         with:
-          name: bazel-testlogs
+          name: bazel-testlogs-tsan
+          path: bazel-testlogs/
+          
+  lsan:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Bazel clean
+        run: bazel clean
+      
+      - name: Bazel build
+        run: bazel build -c dbg --config=lsan //...
+      
+      - name: Bazel test
+        run: bazel test -c dbg --config=lsan --runs_per_test 100 //...
+
+      - name: Upload bazel-testlogs
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazel-testlogs-lsan
+          path: bazel-testlogs/
+          
+  ubsan:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Bazel clean
+        run: bazel clean
+      
+      - name: Bazel build
+        run: bazel build -c dbg --config=ubsan //...
+      
+      - name: Bazel test
+        run: bazel test -c dbg --config=ubsan --runs_per_test 100 //...
+
+      - name: Upload bazel-testlogs
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazel-testlogs-ubsan
           path: bazel-testlogs/
