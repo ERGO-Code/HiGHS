@@ -1601,6 +1601,18 @@ HighsStatus Highs::optimizeModel() {
           // and IPX determined optimality
           solution_.dual_valid = true;
           basis_.invalidate();
+	  /*
+	  if (options_.solver == kPdlpString) {
+	        this->lpKktCheck("After postsolve");
+	     solveLp(incumbent_lp,
+		     "Solving the original LP from the solution after postsolve",
+		     this_solve_original_lp_time);
+	     return_status = HighsStatus::kOk;
+	     return_status = interpretCallStatus(options_.log_options, call_status,
+						 return_status, "callSolveLp");
+
+	  }
+	  */
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP
@@ -1685,7 +1697,7 @@ HighsStatus Highs::optimizeModel() {
   // Unless the model status was determined using the strictly reduced LP, the
   // HiGHS info is valid
   if (!no_incumbent_lp_solution_or_basis) {
-    this->lpKktCheck();
+    this->lpKktCheck("On exit from optimizeModel()");
     info_.valid = true;
   }
 

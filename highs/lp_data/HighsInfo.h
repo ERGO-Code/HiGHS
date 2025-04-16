@@ -163,6 +163,7 @@ class HighsInfo : public HighsInfoStruct {
   }
 
   void invalidate();
+  void invalidateKkt();
 
  private:
   void deleteRecords() {

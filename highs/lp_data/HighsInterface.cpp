@@ -2578,7 +2578,7 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::lpKktCheck() {
+HighsStatus Highs::lpKktCheck(const std::string& message) {
   if (!this->solution_.value_valid) return HighsStatus::kOk;
   HighsInfo& info = this->info_;
   const HighsOptions& options = this->options_;
@@ -2623,7 +2623,7 @@ HighsStatus Highs::lpKktCheck() {
     written_optimality_error_header = true;
   };
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Highs::lpKktCheck()\n");
+               "Highs::lpKktCheck: %s\n", message.c_str());
   if (basis_.valid) {
     const bool have_residual_errors = true;
     if (was_optimal) {

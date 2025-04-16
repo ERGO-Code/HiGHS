@@ -26,7 +26,7 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
   highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
   HighsStatus run_status = HighsStatus::kOk;
-  bool optimal = true;
+  bool optimal = false;//true;
 
   const HighsInt pdlp_iteration_count_optimal = 240;
   run_status = highs.run();

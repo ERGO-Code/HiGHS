@@ -25,7 +25,7 @@ const uint8_t kHighsSolutionLo = -1;
 const uint8_t kHighsSolutionNo = 0;
 const uint8_t kHighsSolutionUp = 1;
 
-const bool printf_kkt = false;
+const bool printf_kkt = true;//false;//
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
@@ -144,6 +144,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   // Check that there is no dual solution if there's no primal solution
   assert(have_primal_solution || !have_dual_solution);
 
+  // Invalidate all the KKT measures
+  highs_info.invalidateKkt();
+
   if (have_primal_solution) {
     // There's a primal solution, so check its size and initialise the
     // infeasibility counts
@@ -159,18 +162,6 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       max_primal_residual_error = 0;
       num_relative_primal_residual_error = 0;
       max_relative_primal_residual_error = 0;
-    }
-  } else {
-    num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
-    max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    num_relative_primal_infeasibility = kHighsIllegalInfeasibilityCount;
-    max_relative_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    if (get_residuals) {
-      num_primal_residual_error = kHighsIllegalResidualCount;
-      max_primal_residual_error = kHighsIllegalResidualMeasure;
-      num_relative_primal_residual_error = kHighsIllegalResidualCount;
-      max_relative_primal_residual_error = kHighsIllegalResidualMeasure;
     }
   }
   if (have_dual_solution) {
@@ -188,18 +179,6 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       max_dual_residual_error = 0;
       num_relative_dual_residual_error = 0;
       max_relative_dual_residual_error = 0;
-    }
-  } else {
-    num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
-    max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    num_relative_dual_infeasibility = kHighsIllegalInfeasibilityCount;
-    max_relative_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    if (get_residuals) {
-      num_dual_residual_error = kHighsIllegalResidualCount;
-      max_dual_residual_error = kHighsIllegalResidualMeasure;
-      num_relative_dual_residual_error = kHighsIllegalResidualCount;
-      max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
     }
   }
   // Without a primal solution, nothing can be done!
@@ -1856,22 +1835,7 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
 }
 
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
-  solver_object.model_status_ = HighsModelStatus::kNotset;
-  solver_object.highs_info_.objective_function_value = 0;
-  solver_object.highs_info_.primal_solution_status = kSolutionStatusNone;
-  solver_object.highs_info_.dual_solution_status = kSolutionStatusNone;
-  solver_object.highs_info_.num_primal_infeasibilities =
-      kHighsIllegalInfeasibilityCount;
-  solver_object.highs_info_.max_primal_infeasibility =
-      kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.sum_primal_infeasibilities =
-      kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.num_dual_infeasibilities =
-      kHighsIllegalInfeasibilityCount;
-  solver_object.highs_info_.max_dual_infeasibility =
-      kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.sum_dual_infeasibilities =
-      kHighsIllegalInfeasibilityMeasure;
+  resetModelStatusAndHighsInfo(solver_object.model_status_, solver_object.highs_info_);
 }
 
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
@@ -1880,12 +1844,7 @@ void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
   highs_info.objective_function_value = 0;
   highs_info.primal_solution_status = kSolutionStatusNone;
   highs_info.dual_solution_status = kSolutionStatusNone;
-  highs_info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-  highs_info.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  highs_info.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  highs_info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-  highs_info.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  highs_info.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  highs_info.invalidateKkt();
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
