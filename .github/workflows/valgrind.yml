@@ -38,7 +38,7 @@ jobs:
           --show-leak-kinds=all \
           --track-origins=yes \
           -s \
-          ./bin/unit_tests multi-objective \
+          ./bin/unit_tests \
           2>&1 | tee logfile
 
       - name: Check log for Errors
