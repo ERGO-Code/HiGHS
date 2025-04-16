@@ -957,8 +957,10 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
 	  PDHG_Print_Header(pdhg);
 	  iter_log_since_header = 0;
 	}
-        if (full_print) PDHG_Print_Iter(pdhg);
-        PDHG_Print_Iter_Average(pdhg);
+	int print_iter = timers->nIter == 0 || full_print;
+	int print_iter_average = timers->nIter > 0 || full_print;
+	if (print_iter) PDHG_Print_Iter(pdhg);
+	if (print_iter_average) PDHG_Print_Iter_Average(pdhg);
 	iter_log_since_header++;
       }
 
@@ -1030,13 +1032,13 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
   }
 
   // print at last
-  if (pdhg->settings->nLogLevel>0) {
+  if (pdhg->settings->nLogLevel>0 && timers->nIter > 0) {
     int full_print = pdhg->settings->nLogLevel >= 2;
-    if (full_print) {
-      PDHG_Print_Header(pdhg);
-      PDHG_Print_Iter(pdhg);
-    }
-    PDHG_Print_Iter_Average(pdhg);
+    if (full_print) PDHG_Print_Header(pdhg);
+    int print_iter = resobj->termIterate == LAST_ITERATE || full_print;
+    int print_iter_average = resobj->termIterate == AVERAGE_ITERATE || full_print;
+    if (print_iter) PDHG_Print_Iter(pdhg);
+    if (print_iter_average) PDHG_Print_Iter_Average(pdhg);
   }
 
   if (pdhg->settings->nLogLevel>0) {
@@ -1171,138 +1173,29 @@ cupdlp_retcode PDHG_PreSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
   CUPDLPresobj *resobj = pdhg->resobj;
   cupdlp_float sense = problem->sense_origin;
 
-  // flag
-  cupdlp_int col_value_flag = 0;
-  cupdlp_int col_dual_flag = 0;
-  cupdlp_int row_value_flag = 0;
-  cupdlp_int row_dual_flag = 0;
+  CUPDLPvec *x = iterates->x[0];
+  CUPDLPvec *y = iterates->y[0];
 
-  // allocate buffer
-  cupdlp_float *col_buffer = NULL;
-  cupdlp_float *row_buffer = NULL;
-  cupdlp_float *col_buffer2 = NULL;
-  // no need for row_buffer2
-  // cupdlp_float *row_buffer2 = NULL;
-  CUPDLP_INIT_DOUBLE(col_buffer, problem->nCols);
-  CUPDLP_INIT_DOUBLE(row_buffer, problem->nRows);
-  CUPDLP_INIT_DOUBLE(col_buffer2, problem->nCols);
-  // CUPDLP_INIT_DOUBLE(row_buffer2, problem->nRows);
+  for (int iCol = 0; iCol < problem->nCols; iCol++)
+    x->data[iCol] = col_value[iCol];
+  for (int iRow = 0; iRow < problem->nRows; iRow++)
+    y->data[iRow] = sense * row_dual[iRow];
 
-  
-  cupdlp_int iter = pdhg->timers->nIter;
-  CUPDLPvec *x = iterates->x[iter % 2];
-  CUPDLPvec *y = iterates->y[iter % 2];
-  CUPDLPvec *ax = iterates->ax[iter % 2];
-  CUPDLPvec *aty = iterates->aty[iter % 2];
-
-  // unscale
+   // Scale
   if (scaling->ifScaled) {
-    cupdlp_ediv(x->data, pdhg->colScale, problem->nCols);
-    cupdlp_ediv(y->data, pdhg->rowScale, problem->nRows);
-    cupdlp_edot(resobj->dSlackPos, pdhg->colScale, problem->nCols);
-    cupdlp_edot(resobj->dSlackNeg, pdhg->colScale, problem->nCols);
-    cupdlp_edot(ax->data, pdhg->rowScale, problem->nRows);
-    cupdlp_edot(aty->data, pdhg->colScale, problem->nCols);
+    cupdlp_edot(x->data, pdhg->colScale, problem->nCols);
+    cupdlp_edot(y->data, pdhg->rowScale, problem->nRows);
   }
 
-  // col value: extract x from (x, z)
-  if (col_value) {
-    CUPDLP_COPY_VEC(col_value, x->data, cupdlp_float, nCols_origin);
+ 
+  for (int iCol = 0; iCol < problem->nCols; iCol++)
+    printf("PDHG_PreSolve:  Col %d primal value = %9.3g\n", iCol, x->data[iCol]);
+  for (int iRow = 0; iRow < problem->nRows; iRow++)
+    printf("PDHG_PreSolve:  Row %d   dual value = %9.3g\n", iRow, y->data[iRow]);
 
-    col_value_flag = 1;
-  }
 
-  // row value
-  if (row_value) {
-    if (constraint_new_idx) {
-      CUPDLP_COPY_VEC(row_buffer, ax->data, cupdlp_float,
-                      problem->nRows);
-
-      // un-permute row value
-      for (int i = 0; i < problem->nRows; i++) {
-        row_value[i] = row_buffer[constraint_new_idx[i]];
-      }
-    } else {
-      CUPDLP_COPY_VEC(row_value, ax->data, cupdlp_float,
-                      problem->nRows);
-    }
-
-    if (constraint_type) {
-      CUPDLP_COPY_VEC(col_buffer, x->data, cupdlp_float,
-                      problem->nCols);
-
-      // EQ = 0, LEQ = 1, GEQ = 2, BOUND = 3
-      for (int i = 0, j = 0; i < problem->nRows; i++) {
-        if (constraint_type[i] == 1) {  // LEQ: multiply -1
-          row_value[i] = -row_value[i];
-        } else if (constraint_type[i] == 3) {  // BOUND: get Ax from Ax - z
-          row_value[i] = row_value[i] + col_buffer[nCols_origin + j];
-          j++;
-        }
-      }
-    }
-
-    row_value_flag = 1;
-  }
-
-  // col duals of l <= x <= u
-  if (col_dual) {
-    CUPDLP_COPY_VEC(col_buffer, resobj->dSlackPos, cupdlp_float, nCols_origin);
-    CUPDLP_COPY_VEC(col_buffer2, resobj->dSlackNeg, cupdlp_float, nCols_origin);
-
-    for (int i = 0; i < nCols_origin; i++) {
-      col_dual[i] = col_buffer[i] - col_buffer2[i];
-    }
-
-    ScaleVector(sense, col_dual, nCols_origin);
-
-    col_dual_flag = 1;
-  }
-
-  // row dual: recover y
-  if (row_dual) {
-    if (constraint_new_idx) {
-      CUPDLP_COPY_VEC(row_buffer, y->data, cupdlp_float,
-                      problem->nRows);
-      // un-permute row dual
-      for (int i = 0; i < problem->nRows; i++) {
-        row_dual[i] = row_buffer[constraint_new_idx[i]];
-      }
-    } else {
-      CUPDLP_COPY_VEC(row_dual, y->data, cupdlp_float,
-                      problem->nRows);
-    }
-
-    ScaleVector(sense, row_dual, problem->nRows);
-
-    if (constraint_type) {
-      // EQ = 0, LEQ = 1, GEQ = 2, BOUND = 3
-      for (int i = 0; i < problem->nRows; i++) {
-        if (constraint_type[i] == 1) {  // LEQ: multiply -1
-          row_dual[i] = -row_dual[i];
-        }
-      }
-    }
-
-    row_dual_flag = 1;
-  }
-
-  // valid
-  if (value_valid) {
-    *value_valid = col_value_flag && row_value_flag;
-  }
-
-  if (dual_valid) {
-    *dual_valid = col_dual_flag && row_dual_flag;
-  }
 
 exit_cleanup:
-  // free buffer
-  CUPDLP_FREE(col_buffer);
-  CUPDLP_FREE(row_buffer);
-  CUPDLP_FREE(col_buffer2);
-  // CUPDLP_FREE(row_buffer2);
-
   return retcode;
 }
 
@@ -1343,6 +1236,11 @@ cupdlp_retcode PDHG_PostSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
   CUPDLPvec *y = iterates->y[iter % 2];
   CUPDLPvec *ax = iterates->ax[iter % 2];
   CUPDLPvec *aty = iterates->aty[iter % 2];
+
+  for (int iCol = 0; iCol < problem->nCols; iCol++)
+    printf("PDHG_PostSolve: Col %d primal value = %9.3g\n", iCol, x->data[iCol]);
+  for (int iRow = 0; iRow < problem->nRows; iRow++)
+    printf("PDHG_PostSolve: Row %d   dual value = %9.3g\n", iRow, y->data[iRow]);
 
   // unscale
   if (scaling->ifScaled) {
@@ -1479,9 +1377,9 @@ cupdlp_retcode LP_SolvePDHG(
     print_cuda_info(pdhg->cusparsehandle);
 #endif
 
- //  CUPDLP_CALL(PDHG_PreSolve(pdhg, nCols_origin, constraint_new_idx,
- //			    constraint_type, col_value, col_dual, row_value,
- //			    row_dual, value_valid, dual_valid));
+ CUPDLP_CALL(PDHG_PreSolve(pdhg, nCols_origin, constraint_new_idx,
+ 	    constraint_type, col_value, col_dual, row_value,
+ 	    row_dual, value_valid, dual_valid));
 
   cupdlp_int has_variables = (*value_valid + *dual_valid) != 0;
 
