@@ -5,8 +5,6 @@
 #include "pdlp/cupdlp/cupdlp_linalg.h"
 #include "pdlp/cupdlp/cupdlp_proj.h"
 #include "pdlp/cupdlp/cupdlp_restart.h"
-// #include "cupdlp_scaling.h"
-// #include "cupdlp_scaling_new.h"
 #include "pdlp/cupdlp/cupdlp_step.h"
 #include "pdlp/cupdlp/cupdlp_utils.h"
 #include "pdlp/cupdlp/glbopts.h"
@@ -1178,37 +1176,44 @@ cupdlp_retcode PDHG_PreSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
 
   assert(constraint_new_idx);
   assert(constraint_type);
+
+  // Have to build cuPDLP-C solution in CPU row and column buffers, so
+  // that only copy operations are required to put the cuPDLP-C
+  // solution into GPU buffers
+  cupdlp_float *col_buffer = NULL;
+  cupdlp_float *row_buffer = NULL;
+  CUPDLP_INIT_DOUBLE(col_buffer, problem->nCols);
+  CUPDLP_INIT_DOUBLE(row_buffer, problem->nRows);
+
+
+  CUPDLP_ZERO_VEC(x->data, cupdlp_float, problem->nCols);
+  CUPDLP_ZERO_VEC(y->data, cupdlp_float, problem->nRows);
+
+
   int iCol = 0;
   for (; iCol < nCols_origin; iCol++)
-    x->data[iCol] = col_value[iCol];
+    col_buffer[iCol] = col_value[iCol];
 
   for (int iRow = 0; iRow < problem->nRows; iRow++) {
     const double mu = constraint_type[iRow] == 1 ? -1 : 1;
-    /*
-    printf("Row %2d: constraint_new_idx = %d; constraint_type = %d; mu = %g\n",
-	   iRow, constraint_new_idx[iRow], constraint_type[iRow], mu);
-    */
-    y->data[constraint_new_idx[iRow]] = sense * mu * row_dual[iRow];
+    row_buffer[constraint_new_idx[iRow]] = sense * mu * row_dual[iRow];
     if (constraint_type[iRow] == 3) 
-      x->data[iCol++] = row_value[iRow];
+      col_buffer[iCol++] = row_value[iRow];
   }
 
-   // Scale
+  // Copy into GPU buffers
+  CUPDLP_COPY_VEC(x->data, col_buffer, cupdlp_float, problem->nCols);
+  CUPDLP_COPY_VEC(y->data, row_buffer, cupdlp_float, problem->nRows);
+
+  // Scale
   if (scaling->ifScaled) {
     cupdlp_edot(x->data, pdhg->colScale, problem->nCols);
     cupdlp_edot(y->data, pdhg->rowScale, problem->nRows);
   }
-
- 
-  /*
-  for (int iCol = 0; iCol < problem->nCols; iCol++)
-    printf("PDHG_PreSolve:  Col %d primal value = %9.3g\n", iCol, x->data[iCol]);
-  for (int iRow = 0; iRow < problem->nRows; iRow++)
-    printf("PDHG_PreSolve:  Row %d   dual value = %9.3g\n", iRow, y->data[iRow]);
-  */
-
-
 exit_cleanup:
+  // free buffer
+  CUPDLP_FREE(col_buffer);
+  CUPDLP_FREE(row_buffer);
   return retcode;
 }
 

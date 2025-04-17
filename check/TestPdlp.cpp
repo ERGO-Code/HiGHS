@@ -79,7 +79,7 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
   highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
   HighsStatus run_status = HighsStatus::kOk;
-  bool optimal = true;
+  bool optimal = false;
 
   run_status = highs.run();
   if (dev_run) highs.writeSolution("", 1);
@@ -256,6 +256,9 @@ TEST_CASE("pdlp-restart", "[pdlp]") {
 }
 
 TEST_CASE("pdlp-restart-lp", "[pdlp]") {
+  // LP with examples of, respectively, LB, EQ, BX and UB constraints
+  // to test conversion of the incumbent solution into the cuPDLP-C
+  // problem space
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   HighsLp lp;

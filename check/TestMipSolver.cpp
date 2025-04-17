@@ -558,7 +558,7 @@ TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
   const std::vector<HighsObjectiveSolution> saved_objective_and_solution =
       highs.getSavedMipSolutions();
   const HighsInt num_saved_solution = saved_objective_and_solution.size();
-  REQUIRE(num_saved_solution > 0); 
+  REQUIRE(num_saved_solution > 0);
   const HighsInt last_saved_solution = num_saved_solution - 1;
   REQUIRE(saved_objective_and_solution[last_saved_solution].objective ==
           highs.getInfo().objective_function_value);

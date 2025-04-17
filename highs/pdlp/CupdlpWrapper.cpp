@@ -11,8 +11,7 @@
  */
 #include "pdlp/CupdlpWrapper.h"
 
-void getUserParamsFromOptions(const HighsOptions& options,
-			      HighsTimer& timer,
+void getUserParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
                               cupdlp_bool* ifChangeIntParam,
                               cupdlp_int* intParam,
                               cupdlp_bool* ifChangeFloatParam,
@@ -94,8 +93,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
 
   // Transfer from options
-  getUserParamsFromOptions(options, timer,
-			   ifChangeIntParam, intParam,
+  getUserParamsFromOptions(options, timer, ifChangeIntParam, intParam,
                            ifChangeFloatParam, floatParam);
 
   // std::vector<int> constraint_type(lp.num_row_);
@@ -631,8 +629,7 @@ void cupdlp_hasub(cupdlp_float* hasub, const cupdlp_float* ub,
 #endif
 }
 
-void getUserParamsFromOptions(const HighsOptions& options,
-			      HighsTimer& timer,
+void getUserParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
                               cupdlp_bool* ifChangeIntParam,
                               cupdlp_int* intParam,
                               cupdlp_bool* ifChangeFloatParam,

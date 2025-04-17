@@ -2617,16 +2617,16 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
   if (basis_.valid) {
     if (was_optimal) {
       if (info.num_primal_infeasibilities > 0) {
-	foundOptimalityError();
+        foundOptimalityError();
         highsLogUser(
-		     log_options, HighsLogType::kError,
-		     "   num/max/sum %6d / %9.4g / %9.4g primal "
-		     "infeasibilities       (tolerance = %4.0e)\n",
-		     int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
-		     info.sum_primal_infeasibilities, primal_feasibility_tolerance);
+            log_options, HighsLogType::kError,
+            "   num/max/sum %6d / %9.4g / %9.4g primal "
+            "infeasibilities       (tolerance = %4.0e)\n",
+            int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
+            info.sum_primal_infeasibilities, primal_feasibility_tolerance);
       }
       if (info.num_dual_infeasibilities > 0) {
-	foundOptimalityError();
+        foundOptimalityError();
         highsLogUser(log_options, HighsLogType::kError,
                      "   num/max/sum %6d / %9.4g / %9.4g   dual "
                      "infeasibilities       (tolerance = %4.0e)\n",
@@ -2638,51 +2638,56 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
       // by construction, and can be assumed to have no primal or dual
       // residual errors or meaningful primal dual objective error
       bool unexpected_error =
-	info.num_complementarity_violations != 0 ||
-	info.primal_dual_objective_error > complementarity_tolerance;
+          info.num_complementarity_violations != 0 ||
+          info.primal_dual_objective_error > complementarity_tolerance;
       const bool have_residual_errors =
-	info.num_primal_residual_errors != kHighsIllegalResidualCount;
+          info.num_primal_residual_errors != kHighsIllegalResidualCount;
       if (have_residual_errors)
-	unexpected_error = unexpected_error ||
-	  info.num_primal_residual_errors != 0 ||
-	  info.num_dual_residual_errors != 0 ||
-	  info.num_relative_primal_residual_errors != 0 ||
-	  info.num_relative_dual_residual_errors != 0;
+        unexpected_error = unexpected_error ||
+                           info.num_primal_residual_errors != 0 ||
+                           info.num_dual_residual_errors != 0 ||
+                           info.num_relative_primal_residual_errors != 0 ||
+                           info.num_relative_dual_residual_errors != 0;
       if (unexpected_error) {
-	printf("Optimal basic solution has %d complementarity violations; %d (%d) "
-	       "primal (relative) residual errors; %d (%d) dual (relative) "
-	       "residual errors; %g primal dual "
-	       "objective error\n",
-	       int(info.num_complementarity_violations),
-	       int(info.num_primal_residual_errors),
-	       int(info.num_relative_primal_residual_errors),
-	       int(info.num_dual_residual_errors),
-	       int(info.num_relative_dual_residual_errors),
-	       info.primal_dual_objective_error);
-	printf("   num/max %6d / %9.4g          primal residual errors         "
-	       "(tolerance = %4.0e)\n",
-	       int(info.num_primal_residual_errors),
-	       info.max_primal_residual_error, primal_residual_tolerance);
-	printf("   num/max %6d / %9.4g  relative primal residual errors         "
-	       "(tolerance = %4.0e)\n",
-	       int(info.num_relative_primal_residual_errors),
-	       info.max_relative_primal_residual_error, primal_residual_tolerance);
-	printf("   num/max %6d / %9.4g            dual residual errors         "
-	       "(tolerance = %4.0e)\n",
-	       int(info.num_dual_residual_errors), info.max_dual_residual_error,
-	       dual_residual_tolerance);
-	printf("   num/max %6d / %9.4g  relative   dual residual errors         "
-	       "(tolerance = %4.0e)\n",
-	       int(info.num_relative_dual_residual_errors),
-	       info.max_relative_dual_residual_error, dual_residual_tolerance);
-	assert(info.num_complementarity_violations == 0);
-	assert(info.primal_dual_objective_error <= complementarity_tolerance);
-	if (have_residual_errors) {
-	  assert(info.num_primal_residual_errors == 0);
-	  assert(info.num_relative_primal_residual_errors == 0);
-	  assert(info.num_dual_residual_errors == 0);
-	  assert(info.num_relative_dual_residual_errors == 0);
-	}
+        printf(
+            "Optimal basic solution has %d complementarity violations; %d (%d) "
+            "primal (relative) residual errors; %d (%d) dual (relative) "
+            "residual errors; %g primal dual "
+            "objective error\n",
+            int(info.num_complementarity_violations),
+            int(info.num_primal_residual_errors),
+            int(info.num_relative_primal_residual_errors),
+            int(info.num_dual_residual_errors),
+            int(info.num_relative_dual_residual_errors),
+            info.primal_dual_objective_error);
+        printf(
+            "   num/max %6d / %9.4g          primal residual errors         "
+            "(tolerance = %4.0e)\n",
+            int(info.num_primal_residual_errors),
+            info.max_primal_residual_error, primal_residual_tolerance);
+        printf(
+            "   num/max %6d / %9.4g  relative primal residual errors         "
+            "(tolerance = %4.0e)\n",
+            int(info.num_relative_primal_residual_errors),
+            info.max_relative_primal_residual_error, primal_residual_tolerance);
+        printf(
+            "   num/max %6d / %9.4g            dual residual errors         "
+            "(tolerance = %4.0e)\n",
+            int(info.num_dual_residual_errors), info.max_dual_residual_error,
+            dual_residual_tolerance);
+        printf(
+            "   num/max %6d / %9.4g  relative   dual residual errors         "
+            "(tolerance = %4.0e)\n",
+            int(info.num_relative_dual_residual_errors),
+            info.max_relative_dual_residual_error, dual_residual_tolerance);
+        assert(info.num_complementarity_violations == 0);
+        assert(info.primal_dual_objective_error <= complementarity_tolerance);
+        if (have_residual_errors) {
+          assert(info.num_primal_residual_errors == 0);
+          assert(info.num_relative_primal_residual_errors == 0);
+          assert(info.num_dual_residual_errors == 0);
+          assert(info.num_relative_dual_residual_errors == 0);
+        }
       }
     }
   } else {
@@ -2741,12 +2746,11 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
       // IPXwithout crossover, now that there is a PDLP cleanup after
       // postsolve (and hence call to getKktErrors that sets the model
       // status).
-      kkt_ok =
-	info.num_relative_primal_infeasibilities == 0 &&
-	info.num_relative_dual_infeasibilities == 0 &&
-	info.num_relative_primal_residual_errors== 0 &&
-	info.num_relative_dual_residual_errors == 0 &&
-	info.primal_dual_objective_error <= complementarity_tolerance;
+      kkt_ok = info.num_relative_primal_infeasibilities == 0 &&
+               info.num_relative_dual_infeasibilities == 0 &&
+               info.num_relative_primal_residual_errors == 0 &&
+               info.num_relative_dual_residual_errors == 0 &&
+               info.primal_dual_objective_error <= complementarity_tolerance;
     }
   }
   if (model_status_ == HighsModelStatus::kOptimal && !kkt_ok) {

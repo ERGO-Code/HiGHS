@@ -1688,10 +1688,9 @@ HighsStatus Highs::optimizeModel() {
     // HighsModelStatus::kUnknown after solver that doesn't yield a
     // basis
     //
-    const bool try_pdlp_cleanup = !basis_.valid
-      && model_status_ == HighsModelStatus::kUnknown
-      && options_.allow_pdlp_cleanup
-      && !options_.run_centring;
+    const bool try_pdlp_cleanup =
+        !basis_.valid && model_status_ == HighsModelStatus::kUnknown &&
+        options_.allow_pdlp_cleanup && !options_.run_centring;
     if (try_pdlp_cleanup) {
       // Primal/dual infeasibilities/residuals can be magnified in
       // postsolve after PDLP, and IPX without crossover can fail,
@@ -1704,30 +1703,30 @@ HighsStatus Highs::optimizeModel() {
       const std::string solver = options_.solver;
       assert(solver == kIpmString || solver == kPdlpString);
       double this_solve_time = timer_.read() - initial_time;
-      double pdlp_time_limit = std::max(10.0, 10*this_solve_time);
+      double pdlp_time_limit = std::max(10.0, 10 * this_solve_time);
       if (options_.time_limit < kHighsInf) {
-	double time_remaining = time_limit - timer_.read();
-	pdlp_time_limit = std::min(0.1 * time_remaining, pdlp_time_limit);
+        double time_remaining = time_limit - timer_.read();
+        pdlp_time_limit = std::min(0.1 * time_remaining, pdlp_time_limit);
       }
       if (pdlp_time_limit > 0) {
-	options_.solver = kPdlpString;
-	options_.time_limit = pdlp_time_limit;
-	solveLp(incumbent_lp,
-		"Unknown model status, and no basis, so use PDLP to solve the original LP from the incumbent solution after postsolve",
-		this_solve_original_lp_time);
-	// Recover solver and time limit option values
-	options_.solver = solver;
-	options_.time_limit = time_limit;
-	return_status = HighsStatus::kOk;
-	return_status =
-	  interpretCallStatus(options_.log_options, call_status,
-			      return_status, "callSolveLp");
-	if (return_status == HighsStatus::kError)
-	  return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-	// Update the number of PDLP, iterations, since the
-	// iteration count is reset to zero if PDLP is used to
-	// clean up after postsolve
-	info_.pdlp_iteration_count += presolved_lp_pdlp_iteration_count;
+        options_.solver = kPdlpString;
+        options_.time_limit = pdlp_time_limit;
+        solveLp(incumbent_lp,
+                "Unknown model status, and no basis, so use PDLP to solve the "
+                "original LP from the incumbent solution after postsolve",
+                this_solve_original_lp_time);
+        // Recover solver and time limit option values
+        options_.solver = solver;
+        options_.time_limit = time_limit;
+        return_status = HighsStatus::kOk;
+        return_status = interpretCallStatus(options_.log_options, call_status,
+                                            return_status, "callSolveLp");
+        if (return_status == HighsStatus::kError)
+          return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+        // Update the number of PDLP, iterations, since the
+        // iteration count is reset to zero if PDLP is used to
+        // clean up after postsolve
+        info_.pdlp_iteration_count += presolved_lp_pdlp_iteration_count;
       }
     }
   }
