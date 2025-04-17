@@ -212,6 +212,7 @@ set(highs_sources
     mip/HighsDebugSol.cpp
     mip/HighsDomain.cpp
     mip/HighsDynamicRowMatrix.cpp
+    mip/HighsFeasibilityJump.cpp
     mip/HighsGFkSolve.cpp
     mip/HighsImplications.cpp
     mip/HighsLpAggregator.cpp
@@ -325,6 +326,7 @@ set(highs_headers
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HStruct.h
+    mip/feasibilityjump.hh
     mip/HighsCliqueTable.h
     mip/HighsConflictPool.h
     mip/HighsCutGeneration.h
