@@ -331,6 +331,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
     ipm.setOptionValue("run_crossover", kHighsOffString);
+    ipm.setOptionValue("allow_pdlp_cleanup", false);
     ipm.setOptionValue("presolve", kHighsOffString);
     ipm.setOptionValue("output_flag", false);
     // ipm.setOptionValue("output_flag", !mipsolver.submip);

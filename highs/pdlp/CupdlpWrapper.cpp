@@ -12,6 +12,7 @@
 #include "pdlp/CupdlpWrapper.h"
 
 void getUserParamsFromOptions(const HighsOptions& options,
+			      HighsTimer& timer,
                               cupdlp_bool* ifChangeIntParam,
                               cupdlp_int* intParam,
                               cupdlp_bool* ifChangeFloatParam,
@@ -93,7 +94,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
 
   // Transfer from options
-  getUserParamsFromOptions(options, ifChangeIntParam, intParam,
+  getUserParamsFromOptions(options, timer,
+			   ifChangeIntParam, intParam,
                            ifChangeFloatParam, floatParam);
 
   // std::vector<int> constraint_type(lp.num_row_);
@@ -630,6 +632,7 @@ void cupdlp_hasub(cupdlp_float* hasub, const cupdlp_float* ub,
 }
 
 void getUserParamsFromOptions(const HighsOptions& options,
+			      HighsTimer& timer,
                               cupdlp_bool* ifChangeIntParam,
                               cupdlp_int* intParam,
                               cupdlp_bool* ifChangeFloatParam,
@@ -667,6 +670,14 @@ void getUserParamsFromOptions(const HighsOptions& options,
     floatParam[D_GAP_TOL] = options.kkt_tolerance;
   }
   //
+  // cuPDLP-C has its own timer, so set its time limit according to
+  // the time remaining with respect to the HiGHS time limit (if
+  // finite)
+  double time_limit = options.time_limit;
+  if (time_limit < kHighsInf) {
+    time_limit -= timer.read();
+    time_limit = std::max(0.0, time_limit);
+  }
   ifChangeFloatParam[D_TIME_LIM] = true;
   floatParam[D_TIME_LIM] = options.time_limit;
   //

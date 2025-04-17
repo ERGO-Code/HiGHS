@@ -1607,26 +1607,6 @@ HighsStatus Highs::optimizeModel() {
           solution_.dual_valid = true;
           basis_.invalidate();
           this->lpKktCheck("After postsolve");
-          if (options_.solver == kPdlpString &&
-              model_status_ == HighsModelStatus::kUnknown) {
-            // Primal/dual infeasibilities/residuals can be magnified
-            // in postsolve, leading to a loss of optimality, so run
-            // PDLP on the original problem, starting from the
-            // solution obtained from postsolve
-            solveLp(incumbent_lp,
-                    "Solving the original LP from the solution after postsolve",
-                    this_solve_original_lp_time);
-            return_status = HighsStatus::kOk;
-            return_status =
-                interpretCallStatus(options_.log_options, call_status,
-                                    return_status, "callSolveLp");
-            if (return_status == HighsStatus::kError)
-              return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-            // Update the number of PDLP, iterations, since the
-            // iteration count is reset to zero if PDLP is used to
-            // clean up after postsolve
-            info_.pdlp_iteration_count += presolved_lp_pdlp_iteration_count;
-          }
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP
@@ -1704,6 +1684,52 @@ HighsStatus Highs::optimizeModel() {
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
     }
+    // Final chance to resolve model_status_ ==
+    // HighsModelStatus::kUnknown after solver that doesn't yield a
+    // basis
+    //
+    const bool try_pdlp_cleanup = !basis_.valid
+      && model_status_ == HighsModelStatus::kUnknown
+      && options_.allow_pdlp_cleanup
+      && !options_.run_centring;
+    if (try_pdlp_cleanup) {
+      // Primal/dual infeasibilities/residuals can be magnified in
+      // postsolve after PDLP, and IPX without crossover can fail,
+      // both leading to model_status_ == HighsModelStatus::kUnknown,
+      // so run PDLP on the original problem, starting from the
+      // incumbent solution
+      //
+      // Force PDLP to be used with a time limit
+      const double time_limit = options_.time_limit;
+      const std::string solver = options_.solver;
+      assert(solver == kIpmString || solver == kPdlpString);
+      double this_solve_time = timer_.read() - initial_time;
+      double pdlp_time_limit = std::max(10.0, 10*this_solve_time);
+      if (options_.time_limit < kHighsInf) {
+	double time_remaining = time_limit - timer_.read();
+	pdlp_time_limit = std::min(0.1 * time_remaining, pdlp_time_limit);
+      }
+      if (pdlp_time_limit > 0) {
+	options_.solver = kPdlpString;
+	options_.time_limit = pdlp_time_limit;
+	solveLp(incumbent_lp,
+		"Unknown model status, and no basis, so use PDLP to solve the original LP from the incumbent solution after postsolve",
+		this_solve_original_lp_time);
+	// Recover solver and time limit option values
+	options_.solver = solver;
+	options_.time_limit = time_limit;
+	return_status = HighsStatus::kOk;
+	return_status =
+	  interpretCallStatus(options_.log_options, call_status,
+			      return_status, "callSolveLp");
+	if (return_status == HighsStatus::kError)
+	  return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+	// Update the number of PDLP, iterations, since the
+	// iteration count is reset to zero if PDLP is used to
+	// clean up after postsolve
+	info_.pdlp_iteration_count += presolved_lp_pdlp_iteration_count;
+      }
+    }
   }
   // Cycling can yield model_status_ == HighsModelStatus::kNotset,
   //  assert(model_status_ != HighsModelStatus::kNotset);
@@ -1725,16 +1751,16 @@ HighsStatus Highs::optimizeModel() {
                 postsolve_iteration_count);
   }
   if (this_solve_time > 0)
-    highsLogDev(log_options, HighsLogType::kInfo, "Time       : %8.2f\n",
+    highsLogDev(log_options, HighsLogType::kInfo, "Time           : %8.2f\n",
                 this_solve_time);
   if (this_presolve_time > 0)
-    highsLogDev(log_options, HighsLogType::kInfo, "Time Pre   : %8.2f\n",
+    highsLogDev(log_options, HighsLogType::kInfo, "Time Pre       : %8.2f\n",
                 this_presolve_time);
   if (this_solve_presolved_lp_time > 0)
-    highsLogDev(log_options, HighsLogType::kInfo, "Time PreLP : %8.2f\n",
+    highsLogDev(log_options, HighsLogType::kInfo, "Time PreLP     : %8.2f\n",
                 this_solve_presolved_lp_time);
   if (this_solve_original_lp_time > 0)
-    highsLogDev(log_options, HighsLogType::kInfo, "Time PostLP: %8.2f\n",
+    highsLogDev(log_options, HighsLogType::kInfo, "Time OriginalLP: %8.2f\n",
                 this_solve_original_lp_time);
   if (this_solve_time > 0) {
     highsLogDev(log_options, HighsLogType::kInfo, "For LP %16s",
@@ -1744,28 +1770,28 @@ HighsStatus Highs::optimizeModel() {
       sum_time += this_presolve_time;
       HighsInt pct = (100 * this_presolve_time) / this_solve_time;
       highsLogDev(log_options, HighsLogType::kInfo,
-                  ": Presolve %8.2f (%3" HIGHSINT_FORMAT "%%)",
+                  "    : Presolve %8.2f (%3" HIGHSINT_FORMAT "%%)",
                   this_presolve_time, pct);
     }
     if (this_solve_presolved_lp_time > 0) {
       sum_time += this_solve_presolved_lp_time;
       HighsInt pct = (100 * this_solve_presolved_lp_time) / this_solve_time;
       highsLogDev(log_options, HighsLogType::kInfo,
-                  ": Solve presolved LP %8.2f (%3" HIGHSINT_FORMAT "%%)",
+                  "    : Solve presolved LP %8.2f (%3" HIGHSINT_FORMAT "%%)",
                   this_solve_presolved_lp_time, pct);
     }
     if (this_postsolve_time > 0) {
       sum_time += this_postsolve_time;
       HighsInt pct = (100 * this_postsolve_time) / this_solve_time;
       highsLogDev(log_options, HighsLogType::kInfo,
-                  ": Postsolve %8.2f (%3" HIGHSINT_FORMAT "%%)",
+                  "    : Postsolve %8.2f (%3" HIGHSINT_FORMAT "%%)",
                   this_postsolve_time, pct);
     }
     if (this_solve_original_lp_time > 0) {
       sum_time += this_solve_original_lp_time;
       HighsInt pct = (100 * this_solve_original_lp_time) / this_solve_time;
       highsLogDev(log_options, HighsLogType::kInfo,
-                  ": Solve original LP %8.2f (%3" HIGHSINT_FORMAT "%%)",
+                  "    : Solve original LP %8.2f (%3" HIGHSINT_FORMAT "%%)",
                   this_solve_original_lp_time, pct);
     }
     highsLogDev(log_options, HighsLogType::kInfo, "\n");
@@ -1777,8 +1803,8 @@ HighsStatus Highs::optimizeModel() {
                   "difference = %g\n",
                   this_solve_time, sum_time, rlv_time_difference);
   }
-  // Assess success according to the scaled model status, regardless
-  // of whether anything worse has happened earlier
+  // Assess success according to the model status, regardless of
+  // whether anything worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(model_status_);
   //  # 2251
   return_status = call_status;
