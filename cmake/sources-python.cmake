@@ -210,6 +210,7 @@ set(highs_sources_python
     highs/mip/HighsDebugSol.cpp
     highs/mip/HighsDomain.cpp
     highs/mip/HighsDynamicRowMatrix.cpp
+    highs/mip/HighsFeasibilityJump.cpp
     highs/mip/HighsGFkSolve.cpp
     highs/mip/HighsImplications.cpp
     highs/mip/HighsLpAggregator.cpp
@@ -320,6 +321,7 @@ set(highs_headers_python
     highs/lp_data/HighsSolve.h
     highs/lp_data/HighsStatus.h
     highs/lp_data/HStruct.h
+    highs/mip/feasibilityjump.hh
     highs/mip/HighsCliqueTable.h
     highs/mip/HighsConflictPool.h
     highs/mip/HighsCutGeneration.h

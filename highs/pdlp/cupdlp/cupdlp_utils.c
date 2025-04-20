@@ -306,7 +306,7 @@ void stepsize_clear(CUPDLPstepsize *stepsize) {
 
 void timers_clear(int log_level, CUPDLPtimers *timers) {
 #ifndef CUPDLP_CPU
-if (log_level)
+if (log_level > 1)
   cupdlp_printf("%20s %e\n\n", "Free Device memory", timers->FreeDeviceMemTime);
 #endif
 
