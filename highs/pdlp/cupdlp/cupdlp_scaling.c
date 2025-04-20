@@ -414,16 +414,10 @@ cupdlp_retcode Init_Scaling(cupdlp_int log_level, CUPDLPscaling* scaling,
   for (cupdlp_int iRow = 0; iRow < nrows; iRow++) scaling->rowScale[iRow] = 1.0;
 
   scaling->dNormCost = twoNorm(cost, ncols);
-  // PDLP default norm of RHS omits bounds for boxed constraints,
-  // since they are handled via an explicit boxed slack
-  // variable. However, externally, relative feasiblilty and residual
-  // measures will use norm of all bounds, which is advantageous to
-  // PDLP, but let's eliminate a source of difference 2251
-  double pdlp_default_norm_rhs = twoNorm(rhs, nrows);
-  double pdlp_true_norm_rhs = scaling->dNormRhs;
+  scaling->dNormRhs = twoNorm(rhs, nrows);
   if (log_level)
-    cupdlp_printf("Using cost norm = %9.3g and RHS norm = %9.3g (default RHS norm = %9.3g)\n",
-                  scaling->dNormCost, scaling->dNormRhs, pdlp_default_norm_rhs);
+    cupdlp_printf("Using cost norm = %9.3g and RHS norm = %9.3g\n",
+                  scaling->dNormCost, scaling->dNormRhs);
 
 exit_cleanup:
   return retcode;

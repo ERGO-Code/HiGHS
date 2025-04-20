@@ -66,7 +66,8 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
-                    const bool get_residuals = false);
+                    const bool get_residuals = false,
+		    const std::string& last_lp_solver = "");
 
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
@@ -76,12 +77,14 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
-                      const bool get_residuals = false);
+                      const bool get_residuals = false,
+		      const std::string& last_lp_solver = "");
 
 void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, HighsInfo& highs_info,
-                    const bool get_residuals = false);
+                    const bool get_residuals = false,
+		    const std::string& last_lp_solver = "");
 
 void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,

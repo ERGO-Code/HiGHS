@@ -98,15 +98,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 
   // std::vector<int> constraint_type(lp.num_row_);
 
-  // Determine the true 2-norm of all row bounds so that the extent to
-  // which the PDLP default norm of RHS under-estimates the true value
-  double pdlp_true_norm_rhs = 0;
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    if (lp.row_lower_[iRow] > -kHighsInf) pdlp_true_norm_rhs += lp.row_lower_[iRow] * lp.row_lower_[iRow];
-    if (lp.row_upper_[iRow] < +kHighsInf) pdlp_true_norm_rhs += lp.row_upper_[iRow] * lp.row_upper_[iRow];
-  }
-  scaling->dNormRhs = std::sqrt(pdlp_true_norm_rhs);
-  
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
 
@@ -441,8 +432,6 @@ int formulateLP_highs(const cupdlp_int local_log_level, const HighsLp& lp,
     }
   }
 
-  int num_boxed_row = *nCols-*nCols_origin;
-  if (local_log_level && num_boxed_row) cupdlp_printf("Added explicit slack variables for each of %d / %d boxed constraints\n", num_boxed_row, *nRows);
   return retcode;
 }
 
