@@ -1703,17 +1703,18 @@ HighsStatus Highs::optimizeModel() {
       const std::string solver = options_.solver;
       assert(solver == kIpmString || solver == kPdlpString);
       double this_solve_time = timer_.read() - initial_time;
-      double pdlp_time_limit = std::max(10.0, 10 * this_solve_time);
+      const double pdlp_min_time_limit = 1000.0;
+      double pdlp_time_limit = std::max(pdlp_min_time_limit, 10 * this_solve_time);
       if (options_.time_limit < kHighsInf) {
         double time_remaining = time_limit - timer_.read();
         pdlp_time_limit = std::min(0.1 * time_remaining, pdlp_time_limit);
       }
       if (pdlp_time_limit > 0) {
+	highsLogUser(log_options, HighsLogType::kInfo, "Unknown model status, and no basis, after initial solve in %g s, so use PDLP with KKT tolerance = %g and time limit = %g to solve the original LP from the incumbent solution after postsolve\n", this_solve_time, options_.kkt_tolerance, pdlp_time_limit);
         options_.solver = kPdlpString;
         options_.time_limit = pdlp_time_limit;
         solveLp(incumbent_lp,
-                "Unknown model status, and no basis, so use PDLP to solve the "
-                "original LP from the incumbent solution after postsolve",
+                "Using PDLP to solve the original LP from the solution after postsolve",
                 this_solve_original_lp_time);
         // Recover solver and time limit option values
         options_.solver = solver;

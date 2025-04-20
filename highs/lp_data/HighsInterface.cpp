@@ -2592,6 +2592,8 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
   const bool get_residuals = true;
   getLpKktFailures(options, model_.lp_, solution, basis_, info,
                    primal_dual_errors, get_residuals);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Highs::lpKktCheck: %s\n", message.c_str());
   reportLpKktFailures(model_.lp_, options, info, "LP");
   if (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
       info.num_primal_infeasibilities == 0 &&
@@ -2612,8 +2614,6 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     written_optimality_error_header = true;
   };
 
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Highs::lpKktCheck: %s\n", message.c_str());
   if (basis_.valid) {
     if (was_optimal) {
       if (info.num_primal_infeasibilities > 0) {

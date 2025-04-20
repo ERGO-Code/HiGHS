@@ -98,19 +98,25 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 
   // std::vector<int> constraint_type(lp.num_row_);
 
-  formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs, &csc_beg, &csc_idx,
-                    &csc_val, &rhs, &lower, &upper, &offset, &sense_origin,
-                    &nCols_origin, &constraint_new_idx, &constraint_type);
-
+  // Determine the true 2-norm of all row bounds so that the extent to
+  // which the PDLP default norm of RHS under-estimates the true value
+  double pdlp_true_norm_rhs = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (lp.row_lower_[iRow] > -kHighsInf) pdlp_true_norm_rhs += lp.row_lower_[iRow] * lp.row_lower_[iRow];
+    if (lp.row_upper_[iRow] < +kHighsInf) pdlp_true_norm_rhs += lp.row_upper_[iRow] * lp.row_upper_[iRow];
+  }
+  scaling->dNormRhs = std::sqrt(pdlp_true_norm_rhs);
+  
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
 
+  formulateLP_highs(local_log_level, lp,
+		    &cost, &nCols, &nRows, &nnz, &nEqs, &csc_beg, &csc_idx,
+                    &csc_val, &rhs, &lower, &upper, &offset, &sense_origin,
+                    &nCols_origin, &constraint_new_idx, &constraint_type);
+
   // H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
   Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
-
-  if (local_log_level)
-    cupdlp_printf("Using cost norm = %9.3g and RHS norm = %9.3g\n",
-                  scaling->dNormCost, scaling->dNormRhs);
 
   cupdlp_int ifScaling = 1;
 
@@ -267,7 +273,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   return retcode == RETCODE_OK ? HighsStatus::kOk : HighsStatus::kError;
 }
 
-int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
+int formulateLP_highs(const cupdlp_int local_log_level, const HighsLp& lp,
+		      double** cost, int* nCols, int* nRows,
                       int* nnz, int* nEqs, int** csc_beg, int** csc_idx,
                       double** csc_val, double** rhs, double** lower,
                       double** upper, double* offset, double* sense_origin,
@@ -434,6 +441,8 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
     }
   }
 
+  int num_boxed_row = *nCols-*nCols_origin;
+  if (local_log_level && num_boxed_row) cupdlp_printf("Added explicit slack variables for each of %d / %d boxed constraints\n", num_boxed_row, *nRows);
   return retcode;
 }
 
