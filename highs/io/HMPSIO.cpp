@@ -876,7 +876,7 @@ HighsStatus writeMps(
           !col_cost[c_n] && a_start[c_n] == a_start[c_n + 1];
       if (no_cost_zero_column) {
         // Possibly skip this column if it's zero and has no cost
-        if (!highs_isInfinity(ub) || lb) {
+        if (!highs_isInfinity(ub) || lb || discrete) {
           // Column would have a bound to report
           num_no_cost_zero_columns_in_bounds_section++;
         }
@@ -1014,7 +1014,7 @@ HighsStatus writeMps(
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Model has %" HIGHSINT_FORMAT
                  " zero columns with no costs: %" HIGHSINT_FORMAT
-                 " have finite upper bounds "
+                 " are discrete or have finite upper bounds "
                  "or nonzero lower bounds and are %swritten in MPS file\n",
                  num_no_cost_zero_columns,
                  num_no_cost_zero_columns_in_bounds_section,
