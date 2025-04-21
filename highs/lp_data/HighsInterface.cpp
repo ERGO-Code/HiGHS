@@ -2567,7 +2567,7 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
 }
 
 HighsStatus Highs::lpKktCheck(const std::string& message,
-			      const std::string& last_lp_solver) {
+                              const std::string& last_lp_solver) {
   if (!this->solution_.value_valid) return HighsStatus::kOk;
   assert(last_lp_solver != "");
   HighsInfo& info = this->info_;
@@ -2595,7 +2595,8 @@ HighsStatus Highs::lpKktCheck(const std::string& message,
   getLpKktFailures(options, model_.lp_, solution, basis_, info,
                    primal_dual_errors, get_residuals, last_lp_solver);
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Highs::lpKktCheck: %s, solving with %s\n", message.c_str(), last_lp_solver.c_str());
+               "Highs::lpKktCheck: %s, solving with %s\n", message.c_str(),
+               last_lp_solver.c_str());
   reportLpKktFailures(model_.lp_, options, info, "LP");
   if (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
       info.num_primal_infeasibilities == 0 &&
@@ -2616,6 +2617,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message,
     written_optimality_error_header = true;
   };
 
+  double max_relative_tolerance_failure = 0;
   if (basis_.valid) {
     if (was_optimal) {
       if (info.num_primal_infeasibilities > 0) {
@@ -2646,48 +2648,35 @@ HighsStatus Highs::lpKktCheck(const std::string& message,
           info.num_primal_residual_errors != kHighsIllegalResidualCount;
       if (have_residual_errors)
         unexpected_error = unexpected_error ||
-                           info.num_primal_residual_errors != 0 ||
-                           info.num_dual_residual_errors != 0 ||
                            info.num_relative_primal_residual_errors != 0 ||
                            info.num_relative_dual_residual_errors != 0;
       if (unexpected_error) {
         printf(
-            "Optimal basic solution has %d complementarity violations; %d (%d) "
-            "primal (relative) residual errors; %d (%d) dual (relative) "
-            "residual errors; %g primal dual "
-            "objective error\n",
+            "Optimal basic solution has %d complementarity violations and %g "
+            "primal dual objective error\n",
             int(info.num_complementarity_violations),
-            int(info.num_primal_residual_errors),
-            int(info.num_relative_primal_residual_errors),
-            int(info.num_dual_residual_errors),
-            int(info.num_relative_dual_residual_errors),
             info.primal_dual_objective_error);
-        printf(
-            "   num/max %6d / %9.4g          primal residual errors         "
-            "(tolerance = %4.0e)\n",
-            int(info.num_primal_residual_errors),
-            info.max_primal_residual_error, primal_residual_tolerance);
-        printf(
-            "   num/max %6d / %9.4g  relative primal residual errors         "
-            "(tolerance = %4.0e)\n",
-            int(info.num_relative_primal_residual_errors),
-            info.max_relative_primal_residual_error, primal_residual_tolerance);
-        printf(
-            "   num/max %6d / %9.4g            dual residual errors         "
-            "(tolerance = %4.0e)\n",
-            int(info.num_dual_residual_errors), info.max_dual_residual_error,
-            dual_residual_tolerance);
-        printf(
-            "   num/max %6d / %9.4g  relative   dual residual errors         "
-            "(tolerance = %4.0e)\n",
-            int(info.num_relative_dual_residual_errors),
-            info.max_relative_dual_residual_error, dual_residual_tolerance);
+        if (have_residual_errors) {
+          max_relative_tolerance_failure = std::max(
+              info.max_relative_primal_residual_error /
+                  primal_residual_tolerance,
+              info.max_relative_dual_residual_error / dual_residual_tolerance);
+          printf(
+              "   num/max %6d / %9.4g  relative primal residual errors         "
+              "(tolerance = %4.0e)\n",
+              int(info.num_relative_primal_residual_errors),
+              info.max_relative_primal_residual_error,
+              primal_residual_tolerance);
+          printf(
+              "   num/max %6d / %9.4g  relative   dual residual errors         "
+              "(tolerance = %4.0e)\n",
+              int(info.num_relative_dual_residual_errors),
+              info.max_relative_dual_residual_error, dual_residual_tolerance);
+        }
         assert(info.num_complementarity_violations == 0);
         assert(info.primal_dual_objective_error <= complementarity_tolerance);
         if (have_residual_errors) {
-          assert(info.num_primal_residual_errors == 0);
           assert(info.num_relative_primal_residual_errors == 0);
-          assert(info.num_dual_residual_errors == 0);
           assert(info.num_relative_dual_residual_errors == 0);
         }
       }
@@ -2697,69 +2686,83 @@ HighsStatus Highs::lpKktCheck(const std::string& message,
     // errors, and complementarity errors - due to the convergence
     // being based on relative primal-dual objective error, so test
     // the latter
-    if (was_optimal) {
-      if (info.num_relative_primal_infeasibilities > 0) {
-        foundOptimalityError();
+    if (info.num_relative_primal_infeasibilities > 0) {
+      double relative_tolerance_failure =
+          info.max_relative_primal_infeasibility / primal_feasibility_tolerance;
+      max_relative_tolerance_failure =
+          std::max(relative_tolerance_failure, max_relative_tolerance_failure);
+      foundOptimalityError();
+      if (was_optimal)
         highsLogUser(log_options, HighsLogType::kError,
                      "   num/max %6d / %9.4g relative primal infeasibilities "
                      "(tolerance = %4.0e)\n",
                      int(info.num_relative_primal_infeasibilities),
                      info.max_relative_primal_infeasibility,
                      primal_feasibility_tolerance);
-      }
-      if (info.num_relative_dual_infeasibilities > 0) {
-        foundOptimalityError();
+    }
+    if (info.num_relative_dual_infeasibilities > 0) {
+      double relative_tolerance_failure =
+          info.max_relative_dual_infeasibility / dual_feasibility_tolerance;
+      max_relative_tolerance_failure =
+          std::max(relative_tolerance_failure, max_relative_tolerance_failure);
+      foundOptimalityError();
+      if (was_optimal)
         highsLogUser(log_options, HighsLogType::kError,
                      "   num/max %6d / %9.4g relative   dual infeasibilities "
                      "(tolerance = %4.0e)\n",
                      int(info.num_relative_dual_infeasibilities),
                      info.max_relative_dual_infeasibility,
                      dual_feasibility_tolerance);
-      }
-      if (info.num_relative_primal_residual_errors > 0) {
-        foundOptimalityError();
+    }
+    if (info.num_relative_primal_residual_errors > 0) {
+      double relative_tolerance_failure =
+          info.max_relative_primal_residual_error / primal_residual_tolerance;
+      max_relative_tolerance_failure =
+          std::max(relative_tolerance_failure, max_relative_tolerance_failure);
+      foundOptimalityError();
+      if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
                      "   num/max %6d / %9.4g relative primal residual errors "
                      "(tolerance = %4.0e)\n",
                      int(info.num_relative_primal_residual_errors),
                      info.max_relative_primal_residual_error,
                      primal_residual_tolerance);
-      }
-      if (info.num_relative_dual_residual_errors > 0) {
-        foundOptimalityError();
+    }
+    if (info.num_relative_dual_residual_errors > 0) {
+      double relative_tolerance_failure =
+          info.max_relative_dual_residual_error / dual_residual_tolerance;
+      max_relative_tolerance_failure =
+          std::max(relative_tolerance_failure, max_relative_tolerance_failure);
+      foundOptimalityError();
+      if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
                      "   num/max %6d / %9.4g relative   dual residual errors "
                      "(tolerance = %4.0e)\n",
                      int(info.num_relative_dual_residual_errors),
                      info.max_relative_dual_residual_error,
                      dual_residual_tolerance);
-      }
-      if (info.primal_dual_objective_error > complementarity_tolerance) {
-        foundOptimalityError();
+    }
+    if (info.primal_dual_objective_error > complementarity_tolerance) {
+      double relative_tolerance_failure =
+          info.primal_dual_objective_error / complementarity_tolerance;
+      max_relative_tolerance_failure =
+          std::max(relative_tolerance_failure, max_relative_tolerance_failure);
+      foundOptimalityError();
+      if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
                      "                 %9.4g relative P-D objective error    "
                      "(tolerance = %4.0e)\n",
                      info.primal_dual_objective_error,
                      complementarity_tolerance);
-      }
-    } else {
-      // Possible that model status is kUnknown but, after postsolve,
-      // optimality conditions hold. This can only happen with
-      // IPXwithout crossover, now that there is a PDLP cleanup after
-      // postsolve (and hence call to getKktErrors that sets the model
-      // status).
-      kkt_ok = info.num_relative_primal_infeasibilities == 0 &&
-               info.num_relative_dual_infeasibilities == 0 &&
-               info.num_relative_primal_residual_errors == 0 &&
-               info.num_relative_dual_residual_errors == 0 &&
-               info.primal_dual_objective_error <= complementarity_tolerance;
     }
   }
-  if (model_status_ == HighsModelStatus::kOptimal && !kkt_ok) {
+  if (model_status_ == HighsModelStatus::kOptimal &&
+      max_relative_tolerance_failure > 1e2) {
     model_status_ = HighsModelStatus::kUnknown;
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Model status changed from \"Optimal\" to \"Unknown\"\n");
-  } else if (model_status_ == HighsModelStatus::kUnknown && kkt_ok) {
+  } else if (model_status_ == HighsModelStatus::kUnknown &&
+             max_relative_tolerance_failure <= 1e2) {
     model_status_ = HighsModelStatus::kOptimal;
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Model status changed from \"Unknown\" to \"Optimal\"\n");

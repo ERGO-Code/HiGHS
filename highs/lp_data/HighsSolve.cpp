@@ -152,13 +152,13 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   std::string last_lp_solver = kHighsChooseString;
   if (solver_object.options_.solver == kIpmString) {
     last_lp_solver = kIpmString;
-  }  else if (solver_object.options_.solver == kPdlpString) {
+  } else if (solver_object.options_.solver == kPdlpString) {
     last_lp_solver = kPdlpString;
-  } 
+  }
   getLpKktFailures(solver_object.options_, solver_object.lp_,
                    solver_object.solution_, solver_object.basis_,
-                   solver_object.highs_info_, primal_dual_errors,
-                   get_residuals, last_lp_solver);
+                   solver_object.highs_info_, primal_dual_errors, get_residuals,
+                   last_lp_solver);
   reportLpKktFailures(solver_object.lp_, solver_object.options_,
                       solver_object.highs_info_);
   solver_object.highs_info_ = save_highs_info;

@@ -93,12 +93,11 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
                           HighsModelStatus& model_status, HighsInfo& highs_info,
                           HighsCallback& callback);
 int formulateLP_highs(const cupdlp_int local_log_level, const HighsLp& lp,
-		      double** cost, int* nCols, int* nRows,
-                      int* nnz, int* nEqs, int** csc_beg, int** csc_idx,
-                      double** csc_val, double** rhs, double** lower,
-                      double** upper, double* offset, double* sign_origin,
-                      int* nCols_origin, int** constraint_new_idx,
-                      int** constraint_type);
+                      double** cost, int* nCols, int* nRows, int* nnz,
+                      int* nEqs, int** csc_beg, int** csc_idx, double** csc_val,
+                      double** rhs, double** lower, double** upper,
+                      double* offset, double* sign_origin, int* nCols_origin,
+                      int** constraint_new_idx, int** constraint_type);
 
 cupdlp_int getCupdlpLogLevel(const HighsOptions& options);
 

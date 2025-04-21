@@ -1304,7 +1304,7 @@ HighsStatus Highs::optimizeModel() {
 
   // Initialise the record of the last LP algorithm used - used to
   // know whether IPX or PDLP was last used when no basis is known
-  std::string last_lp_solver = "";  
+  std::string last_lp_solver = "";
 
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
@@ -1339,7 +1339,8 @@ HighsStatus Highs::optimizeModel() {
     if (return_status == HighsStatus::kError)
       return returnFromOptimizeModel(return_status, undo_mods);
     // Record the solver used
-    if (options_.solver == kHighsChooseString || options_.solver == kSimplexString || unconstrained_lp) {
+    if (options_.solver == kHighsChooseString ||
+        options_.solver == kSimplexString || unconstrained_lp) {
       last_lp_solver = "kSimplexString";
     } else {
       last_lp_solver = options_.solver;
@@ -1574,7 +1575,7 @@ HighsStatus Highs::optimizeModel() {
 
     // Record the solver used
     if (options_.solver == kHighsChooseString ||
-	options_.solver == kSimplexString) {
+        options_.solver == kSimplexString) {
       last_lp_solver = "kSimplexString";
     } else {
       last_lp_solver = options_.solver;
@@ -1721,22 +1722,29 @@ HighsStatus Highs::optimizeModel() {
       assert(solver == kIpmString || solver == kPdlpString);
       double this_solve_time = timer_.read() - initial_time;
       const double pdlp_min_time_limit = 1000.0;
-      double pdlp_time_limit = std::max(pdlp_min_time_limit, 10 * this_solve_time);
+      double pdlp_time_limit =
+          std::max(pdlp_min_time_limit, 10 * this_solve_time);
       if (options_.time_limit < kHighsInf) {
         double time_remaining = time_limit - timer_.read();
         pdlp_time_limit = std::min(0.1 * time_remaining, pdlp_time_limit);
       }
       if (pdlp_time_limit > 0) {
-	highsLogUser(log_options, HighsLogType::kInfo, "Unknown model status, and no basis, after initial solve in %g s, so use PDLP with KKT tolerance = %g and time limit = %g to solve the original LP from the incumbent solution after postsolve\n", this_solve_time, options_.kkt_tolerance, pdlp_time_limit);
+        highsLogUser(
+            log_options, HighsLogType::kInfo,
+            "Unknown model status, and no basis, after initial solve in %g s, "
+            "so use PDLP with KKT tolerance = %g and time limit = %g to solve "
+            "the original LP from the incumbent solution after postsolve\n",
+            this_solve_time, options_.kkt_tolerance, pdlp_time_limit);
         options_.solver = kPdlpString;
         options_.time_limit = pdlp_time_limit;
         solveLp(incumbent_lp,
-                "Using PDLP to solve the original LP from the solution after postsolve",
+                "Using PDLP to solve the original LP from the solution after "
+                "postsolve",
                 this_solve_original_lp_time);
         // Recover solver and time limit option values
         options_.solver = solver;
         options_.time_limit = time_limit;
-	last_lp_solver = kPdlpString;
+        last_lp_solver = kPdlpString;
         return_status = HighsStatus::kOk;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");

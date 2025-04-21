@@ -101,10 +101,10 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
 
-  formulateLP_highs(local_log_level, lp,
-		    &cost, &nCols, &nRows, &nnz, &nEqs, &csc_beg, &csc_idx,
-                    &csc_val, &rhs, &lower, &upper, &offset, &sense_origin,
-                    &nCols_origin, &constraint_new_idx, &constraint_type);
+  formulateLP_highs(local_log_level, lp, &cost, &nCols, &nRows, &nnz, &nEqs,
+                    &csc_beg, &csc_idx, &csc_val, &rhs, &lower, &upper, &offset,
+                    &sense_origin, &nCols_origin, &constraint_new_idx,
+                    &constraint_type);
 
   // H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
   Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
@@ -265,12 +265,11 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 }
 
 int formulateLP_highs(const cupdlp_int local_log_level, const HighsLp& lp,
-		      double** cost, int* nCols, int* nRows,
-                      int* nnz, int* nEqs, int** csc_beg, int** csc_idx,
-                      double** csc_val, double** rhs, double** lower,
-                      double** upper, double* offset, double* sense_origin,
-                      int* nCols_origin, int** constraint_new_idx,
-                      int** constraint_type) {
+                      double** cost, int* nCols, int* nRows, int* nnz,
+                      int* nEqs, int** csc_beg, int** csc_idx, double** csc_val,
+                      double** rhs, double** lower, double** upper,
+                      double* offset, double* sense_origin, int* nCols_origin,
+                      int** constraint_new_idx, int** constraint_type) {
   int retcode = 0;
 
   // problem size for malloc
