@@ -295,7 +295,7 @@ TEST_CASE("highs-callback-logging", "[highs_callback]") {
   highs.startCallback(kCallbackLogging);
   highs.readModel(filename);
   highs.run();
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -312,7 +312,7 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
   highs.startCallback(kCallbackLogging);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   if (dev_run) highs.writeBasis("");
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -329,7 +329,7 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().simplex_iteration_count >
           adlittle_simplex_iteration_limit);
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -346,7 +346,7 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().ipm_iteration_count > adlittle_ipm_iteration_limit);
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -362,7 +362,7 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs_callback]") {
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -377,7 +377,7 @@ TEST_CASE("highs-callback-mip-improving", "[highs_callback]") {
   highs.startCallback(kCallbackMipImprovingSolution);
   highs.readModel(filename);
   highs.run();
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -391,7 +391,7 @@ TEST_CASE("highs-callback-mip-data", "[highs_callback]") {
   highs.startCallback(kCallbackMipLogging);
   highs.readModel(filename);
   highs.run();
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -413,7 +413,7 @@ TEST_CASE("highs-callback-mip-solution", "[highs_callback]") {
   highs.setCallback(userMipSolutionCallback, p_user_callback_data);
   highs.startCallback(kCallbackMipSolution);
   highs.run();
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -425,7 +425,7 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
   highs.setCallback(userMipCutPoolCallback);
   highs.startCallback(kCallbackMipGetCutPool);
   highs.run();
-  
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -469,6 +469,6 @@ TEST_CASE("highs-callback-mip-user-solution", "[highs_callback]") {
         std::max(1.0, std::fabs(objective_function_value0));
     REQUIRE(objective_diff < 1e-12);
   }
-  
+
   highs.resetGlobalScheduler(true);
 }

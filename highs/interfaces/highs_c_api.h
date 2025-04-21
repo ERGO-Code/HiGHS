@@ -1672,6 +1672,24 @@ HighsInt Highs_changeRowBounds(void* highs, const HighsInt row,
                                const double lower, const double upper);
 
 /**
+ * Change the variable bounds of multiple adjacent rows.
+ *
+ * @param highs     A pointer to the Highs instance.
+ * @param from_row  The index of the first row whose bound changes.
+ * @param to_row    The index of the last row whose bound changes.
+ * @param lower     An array of length [to_row - from_row + 1] with the new
+ *                  lower bounds.
+ * @param upper     An array of length [to_row - from_row + 1] with the new
+ *                  upper bounds.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_changeRowsBoundsByRange(void* highs, const HighsInt from_row,
+                                       const HighsInt to_row,
+                                       const double* lower,
+                                       const double* upper);
+
+/**
  * Change the bounds of multiple rows given by an array of indices.
  *
  * @param highs             A pointer to the Highs instance.
