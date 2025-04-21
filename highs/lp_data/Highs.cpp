@@ -1302,10 +1302,6 @@ HighsStatus Highs::optimizeModel() {
     time += timer_.read(timer_.solve_clock);
   };
 
-  // Initialise the record of the last LP algorithm used - used to
-  // know whether IPX or PDLP was last used when no basis is known
-  std::string last_lp_solver = "";
-
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
   // Even if options_.solver == kHighsChooseString in isolation will,
@@ -1338,13 +1334,6 @@ HighsStatus Highs::optimizeModel() {
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
       return returnFromOptimizeModel(return_status, undo_mods);
-    // Record the solver used
-    if (options_.solver == kHighsChooseString ||
-        options_.solver == kSimplexString || unconstrained_lp) {
-      last_lp_solver = "kSimplexString";
-    } else {
-      last_lp_solver = options_.solver;
-    }
   } else {
     // Otherwise, consider presolve
     //
@@ -1573,14 +1562,6 @@ HighsStatus Highs::optimizeModel() {
         model_presolve_status_ == HighsPresolveStatus::kReduced &&
         model_status_ == HighsModelStatus::kUnknown;
 
-    // Record the solver used
-    if (options_.solver == kHighsChooseString ||
-        options_.solver == kSimplexString) {
-      last_lp_solver = "kSimplexString";
-    } else {
-      last_lp_solver = options_.solver;
-    }
-
     // #2251 Ultimately model_status_ == HighsModelStatus::kUnknown won't be
     // passed down
     //    assert(model_status_ != HighsModelStatus::kUnknown);
@@ -1624,7 +1605,7 @@ HighsStatus Highs::optimizeModel() {
           // and IPX determined optimality
           solution_.dual_valid = true;
           basis_.invalidate();
-          this->lpKktCheck("After postsolve", last_lp_solver);
+          this->lpKktCheck("After postsolve");
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP
@@ -1744,7 +1725,6 @@ HighsStatus Highs::optimizeModel() {
         // Recover solver and time limit option values
         options_.solver = solver;
         options_.time_limit = time_limit;
-        last_lp_solver = kPdlpString;
         return_status = HighsStatus::kOk;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
@@ -1763,7 +1743,7 @@ HighsStatus Highs::optimizeModel() {
   // Unless the model status was determined using the strictly reduced LP, the
   // HiGHS info is valid
   if (!no_incumbent_lp_solution_or_basis) {
-    this->lpKktCheck("On exit from optimizeModel()", last_lp_solver);
+    this->lpKktCheck("On exit from optimizeModel()");
     info_.valid = true;
   }
 

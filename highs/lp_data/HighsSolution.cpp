@@ -39,13 +39,12 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
-                    const bool get_residuals,
-                    const std::string& last_lp_solver) {
+                    const bool get_residuals) {
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
   const HighsLp& lp = model.lp_;
   getKktFailures(options, model.isQp(), lp, gradient, solution, highs_info,
-                 get_residuals, last_lp_solver);
+                 get_residuals);
   getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
   getPrimalDualGlpsolErrors(options, lp, gradient, solution,
                             primal_dual_errors);
@@ -63,10 +62,9 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
-                      const bool get_residuals,
-                      const std::string& last_lp_solver) {
+                      const bool get_residuals) {
   getKktFailures(options, false, lp, lp.col_cost_, solution, highs_info,
-                 get_residuals, last_lp_solver);
+                 get_residuals);
   getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
   getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
                             primal_dual_errors);
@@ -75,9 +73,7 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
 void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, HighsInfo& highs_info,
-                    const bool get_residuals,
-                    const std::string& last_lp_solver) {
-  assert(last_lp_solver != "");
+                    const bool get_residuals) {
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
