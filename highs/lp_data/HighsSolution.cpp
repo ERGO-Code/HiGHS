@@ -25,7 +25,7 @@ const uint8_t kHighsSolutionLo = -1;
 const uint8_t kHighsSolutionNo = 0;
 const uint8_t kHighsSolutionUp = 1;
 
-const bool printf_kkt = false;  // true;//
+const bool printf_kkt = true;//false;  // 
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
@@ -39,12 +39,13 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
-                    const bool get_residuals) {
+                    const bool get_residuals,
+		    const std::string& last_lp_solver) {
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
   const HighsLp& lp = model.lp_;
   getKktFailures(options, model.isQp(), lp, gradient, solution, highs_info,
-                 get_residuals);
+                 get_residuals, last_lp_solver);
   getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
   getPrimalDualGlpsolErrors(options, lp, gradient, solution,
                             primal_dual_errors);
@@ -62,9 +63,11 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
-                      const bool get_residuals) {
+                      const bool get_residuals,
+		      const std::string& last_lp_solver) {
   getKktFailures(options, false, lp, lp.col_cost_, solution, highs_info,
-                 get_residuals);
+                 get_residuals,
+		 last_lp_solver);
   getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
   getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
                             primal_dual_errors);
@@ -73,7 +76,9 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
 void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, HighsInfo& highs_info,
-                    const bool get_residuals) {
+                    const bool get_residuals,
+		      const std::string& last_lp_solver) {
+  assert(last_lp_solver != "");
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
@@ -238,29 +243,6 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double pdlp_norm_costs = 0.0;
   double highs_norm_costs = 0.0;
 
-  auto updateHighsNorm = [&](const double value, double& norm) {
-    double abs_value = std::fabs(value);
-    if (options.relative_kkt_error_norm == 0) {
-      norm = std::max(abs_value, norm);
-    } else if (options.relative_kkt_error_norm == 1) {
-      norm += abs_value;
-    } else if (options.relative_kkt_error_norm == 2) {
-      norm += value * value;
-    }
-  };
-  auto updateRelativeMeasure = [&](const double value,
-                                   double& relative_measure) {
-    double abs_value = std::fabs(value);
-    if (options.relative_kkt_error_norm == 0) {
-      relative_measure = std::max(abs_value, relative_measure);
-    } else if (options.relative_kkt_error_norm == 1) {
-      relative_measure += abs_value;
-    } else {
-      relative_measure *= relative_measure;
-      relative_measure += value * value;
-      relative_measure = std::sqrt(relative_measure);
-    }
-  };
   // Pass twice through this loop, once to determine the bound and
   // cost norms, and once to use them to assess relative
   // infeasibilities and residual errors
@@ -277,10 +259,14 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         if (have_integrality) integrality = lp.integrality_[iCol];
         if (pass == 0) {
           ipx_norm_costs = std::max(std::fabs(cost), ipx_norm_costs);
+	  if (lower > -kHighsInf)
+	    ipx_norm_bounds = std::max(std::fabs(lower), ipx_norm_bounds);
+	  if (upper < kHighsInf) 
+	    ipx_norm_bounds = std::max(std::fabs(upper), ipx_norm_bounds);
           pdlp_norm_costs += cost * cost;
           if (dual * dual < dual_feasibility_tolerance) {
             // Dual close to zero
-            updateHighsNorm(cost, highs_norm_costs);
+            highs_norm_costs += cost * cost;
           }
           if (get_residuals && have_dual_solution) {
             // Subtract off the gradient value
@@ -303,15 +289,24 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
             ipx_norm_bounds = std::max(std::fabs(lower), ipx_norm_bounds);
             pdlp_norm_bounds += lower * lower;
           } else {
-            // BX constraints will be separated into two constraints
-            // by IPC and PDLP, so count both bounds
+            // BX constraints are handled by IPX and PDLP by adding a
+            // boxed explicit slack. However, its bounds aren't
+            // included in the PDLP RHS measure
             if (lower > -kHighsInf) {
+	      // Finite lower bound, so counts for IPX
               ipx_norm_bounds = std::max(std::fabs(lower), ipx_norm_bounds);
-              pdlp_norm_bounds += lower * lower;
+	      if (upper >= kHighsInf) {
+		// LB constraint, so bound counts for PDLP
+		pdlp_norm_bounds += lower * lower;
+	      }
             }
             if (upper < kHighsInf) {
+	      // Finite upper bound, so counts for IPX
               ipx_norm_bounds = std::max(std::fabs(upper), ipx_norm_bounds);
-              pdlp_norm_bounds += upper * upper;
+	      if (lower <= -kHighsInf) {
+		// UB constraint, so bound counts for PDLP
+		pdlp_norm_bounds += upper * upper;
+	      }
             }
           }
         }
@@ -341,10 +336,10 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         double residual = 0;
         if (at_status == kHighsSolutionLo) {
           residual = std::fabs(lower - value);
-          updateHighsNorm(lower, highs_norm_bounds);
+          highs_norm_bounds += residual * residual;
         } else if (at_status == kHighsSolutionUp) {
           residual = std::fabs(value - upper);
-          updateHighsNorm(upper, highs_norm_bounds);
+          highs_norm_bounds += residual * residual;
         }
       } else {
         if (primal_infeasibility > 0) {
@@ -370,14 +365,15 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
                 mid_status == kHighsSolutionLo) {
               // Bound interval is short, or variable is below the
               // midpoint (which is only possible lower is finite)
-              if (lower) updateRelativeMeasure(lower, relative_bound_measure);
+	      //
+	      // if (lower) updateRelativeMeasure(lower, relative_bound_measure);
             } else {
               assert(mid_status == kHighsSolutionUp);
               // Variable is above the midpoint of the bound interval
               // (which is only possible upper is finite)
-              if (upper)
-                relative_bound_measure =
-                    std::max(std::fabs(upper), relative_bound_measure);
+	      //
+	      // if (upper) relative_bound_measure =
+	      // std::max(std::fabs(upper), relative_bound_measure);
             }
             // 2251
             assert(relative_bound_measure < kHighsInf);
@@ -411,7 +407,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               // are not small. hence the cost has not been included in
               // highs_norm_costs, but should be used for local relative
               // infeasiblility.
-              updateRelativeMeasure(cost, relative_cost_measure);
+	      //
+	      // updateRelativeMeasure(cost, relative_cost_measure);
             }
             // 2251
             assert(relative_cost_measure < kHighsInf);
@@ -483,14 +480,17 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     if (pass == 0) {
       pdlp_norm_costs = std::sqrt(pdlp_norm_costs);
       pdlp_norm_bounds = std::sqrt(pdlp_norm_bounds);
-
-      if (options.relative_kkt_error_norm == 2) {
-        highs_norm_costs = std::sqrt(highs_norm_costs);
-        highs_norm_bounds = std::sqrt(highs_norm_bounds);
-      } else if (options.relative_kkt_error_norm < 0) {
+      printf("last_lp_solver = %s\n", last_lp_solver.c_str());
+      if (last_lp_solver == kIpmString) {
+        highs_norm_costs = ipx_norm_costs;
+        highs_norm_bounds = ipx_norm_bounds;
+      } else if (last_lp_solver == kPdlpString) {
         highs_norm_costs = pdlp_norm_costs;
         highs_norm_bounds = pdlp_norm_bounds;
-      }
+      } else {
+        highs_norm_costs = std::sqrt(highs_norm_costs);
+        highs_norm_bounds = std::sqrt(highs_norm_bounds);
+      } 
     }
   }
 

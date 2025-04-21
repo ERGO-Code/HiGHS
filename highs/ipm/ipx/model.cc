@@ -60,6 +60,12 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
     for (double x : ub_)
         if (std::isfinite(x))
             norm_bounds_ = std::max(norm_bounds_, std::abs(x));
+
+    h_logging_stream
+      << Textline("Cost norm:   ") << norm_c_ << '\n'
+      << Textline("Bounds norm: ") << norm_bounds_ << '\n';
+    control.hLog(h_logging_stream);
+
     PrintPreprocessingLog(control);
     return 0;
 }

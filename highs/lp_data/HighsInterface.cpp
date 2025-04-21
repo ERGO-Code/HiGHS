@@ -2566,8 +2566,10 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::lpKktCheck(const std::string& message) {
+HighsStatus Highs::lpKktCheck(const std::string& message,
+			      const std::string& last_lp_solver) {
   if (!this->solution_.value_valid) return HighsStatus::kOk;
+  assert(last_lp_solver != "");
   HighsInfo& info = this->info_;
   const HighsOptions& options = this->options_;
   const HighsSolution& solution = this->solution_;
@@ -2591,9 +2593,9 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
   // #and don't test for zero residual error count
   const bool get_residuals = true;
   getLpKktFailures(options, model_.lp_, solution, basis_, info,
-                   primal_dual_errors, get_residuals);
+                   primal_dual_errors, get_residuals, last_lp_solver);
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Highs::lpKktCheck: %s\n", message.c_str());
+               "Highs::lpKktCheck: %s, solving with %s\n", message.c_str(), last_lp_solver.c_str());
   reportLpKktFailures(model_.lp_, options, info, "LP");
   if (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
       info.num_primal_infeasibilities == 0 &&
