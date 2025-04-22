@@ -46,8 +46,8 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
       fjVarType = external_feasibilityjump::VarType::Continuous;
     } else {
       fjVarType = external_feasibilityjump::VarType::Integer;
-      lower = std::ceil(lower);
-      upper = std::floor(upper);
+      lower = std::ceil(lower - feastol);
+      upper = std::floor(upper + feastol);
     }
 
     const bool legal_bounds = lower <= upper && lower < kHighsInf &&
