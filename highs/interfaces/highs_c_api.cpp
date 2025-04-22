@@ -928,6 +928,14 @@ HighsInt Highs_changeRowBounds(void* highs, const HighsInt row,
   return (HighsInt)((Highs*)highs)->changeRowBounds(row, lower, upper);
 }
 
+HighsInt Highs_changeRowsBoundsByRange(void* highs, const HighsInt from_row,
+                                       const HighsInt to_row,
+                                       const double* lower,
+                                       const double* upper) {
+  return (HighsInt)((Highs*)highs)
+      ->changeRowsBounds(from_row, to_row, lower, upper);
+}
+
 HighsInt Highs_changeRowsBoundsBySet(void* highs,
                                      const HighsInt num_set_entries,
                                      const HighsInt* set, const double* lower,

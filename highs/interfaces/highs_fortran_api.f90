@@ -572,6 +572,16 @@ module highs_fortran_api
       integer(c_int) :: s
     end function Highs_changeRowBounds
 
+    function Highs_changeRowsBoundsByRange (h, from, to, lo, up) result(s) bind(c, name='Highs_changeRowsBoundsByRange')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: from
+      integer(c_int), VALUE :: to
+      real(c_double) :: lo(*)
+      real(c_double) :: up(*)
+      integer(c_int) :: s
+    end function Highs_changeRowsBoundsByRange
+
     function Highs_changeRowsBoundsBySet (h, nse, set, lo, up) result(s) bind(c, name='Highs_changeRowsBoundsBySet')
       use iso_c_binding
       type(c_ptr), VALUE :: h
