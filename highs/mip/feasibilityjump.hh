@@ -33,11 +33,8 @@ struct FJStatus {
   double* solution;
 };
 
-double violationTolerance = 1.0e-5;
-double equalityTolerance = 1.0e-5;
-
-// Measures if two doubles are equal within a tolerance of 1.0e-5.
-bool eq(double a, double b) { return fabs(a - b) < equalityTolerance; }
+// Measures if two doubles are equal within a tolerance
+bool eq(double a, double b, double tol) { return fabs(a - b) < tol; }
 
 struct IdxCoeff {
   uint32_t idx;
@@ -102,7 +99,14 @@ struct LhsModification {
 // Stores the MIP problem, an incumbent assignment, and the set of constraints
 // that are violated in the current incumbent assignment. This set is maintained
 // when changes are given to the incumbent assignment using `setValue`.
-struct Problem {
+class Problem {
+  const double equalityTolerance;
+  const double violationTolerance;
+
+ public:
+  Problem(double equalityTolerance, double violationTolerance)
+      : equalityTolerance(equalityTolerance),
+        violationTolerance(violationTolerance) {}
   std::vector<Var> vars;
   std::vector<Constraint> constraints;
   std::vector<double> incumbentAssignment;
@@ -168,7 +172,7 @@ struct Problem {
       else if (sense == RowType::Gte)
         ok = 0 + equalityTolerance >= rhs;
       else
-        ok = eq(0, rhs);
+        ok = eq(0, rhs, equalityTolerance);
 
       return ok ? INT_MAX : INT_MIN;
     }
@@ -297,10 +301,12 @@ void modifyMove(LhsModification mod, Problem& problem, Move& move) {
 // Stores current moves and computes updated jump values for
 // the "Jump" move type.
 class JumpMove {
+  const double equalityTolerance;
   std::vector<Move> moves;
   std::vector<std::pair<double, double>> bestShiftBuffer;
 
  public:
+  JumpMove(double equalityTolerance) : equalityTolerance(equalityTolerance) {}
   void init(Problem& problem) { moves.resize(problem.vars.size()); }
 
   template <typename F>
@@ -396,8 +402,9 @@ class JumpMove {
       // %g\n", currentScore,currentSlope, currentValue, bestScore, bestValue
       // );
 
-      if (eq(bestValue, varIncumbentValue) ||
-          (!eq(currentValue, varIncumbentValue) && currentScore < bestScore)) {
+      if (eq(bestValue, varIncumbentValue, equalityTolerance) ||
+          (!eq(currentValue, varIncumbentValue, equalityTolerance) &&
+           currentScore < bestScore)) {
         bestScore = currentScore;
         bestValue = currentValue;
       }
@@ -405,7 +412,9 @@ class JumpMove {
       // Slope is always increasing, so if we have a valid value, we can quit
       // as soon as the slope turns nonnegative, since we must already have
       // visited the minimum.
-      if (!eq(bestValue, varIncumbentValue) && currentSlope >= 0.) break;
+      if (!eq(bestValue, varIncumbentValue, equalityTolerance) &&
+          currentSlope >= 0.)
+        break;
     }
 
     // printf("Setting jump for %d to from %g to %g\n", varIdx,
@@ -458,7 +467,11 @@ class FeasibilityJumpSolver {
 
  public:
   FeasibilityJumpSolver(int seed = 0, int _verbosity = 0,
-                        double _weightUpdateDecay = 1.0) {
+                        double _weightUpdateDecay = 1.0,
+                        double equalityTolerance = 1e-5,
+                        double violationTolerance = 1e-5)
+      : problem(equalityTolerance, violationTolerance),
+        jumpMove(equalityTolerance) {
     verbosity = _verbosity;
     weightUpdateDecay = _weightUpdateDecay;
     rng = std::mt19937(seed);
@@ -572,10 +585,7 @@ class FeasibilityJumpSolver {
       for (size_t i = 0; i < sampleSize; i++) {
         auto setidx = rng() % goodVarsSet.size();
         auto varIdx = goodVarsSet[setidx];
-        // assert(goodVarsSetIdx[varIdx] >= 0 && goodVarsSetIdx[varIdx] ==
-        // setidx);
         Move move = bestMove(varIdx);
-        // assert(move.score > equalityTolerance);
         if (move.score > bestScore) {
           bestScore = move.score;
           bestVar = varIdx;
