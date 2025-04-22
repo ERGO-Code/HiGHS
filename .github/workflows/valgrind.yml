@@ -32,7 +32,25 @@ jobs:
       - name: Test
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s ./bin/unit_tests 
+        run: |
+          valgrind \
+          --leak-check=full \
+          --show-leak-kinds=all \
+          --track-origins=yes \
+          -s \
+          ./bin/unit_tests \
+          2>&1 | tee logfile
+
+      - name: Check log for Errors
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          cat logfile
+          OUTPUT='ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)'
+          if grep -q "$OUTPUT" logfile; then
+            exit 0
+          fi
+          exit 1
 
   instance_tests:
     runs-on: ${{ matrix.os }}
@@ -63,4 +81,24 @@ jobs:
       - name: Test
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s ctest -E unit.* --timeout 1000 --output-on-failure 
+        run: |
+          valgrind \
+          --leak-check=full \
+          --show-leak-kinds=all \
+          --track-origins=yes \
+          -s \
+          ctest -E unit.* \
+          --timeout 1000 \
+          --output-on-failure \
+          2>&1 | tee logfile2
+
+      - name: Check log for Errors
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          cat logfile2
+          OUTPUT='ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)'
+          if grep -q "$OUTPUT" logfile2; then
+            exit 0
+          fi
+          exit 1

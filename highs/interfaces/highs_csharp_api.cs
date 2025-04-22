@@ -417,6 +417,9 @@ public class HighsLpSolver : IDisposable
     private static extern int Highs_changeRowBounds(IntPtr highs, int row, double lower, double upper);
 
     [DllImport(highslibname)]
+    private static extern int Highs_changeRowsBoundsByRange(IntPtr highs, int from_row, int to_row, double[] lower, double[] upper);
+
+    [DllImport(highslibname)]
     private static extern int Highs_changeRowsBoundsBySet(IntPtr highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
     [DllImport(highslibname)]
@@ -912,6 +915,11 @@ public class HighsLpSolver : IDisposable
     public HighsStatus changeRowBounds(int row, double lower, double upper)
     {
         return (HighsStatus)HighsLpSolver.Highs_changeRowBounds(this.highs, row, lower, upper);
+    }
+
+    public HighsStatus changeRowsBoundsByRange(int from, int to, double[] lower, double[] upper)
+    {
+        return (HighsStatus)HighsLpSolver.Highs_changeRowsBoundsByRange(this.highs, from, to, lower, upper);
     }
 
     public HighsStatus changeRowsBoundsBySet(int[] rows, double[] lower, double[] upper)
