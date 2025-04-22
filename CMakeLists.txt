@@ -520,6 +520,12 @@ set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
 configure_file(${PROJECT_SOURCE_DIR}/highs/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
+if (NOT DEBUG_MEMORY STREQUAL "Off")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options($<$<AND:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>,$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>>:-fno-sanitize=function,vptr>)
+  endif()
+endif()
+
 if (DEBUG_MEMORY STREQUAL "Address")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
@@ -529,6 +535,11 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
+
+  # add_compile_options("-fsanitize=address,undefined")
+  # add_compile_options("-fno-omit-frame-pointer")
+  # add_link_options("-fsanitize=address,undefined")
+  # add_link_options("-lubsan")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
       -fsanitize=address,undefined \
@@ -540,34 +551,56 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fno-optimize-sibling-calls ")
 
 elseif (DEBUG_MEMORY STREQUAL "Thread")
-  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
-      -fsanitize=thread,undefined \
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
       -fno-omit-frame-pointer")
-  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
-      -fsanitize=thread,undefined \
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
       -fno-omit-frame-pointer")
 
-  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
-      -fsanitize=thread,undefined \
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread \
       -fno-omit-frame-pointer ")
-  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
-      -fsanitize=thread,undefined \
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=thread \
       -fno-omit-frame-pointer ")
 
 elseif (DEBUG_MEMORY STREQUAL "Leak")
-  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
-      -fsanitize=leak,undefined \
-      -fno-omit-frame-pointer")
-  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
-      -fsanitize=leak,undefined \
-      -fno-omit-frame-pointer")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak \
+        -fno-omit-frame-pointer")
+    set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak \
+        -fno-omit-frame-pointer")
+    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak \
+        -fno-omit-frame-pointer ")
+  else()
+    set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer")
+    set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer")
+    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer ")
+  endif()
+elseif (DEBUG_MEMORY STREQUAL "Memory")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=memory \
+        -fno-omit-frame-pointer")
+    set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=memory \
+        -fno-omit-frame-pointer")
+    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=memory \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=memory \
+        -fno-omit-frame-pointer ")
 
-  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
-      -fsanitize=leak,undefined \
-      -fno-omit-frame-pointer ")
-  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
-      -fsanitize=leak,undefined \
-      -fno-omit-frame-pointer ")
+  else()
+    message(FATAL_ERROR "Memory sanitizer only available with clang.")
+  endif()
 endif()
 
 # HiGHS coverage update in progress
