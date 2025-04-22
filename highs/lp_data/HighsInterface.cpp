@@ -2620,7 +2620,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
       if (info.num_primal_infeasibilities > 0) {
         foundOptimalityError();
         highsLogUser(
-            log_options, HighsLogType::kError,
+            log_options, HighsLogType::kWarning,
             "   num/max/sum %6d / %9.4g / %9.4g primal "
             "infeasibilities       (tolerance = %4.0e)\n",
             int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
@@ -2628,7 +2628,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
       }
       if (info.num_dual_infeasibilities > 0) {
         foundOptimalityError();
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "   num/max/sum %6d / %9.4g / %9.4g   dual "
                      "infeasibilities       (tolerance = %4.0e)\n",
                      int(info.num_dual_infeasibilities),
@@ -2690,7 +2690,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
           std::max(relative_tolerance_failure, max_relative_tolerance_failure);
       foundOptimalityError();
       if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "   num/max %6d / %9.4g relative primal infeasibilities "
                      "(tolerance = %4.0e)\n",
                      int(info.num_relative_primal_infeasibilities),
@@ -2704,7 +2704,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
           std::max(relative_tolerance_failure, max_relative_tolerance_failure);
       foundOptimalityError();
       if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "   num/max %6d / %9.4g relative   dual infeasibilities "
                      "(tolerance = %4.0e)\n",
                      int(info.num_relative_dual_infeasibilities),
@@ -2757,7 +2757,9 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
       max_relative_tolerance_failure > 1e2) {
     model_status_ = HighsModelStatus::kUnknown;
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "Model status changed from \"Optimal\" to \"Unknown\"\n");
+                 "Model status changed from \"Optimal\" to \"Unknown\""
+                 " due to violating relative tolerances by %g\n",
+                 max_relative_tolerance_failure);
   } else if (model_status_ == HighsModelStatus::kUnknown &&
              max_relative_tolerance_failure <= 1e2) {
     model_status_ = HighsModelStatus::kOptimal;
