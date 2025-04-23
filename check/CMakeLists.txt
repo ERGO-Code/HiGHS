@@ -339,7 +339,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             "chip\;-8.9999999\;"
             "scrs8\; 9.04297094\;"
             "sctest\; 5.7500000\;"
-            "shell\; 5.75000000\;"
+            "shell\; 1.20882534\;"
             "stair\;-2.51266942\;"
             "standata\; 1.257699393\;"
             "standgub\; 1.25769939\;"
