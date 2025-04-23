@@ -3746,8 +3746,9 @@ bool Highs::infeasibleBoundsOk() {
       if (perform_inward_integer_rounding &&
           lp.integrality_[iCol] == HighsVarType::kInteger) {
         // Assess bounds after inward integer rounding
-        double integer_lower = std::ceil(lower);
-        double integer_upper = std::floor(upper);
+        double feastol = this->options_.mip_feasibility_tolerance;
+        double integer_lower = std::ceil(lower - feastol);
+        double integer_upper = std::floor(upper + feastol);
         assert(integer_lower >= lower);
         assert(integer_upper <= upper);
         performed_inward_integer_rounding =

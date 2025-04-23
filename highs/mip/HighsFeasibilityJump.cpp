@@ -28,12 +28,11 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
   double objective_function_value;
 
   // Configure Feasibility Jump and pass it the problem
-  external_feasibilityjump::equalityTolerance = epsilon;
-  external_feasibilityjump::violationTolerance = feastol;
-
   int verbosity = mipsolver.submip ? 0 : mipsolver.options_mip_->log_dev_level;
   auto solver = external_feasibilityjump::FeasibilityJumpSolver(
-      /* seed = */ 0, /* verbosity = */ verbosity);
+      /* seed = */ 0, /* verbosity = */ verbosity,
+      /* equalityTolerance = */ epsilon,
+      /* violationTolerance = */ feastol);
 
   for (HighsInt col = 0; col < model->num_col_; ++col) {
     double lower = model->col_lower_[col];
@@ -47,8 +46,8 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
       fjVarType = external_feasibilityjump::VarType::Continuous;
     } else {
       fjVarType = external_feasibilityjump::VarType::Integer;
-      lower = std::ceil(lower);
-      upper = std::floor(upper);
+      lower = std::ceil(lower - feastol);
+      upper = std::floor(upper + feastol);
     }
 
     const bool legal_bounds = lower <= upper && lower < kHighsInf &&
