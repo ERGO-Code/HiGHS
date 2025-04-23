@@ -347,17 +347,17 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     endif()
   elseif(APPLE)
     set(pdlpInstances
-        "25fv47\; 5.50184699\;"
-        "adlittle\; 2.25494931\;"
-        "afiro\;-4.64753149\;"
-        "avgas\;-7.74999997\;"
+        "25fv47\; 5.501846\;"
+        "adlittle\; 2.254949\;"
+        "afiro\;-4.647531\;"
+        "avgas\;-7.7499999\;"
         "blending\;-3.19999999\;"
         "chip\;-9.0000000\;"
-        "e226\;-1.16389309\;"
-        "scrs8\; 9.04296873\;"
+        "e226\;-1.16389\;"
+        "scrs8\; 9.04296\;"
         "sctest\; 5.75000000\;"
         "shell\; 1.20882535\;"
-        "stair\;-2.5126695\;"
+        "stair\;-2.5126\;"
         "standata\; 1.25769947\;"
         "standgub\; 1.2576994\;"
     )
