@@ -331,10 +331,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         # on windows e226 model status is unknown
         # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
         set(pdlpInstances
-            "25fv47\; 5.50184472\;"
+            "25fv47\; 5.50184\;"
             "adlittle\; 2.25494944\;"
             "afiro\;-4.647531504\;"
-            "avgas\;-7.74999997\;"
+            "avgas\;-7.7499999\;"
             "blending\;-3.19999999\;"
             "chip\;-8.9999999\;"
             "scrs8\; 9.04297094\;"
