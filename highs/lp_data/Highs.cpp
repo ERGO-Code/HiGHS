@@ -4402,7 +4402,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   if (return_status != run_return_status) {
     printf(
-        "Highs::returnFromOptimize: return_status = %d != %d = "
+        "Highs::returnFromOptimizeModel: return_status = %d != %d = "
         "run_return_status "
         "For model_status_ = %s\n",
         int(return_status), int(run_return_status),

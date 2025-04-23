@@ -6,7 +6,7 @@
 
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-3;
-
+const double kkt_tolerance = 1e-4;
 #ifdef CUPDLP_CPU
 TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   SpecialLps special_lps;
@@ -23,12 +23,11 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
-  highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
+  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = HighsStatus::kOk;
-  bool optimal = false;  // true;
+  bool optimal = true;
 
-  const HighsInt pdlp_iteration_count_optimal = 240;
+  const HighsInt pdlp_iteration_count_optimal = 160;
   run_status = highs.run();
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
@@ -44,8 +43,13 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   HighsInt pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
   REQUIRE(pdlp_iteration_count > 0);
   REQUIRE(pdlp_iteration_count == pdlp_iteration_count_optimal);
+
   // Now run with half the iteration count as the limit to test
   // iteration limit termination
+  //
+  // Now that PDLP hot starts, have to clear the solution
+  //
+  highs.clearSolver();
 
   highs.setOptionValue("pdlp_iteration_limit",
                        pdlp_iteration_count_optimal / 2);
@@ -76,10 +80,9 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
-  highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
+  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = HighsStatus::kOk;
-  bool optimal = false;
+  bool optimal = true;
 
   run_status = highs.run();
   if (dev_run) highs.writeSolution("", 1);
@@ -129,8 +132,7 @@ TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
-  highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
+  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = highs.run();
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
@@ -166,17 +168,18 @@ TEST_CASE("pdlp-boxed-row-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = highs.run();
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
-  const bool not_optimal = false;
-  if (not_optimal) {
-    REQUIRE(run_status == HighsStatus::kWarning);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
-  } else {
+  const bool optimal = true;
+  if (optimal) {
     REQUIRE(run_status == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  } else {
+    REQUIRE(run_status == HighsStatus::kWarning);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
   }
 
   highs.resetGlobalScheduler(true);
@@ -199,6 +202,7 @@ TEST_CASE("pdlp-infeasible-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
@@ -223,6 +227,7 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", 1);
   const bool not_unbounded = false;
@@ -242,7 +247,7 @@ void pdlpRestart(const std::string& model) {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
-  h.setOptionValue("kkt_tolerance", 1e-4);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = h.run();
   const bool was_optimal = h.getModelStatus() == HighsModelStatus::kOptimal;
   h.setOptionValue("presolve", kHighsOffString);
@@ -275,6 +280,7 @@ TEST_CASE("pdlp-restart-lp", "[pdlp]") {
   lp.a_matrix_.value_ = {1, 1, 1, 1, 2, 1, 2, 2, 4, 3, 2, 3};
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = h.run();
 
   h.setOptionValue("presolve", kHighsOffString);
@@ -296,7 +302,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
   h.setOptionValue("presolve", kHighsOffString);
-  h.setOptionValue("kkt_tolerance", 1e-4);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = h.run();
   if (dev_run) h.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <

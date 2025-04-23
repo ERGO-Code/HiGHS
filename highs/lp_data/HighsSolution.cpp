@@ -86,7 +86,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     dual_residual_tolerance = options.kkt_tolerance;
     complementarity_tolerance = options.kkt_tolerance;
   }
-  // highs_info are the values computed in this method.
+  // highs_info are the values computed in this method
+
+  //  printf("\ngetKktFailures: get_residuals = %d\n", get_residuals); 2251
 
   HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
   double& max_primal_infeasibility = highs_info.max_primal_infeasibility;
@@ -132,6 +134,12 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
   const bool have_integrality = (lp.integrality_.size() != 0);
+
+  // Primal/dual solution status on entry can be feasible or
+  // infeasible, because it refers to the previous problem solved, so
+  // can't check whether something meaningful is being changed
+  highs_info.primal_solution_status = kSolutionStatusNone;
+  highs_info.dual_solution_status = kSolutionStatusNone;
 
   // Check that there is no dual solution if there's no primal solution
   assert(have_primal_solution || !have_dual_solution);
@@ -505,15 +513,25 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
              highs_info.primal_dual_objective_error);
   }
 
-  // Assign primal solution status
-  if (num_primal_infeasibility) {
+  // Assign primal (and possibly dual) solution status according to
+  // existence of primal and dual feasibilities
+  //
+  // For LP this may mean that primal/dual feasibility of the solution
+  // is claimed when there are residual errors, or denied when PDLP or
+  // IPX without crossover are used, since they are deemed feasible
+  // according to relative tolerances. This will be cleaned up in
+  // Highs::lpKktCheck, when the existence of a basis determines
+  //  whether absolute or relative measures are used.
+
+  //  bool have_primal_residual_error = get_residuals && num_primal_residual_error; 2251
+  if (num_primal_infeasibility) {//2251 || have_primal_residual_error) {
     highs_info.primal_solution_status = kSolutionStatusInfeasible;
   } else {
     highs_info.primal_solution_status = kSolutionStatusFeasible;
   }
   if (have_dual_solution) {
-    // Assign dual solution status
-    if (num_dual_infeasibility) {
+    // bool have_dual_residual_error = get_residuals && num_dual_residual_error; 2251
+    if (num_dual_infeasibility) {//2251  || have_dual_residual_error) {
       highs_info.dual_solution_status = kSolutionStatusInfeasible;
     } else {
       highs_info.dual_solution_status = kSolutionStatusFeasible;
