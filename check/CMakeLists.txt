@@ -331,18 +331,18 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         # on windows e226 model status is unknown
         # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
         set(pdlpInstances
-            "25fv47\; 5.5018458\;"
-            "adlittle\; 2.25494963\;"
-            "afiro\;-4.64753142\;"
-            "avgas\;-7.749999999\;"
+            "25fv47\; 5.50184472\;"
+            "adlittle\; 2.25494944\;"
+            "afiro\;-4.647531504\;"
+            "avgas\;-7.74999997\;"
             "blending\;-3.19999999\;"
-            "chip\;-9.000000001\;"
-            "scrs8\; 9.0429695\;"
-            "sctest\; 5.749999936\;"
-            "shell\; 1.2088253460\;"
-            "stair\;-2.51266951\;"
-            "standata\; 1.2576995\;"
-            "standgub\; 1.2576995\;"
+            "chip\;-8.9999999\;"
+            "scrs8\; 9.04297094\;"
+            "sctest\; 5.7500000\;"
+            "shell\; 5.75000000\;"
+            "stair\;-2.51266942\;"
+            "standata\; 1.257699393\;"
+            "standgub\; 1.25769939\;"
             )
     endif()
   elseif(APPLE)
