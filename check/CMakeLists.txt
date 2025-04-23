@@ -296,19 +296,19 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             )
     else() # CUPDLP_CPU
         set(pdlpInstances
-            "25fv47\; 5.5018360\;"
-            "adlittle\; 2.254953\;"
-            "afiro\;-4.64753126\;"
-            "avgas\;-7.75000038\;"
-            "blending\;-3.19999999\;"
-            "chip\;-9.000000020\;"
-            "e226\;-1.163892070\;"
-            "scrs8\; 9.042970154\;"
-            "sctest\; 5.750000001\;"
-            "shell\; 1.2088253471\;"
-            "stair\;-2.512669020\;"
-            "standata\; 1.257699155\;"
-            "standgub\; 1.257700132\;"
+            "25fv47\; 5.5018469\;"
+            "adlittle\; 2.254949\;"
+            "afiro\;-4.64753150\;"
+            "avgas\;-7.7499999\;"
+            "blending\;-3.1999999\;"
+            "chip\;-8.9999999\;"
+            "e226\;-1.16389294\;"
+            "scrs8\; 9.04297094\;"
+            "sctest\; 5.75000000\;"
+            "shell\; 1.20882534\;"
+            "stair\;-2.51266942\;"
+            "standata\; 1.25769944\;"
+            "standgub\; 1.25769944\;"
             )
     endif()
   elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
