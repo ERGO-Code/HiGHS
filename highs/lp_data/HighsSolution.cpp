@@ -523,15 +523,17 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   // Highs::lpKktCheck, when the existence of a basis determines
   //  whether absolute or relative measures are used.
 
-  //  bool have_primal_residual_error = get_residuals && num_primal_residual_error; 2251
-  if (num_primal_infeasibility) {//2251 || have_primal_residual_error) {
+  //  bool have_primal_residual_error = get_residuals &&
+  //  num_primal_residual_error; 2251
+  if (num_primal_infeasibility) {  // 2251 || have_primal_residual_error) {
     highs_info.primal_solution_status = kSolutionStatusInfeasible;
   } else {
     highs_info.primal_solution_status = kSolutionStatusFeasible;
   }
   if (have_dual_solution) {
-    // bool have_dual_residual_error = get_residuals && num_dual_residual_error; 2251
-    if (num_dual_infeasibility) {//2251  || have_dual_residual_error) {
+    // bool have_dual_residual_error = get_residuals && num_dual_residual_error;
+    // 2251
+    if (num_dual_infeasibility) {  // 2251  || have_dual_residual_error) {
       highs_info.dual_solution_status = kSolutionStatusInfeasible;
     } else {
       highs_info.dual_solution_status = kSolutionStatusFeasible;
@@ -1725,9 +1727,7 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
                               ? HighsLogType::kWarning
                               : HighsLogType::kInfo;
 
-  highsLogUser(log_options, log_type,
-               "HighsSolution.cpp reportLpKktFailures\n");
-  highsLogUser(log_options, log_type, "LP solution KKT conditions\n");
+  highsLogUser(log_options, log_type, "\nLP solution KKT conditions\n");
 
   highsLogUser(
       log_options, HighsLogType::kInfo,
@@ -1756,12 +1756,6 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
                int(info.num_dual_residual_errors), info.max_dual_residual_error,
                int(info.num_relative_dual_residual_errors),
                info.max_relative_dual_residual_error, dual_residual_tolerance);
-  highsLogUser(
-      log_options, HighsLogType::kInfo,
-      "num/max %6d / %8.3g                              complementarity "
-      "violations (tolerance = %4.0e)\n",
-      int(info.num_complementarity_violations),
-      info.max_complementarity_violation, complementarity_tolerance);
   if (info.primal_dual_objective_error !=
       kHighsIllegalComplementarityViolation) {
     highsLogUser(
