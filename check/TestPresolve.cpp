@@ -260,6 +260,7 @@ HighsStatus zeroCostColSing() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -317,7 +318,9 @@ HighsStatus colSingDoubletonEquality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -374,7 +377,9 @@ HighsStatus colSingDoubletonInequality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -412,7 +417,9 @@ HighsStatus twoColSingDoubletonEquality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -451,7 +458,9 @@ HighsStatus twoColSingDoubletonInequality() {
 
   highs.run();
   status = highs.run();
+
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -539,7 +548,9 @@ HighsStatus issue425() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 

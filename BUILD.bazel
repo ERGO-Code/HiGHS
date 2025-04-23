@@ -74,6 +74,26 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "highs-runtime-opts",
+    hdrs = ["app/HighsRuntimeOptions.h",
+            "app/CLI11.hpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:highs",
+    ],
+)
+
+cc_binary(
+    name = "highs-bin",
+    srcs = ["app/RunHighs.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:highs",
+        "//:highs-runtime-opts",
+    ],
+)
+
 cc_binary(
     name = "call-highs-example",
     srcs = ["examples/call_highs_from_cpp.cpp"],
