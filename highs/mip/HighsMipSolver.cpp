@@ -853,8 +853,7 @@ void HighsMipSolver::cleanupSolve() {
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 
-  if (improving_solution_file_ != nullptr)
-    fclose(improving_solution_file_);
+  if (improving_solution_file_ != nullptr) fclose(improving_solution_file_);
 }
 
 // Only called in Highs::runPresolve
