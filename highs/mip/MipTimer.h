@@ -21,6 +21,7 @@ enum iClockMip {
   kMipClockInit,
   kMipClockRunPresolve,
   kMipClockRunSetup,
+  kMipClockFeasibilityJump,
   kMipClockTrivialHeuristics,
   kMipClockEvaluateRootNode,
   kMipClockPerformAging0,
@@ -135,6 +136,8 @@ class MipTimer {
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
     clock[kMipClockRunPresolve] = timer_pointer->clock_def("Run presolve");
     clock[kMipClockRunSetup] = timer_pointer->clock_def("Run setup");
+    clock[kMipClockFeasibilityJump] =
+        timer_pointer->clock_def("Feasibility jump");
     clock[kMipClockTrivialHeuristics] =
         timer_pointer->clock_def("Trivial heuristics");
     clock[kMipClockEvaluateRootNode] =
@@ -320,6 +323,7 @@ class MipTimer {
     const std::vector<HighsInt> mip_clock_list{kMipClockInit,
                                                kMipClockRunPresolve,
                                                kMipClockRunSetup,
+                                               kMipClockFeasibilityJump,
                                                kMipClockTrivialHeuristics,
                                                kMipClockEvaluateRootNode,
                                                kMipClockPerformAging0,
@@ -466,6 +470,17 @@ class MipTimer {
     csvMipClockList("csvRootNode", model_name, mip_clock_list, mip_timer_clock,
                     kMipClockEvaluateRootNode, header, end_line);
   };
+  void reportFjClock(std::string& model,
+                     const HighsTimerClock& mip_timer_clock) {
+    HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
+    HighsInt iClock = mip_timer_clock.clock_[kMipClockFeasibilityJump];
+    const double fj_time = timer_pointer->read(iClock);
+    const double total_time = timer_pointer->read();
+    const double pct = total_time > 0 ? 1e2 * fj_time / total_time : 0;
+    printf("grepFK,%s,%s,%d,%g,%g\n", model.c_str(),
+           timer_pointer->clock_names[iClock].c_str(),
+           int(timer_pointer->clock_num_call[iClock]), fj_time, pct);
+  }
 };
 
 #endif /* MIP_MIPTIMER_H_ */
