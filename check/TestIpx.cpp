@@ -1,4 +1,5 @@
 #include "HCheckConfig.h"
+#include "Highs.h"
 #include "catch.hpp"
 #include "ipm/ipx/ipx_status.h"
 #include "ipm/ipx/lp_solver.h"
@@ -7,8 +8,6 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 #include "parallel/HighsParallel.h"
-
-#include "Highs.h"
 
 // Example for using IPX from its C++ interface. The program solves the Netlib
 // problem afiro.
