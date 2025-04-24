@@ -55,7 +55,10 @@ jobs:
           pwd
           ls
           cd build
-          ./bin/unit_test [highs_test_alien_basis]
+          ls
+          cd bin
+          ls
+          unit_test [highs_test_alien_basis]
 
       - uses: actions/upload-artifact@v4
         with:
