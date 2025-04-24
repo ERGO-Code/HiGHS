@@ -4159,8 +4159,12 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       HighsLp& lp = this->model_.lp_;
       this->info_.objective_function_value =
           computeObjectiveValue(lp, this->solution_);
-      getKktFailures(this->options_, this->model_, this->solution_,
-                     this->basis_, this->info_);
+      const bool is_qp = this->model_.isQp();
+      assert(!is_qp);
+      const bool get_residuals = true;
+      getKktFailures(this->options_, is_qp, this->model_.lp_,
+                     this->model_.lp_.col_cost_, this->solution_, this->info_,
+                     get_residuals);
       double& max_integrality_violation = this->info_.max_integrality_violation;
       max_integrality_violation = 0;
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -4261,6 +4265,13 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                                             return_status, "callSolveLp");
         // Recover the options
         options_ = save_options;
+        HighsPrimalDualErrors primal_dual_errors;
+        const bool is_qp = this->model_.isQp();
+        assert(!is_qp);
+        const bool get_residuals = true;
+        getKktFailures(this->options_, is_qp, this->model_.lp_,
+                       this->model_.lp_.col_cost_, this->solution_, this->info_,
+                       get_residuals);
         if (return_status == HighsStatus::kError) {
           // Set undo_mods = false, since passing models requiring
           // modification to Highs::presolve is illegal
@@ -4268,10 +4279,15 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
           return returnFromOptimizeModel(return_status, undo_mods);
         }
       } else {
-        basis_.clear();
+        this->basis_.clear();
         info_.objective_function_value =
             model_.lp_.objectiveValue(solution_.col_value);
-        getLpKktFailures(options_, model_.lp_, solution_, basis_, info_);
+        const bool is_qp = this->model_.isQp();
+        assert(!is_qp);
+        const bool get_residuals = true;
+        getKktFailures(this->options_, is_qp, this->model_.lp_,
+                       this->model_.lp_.col_cost_, this->solution_, this->info_,
+                       get_residuals);
         if (info_.num_primal_infeasibilities == 0 &&
             info_.num_dual_infeasibilities == 0) {
           model_status_ = HighsModelStatus::kOptimal;
