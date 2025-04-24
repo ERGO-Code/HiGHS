@@ -56,7 +56,7 @@ jobs:
           ls
           ls build
           ls build/bin
-          build/bin/unit_tests 
+          ./build/bin/unit_tests 
 
       - uses: actions/upload-artifact@v4
         with:
