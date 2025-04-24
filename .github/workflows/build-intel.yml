@@ -47,25 +47,21 @@ jobs:
           source /opt/intel/oneapi/setvars.sh
           cmake --build build --parallel
 
-      - name: Unit Test
-        shell: bash
-        run: |
-          source /opt/intel/oneapi/setvars.sh
-          export SYCL_DEVICE_FILTER=opencl.cpu
-          pwd
-          ls
-          ls build
-          ls build/bin
-          ./build/bin/unit_tests 
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: log-intel
-          path: log.out
-
-      # - name: Test
+      # If the unit tests below are failing run to see details.
+      # - name: Unit Test
       #   shell: bash
       #   run: |
       #     source /opt/intel/oneapi/setvars.sh
       #     export SYCL_DEVICE_FILTER=opencl.cpu
-      #     ctest --test-dir build --output-on-failure --timeout 300 
+      #     pwd
+      #     ls
+      #     ls build
+      #     ls build/bin
+      #     ./build/bin/unit_tests 
+
+      - name: Test
+        shell: bash
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          export SYCL_DEVICE_FILTER=opencl.cpu
+          ctest --test-dir build --output-on-failure --timeout 300 
