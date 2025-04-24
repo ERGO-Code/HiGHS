@@ -53,7 +53,10 @@ jobs:
           source /opt/intel/oneapi/setvars.sh
           export SYCL_DEVICE_FILTER=opencl.cpu
           pwd
-          build/bin/unit_tests &> log.out 
+          ls
+          ls build
+          ls build/bin
+          build/bin/unit_tests 
 
       - uses: actions/upload-artifact@v4
         with:
