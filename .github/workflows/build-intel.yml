@@ -52,6 +52,8 @@ jobs:
         run: |
           source /opt/intel/oneapi/setvars.sh
           export SYCL_DEVICE_FILTER=opencl.cpu
+          pwd
+          ls
           cd build
           ./bin/unit_test [highs_test_alien_basis]
 
