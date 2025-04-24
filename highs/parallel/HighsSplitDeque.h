@@ -41,9 +41,9 @@
 
 #ifdef TSAN_ENABLED
 #define TSAN_ANNOTATE_HAPPENS_BEFORE(addr) \
-    AnnotateHappensBefore(__FILE__, __LINE__, (void*)(addr))
+  AnnotateHappensBefore(__FILE__, __LINE__, (void*)(addr))
 #define TSAN_ANNOTATE_HAPPENS_AFTER(addr) \
-    AnnotateHappensAfter(__FILE__, __LINE__, (void*)(addr))
+  AnnotateHappensAfter(__FILE__, __LINE__, (void*)(addr))
 extern "C" void AnnotateHappensBefore(const char* f, int l, void* addr);
 extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
 #else

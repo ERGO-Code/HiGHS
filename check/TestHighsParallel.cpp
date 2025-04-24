@@ -24,8 +24,8 @@ int64_t fib(const int64_t n) {
   if (n <= 20) return fib_sequential(n);
 
   int64_t n1;
-  parallel::spawn([&]() { 
-    n1 = fib(n - 1); 
+  parallel::spawn([&]() {
+    n1 = fib(n - 1);
     TSAN_ANNOTATE_HAPPENS_BEFORE(&n1);
   });
 
