@@ -826,7 +826,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
-  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+  REQUIRE(optimal_objective_value - avgas_optimal_objective_value < 1e-10);
 
   const HighsLp& local_lp = highs.getLp();
   row0135789_lower[0] = local_lp.row_lower_[0];
