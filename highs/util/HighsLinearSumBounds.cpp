@@ -230,7 +230,7 @@ double HighsLinearSumBounds::getImplVarLower(
     HighsInt sum, double myVarLower, double myImplVarLower,
     HighsInt myImplVarLowerSource) const {
   return (myImplVarLowerSource == sum ? myVarLower
-                                      : std::min(myImplVarLower, myVarLower));
+                                      : std::max(myImplVarLower, myVarLower));
 }
 
 void HighsLinearSumBounds::addOrRemove(HighsInt sum, HighsInt var,
