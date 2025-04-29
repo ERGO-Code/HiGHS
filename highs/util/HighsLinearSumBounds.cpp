@@ -10,139 +10,18 @@
 #include <algorithm>
 
 void HighsLinearSumBounds::add(HighsInt sum, HighsInt var, double coefficient) {
-  double vLower = implVarLowerSource[var] == sum
-                      ? varLower[var]
-                      : std::max(implVarLower[var], varLower[var]);
-  double vUpper = implVarUpperSource[var] == sum
-                      ? varUpper[var]
-                      : std::min(implVarUpper[var], varUpper[var]);
-
-  if (coefficient > 0) {
-    // coefficient is positive, therefore variable lower contributes to sum
-    // lower bound
-    if (vLower == -kHighsInf)
-      numInfSumLower[sum] += 1;
-    else
-      sumLower[sum] += vLower * coefficient;
-
-    if (vUpper == kHighsInf)
-      numInfSumUpper[sum] += 1;
-    else
-      sumUpper[sum] += vUpper * coefficient;
-
-    if (varLower[var] == -kHighsInf)
-      numInfSumLowerOrig[sum] += 1;
-    else
-      sumLowerOrig[sum] += varLower[var] * coefficient;
-
-    if (varUpper[var] == kHighsInf)
-      numInfSumUpperOrig[sum] += 1;
-    else
-      sumUpperOrig[sum] += varUpper[var] * coefficient;
-  } else {
-    // coefficient is negative, therefore variable upper contributes to sum
-    // lower bound
-    if (vUpper == kHighsInf)
-      numInfSumLower[sum] += 1;
-    else
-      sumLower[sum] += vUpper * coefficient;
-
-    if (vLower == -kHighsInf)
-      numInfSumUpper[sum] += 1;
-    else
-      sumUpper[sum] += vLower * coefficient;
-
-    if (varUpper[var] == kHighsInf)
-      numInfSumLowerOrig[sum] += 1;
-    else
-      sumLowerOrig[sum] += varUpper[var] * coefficient;
-
-    if (varLower[var] == -kHighsInf)
-      numInfSumUpperOrig[sum] += 1;
-    else
-      sumUpperOrig[sum] += varLower[var] * coefficient;
-  }
+  addOrRemove(sum, var, coefficient, HighsInt{1});
 }
 
 void HighsLinearSumBounds::remove(HighsInt sum, HighsInt var,
                                   double coefficient) {
-  double vLower = implVarLowerSource[var] == sum
-                      ? varLower[var]
-                      : std::max(implVarLower[var], varLower[var]);
-  double vUpper = implVarUpperSource[var] == sum
-                      ? varUpper[var]
-                      : std::min(implVarUpper[var], varUpper[var]);
-
-  if (coefficient > 0) {
-    // coefficient is positive, therefore variable lower contributes to sum
-    // lower bound
-    if (vLower == -kHighsInf)
-      numInfSumLower[sum] -= 1;
-    else
-      sumLower[sum] -= vLower * coefficient;
-
-    if (vUpper == kHighsInf)
-      numInfSumUpper[sum] -= 1;
-    else
-      sumUpper[sum] -= vUpper * coefficient;
-
-    if (varLower[var] == -kHighsInf)
-      numInfSumLowerOrig[sum] -= 1;
-    else
-      sumLowerOrig[sum] -= varLower[var] * coefficient;
-
-    if (varUpper[var] == kHighsInf)
-      numInfSumUpperOrig[sum] -= 1;
-    else
-      sumUpperOrig[sum] -= varUpper[var] * coefficient;
-  } else {
-    // coefficient is negative, therefore variable upper contributes to sum
-    // lower bound
-    if (vUpper == kHighsInf)
-      numInfSumLower[sum] -= 1;
-    else
-      sumLower[sum] -= vUpper * coefficient;
-
-    if (vLower == -kHighsInf)
-      numInfSumUpper[sum] -= 1;
-    else
-      sumUpper[sum] -= vLower * coefficient;
-
-    if (varUpper[var] == kHighsInf)
-      numInfSumLowerOrig[sum] -= 1;
-    else
-      sumLowerOrig[sum] -= varUpper[var] * coefficient;
-
-    if (varLower[var] == -kHighsInf)
-      numInfSumUpperOrig[sum] -= 1;
-    else
-      sumUpperOrig[sum] -= varLower[var] * coefficient;
-  }
+  addOrRemove(sum, var, coefficient, HighsInt{-1});
 }
 
 void HighsLinearSumBounds::updatedVarUpper(HighsInt sum, HighsInt var,
                                            double coefficient,
                                            double oldVarUpper) {
-  double oldVUpper = implVarUpperSource[var] == sum
-                         ? oldVarUpper
-                         : std::min(implVarUpper[var], oldVarUpper);
-
-  double vUpper = implVarUpperSource[var] == sum
-                      ? varUpper[var]
-                      : std::min(implVarUpper[var], varUpper[var]);
-
   if (coefficient > 0) {
-    if (vUpper != oldVUpper) {
-      if (oldVUpper == kHighsInf)
-        numInfSumUpper[sum] -= 1;
-      else
-        sumUpper[sum] -= oldVUpper * coefficient;
-
-      if (vUpper == kHighsInf)
-        numInfSumUpper[sum] += 1;
-      else
-        sumUpper[sum] += vUpper * coefficient;
-    }
     if (oldVarUpper == kHighsInf)
       numInfSumUpperOrig[sum] -= 1;
     else
@@ -153,17 +32,6 @@ void HighsLinearSumBounds::updatedVarUpper(HighsInt sum, HighsInt var,
     else
       sumUpperOrig[sum] += varUpper[var] * coefficient;
   } else {
-    if (vUpper != oldVUpper) {
-      if (oldVUpper == kHighsInf)
-        numInfSumLower[sum] -= 1;
-      else
-        sumLower[sum] -= oldVUpper * coefficient;
-
-      if (vUpper == kHighsInf)
-        numInfSumLower[sum] += 1;
-      else
-        sumLower[sum] += vUpper * coefficient;
-    }
     if (oldVarUpper == kHighsInf)
       numInfSumLowerOrig[sum] -= 1;
     else
@@ -174,32 +42,14 @@ void HighsLinearSumBounds::updatedVarUpper(HighsInt sum, HighsInt var,
     else
       sumLowerOrig[sum] += varUpper[var] * coefficient;
   }
+  updatedImplVarUpper(sum, var, coefficient, oldVarUpper, implVarUpper[var],
+                      implVarUpperSource[var]);
 }
 
 void HighsLinearSumBounds::updatedVarLower(HighsInt sum, HighsInt var,
                                            double coefficient,
                                            double oldVarLower) {
-  double oldVLower = implVarLowerSource[var] == sum
-                         ? oldVarLower
-                         : std::max(implVarLower[var], oldVarLower);
-
-  double vLower = implVarLowerSource[var] == sum
-                      ? varLower[var]
-                      : std::max(implVarLower[var], varLower[var]);
-
   if (coefficient > 0) {
-    if (vLower != oldVLower) {
-      if (oldVLower == -kHighsInf)
-        numInfSumLower[sum] -= 1;
-      else
-        sumLower[sum] -= oldVLower * coefficient;
-
-      if (vLower == -kHighsInf)
-        numInfSumLower[sum] += 1;
-      else
-        sumLower[sum] += vLower * coefficient;
-    }
-
     if (oldVarLower == -kHighsInf)
       numInfSumLowerOrig[sum] -= 1;
     else
@@ -211,17 +61,6 @@ void HighsLinearSumBounds::updatedVarLower(HighsInt sum, HighsInt var,
       sumLowerOrig[sum] += varLower[var] * coefficient;
 
   } else {
-    if (vLower != oldVLower) {
-      if (oldVLower == -kHighsInf)
-        numInfSumUpper[sum] -= 1;
-      else
-        sumUpper[sum] -= oldVLower * coefficient;
-
-      if (vLower == -kHighsInf)
-        numInfSumUpper[sum] += 1;
-      else
-        sumUpper[sum] += vLower * coefficient;
-    }
     if (oldVarLower == -kHighsInf)
       numInfSumUpperOrig[sum] -= 1;
     else
@@ -232,81 +71,24 @@ void HighsLinearSumBounds::updatedVarLower(HighsInt sum, HighsInt var,
     else
       sumUpperOrig[sum] += varLower[var] * coefficient;
   }
+  updatedImplVarLower(sum, var, coefficient, oldVarLower, implVarLower[var],
+                      implVarLowerSource[var]);
 }
 
 void HighsLinearSumBounds::updatedImplVarUpper(HighsInt sum, HighsInt var,
                                                double coefficient,
                                                double oldImplVarUpper,
                                                HighsInt oldImplVarUpperSource) {
-  double oldVUpper = oldImplVarUpperSource == sum
-                         ? varUpper[var]
-                         : std::min(oldImplVarUpper, varUpper[var]);
-
-  double vUpper = implVarUpperSource[var] == sum
-                      ? varUpper[var]
-                      : std::min(implVarUpper[var], varUpper[var]);
-
-  if (vUpper == oldVUpper) return;
-
-  if (coefficient > 0) {
-    if (oldVUpper == kHighsInf)
-      numInfSumUpper[sum] -= 1;
-    else
-      sumUpper[sum] -= oldVUpper * coefficient;
-
-    if (vUpper == kHighsInf)
-      numInfSumUpper[sum] += 1;
-    else
-      sumUpper[sum] += vUpper * coefficient;
-  } else {
-    if (oldVUpper == kHighsInf)
-      numInfSumLower[sum] -= 1;
-    else
-      sumLower[sum] -= oldVUpper * coefficient;
-
-    if (vUpper == kHighsInf)
-      numInfSumLower[sum] += 1;
-    else
-      sumLower[sum] += vUpper * coefficient;
-  }
+  updatedImplVarUpper(sum, var, coefficient, varUpper[var], oldImplVarUpper,
+                      oldImplVarUpperSource);
 }
 
 void HighsLinearSumBounds::updatedImplVarLower(HighsInt sum, HighsInt var,
                                                double coefficient,
                                                double oldImplVarLower,
                                                HighsInt oldImplVarLowerSource) {
-  double oldVLower = oldImplVarLowerSource == sum
-                         ? varLower[var]
-                         : std::max(oldImplVarLower, varLower[var]);
-
-  double vLower = implVarLowerSource[var] == sum
-                      ? varLower[var]
-                      : std::max(implVarLower[var], varLower[var]);
-
-  if (vLower == oldVLower) return;
-
-  if (coefficient > 0) {
-    if (oldVLower == -kHighsInf)
-      numInfSumLower[sum] -= 1;
-    else
-      sumLower[sum] -= oldVLower * coefficient;
-
-    if (vLower == -kHighsInf)
-      numInfSumLower[sum] += 1;
-    else
-      sumLower[sum] += vLower * coefficient;
-
-  } else {
-    if (oldVLower == -kHighsInf)
-      numInfSumUpper[sum] -= 1;
-    else
-      sumUpper[sum] -= oldVLower * coefficient;
-
-    if (vLower == -kHighsInf)
-      numInfSumUpper[sum] += 1;
-    else
-      sumUpper[sum] += vLower * coefficient;
-  }
+  updatedImplVarLower(sum, var, coefficient, varLower[var], oldImplVarLower,
+                      oldImplVarLowerSource);
 }
 
 double HighsLinearSumBounds::getResidualSumLower(HighsInt sum, HighsInt var,
@@ -314,28 +96,18 @@ double HighsLinearSumBounds::getResidualSumLower(HighsInt sum, HighsInt var,
   switch (numInfSumLower[sum]) {
     case 0:
       if (coefficient > 0) {
-        double vLower = implVarLowerSource[var] == sum
-                            ? varLower[var]
-                            : std::max(implVarLower[var], varLower[var]);
-        return double(sumLower[sum] - vLower * coefficient);
+        return double(sumLower[sum] - getImplVarLower(sum, var) * coefficient);
       } else {
-        double vUpper = implVarUpperSource[var] == sum
-                            ? varUpper[var]
-                            : std::min(implVarUpper[var], varUpper[var]);
-        return double(sumLower[sum] - vUpper * coefficient);
+        return double(sumLower[sum] - getImplVarUpper(sum, var) * coefficient);
       }
       break;
     case 1:
       if (coefficient > 0) {
-        double vLower = implVarLowerSource[var] == sum
-                            ? varLower[var]
-                            : std::max(implVarLower[var], varLower[var]);
-        return vLower == -kHighsInf ? double(sumLower[sum]) : -kHighsInf;
+        return getImplVarLower(sum, var) == -kHighsInf ? double(sumLower[sum])
+                                                       : -kHighsInf;
       } else {
-        double vUpper = implVarUpperSource[var] == sum
-                            ? varUpper[var]
-                            : std::min(implVarUpper[var], varUpper[var]);
-        return vUpper == kHighsInf ? double(sumLower[sum]) : -kHighsInf;
+        return getImplVarUpper(sum, var) == kHighsInf ? double(sumLower[sum])
+                                                      : -kHighsInf;
       }
       break;
     default:
@@ -348,28 +120,18 @@ double HighsLinearSumBounds::getResidualSumUpper(HighsInt sum, HighsInt var,
   switch (numInfSumUpper[sum]) {
     case 0:
       if (coefficient > 0) {
-        double vUpper = implVarUpperSource[var] == sum
-                            ? varUpper[var]
-                            : std::min(implVarUpper[var], varUpper[var]);
-        return double(sumUpper[sum] - vUpper * coefficient);
+        return double(sumUpper[sum] - getImplVarUpper(sum, var) * coefficient);
       } else {
-        double vLower = implVarLowerSource[var] == sum
-                            ? varLower[var]
-                            : std::max(implVarLower[var], varLower[var]);
-        return double(sumUpper[sum] - vLower * coefficient);
+        return double(sumUpper[sum] - getImplVarLower(sum, var) * coefficient);
       }
       break;
     case 1:
       if (coefficient > 0) {
-        double vUpper = implVarUpperSource[var] == sum
-                            ? varUpper[var]
-                            : std::min(implVarUpper[var], varUpper[var]);
-        return vUpper == kHighsInf ? double(sumUpper[sum]) : kHighsInf;
+        return getImplVarUpper(sum, var) == kHighsInf ? double(sumUpper[sum])
+                                                      : kHighsInf;
       } else {
-        double vLower = implVarLowerSource[var] == sum
-                            ? varLower[var]
-                            : std::max(implVarLower[var], varLower[var]);
-        return vLower == -kHighsInf ? double(sumUpper[sum]) : kHighsInf;
+        return getImplVarLower(sum, var) == -kHighsInf ? double(sumUpper[sum])
+                                                       : kHighsInf;
       }
       break;
     default:
@@ -445,4 +207,149 @@ void HighsLinearSumBounds::shrink(const std::vector<HighsInt>& newIndices,
   sumUpperOrig.resize(newSize);
   numInfSumLowerOrig.resize(newSize);
   numInfSumUpperOrig.resize(newSize);
+}
+
+double HighsLinearSumBounds::getImplVarUpper(HighsInt sum, HighsInt var) const {
+  return getImplVarUpper(sum, varUpper[var], implVarUpper[var],
+                         implVarUpperSource[var]);
+}
+
+double HighsLinearSumBounds::getImplVarLower(HighsInt sum, HighsInt var) const {
+  return getImplVarLower(sum, varLower[var], implVarLower[var],
+                         implVarLowerSource[var]);
+}
+
+double HighsLinearSumBounds::getImplVarUpper(
+    HighsInt sum, double myVarUpper, double myImplVarUpper,
+    HighsInt myImplVarUpperSource) const {
+  return (myImplVarUpperSource == sum ? myVarUpper
+                                      : std::min(myImplVarUpper, myVarUpper));
+}
+
+double HighsLinearSumBounds::getImplVarLower(
+    HighsInt sum, double myVarLower, double myImplVarLower,
+    HighsInt myImplVarLowerSource) const {
+  return (myImplVarLowerSource == sum ? myVarLower
+                                      : std::min(myImplVarLower, myVarLower));
+}
+
+void HighsLinearSumBounds::addOrRemove(HighsInt sum, HighsInt var,
+                                       double coefficient, HighsInt direction) {
+  double vLower = getImplVarLower(sum, var);
+  double vUpper = getImplVarUpper(sum, var);
+
+  if (coefficient > 0) {
+    // coefficient is positive, therefore variable lower contributes to sum
+    // lower bound
+    if (vLower == -kHighsInf)
+      numInfSumLower[sum] += direction;
+    else
+      sumLower[sum] += direction * vLower * coefficient;
+
+    if (vUpper == kHighsInf)
+      numInfSumUpper[sum] += direction;
+    else
+      sumUpper[sum] += direction * vUpper * coefficient;
+
+    if (varLower[var] == -kHighsInf)
+      numInfSumLowerOrig[sum] += direction;
+    else
+      sumLowerOrig[sum] += direction * varLower[var] * coefficient;
+
+    if (varUpper[var] == kHighsInf)
+      numInfSumUpperOrig[sum] += direction;
+    else
+      sumUpperOrig[sum] += direction * varUpper[var] * coefficient;
+  } else {
+    // coefficient is negative, therefore variable upper contributes to sum
+    // lower bound
+    if (vUpper == kHighsInf)
+      numInfSumLower[sum] += direction;
+    else
+      sumLower[sum] += direction * vUpper * coefficient;
+
+    if (vLower == -kHighsInf)
+      numInfSumUpper[sum] += direction;
+    else
+      sumUpper[sum] += direction * vLower * coefficient;
+
+    if (varUpper[var] == kHighsInf)
+      numInfSumLowerOrig[sum] += direction;
+    else
+      sumLowerOrig[sum] += direction * varUpper[var] * coefficient;
+
+    if (varLower[var] == -kHighsInf)
+      numInfSumUpperOrig[sum] += direction;
+    else
+      sumUpperOrig[sum] += direction * varLower[var] * coefficient;
+  }
+}
+
+void HighsLinearSumBounds::updatedImplVarUpper(HighsInt sum, HighsInt var,
+                                               double coefficient,
+                                               double oldVarUpper,
+                                               double oldImplVarUpper,
+                                               HighsInt oldImplVarUpperSource) {
+  double oldVUpper =
+      getImplVarUpper(sum, oldVarUpper, oldImplVarUpper, oldImplVarUpperSource);
+  double vUpper = getImplVarUpper(sum, var);
+
+  if (vUpper == oldVUpper) return;
+
+  if (coefficient > 0) {
+    if (oldVUpper == kHighsInf)
+      numInfSumUpper[sum] -= 1;
+    else
+      sumUpper[sum] -= oldVUpper * coefficient;
+
+    if (vUpper == kHighsInf)
+      numInfSumUpper[sum] += 1;
+    else
+      sumUpper[sum] += vUpper * coefficient;
+  } else {
+    if (oldVUpper == kHighsInf)
+      numInfSumLower[sum] -= 1;
+    else
+      sumLower[sum] -= oldVUpper * coefficient;
+
+    if (vUpper == kHighsInf)
+      numInfSumLower[sum] += 1;
+    else
+      sumLower[sum] += vUpper * coefficient;
+  }
+}
+
+void HighsLinearSumBounds::updatedImplVarLower(HighsInt sum, HighsInt var,
+                                               double coefficient,
+                                               double oldVarLower,
+                                               double oldImplVarLower,
+                                               HighsInt oldImplVarLowerSource) {
+  double oldVLower =
+      getImplVarLower(sum, oldVarLower, oldImplVarLower, oldImplVarLowerSource);
+  double vLower = getImplVarLower(sum, var);
+
+  if (vLower == oldVLower) return;
+
+  if (coefficient > 0) {
+    if (oldVLower == -kHighsInf)
+      numInfSumLower[sum] -= 1;
+    else
+      sumLower[sum] -= oldVLower * coefficient;
+
+    if (vLower == -kHighsInf)
+      numInfSumLower[sum] += 1;
+    else
+      sumLower[sum] += vLower * coefficient;
+
+  } else {
+    if (oldVLower == -kHighsInf)
+      numInfSumUpper[sum] -= 1;
+    else
+      sumUpper[sum] -= oldVLower * coefficient;
+
+    if (vLower == -kHighsInf)
+      numInfSumUpper[sum] += 1;
+    else
+      sumUpper[sum] += vLower * coefficient;
+  }
 }
