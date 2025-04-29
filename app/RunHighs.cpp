@@ -9,11 +9,7 @@
  * @brief HiGHS main
  */
 #include "Highs.h"
-// #include "io/HighsIO.h"
 #include "HighsRuntimeOptions.h"
-
-// uncomment if we will be shutting down task executor from exe
-// #include "parallel/HighsParallel.h"
 
 int main(int argc, char** argv) {
   // Create the Highs instance.
@@ -30,10 +26,6 @@ int main(int argc, char** argv) {
   loaded_options.log_file = "HiGHS.log";
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
-
-  // Replace command line options parsing library
-  // cxxopts now Cpp17 with
-  // CLI11 for Cpp11
 
   CLI::App app{""};
   argv = app.ensure_utf8(argv);
@@ -117,8 +109,9 @@ int main(int argc, char** argv) {
 
   // highs.writeInfo("Info.md");
 
-  // Shut down task executor: optional and wip
-  // HighsTaskExecutor::shutdown(true);
+  // Shut down task executor for explicit release of memory.
+  // Valgrind still reachable otherwise.
+  highs.resetGlobalScheduler(true);
 
   return (int)run_status;
 }

@@ -392,6 +392,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
           HighsStatus::kOk);
   REQUIRE(check_value == to_value);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("LP-row-index-duplication", "[highs_data]") {
@@ -447,6 +449,8 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   if (dev_run) printf("highs.run(); returns %d\n", (int)return_status);
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("LP-inf-cost", "[highs_data]") {
@@ -571,6 +575,8 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   REQUIRE(highs.getInfo().objective_function_value == -my_infinite_cost);
   // Check that x was fixed at 1, not 0.5
   REQUIRE(highs.getSolution().col_value[0] == 1);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("LP-change-coefficient", "[highs_data]") {
@@ -616,6 +622,8 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   delta_objective_value = std::fabs(required_objective_value -
                                     highs.getInfo().objective_function_value);
   REQUIRE(delta_objective_value < 1e-8);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
@@ -649,6 +657,8 @@ TEST_CASE("LP-row-wise", "[highs_data]") {
   lp.row_upper_ = {80, 120};
   highs.passModel(lp);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
@@ -676,4 +686,6 @@ TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
   highs.changeColBounds(0, 0, -1);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }

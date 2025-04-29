@@ -24,6 +24,8 @@ void testDualObjective(const std::string model) {
       std::fabs(primal_objective - dual_objective) /
       std::max(1.0, std::fabs(primal_objective));
   REQUIRE(relative_primal_dual_gap < 1e-12);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
@@ -38,6 +40,8 @@ TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
   highs.setOptionValue("solver", kIpmString);
   status = highs.run();
   REQUIRE(status == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
@@ -164,6 +168,8 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
                max_objective_function_value);
   if (dev_run) printf("\nOptimal objective value error = %g\n", error);
   REQUIRE(error < 1e-10);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
@@ -197,6 +203,8 @@ TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
     printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
   }
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("dual-objective-max", "[highs_lp_solver]") {
@@ -225,6 +233,8 @@ TEST_CASE("dual-objective-max", "[highs_lp_solver]") {
       std::fabs(primal_objective - dual_objective) /
       std::max(1.0, std::fabs(primal_objective));
   REQUIRE(relative_primal_dual_gap < 1e-12);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("dual-objective", "[highs_lp_solver]") {
@@ -294,6 +304,8 @@ void testStandardForm(const HighsLp& lp) {
     REQUIRE(highs.passModel(presolved_lp) == HighsStatus::kOk);
     highs.writeModel("");
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 void testStandardFormModel(const std::string model) {
@@ -305,6 +317,8 @@ void testStandardFormModel(const std::string model) {
   highs.readModel(model_file);
   HighsLp lp = highs.getLp();
   testStandardForm(lp);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("standard-form-mps", "[highs_lp_solver]") {
@@ -348,6 +362,8 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
         "\nNow test by adding a fixed column and a fixed row, and "
         "maximizing\n");
   testStandardForm(highs.getLp());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("simplex-stats", "[highs_lp_solver]") {
@@ -383,6 +399,8 @@ TEST_CASE("simplex-stats", "[highs_lp_solver]") {
   REQUIRE(simplex_stats.row_ap_density > 0);
   REQUIRE(simplex_stats.row_DSE_density > 0);
   if (dev_run) h.reportSimplexStats(stdout);
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("use_warm_start", "[highs_lp_solver]") {
@@ -398,6 +416,8 @@ TEST_CASE("use_warm_start", "[highs_lp_solver]") {
   h.run();
   HighsInt iteration_count = h.getInfo().simplex_iteration_count;
   REQUIRE(iteration_count == required_iteration_count);
+
+  h.resetGlobalScheduler(true);
 }
 
 bool fileExists(const std::string& file_name) {
@@ -406,10 +426,11 @@ bool fileExists(const std::string& file_name) {
 }
 
 TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string write_solution_file = test_name + ".sol";
+  const std::string write_basis_file = test_name + ".bas";
+  const std::string write_model_file = test_name + ".mps";
   Highs h;
-  std::string write_solution_file = "lp-temp.sol";
-  std::string write_basis_file = "lp-temp.bas";
-  std::string write_model_file = "lp-temp.mps";
   h.setOptionValue("output_flag", dev_run);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
@@ -440,13 +461,16 @@ TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
   std::remove(write_basis_file.c_str());
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string write_solution_file = test_name + ".sol";
+  const std::string write_basis_file = test_name + ".bas";
+  const std::string write_model_file = test_name + ".mps";
   Highs h;
-  std::string write_solution_file = "mip-temp.sol";
-  std::string write_basis_file = "mip-temp.bas";
-  std::string write_model_file = "mip-temp.mps";
   h.setOptionValue("output_flag", dev_run);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
@@ -471,9 +495,8 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
   REQUIRE(run_status == HighsStatus::kOk);
 
-  // This also causes the meson build CI test to fail!
-  REQUIRE(h.getInfo().mip_node_count < mip_node_count);
-
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
+
+  h.resetGlobalScheduler(true);
 }

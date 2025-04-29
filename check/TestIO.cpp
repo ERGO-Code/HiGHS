@@ -37,6 +37,8 @@ TEST_CASE("run-callback", "[highs_io]") {
   // highs.setLogCallback(userLogCallback);
   highs.readModel(filename);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("log-callback", "[highs_io]") {

@@ -81,6 +81,8 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
     solution.col_dual.clear();
     solution.row_dual.clear();
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("presolve-solve-postsolve-mip", "[highs_test_presolve]") {
@@ -170,6 +172,8 @@ TEST_CASE("empty-row", "[highs_test_presolve]") {
   const HighsBasis& basis = highs.getBasis();
   REQUIRE(HighsInt(solution.row_value.size()) == lp.num_row_);
   REQUIRE(HighsInt(basis.row_status.size()) == lp.num_row_);
+
+  highs.resetGlobalScheduler(true);
 }
 
 void presolveSolvePostsolve(const std::string& model_file,
@@ -217,6 +221,8 @@ void presolveSolvePostsolve(const std::string& model_file,
     REQUIRE(model_status == HighsModelStatus::kOptimal);
     REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
   }
+
+  highs1.resetGlobalScheduler(true);
 }
 
 HighsStatus zeroCostColSing() {
@@ -252,6 +258,9 @@ HighsStatus zeroCostColSing() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
+  highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -309,6 +318,8 @@ HighsStatus colSingDoubletonEquality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
+  highs.resetGlobalScheduler(true);
   return status;
 }
 
@@ -365,6 +376,8 @@ HighsStatus colSingDoubletonInequality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
+  highs.resetGlobalScheduler(true);
   return status;
 }
 
@@ -402,6 +415,8 @@ HighsStatus twoColSingDoubletonEquality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
+  highs.resetGlobalScheduler(true);
   return status;
 }
 
@@ -440,6 +455,8 @@ HighsStatus twoColSingDoubletonInequality() {
 
   highs.run();
   status = highs.run();
+
+  highs.resetGlobalScheduler(true);
   return status;
 }
 
@@ -527,6 +544,8 @@ HighsStatus issue425() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+
+  highs.resetGlobalScheduler(true);
   return status;
 }
 
@@ -577,7 +596,8 @@ TEST_CASE("postsolve-reduced-to-empty", "[highs_test_presolve]") {
 }
 
 TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
-  std::string presolved_model_file = "temp.mps";
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string presolved_model_file = test_name + ".mps";
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
   Highs highs;
@@ -600,6 +620,8 @@ TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
   // simplex_iteration_count is -1
   REQUIRE(highs.getInfo().simplex_iteration_count == -1);
   std::remove(presolved_model_file.c_str());
+
+  highs1.resetGlobalScheduler(true);
 }
 
 TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
@@ -638,6 +660,8 @@ TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
   REQUIRE(h.presolve() == HighsStatus::kOk);
   REQUIRE(h.getPresolvedLp().num_col_ == 2);
   REQUIRE(h.getPresolvedLp().num_row_ == 2);
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
@@ -659,6 +683,8 @@ TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
   highs.setOptionValue("mip_root_presolve_only", true);
   highs.readModel(model_file);
   REQUIRE(highs.run() == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {

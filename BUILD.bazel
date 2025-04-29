@@ -37,6 +37,7 @@ cc_library(
     ]),
     hdrs = glob([
         "**/*.h",
+        "highs/mip/feasibilityjump.hh",
         "highs/qpsolver/*.hpp",
         "highs/Highs.h",
         "extern/filereaderlp/*.hpp",
@@ -70,6 +71,26 @@ cc_library(
     deps = [
         "//:config",
         "@zlib",
+    ],
+)
+
+cc_library(
+    name = "highs-runtime-opts",
+    hdrs = ["app/HighsRuntimeOptions.h",
+            "app/CLI11.hpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:highs",
+    ],
+)
+
+cc_binary(
+    name = "highs-bin",
+    srcs = ["app/RunHighs.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:highs",
+        "//:highs-runtime-opts",
     ],
 )
 
