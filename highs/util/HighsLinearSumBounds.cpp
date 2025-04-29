@@ -67,18 +67,24 @@ double HighsLinearSumBounds::getResidualSumLower(HighsInt sum, HighsInt var,
   switch (numInfSumLower[sum]) {
     case 0:
       if (coefficient > 0) {
-        return double(sumLower[sum] - getImplVarLower(sum, var) * coefficient);
+        return static_cast<double>(
+            sumLower[sum] -
+            static_cast<HighsCDouble>(getImplVarLower(sum, var)) * coefficient);
       } else {
-        return double(sumLower[sum] - getImplVarUpper(sum, var) * coefficient);
+        return static_cast<double>(
+            sumLower[sum] -
+            static_cast<HighsCDouble>(getImplVarUpper(sum, var)) * coefficient);
       }
       break;
     case 1:
       if (coefficient > 0) {
-        return getImplVarLower(sum, var) == -kHighsInf ? double(sumLower[sum])
-                                                       : -kHighsInf;
+        return getImplVarLower(sum, var) == -kHighsInf
+                   ? static_cast<double>(sumLower[sum])
+                   : -kHighsInf;
       } else {
-        return getImplVarUpper(sum, var) == kHighsInf ? double(sumLower[sum])
-                                                      : -kHighsInf;
+        return getImplVarUpper(sum, var) == kHighsInf
+                   ? static_cast<double>(sumLower[sum])
+                   : -kHighsInf;
       }
       break;
     default:
@@ -91,18 +97,24 @@ double HighsLinearSumBounds::getResidualSumUpper(HighsInt sum, HighsInt var,
   switch (numInfSumUpper[sum]) {
     case 0:
       if (coefficient > 0) {
-        return double(sumUpper[sum] - getImplVarUpper(sum, var) * coefficient);
+        return static_cast<double>(
+            sumUpper[sum] -
+            static_cast<HighsCDouble>(getImplVarUpper(sum, var)) * coefficient);
       } else {
-        return double(sumUpper[sum] - getImplVarLower(sum, var) * coefficient);
+        return static_cast<double>(
+            sumUpper[sum] -
+            static_cast<HighsCDouble>(getImplVarLower(sum, var)) * coefficient);
       }
       break;
     case 1:
       if (coefficient > 0) {
-        return getImplVarUpper(sum, var) == kHighsInf ? double(sumUpper[sum])
-                                                      : kHighsInf;
+        return getImplVarUpper(sum, var) == kHighsInf
+                   ? static_cast<double>(sumUpper[sum])
+                   : kHighsInf;
       } else {
-        return getImplVarLower(sum, var) == -kHighsInf ? double(sumUpper[sum])
-                                                       : kHighsInf;
+        return getImplVarLower(sum, var) == -kHighsInf
+                   ? static_cast<double>(sumUpper[sum])
+                   : kHighsInf;
       }
       break;
     default:
@@ -115,17 +127,23 @@ double HighsLinearSumBounds::getResidualSumLowerOrig(HighsInt sum, HighsInt var,
   switch (numInfSumLowerOrig[sum]) {
     case 0:
       if (coefficient > 0)
-        return double(sumLowerOrig[sum] - varLower[var] * coefficient);
+        return static_cast<double>(sumLowerOrig[sum] -
+                                   static_cast<HighsCDouble>(varLower[var]) *
+                                       coefficient);
       else
-        return double(sumLowerOrig[sum] - varUpper[var] * coefficient);
+        return static_cast<double>(sumLowerOrig[sum] -
+                                   static_cast<HighsCDouble>(varUpper[var]) *
+                                       coefficient);
       break;
     case 1:
       if (coefficient > 0)
-        return varLower[var] == -kHighsInf ? double(sumLowerOrig[sum])
-                                           : -kHighsInf;
+        return varLower[var] == -kHighsInf
+                   ? static_cast<double>(sumLowerOrig[sum])
+                   : -kHighsInf;
       else
-        return varUpper[var] == kHighsInf ? double(sumLowerOrig[sum])
-                                          : -kHighsInf;
+        return varUpper[var] == kHighsInf
+                   ? static_cast<double>(sumLowerOrig[sum])
+                   : -kHighsInf;
       break;
     default:
       return -kHighsInf;
@@ -137,17 +155,23 @@ double HighsLinearSumBounds::getResidualSumUpperOrig(HighsInt sum, HighsInt var,
   switch (numInfSumUpperOrig[sum]) {
     case 0:
       if (coefficient > 0)
-        return double(sumUpperOrig[sum] - varUpper[var] * coefficient);
+        return static_cast<double>(sumUpperOrig[sum] -
+                                   static_cast<HighsCDouble>(varUpper[var]) *
+                                       coefficient);
       else
-        return double(sumUpperOrig[sum] - varLower[var] * coefficient);
+        return static_cast<double>(sumUpperOrig[sum] -
+                                   static_cast<HighsCDouble>(varLower[var]) *
+                                       coefficient);
       break;
     case 1:
       if (coefficient > 0)
-        return varUpper[var] == kHighsInf ? double(sumUpperOrig[sum])
-                                          : kHighsInf;
+        return varUpper[var] == kHighsInf
+                   ? static_cast<double>(sumUpperOrig[sum])
+                   : kHighsInf;
       else
-        return varLower[var] == -kHighsInf ? double(sumUpperOrig[sum])
-                                           : kHighsInf;
+        return varLower[var] == -kHighsInf
+                   ? static_cast<double>(sumUpperOrig[sum])
+                   : kHighsInf;
       break;
     default:
       return kHighsInf;
@@ -214,14 +238,16 @@ void HighsLinearSumBounds::addOrRemoveVarUpper(HighsInt sum, HighsInt var,
     if (myVarUpper == kHighsInf)
       numInfSumUpperOrig[sum] += direction;
     else
-      sumUpperOrig[sum] += direction * myVarUpper * coefficient;
+      sumUpperOrig[sum] +=
+          direction * static_cast<HighsCDouble>(myVarUpper) * coefficient;
   } else {
     // coefficient is negative, therefore variable upper bound contributes to
     // sum lower bound
     if (myVarUpper == kHighsInf)
       numInfSumLowerOrig[sum] += direction;
     else
-      sumLowerOrig[sum] += direction * myVarUpper * coefficient;
+      sumLowerOrig[sum] +=
+          direction * static_cast<HighsCDouble>(myVarUpper) * coefficient;
   }
 }
 
@@ -235,14 +261,16 @@ void HighsLinearSumBounds::addOrRemoveVarLower(HighsInt sum, HighsInt var,
     if (myVarLower == -kHighsInf)
       numInfSumLowerOrig[sum] += direction;
     else
-      sumLowerOrig[sum] += direction * myVarLower * coefficient;
+      sumLowerOrig[sum] +=
+          direction * static_cast<HighsCDouble>(myVarLower) * coefficient;
   } else {
     // coefficient is negative, therefore variable lower bound contributes to
     // sum upper bound
     if (myVarLower == -kHighsInf)
       numInfSumUpperOrig[sum] += direction;
     else
-      sumUpperOrig[sum] += direction * myVarLower * coefficient;
+      sumUpperOrig[sum] +=
+          direction * static_cast<HighsCDouble>(myVarLower) * coefficient;
   }
 }
 
@@ -256,14 +284,16 @@ void HighsLinearSumBounds::addOrRemoveImplVarUpper(HighsInt sum, HighsInt var,
     if (myImplVarUpper == kHighsInf)
       numInfSumUpper[sum] += direction;
     else
-      sumUpper[sum] += direction * myImplVarUpper * coefficient;
+      sumUpper[sum] +=
+          direction * static_cast<HighsCDouble>(myImplVarUpper) * coefficient;
   } else {
     // coefficient is negative, therefore variable upper bound contributes to
     // sum lower bound
     if (myImplVarUpper == kHighsInf)
       numInfSumLower[sum] += direction;
     else
-      sumLower[sum] += direction * myImplVarUpper * coefficient;
+      sumLower[sum] +=
+          direction * static_cast<HighsCDouble>(myImplVarUpper) * coefficient;
   }
 }
 
@@ -277,14 +307,16 @@ void HighsLinearSumBounds::addOrRemoveImplVarLower(HighsInt sum, HighsInt var,
     if (myImplVarLower == -kHighsInf)
       numInfSumLower[sum] += direction;
     else
-      sumLower[sum] += direction * myImplVarLower * coefficient;
+      sumLower[sum] +=
+          direction * static_cast<HighsCDouble>(myImplVarLower) * coefficient;
   } else {
     // coefficient is negative, therefore variable lower bound contributes to
     // sum upper bound
     if (myImplVarLower == -kHighsInf)
       numInfSumUpper[sum] += direction;
     else
-      sumUpper[sum] += direction * myImplVarLower * coefficient;
+      sumUpper[sum] +=
+          direction * static_cast<HighsCDouble>(myImplVarLower) * coefficient;
   }
 }
 
