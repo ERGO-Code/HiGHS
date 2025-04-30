@@ -18,14 +18,14 @@ jobs:
         with:
           repository: KarypisLab/GKlib
           ref: master
-          path: GKlib
+          path: ${{runner.workspace}}/GKlib
 
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
           repository: KarypisLab/METIS
           ref: master
-          path: METIS
+          path: ${{runner.workspace}}/METIS
 
       - name: Install GKLIB
         working-directory: ${{runner.workspace}}
