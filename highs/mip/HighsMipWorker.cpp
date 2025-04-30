@@ -14,11 +14,11 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
     : mipsolver_(mipsolver__),
       mipdata_(*mipsolver_.mipdata_.get()),
       lprelaxation_(lprelax_),
+      pseudocost_(mipsolver__),
       cutpool_(mipsolver_.numCol(), mipsolver_.options_mip_->mip_pool_age_limit,
                mipsolver_.options_mip_->mip_pool_soft_limit),
       conflictpool_(5 * mipsolver_.options_mip_->mip_pool_age_limit,
-                    mipsolver_.options_mip_->mip_pool_soft_limit),
-      pseudocost_(mipsolver__) {
+                    mipsolver_.options_mip_->mip_pool_soft_limit) {
   // std::cout << mipdata_.domain.changedcolsflags_.size() << std::endl;
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
