@@ -33,13 +33,10 @@
 #endif
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
-// HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipWorker& mipworker)
+    // HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipWorker& mipworker)
     // : mipworker(mipworker),
     //  mipsolver(mipworker.mipsolver_),
-    : mipsolver(mipsolver)
-       {
-
-}
+    : mipsolver(mipsolver) {}
 
 void HighsPrimalHeuristics::setupIntCols() {
   intcols = mipsolver.mipdata_->integer_cols;
@@ -75,10 +72,11 @@ void HighsPrimalHeuristics::setupIntCols() {
   });
 }
 
-bool HighsPrimalHeuristics::solveSubMip(HighsMipWorker& worker,
-    const HighsLp& lp, const HighsBasis& basis, double fixingRate,
-    std::vector<double> colLower, std::vector<double> colUpper,
-    HighsInt maxleaves, HighsInt maxnodes, HighsInt stallnodes) {
+bool HighsPrimalHeuristics::solveSubMip(
+    HighsMipWorker& worker, const HighsLp& lp, const HighsBasis& basis,
+    double fixingRate, std::vector<double> colLower,
+    std::vector<double> colUpper, HighsInt maxleaves, HighsInt maxnodes,
+    HighsInt stallnodes) {
   HighsOptions submipoptions = *mipsolver.options_mip_;
   HighsLp submip = lp;
 
@@ -147,7 +145,8 @@ bool HighsPrimalHeuristics::solveSubMip(HighsMipWorker& worker,
   submipsolver.run();
   // ig:here
   // mipsolver.max_submip_level =
-  //     std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
+  //     std::max(submipsolver.max_submip_level + 1,
+  //     mipsolver.max_submip_level);
   if (!mipsolver.submip) mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
@@ -158,7 +157,8 @@ bool HighsPrimalHeuristics::solveSubMip(HighsMipWorker& worker,
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
     worker.heur_stats.lp_iterations += adjusted_lp_iterations;
     worker.heur_stats.total_repair_lp += submipsolver.mipdata_->total_repair_lp;
-    worker.heur_stats.total_repair_lp_feasible += submipsolver.mipdata_->total_repair_lp_feasible;
+    worker.heur_stats.total_repair_lp_feasible +=
+        submipsolver.mipdata_->total_repair_lp_feasible;
     worker.heur_stats.total_repair_lp_iterations +=
         submipsolver.mipdata_->total_repair_lp_iterations;
     if (mipsolver.submip)
@@ -189,18 +189,21 @@ bool HighsPrimalHeuristics::solveSubMip(HighsMipWorker& worker,
   return true;
 }
 
-double HighsPrimalHeuristics::determineTargetFixingRate(HighsMipWorker& worker) {
+double HighsPrimalHeuristics::determineTargetFixingRate(
+    HighsMipWorker& worker) {
   double lowFixingRate = 0.6;
   double highFixingRate = 0.6;
 
   if (worker.heur_stats.numInfeasObservations != 0) {
-    double infeasRate = worker.heur_stats.infeasObservations / worker.heur_stats.numInfeasObservations;
+    double infeasRate = worker.heur_stats.infeasObservations /
+                        worker.heur_stats.numInfeasObservations;
     highFixingRate = 0.9 * infeasRate;
     lowFixingRate = std::min(lowFixingRate, highFixingRate);
   }
 
   if (worker.heur_stats.numSuccessObservations != 0) {
-    double successFixingRate = worker.heur_stats.successObservations / worker.heur_stats.numSuccessObservations;
+    double successFixingRate = worker.heur_stats.successObservations /
+                               worker.heur_stats.numSuccessObservations;
     lowFixingRate = std::min(lowFixingRate, 0.9 * successFixingRate);
     highFixingRate = std::max(successFixingRate * 1.1, highFixingRate);
   }
@@ -310,14 +313,15 @@ void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
   if (fixingRate < 0.3) return;
 
   // mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRootReducedCost);
-  solveSubMip(worker, *mipsolver.model_, mipsolver.mipdata_->firstrootbasis, fixingRate,
-              localdom.col_lower_, localdom.col_upper_,
+  solveSubMip(worker, *mipsolver.model_, mipsolver.mipdata_->firstrootbasis,
+              fixingRate, localdom.col_lower_, localdom.col_upper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
               200 + mipsolver.mipdata_->num_nodes / 20, 12);
 }
 
-void HighsPrimalHeuristics::RENS(HighsMipWorker& worker, const std::vector<double>& tmp) {
+void HighsPrimalHeuristics::RENS(HighsMipWorker& worker,
+                                 const std::vector<double>& tmp) {
   // return if domain is infeasible
   if (mipsolver.mipdata_->domain.infeasible()) return;
 
@@ -541,13 +545,14 @@ retry:
 
   heurlp.removeObsoleteRows(false);
   const bool solve_sub_mip_return =
-      solveSubMip(worker, heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-                  localdom.col_lower_, localdom.col_upper_,
+      solveSubMip(worker, heurlp.getLp(), heurlp.getLpSolver().getBasis(),
+                  fixingrate, localdom.col_lower_, localdom.col_upper_,
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
   if (!solve_sub_mip_return) {
-    int64_t new_lp_iterations = worker.heur_stats.lp_iterations + heur.getLocalLpIterations();
+    int64_t new_lp_iterations =
+        worker.heur_stats.lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
                    mipsolver.mipdata_->heuristic_lp_iterations -
@@ -571,7 +576,8 @@ retry:
   worker.heur_stats.lp_iterations += heur.getLocalLpIterations();
 }
 
-void HighsPrimalHeuristics::RINS(HighsMipWorker& worker, const std::vector<double>& relaxationsol) {
+void HighsPrimalHeuristics::RINS(HighsMipWorker& worker,
+                                 const std::vector<double>& relaxationsol) {
   // return if domain is infeasible
   if (mipsolver.mipdata_->domain.infeasible()) return;
 
@@ -838,13 +844,14 @@ retry:
 
   heurlp.removeObsoleteRows(false);
   const bool solve_sub_mip_return =
-      solveSubMip(worker, heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-                  localdom.col_lower_, localdom.col_upper_,
+      solveSubMip(worker, heurlp.getLp(), heurlp.getLpSolver().getBasis(),
+                  fixingrate, localdom.col_lower_, localdom.col_upper_,
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
   if (!solve_sub_mip_return) {
-    int64_t new_lp_iterations = worker.heur_stats.lp_iterations + heur.getLocalLpIterations();
+    int64_t new_lp_iterations =
+        worker.heur_stats.lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
                    mipsolver.mipdata_->heuristic_lp_iterations -
@@ -867,7 +874,8 @@ retry:
   worker.heur_stats.lp_iterations += heur.getLocalLpIterations();
 }
 
-bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
+bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
+                                            const std::vector<double>& point,
                                             const int solution_source) {
   auto localdom = mipsolver.mipdata_->domain;
   bool integerFeasible = true;
@@ -935,7 +943,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
       const auto& lpsol = lprelax.getLpSolver().getSolution().col_value;
       if (!integerFeasible) {
         // there may be fractional integer variables -> try ziRound heuristic
-        ziRound(lpsol);
+        ziRound(worker, lpsol);
         return mipsolver.mipdata_->trySolution(lpsol, solution_source);
       } else {
         // all integer variables are fixed -> add incumbent
@@ -950,8 +958,8 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
 }
 
 bool HighsPrimalHeuristics::linesearchRounding(
-    const std::vector<double>& point1, const std::vector<double>& point2,
-    const int solution_source) {
+    HighsMipWorker& worker, const std::vector<double>& point1,
+    const std::vector<double>& point2, const int solution_source) {
   std::vector<double> roundedpoint;
 
   HighsInt numintcols = intcols.size();
@@ -995,7 +1003,7 @@ bool HighsPrimalHeuristics::linesearchRounding(
       if (tmpalpha < nextalpha && tmpalpha > alpha + 1e-2) nextalpha = tmpalpha;
     }
 
-    if (tryRoundedPoint(roundedpoint, solution_source)) return true;
+    if (tryRoundedPoint(worker, roundedpoint, solution_source)) return true;
 
     if (reachedpoint2) return false;
 
@@ -1005,8 +1013,8 @@ bool HighsPrimalHeuristics::linesearchRounding(
   return false;
 }
 
-void HighsPrimalHeuristics::randomizedRounding(HighsMipWorker& worker,
-    const std::vector<double>& relaxationsol) {
+void HighsPrimalHeuristics::randomizedRounding(
+    HighsMipWorker& worker, const std::vector<double>& relaxationsol) {
   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   auto localdom = mipsolver.mipdata_->domain;
@@ -1078,7 +1086,8 @@ void HighsPrimalHeuristics::randomizedRounding(HighsMipWorker& worker,
   }
 }
 
-void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
+void HighsPrimalHeuristics::shifting(HighsMipWorker& worker,
+                                     const std::vector<double>& relaxationsol) {
   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   std::vector<double> current_relax_solution = relaxationsol;
@@ -1140,7 +1149,7 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
       HighsInt row_index = rIndex - 1;
       if (!fractionalIntegerFound) {
         // otherwise select a random infeasible row
-        row_index = randgen.integer(current_infeasible_rows.size());
+        row_index = worker.randgen.integer(current_infeasible_rows.size());
       }
 
       HighsInt row = std::get<0>(current_infeasible_rows[row_index]);
@@ -1321,17 +1330,18 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
   }
   // re-check for feasibility and add incumbent
   if (hasInfeasibleConstraints) {
-    tryRoundedPoint(current_relax_solution, kSolutionSourceShifting);
+    tryRoundedPoint(worker, current_relax_solution, kSolutionSourceShifting);
   } else {
     if (current_fractional_integers.size() > 0)
-      ziRound(current_relax_solution);
+      ziRound(worker, current_relax_solution);
     else
       mipsolver.mipdata_->trySolution(current_relax_solution,
                                       kSolutionSourceShifting);
   }
 }
 
-void HighsPrimalHeuristics::ziRound(const std::vector<double>& relaxationsol) {
+void HighsPrimalHeuristics::ziRound(HighsMipWorker& worker,
+                                    const std::vector<double>& relaxationsol) {
   // if (mipsolver.submip) return;
   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
@@ -1444,7 +1454,7 @@ void HighsPrimalHeuristics::ziRound(const std::vector<double>& relaxationsol) {
                                   kSolutionSourceZiRound);
 }
 
-void HighsPrimalHeuristics::feasibilityPump() {
+void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
   HighsLpRelaxation lprelax(mipsolver.mipdata_->lp);
   std::unordered_set<std::vector<HighsInt>, HighsVectorHasher, HighsVectorEqual>
       referencepoints;
@@ -1517,7 +1527,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
     if (havecycle) return;
 
-    if (linesearchRounding(lpsol, roundedsol, kSolutionSourceFeasibilityPump))
+    if (linesearchRounding(worker, lpsol, roundedsol, kSolutionSourceFeasibilityPump))
       return;
 
     if (lprelax.getNumLpIterations() >=
@@ -1551,21 +1561,21 @@ void HighsPrimalHeuristics::feasibilityPump() {
         kSolutionSourceFeasibilityPump);
 }
 
-void HighsPrimalHeuristics::centralRounding() {
+void HighsPrimalHeuristics::centralRounding(HighsMipWorker& worker) {
   if (mipsolver.mipdata_->analyticCenter.size() !=
       static_cast<size_t>(mipsolver.numCol()))
     return;
 
   if (!mipsolver.mipdata_->firstlpsol.empty())
-    linesearchRounding(mipsolver.mipdata_->firstlpsol,
+    linesearchRounding(worker, mipsolver.mipdata_->firstlpsol,
                        mipsolver.mipdata_->analyticCenter,
                        kSolutionSourceCentralRounding);
   else if (!mipsolver.mipdata_->rootlpsol.empty())
-    linesearchRounding(mipsolver.mipdata_->rootlpsol,
+    linesearchRounding(worker, mipsolver.mipdata_->rootlpsol,
                        mipsolver.mipdata_->analyticCenter,
                        kSolutionSourceCentralRounding);
   else
-    linesearchRounding(mipsolver.mipdata_->analyticCenter,
+    linesearchRounding(worker, mipsolver.mipdata_->analyticCenter,
                        mipsolver.mipdata_->analyticCenter,
                        kSolutionSourceCentralRounding);
 }
@@ -1638,12 +1648,15 @@ void HighsPrimalHeuristics::clique() {
 
 void HighsPrimalHeuristics::flushStatistics(HighsMipWorker& worker) {
   mipsolver.mipdata_->total_repair_lp += worker.heur_stats.total_repair_lp;
-  mipsolver.mipdata_->total_repair_lp_feasible += worker.heur_stats.total_repair_lp_feasible;
-  mipsolver.mipdata_->total_repair_lp_iterations += worker.heur_stats.total_repair_lp_iterations;
+  mipsolver.mipdata_->total_repair_lp_feasible +=
+      worker.heur_stats.total_repair_lp_feasible;
+  mipsolver.mipdata_->total_repair_lp_iterations +=
+      worker.heur_stats.total_repair_lp_iterations;
   worker.heur_stats.total_repair_lp = 0;
   worker.heur_stats.total_repair_lp_feasible = 0;
   worker.heur_stats.total_repair_lp_iterations = 0;
-  mipsolver.mipdata_->heuristic_lp_iterations += worker.heur_stats.lp_iterations;
+  mipsolver.mipdata_->heuristic_lp_iterations +=
+      worker.heur_stats.lp_iterations;
   mipsolver.mipdata_->total_lp_iterations += worker.heur_stats.lp_iterations;
   worker.heur_stats.lp_iterations = 0;
 }

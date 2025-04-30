@@ -220,7 +220,7 @@ struct HighsMipSolverData {
                    const int solution_source = kSolutionSourceNone);
   bool rootSeparationRound(HighsMipWorker& worker, HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
-  HighsLpRelaxation::Status evaluateRootLp();
+  HighsLpRelaxation::Status evaluateRootLp(HighsMipWorker& worker);
 
   void evaluateRootNode(HighsMipWorker& worker);
 

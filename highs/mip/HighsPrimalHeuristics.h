@@ -60,10 +60,10 @@ class HighsPrimalHeuristics {
 
   void setupIntCols();
 
-  bool solveSubMip(HighsMipWorker& worker, const HighsLp& lp, const HighsBasis& basis,
-                   double fixingRate, std::vector<double> colLower,
-                   std::vector<double> colUpper, HighsInt maxleaves,
-                   HighsInt maxnodes, HighsInt stallnodes);
+  bool solveSubMip(HighsMipWorker& worker, const HighsLp& lp,
+                   const HighsBasis& basis, double fixingRate,
+                   std::vector<double> colLower, std::vector<double> colUpper,
+                   HighsInt maxleaves, HighsInt maxnodes, HighsInt stallnodes);
 
   double determineTargetFixingRate(HighsMipWorker& worker);
 
@@ -77,22 +77,26 @@ class HighsPrimalHeuristics {
 
   void feasibilityPump(HighsMipWorker& worker);
 
-  void centralRounding();
+  void centralRounding(HighsMipWorker& worker);
 
   void flushStatistics(HighsMipWorker& worker);
 
-  bool tryRoundedPoint(const std::vector<double>& point,
+  bool tryRoundedPoint(HighsMipWorker& worker, const std::vector<double>& point,
                        const int solution_source);
 
-  bool linesearchRounding(const std::vector<double>& point1,
+  bool linesearchRounding(HighsMipWorker& worker,
+                          const std::vector<double>& point1,
                           const std::vector<double>& point2,
                           const int solution_source);
 
-  void randomizedRounding(HighsMipWorker& worker, const std::vector<double>& relaxationsol);
+  void randomizedRounding(HighsMipWorker& worker,
+                          const std::vector<double>& relaxationsol);
 
-  void shifting(const std::vector<double>& relaxationsol);
+  void shifting(HighsMipWorker& worker,
+                const std::vector<double>& relaxationsol);
 
-  void ziRound(const std::vector<double>& relaxationsol);
+  void ziRound(HighsMipWorker& worker,
+               const std::vector<double>& relaxationsol);
 };
 
 #endif
