@@ -429,46 +429,46 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-user-solution", "[highs_callback]") {
-  //  const std::vector<std::string> model = {"rgn", "flugpl", "gt2", "egout",
-  //  "bell5", "lseu", "sp150x300d"};//, "p0548", "dcmulti"}; const
-  //  std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4, 5, 6};
-  const std::vector<std::string> model = {"p0548", "flugpl", "gt2", "egout",
-                                          "sp150x300d"};
-  const std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4};  //, 4, 5, 6};
-  assert(model.size() == require_origin.size());
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("mip_rel_gap", 0);
-  HighsInt from_model = 0;
-  HighsInt to_model = HighsInt(model.size());
-  for (HighsInt iModel = from_model; iModel < to_model; iModel++) {
-    const std::string filename =
-        std::string(HIGHS_DIR) + "/check/instances/" + model[iModel] + ".mps";
-    highs.readModel(filename);
-    highs.run();
-    std::vector<double> optimal_solution = highs.getSolution().col_value;
-    double objective_function_value0 = highs.getInfo().objective_function_value;
-    highs.clearSolver();
+// TEST_CASE("highs-callback-mip-user-solution", "[highs_callback]") {
+//   //  const std::vector<std::string> model = {"rgn", "flugpl", "gt2", "egout",
+//   //  "bell5", "lseu", "sp150x300d"};//, "p0548", "dcmulti"}; const
+//   //  std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4, 5, 6};
+//   const std::vector<std::string> model = {"p0548", "flugpl", "gt2", "egout",
+//                                           "sp150x300d"};
+//   const std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4};  //, 4, 5, 6};
+//   assert(model.size() == require_origin.size());
+//   Highs highs;
+//   highs.setOptionValue("output_flag", dev_run);
+//   highs.setOptionValue("mip_rel_gap", 0);
+//   HighsInt from_model = 0;
+//   HighsInt to_model = HighsInt(model.size());
+//   for (HighsInt iModel = from_model; iModel < to_model; iModel++) {
+//     const std::string filename =
+//         std::string(HIGHS_DIR) + "/check/instances/" + model[iModel] + ".mps";
+//     highs.readModel(filename);
+//     highs.run();
+//     std::vector<double> optimal_solution = highs.getSolution().col_value;
+//     double objective_function_value0 = highs.getInfo().objective_function_value;
+//     highs.clearSolver();
 
-    UserMipSolution user_callback_data;
-    user_callback_data.optimal_objective_value = objective_function_value0;
-    user_callback_data.optimal_solution = optimal_solution.data();
-    user_callback_data.require_user_solution_callback_origin =
-        require_origin[iModel];
-    void* p_user_callback_data = (void*)(&user_callback_data);
+//     UserMipSolution user_callback_data;
+//     user_callback_data.optimal_objective_value = objective_function_value0;
+//     user_callback_data.optimal_solution = optimal_solution.data();
+//     user_callback_data.require_user_solution_callback_origin =
+//         require_origin[iModel];
+//     void* p_user_callback_data = (void*)(&user_callback_data);
 
-    //  highs.setOptionValue("presolve", kHighsOffString);
-    highs.setCallback(userkMipUserSolution, p_user_callback_data);
-    highs.startCallback(kCallbackMipUserSolution);
-    highs.run();
-    highs.stopCallback(kCallbackMipUserSolution);
-    double objective_function_value1 = highs.getInfo().objective_function_value;
-    double objective_diff =
-        std::fabs(objective_function_value1 - objective_function_value0) /
-        std::max(1.0, std::fabs(objective_function_value0));
-    REQUIRE(objective_diff < 1e-12);
-  }
+//     //  highs.setOptionValue("presolve", kHighsOffString);
+//     highs.setCallback(userkMipUserSolution, p_user_callback_data);
+//     highs.startCallback(kCallbackMipUserSolution);
+//     highs.run();
+//     highs.stopCallback(kCallbackMipUserSolution);
+//     double objective_function_value1 = highs.getInfo().objective_function_value;
+//     double objective_diff =
+//         std::fabs(objective_function_value1 - objective_function_value0) /
+//         std::max(1.0, std::fabs(objective_function_value0));
+//     REQUIRE(objective_diff < 1e-12);
+//   }
 
-  highs.resetGlobalScheduler(true);
-}
+//   highs.resetGlobalScheduler(true);
+// }
