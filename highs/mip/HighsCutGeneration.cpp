@@ -735,7 +735,7 @@ bool HighsCutGeneration::postprocessCut() {
     return true;
   }
 
-  HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
+  const HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
   // determine maximal absolute coefficient
   double maxAbsValue = 0.0;
   for (HighsInt i = 0; i != rowlen; ++i)
@@ -1200,7 +1200,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   upper.resize(rowlen);
   solval.resize(rowlen);
 
-  HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
+  const HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
   double activity = 0.0;
   for (HighsInt i = 0; i != rowlen; ++i) {
     HighsInt col = inds[i];

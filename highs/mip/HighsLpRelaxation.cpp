@@ -964,9 +964,11 @@ void HighsLpRelaxation::storeDualInfProof() {
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
       dualproofrhs);
 
-  mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
-      mipsolver, dualproofinds.data(), dualproofvals.data(),
-      dualproofinds.size(), dualproofrhs);
+  if (mipsolver.mipdata_->workers.size() <= 1) {
+    mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
+        mipsolver, dualproofinds.data(), dualproofvals.data(),
+        dualproofinds.size(), dualproofrhs);
+  }
 }
 
 void HighsLpRelaxation::storeDualUBProof() {

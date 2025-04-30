@@ -2016,8 +2016,15 @@ HighsSymmetries& HighsSearch::getSymmetries() const {
 bool HighsSearch::addIncumbent(const std::vector<double>& sol, double solobj,
                                const int solution_source,
                                const bool print_display_line) {
-  return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
-                                          print_display_line);
+  // if (mipsolver.mipdata_->workers.size() <= 1) 
+    return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
+                                            print_display_line);
+  
+  // dive part.
+    // return mipworker.addIncumbent(sol, solobj, solution_source,
+    //                                         print_display_line);
+
+
 }
 
 int64_t& HighsSearch::getNumNodes() { return mipsolver.mipdata_->num_nodes; }

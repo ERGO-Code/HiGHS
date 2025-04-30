@@ -34,7 +34,9 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   vectorsum.setDimension(numTransformedCol);
 
   for (HighsInt col : mipsolver.mipdata_->continuous_cols) {
-    mipsolver.mipdata_->implications.cleanupVarbounds(col);
+    if (mipsolver.mipdata_->workers.size() <= 1)
+      mipsolver.mipdata_->implications.cleanupVarbounds(col);
+
     if (mipsolver.mipdata_->domain.infeasible()) return;
 
     if (mipsolver.mipdata_->domain.isFixed(col)) continue;
@@ -63,7 +65,9 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     double bestub = mipsolver.mipdata_->domain.col_upper_[col];
     double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
 
-    mipsolver.mipdata_->implications.cleanupVarbounds(col);
+    if (mipsolver.mipdata_->workers.size() <= 1)
+      mipsolver.mipdata_->implications.cleanupVarbounds(col);
+
     if (mipsolver.mipdata_->domain.infeasible()) return;
     simpleUbDist[col] = bestub - lpSolution.col_value[col];
     if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
@@ -185,9 +189,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         bestVub[col].second.maxValue() > ub + mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
-      mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
-                                            bestVub[col].second, ub, redundant,
-                                            infeasible, false);
+      if (mip.mipdata_->workers.size() <= 1)
+        mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
+                                              bestVub[col].second, ub, redundant,
+                                              infeasible, false);
     }
 
     // the code below uses the difference between the column upper and lower
@@ -200,9 +205,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         bestVlb[col].second.minValue() < lb - mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
-      mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
-                                            bestVlb[col].second, lb, redundant,
-                                            infeasible, false);
+
+      if (mip.mipdata_->workers.size() <= 1)
+        mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
+                                              bestVlb[col].second, lb, redundant,
+                                              infeasible, false);
     }
 
     // store the old bound type so that we can restore it if the continuous

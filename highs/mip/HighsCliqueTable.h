@@ -289,9 +289,9 @@ class HighsCliqueTable {
 
   void addImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 
-  HighsInt getNumImplications(HighsInt col);
+  HighsInt getNumImplications(HighsInt col) const;
 
-  HighsInt getNumImplications(HighsInt col, bool val);
+  HighsInt getNumImplications(HighsInt col, bool val) const;
 
   void runCliqueMerging(HighsDomain& globaldomain);
 

@@ -134,18 +134,11 @@ void HighsMipSolver::run() {
                  "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 
   // Initialize master worker.
-  // HighsMipWorker master_worker(*this, mipdata_->lp);
-
-  mipdata_->workers.emplace_back(*this, mipdata_->lp);
-  // workers.emplace_back(mipsolver, lp);
-
-  // mipdata_->workers.emplace_back(*this, mipdata_->lps.at(0));
-  HighsMipWorker& master_worker = mipdata_->workers.at(0);
-
   // Now the worker lives in mipdata.
   // The master worker is used in evaluateRootNode.
+  mipdata_->workers.emplace_back(*this, mipdata_->lp);
 
-  // HighsMipWorker& master_worker = mipdata_->workers.at(0);
+  HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
@@ -266,7 +259,7 @@ restart:
   // This search is from the worker and will use the worker pseudocost.
   // does not work yet, fails at domain propagation somewhere.
   // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
-
+  // search.setLpRelaxation(&mipdata_->lp);
 
 
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
@@ -322,11 +315,11 @@ restart:
     // Initialize worker relaxations and mipworkers
     // todo lps and workers are still empty right now 
 
-    // const int num_workers = 7;
-    // for (int i = 0; i < 7; i++) {
-    //   mipdata_->lps.push_back(HighsLpRelaxation(*this));
-    //   mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
-    // }
+     const int num_workers = 7;
+     for (int i = 0; i < 7; i++) {
+       mipdata_->lps.push_back(HighsLpRelaxation(*this));
+       mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
+     }
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
@@ -347,6 +340,7 @@ restart:
         if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
 
         if (search.currentNodePruned()) {
+          // ig: do we update num_leaves here? 
           ++mipdata_->num_leaves;
           search.flushStatistics();
         } else {
@@ -715,7 +709,7 @@ restart:
 
       // the node is still not fathomed, so perform separation
       analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
-      sepa.separate(search.getLocalDomain());
+      sepa.separate(master_worker, search.getLocalDomain());
       analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
 
       if (mipdata_->domain.infeasible()) {

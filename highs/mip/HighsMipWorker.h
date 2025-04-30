@@ -15,6 +15,7 @@
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/HighsPrimalHeuristics.h"
 
 #include "mip/HighsPseudocost.h"
 // #include "mip/HighsSeparation.h"
@@ -47,6 +48,8 @@ class HighsMipWorker {
     double solution_objective_;
   };
 
+  Solution solution;
+
   HighsPrimalHeuristics::Statistics heur_stats;
 
   HighsRandom randgen;
@@ -60,6 +63,14 @@ class HighsMipWorker {
   }
 
   const bool checkLimits(int64_t nodeOffset = 0) const;
+
+
+  bool addIncumbent(const std::vector<double>& sol,
+                    double solobj, const int solution_source,
+                    const bool print_display_line = true);
+
+  double transformNewIntegerFeasibleSolution( const std::vector<double>& sol,
+    const bool possibly_store_as_new_incumbent = true);
 
   // todo: 
   // timer_

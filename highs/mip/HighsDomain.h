@@ -61,7 +61,7 @@ class HighsDomain {
   class ConflictSet {
     friend class HighsDomain;
     HighsDomain& localdom;
-    HighsDomain& globaldom;
+    const HighsDomain& globaldom;
 
    public:
     struct LocalDomChg {
@@ -410,11 +410,11 @@ class HighsDomain {
 
   void computeMinActivity(HighsInt start, HighsInt end, const HighsInt* ARindex,
                           const double* ARvalue, HighsInt& ninfmin,
-                          HighsCDouble& activitymin);
+                          HighsCDouble& activitymin) const;
 
   void computeMaxActivity(HighsInt start, HighsInt end, const HighsInt* ARindex,
                           const double* ARvalue, HighsInt& ninfmax,
-                          HighsCDouble& activitymax);
+                          HighsCDouble& activitymax) const;
 
   double adjustedUb(HighsInt col, HighsCDouble boundVal, bool& accept) const;
 
