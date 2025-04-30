@@ -231,7 +231,7 @@ std::function<void(int, const std::string&, const HighsCallbackDataOut*,
             data_out->objective_function_value, message.c_str());
     };
 
-TEST_CASE("my-callback-logging", "[highs-callback]") {
+TEST_CASE("my-callback-logging", "[highs_callback]") {
   bool output_flag = true;  // Still runs quietly
   bool log_to_console = false;
   HighsInt log_dev_level = kHighsLogDevLevelInfo;
@@ -281,7 +281,7 @@ TEST_CASE("my-callback-logging", "[highs-callback]") {
   }
 }
 
-TEST_CASE("highs-callback-logging", "[highs-callback]") {
+TEST_CASE("highs-callback-logging", "[highs_callback]") {
   // Uses userInterruptCallback to start logging lines with
   // "userInterruptCallback(kUserCallbackData): " since
   // Highs::setCallback has second argument p_user_callback_data
@@ -295,9 +295,11 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
   highs.startCallback(kCallbackLogging);
   highs.readModel(filename);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-solution-basis-logging", "[highs-callback]") {
+TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   int user_callback_data = kUserCallbackData;
   void* p_user_callback_data =
@@ -310,9 +312,11 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs-callback]") {
   highs.startCallback(kCallbackLogging);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   if (dev_run) highs.writeBasis("");
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
+TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   Highs highs;
@@ -325,9 +329,11 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().simplex_iteration_count >
           adlittle_simplex_iteration_limit);
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-ipm-interrupt", "[highs-callback]") {
+TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   Highs highs;
@@ -340,9 +346,11 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs-callback]") {
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().ipm_iteration_count > adlittle_ipm_iteration_limit);
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-interrupt", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -354,9 +362,11 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-improving", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -367,9 +377,11 @@ TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
   highs.startCallback(kCallbackMipImprovingSolution);
   highs.readModel(filename);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-data", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -379,9 +391,11 @@ TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
   highs.startCallback(kCallbackMipLogging);
   highs.readModel(filename);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-solution", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-solution", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -399,9 +413,11 @@ TEST_CASE("highs-callback-mip-solution", "[highs-callback]") {
   highs.setCallback(userMipSolutionCallback, p_user_callback_data);
   highs.startCallback(kCallbackMipSolution);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -409,9 +425,11 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
   highs.setCallback(userMipCutPoolCallback);
   highs.startCallback(kCallbackMipGetCutPool);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-user-solution", "[highs_callback]") {
   //  const std::vector<std::string> model = {"rgn", "flugpl", "gt2", "egout",
   //  "bell5", "lseu", "sp150x300d"};//, "p0548", "dcmulti"}; const
   //  std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4, 5, 6};
@@ -451,4 +469,6 @@ TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
         std::max(1.0, std::fabs(objective_function_value0));
     REQUIRE(objective_diff < 1e-12);
   }
+
+  highs.resetGlobalScheduler(true);
 }

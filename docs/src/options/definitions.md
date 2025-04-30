@@ -128,7 +128,7 @@
 - Default: 1
 
 ## simplex\_scale\_strategy
-- Simplex scaling strategy: off / choose / equilibration / forced equilibration / max value 0 / max value 1 (0/1/2/3/4/5)
+- Simplex scaling strategy: off / choose / equilibration (default) / forced equilibration / max value (0/1/2/3/4)
 - Type: integer
 - Range: {0, 5}
 - Default: 1

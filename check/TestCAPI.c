@@ -238,7 +238,7 @@ void assertLogical(const char* name, const HighsInt is) {
   }
 }
 
-void version_api() {
+void versionApi() {
   if (dev_run) {
     printf("HiGHS version %s\n", Highs_version());
     printf("HiGHS version major %" HIGHSINT_FORMAT "\n", Highs_versionMajor());
@@ -250,7 +250,7 @@ void version_api() {
   }
 }
 
-void minimal_api_lp() {
+void minimalApiLp() {
   // This illustrates the use of Highs_call, the simple C interface to
   // HiGHS. It's designed to solve the general LP problem
   //
@@ -375,7 +375,7 @@ void minimal_api_lp() {
   free(row_basis_status);
 }
 
-void minimal_api_mip() {
+void minimalApiMip() {
   // The use of Highs_mipCall is illustrated for the MIP
   //
   // Min    f  = -3x_0 - 2x_1 - x_2
@@ -455,7 +455,7 @@ void minimal_api_mip() {
   free(row_value);
 }
 
-void minimal_api_qp() {
+void minimalApiQp() {
   // Test solving the problem qjh
   //
   // minimize -x_2 - 3x_3 + (1/2)(2x_1^2 - 2x_1x_3 + 0.2x_2^2 + 2x_3^2)
@@ -503,7 +503,7 @@ void minimal_api_qp() {
   free(col_value);
 }
 
-void minimal_api_illegal_lp() {
+void minimalApiIllegalLp() {
   const double inf = 1e30;
   HighsInt num_col = 2;
   HighsInt num_row = 1;
@@ -530,7 +530,7 @@ void minimal_api_illegal_lp() {
   assert(model_status == kHighsModelStatusNotset);
 }
 
-void full_api() {
+void fullApi() {
   void* highs = Highs_create();
 
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
@@ -561,8 +561,6 @@ void full_api() {
   HighsInt ck_num_col;
   HighsInt ck_num_row;
   HighsInt ck_num_nz;
-  HighsInt ck_hessian_num_nz;
-  HighsInt ck_rowwise;
   HighsInt ck_sense;
   double ck_offset;
   double ck_cc[2];
@@ -620,7 +618,6 @@ void full_api() {
   // Define all column names to be different
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     const char suffix = iCol + '0';
-    const char* suffix_p = &suffix;
     char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", col_prefix, iCol);
     const char* name_p = name;
@@ -654,7 +651,6 @@ void full_api() {
   // Define all row names to be different
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     const char suffix = iRow + '0';
-    const char* suffix_p = &suffix;
     char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", row_prefix, iRow);
     const char* name_p = name;
@@ -698,7 +694,7 @@ void full_api() {
   Highs_destroy(highs);
 }
 
-void full_api_options() {
+void fullApiOptions() {
   void* highs;
 
   highs = Highs_create();
@@ -743,8 +739,8 @@ void full_api_options() {
   assert(return_status == kHighsStatusOk);
   assert(check_simplex_scale_strategy == simplex_scale_strategy);
   assert(min_simplex_scale_strategy == 0);
-  assert(max_simplex_scale_strategy == 5);
-  assert(default_simplex_scale_strategy == 1);
+  assert(max_simplex_scale_strategy == 4);
+  assert(default_simplex_scale_strategy == 2);
 
   // There are some functions to check what type of option value you should
   // provide.
@@ -841,7 +837,7 @@ void full_api_options() {
   Highs_destroy(highs);
 }
 
-void full_api_lp() {
+void fullApiLp() {
   // Form and solve the LP
   // Min    f  = 2x_0 + 3x_1
   // s.t.                x_1 <= 6
@@ -1059,7 +1055,7 @@ void full_api_lp() {
   Highs_destroy(highs);
 }
 
-void full_api_mip() {
+void fullApiMip() {
   // The use of the full HiGHS API is illustrated for the MIP
   //
   // Min    f  = -3x_0 - 2x_1 - x_2
@@ -1092,7 +1088,6 @@ void full_api_mip() {
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   double* row_value = (double*)malloc(sizeof(double) * num_row);
 
-  HighsInt model_status;
   HighsInt return_status;
 
   void* highs = Highs_create();
@@ -1138,7 +1133,7 @@ void full_api_mip() {
   free(row_value);
 }
 
-void full_api_qp() {
+void fullApiQp() {
   double required_objective_function_value;
   double required_x0;
   double required_x1;
@@ -1324,7 +1319,7 @@ void full_api_qp() {
   free(col_solution);
 }
 
-void pass_presolve_get_lp() {
+void passPresolveGetLp() {
   // Form and solve the LP
   // Min    f  = 2x_0 + 3x_1
   // s.t.                x_1 <= 6
@@ -1474,7 +1469,7 @@ void options() {
   Highs_destroy(highs);
 }
 
-void test_getColsByRange() {
+void testGetColsByRange() {
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   HighsInt return_status;
@@ -1510,7 +1505,7 @@ void test_getColsByRange() {
   Highs_destroy(highs);
 }
 
-void test_passHessian() {
+void testPassHessian() {
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   Highs_addCol(highs, 2.0, 0.0, 2.0, 0, NULL, NULL);
@@ -1540,7 +1535,7 @@ void test_passHessian() {
   Highs_destroy(highs);
 }
 
-void test_ranging() {
+void testRanging() {
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   //
@@ -1678,7 +1673,7 @@ void test_ranging() {
   Highs_destroy(highs);
 }
 
-void test_feasibilityRelaxation() {
+void testFeasibilityRelaxation() {
   void* highs;
   highs = Highs_create();
   const double kHighsInf = Highs_getInfinity(highs);
@@ -1728,7 +1723,7 @@ void test_feasibilityRelaxation() {
   Highs_destroy(highs);
 }
 
-void test_callback() {
+void testCallback() {
   HighsInt num_col = 7;
   HighsInt num_row = 1;
   HighsInt num_nz = num_col;
@@ -1783,7 +1778,7 @@ void test_callback() {
   Highs_destroy(highs);
 }
 
-void test_getModel() {
+void testGetModel() {
   void* highs;
   highs = Highs_create();
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
@@ -1793,7 +1788,6 @@ void test_getModel() {
   HighsInt num_row = 2;
   HighsInt num_nz = 4;
   HighsInt sense = -1;
-  double offset;
   double col_cost[2] = {8, 10};
   double col_lower[2] = {0, 0};
   double col_upper[2] = {inf, inf};
@@ -1855,7 +1849,7 @@ void test_getModel() {
   Highs_destroy(highs);
 }
 
-void test_multiObjective() {
+void testMultiObjective() {
   void* highs;
   highs = Highs_create();
   const double inf = Highs_getInfinity(highs);
@@ -1874,7 +1868,6 @@ void test_multiObjective() {
   HighsInt a_start[3] = {0, 3, 6};
   HighsInt a_index[6] = {0, 1, 2, 0, 1, 2};
   double a_value[6] = {3, 1, 1, 1, 1, 2};
-  HighsInt integrality[2] = {kHighsVarTypeInteger, kHighsVarTypeInteger};
 
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   HighsInt return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense,
@@ -1967,11 +1960,90 @@ void test_multiObjective() {
   free(col_value);
 }
 
+void testQpIndefiniteFailure() {
+    void* highs = Highs_create();
+    Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+    HighsInt ret;
+    const double inf = Highs_getInfinity(highs);
+    ret = Highs_addCol(highs, 0.0, 1.0, inf, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, 0.0, 1.0, 1.0, 0, NULL, NULL);
+    HighsInt start[2] = {0, 1};
+    HighsInt index[1] = {1};
+    double value[1] = {1.0};
+    ret = Highs_passHessian(highs, 2, 1, kHighsHessianFormatTriangular, start, index, value);
+    assert(ret == 0);
+    HighsInt run_status = Highs_run(highs);
+    HighsInt model_status = Highs_getModelStatus(highs);
+    assert(run_status == kHighsStatusError);
+    assert(model_status == kHighsModelStatusSolveError);
+    Highs_destroy(highs);
+}
+
+void testDualRayTwice() {
+    void* highs = Highs_create();
+    Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+    int ret;
+    double INF = Highs_getInfinity(highs);
+    ret = Highs_changeObjectiveOffset(highs, 0.0);
+    assert(ret == 0);
+    ret = Highs_setStringOptionValue(highs, "presolve", "off");
+    assert(ret == 0);
+    ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
+    assert(ret == 0);
+    HighsInt index[2] = {2, 3};
+    double value[2] = {1.0, -1.0};
+    ret = Highs_addRow(highs, 0.0, 0.0, 2, index, value);
+    assert(ret == 0);
+    index[0] = 2;    index[1] = 3;
+    value[0] = 1.0;  value[1] = 1.0;
+    ret = Highs_addRow(highs, 1.0, INF, 2, index, value);
+    assert(ret == 0);
+    index[0] = 0;    index[1] = 2;
+    value[0] = -2.0; value[1] = 1.0;
+    ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
+    assert(ret == 0);
+    index[0] = 1;    index[1] = 3;
+    value[0] = -3.0; value[1] = 1.0;
+    ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
+    assert(ret == 0);
+    ret = Highs_run(highs);
+    assert(ret == 0);
+    HighsInt has_dual_ray = 0;
+    double dual_ray_value[4] = {0.0, 0.0, 0.0, 0.0};
+    ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
+    assert(ret == 0);
+    assertIntValuesEqual("has_dual_ray", has_dual_ray, 1);
+    assertDoubleValuesEqual("dual_ray_value[0]", dual_ray_value[0], 0.0);
+    assertDoubleValuesEqual("dual_ray_value[1]", dual_ray_value[1], 1.0);
+    assertDoubleValuesEqual("dual_ray_value[2]", dual_ray_value[2], -1.0);
+    assertDoubleValuesEqual("dual_ray_value[3]", dual_ray_value[3], -1.0);
+    ret = Highs_changeColBounds(highs, 1, 1.0, 1.0);
+    assert(ret == 0);
+    ret = Highs_run(highs);
+    assert(ret == 0);
+    ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
+    assert(ret == 0);
+    assertIntValuesEqual("has_dual_ray", has_dual_ray, 1);
+    assertDoubleValuesEqual("dual_ray_value[0]", dual_ray_value[0], 1.0);
+    assertDoubleValuesEqual("dual_ray_value[1]", dual_ray_value[1], 1.0);
+    assertDoubleValuesEqual("dual_ray_value[2]", dual_ray_value[2], -2.0);
+    assertDoubleValuesEqual("dual_ray_value[3]", dual_ray_value[3], 0.0);
+    Highs_destroy(highs);
+    return;
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
 
-void test_setSolution() {
+void testSetSolution() {
   void* highs = Highs_create();
   // Perform in C the equivalent of std::string model_file =
   // std::string(HIGHS_DIR) + "/check/instances/shell.mps";
@@ -2012,26 +2084,62 @@ iteration_count1); assertLogical("Dual", logic);
   Highs_destroy(highs);
 }
 */
+void testDeleteRowResolveWithBasis() {
+  // Created to expose bug in #2267, but also illustrates case where
+  // scaling was performed on the original problem - due to the 6 in
+  // row 1, but would not be performed on the problem after row 1 has
+  // been removed
+  void* highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  HighsInt ret;
+  double INF = Highs_getInfinity(highs);
+  ret = Highs_addCol(highs, 0.0, 2.0, 2.0, 0, NULL, NULL);
+  ret = Highs_addCol(highs, 0.0, -INF, INF, 0, NULL, NULL);
+  ret = Highs_addCol(highs, 0.0, -INF, INF, 0, NULL, NULL);
+  HighsInt index_1[2] = {0, 2};
+  double value_1[2] = {2.0, -1.0};
+  ret = Highs_addRow(highs, 0.0, 0.0, 2, index_1, value_1);
+  HighsInt index_2[1] = {1};
+  double value_2[1] = {6.0};
+  ret = Highs_addRow(highs, 10.0, INF, 1, index_2, value_2);
+  Highs_run(highs);
+  double col_value[3] = {0.0, 0.0, 0.0};
+  Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assertDoubleValuesEqual("col_value[0]", col_value[0], 2.0);
+  ret = Highs_deleteRowsByRange(highs, 1, 1);
+  assert(ret == 0);
+  ret = Highs_run(highs);
+  assert(ret == 0);
+  ret = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assert(ret == 0);
+  assertDoubleValuesEqual("col_value[0]", col_value[0], 2.0);
+  Highs_destroy(highs);
+}
+
 int main() {
-  minimal_api_illegal_lp();
-  test_callback();
-  version_api();
-  full_api();
-  minimal_api_lp();
-  minimal_api_mip();
-  minimal_api_qp();
-  full_api_options();
-  full_api_lp();
-  full_api_mip();
-  full_api_qp();
-  pass_presolve_get_lp();
+  minimalApiIllegalLp();
+  testCallback();
+  versionApi();
+  fullApi();
+  minimalApiLp();
+  minimalApiMip();
+  minimalApiQp();
+  fullApiOptions();
+  fullApiLp();
+  fullApiMip();
+  fullApiQp();
+  passPresolveGetLp();
   options();
-  test_getColsByRange();
-  test_passHessian();
-  test_ranging();
-  test_feasibilityRelaxation();
-  test_getModel();
-  test_multiObjective();
+  testGetColsByRange();
+  testPassHessian();
+  testRanging();
+  testFeasibilityRelaxation();
+  testGetModel();
+  testMultiObjective();
+  testQpIndefiniteFailure();
+  testDualRayTwice();
+
+  testDeleteRowResolveWithBasis();
   return 0;
 }
-//  test_setSolution();
+//  testSetSolution();

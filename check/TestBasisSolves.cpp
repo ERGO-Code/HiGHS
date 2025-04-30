@@ -563,6 +563,8 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   // Solve
   highs.run();
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Kappa", "[highs_basis_solves]") {
@@ -610,4 +612,6 @@ TEST_CASE("Kappa", "[highs_basis_solves]") {
     highs.run();
     REQUIRE(highs.getKappa(kappa) == HighsStatus::kError);
   }
+
+  highs.resetGlobalScheduler(true);
 }

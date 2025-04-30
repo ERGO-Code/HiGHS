@@ -1,25 +1,25 @@
 set(include_dirs
-  ${CMAKE_SOURCE_DIR}/extern
-  ${CMAKE_SOURCE_DIR}/extern/filereader
-  ${CMAKE_SOURCE_DIR}/extern/pdqsort
-  ${CMAKE_SOURCE_DIR}/extern/zstr
-  ${CMAKE_SOURCE_DIR}/src
-  ${CMAKE_SOURCE_DIR}/src/interfaces
-  ${CMAKE_SOURCE_DIR}/src/io
-  ${CMAKE_SOURCE_DIR}/src/ipm
-  ${CMAKE_SOURCE_DIR}/src/ipm/ipx
-  ${CMAKE_SOURCE_DIR}/src/ipm/basiclu
-  ${CMAKE_SOURCE_DIR}/src/lp_data
-  ${CMAKE_SOURCE_DIR}/src/mip
-  ${CMAKE_SOURCE_DIR}/src/model
-  ${CMAKE_SOURCE_DIR}/src/parallel
-  ${CMAKE_SOURCE_DIR}/src/pdlp
-  ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
-  ${CMAKE_SOURCE_DIR}/src/presolve
-  ${CMAKE_SOURCE_DIR}/src/qpsolver
-  ${CMAKE_SOURCE_DIR}/src/simplex
-  ${CMAKE_SOURCE_DIR}/src/test
-  ${CMAKE_SOURCE_DIR}/src/util
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/filereader>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/pdqsort>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/interfaces>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/ipx>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/basiclu>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/lp_data>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/mip>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/model>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/test_kkt>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
 set(cupdlp_sources
@@ -27,7 +27,7 @@ set(cupdlp_sources
   pdlp/cupdlp/cupdlp_linalg.c
   pdlp/cupdlp/cupdlp_proj.c
   pdlp/cupdlp/cupdlp_restart.c
-  pdlp/cupdlp/cupdlp_scaling_cuda.c
+  pdlp/cupdlp/cupdlp_scaling.c
   pdlp/cupdlp/cupdlp_solver.c
   pdlp/cupdlp/cupdlp_step.c
   pdlp/cupdlp/cupdlp_utils.c)
@@ -38,10 +38,17 @@ set(cupdlp_headers
   pdlp/cupdlp/cupdlp_linalg.h
   pdlp/cupdlp/cupdlp_proj.h
   pdlp/cupdlp/cupdlp_restart.h
-  pdlp/cupdlp/cupdlp_scaling_cuda.h
+  pdlp/cupdlp/cupdlp_scaling.h
   pdlp/cupdlp/cupdlp_solver.h
   pdlp/cupdlp/cupdlp_step.h
   pdlp/cupdlp/cupdlp_utils.c)
+
+set(cuda_sources
+  pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
+  pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
+  pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
+  pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu)
+
 
 set(basiclu_sources
   ipm/basiclu/basiclu_factorize.c
@@ -205,6 +212,7 @@ set(highs_sources
     mip/HighsDebugSol.cpp
     mip/HighsDomain.cpp
     mip/HighsDynamicRowMatrix.cpp
+    mip/HighsFeasibilityJump.cpp
     mip/HighsGFkSolve.cpp
     mip/HighsImplications.cpp
     mip/HighsLpAggregator.cpp
@@ -262,8 +270,8 @@ set(highs_sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test/KktCh2.cpp
-    test/DevKkt.cpp
+    test_kkt/KktCh2.cpp
+    test_kkt/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -319,6 +327,7 @@ set(highs_headers
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HStruct.h
+    mip/feasibilityjump.hh
     mip/HighsCliqueTable.h
     mip/HighsConflictPool.h
     mip/HighsCutGeneration.h
@@ -410,8 +419,8 @@ set(highs_headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    test/DevKkt.h
-    test/KktCh2.h
+    test_kkt/DevKkt.h
+    test_kkt/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
