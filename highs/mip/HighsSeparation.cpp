@@ -52,7 +52,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     }
 
     // only modify cliquetable for master worker.
-    if (&propdomain == &mipdata.domain) 
+    if (&propdomain == &mipdata.domain)
       mipdata.cliquetable.cleanupFixed(mipdata.domain);
 
     if (mipdata.domain.infeasible()) {
@@ -81,8 +81,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
   if (&propdomain == &mipdata.domain) {
     lp->getMipSolver().timer_.start(implBoundClock);
-    mipdata.implications.separateImpliedBounds(*lp, lp->getSolution().col_value,
-                                              mipdata.cutpool, mipdata.feastol);
+    mipdata.implications.separateImpliedBounds(
+        *lp, lp->getSolution().col_value, mipdata.cutpool, mipdata.feastol);
     lp->getMipSolver().timer_.stop(implBoundClock);
   }
 
@@ -133,7 +133,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     ncuts += numboundchgs;
 
   if (&propdomain == &mipdata.domain) {
-    mipdata.cutpool.separate(sol.col_value, propdomain, cutset, mipdata.feastol);
+    mipdata.cutpool.separate(sol.col_value, propdomain, cutset,
+                             mipdata.feastol);
   }
 
   if (cutset.numCuts() > 0) {
@@ -154,7 +155,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   return ncuts;
 }
 
-void HighsSeparation::separate(HighsMipWorker& worker, HighsDomain& propdomain) {
+void HighsSeparation::separate(HighsMipWorker& worker,
+                               HighsDomain& propdomain) {
   HighsLpRelaxation::Status status = lp->getStatus();
   const HighsMipSolver& mipsolver = lp->getMipSolver();
 
@@ -172,7 +174,7 @@ void HighsSeparation::separate(HighsMipWorker& worker, HighsDomain& propdomain) 
       // replace with mipworker iterations field
       // mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
       // mipsolver.mipdata_->total_lp_iterations += nlpiters;
-      
+
       // todo:ig  more stats for separation iterations?
       worker.heur_stats.lp_iterations += nlpiters;
 

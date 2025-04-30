@@ -86,7 +86,6 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
 
   // ig:here
   // workers.emplace_back(mipsolver, lp);
-
 }
 
 std::string HighsMipSolverData::solutionSourceToString(
@@ -1753,7 +1752,8 @@ bool HighsMipSolverData::rootSeparationRound(
   return false;
 }
 
-HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp(HighsMipWorker& worker) {
+HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp(
+    HighsMipWorker& worker) {
   do {
     domain.propagate();
 
@@ -2226,7 +2226,7 @@ restart:
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
   if (mipsolver.options_mip_->mip_heuristic_run_zi_round) {
-    heuristics.ziRound(worker,firstlpsol);
+    heuristics.ziRound(worker, firstlpsol);
     heuristics.flushStatistics(worker);
   }
   if (mipsolver.options_mip_->mip_heuristic_run_shifting) {

@@ -841,7 +841,6 @@ void HighsCliqueTable::extractCliques(
     std::vector<double>& vals, std::vector<int8_t>& complementation, double rhs,
     HighsInt nbin, std::vector<HighsInt>& perm, std::vector<CliqueVar>& clique,
     double feastol) {
-
   // only extract cliques before the dive.
   // not needed, only called in presolve.
   // if (mipsolver.mipdata_->workers.size() > 1)

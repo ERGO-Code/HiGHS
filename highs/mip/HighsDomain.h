@@ -284,10 +284,10 @@ class HighsDomain {
     void recomputeCapacityThreshold();
   };
 
-//  public:
+  //  public:
   std::vector<uint8_t> changedcolsflags_;
 
-//  private: 
+  //  private:
   std::vector<HighsInt> changedcols_;
 
   std::vector<std::pair<HighsInt, HighsInt>> propRowNumChangedBounds_;

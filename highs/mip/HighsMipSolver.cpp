@@ -221,26 +221,27 @@ restart:
     return;
   }
 
- printf(
+  printf(
       "MIPSOLVER mipdata lp deque member  with address %p, %d "
       "columns, and %d rows\n",
-      (void*)&mipdata_->lps.at(0), int(mipdata_->lps.at(0).getLpSolver().getNumCol()),
+      (void*)&mipdata_->lps.at(0),
+      int(mipdata_->lps.at(0).getLpSolver().getNumCol()),
       int(mipdata_->lps.at(0).getLpSolver().getNumRow()));
 
- printf( "Passed to search atm:  \n");
+  printf("Passed to search atm:  \n");
 
- printf( "MIPSOLVER mipdata lp ref with address %p, %d "
+  printf(
+      "MIPSOLVER mipdata lp ref with address %p, %d "
       "columns, and %d rows\n",
       (void*)&mipdata_->lp, int(mipdata_->lp.getLpSolver().getNumCol()),
       int(mipdata_->lp.getLpSolver().getNumRow()));
 
-
- printf(
+  printf(
       "master_worker lprelaxation_ member  with address %p, %d "
       "columns, and %d rows\n",
-      (void*)&master_worker.lprelaxation_, int(master_worker.lprelaxation_.getLpSolver().getNumCol()),
+      (void*)&master_worker.lprelaxation_,
+      int(master_worker.lprelaxation_.getLpSolver().getNumCol()),
       int(mipdata_->lps.at(0).getLpSolver().getNumRow()));
-
 
   std::shared_ptr<const HighsBasis> basis;
   // HighsSearch search{*this, mipdata_->pseudocost};
@@ -260,7 +261,6 @@ restart:
   // does not work yet, fails at domain propagation somewhere.
   // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
   // search.setLpRelaxation(&mipdata_->lp);
-
 
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
 
@@ -311,15 +311,14 @@ restart:
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
-
     // Initialize worker relaxations and mipworkers
-    // todo lps and workers are still empty right now 
+    // todo lps and workers are still empty right now
 
-     const int num_workers = 7;
-     for (int i = 0; i < 7; i++) {
-       mipdata_->lps.push_back(HighsLpRelaxation(*this));
-       mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
-     }
+    const int num_workers = 7;
+    for (int i = 0; i < 7; i++) {
+      mipdata_->lps.push_back(HighsLpRelaxation(*this));
+      mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
+    }
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
@@ -340,14 +339,15 @@ restart:
         if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
 
         if (search.currentNodePruned()) {
-          // ig: do we update num_leaves here? 
+          // ig: do we update num_leaves here?
           ++mipdata_->num_leaves;
           search.flushStatistics();
         } else {
           analysis_.mipTimerStart(kMipClockDivePrimalHeuristics);
           if (mipdata_->incumbent.empty()) {
             analysis_.mipTimerStart(kMipClockDiveRandomizedRounding);
-            mipdata_->heuristics.randomizedRounding(master_worker,
+            mipdata_->heuristics.randomizedRounding(
+                master_worker,
                 mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockDiveRandomizedRounding);
           }
@@ -355,14 +355,16 @@ restart:
           if (mipdata_->incumbent.empty()) {
             if (options_mip_->mip_heuristic_run_rens) {
               analysis_.mipTimerStart(kMipClockDiveRens);
-              mipdata_->heuristics.RENS(master_worker,
+              mipdata_->heuristics.RENS(
+                  master_worker,
                   mipdata_->lp.getLpSolver().getSolution().col_value);
               analysis_.mipTimerStop(kMipClockDiveRens);
             }
           } else {
             if (options_mip_->mip_heuristic_run_rins) {
               analysis_.mipTimerStart(kMipClockDiveRins);
-              mipdata_->heuristics.RINS(master_worker,
+              mipdata_->heuristics.RINS(
+                  master_worker,
                   mipdata_->lp.getLpSolver().getSolution().col_value);
               analysis_.mipTimerStop(kMipClockDiveRins);
             }

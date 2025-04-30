@@ -159,8 +159,8 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
               domchg, inds.data(), vals.data(), inds.size(), rhs,
               mipsolver.mipdata_->conflictPool);
         }
-        addedConstraints =
-            mipsolver.mipdata_->conflictPool.getNumConflicts() != oldNumConflicts;
+        addedConstraints = mipsolver.mipdata_->conflictPool.getNumConflicts() !=
+                           oldNumConflicts;
 
         if (addedConstraints) {
           localdomain.propagate();
@@ -168,9 +168,9 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
 
           boundChanges.erase(
               std::remove_if(boundChanges.begin(), boundChanges.end(),
-                            [&](const HighsDomainChange& domchg) {
-                              return localdomain.isActive(domchg);
-                            }),
+                             [&](const HighsDomainChange& domchg) {
+                               return localdomain.isActive(domchg);
+                             }),
               boundChanges.end());
         }
       }

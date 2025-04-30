@@ -990,15 +990,19 @@ class HighsHashTable {
     makeEmptyTable(initCapacity);
   }
 
-  HighsHashTable(const HighsHashTable& hashTable) : tableSizeMask(hashTable.tableSizeMask), numHashShift(hashTable.numHashShift), numElements(hashTable.numElements) {
-   
+  HighsHashTable(const HighsHashTable& hashTable)
+      : tableSizeMask(hashTable.tableSizeMask),
+        numHashShift(hashTable.numHashShift),
+        numElements(hashTable.numElements) {
     u64 capacity = tableSizeMask + 1;
     metadata = decltype(metadata)(new u8[capacity]);
     entries =
         decltype(entries)((Entry*)::operator new(sizeof(Entry) * capacity));
-    
-    std::copy(hashTable.metadata.get(), hashTable.metadata.get() + capacity, metadata.get());
-    std::copy(hashTable.entries.get(), hashTable.entries.get() + capacity, entries.get());
+
+    std::copy(hashTable.metadata.get(), hashTable.metadata.get() + capacity,
+              metadata.get());
+    std::copy(hashTable.entries.get(), hashTable.entries.get() + capacity,
+              entries.get());
   }
 
   iterator end() {

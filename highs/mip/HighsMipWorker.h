@@ -10,21 +10,18 @@
 
 #include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
-
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsPrimalHeuristics.h"
-
 #include "mip/HighsPseudocost.h"
 // #include "mip/HighsSeparation.h"
 
 class HighsSearch;
 
 class HighsMipWorker {
- public: 
-
+ public:
   const HighsMipSolver& mipsolver_;
   const HighsMipSolverData& mipdata_;
 
@@ -32,7 +29,6 @@ class HighsMipWorker {
 
   std::unique_ptr<HighsSearch> search_ptr_;
 
- 
   const HighsMipSolver& getMipSolver();
 
   HighsLpRelaxation& lprelaxation_;
@@ -55,28 +51,29 @@ class HighsMipWorker {
   HighsRandom randgen;
 
   // HighsMipWorker(const HighsMipSolver& mipsolver__);
-  HighsMipWorker(const HighsMipSolver& mipsolver__, HighsLpRelaxation& lprelax_);
+  HighsMipWorker(const HighsMipSolver& mipsolver__,
+                 HighsLpRelaxation& lprelax_);
 
   ~HighsMipWorker() {
-      // search_ptr_.release();
-      search_ptr_.reset();
+    // search_ptr_.release();
+    search_ptr_.reset();
   }
 
   const bool checkLimits(int64_t nodeOffset = 0) const;
 
-
-  bool addIncumbent(const std::vector<double>& sol,
-                    double solobj, const int solution_source,
+  bool addIncumbent(const std::vector<double>& sol, double solobj,
+                    const int solution_source,
                     const bool print_display_line = true);
 
-  double transformNewIntegerFeasibleSolution( const std::vector<double>& sol,
-    const bool possibly_store_as_new_incumbent = true);
+  double transformNewIntegerFeasibleSolution(
+      const std::vector<double>& sol,
+      const bool possibly_store_as_new_incumbent = true);
 
-  // todo: 
+  // todo:
   // timer_
   // sync too
-  // or name times differently for workers in the same timer instance in mipsolver.
-
+  // or name times differently for workers in the same timer instance in
+  // mipsolver.
 };
 
 #endif

@@ -1527,7 +1527,8 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
 
     if (havecycle) return;
 
-    if (linesearchRounding(worker, lpsol, roundedsol, kSolutionSourceFeasibilityPump))
+    if (linesearchRounding(worker, lpsol, roundedsol,
+                           kSolutionSourceFeasibilityPump))
       return;
 
     if (lprelax.getNumLpIterations() >=

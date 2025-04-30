@@ -14,14 +14,13 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolverData.h"
 
-// HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
+// HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost&
+// pseudocost)
 //     : mipsolver(mipsolver),
 //       lp(nullptr),
 //       localdom(mipsolver.mipdata_->domain),
-      
 
-HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost&
-pseudocost)
+HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
     : mipworker(mipworker),
       mipsolver(mipworker.mipsolver_),
       lp(nullptr),
@@ -2016,15 +2015,13 @@ HighsSymmetries& HighsSearch::getSymmetries() const {
 bool HighsSearch::addIncumbent(const std::vector<double>& sol, double solobj,
                                const int solution_source,
                                const bool print_display_line) {
-  // if (mipsolver.mipdata_->workers.size() <= 1) 
-    return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
-                                            print_display_line);
-  
+  // if (mipsolver.mipdata_->workers.size() <= 1)
+  return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
+                                          print_display_line);
+
   // dive part.
-    // return mipworker.addIncumbent(sol, solobj, solution_source,
-    //                                         print_display_line);
-
-
+  // return mipworker.addIncumbent(sol, solobj, solution_source,
+  //                                         print_display_line);
 }
 
 int64_t& HighsSearch::getNumNodes() { return mipsolver.mipdata_->num_nodes; }

@@ -30,7 +30,7 @@ class HighsImplications;
 class HighsCliqueTable;
 
 class HighsSearch {
-public: 
+ public:
   HighsMipWorker& mipworker;
 
   const HighsMipSolver& mipsolver;

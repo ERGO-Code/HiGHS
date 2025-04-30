@@ -218,8 +218,8 @@ struct HighsMipSolverData {
       const std::vector<double>& solution) const;
   bool trySolution(const std::vector<double>& solution,
                    const int solution_source = kSolutionSourceNone);
-  bool rootSeparationRound(HighsMipWorker& worker, HighsSeparation& sepa, HighsInt& ncuts,
-                           HighsLpRelaxation::Status& status);
+  bool rootSeparationRound(HighsMipWorker& worker, HighsSeparation& sepa,
+                           HighsInt& ncuts, HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp(HighsMipWorker& worker);
 
   void evaluateRootNode(HighsMipWorker& worker);

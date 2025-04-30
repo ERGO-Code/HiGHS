@@ -191,8 +191,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       bool infeasible = false;
       if (mip.mipdata_->workers.size() <= 1)
         mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
-                                              bestVub[col].second, ub, redundant,
-                                              infeasible, false);
+                                              bestVub[col].second, ub,
+                                              redundant, infeasible, false);
     }
 
     // the code below uses the difference between the column upper and lower
@@ -208,8 +208,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 
       if (mip.mipdata_->workers.size() <= 1)
         mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
-                                              bestVlb[col].second, lb, redundant,
-                                              infeasible, false);
+                                              bestVlb[col].second, lb,
+                                              redundant, infeasible, false);
     }
 
     // store the old bound type so that we can restore it if the continuous
