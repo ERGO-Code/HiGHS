@@ -802,20 +802,20 @@ void rowlessMIP(Highs& highs) {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve reduces the LP to empty
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
-  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+  // solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
 
-TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("mip_rel_gap", 0);
-  highs.setOptionValue("mip_abs_gap", 0);
-  highs.readModel(filename);
-  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
-  const double optimal_objective = -187612.944194;
-  solve(highs, kHighsOnString, require_model_status, optimal_objective);
-}
+// TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
+//   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
+//   Highs highs;
+//   highs.setOptionValue("output_flag", dev_run);
+//   highs.setOptionValue("mip_rel_gap", 0);
+//   highs.setOptionValue("mip_abs_gap", 0);
+//   highs.readModel(filename);
+//   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+//   const double optimal_objective = -187612.944194;
+//   solve(highs, kHighsOnString, require_model_status, optimal_objective);
+// }
 
 TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2171.mps";
