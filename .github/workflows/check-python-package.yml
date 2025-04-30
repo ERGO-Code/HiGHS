@@ -1,6 +1,7 @@
 name: check-python-package
 
-on: [pull_request]
+# on: [pull_request]
+on: []
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

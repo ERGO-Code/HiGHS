@@ -218,6 +218,7 @@ set(highs_sources_python
     highs/mip/HighsMipAnalysis.cpp
     highs/mip/HighsMipSolver.cpp
     highs/mip/HighsMipSolverData.cpp
+    highs/mip/HighsMipWorker.cpp
     highs/mip/HighsModkSeparator.cpp
     highs/mip/HighsNodeQueue.cpp
     highs/mip/HighsObjectiveFunction.cpp
@@ -337,6 +338,7 @@ set(highs_headers_python
     highs/mip/HighsMipAnalysis.h
     highs/mip/HighsMipSolver.h
     highs/mip/HighsMipSolverData.h
+    highs/mip/HighsMipWorker.h
     highs/mip/HighsModkSeparator.h
     highs/mip/HighsNodeQueue.h
     highs/mip/HighsObjectiveFunction.h

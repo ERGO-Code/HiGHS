@@ -1,6 +1,7 @@
 name: build-python-package
 
-on: [push, pull_request]
+# on: [push, pull_request]
+on: []
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

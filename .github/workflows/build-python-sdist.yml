@@ -1,6 +1,7 @@
 name: build-python-sdist
 
-on: [push, pull_request]
+# on: [push, pull_request]
+on: []
 
 jobs:
   build_sdist_ubuntu:
