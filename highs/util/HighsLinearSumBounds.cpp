@@ -10,29 +10,25 @@
 #include <algorithm>
 
 void HighsLinearSumBounds::add(HighsInt sum, HighsInt var, double coefficient) {
-  addOrRemoveVarUpper(sum, var, coefficient, varUpper[var], HighsInt{1});
-  addOrRemoveVarLower(sum, var, coefficient, varLower[var], HighsInt{1});
-  addOrRemoveImplVarUpper(sum, var, coefficient, getImplVarUpper(sum, var),
-                          HighsInt{1});
-  addOrRemoveImplVarLower(sum, var, coefficient, getImplVarLower(sum, var),
-                          HighsInt{1});
+  handleVarUpper(sum, coefficient, varUpper[var], HighsInt{1});
+  handleVarLower(sum, coefficient, varLower[var], HighsInt{1});
+  handleImplVarUpper(sum, coefficient, getImplVarUpper(sum, var), HighsInt{1});
+  handleImplVarLower(sum, coefficient, getImplVarLower(sum, var), HighsInt{1});
 }
 
 void HighsLinearSumBounds::remove(HighsInt sum, HighsInt var,
                                   double coefficient) {
-  addOrRemoveVarUpper(sum, var, coefficient, varUpper[var], HighsInt{-1});
-  addOrRemoveVarLower(sum, var, coefficient, varLower[var], HighsInt{-1});
-  addOrRemoveImplVarUpper(sum, var, coefficient, getImplVarUpper(sum, var),
-                          HighsInt{-1});
-  addOrRemoveImplVarLower(sum, var, coefficient, getImplVarLower(sum, var),
-                          HighsInt{-1});
+  handleVarUpper(sum, coefficient, varUpper[var], HighsInt{-1});
+  handleVarLower(sum, coefficient, varLower[var], HighsInt{-1});
+  handleImplVarUpper(sum, coefficient, getImplVarUpper(sum, var), HighsInt{-1});
+  handleImplVarLower(sum, coefficient, getImplVarLower(sum, var), HighsInt{-1});
 }
 
 void HighsLinearSumBounds::updatedVarUpper(HighsInt sum, HighsInt var,
                                            double coefficient,
                                            double oldVarUpper) {
-  addOrRemoveVarUpper(sum, var, coefficient, oldVarUpper, HighsInt{-1});
-  addOrRemoveVarUpper(sum, var, coefficient, varUpper[var], HighsInt{1});
+  handleVarUpper(sum, coefficient, oldVarUpper, HighsInt{-1});
+  handleVarUpper(sum, coefficient, varUpper[var], HighsInt{1});
   updatedImplVarUpper(sum, var, coefficient, oldVarUpper, implVarUpper[var],
                       implVarUpperSource[var]);
 }
@@ -40,8 +36,8 @@ void HighsLinearSumBounds::updatedVarUpper(HighsInt sum, HighsInt var,
 void HighsLinearSumBounds::updatedVarLower(HighsInt sum, HighsInt var,
                                            double coefficient,
                                            double oldVarLower) {
-  addOrRemoveVarLower(sum, var, coefficient, oldVarLower, HighsInt{-1});
-  addOrRemoveVarLower(sum, var, coefficient, varLower[var], HighsInt{1});
+  handleVarLower(sum, coefficient, oldVarLower, HighsInt{-1});
+  handleVarLower(sum, coefficient, varLower[var], HighsInt{1});
   updatedImplVarLower(sum, var, coefficient, oldVarLower, implVarLower[var],
                       implVarLowerSource[var]);
 }
@@ -228,96 +224,45 @@ double HighsLinearSumBounds::getImplVarLower(
                                       : std::max(myImplVarLower, myVarLower));
 }
 
-void HighsLinearSumBounds::addOrRemoveVarUpper(HighsInt sum, HighsInt var,
-                                               double coefficient,
-                                               double myVarUpper,
-                                               HighsInt direction) {
-  if (coefficient > 0) {
-    // coefficient is positive, therefore variable upper bound contributes to
-    // sum upper bound
-    if (myVarUpper == kHighsInf)
-      numInfSumUpperOrig[sum] += direction;
-    else
-      sumUpperOrig[sum] +=
-          direction * static_cast<HighsCDouble>(myVarUpper) * coefficient;
-  } else {
-    // coefficient is negative, therefore variable upper bound contributes to
-    // sum lower bound
-    if (myVarUpper == kHighsInf)
-      numInfSumLowerOrig[sum] += direction;
-    else
-      sumLowerOrig[sum] +=
-          direction * static_cast<HighsCDouble>(myVarUpper) * coefficient;
-  }
+void HighsLinearSumBounds::update(HighsInt& numInf, HighsCDouble& sum,
+                                  bool isBoundFinite, HighsInt direction,
+                                  double bound, double coefficient) {
+  if (!isBoundFinite)
+    numInf += direction;
+  else
+    sum += direction * static_cast<HighsCDouble>(bound) * coefficient;
 }
 
-void HighsLinearSumBounds::addOrRemoveVarLower(HighsInt sum, HighsInt var,
-                                               double coefficient,
-                                               double myVarLower,
-                                               HighsInt direction) {
-  if (coefficient > 0) {
-    // coefficient is positive, therefore variable lower bound contributes to
-    // sum lower bound
-    if (myVarLower == -kHighsInf)
-      numInfSumLowerOrig[sum] += direction;
-    else
-      sumLowerOrig[sum] +=
-          direction * static_cast<HighsCDouble>(myVarLower) * coefficient;
-  } else {
-    // coefficient is negative, therefore variable lower bound contributes to
-    // sum upper bound
-    if (myVarLower == -kHighsInf)
-      numInfSumUpperOrig[sum] += direction;
-    else
-      sumUpperOrig[sum] +=
-          direction * static_cast<HighsCDouble>(myVarLower) * coefficient;
-  }
+void HighsLinearSumBounds::handleVarUpper(HighsInt sum, double coefficient,
+                                          double myVarUpper,
+                                          HighsInt direction) {
+  update(coefficient > 0 ? numInfSumUpperOrig[sum] : numInfSumLowerOrig[sum],
+         coefficient > 0 ? sumUpperOrig[sum] : sumLowerOrig[sum],
+         myVarUpper != kHighsInf, direction, myVarUpper, coefficient);
 }
 
-void HighsLinearSumBounds::addOrRemoveImplVarUpper(HighsInt sum, HighsInt var,
-                                                   double coefficient,
-                                                   double myImplVarUpper,
-                                                   HighsInt direction) {
-  if (coefficient > 0) {
-    // coefficient is positive, therefore variable upper bound contributes to
-    // sum upper bound
-    if (myImplVarUpper == kHighsInf)
-      numInfSumUpper[sum] += direction;
-    else
-      sumUpper[sum] +=
-          direction * static_cast<HighsCDouble>(myImplVarUpper) * coefficient;
-  } else {
-    // coefficient is negative, therefore variable upper bound contributes to
-    // sum lower bound
-    if (myImplVarUpper == kHighsInf)
-      numInfSumLower[sum] += direction;
-    else
-      sumLower[sum] +=
-          direction * static_cast<HighsCDouble>(myImplVarUpper) * coefficient;
-  }
+void HighsLinearSumBounds::handleVarLower(HighsInt sum, double coefficient,
+                                          double myVarLower,
+                                          HighsInt direction) {
+  update(coefficient > 0 ? numInfSumLowerOrig[sum] : numInfSumUpperOrig[sum],
+         coefficient > 0 ? sumLowerOrig[sum] : sumUpperOrig[sum],
+         myVarLower != -kHighsInf, direction, myVarLower, coefficient);
 }
 
-void HighsLinearSumBounds::addOrRemoveImplVarLower(HighsInt sum, HighsInt var,
-                                                   double coefficient,
-                                                   double myImplVarLower,
-                                                   HighsInt direction) {
-  if (coefficient > 0) {
-    // coefficient is positive, therefore variable lower bound contributes to
-    // sum lower bound
-    if (myImplVarLower == -kHighsInf)
-      numInfSumLower[sum] += direction;
-    else
-      sumLower[sum] +=
-          direction * static_cast<HighsCDouble>(myImplVarLower) * coefficient;
-  } else {
-    // coefficient is negative, therefore variable lower bound contributes to
-    // sum upper bound
-    if (myImplVarLower == -kHighsInf)
-      numInfSumUpper[sum] += direction;
-    else
-      sumUpper[sum] +=
-          direction * static_cast<HighsCDouble>(myImplVarLower) * coefficient;
-  }
+void HighsLinearSumBounds::handleImplVarUpper(HighsInt sum, double coefficient,
+                                              double myImplVarUpper,
+                                              HighsInt direction) {
+  update(coefficient > 0 ? numInfSumUpper[sum] : numInfSumLower[sum],
+         coefficient > 0 ? sumUpper[sum] : sumLower[sum],
+         myImplVarUpper != kHighsInf, direction, myImplVarUpper, coefficient);
+}
+
+void HighsLinearSumBounds::handleImplVarLower(HighsInt sum, double coefficient,
+                                              double myImplVarLower,
+                                              HighsInt direction) {
+  update(coefficient > 0 ? numInfSumLower[sum] : numInfSumUpper[sum],
+         coefficient > 0 ? sumLower[sum] : sumUpper[sum],
+         myImplVarLower != -kHighsInf, direction, myImplVarLower, coefficient);
 }
 
 void HighsLinearSumBounds::updatedImplVarUpper(HighsInt sum, HighsInt var,
@@ -331,8 +276,8 @@ void HighsLinearSumBounds::updatedImplVarUpper(HighsInt sum, HighsInt var,
 
   if (vUpper == oldVUpper) return;
 
-  addOrRemoveImplVarUpper(sum, var, coefficient, oldVUpper, HighsInt{-1});
-  addOrRemoveImplVarUpper(sum, var, coefficient, vUpper, HighsInt{1});
+  handleImplVarUpper(sum, coefficient, oldVUpper, HighsInt{-1});
+  handleImplVarUpper(sum, coefficient, vUpper, HighsInt{1});
 }
 
 void HighsLinearSumBounds::updatedImplVarLower(HighsInt sum, HighsInt var,
@@ -346,6 +291,6 @@ void HighsLinearSumBounds::updatedImplVarLower(HighsInt sum, HighsInt var,
 
   if (vLower == oldVLower) return;
 
-  addOrRemoveImplVarLower(sum, var, coefficient, oldVLower, HighsInt{-1});
-  addOrRemoveImplVarLower(sum, var, coefficient, vLower, HighsInt{1});
+  handleImplVarLower(sum, coefficient, oldVLower, HighsInt{-1});
+  handleImplVarLower(sum, coefficient, vLower, HighsInt{1});
 }

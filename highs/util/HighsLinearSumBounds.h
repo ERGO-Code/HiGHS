@@ -164,17 +164,20 @@ class HighsLinearSumBounds {
   double getImplVarLower(HighsInt sum, double myVarLower, double myImplVarLower,
                          HighsInt myImplVarLowerSource) const;
 
-  void addOrRemoveVarUpper(HighsInt sum, HighsInt var, double coefficient,
-                           double myVarUpper, HighsInt direction);
+  void update(HighsInt& numInf, HighsCDouble& sum, bool isBoundFinite,
+              HighsInt direction, double bound, double coefficient);
 
-  void addOrRemoveVarLower(HighsInt sum, HighsInt var, double coefficient,
-                           double myVarLower, HighsInt direction);
+  void handleVarUpper(HighsInt sum, double coefficient, double myVarUpper,
+                      HighsInt direction);
 
-  void addOrRemoveImplVarUpper(HighsInt sum, HighsInt var, double coefficient,
-                               double myImplVarUpper, HighsInt direction);
+  void handleVarLower(HighsInt sum, double coefficient, double myVarLower,
+                      HighsInt direction);
 
-  void addOrRemoveImplVarLower(HighsInt sum, HighsInt var, double coefficient,
-                               double myImplVarLower, HighsInt direction);
+  void handleImplVarUpper(HighsInt sum, double coefficient,
+                          double myImplVarUpper, HighsInt direction);
+
+  void handleImplVarLower(HighsInt sum, double coefficient,
+                          double myImplVarLower, HighsInt direction);
 
   void updatedImplVarUpper(HighsInt sum, HighsInt var, double coefficient,
                            double oldVarUpper, double oldImplVarUpper,
