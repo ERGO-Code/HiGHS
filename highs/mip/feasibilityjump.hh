@@ -467,9 +467,9 @@ class FeasibilityJumpSolver {
 
  public:
   FeasibilityJumpSolver(int seed = 0, int _verbosity = 0,
-                        double _weightUpdateDecay = 1.0,
                         double equalityTolerance = 1e-5,
-                        double violationTolerance = 1e-5)
+                        double violationTolerance = 1e-5,
+                        double _weightUpdateDecay = 1.0)
       : problem(equalityTolerance, violationTolerance),
         jumpMove(equalityTolerance) {
     verbosity = _verbosity;
