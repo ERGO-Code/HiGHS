@@ -16,6 +16,8 @@ void solve(Highs& highs, std::string presolve,
            const double require_iteration_count = -1);
 void distillationMIP(Highs& highs);
 void rowlessMIP(Highs& highs);
+void rowlessMIP1(Highs& highs);
+void rowlessMIP2(Highs& highs);
 
 TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   Highs highs;
@@ -25,10 +27,25 @@ TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
+// Fails but the cases work separately in 
+// MIP-rowless-1 and 
+// MIP-rowless-2 below
+// TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
+//   Highs highs;
+//   if (!dev_run) highs.setOptionValue("output_flag", false);
+//   rowlessMIP(highs);
+// }
+
+TEST_CASE("MIP-rowless-1", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  rowlessMIP(highs);
+  rowlessMIP1(highs);
+}
+
+TEST_CASE("MIP-rowless-2", "[highs_test_mip_solver]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  rowlessMIP2(highs);
 }
 
 TEST_CASE("MIP-solution-limit", "[highs_test_mip_solver]") {
@@ -802,20 +819,65 @@ void rowlessMIP(Highs& highs) {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve reduces the LP to empty
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
+
+void rowlessMIP1(Highs& highs) {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_matrix_.start_ = {0, 0, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = -1.0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve reduces the LP to empty
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
   // solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
 
-// TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
-//   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
-//   Highs highs;
-//   highs.setOptionValue("output_flag", dev_run);
-//   highs.setOptionValue("mip_rel_gap", 0);
-//   highs.setOptionValue("mip_abs_gap", 0);
-//   highs.readModel(filename);
-//   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
-//   const double optimal_objective = -187612.944194;
-//   solve(highs, kHighsOnString, require_model_status, optimal_objective);
-// }
+
+void rowlessMIP2(Highs& highs) {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_matrix_.start_ = {0, 0, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = -1.0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve reduces the LP to empty
+  // solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -187612.944194;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
 
 TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2171.mps";

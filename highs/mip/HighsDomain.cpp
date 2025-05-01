@@ -2057,8 +2057,9 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   domchgreason_.push_back(reason);
 
   if (binary && !infeasible_ && isFixed(boundchg.column))
-    // only modify cliquetable before the dive.
-    if (mipsolver->mipdata_->workers.size() <= 1)
+    // tried to only modify cliquetable before the dive
+    // but when I try the condition below breaks lseu and I don't know why yet
+    // if (mipsolver->mipdata_->workers.size() <= 1)
       mipsolver->mipdata_->cliquetable.addImplications(
           *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
 }
@@ -2531,8 +2532,9 @@ void HighsDomain::conflictAnalysis(HighsConflictPool& conflictPool) {
   if (&mipsolver->mipdata_->domain == this) return;
   if (mipsolver->mipdata_->domain.infeasible() || !infeasible_) return;
 
-  // mipsolver->mipdata_->domain.propagate();
-  // if (mipsolver->mipdata_->domain.infeasible()) return;
+  // Not sure how this should be modified for the workers.
+  mipsolver->mipdata_->domain.propagate();
+  if (mipsolver->mipdata_->domain.infeasible()) return;
 
   ConflictSet conflictSet(*this);
 
@@ -2547,8 +2549,8 @@ void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
 
   if (mipsolver->mipdata_->domain.infeasible()) return;
 
-  // mipsolver->mipdata_->domain.propagate();
-  // if (mipsolver->mipdata_->domain.infeasible()) return;
+  mipsolver->mipdata_->domain.propagate();
+  if (mipsolver->mipdata_->domain.infeasible()) return;
 
   ConflictSet conflictSet(*this);
   conflictSet.conflictAnalysis(proofinds, proofvals, prooflen, proofrhs,
@@ -2563,8 +2565,8 @@ void HighsDomain::conflictAnalyzeReconvergence(
 
   if (mipsolver->mipdata_->domain.infeasible()) return;
 
-  // mipsolver->mipdata_->domain.propagate();
-  // if (mipsolver->mipdata_->domain.infeasible()) return;
+  mipsolver->mipdata_->domain.propagate();
+  if (mipsolver->mipdata_->domain.infeasible()) return;
 
   ConflictSet conflictSet(*this);
 

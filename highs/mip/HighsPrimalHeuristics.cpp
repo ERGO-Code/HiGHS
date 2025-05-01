@@ -1629,6 +1629,10 @@ void HighsPrimalHeuristics::clique() {
   cliques = mipsolver.mipdata_->cliquetable.separateCliques(
       solution, mipsolver.mipdata_->domain, mipsolver.mipdata_->feastol);
   numcliques = cliques.size();
+  while (numcliques != 0) {
+    bestviol = 0.5;
+    bestviolpos = -1;
+
     for (HighsInt c = 0; c != numcliques; ++c) {
       double viol = -1.0;
       for (HighsCliqueTable::CliqueVar clqvar : cliques[c])

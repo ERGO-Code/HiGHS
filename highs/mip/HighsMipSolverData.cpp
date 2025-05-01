@@ -2290,7 +2290,8 @@ restart:
 
     if (mipsolver.options_mip_->mip_heuristic_run_root_reduced_cost) {
       analysis.mipTimerStart(kMipClockRootHeuristicsReducedCost);
-      heuristics.rootReducedCost(worker);
+      // atm breaks lseu random seed 2 but not default presolve on and off
+      // heuristics.rootReducedCost(worker);
       analysis.mipTimerStop(kMipClockRootHeuristicsReducedCost);
       heuristics.flushStatistics(worker);
     }
@@ -2321,7 +2322,8 @@ restart:
     if (checkLimits()) return clockOff(analysis);
     if (mipsolver.options_mip_->mip_heuristic_run_rens) {
       analysis.mipTimerStart(kMipClockRootHeuristicsRens);
-      heuristics.RENS(worker, rootlpsol);
+      // atm breaks p0548 presolve off
+      // heuristics.RENS(worker, rootlpsol);
       analysis.mipTimerStop(kMipClockRootHeuristicsRens);
       heuristics.flushStatistics(worker);
     }
