@@ -1164,15 +1164,15 @@ HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
  * See `Highs_getBasicVariables` for a description of the ``B`` matrix.
  *
  * The arrays `row_vector` and `row_index` must have an allocated length of
- * [num_row]. However, check `row_num_nz` to see how many non-zero elements are
+ * [num_col]. However, check `row_num_nz` to see how many non-zero elements are
  * actually stored.
  *
  * @param highs         A pointer to the Highs instance.
  * @param row           The index of the row to compute.
- * @param row_vector    An array of length [num_row] in which to store the
+ * @param row_vector    An array of length [num_col] in which to store the
  *                      values of the non-zero elements.
  * @param row_num_nz    The number of non-zeros in the row.
- * @param row_index     An array of length [num_row] in which to store the
+ * @param row_index     An array of length [num_col] in which to store the
  *                      indices of the non-zero elements.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
