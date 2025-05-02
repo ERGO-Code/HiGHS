@@ -324,8 +324,8 @@ restart:
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
 
-    bool considerHeuristics = true;
-    // bool considerHeuristics = false;
+    // bool considerHeuristics = true;
+    bool considerHeuristics = false;
 
     analysis_.mipTimerStart(kMipClockDive);
     while (true) {
