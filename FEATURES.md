@@ -18,3 +18,5 @@ ZI rounding and shifting MIP primal heuristics have been added (see [#2287](http
 
 Added `Highs_changeRowsBoundsByRange` to C API, fixing [#2296](https://github.com/ERGO-Code/HiGHS/issues/2296))
 
+Corrected docstrings for `Highs_getReducedRow`, motivated by [#2312](https://github.com/ERGO-Code/HiGHS/issues/2312))
+
