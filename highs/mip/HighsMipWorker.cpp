@@ -40,25 +40,28 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
   search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
 
   // printf(
-  //     "lprelax_ parameter address in constructor of mipworker %p, %d columns, "
-  //     "and "
+  //     "lprelax_ parameter address in constructor of mipworker %p, %d columns,
+  //     " "and "
   //     "%d rows\n",
   //     (void*)&lprelax_, int(lprelax_.getLpSolver().getNumCol()),
   //     int(lprelax_.getLpSolver().getNumRow()));
 
   // printf(
-  //     "lprelaxation_ address in constructor of mipworker %p, %d columns, and "
+  //     "lprelaxation_ address in constructor of mipworker %p, %d columns, and
+  //     "
   //     "%d rows\n",
   //     (void*)&lprelaxation_, int(lprelaxation_.getLpSolver().getNumCol()),
   //     int(lprelaxation_.getLpSolver().getNumRow()));
 
   // HighsSearch has its own relaxation initialized no nullptr.
+
   search_ptr_->setLpRelaxation(&lprelaxation_);
 
   // printf(
   //     "Search has lp member in constructor of mipworker with address %p, %d "
   //     "columns, and %d rows\n",
-  //     (void*)&search_ptr_->lp, int(search_ptr_->lp->getLpSolver().getNumCol()),
+  //     (void*)&search_ptr_->lp,
+  //     int(search_ptr_->lp->getLpSolver().getNumCol()),
   //     int(search_ptr_->lp->getLpSolver().getNumRow()));
 }
 

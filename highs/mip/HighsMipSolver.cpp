@@ -324,6 +324,7 @@ restart:
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
 
+    // atm heuristics in the dive break lseu debug64
     // bool considerHeuristics = true;
     bool considerHeuristics = false;
 

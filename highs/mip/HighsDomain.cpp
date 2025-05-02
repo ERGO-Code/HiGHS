@@ -2060,8 +2060,8 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     // tried to only modify cliquetable before the dive
     // but when I try the condition below breaks lseu and I don't know why yet
     // if (mipsolver->mipdata_->workers.size() <= 1)
-      mipsolver->mipdata_->cliquetable.addImplications(
-          *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
+    mipsolver->mipdata_->cliquetable.addImplications(
+        *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
 }
 
 void HighsDomain::setDomainChangeStack(
