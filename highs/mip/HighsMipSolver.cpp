@@ -291,7 +291,21 @@ restart:
   double upperLimLastCheck = mipdata_->upper_limit;
   double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
+
+  int k = 0;
+
+  // Initialize worker relaxations and mipworkers
+  // todo lps and workers are still empty right now
+
+  const int num_workers = 7;
+  for (int i = 0; i < 7; i++) {
+    mipdata_->lps.push_back(HighsLpRelaxation(*this));
+    mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
+  }
+
   while (search.hasNode()) {
+
+
     // Possibly look for primal solution from the user
     if (!submip && callback_->user_callback &&
         callback_->active[kCallbackMipUserSolution])
@@ -311,14 +325,6 @@ restart:
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
-    // Initialize worker relaxations and mipworkers
-    // todo lps and workers are still empty right now
-
-    const int num_workers = 7;
-    for (int i = 0; i < 7; i++) {
-      mipdata_->lps.push_back(HighsLpRelaxation(*this));
-      mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
-    }
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
