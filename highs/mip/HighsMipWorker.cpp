@@ -72,7 +72,6 @@ const HighsMipSolver& HighsMipWorker::getMipSolver() { return mipsolver_; }
 bool HighsMipWorker::addIncumbent(const std::vector<double>& sol, double solobj,
                                   const int solution_source,
                                   const bool print_display_line) {
- 
   const bool execute_mip_solution_callback = false;
 
   // Determine whether the potential new incumbent should be
@@ -101,10 +100,10 @@ bool HighsMipWorker::addIncumbent(const std::vector<double>& sol, double solobj,
     upper_bound = solobj;
 
     bool bound_change = upper_bound != prev_upper_bound;
-    // todo: 
+    // todo:
     // if (!mipsolver_.submip && bound_change)
-      // updatePrimalDualIntegral(lower_bound, lower_bound, prev_upper_bound,
-      //                          upper_bound);
+    // updatePrimalDualIntegral(lower_bound, lower_bound, prev_upper_bound,
+    //                          upper_bound);
 
     incumbent = sol;
 
@@ -122,7 +121,8 @@ bool HighsMipWorker::addIncumbent(const std::vector<double>& sol, double solobj,
     //   nodequeue.setOptimalityLimit(optimality_limit);
     //   debugSolution.newIncumbentFound();
     //   domain.propagate();
-    //   if (!domain.infeasible()) redcostfixing.propagateRootRedcost(mipsolver);
+    //   if (!domain.infeasible())
+    //   redcostfixing.propagateRootRedcost(mipsolver);
 
     //   // Two calls to printDisplayLine added for completeness,
     //   // ensuring that when the root node has an integer solution, a
@@ -154,14 +154,14 @@ bool HighsMipWorker::addIncumbent(const std::vector<double>& sol, double solobj,
 
 double HighsMipWorker::transformNewIntegerFeasibleSolution(
     const std::vector<double>& sol,
-    const bool possibly_store_as_new_incumbent) {    
-      
+    const bool possibly_store_as_new_incumbent) {
   HighsSolution solution;
   solution.col_value = sol;
   solution.value_valid = true;
 
   // Perform primal postsolve to get the original column values
-  mipsolver_.mipdata_->postSolveStack.undoPrimal(*mipsolver_.options_mip_, solution);
+  mipsolver_.mipdata_->postSolveStack.undoPrimal(*mipsolver_.options_mip_,
+                                                 solution);
 
   // Determine the row values, as they aren't computed in primal
   // postsolve
@@ -198,7 +198,7 @@ try_again:
       }
     }
 
-    // todo: 
+    // todo:
     // this->total_repair_lp++;
 
     double time_available = std::max(
@@ -214,8 +214,9 @@ try_again:
     // tmpSolver.setOptionValue("simplex_scale_strategy", 0);
     // tmpSolver.setOptionValue("presolve", kHighsOffString);
     tmpSolver.setOptionValue("time_limit", time_available);
-    tmpSolver.setOptionValue("primal_feasibility_tolerance",
-                             mipsolver_.options_mip_->mip_feasibility_tolerance);
+    tmpSolver.setOptionValue(
+        "primal_feasibility_tolerance",
+        mipsolver_.options_mip_->mip_feasibility_tolerance);
     // check if only root presolve is allowed
     if (mipsolver_.options_mip_->mip_root_presolve_only)
       tmpSolver.setOptionValue("presolve", kHighsOffString);
@@ -236,14 +237,15 @@ try_again:
     }
   }
 
-  // todo: 
+  // todo:
   // Possible MIP solution callback
   // if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
   //     mipsolver.callback_->active[kCallbackMipSolution]) {
   //   mipsolver.callback_->clearHighsCallbackDataOut();
   //   mipsolver.callback_->data_out.mip_solution = solution.col_value.data();
   //   const bool interrupt = interruptFromCallbackWithData(
-  //       kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
+  //       kCallbackMipSolution, mipsolver_objective_value, "Feasible
+  //       solution");
   //   assert(!interrupt);
   // }
 
@@ -271,11 +273,12 @@ try_again:
           solution_.row_violation_ <=
               mipsolver_.options_mip_->mip_feasibility_tolerance;
 
-      highsLogUser(mipsolver_.options_mip_->log_options, HighsLogType::kWarning,
-                   "WORKER Solution with objective %g has untransformed violations: "
-                   "bound = %.4g; integrality = %.4g; row = %.4g\n",
-                   mipsolver_objective_value, bound_violation_,
-                   integrality_violation_, row_violation_);
+      highsLogUser(
+          mipsolver_.options_mip_->log_options, HighsLogType::kWarning,
+          "WORKER Solution with objective %g has untransformed violations: "
+          "bound = %.4g; integrality = %.4g; row = %.4g\n",
+          mipsolver_objective_value, bound_violation_, integrality_violation_,
+          row_violation_);
       if (!currentFeasible) {
         // if the current incumbent is non existent or also not feasible we
         // still store the new one
