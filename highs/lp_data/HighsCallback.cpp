@@ -273,7 +273,8 @@ HighsStatus HighsCallbackInput::repairSolution() {
                          i, value);
             return HighsStatus::kError;
           } else {
-            // since the variable is integral, round it to avoid numerical issues
+            // since the variable is integral, round it to avoid numerical
+            // issues
             value = std::round(value);
           }
         }
