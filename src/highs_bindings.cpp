@@ -1670,6 +1670,9 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("cutpool_num_col", &HighsCallbackOutput::cutpool_num_col)
       .def_readwrite("cutpool_num_cut", &HighsCallbackOutput::cutpool_num_cut)
       .def_property_readonly(
+          "cutpool_start",
+          make_readonly_ptr(&HighsCallbackOutput::cutpool_start))
+      .def_property_readonly(
           "cutpool_index",
           make_readonly_ptr(&HighsCallbackOutput::cutpool_index))
       .def_property_readonly(
