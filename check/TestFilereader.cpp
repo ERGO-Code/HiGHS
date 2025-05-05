@@ -98,10 +98,18 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
     }
 
     if (test_garbage_lp) {
+      // Since #2316, reading an LP file of garbage yields an empty
+      // model, since the absence of an objecive is (rightly) no
+      // longer an error. However the LP file reader should fail due
+      // to the requirement that a LP format file must begin with a
+      // keyword.
       if (dev_run) printf("\ngarbage.lp\n");
       model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
       read_status = highs.readModel(model_file);
-      REQUIRE(read_status == HighsStatus::kError);
+      REQUIRE(read_status == HighsStatus::kOk);
+      REQUIRE(highs.getLp().num_col_ == 0);
+      REQUIRE(highs.getLp().num_row_ == 0);
+      REQUIRE(highs.getLp().a_matrix_.numNz() == 0);
     }
   }
 
