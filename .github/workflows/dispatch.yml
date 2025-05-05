@@ -18,4 +18,4 @@ jobs:
           repository: ERGO-Code/highs-tests 
           event-type: Integration-with-Automation
       - name: my-step
-        run: 'echo ${{ github.actor }} Hello 2!'
+        run: 'echo ${{ github.actor }} Hello 3!'
