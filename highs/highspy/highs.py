@@ -1401,6 +1401,26 @@ class HighsCallbackEvent(object):
         """
         return Highs.internal_get_value(self.data_out.mip_solution, var_expr)
 
+    def cut(self, index: int):
+        """
+        Gets the cut pool for the given index.
+        """
+        cut = highs_linear_expression()
+        
+        if self.data_out and index >= 0 and index < self.data_out.cutpool_num_cut:
+            start, end = self.data_out.cutpool_start[index:index+2]
+            cut.bounds = (self.data_out.cutpool_lower[index], self.data_out.cutpool_upper[index])
+            cut.idxs = list(map(int, self.data_out.cutpool_index[start:end]))
+            cut.vals = list(map(float, self.data_out.cutpool_value[start:end]))
+
+        return cut
+
+    @property
+    def cuts(self):
+        """
+        Gets all cuts in the cut pool.
+        """
+        return [self.cut(i) for i in range(self.data_out.cutpool_num_cut)]
 
 class HighsCallback(object):
     __slots__ = ["callbacks", "user_callback_data", "highs", "callback_type"]
