@@ -107,7 +107,7 @@ class HighsMipSolver {
   bool solutionFeasible(const HighsLp* lp, const std::vector<double>& col_value,
                         const std::vector<double>* pass_row_value,
                         double& bound_violation, double& row_violation,
-                        double& integrality_violation, HighsCDouble& obj);
+                        double& integrality_violation, HighsCDouble& obj) const;
 };
 
 #endif

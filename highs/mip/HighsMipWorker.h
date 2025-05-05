@@ -44,7 +44,9 @@ class HighsMipWorker {
     double solution_objective_;
   };
 
-  Solution solution;
+  double upper_bound;
+
+  Solution solution_;
 
   HighsPrimalHeuristics::Statistics heur_stats;
 
