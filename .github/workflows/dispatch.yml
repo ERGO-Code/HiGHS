@@ -1,0 +1,21 @@
+name: Source Workflow
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '*'
+      
+run-name: ${{ github.actor }} is testing out GitHub Actions  🚀
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: trigger the automated test in another repo
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: '${{ secrets.PAT }}'
+          repository: ERGO-Code/highs-tests 
+          event-type: Integration-with-Automation
+      - name: my-step
+        run: 'echo ${{ github.actor }} Hello !'
