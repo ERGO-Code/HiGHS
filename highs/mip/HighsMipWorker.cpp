@@ -299,3 +299,8 @@ try_again:
 
   return double(mipsolver_quad_objective_value - mipsolver_.model_->offset_);
 }
+
+bool HighsMipWorker::syncNodeQueue(HighsNodeQueue& nodequeue) {
+    search_ptr_.get()->openNodesToQueue(nodequeue);
+    return true;
+  }

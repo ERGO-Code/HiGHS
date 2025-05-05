@@ -14,6 +14,7 @@
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/HighsNodeQueue.h"
 #include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
 // #include "mip/HighsSeparation.h"
@@ -70,6 +71,22 @@ class HighsMipWorker {
   double transformNewIntegerFeasibleSolution(
       const std::vector<double>& sol,
       const bool possibly_store_as_new_incumbent = true);
+
+  bool syncSolution(double& row_violation,
+    double& bound_violation,
+    double& integrality_violation,
+    std::vector<double>& solution,
+    double& solution_objective) {
+      row_violation = solution_.row_violation_;
+      bound_violation = solution_.bound_violation_;
+      integrality_violation = solution_.integrality_violation_;
+      solution = solution_.solution_;
+      solution_objective = solution_.solution_objective_;
+
+      return true;
+    }
+
+  bool syncNodeQueue(HighsNodeQueue& nodequeue);
 
   // todo:
   // timer_
