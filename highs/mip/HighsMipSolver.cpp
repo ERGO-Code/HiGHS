@@ -304,8 +304,6 @@ restart:
   }
 
   while (search.hasNode()) {
-
-
     // Possibly look for primal solution from the user
     if (!submip && callback_->user_callback &&
         callback_->active[kCallbackMipUserSolution])
@@ -324,7 +322,6 @@ restart:
                           HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
 
     mipdata_->lp.setIterationLimit(iterlimit);
-
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
