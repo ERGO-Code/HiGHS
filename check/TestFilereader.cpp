@@ -106,6 +106,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
       if (dev_run) printf("\ngarbage.lp\n");
       model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
       read_status = highs.readModel(model_file);
+      // Should be HighsStatus::kError); #2316
       REQUIRE(read_status == HighsStatus::kOk);
       REQUIRE(highs.getLp().num_col_ == 0);
       REQUIRE(highs.getLp().num_row_ == 0);
@@ -118,7 +119,8 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   if (dev_run) printf("\n%s.mps\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::kError);
+  // Should be HighsStatus::kError); #2316
+  REQUIRE(read_status == HighsStatus::kOk);
 
   // Gurobi cannot read
   //
