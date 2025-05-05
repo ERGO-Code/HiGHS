@@ -9,6 +9,7 @@
  * @brief
  */
 #include "lp_data/HighsCallback.h"
+#include "util/HighsIntegers.h"
 
 #include <algorithm>
 #include <cassert>
@@ -254,10 +255,30 @@ HighsStatus HighsCallbackInput::repairSolution() {
     clone.setOptionValue("output_flag", false);
     clone.passModel(highs->getModel());
 
+    HighsVarType vtype = HighsVarType::kContinuous;
+    double tolerance = highs->getOptions().mip_feasibility_tolerance;
+
     // fix the variables
     for (HighsInt i = 0; i < user_solution.size(); i++) {
       if (user_solution[i] != kHighsUndefined) {
-        clone.changeColBounds(i, user_solution[i], user_solution[i]);
+        double value = user_solution[i];
+        highs->getColIntegrality(i, vtype);
+
+        if (vtype == HighsVarType::kInteger) {
+          // check if the provided solution value is integerfeasible
+          if (!HighsIntegers::isIntegral(value, tolerance)) {
+            highsLogUser(highs->getOptions().log_options, HighsLogType::kError,
+                         "repairSolution: User solution (index %d) is outside "
+                         "integrality tolerance (value %f)\n",
+                         i, value);
+            return HighsStatus::kError;
+          } else {
+            // since the variable is integral, round it to avoid numerical issues
+            value = std::round(value);
+          }
+        }
+
+        clone.changeColBounds(i, value, value);
       }
     }
 

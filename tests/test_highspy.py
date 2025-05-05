@@ -1454,13 +1454,13 @@ class TestHighsPy(unittest.TestCase):
 
             # get every 2nd element from 2d numpy sol array
             self.assertEqual(e.data_in.setSolution(x[:, ::2], sol[:, ::2]), highspy.HighsStatus.kOk)
-            self.assertTrue((e.data_in.user_solution[0:4] == [0,highspy.kHighsUndefined,0,highspy.kHighsUndefined]).all())
+            self.assertEqual(list(e.data_in.user_solution[0:4]), [sol[0,0],highspy.kHighsUndefined,sol[0,2],highspy.kHighsUndefined])
             self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kOk)
-            self.assertEqual(list(e.data_in.user_solution[0:8]), [0., 0., 0., 0., 0., 1., 0., 0.])
+            self.assertEqual(list(e.data_in.user_solution[0:8]), list(sol[0,0:8]))
 
             def try_change_ptr(e):
                 e.data_in.user_solution = [0] * (N*N)
-        
+
             self.assertRaises(Exception, lambda: try_change_ptr(e))
 
             # modify directly
@@ -1474,6 +1474,10 @@ class TestHighsPy(unittest.TestCase):
             self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kOk)
             self.assertEqual(list(e.data_in.user_solution[0:8]), [0., 0., 0., 0., 0., 0., 1., 0.])
             self.assertEqual(e.data_in.user_has_solution, True)
+
+            # set partial solution with fractional value
+            self.assertEqual(e.data_in.setSolution([0., 0.5]), highspy.HighsStatus.kOk)
+            self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kError)
 
         # verify partial solution
         h.cbMipUserSolution += partial_solution
