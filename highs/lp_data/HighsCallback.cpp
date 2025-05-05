@@ -9,7 +9,6 @@
  * @brief
  */
 #include "lp_data/HighsCallback.h"
-#include "util/HighsIntegers.h"
 
 #include <algorithm>
 #include <cassert>
@@ -17,6 +16,7 @@
 
 #include "Highs.h"
 #include "lp_data/HighsStatus.h"
+#include "util/HighsIntegers.h"
 
 void HighsCallback::clearHighsCallbackOutput() {
   this->data_out.log_type = HighsLogType::kInfo;
