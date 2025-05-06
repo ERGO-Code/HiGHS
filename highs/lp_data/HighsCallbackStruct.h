@@ -47,12 +47,15 @@ typedef struct {
   HighsInt user_solution_callback_origin;
 } HighsCallbackDataOut;
 
+// Some external packages (e.g., jump) currently assume that the first 2 fields
+// of this struct are interrupt and solution. Rearranging the struct may be a
+// breaking change.
 typedef struct {
-  void* cbdata;  // cast of HighsCallbackInput
   int user_interrupt;
+  double* user_solution;
+  void* cbdata;  // cast of HighsCallbackInput (for internal use)
   int user_has_solution;
   HighsInt user_solution_size;
-  double* user_solution;
 } HighsCallbackDataIn;
 
 // Additional callback handling
