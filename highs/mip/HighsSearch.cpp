@@ -22,6 +22,7 @@
 
 HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
     : mipworker(mipworker),
+      is_master(false),
       mipsolver(mipworker.mipsolver_),
       lp(nullptr),
       localdom(mipworker.mipdata_.domain),
@@ -1985,15 +1986,21 @@ const std::vector<HighsInt>& HighsSearch::getIntegralCols() const {
 }
 
 HighsDomain& HighsSearch::getDomain() const {
-  return mipsolver.mipdata_->domain;
+  if (is_master)
+    return mipsolver.mipdata_->domain;
+  return mipworker.search_ptr_.get()->getDomain();
 }
 
 HighsConflictPool& HighsSearch::getConflictPool() const {
-  return mipsolver.mipdata_->conflictPool;
+  if (is_master)
+    return mipsolver.mipdata_->conflictPool;
+  return mipworker.conflictpool_;
 }
 
 HighsCutPool& HighsSearch::getCutPool() const {
-  return mipsolver.mipdata_->cutpool;
+  if (is_master)
+    return mipsolver.mipdata_->cutpool;
+  return mipworker.cutpool_;
 }
 
 const HighsDebugSol& HighsSearch::getDebugSolution() const {
@@ -2001,7 +2008,9 @@ const HighsDebugSol& HighsSearch::getDebugSolution() const {
 }
 
 const HighsNodeQueue& HighsSearch::getNodeQueue() const {
-  return mipsolver.mipdata_->nodequeue;
+  if (is_master)
+    return mipsolver.mipdata_->nodequeue;
+  return mipworker.nodequeue_;
 }
 
 const bool HighsSearch::checkLimits(int64_t nodeOffset) const {
@@ -2016,12 +2025,13 @@ bool HighsSearch::addIncumbent(const std::vector<double>& sol, double solobj,
                                const int solution_source,
                                const bool print_display_line) {
   // if (mipsolver.mipdata_->workers.size() <= 1)
+  if (is_master)
   return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
                                           print_display_line);
 
   // dive part.
-  // return mipworker.addIncumbent(sol, solobj, solution_source,
-  //                                         print_display_line);
+  return mipworker.addIncumbent(sol, solobj, solution_source,
+                                          print_display_line);
 }
 
 int64_t& HighsSearch::getNumNodes() { return mipsolver.mipdata_->num_nodes; }

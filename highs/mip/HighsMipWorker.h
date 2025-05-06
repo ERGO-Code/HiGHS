@@ -37,6 +37,8 @@ class HighsMipWorker {
   HighsCutPool cutpool_;
   HighsConflictPool conflictpool_;
 
+  HighsNodeQueue nodequeue_;
+
   struct Solution {
     double row_violation_;
     double bound_violation_;

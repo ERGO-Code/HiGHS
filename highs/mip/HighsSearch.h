@@ -32,6 +32,7 @@ class HighsCliqueTable;
 class HighsSearch {
  public:
   HighsMipWorker& mipworker;
+  bool is_master;
 
   const HighsMipSolver& mipsolver;
   HighsLpRelaxation* lp;
