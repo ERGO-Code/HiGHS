@@ -146,6 +146,9 @@ endif()
   # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
 # endif()
 
+option(PROTO_IPM "Build ProtoIPM" OFF)
+message(STATUS "Build ProtoIPM: ${PROTO_IPM}")
+
 if (CUPDLP_GPU)
   if (WIN32)
     set(BUILD_SHARED_LIBS ON)
@@ -175,6 +178,14 @@ endif()
 # option to force native termination, mostly for testing new GPU code
 # in comparison with the CPU
 option(CUPDLP_FORCE_NATIVE "Build pdlp with native termination" OFF)
+
+# ProtoIPM deps 
+if(PROTO_IPM)
+  # find_package(METIS REQUIRED)
+  # find_package(GKlib REQUIRED)
+  # does not work with outdated CMake 
+  include(FindProtoDeps)
+endif()
 
 if (BUILD_CXX)
   # Default Build Type to be Release
