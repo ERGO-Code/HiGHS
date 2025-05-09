@@ -1105,15 +1105,14 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
     }
   }
 
-  HighsCDouble rhsminactdiff = rhs - minact;
-  if (rhsminactdiff < 0.0) {
-    rhsminactdiff = 0.0;
+  if (rhs - minact < 0.0) {
+    minact = rhs;
   }
 
   for (HighsInt i = 0; i != len; ++i) {
     if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous) continue;
 
-    double boundVal = double(rhsminactdiff / vals[i]);
+    double boundVal = double((rhs - minact) / vals[i]);
     if (vals[i] > 0) {
       boundVal = std::floor(boundVal + globaldom.col_lower_[inds[i]] +
                             globaldom.feastol());
@@ -1147,7 +1146,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   if (nbin < len) {
     for (HighsInt i = 0; i != nbin; ++i) {
       HighsInt bincol = inds[perm[i]];
-      HighsCDouble impliedActivity = rhsminactdiff - std::abs(vals[perm[i]]);
+      HighsCDouble impliedActivity = rhs - minact - std::abs(vals[perm[i]]);
       for (HighsInt j = nbin; j != len; ++j) {
         HighsInt col = inds[perm[j]];
         if (globaldom.isFixed(col)) continue;
@@ -1221,7 +1220,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   });
   // check if any cliques exists
   if (std::abs(vals[perm[0]]) + std::abs(vals[perm[1]]) <=
-      double(rhsminactdiff + feastol))
+      double(rhs - minact + feastol))
     return;
 
   HighsInt maxNewEntries =
@@ -1231,7 +1230,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
 
   for (HighsInt k = nbin - 1; k != 0 && numEntries < maxNewEntries; --k) {
     double mincliqueval =
-        double(rhsminactdiff - std::abs(vals[perm[k]]) + feastol);
+        double(rhs - minact - std::abs(vals[perm[k]]) + feastol);
     auto cliqueend = std::partition_point(
         perm.begin(), perm.begin() + k,
         [&](HighsInt p) { return std::abs(vals[p]) > mincliqueval; });
