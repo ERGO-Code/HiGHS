@@ -1105,6 +1105,10 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
     }
   }
 
+  if (rhs - minact < 0.0) {
+    return;
+  }
+
   for (HighsInt i = 0; i != len; ++i) {
     if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous) continue;
 
