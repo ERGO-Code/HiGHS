@@ -4365,7 +4365,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     bool trySparsify =
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
-    bool tryProbing = mipsolver != nullptr;
+    bool tryProbing =
+        mipsolver != nullptr && analysis_.allow_rule_[kPresolveRuleProbing];
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
