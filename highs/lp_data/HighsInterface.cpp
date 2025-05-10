@@ -2723,12 +2723,12 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     // errors, and complementarity errors - due to the convergence
     // being based on relative primal-dual objective error, so test
     // the latter
+    double tolerance_relative_violation =
+      info.max_relative_primal_infeasibility / primal_feasibility_tolerance;
+    max_primal_tolerance_relative_violation =
+      std::max(tolerance_relative_violation,
+	       max_primal_tolerance_relative_violation);
     if (info.num_relative_primal_infeasibilities > 0) {
-      double tolerance_relative_violation =
-          info.max_relative_primal_infeasibility / primal_feasibility_tolerance;
-      max_primal_tolerance_relative_violation =
-          std::max(tolerance_relative_violation,
-                   max_primal_tolerance_relative_violation);
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
@@ -2738,11 +2738,12 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                      info.max_relative_primal_infeasibility,
                      primal_feasibility_tolerance);
     }
+    tolerance_relative_violation =
+      info.max_relative_dual_infeasibility / dual_feasibility_tolerance;
+    max_dual_tolerance_relative_violation =
+      std::max(tolerance_relative_violation,
+	       max_dual_tolerance_relative_violation);
     if (info.num_relative_dual_infeasibilities > 0) {
-      double tolerance_relative_violation =
-          info.max_relative_dual_infeasibility / dual_feasibility_tolerance;
-      max_dual_tolerance_relative_violation = std::max(
-          tolerance_relative_violation, max_dual_tolerance_relative_violation);
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
@@ -2752,12 +2753,12 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                      info.max_relative_dual_infeasibility,
                      dual_feasibility_tolerance);
     }
-    if (info.num_relative_primal_residual_errors > 0) {
-      double tolerance_relative_violation =
+    tolerance_relative_violation =
           info.max_relative_primal_residual_error / primal_residual_tolerance;
-      max_primal_tolerance_relative_violation =
-          std::max(tolerance_relative_violation,
-                   max_primal_tolerance_relative_violation);
+    max_primal_tolerance_relative_violation =
+      std::max(tolerance_relative_violation,
+	       max_primal_tolerance_relative_violation);
+    if (info.num_relative_primal_residual_errors > 0) {
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
@@ -2767,11 +2768,12 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                      info.max_relative_primal_residual_error,
                      primal_residual_tolerance);
     }
+    tolerance_relative_violation =
+      info.max_relative_dual_residual_error / dual_residual_tolerance;
+    max_dual_tolerance_relative_violation =
+      std::max(tolerance_relative_violation,
+	       max_dual_tolerance_relative_violation);
     if (info.num_relative_dual_residual_errors > 0) {
-      double tolerance_relative_violation =
-          info.max_relative_dual_residual_error / dual_residual_tolerance;
-      max_dual_tolerance_relative_violation = std::max(
-          tolerance_relative_violation, max_dual_tolerance_relative_violation);
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
