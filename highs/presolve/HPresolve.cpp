@@ -4627,10 +4627,6 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
-  const bool stopped = numreductions >= reductionLimit;
-  if (stopped) {
-    printf("2326: numreductions >= reductionLimit\n");
-  }
   return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
 }
 
@@ -4748,16 +4744,20 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       }
       mipsolver->mipdata_->lower_bound = 0;
     } else {
-      assert(model->num_row_ == 0);
+      // An LP with no columns must have no rows, unless the reduction
+      // limit has been reached
+      assert(model->num_row_ == 0 ||
+             postsolve_stack.numReductions() >= reductionLimit);
       if (model->num_row_ != 0) {
         presolve_status_ = HighsPresolveStatus::kNotPresolved;
         return HighsModelStatus::kNotset;
       }
     }
     presolve_status_ = HighsPresolveStatus::kReducedToEmpty;
-    // Make sure that the column-less model does not have inconsistent
-    // bounds
-    return zeroRowActivityFeasible() ? HighsModelStatus::kOptimal : HighsModelStatus::kInfeasible;
+    // Make sure that zero row activity from the column-less model is
+    // consistent with the bounds
+    return zeroRowActivityFeasible() ? HighsModelStatus::kOptimal
+                                     : HighsModelStatus::kInfeasible;
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
@@ -6896,8 +6896,8 @@ bool HPresolve::zeroRowActivityFeasible() const {
   // has no columns to assess whether the HighsModelStatus returned is
   // kOptimal or kInfeasible (as was required for 2326)
   for (HighsInt iRow = 0; iRow < model->num_row_; iRow++)
-    if (model->row_lower_[iRow] > 0 ||
-	model->row_upper_[iRow] < 0) return false;
+    if (model->row_lower_[iRow] > 0 || model->row_upper_[iRow] < 0)
+      return false;
   return true;
 }
 

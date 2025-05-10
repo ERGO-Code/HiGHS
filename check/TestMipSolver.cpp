@@ -27,8 +27,8 @@ TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   highs.resetGlobalScheduler(true);
 }
 
-// Fails but the cases work separately in 
-// MIP-rowless-1 and 
+// Fails but the cases work separately in
+// MIP-rowless-1 and
 // MIP-rowless-2 below
 // TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
 //   Highs highs;
@@ -843,7 +843,6 @@ void rowlessMIP1(Highs& highs) {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
   // solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
-
 
 void rowlessMIP2(Highs& highs) {
   HighsLp lp;
