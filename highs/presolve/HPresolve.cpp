@@ -4627,6 +4627,10 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
+  const bool stopped = numreductions >= reductionLimit;
+  if (stopped) {
+    printf("2326: numreductions >= reductionLimit\n");
+  }
   return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
 }
 
@@ -4751,7 +4755,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       }
     }
     presolve_status_ = HighsPresolveStatus::kReducedToEmpty;
-    return HighsModelStatus::kOptimal;
+    // Make sure that the column-less model does not have inconsistent
+    // bounds
+    return zeroRowActivityFeasible() ? HighsModelStatus::kOptimal : HighsModelStatus::kInfeasible;
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
@@ -6883,6 +6889,16 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   }
 
   return Result::kOk;
+}
+
+bool HPresolve::zeroRowActivityFeasible() const {
+  // Check that zero row activity is feasible - called when reduced model
+  // has no columns to assess whether the HighsModelStatus returned is
+  // kOptimal or kInfeasible (as was required for 2326)
+  for (HighsInt iRow = 0; iRow < model->num_row_; iRow++)
+    if (model->row_lower_[iRow] > 0 ||
+	model->row_upper_[iRow] < 0) return false;
+  return true;
 }
 
 HighsInt HPresolve::debugGetCheckCol() const {
