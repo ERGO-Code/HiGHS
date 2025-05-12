@@ -727,7 +727,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       updateViolationAndNorm(j, vals[j], checkviol, checknorm);
     }
     double checkefficacy = checkviol / sqrt(checknorm);
-    assert(fabs(checkefficacy - bestefficacy) < 0.001);
+    // the efficacy can become infinite if the cut 0 <= -1 is derived
+    assert(fabs(checkefficacy - bestefficacy) < 0.001 || fabs(checkefficacy) >= 1e30);
   }
 #endif
 
