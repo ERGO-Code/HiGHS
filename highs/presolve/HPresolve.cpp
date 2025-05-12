@@ -6898,8 +6898,8 @@ bool HPresolve::zeroRowActivityFeasible() const {
   // has no columns to assess whether the HighsModelStatus returned is
   // kOptimal or kInfeasible (as was required for 2326)
   for (HighsInt iRow = 0; iRow < model->num_row_; iRow++)
-    if (model->row_lower_[row] > primal_feastol ||
-        model->row_upper_[row] < -primal_feastol)
+    if (model->row_lower_[iRow] > primal_feastol ||
+        model->row_upper_[iRow] < -primal_feastol)
       return false;
   return true;
 }
