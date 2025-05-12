@@ -561,8 +561,6 @@ void fullApi() {
   HighsInt ck_num_col;
   HighsInt ck_num_row;
   HighsInt ck_num_nz;
-  HighsInt ck_hessian_num_nz;
-  HighsInt ck_rowwise;
   HighsInt ck_sense;
   double ck_offset;
   double ck_cc[2];
@@ -620,7 +618,6 @@ void fullApi() {
   // Define all column names to be different
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     const char suffix = iCol + '0';
-    const char* suffix_p = &suffix;
     char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", col_prefix, iCol);
     const char* name_p = name;
@@ -654,7 +651,6 @@ void fullApi() {
   // Define all row names to be different
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     const char suffix = iRow + '0';
-    const char* suffix_p = &suffix;
     char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", row_prefix, iRow);
     const char* name_p = name;
@@ -743,8 +739,8 @@ void fullApiOptions() {
   assert(return_status == kHighsStatusOk);
   assert(check_simplex_scale_strategy == simplex_scale_strategy);
   assert(min_simplex_scale_strategy == 0);
-  assert(max_simplex_scale_strategy == 5);
-  assert(default_simplex_scale_strategy == 1);
+  assert(max_simplex_scale_strategy == 4);
+  assert(default_simplex_scale_strategy == 2);
 
   // There are some functions to check what type of option value you should
   // provide.
@@ -1092,7 +1088,6 @@ void fullApiMip() {
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   double* row_value = (double*)malloc(sizeof(double) * num_row);
 
-  HighsInt model_status;
   HighsInt return_status;
 
   void* highs = Highs_create();
@@ -1793,7 +1788,6 @@ void testGetModel() {
   HighsInt num_row = 2;
   HighsInt num_nz = 4;
   HighsInt sense = -1;
-  double offset;
   double col_cost[2] = {8, 10};
   double col_lower[2] = {0, 0};
   double col_upper[2] = {inf, inf};
@@ -1874,7 +1868,6 @@ void testMultiObjective() {
   HighsInt a_start[3] = {0, 3, 6};
   HighsInt a_index[6] = {0, 1, 2, 0, 1, 2};
   double a_value[6] = {3, 1, 1, 1, 1, 2};
-  HighsInt integrality[2] = {kHighsVarTypeInteger, kHighsVarTypeInteger};
 
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   HighsInt return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense,
@@ -2091,6 +2084,38 @@ iteration_count1); assertLogical("Dual", logic);
   Highs_destroy(highs);
 }
 */
+void testDeleteRowResolveWithBasis() {
+  // Created to expose bug in #2267, but also illustrates case where
+  // scaling was performed on the original problem - due to the 6 in
+  // row 1, but would not be performed on the problem after row 1 has
+  // been removed
+  void* highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  HighsInt ret;
+  double INF = Highs_getInfinity(highs);
+  ret = Highs_addCol(highs, 0.0, 2.0, 2.0, 0, NULL, NULL);
+  ret = Highs_addCol(highs, 0.0, -INF, INF, 0, NULL, NULL);
+  ret = Highs_addCol(highs, 0.0, -INF, INF, 0, NULL, NULL);
+  HighsInt index_1[2] = {0, 2};
+  double value_1[2] = {2.0, -1.0};
+  ret = Highs_addRow(highs, 0.0, 0.0, 2, index_1, value_1);
+  HighsInt index_2[1] = {1};
+  double value_2[1] = {6.0};
+  ret = Highs_addRow(highs, 10.0, INF, 1, index_2, value_2);
+  Highs_run(highs);
+  double col_value[3] = {0.0, 0.0, 0.0};
+  Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assertDoubleValuesEqual("col_value[0]", col_value[0], 2.0);
+  ret = Highs_deleteRowsByRange(highs, 1, 1);
+  assert(ret == 0);
+  ret = Highs_run(highs);
+  assert(ret == 0);
+  ret = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assert(ret == 0);
+  assertDoubleValuesEqual("col_value[0]", col_value[0], 2.0);
+  Highs_destroy(highs);
+}
+
 int main() {
   minimalApiIllegalLp();
   testCallback();
@@ -2113,6 +2138,8 @@ int main() {
   testMultiObjective();
   testQpIndefiniteFailure();
   testDualRayTwice();
+
+  testDeleteRowResolveWithBasis();
   return 0;
 }
 //  testSetSolution();

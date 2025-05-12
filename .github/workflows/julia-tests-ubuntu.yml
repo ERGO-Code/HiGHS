@@ -1,0 +1,63 @@
+name: JuliaCompileAndTest
+on:
+  push:
+    branches: [master, latest]
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+jobs:
+  test:
+    name: Julia - ${{ github.event_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Install Julia 1.7 for BinaryBuilder. Note that this is an old version of
+      # Julia, but it is required for compatibility with BinaryBuilder.
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.7"
+          arch: x64
+      - uses: julia-actions/cache@v2
+      # Set the environment variables required by BinaryBuilder.
+      - run: |
+          git fetch --tags
+          echo "HIGHS_RELEASE=$(git describe --tags $(git rev-list --tags --max-count=1) | sed 's/^v//')" >> $GITHUB_ENV
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "HIGHS_COMMIT=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+            echo "HIGHS_URL=${{ github.event.pull_request.head.repo.clone_url }}" >> $GITHUB_ENV
+          else
+            echo "HIGHS_COMMIT=${{ github.sha }}" >> $GITHUB_ENV
+            echo "HIGHS_URL=https://github.com/${{ github.repository }}.git" >> $GITHUB_ENV
+          fi
+      - run: |
+          julia --color=yes -e 'using Pkg; Pkg.add("BinaryBuilder")'
+          julia --color=yes .github/julia/build_tarballs.jl x86_64-linux-gnu-cxx11 --verbose --deploy="local"
+      # Now install a newer version of Julia to actually test HiGHS_jll. We
+      # choose v1.10 because it is the current Long-Term Support (LTS).
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.10"
+          arch: x64
+      # We want to install the latest version of HiGHS.jl, but we also want it
+      # to be compatible with our newly compiled HiGHS_jll. To do so, we
+      # manually edit HiGHS.jl's Project.toml file to allow any v1.X.Y version
+      # of HiGHS_jll
+      - shell: julia --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.develop("HiGHS")
+          project_filename = "/home/runner/.julia/dev/HiGHS/Project.toml"
+          project = read(project_filename, String)
+          write(
+            project_filename,
+            replace(project, r"HiGHS_jll = \"=.+?\"" => "HiGHS_jll = \"1\""),
+          )
+      # Now we can add HiGHS_jll and run the tests for HiGHS.
+      - shell: julia --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.develop(; path="/home/runner/.julia/dev/HiGHS_jll")
+          Pkg.test("HiGHS")
