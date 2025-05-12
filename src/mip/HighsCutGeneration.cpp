@@ -589,14 +589,15 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
     if (oneoveroneminusf0 > maxCMirScale) continue;
 
-    double sqrnorm = scale * scale * continuoussqrnorm;
-    double viol = scale * continuouscontribution * oneoveroneminusf0 - downrhs;
+    double contscale = scale * oneoveroneminusf0;
+    double sqrnorm = contscale * contscale * continuoussqrnorm;
+    double viol = contscale * continuouscontribution - downrhs;
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      double aj = downaj + std::max(0.0, fj - f0);
+      double aj = downaj + std::max(0.0, (fj - f0) * oneoveroneminusf0);
       updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
@@ -621,14 +622,15 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
     if (oneoveroneminusf0 > maxCMirScale) continue;
 
-    double sqrnorm = scale * scale * continuoussqrnorm;
-    double viol = scale * continuouscontribution * oneoveroneminusf0 - downrhs;
+    double contscale = scale * oneoveroneminusf0;
+    double sqrnorm = contscale * contscale * continuoussqrnorm;
+    double viol = contscale * continuouscontribution - downrhs;
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      double aj = downaj + std::max(0.0, fj - f0);
+      double aj = downaj + std::max(0.0, (fj - f0) * oneoveroneminusf0);
       updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
@@ -665,14 +667,15 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       continue;
     }
 
-    double sqrnorm = scale * scale * continuoussqrnorm;
-    double viol = scale * continuouscontribution * oneoveroneminusf0 - downrhs;
+    double contscale = scale * oneoveroneminusf0;
+    double sqrnorm = contscale * contscale * continuoussqrnorm;
+    double viol = contscale * continuouscontribution - downrhs;
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      double aj = downaj + std::max(0.0, fj - f0);
+      double aj = downaj + std::max(0.0, (fj - f0) * oneoveroneminusf0);
       updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
@@ -708,11 +711,26 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double downaj = floor(double(scalaj + kHighsTiny));
       HighsCDouble fj = scalaj - downaj;
       HighsCDouble aj = downaj;
-      if (fj > f0) aj += fj - f0;
+      if (fj > f0) aj += (fj - f0) * oneoveroneminusf0;
 
       vals[j] = double(aj * bestdelta);
     }
   }
+
+#ifndef NDEBUG
+  // Check if the computed cut has the correct efficacy
+  {
+    double checkviol = -downrhs * bestdelta;
+    double checknorm = 0.0;
+    for (HighsInt j = 0; j != rowlen; ++j) {
+      if (vals[j] == 0.0) continue;
+      updateViolationAndNorm(j, vals[j], checkviol, checknorm);
+    }
+    double checkefficacy = checkviol / sqrt(checknorm);
+    // the efficacy can become infinite if the cut 0 <= -1 is derived
+    assert(fabs(checkefficacy - bestefficacy) < 0.001 || fabs(checkefficacy) >= 1e30);
+  }
+#endif
 
   return true;
 }
