@@ -142,13 +142,7 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
     // Initial assignments that violate integrality or column bounds can lead to
     // infeasible results. Even if those initial assignments should not occur,
     // use trySolution rather than addIncumbent for an explicit check.
-    bool is_really_feasible =
-        trySolution(col_value, kSolutionSourceFeasibilityJump);
-    if (!is_really_feasible) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Discarding infeasible result from Feasibility Jump\n");
-    }
-    assert(is_really_feasible);
+    trySolution(col_value, kSolutionSourceFeasibilityJump);
   }
   return HighsModelStatus::kNotset;
 #endif
