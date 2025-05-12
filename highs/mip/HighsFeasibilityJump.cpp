@@ -112,16 +112,6 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
                                       status.solution + status.numVars);
       objective_function_value =
           model->offset_ + sense_multiplier * status.solutionObjectiveValue;
-      if (verbosity > 0) {
-        printf("Feasibility Jump has found a solution");
-        if (model->num_col_ < 10) {
-          printf(" [");
-          for (HighsInt col = 0; col < std::min(10, model->num_col_); ++col)
-            printf(" %g", col_value[col]);
-          printf("]");
-        }
-        printf(" with objective %g\n", objective_function_value);
-      }
     }
     if (status.effortSinceLastImprovement > kMaxEffortSinceLastImprovement ||
         status.totalEffort > kMaxTotalEffort) {
@@ -131,11 +121,6 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
     }
   };
 
-  if (verbosity > 0)
-    printf(
-        "Feasibility Jump: kMaxTotalEffort = %zd; "
-        "kMaxEffortSinceLastImprovement = %zd\n",
-        kMaxTotalEffort, kMaxEffortSinceLastImprovement);
   solver.solve(col_value.data(), fjControlCallback);
 
   if (found_integer_feasible_solution) {
