@@ -394,6 +394,8 @@ class HPresolve {
 
   HighsPresolveStatus getPresolveStatus() const { return presolve_status_; }
 
+  bool zeroRowActivityFeasible() const;
+
   HighsInt debugGetCheckCol() const;
   HighsInt debugGetCheckRow() const;
 
