@@ -4757,8 +4757,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     presolve_status_ = HighsPresolveStatus::kReducedToEmpty;
     // Make sure that zero row activity from the column-less model is
     // consistent with the bounds
-    return zeroRowActivityFeasible() ? HighsModelStatus::kOptimal
-                                     : HighsModelStatus::kInfeasible;
+    return model->num_row_ == 0 || zeroRowActivityFeasible()
+               ? HighsModelStatus::kOptimal
+               : HighsModelStatus::kInfeasible;
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
@@ -6897,7 +6898,8 @@ bool HPresolve::zeroRowActivityFeasible() const {
   // has no columns to assess whether the HighsModelStatus returned is
   // kOptimal or kInfeasible (as was required for 2326)
   for (HighsInt iRow = 0; iRow < model->num_row_; iRow++)
-    if (model->row_lower_[iRow] > 0 || model->row_upper_[iRow] < 0)
+    if (model->row_lower_[row] > primal_feastol ||
+        model->row_upper_[row] < -primal_feastol)
       return false;
   return true;
 }
