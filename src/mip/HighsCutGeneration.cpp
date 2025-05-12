@@ -630,7 +630,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double scalaj = vals[j] * scale;
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      double aj = downaj + std::max(0.0, (fj - f0) * oneoveroneminusf0 );
+      double aj = downaj + std::max(0.0, (fj - f0) * oneoveroneminusf0);
       updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
@@ -675,7 +675,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double scalaj = vals[j] * scale;
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      double aj = downaj + std::max(0.0, (fj - f0) * oneoveroneminusf0 );
+      double aj = downaj + std::max(0.0, (fj - f0) * oneoveroneminusf0);
       updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
@@ -718,7 +718,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   }
 
 #ifndef NDEBUG
-  //Check if the computed cut has the correct efficacy
+  // Check if the computed cut has the correct efficacy
   {
     double checkviol = -downrhs * bestdelta;
     double checknorm = 0.0;
