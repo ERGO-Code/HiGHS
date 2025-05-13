@@ -4371,7 +4371,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     bool trySparsify =
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
-    bool tryProbing = mipsolver != nullptr;
+    bool tryProbing =
+        mipsolver != nullptr && analysis_.allow_rule_[kPresolveRuleProbing];
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
@@ -4750,14 +4751,21 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       }
       mipsolver->mipdata_->lower_bound = 0;
     } else {
-      assert(model->num_row_ == 0);
+      // An LP with no columns must have no rows, unless the reduction
+      // limit has been reached
+      assert(model->num_row_ == 0 ||
+             postsolve_stack.numReductions() >= reductionLimit);
       if (model->num_row_ != 0) {
         presolve_status_ = HighsPresolveStatus::kNotPresolved;
         return HighsModelStatus::kNotset;
       }
     }
     presolve_status_ = HighsPresolveStatus::kReducedToEmpty;
-    return HighsModelStatus::kOptimal;
+    // Make sure that zero row activity from the column-less model is
+    // consistent with the bounds
+    return model->num_row_ == 0 || zeroRowActivityFeasible()
+               ? HighsModelStatus::kOptimal
+               : HighsModelStatus::kInfeasible;
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
@@ -6889,6 +6897,17 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   }
 
   return Result::kOk;
+}
+
+bool HPresolve::zeroRowActivityFeasible() const {
+  // Check that zero row activity is feasible - called when reduced model
+  // has no columns to assess whether the HighsModelStatus returned is
+  // kOptimal or kInfeasible (as was required for 2326)
+  for (HighsInt iRow = 0; iRow < model->num_row_; iRow++)
+    if (model->row_lower_[iRow] > primal_feastol ||
+        model->row_upper_[iRow] < -primal_feastol)
+      return false;
+  return true;
 }
 
 HighsInt HPresolve::debugGetCheckCol() const {
