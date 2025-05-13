@@ -152,6 +152,40 @@ class HighsLinearSumBounds {
   }
 
   void shrink(const std::vector<HighsInt>& newIndices, HighsInt newSize);
+
+  double getImplVarUpper(HighsInt sum, HighsInt var) const;
+
+  double getImplVarLower(HighsInt sum, HighsInt var) const;
+
+ private:
+  double getImplVarUpper(HighsInt sum, double myVarUpper, double myImplVarUpper,
+                         HighsInt myImplVarUpperSource) const;
+
+  double getImplVarLower(HighsInt sum, double myVarLower, double myImplVarLower,
+                         HighsInt myImplVarLowerSource) const;
+
+  void update(HighsInt& numInf, HighsCDouble& sum, bool isBoundFinite,
+              HighsInt direction, double bound, double coefficient);
+
+  void handleVarUpper(HighsInt sum, double coefficient, double myVarUpper,
+                      HighsInt direction);
+
+  void handleVarLower(HighsInt sum, double coefficient, double myVarLower,
+                      HighsInt direction);
+
+  void handleImplVarUpper(HighsInt sum, double coefficient,
+                          double myImplVarUpper, HighsInt direction);
+
+  void handleImplVarLower(HighsInt sum, double coefficient,
+                          double myImplVarLower, HighsInt direction);
+
+  void updatedImplVarUpper(HighsInt sum, HighsInt var, double coefficient,
+                           double oldVarUpper, double oldImplVarUpper,
+                           HighsInt oldImplVarUpperSource);
+
+  void updatedImplVarLower(HighsInt sum, HighsInt var, double coefficient,
+                           double oldVarLower, double oldImplVarLower,
+                           HighsInt oldImplVarLowerSource);
 };
 
 #endif

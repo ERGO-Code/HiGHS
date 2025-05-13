@@ -30,7 +30,8 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
   // Configure Feasibility Jump and pass it the problem
   int verbosity = mipsolver.submip ? 0 : mipsolver.options_mip_->log_dev_level;
   auto solver = external_feasibilityjump::FeasibilityJumpSolver(
-      /* seed = */ 0, /* verbosity = */ verbosity,
+      /* seed = */ mipsolver.options_mip_->random_seed,
+      /* verbosity = */ verbosity,
       /* equalityTolerance = */ epsilon,
       /* violationTolerance = */ feastol);
 
@@ -111,16 +112,6 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
                                       status.solution + status.numVars);
       objective_function_value =
           model->offset_ + sense_multiplier * status.solutionObjectiveValue;
-      if (verbosity > 0) {
-        printf("Feasibility Jump has found a solution");
-        if (model->num_col_ < 10) {
-          printf(" [");
-          for (HighsInt col = 0; col < std::min(10, model->num_col_); ++col)
-            printf(" %g", col_value[col]);
-          printf("]");
-        }
-        printf(" with objective %g\n", objective_function_value);
-      }
     }
     if (status.effortSinceLastImprovement > kMaxEffortSinceLastImprovement ||
         status.totalEffort > kMaxTotalEffort) {
@@ -130,24 +121,13 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
     }
   };
 
-  if (verbosity > 0)
-    printf(
-        "Feasibility Jump: kMaxTotalEffort = %zd; "
-        "kMaxEffortSinceLastImprovement = %zd\n",
-        kMaxTotalEffort, kMaxEffortSinceLastImprovement);
   solver.solve(col_value.data(), fjControlCallback);
 
   if (found_integer_feasible_solution) {
     // Initial assignments that violate integrality or column bounds can lead to
     // infeasible results. Even if those initial assignments should not occur,
     // use trySolution rather than addIncumbent for an explicit check.
-    bool is_really_feasible =
-        trySolution(col_value, kSolutionSourceFeasibilityJump);
-    if (!is_really_feasible) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Discarding infeasible result from Feasibility Jump\n");
-    }
-    assert(is_really_feasible);
+    trySolution(col_value, kSolutionSourceFeasibilityJump);
   }
   return HighsModelStatus::kNotset;
 #endif

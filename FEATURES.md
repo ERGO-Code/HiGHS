@@ -20,3 +20,9 @@ ZI rounding and shifting MIP primal heuristics have been added (see [#2287](http
 
 Added `Highs_changeRowsBoundsByRange` to C API, fixing [#2296](https://github.com/ERGO-Code/HiGHS/issues/2296))
 
+Corrected docstrings for `Highs_getReducedRow`, motivated by [#2312](https://github.com/ERGO-Code/HiGHS/issues/2312))
+
+LP file reader no longer fails when there is no objective section. Fix is [#2316](https://github.com/ERGO-Code/HiGHS/pull/2316)), but this exposes code quality issue [#2318](https://github.com/ERGO-Code/HiGHS/issues/2318))
+
+
+

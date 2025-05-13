@@ -1425,6 +1425,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Aggregator";
   } else if (rule_type == kPresolveRuleParallelRowsAndCols) {
     return "Parallel rows and columns";
+  } else if (rule_type == kPresolveRuleProbing) {
+    return "Probing";
   }
   assert(1 == 0);
   return "????";

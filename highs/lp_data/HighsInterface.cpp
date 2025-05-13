@@ -321,6 +321,9 @@ HighsStatus Highs::formStandardFormLp() {
     this->standard_form_matrix_.start_.push_back(
         HighsInt(this->standard_form_matrix_.index_.size()));
   }
+  // Now set correct values for the dimensions of this->standard_form_matrix_
+  this->standard_form_matrix_.num_col_ = int(standard_form_cost_.size());
+  this->standard_form_matrix_.num_row_ = int(standard_form_rhs_.size());
   this->standard_form_valid_ = true;
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "Standard form LP obtained for LP with (free / lower / upper / "

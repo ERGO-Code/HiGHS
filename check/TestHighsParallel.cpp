@@ -224,6 +224,7 @@ TEST_CASE("MatrixMultHighs", "[parallel]") {
   parallel::initialize_scheduler(numThreads);
   if (dev_run) std::cout << "\nhighs workstealing for loop:" << std::endl;
   matrix_multiplication("highs", parallel::num_threads(), 1);
+  HighsTaskExecutor::shutdown();
 }
 
 TEST_CASE("FibonacciTasksHighs", "[parallel]") {
@@ -245,6 +246,7 @@ TEST_CASE("FibonacciTasksHighs", "[parallel]") {
   // REQUIRE(result == 20365011074);
   // fib 41
   REQUIRE(result == 267914296);
+  HighsTaskExecutor::shutdown();
 }
 
 #if 0
