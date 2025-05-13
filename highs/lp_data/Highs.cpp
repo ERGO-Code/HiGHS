@@ -1561,10 +1561,6 @@ HighsStatus Highs::optimizeModel() {
     const bool have_unknown_reduced_solution =
         model_presolve_status_ == HighsPresolveStatus::kReduced &&
         model_status_ == HighsModelStatus::kUnknown;
-
-    // #2251 Ultimately model_status_ == HighsModelStatus::kUnknown won't be
-    // passed down
-    //    assert(model_status_ != HighsModelStatus::kUnknown);
     if (have_optimal_reduced_solution || have_unknown_reduced_solution) {
       // ToDo Put this in a separate method
       assert(model_status_ == HighsModelStatus::kOptimal ||
@@ -1811,18 +1807,7 @@ HighsStatus Highs::optimizeModel() {
   }
   // Assess success according to the model status, regardless of
   // whether anything worse has happened earlier
-  call_status = highsStatusFromHighsModelStatus(model_status_);
-  //  # 2251
-  return_status = call_status;
-  //  return_status =
-  //      interpretCallStatus(options_.log_options, call_status, return_status,
-  //                          "highsStatusFromHighsModelStatus");
-  //  if (return_status != call_status) {
-  //    printf("Highs::solve() %d = return_status != call_status = %d;
-  //    model_status_ = %s\n",
-  //	   int(return_status), int(call_status),
-  //	   this->model_statusToString(model_status_).c_str());
-  //  }
+  return_status = highsStatusFromHighsModelStatus(model_status_);
   return returnFromOptimizeModel(return_status, undo_mods);
 }
 
@@ -4678,16 +4663,10 @@ void Highs::reportSolvedLpQpStats() {
                  "Objective value     : %17.10e\n",
                  info_.objective_function_value);
   }
-  if (solution_.dual_valid && !this->model_.isQp()) {
-    // #2251 for checking >>>
-    double dual_objective_value;
-    HighsStatus status = this->getDualObjectiveValue(dual_objective_value);
-    assert(status == HighsStatus::kOk);
-    // #2251 for checking <<<
+  if (solution_.dual_valid && !this->model_.isQp())
     highsLogUser(log_options, HighsLogType::kInfo,
                  "P-D objective error : %17.10e\n",
                  info_.primal_dual_objective_error);
-  }
   if (!options_.timeless_log) {
     double run_time = timer_.read();
     highsLogUser(log_options, HighsLogType::kInfo,

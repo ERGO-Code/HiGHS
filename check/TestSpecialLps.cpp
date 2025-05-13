@@ -46,12 +46,6 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     }
     REQUIRE(iteration_count == require_iteration_count);
   }
-  printf("HighsModelStatus %s\n",
-         highs.modelStatusToString(highs.getModelStatus()).c_str());
-  printf("HighsInfo::primal_solution_status = %d\n",
-         int(highs.getInfo().primal_solution_status));
-  printf("HighsInfo::dual_solution_status =   %d\n",
-         int(highs.getInfo().dual_solution_status));
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
   highs.setOptionValue("output_flag", dev_run);
 

@@ -177,15 +177,6 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
                           mip_primal_feasibility_tolerance);
   lpsolver.setOptionValue("dual_feasibility_tolerance",
                           mip_dual_feasibility_tolerance);
-  // 2251 Setting infinite primal and dual residual tolerances - but
-  // shouldn't be checked for
-  HighsStatus option_set_status;
-  option_set_status =
-      lpsolver.setOptionValue("primal_residual_tolerance", kHighsInf);
-  assert(option_set_status == HighsStatus::kOk);
-  option_set_status =
-      lpsolver.setOptionValue("dual_residual_tolerance", kHighsInf);
-  assert(option_set_status == HighsStatus::kOk);
   status = Status::kNotSet;
   numlpiters = 0;
   avgSolveIters = 0;

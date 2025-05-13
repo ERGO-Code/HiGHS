@@ -2592,17 +2592,20 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
   info.objective_function_value =
       model_.lp_.objectiveValue(solution_.col_value);
   HighsPrimalDualErrors primal_dual_errors;
-  // #2251 Ultimately, only get residuals when solution has no basis,
-  // #and don't test for zero residual error count
-  const bool get_residuals = true;
+  const bool get_residuals = !basis_.valid;
   getLpKktFailures(options, model_.lp_, solution, basis_, info,
                    primal_dual_errors, get_residuals);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Highs::lpKktCheck: %s\n", message.c_str());
+  //  highsLogUser(options.log_options, HighsLogType::kInfo,
+  //               "Highs::lpKktCheck: %s\n", message.c_str());
   reportLpKktFailures(model_.lp_, options, info, "LP");
+  // get_residuals is false when there is a valid basis, since
+  // residual errors are assumed to be small, so
+  // info.num_primal_residual_errors = -1, since they aren't
+  // known. Hence don't consider this in identifying unboundedness
+  // from HighsModelStatus::kUnboundedOrInfeasible
   if (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
       info.num_primal_infeasibilities == 0 &&
-      info.num_primal_residual_errors == 0)
+      (!get_residuals || info.num_primal_residual_errors == 0))
     model_status_ = HighsModelStatus::kUnbounded;
   if (model_status_ != HighsModelStatus::kOptimal &&
       model_status_ != HighsModelStatus::kUnknown)
@@ -2727,10 +2730,9 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     // being based on relative primal-dual objective error, so test
     // the latter
     double tolerance_relative_violation =
-      info.max_relative_primal_infeasibility / primal_feasibility_tolerance;
-    max_primal_tolerance_relative_violation =
-      std::max(tolerance_relative_violation,
-	       max_primal_tolerance_relative_violation);
+        info.max_relative_primal_infeasibility / primal_feasibility_tolerance;
+    max_primal_tolerance_relative_violation = std::max(
+        tolerance_relative_violation, max_primal_tolerance_relative_violation);
     if (info.num_relative_primal_infeasibilities > 0) {
       foundOptimalityError();
       if (was_optimal)
@@ -2742,10 +2744,9 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                      primal_feasibility_tolerance);
     }
     tolerance_relative_violation =
-      info.max_relative_dual_infeasibility / dual_feasibility_tolerance;
-    max_dual_tolerance_relative_violation =
-      std::max(tolerance_relative_violation,
-	       max_dual_tolerance_relative_violation);
+        info.max_relative_dual_infeasibility / dual_feasibility_tolerance;
+    max_dual_tolerance_relative_violation = std::max(
+        tolerance_relative_violation, max_dual_tolerance_relative_violation);
     if (info.num_relative_dual_infeasibilities > 0) {
       foundOptimalityError();
       if (was_optimal)
@@ -2757,10 +2758,9 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                      dual_feasibility_tolerance);
     }
     tolerance_relative_violation =
-          info.max_relative_primal_residual_error / primal_residual_tolerance;
-    max_primal_tolerance_relative_violation =
-      std::max(tolerance_relative_violation,
-	       max_primal_tolerance_relative_violation);
+        info.max_relative_primal_residual_error / primal_residual_tolerance;
+    max_primal_tolerance_relative_violation = std::max(
+        tolerance_relative_violation, max_primal_tolerance_relative_violation);
     if (info.num_relative_primal_residual_errors > 0) {
       foundOptimalityError();
       if (was_optimal)
@@ -2772,10 +2772,9 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                      primal_residual_tolerance);
     }
     tolerance_relative_violation =
-      info.max_relative_dual_residual_error / dual_residual_tolerance;
-    max_dual_tolerance_relative_violation =
-      std::max(tolerance_relative_violation,
-	       max_dual_tolerance_relative_violation);
+        info.max_relative_dual_residual_error / dual_residual_tolerance;
+    max_dual_tolerance_relative_violation = std::max(
+        tolerance_relative_violation, max_dual_tolerance_relative_violation);
     if (info.num_relative_dual_residual_errors > 0) {
       foundOptimalityError();
       if (was_optimal)
@@ -2829,8 +2828,9 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                    "Model status changed from \"Optimal\" to \"Unknown\""
                    " since relative violation of tolerances is %8.3g\n",
                    max_tolerance_relative_violation);
-    } else if (max_allowed_tolerance_relative_violation > 1) {
-      highsLogUser(log_options, HighsLogType::kWarning,
+    } else if (max_allowed_tolerance_relative_violation > 1 &&
+               max_tolerance_relative_violation > 0) {
+      highsLogUser(log_options, HighsLogType::kInfo,
                    "Model status is \"Optimal\" since relative violation of "
                    "tolerances is no more than %8.3g\n",
                    max_tolerance_relative_violation);
@@ -3117,6 +3117,13 @@ HighsStatus Highs::optionChangeAction() {
       this->solution_.row_dual[iRow] *= dl_user_cost_scale_value;
     model.userCostScale(options.user_cost_scale);
   }
+  // Too hard to identify optimality from primal/dual solution status,
+  // since (for example) after IPX without crossover on an infeasible
+  // LP, primal/dual solution status may be feasible, but there are
+  // primal/dual residual errors. There could also be complementarity
+  // errors, even at a feasible point
+  //
+  /*
   if (this->model_status_ != HighsModelStatus::kOptimal) {
     if (info.primal_solution_status == kSolutionStatusFeasible &&
         info.dual_solution_status == kSolutionStatusFeasible) {
@@ -3125,6 +3132,7 @@ HighsStatus Highs::optionChangeAction() {
       this->model_status_ = HighsModelStatus::kOptimal;
     }
   }
+  */
   if (!user_bound_scale_ok || !user_cost_scale_ok) return HighsStatus::kError;
   if (this->iis_.valid_ && options_.iis_strategy != this->iis_.strategy_)
     this->iis_.invalidate();

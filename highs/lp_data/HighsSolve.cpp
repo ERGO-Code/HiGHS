@@ -143,19 +143,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   if (debugHighsLpSolution(message, solver_object) ==
       HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
-  // For fix-2251
-  HighsPrimalDualErrors primal_dual_errors;
-  const bool get_residuals = true;
-  HighsInfo save_highs_info = solver_object.highs_info_;
-  solver_object.highs_info_.objective_function_value =
-      solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
-  getLpKktFailures(solver_object.options_, solver_object.lp_,
-                   solver_object.solution_, solver_object.basis_,
-                   solver_object.highs_info_, primal_dual_errors,
-                   get_residuals);
-  reportLpKktFailures(solver_object.lp_, solver_object.options_,
-                      solver_object.highs_info_);
-  solver_object.highs_info_ = save_highs_info;
   return return_status;
 }
 
