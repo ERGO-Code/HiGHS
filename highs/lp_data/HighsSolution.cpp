@@ -1653,14 +1653,6 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
 
 void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
                          const HighsInfo& info, const std::string& solver) {
-  const bool force_report = false;
-  const bool has_kkt_failures = info.num_primal_infeasibilities > 0 ||
-                                info.num_dual_infeasibilities > 0 ||
-                                info.num_primal_residual_errors > 0 ||
-                                info.num_dual_residual_errors > 0 ||
-                                info.num_complementarity_violations;
-  if (!has_kkt_failures && !force_report) return;
-
   const HighsLogOptions& log_options = options.log_options;
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
@@ -1674,6 +1666,15 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
     dual_residual_tolerance = options.kkt_tolerance;
     complementarity_tolerance = options.kkt_tolerance;
   }
+
+  const bool force_report = false;
+  const bool has_kkt_failures =
+    info.num_primal_infeasibilities > 0 ||
+    info.num_dual_infeasibilities > 0 ||
+    info.num_primal_residual_errors > 0 ||
+    info.num_dual_residual_errors > 0 ||
+    info.primal_dual_objective_error > complementarity_tolerance;
+  if (!has_kkt_failures && !force_report) return;
 
   HighsLogType log_type =
       has_kkt_failures ? HighsLogType::kWarning : HighsLogType::kInfo;

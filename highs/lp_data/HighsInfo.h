@@ -346,6 +346,12 @@ class HighsInfo : public HighsInfoStruct {
                              &max_relative_dual_residual_error, 0);
     records.push_back(record_double);
 
+    record_int =
+        new InfoRecordInt("num_complementarity_violations",
+                          "Number of complementarity violations", advanced,
+                          &num_complementarity_violations, -1);
+    records.push_back(record_int);
+
     record_double = new InfoRecordDouble(
         "max_complementarity_violation", "Max complementarity violation",
         advanced, &max_complementarity_violation, 0);
