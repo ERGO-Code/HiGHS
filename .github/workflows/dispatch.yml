@@ -1,11 +1,14 @@
 name: Source Workflow
 on:
   workflow_dispatch:
-  push:
+  # push:
+  #   branches:
+  #     - '*'
+  pull_request:
     branches:
       - '*'
       
-run-name: ${{ github.actor }} is testing out GitHub Actions  🚀
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 
 jobs:
   trigger:
@@ -18,4 +21,4 @@ jobs:
           repository: ERGO-Code/highs-tests 
           event-type: Integration-with-Automation
       - name: my-step
-        run: 'echo ${{ github.actor }} Hello 3!'
+        run: 'echo ${{ github.actor }} Hello automations!'
