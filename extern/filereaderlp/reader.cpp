@@ -308,23 +308,6 @@ Model Reader::read() {
   splittokens();
 
   // std::clog << "Setting up model..." << std::endl;
-  //
-  // Since
-  //
-  // "The problem statement must begin with the word MINIMIZE or
-  // MAXIMIZE, MINIMUM or MAXIMUM, or the abbreviations MIN or MAX, in
-  // any combination of upper- and lower-case characters. The word
-  // introduces the objective function section."
-  //
-  // Use positivity of sectiontokens.count(LpSectionKeyword::OBJMIN) +
-  // sectiontokens.count(LpSectionKeyword::OBJMAX) to identify garbage file
-  //
-
-  const int num_objective_section =
-    sectiontokens.count(LpSectionKeyword::OBJMIN) +
-    sectiontokens.count(LpSectionKeyword::OBJMAX);
-  lpassert(num_objective_section>0);
-
   processsections();
   processedtokens.clear();
   processedtokens.shrink_to_fit();

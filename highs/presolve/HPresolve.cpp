@@ -3774,28 +3774,41 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       }
 
       auto strengthenCoefs = [&](HighsCDouble& rhs, HighsInt direction,
-                                 double maxCoefValue) {
+                                 HighsCDouble maxAbsCoefValue) {
         // iterate over non-zero positions instead of iterating over the
         // HighsMatrixSlice (provided by HPresolve::getStoredRow) because the
         // latter contains pointers to Acol and Avalue that may be invalidated
         // if these vectors are reallocated (see std::vector::push_back
         // performed in HPresolve::addToMatrix).
         for (HighsInt rowiter : rowpositions) {
+          // max. absolute coefficient should not be negative
+          assert(maxAbsCoefValue >= 0);
+
           // get column index and coefficient
           HighsInt col = Acol[rowiter];
-          double val = Avalue[rowiter];
+          double val = direction * Avalue[rowiter];
+
+          // get lower and upper bounds
+          double col_lower = impliedRowBounds.getImplVarLower(row, col);
+          double col_upper = impliedRowBounds.getImplVarUpper(row, col);
 
           // skip continuous variables
           if (model->integrality_[col] == HighsVarType::kContinuous) continue;
 
-          if (direction * val > maxCoefValue + primal_feastol) {
-            double delta = direction * maxCoefValue - val;
-            addToMatrix(row, col, delta);
-            rhs += delta * model->col_upper_[col];
-          } else if (direction * val < -maxCoefValue - primal_feastol) {
-            double delta = -direction * maxCoefValue - val;
-            addToMatrix(row, col, delta);
-            rhs += delta * model->col_lower_[col];
+          if (val > maxAbsCoefValue + primal_feastol) {
+            assert(col_upper != kHighsInf);
+            // new matrix coefficient is direction * maxAbsCoefValue; subtract
+            // existing matrix coefficient to get delta
+            HighsCDouble delta = direction * (maxAbsCoefValue - val);
+            addToMatrix(row, col, static_cast<double>(delta));
+            rhs += delta * col_upper;
+          } else if (val < -maxAbsCoefValue - primal_feastol) {
+            assert(col_lower != -kHighsInf);
+            // new matrix coefficient is (-direction) * maxAbsCoefValue;
+            // subtract existing matrix coefficient to get delta
+            HighsCDouble delta = -direction * (maxAbsCoefValue + val);
+            addToMatrix(row, col, static_cast<double>(delta));
+            rhs += delta * col_lower;
           }
         }
       };
@@ -3805,7 +3818,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         // <= constraint: try to strengthen coefficients
         HighsCDouble rhs = model->row_upper_[row];
         strengthenCoefs(rhs, HighsInt{1},
-                        impliedRowUpper - model->row_upper_[row]);
+                        static_cast<HighsCDouble>(impliedRowUpper) -
+                            model->row_upper_[row]);
         model->row_upper_[row] = static_cast<double>(rhs);
       }
 
@@ -3814,7 +3828,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         // >= constraint: try to strengthen coefficients
         HighsCDouble rhs = model->row_lower_[row];
         strengthenCoefs(rhs, HighsInt{-1},
-                        model->row_lower_[row] - impliedRowLower);
+                        model->row_lower_[row] -
+                            static_cast<HighsCDouble>(impliedRowLower));
         model->row_lower_[row] = static_cast<double>(rhs);
       }
     }
@@ -4350,7 +4365,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     bool trySparsify =
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
-    bool tryProbing = mipsolver != nullptr;
+    bool tryProbing =
+        mipsolver != nullptr && analysis_.allow_rule_[kPresolveRuleProbing];
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
@@ -4729,14 +4745,21 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       }
       mipsolver->mipdata_->lower_bound = 0;
     } else {
-      assert(model->num_row_ == 0);
+      // An LP with no columns must have no rows, unless the reduction
+      // limit has been reached
+      assert(model->num_row_ == 0 ||
+             postsolve_stack.numReductions() >= reductionLimit);
       if (model->num_row_ != 0) {
         presolve_status_ = HighsPresolveStatus::kNotPresolved;
         return HighsModelStatus::kNotset;
       }
     }
     presolve_status_ = HighsPresolveStatus::kReducedToEmpty;
-    return HighsModelStatus::kOptimal;
+    // Make sure that zero row activity from the column-less model is
+    // consistent with the bounds
+    return model->num_row_ == 0 || zeroRowActivityFeasible()
+               ? HighsModelStatus::kOptimal
+               : HighsModelStatus::kInfeasible;
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
@@ -6868,6 +6891,17 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   }
 
   return Result::kOk;
+}
+
+bool HPresolve::zeroRowActivityFeasible() const {
+  // Check that zero row activity is feasible - called when reduced model
+  // has no columns to assess whether the HighsModelStatus returned is
+  // kOptimal or kInfeasible (as was required for 2326)
+  for (HighsInt iRow = 0; iRow < model->num_row_; iRow++)
+    if (model->row_lower_[iRow] > primal_feastol ||
+        model->row_upper_[iRow] < -primal_feastol)
+      return false;
+  return true;
 }
 
 HighsInt HPresolve::debugGetCheckCol() const {
