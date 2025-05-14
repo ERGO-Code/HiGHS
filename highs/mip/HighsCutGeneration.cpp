@@ -781,6 +781,8 @@ bool HighsCutGeneration::postprocessCut() {
     }
   }
 
+  if (rowlen == 0) return false;
+
   if (integralSupport) {
     // integral support -> determine scale to make all coefficients integral
     double intscale =
@@ -861,6 +863,8 @@ bool HighsCutGeneration::postprocessCut() {
     int expshift;
     std::frexp(maxAbsValue - epsilon, &expshift);
     expshift = -expshift;
+    // Don't scale the coefficients by more than +1024 (violations can increase)
+    expshift = std::min(10, expshift);
     rhs = std::ldexp((double)rhs, expshift);
 
     for (HighsInt i = 0; i != rowlen; ++i)
@@ -895,6 +899,8 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   int expshift = 0;
   std::frexp(maxAbsVal, &expshift);
   expshift = -expshift;
+  // Don't scale the coefficients by more than +1024 (violations can increase)
+  expshift = std::min(10, expshift);
   initialScale = std::ldexp(1.0, expshift);
   rhs *= initialScale;
   for (HighsInt i = 0; i < rowlen; ++i) vals[i] = std::ldexp(vals[i], expshift);
