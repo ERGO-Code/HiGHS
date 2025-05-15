@@ -900,7 +900,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   for (HighsInt i = 0; i < rowlen; ++i)
     maxAbsVal = std::max(std::abs(vals[i]), maxAbsVal);
 
-  scale(maxAbsVal);
+  initialScale = scale(maxAbsVal);
 
   isintegral.resize(rowlen);
   for (HighsInt i = 0; i != rowlen; ++i) {
