@@ -4140,6 +4140,27 @@ HighsStatus Highs::multiobjectiveSolve() {
                                              original_lp_num_row);
 }
 
+bool Highs::tryPdlpCleanup(double& pdlp_time_limit,
+			    const double& presolved_lp_time,
+			    const HighsInfo& presolved_lp_info) {
+  // Primal/dual infeasibilities/residuals can be magnified in
+  // postsolve after PDLP, and IPX without crossover can fail,
+  // both leading to model_status_ == HighsModelStatus::kUnknown.
+  //
+  // If the primal/dual infeasibilities/residuals are too large, then it's not worth it, so measure this
+  //
+  // Force PDLP to be used with a time limit
+  const double time_limit = options_.time_limit;
+  const double pdlp_min_time_limit = 1000.0;
+  pdlp_time_limit =
+    std::max(pdlp_min_time_limit, 10 * presolved_lp_time);
+  if (options_.time_limit < kHighsInf) {
+    double time_remaining = time_limit - timer_.read();
+    pdlp_time_limit = std::min(0.1 * time_remaining, pdlp_time_limit);
+  }
+  return true;
+}
+
 void HighsLinearObjective::clear() {
   this->weight = 0.0;
   this->offset = 0.0;

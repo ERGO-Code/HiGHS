@@ -1697,6 +1697,10 @@ class Highs {
   bool hasRepeatedLinearObjectivePriorities(
       const HighsLinearObjective* linear_objective = nullptr) const;
 
+  bool tryPdlpCleanup(double& pdlp_time_limit, 
+		      const double& presolved_lp_time,
+		      const HighsInfo& presolved_lp_info);
+
   bool optionsHasHighsFiles() const;
   void saveHighsFiles();
   void getHighsFiles();
