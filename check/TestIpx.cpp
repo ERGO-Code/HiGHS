@@ -56,8 +56,8 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
 
   highs::parallel::initialize_scheduler();
 
-  HighsCallback callback;
-  // Set pointer to null callback
+  // set empty callback to avoid issues
+  HighsCallback callback(nullptr);
   lps.SetCallback(&callback);
 
   Int status = lps.Solve();

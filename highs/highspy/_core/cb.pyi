@@ -5,6 +5,7 @@ Callback interface submodule
 from __future__ import annotations
 import highspy._core
 import typing
+import numpy as np
 
 __all__ = [
     "HighsCallbackDataIn",
@@ -21,16 +22,22 @@ __all__ = [
     "kCallbackMipLogging",
     "kCallbackMipSolution",
     "kCallbackSimplexInterrupt",
+    "kCallbackMipUserSolution"
     "kNumCallbackType",
 ]
 
-class HighsCallbackDataIn:
-    user_interrupt: int
+class HighsCallbackInput:
+    user_interrupt: bool
+    user_has_solution: bool
+    user_solution: np.ndarray[typing.Any, np.dtype[np.float64]]
     def __init__(self) -> None: ...
+    def setSolution(self, value: np.ndarray[typing.Any, np.dtype[np.float64]]) -> highspy.HighsStatus: ...
+    def setSolution(self, index: np.ndarray[typing.Any, np.dtype[np.integer]], value: np.ndarray[typing.Any, np.dtype[np.float64]]) -> highspy.HighsStatus: ...
+    def repairSolution(self) -> highspy.HighsStatus: ...
 
-class HighsCallbackDataOut:
+class HighsCallbackOutput:
     ipm_iteration_count: int
-    log_type: int
+    log_type: highspy._core.HighsLogType
     mip_dual_bound: float
     mip_gap: float
     mip_node_count: int
@@ -39,9 +46,15 @@ class HighsCallbackDataOut:
     pdlp_iteration_count: int
     running_time: float
     simplex_iteration_count: int
+    mip_solution: np.ndarray[typing.Any, np.dtype[np.float64]]
+    cutpool_num_col: int
+    cutpool_num_cut: int
+    cutpool_start: np.ndarray[typing.Any, np.dtype[np.integer]]
+    cutpool_index: np.ndarray[typing.Any, np.dtype[np.integer]]
+    cutpool_value: np.ndarray[typing.Any, np.dtype[np.float64]]
+    cutpool_lower: np.ndarray[typing.Any, np.dtype[np.float64]]
+    cutpool_upper: np.ndarray[typing.Any, np.dtype[np.float64]]
     def __init__(self) -> None: ...
-    @property
-    def mip_solution(self) -> highspy._core.readonly_ptr_wrapper_double: ...
 
 class HighsCallbackType:
     """
@@ -56,6 +69,7 @@ class HighsCallbackType:
       kCallbackMipInterrupt
       kCallbackMipGetCutPool
       kCallbackMipDefineLazyConstraints
+      kCallbackMipUserSolution
       kCallbackMax
       kNumCallbackType
     """
@@ -72,6 +86,7 @@ class HighsCallbackType:
     kCallbackMipLogging: typing.ClassVar[HighsCallbackType]
     kCallbackMipSolution: typing.ClassVar[HighsCallbackType]
     kCallbackSimplexInterrupt: typing.ClassVar[HighsCallbackType]
+    kCallbackMipUserSolution: typing.ClassVar[HighsCallbackType]
     kNumCallbackType: typing.ClassVar[HighsCallbackType]
     def __eq__(self, other: typing.Any) -> bool: ...
     def __getstate__(self) -> int: ...
@@ -99,4 +114,5 @@ kCallbackMipInterrupt: HighsCallbackType
 kCallbackMipLogging: HighsCallbackType
 kCallbackMipSolution: HighsCallbackType
 kCallbackSimplexInterrupt: HighsCallbackType
+kCallbackMipUserSolution: HighsCallbackType
 kNumCallbackType: HighsCallbackType

@@ -6,6 +6,11 @@ import highspy
 
 hscb = highspy.cb 
 
+# Constants for iteration limits or objective targets, adjust as required
+SIMPLEX_ITERATION_LIMIT = 100
+IPM_ITERATION_LIMIT = 100
+EGOUT_OBJECTIVE_TARGET = 610.0
+
 h = highspy.Highs()
 
 # h.setOptionValue("log_to_console", True)
@@ -230,38 +235,33 @@ print("From logical basis, simplex iteration count =", simplex_iteration_count)
 
 # Define a callback
 
-def user_interrupt_callback(
+def user_callback(
     callback_type,
     message,
     data_out,
     data_in,
     user_callback_data
 ):
-    # dev_run = True
-    dev_run = False
-
-    # Constants for iteration limits or objective targets, adjust as required
-    SIMPLEX_ITERATION_LIMIT = 100
-    IPM_ITERATION_LIMIT = 100
-    EGOUT_OBJECTIVE_TARGET = 1.0
+    dev_run = True
+    #dev_run = False
 
     # Callback for MIP Improving Solution
     if callback_type == hscb.HighsCallbackType.kCallbackMipImprovingSolution:
         # Assuming it is a list or array
         assert user_callback_data is not None, "User callback data is None!"
-        local_callback_data = user_callback_data[0]
 
         if dev_run:
-            print(f"userCallback(type {callback_type};")
-            print(f"data {local_callback_data:.4g}): {message}")
-            print(f"with objective {data_out.objective_function_value}")
+            print(f"userCallback(type {callback_type}; "
+                  f"data {user_callback_data:.4g}): {message} "
+                  f"with objective {data_out.objective_function_value:.4g}")
             print(f"and solution[0] = {data_out.mip_solution[0]}")
+            print(f"and solution[1] = {data_out.mip_solution[1]}")
 
         # Check and update the objective function value
         assert (
-            local_callback_data >= data_out.objective_function_value
+            user_callback_data >= data_out.objective_function_value
         ), "Objective function value is invalid!"
-        user_callback_data[0] = data_out.objective_function_value
+        user_callback_data = data_out.objective_function_value
 
     else:
         # Various other callback types
@@ -290,14 +290,15 @@ def user_interrupt_callback(
 
         elif callback_type == hscb.HighsCallbackType.kCallbackMipInterrupt:
             if dev_run:
-                print(f"userInterruptCallback(type {callback_type}): {message}")
+                print(f"userInterruptCallback(type {callback_type}; "
+                  f"data {user_callback_data:.4g}): {message} "
+                  f"with objective {data_out.objective_function_value:.4g}")
                 print(f"Dual bound = {data_out.mip_dual_bound:.4g}")
                 print(f"Primal bound = {data_out.mip_primal_bound:.4g}")
                 print(f"Gap = {data_out.mip_gap:.4g}")
-                print(f"Objective = {data_out.objective_function_value:.4g}")
 
             data_in.user_interrupt = (
-                data_out.objective_function_value < EGOUT_OBJECTIVE_TARGET
+                data_out.objective_function_value < user_callback_data
             )
 
 
@@ -316,7 +317,7 @@ h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
 
 
 # Set callback and run
-h.setCallback(user_interrupt_callback, None)
+h.setCallback(user_callback, None)
 h.startCallback(hscb.HighsCallbackType.kCallbackLogging)
 
 h.run()
@@ -356,3 +357,35 @@ for icol in range(num_var-2, num_var):
 # ~~~
 # Clear so that incumbent model is empty
 h.clear()
+
+# Test MIP callbacks
+print("\negout as HighsModel")
+
+h.setOptionValue("output_flag", False);
+h.setOptionValue("presolve", "off");
+
+h.readModel("check/instances/egout.mps")
+
+for iCase in range(0, 2):
+    if iCase == 0:
+        user_callback_data = EGOUT_OBJECTIVE_TARGET;
+        h.setCallback(user_callback, user_callback_data)
+        h.startCallback(hscb.HighsCallbackType.kCallbackMipInterrupt)
+        required_model_status = highspy.HighsModelStatus.kInterrupt
+    else:
+        user_callback_data = 1e30;
+        h.setCallback(user_callback, user_callback_data)
+        h.startCallback(hscb.HighsCallbackType.kCallbackMipImprovingSolution)
+        required_model_status = highspy.HighsModelStatus.kOptimal
+
+    h.run()
+
+    assert (h.getModelStatus() == required_model_status)
+
+    print(f"user_callback_data = {user_callback_data}: Success!")
+    h.clearSolver()
+    
+
+
+
+
