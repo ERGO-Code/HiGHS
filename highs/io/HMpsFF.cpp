@@ -475,9 +475,10 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, size_t& start,
   // Can have keywords used as column names or names of RHS, BOUND,
   // RANGES etc, so assume this if there are non-blanks after the
   // apparent keyword. Only cases that don't work are NAME, OBJSENSE,
-  // QCMATRIX and QSECTION, since they can be followed by text
+  // QCMATRIX, QSECTION, and CSECTION since they can be followed by text
   if (key == HMpsFF::Parsekey::kName || key == HMpsFF::Parsekey::kObjsense ||
-      key == HMpsFF::Parsekey::kQcmatrix || key == HMpsFF::Parsekey::kQsection)
+      key == HMpsFF::Parsekey::kQcmatrix || key == HMpsFF::Parsekey::kQsection ||
+      key == HMpsFF::Parsekey::kCsection)
     return key;
   assert(key != HMpsFF::Parsekey::kNone);
 
