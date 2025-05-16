@@ -314,6 +314,10 @@ class HighsCDouble {
   }
 
   friend HighsCDouble round(const HighsCDouble& x) { return floor(x + 0.5); }
+
+  friend HighsCDouble ldexp(const HighsCDouble& v, int exp) {
+    return HighsCDouble(std::ldexp(v.hi, exp), std::ldexp(v.lo, exp));
+  }
 };
 
 #endif
