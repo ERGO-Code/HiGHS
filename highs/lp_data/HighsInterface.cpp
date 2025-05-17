@@ -674,10 +674,10 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   return return_status;
 }
 
-void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
-                        bool& deleted_basic, bool& deleted_nonbasic,
-                        const HighsIndexCollection& index_collection,
-                        const HighsInt entry_dim) {
+static void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
+                               bool& deleted_basic, bool& deleted_nonbasic,
+                               const HighsIndexCollection& index_collection,
+                               const HighsInt entry_dim) {
   assert(ok(index_collection));
   assert(static_cast<size_t>(entry_dim) == status.size());
   HighsInt from_k;
@@ -717,9 +717,9 @@ void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
   status.resize(new_num_entry);
 }
 
-void deleteBasisCols(HighsBasis& basis,
-                     const HighsIndexCollection& index_collection,
-                     const HighsInt original_num_col) {
+static void deleteBasisCols(HighsBasis& basis,
+                            const HighsIndexCollection& index_collection,
+                            const HighsInt original_num_col) {
   bool deleted_basic;
   bool deleted_nonbasic;
   deleteBasisEntries(basis.col_status, deleted_basic, deleted_nonbasic,
@@ -727,9 +727,9 @@ void deleteBasisCols(HighsBasis& basis,
   if (deleted_basic) basis.valid = false;
 }
 
-void deleteBasisRows(HighsBasis& basis,
-                     const HighsIndexCollection& index_collection,
-                     const HighsInt original_num_row) {
+static void deleteBasisRows(HighsBasis& basis,
+                            const HighsIndexCollection& index_collection,
+                            const HighsInt original_num_row) {
   bool deleted_basic;
   bool deleted_nonbasic;
   deleteBasisEntries(basis.row_status, deleted_basic, deleted_nonbasic,
