@@ -45,6 +45,7 @@ class HighsTimer {
     num_clock = 0;
     HighsInt i_clock = clock_def("Run HiGHS");
     assert(i_clock == 0);
+    (void)i_clock;
 
     presolve_clock = clock_def("Presolve");
     solve_clock = clock_def("Solve");
@@ -102,6 +103,7 @@ class HighsTimer {
     this->clock_names.clear();
     HighsInt i_clock = clock_def("Run HiGHS");
     assert(i_clock == 0);
+    (void)i_clock;
     this->presolve_clock = clock_def("Presolve");
     this->solve_clock = clock_def("Solve");
     this->postsolve_clock = clock_def("Postsolve");
