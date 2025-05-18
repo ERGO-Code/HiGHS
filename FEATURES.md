@@ -18,11 +18,31 @@ As part of [#2286](https://github.com/ERGO-Code/HiGHS/pull/2286), the root of th
 
 ZI rounding and shifting MIP primal heuristics have been added (see [#2287](https://github.com/ERGO-Code/HiGHS/pull/2287)). They are off by default, but can be activated by setting the options `mip_heuristic_run_zi_round` and `mip_heuristic_run_shifting` to be true. Options `mip_heuristic_run_rins`, `mip_heuristic_run_rens` and `mip_heuristic_run_root_reduced_cost` to run the RINS, RENS and rootReducedCost heuristics have been added. These are true by default, but setting them to be false can accelerate the MIP solver on easy problems.
 
-Added `Highs_changeRowsBoundsByRange` to C API, fixing [#2296](https://github.com/ERGO-Code/HiGHS/issues/2296))
+Added `Highs_changeRowsBoundsByRange` to C API, fixing [#2296](https://github.com/ERGO-Code/HiGHS/issues/2296)
 
-Corrected docstrings for `Highs_getReducedRow`, motivated by [#2312](https://github.com/ERGO-Code/HiGHS/issues/2312))
+Corrected docstrings for `Highs_getReducedRow`, motivated by [#2312](https://github.com/ERGO-Code/HiGHS/issues/2312)
 
-LP file reader no longer fails when there is no objective section. Fix is [#2316](https://github.com/ERGO-Code/HiGHS/pull/2316)), but this exposes code quality issue [#2318](https://github.com/ERGO-Code/HiGHS/issues/2318))
+LP file reader no longer fails when there is no objective section. Fix is [#2316](https://github.com/ERGO-Code/HiGHS/pull/2316), but this exposes code quality issue [#2318](https://github.com/ERGO-Code/HiGHS/issues/2318)
+
+Corrected the bounds used in when strengthening coefficients in `HPresolve::rowPresolve`, fixing [#1517](https://github.com/ERGO-Code/HiGHS/issues/1517)
+
+Fixed numerical error in `highs/mip/HighsCliqueTable.cpp`, closing [#2320](https://github.com/ERGO-Code/HiGHS/issues/2320)
+
+Fixed bug in `highs/mip/HighsFeasibilityJump.cpp`, closing [#2331](https://github.com/ERGO-Code/HiGHS/issues/2331)
+
+Tightened CMIR cuts, leading to small performance gain,  closing [#2333](https://github.com/ERGO-Code/HiGHS/issues/2333)
+
+Scaling the tolerance in forcing row reduction to avoid use of rows with small coefficients and bounds,  closing [#2290](https://github.com/ERGO-Code/HiGHS/issues/2333)
+
+Fixed bug when calculating a coefficient in one of the cuts in `separateImpliedBounds` in `highs/mip/HighsImplications.cpp`
+
+Added `CSECTION` to the exceptions for keywords that are followed by text, and thus cannot be used as names of columns, RHS, ranges, bounds etc,
+
+
+
+
+
+
 
 
 

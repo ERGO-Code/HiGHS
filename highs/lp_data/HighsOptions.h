@@ -559,7 +559,7 @@ struct HighsOptionsStruct {
         less_infeasible_DSE_check(false),
         less_infeasible_DSE_choose_row(false),
         use_original_HFactor_logic(false),
-	//        allow_pdlp_cleanup(false),
+        //        allow_pdlp_cleanup(false),
         run_centring(false),
         max_centring_steps(0),
         centring_ratio_tolerance(0.0),

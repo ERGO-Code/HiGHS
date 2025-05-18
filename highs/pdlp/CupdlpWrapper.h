@@ -79,10 +79,10 @@ cupdlp_retcode data_alloc(CUPDLPdata* data, cupdlp_int nRows, cupdlp_int nCols,
 
 double infNorm(double* x, cupdlp_int n);
 
-void cupdlp_hasLower(cupdlp_float *haslb, const cupdlp_float *lb,
+void cupdlp_hasLower(cupdlp_float* haslb, const cupdlp_float* lb,
                      const cupdlp_float bound, const cupdlp_int len);
 
-void cupdlp_hasUpper(cupdlp_float *hasub, const cupdlp_float *ub,
+void cupdlp_hasUpper(cupdlp_float* hasub, const cupdlp_float* ub,
                      const cupdlp_float bound, const cupdlp_int len);
 
 void cupdlp_haslb(cupdlp_float* haslb, const cupdlp_float* lb,

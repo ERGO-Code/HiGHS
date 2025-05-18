@@ -1669,11 +1669,11 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
 
   const bool force_report = false;
   const bool has_kkt_failures =
-    info.num_primal_infeasibilities > 0 ||
-    info.num_dual_infeasibilities > 0 ||
-    info.num_primal_residual_errors > 0 ||
-    info.num_dual_residual_errors > 0 ||
-    info.primal_dual_objective_error > complementarity_tolerance;
+      info.num_primal_infeasibilities > 0 ||
+      info.num_dual_infeasibilities > 0 ||
+      info.num_primal_residual_errors > 0 ||
+      info.num_dual_residual_errors > 0 ||
+      info.primal_dual_objective_error > complementarity_tolerance;
   if (!has_kkt_failures && !force_report) return;
 
   HighsLogType log_type =

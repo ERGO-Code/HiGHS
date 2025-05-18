@@ -1698,7 +1698,7 @@ class Highs {
       const HighsLinearObjective* linear_objective = nullptr) const;
 
   bool tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
-		      const HighsInfo& presolved_lp_info) const;
+                      const HighsInfo& presolved_lp_info) const;
 
   bool optionsHasHighsFiles() const;
   void saveHighsFiles();
