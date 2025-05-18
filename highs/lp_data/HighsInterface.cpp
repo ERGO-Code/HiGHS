@@ -4209,8 +4209,10 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
   // Force PDLP to be used with an iteration limit
   if (presolved_lp_info.pdlp_iteration_count > 0) {
     // PDLP was used, so allow 10% of the iterations to clean up
+    HighsInt ten_percent_pdlp_iteration_count =
+        presolved_lp_info.pdlp_iteration_count / 10;
     pdlp_cleanup_iteration_limit =
-        std::max(10000, presolved_lp_info.pdlp_iteration_count / 10);
+        std::max(10000, ten_percent_pdlp_iteration_count);
   } else {
     // IPX without crossover was used, so can only guess what PDLP iteration
     // limit to use
