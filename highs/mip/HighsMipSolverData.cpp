@@ -1813,7 +1813,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
   } while (true);
 }
 
-void clockOff(HighsMipAnalysis& analysis) {
+static void clockOff(HighsMipAnalysis& analysis) {
   if (!analysis.analyse_mip_time) return;
   // Make sure that exactly one of the following clocks is running
   const int clock0_running =
