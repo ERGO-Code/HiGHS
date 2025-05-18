@@ -4140,23 +4140,45 @@ HighsStatus Highs::multiobjectiveSolve() {
                                              original_lp_num_row);
 }
 
-bool Highs::tryPdlpCleanup(double& pdlp_time_limit,
-			    const double& presolved_lp_time,
-			    const HighsInfo& presolved_lp_info) {
+bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
+			   const HighsInfo& presolved_lp_info) const {
   // Primal/dual infeasibilities/residuals can be magnified in
   // postsolve after PDLP, and IPX without crossover can fail,
   // both leading to model_status_ == HighsModelStatus::kUnknown.
   //
   // If the primal/dual infeasibilities/residuals are too large, then it's not worth it, so measure this
   //
-  // Force PDLP to be used with a time limit
-  const double time_limit = options_.time_limit;
-  const double pdlp_min_time_limit = 1000.0;
-  pdlp_time_limit =
-    std::max(pdlp_min_time_limit, 10 * presolved_lp_time);
-  if (options_.time_limit < kHighsInf) {
-    double time_remaining = time_limit - timer_.read();
-    pdlp_time_limit = std::min(0.1 * time_remaining, pdlp_time_limit);
+  const double tolerance_margin = 1e2;
+  bool no_cleanup = false;
+  double max_relative_violation = 0;
+  // Lambda for updating no_cleanup and max_relative_violation
+  auto noCleanup = [&](const std::string& kkt_name, const double kkt_error, const double kkt_tolerance) {
+    double use_kkt_tolerance = this->options_.kkt_tolerance != kDefaultKktTolerance ? this->options_.kkt_tolerance : kkt_tolerance;
+    double relative_violation = kkt_error / use_kkt_tolerance;
+    if (relative_violation > tolerance_margin) printf("KKT measure (%11.4g, %11.4g) gives relative violation of %11.4g for %s\n",
+						      kkt_error, use_kkt_tolerance, relative_violation, kkt_name.c_str());
+    max_relative_violation = std::max(relative_violation, max_relative_violation);
+    no_cleanup = max_relative_violation > tolerance_margin;
+  };
+  noCleanup("Max relative primal infeasibility", this->info_.max_relative_primal_infeasibility, this->options_.primal_feasibility_tolerance);
+  noCleanup("Max relative dual infeasibility", this->info_.max_relative_dual_infeasibility, this->options_.dual_feasibility_tolerance);
+  noCleanup("Max relative primal residual error", this->info_.max_relative_primal_residual_error, this->options_.primal_residual_tolerance);
+  noCleanup("Max relative dual residual error", this->info_.max_relative_dual_residual_error, this->options_.dual_residual_tolerance);
+  noCleanup("Primal-dual objective error", this->info_.primal_dual_objective_error, this->options_.complementarity_tolerance);
+  if (no_cleanup) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+		 "No PDLP cleanup due to KKT errors exceeding tolerances by a max factor = %g > %g = allowed margin\n",
+		 max_relative_violation, tolerance_margin);
+    return false;
+  }
+  //
+  // Force PDLP to be used with an iteration limit
+  if (presolved_lp_info.pdlp_iteration_count > 0) {
+    // PDLP was used, so allow 10% of the iterations to clean up
+    pdlp_cleanup_iteration_limit = std::max(10000, presolved_lp_info.pdlp_iteration_count / 10);
+  } else {
+    // IPX without crossover was used, so can only guess what PDLP iteration limit to use
+    pdlp_cleanup_iteration_limit = 1000;
   }
   return true;
 }
