@@ -75,8 +75,11 @@ int main(int argc, char** argv) {
   // call this first so that printHighsVersionCopyright uses reporting
   // settings defined in any options file.
   highs.passOptions(loaded_options);
-  //  highs.writeOptions("Options.md");
   highs.writeOptions("", true);
+
+  // Lines to write out documentation of HighsOptions and HighsInfo
+  // highs.writeOptions("Options.md");
+  // highs.writeInfo("Info.md");
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(cmd_options.model_file);
@@ -106,8 +109,6 @@ int main(int argc, char** argv) {
   // Solve the model
   HighsStatus run_status = highs.run();
   if (run_status == HighsStatus::kError) return int(run_status);
-
-  // highs.writeInfo("Info.md");
 
   // Shut down task executor for explicit release of memory.
   // Valgrind still reachable otherwise.

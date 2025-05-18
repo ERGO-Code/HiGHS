@@ -36,7 +36,9 @@ Scaling the tolerance in forcing row reduction to avoid use of rows with small c
 
 Fixed bug when calculating a coefficient in one of the cuts in `separateImpliedBounds` in `highs/mip/HighsImplications.cpp`
 
-Added `CSECTION` to the exceptions for keywords that are followed by text, and thus cannot be used as names of columns, RHS, ranges, bounds etc,
+Added `CSECTION` to the exceptions for keywords that are followed by text, and thus cannot be used as names of columns, RHS, ranges, bounds etc.
+
+Introduced the following KKT error measures to `HighsInfo`: `num_relative_primal_infeasibilities`; `max_relative_primal_infeasibility`; `num_relative_dual_infeasibilities`; `max_relative_dual_infeasibility`; `num_primal_residual_errors`; `max_primal_residual_error`; `num_dual_residual_errors`; `max_dual_residual_error`; `num_relative_primal_residual_errors`; `max_relative_primal_residual_error`; `num_relative_dual_residual_errors`; `max_relative_dual_residual_error`; `num_complementarity_violations`; `max_complementarity_violation`; `primal_dual_objective_error.` The relative values are used to assess whether a solution deemed to be optimal by the first order LP solver `cuPDLP-C` or interior point solver `IPX` (without crossover) is truly acceptable. They also enable users to determine whether a solution corresponding to `HighsModelStatus::kUnknown` is acceptable to them as optimal. Also introduced options `complementarity_tolerance` used to assess whether the (relative) primal-dual objective error is acceptable, and `kkt_tolerance` which, if set to a value other than `kDefaultKktTolerance = 1e-7` is used as the tolerance for all the KKT error measures. The HiGHS documentation has been updated to reflect the new options and `HighsInfo` data, and logging messages indicate when KKT error measures are not satisfied, despite the solver considering the LP solution to be optimal.
 
 
 

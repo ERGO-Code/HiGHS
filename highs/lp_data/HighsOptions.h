@@ -726,9 +726,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &large_matrix_value, 1e0, 1e15, kHighsInf);
     records.push_back(record_double);
 
-    record_double = new OptionRecordDouble("kkt_tolerance", "KKT tolerance",
-                                           advanced, &kkt_tolerance, 1e-10,
-                                           kDefaultKktTolerance, kHighsInf);
+    record_double = new OptionRecordDouble(
+        "kkt_tolerance",
+        "If not set to 1e-7, this KKT tolerance is used for all feasibility "
+        "and optimality measures",
+        advanced, &kkt_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -754,8 +756,9 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "complementarity_tolerance", "Complementarity tolerance", advanced,
-        &complementarity_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        "complementarity_tolerance", "Primal-dual objective error tolerance",
+        advanced, &complementarity_tolerance, 1e-10, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
