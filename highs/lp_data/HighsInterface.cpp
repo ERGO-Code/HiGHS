@@ -4212,7 +4212,7 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
     HighsInt ten_percent_pdlp_iteration_count =
         presolved_lp_info.pdlp_iteration_count / 10;
     pdlp_cleanup_iteration_limit =
-        std::max(10000, ten_percent_pdlp_iteration_count);
+        std::max(HighsInt(10000), ten_percent_pdlp_iteration_count);
   } else {
     // IPX without crossover was used, so can only guess what PDLP iteration
     // limit to use
