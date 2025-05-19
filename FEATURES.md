@@ -22,5 +22,5 @@ Corrected docstrings for `Highs_getReducedRow`, motivated by [#2312](https://git
 
 LP file reader no longer fails when there is no objective section. Fix is [#2316](https://github.com/ERGO-Code/HiGHS/pull/2316)), but this exposes code quality issue [#2318](https://github.com/ERGO-Code/HiGHS/issues/2318))
 
-
+Added a max scale factor (+1024) when scaling up coefficients in `preprocessBaseInequality` and `postprocessCut`. Fix is [#2337](https://github.com/ERGO-Code/HiGHS/pull/2337).
 
