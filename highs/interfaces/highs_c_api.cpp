@@ -1493,6 +1493,34 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
   return nullptr;
 }
 
+HighsInt Highs_setCallbackSolution(HighsCallbackDataIn* data_in,
+                              HighsInt num_entries, const double* value) {
+  if (data_in != nullptr && data_in->cbdata != nullptr) {
+    HighsCallbackInput* obj = static_cast<HighsCallbackInput*>(data_in->cbdata);
+    return static_cast<int>(obj->setSolution(num_entries, value));
+  } else
+    return static_cast<int>(HighsStatus::kError);
+}
+
+HighsInt Highs_setCallbackSparseSolution(HighsCallbackDataIn* data_in,
+                                     HighsInt num_entries,
+                                     const HighsInt* index,
+                                     const double* value) {
+  if (data_in != nullptr && data_in->cbdata != nullptr) {
+    HighsCallbackInput* obj = static_cast<HighsCallbackInput*>(data_in->cbdata);
+    return static_cast<int>(obj->setSolution(num_entries, index, value));
+  } else
+    return static_cast<int>(HighsStatus::kError);
+}
+
+HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in) {
+  if (data_in != nullptr && data_in->cbdata != nullptr) {
+    HighsCallbackInput* obj = static_cast<HighsCallbackInput*>(data_in->cbdata);
+    return static_cast<int>(obj->repairSolution());
+  } else
+    return static_cast<int>(HighsStatus::kError);
+}
+
 // *********************
 // * Deprecated methods*
 // *********************

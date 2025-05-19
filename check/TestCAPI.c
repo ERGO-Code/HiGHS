@@ -126,7 +126,7 @@ static void userCallback(const int callback_type, const char* message,
       printf("userCallback(%11.4g): improving solution with objective = %g\n",
              local_callback_data, objective_function_value);
     // Now test all more simply
-    checkGetCallbackDataOutInt(data_out, kHighsCallbackDataOutLogTypeName, -1);
+    checkGetCallbackDataOutInt(data_out, kHighsCallbackDataOutLogTypeName, 1);
     checkGetCallbackDataOutDouble(
         data_out, kHighsCallbackDataOutRunningTimeName, data_out->running_time);
     checkGetCallbackDataOutHighsInt(
@@ -1870,9 +1870,9 @@ void testMultiObjective() {
   double a_value[6] = {3, 1, 1, 1, 1, 2};
 
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
-  HighsInt return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense,
-					offset, col_cost, col_lower, col_upper,
-					row_lower, row_upper, a_start, a_index, a_value);
+  HighsInt return_status = Highs_passLp(
+      highs, num_col, num_row, num_nz, a_format, sense, offset, col_cost,
+      col_lower, col_upper, row_lower, row_upper, a_start, a_index, a_value);
   assert(return_status == kHighsStatusOk);
 
   return_status = Highs_clearLinearObjectives(highs);
@@ -1884,15 +1884,19 @@ void testMultiObjective() {
   double abs_tolerance = 0;
   double rel_tolerance = 0;
   HighsInt priority = 10;
-  return_status = Highs_addLinearObjective(highs, weight, linear_objective_offset, coefficients, abs_tolerance, rel_tolerance, priority);
+  return_status = Highs_addLinearObjective(
+      highs, weight, linear_objective_offset, coefficients, abs_tolerance,
+      rel_tolerance, priority);
   assert(return_status == kHighsStatusOk);
-  
+
   weight = 1e-4;
   linear_objective_offset = 0;
   coefficients[0] = 1;
   coefficients[1] = 0;
   priority = 0;
-  return_status = Highs_addLinearObjective(highs, weight, linear_objective_offset, coefficients, abs_tolerance, rel_tolerance, priority);
+  return_status = Highs_addLinearObjective(
+      highs, weight, linear_objective_offset, coefficients, abs_tolerance,
+      rel_tolerance, priority);
   assert(return_status == kHighsStatusOk);
 
   return_status = Highs_run(highs);
@@ -1902,8 +1906,7 @@ void testMultiObjective() {
 
   Highs_writeSolutionPretty(highs, "");
   double* col_value = (double*)malloc(sizeof(double) * num_col);
-  return_status =
-    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  return_status = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
   assertDoubleValuesEqual("col_value[0]", col_value[0], 2);
   assertDoubleValuesEqual("col_value[1]", col_value[1], 6);
 
@@ -1916,14 +1919,15 @@ void testMultiObjective() {
   double abs_tolerance2[2] = {0, -1};
   double rel_tolerance2[2] = {0, -1};
   HighsInt priority2[2] = {10, 0};
-  return_status = Highs_passLinearObjectives(highs, 2, weight2, linear_objective_offset2, coefficients2, abs_tolerance2, rel_tolerance2, priority2);
+  return_status = Highs_passLinearObjectives(
+      highs, 2, weight2, linear_objective_offset2, coefficients2,
+      abs_tolerance2, rel_tolerance2, priority2);
   return_status = Highs_run(highs);
   assert(return_status == kHighsStatusOk);
   model_status = Highs_getModelStatus(highs);
   assert(model_status == kHighsModelStatusOptimal);
   Highs_writeSolutionPretty(highs, "");
-  return_status =
-    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  return_status = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
   assertDoubleValuesEqual("col_value[0]", col_value[0], 2);
   assertDoubleValuesEqual("col_value[1]", col_value[1], 6);
 
@@ -1931,28 +1935,30 @@ void testMultiObjective() {
   coefficients2[0] = 1.0001;
   abs_tolerance2[0] = 1e-5;
   rel_tolerance2[0] = 0.05;
-  return_status = Highs_passLinearObjectives(highs, 2, weight2, linear_objective_offset2, coefficients2, abs_tolerance2, rel_tolerance2, priority2);
+  return_status = Highs_passLinearObjectives(
+      highs, 2, weight2, linear_objective_offset2, coefficients2,
+      abs_tolerance2, rel_tolerance2, priority2);
   return_status = Highs_run(highs);
   assert(return_status == kHighsStatusOk);
   model_status = Highs_getModelStatus(highs);
   assert(model_status == kHighsModelStatusOptimal);
   Highs_writeSolutionPretty(highs, "");
-  return_status =
-    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  return_status = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
   assertDoubleValuesEqual("col_value[0]", col_value[0], 4.9);
   assertDoubleValuesEqual("col_value[1]", col_value[1], 3.1);
 
   if (dev_run) printf("\n***************\nLexicographic 2\n***************\n");
   abs_tolerance2[0] = -1;
 
-  return_status = Highs_passLinearObjectives(highs, 2, weight2, linear_objective_offset2, coefficients2, abs_tolerance2, rel_tolerance2, priority2);
+  return_status = Highs_passLinearObjectives(
+      highs, 2, weight2, linear_objective_offset2, coefficients2,
+      abs_tolerance2, rel_tolerance2, priority2);
   return_status = Highs_run(highs);
   assert(return_status == kHighsStatusOk);
   model_status = Highs_getModelStatus(highs);
   assert(model_status == kHighsModelStatusOptimal);
   Highs_writeSolutionPretty(highs, "");
-  return_status =
-    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  return_status = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
   assertDoubleValuesEqual("col_value[0]", col_value[0], 1.30069);
   assertDoubleValuesEqual("col_value[1]", col_value[1], 6.34966);
 
@@ -1961,82 +1967,89 @@ void testMultiObjective() {
 }
 
 void testQpIndefiniteFailure() {
-    void* highs = Highs_create();
-    Highs_setBoolOptionValue(highs, "output_flag", dev_run);
-    HighsInt ret;
-    const double inf = Highs_getInfinity(highs);
-    ret = Highs_addCol(highs, 0.0, 1.0, inf, 0, NULL, NULL);
-    assert(ret == 0);
-    ret = Highs_addCol(highs, 0.0, 1.0, 1.0, 0, NULL, NULL);
-    HighsInt start[2] = {0, 1};
-    HighsInt index[1] = {1};
-    double value[1] = {1.0};
-    ret = Highs_passHessian(highs, 2, 1, kHighsHessianFormatTriangular, start, index, value);
-    assert(ret == 0);
-    HighsInt run_status = Highs_run(highs);
-    HighsInt model_status = Highs_getModelStatus(highs);
-    assert(run_status == kHighsStatusError);
-    assert(model_status == kHighsModelStatusSolveError);
-    Highs_destroy(highs);
+  void* highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  HighsInt ret;
+  const double inf = Highs_getInfinity(highs);
+  ret = Highs_addCol(highs, 0.0, 1.0, inf, 0, NULL, NULL);
+  assert(ret == 0);
+  ret = Highs_addCol(highs, 0.0, 1.0, 1.0, 0, NULL, NULL);
+  HighsInt start[2] = {0, 1};
+  HighsInt index[1] = {1};
+  double value[1] = {1.0};
+  ret = Highs_passHessian(highs, 2, 1, kHighsHessianFormatTriangular, start,
+                          index, value);
+  assert(ret == 0);
+  HighsInt run_status = Highs_run(highs);
+  HighsInt model_status = Highs_getModelStatus(highs);
+  assert(run_status == kHighsStatusError);
+  assert(model_status == kHighsModelStatusSolveError);
+  Highs_destroy(highs);
 }
 
 void testDualRayTwice() {
-    void* highs = Highs_create();
-    Highs_setBoolOptionValue(highs, "output_flag", dev_run);
-    int ret;
-    double INF = Highs_getInfinity(highs);
-    ret = Highs_changeObjectiveOffset(highs, 0.0);
-    assert(ret == 0);
-    ret = Highs_setStringOptionValue(highs, "presolve", "off");
-    assert(ret == 0);
-    ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
-    assert(ret == 0);
-    ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
-    assert(ret == 0);
-    ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
-    assert(ret == 0);
-    ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
-    assert(ret == 0);
-    HighsInt index[2] = {2, 3};
-    double value[2] = {1.0, -1.0};
-    ret = Highs_addRow(highs, 0.0, 0.0, 2, index, value);
-    assert(ret == 0);
-    index[0] = 2;    index[1] = 3;
-    value[0] = 1.0;  value[1] = 1.0;
-    ret = Highs_addRow(highs, 1.0, INF, 2, index, value);
-    assert(ret == 0);
-    index[0] = 0;    index[1] = 2;
-    value[0] = -2.0; value[1] = 1.0;
-    ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
-    assert(ret == 0);
-    index[0] = 1;    index[1] = 3;
-    value[0] = -3.0; value[1] = 1.0;
-    ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
-    assert(ret == 0);
-    ret = Highs_run(highs);
-    assert(ret == 0);
-    HighsInt has_dual_ray = 0;
-    double dual_ray_value[4] = {0.0, 0.0, 0.0, 0.0};
-    ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
-    assert(ret == 0);
-    assertIntValuesEqual("has_dual_ray", has_dual_ray, 1);
-    assertDoubleValuesEqual("dual_ray_value[0]", dual_ray_value[0], 0.0);
-    assertDoubleValuesEqual("dual_ray_value[1]", dual_ray_value[1], 1.0);
-    assertDoubleValuesEqual("dual_ray_value[2]", dual_ray_value[2], -1.0);
-    assertDoubleValuesEqual("dual_ray_value[3]", dual_ray_value[3], -1.0);
-    ret = Highs_changeColBounds(highs, 1, 1.0, 1.0);
-    assert(ret == 0);
-    ret = Highs_run(highs);
-    assert(ret == 0);
-    ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
-    assert(ret == 0);
-    assertIntValuesEqual("has_dual_ray", has_dual_ray, 1);
-    assertDoubleValuesEqual("dual_ray_value[0]", dual_ray_value[0], 1.0);
-    assertDoubleValuesEqual("dual_ray_value[1]", dual_ray_value[1], 1.0);
-    assertDoubleValuesEqual("dual_ray_value[2]", dual_ray_value[2], -2.0);
-    assertDoubleValuesEqual("dual_ray_value[3]", dual_ray_value[3], 0.0);
-    Highs_destroy(highs);
-    return;
+  void* highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  int ret;
+  double INF = Highs_getInfinity(highs);
+  ret = Highs_changeObjectiveOffset(highs, 0.0);
+  assert(ret == 0);
+  ret = Highs_setStringOptionValue(highs, "presolve", "off");
+  assert(ret == 0);
+  ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
+  assert(ret == 0);
+  ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
+  assert(ret == 0);
+  ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
+  assert(ret == 0);
+  ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
+  assert(ret == 0);
+  HighsInt index[2] = {2, 3};
+  double value[2] = {1.0, -1.0};
+  ret = Highs_addRow(highs, 0.0, 0.0, 2, index, value);
+  assert(ret == 0);
+  index[0] = 2;
+  index[1] = 3;
+  value[0] = 1.0;
+  value[1] = 1.0;
+  ret = Highs_addRow(highs, 1.0, INF, 2, index, value);
+  assert(ret == 0);
+  index[0] = 0;
+  index[1] = 2;
+  value[0] = -2.0;
+  value[1] = 1.0;
+  ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
+  assert(ret == 0);
+  index[0] = 1;
+  index[1] = 3;
+  value[0] = -3.0;
+  value[1] = 1.0;
+  ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
+  assert(ret == 0);
+  ret = Highs_run(highs);
+  assert(ret == 0);
+  HighsInt has_dual_ray = 0;
+  double dual_ray_value[4] = {0.0, 0.0, 0.0, 0.0};
+  ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
+  assert(ret == 0);
+  assertIntValuesEqual("has_dual_ray", has_dual_ray, 1);
+  assertDoubleValuesEqual("dual_ray_value[0]", dual_ray_value[0], 0.0);
+  assertDoubleValuesEqual("dual_ray_value[1]", dual_ray_value[1], 1.0);
+  assertDoubleValuesEqual("dual_ray_value[2]", dual_ray_value[2], -1.0);
+  assertDoubleValuesEqual("dual_ray_value[3]", dual_ray_value[3], -1.0);
+  ret = Highs_changeColBounds(highs, 1, 1.0, 1.0);
+  assert(ret == 0);
+  ret = Highs_run(highs);
+  assert(ret == 0);
+  ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
+  assert(ret == 0);
+  assertIntValuesEqual("has_dual_ray", has_dual_ray, 1);
+  assertDoubleValuesEqual("dual_ray_value[0]", dual_ray_value[0], 1.0);
+  assertDoubleValuesEqual("dual_ray_value[1]", dual_ray_value[1], 1.0);
+  assertDoubleValuesEqual("dual_ray_value[2]", dual_ray_value[2], -2.0);
+  assertDoubleValuesEqual("dual_ray_value[3]", dual_ray_value[3], 0.0);
+  Highs_destroy(highs);
+  return;
 }
 
 /*

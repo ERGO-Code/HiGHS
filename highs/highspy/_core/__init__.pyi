@@ -43,6 +43,7 @@ __all__ = [
     "kBasisValidityValid",
     "kHighsIInf",
     "kHighsInf",
+    "kHighsUndefined",
     "kSolutionStatusFeasible",
     "kSolutionStatusInfeasible",
     "kSolutionStatusNone",
@@ -1049,6 +1050,7 @@ kBasisValidityInvalid: BasisValidity
 kBasisValidityValid: BasisValidity
 kHighsIInf: int
 kHighsInf: float
+kHighsUndefined: float
 kSolutionStatusFeasible: SolutionStatus
 kSolutionStatusInfeasible: SolutionStatus
 kSolutionStatusNone: SolutionStatus
