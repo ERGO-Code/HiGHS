@@ -24,6 +24,8 @@ Corrected docstrings for `Highs_getReducedRow`, motivated by [#2312](https://git
 
 LP file reader no longer fails when there is no objective section. Fix is [#2316](https://github.com/ERGO-Code/HiGHS/pull/2316), but this exposes code quality issue [#2318](https://github.com/ERGO-Code/HiGHS/issues/2318)
 
+Added a max scale factor (+1024) when scaling up coefficients in `preprocessBaseInequality` and `postprocessCut`. Fix is [#2337](https://github.com/ERGO-Code/HiGHS/pull/2337)
+
 Corrected the bounds used in when strengthening coefficients in `HPresolve::rowPresolve`, fixing [#1517](https://github.com/ERGO-Code/HiGHS/issues/1517)
 
 Fixed numerical error in `highs/mip/HighsCliqueTable.cpp`, closing [#2320](https://github.com/ERGO-Code/HiGHS/issues/2320)
@@ -32,7 +34,7 @@ Fixed bug in `highs/mip/HighsFeasibilityJump.cpp`, closing [#2331](https://githu
 
 Tightened CMIR cuts, leading to small performance gain,  closing [#2333](https://github.com/ERGO-Code/HiGHS/issues/2333)
 
-Scaling the tolerance in forcing row reduction to avoid use of rows with small coefficients and bounds,  closing [#2290](https://github.com/ERGO-Code/HiGHS/issues/2333)
+Scaling the tolerance in forcing row reduction to avoid use of rows with small coefficients and bounds,  closing [#2290](https://github.com/ERGO-Code/HiGHS/issues/2290)
 
 Fixed bug when calculating a coefficient in one of the cuts in `separateImpliedBounds` in `highs/mip/HighsImplications.cpp`
 
@@ -45,6 +47,4 @@ Introduced the following KKT error measures to `HighsInfo`: `num_relative_primal
 
 
 
-
-Added a max scale factor (+1024) when scaling up coefficients in `preprocessBaseInequality` and `postprocessCut`. Fix is [#2337](https://github.com/ERGO-Code/HiGHS/pull/2337).
 
