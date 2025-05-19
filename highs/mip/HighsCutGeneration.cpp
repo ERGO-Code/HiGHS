@@ -736,6 +736,25 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   return true;
 }
 
+double HighsCutGeneration::scale(double val) {
+  int expshift = 0;
+  std::frexp(val, &expshift);
+  expshift = -expshift;
+
+  // Don't scale the coefficients by more than +1024 (violations can increase)
+  expshift = std::min(10, expshift);
+
+  // Scale rhs
+  rhs = ldexp(rhs, expshift);
+
+  // Scale row
+  for (HighsInt i = 0; i != rowlen; ++i)
+    vals[i] = std::ldexp(vals[i], expshift);
+
+  // Return scaling factor
+  return std::ldexp(1.0, expshift);
+}
+
 bool HighsCutGeneration::postprocessCut() {
   // right hand sides slightly below zero are likely due to numerical errors and
   // can cause numerical troubles with scaling, so set them to zero
@@ -799,6 +818,8 @@ bool HighsCutGeneration::postprocessCut() {
       vals[i] = vals[rowlen];
     }
   }
+
+  if (rowlen == 0) return false;
 
   if (integralSupport) {
     // integral support -> determine scale to make all coefficients integral
@@ -865,25 +886,12 @@ bool HighsCutGeneration::postprocessCut() {
       for (HighsInt i = 0; i != rowlen; ++i)
         minAbsValue = std::min(std::abs(vals[i]), minAbsValue);
 
-      int expshift;
-      std::frexp(minAbsValue - epsilon, &expshift);
-      expshift = -expshift;
-
-      rhs = std::ldexp((double)rhs, expshift);
-
-      for (HighsInt i = 0; i != rowlen; ++i)
-        vals[i] = std::ldexp(vals[i], expshift);
+      scale(minAbsValue - epsilon);
     }
   } else {
     // the support is not integral, scale cut to have the largest coefficient
     // around 1.0
-    int expshift;
-    std::frexp(maxAbsValue - epsilon, &expshift);
-    expshift = -expshift;
-    rhs = std::ldexp((double)rhs, expshift);
-
-    for (HighsInt i = 0; i != rowlen; ++i)
-      vals[i] = std::ldexp(vals[i], expshift);
+    scale(maxAbsValue - epsilon);
   }
 
   return true;
@@ -911,12 +919,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   for (HighsInt i = 0; i < rowlen; ++i)
     maxAbsVal = std::max(std::abs(vals[i]), maxAbsVal);
 
-  int expshift = 0;
-  std::frexp(maxAbsVal, &expshift);
-  expshift = -expshift;
-  initialScale = std::ldexp(1.0, expshift);
-  rhs *= initialScale;
-  for (HighsInt i = 0; i < rowlen; ++i) vals[i] = std::ldexp(vals[i], expshift);
+  initialScale = scale(maxAbsVal);
 
   isintegral.resize(rowlen);
   for (HighsInt i = 0; i != rowlen; ++i) {
