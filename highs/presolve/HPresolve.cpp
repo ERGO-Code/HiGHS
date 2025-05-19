@@ -3842,9 +3842,19 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   //        baseiRUpper);
 
   auto checkForcingRow = [&](HighsInt row, HighsInt direction, double rowSide,
+                             double impliedRowBound, double minAbsCoef,
                              HighsPostsolveStack::RowType rowType) {
-    // store row
-    storeRow(row);
+    // 1. direction =  1 (>=): forcing row if upper bound on constraint activity
+    //                         is equal to row's lower bound
+    // 2. direction = -1 (<=): forcing row if lower bound on constraint activity
+    //                         is equal to row's upper bound
+    // scale tolerance (equivalent to scaling row to have minimum absolute
+    // coefficient of 1)
+    if (direction * impliedRowBound >
+        direction * rowSide + primal_feastol * std::min(1.0, minAbsCoef))
+      return Result::kOk;
+
+    // get stored row
     auto rowVector = getStoredRow();
 
     HighsInt nfixings = 0;
@@ -3920,29 +3930,25 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
   if (analysis_.allow_rule_[kPresolveRuleForcingRow]) {
     // Allow rule to consider forcing rows
-    if (impliedRowUpper <=  // check for forcing row on the row lower bound
-        model->row_lower_[row] + primal_feastol) {
-      // the row upper bound that is implied by the column bounds is equal to
-      // the row lower bound there for we can fix all columns at their bound
-      // as this is the only feasible assignment for this row and then find a
-      // suitable dual multiplier in postsolve. First we store the row on the
-      // postsolve stack (forcingRow() call) afterwards we store each column
-      // fixing on the postsolve stack. As the postsolve goes over the stack
-      // in reverse, it will first restore the column primal and dual values
-      // as the dual values are required to find the proper dual multiplier for
-      // the row and the column that we put in the basis.
-      HPRESOLVE_CHECKED_CALL(
-          checkForcingRow(row, HighsInt{1}, model->row_lower_[row],
-                          HighsPostsolveStack::RowType::kGeq));
-      if (rowDeleted[row]) return Result::kOk;
 
-    } else if (impliedRowLower >= model->row_upper_[row] - primal_feastol) {
-      // forcing row in the other direction
-      HPRESOLVE_CHECKED_CALL(
-          checkForcingRow(row, HighsInt{-1}, model->row_upper_[row],
-                          HighsPostsolveStack::RowType::kLeq));
-      if (rowDeleted[row]) return Result::kOk;
+    // store row and compute minimum absolute coefficient
+    storeRow(row);
+    double minAbsCoef = kHighsInf;
+    for (const HighsSliceNonzero& nonzero : getStoredRow()) {
+      minAbsCoef = std::min(minAbsCoef, std::abs(nonzero.value()));
     }
+
+    // >= inequality
+    HPRESOLVE_CHECKED_CALL(checkForcingRow(
+        row, HighsInt{1}, model->row_lower_[row], impliedRowUpper, minAbsCoef,
+        HighsPostsolveStack::RowType::kGeq));
+    if (rowDeleted[row]) return Result::kOk;
+
+    // <= inequality
+    HPRESOLVE_CHECKED_CALL(checkForcingRow(
+        row, HighsInt{-1}, model->row_upper_[row], impliedRowLower, minAbsCoef,
+        HighsPostsolveStack::RowType::kLeq));
+    if (rowDeleted[row]) return Result::kOk;
   }
 
   // implied bounds can only be computed when row bounds are available and
