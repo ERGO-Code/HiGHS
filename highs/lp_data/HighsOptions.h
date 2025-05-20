@@ -452,6 +452,7 @@ struct HighsOptionsStruct {
   std::string mip_improving_solution_file;
   bool mip_root_presolve_only;
   HighsInt mip_lifting_for_probing;
+  HighsInt mip_search_concurrency;
 
   // Logging callback identifiers
   HighsLogOptions log_options;
@@ -591,10 +592,11 @@ struct HighsOptionsStruct {
 #endif
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
-        // clang-format off
         mip_improving_solution_file(""),
         mip_root_presolve_only(false),
-        mip_lifting_for_probing(-1) {};
+        mip_lifting_for_probing(-1),
+        // clang-format off
+        mip_search_concurrency(0) {};
   // clang-format on
 };
 
@@ -1167,6 +1169,11 @@ class HighsOptions : public HighsOptionsStruct {
         "mip_min_logging_interval", "MIP minimum logging interval", advanced,
         &mip_min_logging_interval, 0, 5, kHighsInf);
     records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "mip_search_concurrency", "Concurrency to use in MIP search", advanced,
+        &mip_search_concurrency, 1, 2, kMipSearchConcurrencyLimit);
+    records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,

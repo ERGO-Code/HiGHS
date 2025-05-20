@@ -33,6 +33,7 @@ const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
 const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
+const HighsInt kMipSearchConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
 const double kExcessivelyLargeBoundValue = 1e10;
 const double kExcessivelyLargeCostValue = 1e10;
