@@ -347,6 +347,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
     ipm.setOptionValue("run_crossover", kHighsOffString);
+    //    ipm.setOptionValue("allow_pdlp_cleanup", false);
     ipm.setOptionValue("presolve", kHighsOffString);
     ipm.setOptionValue("output_flag", false);
     // ipm.setOptionValue("output_flag", !mipsolver.submip);
@@ -1093,8 +1094,14 @@ try_again:
     // tmpSolver.setOptionValue("simplex_scale_strategy", 0);
     // tmpSolver.setOptionValue("presolve", kHighsOffString);
     tmpSolver.setOptionValue("time_limit", time_available);
+    // Set primal feasiblity tolerance for LP solves according to
+    // mip_feasibility_tolerance. Interestingly, dual feasibility
+    // tolerance not set to smaller tolerance as in
+    // HighsLpRelaxationconstructor.
+    double mip_primal_feasibility_tolerance =
+        mipsolver.options_mip_->mip_feasibility_tolerance;
     tmpSolver.setOptionValue("primal_feasibility_tolerance",
-                             mipsolver.options_mip_->mip_feasibility_tolerance);
+                             mip_primal_feasibility_tolerance);
     // check if only root presolve is allowed
     if (mipsolver.options_mip_->mip_root_presolve_only)
       tmpSolver.setOptionValue("presolve", kHighsOffString);

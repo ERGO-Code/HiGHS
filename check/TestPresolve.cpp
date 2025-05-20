@@ -320,6 +320,7 @@ HighsStatus colSingDoubletonEquality() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -378,6 +379,7 @@ HighsStatus colSingDoubletonInequality() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -417,6 +419,7 @@ HighsStatus twoColSingDoubletonEquality() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -457,6 +460,7 @@ HighsStatus twoColSingDoubletonInequality() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -546,6 +550,7 @@ HighsStatus issue425() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 

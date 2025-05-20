@@ -415,6 +415,10 @@ cupdlp_retcode Init_Scaling(cupdlp_int log_level, CUPDLPscaling* scaling,
 
   scaling->dNormCost = twoNorm(cost, ncols);
   scaling->dNormRhs = twoNorm(rhs, nrows);
+  if (log_level)
+    cupdlp_printf("Using cost norm = %9.3g and RHS norm = %9.3g\n",
+                  scaling->dNormCost, scaling->dNormRhs);
+
 exit_cleanup:
   return retcode;
 }

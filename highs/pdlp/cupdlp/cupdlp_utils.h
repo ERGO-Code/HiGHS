@@ -106,9 +106,6 @@ cupdlp_retcode iterates_Alloc(CUPDLPiterates *iterates, cupdlp_int ncols,
 
 cupdlp_retcode stepsize_Alloc(CUPDLPstepsize *stepsize);
 
-cupdlp_retcode scaling_Alloc(CUPDLPscaling *scaling, CUPDLPproblem *problem,
-                             cupdlp_int ncols, cupdlp_int nrows);
-
 cupdlp_retcode timers_Alloc(CUPDLPtimers *timers);
 
 void PDHG_Init_Data(CUPDLPwork *w);

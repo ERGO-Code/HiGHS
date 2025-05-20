@@ -80,7 +80,8 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 
     REQUIRE(highs.setOptionValue("simplex_strategy", kSimplexStrategyDual) ==
             HighsStatus::kOk);
-    highs.setOptionValue("log_dev_level", kHighsLogDevLevelDetailed);
+    if (dev_run)
+      highs.setOptionValue("log_dev_level", kHighsLogDevLevelDetailed);
     REQUIRE(highs.run() == HighsStatus::kOk);
   } else {
     //    ekk_distillation(highs);

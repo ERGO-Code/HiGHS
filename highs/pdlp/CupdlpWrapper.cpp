@@ -11,7 +11,7 @@
  */
 #include "pdlp/CupdlpWrapper.h"
 
-void getUserParamsFromOptions(const HighsOptions& options,
+void getUserParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
                               cupdlp_bool* ifChangeIntParam,
                               cupdlp_int* intParam,
                               cupdlp_bool* ifChangeFloatParam,
@@ -32,10 +32,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
                           HighsSolution& highs_solution,
                           HighsModelStatus& model_status, HighsInfo& highs_info,
                           HighsCallback& callback) {
-  // Indicate that there is no valid primal solution, dual solution or basis
-  highs_basis.valid = false;
-  highs_solution.value_valid = false;
-  highs_solution.dual_valid = false;
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
@@ -97,17 +93,18 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
 
   // Transfer from options
-  getUserParamsFromOptions(options, ifChangeIntParam, intParam,
+  getUserParamsFromOptions(options, timer, ifChangeIntParam, intParam,
                            ifChangeFloatParam, floatParam);
 
   // std::vector<int> constraint_type(lp.num_row_);
 
-  formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs, &csc_beg, &csc_idx,
-                    &csc_val, &rhs, &lower, &upper, &offset, &sense_origin,
-                    &nCols_origin, &constraint_new_idx, &constraint_type);
-
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
+
+  formulateLP_highs(local_log_level, lp, &cost, &nCols, &nRows, &nnz, &nEqs,
+                    &csc_beg, &csc_idx, &csc_val, &rhs, &lower, &upper, &offset,
+                    &sense_origin, &nCols_origin, &constraint_new_idx,
+                    &constraint_type);
 
   // H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
   Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
@@ -194,8 +191,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   highs_solution.row_value.resize(lp.num_row_);
   highs_solution.col_dual.resize(lp.num_col_);
   highs_solution.row_dual.resize(lp.num_row_);
-  int value_valid = 0;
-  int dual_valid = 0;
+  int value_valid = highs_solution.value_valid;
+  int dual_valid = highs_solution.dual_valid;
   int pdlp_model_status = 0;
   cupdlp_int pdlp_num_iter = 0;
 
@@ -209,83 +206,36 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   highs_info.pdlp_iteration_count = pdlp_num_iter;
 
   model_status = HighsModelStatus::kUnknown;
-  if (retcode != RETCODE_OK) return HighsStatus::kError;
-
   highs_solution.value_valid = value_valid;
   highs_solution.dual_valid = dual_valid;
+  highs_basis.valid = false;
 
-  if (pdlp_model_status == OPTIMAL) {
-    model_status = HighsModelStatus::kOptimal;
-  } else if (pdlp_model_status == INFEASIBLE) {
-    model_status = HighsModelStatus::kInfeasible;
-  } else if (pdlp_model_status == UNBOUNDED) {
-    model_status = HighsModelStatus::kUnbounded;
-  } else if (pdlp_model_status == INFEASIBLE_OR_UNBOUNDED) {
-    model_status = HighsModelStatus::kUnboundedOrInfeasible;
-  } else if (pdlp_model_status == TIMELIMIT_OR_ITERLIMIT) {
-    model_status = pdlp_num_iter >= intParam[N_ITER_LIM] - 1
-                       ? HighsModelStatus::kIterationLimit
-                       : HighsModelStatus::kTimeLimit;
-  } else if (pdlp_model_status == FEASIBLE) {
-    assert(111 == 666);
-    model_status = HighsModelStatus::kUnknown;
-  } else {
-    assert(111 == 777);
-  }
+  if (retcode == RETCODE_OK) {
+    if (pdlp_model_status == OPTIMAL) {
+      model_status = HighsModelStatus::kOptimal;
+    } else if (pdlp_model_status == INFEASIBLE) {
+      model_status = HighsModelStatus::kInfeasible;
+    } else if (pdlp_model_status == UNBOUNDED) {
+      model_status = HighsModelStatus::kUnbounded;
+    } else if (pdlp_model_status == INFEASIBLE_OR_UNBOUNDED) {
+      model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    } else if (pdlp_model_status == TIMELIMIT_OR_ITERLIMIT) {
+      model_status = pdlp_num_iter >= intParam[N_ITER_LIM] - 1
+                         ? HighsModelStatus::kIterationLimit
+                         : HighsModelStatus::kTimeLimit;
+    } else if (pdlp_model_status == FEASIBLE) {
+      assert(111 == 666);
+      model_status = HighsModelStatus::kUnknown;
+    } else {
+      assert(111 == 777);
+    }
 #if CUPDLP_DEBUG
-  analysePdlpSolution(options, lp, highs_solution);
+    analysePdlpSolution(options, lp, highs_solution);
 #endif
-
-  // free(cost);
-  // free(lower);
-  // free(upper);
-  // free(csc_beg);
-  // free(csc_idx);
-  // free(csc_val);
-  // free(rhs);
-  // free(constraint_new_idx);
-
-  // Scaling
-  // #ifdef CUPDLP_CPU
-
-  //   if (scaling->rowScale != nullptr) free(scaling->rowScale);
-  //   if (scaling->colScale != nullptr) free(scaling->colScale);
-  //   free(scaling);
-
-  // #else
-
-  // #endif
-
-  // #ifdef CUPDLP_CPU
-  // free(prob->cost);
-  // free(prob->lower);
-  // free(prob->upper);
-  // free(prob->rhs);
-
-  // free(prob->hasLower);
-  // free(prob->hasUpper);
-
-  // free(prob->data->csr_matrix->rowMatBeg);
-  // free(prob->data->csr_matrix->rowMatIdx);
-  // free(prob->data->csr_matrix->rowMatElem);
-  // free(prob->data->csr_matrix);
-
-  // free(prob->data->csc_matrix->colMatBeg);
-  // free(prob->data->csc_matrix->colMatIdx);
-  // free(prob->data->csc_matrix->colMatElem);
-  // free(prob->data->csc_matrix);
-
-  // free(prob->data);
-
-  // free(prob);
-
-  // free(csc_cpu->colMatBeg);
-  // free(csc_cpu->colMatIdx);
-  // free(csc_cpu->colMatElem);
-
-  // free(csc_cpu);
-  // #endif
-
+  } else {
+    // Failure return from LP_SolvePDHG
+    model_status = HighsModelStatus::kSolveError;
+  }
   // free problem
   if (scaling) {
     scaling_clear(scaling);
@@ -305,20 +255,21 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   csc_clear_host(csc_cpu);
   problem_clear(prob);
 #if !defined(CUPDLP_CPU)
-  if (check_cuda_call(cudaDeviceReset(), __FILE__, __LINE__) != cudaSuccess)
+  if (check_cuda_call(cudaDeviceReset(), __FILE__, __LINE__) != cudaSuccess) {
+    model_status = HighsModelStatus::kSolveError;
     return HighsStatus::kError;
     // CHECK_CUDA(cudaDeviceReset())
+  }
 #endif
-
-  return HighsStatus::kOk;
+  return retcode == RETCODE_OK ? HighsStatus::kOk : HighsStatus::kError;
 }
 
-int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
-                      int* nnz, int* nEqs, int** csc_beg, int** csc_idx,
-                      double** csc_val, double** rhs, double** lower,
-                      double** upper, double* offset, double* sense_origin,
-                      int* nCols_origin, int** constraint_new_idx,
-                      int** constraint_type) {
+int formulateLP_highs(const cupdlp_int local_log_level, const HighsLp& lp,
+                      double** cost, int* nCols, int* nRows, int* nnz,
+                      int* nEqs, int** csc_beg, int** csc_idx, double** csc_val,
+                      double** rhs, double** lower, double** upper,
+                      double* offset, double* sense_origin, int* nCols_origin,
+                      int** constraint_new_idx, int** constraint_type) {
   int retcode = 0;
 
   // problem size for malloc
@@ -675,7 +626,7 @@ void cupdlp_hasub(cupdlp_float* hasub, const cupdlp_float* ub,
 #endif
 }
 
-void getUserParamsFromOptions(const HighsOptions& options,
+void getUserParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
                               cupdlp_bool* ifChangeIntParam,
                               cupdlp_int* intParam,
                               cupdlp_bool* ifChangeFloatParam,
@@ -706,38 +657,26 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeFloatParam[D_GAP_TOL] = true;
   floatParam[D_GAP_TOL] = options.pdlp_d_gap_tol;
+  // Possibly over-write with uniform KKT tolerance
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    floatParam[D_PRIMAL_TOL] = options.kkt_tolerance;
+    floatParam[D_DUAL_TOL] = options.kkt_tolerance;
+    floatParam[D_GAP_TOL] = options.kkt_tolerance;
+  }
   //
+  // cuPDLP-C has its own timer, so set its time limit according to
+  // the time remaining with respect to the HiGHS time limit (if
+  // finite)
+  double time_limit = options.time_limit;
+  if (time_limit < kHighsInf) {
+    time_limit -= timer.read();
+    time_limit = std::max(0.0, time_limit);
+  }
   ifChangeFloatParam[D_TIME_LIM] = true;
   floatParam[D_TIME_LIM] = options.time_limit;
   //
   ifChangeIntParam[E_RESTART_METHOD] = true;
   intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
-  //
-
-  // for the moment only native termination is allowed with GPU
-#ifdef CUPDLP_CPU
-#ifdef CUPDLP_FORCE_NATIVE
-  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
-  if (!options.pdlp_native_termination) {
-    printf(
-        "Warning: CUPDLP_FORCE_NATIVE is on. Forcing "
-        "pdlp_native_termination=on.\n");
-  }
-#else
-  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
-  intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
-#endif
-#else
-  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
-
-  if (intParam[N_LOG_LEVEL]) {
-    if (!options.pdlp_native_termination) {
-      printf(
-          "GPU only supports pdlp_native_termination=on. Forcing "
-          "pdlp_native_termination=on.\n");
-    }
-  }
-#endif
 }
 
 void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,

@@ -378,7 +378,6 @@ void testUnboundedMpsLp(const std::string model,
                         const ObjSense sense = ObjSense::kMinimize) {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-
   if (dev_run) highs.setOptionValue("log_dev_level", 1);
 
   std::string model_file;
@@ -721,9 +720,6 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
           HighsStatus::kOk);
   std::string presolve_status = "off";
-  HighsModelStatus require_model_status =
-      allow_unbounded_or_infeasible ? HighsModelStatus::kUnboundedOrInfeasible
-                                    : HighsModelStatus::kUnbounded;
 
   for (HighsInt k = 0; k < num_pass; k++) {
     // Loop twice, without and with presolve
@@ -737,6 +733,10 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
       printf("Model status = %s\n",
              highs.modelStatusToString(highs.getModelStatus()).c_str());
 
+    HighsModelStatus require_model_status =
+        k == 0 || !allow_unbounded_or_infeasible
+            ? HighsModelStatus::kUnbounded
+            : HighsModelStatus::kUnboundedOrInfeasible;
     REQUIRE(highs.getModelStatus() == require_model_status);
     // Get the primal ray twice, to check that, second time, it's
     // copied from ekk_instance_.primal_ray_
@@ -749,7 +749,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
       // - not on first pass with allow_unbounded_or_infeasible true,
       // since presolve/simplex yield model status
       // HighsModelStatus::kUnboundedOrInfeasible
-      bool require_primal_ray = p == 1 || !allow_unbounded_or_infeasible;
+      bool require_primal_ray = p == 1;
       REQUIRE(has_primal_ray == require_primal_ray);
 
       // Get the primal ray

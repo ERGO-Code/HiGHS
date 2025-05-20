@@ -117,15 +117,19 @@ HighsDebugStatus debugHighsSolution(
       true;  // options.highs_debug_level >= kHighsDebugLevelCostly;
 
   vector<double> gradient;
-  if (hessian.dim_ > 0) {
+  const bool is_qp = hessian.dim_ > 0;
+  if (is_qp) {
     hessian.product(solution.col_value, gradient);
   } else {
     gradient.assign(lp.num_col_, 0);
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     gradient[iCol] += lp.col_cost_[iCol];
-  getKktFailures(options, lp, gradient, solution, basis, local_highs_info,
-                 primal_dual_errors, get_residuals);
+  getKktFailures(options, is_qp, lp, gradient, solution, local_highs_info,
+                 get_residuals);
+  getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
+  getPrimalDualGlpsolErrors(options, lp, gradient, solution,
+                            primal_dual_errors);
   HighsInt& num_primal_infeasibility =
       local_highs_info.num_primal_infeasibilities;
   HighsInt& num_dual_infeasibility = local_highs_info.num_dual_infeasibilities;
@@ -314,13 +318,13 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         primal_dual_errors.max_off_bound_nonbasic,
         primal_dual_errors.sum_off_bound_nonbasic);
   }
-  if (primal_dual_errors.num_primal_residual >= 0) {
-    if (primal_dual_errors.max_primal_residual.absolute_value >
+  if (primal_dual_errors.glpsol_num_primal_residual_errors >= 0) {
+    if (primal_dual_errors.glpsol_max_primal_residual.absolute_value >
         excessive_residual_error) {
       value_adjective = "Excessive";
       report_level = HighsLogType::kError;
       return_status = HighsDebugStatus::kError;
-    } else if (primal_dual_errors.max_primal_residual.absolute_value >
+    } else if (primal_dual_errors.glpsol_max_primal_residual.absolute_value >
                large_residual_error) {
       value_adjective = "Large";
       report_level = HighsLogType::kDetailed;
@@ -336,17 +340,18 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         "PrDuErrors : %-9s Primal residual:           num = %7" HIGHSINT_FORMAT
         "; "
         "max = %9.4g; sum = %9.4g\n",
-        value_adjective.c_str(), primal_dual_errors.num_primal_residual,
-        primal_dual_errors.max_primal_residual.absolute_value,
-        primal_dual_errors.sum_primal_residual);
+        value_adjective.c_str(),
+        primal_dual_errors.glpsol_num_primal_residual_errors,
+        primal_dual_errors.glpsol_max_primal_residual.absolute_value,
+        primal_dual_errors.glpsol_sum_primal_residual_errors);
   }
-  if (primal_dual_errors.num_dual_residual >= 0) {
-    if (primal_dual_errors.max_dual_residual.absolute_value >
+  if (primal_dual_errors.glpsol_num_dual_residual_errors >= 0) {
+    if (primal_dual_errors.glpsol_max_dual_residual.absolute_value >
         excessive_residual_error) {
       value_adjective = "Excessive";
       report_level = HighsLogType::kError;
       return_status = HighsDebugStatus::kError;
-    } else if (primal_dual_errors.max_dual_residual.absolute_value >
+    } else if (primal_dual_errors.glpsol_max_dual_residual.absolute_value >
                large_residual_error) {
       value_adjective = "Large";
       report_level = HighsLogType::kDetailed;
@@ -362,9 +367,10 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         "PrDuErrors : %-9s Dual residual:             num = %7" HIGHSINT_FORMAT
         "; "
         "max = %9.4g; sum = %9.4g\n",
-        value_adjective.c_str(), primal_dual_errors.num_dual_residual,
-        primal_dual_errors.max_dual_residual.absolute_value,
-        primal_dual_errors.sum_dual_residual);
+        value_adjective.c_str(),
+        primal_dual_errors.glpsol_num_dual_residual_errors,
+        primal_dual_errors.glpsol_max_dual_residual.absolute_value,
+        primal_dual_errors.glpsol_sum_dual_residual_errors);
   }
   return return_status;
 }

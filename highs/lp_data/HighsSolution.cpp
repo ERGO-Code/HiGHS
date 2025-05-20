@@ -21,6 +21,12 @@
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
 
+const uint8_t kHighsSolutionLo = -1;
+const uint8_t kHighsSolutionNo = 0;
+const uint8_t kHighsSolutionUp = 1;
+
+const bool printf_kkt = false;  // true;  //
+
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info) {
@@ -36,8 +42,12 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const bool get_residuals) {
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
-  getKktFailures(options, model.lp_, gradient, solution, basis, highs_info,
-                 primal_dual_errors, get_residuals);
+  const HighsLp& lp = model.lp_;
+  getKktFailures(options, model.isQp(), lp, gradient, solution, highs_info,
+                 get_residuals);
+  getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
+  getPrimalDualGlpsolErrors(options, lp, gradient, solution,
+                            primal_dual_errors);
 }
 
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
@@ -53,70 +63,87 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals) {
-  getKktFailures(options, lp, lp.col_cost_, solution, basis, highs_info,
-                 primal_dual_errors, get_residuals);
+  getKktFailures(options, false, lp, lp.col_cost_, solution, highs_info,
+                 get_residuals);
+  getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
+  getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
+                            primal_dual_errors);
 }
 
-void getKktFailures(const HighsOptions& options, const HighsLp& lp,
-                    const std::vector<double>& gradient,
-                    const HighsSolution& solution, const HighsBasis& basis,
-                    HighsInfo& highs_info,
-                    HighsPrimalDualErrors& primal_dual_errors,
+void getKktFailures(const HighsOptions& options, const bool is_qp,
+                    const HighsLp& lp, const std::vector<double>& gradient,
+                    const HighsSolution& solution, HighsInfo& highs_info,
                     const bool get_residuals) {
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  // highs_info are the values computed in this method.
+  double primal_residual_tolerance = options.primal_residual_tolerance;
+  double dual_residual_tolerance = options.dual_residual_tolerance;
+  double complementarity_tolerance = options.complementarity_tolerance;
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    primal_feasibility_tolerance = options.kkt_tolerance;
+    dual_feasibility_tolerance = options.kkt_tolerance;
+    primal_residual_tolerance = options.kkt_tolerance;
+    dual_residual_tolerance = options.kkt_tolerance;
+    complementarity_tolerance = options.kkt_tolerance;
+  }
+  // highs_info are the values computed in this method
 
   HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
-
-  HighsInt& max_absolute_primal_infeasibility_index =
-      primal_dual_errors.max_primal_infeasibility.absolute_index;
-  double& max_absolute_primal_infeasibility_value =
-      highs_info.max_primal_infeasibility;
-  HighsInt& max_relative_primal_infeasibility_index =
-      primal_dual_errors.max_primal_infeasibility.relative_index;
-  double& max_relative_primal_infeasibility_value =
-      primal_dual_errors.max_primal_infeasibility.relative_value;
-
+  double& max_primal_infeasibility = highs_info.max_primal_infeasibility;
   double& sum_primal_infeasibility = highs_info.sum_primal_infeasibilities;
 
   HighsInt& num_dual_infeasibility = highs_info.num_dual_infeasibilities;
-
-  HighsInt& max_dual_infeasibility_index =
-      primal_dual_errors.max_dual_infeasibility.absolute_index;
-  double& max_dual_infeasibility_value = highs_info.max_dual_infeasibility;
-
+  double& max_dual_infeasibility = highs_info.max_dual_infeasibility;
   double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
 
+  HighsInt& num_relative_primal_infeasibility =
+      highs_info.num_relative_primal_infeasibilities;
+  double& max_relative_primal_infeasibility =
+      highs_info.max_relative_primal_infeasibility;
+
+  HighsInt& num_relative_dual_infeasibility =
+      highs_info.num_relative_dual_infeasibilities;
+  double& max_relative_dual_infeasibility =
+      highs_info.max_relative_dual_infeasibility;
+
+  HighsInt& num_primal_residual_error = highs_info.num_primal_residual_errors;
+  double& max_primal_residual_error = highs_info.max_primal_residual_error;
+
+  HighsInt& num_dual_residual_error = highs_info.num_dual_residual_errors;
+  double& max_dual_residual_error = highs_info.max_dual_residual_error;
+
+  HighsInt& num_relative_primal_residual_error =
+      highs_info.num_relative_primal_residual_errors;
+  double& max_relative_primal_residual_error =
+      highs_info.max_relative_primal_residual_error;
+
+  HighsInt& num_relative_dual_residual_error =
+      highs_info.num_relative_dual_residual_errors;
+  double& max_relative_dual_residual_error =
+      highs_info.max_relative_dual_residual_error;
+
+  HighsInt& num_complementarity_violation =
+      highs_info.num_complementarity_violations;
   double& max_complementarity_violation =
       highs_info.max_complementarity_violation;
-  double& sum_complementarity_violations =
-      highs_info.sum_complementarity_violations;
 
-  num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
-  max_absolute_primal_infeasibility_value = kHighsIllegalInfeasibilityMeasure;
-  sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  primal_dual_errors.max_primal_infeasibility.invalidate();
-  highs_info.primal_solution_status = kSolutionStatusNone;
-
-  num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
-  max_dual_infeasibility_value = kHighsIllegalInfeasibilityMeasure;
-  sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-
-  primal_dual_errors.max_dual_infeasibility.invalidate();
-  highs_info.dual_solution_status = kSolutionStatusNone;
-
-  max_complementarity_violation = kHighsIllegalComplementarityViolation;
-  sum_complementarity_violations = kHighsIllegalComplementarityViolation;
+  double& primal_dual_objective_error = highs_info.primal_dual_objective_error;
 
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
-  const bool& have_basis = basis.valid;
   const bool have_integrality = (lp.integrality_.size() != 0);
+
+  // Primal/dual solution status on entry can be feasible or
+  // infeasible, because it refers to the previous problem solved, so
+  // can't check whether something meaningful is being changed
+  highs_info.primal_solution_status = kSolutionStatusNone;
+  highs_info.dual_solution_status = kSolutionStatusNone;
+
   // Check that there is no dual solution if there's no primal solution
   assert(have_primal_solution || !have_dual_solution);
-  // Check that there is no basis if there's no dual solution
-  assert(have_dual_solution || !have_basis);
+
+  // Invalidate all the KKT measures
+  highs_info.invalidateKkt();
 
   if (have_primal_solution) {
     // There's a primal solution, so check its size and initialise the
@@ -124,132 +151,584 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     assert((int)solution.col_value.size() >= lp.num_col_);
     assert((int)solution.row_value.size() >= lp.num_row_);
     num_primal_infeasibility = 0;
-    max_absolute_primal_infeasibility_value = 0;
+    max_primal_infeasibility = 0;
     sum_primal_infeasibility = 0;
-    primal_dual_errors.max_primal_infeasibility.reset();
+    num_relative_primal_infeasibility = 0;
+    max_relative_primal_infeasibility = 0;
+    if (get_residuals) {
+      num_primal_residual_error = 0;
+      max_primal_residual_error = 0;
+      num_relative_primal_residual_error = 0;
+      max_relative_primal_residual_error = 0;
+    }
+  }
+  if (have_dual_solution) {
+    // There's a dual solution, so check its size and initialise the
+    // infeasibility counts
+    assert((int)solution.col_dual.size() >= lp.num_col_);
+    assert((int)solution.row_dual.size() >= lp.num_row_);
+    num_dual_infeasibility = 0;
+    max_dual_infeasibility = 0;
+    sum_dual_infeasibility = 0;
+    num_relative_dual_infeasibility = 0;
+    max_relative_dual_infeasibility = 0;
+    if (get_residuals) {
+      num_dual_residual_error = 0;
+      max_dual_residual_error = 0;
+      num_relative_dual_residual_error = 0;
+      max_relative_dual_residual_error = 0;
+    }
+  }
+  // Without a primal solution, nothing can be done!
+  if (!have_primal_solution) return;
+
+  // Possibly compute Ax and A^Ty (to form A^Ty-c) as residual check
+  // for solution.row_value and -solution.col_dual
+  std::vector<double> primal_activity;
+  std::vector<double> dual_activity;
+  if (get_residuals)
+    lp.a_matrix_.productQuad(primal_activity, solution.col_value);
+  if (get_residuals && have_dual_solution)
+    lp.a_matrix_.productTransposeQuad(dual_activity, solution.row_dual);
+
+  double max_col_primal_infeasibility = 0;
+  double max_col_dual_infeasibility = 0;
+  double max_relative_col_primal_infeasibility = 0;
+  double max_relative_col_dual_infeasibility = 0;
+
+  double primal_infeasibility;
+  double relative_primal_infeasibility;
+  double dual_infeasibility;
+  double cost;
+  double lower;
+  double upper;
+  double value;
+  double dual = 0;
+  uint8_t at_status;
+  uint8_t mid_status;
+  HighsVarType integrality = HighsVarType::kContinuous;
+  HighsBasisStatus status;
+  // Compute the infinity norm of all near-active column and row
+  // bounds, since they contribute to the magnitude of the row values,
+  // and dividing their residual error by the norm gives a relative
+  // residual error: don't consider large inactive bounds, since they
+  // don't affect the model
+  //
+  // In IPM without crossover, the columns and rows with values close
+  // to their bounds are marginal in driving the algorithm so, by
+  // computing the norm as we do, we capture the active bounds of all
+  // these variables.
+  //
+  // In PDLP, only the constraint bounds contribute to the norm, but
+  // do the variable bounds not (also) drive the algorithm
+  //
+  // In simplex the values of the nonbasic variables would be used,
+  // since they determine the RHS of the system solved for the values
+  // of the basic variables values. That said, by computing the norm
+  // as we do, we capture the active bounds of all the nonbasic variables
+  double highs_norm_bounds = 0.0;
+  // Compute the infinity norm of all near-active column duals, since
+  // they contribute to the magnitude of the row values, and dividing
+  // their residual error by the norm gives a relative residual error:
+  // don't consider large inactive bounds, since they don't affect the
+  // model
+  double highs_norm_costs = 0.0;
+
+  // Pass twice through this loop, once to determine the bound and
+  // cost norms, and once to use them to assess relative
+  // infeasibilities and residual errors
+  for (HighsInt pass = 0; pass < 2; pass++) {
+    for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+      const bool is_col = iVar < lp.num_col_;
+      if (is_col) {
+        HighsInt iCol = iVar;
+        cost = gradient[iCol];
+        lower = lp.col_lower_[iCol];
+        upper = lp.col_upper_[iCol];
+        value = solution.col_value[iCol];
+        if (have_dual_solution) dual = solution.col_dual[iCol];
+        if (have_integrality) integrality = lp.integrality_[iCol];
+        if (pass == 0) {
+          if (dual * dual < dual_feasibility_tolerance) {
+            // Dual close to zero
+            highs_norm_costs = std::max(std::fabs(cost), highs_norm_costs);
+          }
+          if (get_residuals && have_dual_solution) {
+            // Subtract off the gradient value
+            HighsCDouble q_dual_activity = dual_activity[iCol];
+            q_dual_activity -= gradient[iCol];
+            dual_activity[iCol] = double(q_dual_activity);
+          }
+        }
+        //
+      } else {
+        HighsInt iRow = iVar - lp.num_col_;
+        lower = lp.row_lower_[iRow];
+        upper = lp.row_upper_[iRow];
+        value = solution.row_value[iRow];
+        if (have_dual_solution) dual = solution.row_dual[iRow];
+        integrality = HighsVarType::kContinuous;
+      }
+      // Flip dual according to lp.sense_
+      dual *= (HighsInt)lp.sense_;
+      // Get the primal and dual infeasibility for this variable, and
+      //
+      // at_status: Indicates whether the variable is close to its
+      // lower bound, upper bound or not at all. Use this as a proxy
+      // for being non-basic, so the active bound contributes to
+      // highs_norm_bounds for calculating relative primal measures.
+      //
+      // mid_status: Indicates whether a variable with meaningful
+      // bound interval length is below the midpoint of its bound
+      // interval, or above the midpoint. The midpoint is infinite for
+      // one-sided variables. For free variables, fixed variables, or
+      // variables with small positive bound interval lengths,
+      // mid_status is returned as kHighsSolutionNo.
+      getVariableKktFailures(primal_feasibility_tolerance,
+                             dual_feasibility_tolerance, lower, upper, value,
+                             dual, integrality, primal_infeasibility,
+                             dual_infeasibility, at_status, mid_status);
+      if (pass == 0) {
+        // If the primal value is close to a bound then include the bound
+        // in the active bound norm
+        if (at_status == kHighsSolutionLo) {
+          highs_norm_bounds = std::max(std::fabs(lower), highs_norm_bounds);
+        } else if (at_status == kHighsSolutionUp) {
+          highs_norm_bounds = std::max(std::fabs(upper), highs_norm_bounds);
+        }
+      } else {
+        if (primal_infeasibility > 0) {
+          // Accumulate primal infeasibilities
+          if (primal_infeasibility > primal_feasibility_tolerance)
+            num_primal_infeasibility++;
+          if (max_primal_infeasibility < primal_infeasibility)
+            max_primal_infeasibility = primal_infeasibility;
+          sum_primal_infeasibility += primal_infeasibility;
+          // Determine the denominator for the relative primal
+          // infeasiblilty
+          double relative_bound_measure = highs_norm_bounds;
+          if (at_status == kHighsSolutionNo) {
+            // Primal value is infeasible, but not close to a bound:
+            // unusual, but possible if absolute primal infeasiblities
+            // are not small. Bound has not been included in
+            // highs_norm_bounds, but should be used for local
+            // relative infeasiblility
+            if (mid_status == kHighsSolutionNo ||
+                mid_status == kHighsSolutionLo) {
+              // Bound interval is short, or variable is below the
+              // midpoint (which is only possible if lower is finite)
+              relative_bound_measure =
+                  std::max(std::fabs(lower), relative_bound_measure);
+            } else {
+              assert(mid_status == kHighsSolutionUp);
+              // Variable is above the midpoint of the bound interval
+              // (which is only possible if upper is finite)
+              relative_bound_measure =
+                  std::max(std::fabs(upper), relative_bound_measure);
+            }
+          }
+          double relative_primal_infeasibility =
+              primal_infeasibility / (1.0 + relative_bound_measure);
+
+          if (relative_primal_infeasibility > primal_feasibility_tolerance)
+            num_relative_primal_infeasibility++;
+          if (max_relative_primal_infeasibility < relative_primal_infeasibility)
+            max_relative_primal_infeasibility = relative_primal_infeasibility;
+        }
+        if (have_dual_solution) {
+          if (dual_infeasibility > 0) {
+            // Accumulate dual infeasibilities
+            if (dual_infeasibility > dual_feasibility_tolerance)
+              num_dual_infeasibility++;
+            if (max_dual_infeasibility < dual_infeasibility)
+              max_dual_infeasibility = dual_infeasibility;
+            sum_dual_infeasibility += dual_infeasibility;
+
+            // Determine the denominator for the relative dual
+            // infeasiblilty
+            double relative_cost_measure = highs_norm_costs;
+            if (is_col && cost && dual * dual >= dual_feasibility_tolerance) {
+              // Dual value is infeasible, but not close to zero:
+              // unusual, but possible if absolute dual infeasiblities
+              // are not small. Hence the cost has not been included in
+              // highs_norm_costs, but should be used for local relative
+              // infeasiblility.
+              //
+              // updateRelativeMeasure(cost, relative_cost_measure);
+              relative_cost_measure =
+                  std::max(std::fabs(cost), relative_cost_measure);
+            }
+            double relative_dual_infeasibility =
+                dual_infeasibility / (1.0 + relative_cost_measure);
+
+            if (relative_dual_infeasibility > dual_feasibility_tolerance)
+              num_relative_dual_infeasibility++;
+            if (max_relative_dual_infeasibility < relative_dual_infeasibility)
+              max_relative_dual_infeasibility = relative_dual_infeasibility;
+          }
+        }
+        if (!is_col && get_residuals) {
+          HighsInt iRow = iVar - lp.num_col_;
+          assert(iRow >= 0);
+          double primal_residual_error =
+              std::fabs(primal_activity[iRow] - solution.row_value[iRow]);
+          double relative_primal_residual_error =
+              primal_residual_error / (1.0 + highs_norm_bounds);
+
+          if (primal_residual_error > primal_residual_tolerance)
+            num_primal_residual_error++;
+          if (max_primal_residual_error < primal_residual_error)
+            max_primal_residual_error = primal_residual_error;
+
+          if (relative_primal_residual_error > primal_residual_tolerance)
+            num_relative_primal_residual_error++;
+          if (max_relative_primal_residual_error <
+              relative_primal_residual_error)
+            max_relative_primal_residual_error = relative_primal_residual_error;
+        }
+        if (is_col && get_residuals && have_dual_solution) {
+          HighsInt iCol = iVar;
+          assert(iCol < lp.num_col_);
+          double dual_residual_error =
+              std::fabs(dual_activity[iCol] + solution.col_dual[iCol]);
+          double relative_dual_residual_error =
+              dual_residual_error / (1.0 + highs_norm_costs);
+
+          if (dual_residual_error > dual_residual_tolerance)
+            num_dual_residual_error++;
+          if (max_dual_residual_error < dual_residual_error)
+            max_dual_residual_error = dual_residual_error;
+
+          if (relative_dual_residual_error > dual_residual_tolerance)
+            num_relative_dual_residual_error++;
+          if (max_relative_dual_residual_error < relative_dual_residual_error)
+            max_relative_dual_residual_error = relative_dual_residual_error;
+        }
+      }
+      if (pass == 1 && iVar == lp.num_col_ - 1) {
+        max_col_primal_infeasibility = max_primal_infeasibility;
+        max_col_dual_infeasibility = max_dual_infeasibility;
+
+        max_relative_col_primal_infeasibility =
+            max_relative_primal_infeasibility;
+        max_relative_col_dual_infeasibility = max_relative_dual_infeasibility;
+
+        max_primal_infeasibility = 0;
+        max_dual_infeasibility = 0;
+
+        max_relative_primal_infeasibility = 0;
+        max_relative_dual_infeasibility = 0;
+      }
+    }
+  }
+
+  double max_row_primal_infeasibility = max_primal_infeasibility;
+  double max_row_dual_infeasibility = max_dual_infeasibility;
+
+  double max_relative_row_primal_infeasibility =
+      max_relative_primal_infeasibility;
+  double max_relative_row_dual_infeasibility = max_relative_dual_infeasibility;
+
+  max_primal_infeasibility =
+      std::max(max_col_primal_infeasibility, max_row_primal_infeasibility);
+  max_dual_infeasibility =
+      std::max(max_col_dual_infeasibility, max_row_dual_infeasibility);
+
+  max_relative_primal_infeasibility =
+      std::max(max_relative_col_primal_infeasibility,
+               max_relative_row_primal_infeasibility);
+  max_relative_dual_infeasibility = std::max(
+      max_relative_col_dual_infeasibility, max_relative_row_dual_infeasibility);
+
+  if (have_dual_solution) {
+    // Determine the sum of complementarity violations
+    const bool have_values = getComplementarityViolations(
+        lp, solution, complementarity_tolerance, num_complementarity_violation,
+        max_complementarity_violation);
+    assert(have_values);
+  }
+
+  if (!is_qp && have_dual_solution) {
+    // Determine the primal-dual objective error
+    //
+    // IPX computes objective_gap = (pobjective-dobjective) / (1.0 +
+    // 0.5*std::abs(pobjective+dobjective));
+    //
+    // PDLP computes dRelObjGap = fabs(dPrimalObj - dDualObj) / (1.0 +
+    // fabs(dPrimalObj) + fabs(dDualObj));
+    //
+    // Use the PDLP relative primal-dual objective error
+    double dual_objective_value;
+    bool dual_objective_status =
+        computeDualObjectiveValue(lp, solution, dual_objective_value);
+    assert(dual_objective_status);
+    const double abs_objective_difference =
+        std::fabs(highs_info.objective_function_value - dual_objective_value);
+    primal_dual_objective_error = abs_objective_difference;
+    const double denominator = 1.0 +
+                               std::fabs(highs_info.objective_function_value) +
+                               std::fabs(dual_objective_value);
+    primal_dual_objective_error = primal_dual_objective_error / denominator;
+  }
+
+  if (printf_kkt || options.log_dev_level > 0) {
+    printf("getKktFailures:: cost norm = %8.3g; bound norm = %8.3g\n",
+           highs_norm_costs, highs_norm_bounds);
+    printf(
+        "getKktFailures:                      LP  (abs / rel)    "
+        "     Col (abs / rel)         Row (abs / rel)\n");
+
+    printf(
+        "getKktFailures: primal infeasibility %8.3g / %8.3g     %8.3g / "
+        "%8.3g     %8.3g / %8.3g\n",
+        highs_info.max_primal_infeasibility,
+        highs_info.max_relative_primal_infeasibility,
+        max_col_primal_infeasibility, max_relative_col_primal_infeasibility,
+        max_row_primal_infeasibility, max_relative_row_primal_infeasibility);
+    if (have_dual_solution)
+      printf(
+          "getKktFailures:   dual infeasibility %8.3g / %8.3g     %8.3g / "
+          "%8.3g     %8.3g / %8.3g\n",
+          highs_info.max_dual_infeasibility,
+          highs_info.max_relative_dual_infeasibility,
+          max_col_dual_infeasibility, max_relative_col_dual_infeasibility,
+          max_row_dual_infeasibility, max_relative_row_dual_infeasibility);
+    if (get_residuals) {
+      printf("getKktFailures: primal residual      %8.3g / %8.3g\n",
+             highs_info.max_primal_residual_error,
+             highs_info.max_relative_primal_residual_error);
+      if (have_dual_solution)
+        printf("getKktFailures:   dual residual      %8.3g / %8.3g\n",
+               highs_info.max_dual_residual_error,
+               highs_info.max_relative_dual_residual_error);
+    }
+    if (!is_qp && have_dual_solution)
+      printf("getKktFailures: objective gap        %8.3g\n",
+             highs_info.primal_dual_objective_error);
+  }
+
+  // Assign primal (and possibly dual) solution status according to
+  // existence of primal and dual feasibilities
+  //
+  // For LP this may mean that primal/dual feasibility of the solution
+  // is claimed when there are residual errors, or denied when PDLP or
+  // IPX without crossover are used, since they are deemed feasible
+  // according to relative tolerances. This will be cleaned up in
+  // Highs::lpKktCheck, when the existence of a basis determines
+  // whether absolute or relative measures are used.
+
+  if (num_primal_infeasibility) {
+    highs_info.primal_solution_status = kSolutionStatusInfeasible;
+  } else {
+    highs_info.primal_solution_status = kSolutionStatusFeasible;
+  }
+  if (have_dual_solution) {
+    if (num_dual_infeasibility) {
+      highs_info.dual_solution_status = kSolutionStatusInfeasible;
+    } else {
+      highs_info.dual_solution_status = kSolutionStatusFeasible;
+    }
+  }
+}
+
+// Gets the KKT failures for a variable.
+//
+// Value and dual are used compute the primal and dual infeasibility
+// It's up to the calling method to ignore these if the value or dual
+// are not valid.
+void getVariableKktFailures(const double primal_feasibility_tolerance,
+                            const double dual_feasibility_tolerance,
+                            const double lower, const double upper,
+                            const double value, const double dual,
+                            const HighsVarType integrality,
+                            double& primal_infeasibility,
+                            double& dual_infeasibility, uint8_t& at_status,
+                            uint8_t& mid_status) {
+  const HighsInt feasibility_tolerance_mu = 0.0;
+  // @primal_infeasibility calculation
+  primal_infeasibility = 0;
+  if (value < lower - primal_feasibility_tolerance * feasibility_tolerance_mu) {
+    // Below lower
+    primal_infeasibility = lower - value;
+  } else if (value >
+             upper + primal_feasibility_tolerance * feasibility_tolerance_mu) {
+    // Above upper
+    primal_infeasibility = value - upper;
+  }
+  // Determine whether this value is close to a bound
+  at_status = kHighsSolutionNo;
+  double residual = std::fabs(lower - value);
+  if (residual * residual <= primal_feasibility_tolerance) {
+    // Close to lower bound
+    at_status = kHighsSolutionLo;
+  } else {
+    // Not close to lower bound: maybe close to upper bound
+    residual = std::fabs(value - upper);
+    if (residual * residual <= primal_feasibility_tolerance)
+      at_status = kHighsSolutionUp;
+  }
+  // Look for dual sign errors that exceed the tolerance. For boxed
+  // variables the test is discontinuous at the midpoint, but any
+  // meaningful dual value on a meaningful interval will show up as a
+  // large complementarity error
+  mid_status = kHighsSolutionNo;
+  if (lower < upper) {
+    double length = upper - lower;
+    // Non-fixed variable
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
+      // Free variable
+      dual_infeasibility = fabs(dual);
+    } else if (length * length > primal_feasibility_tolerance) {
+      // Interval length is meaningful
+      //
+      // Compute the mid-point of the bound interval. This will be
+      // +infinity for LB variables; -infinity for UB variables;
+      // finite for boxed and fixed variables
+      const double middle = (lower + upper) * 0.5;
+      if (value < middle) {
+        // Below the mid-point, so use lower bound optimality condition:
+        // feasiblity is dual >= -tolerance
+        mid_status = kHighsSolutionLo;
+        dual_infeasibility = std::max(-dual, 0.);
+      } else {
+        // Below the mid-point, so use upper bound optimality condition:
+        // feasiblity is dual <= tolerance
+        mid_status = kHighsSolutionUp;
+        dual_infeasibility = std::max(dual, 0.);
+      }
+    } else {
+      // Interval length is less than
+      // sqrt(primal_feasibility_tolerance) so dual infeasibility is
+      // hard to define
+      dual_infeasibility = 0;
+    }
+  } else {
+    // Fixed variable
+    dual_infeasibility = 0;
+  }
+  // Account for semi-variables
+  const bool semi_variable = integrality == HighsVarType::kSemiContinuous ||
+                             integrality == HighsVarType::kSemiInteger;
+  if (semi_variable && std::fabs(value) < primal_feasibility_tolerance)
+    primal_infeasibility = 0;
+}
+
+void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
+                               const std::vector<double>& gradient,
+                               const HighsSolution& solution,
+                               HighsPrimalDualErrors& primal_dual_errors) {
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double primal_residual_tolerance = options.primal_residual_tolerance;
+  double dual_residual_tolerance = options.dual_residual_tolerance;
+  double complementarity_tolerance = options.complementarity_tolerance;
+
+  // clang-format off
+  HighsInt& num_primal_residual_error = primal_dual_errors.glpsol_num_primal_residual_errors;
+  double&   sum_primal_residual_error = primal_dual_errors.glpsol_sum_primal_residual_errors;
+  
+  HighsInt& num_dual_residual_error = primal_dual_errors.glpsol_num_dual_residual_errors;
+  double&   sum_dual_residual_error = primal_dual_errors.glpsol_sum_dual_residual_errors;
+  
+  double&   max_primal_residual_error = primal_dual_errors.glpsol_max_primal_residual.absolute_value;
+  HighsInt& max_primal_residual_index = primal_dual_errors.glpsol_max_primal_residual.absolute_index;
+
+  double&   max_relative_primal_residual_error = primal_dual_errors.glpsol_max_primal_residual.relative_value;
+  HighsInt& max_relative_primal_residual_index = primal_dual_errors.glpsol_max_primal_residual.relative_index;
+
+  double&   max_primal_infeasibility =       primal_dual_errors.glpsol_max_primal_infeasibility.absolute_value;
+  HighsInt& max_primal_infeasibility_index = primal_dual_errors.glpsol_max_primal_infeasibility.absolute_index;
+
+  double&   max_relative_primal_infeasibility =       primal_dual_errors.glpsol_max_primal_infeasibility.relative_value;
+  HighsInt& max_relative_primal_infeasibility_index = primal_dual_errors.glpsol_max_primal_infeasibility.relative_index;
+
+  double&   max_dual_residual_error = primal_dual_errors.glpsol_max_dual_residual.absolute_value;
+  HighsInt& max_dual_residual_index = primal_dual_errors.glpsol_max_dual_residual.absolute_index;
+
+  double&   max_relative_dual_residual_error = primal_dual_errors.glpsol_max_dual_residual.relative_value;
+  HighsInt& max_relative_dual_residual_index = primal_dual_errors.glpsol_max_dual_residual.relative_index;
+
+  double&   max_dual_infeasibility =       primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value;
+  HighsInt& max_dual_infeasibility_index = primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
+  // clang-format on
+
+  // Relative dual infeasiblities are same as absolute
+
+  primal_dual_errors.glpsol_max_primal_infeasibility.invalidate();
+  primal_dual_errors.glpsol_max_dual_infeasibility.invalidate();
+
+  const bool have_primal_solution = solution.value_valid;
+  const bool have_dual_solution = solution.dual_valid;
+  const bool have_integrality = lp.integrality_.size() != 0;
+
+  // Check that there is no dual solution if there's no primal solution
+  assert(have_primal_solution || !have_dual_solution);
+
+  if (have_primal_solution) {
+    // There's a primal solution, so check its size and initialise the
+    // infeasibility counts
+    assert((int)solution.col_value.size() >= lp.num_col_);
+    assert((int)solution.row_value.size() >= lp.num_row_);
+    max_primal_infeasibility = 0;
+    primal_dual_errors.glpsol_max_primal_infeasibility.reset();
     if (have_dual_solution) {
       // There's a dual solution, so check its size and initialise the
       // infeasibility counts
       assert((int)solution.col_dual.size() >= lp.num_col_);
       assert((int)solution.row_dual.size() >= lp.num_row_);
-      num_dual_infeasibility = 0;
-      max_dual_infeasibility_value = 0;
-      sum_dual_infeasibility = 0;
-      primal_dual_errors.max_dual_infeasibility.reset();
+      max_dual_infeasibility = 0;
+      primal_dual_errors.glpsol_max_dual_infeasibility.reset();
     }
   }
 
-  HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
+  if (have_primal_solution) {
+    num_primal_residual_error = 0;
+    max_primal_residual_error = 0;
+    max_relative_primal_residual_error = 0;
+    primal_dual_errors.glpsol_max_primal_residual.reset();
 
-  HighsInt& max_absolute_primal_residual_index =
-      primal_dual_errors.max_primal_residual.absolute_index;
-  double& max_absolute_primal_residual_value =
-      primal_dual_errors.max_primal_residual.absolute_value;
-  HighsInt& max_relative_primal_residual_index =
-      primal_dual_errors.max_primal_residual.relative_index;
-  double& max_relative_primal_residual_value =
-      primal_dual_errors.max_primal_residual.relative_value;
-
-  double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
-
-  HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
-
-  HighsInt& max_absolute_dual_residual_index =
-      primal_dual_errors.max_dual_residual.absolute_index;
-  double& max_absolute_dual_residual_value =
-      primal_dual_errors.max_dual_residual.absolute_value;
-  HighsInt& max_relative_dual_residual_index =
-      primal_dual_errors.max_dual_residual.relative_index;
-  double& max_relative_dual_residual_value =
-      primal_dual_errors.max_dual_residual.relative_value;
-
-  double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
-
-  HighsInt& num_nonzero_basic_duals =
-      primal_dual_errors.num_nonzero_basic_duals;
-  HighsInt& num_large_nonzero_basic_duals =
-      primal_dual_errors.num_large_nonzero_basic_duals;
-  double& max_nonzero_basic_dual = primal_dual_errors.max_nonzero_basic_dual;
-  double& sum_nonzero_basic_duals = primal_dual_errors.sum_nonzero_basic_duals;
-
-  HighsInt& num_off_bound_nonbasic = primal_dual_errors.num_off_bound_nonbasic;
-  double& max_off_bound_nonbasic = primal_dual_errors.max_off_bound_nonbasic;
-  double& sum_off_bound_nonbasic = primal_dual_errors.sum_off_bound_nonbasic;
-
-  // Initialise HighsPrimalDualErrors
-
-  if (have_primal_solution && get_residuals) {
-    num_primal_residual = 0;
-    max_absolute_primal_residual_value = 0;
-    sum_primal_residual = 0;
-    primal_dual_errors.max_primal_residual.reset();
   } else {
-    num_primal_residual = kHighsIllegalInfeasibilityCount;
-    max_absolute_primal_residual_value = kHighsIllegalInfeasibilityMeasure;
-    sum_primal_residual = kHighsIllegalInfeasibilityMeasure;
-    primal_dual_errors.max_primal_residual.invalidate();
+    num_primal_residual_error = kHighsIllegalResidualCount;
+    max_primal_residual_error = kHighsIllegalResidualMeasure;
+    max_relative_primal_residual_error = kHighsIllegalResidualMeasure;
+    primal_dual_errors.glpsol_max_primal_residual.invalidate();
   }
-  if (have_dual_solution && get_residuals) {
-    num_dual_residual = 0;
-    max_absolute_dual_residual_value = 0;
-    sum_dual_residual = 0;
-    primal_dual_errors.max_dual_residual.reset();
+  if (have_dual_solution) {
+    num_dual_residual_error = 0;
+    max_dual_residual_error = 0;
+    max_relative_dual_residual_error = 0;
+    primal_dual_errors.glpsol_max_dual_residual.reset();
   } else {
-    num_dual_residual = kHighsIllegalInfeasibilityCount;
-    max_absolute_dual_residual_value = kHighsIllegalInfeasibilityMeasure;
-    sum_dual_residual = kHighsIllegalInfeasibilityMeasure;
-    primal_dual_errors.max_dual_residual.invalidate();
+    num_dual_residual_error = kHighsIllegalResidualCount;
+    max_dual_residual_error = kHighsIllegalResidualMeasure;
+    max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
+    primal_dual_errors.glpsol_max_dual_residual.invalidate();
   }
-  if (have_basis) {
-    num_nonzero_basic_duals = 0;
-    num_large_nonzero_basic_duals = 0;
-    max_nonzero_basic_dual = 0;
-    sum_nonzero_basic_duals = 0;
-
-    num_off_bound_nonbasic = 0;
-    max_off_bound_nonbasic = 0;
-    sum_off_bound_nonbasic = 0;
-  } else {
-    num_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
-    num_large_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
-    max_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
-    sum_nonzero_basic_duals = kHighsIllegalInfeasibilityMeasure;
-
-    num_off_bound_nonbasic = kHighsIllegalInfeasibilityCount;
-    max_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
-    sum_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
-  }
-
   // Without a primal solution, nothing can be done!
   if (!have_primal_solution) return;
+
+  // Residuals are formed for Glpsol via their positive and negative
+  // terms so that meaningful relative values can be computed
   std::vector<double> primal_positive_sum;
   std::vector<double> primal_negative_sum;
   std::vector<double> dual_positive_sum;
   std::vector<double> dual_negative_sum;
-  if (get_residuals) {
-    primal_positive_sum.assign(lp.num_row_, 0);
-    primal_negative_sum.assign(lp.num_row_, 0);
-    if (have_dual_solution) {
-      dual_positive_sum.resize(lp.num_col_);
-      dual_negative_sum.resize(lp.num_col_);
-    }
+  primal_positive_sum.assign(lp.num_row_, 0);
+  primal_negative_sum.assign(lp.num_row_, 0);
+  if (have_dual_solution) {
+    dual_positive_sum.resize(lp.num_col_);
+    dual_negative_sum.resize(lp.num_col_);
   }
 
-  // Set status to a value so the compiler doesn't think it might be unassigned.
-  HighsBasisStatus status = HighsBasisStatus::kNonbasic;
-  // Set status_pointer to be NULL unless we have a basis, in which
-  // case it's the pointer to status. Can't make it a pointer to the
-  // entry of basis since this is const.
-  const HighsBasisStatus* status_pointer = have_basis ? &status : NULL;
-
-  double absolute_primal_infeasibility;
+  double primal_infeasibility;
   double relative_primal_infeasibility;
   double dual_infeasibility;
-  double value_residual;
   double lower;
   double upper;
   double value;
   double dual = 0;
+  uint8_t at_status;
+  uint8_t mid_status;
   HighsVarType integrality = HighsVarType::kContinuous;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
     if (iVar < lp.num_col_) {
@@ -258,79 +737,53 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       upper = lp.col_upper_[iCol];
       value = solution.col_value[iCol];
       if (have_dual_solution) dual = solution.col_dual[iCol];
-      if (have_basis) status = basis.col_status[iCol];
       if (have_integrality) integrality = lp.integrality_[iCol];
     } else {
       HighsInt iRow = iVar - lp.num_col_;
       lower = lp.row_lower_[iRow];
       upper = lp.row_upper_[iRow];
       value = solution.row_value[iRow];
-      // @FlipRowDual -solution.row_dual[iRow]; became solution.row_dual[iRow];
       if (have_dual_solution) dual = solution.row_dual[iRow];
-      if (have_basis) status = basis.row_status[iRow];
       integrality = HighsVarType::kContinuous;
     }
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
 
-    const bool status_value_ok = getVariableKktFailures(
-        primal_feasibility_tolerance, dual_feasibility_tolerance, lower, upper,
-        value, dual, status_pointer, integrality, absolute_primal_infeasibility,
-        relative_primal_infeasibility, dual_infeasibility, value_residual);
-    if (!status_value_ok)
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "getKktFailures: %s %d status-value error: [%23.18g; "
-                   "%23.18g; %23.18g] has "
-                   "residual %g\n",
-                   iVar < lp.num_col_ ? "Column" : "Row   ",
-                   iVar < lp.num_col_ ? int(iVar) : int(iVar - lp.num_col_),
-                   lower, value, upper, value_residual);
-    assert(status_value_ok);
-    // Accumulate primal infeasibilities
-    if (absolute_primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibility++;
-    if (max_absolute_primal_infeasibility_value <
-        absolute_primal_infeasibility) {
-      max_absolute_primal_infeasibility_index = iVar;
-      max_absolute_primal_infeasibility_value = absolute_primal_infeasibility;
+    getVariableKktFailures(primal_feasibility_tolerance,
+                           dual_feasibility_tolerance, lower, upper, value,
+                           dual, integrality, primal_infeasibility,
+                           dual_infeasibility, at_status, mid_status);
+
+    relative_primal_infeasibility = 0;
+    if (mid_status == kHighsSolutionLo) {
+      relative_primal_infeasibility =
+          primal_infeasibility / (1 + std::fabs(lower));
+    } else if (mid_status == kHighsSolutionUp) {
+      relative_primal_infeasibility =
+          primal_infeasibility / (1 + std::fabs(upper));
+    } else if (lower > -kHighsInf) {
+      // Variable has small bound length
+      relative_primal_infeasibility =
+          primal_infeasibility / (1 + std::fabs(lower));
     }
-    if (max_relative_primal_infeasibility_value <
-        relative_primal_infeasibility) {
+
+    if (max_primal_infeasibility < primal_infeasibility) {
+      max_primal_infeasibility = primal_infeasibility;
+      max_primal_infeasibility_index = iVar;
+    }
+    if (max_relative_primal_infeasibility < relative_primal_infeasibility) {
+      max_relative_primal_infeasibility = relative_primal_infeasibility;
       max_relative_primal_infeasibility_index = iVar;
-      max_relative_primal_infeasibility_value = relative_primal_infeasibility;
     }
-    sum_primal_infeasibility += absolute_primal_infeasibility;
 
     if (have_dual_solution) {
       // Accumulate dual infeasibilities
-      if (dual_infeasibility > dual_feasibility_tolerance)
-        num_dual_infeasibility++;
-      if (max_dual_infeasibility_value < dual_infeasibility) {
-        max_dual_infeasibility_value = dual_infeasibility;
+      if (max_dual_infeasibility < dual_infeasibility) {
+        max_dual_infeasibility = dual_infeasibility;
         max_dual_infeasibility_index = iVar;
       }
-      sum_dual_infeasibility += dual_infeasibility;
     }
-    if (have_basis) {
-      if (status == HighsBasisStatus::kBasic) {
-        double abs_basic_dual = dual_infeasibility;
-        if (abs_basic_dual > 0) {
-          num_nonzero_basic_duals++;
-          if (abs_basic_dual > dual_feasibility_tolerance)
-            num_large_nonzero_basic_duals++;
-          max_nonzero_basic_dual =
-              std::max(abs_basic_dual, max_nonzero_basic_dual);
-          sum_nonzero_basic_duals += abs_basic_dual;
-        }
-      } else {
-        double off_bound_nonbasic = value_residual;
-        if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
-        max_off_bound_nonbasic =
-            std::max(off_bound_nonbasic, max_off_bound_nonbasic);
-        sum_off_bound_nonbasic += off_bound_nonbasic;
-      }
-    }
-    if (iVar < lp.num_col_ && get_residuals) {
+    if (iVar < lp.num_col_) {
       HighsInt iCol = iVar;
       if (have_dual_solution) {
         if (gradient[iCol] > 0) {
@@ -362,232 +815,147 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
   }
 
-  if (have_dual_solution) {
-    // Determine the sum of complementarity violations
-    max_complementarity_violation = 0;
-    sum_complementarity_violations = 0;
-    double primal_residual = 0;
-    for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
-      const bool is_col = iVar < lp.num_col_;
-      const HighsInt iRow = iVar - lp.num_col_;
-      const double primal =
-          is_col ? solution.col_value[iVar] : solution.row_value[iRow];
-      const double dual =
-          is_col ? solution.col_dual[iVar] : solution.row_dual[iRow];
-      const double lower = is_col ? lp.col_lower_[iVar] : lp.row_lower_[iRow];
-      const double upper = is_col ? lp.col_upper_[iVar] : lp.row_upper_[iRow];
-      if (lower <= -kHighsInf && upper >= kHighsInf) {
-        // Free
-        primal_residual = 1;
-      } else {
-        const double mid = (lower + upper) * 0.5;
-        primal_residual = primal < mid ? std::fabs(lower - primal)
-                                       : std::fabs(upper - primal);
-      }
-      const double dual_residual = std::fabs(dual);
-      const double complementarity_violation = primal_residual * dual_residual;
-      sum_complementarity_violations += complementarity_violation;
-      max_complementarity_violation =
-          std::max(complementarity_violation, max_complementarity_violation);
-    }
-    double check_max_complementarity_violation;
-    double check_sum_complementarity_violations;
-    const bool have_values = getComplementarityViolations(
-        lp, solution, check_max_complementarity_violation,
-        check_sum_complementarity_violations);
-    assert(have_values);
-    assert(check_max_complementarity_violation ==
-           max_complementarity_violation);
-    assert(check_sum_complementarity_violations ==
-           sum_complementarity_violations);
-  }
+  // Relative dual infeasiblities are same as absolute
+  primal_dual_errors.glpsol_max_dual_infeasibility.relative_value =
+      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value;
 
-  if (get_residuals) {
-    const double large_residual_error = 1e-12;
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      double term = -solution.row_value[iRow];
-      if (term > 0) {
-        primal_positive_sum[iRow] += term;
-      } else {
-        primal_negative_sum[iRow] -= term;
-      }
-      assert(primal_positive_sum[iRow] >= 0);
-      assert(primal_negative_sum[iRow] >= 0);
-      double absolute_primal_residual =
-          std::fabs(primal_positive_sum[iRow] - primal_negative_sum[iRow]);
-      double relative_primal_residual =
-          absolute_primal_residual /
-          (1 + primal_positive_sum[iRow] + primal_negative_sum[iRow]);
-
-      if (absolute_primal_residual > large_residual_error)
-        num_primal_residual++;
-      if (max_absolute_primal_residual_value < absolute_primal_residual) {
-        max_absolute_primal_residual_value = absolute_primal_residual;
-        max_absolute_primal_residual_index = iRow;
-      }
-      if (max_relative_primal_residual_value < relative_primal_residual) {
-        max_relative_primal_residual_value = relative_primal_residual;
-        max_relative_primal_residual_index = iRow;
-      }
-      sum_primal_residual += absolute_primal_residual;
-    }
-    if (have_dual_solution) {
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-        double term = -solution.col_dual[iCol];
-        if (term > 0) {
-          dual_positive_sum[iCol] += term;
-        } else {
-          dual_negative_sum[iCol] -= term;
-        }
-        assert(dual_positive_sum[iCol] >= 0);
-        assert(dual_negative_sum[iCol] >= 0);
-        double absolute_dual_residual =
-            std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol]);
-        double relative_dual_residual =
-            absolute_dual_residual /
-            (1 + dual_positive_sum[iCol] + dual_negative_sum[iCol]);
-        if (absolute_dual_residual > large_residual_error) num_dual_residual++;
-        if (max_absolute_dual_residual_value < absolute_dual_residual) {
-          max_absolute_dual_residual_value = absolute_dual_residual;
-          max_absolute_dual_residual_index = iCol;
-        }
-        if (max_relative_dual_residual_value < relative_dual_residual) {
-          max_relative_dual_residual_value = relative_dual_residual;
-          max_relative_dual_residual_index = iCol;
-        }
-        sum_dual_residual += absolute_dual_residual;
-      }
-    }
-  }
-  // Assign primal solution status
-  if (num_primal_infeasibility) {
-    highs_info.primal_solution_status = kSolutionStatusInfeasible;
-  } else {
-    highs_info.primal_solution_status = kSolutionStatusFeasible;
-  }
-  if (have_dual_solution) {
-    // Assign dual solution status
-    if (num_dual_infeasibility) {
-      highs_info.dual_solution_status = kSolutionStatusInfeasible;
-    } else {
-      highs_info.dual_solution_status = kSolutionStatusFeasible;
-    }
-  }
-  // Assign the two entries in primal_dual_errors that are accumulated
-  // in highs_info
-  primal_dual_errors.max_primal_infeasibility.absolute_value =
-      highs_info.max_primal_infeasibility;
-  ;
-  primal_dual_errors.max_dual_infeasibility.absolute_value =
-      highs_info.max_dual_infeasibility;
-  // Relative dual_infeasibility data is the same as absolute
-  primal_dual_errors.max_dual_infeasibility.relative_value =
-      primal_dual_errors.max_dual_infeasibility.absolute_value;
-  primal_dual_errors.max_dual_infeasibility.relative_index =
-      primal_dual_errors.max_dual_infeasibility.absolute_index;
+  primal_dual_errors.glpsol_max_dual_infeasibility.relative_index =
+      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
 }
 
-// Gets the KKT failures for a variable. The lack of a basis status is
-// indicated by status_pointer being null.
-//
-// Value and dual are used compute the primal and dual infeasibility -
-// according to the basis status (if valid) or primal value. It's up
-// to the calling method to ignore these if the value or dual are not
-// valid.
-//
-// If the basis status is valid, then the numbers of basic and
-// nonbasic variables are updated, and the extent to which a nonbasic
-// variable is off its bound is returned.
-bool getVariableKktFailures(const double primal_feasibility_tolerance,
-                            const double dual_feasibility_tolerance,
-                            const double lower, const double upper,
-                            const double value, const double dual,
-                            const HighsBasisStatus* status_pointer,
-                            const HighsVarType integrality,
-                            double& absolute_primal_infeasibility,
-                            double& relative_primal_infeasibility,
-                            double& dual_infeasibility,
-                            double& value_residual) {
-  bool status_value_ok = true;
-  // @primal_infeasibility calculation
-  absolute_primal_infeasibility = 0;
-  relative_primal_infeasibility = 0;
-  if (value < lower - primal_feasibility_tolerance) {
-    // Below lower
-    absolute_primal_infeasibility = lower - value;
-    relative_primal_infeasibility =
-        absolute_primal_infeasibility / (1 + std::fabs(lower));
-  } else if (value > upper + primal_feasibility_tolerance) {
-    // Above upper
-    absolute_primal_infeasibility = value - upper;
-    relative_primal_infeasibility =
-        absolute_primal_infeasibility / (1 + std::fabs(upper));
+void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
+                              const HighsSolution& solution,
+                              const HighsBasis& basis,
+                              HighsPrimalDualErrors& primal_dual_errors) {
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  const bool& have_primal_solution = solution.value_valid;
+  const bool& have_dual_solution = solution.dual_valid;
+  const bool& have_basis = basis.valid;
+
+  // Check that there is no dual solution if there's no primal solution
+  assert(have_primal_solution || !have_dual_solution);
+
+  // Check that there is no basis if there's no dual solution
+  assert(have_dual_solution || !have_basis);
+
+  HighsInt& num_nonzero_basic_dual = primal_dual_errors.num_nonzero_basic_duals;
+  double& max_nonzero_basic_dual = primal_dual_errors.max_nonzero_basic_dual;
+  double& sum_nonzero_basic_dual = primal_dual_errors.sum_nonzero_basic_duals;
+
+  HighsInt& num_off_bound_nonbasic = primal_dual_errors.num_off_bound_nonbasic;
+  double& max_off_bound_nonbasic = primal_dual_errors.max_off_bound_nonbasic;
+  double& sum_off_bound_nonbasic = primal_dual_errors.sum_off_bound_nonbasic;
+
+  if (have_basis) {
+    num_nonzero_basic_dual = 0;
+    max_nonzero_basic_dual = 0;
+    sum_nonzero_basic_dual = 0;
+
+    num_off_bound_nonbasic = 0;
+    max_off_bound_nonbasic = 0;
+    sum_off_bound_nonbasic = 0;
+  } else {
+    num_nonzero_basic_dual = kHighsIllegalInfeasibilityCount;
+    max_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
+    sum_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
+
+    num_off_bound_nonbasic = kHighsIllegalInfeasibilityCount;
+    max_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
+    sum_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
   }
-  // Account for semi-variables
-  if (absolute_primal_infeasibility > 0 &&
-      (integrality == HighsVarType::kSemiContinuous ||
-       integrality == HighsVarType::kSemiInteger) &&
-      std::fabs(value) < primal_feasibility_tolerance) {
-    absolute_primal_infeasibility = 0;
-    relative_primal_infeasibility = 0;
-  }
-  value_residual = std::min(std::fabs(lower - value), std::fabs(value - upper));
-  // Determine whether the variable is at a bound using the basis
-  // status (if valid) or value residual.
-  bool at_a_bound = value_residual <= primal_feasibility_tolerance;
-  if (status_pointer != NULL) {
-    // If the variable is basic, then consider it not to be at a bound
-    // so that any dual value yields an infeasibility value
-    if (*status_pointer == HighsBasisStatus::kBasic) at_a_bound = false;
+  // Without a primal solution or a basis, nothing can be done!
+  if (!have_primal_solution || !have_basis) return;
+  // Makes no sense to get primal dual basis failures without a primal
+  // solution, dual solution and basis
+  assert(have_primal_solution && have_dual_solution && have_basis);
+  double primal_infeasibility;
+  double relative_primal_infeasibility;
+  double dual_infeasibility;
+  double value_residual;
+  double lower;
+  double upper;
+  double value;
+  double dual = 0;
+  HighsBasisStatus status;
+  bool status_value_ok;
+  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+    if (iVar < lp.num_col_) {
+      HighsInt iCol = iVar;
+      lower = lp.col_lower_[iCol];
+      upper = lp.col_upper_[iCol];
+      value = solution.col_value[iCol];
+      dual = solution.col_dual[iCol];
+      status = basis.col_status[iCol];
+    } else {
+      HighsInt iRow = iVar - lp.num_col_;
+      lower = lp.row_lower_[iRow];
+      upper = lp.row_upper_[iRow];
+      value = solution.row_value[iRow];
+      dual = solution.row_dual[iRow];
+      status = basis.row_status[iRow];
+    }
+    value_residual =
+        std::min(std::fabs(lower - value), std::fabs(value - upper));
+    // Flip dual according to lp.sense_
+    dual *= (HighsInt)lp.sense_;
+    status_value_ok = true;
+    // Check that kLower and kUpper are consistent with value and
+    // bounds - for debugging QP basis errors
+    //
     // With very large values, accuracy is lost in adding/subtracting
     // the feasibility tolerance from the bounds, so skip if this may
     // occur
-    //
-    // Check that kLower and kUpper are consistent with value and
-    // bounds - for debugging QP basis errors
-    if (*status_pointer == HighsBasisStatus::kLower) {
+    if (status == HighsBasisStatus::kLower) {
       if (std::fabs(lower) / primal_feasibility_tolerance < 1e-16)
         status_value_ok = value >= lower - primal_feasibility_tolerance &&
                           value <= lower + primal_feasibility_tolerance;
-    } else if (*status_pointer == HighsBasisStatus::kUpper) {
+    } else if (status == HighsBasisStatus::kUpper) {
       if (std::fabs(upper) / primal_feasibility_tolerance < 1e-16)
         status_value_ok = value >= upper - primal_feasibility_tolerance &&
                           value <= upper + primal_feasibility_tolerance;
     }
-  }
-  if (at_a_bound) {
-    // At a bound
-    double middle = (lower + upper) * 0.5;
-    if (lower < upper) {
-      // Non-fixed variable
-      if (value < middle) {
-        // At lower
-        dual_infeasibility = std::max(-dual, 0.);
-      } else {
-        // At upper
-        dual_infeasibility = std::max(dual, 0.);
+
+    if (!status_value_ok)
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "getPrimalDualBasisErrors: %s %d status-value error: [%23.18g; "
+          "%23.18g; %23.18g] has "
+          "residual %g\n",
+          iVar < lp.num_col_ ? "Column" : "Row   ",
+          iVar < lp.num_col_ ? int(iVar) : int(iVar - lp.num_col_), lower,
+          value, upper, value_residual);
+    assert(status_value_ok);
+
+    if (status == HighsBasisStatus::kBasic) {
+      double abs_basic_dual = std::fabs(dual);
+      if (abs_basic_dual > 0) {
+        num_nonzero_basic_dual++;
+        max_nonzero_basic_dual =
+            std::max(abs_basic_dual, max_nonzero_basic_dual);
+        sum_nonzero_basic_dual += abs_basic_dual;
       }
     } else {
-      // Fixed variable
-      dual_infeasibility = 0;
+      double off_bound_nonbasic = value_residual;
+      if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
+      max_off_bound_nonbasic =
+          std::max(off_bound_nonbasic, max_off_bound_nonbasic);
+      sum_off_bound_nonbasic += off_bound_nonbasic;
     }
-  } else {
-    // Off bounds (or free)
-    dual_infeasibility = fabs(dual);
   }
-  return status_value_ok;
 }
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
-                                  double& max_complementarity_violation,
-                                  double& sum_complementarity_violations) {
+                                  const double complementarity_tolerance,
+                                  HighsInt& num_complementarity_violation,
+                                  double& max_complementarity_violation) {
+  num_complementarity_violation = kHighsIllegalComplementarityCount;
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
-  sum_complementarity_violations = kHighsIllegalComplementarityViolation;
   if (!solution.dual_valid) return false;
 
+  num_complementarity_violation = 0;
   max_complementarity_violation = 0;
-  sum_complementarity_violations = 0;
   double primal_residual = 0;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
     const bool is_col = iVar < lp.num_col_;
@@ -608,7 +976,8 @@ bool getComplementarityViolations(const HighsLp& lp,
     }
     const double dual_residual = std::fabs(dual);
     const double complementarity_violation = primal_residual * dual_residual;
-    sum_complementarity_violations += complementarity_violation;
+    if (complementarity_violation > complementarity_tolerance)
+      num_complementarity_violation++;
     max_complementarity_violation =
         std::max(complementarity_violation, max_complementarity_violation);
   }
@@ -763,57 +1132,53 @@ HighsStatus ipxSolutionToHighsSolution(
     const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
     const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
-    const std::vector<double>& ipx_zu, const HighsModelStatus model_status,
-    HighsSolution& highs_solution) {
+    const std::vector<double>& ipx_zu, HighsSolution& highs_solution) {
   // Resize the HighsSolution
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_value.resize(lp.num_row_);
   highs_solution.col_dual.resize(lp.num_col_);
   highs_solution.row_dual.resize(lp.num_row_);
 
-  const double primal_feasibility_tolerance =
-      options.primal_feasibility_tolerance;
-  const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   const std::vector<double>& ipx_col_value = ipx_x;
   const std::vector<double>& ipx_row_value = ipx_slack_vars;
 
   // Row activities are needed to set activity values of free rows -
   // which are ignored by IPX
   vector<double> row_activity;
-  const bool get_row_activities = true;  // ipx_num_row < lp.num_row_;
+  const bool get_row_activities = ipx_num_row < lp.num_row_;
   if (get_row_activities) row_activity.assign(lp.num_row_, 0);
   HighsInt ipx_slack = lp.num_col_;
   assert(ipx_num_row == lp.num_row_);
-  double dual_residual_norm = 0;
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    double value = ipx_col_value[col];
+  HighsInt dual_infeasibility_count = 0;
+  double primal_infeasibility;
+  double relative_primal_infeasibility;
+  double dual_infeasibility;
+  double value_residual;
+  uint8_t at_status;   // Not used
+  uint8_t mid_status;  // Not used
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double value = ipx_col_value[iCol];
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
-      double check_dual = lp.col_cost_[col];
-      for (HighsInt el = lp.a_matrix_.start_[col];
-           el < lp.a_matrix_.start_[col + 1]; el++) {
+      for (HighsInt el = lp.a_matrix_.start_[iCol];
+           el < lp.a_matrix_.start_[iCol + 1]; el++) {
         HighsInt row = lp.a_matrix_.index_[el];
         row_activity[row] += value * lp.a_matrix_.value_[el];
-        check_dual -= ipx_y[row] * lp.a_matrix_.value_[el];
       }
-      double dual_residual =
-          std::fabs(check_dual - (ipx_zl[col] - ipx_zu[col]));
-      dual_residual_norm = std::max(dual_residual, dual_residual_norm);
     }
-    double dual = ipx_zl[col] - ipx_zu[col];
-    highs_solution.col_value[col] = value;
-    highs_solution.col_dual[col] = dual;
+    double dual = ipx_zl[iCol] - ipx_zu[iCol];
+    highs_solution.col_value[iCol] = value;
+    highs_solution.col_dual[iCol] = dual;
   }
   HighsInt ipx_row = 0;
   ipx_slack = lp.num_col_;
-  double delta_norm = 0;
-  for (HighsInt row = 0; row < lp.num_row_; row++) {
-    double lower = lp.row_lower_[row];
-    double upper = lp.row_upper_[row];
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    double lower = lp.row_lower_[iRow];
+    double upper = lp.row_upper_[iRow];
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so set it to its row activity
-      highs_solution.row_value[row] = row_activity[row];
-      highs_solution.row_dual[row] = 0;
+      highs_solution.row_value[iRow] = row_activity[iRow];
+      highs_solution.row_dual[iRow] = 0;
       continue;
     }
     // Non-free row, so IPX will have it
@@ -830,235 +1195,10 @@ HighsStatus ipxSolutionToHighsSolution(
       value = rhs[ipx_row] - ipx_row_value[ipx_row];
       dual = ipx_y[ipx_row];
     }
-    delta_norm = std::max(std::fabs(value - row_activity[row]), delta_norm);
-    highs_solution.row_value[row] = value;
-    highs_solution.row_dual[row] = dual;
+    highs_solution.row_value[iRow] = value;
+    highs_solution.row_dual[iRow] = dual;
     // Update the IPX row index
     ipx_row++;
-  }
-  //  if (delta_norm >= dual_feasibility_tolerance)
-  highsLogDev(
-      options.log_options, HighsLogType::kInfo,
-      "ipxSolutionToHighsSolution: Norm of dual residual values is %10.4g\n",
-      dual_residual_norm);
-  highsLogDev(
-      options.log_options, HighsLogType::kInfo,
-      "ipxSolutionToHighsSolution: Norm of delta     row values is %10.4g\n",
-      delta_norm);
-  const bool force_dual_feasibility = false;  // true;
-  const bool minimal_truncation = true;
-  if (model_status == HighsModelStatus::kOptimal &&
-      (force_dual_feasibility || minimal_truncation)) {
-    double primal_truncation_norm = 0;
-    double dual_truncation_norm = 0;
-    double col_primal_truncation_norm = 0;
-    double col_dual_truncation_norm = 0;
-    HighsInt num_primal_truncations = 0;
-    HighsInt num_dual_truncations = 0;
-    HighsInt num_col_primal_truncations = 0;
-    HighsInt num_col_dual_truncations = 0;
-    HighsInt col = 0, row = 0;
-    double lower, upper, value, dual;
-    const HighsInt check_col = -127;
-    const HighsInt check_row = -37;
-    // Truncating to tolerances can lead to infeasibilities by margin
-    // of machine precision
-    const double primal_margin = 0;  // primal_feasibility_tolerance;
-    const double dual_margin = 0;    // dual_feasibility_tolerance;
-    double max_abs_primal_value = 0;
-    for (HighsInt var = 0; var < lp.num_col_ + lp.num_row_; var++) {
-      if (var == lp.num_col_) {
-        col_primal_truncation_norm = primal_truncation_norm;
-        col_dual_truncation_norm = dual_truncation_norm;
-        num_col_primal_truncations = num_primal_truncations;
-        num_col_dual_truncations = num_dual_truncations;
-        primal_truncation_norm = 0;
-        dual_truncation_norm = 0;
-        num_primal_truncations = 0;
-        num_dual_truncations = 0;
-      }
-      const bool is_col = var < lp.num_col_;
-      if (is_col) {
-        col = var;
-        lower = lp.col_lower_[col];
-        upper = lp.col_upper_[col];
-        value = highs_solution.col_value[col];
-        dual = highs_solution.col_dual[col];
-        if (col == check_col) {
-          printf("Column %d\n", (int)check_col);
-        }
-      } else {
-        row = var - lp.num_col_;
-        lower = lp.row_lower_[row];
-        upper = lp.row_upper_[row];
-        value = highs_solution.row_value[row];
-        dual = highs_solution.row_dual[row];
-        if (row == check_row) {
-          printf("Row %d\n", (int)check_row);
-        }
-      }
-      // Continue if equality: cannot have dual infeasibility
-      if (lower >= upper) continue;
-      double dual_truncation = 0;
-      double primal_truncation = 0;
-      double dual_infeasibility = 0;
-      double residual = std::fabs(std::max(lower - value, value - upper));
-      double new_value = value;
-      double new_dual = dual;
-      const bool at_lower = value <= lower + primal_feasibility_tolerance;
-      const bool at_upper = value >= upper - primal_feasibility_tolerance;
-      // Continue if at distinct bounds: cannot have dual infeasibility
-      if (at_lower && at_upper) continue;
-      if (at_lower) {
-        dual_infeasibility = -dual;
-      } else if (at_upper) {
-        dual_infeasibility = dual;
-      } else {
-        dual_infeasibility = std::fabs(dual);
-      }
-      // Continue if no dual infeasibility
-      if (dual_infeasibility <= dual_feasibility_tolerance) continue;
-
-      if (residual < dual_infeasibility && !force_dual_feasibility) {
-        /*
-          // Residual is less than dual infeasibility, or not forcing
-          // dual feasibility, so truncate value
-          if (at_lower) {
-            assert(10 == 50);
-          } else if (at_upper) {
-            assert(11 == 50);
-          } else {
-            // Off bound
-            if (lower <= -kHighsInf) {
-              if (upper >= kHighsInf) {
-                // Free shouldn't be possible, as residual would be inf
-                assert(12 == 50);
-              } else {
-                // Upper bounded, so assume dual is negative
-                if (dual > 0) assert(13 == 50);
-              }
-            } else if (upper >= kHighsInf) {
-              // Lower bounded, so assume dual is positive
-              if (dual < 0) assert(14 == 50);
-            }
-          }
-        */
-        num_primal_truncations++;
-        if (dual > 0) {
-          // Put closest to lower
-          if (value < lower) {
-            new_value = lower - primal_margin;
-          } else {
-            new_value = lower + primal_margin;
-          }
-        } else {
-          // Put closest to upper
-          if (value < upper) {
-            new_value = upper - primal_margin;
-          } else {
-            new_value = upper + primal_margin;
-          }
-        }
-      } else {
-        // Residual is greater than dual infeasibility, or forcing
-        // dual feasibility, so truncate dual
-        num_dual_truncations++;
-        if (at_lower) {
-          // At lower bound, so possibly truncate to -dual_margin
-          new_dual = -dual_margin;
-        } else if (at_upper) {
-          // At upper bound, so possibly truncate to dual_margin
-          new_dual = dual_margin;
-        } else {
-          // Between bounds so possibly set dual to signed dual_margin
-          if (dual > 0) {
-            new_dual = dual_margin;
-          } else {
-            new_dual = -dual_margin;
-          }
-        }
-      }
-      primal_truncation = std::fabs(value - new_value);
-      dual_truncation = std::fabs(dual - new_dual);
-      primal_truncation_norm =
-          std::max(primal_truncation, primal_truncation_norm);
-      dual_truncation_norm = std::max(dual_truncation, dual_truncation_norm);
-      /*if (dual_truncation > 1e-2 || primal_truncation > 1e-2)
-        printf(
-            "%s %4d: [%11.4g, %11.4g, %11.4g] residual = %11.4g; new = %11.4g; "
-            "truncation = %11.4g | "
-            "dual = %11.4g; new = %11.4g; truncation = %11.4g\n",
-            is_col ? "Col" : "Row", (int)(is_col ? col : row), lower, value,
-            upper, residual, new_value, primal_truncation, dual, new_dual,
-            dual_truncation);
-      */
-      max_abs_primal_value =
-          std::max(std::abs(new_value), max_abs_primal_value);
-      if (is_col) {
-        highs_solution.col_value[col] = new_value;
-        highs_solution.col_dual[col] = new_dual;
-      } else {
-        highs_solution.row_value[row] = new_value;
-        highs_solution.row_dual[row] = new_dual;
-      }
-    }
-    // Assess the truncations
-    //  if (dual_truncation_norm >= dual_margin)
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %6d col  primal "
-                "truncations is %10.4g\n",
-                num_col_primal_truncations, col_primal_truncation_norm);
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %6d row  primal "
-                "truncations is %10.4g\n",
-                num_primal_truncations, primal_truncation_norm);
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %6d col    dual "
-                "truncations is %10.4g\n",
-                num_col_dual_truncations, col_dual_truncation_norm);
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %6d row    dual "
-                "truncations is %10.4g\n",
-                num_dual_truncations, dual_truncation_norm);
-    // Determine the new residuals
-
-    vector<double> final_row_activity;
-    final_row_activity.assign(lp.num_row_, 0);
-    dual_residual_norm = 0;
-    for (HighsInt col = 0; col < lp.num_col_; col++) {
-      double check_dual = lp.col_cost_[col];
-      for (HighsInt el = lp.a_matrix_.start_[col];
-           el < lp.a_matrix_.start_[col + 1]; el++) {
-        HighsInt row = lp.a_matrix_.index_[el];
-        final_row_activity[row] +=
-            highs_solution.col_value[col] * lp.a_matrix_.value_[el];
-        check_dual -= highs_solution.row_dual[row] * lp.a_matrix_.value_[el];
-      }
-      double dual_residual =
-          std::fabs(check_dual - highs_solution.col_dual[col]);
-      dual_residual_norm = std::max(dual_residual, dual_residual_norm);
-    }
-    double primal_residual_norm = 0;
-    for (HighsInt row = 0; row < lp.num_row_; row++) {
-      double primal_residual =
-          std::fabs(final_row_activity[row] - highs_solution.row_value[row]);
-      primal_residual_norm = std::max(primal_residual, primal_residual_norm);
-    }
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Final norm of primal residual "
-                "values is %10.4g\n",
-                primal_residual_norm);
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Final norm of dual   residual "
-                "values is %10.4g\n",
-                dual_residual_norm);
-    if (max_abs_primal_value > kExcessivePrimalValue) {
-      //    highsLogUser(options.log_options, HighsLogType::kInfo,
-      printf(
-          "ipxSolutionToHighsSolution: "
-          "Excessive corrected |primal value| is %10.4g\n",
-          max_abs_primal_value);
-    }
   }
   assert(ipx_row == ipx_num_row);
   assert(ipx_slack == ipx_num_col);
@@ -1461,90 +1601,9 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
   assert(num_basic_variables == num_row);
 }
 
-void correctResiduals(HighsLpSolverObject& solver_object) {
-  HighsOptions& options = solver_object.options_;
-  HighsSolution& solution = solver_object.solution_;
-  const bool& have_primal_solution = solution.value_valid;
-  const bool& have_dual_solution = solution.dual_valid;
-  assert(have_primal_solution);
-  assert(have_dual_solution);
-  HighsLp& lp = solver_object.lp_;
-  std::vector<double> check_row_value;
-  std::vector<double> check_col_dual;
-  lp.a_matrix_.productQuad(check_row_value, solution.col_value);
-  if (have_dual_solution) {
-    lp.a_matrix_.productTransposeQuad(check_col_dual, solution.row_dual);
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      check_col_dual[iCol] -= lp.col_cost_[iCol];
-  }
-  double norm_primal_residual = 0;
-  HighsInt num_primal_correction = 0;
-  double max_primal_correction = 0;
-  double sum_primal_correction = 0;
-  double use_primal_residual_tolerance = options.primal_residual_tolerance;
-
-  double norm_dual_residual = 0;
-  HighsInt num_dual_correction = 0;
-  double max_dual_correction = 0;
-  double sum_dual_correction = 0;
-  double use_dual_residual_tolerance = options.dual_residual_tolerance;
-
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    double primal_residual = check_row_value[iRow] - solution.row_value[iRow];
-    double abs_primal_residual = std::fabs(primal_residual);
-    if (abs_primal_residual > use_primal_residual_tolerance) {
-      solution.row_value[iRow] += primal_residual;
-      double check_primal_residual =
-          std::fabs(check_row_value[iRow] - solution.row_value[iRow]);
-      assert(check_primal_residual < 1e-10);
-      num_primal_correction++;
-      max_primal_correction =
-          std::max(abs_primal_residual, max_primal_correction);
-      sum_primal_correction += abs_primal_residual;
-    }
-    norm_primal_residual = std::max(abs_primal_residual, norm_primal_residual);
-  }
-  if (have_dual_solution) {
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      double dual_residual = check_col_dual[iCol] + solution.col_dual[iCol];
-      double abs_dual_residual = std::fabs(dual_residual);
-      if (abs_dual_residual > use_dual_residual_tolerance) {
-        solution.col_dual[iCol] -= dual_residual;
-        num_dual_correction++;
-        max_dual_correction = std::max(abs_dual_residual, max_dual_correction);
-        sum_dual_correction += abs_dual_residual;
-      }
-      norm_dual_residual = std::max(abs_dual_residual, norm_dual_residual);
-    }
-  }
-
-  if (num_primal_correction > 0 || num_dual_correction > 0)
-    highsLogUser(
-        options.log_options, HighsLogType::kWarning,
-        "LP solver residuals: primal = %g; dual = %g yield num/max/sum primal "
-        "(%d/%g/%g) and dual (%d/%g/%g) corrections\n",
-        norm_primal_residual, norm_dual_residual, int(num_primal_correction),
-        max_primal_correction, sum_primal_correction, int(num_dual_correction),
-        max_dual_correction, sum_dual_correction);
-}
-
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
-  solver_object.model_status_ = HighsModelStatus::kNotset;
-  solver_object.highs_info_.objective_function_value = 0;
-  solver_object.highs_info_.primal_solution_status = kSolutionStatusNone;
-  solver_object.highs_info_.dual_solution_status = kSolutionStatusNone;
-  solver_object.highs_info_.num_primal_infeasibilities =
-      kHighsIllegalInfeasibilityCount;
-  solver_object.highs_info_.max_primal_infeasibility =
-      kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.sum_primal_infeasibilities =
-      kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.num_dual_infeasibilities =
-      kHighsIllegalInfeasibilityCount;
-  solver_object.highs_info_.max_dual_infeasibility =
-      kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.sum_dual_infeasibilities =
-      kHighsIllegalInfeasibilityMeasure;
+  resetModelStatusAndHighsInfo(solver_object.model_status_,
+                               solver_object.highs_info_);
 }
 
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
@@ -1553,12 +1612,7 @@ void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
   highs_info.objective_function_value = 0;
   highs_info.primal_solution_status = kSolutionStatusNone;
   highs_info.dual_solution_status = kSolutionStatusNone;
-  highs_info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-  highs_info.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  highs_info.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  highs_info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-  highs_info.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  highs_info.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  highs_info.invalidateKkt();
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
@@ -1595,6 +1649,91 @@ bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
   return basis.col_status.size() == static_cast<size_t>(lp.num_col_) &&
          basis.row_status.size() == static_cast<size_t>(lp.num_row_);
+}
+
+void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
+                         const HighsInfo& info, const std::string& solver) {
+  const HighsLogOptions& log_options = options.log_options;
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double primal_residual_tolerance = options.primal_residual_tolerance;
+  double dual_residual_tolerance = options.dual_residual_tolerance;
+  double complementarity_tolerance = options.complementarity_tolerance;
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    primal_feasibility_tolerance = options.kkt_tolerance;
+    dual_feasibility_tolerance = options.kkt_tolerance;
+    primal_residual_tolerance = options.kkt_tolerance;
+    dual_residual_tolerance = options.kkt_tolerance;
+    complementarity_tolerance = options.kkt_tolerance;
+  }
+
+  const bool force_report = false;
+  const bool has_kkt_failures =
+      info.num_primal_infeasibilities > 0 ||
+      info.num_dual_infeasibilities > 0 ||
+      info.num_primal_residual_errors > 0 ||
+      info.num_dual_residual_errors > 0 ||
+      info.primal_dual_objective_error > complementarity_tolerance;
+  if (!has_kkt_failures && !force_report) return;
+
+  HighsLogType log_type =
+      has_kkt_failures ? HighsLogType::kWarning : HighsLogType::kInfo;
+
+  highsLogUser(log_options, log_type, "LP solution KKT conditions\n");
+
+  highsLogUser(
+      log_options, HighsLogType::kInfo,
+      "num/max %6d / %8.3g (relative %6d / %8.3g) primal "
+      "infeasibilities     (tolerance = %4.0e)\n",
+      int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
+      int(info.num_relative_primal_infeasibilities),
+      info.max_relative_primal_infeasibility, primal_feasibility_tolerance);
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "num/max %6d / %8.3g (relative %6d / %8.3g)   dual "
+               "infeasibilities     (tolerance = %4.0e)\n",
+               int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
+               int(info.num_relative_dual_infeasibilities),
+               info.max_relative_dual_infeasibility,
+               dual_feasibility_tolerance);
+  if (info.num_primal_residual_errors >= 0)
+    highsLogUser(
+        log_options, HighsLogType::kInfo,
+        "num/max %6d / %8.3g (relative %6d / %8.3g) primal residual "
+        "errors     (tolerance = %4.0e)\n",
+        int(info.num_primal_residual_errors), info.max_primal_residual_error,
+        int(info.num_relative_primal_residual_errors),
+        info.max_relative_primal_residual_error, primal_residual_tolerance);
+  if (info.num_dual_residual_errors >= 0)
+    highsLogUser(
+        log_options, HighsLogType::kInfo,
+        "num/max %6d / %8.3g (relative %6d / %8.3g)   dual residual "
+        "errors     (tolerance = %4.0e)\n",
+        int(info.num_dual_residual_errors), info.max_dual_residual_error,
+        int(info.num_relative_dual_residual_errors),
+        info.max_relative_dual_residual_error, dual_residual_tolerance);
+  if (info.primal_dual_objective_error !=
+      kHighsIllegalComplementarityViolation) {
+    highsLogUser(
+        log_options, HighsLogType::kInfo,
+        "                          "
+        "               %1d / %8.3g  P-D objective error        "
+        "(tolerance = %4.0e)\n",
+        info.primal_dual_objective_error > complementarity_tolerance ? 1 : 0,
+        info.primal_dual_objective_error, complementarity_tolerance);
+  }
+  if (printf_kkt) {
+    printf("grepLpKktFailures,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",
+           options.solver.c_str(), lp.model_name_.c_str(),
+           lp.origin_name_.c_str(), int(info.num_primal_infeasibilities),
+           int(info.num_dual_infeasibilities),
+           int(info.num_primal_residual_errors),
+           int(info.num_dual_residual_errors),
+           int(info.num_relative_primal_infeasibilities),
+           int(info.num_relative_dual_infeasibilities),
+           int(info.num_relative_primal_residual_errors),
+           int(info.num_relative_dual_residual_errors),
+           info.primal_dual_objective_error);
+  }
 }
 
 bool HighsSolution::hasUndefined() const {

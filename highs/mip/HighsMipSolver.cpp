@@ -852,6 +852,8 @@ void HighsMipSolver::cleanupSolve() {
   if (!timeless_log) analysis_.reportMipTimer();
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
+
+  if (improving_solution_file_ != nullptr) fclose(improving_solution_file_);
 }
 
 // Only called in Highs::runPresolve

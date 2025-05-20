@@ -306,11 +306,13 @@ struct HighsOptionsStruct {
   double infinite_bound;
   double small_matrix_value;
   double large_matrix_value;
+  double kkt_tolerance;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double ipm_optimality_tolerance;
   double primal_residual_tolerance;
   double dual_residual_tolerance;
+  double complementarity_tolerance;
   double objective_bound;
   double objective_target;
   HighsInt threads;
@@ -346,7 +348,6 @@ struct HighsOptionsStruct {
   HighsInt ipm_iteration_limit;
 
   // Options for PDLP solver
-  bool pdlp_native_termination;
   bool pdlp_scaling;
   HighsInt pdlp_iteration_limit;
   HighsInt pdlp_e_restart_method;
@@ -404,6 +405,7 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
+  //  bool allow_pdlp_cleanup;
   bool run_centring;
   HighsInt max_centring_steps;
   double centring_ratio_tolerance;
@@ -474,11 +476,13 @@ struct HighsOptionsStruct {
         infinite_bound(0.0),
         small_matrix_value(0.0),
         large_matrix_value(0.0),
+        kkt_tolerance(0.0),
         primal_feasibility_tolerance(0.0),
         dual_feasibility_tolerance(0.0),
         ipm_optimality_tolerance(0.0),
         primal_residual_tolerance(0.0),
         dual_residual_tolerance(0.0),
+        complementarity_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),
@@ -506,7 +510,6 @@ struct HighsOptionsStruct {
         log_to_console(false),
         timeless_log(false),
         ipm_iteration_limit(0),
-        pdlp_native_termination(false),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
@@ -556,6 +559,7 @@ struct HighsOptionsStruct {
         less_infeasible_DSE_check(false),
         less_infeasible_DSE_choose_row(false),
         use_original_HFactor_logic(false),
+        //        allow_pdlp_cleanup(false),
         run_centring(false),
         max_centring_steps(0),
         centring_ratio_tolerance(0.0),
@@ -723,28 +727,43 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
+        "kkt_tolerance",
+        "If not set to 1e-7, this KKT tolerance is used for all feasibility "
+        "and optimality measures",
+        advanced, &kkt_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
         "primal_feasibility_tolerance", "Primal feasibility tolerance",
-        advanced, &primal_feasibility_tolerance, 1e-10, 1e-7, kHighsInf);
+        advanced, &primal_feasibility_tolerance, 1e-10, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "dual_feasibility_tolerance", "Dual feasibility tolerance", advanced,
-        &dual_feasibility_tolerance, 1e-10, 1e-7, kHighsInf);
+        &dual_feasibility_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
-        &ipm_optimality_tolerance, 1e-12, 1e-8, kHighsInf);
+        &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "primal_residual_tolerance", "Primal residual tolerance", advanced,
-        &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+        &primal_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "complementarity_tolerance", "Primal-dual objective error tolerance",
+        advanced, &complementarity_tolerance, 1e-10, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "dual_residual_tolerance", "Dual residual tolerance", advanced,
-        &dual_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+        &dual_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1114,7 +1133,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "mip_feasibility_tolerance", "MIP feasibility tolerance", advanced,
+        "mip_feasibility_tolerance", "MIP integrality tolerance", advanced,
         &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
     records.push_back(record_double);
 
@@ -1174,12 +1193,6 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
-        "pdlp_native_termination",
-        "Use native termination for PDLP solver: Default = false", advanced,
-        &pdlp_native_termination, false);
-    records.push_back(record_bool);
-
-    record_bool = new OptionRecordBool(
         "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
         advanced, &pdlp_scaling, true);
     records.push_back(record_bool);
@@ -1196,9 +1209,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "pdlp_d_gap_tol",
-        "Duality gap tolerance for PDLP solver: Default = 1e-4", advanced,
-        &pdlp_d_gap_tol, 1e-12, 1e-4, kHighsInf);
+        "pdlp_d_gap_tol", "Duality gap tolerance for PDLP solver", advanced,
+        &pdlp_d_gap_tol, 1e-12, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
@@ -1471,7 +1483,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "start_crossover_tolerance",
         "Tolerance to be satisfied before IPM crossover will start", advanced,
-        &start_crossover_tolerance, 1e-12, 1e-8, kHighsInf);
+        &start_crossover_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_bool = new OptionRecordBool(
@@ -1495,6 +1508,14 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordBool("run_centring", "Perform centring steps or not",
                              advanced, &run_centring, false);
     records.push_back(record_bool);
+
+    /*
+    record_bool = new OptionRecordBool("allow_pdlp_cleanup",
+                                       "Allow PDLP to be used to clean up "
+                                       "model with unknown status and no basis",
+                                       advanced, &allow_pdlp_cleanup, true);
+    records.push_back(record_bool);
+    */
 
     record_int =
         new OptionRecordInt("max_centring_steps",

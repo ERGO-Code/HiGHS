@@ -207,7 +207,7 @@ TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
                      HighsVarType::kInteger};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("highs_debug_level", kHighsDebugLevelCheap);
-  highs.setOptionValue("log_dev_level", 2);
+  if (dev_run) highs.setOptionValue("log_dev_level", 2);
   HighsStatus return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeInfo("");

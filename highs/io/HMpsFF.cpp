@@ -477,8 +477,8 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, size_t& start,
   // apparent keyword. Only cases that don't work are NAME, OBJSENSE,
   // QCMATRIX, QSECTION, and CSECTION since they can be followed by text
   if (key == HMpsFF::Parsekey::kName || key == HMpsFF::Parsekey::kObjsense ||
-      key == HMpsFF::Parsekey::kQcmatrix || key == HMpsFF::Parsekey::kQsection ||
-      key == HMpsFF::Parsekey::kCsection)
+      key == HMpsFF::Parsekey::kQcmatrix ||
+      key == HMpsFF::Parsekey::kQsection || key == HMpsFF::Parsekey::kCsection)
     return key;
   assert(key != HMpsFF::Parsekey::kNone);
 

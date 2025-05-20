@@ -35,6 +35,7 @@ class HighsLp {
   double offset_;
 
   std::string model_name_;
+  std::string origin_name_;
   std::string objective_name_;
 
   HighsInt new_col_name_ix_ = 0;
