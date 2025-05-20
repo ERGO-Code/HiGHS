@@ -22,6 +22,12 @@ including [pre-build libraries](https://github.com/coin-or/GAMSlinks/releases).
  * Alternatively, HiGHS also has a [native Node.js](https://www.npmjs.com/package/highs-solver)
    interface.
 
+## MATLAB
+
+* [HiGHSMEX](https://github.com/savyasachi/HiGHSMEX) is a MATLAB interface for Windows to provide all the functionality of HiGHS, except the following: Reading problem data from a model file; Setting names for the rows and columns of the model, or setting name for the objective; Advanced features such as solution of systems using the current basis matrix.
+
+* The HiGHS MIP and dual simplex LP solvers have been used _within_ MATLAB (so for all architectures) by default since release 2024a.
+
 ## R
 
  * An R interface is available through the [`highs` R package](https://cran.r-project.org/web/packages/highs/index.html).
