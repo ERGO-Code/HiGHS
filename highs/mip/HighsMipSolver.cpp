@@ -68,6 +68,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
 HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
+  const bool debug_logging = false;  // true;
   modelstatus_ = HighsModelStatus::kNotset;
 
   if (submip) {
@@ -279,6 +280,16 @@ restart:
                                        mipdata_->upper_bound);
 
   mipdata_->printDisplayLine();
+  int64_t num_nodes = mipdata_->nodequeue.numNodes();
+  if (num_nodes > 1) {
+    // Should be exactly one node on the queue?
+    if (debug_logging)
+      printf(
+          "HighsMipSolver::run() popping node from nodequeue with %d > 1 "
+          "nodes\n",
+          HighsInt(num_nodes));
+    assert(num_nodes == 1);
+  }
 
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
   int64_t numStallNodes = 0;
