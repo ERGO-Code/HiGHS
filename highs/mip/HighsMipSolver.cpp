@@ -308,11 +308,44 @@ restart:
   // Initialize worker relaxations and mipworkers
   // todo lps and workers are still empty right now
 
-  const int num_workers = 7;
-  for (int i = 0; i < 7; i++) {
+  const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
+  const HighsInt num_worker = mip_search_concurrency - 1;
+  for (int i = 0; i < num_worker; i++) {
     mipdata_->lps.push_back(HighsLpRelaxation(*this));
     mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
   }
+
+  // Lambda for combining limit_reached across searches
+  auto limitReached = [&]() -> bool {
+    bool limit_reached = false;
+    for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++)
+      limit_reached =
+	limit_reached || mipdata_->workers[iSearch].search_ptr_->limit_reached_;
+    return limit_reached;
+  };
+
+  // Lambda checking whether to break out of search
+  auto breakSearch = [&]() -> bool {
+    bool break_search = false;
+    for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++)
+      break_search =
+	break_search || mipdata_->workers[iSearch].search_ptr_->break_search_;
+    return break_search;
+  };
+
+  // Lambda checking whether loop pass is to be skipped
+  auto performedDive = [&](const HighsSearch& search,
+			   const HighsInt iSearch) -> bool {
+    if (iSearch == 0) {
+      assert(search.performed_dive_);
+    } else {
+      assert(!search.performed_dive_);
+    }
+    // Make sure that if a dive has been performed, we're not
+    // continuing after breaking from the search
+    if (search.performed_dive_) assert(!breakSearch());
+    return search.performed_dive_;
+  };
 
   while (search.hasNode()) {
     // Possibly look for primal solution from the user
