@@ -1,0 +1,12 @@
+## HiGHS CMake configuration file
+
+set(@PACKAGE_PREFIX@_VERSION @PROJECT_VERSION@)
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Threads)
+
+@CONF_ZLIB@
+
+include("${CMAKE_CURRENT_LIST_DIR}/highs-targets.cmake")

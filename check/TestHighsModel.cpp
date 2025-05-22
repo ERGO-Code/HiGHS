@@ -75,6 +75,8 @@ TEST_CASE("highs-model", "[highs_model]") {
   REQUIRE(status == HighsStatus::kOk);
   status = highs.run();
   REQUIRE(status == HighsStatus::kError);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("highs-integrality", "[highs_model]") {
@@ -103,7 +105,8 @@ TEST_CASE("highs-integrality", "[highs_model]") {
 
   HighsVarType integrality;
   REQUIRE(highs.getColIntegrality(-1, integrality) == HighsStatus::kError);
-  REQUIRE(highs.getColIntegrality(0, integrality) == HighsStatus::kError);
+  REQUIRE(highs.getColIntegrality(0, integrality) == HighsStatus::kOk);
+  REQUIRE(integrality == HighsVarType::kContinuous);
   REQUIRE(highs.getColIntegrality(lp.num_col_, integrality) ==
           HighsStatus::kError);
 
@@ -126,4 +129,6 @@ TEST_CASE("highs-integrality", "[highs_model]") {
 
   REQUIRE(highs.getColIntegrality(0, integrality) == HighsStatus::kOk);
   REQUIRE(integrality == HighsVarType::kInteger);
+
+  highs.resetGlobalScheduler(true);
 }

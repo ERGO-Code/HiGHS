@@ -45,7 +45,7 @@ jobs:
           lcov --remove cov.info "extern/zstr/*" -o cov.info
           lcov --remove cov.info "extern/catch*" -o cov.info
           lcov --remove cov.info "app/CLI11*" -o cov.info
-          lcov --remove cov.info "src/test*" -o cov.info
+          lcov --remove cov.info "highs/test_kkt*" -o cov.info
           lcov --list cov.info
           mv cov.info coverage.info
 

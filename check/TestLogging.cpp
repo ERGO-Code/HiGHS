@@ -7,14 +7,14 @@
 const bool dev_run = false;
 
 TEST_CASE("logging", "[highs_logging]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string log_file = test_name + ".log";
   std::string model;
   std::string model_file;
-  std::string log_file;
   HighsStatus return_status;
 
   model = "avgas";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  log_file = "temp.log";
 
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -44,6 +44,8 @@ TEST_CASE("logging", "[highs_logging]") {
   highs.run();
 
   if (!dev_run) std::remove(log_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("no-logging", "[highs_logging]") {
@@ -62,4 +64,6 @@ TEST_CASE("no-logging", "[highs_logging]") {
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
