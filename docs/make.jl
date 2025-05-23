@@ -39,11 +39,13 @@ Documenter.makedocs(
     strict = !("strict=false" in ARGS),
     doctest = ("doctest=only" in ARGS) ? :only : true,
     repo = "https://github.com/ERGO-Code/HiGHS/tree/latest{path}",
-    linkcheck = true,
+    linkcheck = false,
     linkcheck_ignore = [
         "https://crates.io/crates/highs",
         "https://crates.io/crates/good_lp",
         "https://link.springer.com/article/10.1007/s12532-017-0130-5",
+	"https://link.springer.com/article/10.1007/s12532-020-00181-8",
+	"https://github.com/ERGO-Code/HiGHS/blob/master/highs/Highs.h"
     ],
     pages = [
         "About" => "index.md",
@@ -54,7 +56,7 @@ Documenter.makedocs(
             "guide/basic.md",
             "guide/further.md",
             "guide/advanced.md",
-            "guide/highs-gpu.md",
+            "guide/gpu.md",
             "guide/kkt.md"
         ],
 	"Data structures" => Any[

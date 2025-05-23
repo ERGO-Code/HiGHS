@@ -1,4 +1,4 @@
-# [HiGHS feasibilty and optimality tolerances](@id kkt)
+# [Feasibilty and optimality](@id kkt)
 
 Mathematically, optimization problems have exact feasibilty conditions and, for continuous optimization problems, exact optimality conditions. However, since solvers cannot always satisfy these conditions exactly when using floating-point arithmetic, they do so to within tolerances. To the user, HiGHS interprets feasibilty and optimality tolerances in the same way for all classes of problem. However, internally, the HiGHS solvers use tolerances to determine feasibilty and optimality in different ways. This, together with internal problem scaling, can lead to solutions that are deemed optimal by a solver not satisfying the HiGHS "quality control" criteria and flagged up as non-optimal.
 
@@ -26,7 +26,7 @@ The primal-dual gap is equivalent to the complementarity condition that `x^Ts=0`
 
 ### The HiGHS feasibility and optimality tolerances
 
-Within
+Within HiGHS there are separate tolerances for [primal](@ref option-primal-feasibility-tolerance) and [dual](@ref option-dual-feasibility-tolerance) feasibility, redisual errors in the [primal](@ref option-primal-residual-tolerance) and [dual](@ref option-dual-residual-tolerance) equations, and [relative primal-dual gap](@ref option-complementarity-tolerance).
 
 
 ### When HiGHS yields an optimal solution

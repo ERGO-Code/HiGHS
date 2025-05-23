@@ -1,4 +1,4 @@
-# [HiGHS on a GPU](@id highs-gpu)
+# [GPU acceleration](@id gpu)
 
 From HiGHS v1.10.0, its first order primal-dual LP (PDLP) solver [cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C) can be run on an NVIDIA GPU under Linux and Windows. However, to achieve this, CUDA utilities must be installed and HiGHS must be built locally using CMake, as described below.
 
@@ -8,9 +8,9 @@ First order solvers for LP are still very much "work in progress". Although impr
 
 #### Termination criteria
 
-Although the PDLP solver may report that it has terminated with an optimal solution, HiGHS may identify that the solution returned by PDLP is not optimal. As discussed in [HiGHS feasibilty and optimality tolerances](kkt), this is due to PDLP using relative termination criteria. 
+Although the PDLP solver may report that it has terminated with an optimal solution, HiGHS may identify that the solution returned by PDLP is not optimal. As discussed in [HiGHS feasibilty and optimality tolerances](@ref kkt), this is due to PDLP using relative termination criteria. 
 
-If you use the HiGHS PDLP solver, in the first instance it is recommended that you increase the feasibility and optimality tolerances to `1e-4`, since this will result in the algorithm terminating much sooner. There are multiple feasibility and optimality tolerances, but all will be set to the value of the [`kkt\_tolerance`](@ref option-kkt-tolerance) option (if it differs from its default value of `1e-4`) so this is recommended in the first instance. 
+If you use the HiGHS PDLP solver, in the first instance it is recommended that you increase the feasibility and optimality tolerances to `1e-4`, since this will result in the algorithm terminating much sooner. There are multiple feasibility and optimality tolerances, but all will be set to the value of the [`kkt_tolerance`](@ref option-kkt-tolerance) option (if it differs from its default value of `1e-4`) so this is recommended in the first instance. 
 
 ### Requirements
 
