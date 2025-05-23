@@ -1,4 +1,5 @@
 #include "HCheckConfig.h"
+#include "Highs.h"
 #include "catch.hpp"
 #include "ipm/ipx/ipx_status.h"
 #include "ipm/ipx/lp_solver.h"
@@ -45,6 +46,7 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   ipx::Parameters parameters;
   if (!dev_run) parameters.display = 0;
   parameters.highs_logging = false;
+  parameters.timeless_log = false;
   lps.SetParameters(parameters);
 
   // Solve the LP.
@@ -54,8 +56,8 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
 
   highs::parallel::initialize_scheduler();
 
-  HighsCallback callback;
-  // Set pointer to null callback
+  // set empty callback to avoid issues
+  HighsCallback callback(nullptr);
   lps.SetCallback(&callback);
 
   Int status = lps.Solve();
@@ -87,4 +89,8 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   REQUIRE(fabs(ipx_col_value[11] - 339.9) < 1);
 
   (void)(info);  // surpress unused variable.
+
+  // hack to reset global scheduler
+  Highs h;
+  h.resetGlobalScheduler(true);
 }

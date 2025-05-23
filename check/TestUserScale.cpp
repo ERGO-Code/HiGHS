@@ -60,6 +60,8 @@ TEST_CASE("user-cost-scale-after-run", "[highs_user_scale]") {
           user_cost_scale_value * max_dual_infeasibility);
   REQUIRE(info.sum_dual_infeasibilities ==
           user_cost_scale_value * sum_dual_infeasibilities);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
@@ -87,6 +89,8 @@ TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
   //  checkSolutionScaling(user_bound_scale, user_cost_scale, unscaled_solution,
   //  scaled_solution);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
@@ -124,6 +128,8 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {

@@ -20,7 +20,7 @@ set(headers_python ${highs_headers_python}
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG)
 
-python_add_library(_core MODULE src/highs_bindings.cpp WITH_SOABI)
+python_add_library(_core MODULE highs/highs_bindings.cpp WITH_SOABI)
 
 # Pybind11
 # include(FetchContent)
