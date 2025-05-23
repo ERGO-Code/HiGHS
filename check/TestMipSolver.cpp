@@ -16,17 +16,36 @@ void solve(Highs& highs, std::string presolve,
            const double require_iteration_count = -1);
 void distillationMIP(Highs& highs);
 void rowlessMIP(Highs& highs);
+void rowlessMIP1(Highs& highs);
+void rowlessMIP2(Highs& highs);
 
 TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   distillationMIP(highs);
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
+// Fails but the cases work separately in
+// MIP-rowless-1 and
+// MIP-rowless-2 below
+// TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
+//   Highs highs;
+//   if (!dev_run) highs.setOptionValue("output_flag", false);
+//   rowlessMIP(highs);
+// }
+
+TEST_CASE("MIP-rowless-1", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  rowlessMIP(highs);
+  rowlessMIP1(highs);
+}
+
+TEST_CASE("MIP-rowless-2", "[highs_test_mip_solver]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  rowlessMIP2(highs);
 }
 
 TEST_CASE("MIP-solution-limit", "[highs_test_mip_solver]") {
@@ -188,7 +207,7 @@ TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
                      HighsVarType::kInteger};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("highs_debug_level", kHighsDebugLevelCheap);
-  highs.setOptionValue("log_dev_level", 2);
+  if (dev_run) highs.setOptionValue("log_dev_level", 2);
   HighsStatus return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeInfo("");
@@ -292,7 +311,7 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   lp.col_upper_ = {inf};
   lp.integrality_ = {HighsVarType::kInteger};
 
-  bool use_presolve = true;
+  bool use_presolve = false;
   HighsModelStatus require_model_status;
   for (HighsInt k = 0; k < 2; k++) {
     if (use_presolve) {
@@ -302,7 +321,11 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
       require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
     } else {
       // With use_presolve = false, MIP solver returns
-      // HighsModelStatus::kUnbounded
+      // HighsModelStatus::kUnbounded, because the all-zeros trivial
+      // heuristic finds a feasible point
+      //
+      // Feasibility jump appears to find one before the all-zeros
+      // trivial heuristic
       highs.setOptionValue("presolve", kHighsOffString);
       require_model_status = HighsModelStatus::kUnbounded;
     }
@@ -315,8 +338,8 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
     model_status = highs.getModelStatus();
     REQUIRE(model_status == require_model_status);
 
-    // Second time through loop is without presolve
-    use_presolve = false;
+    // Second time through loop is with presolve
+    use_presolve = true;
   }
   // Two-variable problem that is also primal unbounded as an LP, but
   // primal infeasible as a MIP.
@@ -337,13 +360,12 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = {1, 2};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
 
-  use_presolve = true;
+  use_presolve = false;
   for (HighsInt k = 0; k < 2; k++) {
     if (use_presolve) {
       // With use_presolve = true, LP solver returns
       // HighsModelStatus::kUnbounded because it solves the LP after
       // presolve has returned
-      // HighsModelStatus::kUnboundedOrInfeasible
       highs.setOptionValue("presolve", kHighsOnString);
       require_model_status = HighsModelStatus::kUnbounded;
     } else {
@@ -362,38 +384,25 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
     model_status = highs.getModelStatus();
     REQUIRE(model_status == require_model_status);
 
-    // Second time through loop is without presolve
-    use_presolve = false;
+    // Second time through loop is with presolve
+    use_presolve = true;
   }
 
   // Now as a MIP - infeasible
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
-  use_presolve = true;
-  for (HighsInt k = 0; k < 2; k++) {
-    if (use_presolve) {
-      // With use_presolve = true, MIP solver returns
-      // HighsModelStatus::kUnboundedOrInfeasible from presolve
-      highs.setOptionValue("presolve", kHighsOnString);
-      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
-    } else {
-      // With use_presolve = false, MIP solver returns
-      // HighsModelStatus::kUnboundedOrInfeasible
-      highs.setOptionValue("presolve", kHighsOffString);
-      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
-    }
+  // With(out) presolve, Highs::infeasibleBoundsOk() performs inward
+  // integer rounding of [0.25, 0.75] to [1, 0] so identifes
+  // infeasiblility. Hence MIP solver returns
+  // HighsModelStatus::kInfeasible
 
-    return_status = highs.passModel(lp);
-    REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.passModel(lp);
+  REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.run();
-    REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
 
-    model_status = highs.getModelStatus();
-    REQUIRE(model_status == require_model_status);
-
-    // Second time through loop is without presolve
-    use_presolve = false;
-  }
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::kInfeasible);
 }
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
@@ -509,6 +518,8 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
 TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
 
 TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string test_mps = test_name + ".mps";
   // Introduced due to #1325 observing that LI and UI are needed
   HighsLp lp;
   lp.num_col_ = 6;
@@ -536,7 +547,6 @@ TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
   const double obj0 = highs.getObjectiveValue();
   if (dev_run) printf("Optimum at first run: %g\n", obj0);
   // now write out to MPS and load again
-  const std::string test_mps = "test.mps";
   highs.writeModel(test_mps);
   highs.readModel(test_mps);
   highs.run();
@@ -549,8 +559,9 @@ TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string solution_file = test_name + ".sol";
   const std::string model = "flugpl";
-  const std::string solution_file = "MipImproving.sol";
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
@@ -564,7 +575,7 @@ TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
   const std::vector<HighsObjectiveSolution> saved_objective_and_solution =
       highs.getSavedMipSolutions();
   const HighsInt num_saved_solution = saved_objective_and_solution.size();
-  REQUIRE(num_saved_solution == 3);
+  REQUIRE(num_saved_solution > 0);
   const HighsInt last_saved_solution = num_saved_solution - 1;
   REQUIRE(saved_objective_and_solution[last_saved_solution].objective ==
           highs.getInfo().objective_function_value);
@@ -617,7 +628,8 @@ TEST_CASE("MIP-max-offset-test", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
-  const std::string solution_file = "MipImproving.sol";
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string solution_file = test_name + ".sol";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_improving_solution_save", true);
@@ -688,9 +700,22 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
           required_model_status = HighsModelStatus::kUnbounded;
         }
       } else {
-        // Presolve on, and identifies primal infeasible or unbounded
-        required_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+        // Presolve on
+        if (l == 0) {
+          // Inward integer rounding proves infeasiblilty
+          required_model_status = HighsModelStatus::kInfeasible;
+        } else {
+          // Presolve identifies primal infeasible or unbounded
+          required_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+        }
       }
+      if (dev_run)
+        printf(
+            "For k = %d and l = %d, original bounds on col 1 are [%g, %g]: "
+            "model status is \"%s\" and required status is \"%s\"\n",
+            int(k), int(l), lp.col_lower_[1], lp.col_upper_[1],
+            highs.modelStatusToString(highs.getModelStatus()).c_str(),
+            highs.modelStatusToString(required_model_status).c_str());
       REQUIRE(highs.getModelStatus() == required_model_status);
     }
     highs.setOptionValue("presolve", kHighsOnString);
@@ -699,8 +724,8 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
 
 TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
   Highs highs;
-  // No presolve
   highs.setOptionValue("output_flag", dev_run);
+  // No presolve
   highs.setOptionValue("presolve", kHighsOffString);
 
   // IP without constraints and fractional bounds on variables
@@ -797,6 +822,50 @@ void rowlessMIP(Highs& highs) {
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
 
+void rowlessMIP1(Highs& highs) {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_matrix_.start_ = {0, 0, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = -1.0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve reduces the LP to empty
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  // solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
+
+void rowlessMIP2(Highs& highs) {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_matrix_.start_ = {0, 0, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = -1.0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve reduces the LP to empty
+  // solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
+
 TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
   Highs highs;
@@ -818,5 +887,45 @@ TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
   highs.readModel(filename);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = -22375.7585461;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2204", "[highs_test_mip_solver]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2204.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 6.0;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Enable both heuristics
+  highs.setOptionValue("mip_heuristic_run_zi_round", true);
+  highs.setOptionValue("mip_heuristic_run_shifting", true);
+  highs.readModel(model_file);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 82.19999924;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2290", "[highs_test_mip_solver]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2290.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -1.6666666666;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }

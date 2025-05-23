@@ -1418,6 +1418,79 @@ class TestHighsPy(unittest.TestCase):
         self.assertRaises(Exception, lambda: h.__setattr__("cbMipDefineLazyConstraints", None))
 
 
+    def test_usercallbacks(self):
+        N = 8
+        h = highspy.Highs()
+        h.silent()
+
+        x = h.addBinaries(N, N)
+        y = np.fliplr(x)
+
+        h.addConstrs(h.qsum(x[i, :]) == 1 for i in range(N))  # each row has exactly one queen
+        h.addConstrs(h.qsum(x[:, j]) == 1 for j in range(N))  # each col has exactly one queen
+
+        h.addConstrs(h.qsum(x.diagonal(k)) <= 1 for k in range(-N + 1, N))  # each diagonal has at most one queen
+        h.addConstrs(h.qsum(y.diagonal(k)) <= 1 for k in range(-N + 1, N))  # each 'reverse' diagonal has at most one queen
+
+        # minimize index where queen is placed
+        h.minimize((x.astype(int) * x).sum())
+        sol = h.val(x)
+        self.assertEqual(sol.shape, (N, N))
+
+        # verify callback called
+        check_called = [False]
+
+        def check_called_func(e):
+            check_called[0] = True
+
+        h.cbMipUserSolution += check_called_func
+
+        # verify initialization
+        h.cbMipUserSolution += lambda e: self.assertEqual(e.data_in.user_has_solution, False)
+
+        def partial_solution(e):
+            # different sizes
+            self.assertEqual(e.data_in.setSolution(range(N*N), sol[::2]), highspy.HighsStatus.kError)
+
+            # get every 2nd element from 2d numpy sol array
+            self.assertEqual(e.data_in.setSolution(x[:, ::2], sol[:, ::2]), highspy.HighsStatus.kOk)
+            self.assertEqual(list(e.data_in.user_solution[0:4]), [sol[0,0],highspy.kHighsUndefined,sol[0,2],highspy.kHighsUndefined])
+            self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kOk)
+            self.assertEqual(list(e.data_in.user_solution[0:8]), list(sol[0,0:8]))
+
+            def try_change_ptr(e):
+                e.data_in.user_solution = [0] * (N*N)
+
+            self.assertRaises(Exception, lambda: try_change_ptr(e))
+
+            # modify directly
+            e.data_in.user_solution[:] = highspy.kHighsUndefined
+            self.assertEqual(e.data_in.user_solution[8], highspy.kHighsUndefined)
+            e.data_in.user_has_solution = False
+
+            # set subset partial without index
+            # note: we're setting a sub-optimal feasible solution here
+            self.assertEqual(e.data_in.setSolution([0., 0., 0., 0., 0., 0., highspy.kHighsUndefined, 0.]), highspy.HighsStatus.kOk)
+            self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kOk)
+            self.assertEqual(list(e.data_in.user_solution[0:8]), [0., 0., 0., 0., 0., 0., 1., 0.])
+            self.assertEqual(e.data_in.user_has_solution, True)
+
+            # set partial solution with fractional value
+            self.assertEqual(e.data_in.setSolution([0., 0.5]), highspy.HighsStatus.kOk)
+            self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kError)
+
+        # verify partial solution
+        h.cbMipUserSolution += partial_solution
+
+        # verify full solution
+        h.cbMipUserSolution += lambda e: self.assertEqual(e.data_in.setSolution([0] * (N * N + 1)), highspy.HighsStatus.kError)
+        h.cbMipUserSolution += lambda e: self.assertEqual(e.data_in.setSolution(sol), highspy.HighsStatus.kOk)
+
+        h.clearSolver()
+        h.solve()
+        self.assertEqual(check_called[0], True)
+
+
 class TestHighsLinearExpressionPy(unittest.TestCase):
     def setUp(self):
         self.h = highspy.Highs()
@@ -2059,3 +2132,31 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         expr = y + x <= 5
         self.assertEqual(repr(expr), "-inf <= 1.0_v1  1.0_v0 <= 5.0")
         self.assertEqual(str(expr), "-inf <= 1.0_v0  1.0_v1 <= 5.0")
+
+    def test_lexicographic_optimization(self):
+        # max f1 = X1
+        # max f2 = 3 X1 + 4 X2
+        # st  X1 <= 2
+        #     X2 <= 4
+        #     5 X1 + 4 X2 <= 20
+        model = highspy.Highs()
+        model.setOptionValue("blend_multi_objectives", False)
+        num_vars = 2
+        model.addVars(num_vars, np.array([0.0, 0.0]), np.array([2.0, 4.0]))
+        obj1 = highspy.HighsLinearObjective()
+        obj1.offset = 0
+        obj1.coefficients = [1, 0]
+        obj1.priority = 2
+        obj1.rel_tolerance = 0.1
+        obj1.abs_tolerance = 0.2
+        obj2 = highspy.HighsLinearObjective()
+        obj2.offset=0
+        obj2.coefficients=[3, 4]
+        obj2.priority=1
+        model.addLinearObjective(obj1)
+        model.addLinearObjective(obj2)
+        model.addRow(0.0, 20.0, num_vars, np.arange(num_vars), np.array([5.0, 4.0]))
+        model.run()
+
+        status = model.getModelStatus()
+        self.assertEqual(status, highspy.HighsModelStatus.kOptimal)

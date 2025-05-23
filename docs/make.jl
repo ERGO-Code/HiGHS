@@ -54,8 +54,8 @@ Documenter.makedocs(
             "guide/basic.md",
             "guide/further.md",
             "guide/advanced.md",
-            "guide/tolerances.md"
-            "guide/highs-gpu.md"
+            "guide/highs-gpu.md",
+            "guide/kkt.md"
         ],
 	"Data structures" => Any[
 	    "structures/index.md",

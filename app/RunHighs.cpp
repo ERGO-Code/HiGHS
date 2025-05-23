@@ -9,11 +9,7 @@
  * @brief HiGHS main
  */
 #include "Highs.h"
-// #include "io/HighsIO.h"
 #include "HighsRuntimeOptions.h"
-
-// uncomment if we will be shutting down task executor from exe
-// #include "parallel/HighsParallel.h"
 
 int main(int argc, char** argv) {
   // Create the Highs instance.
@@ -30,10 +26,6 @@ int main(int argc, char** argv) {
   loaded_options.log_file = "HiGHS.log";
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
-
-  // Replace command line options parsing library
-  // cxxopts now Cpp17 with
-  // CLI11 for Cpp11
 
   CLI::App app{""};
   argv = app.ensure_utf8(argv);
@@ -83,8 +75,11 @@ int main(int argc, char** argv) {
   // call this first so that printHighsVersionCopyright uses reporting
   // settings defined in any options file.
   highs.passOptions(loaded_options);
-  //  highs.writeOptions("Options.md");
   highs.writeOptions("", true);
+
+  // Lines to write out documentation of HighsOptions and HighsInfo
+  // highs.writeOptions("Options.md");
+  // highs.writeInfo("Info.md");
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(cmd_options.model_file);
@@ -93,26 +88,7 @@ int main(int argc, char** argv) {
     return (int)read_status;
   }
 
-  if (cmd_options.cmd_read_basis_file != "") {
-    HighsStatus basis_status = highs.readBasis(cmd_options.cmd_read_basis_file);
-    if (basis_status == HighsStatus::kError) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Error reading basis from file\n");
-      return (int)basis_status;
-    }
-  }
-
-  // Possible read a solution file
-  if (cmd_options.read_solution_file != "") {
-    HighsStatus read_solution_status =
-        highs.readSolution(cmd_options.read_solution_file);
-    if (read_solution_status == HighsStatus::kError) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Error loading solution file\n");
-      return (int)read_solution_status;
-    }
-  }
-  if (options.write_presolved_model_to_file) {
+  if (options.write_presolved_model_file != "") {
     // Run presolve and write the presolved model to a file
     HighsStatus status = highs.presolve();
     if (status == HighsStatus::kError) return int(status);
@@ -134,32 +110,9 @@ int main(int argc, char** argv) {
   HighsStatus run_status = highs.run();
   if (run_status == HighsStatus::kError) return int(run_status);
 
-  // highs.writeInfo("Info.md");
-
-  if (cmd_options.cmd_write_basis_file != "") {
-    HighsStatus basis_status =
-        highs.writeBasis(cmd_options.cmd_write_basis_file);
-    if (basis_status == HighsStatus::kError) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Error writing basis to file\n");
-
-      return (int)basis_status;
-    }
-  }
-
-  // Possibly write the solution to a file
-  if (options.write_solution_to_file || options.solution_file != "")
-    highs.writeSolution(options.solution_file, options.write_solution_style);
-
-  // Possibly write the model to a file
-  if (options.write_model_to_file) {
-    HighsStatus write_model_status = highs.writeModel(options.write_model_file);
-    if (write_model_status == HighsStatus::kError)
-      return (int)write_model_status;  // todo: change to write model error
-  }
-
-  // Shut down task executor: optional and wip
-  // HighsTaskExecutor::shutdown(true);
+  // Shut down task executor for explicit release of memory.
+  // Valgrind still reachable otherwise.
+  highs.resetGlobalScheduler(true);
 
   return (int)run_status;
 }

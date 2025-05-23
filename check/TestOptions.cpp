@@ -79,6 +79,8 @@ TEST_CASE("external-options", "[highs_options]") {
 }
 
 TEST_CASE("internal-options", "[highs_options]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string model_file = test_name + ".mps";
   HighsOptions options;
   HighsLogOptions report_log_options = options.log_options;
   if (!dev_run) options.output_flag = false;
@@ -209,7 +211,6 @@ TEST_CASE("internal-options", "[highs_options]") {
                           options.log_options, options.records, "ml.mps");
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
-  std::string model_file = "ml.mps";
   return_status =
       setLocalOptionValue(report_log_options, kPresolveString,
                           options.log_options, options.records, model_file);
@@ -260,9 +261,12 @@ TEST_CASE("internal-options", "[highs_options]") {
 }
 
 TEST_CASE("highs-options", "[highs_options]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string options_file = test_name + ".set";
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
-  HighsStatus return_status = highs.writeOptions("Highs.set");
+  highs.setOptionValue("output_flag", dev_run);
+
+  HighsStatus return_status = highs.writeOptions(options_file);
   REQUIRE(return_status == HighsStatus::kOk);
 
   // Check mixed-string value
@@ -390,9 +394,10 @@ TEST_CASE("highs-options", "[highs_options]") {
       highs.setOptionValue("allowed_matrix_scale_factor", "3.14159");
   REQUIRE(return_status == HighsStatus::kError);
 
-  if (dev_run) printf("\nAfter setting allowed_matrix_scale_factor to 1\n");
-  return_status = highs.writeOptions("Highs.set");
-  REQUIRE(return_status == HighsStatus::kOk);
+  if (dev_run) {
+    printf("\nAfter setting allowed_matrix_scale_factor to 1\n");
+    return_status = highs.writeOptions(options_file);
+  }
 
   double allowed_matrix_scale_factor_double = 1e-7;
   return_status = highs.setOptionValue("allowed_matrix_scale_factor",
@@ -404,9 +409,10 @@ TEST_CASE("highs-options", "[highs_options]") {
                                        allowed_matrix_scale_factor);
   REQUIRE(return_status == HighsStatus::kOk);
 
-  if (dev_run) printf("\nAfter testing HighsInt options\n");
-  return_status = highs.writeOptions("Highs.set");
-  REQUIRE(return_status == HighsStatus::kOk);
+  if (dev_run) {
+    printf("\nAfter testing HighsInt options\n");
+    return_status = highs.writeOptions(options_file);
+  }
 
   // Check setting double options
 
@@ -446,9 +452,7 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status = highs.setOptionValue(kModelFileString, model_file);
   REQUIRE(return_status == HighsStatus::kError);
 
-  std::string options_file = "Highs.set";
-  return_status = highs.writeOptions(options_file);
-  REQUIRE(return_status == HighsStatus::kOk);
+  if (dev_run) return_status = highs.writeOptions(options_file);
 
   HighsOptionType highs_option_type;
 

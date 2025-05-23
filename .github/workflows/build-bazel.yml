@@ -21,7 +21,13 @@ jobs:
         run: bazel build //...
       
       - name: test all
-        run: bazel test //...
+        run: bazel test --test_output=all //...
 
       - name: test example
         run: ./bazel-bin/call-highs-example
+
+      - name: Upload bazel-testlogs
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazel-testlogs
+          path: bazel-testlogs/
