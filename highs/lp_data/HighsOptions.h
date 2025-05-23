@@ -728,8 +728,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "kkt_tolerance",
-        "If not set to 1e-7, this KKT tolerance is used for all feasibility "
-        "and optimality measures",
+        "If changed from its default value, this tolerance is used for all feasibility "
+        "and optimality (KKT) measures",
         advanced, &kkt_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
@@ -756,14 +756,14 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "complementarity_tolerance", "Primal-dual objective error tolerance",
-        advanced, &complementarity_tolerance, 1e-10, kDefaultKktTolerance,
-        kHighsInf);
+        "dual_residual_tolerance", "Dual residual tolerance", advanced,
+        &dual_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "dual_residual_tolerance", "Dual residual tolerance", advanced,
-        &dual_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        "complementarity_tolerance", "Primal-dual objective error tolerance",
+        advanced, &complementarity_tolerance, 1e-10, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

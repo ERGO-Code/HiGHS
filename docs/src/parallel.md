@@ -7,7 +7,7 @@ computing. When using a CPU, these are currently restricted to the
 dual simplex solver for LP, and the MIP solver. Details of these and
 future plans are set out below. HiGHS has an implementation of a first
 order method (PDLP) for solving LPs that can exploit the availability of a
-[GPU](@ref highs-gpu).
+[GPU](@ref gpu).
 
 By default, when running in parallel, HiGHS will use half the
 available threads on a machine. This number can be modified by setting

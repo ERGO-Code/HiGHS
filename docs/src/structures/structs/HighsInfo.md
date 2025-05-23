@@ -59,7 +59,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_primal\_infeasibilities
-- The number of variables violating a bound by more than the [primal feasibility tolerance](@ref primal_feasibility_tolerance).
+- The number of variables violating a bound by more than the [primal feasibility tolerance](@ref option-primal-feasibility-tolerance).
 - Type: integer
 
 ## max\_primal\_infeasibility
@@ -71,7 +71,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_dual\_infeasibilities
-- The number of variables violating dual feasibility by more than the [dual feasibility tolerance](@ref dual_feasibility_tolerance).
+- The number of variables violating dual feasibility by more than the [dual feasibility tolerance](@ref option-dual-feasibility-tolerance).
 - Type: integer
 
 ## max\_dual\_infeasibility
@@ -83,7 +83,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_relative\_primal\_infeasibilities
-- The number of variables violating a bound by relatively more than the [primal feasibility tolerance](@ref primal_feasibility_tolerance).
+- The number of variables violating a bound by relatively more than the [primal feasibility tolerance](@ref option-primal-feasibility-tolerance).
 - Type: integer
 
 ## max\_relative\_primal\_infeasibility
@@ -91,7 +91,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_relative\_dual\_infeasibilities
-- The number of variables violating dual feasibility by relatively more than the [dual feasibility tolerance](@ref dual_feasibility_tolerance).
+- The number of variables violating dual feasibility by relatively more than the [dual feasibility tolerance](@ref option-dual-feasibility-tolerance).
 - Type: integer
 
 ## max\_relative\_dual\_infeasibility
@@ -99,7 +99,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_primal\_residual\_errors
-- The number of primal equations violated by more than the [primal residual tolerance](@ref primal_residual_tolerance).
+- The number of primal equations violated by more than the [primal residual tolerance](@ref option-primal-residual-tolerance).
 - Type: integer
 
 ## max\_primal\_residual\_error
@@ -107,7 +107,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_dual\_residual\_errors
-- The number of dual equations violated by more than the [dual residual tolerance](@ref dual_residual_tolerance).
+- The number of dual equations violated by more than the [dual residual tolerance](@ref option-dual-residual-tolerance).
 - Type: integer
 
 ## max\_dual\_residual\_error
@@ -115,7 +115,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_relative\_primal\_residual\_errors
-- The number of primal equations violated by relatively more than the [primal residual tolerance](@ref primal_residual_tolerance).
+- The number of primal equations violated by relatively more than the [primal residual tolerance](@ref option-primal-residual-tolerance).
 - Type: integer
 
 ## max\_relative\_primal\_residual\_error
@@ -123,7 +123,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_relative\_dual\_residual\_errors
-- The number of dual equations violated by relatively more than the [dual residual tolerance](@ref dual_residual_tolerance).
+- The number of dual equations violated by relatively more than the [dual residual tolerance](@ref option-dual-residual-tolerance).
 - Type: integer
 
 ## max\_relative\_dual\_residual\_error

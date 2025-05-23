@@ -55,19 +55,19 @@
 - Range: [1, inf]
 - Default: 1e+15
 
-## kkt\_tolerance
-- KKT tolerance
+## [kkt\_tolerance](@id option-kkt-tolerance)
+- If changed from its default value, this tolerance is used for all feasibility and optimality (KKT) measures
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## primal\_feasibility\_tolerance
+## [primal\_feasibility\_tolerance](@id option-primal-feasibility-tolerance)
 - Primal feasibility tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## dual\_feasibility\_tolerance
+## [dual\_feasibility\_tolerance](@id option-dual-feasibility-tolerance)
 - Dual feasibility tolerance
 - Type: double
 - Range: [1e-10, inf]
@@ -79,19 +79,19 @@
 - Range: [1e-12, inf]
 - Default: 1e-08
 
-## primal\_residual\_tolerance
+## [primal\_residual\_tolerance](@id option-primal-residual-tolerance)
 - Primal residual tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## complementarity\_tolerance
+## [complementarity\_tolerance](@id option-complementarity-tolerance)
 - Primal-dual objective error tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## dual\_residual\_tolerance
+## [dual\_residual\_tolerance](@id option-dual-residual-tolerance)
 - Dual residual tolerance
 - Type: double
 - Range: [1e-10, inf]
@@ -414,11 +414,6 @@
 - Range: {0, 2147483647}
 - Default: 2147483647
 
-## pdlp\_native\_termination
-- Use native termination for PDLP solver: Default = false
-- Type: boolean
-- Default: "false"
-
 ## pdlp\_scaling
 - Scaling option for PDLP solver: Default = true
 - Type: boolean
@@ -430,7 +425,7 @@
 - Range: {0, 2147483647}
 - Default: 2147483647
 
-## pdlp\_e\_restart\_method
+## [pdlp\_e\_restart\_method](@id option-pdlp-d-gap-tol)
 - Restart mode for PDLP solver: 0 => none; 1 => GPU (default); 2 => CPU 
 - Type: integer
 - Range: {0, 2}
