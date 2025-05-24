@@ -56,11 +56,11 @@ enum MipSolutionSource : int {
   kSolutionSourceSolveLp,
   kSolutionSourceEvaluateNode,
   kSolutionSourceUnbounded,
+  kSolutionSourceUserSolution,
   kSolutionSourceTrivialZ,
   kSolutionSourceTrivialL,
   kSolutionSourceTrivialU,
   kSolutionSourceTrivialP,
-  kSolutionSourceUserSolution,
   kSolutionSourceCleanup,
   kSolutionSourceCount
 };

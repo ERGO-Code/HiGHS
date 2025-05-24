@@ -164,11 +164,11 @@ void HighsMipAnalysis::reportMipTimer() {
   //  reportMipSolveLpClock(true);
   //  mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);
   //  reportMipSolveLpClock(false);
-  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, true, true);
-  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, false, true);
-  //  analyseVectorValues(nullptr, "Node search time",
+  //  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, true,
+  //  true); mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks,
+  //  false, true); analyseVectorValues(nullptr, "Node search time",
   //                      HighsInt(node_search_time.size()), node_search_time);
   //  analyseVectorValues(nullptr, "Dive time", HighsInt(dive_time.size()),
   //                      dive_time);
-  mip_timer.reportFjClock(this->model_name, mip_clocks);
+  // mip_timer.reportFjClock(this->model_name, mip_clocks);
 }

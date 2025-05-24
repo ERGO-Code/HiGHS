@@ -1504,9 +1504,11 @@ void HighsMipSolverData::printSolutionSourceKey() {
   // not a solution source, but used to force the last logging line to
   // be printed
   const int last_enum = kSolutionSourceCount - 1;
-  int third_list = 5;
-  int two_third_list = 10;
-  std::vector<int> limits = {third_list, two_third_list, last_enum};
+  // Set the index of the last solution source to be printed in each
+  // line of the key. Four or five can be printed, depending on the
+  // lengths of the solution source strings in that line
+  std::vector<int> limits = {4, 9, 14, last_enum};
+  assert(last_enum > limits[limits.size() - 2]);
 
   ss.str(std::string());
   for (int k = 0; k < limits[0]; k++) {
@@ -1520,7 +1522,8 @@ void HighsMipSolverData::printSolutionSourceKey() {
   }
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                "%s;\n", ss.str().c_str());
-  for (int line = 0; line < 2; line++) {
+  int to_line = limits.size() - 1;
+  for (int line = 0; line < to_line; line++) {
     ss.str(std::string());
     for (int k = limits[line]; k < limits[line + 1]; k++) {
       if (k == limits[line]) {
@@ -1532,7 +1535,7 @@ void HighsMipSolverData::printSolutionSourceKey() {
          << solutionSourceToString(k, false);
     }
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "%s%s\n", ss.str().c_str(), line == 0 ? ";" : "");
+                 "%s%s\n", ss.str().c_str(), line < to_line - 1 ? ";" : "");
   }
 }
 
