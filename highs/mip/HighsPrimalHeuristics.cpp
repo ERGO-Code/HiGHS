@@ -1266,7 +1266,9 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
       HighsInt j_min = std::numeric_limits<HighsInt>::max();
       double x_j_min = kHighsInf;
       HighsInt sigma = 0;
-      for (HighsInt i = 0; i != static_cast<HighsInt>(current_fractional_integers.size()); ++i) {
+      for (HighsInt i = 0;
+           i != static_cast<HighsInt>(current_fractional_integers.size());
+           ++i) {
         std::pair<HighsInt, double> it = current_fractional_integers[i];
         HighsInt col = it.first;
         assert(col >= 0);
