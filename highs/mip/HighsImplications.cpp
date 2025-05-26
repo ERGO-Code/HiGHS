@@ -395,6 +395,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
   // assume that VUBs do not have infinite coefficients and infinite constant
   // terms since such VUBs effectively evaluate to NaN.
   assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
+  if (numVarBounds >= maxVarBounds) return;
 
   VarBound vub{vubcoef, vubconstant};
 
@@ -415,6 +416,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
       currentvub.constant = vubconstant;
     }
   }
+  else numVarBounds++;
 }
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
@@ -422,6 +424,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   // assume that VLBs do not have infinite coefficients and infinite constant
   // terms since such VLBs effectively evaluate to NaN.
   assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
+  if (numVarBounds >= maxVarBounds) return;
 
   VarBound vlb{vlbcoef, vlbconstant};
 
@@ -443,6 +446,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
       currentvlb.constant = vlbconstant;
     }
   }
+  else numVarBounds++;
 }
 
 void HighsImplications::rebuild(HighsInt ncols,
@@ -469,6 +473,7 @@ void HighsImplications::rebuild(HighsInt ncols,
   vlbs.shrink_to_fit();
   vlbs.resize(ncols);
   numImplications = 0;
+  numVarBounds = 0;
   HighsInt oldncols = oldvubs.size();
 
   nextCleanupCall = mipsolver.numNonzero();
@@ -710,6 +715,8 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   double lb = mipsolver.mipdata_->domain.col_lower_[col];
 
   if (ub == lb) {
+    numVarBounds -= vlbs.size();
+    numVarBounds -= vubs.size();
     vlbs[col].clear();
     vubs[col].clear();
     return;
@@ -726,7 +733,10 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   });
 
   if (!delVbds.empty()) {
-    for (HighsInt vubCol : delVbds) vubs[col].erase(vubCol);
+    for (HighsInt vubCol : delVbds) {
+      vubs[col].erase(vubCol);
+      numVarBounds--;
+    }
     delVbds.clear();
   }
 
@@ -738,7 +748,10 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
     if (infeasible) return;
   });
 
-  for (HighsInt vlbCol : delVbds) vlbs[col].erase(vlbCol);
+  for (HighsInt vlbCol : delVbds) {
+    vlbs[col].erase(vlbCol);
+    numVarBounds--;
+  }
 }
 
 void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
