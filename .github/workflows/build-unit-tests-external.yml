@@ -82,7 +82,7 @@ jobs:
         run: ctest --parallel --timeout 300 --output-on-failure 
 
   # release__windows_extra_unit_tests:
-  #   runs-on: windows-2019
+  #   runs-on: windows-2022
 
   #   steps:
   #     - uses: actions/checkout@v4
