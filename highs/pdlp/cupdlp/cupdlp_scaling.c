@@ -13,7 +13,8 @@
 // elements
 // cupdlp_retcode scale_problem(CUPDLPwork *w, cupdlp_float *col_scaling,
 // cupdlp_float *row_scaling)
-cupdlp_retcode scale_problem(CUPDLPcsc *csc, cupdlp_float *cost,
+
+static cupdlp_retcode scale_problem(CUPDLPcsc *csc, cupdlp_float *cost,
                              cupdlp_float *lower, cupdlp_float *upper,
                              cupdlp_float *rhs, cupdlp_float *col_scaling,
                              cupdlp_float *row_scaling) {
@@ -43,7 +44,7 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode cupdlp_ruiz_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
+static cupdlp_retcode cupdlp_ruiz_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
                                    cupdlp_float *lower,
                                    cupdlp_float *upper, cupdlp_float *rhs,
                                    CUPDLPscaling *scaling)
@@ -118,7 +119,7 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode cupdlp_l2norm_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
+static cupdlp_retcode cupdlp_l2norm_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
                                      cupdlp_float *lower,
                                      cupdlp_float *upper,
                                      cupdlp_float *rhs,
@@ -170,7 +171,7 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode cupdlp_pc_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
+static cupdlp_retcode cupdlp_pc_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
                                  cupdlp_float *lower, cupdlp_float *upper,
                                  cupdlp_float *rhs, CUPDLPscaling *scaling)
 // cupdlp_retcode cupdlp_pc_scaling(CUPDLPwork *work, cupdlp_float alpha)

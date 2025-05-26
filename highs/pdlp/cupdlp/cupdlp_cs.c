@@ -22,7 +22,10 @@ void *cupdlp_dcs_realloc(void *p, int n, size_t size, int *ok) {
   void *pnew;
   pnew = realloc(p, MAX(n, 1) * size); /* realloc the block */
   *ok = (pnew != NULL);                /* realloc fails if pnew is NULL */
-  return ((*ok) ? pnew : p);           /* return original p if failure */
+  // return ((*ok) ? pnew : p);           /* return original p if failure */
+  if (*ok)
+    p = pnew;
+  return p;
 }
 
 cupdlp_dcs *cupdlp_dcs_spalloc(int m, int n, int nzmax, int values,
