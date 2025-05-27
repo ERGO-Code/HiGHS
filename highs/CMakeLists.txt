@@ -246,8 +246,12 @@ else()
       target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
       target_compile_options(highs PRIVATE "-Wno-unused-but-set-variable")
       target_compile_options(highs PRIVATE "-Wno-comment")
-      target_compile_options(highs PRIVATE "-Wno-unused-lambda-capture")
       target_compile_options(highs PRIVATE "-Wno-unused-label")
+
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")   
+        target_compile_options(highs PRIVATE "-Wno-unused-lambda-capture")
+      endif()
+
     else()
       target_compile_options(highs PRIVATE "-Wno-unused-variable")
       target_compile_options(highs PRIVATE "-Wno-unused-const-variable")

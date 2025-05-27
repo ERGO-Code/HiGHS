@@ -1170,7 +1170,7 @@ HighsInt Highs_getPresolvedNumNz(const void* highs) {
 
 // Gets pointers to all the public data members of HighsLp: avoids
 // duplicate code in Highs_getModel, Highs_getPresolvedLp,
-HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
+static HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
                               HighsInt* num_col, HighsInt* num_row,
                               HighsInt* num_nz, HighsInt* sense, double* offset,
                               double* col_cost, double* col_lower,
