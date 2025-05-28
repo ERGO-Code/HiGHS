@@ -53,6 +53,8 @@ class HighsPrimalHeuristics {
 
   void feasibilityPump();
 
+  void fixAndPropagate();
+
   void centralRounding();
 
   void flushStatistics();

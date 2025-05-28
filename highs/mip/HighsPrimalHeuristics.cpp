@@ -1545,6 +1545,85 @@ void HighsPrimalHeuristics::feasibilityPump() {
         kSolutionSourceFeasibilityPump);
 }
 
+void HighsPrimalHeuristics::fixAndPropagate() {
+  if (mipsolver.mipdata_->domain.infeasible()) return;
+  // Sort integer variables
+  auto localdom = mipsolver.mipdata_->domain;
+  const auto& rootsol = mipsolver.mipdata_->rootlpsol;
+  const auto& centersol = mipsolver.mipdata_->analyticCenter;
+  double feastol = mipsolver.mipdata_->feastol;
+  vector<HighsInt> diveperm = mipsolver.mipdata_->integer_cols;
+  pdqsort(diveperm.begin(), diveperm.end(),
+    [&](HighsInt c1, HighsInt c2) {
+    if (localdom.isBinary(c1) && !localdom.isBinary(c2)) return true;
+    if (localdom.isBinary(c2) && !localdom.isBinary(c1)) return false;
+    if ((rootsol[c1] <= localdom.col_lower_[c1] +
+      feastol) || (rootsol[c1] >=
+        localdom.col_upper_[c1] - feastol)) return true;
+    if ((rootsol[c2] <= localdom.col_lower_[c2] +
+      feastol) || (rootsol[c2] >=
+        localdom.col_upper_[c2] - feastol)) return false;
+    return mipsolver.mipdata_->cliquetable.getNumImplications(c1) >=
+      mipsolver.mipdata_->cliquetable.getNumImplications(c2);
+  });
+
+  // Repeatedly fix and propagate (simulate a dive)
+  for (HighsInt col : diveperm) {
+    if (localdom.col_lower_[col] == localdom.col_upper_[col]) continue;
+    HighsInt fixval = localdom.col_upper_[col];
+    if (rootsol[col] <= localdom.col_lower_[col] + feastol) {
+      fixval = localdom.col_lower_[col];
+    }
+    else if (rootsol[col] >= localdom.col_upper_[col] - feastol) {
+      fixval = localdom.col_upper_[col];
+    }
+    else if (localdom.isBinary(col)) fixval = localdom.col_upper_[col];
+    else if (mipsolver.mipdata_->analyticCenterComputed &&
+      mipsolver.mipdata_->analyticCenterStatus == HighsModelStatus::kOptimal) {
+      fixval = std::max(std::min(std::floor(
+        (rootsol[col] + centersol[col]) / 2 + randgen.real(0.4, 0.6)),
+        localdom.col_upper_[col]), localdom.col_lower_[col]);
+    }
+    localdom.fixCol(col, fixval, HighsDomain::Reason::branching());
+    localdom.propagate();
+    if (localdom.infeasible()) {
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      localdom.backtrack();
+      // In this case choose another value to fix column to
+      double newfixval = localdom.col_lower_[col] +
+        (localdom.col_upper_[col] - fixval);
+      if ((fixval - feastol <= newfixval) && (newfixval <= fixval + feastol)) {
+        if ((fixval - feastol <= localdom.col_lower_[col]) &&
+          (localdom.col_lower_[col] <= fixval + feastol))
+          newfixval = localdom.col_lower_[col];
+        else newfixval = localdom.col_upper_[col];
+        localdom.fixCol(col, newfixval, HighsDomain::Reason::branching());
+        localdom.propagate();
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          return;
+        }
+      }
+    }
+  }
+
+  // See if an LP solution exists for the integer assignment
+  HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
+  heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
+    localdom.col_lower_.data(),localdom.col_upper_.data());
+  int64_t niters = -heurlp.getNumLpIterations();
+  HighsLpRelaxation::Status status = heurlp.resolveLp();
+  niters += heurlp.getNumLpIterations();
+  if (niters == 0) return;
+  lp_iterations += niters;
+  if (heurlp.getFractionalIntegers().empty() &&
+      heurlp.unscaledPrimalFeasible(status))
+    mipsolver.mipdata_->addIncumbent(
+        heurlp.getLpSolver().getSolution().col_value,
+        heurlp.getObjective(),
+        kSolutionSourceFeasibilityPump);
+}
+
 void HighsPrimalHeuristics::centralRounding() {
   if (mipsolver.mipdata_->analyticCenter.size() !=
       static_cast<size_t>(mipsolver.numCol()))
