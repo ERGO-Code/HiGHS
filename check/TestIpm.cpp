@@ -5,7 +5,7 @@
 
 // I use dev_run to switch on/off printing and logging used for
 // development of the unit test
-const bool dev_run = true;//false;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 TEST_CASE("test-analytic-centre", "[highs_ipm]") {
@@ -125,21 +125,25 @@ TEST_CASE("test-1966", "[highs_ipm]") {
     printf("Primal solution status = %d\n", int(info.primal_solution_status));
     printf("Dual solution status = %d\n", int(info.dual_solution_status));
     printf("Num primal infeasibilities   = %d\n",
-	   int(info.num_primal_infeasibilities));
-    printf("Max primal infeasibility     = %g\n", info.max_primal_infeasibility);
+           int(info.num_primal_infeasibilities));
+    printf("Max primal infeasibility     = %g\n",
+           info.max_primal_infeasibility);
     printf("Sum primal infeasibilities   = %g\n",
-	   info.sum_primal_infeasibilities);
+           info.sum_primal_infeasibilities);
     printf("Num   dual infeasibilities   = %d\n",
-	   int(info.num_dual_infeasibilities));
+           int(info.num_dual_infeasibilities));
     printf("Max   dual infeasibility     = %g\n", info.max_dual_infeasibility);
-    printf("Sum   dual infeasibilities   = %g\n", info.sum_dual_infeasibilities);
+    printf("Sum   dual infeasibilities   = %g\n",
+           info.sum_dual_infeasibilities);
     printf("Num   primal residual errors = %d\n",
-	   int(info.num_primal_residual_errors));
-    printf("Max   primal residual error  = %g\n", info.max_primal_residual_error);
+           int(info.num_primal_residual_errors));
+    printf("Max   primal residual error  = %g\n",
+           info.max_primal_residual_error);
     printf("Num   dual residual errors   = %d\n",
-	   int(info.num_dual_residual_errors));
+           int(info.num_dual_residual_errors));
     printf("Max   dual residual error    = %g\n", info.max_dual_residual_error);
-    printf("Primal-dual objective error  = %g\n", info.primal_dual_objective_error);
+    printf("Primal-dual objective error  = %g\n",
+           info.primal_dual_objective_error);
   }
 
   highs.resetGlobalScheduler(true);
