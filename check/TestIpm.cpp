@@ -89,10 +89,19 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
 }
 
 TEST_CASE("test-1966", "[highs_ipm]") {
+  // This is the primal-dual infeasible instance
+  // ("PrimalAndDualInfeasible") from OR-Tools that exposed the need
+  // for primal_solution_status and dual_solution_status not to be set
+  // to kSolutionStatusFeasible when there are no primal/dual
+  // infeasiblities, but meaningful primal/dual residual errors
+  //
+  // Takehome: make sure HiGHS unit tests include what failed in unit
+  // tests elsewhere!
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
   HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
   lp.col_cost_ = {2, -1};
@@ -103,43 +112,70 @@ TEST_CASE("test-1966", "[highs_ipm]") {
   lp.a_matrix_.start_ = {0, 2, 4};
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, -1, 1, -1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   highs.passModel(lp);
-  highs.setOptionValue("solver", kIpmString);
   highs.setOptionValue("presolve", kHighsOffString);
-
-  if (dev_run) printf("\nWith default residual tolerances\n");
-  highs.run();
-  if (dev_run) {
-    highs.writeSolution("", kSolutionStylePretty);
-    printf("Num primal infeasibilities = %d\n",
-           int(info.num_primal_infeasibilities));
-    printf("Max primal infeasibility   = %g\n", info.max_primal_infeasibility);
-    printf("Sum primal infeasibilities = %g\n",
-           info.sum_primal_infeasibilities);
-    printf("Num   dual infeasibilities = %d\n",
-           int(info.num_dual_infeasibilities));
-    printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
-    printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
+  //  if (dev_run) highs.writeModel("");
+  HighsModelStatus require_model_status = HighsModelStatus::kNotset;
+  for (int k = 0; k < 2; k++) {
+    if (k == 0) {
+      highs.setOptionValue("solver", kIpmString);
+      if (dev_run) printf("Solving with IPX\n");
+      require_model_status = HighsModelStatus::kInfeasible;
+    } else {
+      highs.setOptionValue("solver", kPdlpString);
+      if (dev_run) printf("Solving with PDLP\n");
+      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    }
+    highs.run();
+    REQUIRE(info.primal_solution_status != kSolutionStatusFeasible);
+    REQUIRE(info.dual_solution_status != kSolutionStatusFeasible);
+    REQUIRE(highs.getModelStatus() == require_model_status);
+    if (dev_run) {
+      // Nice illustration that IPX
+      //
+      // * identifies "infeasible"
+      //
+      // * gets no primal or dual infeasibilies
+      //
+      // * gets primal and dual residual errors
+      //
+      // whereas PDLP
+      //
+      // * identifies only "infeasible or unbounded"
+      //
+      // * gets primal infeasibilies and no primal residual errors
+      //
+      // * gets no primal infeasibilies but primal residual errors
+      //
+      //    highs.writeSolution("", kSolutionStylePretty);
+      printf("Primal solution status = %d\n", int(info.primal_solution_status));
+      printf("Dual solution status = %d\n", int(info.dual_solution_status));
+      printf("Num primal infeasibilities   = %d\n",
+             int(info.num_primal_infeasibilities));
+      printf("Max primal infeasibility     = %g\n",
+             info.max_primal_infeasibility);
+      printf("Sum primal infeasibilities   = %g\n",
+             info.sum_primal_infeasibilities);
+      printf("Num   dual infeasibilities   = %d\n",
+             int(info.num_dual_infeasibilities));
+      printf("Max   dual infeasibility     = %g\n",
+             info.max_dual_infeasibility);
+      printf("Sum   dual infeasibilities   = %g\n",
+             info.sum_dual_infeasibilities);
+      printf("Num   primal residual errors = %d\n",
+             int(info.num_primal_residual_errors));
+      printf("Max   primal residual error  = %g\n",
+             info.max_primal_residual_error);
+      printf("Num   dual residual errors   = %d\n",
+             int(info.num_dual_residual_errors));
+      printf("Max   dual residual error    = %g\n",
+             info.max_dual_residual_error);
+      printf("Primal-dual objective error  = %g\n",
+             info.primal_dual_objective_error);
+    }
+    highs.clearSolver();
   }
-  highs.clearSolver();
-
-  if (dev_run) printf("\nWith infinite residual tolerances\n");
-  highs.setOptionValue("primal_residual_tolerance", 1e30);
-  highs.setOptionValue("dual_residual_tolerance", 1e30);
-  highs.run();
-  if (dev_run) {
-    highs.writeSolution("", kSolutionStylePretty);
-    printf("Num primal infeasibilities = %d\n",
-           int(info.num_primal_infeasibilities));
-    printf("Max primal infeasibility   = %g\n", info.max_primal_infeasibility);
-    printf("Sum primal infeasibilities = %g\n",
-           info.sum_primal_infeasibilities);
-    printf("Num   dual infeasibilities = %d\n",
-           int(info.num_dual_infeasibilities));
-    printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
-    printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
-  }
-
   highs.resetGlobalScheduler(true);
 }
 
