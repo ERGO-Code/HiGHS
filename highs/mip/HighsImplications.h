@@ -66,7 +66,7 @@ class HighsImplications {
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
     numVarBounds = 0;
-    maxVarBounds = 2000000 + 10 * numcol;
+    maxVarBounds = 5000000 + 10 * numcol;
   }
 
   std::function<void(HighsInt, HighsInt, HighsInt, double)>
@@ -89,7 +89,7 @@ class HighsImplications {
     vlbs.shrink_to_fit();
     vlbs.resize(numcol);
     numVarBounds = 0;
-    maxVarBounds = 2000000 + 10 * numcol;
+    maxVarBounds = 5000000 + 10 * numcol;
 
     nextCleanupCall = mipsolver.numNonzero();
   }
