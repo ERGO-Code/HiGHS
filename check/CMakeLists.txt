@@ -280,19 +280,19 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   if (UNIX AND NOT APPLE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     if (CUPDLP_GPU)
         set(pdlpInstances
-            "25fv47\; 5.5018549\;"
-            "adlittle\; 2.254950\;"
-            "afiro\;-4.6475325\;"
-            "avgas\;-7.75000038\;"
+            "25fv47\; 5.501847\;"
+            "adlittle\; 2.254949\;"
+            "afiro\;-4.647531\;"
+            "avgas\;-7.7499999\;"
             "blending\;-3.19999999\;"
             "chip\;-9.0000000\;"
-            "e226\;-1.16389258\;"
-            "scrs8\; 9.0429623\;"
+            "e226\;-1.1638932\;"
+            "scrs8\; 9.042968\;"
             "sctest\; 5.750000001\;"
             "shell\; 1.20882535\;"
             "stair\;-2.5126695\;"
-            "standata\; 1.25769951\;"
-            "standgub\; 1.2576993\;"
+            "standata\; 1.2576995\;"
+            "standgub\; 1.2576994\;"
             )
     else() # CUPDLP_CPU
         set(pdlpInstances
