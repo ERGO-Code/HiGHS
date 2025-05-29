@@ -572,6 +572,8 @@ static void cstyle_userCallback(const int callback_type, const char* message,
       case HighsCallbackType::kCallbackMipInterrupt:
         printf("userCallback(%11.4g): MIP interrupt\n", local_callback_data);
         break;
+      default:
+        break;
     }
   }
 

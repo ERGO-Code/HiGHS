@@ -88,7 +88,7 @@ cmake -S. -B build
 cmake --build build --parallel
 ```
 
-This generates HiGHS in the `build` directory and creates the [executable](@ref Executable) `build/bin/highs`, or `build/bin/Release/highs.exe` on Windows. To perform a quick test to see whether the compilation was successful, run `ctest` from within the build folder.
+This generates HiGHS in the `build` directory and creates the [executable](@ref Executable) `build/bin/highs`, or `build/Release/bin/highs.exe` on Windows. To perform a quick test to see whether the compilation was successful, run `ctest` from within the build folder.
 
 ``` bash
 ctest 

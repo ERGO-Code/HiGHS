@@ -3,6 +3,8 @@
 #include "Highs.h"
 #include "catch.hpp"
 
+#include "HCheckConfig.h"
+
 // I use dev_run to switch on/off printing and logging used for
 // development of the unit test
 const bool dev_run = false;
