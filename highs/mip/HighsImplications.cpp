@@ -415,8 +415,8 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
       currentvub.coef = vubcoef;
       currentvub.constant = vubconstant;
     }
-  }
-  else numVarBounds++;
+  } else
+    numVarBounds++;
 }
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
@@ -445,8 +445,8 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
       currentvlb.coef = vlbcoef;
       currentvlb.constant = vlbconstant;
     }
-  }
-  else numVarBounds++;
+  } else
+    numVarBounds++;
 }
 
 void HighsImplications::rebuild(HighsInt ncols,

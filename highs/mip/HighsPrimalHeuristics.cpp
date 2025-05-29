@@ -155,9 +155,10 @@ bool HighsPrimalHeuristics::solveSubMip(
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
-    double adjustmentfactor = ((1 - fixingRate) *
-      mipsolver.mipdata_->integral_cols.size() +
-      mipsolver.mipdata_->continuous_cols.size()) / std::max(1.0, numUnfixed);
+    double adjustmentfactor =
+        ((1 - fixingRate) * mipsolver.mipdata_->integral_cols.size() +
+         mipsolver.mipdata_->continuous_cols.size()) /
+        std::max(1.0, numUnfixed);
     // (double)mipsolver.orig_model_->a_matrix_.value_.size();
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
