@@ -1171,13 +1171,13 @@ HighsInt Highs_getPresolvedNumNz(const void* highs) {
 // Gets pointers to all the public data members of HighsLp: avoids
 // duplicate code in Highs_getModel, Highs_getPresolvedLp,
 static HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
-                              HighsInt* num_col, HighsInt* num_row,
-                              HighsInt* num_nz, HighsInt* sense, double* offset,
-                              double* col_cost, double* col_lower,
-                              double* col_upper, double* row_lower,
-                              double* row_upper, HighsInt* a_start,
-                              HighsInt* a_index, double* a_value,
-                              HighsInt* integrality) {
+                                     HighsInt* num_col, HighsInt* num_row,
+                                     HighsInt* num_nz, HighsInt* sense,
+                                     double* offset, double* col_cost,
+                                     double* col_lower, double* col_upper,
+                                     double* row_lower, double* row_upper,
+                                     HighsInt* a_start, HighsInt* a_index,
+                                     double* a_value, HighsInt* integrality) {
   const MatrixFormat desired_a_format =
       a_format == HighsInt(MatrixFormat::kColwise) ? MatrixFormat::kColwise
                                                    : MatrixFormat::kRowwise;
