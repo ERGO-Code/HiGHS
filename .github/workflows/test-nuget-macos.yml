@@ -42,7 +42,7 @@ jobs:
 
       - name: Dotnet push to local feed
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet nuget push ./Release/bin/*.nupkg -s ${{runner.workspace}}/nugets
+        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
         shell: bash
@@ -87,7 +87,7 @@ jobs:
 
       - name: Dotnet push to local feed
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet nuget push ./Release/bin/*.nupkg -s ${{runner.workspace}}/nugets
+        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
         shell: bash
