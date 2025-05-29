@@ -392,7 +392,7 @@ retry:
     // printf("after evaluating node current fixingrate is %g\n", fixingrate);
     if (fixingrate >= maxfixingrate) break;
     if (stop) break;
-    if (nbacktracks >= 15) break;
+    if (nbacktracks >= 10) break;
 
     HighsInt numBranched = 0;
     double stopFixingRate = std::min(
