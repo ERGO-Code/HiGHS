@@ -161,12 +161,6 @@ bool HighsPrimalHeuristics::solveSubMip(
     // (double)mipsolver.orig_model_->a_matrix_.value_.size();
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
-    // The value of adjustmentfactor as the sub-MIP level decreases
-    // can lead to lp_iterations blowing up - see original model in
-    // #2326. Since lp_iterations is a pseudo-measure - for what
-    // purpose? - is it misleading to report it? That said, the reason
-    // why it blows up may be indicative of circumstances where
-    // sub-MIPs being solved is inadvisable
     lp_iterations += adjusted_lp_iterations;
     total_repair_lp += submipsolver.mipdata_->total_repair_lp;
     total_repair_lp_feasible += submipsolver.mipdata_->total_repair_lp_feasible;
