@@ -53,4 +53,4 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           ls 
-          ./bin/Debug/csharpexample.exe
+          ./Debug/bin/csharpexample.exe
