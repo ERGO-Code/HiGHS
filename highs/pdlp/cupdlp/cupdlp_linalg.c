@@ -141,7 +141,7 @@ double nrminf(cupdlp_int n, const double *x, cupdlp_int incx) {
 #endif
 }
 
-cupdlp_int nrminfindex(cupdlp_int n, const double *x, cupdlp_int incx) {
+static cupdlp_int nrminfindex(cupdlp_int n, const double *x, cupdlp_int incx) {
 #ifdef USE_MY_BLAS
   assert(incx == 1);
 
@@ -251,53 +251,57 @@ void cupdlp_projNegative(cupdlp_float *x, const cupdlp_int len) {
   cupdlp_projSameUpperBound(x, 0.0, len);
 }
 
+// Unused warning
 /* ||x - y||_2^2 */
 // cupdlp_float cupdlp_diffTwoNormSquared(cupdlp_float *x, cupdlp_float *y,
 // const cupdlp_int len)
-cupdlp_float diffTwoNormSquared(cupdlp_float *x, cupdlp_float *y,
-                                const cupdlp_int len) {
-  cupdlp_float res = 0.0;
-  for (int i = 0; i < len; i++) {
-    cupdlp_float tmp = x[i] - y[i];
-    res += tmp * tmp;
-  }
-  return res;
-}
+// static cupdlp_float diffTwoNormSquared(cupdlp_float *x, cupdlp_float *y,
+//                                 const cupdlp_int len) {
+//   cupdlp_float res = 0.0;
+//   for (int i = 0; i < len; i++) {
+//     cupdlp_float tmp = x[i] - y[i];
+//     res += tmp * tmp;
+//   }
+//   return res;
+// }
 
+// Unused warning
 /* ||x - y||_2 */
 // cupdlp_float cupdlp_diffTwoNorm(cupdlp_float *x, cupdlp_float *y, const
 // cupdlp_int len)
-cupdlp_float diffTwoNorm(cupdlp_float *x, cupdlp_float *y,
-                         const cupdlp_int len) {
-  // return sqrt(cupdlp_diffTwoNormSquared(x, y, len));
-  return sqrt(diffTwoNormSquared(x, y, len));
-}
+// static cupdlp_float diffTwoNorm(cupdlp_float *x, cupdlp_float *y,
+//                          const cupdlp_int len) {
+//   // return sqrt(cupdlp_diffTwoNormSquared(x, y, len));
+//   return sqrt(diffTwoNormSquared(x, y, len));
+// }
 
+// Unused warning
 /* ||x - y||_inf */
 // cupdlp_float cupdlp_diffInfNorm(cupdlp_float *x, cupdlp_float *y, const
 // cupdlp_int len)
-cupdlp_float diffInfNorm(cupdlp_float *x, cupdlp_float *y,
-                         const cupdlp_int len) {
-  cupdlp_float res = 0.0;
-  for (int i = 0; i < len; i++) {
-    cupdlp_float tmp = fabs(x[i] - y[i]);
-    if (tmp > res) res = tmp;
-  }
-  return res;
-}
+// static cupdlp_float diffInfNorm(cupdlp_float *x, cupdlp_float *y,
+//                          const cupdlp_int len) {
+//   cupdlp_float res = 0.0;
+//   for (int i = 0; i < len; i++) {
+//     cupdlp_float tmp = fabs(x[i] - y[i]);
+//     if (tmp > res) res = tmp;
+//   }
+//   return res;
+// }
 
+// Unused warning
 /* (x1 - x2)' (y1 - y2) */
 // cupdlp_float cupdlp_diffDotDiff(cupdlp_float *x1, cupdlp_float *x2,
 // cupdlp_float *y1, cupdlp_float *y2, const cupdlp_int len)
-cupdlp_float diffDotDiff(cupdlp_float *x1, cupdlp_float *x2, cupdlp_float *y1,
-                         cupdlp_float *y2, const cupdlp_int len) {
-  cupdlp_float x1y1 = dot(len, x1, 1, y1, 1);
-  cupdlp_float x2y2 = dot(len, x2, 1, y2, 1);
-  cupdlp_float x1y2 = dot(len, x1, 1, y2, 1);
-  cupdlp_float x2y1 = dot(len, x2, 1, y1, 1);
+// static cupdlp_float diffDotDiff(cupdlp_float *x1, cupdlp_float *x2, cupdlp_float *y1,
+//                          cupdlp_float *y2, const cupdlp_int len) {
+//   cupdlp_float x1y1 = dot(len, x1, 1, y1, 1);
+//   cupdlp_float x2y2 = dot(len, x2, 1, y2, 1);
+//   cupdlp_float x1y2 = dot(len, x1, 1, y2, 1);
+//   cupdlp_float x2y1 = dot(len, x2, 1, y1, 1);
 
-  return x1y1 - x1y2 - x2y1 + x2y2;
-}
+//   return x1y1 - x1y2 - x2y1 + x2y2;
+// }
 
 /* x = x .* y */
 // void cupdlp_cdot_fb(cupdlp_float *x, const cupdlp_bool *y, const cupdlp_int
@@ -364,21 +368,21 @@ void ScaleVector(cupdlp_float weight, cupdlp_float *x, cupdlp_int n) {
 }
 
 
-void cupdlp_filter_lower_bound(cupdlp_float *x, const cupdlp_float *lb,
+static void cupdlp_filter_lower_bound(cupdlp_float *x, const cupdlp_float *lb,
                                const cupdlp_float bound, const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     x[i] = lb[i] > bound ? lb[i] : 0.0;
   }
 }
 
-void cupdlp_filter_upper_bound(cupdlp_float *x, const cupdlp_float *ub,
+static void cupdlp_filter_upper_bound(cupdlp_float *x, const cupdlp_float *ub,
                                const cupdlp_float bound, const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     x[i] = ub[i] < bound ? ub[i] : 0.0;
   }
 }
 
-void cupdlp_init_vector(cupdlp_float *x, const cupdlp_float val,
+static void cupdlp_init_vector(cupdlp_float *x, const cupdlp_float val,
                         const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     x[i] = val;

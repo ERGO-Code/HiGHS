@@ -74,19 +74,22 @@ void setupCommandLineOptions(CLI::App& app,
 
   app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
                  "File for writing out model.")
-      ->check(checkSingle)
-      ->check(CLI::ExistingFile);
+      // File does not need to exist
+      //      ->check(CLI::ExistingFile)
+      ->check(checkSingle);
 
   app.add_option("--" + kWriteSolutionFileString,
                  cmd_options.cmd_write_solution_file,
                  "File for writing out solution.")
-      ->check(checkSingle)
-      ->check(CLI::ExistingFile);
+      // File does not need to exist
+      //      ->check(CLI::ExistingFile)
+      ->check(checkSingle);
 
   app.add_option("--" + kWriteBasisFileString, cmd_options.cmd_write_basis_file,
                  "File for writing out final basis.")
-      ->check(checkSingle)
-      ->check(CLI::ExistingFile);
+      // File does not need to exist
+      //      ->check(CLI::ExistingFile)
+      ->check(checkSingle);
 
   // Command line option specifications.
   app.add_option("--" + kPresolveString, cmd_options.cmd_presolve,

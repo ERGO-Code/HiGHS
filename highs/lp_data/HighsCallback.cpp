@@ -192,7 +192,7 @@ HighsStatus HighsCallbackInput::setSolution(HighsInt num_entries,
   const auto& lp = highs->getLp();
 
   // Warn about duplicates in index
-  assert(user_solution.size() == lp.num_col_);
+  assert(user_solution.size() == static_cast<size_t>(lp.num_col_));
 
   HighsStatus return_status = HighsStatus::kOk;
   HighsInt num_duplicates = 0;
@@ -242,7 +242,7 @@ HighsStatus HighsCallbackInput::repairSolution() {
     highsLogUser(highs->getOptions().log_options, HighsLogType::kError,
                  "repairSolution: No user solution has been set\n");
     return HighsStatus::kError;
-  } else if (user_solution.size() != highs->getNumCol()) {
+  } else if (user_solution.size() != static_cast<size_t>(highs->getNumCol())) {
     highsLogUser(highs->getOptions().log_options, HighsLogType::kError,
                  "repairSolution: User solution size %d does not match model "
                  "number of columns %d\n",
@@ -259,7 +259,7 @@ HighsStatus HighsCallbackInput::repairSolution() {
     double tolerance = highs->getOptions().mip_feasibility_tolerance;
 
     // fix the variables
-    for (HighsInt i = 0; i < user_solution.size(); i++) {
+    for (HighsInt i = 0; i < static_cast<HighsInt>(user_solution.size()); i++) {
       if (user_solution[i] != kHighsUndefined) {
         double value = user_solution[i];
         highs->getColIntegrality(i, vtype);

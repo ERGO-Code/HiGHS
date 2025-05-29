@@ -2607,9 +2607,6 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
       info.num_primal_infeasibilities == 0 &&
       (!get_residuals || info.num_primal_residual_errors == 0))
     model_status_ = HighsModelStatus::kUnbounded;
-  if (model_status_ != HighsModelStatus::kOptimal &&
-      model_status_ != HighsModelStatus::kUnknown)
-    return HighsStatus::kOk;
   bool was_optimal = model_status_ == HighsModelStatus::kOptimal;
   bool kkt_ok = true;
   bool written_optimality_error_header = false;
@@ -2717,8 +2714,10 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
         assert(info.num_relative_dual_residual_errors == 0);
       }
     }
-    // Infeasibility of the primal and dual solutions should have been
-    // set in getKktFailures
+    // Infeasibility of the primal and dual solutions based on number
+    // of primal/dual infeasibilities should have been set in
+    // getKktFailures, but qualify this if the residuals are
+    // meaningful
     if (info.num_primal_infeasibilities) {
       assert(info.primal_solution_status == kSolutionStatusInfeasible);
     } else {
@@ -2843,7 +2842,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                    " since relative violation of tolerances is %8.3g\n",
                    max_tolerance_relative_violation);
     } else if (max_allowed_tolerance_relative_violation > 1 &&
-               max_tolerance_relative_violation > 0) {
+               max_tolerance_relative_violation > 1) {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Model status is \"Optimal\" since relative violation of "
                    "tolerances is no more than %8.3g\n",
