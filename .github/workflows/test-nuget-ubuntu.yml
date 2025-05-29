@@ -39,7 +39,7 @@ jobs:
 
       - name: Dotnet push to local feed
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet nuget push ./bin/Release/*.nupkg -s /__w/HiGHS/HiGHS/nugets
+        run: dotnet nuget push ./Release/bin/*.nupkg -s /__w/HiGHS/HiGHS/nugets
 
       - name: Create new project and test
         shell: bash
@@ -83,7 +83,7 @@ jobs:
 
       - name: Dotnet push to local feed
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet nuget push ./bin/Release/*.nupkg -s /__w/HiGHS/HiGHS/nugets
+        run: dotnet nuget push ./Release/bin/*.nupkg -s /__w/HiGHS/HiGHS/nugets
 
       - name: Create new project and test
         shell: bash

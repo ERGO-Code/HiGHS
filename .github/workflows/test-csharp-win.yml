@@ -27,7 +27,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           ls 
-          ./bin/Release/csharpexample.exe
+          ./Release/bin/csharpexample.exe
 
   fast_build_debug:
     runs-on: windows-latest
