@@ -9,6 +9,7 @@
 
 #include <numeric>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HConst.h"
 #include "mip/HighsCutGeneration.h"
 #include "mip/HighsDomainChange.h"
@@ -254,6 +255,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   std::vector<double> downbound;
 
   HighsInt numfrac = lp->getFractionalIntegers().size();
+  if (numfrac == 1) return 0;
   const auto& fracints = lp->getFractionalIntegers();
 
   upscore.resize(numfrac, kHighsInf);
@@ -389,6 +391,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     return best;
   };
 
+  bool strongbranched = false;
   HighsLpRelaxation::Playground playground = lp->playground();
 
   while (true) {
@@ -399,9 +402,12 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
         mustStop) {
-      downNodeLb = downbound[candidate];
-      upNodeLb = upbound[candidate];
-      return candidate;
+      if (mipsolver.submip) {
+        upNodeLb = upbound[candidate];
+        downNodeLb = downbound[candidate];
+        return candidate;
+      }
+      break;
     }
 
     lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -411,6 +417,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     double upval = std::ceil(fracval);
     double downval = std::floor(fracval);
 
+    // Check for observations of other branching candidates in LP sol
     auto analyzeSolution = [&](double objdelta,
                                const std::vector<double>& sol) {
       HighsInt numChangedCols = localdom.getChangedCols().size();
@@ -519,6 +526,9 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
             if (!solutionValid) continue;
           }
 
+          // Objdelta is an upper bound on the potential objective change
+          // when strong branching in given direction for othercol.
+          // As bound is small, actual value must be small.
           if (objdelta <= mipsolver.mipdata_->feastol) {
             pseudocost.addObservation(fracints[k].first,
                                       otherupval - otherfracval, objdelta);
@@ -530,6 +540,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       }
     };
 
+    // Strong branch in one direction
     auto strongBranch = [&](bool upbranch) {
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
       HighsBoundType boundtype = upbranch ? HighsBoundType::kLower
@@ -713,7 +724,84 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       // evaluate up branch
       if (strongBranch(true)) return -1;
     }
+    strongbranched = true;
   }
+
+  // Score candidates and select best one
+  HighsInt numcands = numfrac;
+  std::vector<double> score;
+  std::vector<HighsInt> perm;
+  score.resize(numfrac, 0.0);
+  perm.resize(numfrac);
+  std::iota(perm.begin(), perm.end(), 0);
+
+  auto sortCandidates = [&] {
+    pdqsort(perm.begin(), perm.begin() + numcands,
+      [&](const HighsInt a, const HighsInt b) {
+        return score[a] > score[b];
+    });
+    for (HighsInt j = 0; j != numcands; j++) {
+      if ((score[perm[j]] <= score[perm[0]] * 0.8) &&
+          (score[perm[j]] <= score[perm[0]] - 1e-6)) {
+        numcands = j;
+        break;
+          }
+    }
+  };
+
+  for (HighsInt k = 0; k != numcands; k++) {
+    if (upscore[perm[k]] <= minScore || downscore[perm[k]] <= minScore)
+      score[k] = pseudocost.getScore(
+        fracints[perm[k]].first,std::min(upscore[perm[k]], minScore),
+        std::min(downscore[perm[k]], minScore));
+    else {
+      score[perm[k]] = upscore[perm[k]] == kHighsInf ||
+        downscore[perm[k]] == kHighsInf ? pseudocost.getScore(
+          fracints[k].first, fracints[k].second) :
+      pseudocost.getScore(fracints[k].first, upscore[k], downscore[k]);
+    }
+  }
+  sortCandidates();
+  if (numcands == 1) {
+    downNodeLb = downbound[perm[0]];
+    upNodeLb = upbound[perm[0]];
+    return perm[0];
+  }
+
+  bool infeas = false;
+  if (strongbranched) {
+    HighsLpRelaxation::Status status = lp->resolveLp();
+    if (!lp->unscaledDualFeasible(status)) infeas = true;
+  }
+  else {
+    if (!lp->unscaledDualFeasible(lp->getStatus())) infeas = true;
+  }
+  if (!infeas) {
+    std::fill(score.begin(), score.end(), 0.0);
+    for (HighsInt k = 0; k != numcands; k++) {
+      HighsInt col = fracints[k].first;
+      double shadowupcost = lp->getLp().col_cost_[col];
+      double shadowdowncost = lp->getLp().col_cost_[col];
+      HighsInt start = lp->getLp().a_matrix_.start_[col];
+      HighsInt end = lp->getLp().a_matrix_.start_[col + 1];
+      for (HighsInt j = start; j != end; ++j) {
+        double s = lp->getSolution().row_dual[lp->getLp().a_matrix_.index_[j]] *
+          lp->getLp().a_matrix_.value_[j];
+        if (s < 0) {
+          shadowdowncost -= s;
+        }
+        else if (s > 0) {
+          shadowupcost += s;
+        }
+      }
+      score[perm[k]] = std::max(1e-6, shadowdowncost) *
+        std::max(1e-6, shadowupcost);
+    }
+    sortCandidates();
+  }
+  downNodeLb = downbound[perm[0]];
+  upNodeLb = upbound[perm[0]];
+  return perm[0];
 }
 
 const HighsSearch::NodeData* HighsSearch::getParentNodeData() const {
@@ -1118,7 +1206,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
       }
     }
 
-    double degeneracyFac = lp->computeLPDegneracy(localdom);
+    double degeneracyFac = std::min(50.0, lp->computeLPDegneracy(localdom));
     pseudocost.setDegeneracyFactor(degeneracyFac);
     if (degeneracyFac >= 10.0) pseudocost.setMinReliable(0);
     // if (!mipsolver.submip)
