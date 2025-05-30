@@ -733,7 +733,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "kkt_tolerance",
-        "If not set to 1e-7, this KKT tolerance is used for all feasibility "
+        "If changed from its default value, this KKT tolerance is used for all "
+        "feasibility "
         "and optimality measures",
         advanced, &kkt_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
@@ -1143,7 +1144,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool =
         new OptionRecordBool("mip_heuristic_run_feasibility_jump",
-                             "Use the Feasibility Jump heuristic", advanced,
+                             "Use the feasibility jump heuristic", advanced,
                              &mip_heuristic_run_feasibility_jump, true);
     records.push_back(record_bool);
 
