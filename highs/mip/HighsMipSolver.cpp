@@ -137,7 +137,7 @@ restart:
       mipdata_->callbackUserSolution(solution_objective_,
                                      kUserMipSolutionCallbackOriginAfterSetup);
 
-    if (options_mip_->mip_allow_feasibility_jump) {
+    if (options_mip_->mip_heuristic_run_feasibility_jump) {
       // Apply the feasibility jump before evaluating the root node
       analysis_.mipTimerStart(kMipClockFeasibilityJump);
       HighsModelStatus returned_model_status = mipdata_->feasibilityJump();

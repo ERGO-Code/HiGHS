@@ -423,7 +423,6 @@ struct HighsOptionsStruct {
   // Options for MIP solver
   bool mip_detect_symmetry;
   bool mip_allow_restart;
-  bool mip_allow_feasibility_jump;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_start_nodes;
@@ -439,12 +438,13 @@ struct HighsOptionsStruct {
   double mip_rel_gap;
   double mip_abs_gap;
   double mip_heuristic_effort;
-  double mip_min_logging_interval;
+  bool mip_heuristic_run_feasibility_jump;
   bool mip_heuristic_run_rins;
   bool mip_heuristic_run_rens;
   bool mip_heuristic_run_root_reduced_cost;
   bool mip_heuristic_run_zi_round;
   bool mip_heuristic_run_shifting;
+  double mip_min_logging_interval;
 
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
@@ -573,7 +573,6 @@ struct HighsOptionsStruct {
         icrash_breakpoints(false),
         mip_detect_symmetry(false),
         mip_allow_restart(false),
-        mip_allow_feasibility_jump(false),
         mip_max_nodes(0),
         mip_max_stall_nodes(0),
         mip_max_start_nodes(0),
@@ -589,6 +588,12 @@ struct HighsOptionsStruct {
         mip_rel_gap(0.0),
         mip_abs_gap(0.0),
         mip_heuristic_effort(0.0),
+        mip_heuristic_run_feasibility_jump(false),
+        mip_heuristic_run_rins(false),
+        mip_heuristic_run_rens(false),
+        mip_heuristic_run_root_reduced_cost(false),
+        mip_heuristic_run_zi_round(false),
+        mip_heuristic_run_shifting(false),
         mip_min_logging_interval(0.0),
 #ifdef HIGHS_DEBUGSOL
         mip_debug_solution_file(""),
@@ -728,7 +733,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "kkt_tolerance",
-        "If not set to 1e-7, this KKT tolerance is used for all feasibility "
+        "If changed from its default value, this KKT tolerance is used for all "
+        "feasibility "
         "and optimality measures",
         advanced, &kkt_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
@@ -1017,12 +1023,6 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &mip_allow_restart, true);
     records.push_back(record_bool);
 
-    record_bool =
-        new OptionRecordBool("mip_allow_feasibility_jump",
-                             "Whether MIP feasibility jump is permitted",
-                             advanced, &mip_allow_feasibility_jump, true);
-    records.push_back(record_bool);
-
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
                                      &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
@@ -1142,30 +1142,36 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
     records.push_back(record_double);
 
-    record_bool = new OptionRecordBool("mip_heuristic_run_rins",
-                                       "Run RINS heuristic: Default = true",
-                                       advanced, &mip_heuristic_run_rins, true);
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_feasibility_jump",
+                             "Use the feasibility jump heuristic", advanced,
+                             &mip_heuristic_run_feasibility_jump, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_heuristic_run_rens",
-                                       "Run RENS heuristic: Default = true",
-                                       advanced, &mip_heuristic_run_rens, true);
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_rins", "Use the RINS heuristic",
+                             advanced, &mip_heuristic_run_rins, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_root_reduced_cost",
-        "Run rootReducedCost heuristic: Default = true", advanced,
-        &mip_heuristic_run_root_reduced_cost, true);
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_rens", "Use the RENS heuristic",
+                             advanced, &mip_heuristic_run_rens, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_zi_round", "Run ZI Round heuristic: Default = false",
-        advanced, &mip_heuristic_run_zi_round, false);
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_root_reduced_cost",
+                             "Use the rootReducedCost heuristic", advanced,
+                             &mip_heuristic_run_root_reduced_cost, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_shifting", "Run Shifting heuristic: Default = false",
-        advanced, &mip_heuristic_run_shifting, false);
+    record_bool = new OptionRecordBool("mip_heuristic_run_zi_round",
+                                       "Use the ZI Round heuristic", advanced,
+                                       &mip_heuristic_run_zi_round, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("mip_heuristic_run_shifting",
+                                       "Use the Shifting heuristic", advanced,
+                                       &mip_heuristic_run_shifting, false);
     records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(
