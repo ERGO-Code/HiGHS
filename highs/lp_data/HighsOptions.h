@@ -1141,36 +1141,36 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
     records.push_back(record_double);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_feasibility_jump",
-        "Whether MIP feasibility jump is permitted", advanced,
-        &mip_heuristic_run_feasibility_jump, true);
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_feasibility_jump",
+                             "Use the Feasibility Jump heuristic", advanced,
+                             &mip_heuristic_run_feasibility_jump, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_heuristic_run_rins",
-                                       "Run RINS heuristic: Default = true",
-                                       advanced, &mip_heuristic_run_rins, true);
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_rins", "Use the RINS heuristic",
+                             advanced, &mip_heuristic_run_rins, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_heuristic_run_rens",
-                                       "Run RENS heuristic: Default = true",
-                                       advanced, &mip_heuristic_run_rens, true);
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_rens", "Use the RENS heuristic",
+                             advanced, &mip_heuristic_run_rens, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_root_reduced_cost",
-        "Run rootReducedCost heuristic: Default = true", advanced,
-        &mip_heuristic_run_root_reduced_cost, true);
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_root_reduced_cost",
+                             "Use the rootReducedCost heuristic", advanced,
+                             &mip_heuristic_run_root_reduced_cost, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_zi_round", "Run ZI Round heuristic: Default = false",
-        advanced, &mip_heuristic_run_zi_round, false);
+    record_bool = new OptionRecordBool("mip_heuristic_run_zi_round",
+                                       "Use the ZI Round heuristic", advanced,
+                                       &mip_heuristic_run_zi_round, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_shifting", "Run Shifting heuristic: Default = false",
-        advanced, &mip_heuristic_run_shifting, false);
+    record_bool = new OptionRecordBool("mip_heuristic_run_shifting",
+                                       "Use the Shifting heuristic", advanced,
+                                       &mip_heuristic_run_shifting, false);
     records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(
