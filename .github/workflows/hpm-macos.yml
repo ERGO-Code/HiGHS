@@ -72,6 +72,7 @@ jobs:
 
       - name: Test executable
         working-directory: ${{runner.workspace}}/build
+        shell: bash
         run:  ./bin/highs --solver=hpm $GITHUB_WORKSPACE/check/instances/afiro.mps
         
   debug:
@@ -144,4 +145,5 @@ jobs:
 
       - name: Test executable
         working-directory: ${{runner.workspace}}/build
+        shell: bash
         run:  ./bin/highs --solver=hpm $GITHUB_WORKSPACE/check/instances/afiro.mps
