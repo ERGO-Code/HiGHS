@@ -68,7 +68,7 @@ jobs:
       - name: Configure CMake, build and ctest
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DHPM=ON -DMETIS_ROOT=${{runner.workspace}} -DGKLIB_ROOT=${{runner.workspace}}
+          cmake $GITHUB_WORKSPACE -DHPM=ON -DMETIS_ROOT=${{runner.workspace}}/installs -DGKLIB_ROOT=${{runner.workspace}}/installs
           cmake --build . --parallel
           ctest --parallel --timeout 300 --output-on-failure
 
