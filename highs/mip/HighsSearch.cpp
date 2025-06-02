@@ -253,6 +253,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   std::vector<uint8_t> downscorereliable;
   std::vector<double> upbound;
   std::vector<double> downbound;
+  std::vector<double> shadowscore;
 
   HighsInt numfrac = lp->getFractionalIntegers().size();
   if (numfrac == 1) return 0;
@@ -262,6 +263,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   downscore.resize(numfrac, kHighsInf);
   upbound.resize(numfrac, getCurrentLowerBound());
   downbound.resize(numfrac, getCurrentLowerBound());
+  if (!mipsolver.submip) shadowscore.resize(numfrac, 0.0);
 
   upscorereliable.resize(numfrac, 0);
   downscorereliable.resize(numfrac, 0);
@@ -322,6 +324,25 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         downscore[k] = pseudocost.getPseudocostDown(col, fracval);
         downscorereliable[k] = true;
       }
+    }
+
+    if (!mipsolver.submip) {
+      double shadowupcost = lp->getLp().col_cost_[col];
+      double shadowdowncost = lp->getLp().col_cost_[col];
+      HighsInt start = lp->getLp().a_matrix_.start_[col];
+      HighsInt end = lp->getLp().a_matrix_.start_[col + 1];
+      for (HighsInt j = start; j != end; ++j) {
+        double s = lp->getSolution().row_dual[lp->getLp().a_matrix_.index_[j]] *
+          lp->getLp().a_matrix_.value_[j];
+        if (s < 0) {
+          shadowdowncost -= s;
+        }
+        else if (s > 0) {
+          shadowupcost += s;
+        }
+      }
+      shadowscore[k] = std::max(1e-6, shadowdowncost) *
+        std::max(1e-6, shadowupcost);
     }
   }
 
@@ -391,7 +412,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     return best;
   };
 
-  bool strongbranched = false;
   HighsLpRelaxation::Playground playground = lp->playground();
 
   while (true) {
@@ -724,7 +744,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       // evaluate up branch
       if (strongBranch(true)) return -1;
     }
-    strongbranched = true;
   }
 
   // Score candidates and select best one
@@ -735,14 +754,14 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   perm.resize(numfrac);
   std::iota(perm.begin(), perm.end(), 0);
 
-  auto sortCandidates = [&] {
+  auto sortCandidates = [&](std::vector<double>& sortscore) {
     pdqsort(perm.begin(), perm.begin() + numcands,
       [&](const HighsInt a, const HighsInt b) {
-        return score[a] > score[b];
+        return sortscore[a] > sortscore[b];
     });
     for (HighsInt j = 0; j != numcands; j++) {
-      if ((score[perm[j]] <= score[perm[0]] * 0.8) &&
-          (score[perm[j]] <= score[perm[0]] - 1e-6)) {
+      if ((sortscore[perm[j]] <= sortscore[perm[0]] * 0.8) &&
+          (sortscore[perm[j]] <= sortscore[perm[0]] - 1e-6)) {
         numcands = j;
         break;
           }
@@ -761,44 +780,23 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       pseudocost.getScore(fracints[k].first, upscore[k], downscore[k]);
     }
   }
-  sortCandidates();
+  sortCandidates(score);
   if (numcands == 1) {
     downNodeLb = downbound[perm[0]];
     upNodeLb = upbound[perm[0]];
     return perm[0];
   }
 
-  bool infeas = false;
-  if (strongbranched) {
-    HighsLpRelaxation::Status status = lp->resolveLp();
-    if (!lp->unscaledDualFeasible(status)) infeas = true;
-  }
-  else {
-    if (!lp->unscaledDualFeasible(lp->getStatus())) infeas = true;
-  }
-  if (!infeas) {
-    std::fill(score.begin(), score.end(), 0.0);
-    for (HighsInt k = 0; k != numcands; k++) {
-      HighsInt col = fracints[k].first;
-      double shadowupcost = lp->getLp().col_cost_[col];
-      double shadowdowncost = lp->getLp().col_cost_[col];
-      HighsInt start = lp->getLp().a_matrix_.start_[col];
-      HighsInt end = lp->getLp().a_matrix_.start_[col + 1];
-      for (HighsInt j = start; j != end; ++j) {
-        double s = lp->getSolution().row_dual[lp->getLp().a_matrix_.index_[j]] *
-          lp->getLp().a_matrix_.value_[j];
-        if (s < 0) {
-          shadowdowncost -= s;
-        }
-        else if (s > 0) {
-          shadowupcost += s;
-        }
-      }
-      score[perm[k]] = std::max(1e-6, shadowdowncost) *
-        std::max(1e-6, shadowupcost);
+  if (!mipsolver.submip) {
+    sortCandidates(shadowscore);
+    if (numcands == 1) {
+      downNodeLb = downbound[perm[0]];
+      upNodeLb = upbound[perm[0]];
+      return perm[0];
     }
-    sortCandidates();
   }
+
+  sortCandidates(score);
   downNodeLb = downbound[perm[0]];
   upNodeLb = upbound[perm[0]];
   return perm[0];
@@ -1206,7 +1204,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
       }
     }
 
-    double degeneracyFac = std::min(50.0, lp->computeLPDegneracy(localdom));
+    double degeneracyFac = std::min(1000.0, lp->computeLPDegneracy(localdom));
     pseudocost.setDegeneracyFactor(degeneracyFac);
     if (degeneracyFac >= 10.0) pseudocost.setMinReliable(0);
     // if (!mipsolver.submip)
