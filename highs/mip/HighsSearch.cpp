@@ -254,16 +254,19 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   std::vector<double> upbound;
   std::vector<double> downbound;
   std::vector<double> shadowscore;
+  std::vector<double> edgescore;
 
   HighsInt numfrac = lp->getFractionalIntegers().size();
   if (numfrac == 1) return 0;
   const auto& fracints = lp->getFractionalIntegers();
+  HighsHashTable<HighsInt, HighsInt> coltoidx(numfrac);
 
   upscore.resize(numfrac, kHighsInf);
   downscore.resize(numfrac, kHighsInf);
   upbound.resize(numfrac, getCurrentLowerBound());
   downbound.resize(numfrac, getCurrentLowerBound());
   if (!mipsolver.submip) shadowscore.resize(numfrac, 0.0);
+  edgescore.resize(numfrac, 0.0);
 
   upscorereliable.resize(numfrac, 0);
   downscorereliable.resize(numfrac, 0);
@@ -326,6 +329,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       }
     }
 
+    // Calculate the shadow score for each candidate
     if (!mipsolver.submip) {
       double shadowupcost = lp->getLp().col_cost_[col];
       double shadowdowncost = lp->getLp().col_cost_[col];
@@ -343,6 +347,31 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       }
       shadowscore[k] = std::max(1e-6, shadowdowncost) *
         std::max(1e-6, shadowupcost);
+    }
+    // Store the col to index mapping (need to get edge weights from basis)
+    auto& idx = coltoidx[col];
+    idx = k;
+  }
+
+  // Get the edge weights assigned to the correct variables
+  const double* edgeWt = lp->getLpSolver().getDualEdgeWeights();
+  HighsInt numweightsstored = 0;
+  if (edgeWt) {
+    const HighsInt* basisinds =
+      lp->getLpSolver().getBasicVariablesArray();
+    HighsInt numRow = lp->numRows();
+    HighsInt numCol = lp->numCols();
+    for (HighsInt k = 0; k < numRow; ++k) {
+      if (numweightsstored == numfrac) break;
+      if (basisinds[k] <= numCol) {
+        auto it = coltoidx.find(basisinds[k]);
+        if (it == nullptr) continue;
+        HighsInt idx = *it;
+        assert(0 <= idx && idx <= numfrac);
+        edgescore[idx] = fracints[idx].second * (1 - fracints[idx].second) /
+          edgeWt[basisinds[k]];
+        numweightsstored++;
+      }
     }
   }
 
@@ -785,6 +814,15 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     downNodeLb = downbound[perm[0]];
     upNodeLb = upbound[perm[0]];
     return perm[0];
+  }
+
+  if (edgeWt) {
+    sortCandidates(edgescore);
+    if (numcands == 1) {
+      downNodeLb = downbound[perm[0]];
+      upNodeLb = upbound[perm[0]];
+      return perm[0];
+    }
   }
 
   if (!mipsolver.submip) {
