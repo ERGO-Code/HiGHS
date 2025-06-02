@@ -34,7 +34,7 @@ struct FJStatus {
 };
 
 // Measures if two doubles are equal within a tolerance
-bool eq(double a, double b, double tol) { return fabs(a - b) < tol; }
+static bool eq(double a, double b, double tol) { return fabs(a - b) < tol; }
 
 struct IdxCoeff {
   uint32_t idx;
@@ -286,7 +286,7 @@ class Problem {
   }
 };
 
-void modifyMove(LhsModification mod, Problem& problem, Move& move) {
+static void modifyMove(LhsModification mod, Problem& problem, Move& move) {
   Constraint& c = problem.constraints[mod.constraintIdx];
   auto incumbent = problem.incumbentAssignment[mod.varIdx];
   double oldModifiedLhs = mod.oldLhs + mod.coeff * (move.value - incumbent);
