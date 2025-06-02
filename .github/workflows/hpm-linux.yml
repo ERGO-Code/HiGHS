@@ -47,7 +47,6 @@ jobs:
           make
           make install
 
-
       - name: Check METIS and GKlib
         working-directory: ${{runner.workspace}}
         run: |
@@ -55,8 +54,24 @@ jobs:
           ls 
           ls lib
 
-      - name: Install OpenBLAS
-        shell: bash
+      # Use linux default blas for now if available
+
+      # - name: Install OpenBLAS
+      #   shell: bash
+      #   run: |
+      #     sudo apt update
+      #     sudo apt install libopenblas-dev 
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake, build and ctest
+        working-directory: ${{runner.workspace}}/build
         run: |
-          sudo apt update
-          sudo apt install libopenblas-dev 
+          cmake $GITHUB_WORKSPACE -DHPM=ON -DMETIS_ROOT=${{runner.workspace}} -DGKLIB_ROOT=${{runner.workspace}}
+          cmake --build . --parallel
+          ctest --parallel --timeout 300 --output-on-failure
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run:  ./bin/highs --solver=hpm $GITHUB_WORKSPACE/check/instances/afiro.mps
