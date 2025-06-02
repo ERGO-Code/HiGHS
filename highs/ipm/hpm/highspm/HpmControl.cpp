@@ -25,7 +25,7 @@ Int HpmControl::interruptCheck(const Int ipm_iteration_count) const {
 
   if (callback_) {
     if (callback_->user_callback && callback_->active[kCallbackIpmInterrupt]) {
-      callback_->clearHighsCallbackDataOut();
+      callback_->clearHighsCallbackOutput();
       callback_->data_out.ipm_iteration_count = ipm_iteration_count;
       if (callback_->callbackAction(kCallbackIpmInterrupt, "IPM interrupt"))
         return kIpmStatusUserInterrupt;

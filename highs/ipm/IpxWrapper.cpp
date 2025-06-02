@@ -417,7 +417,6 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
                        HighsSolution& highs_solution,
                        HighsModelStatus& model_status, HighsInfo& highs_info,
                        HighsCallback& callback) {
-{
   // Use HPM
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -461,26 +460,38 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
 
   // Set pointer to any callback
 
-  ipx::Int num_col, num_row;
+   // ===================================================================================
+  // CHANGE FORMULATION
+  // ===================================================================================
+  // Input problem must be in the form
+  //
+  //  min   obj^T * x
+  //  s.t.  A * x {<=,=,>=} rhs
+  //        lower <= x <= upper
+  //
+  //  constraints[i] is : =, <, >
+  // ===================================================================================
+
+  highspm::Int n, m;
+  std::vector<double> obj, rhs, lower, upper, Aval;
+  std::vector<highspm::Int> Aptr, Aind;
+  std::vector<char> constraints;
   double offset;
-  std::vector<ipx::Int> Ap, Ai;
-  std::vector<double> objective, col_lb, col_ub, Av, rhs;
-  std::vector<char> constraint_type;
-  fillInIpxData(lp, num_col, num_row, offset, objective, col_lb, col_ub, Ap, Ai,
-                Av, rhs, constraint_type);
+
+  fillInIpxData(lp, n, m, offset, obj, lower, upper, Aptr, Aind, Aval, rhs,
+                constraints);
 
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "HPM model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                " columns and %" HIGHSINT_FORMAT " nonzeros\n",
-               num_row, num_col, Ap[num_col]);
-
-
+               n, m, Aptr[n]);
   
   // Get information from highs object. I added some of these functions to highs
   // on purpose to extract the data. They will not be needed when hpm will be
   // built together with highs.
+  highspm::HpmOptions hpm_options{};
 
-  hpm.set(options, options.log_options, callback, timer);
+  hpm.set(hpm_options, options.log_options, callback, timer);
 
   // load the problem
   hpm.load(n, m, obj.data(), rhs.data(), lower.data(), upper.data(),
