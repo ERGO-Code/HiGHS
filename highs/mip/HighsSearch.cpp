@@ -816,8 +816,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     return perm[0];
   }
 
-  if (edgeWt) {
-    sortCandidates(edgescore);
+  if (!mipsolver.submip) {
+    sortCandidates(shadowscore);
     if (numcands == 1) {
       downNodeLb = downbound[perm[0]];
       upNodeLb = upbound[perm[0]];
@@ -825,8 +825,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     }
   }
 
-  if (!mipsolver.submip) {
-    sortCandidates(shadowscore);
+  if (edgeWt) {
+    sortCandidates(edgescore);
     if (numcands == 1) {
       downNodeLb = downbound[perm[0]];
       upNodeLb = upbound[perm[0]];
