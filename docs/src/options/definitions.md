@@ -56,7 +56,7 @@
 - Default: 1e+15
 
 ## kkt\_tolerance
-- KKT tolerance
+- If changed from its default value, this KKT tolerance is used for all feasibility and optimality measures
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
@@ -185,11 +185,6 @@
 - Type: boolean
 - Default: "true"
 
-## solution\_file
-- Solution file
-- Type: string
-- Default: ""
-
 ## log\_file
 - Log file
 - Type: string
@@ -259,11 +254,6 @@
 
 ## mip\_allow\_restart
 - Whether MIP restart is permitted
-- Type: boolean
-- Default: "true"
-
-## mip\_allow\_feasibility\_jump
-- Whether MIP feasibility jump is permitted
 - Type: boolean
 - Default: "true"
 
@@ -365,28 +355,33 @@
 - Range: [0, 1]
 - Default: 0.05
 
+## mip\_heuristic\_run\_feasibility\_jump
+- Use the feasibility jump heuristic
+- Type: boolean
+- Default: "true"
+
 ## mip\_heuristic\_run\_rins
-- Run RINS heuristic: Default = true
+- Use the RINS heuristic
 - Type: boolean
 - Default: "true"
 
 ## mip\_heuristic\_run\_rens
-- Run RENS heuristic: Default = true
+- Use the RENS heuristic
 - Type: boolean
 - Default: "true"
 
 ## mip\_heuristic\_run\_root\_reduced\_cost
-- Run rootReducedCost heuristic: Default = true
+- Use the rootReducedCost heuristic
 - Type: boolean
 - Default: "true"
 
 ## mip\_heuristic\_run\_zi\_round
-- Run ZI Round heuristic: Default = false
+- Use the ZI Round heuristic
 - Type: boolean
 - Default: "false"
 
 ## mip\_heuristic\_run\_shifting
-- Run Shifting heuristic: Default = false
+- Use the Shifting heuristic
 - Type: boolean
 - Default: "false"
 
