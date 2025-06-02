@@ -1,9 +1,13 @@
 # [Executable](@id executable)
 
-For convenience, the executable is assumed to be `bin/highs`.
+HiGHS can run as a standalone program with a command-line interface. It solves an optimization problem provided by a model file. HiGHS supports the following model file formats:
+
+- [MPS file format](https://en.wikipedia.org/wiki/MPS_(format))
+- (CPLEX) [LP file format](https://docs.mosek.com/latest/capi/lp-format.html)
 
 ### Running the executable
 
+For convenience, the executable is assumed to be `bin/highs`.
 The model given by the MPS file `model.mps` is solved by the command:
 
 ```shell
