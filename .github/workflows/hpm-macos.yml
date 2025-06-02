@@ -47,10 +47,23 @@ jobs:
           make
           make install
 
-
       - name: Check METIS and GKlib
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
           ls 
           ls lib
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake, build and ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHPM=ON -DMETIS_ROOT=${{runner.workspace}} -DGKLIB_ROOT=${{runner.workspace}}
+          cmake --build . --parallel
+          ctest --parallel --timeout 300 --output-on-failure
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run:  ./bin/highs --solver=hpm $GITHUB_WORKSPACE/check/instances/afiro.mps
