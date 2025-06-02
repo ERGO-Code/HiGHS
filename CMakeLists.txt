@@ -146,8 +146,17 @@ endif()
   # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
 # endif()
 
-option(PROTO_IPM "Build ProtoIPM" OFF)
-message(STATUS "Build ProtoIPM: ${PROTO_IPM}")
+option(HPM "Build HPM" OFF)
+message(STATUS "Build HPM: ${HPM}")
+if (HPM AND CSHARP)
+  message(ERROR "HPM is only available in C++. Not yet supported in C#.")
+endif()
+if (HPM AND FORTRAN)
+  message(ERROR "HPM is only available in C++. Not yet supported in FORTRAN")
+endif()
+if (HPM AND PYTHON_BUILD_SETUP)
+  message(ERROR "HPM is only available in C++. Not yet supported in Python.")
+endif()
 
 if (CUPDLP_GPU)
   if (WIN32)
@@ -176,7 +185,7 @@ else()
 endif()
 
 # ProtoIPM deps 
-if(PROTO_IPM)
+if(HPM)
   # find_package(METIS REQUIRED)
   # find_package(GKlib REQUIRED)
   # does not work with outdated CMake 

@@ -7,6 +7,11 @@ include(sources)
 set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
+if(HPM)
+  set(sources ${sources} ${hpm_sources} ${factor_highs_sources} ${hpm_util_sources})
+  set(headers ${headers} ${hpm_headers} ${factor_highs_headers} ${hpm_util_headers})
+endif()
+
 # Configure the config windows version file
 if(MSVC)
   string(REPLACE "." ","  PROJECT_RC_VERSION "${PROJECT_VERSION}")
