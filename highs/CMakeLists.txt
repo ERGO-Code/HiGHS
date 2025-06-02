@@ -176,6 +176,40 @@ else()
 
   target_include_directories(highs PRIVATE ${include_dirs})
 
+  # Optional HPM
+  if (HPM)
+
+    target_include_directories(highs PRIVATE 
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hpm>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hpm/auxiliary>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hpm/factorhighs>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hpm/highspm>
+    )
+
+    if(APPLE)
+        target_link_libraries(highs "-framework Accelerate")
+        target_compile_definitions(highs PRIVATE FRAMEWORK_ACCELERATE)
+    else(APPLE)
+        if(BLAS_LIB)
+            target_link_libraries(highs "${BLAS_LIB}")
+        elseif(OPENBLAS_LIB)
+            target_link_libraries(highs "${OPENBLAS_LIB}")
+        else()
+            message(FATAL_ERROR "No BLAS library available")
+        endif(BLAS_LIB)
+    endif(APPLE)
+
+    # Metis
+    target_include_directories(highs PRIVATE "${METIS_PATH}")
+    target_link_libraries(highs "${METIS_LIB}")
+
+    # GKlib
+    target_include_directories(highs PRIVATE "${GKLIB_PATH}")
+    target_link_libraries(highs "${GKLIB_LIB}")
+
+  endif()
+
+
   if(MSVC)
     list(APPEND highs_compile_opts
       "/bigobj" # Allow big object
