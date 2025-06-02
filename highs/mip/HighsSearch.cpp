@@ -369,7 +369,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         HighsInt idx = *it;
         assert(0 <= idx && idx <= numfrac);
         edgescore[idx] = fracints[idx].second * (1 - fracints[idx].second) /
-          edgeWt[basisinds[k]];
+          std::max(edgeWt[basisinds[k]], 1e-3);
         numweightsstored++;
       }
     }
