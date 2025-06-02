@@ -54,13 +54,13 @@ jobs:
           ls 
           ls lib
 
-      # Use linux default blas for now if available
+      # no default blas available on runner
 
-      # - name: Install OpenBLAS
-      #   shell: bash
-      #   run: |
-      #     sudo apt update
-      #     sudo apt install libopenblas-dev 
+      - name: Install OpenBLAS
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install libopenblas-dev 
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
