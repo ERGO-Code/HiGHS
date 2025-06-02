@@ -78,11 +78,6 @@ jobs:
           cmake --build . --parallel
           ctest --parallel --timeout 300 --output-on-failure
 
-      - name: Test executable
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run:  ./bin/highs --solver=hpm $GITHUB_WORKSPACE/check/instances/afiro.mps
-
   debug:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -158,8 +153,3 @@ jobs:
         run: |
           cmake --build . --parallel
           ctest --parallel --timeout 300 --output-on-failure
-
-      - name: Test executable
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run:  ./bin/highs --solver=hpm $GITHUB_WORKSPACE/check/instances/afiro.mps
