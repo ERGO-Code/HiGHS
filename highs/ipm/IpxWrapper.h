@@ -27,6 +27,17 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsModelStatus& model_status, HighsInfo& highs_info,
                        HighsCallback& callback);
 
+#ifdef HPM
+HighsStatus solveLpHpm(HighsLpSolverObject& solver_object);
+
+HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
+                       const HighsLp& lp, HighsBasis& highs_basis,
+                       HighsSolution& highs_solution,
+                       HighsModelStatus& model_status, HighsInfo& highs_info,
+                       HighsCallback& callback);
+
+#endif
+
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    double& offset, std::vector<double>& obj,
                    std::vector<double>& col_lb, std::vector<double>& col_ub,

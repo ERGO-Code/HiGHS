@@ -16,6 +16,10 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
+#ifdef HPM
+#include "ipm/hpm/highspm/HpmSolver.h"
+#endif
+
 using std::min;
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
@@ -398,6 +402,121 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   return return_status;
 }
+
+
+#ifdef HPM
+HighsStatus solveLpHpm(HighsLpSolverObject& solver_object) {
+  return solveLpHpm(solver_object.options_, solver_object.timer_,
+                    solver_object.lp_, solver_object.basis_,
+                    solver_object.solution_, solver_object.model_status_,
+                    solver_object.highs_info_, solver_object.callback_);
+  }
+
+HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
+                       const HighsLp& lp, HighsBasis& highs_basis,
+                       HighsSolution& highs_solution,
+                       HighsModelStatus& model_status, HighsInfo& highs_info,
+                       HighsCallback& callback) {
+{
+  // Use HPM
+  //
+  // Can return HighsModelStatus (HighsStatus) values:
+  //
+  // 1. kSolveError (kError) if various unlikely solution errors occur
+  //
+  // 2. kTimeLimit (kWarning) if time limit is reached
+  //
+  // 3. kIterationLimit (kWarning) if iteration limit is reached
+  //
+  // 4. kUnknown (kWarning) if HPM makes no progress or if
+  // IPM/crossover are imprecise
+  //
+  // 5. kInfeasible (kOk) if HPM identifies primal infeasibility
+  //
+  // 6. kUnboundedOrInfeasible (kOk) if HPM identifies dual
+  // infeasibility
+  //
+  // kOptimal (kOk) if HPM/crossover identify optimality
+  //
+  // With a non-error return, if just HPM has been run then a
+  // non-vertex primal solution is obtained; if crossover has been run
+  // then a basis and primal+dual solution are obtained.
+  //
+  //
+  // Indicate that there is no valid primal solution, dual solution or basis
+  highs_basis.valid = false;
+  highs_solution.value_valid = false;
+  highs_solution.dual_valid = false;
+  // Indicate that no imprecise solution has (yet) been found
+  resetModelStatusAndHighsInfo(model_status, highs_info);
+
+  // Create the LpSolver instance
+  // create solver
+  highspm::HpmSolver hpm{};
+
+
+  // todo: set parameters
+
+  // Set the internal HPM parameters
+
+  // Set pointer to any callback
+
+  ipx::Int num_col, num_row;
+  double offset;
+  std::vector<ipx::Int> Ap, Ai;
+  std::vector<double> objective, col_lb, col_ub, Av, rhs;
+  std::vector<char> constraint_type;
+  fillInIpxData(lp, num_col, num_row, offset, objective, col_lb, col_ub, Ap, Ai,
+                Av, rhs, constraint_type);
+
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "HPM model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
+               " columns and %" HIGHSINT_FORMAT " nonzeros\n",
+               num_row, num_col, Ap[num_col]);
+
+
+  
+  // Get information from highs object. I added some of these functions to highs
+  // on purpose to extract the data. They will not be needed when hpm will be
+  // built together with highs.
+
+  hpm.set(options, options.log_options, callback, timer);
+
+  // load the problem
+  hpm.load(n, m, obj.data(), rhs.data(), lower.data(), upper.data(),
+           Aptr.data(), Aind.data(), Aval.data(), constraints.data(), offset);
+
+  // todo: maybe a return status if success
+  // if (load_status) {
+  //   model_status = HighsModelStatus::kSolveError;
+  //   return HighsStatus::kError;
+  // }
+
+  hpm.solve();
+
+  // todo: handle result as in solveLpIpx above
+
+  const bool report_solve_data =
+      kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
+
+  // Get solver and solution information.
+  const highspm::HpmInfo hpm_info = hpm.getInfo();
+
+  highspm::IpmStatus solve_status = hpm_info.ipm_status;
+
+  // if (solve_status == ...
+
+  HighsStatus return_status = HighsStatus::kWarning;
+  if (solve_status == highspm::IpmStatus::kIpmStatusOptimal) {
+    // todo: copy solution back etc
+    return_status = HighsStatus::kOk;
+  }
+  
+  return return_status;
+}
+
+#endif
+
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    double& offset, std::vector<double>& obj,
