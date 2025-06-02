@@ -1,9 +1,12 @@
 # [Executable](@id executable)
 
-HiGHS can run as a standalone program with a command-line interface. It solves an optimization problem provided by a model file. HiGHS supports the following model file formats:
-
-- [MPS file format](https://en.wikipedia.org/wiki/MPS_(format))
-- (CPLEX) [LP file format](https://docs.mosek.com/latest/capi/lp-format.html)
+HiGHS can run as a standalone program with a command-line
+interface. It solves an optimization problem provided by either an
+[MPS](https://docs.gurobi.com/projects/optimizer/en/current/reference/fileformats/modelformats.html#mps-format)
+file, or
+[LP](https://docs.gurobi.com/projects/optimizer/en/current/reference/fileformats/modelformats.html#lp-format)
+file. Note that HiGHS cannot read the [lpsolve LP file
+format](https://lpsolve.sourceforge.net/5.5/lp-format.htm).
 
 ### Running the executable
 
@@ -19,9 +22,9 @@ path name can be given.
 
 ### Command line options
 
-When HiGHS is run from the command line, some fundamental option values may be
-specified directly. Many more may be specified via a file. Formally, the usage
-is:
+When HiGHS is run from the command line, some fundamental option
+values may be specified directly. Many more may be specified via a
+file containing HiGHS options settings. Formally, the usage is:
 
 ```shell
 $ bin/highs --help
@@ -64,7 +67,9 @@ options:
 ```
 
 The [list of options](@ref option-definitions) section gives a full
-list of options, and the format in which they are specified.
+list of options, and their default values. In a file containing HiGHS
+options they are specified as `name = value`, with one per line, and
+any line beginning with `#` treated as a comment.
 
 ### Return code values
 
