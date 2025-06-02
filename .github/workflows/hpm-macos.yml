@@ -1,4 +1,4 @@
-name: proto
+name: hpm-macos
 
 on: [push, pull_request]
 

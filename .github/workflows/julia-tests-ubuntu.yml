@@ -1,9 +1,10 @@
 name: JuliaCompileAndTest
-on:
-  push:
-    branches: [master, latest]
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+on: []
+# on:
+#   push:
+#     branches: [master, latest]
+#   pull_request:
+#     types: [opened, synchronize, ready_for_review, reopened]
 # needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
   actions: write

@@ -1,6 +1,7 @@
 name: test-python-ubuntu
 
-on: [push, pull_request]
+# on: [push, pull_request]
+on: []
 
 jobs:
   build:

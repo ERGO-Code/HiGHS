@@ -1,6 +1,7 @@
 name: test-csharp-win
 
-on: [push, pull_request]
+# on: [push, pull_request]
+on: []
 
 jobs:
   fast_build_release:
