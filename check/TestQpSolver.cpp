@@ -13,6 +13,9 @@ const double double_equal_tolerance = 1e-5;
 void testPrimalDualObjective(Highs& h, const double required_objective_function_value) {
   const HighsInfo& info = h.getInfo();
   double objective_function_value = info.objective_function_value;
+  const HighsSolution& solution = h.getSolution();
+  double alt_objective_function_value =
+    h.getModel().objectiveValue(solution.col_value);
   double dual_objective_function_value;
   REQUIRE(h.getDualObjectiveValue(dual_objective_function_value) == HighsStatus::kOk);
   if (dev_run) printf("(Primal, Dual) objective = (%17.10g, %17.10g): P-D error = %17.10g\n",
@@ -21,6 +24,8 @@ void testPrimalDualObjective(Highs& h, const double required_objective_function_
   REQUIRE(fabs(objective_function_value - required_objective_function_value) <
           double_equal_tolerance);
   REQUIRE(fabs(dual_objective_function_value - required_objective_function_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
           double_equal_tolerance);
   double complementarity_tolerance;
   h.getOptionValue("complementarity_tolerance", complementarity_tolerance);
@@ -218,11 +223,13 @@ TEST_CASE("test-qod", "[qpsolver]") {
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) {
-    printf("One variable unconstrained QP: objective = %g; solution:\n",
+    printf("\nOne variable unconstrained QP: objective = %g; solution:\n",
            objective_function_value);
     highs.writeSolution("", kSolutionStylePretty);
   }
@@ -245,6 +252,10 @@ TEST_CASE("test-qod", "[qpsolver]") {
   if (dev_run) highs.writeModel("");
 
   // Can solve the model before the Hessian has been replaced
+  if (dev_run) 
+    printf("\nTwo variable unconstrained QP with semi-definite Hessian - is unbounded\n");
+  // Reinstate the QP regularization since the Hessian is only semi-definite
+  REQUIRE(highs.setOptionValue("qp_regularization_value", kHessianRegularizationValue) == HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -259,6 +270,8 @@ TEST_CASE("test-qod", "[qpsolver]") {
   return_status = highs.passHessian(hessian);
   REQUIRE(return_status == HighsStatus::kOk);
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -275,8 +288,8 @@ TEST_CASE("test-qod", "[qpsolver]") {
   REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
           double_equal_tolerance);
 
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
+  
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
 
@@ -316,8 +329,8 @@ TEST_CASE("test-qod", "[qpsolver]") {
   REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
           double_equal_tolerance);
 
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
+  
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
 
@@ -365,12 +378,14 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   required_objective_function_value = -5.50;
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
 
+  testPrimalDualObjective(highs, required_objective_function_value);
+  
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
@@ -425,8 +440,9 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     REQUIRE(return_status == HighsStatus::kOk);
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
-    REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-            double_equal_tolerance);
+
+    testPrimalDualObjective(highs, required_objective_function_value);
+
     return_status = highs.clearModel();
   }
 
@@ -492,12 +508,15 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
   REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
   // Make the problem a maximization
   REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
   const double required_objective_function_value = 1.25;
-  REQUIRE(fabs(highs.getObjectiveValue() - required_objective_function_value) <
-          double_equal_tolerance);
+
+  testPrimalDualObjective(highs, required_objective_function_value);
+
   const HighsSolution& solution = highs.getSolution();
   REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - 1.5) < double_equal_tolerance);
@@ -542,6 +561,8 @@ TEST_CASE("test-semi-definite0", "[qpsolver]") {
 
   //  highs.writeModel("semi-definite.mps");
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
@@ -578,11 +599,17 @@ TEST_CASE("test-semi-definite1", "[qpsolver]") {
   hessian.value_ = {1.0, -1.0, 1.0};
   REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
+
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  const double required_objective_function_value = -1.5;
+
+  testPrimalDualObjective(highs, required_objective_function_value);
+
   const HighsSolution& solution = highs.getSolution();
-  const double objective_function_value = highs.getObjectiveValue();
-  REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - 1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1]) < double_equal_tolerance);
 
@@ -618,11 +645,17 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
   hessian.value_ = {1.0};
   REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
+
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  const double required_objective_function_value = -1.5;
+
+  testPrimalDualObjective(highs, required_objective_function_value);
+
   const HighsSolution& solution = highs.getSolution();
-  const double objective_function_value = highs.getObjectiveValue();
-  REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] + 1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - 2) < double_equal_tolerance);
 
@@ -634,6 +667,7 @@ void hessianProduct(const HighsHessian& hessian, const std::vector<double>& arg,
   HighsInt dim = hessian.dim_;
   assert(HighsInt(arg.size()) == dim);
   result.resize(dim);
+  assert(hessian.format_ == HessianFormat::kSquare);
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     double sum = 0;
     for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];

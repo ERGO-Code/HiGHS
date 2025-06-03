@@ -3904,7 +3904,9 @@ HighsStatus Highs::callSolveQp() {
 
   settings.iteration_limit = options_.qp_iteration_limit;
   settings.nullspace_limit = options_.qp_nullspace_limit;
-
+  assert(settings.hessian_regularization_value == kHessianRegularizationValue);
+  settings.hessian_regularization_value = options_.qp_regularization_value;
+    
   // Define the QP model status logging function
   settings.qp_model_status_log.subscribe(
       [this](QpModelStatus& qp_model_status) {
