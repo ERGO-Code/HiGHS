@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = true;//false;
+const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
@@ -662,21 +662,6 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
   highs.resetGlobalScheduler(true);
 }
 
-void hessianProduct(const HighsHessian& hessian, const std::vector<double>& arg,
-                    std::vector<double>& result) {
-  HighsInt dim = hessian.dim_;
-  assert(HighsInt(arg.size()) == dim);
-  result.resize(dim);
-  assert(hessian.format_ == HessianFormat::kSquare);
-  for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    double sum = 0;
-    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
-         iEl++)
-      sum += hessian.value_[iEl] * arg[hessian.index_[iEl]];
-    result[iCol] = sum;
-  }
-}
-
 TEST_CASE("test-qp-modification", "[qpsolver]") {
   //  HighsStatus return_status;
   //  HighsModelStatus model_status;
@@ -761,12 +746,12 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   for (HighsInt iCol = delete_col; iCol < dim; iCol++)
     arg1[iCol] = arg1[iCol + 1];
   arg0[delete_col] = 0;
-  hessianProduct(hessian0, arg0, result0);
+  hessian0.product(arg0, result0);
   for (HighsInt iCol = delete_col; iCol < dim; iCol++)
     result0[iCol] = result0[iCol + 1];
 
   arg1.resize(dim);
-  hessianProduct(incumbent_model.hessian_, arg1, result1);
+  incumbent_model.hessian_.product(arg1, result1);
   for (HighsInt iCol = 0; iCol < dim; iCol++)
     REQUIRE(result0[iCol] == result1[iCol]);
 
@@ -834,13 +819,13 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   arg1[2] = arg1[4];
   arg0[1] = 0;
   arg0[3] = 0;
-  hessianProduct(hessian0, arg0, result0);
+  hessian0.product(arg0, result0);
   result0[1] = result0[2];
   result0[2] = result0[4];
 
   dim = 3;
   arg1.resize(dim);
-  hessianProduct(incumbent_model.hessian_, arg1, result1);
+  incumbent_model.hessian_.product(arg1, result1);
   for (HighsInt iCol = 0; iCol < dim; iCol++)
     REQUIRE(result0[iCol] == result1[iCol]);
 
@@ -923,14 +908,14 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
       arg1[iRow] = arg1[iCol];
     }
   }
-  hessianProduct(hessian0, arg0, result0);
+  hessian0.product(arg0, result0);
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     HighsInt iRow = mask[iCol];
     if (iRow >= 0) result0[iRow] = result0[iCol];
   }
   dim = incumbent_model.hessian_.dim_;
   arg1.resize(dim);
-  hessianProduct(incumbent_model.hessian_, arg1, result1);
+  incumbent_model.hessian_.product(arg1, result1);
 
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     REQUIRE(fabs(result0[iCol] - result1[iCol]) < 1e-8);

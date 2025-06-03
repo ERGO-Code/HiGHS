@@ -1025,8 +1025,6 @@ bool computeDualObjectiveValue(const double* gradient,
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       double quad_term = (lp.col_cost_[iCol]-gradient[iCol])*solution.col_value[iCol];
       quad_value += quad_term;
-      printf("computeDualObjectiveValue %d: c = %17.10g; g = %17.10g; quad_term = %17.10g; quad_value = %17.10g\n",
-	     int(iCol), lp.col_cost_[iCol], gradient[iCol], quad_term, quad_value);
     }	     
     quad_value *= 0.5;
   }
@@ -1049,8 +1047,6 @@ bool computeDualObjectiveValue(const double* gradient,
     }
     dual_objective_value += bound * dual;
   }
-  printf("computeDualObjectiveValue: offset + quad_value + dual_term = %17.10g + %17.10g + %17.10g = %17.10g\n",
-	 lp.offset_, quad_value, dual_objective_value, lp.offset_ + quad_value + dual_objective_value);
   dual_objective_value += (lp.offset_ + quad_value);
   return true;
 }
