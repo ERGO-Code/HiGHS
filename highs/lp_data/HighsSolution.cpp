@@ -459,9 +459,10 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     //
     // Use the PDLP relative primal-dual objective error
     //
-    // The dual objective for a QP has a (1/2)x^TQx term, and this can
-    // be computed from the gradient (g = Qx + c) as (1/2)(g-c)^Tx, so
-    // pass a pointer to the gradient data if this is necessary
+    // The dual objective for a QP has a -(1/2)x^TQx term, and this
+    // can be computed from the gradient (g = Qx + c) as
+    // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, so pass a pointer to the
+    // gradient data if this is necessary
     const double* gradient_p = is_qp ? gradient.data() : nullptr;
     double dual_objective_value;
     bool dual_objective_status = computeDualObjectiveValue(
@@ -1016,19 +1017,18 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
   assert(solution.row_value.size() == static_cast<size_t>(lp.num_row_));
   assert(solution.row_dual.size() == static_cast<size_t>(lp.num_row_));
 
-  //  dual_objective_value = lp.offset_;
-  double quad_value = 0;
+  dual_objective_value = lp.offset_;
   if (gradient) {
     // The dual objective for a QP has a -(1/2)x^TQx term, and this
     // can be computed from the gradient (g = Qx + c) as
     // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, a pointer to the gradient data
     // is passed if this is necessary
+    double quad_value = 0;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      double quad_term =
+      quad_value +=
           (lp.col_cost_[iCol] - gradient[iCol]) * solution.col_value[iCol];
-      quad_value += quad_term;
     }
-    quad_value *= 0.5;
+    dual_objective_value += 0.5 * quad_value;
   }
   double bound = 0;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
@@ -1049,7 +1049,6 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
     }
     dual_objective_value += bound * dual;
   }
-  dual_objective_value += (lp.offset_ + quad_value);
   return true;
 }
 
