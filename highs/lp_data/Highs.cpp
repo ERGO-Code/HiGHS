@@ -1959,7 +1959,8 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 
 HighsStatus Highs::getDualObjectiveValue(
     double& dual_objective_function_value) const {
-  bool have_dual_objective_value = computeDualObjectiveValue(model_, solution_, dual_objective_function_value);
+  bool have_dual_objective_value = computeDualObjectiveValue(
+      model_, solution_, dual_objective_function_value);
   return have_dual_objective_value ? HighsStatus::kOk : HighsStatus::kError;
 }
 
@@ -3906,7 +3907,7 @@ HighsStatus Highs::callSolveQp() {
   settings.nullspace_limit = options_.qp_nullspace_limit;
   assert(settings.hessian_regularization_value == kHessianRegularizationValue);
   settings.hessian_regularization_value = options_.qp_regularization_value;
-    
+
   // Define the QP model status logging function
   settings.qp_model_status_log.subscribe(
       [this](QpModelStatus& qp_model_status) {

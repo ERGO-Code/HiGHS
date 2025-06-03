@@ -109,12 +109,11 @@ bool getComplementarityViolations(const HighsLp& lp,
                                   double& max_complementarity_violation);
 
 bool computeDualObjectiveValue(const HighsModel& model,
-			       const HighsSolution& solution,
-			       double& dual_objective_value);
+                               const HighsSolution& solution,
+                               double& dual_objective_value);
 
-bool computeDualObjectiveValue(const double* gradient,
-			       const HighsLp& lp,
-			       const HighsSolution& solution,
+bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
+                               const HighsSolution& solution,
                                double& dual_objective_value);
 
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);

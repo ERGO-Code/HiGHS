@@ -517,7 +517,7 @@ struct HighsOptionsStruct {
         pdlp_optimality_tolerance(0.0),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
-	qp_regularization_value(0),
+        qp_regularization_value(0),
         iis_strategy(0),
         blend_multi_objectives(false),
         log_dev_level(0),
@@ -1226,8 +1226,9 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "qp_regularization_value", "Regularization value added to the Hessian", advanced,
-        &qp_regularization_value, 0, kHessianRegularizationValue, kHighsInf);
+        "qp_regularization_value", "Regularization value added to the Hessian",
+        advanced, &qp_regularization_value, 0, kHessianRegularizationValue,
+        kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(

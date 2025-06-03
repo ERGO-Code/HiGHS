@@ -464,8 +464,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     // pass a pointer to the gradient data if this is necessary
     const double* gradient_p = is_qp ? gradient.data() : nullptr;
     double dual_objective_value;
-    bool dual_objective_status = 
-      computeDualObjectiveValue(gradient_p, lp, solution, dual_objective_value);
+    bool dual_objective_status = computeDualObjectiveValue(
+        gradient_p, lp, solution, dual_objective_value);
     assert(dual_objective_status);
     const double abs_objective_difference =
         std::fabs(highs_info.objective_function_value - dual_objective_value);
@@ -990,22 +990,23 @@ bool getComplementarityViolations(const HighsLp& lp,
 }
 
 bool computeDualObjectiveValue(const HighsModel& model,
-			       const HighsSolution& solution,
+                               const HighsSolution& solution,
                                double& dual_objective_value) {
   const HighsLp& lp = model.lp_;
   if (!model.isQp())
-    return computeDualObjectiveValue(nullptr, lp, solution, dual_objective_value);
+    return computeDualObjectiveValue(nullptr, lp, solution,
+                                     dual_objective_value);
   assert(solution.col_value.size() == static_cast<size_t>(lp.num_col_));
   // Model is QP, so compute gradient Qx + c so generic
   // computeDualObjectiveValue can be used
   std::vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
-  return computeDualObjectiveValue(gradient.data(), lp, solution, dual_objective_value);
+  return computeDualObjectiveValue(gradient.data(), lp, solution,
+                                   dual_objective_value);
 }
 
-bool computeDualObjectiveValue(const double* gradient,
-			       const HighsLp& lp,
-			       const HighsSolution& solution,
+bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
+                               const HighsSolution& solution,
                                double& dual_objective_value) {
   dual_objective_value = 0;
   if (!solution.dual_valid) return false;
@@ -1023,9 +1024,10 @@ bool computeDualObjectiveValue(const double* gradient,
     // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, a pointer to the gradient data
     // is passed if this is necessary
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      double quad_term = (lp.col_cost_[iCol]-gradient[iCol])*solution.col_value[iCol];
+      double quad_term =
+          (lp.col_cost_[iCol] - gradient[iCol]) * solution.col_value[iCol];
       quad_value += quad_term;
-    }	     
+    }
     quad_value *= 0.5;
   }
   double bound = 0;

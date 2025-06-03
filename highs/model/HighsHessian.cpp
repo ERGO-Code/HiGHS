@@ -196,7 +196,7 @@ void HighsHessian::product(const std::vector<double>& solution,
       const HighsInt iRow = this->index_[iEl];
       product[iRow] += this->value_[iEl] * solution[iCol];
       if (triangular && iRow != iCol)
-	product[iCol] += this->value_[iEl] * solution[iRow];
+        product[iCol] += this->value_[iEl] * solution[iRow];
     }
   }
 }
@@ -205,7 +205,7 @@ double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
   double objective_function_value = 0;
   for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
     HighsInt iEl = this->start_[iCol];
-    // Assumes Hessian format is triangular 
+    // Assumes Hessian format is triangular
     assert(this->index_[iEl] == iCol);
     objective_function_value +=
         0.5 * solution[iCol] * this->value_[iEl] * solution[iCol];
@@ -222,7 +222,7 @@ HighsCDouble HighsHessian::objectiveCDoubleValue(
   HighsCDouble objective_function_value = HighsCDouble(0);
   for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
     HighsInt iEl = this->start_[iCol];
-    // Assumes Hessian format is triangular 
+    // Assumes Hessian format is triangular
     assert(this->index_[iEl] == iCol);
     objective_function_value +=
         0.5 * solution[iCol] * this->value_[iEl] * solution[iCol];
