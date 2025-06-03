@@ -1959,10 +1959,7 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 
 HighsStatus Highs::getDualObjectiveValue(
     double& dual_objective_function_value) const {
-  bool have_dual_objective_value = false;
-  if (!this->model_.isQp())
-    have_dual_objective_value = computeDualObjectiveValue(
-        model_.lp_, solution_, dual_objective_function_value);
+  bool have_dual_objective_value = computeDualObjectiveValue(model_, solution_, dual_objective_function_value);
   return have_dual_objective_value ? HighsStatus::kOk : HighsStatus::kError;
 }
 
@@ -4673,7 +4670,7 @@ void Highs::reportSolvedLpQpStats() {
                  "Objective value     : %17.10e\n",
                  info_.objective_function_value);
   }
-  if (solution_.dual_valid && !this->model_.isQp())
+  if (solution_.dual_valid)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "P-D objective error : %17.10e\n",
                  info_.primal_dual_objective_error);

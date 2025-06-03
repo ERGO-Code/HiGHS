@@ -6,9 +6,26 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = false;
+const bool dev_run = true;//false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
+
+void testPrimalDualObjective(Highs& h, const double required_objective_function_value) {
+  const HighsInfo& info = h.getInfo();
+  double objective_function_value = info.objective_function_value;
+  double dual_objective_function_value;
+  REQUIRE(h.getDualObjectiveValue(dual_objective_function_value) == HighsStatus::kOk);
+  if (dev_run) printf("(Primal, Dual) objective = (%17.10g, %17.10g): P-D error = %17.10g\n",
+		      objective_function_value,  dual_objective_function_value,
+		      info.primal_dual_objective_error);
+  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(dual_objective_function_value - required_objective_function_value) <
+          double_equal_tolerance);
+  double complementarity_tolerance;
+  h.getOptionValue("complementarity_tolerance", complementarity_tolerance);
+  REQUIRE(fabs(info.primal_dual_objective_error) < complementarity_tolerance);
+}
 
 TEST_CASE("qp-unbounded", "[qpsolver]") {
   std::string filename;
@@ -174,7 +191,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   // Oscar's edge case
   //
-  // min x^2 + x = x(x + 1)
+  // min 1/4 + x^2 + x = 1/4 + x(x + 1)
+  //
+  // x* = -1/2; f* = 0
 
   lp.model_name_ = "qod";
   lp.num_col_ = 1;
@@ -216,8 +235,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
   REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
           double_equal_tolerance);
 
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
 
   // Add a variable x1 with objective x1^2 - x1
@@ -371,8 +389,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   required_objective_function_value = -5.25;
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);

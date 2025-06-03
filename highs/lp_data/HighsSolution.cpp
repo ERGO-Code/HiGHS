@@ -448,7 +448,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     assert(have_values);
   }
 
-  if (!is_qp && have_dual_solution) {
+  if (have_dual_solution) {
     // Determine the primal-dual objective error
     //
     // IPX computes objective_gap = (pobjective-dobjective) / (1.0 +
@@ -458,9 +458,14 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     // fabs(dPrimalObj) + fabs(dDualObj));
     //
     // Use the PDLP relative primal-dual objective error
+    //
+    // The dual objective for a QP has a (1/2)x^TQx term, and this can
+    // be computed from the gradient (g = Qx + c) as (1/2)(g-c)^Tx, so
+    // pass a pointer to the gradient data if this is necessary
+    const double* gradient_p = is_qp ? gradient.data() : nullptr;
     double dual_objective_value;
-    bool dual_objective_status =
-        computeDualObjectiveValue(lp, solution, dual_objective_value);
+    bool dual_objective_status = 
+      computeDualObjectiveValue(gradient_p, lp, solution, dual_objective_value);
     assert(dual_objective_status);
     const double abs_objective_difference =
         std::fabs(highs_info.objective_function_value - dual_objective_value);
@@ -984,7 +989,23 @@ bool getComplementarityViolations(const HighsLp& lp,
   return true;
 }
 
-bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
+bool computeDualObjectiveValue(const HighsModel& model,
+			       const HighsSolution& solution,
+                               double& dual_objective_value) {
+  const HighsLp& lp = model.lp_;
+  if (!model.isQp())
+    return computeDualObjectiveValue(nullptr, lp, solution, dual_objective_value);
+  assert(solution.col_value.size() == static_cast<size_t>(lp.num_col_));
+  // Model is QP, so compute gradient Qx + c so generic
+  // computeDualObjectiveValue can be used
+  std::vector<double> gradient;
+  model.objectiveGradient(solution.col_value, gradient);
+  return computeDualObjectiveValue(gradient.data(), lp, solution, dual_objective_value);
+}
+
+bool computeDualObjectiveValue(const double* gradient,
+			       const HighsLp& lp,
+			       const HighsSolution& solution,
                                double& dual_objective_value) {
   dual_objective_value = 0;
   if (!solution.dual_valid) return false;
@@ -994,7 +1015,21 @@ bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
   assert(solution.row_value.size() == static_cast<size_t>(lp.num_row_));
   assert(solution.row_dual.size() == static_cast<size_t>(lp.num_row_));
 
-  dual_objective_value = lp.offset_;
+  //  dual_objective_value = lp.offset_;
+  double quad_value = 0;
+  if (gradient) {
+    // The dual objective for a QP has a -(1/2)x^TQx term, and this
+    // can be computed from the gradient (g = Qx + c) as
+    // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, a pointer to the gradient data
+    // is passed if this is necessary
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      double quad_term = (lp.col_cost_[iCol]-gradient[iCol])*solution.col_value[iCol];
+      quad_value += quad_term;
+      printf("computeDualObjectiveValue %d: c = %17.10g; g = %17.10g; quad_term = %17.10g; quad_value = %17.10g\n",
+	     int(iCol), lp.col_cost_[iCol], gradient[iCol], quad_term, quad_value);
+    }	     
+    quad_value *= 0.5;
+  }
   double bound = 0;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
     const bool is_col = iVar < lp.num_col_;
@@ -1014,6 +1049,9 @@ bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
     }
     dual_objective_value += bound * dual;
   }
+  printf("computeDualObjectiveValue: offset + quad_value + dual_term = %17.10g + %17.10g + %17.10g = %17.10g\n",
+	 lp.offset_, quad_value, dual_objective_value, lp.offset_ + quad_value + dual_objective_value);
+  dual_objective_value += (lp.offset_ + quad_value);
   return true;
 }
 
