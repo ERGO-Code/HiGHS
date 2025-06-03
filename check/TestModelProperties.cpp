@@ -1,9 +1,8 @@
 #include <cmath>
 
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-
-#include "HCheckConfig.h"
 
 const bool dev_run = false;
 const double inf = kHighsInf;

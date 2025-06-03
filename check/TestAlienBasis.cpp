@@ -434,7 +434,7 @@ void testAlienBasis(const bool avgas, const HighsInt seed) {
 
   HighsStatus read_status = highs.readModel(filename);
   assert(read_status == HighsStatus::kOk);
-  
+
   HighsLp lp = highs.getLp();
   HighsInt num_col = lp.num_col_;
   HighsInt num_row = lp.num_row_;

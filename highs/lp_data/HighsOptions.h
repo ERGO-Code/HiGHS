@@ -351,7 +351,7 @@ struct HighsOptionsStruct {
   bool pdlp_scaling;
   HighsInt pdlp_iteration_limit;
   HighsInt pdlp_e_restart_method;
-  double pdlp_d_gap_tol;
+  double pdlp_optimality_tolerance;
 
   // Options for QP solver
   HighsInt qp_iteration_limit;
@@ -513,7 +513,7 @@ struct HighsOptionsStruct {
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
-        pdlp_d_gap_tol(0.0),
+        pdlp_optimality_tolerance(0.0),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
         iis_strategy(0),
@@ -1209,8 +1209,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "pdlp_d_gap_tol", "Duality gap tolerance for PDLP solver", advanced,
-        &pdlp_d_gap_tol, 1e-12, kDefaultKktTolerance, kHighsInf);
+        "pdlp_optimality_tolerance", "PDLP optimality tolerance", advanced,
+        &pdlp_optimality_tolerance, 1e-12, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
