@@ -421,7 +421,6 @@ retry:
         heur.branchDownwards(i, upval, upval + 0.5);
         localdom.propagate();
         if (localdom.infeasible()) {
-          // TODO: Is this needed? Won't evaluateNode catch the conflict analysis?
           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
           break;
         }
@@ -1593,8 +1592,8 @@ void HighsPrimalHeuristics::fixAndPropagate() {
   });
 
   HighsInt numpropagationcalls = 0;
-  const HighsInt kMaxPropagationCalls = std::max(
-    1000, 2 * static_cast<int>(intcols.size()));
+  const HighsInt kMaxPropagationCalls = std::min(std::max(
+    1000, 2 * static_cast<int>(intcols.size())), 10000);
   bool evaluatenode = true;
 
   // Continue branching and propagating until either (a) limit is hit,
@@ -1674,6 +1673,7 @@ void HighsPrimalHeuristics::fixAndPropagate() {
       localdom.propagate();
       ++numpropagationcalls;
       if (localdom.infeasible()) {
+        // TODO: Is this needed? Won't evaluateNode catch the conflict analysis?
         localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
         evaluatenode = true;
         break;
