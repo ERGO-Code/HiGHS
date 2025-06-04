@@ -190,16 +190,20 @@ static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
 }
 
 static void regularize(Runtime& rt) {
-  if (!rt.settings.hessianregularization) {
+  assert(!rt.settings.hessian_regularization_on);
+  if (!rt.settings.hessian_regularization_on) {
     return;
   }
+  // This regularization is not called, since
+  // rt.settings.hessian_regularization_on is false
+  //
   // add small diagonal to hessian
   for (HighsInt i = 0; i < rt.instance.num_var; i++) {
     for (HighsInt index = rt.instance.Q.mat.start[i];
          index < rt.instance.Q.mat.start[i + 1]; index++) {
       if (rt.instance.Q.mat.index[index] == i) {
         rt.instance.Q.mat.value[index] +=
-            rt.settings.hessianregularizationfactor;
+            rt.settings.hessian_regularization_value;
       }
     }
   }

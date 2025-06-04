@@ -2659,7 +2659,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     if (info.primal_dual_objective_error > complementarity_tolerance) {
       // Ignore primal-dual objective errors if both objectives are small
       const bool ok_dual_objective = computeDualObjectiveValue(
-          this->model_.lp_, this->solution_, local_dual_objective);
+          nullptr, this->model_.lp_, this->solution_, local_dual_objective);
       assert(ok_dual_objective);
       if (info.objective_function_value * info.objective_function_value >
               complementarity_tolerance &&
