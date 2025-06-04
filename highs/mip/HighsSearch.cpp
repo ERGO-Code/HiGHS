@@ -369,7 +369,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         HighsInt idx = *it;
         assert(0 <= idx && idx <= numfrac);
         edgescore[idx] = fracints[idx].second * (1 - fracints[idx].second) /
-          std::max(edgeWt[basisinds[k]], 1e-2);
+          std::max(edgeWt[basisinds[k]], 1e-3);
         numweightsstored++;
       }
     }
@@ -384,9 +384,9 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   double maxedgescore = *std::max_element(
       edgescore.begin(), edgescore.end());
   for (HighsInt k = 0; k < numfrac; ++k) {
-    if ((1000 * edgescore[k] < maxedgescore + mipsolver.mipdata_->feastol) ||
-      (!mipsolver.submip && (1000 * shadowscore[k] < maxshadowscore +
-        mipsolver.mipdata_->feastol))) {
+    if (100 * edgescore[k] < maxedgescore + mipsolver.mipdata_->feastol &&
+      (mipsolver.submip || 100 * shadowscore[k] <
+        maxshadowscore + mipsolver.mipdata_->feastol)) {
       if (downscore[k] == kHighsInf) downscore[k] = 0.0;
       if (upscore[k] == kHighsInf) upscore[k] = 0.0;
       downscorereliable[k] = true;
@@ -808,7 +808,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         return sortscore[a] > sortscore[b];
     });
     for (HighsInt j = 0; j != numcands; j++) {
-      if ((sortscore[perm[j]] <= sortscore[perm[0]] * 0.5) &&
+      if ((sortscore[perm[j]] <= sortscore[perm[0]] * 0.67) &&
           (sortscore[perm[j]] <= sortscore[perm[0]] - 1e-6)) {
         numcands = j;
         break;
