@@ -117,11 +117,6 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     parameters.ipm_feasibility_tol = options.kkt_tolerance;
     parameters.ipm_optimality_tol = 1e-1 * options.kkt_tolerance;
     parameters.start_crossover_tol = 1e-1 * options.kkt_tolerance;
-    printf(
-        "IpxWrapper: ipm_feasibility_tol = %g; ipm_optimality_tol = %g; "
-        "start_crossover_tol = %g\n",
-        parameters.ipm_feasibility_tol, parameters.ipm_optimality_tol,
-        parameters.start_crossover_tol);
   }
 
   parameters.analyse_basis_data =
