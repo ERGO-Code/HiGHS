@@ -52,3 +52,5 @@ Introduced the following KKT error measures to `HighsInfo`: `num_relative_primal
 
 Added a max scale factor (+1024) when scaling up coefficients in `preprocessBaseInequality` and `postprocessCut`. Fix is [#2337](https://github.com/ERGO-Code/HiGHS/pull/2337).
 
+Renamed `HighsOptions::pdlp_d_gap_tol` to `HighsOptions::pdlp_optimality_tolerance` for consistency with IPM
+

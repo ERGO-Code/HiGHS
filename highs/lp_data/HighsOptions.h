@@ -309,10 +309,9 @@ struct HighsOptionsStruct {
   double kkt_tolerance;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
-  double ipm_optimality_tolerance;
   double primal_residual_tolerance;
   double dual_residual_tolerance;
-  double complementarity_tolerance;
+  double optimality_tolerance;
   double objective_bound;
   double objective_target;
   HighsInt threads;
@@ -345,17 +344,19 @@ struct HighsOptionsStruct {
   bool timeless_log;
 
   // Options for IPM solver
+  double ipm_optimality_tolerance;
   HighsInt ipm_iteration_limit;
 
   // Options for PDLP solver
   bool pdlp_scaling;
   HighsInt pdlp_iteration_limit;
   HighsInt pdlp_e_restart_method;
-  double pdlp_d_gap_tol;
+  double pdlp_optimality_tolerance;
 
   // Options for QP solver
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
+  double qp_regularization_value;
 
   // Options for IIS calculation
   HighsInt iis_strategy;
@@ -479,10 +480,9 @@ struct HighsOptionsStruct {
         kkt_tolerance(0.0),
         primal_feasibility_tolerance(0.0),
         dual_feasibility_tolerance(0.0),
-        ipm_optimality_tolerance(0.0),
         primal_residual_tolerance(0.0),
         dual_residual_tolerance(0.0),
-        complementarity_tolerance(0.0),
+        optimality_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),
@@ -509,13 +509,15 @@ struct HighsOptionsStruct {
         output_flag(false),
         log_to_console(false),
         timeless_log(false),
+        ipm_optimality_tolerance(0.0),
         ipm_iteration_limit(0),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
-        pdlp_d_gap_tol(0.0),
+        pdlp_optimality_tolerance(0.0),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
+        qp_regularization_value(0),
         iis_strategy(0),
         blend_multi_objectives(false),
         log_dev_level(0),
@@ -745,12 +747,6 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
-        &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
-        kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
         "primal_residual_tolerance", "Primal residual tolerance", advanced,
         &primal_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
@@ -761,8 +757,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "complementarity_tolerance", "Primal-dual objective error tolerance",
-        advanced, &complementarity_tolerance, 1e-10, kDefaultKktTolerance,
+        "optimality_tolerance", "Optimality tolerance",
+        advanced, &optimality_tolerance, 1e-10, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
 
@@ -1187,6 +1183,12 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_min_logging_interval, 0, 5, kHighsInf);
     records.push_back(record_double);
 
+    record_double = new OptionRecordDouble(
+        "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
+        &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        kHighsInf);
+    records.push_back(record_double);
+
     record_int = new OptionRecordInt(
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
@@ -1209,8 +1211,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "pdlp_d_gap_tol", "Duality gap tolerance for PDLP solver", advanced,
-        &pdlp_d_gap_tol, 1e-12, kDefaultKktTolerance, kHighsInf);
+        "pdlp_optimality_tolerance", "PDLP optimality tolerance", advanced,
+        &pdlp_optimality_tolerance, 1e-12, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
@@ -1222,6 +1224,12 @@ class HighsOptions : public HighsOptionsStruct {
                                      "Nullspace limit for QP solver", advanced,
                                      &qp_nullspace_limit, 0, 4000, kHighsIInf);
     records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "qp_regularization_value", "Regularization value added to the Hessian",
+        advanced, &qp_regularization_value, 0, kHessianRegularizationValue,
+        kHighsInf);
+    records.push_back(record_double);
 
     record_int = new OptionRecordInt(
         "iis_strategy",

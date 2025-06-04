@@ -32,11 +32,18 @@ struct Settings {
       1e-7;  // if p'Qp < this, p is determined to not have curvature, a
              // simplex-like iteration is performed.
 
-  bool hessianregularization =
+  bool hessian_regularization_on =
       false;  // if true, a small multiple of the identity matrix will be added
-              // to the Hessian
-  double hessianregularizationfactor =
-      1e-7;  // multiple of identity matrix added to hessian in case of
+              // to the Hessian.
+              //
+              // This is always false, so regularization in
+              // regularize(Runtime& rt) never happens, but
+              // regularization in solveqp is _always_ performed
+              //
+              // This explains the "perturbed" solutions of problems
+              // in TestQpSolver.cpp
+  double hessian_regularization_value =
+      1e-7;  // multiple of identity matrix added to Hessian in case of
              // regularization
 
   Phase1Strategy phase1strategy = Phase1Strategy::HIGHS;
