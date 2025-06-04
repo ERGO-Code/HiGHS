@@ -47,6 +47,7 @@ enum iClockMip {
   kMipClockFinishAnalyticCentreComputation,
   kMipClockRootCentralRounding,
   kMipClockRootSeparationRound0,
+  kMipClockRootHeuristicsFixAndPropagate,
   kMipClockRootHeuristicsReducedCost,
   kMipClockRootSeparationRound1,
   kMipClockRootHeuristicsRens,
@@ -167,6 +168,8 @@ class MipTimer {
         timer_pointer->clock_def("Root central rounding");
     clock[kMipClockRootSeparationRound0] =
         timer_pointer->clock_def("Root separation round 0");
+    clock[kMipClockRootHeuristicsFixAndPropagate] =
+        timer_pointer->clock_def("Root heuristics fix and propagate");
     clock[kMipClockRootHeuristicsReducedCost] =
         timer_pointer->clock_def("Root heuristics reduced cost");
     clock[kMipClockRootSeparationRound1] =
@@ -374,6 +377,7 @@ class MipTimer {
         kMipClockFinishAnalyticCentreComputation,
         kMipClockRootCentralRounding,
         kMipClockRootSeparationRound0,
+        kMipClockRootHeuristicsFixAndPropagate,
         kMipClockRootHeuristicsReducedCost,
         kMipClockRootSeparationRound1,
         kMipClockRootHeuristicsRens,
@@ -461,6 +465,7 @@ class MipTimer {
         kMipClockFinishAnalyticCentreComputation,
         kMipClockRootCentralRounding,
         kMipClockRootSeparationRound0,
+        kMipClockRootHeuristicsFixAndPropagate,
         kMipClockRootHeuristicsReducedCost,
         kMipClockRootSeparationRound1,
         kMipClockRootHeuristicsRens,

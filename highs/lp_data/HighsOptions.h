@@ -442,6 +442,7 @@ struct HighsOptionsStruct {
   double mip_min_logging_interval;
   bool mip_heuristic_run_rins;
   bool mip_heuristic_run_rens;
+  bool mip_heuristic_run_fix_and_propagate;
   bool mip_heuristic_run_root_reduced_cost;
   bool mip_heuristic_run_zi_round;
   bool mip_heuristic_run_shifting;
@@ -1150,6 +1151,12 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("mip_heuristic_run_rens",
                                        "Run RENS heuristic: Default = true",
                                        advanced, &mip_heuristic_run_rens, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_fix_and_propagate",
+        "Run fixAndPropagate heuristic: Default = true", advanced,
+        &mip_heuristic_run_fix_and_propagate, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(

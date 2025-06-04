@@ -30,6 +30,9 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceCentralRounding) {
     if (code) return "C";
     return "Central rounding";
+  } else if (solution_source == kSolutionSourceFixAndPropagate) {
+    if (code) return "A";
+    return "Fix and propagate";
   } else if (solution_source == kSolutionSourceFeasibilityPump) {
     if (code) return "F";
     return "Feasibility pump";
@@ -2223,6 +2226,13 @@ restart:
   do {
     if (rootlpsol.empty()) break;
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
+
+    if (mipsolver.options_mip_->mip_heuristic_run_fix_and_propagate) {
+      analysis.mipTimerStart(kMipClockRootHeuristicsFixAndPropagate);
+      heuristics.fixAndPropagate();
+      analysis.mipTimerStop(kMipClockRootHeuristicsFixAndPropagate);
+      heuristics.flushStatistics();
+    }
 
     if (mipsolver.options_mip_->mip_heuristic_run_root_reduced_cost) {
       analysis.mipTimerStart(kMipClockRootHeuristicsReducedCost);

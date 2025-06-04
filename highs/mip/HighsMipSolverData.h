@@ -44,6 +44,7 @@ enum MipSolutionSource : int {
   kSolutionSourceMin = kSolutionSourceNone,
   kSolutionSourceBranching,
   kSolutionSourceCentralRounding,
+  kSolutionSourceFixAndPropagate,
   kSolutionSourceFeasibilityPump,
   kSolutionSourceFeasibilityJump,
   kSolutionSourceHeuristic,
