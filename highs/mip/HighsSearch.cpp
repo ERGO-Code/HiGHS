@@ -369,7 +369,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         HighsInt idx = *it;
         assert(0 <= idx && idx <= numfrac);
         edgescore[idx] = fracints[idx].second * (1 - fracints[idx].second) /
-          std::max(edgeWt[basisinds[k]], 1e-3);
+          std::max(edgeWt[basisinds[k]], 1e-2);
         numweightsstored++;
       }
     }
@@ -808,7 +808,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         return sortscore[a] > sortscore[b];
     });
     for (HighsInt j = 0; j != numcands; j++) {
-      if ((sortscore[perm[j]] <= sortscore[perm[0]] * 0.8) &&
+      if ((sortscore[perm[j]] <= sortscore[perm[0]] * 0.5) &&
           (sortscore[perm[j]] <= sortscore[perm[0]] - 1e-6)) {
         numcands = j;
         break;
