@@ -1573,15 +1573,18 @@ void HighsPrimalHeuristics::fixAndPropagate() {
   double feastol = mipsolver.mipdata_->feastol;
   std::vector<HighsInt> diveperm = intcols;
   std::map<HighsInt, std::tuple<
-    bool, bool, HighsInt, double, HighsInt>> permkey;
+    bool, bool, bool, HighsInt, double, HighsInt>> permkey;
   for (HighsInt col : intcols) {
-    permkey.emplace(col, std::tuple<bool, bool, HighsInt, double, HighsInt>(
-      localdom.isBinary(col),
-      (rootsol[col] <= localdom.col_lower_[col] +feastol) ||
-      (rootsol[col] >= localdom.col_upper_[col] - feastol),
-      -heurlp.getLp().col_cost_[col],
-      mipsolver.mipdata_->cliquetable.getNumImplications(col),
-      col));
+    permkey.emplace(
+      col, std::tuple<bool, bool, bool, HighsInt, double, HighsInt>(
+        localdom.isBinary(col),
+        (lpsol[col] <= localdom.col_lower_[col] + feastol) ||
+        (lpsol[col] >= localdom.col_upper_[col] - feastol),
+        (rootsol[col] <= localdom.col_lower_[col] +feastol) ||
+        (rootsol[col] >= localdom.col_upper_[col] - feastol),
+        mipsolver.mipdata_->cliquetable.getNumImplications(col),
+        -heurlp.getLp().col_cost_[col],
+        col));
   }
   pdqsort(diveperm.begin(), diveperm.end(),
     [&](const HighsInt c1, const HighsInt c2) {
@@ -1603,8 +1606,10 @@ void HighsPrimalHeuristics::fixAndPropagate() {
         return;
       }
 
+      // TODO: Is this case only reached when the root is infeasible?
       if (!heur.backtrack()) {
-        break;
+        lp_iterations += heur.getLocalLpIterations();
+        return;
       }
     }
     bool branched = false;
@@ -1615,10 +1620,10 @@ void HighsPrimalHeuristics::fixAndPropagate() {
       if (localdom.col_lower_[col] == localdom.col_upper_[col]) continue;
       // Decide on the fix value
       double fixval = localdom.col_upper_[col];
-      if (rootsol[col] <= localdom.col_lower_[col] + feastol) {
+      if (rootsol[col] <= heurlp.colLower(col) + feastol) {
         fixval = localdom.col_lower_[col];
       }
-      else if (rootsol[col] >= localdom.col_upper_[col] - feastol) {
+      else if (rootsol[col] >= heurlp.colUpper(col) - feastol) {
         fixval = localdom.col_upper_[col];
       }
       else if (localdom.isBinary(col) && lpsol[col] < 0.1) {
@@ -1673,8 +1678,8 @@ void HighsPrimalHeuristics::fixAndPropagate() {
     }
   }
 
+  // Solve the LP with all integer variables fixed
   if (!heur.hasNode()) return;
-
   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                         localdom.col_lower_.data(),
                                         localdom.col_upper_.data());
