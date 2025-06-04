@@ -309,10 +309,9 @@ struct HighsOptionsStruct {
   double kkt_tolerance;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
-  double ipm_optimality_tolerance;
   double primal_residual_tolerance;
   double dual_residual_tolerance;
-  double complementarity_tolerance;
+  double optimality_tolerance;
   double objective_bound;
   double objective_target;
   HighsInt threads;
@@ -345,6 +344,7 @@ struct HighsOptionsStruct {
   bool timeless_log;
 
   // Options for IPM solver
+  double ipm_optimality_tolerance;
   HighsInt ipm_iteration_limit;
 
   // Options for PDLP solver
@@ -480,10 +480,9 @@ struct HighsOptionsStruct {
         kkt_tolerance(0.0),
         primal_feasibility_tolerance(0.0),
         dual_feasibility_tolerance(0.0),
-        ipm_optimality_tolerance(0.0),
         primal_residual_tolerance(0.0),
         dual_residual_tolerance(0.0),
-        complementarity_tolerance(0.0),
+        optimality_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),
@@ -510,6 +509,7 @@ struct HighsOptionsStruct {
         output_flag(false),
         log_to_console(false),
         timeless_log(false),
+        ipm_optimality_tolerance(0.0),
         ipm_iteration_limit(0),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
@@ -747,19 +747,13 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
-        &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
-        kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
         "primal_residual_tolerance", "Primal residual tolerance", advanced,
         &primal_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "complementarity_tolerance", "Primal-dual objective error tolerance",
-        advanced, &complementarity_tolerance, 1e-10, kDefaultKktTolerance,
+        "optimality_tolerance", "Primal-dual objective error tolerance",
+        advanced, &optimality_tolerance, 1e-10, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
 
@@ -1187,6 +1181,12 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "mip_min_logging_interval", "MIP minimum logging interval", advanced,
         &mip_min_logging_interval, 0, 5, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
+        &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(

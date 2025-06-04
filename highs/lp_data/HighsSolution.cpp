@@ -78,13 +78,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
-  double complementarity_tolerance = options.complementarity_tolerance;
+  double optimality_tolerance = options.optimality_tolerance;
   if (options.kkt_tolerance != kDefaultKktTolerance) {
     primal_feasibility_tolerance = options.kkt_tolerance;
     dual_feasibility_tolerance = options.kkt_tolerance;
     primal_residual_tolerance = options.kkt_tolerance;
     dual_residual_tolerance = options.kkt_tolerance;
-    complementarity_tolerance = options.kkt_tolerance;
+    optimality_tolerance = options.kkt_tolerance;
   }
   // highs_info are the values computed in this method
 
@@ -443,7 +443,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   if (have_dual_solution) {
     // Determine the sum of complementarity violations
     const bool have_values = getComplementarityViolations(
-        lp, solution, complementarity_tolerance, num_complementarity_violation,
+        lp, solution, optimality_tolerance, num_complementarity_violation,
         max_complementarity_violation);
     assert(have_values);
   }
@@ -627,7 +627,7 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
-  double complementarity_tolerance = options.complementarity_tolerance;
+  double optimality_tolerance = options.optimality_tolerance;
 
   // clang-format off
   HighsInt& num_primal_residual_error = primal_dual_errors.glpsol_num_primal_residual_errors;
@@ -953,7 +953,7 @@ void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
-                                  const double complementarity_tolerance,
+                                  const double optimality_tolerance,
                                   HighsInt& num_complementarity_violation,
                                   double& max_complementarity_violation) {
   num_complementarity_violation = kHighsIllegalComplementarityCount;
@@ -982,7 +982,7 @@ bool getComplementarityViolations(const HighsLp& lp,
     }
     const double dual_residual = std::fabs(dual);
     const double complementarity_violation = primal_residual * dual_residual;
-    if (complementarity_violation > complementarity_tolerance)
+    if (complementarity_violation > optimality_tolerance)
       num_complementarity_violation++;
     max_complementarity_violation =
         std::max(complementarity_violation, max_complementarity_violation);
@@ -1693,13 +1693,13 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
-  double complementarity_tolerance = options.complementarity_tolerance;
+  double optimality_tolerance = options.optimality_tolerance;
   if (options.kkt_tolerance != kDefaultKktTolerance) {
     primal_feasibility_tolerance = options.kkt_tolerance;
     dual_feasibility_tolerance = options.kkt_tolerance;
     primal_residual_tolerance = options.kkt_tolerance;
     dual_residual_tolerance = options.kkt_tolerance;
-    complementarity_tolerance = options.kkt_tolerance;
+    optimality_tolerance = options.kkt_tolerance;
   }
 
   const bool force_report = false;
@@ -1708,7 +1708,7 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
       info.num_dual_infeasibilities > 0 ||
       info.num_primal_residual_errors > 0 ||
       info.num_dual_residual_errors > 0 ||
-      info.primal_dual_objective_error > complementarity_tolerance;
+      info.primal_dual_objective_error > optimality_tolerance;
   if (!has_kkt_failures && !force_report) return;
 
   HighsLogType log_type =
@@ -1753,8 +1753,8 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
         "                          "
         "               %1d / %8.3g  P-D objective error        "
         "(tolerance = %4.0e)\n",
-        info.primal_dual_objective_error > complementarity_tolerance ? 1 : 0,
-        info.primal_dual_objective_error, complementarity_tolerance);
+        info.primal_dual_objective_error > optimality_tolerance ? 1 : 0,
+        info.primal_dual_objective_error, optimality_tolerance);
   }
   if (printf_kkt) {
     printf("grepLpKktFailures,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",
