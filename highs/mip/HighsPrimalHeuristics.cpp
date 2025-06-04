@@ -421,6 +421,7 @@ retry:
         heur.branchDownwards(i, upval, upval + 0.5);
         localdom.propagate();
         if (localdom.infeasible()) {
+          // TODO: Is this needed? Won't evaluateNode catch the conflict analysis?
           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
           break;
         }
@@ -1594,24 +1595,28 @@ void HighsPrimalHeuristics::fixAndPropagate() {
   HighsInt numpropagationcalls = 0;
   const HighsInt kMaxPropagationCalls = std::max(
     1000, 2 * static_cast<int>(intcols.size()));
+  bool evaluatenode = true;
 
   // Continue branching and propagating until either (a) limit is hit,
   // (b) backtracked to root, or (c) reached a potentially feasible leaf
   while (true) {
-    heur.evaluateNode();
-    // printf("done evaluating node\n");
-    if (heur.currentNodePruned()) {
-      if (mipsolver.mipdata_->domain.infeasible()) {
-        lp_iterations += heur.getLocalLpIterations();
-        return;
-      }
+    if (evaluatenode) {
+      heur.evaluateNode();
+      // printf("done evaluating node\n");
+      if (heur.currentNodePruned()) {
+        if (mipsolver.mipdata_->domain.infeasible()) {
+          lp_iterations += heur.getLocalLpIterations();
+          return;
+        }
 
-      // TODO: Is this case only reached when the root is infeasible?
-      if (!heur.backtrack()) {
-        lp_iterations += heur.getLocalLpIterations();
-        return;
+        // TODO: Is this case only reached when the root is infeasible?
+        if (!heur.backtrack()) {
+          lp_iterations += heur.getLocalLpIterations();
+          return;
+        }
       }
     }
+    evaluatenode = false;
     bool branched = false;
     for (HighsInt col : diveperm) {
       if (numpropagationcalls > kMaxPropagationCalls) {
@@ -1670,6 +1675,7 @@ void HighsPrimalHeuristics::fixAndPropagate() {
       ++numpropagationcalls;
       if (localdom.infeasible()) {
         localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+        evaluatenode = true;
         break;
       }
     }

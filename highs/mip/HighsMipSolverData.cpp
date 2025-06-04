@@ -2227,12 +2227,16 @@ restart:
     if (rootlpsol.empty()) break;
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
-    if (mipsolver.options_mip_->mip_heuristic_run_fix_and_propagate) {
+    // TODO: Find a way to make sure this is only called once
+    if (mipsolver.options_mip_->mip_heuristic_run_fix_and_propagate &&
+      numRestarts <= 0 && !mipsolver.submip) {
       analysis.mipTimerStart(kMipClockRootHeuristicsFixAndPropagate);
       heuristics.fixAndPropagate();
       analysis.mipTimerStop(kMipClockRootHeuristicsFixAndPropagate);
       heuristics.flushStatistics();
-    }
+      }
+
+    if (checkLimits()) return clockOff(analysis);
 
     if (mipsolver.options_mip_->mip_heuristic_run_root_reduced_cost) {
       analysis.mipTimerStart(kMipClockRootHeuristicsReducedCost);
