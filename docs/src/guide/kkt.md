@@ -81,7 +81,7 @@ The PDLP algorithm determines values of ``x\ge0`` and ``y``, and chooses ``s`` t
 
 #### HiGHS solutions
 
-The relative measures used by PDLP and IPX assume that all components of the cost and RHS vectors are relevant. When an LP problem is in standard form this is true for ``b``, but not necessarily for the cost vector ``c``. Consider a large component of ``c`` for which the corresponding reduced cost value in ``s`` is also large, in which case the LP solution is insensitive to the cost. This component will contribute significantly to ``\|c\|_2`` and, hence, the RHS of the dual residual condition, allowing large values of ``\|c-A^Ty-s\|_2`` to be accepted. However, within  residuals to be within the tolerance in dual equations for which the cost and reduced cost are small result in large absolute residuals in 
+The relative measures used by PDLP and IPX assume that all components of the cost and RHS vectors are relevant. When an LP problem is in standard form this is true for ``b``, but not necessarily for the cost vector ``c``. Consider a large component of ``c`` for which the corresponding reduced cost value in ``s`` is also large, in which case the LP solution is insensitive to the cost. This component will contribute significantly to ``\|c\|`` and, hence, the RHS of the dual residual condition, allowing large values of ``\|c-A^Ty-s\|`` to be accepted. However, within  residuals to be within the tolerance in dual equations for which the cost and reduced cost are small result in large absolute residuals in 
 
 However, the LP solution is insensitive to this This will 
 
