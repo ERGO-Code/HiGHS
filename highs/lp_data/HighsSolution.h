@@ -104,7 +104,7 @@ void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
-                                  const double complementarity_tolerance,
+                                  const double optimality_tolerance,
                                   HighsInt& num_complementarity_violations,
                                   double& max_complementarity_violation);
 
