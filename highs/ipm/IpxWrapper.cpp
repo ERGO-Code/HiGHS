@@ -402,14 +402,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   return return_status;
 }
 
-
 #ifdef HPM
 HighsStatus solveLpHpm(HighsLpSolverObject& solver_object) {
   return solveLpHpm(solver_object.options_, solver_object.timer_,
                     solver_object.lp_, solver_object.basis_,
                     solver_object.solution_, solver_object.model_status_,
                     solver_object.highs_info_, solver_object.callback_);
-  }
+}
 
 HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
                        const HighsLp& lp, HighsBasis& highs_basis,
@@ -452,14 +451,13 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
   // create solver
   highspm::HpmSolver hpm{};
 
-
   // todo: set parameters
 
   // Set the internal HPM parameters
 
   // Set pointer to any callback
 
-   // ===================================================================================
+  // ===================================================================================
   // CHANGE FORMULATION
   // ===================================================================================
   // Input problem must be in the form
@@ -483,24 +481,21 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "HPM model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                " columns and %" HIGHSINT_FORMAT " nonzeros\n",
-               n, m, Aptr[n]);
-  
-  // Get information from highs object. I added some of these functions to highs
-  // on purpose to extract the data. They will not be needed when hpm will be
-  // built together with highs.
+               m, n, Aptr[n]);
+
   highspm::HpmOptions hpm_options{};
 
   hpm.set(hpm_options, options.log_options, callback, timer);
 
   // load the problem
-  hpm.load(n, m, obj.data(), rhs.data(), lower.data(), upper.data(),
-           Aptr.data(), Aind.data(), Aval.data(), constraints.data(), offset);
+  highspm::Int load_status = hpm.load(
+      n, m, obj.data(), rhs.data(), lower.data(), upper.data(), Aptr.data(),
+      Aind.data(), Aval.data(), constraints.data(), offset);
 
-  // todo: maybe a return status if success
-  // if (load_status) {
-  //   model_status = HighsModelStatus::kSolveError;
-  //   return HighsStatus::kError;
-  // }
+  if (load_status) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
 
   hpm.solve();
 
@@ -525,7 +520,6 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
   if (solve_status == highspm::IpmStatus::kIpmStatusPDFeas) {
     // todo: copy solution back etc
 
-
     // todo: not sure where this is set with ipx
     // probably not here
     // added this so ctest would pass
@@ -533,14 +527,12 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
     highs_solution.dual_valid = true;
 
     return_status = HighsStatus::kOk;
-
   }
-  
+
   return return_status;
 }
 
 #endif
-
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    double& offset, std::vector<double>& obj,

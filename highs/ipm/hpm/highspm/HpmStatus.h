@@ -18,6 +18,7 @@ enum IpmStatus {
   // With these statuses, the solver should stop and not attempt refining
   kIpmStatusStop,
   kIpmStatusError,
+  kIpmStatusBadModel,
   kIpmStatusTimeLimit,
   kIpmStatusUserInterrupt,
   kIpmStatusPrimalInfeasible,

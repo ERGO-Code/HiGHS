@@ -62,22 +62,21 @@ class HpmModel {
   std::vector<Int> rows_shift_{};
   Int empty_rows_{};
 
-  // Put the model into correct formulation
   void reformulate();
-
-  // Scale the problem
   void scale();
-
   void preprocess();
-
   void denseColumns();
+  Int checkData(const Int num_var, const Int num_con, const double* obj,
+                const double* rhs, const double* lower, const double* upper,
+                const Int* A_ptr, const Int* A_rows, const double* A_vals,
+                const char* constraints) const;
 
  public:
   // Initialise the model
-  void init(const Int num_var, const Int num_con, const double* obj,
-            const double* rhs, const double* lower, const double* upper,
-            const Int* A_ptr, const Int* A_rows, const double* A_vals,
-            const char* constraints, double offset);
+  Int init(const Int num_var, const Int num_con, const double* obj,
+           const double* rhs, const double* lower, const double* upper,
+           const Int* A_ptr, const Int* A_rows, const double* A_vals,
+           const char* constraints, double offset);
 
   // Print information of model
   void print() const;

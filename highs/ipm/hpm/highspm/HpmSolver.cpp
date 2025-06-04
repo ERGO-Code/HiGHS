@@ -9,17 +9,13 @@
 
 namespace highspm {
 
-void HpmSolver::load(const Int num_var, const Int num_con, const double* obj,
-                     const double* rhs, const double* lower,
-                     const double* upper, const Int* A_ptr, const Int* A_rows,
-                     const double* A_vals, const char* constraints,
-                     double offset) {
-  if (!obj || !rhs || !lower || !upper || !A_ptr || !A_rows || !A_vals ||
-      !constraints)
-    return;
-
-  model_.init(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows, A_vals,
-              constraints, offset);
+Int HpmSolver::load(const Int num_var, const Int num_con, const double* obj,
+                    const double* rhs, const double* lower, const double* upper,
+                    const Int* A_ptr, const Int* A_rows, const double* A_vals,
+                    const char* constraints, double offset) {
+  if (model_.init(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows,
+                  A_vals, constraints, offset))
+    return kIpmStatusBadModel;
 
   m_ = model_.m();
   n_ = model_.n();
@@ -29,6 +25,8 @@ void HpmSolver::load(const Int num_var, const Int num_con, const double* obj,
   info_.n_solver = n_;
   info_.m_original = num_con;
   info_.n_original = num_var;
+
+  return 0;
 }
 
 void HpmSolver::set(const HpmOptions& options,

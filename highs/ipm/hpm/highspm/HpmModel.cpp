@@ -1,15 +1,20 @@
 #include "HpmModel.h"
 
 #include "HpmConst.h"
+#include "HpmStatus.h"
 #include "ipm/hpm/auxiliary/HpmLog.h"
 
 namespace highspm {
 
-void HpmModel::init(const Int num_var, const Int num_con, const double* obj,
-                    const double* rhs, const double* lower, const double* upper,
-                    const Int* A_ptr, const Int* A_rows, const double* A_vals,
-                    const char* constraints, double offset) {
+Int HpmModel::init(const Int num_var, const Int num_con, const double* obj,
+                   const double* rhs, const double* lower, const double* upper,
+                   const Int* A_ptr, const Int* A_rows, const double* A_vals,
+                   const char* constraints, double offset) {
   // copy the input into the model
+
+  if (checkData(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows, A_vals,
+                constraints))
+    return kIpmStatusBadModel;
 
   n_orig_ = num_var;
   m_orig_ = num_con;
@@ -45,6 +50,47 @@ void HpmModel::init(const Int num_var, const Int num_con, const double* obj,
   denseColumns();
 
   ready_ = true;
+
+  return 0;
+}
+
+Int HpmModel::checkData(const Int num_var, const Int num_con, const double* obj,
+                        const double* rhs, const double* lower,
+                        const double* upper, const Int* A_ptr,
+                        const Int* A_rows, const double* A_vals,
+                        const char* constraints) const {
+  // Check if model provided by the user is ok.
+  // Return kIpmStatusBadModel if something is wrong.
+
+  // Pointers are valid
+  if (!obj || !rhs || !lower || !upper || !A_ptr || !A_rows || !A_vals ||
+      !constraints)
+    return kIpmStatusBadModel;
+
+  // Dimensions are valid
+  if (num_var <= 0 || num_con < 0) return kIpmStatusBadModel;
+
+  // Vectors are valid
+  for (Int i = 0; i < num_var; ++i)
+    if (!std::isfinite(obj[i])) return kIpmStatusBadModel;
+  for (Int i = 0; i < num_con; ++i)
+    if (!std::isfinite(rhs[i])) return kIpmStatusBadModel;
+  for (Int i = 0; i < num_var; ++i) {
+    if (!std::isfinite(lower[i]) && lower[i] != -INFINITY)
+      return kIpmStatusBadModel;
+    if (!std::isfinite(upper[i]) && upper[i] != INFINITY)
+      return kIpmStatusBadModel;
+    if (lower[i] > upper[i]) return kIpmStatusBadModel;
+  }
+  for (Int i = 0; i < num_con; ++i)
+    if (constraints[i] != '<' && constraints[i] != '=' && constraints[i] != '>')
+      return kIpmStatusBadModel;
+
+  // Matrix is valid
+  for (Int i = 0; i < A_ptr[num_var]; ++i)
+    if (!std::isfinite(A_vals[i])) return kIpmStatusBadModel;
+
+  return 0;
 }
 
 void HpmModel::preprocess() {
@@ -462,8 +508,7 @@ Int HpmModel::loadIntoIpx(ipx::LpSolver& lps) const {
 }
 
 void HpmModel::multWithoutSlack(double alpha, const std::vector<double>& x,
-                                std::vector<double>& y,
-                                bool trans) const {
+                                std::vector<double>& y, bool trans) const {
   assert(x.size() == trans ? m_ : n_orig_);
   assert(y.size() == trans ? n_orig_ : m_);
 
