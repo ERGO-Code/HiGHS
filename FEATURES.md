@@ -54,3 +54,6 @@ Added a max scale factor (+1024) when scaling up coefficients in `preprocessBase
 
 Renamed `HighsOptions::pdlp_d_gap_tol` to `HighsOptions::pdlp_optimality_tolerance` for consistency with IPM
 
+Renamed `HighsOptions::complementarity_tolerance` to `HighsOptions::optimality_tolerance` for consistency with IPM and PDLP
+
+
