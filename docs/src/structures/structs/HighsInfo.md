@@ -58,7 +58,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - The maximum deviation from an integer value over all the discrete variables
 - Type: double
 
-## num\_primal\_infeasibilities
+## [num\_primal\_infeasibilities](@id info-num-primal-infeasibilities)
 - The number of variables violating a bound by more than the [primal feasibility tolerance](@ref option-primal-feasibility-tolerance).
 - Type: integer
 

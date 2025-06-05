@@ -4052,11 +4052,11 @@ HighsStatus Highs::callSolveMip() {
   assert(!basis_.valid);
   // Get the objective and any KKT failures
   info_.objective_function_value = solver.solution_objective_;
-  const bool use_mip_feasibility_tolerance = true;
+  // Remember to judge primal feasibility according to
+  // mip_feasibility_tolerance, so take a copy of the original
+  // value...
   double primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
-  if (use_mip_feasibility_tolerance) {
-    options_.primal_feasibility_tolerance = options_.mip_feasibility_tolerance;
-  }
+  options_.primal_feasibility_tolerance = options_.mip_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
   getKktFailures(options_, model_, solution_, basis_, info_);
   // Set the MIP-specific values of info_
@@ -4073,32 +4073,29 @@ HighsStatus Highs::callSolveMip() {
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
     return_status = checkOptimality("MIP");
-  if (use_mip_feasibility_tolerance) {
-    // Overwrite max infeasibility to include integrality if there is a solution
-    if (solver.solution_objective_ != kHighsInf) {
-      const double mip_max_bound_violation =
-          std::max(solver.row_violation_, solver.bound_violation_);
-      const double delta_max_bound_violation =
-          std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
-      // Possibly report a mis-match between the max bound violation
-      // returned by the MIP solver, and the value obtained from the
-      // solution
-      if (delta_max_bound_violation > 1e-12)
-        highsLogDev(options_.log_options, HighsLogType::kWarning,
-                    "Inconsistent max bound violation: MIP solver (%10.4g); LP "
-                    "(%10.4g); Difference of %10.4g\n",
-                    mip_max_bound_violation, info_.max_primal_infeasibility,
-                    delta_max_bound_violation);
-      info_.max_integrality_violation = solver.integrality_violation_;
-      if (info_.max_integrality_violation >
-          options_.mip_feasibility_tolerance) {
-        info_.primal_solution_status = kSolutionStatusInfeasible;
-        assert(model_status_ == HighsModelStatus::kInfeasible);
-      }
+  // Overwrite max infeasibility to include integrality if there is a solution
+  if (solver.solution_objective_ != kHighsInf) {
+    const double mip_max_bound_violation =
+        std::max(solver.row_violation_, solver.bound_violation_);
+    const double delta_max_bound_violation =
+        std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
+    // Possibly report a mis-match between the max bound violation
+    // returned by the MIP solver, and the value obtained from the
+    // solution
+    if (delta_max_bound_violation > 1e-12)
+      highsLogDev(options_.log_options, HighsLogType::kWarning,
+                  "Inconsistent max bound violation: MIP solver (%10.4g); LP "
+                  "(%10.4g); Difference of %10.4g\n",
+                  mip_max_bound_violation, info_.max_primal_infeasibility,
+                  delta_max_bound_violation);
+    info_.max_integrality_violation = solver.integrality_violation_;
+    if (info_.max_integrality_violation > options_.mip_feasibility_tolerance) {
+      info_.primal_solution_status = kSolutionStatusInfeasible;
+      assert(model_status_ == HighsModelStatus::kInfeasible);
     }
-    // Recover the primal feasibility tolerance
-    options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
   }
+  // ... and remember to recover the primal feasibility tolerance
+  options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
   return return_status;
 }
 
