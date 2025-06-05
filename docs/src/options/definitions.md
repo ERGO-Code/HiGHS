@@ -73,26 +73,20 @@
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## ipm\_optimality\_tolerance
-- IPM optimality tolerance
-- Type: double
-- Range: [1e-12, inf]
-- Default: 1e-08
-
-## [primal\_residual\_tolerance](@id option-primal-residual-tolerance)
+## [primal\_residual\_tolerance](@id option-primal-residual-tolernace)
 - Primal residual tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## [complementarity\_tolerance](@id option-complementarity-tolerance)
-- Primal-dual objective error tolerance
+## [dual\_residual\_tolerance](@id option-dual-residual-tolernace)
+- Dual residual tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## [dual\_residual\_tolerance](@id option-dual-residual-tolerance)
-- Dual residual tolerance
+## [optimality\_tolerance](@id option-optimality-tolernace)
+- Optimality tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
@@ -408,6 +402,12 @@
 - Range: [0, inf]
 - Default: 5
 
+## ipm\_optimality\_tolerance
+- IPM optimality tolerance
+- Type: double
+- Range: [1e-12, inf]
+- Default: 1e-08
+
 ## ipm\_iteration\_limit
 - Iteration limit for IPM solver
 - Type: integer
@@ -431,8 +431,8 @@
 - Range: {0, 2}
 - Default: 1
 
-## pdlp\_d\_gap\_tol
-- Duality gap tolerance for PDLP solver
+## pdlp\_optimality\_tolerance
+- PDLP optimality tolerance
 - Type: double
 - Range: [1e-12, inf]
 - Default: 1e-07
@@ -448,6 +448,18 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 4000
+
+## qp\_regularization\_value
+- Regularization value added to the Hessian
+- Type: double
+- Range: [0, inf]
+- Default: 1e-07
+
+## iis\_strategy
+- Strategy for IIS calculation: Prioritise rows (default) / Prioritise columns (0/1)
+- Type: integer
+- Range: {0, 1}
+- Default: 0
 
 ## blend\_multi\_objectives
 - Blend multiple objectives or apply lexicographically: Default = true

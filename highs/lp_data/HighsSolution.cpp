@@ -452,7 +452,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     // Determine the primal-dual objective error
     //
     // IPX computes objective_gap = (pobjective-dobjective) / (1.0 +
-    // 0.5*std::abs(pobjective+dobjective));
+    // 0.5*std::fabs(pobjective+dobjective));
     //
     // PDLP computes dRelObjGap = fabs(dPrimalObj - dDualObj) / (1.0 +
     // fabs(dPrimalObj) + fabs(dDualObj));

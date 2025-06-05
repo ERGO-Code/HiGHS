@@ -2,7 +2,7 @@
 
 Mathematically, continuous optimization problems have exact feasibilty and optimality conditions. However, since solvers cannot always satisfy these conditions exactly when using floating-point arithmetic, they do so to within tolerances. As explored below, some solvers aim to satisfy those tolerances absolutely, and others aim to satisfy tolerances relative to problem data. When tolerances are satisfied relatively, they are not generally satisfied absolutely. The use of tolerances relative to problem data is not consistent across solvers, and can give a misleading claim of optimality. To achieve consistency, HiGHS reassesses the optimal solution claimed by such a solver in a reasonable and uniform manner.
 
-### Optimality conditions
+### Feasibilty and optimality conditions
 
 To discuss tolerances and their use in different solvers, consider the standard form linear programming (LP) problem with ``n`` variables and ``m`` equations (``n\ge m``). 
 ```math
@@ -12,27 +12,27 @@ To discuss tolerances and their use in different solvers, consider the standard 
                           & x \ge 0,
 \end{aligned}
 ```
-The optimality conditions are that, at a point ``x``, there exist (row) dual values ``y`` and reduced costs (column dual values) ``s`` such that
+The feasibilty and optimality conditions (KKT conditions) are that, at a point ``x``, there exist (row) dual values ``y`` and reduced costs (column dual values) ``s`` such that
 ```math
 \begin{aligned}
 Ax=b&\qquad\textrm{Primal~equations}\\
 A^Ty+s=c&\qquad\textrm{Dual~equations}\\
 x\ge0&\qquad\textrm{Primal~feasibility}\\
 s\ge0&\qquad\textrm{Dual~feasibility}\\
-c^Tx-b^Ty=0&\qquad\textrm{Primal-dual~gap}
+c^Tx-b^Ty=0&\qquad\textrm{Optimality}
 \end{aligned}
 ```
-The primal-dual gap being zero is equivalent to the complementarity condition that `x^Ts=0`. Since any LP problem can be transformed into standard form, the following discussion loses no generality. This discussion also largely applies to quadratic programming QP problems, with the differences explored below. 
+The optimality condition is equivalent to the complementarity condition that `x^Ts=0`. Since any LP problem can be transformed into standard form, the following discussion loses no generality. This discussion also largely applies to quadratic programming (QP) problems, with the differences explored below. 
 
 ### The HiGHS feasibility and optimality tolerances
 
-HiGHS has the following separate tolerances, listed with convenient mathematical notation
+HiGHS has separate tolerances for the following, listed with convenient mathematical notation
 
 - [Primal feasibility](@ref option-primal-feasibility-tolerance) (``\epsilon_P``)
 - [Dual feasibility](@ref option-dual-feasibility-tolerance) (``\epsilon_D``)
 - Residual errors in the [primal equations](@ref option-primal-residual-tolerance) (``\epsilon_R``)
 - Residual errors in the [dual equations](@ref option-dual-residual-tolerance) (``\epsilon_C``)
-- The [relative primal-dual gap](@ref option-complementarity-tolerance) (``\epsilon_{PD}``)
+- [Optimality](@ref option-optimality-tolerance) (``\epsilon_{O}``)
 
 All are set to the same default value of ``10^{-7}``. Although they can be set to different values by the user, if the user wishes to solve LPs to a general lower or higher tolerance, the value of the [KKT tolerance](@ref option-kkt-tolerance) can be changed from this default value.
 
@@ -42,9 +42,9 @@ When HiGHS returns a model status of optimal, the solution will satisfy feasibil
 
 ### Solutions with a corresponding basis
 
-The HiGHS simplex solver and the interior point solver after crossover yield an optimal basic solution of the LP. There are ``m`` basic variables and ``n-m`` nonbasic variables. At this basis, the nonbasic variables are zero, and values for the basic variables are given by solving a linear system of equations. Values for the row dual values can be computed by solving a linear system of equations, and the column dual values are then given by ``s=c-A^Ty``. With exact arithmetic, the basic dual values and primal-dual gap are zero by construction. 
+The HiGHS simplex solver and the interior point solver after crossover yield an optimal basic solution of the LP, consisting of ``m`` basic variables and ``n-m`` nonbasic variables. At any basis, the nonbasic variables are zero, and values for the basic variables are given by solving a linear system of equations. Values for the row dual values can be computed by solving a linear system of equations, and the column dual values are then given by ``s=c-A^Ty``. With exact arithmetic, the basic dual values are zero, and the optimality condition holds by construction. 
 
-When primal and dual values are computed using floating-point arithmetic, the primal and dual equations may not hold exactly so have nonzero residuals. However, when solving a linear system of equations using a stable technique, any residuals are small relative to the RHS of the equations, whatever the condition of the matrix of coefficients. Hence HiGHS does not assess the primal residuals, dual residuals for basic variables, or the complementarity condition. Thus optimality for a basic solution is assessed by HiGHS according to whether the following conditions hold
+When primal and dual values are computed using floating-point arithmetic, the primal and dual equations may not hold exactly so have nonzero residuals. However, when solving a linear system of equations using a stable technique, any residuals are small relative to the RHS of the equations, whatever the condition of the matrix of coefficients. Hence HiGHS does not assess the primal residuals, the dual residuals for basic variables, or the complementarity condition. Thus optimality for a basic solution is assessed by HiGHS according to whether the following conditions hold
 ```math
 \begin{aligned}
 x_i\ge-\epsilon_P&\qquad\forall i=1,\ldots,n\\
@@ -57,13 +57,15 @@ The HiGHS PDLP solver and the interior point solver without crossover (IPX) yiel
 
 #### Interior point solutions
 
+
+
 ```math
 \begin{aligned}
-\|Ax-b\|_\infty\le\epsilon_R&\\
+\|Ax-b\|_\infty\le\epsilon_R(1+\|b\|_\infty)&\\
 \|c-A^Ty+s\|_\infty\le\epsilon_C\\
 x_i\ge-\epsilon_P&\forall i=1,\ldots,n\\
 s_i\ge-\epsilon_D&\forall i=1,\ldots,n\\
-|c^Tx-b^Ty|\le\epsilon_{PD}
+|c^Tx-b^Ty|\le\epsilon_{IPM}(1+|c^Tx+b^Ty|/2)
 \end{aligned}
 ```
 
@@ -75,7 +77,7 @@ The PDLP algorithm determines values of ``x\ge0`` and ``y``, and chooses ``s`` t
 \begin{aligned}
 \|Ax-b\|_2&\le \epsilon_P(1+\|b\|_2)\\
 \|c-A^Ty-s\|_2&\le \epsilon_D(1+\|c\|_2)\\
-|c^Tx-b^Ty|&\le \epsilon_{PD}(|c^Tx|+|b^Ty|)
+|c^Tx-b^Ty|&\le \epsilon_{PDLP}(1+|c^Tx|+|b^Ty|)
 \end{aligned}
 ```
 
