@@ -582,6 +582,9 @@ void Iterate::ComputeResiduals() const {
     // Notice that postprocessing sets xl and xu for fixed/implied variables
     // such that rl and ru are zero; hence the residuals computed here are also
     // correct if the iterate was postprocessed.
+
+    // Modified the following to be much more succinct
+    /*
     for (Int j = 0; j < n+m; j++) {
         if (has_barrier_lb(j))
             rl_[j] = lb[j] - x_[j] + xl_[j];
@@ -593,6 +596,11 @@ void Iterate::ComputeResiduals() const {
             ru_[j] = ub[j] - x_[j] - xu_[j];
         else
             ru_[j] = 0.0;
+    }
+    */
+    for (Int j = 0; j < n+m; j++) {
+      rl_[j] = has_barrier_lb(j) ? lb[j] - x_[j] + xl_[j] : 0.0;
+      ru_[j] = has_barrier_ub(j) ? ub[j] - x_[j] - xu_[j] : 0.0;
     }
 
     assert(AllFinite(rb_));

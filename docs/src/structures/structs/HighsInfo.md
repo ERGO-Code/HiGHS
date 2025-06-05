@@ -139,7 +139,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## primal\_dual\_objective\_error
-- The relative difference between the primal and dual objective values (LP only)
+- The relative difference between the primal and dual objective values
 - Type: double
 
 ## primal\_dual\_integral

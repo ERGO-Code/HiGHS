@@ -52,7 +52,7 @@ s_i\ge-\epsilon_D&\qquad\forall i=1,\ldots,n
 \end{aligned}
 ```
 
-The HiGHS active set QP solver has an objective ``(1/2)x^TQx + c^Tx``, and maintains the QP equivalent of a basis to guarantee that nonbasic variables are zero, basic variables have zero reduced costs, so the optimality condition holds by construction. 
+The HiGHS active set QP solver has an objective ``(1/2)x^TQx + c^Tx``, and maintains the QP equivalent of a basis in which a subset of (up to ``n``) variables that are zero. However, there are variables that are off their bounds whose reduced costs are not zero by construction. At an optimal solution they will only be less than a dual feasibility tolerance in magnitude, so the optimality condition will not be satisfied by construction. The primal and dual equations (where the latter is ``A^Ty+s=Qx+c``) will be satisfied with small residuals. Optimality is assessed by HiGHS according to whether primal and dual feasibility is satisfied to within the correponding tolerance.
 
 
 ### Solutions without a corresponding basis
@@ -87,13 +87,11 @@ The PDLP algorithm uses an [optimality tolerance](@ref option-pdlp-optimality-to
 
 #### HiGHS solutions
 
-The relative measures used by PDLP and IPX assume that all components of the cost and RHS vectors are relevant. When an LP problem is in standard form this is true for ``b``, but not necessarily for the cost vector ``c``. Consider a large component of ``c`` for which the corresponding reduced cost value in ``s`` is also large, in which case the LP solution is insensitive to the cost. This component will contribute significantly to ``\|c\|`` and, hence, the RHS of the dual residual condition, allowing large values of ``\|c-A^Ty-s\|`` to be accepted. However, within  residuals to be within the tolerance in dual equations for which the cost and reduced cost are small result in large absolute residuals in 
+The relative measures used by PDLP and IPX assume that all components of the cost and RHS vectors are relevant. When an LP problem is in standard form this is true for ``b``, but not necessarily for the cost vector ``c``. Consider a large component of ``c`` for which the corresponding reduced cost value in ``s`` is also large, in which case the LP solution is insensitive to the cost. This component will contribute significantly to ``\|c\|`` and, hence, the RHS of the dual residual condition, allowing large values of ``\|c-A^Ty-s\|`` to be accepted. However, this can lead to unacceptably large absolute residual errors and non-optimal solutions being deemed "optimal". When equations in ``Ax=b`` correspond to inequality constraints with large RHS values and a slack variable (so the constraint is redundant) the same issue occurs in the case of primal residual errors. The solution of the LP is not sensitive to this large RHS value, but its contribution to ``||b||`` can allow large absolute primal residual errors to be overlooked. 
 
-However, the LP solution is insensitive to this This will 
-
-
+To make an informed assessment of whether an "optimal" solution obtained by IPX or PDLP is acceptable, HiGHS computes infinity norm measures of ``b`` and ``c`` corresponding to the components that define the optimal solution. For ``c`` these are the components corresponding to positive values of ``x`` and reduced costs that are close to zero. For ``b``, these are the components corresponding to constraints that are (close to being) satisfied exactly. The resulting measures are smaller than ``\|b\|_2`` or ``\|c\|_2``, and may lead to relative measures of primal/dual residual errors or infeasiblilties not being satisfied, so the status of the solver's "optimal" solution may be reduced to "unknown". When this happens - and possibly if tolerances on relative measures have been satisfied - users can consult the absolute and relative measures available via [HighsInfo](@ref HighsInfo).
 
 ### Discrete optimization problems
 
-Discrete optimization problems have no local optimality conditions. 
+Discrete optimization problems have no local optimality conditions. Variables required to take integer values will do so to within the `mip_feasibility_tolerance`. Since MIP sub-problems are solved with the simplex solver, the values of the variables and constraints will satisfy absolute feasibility tolerances.
 
