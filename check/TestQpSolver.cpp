@@ -40,9 +40,9 @@ void testPrimalDualObjective(Highs& h,
                             required_objective_function_value));
   REQUIRE(okValueDifference(alt_objective_function_value,
                             required_objective_function_value));
-  double complementarity_tolerance;
-  h.getOptionValue("complementarity_tolerance", complementarity_tolerance);
-  REQUIRE(fabs(info.primal_dual_objective_error) < complementarity_tolerance);
+  double optimality_tolerance;
+  h.getOptionValue("optimality_tolerance", optimality_tolerance);
+  REQUIRE(fabs(info.primal_dual_objective_error) < optimality_tolerance);
 }
 
 TEST_CASE("qp-unbounded", "[qpsolver]") {

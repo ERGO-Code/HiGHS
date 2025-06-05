@@ -137,7 +137,7 @@ lp.col_lower_ = np.array([0, 1], dtype=np.double)
 lp.col_upper_ = np.array([4, inf], dtype=np.double)
 lp.row_lower_ = np.array([-inf, 5, 6], dtype=np.double)
 lp.row_upper_ = np.array([7, 15, inf], dtype=np.double)
-# In a HighsLp instsance, the number of nonzeros is given by a fictitious final start
+# In a HighsLp instance, the number of nonzeros is given by a fictitious final start
 lp.a_matrix_.start_ = np.array([0, 2, 5])
 lp.a_matrix_.index_ = np.array([1, 2, 0, 1, 2])
 lp.a_matrix_.value_ = np.array([1, 3, 1, 2, 2], dtype=np.double)

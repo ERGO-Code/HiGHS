@@ -8,6 +8,8 @@ Add missing include to zstr needed for gcc v15 and clang v19 [#2313](https://git
 
 Updates for intel llvm compiler on linux [#2257](https://github.com/ERGO-Code/HiGHS/pull/2257)
 
+Build directory for Windows MSVC now `Release/bin` replacing `bin/Release` [#2376](https://github.com/ERGO-Code/HiGHS/pull/2376)
+
 ## Code changes
 
 Fixed incorrect assertion in `HighsMipSolver::solutionFeasible()` (fixing [#2204](https://github.com/ERGO-Code/HiGHS/issues/2204))
@@ -21,6 +23,8 @@ Now ensuring that when solving a scaled LP with useful but unvalidated basis, it
 By setting non-empty values of options `read_solution_file`, `read_basis_file`, `write_model_file` (with extension `.lp` or `.mps`), `write_solution_file`, `solution_file`, `write_basis_file`, these files will be read or written when calling `Highs::run()`. Hence options previously only available via the command line interface can be use (for example) by modelling languages that only call `Highs::run()` (fixing [#2269](https://github.com/ERGO-Code/HiGHS/issues/2269)).
 
 Bug [#2273](https://github.com/ERGO-Code/HiGHS/issues/2273) fixed
+
+Added the feasibility jump heuristic as per [#1423](https://github.com/ERGO-Code/HiGHS/issues/1423). This is on by default, but using the option `mip_heuristic_run_feasibility_jump=false` switches it off.
 
 ZI rounding and shifting MIP primal heuristics have been added (see [#2287](https://github.com/ERGO-Code/HiGHS/pull/2287)). They are off by default, but can be activated by setting the options `mip_heuristic_run_zi_round` and `mip_heuristic_run_shifting` to be true. Options `mip_heuristic_run_rins`, `mip_heuristic_run_rens` and `mip_heuristic_run_root_reduced_cost` to run the RINS, RENS and rootReducedCost heuristics have been added. These are true by default, but setting them to be false can accelerate the MIP solver on easy problems.
 
@@ -51,4 +55,7 @@ Introduced the following KKT error measures to `HighsInfo`: `num_relative_primal
 Added a max scale factor (+1024) when scaling up coefficients in `preprocessBaseInequality` and `postprocessCut`. Fix is [#2337](https://github.com/ERGO-Code/HiGHS/pull/2337).
 
 Renamed `HighsOptions::pdlp_d_gap_tol` to `HighsOptions::pdlp_optimality_tolerance` for consistency with IPM
+
+Renamed `HighsOptions::complementarity_tolerance` to `HighsOptions::optimality_tolerance` for consistency with IPM and PDLP
+
 
