@@ -22,6 +22,8 @@ By setting non-empty values of options `read_solution_file`, `read_basis_file`, 
 
 Bug [#2273](https://github.com/ERGO-Code/HiGHS/issues/2273) fixed
 
+Added the feasibility jump heuristic as per [#1423](https://github.com/ERGO-Code/HiGHS/issues/1423). This is on by default, but using the option `mip_heuristic_run_feasibility_jump=false` switches it off.
+
 ZI rounding and shifting MIP primal heuristics have been added (see [#2287](https://github.com/ERGO-Code/HiGHS/pull/2287)). They are off by default, but can be activated by setting the options `mip_heuristic_run_zi_round` and `mip_heuristic_run_shifting` to be true. Options `mip_heuristic_run_rins`, `mip_heuristic_run_rens` and `mip_heuristic_run_root_reduced_cost` to run the RINS, RENS and rootReducedCost heuristics have been added. These are true by default, but setting them to be false can accelerate the MIP solver on easy problems.
 
 Added `Highs_changeRowsBoundsByRange` to C API, fixing [#2296](https://github.com/ERGO-Code/HiGHS/issues/2296)
@@ -51,4 +53,7 @@ Introduced the following KKT error measures to `HighsInfo`: `num_relative_primal
 Added a max scale factor (+1024) when scaling up coefficients in `preprocessBaseInequality` and `postprocessCut`. Fix is [#2337](https://github.com/ERGO-Code/HiGHS/pull/2337).
 
 Renamed `HighsOptions::pdlp_d_gap_tol` to `HighsOptions::pdlp_optimality_tolerance` for consistency with IPM
+
+Renamed `HighsOptions::complementarity_tolerance` to `HighsOptions::optimality_tolerance` for consistency with IPM and PDLP
+
 

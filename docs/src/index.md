@@ -31,15 +31,15 @@ Read the [Terminology](@ref) section for more details.
 
 ## Using HiGHS
 
-HiGHS can be used as a standalone executable on Windows, Linux and MacOS. There
+HiGHS can be used as a stand-alone executable on Windows, Linux and MacOS. There
 is also a C++11 library that can be used within a C++ project or, via its C, C#,
-FORTRAN, Julia, and Python interfaces.
+FORTRAN, Julia, Python and Rust interfaces.
 
 Get started by following [Install HiGHS](@ref).
 
 ## Overview
 
-The standalone [executable](@ref executable) allows models to be solved from
+The stand-alone [executable](@ref executable) allows models to be solved from
 [MPS](https://en.wikipedia.org/wiki/MPS_(format)) or (CPLEX)
 [LP](https://web.mit.edu/lpsolve/doc/CPLEX-format.htm) files, with full control
 of the HiGHS run-time options, and the solution can be written to files in human
