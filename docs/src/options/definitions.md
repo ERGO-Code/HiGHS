@@ -73,19 +73,19 @@
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## [primal\_residual\_tolerance](@id option-primal-residual-tolernace)
+## [primal\_residual\_tolerance](@id option-primal-residual-tolerance)
 - Primal residual tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## [dual\_residual\_tolerance](@id option-dual-residual-tolernace)
+## [dual\_residual\_tolerance](@id option-dual-residual-tolerance)
 - Dual residual tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## [optimality\_tolerance](@id option-optimality-tolernace)
+## [optimality\_tolerance](@id option-optimality-tolerance)
 - Optimality tolerance
 - Type: double
 - Range: [1e-10, inf]
