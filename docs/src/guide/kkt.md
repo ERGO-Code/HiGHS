@@ -42,36 +42,40 @@ When HiGHS returns a model status of optimal, the solution will satisfy feasibil
 
 ### Solutions with a corresponding basis
 
-The HiGHS simplex solver and the interior point solver after crossover yield an optimal basic solution of the LP, consisting of ``m`` basic variables and ``n-m`` nonbasic variables. At any basis, the nonbasic variables are zero, and values for the basic variables are given by solving a linear system of equations. Values for the row dual values can be computed by solving a linear system of equations, and the column dual values are then given by ``s=c-A^Ty``. With exact arithmetic, the basic dual values are zero, and the optimality condition holds by construction. 
+The HiGHS simplex solver and the interior point solver after crossover yield an optimal basic solution of the LP, consisting of ``m`` basic variables and ``n-m`` nonbasic variables. At any basis, the nonbasic variables are zero, and values for the basic variables are given by solving a linear system of equations. Values for the row dual values can be computed by solving a linear system of equations, and the column dual values are then given by ``s=c-A^Ty``. With exact arithmetic, the basic dual values are zero by construction. 
 
-When primal and dual values are computed using floating-point arithmetic, the primal and dual equations may not hold exactly so have nonzero residuals. However, when solving a linear system of equations using a stable technique, any residuals are small relative to the RHS of the equations, whatever the condition of the matrix of coefficients. Hence HiGHS does not assess the primal residuals, the dual residuals for basic variables, or the complementarity condition. Thus optimality for a basic solution is assessed by HiGHS according to whether the following conditions hold
+When primal and dual values are computed using floating-point arithmetic, the basic dual values are set to zero so the optimality condition holds by construction. However, the primal and dual equations may not hold exactly, so have nonzero residuals. Fortunately, when solving a linear system of equations using a stable technique, any residuals are small relative to the RHS of the equations, whatever the condition of the matrix of coefficients. Hence HiGHS does not assess the primal residuals, the dual residuals for basic variables. Thus optimality for a basic solution is assessed by HiGHS according to whether the following conditions hold
 ```math
 \begin{aligned}
 x_i\ge-\epsilon_P&\qquad\forall i=1,\ldots,n\\
 s_i\ge-\epsilon_D&\qquad\forall i=1,\ldots,n
 \end{aligned}
 ```
+
+The HiGHS active set QP solver has an objective ``(1/2)x^TQx + c^Tx``, and maintains the QP equivalent of a basis to guarantee that nonbasic variables are zero, basic variables have zero reduced costs, so the optimality condition holds by construction. 
+
+
 ### Solutions without a corresponding basis
 
 The HiGHS PDLP solver and the interior point solver without crossover (IPX) yield "optimal" primal and dual values that satisfy internal conditions for termination of the underlying algorithm. These conditions are discussed below, and are used for good reason. However they can lead to a misleading claim of optimality.
 
 #### Interior point solutions
 
-
+The interior point algorithm uses a single feasibility tolerance ``\epsilon=\min(\epsilon_P, \epsilon_D)``, and an [optimality tolerance](@ref option-ipm-optimality-tolerance) (``\epsilon_{IPM}``) that (currently) by default is ten times smaller than the other feasibility and optimality tolerances used by HiGHS. It terminates when
 
 ```math
 \begin{aligned}
-\|Ax-b\|_\infty\le\epsilon_R(1+\|b\|_\infty)&\\
-\|c-A^Ty+s\|_\infty\le\epsilon_C\\
-x_i\ge-\epsilon_P&\forall i=1,\ldots,n\\
-s_i\ge-\epsilon_D&\forall i=1,\ldots,n\\
+\|Ax-b\|_\infty\le\epsilon(1+\|b\|_\infty)&\\
+\|c-A^Ty+s\|_\infty\le\epsilon_C(1+\|c\|_\infty)\\
+x_i\ge-\epsilon&\forall i=1,\ldots,n\\
+s_i\ge-\epsilon&\forall i=1,\ldots,n\\
 |c^Tx-b^Ty|\le\epsilon_{IPM}(1+|c^Tx+b^Ty|/2)
 \end{aligned}
 ```
 
 #### PDLP solutions
 
-The PDLP algorithm determines values of ``x\ge0`` and ``y``, and chooses ``s`` to be the non-negative values of ``c-A^Ty``. Hence it guarantees primal and dual feasibility by construction. PDLP terminates when
+The PDLP algorithm uses an [optimality tolerance](@ref option-pdlp-optimality-tolerance) (``\epsilon_{PDLP}``) that is equal to the other feasibility and optimality tolerances used by HiGHS. It determines values of ``x\ge0`` and ``y``, and chooses ``s`` to be the non-negative values of ``c-A^Ty``. Hence it guarantees primal and dual feasibility by construction. It terminates when
 
 ```math
 \begin{aligned}

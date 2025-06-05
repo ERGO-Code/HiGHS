@@ -402,7 +402,7 @@
 - Range: [0, inf]
 - Default: 5
 
-## ipm\_optimality\_tolerance
+## [ipm\_optimality\_tolerance](@id option-ipm-optimality-tolerance)
 - IPM optimality tolerance
 - Type: double
 - Range: [1e-12, inf]
@@ -431,7 +431,7 @@
 - Range: {0, 2}
 - Default: 1
 
-## pdlp\_optimality\_tolerance
+## [pdlp\_optimality\_tolerance](@id option-pdlp-optimality-tolerance)
 - PDLP optimality tolerance
 - Type: double
 - Range: [1e-12, inf]

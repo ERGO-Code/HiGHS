@@ -578,6 +578,7 @@ void Iterate::ComputeResiduals() const {
     // Also, if the variable is implied (i.e. treated as free by the IPM) or
     // fixed (i.e. treated as non-existent by the IPM), the bound residual is
     // zero.
+    //
     // Notice that postprocessing sets xl and xu for fixed/implied variables
     // such that rl and ru are zero; hence the residuals computed here are also
     // correct if the iterate was postprocessed.
