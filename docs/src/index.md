@@ -32,7 +32,7 @@ Read the [Terminology](@ref) section for more details.
 ## Using HiGHS
 
 HiGHS can be used as a standalone executable on Windows, Linux and MacOS. There
-is also a C++11 library that can be used within a C++ project or, via its C, C#,
+is also a C++11 library that can be used within a C++ project or, via its C, Rust, C#,
 FORTRAN, Julia, and Python interfaces.
 
 Get started by following [Install HiGHS](@ref).
