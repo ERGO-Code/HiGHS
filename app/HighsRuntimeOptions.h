@@ -41,52 +41,56 @@ struct HighsCommandLineOptions {
 
 void setupCommandLineOptions(CLI::App& app,
                              HighsCommandLineOptions& cmd_options) {
-  const auto checkSingle = [](const std::string& input) -> std::string {
-    if (input.find(' ') != std::string::npos) {
-      return "Multiple files not implemented.";
-    }
-    return {};
-  };
+  // Does not work on windows with spaces in directory or file names.
+  // const auto checkSingle = [](const std::string& input) -> std::string {
+  //   if (input.find(' ') != std::string::npos) {
+  //     return "Multiple files not implemented.";
+  //   }
+  //   return {};
+  // };
 
   // Command line file specifications.
   app.add_option("--" + kModelFileString + "," + kModelFileString,
                  cmd_options.model_file, "File of model to solve.")
       // Can't use required here because it breaks version printing with -v.
       // ->required()
-      ->check(checkSingle)
+      // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kOptionsFileString, cmd_options.options_file,
                  "File containing HiGHS options.")
-      ->check(checkSingle)
+      // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kReadSolutionFileString,
                  cmd_options.cmd_read_solution_file,
                  "File of solution to read.")
-      ->check(checkSingle)
+      // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kReadBasisFileString, cmd_options.cmd_read_basis_file,
                  "File of initial basis to read.")
-      ->check(checkSingle)
+      // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
-                 "File for writing out model.")
-      ->check(checkSingle)
-      ->check(CLI::ExistingFile);
+                 "File for writing out model.");
+  // File does not need to exist
+  //      ->check(CLI::ExistingFile)
+  // ->check(checkSingle);
 
   app.add_option("--" + kWriteSolutionFileString,
                  cmd_options.cmd_write_solution_file,
-                 "File for writing out solution.")
-      ->check(checkSingle)
-      ->check(CLI::ExistingFile);
+                 "File for writing out solution.");
+  // File does not need to exist
+  //      ->check(CLI::ExistingFile)
+  // ->check(checkSingle);
 
   app.add_option("--" + kWriteBasisFileString, cmd_options.cmd_write_basis_file,
-                 "File for writing out final basis.")
-      ->check(checkSingle)
-      ->check(CLI::ExistingFile);
+                 "File for writing out final basis.");
+  // File does not need to exist
+  //      ->check(CLI::ExistingFile)
+  // ->check(checkSingle);
 
   // Command line option specifications.
   app.add_option("--" + kPresolveString, cmd_options.cmd_presolve,

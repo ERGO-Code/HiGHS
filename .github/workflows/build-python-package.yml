@@ -49,7 +49,7 @@ jobs:
           python3 -m pytest $GITHUB_WORKSPACE
 
   build_sdist_win:
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
@@ -195,7 +195,7 @@ jobs:
           python3 -m pytest $GITHUB_WORKSPACE
 
   build_wheel_windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
@@ -222,7 +222,7 @@ jobs:
           python -m pytest 
           
   build_wheel_windows_313:
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 

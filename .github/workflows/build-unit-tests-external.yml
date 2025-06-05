@@ -82,7 +82,7 @@ jobs:
         run: ctest --parallel --timeout 300 --output-on-failure 
 
   # release__windows_extra_unit_tests:
-  #   runs-on: windows-2019
+  #   runs-on: windows-2022
 
   #   steps:
   #     - uses: actions/checkout@v4
@@ -118,7 +118,7 @@ jobs:
   #     - name: Unit Test Extra
   #       working-directory: ${{runner.workspace}}/build
   #       shell: bash
-  #       run: ./bin/Release/unit_tests.exe highs-names-extra 
+  #       run: ./Release/bin/unit_tests.exe highs-names-extra 
 
   #     - name: Test
   #       working-directory: ${{runner.workspace}}/build

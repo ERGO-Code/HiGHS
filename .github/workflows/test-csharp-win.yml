@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           ls 
-          ./bin/Release/csharpexample.exe
+          ./Release/bin/csharpexample.exe
 
   fast_build_debug:
     runs-on: windows-latest
@@ -53,4 +53,4 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           ls 
-          ./bin/Debug/csharpexample.exe
+          ./Debug/bin/csharpexample.exe
