@@ -8,6 +8,8 @@ Add missing include to zstr needed for gcc v15 and clang v19 [#2313](https://git
 
 Updates for intel llvm compiler on linux [#2257](https://github.com/ERGO-Code/HiGHS/pull/2257)
 
+Build directory for Windows MSVC now `Release/bin` replacing `bin/Release` [#2376](https://github.com/ERGO-Code/HiGHS/pull/2376)
+
 ## Code changes
 
 Fixed incorrect assertion in `HighsMipSolver::solutionFeasible()` (fixing [#2204](https://github.com/ERGO-Code/HiGHS/issues/2204))
