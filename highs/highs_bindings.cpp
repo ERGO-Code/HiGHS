@@ -1222,7 +1222,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("qp_iteration_limit", &HighsOptions::qp_iteration_limit)
       .def_readwrite("qp_nullspace_limit", &HighsOptions::qp_nullspace_limit)
       .def_readwrite("qp_regularization_value", &HighsOptions::qp_regularization_value)
-      .def_readwrite("mip_allow_feasibility_jump", &HighsOptions::mip_allow_feasibility_jump)
+      .def_readwrite("mip_heuristic_run_feasibility_jump", &HighsOptions::mip_heuristic_run_feasibility_jump)
       .def_readwrite("mip_heuristic_run_rins", &HighsOptions::mip_heuristic_run_rins)
       .def_readwrite("mip_heuristic_run_rens", &HighsOptions::mip_heuristic_run_rens)
       .def_readwrite("mip_heuristic_run_root_reduced_cost", &HighsOptions::mip_heuristic_run_root_reduced_cost)

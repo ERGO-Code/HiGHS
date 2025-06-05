@@ -420,7 +420,7 @@
 - Range: {0, 2147483647}
 - Default: 2147483647
 
-## [pdlp\_e\_restart\_method](@id option-pdlp-d-gap-tol)
+## pdlp\_e\_restart\_method
 - Restart mode for PDLP solver: 0 => none; 1 => GPU (default); 2 => CPU 
 - Type: integer
 - Range: {0, 2}
@@ -449,12 +449,6 @@
 - Type: double
 - Range: [0, inf]
 - Default: 1e-07
-
-## iis\_strategy
-- Strategy for IIS calculation: Prioritise rows (default) / Prioritise columns (0/1)
-- Type: integer
-- Range: {0, 1}
-- Default: 0
 
 ## blend\_multi\_objectives
 - Blend multiple objectives or apply lexicographically: Default = true
