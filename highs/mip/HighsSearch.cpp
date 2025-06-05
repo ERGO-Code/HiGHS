@@ -375,25 +375,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     }
   }
 
-  // Implicitly skip strong branching on variables with low edge / shadow scores
-  double maxshadowscore = kHighsInf;
-  if (!mipsolver.submip) {
-    maxshadowscore = *std::max_element(
-      shadowscore.begin(), shadowscore.end());
-  }
-  double maxedgescore = *std::max_element(
-      edgescore.begin(), edgescore.end());
-  for (HighsInt k = 0; k < numfrac; ++k) {
-    if (100 * edgescore[k] < maxedgescore + mipsolver.mipdata_->feastol &&
-      (mipsolver.submip || 100 * shadowscore[k] <
-        maxshadowscore + mipsolver.mipdata_->feastol)) {
-      if (downscore[k] == kHighsInf) downscore[k] = 0.0;
-      if (upscore[k] == kHighsInf) upscore[k] = 0.0;
-      downscorereliable[k] = true;
-      upscorereliable[k] = true;
-    }
-  }
-
   std::vector<HighsInt> evalqueue;
   evalqueue.resize(numfrac);
   std::iota(evalqueue.begin(), evalqueue.end(), 0);
