@@ -3,7 +3,7 @@
 ## Compile from source 
 
 HiGHS uses CMake as build system, and requires at least version
-3.15. Details about building from source using cmake can be found in `HiGHS/cmake/README.md`.
+3.15. Details about building from source using CMake can be found in `HiGHS/cmake/README.md`.
 
 ## Install via a package manager
 
@@ -21,7 +21,7 @@ Precompiled static executables are available for a variety of platforms at
  * [https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases](https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases)
 
 Multiple versions are available. Each version has the form `vX.Y.Z`. In
-general, you should choose the most recent versinon.
+general, you should choose the most recent version.
 
 To install a precompiled binary, download the appropriate `HiGHSstatic.vX.Y.Z.[platform-string].tar.gz`
 file and extract the executable located at `/bin/highs`.

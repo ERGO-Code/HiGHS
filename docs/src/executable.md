@@ -1,6 +1,6 @@
 # [Executable](@id executable)
 
-HiGHS can run as a standalone program with a command-line
+HiGHS can run as a stand-alone program with a command-line
 interface. It solves an optimization problem provided by either an
 [MPS](https://docs.gurobi.com/projects/optimizer/en/current/reference/fileformats/modelformats.html#mps-format)
 file, or
