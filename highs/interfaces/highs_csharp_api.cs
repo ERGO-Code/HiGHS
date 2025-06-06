@@ -1018,7 +1018,7 @@ public class HighsLpSolver : IDisposable
 
     public HighsStatus setSolution(HighsSolution solution)
     {
-        return (HighsStatus)HighsLpSolver.Highs_setSolution(this.highs, solution.colvalue, solution.coldual, solution.rowvalue, solution.rowdual);
+        return (HighsStatus)HighsLpSolver.Highs_setSolution(this.highs, solution.colvalue, solution.rowvalue, solution.coldual, solution.rowdual);
     }
 
     /// <summary>Set a partial primal solution by passing values for a set of variables</summary>
