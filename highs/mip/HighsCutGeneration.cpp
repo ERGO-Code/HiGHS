@@ -500,6 +500,8 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   return true;
 }
 
+static double fast_ceil(double x) { return (int64_t)x + (x > (int64_t)x); }
+
 static double fast_floor(double x) { return (int64_t)x - (x < (int64_t)x); }
 
 bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
@@ -521,6 +523,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   integerinds.clear();
   integerinds.reserve(rowlen);
 
+  bool strongcg = true;
   double maxabsdelta = 0.0;
   constexpr double maxCMirScale = 1e6;
   constexpr double f0min = 0.005;
@@ -545,6 +548,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     } else {
       updateViolationAndNorm(i, vals[i], continuouscontribution,
                              continuoussqrnorm);
+      if (vals[i] <= 0) strongcg = false;
     }
   }
 
@@ -687,12 +691,50 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
   }
 
+  // If inequality has no neg coef on cont vars: Calc strongcg cut
+  if (strongcg) {
+    double delta = bestdelta;
+    double scale = 1.0 / delta;
+    double scalrhs = double(rhs) * scale;
+    double downrhs = fast_floor(scalrhs);
+    double f0 = scalrhs - downrhs;
+    double oneoveroneminusf0 = 1.0 / (1.0 - f0);
+    // TODO: Should stronger safeguards be used, i.e. multiply delta by 2, if f0 is too large?
+    double k = fast_ceil(1 / f0) - 1;
+
+    double contscale = scale * oneoveroneminusf0;
+    double sqrnorm = contscale * contscale * continuoussqrnorm;
+    double viol = contscale * continuouscontribution - downrhs;
+
+    for (HighsInt j : integerinds) {
+      double scalaj = vals[j] * scale;
+      double downaj = fast_floor(scalaj + kHighsTiny);
+      double fj = scalaj - downaj;
+      if (fj <= f0) {
+        double aj = downaj;
+        updateViolationAndNorm(j, aj, viol, sqrnorm);
+      }
+      else {
+        double pj = fast_ceil(k * (fj - f0) * oneoveroneminusf0);
+        double aj = downaj + (pj / (k + 1));
+        updateViolationAndNorm(j, aj, viol, sqrnorm);
+      }
+    }
+    double efficacy = viol / sqrt(sqrnorm);
+    // Use the strong CG cut instead of the CMIR if efficacy is larger
+    if (efficacy < bestefficacy + feastol) {
+      strongcg = false;
+    }
+  }
+
   HighsCDouble scale = 1.0 / HighsCDouble(bestdelta);
   HighsCDouble scalrhs = rhs * scale;
   double downrhs = floor(double(scalrhs));
 
   HighsCDouble f0 = scalrhs - downrhs;
   HighsCDouble oneoveroneminusf0 = 1.0 / (1.0 - f0);
+
+  double k = strongcg ? ceil(static_cast<double>(1 / f0)) : 0;
 
   rhs = downrhs * bestdelta;
   integralSupport = true;
@@ -711,8 +753,15 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double downaj = floor(double(scalaj + kHighsTiny));
       HighsCDouble fj = scalaj - downaj;
       HighsCDouble aj = downaj;
-      if (fj > f0) aj += (fj - f0) * oneoveroneminusf0;
-
+      if (fj > f0) {
+        if (strongcg) {
+          HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0);
+          aj += pj / (k + 1);
+        }
+        else {
+          aj += (fj - f0) * oneoveroneminusf0;
+        }
+      }
       vals[j] = double(aj * bestdelta);
     }
   }
