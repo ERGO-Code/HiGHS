@@ -294,7 +294,7 @@ class HPresolve {
 
   void storeCurrentProblemSize();
 
-  double problemSizeReduction();
+  double problemSizeReduction() const;
 
  public:
   // for LP presolve

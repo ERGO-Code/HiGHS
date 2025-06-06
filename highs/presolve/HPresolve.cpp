@@ -4642,7 +4642,7 @@ void HPresolve::storeCurrentProblemSize() {
   oldNumRow = model->num_row_ - numDeletedRows;
 }
 
-double HPresolve::problemSizeReduction() {
+double HPresolve::problemSizeReduction() const {
   double colReduction =
       100.0 *
       static_cast<double>(oldNumCol - (model->num_col_ - numDeletedCols)) /
@@ -6073,25 +6073,19 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           // With the opposite - merging an integer variable into a
           // continuous variable - the retained variable is
           // continuous, so no action is required
-          HighsInt rowsizeIntReduction = 0;
-          if (model->integrality_[duplicateCol] != HighsVarType::kInteger &&
-              model->integrality_[col] == HighsVarType::kInteger) {
-            rowsizeIntReduction = 1;
+          bool rowsizeIntReduction =
+              model->integrality_[duplicateCol] != HighsVarType::kInteger &&
+              model->integrality_[col] == HighsVarType::kInteger;
+          if (rowsizeIntReduction)
             model->integrality_[col] = HighsVarType::kContinuous;
-          }
+
           markChangedCol(col);
           if (colsize[duplicateCol] == 1) {
             HighsInt row = Arow[colhead[duplicateCol]];
             numRowSingletons[row] -= 1;
           }
 
-          // by updating the bounds properly, the unlink calls will update the
-          // implied row upper bounds to the correct values. For finite bounds
-          // simply setting the bounds of duplicate col to zero suffices. For
-          // infinite bounds we need to make sure the counters for the number of
-          // infinite bounds that contribute to the implied row bounds are
-          // updated correctly and that all finite contributions are removed.
-
+          // compute bounds of merged variable
           double mergeLower = 0;
           double mergeUpper = 0;
           if (colScale > 0) {
@@ -6099,45 +6093,16 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                          colScale * model->col_lower_[duplicateCol];
             mergeUpper = model->col_upper_[col] +
                          colScale * model->col_upper_[duplicateCol];
-            if (mergeUpper == kHighsInf && model->col_upper_[col] != kHighsInf)
-              model->col_upper_[duplicateCol] =
-                  model->col_upper_[col] / colScale;
-            else
-              model->col_upper_[duplicateCol] = 0;
-
-            if (mergeLower == -kHighsInf &&
-                model->col_lower_[col] != -kHighsInf)
-              // make sure that upon removal of the duplicate column the finite
-              // contribution of col's lower bound is removed and the infinite
-              // contribution of duplicateCol is retained
-              model->col_lower_[duplicateCol] =
-                  model->col_lower_[col] / colScale;
-            else
-              model->col_lower_[duplicateCol] = 0;
           } else {
             mergeLower = model->col_lower_[col] +
                          colScale * model->col_upper_[duplicateCol];
             mergeUpper = model->col_upper_[col] +
                          colScale * model->col_lower_[duplicateCol];
-            if (mergeUpper == kHighsInf && model->col_upper_[col] != kHighsInf)
-              model->col_lower_[duplicateCol] =
-                  model->col_upper_[col] / colScale;
-            else
-              model->col_lower_[duplicateCol] = 0;
-
-            if (mergeLower == -kHighsInf &&
-                model->col_lower_[col] != -kHighsInf)
-              // make sure that upon removal of the duplicate column the finite
-              // contribution of col's lower bound is removed and the infinite
-              // contribution of duplicateCol is retained
-              model->col_upper_[duplicateCol] =
-                  model->col_lower_[col] / colScale;
-            else
-              model->col_upper_[duplicateCol] = 0;
           }
 
-          model->col_lower_[col] = mergeLower;
-          model->col_upper_[col] = mergeUpper;
+          // change bounds
+          changeColLower(col, mergeLower);
+          changeColUpper(col, mergeUpper);
 
           // mark duplicate column as deleted
           markColDeleted(duplicateCol);
@@ -6147,12 +6112,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
             HighsInt colpos = coliter;
             HighsInt colrow = Arow[coliter];
+
             // if an integer column was merged into a continuous one make
             // sure to update the integral rowsize
-            if (rowsizeIntReduction) {
-              assert(rowsizeIntReduction == 1);
-              rowsizeInteger[colrow] -= rowsizeIntReduction;
-            }
+            if (rowsizeIntReduction) rowsizeInteger[colrow] -= 1;
+
             coliter = Anext[coliter];
 
             unlink(colpos);
