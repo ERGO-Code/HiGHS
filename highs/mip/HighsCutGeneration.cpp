@@ -545,10 +545,12 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         maxabsdelta = max(maxabsdelta, delta);
         deltas.push_back(delta);
       }
-    } else {
+    }
+    else if (vals[i] < 0) {
+      // Positive coefficient values later set to 0 so have no contribution
       updateViolationAndNorm(i, vals[i], continuouscontribution,
                              continuoussqrnorm);
-      if (vals[i] <= 0) strongcg = false;
+      strongcg = false;
     }
   }
 
@@ -702,9 +704,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     // TODO: Should stronger safeguards be used, i.e. multiply delta by 2, if f0 is too large?
     double k = fast_ceil(1 / f0) - 1;
 
-    double contscale = scale * oneoveroneminusf0;
-    double sqrnorm = contscale * contscale * continuoussqrnorm;
-    double viol = contscale * continuouscontribution - downrhs;
+    // All coefficients of continuous variables are 0 in strong CG cut
+    double sqrnorm = 0;
+    double viol = -downrhs;
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
@@ -715,15 +717,18 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         updateViolationAndNorm(j, aj, viol, sqrnorm);
       }
       else {
-        double pj = fast_ceil(k * (fj - f0) * oneoveroneminusf0);
+        double pj = fast_ceil(k * (fj - f0) * oneoveroneminusf0 - kHighsTiny);
         double aj = downaj + (pj / (k + 1));
         updateViolationAndNorm(j, aj, viol, sqrnorm);
       }
     }
     double efficacy = viol / sqrt(sqrnorm);
     // Use the strong CG cut instead of the CMIR if efficacy is larger
-    if (efficacy < bestefficacy + feastol) {
+    if (efficacy < bestefficacy + 10 * feastol) {
       strongcg = false;
+    }
+    else {
+      bestefficacy = efficacy;
     }
   }
 
