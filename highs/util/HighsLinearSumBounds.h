@@ -17,6 +17,7 @@
 
 #include "lp_data/HConst.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsMatrixSlice.h"
 
 class HighsLinearSumBounds {
   std::vector<HighsCDouble> sumLowerOrig;
@@ -156,6 +157,12 @@ class HighsLinearSumBounds {
   double getImplVarUpper(HighsInt sum, HighsInt var) const;
 
   double getImplVarLower(HighsInt sum, HighsInt var) const;
+
+  bool sumLowerOk(HighsInt sum,
+                  const HighsTripletTreeSlicePreOrder& rowVector) const;
+
+  bool sumUpperOk(HighsInt sum,
+                  const HighsTripletTreeSlicePreOrder& rowVector) const;
 
  private:
   double getImplVarUpper(HighsInt sum, double myVarUpper, double myImplVarUpper,

@@ -296,6 +296,8 @@ class HPresolve {
 
   double problemSizeReduction();
 
+  bool impliedRowBoundsOk(HighsInt row) const;
+
  public:
   // for LP presolve
   bool okSetInput(HighsLp& model_, const HighsOptions& options_,
