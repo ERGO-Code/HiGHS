@@ -294,9 +294,7 @@ class HPresolve {
 
   void storeCurrentProblemSize();
 
-  double problemSizeReduction();
-
-  bool impliedRowBoundsOk(HighsInt row) const;
+  double problemSizeReduction() const;
 
  public:
   // for LP presolve

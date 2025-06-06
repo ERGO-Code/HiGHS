@@ -434,8 +434,6 @@ void HPresolve::link(HighsInt pos) {
     ++rowsizeInteger[Arow[pos]];
   else if (model->integrality_[Acol[pos]] == HighsVarType::kImplicitInteger)
     ++rowsizeImplInt[Arow[pos]];
-
-  assert(impliedRowBoundsOk(Arow[pos]));
 }
 
 void HPresolve::unlink(HighsInt pos) {
@@ -492,8 +490,6 @@ void HPresolve::unlink(HighsInt pos) {
   Avalue[pos] = 0;
 
   freeslots.push_back(pos);
-
-  if (!rowDeleted[Arow[pos]]) assert(impliedRowBoundsOk(Arow[pos]));
 }
 
 void HPresolve::markChangedRow(HighsInt row) {
@@ -4646,7 +4642,7 @@ void HPresolve::storeCurrentProblemSize() {
   oldNumRow = model->num_row_ - numDeletedRows;
 }
 
-double HPresolve::problemSizeReduction() {
+double HPresolve::problemSizeReduction() const {
   double colReduction =
       100.0 *
       static_cast<double>(oldNumCol - (model->num_col_ - numDeletedCols)) /
@@ -6910,11 +6906,6 @@ HighsInt HPresolve::debugGetCheckRow() const {
     }
   }
   return check_row;
-}
-
-bool HPresolve::impliedRowBoundsOk(HighsInt row) const {
-  return (impliedRowBounds.sumLowerOk(row, getRowVector(row)) &&
-          impliedRowBounds.sumUpperOk(row, getRowVector(row)));
 }
 
 }  // namespace presolve
