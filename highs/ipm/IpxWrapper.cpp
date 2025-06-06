@@ -447,47 +447,97 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  // Create the LpSolver instance
-  // create solver
+  // Create solver instance
   highspm::HpmSolver hpm{};
 
-  // todo: set parameters
+  highspm::HpmOptions hpm_options{};
 
-  // Set the internal HPM parameters
+  hpm_options.display = true;
+  if (!options.output_flag | !options.log_to_console)
+    hpm_options.display = false;
 
-  // Set pointer to any callback
+  // Debug option is already considered through log_options.log_dev_level in
+  // highspm::Log::debug
 
-  // ===================================================================================
-  // CHANGE FORMULATION
-  // ===================================================================================
-  // Input problem must be in the form
-  //
-  //  min   obj^T * x
-  //  s.t.  A * x {<=,=,>=} rhs
-  //        lower <= x <= upper
-  //
-  //  constraints[i] is : =, <, >
-  // ===================================================================================
+  hpm_options.timeless_log = options.timeless_log;
+  hpm_options.feasibility_tol = std::min(options.primal_feasibility_tolerance,
+                                         options.dual_feasibility_tolerance);
+  hpm_options.optimality_tol = options.ipm_optimality_tolerance;
+  hpm_options.crossover_tol = options.start_crossover_tolerance;
 
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    hpm_options.feasibility_tol = options.kkt_tolerance;
+    hpm_options.optimality_tol = 1e-1 * options.kkt_tolerance;
+    hpm_options.crossover_tol = 1e-1 * options.kkt_tolerance;
+    printf(
+        "IpxWrapper: feasibility_tol = %g; optimality_tol = %g; "
+        "crossover_tol = %g\n",
+        hpm_options.feasibility_tol, hpm_options.optimality_tol,
+        hpm_options.crossover_tol);
+  }
+
+  // hpm uses same timer as highs, so it is fine to pass the same time limit
+  hpm_options.time_limit = options.time_limit;
+
+  hpm_options.max_iter =
+      options.ipm_iteration_limit - highs_info.ipm_iteration_count;
+
+  if (options.run_crossover == kHighsOnString)
+    hpm_options.crossover = highspm::kOptionCrossoverOn;
+  else if (options.run_crossover == kHighsOffString)
+    hpm_options.crossover = highspm::kOptionCrossoverOff;
+  else {
+    assert(options.run_crossover == kHighsChooseString);
+    // Crossover choose not yet implemented in hpm, set to on for now
+    hpm_options.crossover = highspm::kOptionCrossoverOn;
+  }
+
+  // Potentially control if ipx is used for refinement and if it is displayed
+  // hpm_options.refine_with_ipx = true;
+  // hpm_options.display_ipx = true;
+
+  // Option parallel for now is just "on", "off", "choose".
+  // hpm can accept also partially on, to select only tree or node parallelism.
+  // It is worth considering whether this choice should be exposed to the user.
+  if (options.parallel == kHighsOnString)
+    hpm_options.parallel = highspm::kOptionParallelOn;
+  else if (options.parallel == kHighsOffString)
+    hpm_options.parallel = highspm::kOptionParallelOff;
+  else {
+    assert(options.parallel == kHighsChooseString);
+    hpm_options.parallel = highspm::kOptionParallelChoose;
+  }
+
+  // Highs does not have an option to select NE/AS approach.
+  // For now use choose, but an option should be added for the user to choose.
+  hpm_options.nla = highspm::kOptionNlaChoose;
+
+  // ===========================================================================
+  // TO DO
+  // - implement option choose for crossover in hpm
+  // - add options for NE/AS
+  // - consider adding options for parallel tree/node
+  // - block size for dense factorisation can have large impact on performance
+  //   and depends on the specific architecture. It may be worth exposing it to
+  //   the user as an advanced option.
+  // ===========================================================================
+
+  hpm.set(hpm_options, options.log_options, callback, timer);
+
+  // Transform problem to correct formulation
   highspm::Int n, m;
   std::vector<double> obj, rhs, lower, upper, Aval;
   std::vector<highspm::Int> Aptr, Aind;
   std::vector<char> constraints;
   double offset;
-
   fillInIpxData(lp, n, m, offset, obj, lower, upper, Aptr, Aind, Aval, rhs,
                 constraints);
-
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "HPM model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                " columns and %" HIGHSINT_FORMAT " nonzeros\n",
                m, n, Aptr[n]);
 
-  highspm::HpmOptions hpm_options{};
-
-  hpm.set(hpm_options, options.log_options, callback, timer);
-
-  // load the problem
+  // Load the problem
   highspm::Int load_status = hpm.load(
       n, m, obj.data(), rhs.data(), lower.data(), upper.data(), Aptr.data(),
       Aind.data(), Aval.data(), constraints.data(), offset);
