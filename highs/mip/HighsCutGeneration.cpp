@@ -712,7 +712,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double scalaj = vals[j] * scale;
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      if (fj <= f0) {
+      if (fj <= f0 + 0.001) {
         double aj = downaj;
         updateViolationAndNorm(j, aj, viol, sqrnorm);
       }
@@ -760,7 +760,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       HighsCDouble aj = downaj;
       if (fj > f0) {
         if (strongcg) {
-          HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0);
+          HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0 -
+            kHighsTiny);
           aj += pj / (k + 1);
         }
         else {
