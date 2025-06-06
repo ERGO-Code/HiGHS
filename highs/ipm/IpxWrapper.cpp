@@ -488,8 +488,7 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
     hpm_options.crossover = highspm::kOptionCrossoverOff;
   else {
     assert(options.run_crossover == kHighsChooseString);
-    // Crossover choose not yet implemented in hpm, set to on for now
-    hpm_options.crossover = highspm::kOptionCrossoverOn;
+    hpm_options.crossover = highspm::kOptionCrossoverChoose;
   }
 
   // Potentially control if ipx is used for refinement and if it is displayed
@@ -514,7 +513,6 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
 
   // ===========================================================================
   // TO DO
-  // - implement option choose for crossover in hpm
   // - add options for NE/AS
   // - consider adding options for parallel tree/node
   // - block size for dense factorisation can have large impact on performance

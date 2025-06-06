@@ -183,7 +183,16 @@ bool HpmSolver::prepareIpx() {
   ipx::Parameters ipx_param;
   ipx_param.display = options_.display_ipx;
   ipx_param.dualize = 0;
-  ipx_param.run_crossover = options_.crossover;
+
+  if (options_.crossover == kOptionCrossoverOn)
+    ipx_param.run_crossover = 1;
+  else if (options_.crossover == kOptionCrossoverOff)
+    ipx_param.run_crossover = 0;
+  else {
+    assert(options_.crossover == kOptionCrossoverChoose);
+    ipx_param.run_crossover = -1;
+  }
+
   ipx_param.ipm_feasibility_tol = options_.feasibility_tol;
   ipx_param.ipm_optimality_tol = options_.optimality_tol;
   ipx_param.start_crossover_tol = options_.crossover_tol;
@@ -224,7 +233,8 @@ void HpmSolver::refineWithIpx() {
     Log::printf("\nSolution is imprecise, restarting with IPX\n");
   } else if (!statusIsOptimal() && options_.refine_with_ipx) {
     Log::printf("\nHiGHSpm did not converge, restarting with IPX\n");
-  } else if (options_.crossover == kOptionCrossoverOn) {
+  } else if (options_.crossover == kOptionCrossoverOn ||
+             options_.crossover == kOptionCrossoverChoose) {
     Log::printf("\nHiGHSpm converged, running crossover with IPX\n");
   } else {
     return;
@@ -1005,7 +1015,8 @@ bool HpmSolver::checkTermination() {
 
     info_.ipm_status = kIpmStatusPDFeas;
 
-    if (options_.crossover) {
+    if (options_.crossover == kOptionCrossoverOn ||
+        options_.crossover == kOptionCrossoverChoose) {
       bool ready_for_crossover =
           it_->infeasAfterDropping() < options_.crossover_tol;
       if (ready_for_crossover) {

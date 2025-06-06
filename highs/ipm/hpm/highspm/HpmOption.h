@@ -19,7 +19,8 @@ enum OptionCrossover {
   kOptionCrossoverMin = 0,
   kOptionCrossoverOff = kOptionCrossoverMin,
   kOptionCrossoverOn,
-  kOptionCrossoverMax = kOptionCrossoverOn,
+  kOptionCrossoverChoose,
+  kOptionCrossoverMax = kOptionCrossoverChoose,
   kOptionCrossoverDefault = kOptionCrossoverOff
 };
 
