@@ -734,7 +734,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   HighsCDouble f0 = scalrhs - downrhs;
   HighsCDouble oneoveroneminusf0 = 1.0 / (1.0 - f0);
 
-  double k = strongcg ? ceil(static_cast<double>(1 / f0)) : 0;
+  double k = strongcg ? ceil(static_cast<double>(1 / f0)) - 1 : 0;
 
   rhs = downrhs * bestdelta;
   integralSupport = true;
