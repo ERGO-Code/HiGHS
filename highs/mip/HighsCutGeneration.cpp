@@ -760,9 +760,11 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       HighsCDouble aj = downaj;
       if (fj > f0) {
         if (strongcg) {
-          HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0 -
-            kHighsTiny);
-          aj += pj / (k + 1);
+          if (fj - f0 > feastol) {
+            HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0 -
+              kHighsTiny);
+            aj += pj / (k + 1);
+          }
         }
         else {
           aj += (fj - f0) * oneoveroneminusf0;
@@ -783,8 +785,15 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
     double checkefficacy = checkviol / sqrt(checknorm);
     // the efficacy can become infinite if the cut 0 <= -1 is derived
-    assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
-           fabs(checkefficacy) >= 1e30);
+    if (!strongcg) {
+      assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
+             fabs(checkefficacy) >= 1e30);
+    }
+    else {
+      // We round conservatively for scoring => actual strongcg cut can be stronger
+      assert(bestefficacy - checkefficacy < 0.001 ||
+             fabs(checkefficacy) >= 1e30);
+    }
   }
 #endif
 
