@@ -321,9 +321,7 @@ class Highs {
   /**
    * @brief Returns the number of options
    */
-  HighsInt getNumOptions() const {
-    return this->options_.num_options_;
-  }
+  HighsInt getNumOptions() const { return this->options_.num_options_; }
 
   /**
    * @brief Get the number of user-settable options
@@ -404,9 +402,7 @@ class Highs {
   /**
    * @brief Get the size of HighsInt
    */
-  HighsInt getSizeofHighsInt() const {
-    return sizeof(options_.num_options_);
-  }
+  HighsInt getSizeofHighsInt() const { return sizeof(options_.num_options_); }
 
   /**
    * @brief Get the run time of HiGHS

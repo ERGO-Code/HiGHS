@@ -692,9 +692,9 @@ class HighsOptions : public HighsOptionsStruct {
         kRegularOption, &run_crossover, kHighsOnString);
     records.push_back(record_string);
 
-    record_double =
-        new OptionRecordDouble(kTimeLimitString, "Time limit (seconds)",
-                               kRegularOption, &time_limit, 0, kHighsInf, kHighsInf);
+    record_double = new OptionRecordDouble(
+        kTimeLimitString, "Time limit (seconds)", kRegularOption, &time_limit,
+        0, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_string =
@@ -743,18 +743,20 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "primal_feasibility_tolerance", "Primal feasibility tolerance",
-        kRegularOption, &primal_feasibility_tolerance, 1e-10, kDefaultKktTolerance,
+        kRegularOption, &primal_feasibility_tolerance, 1e-10,
+        kDefaultKktTolerance, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_feasibility_tolerance", "Dual feasibility tolerance",
+        kRegularOption, &dual_feasibility_tolerance, 1e-10,
+        kDefaultKktTolerance, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "primal_residual_tolerance", "Primal residual tolerance",
+        kRegularOption, &primal_residual_tolerance, 1e-10, kDefaultKktTolerance,
         kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "dual_feasibility_tolerance", "Dual feasibility tolerance", kRegularOption,
-        &dual_feasibility_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "primal_residual_tolerance", "Primal residual tolerance", kRegularOption,
-        &primal_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -769,8 +771,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "objective_bound",
-        "Objective bound for termination of the dual simplex solver", kRegularOption,
-        &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
+        "Objective bound for termination of the dual simplex solver",
+        kRegularOption, &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -786,8 +788,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "threads", "Number of threads used by HiGHS (0: automatic)", kRegularOption,
-        &threads, 0, 0, kHighsIInf);
+        "threads", "Number of threads used by HiGHS (0: automatic)",
+        kRegularOption, &threads, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -800,10 +802,10 @@ class HighsOptions : public HighsOptionsStruct {
         kRegularOption, &user_cost_scale, -kHighsIInf, 0, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("highs_debug_level",
-                                     "Debugging level in HiGHS", kAdvancedOption,
-                                     &highs_debug_level, kHighsDebugLevelMin,
-                                     kHighsDebugLevelMin, kHighsDebugLevelMax);
+    record_int = new OptionRecordInt(
+        "highs_debug_level", "Debugging level in HiGHS", kAdvancedOption,
+        &highs_debug_level, kHighsDebugLevelMin, kHighsDebugLevelMin,
+        kHighsDebugLevelMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -817,8 +819,8 @@ class HighsOptions : public HighsOptionsStruct {
         "simplex_strategy",
         "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => "
         "Dual (SIP); 3 => Dual (PAMI); 4 => Primal",
-        kRegularOption, &simplex_strategy, kSimplexStrategyMin, kSimplexStrategyDual,
-        kSimplexStrategyMax);
+        kRegularOption, &simplex_strategy, kSimplexStrategyMin,
+        kSimplexStrategyDual, kSimplexStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -832,8 +834,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_crash_strategy",
-        "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)", kAdvancedOption,
-        &simplex_crash_strategy, kSimplexCrashStrategyMin,
+        "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)",
+        kAdvancedOption, &simplex_crash_strategy, kSimplexCrashStrategyMin,
         kSimplexCrashStrategyOff, kSimplexCrashStrategyMax);
     records.push_back(record_int);
 
@@ -898,8 +900,8 @@ class HighsOptions : public HighsOptionsStruct {
         &timeless_log, false);
     records.push_back(record_bool);
 
-    record_string = new OptionRecordString(kLogFileString, "Log file", kRegularOption,
-                                           &log_file, "");
+    record_string = new OptionRecordString(kLogFileString, "Log file",
+                                           kRegularOption, &log_file, "");
     records.push_back(record_string);
 
     record_bool =
@@ -915,8 +917,8 @@ class HighsOptions : public HighsOptionsStruct {
         "-1 => HiGHS old raw (deprecated); 0 => HiGHS raw; "
         "1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; "
         "4 => HiGHS sparse raw",
-        kRegularOption, &write_solution_style, kSolutionStyleMin, kSolutionStyleRaw,
-        kSolutionStyleMax);
+        kRegularOption, &write_solution_style, kSolutionStyleMin,
+        kSolutionStyleRaw, kSolutionStyleMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -974,23 +976,23 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
-        kReadBasisFileString, "Read basis file", kRegularOption, &read_basis_file,
-        kHighsFilenameDefault);
+        kReadBasisFileString, "Read basis file", kRegularOption,
+        &read_basis_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
-        kWriteModelFileString, "Write model file", kRegularOption, &write_model_file,
-        kHighsFilenameDefault);
-    records.push_back(record_string);
-
-    record_string =
-        new OptionRecordString(kWriteSolutionFileString, "Write solution file",
-                               kRegularOption, &solution_file, kHighsFilenameDefault);
+        kWriteModelFileString, "Write model file", kRegularOption,
+        &write_model_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
-        kWriteBasisFileString, "Write basis file", kRegularOption, &write_basis_file,
-        kHighsFilenameDefault);
+        kWriteSolutionFileString, "Write solution file", kRegularOption,
+        &solution_file, kHighsFilenameDefault);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kWriteBasisFileString, "Write basis file", kRegularOption,
+        &write_basis_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
     record_bool =
@@ -999,8 +1001,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(
-        kWritePresolvedModelFileString, "Write presolved model file", kRegularOption,
-        &write_presolved_model_file, kHighsFilenameDefault);
+        kWritePresolvedModelFileString, "Write presolved model file",
+        kRegularOption, &write_presolved_model_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
     record_bool = new OptionRecordBool(
@@ -1013,14 +1015,14 @@ class HighsOptions : public HighsOptionsStruct {
         kRegularOption, &mip_detect_symmetry, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_allow_restart",
-                                       "Whether MIP restart is permitted",
-                                       kRegularOption, &mip_allow_restart, true);
+    record_bool = new OptionRecordBool(
+        "mip_allow_restart", "Whether MIP restart is permitted", kRegularOption,
+        &mip_allow_restart, true);
     records.push_back(record_bool);
 
-    record_int = new OptionRecordInt("mip_max_nodes",
-                                     "MIP solver max number of nodes", kRegularOption,
-                                     &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
+    record_int = new OptionRecordInt(
+        "mip_max_nodes", "MIP solver max number of nodes", kRegularOption,
+        &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -1043,10 +1045,10 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 #endif
 
-    record_bool =
-        new OptionRecordBool("mip_improving_solution_save",
-                             "Whether improving MIP solutions should be saved",
-                             kRegularOption, &mip_improving_solution_save, false);
+    record_bool = new OptionRecordBool(
+        "mip_improving_solution_save",
+        "Whether improving MIP solutions should be saved", kRegularOption,
+        &mip_improving_solution_save, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
@@ -1128,19 +1130,19 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "mip_feasibility_tolerance", "MIP integrality tolerance", kRegularOption,
-        &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
+        "mip_feasibility_tolerance", "MIP integrality tolerance",
+        kRegularOption, &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "mip_heuristic_effort", "Effort spent for MIP heuristics", kRegularOption,
-        &mip_heuristic_effort, 0.0, 0.05, 1.0);
+        "mip_heuristic_effort", "Effort spent for MIP heuristics",
+        kRegularOption, &mip_heuristic_effort, 0.0, 0.05, 1.0);
     records.push_back(record_double);
 
-    record_bool =
-        new OptionRecordBool("mip_heuristic_run_feasibility_jump",
-                             "Use the feasibility jump heuristic", kRegularOption,
-                             &mip_heuristic_run_feasibility_jump, true);
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_feasibility_jump",
+        "Use the feasibility jump heuristic", kRegularOption,
+        &mip_heuristic_run_feasibility_jump, true);
     records.push_back(record_bool);
 
     record_bool =
@@ -1153,20 +1155,20 @@ class HighsOptions : public HighsOptionsStruct {
                              kRegularOption, &mip_heuristic_run_rens, true);
     records.push_back(record_bool);
 
-    record_bool =
-        new OptionRecordBool("mip_heuristic_run_root_reduced_cost",
-                             "Use the rootReducedCost heuristic", kRegularOption,
-                             &mip_heuristic_run_root_reduced_cost, true);
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_root_reduced_cost",
+        "Use the rootReducedCost heuristic", kRegularOption,
+        &mip_heuristic_run_root_reduced_cost, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_heuristic_run_zi_round",
-                                       "Use the ZI Round heuristic", kRegularOption,
-                                       &mip_heuristic_run_zi_round, false);
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_zi_round", "Use the ZI Round heuristic",
+        kRegularOption, &mip_heuristic_run_zi_round, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_heuristic_run_shifting",
-                                       "Use the Shifting heuristic", kRegularOption,
-                                       &mip_heuristic_run_shifting, false);
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_shifting", "Use the Shifting heuristic",
+        kRegularOption, &mip_heuristic_run_shifting, false);
     records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(
@@ -1184,8 +1186,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "mip_min_logging_interval", "MIP minimum logging interval", kRegularOption,
-        &mip_min_logging_interval, 0, 5, kHighsInf);
+        "mip_min_logging_interval", "MIP minimum logging interval",
+        kRegularOption, &mip_min_logging_interval, 0, 5, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1205,19 +1207,21 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
-        "pdlp_iteration_limit", "Iteration limit for PDLP solver", kRegularOption,
-        &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
+        "pdlp_iteration_limit", "Iteration limit for PDLP solver",
+        kRegularOption, &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("pdlp_e_restart_method",
-                                     "Restart mode for PDLP solver: 0 => none; "
-                                     "1 => GPU (default); 2 => CPU ",
-                                     kRegularOption, &pdlp_e_restart_method, 0, 1, 2);
+    record_int =
+        new OptionRecordInt("pdlp_e_restart_method",
+                            "Restart mode for PDLP solver: 0 => none; "
+                            "1 => GPU (default); 2 => CPU ",
+                            kRegularOption, &pdlp_e_restart_method, 0, 1, 2);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "pdlp_optimality_tolerance", "PDLP optimality tolerance", kRegularOption,
-        &pdlp_optimality_tolerance, 1e-12, kDefaultKktTolerance, kHighsInf);
+        "pdlp_optimality_tolerance", "PDLP optimality tolerance",
+        kRegularOption, &pdlp_optimality_tolerance, 1e-12, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
@@ -1225,15 +1229,15 @@ class HighsOptions : public HighsOptionsStruct {
         &qp_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("qp_nullspace_limit",
-                                     "Nullspace limit for QP solver", kRegularOption,
-                                     &qp_nullspace_limit, 0, 4000, kHighsIInf);
+    record_int = new OptionRecordInt(
+        "qp_nullspace_limit", "Nullspace limit for QP solver", kRegularOption,
+        &qp_nullspace_limit, 0, 4000, kHighsIInf);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
         "qp_regularization_value", "Regularization value added to the Hessian",
-        kRegularOption, &qp_regularization_value, 0, kHessianRegularizationValue,
-        kHighsInf);
+        kRegularOption, &qp_regularization_value, 0,
+        kHessianRegularizationValue, kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
@@ -1248,8 +1252,8 @@ class HighsOptions : public HighsOptionsStruct {
         " (0/1"
         //        "/2/3)",
         ")",
-        kRegularOption, &iis_strategy, kIisStrategyMin, kIisStrategyFromLpRowPriority,
-        kIisStrategyMax);
+        kRegularOption, &iis_strategy, kIisStrategyMin,
+        kIisStrategyFromLpRowPriority, kIisStrategyMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
@@ -1260,12 +1264,12 @@ class HighsOptions : public HighsOptionsStruct {
 
     // Advanced options
 
-    record_int =
-        new OptionRecordInt("log_dev_level",
-                            "Output development messages: 0 => none; 1 => "
-                            "info; 2 => detailed; 3 => verbose",
-                            kAdvancedOption, &log_dev_level, kHighsLogDevLevelMin,
-                            kHighsLogDevLevelNone, kHighsLogDevLevelMax);
+    record_int = new OptionRecordInt(
+        "log_dev_level",
+        "Output development messages: 0 => none; 1 => "
+        "info; 2 => detailed; 3 => verbose",
+        kAdvancedOption, &log_dev_level, kHighsLogDevLevelMin,
+        kHighsLogDevLevelNone, kHighsLogDevLevelMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("log_githash", "Log the githash",
@@ -1277,10 +1281,10 @@ class HighsOptions : public HighsOptionsStruct {
         kAdvancedOption, &solve_relaxation, false);
     records.push_back(record_bool);
 
-    record_bool =
-        new OptionRecordBool("allow_unbounded_or_infeasible",
-                             "Allow ModelStatus::kUnboundedOrInfeasible",
-                             kAdvancedOption, &allow_unbounded_or_infeasible, false);
+    record_bool = new OptionRecordBool(
+        "allow_unbounded_or_infeasible",
+        "Allow ModelStatus::kUnboundedOrInfeasible", kAdvancedOption,
+        &allow_unbounded_or_infeasible, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
@@ -1296,9 +1300,9 @@ class HighsOptions : public HighsOptionsStruct {
         kAdvancedOption, &lp_presolve_requires_basis_postsolve, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mps_parser_type_free",
-                                       "Use the free format MPS file reader",
-                                       kAdvancedOption, &mps_parser_type_free, true);
+    record_bool = new OptionRecordBool(
+        "mps_parser_type_free", "Use the free format MPS file reader",
+        kAdvancedOption, &mps_parser_type_free, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("use_warm_start",
@@ -1334,21 +1338,21 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "ipx_dualize_strategy", "Strategy for dualizing before IPX", kAdvancedOption,
-        &ipx_dualize_strategy, kIpxDualizeStrategyMin, kIpxDualizeStrategyLukas,
-        kIpxDualizeStrategyMax);
+        "ipx_dualize_strategy", "Strategy for dualizing before IPX",
+        kAdvancedOption, &ipx_dualize_strategy, kIpxDualizeStrategyMin,
+        kIpxDualizeStrategyLukas, kIpxDualizeStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "simplex_dualize_strategy", "Strategy for dualizing before simplex",
-        kAdvancedOption, &simplex_dualize_strategy, kHighsOptionOff, kHighsOptionOff,
-        kHighsOptionOn);
+        kAdvancedOption, &simplex_dualize_strategy, kHighsOptionOff,
+        kHighsOptionOff, kHighsOptionOn);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "simplex_permute_strategy", "Strategy for permuting before simplex",
-        kAdvancedOption, &simplex_permute_strategy, kHighsOptionOff, kHighsOptionOff,
-        kHighsOptionOn);
+        kAdvancedOption, &simplex_permute_strategy, kHighsOptionOff,
+        kHighsOptionOff, kHighsOptionOn);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -1363,24 +1367,24 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "simplex_price_strategy", "Strategy for PRICE in simplex", kAdvancedOption,
-        &simplex_price_strategy, kSimplexPriceStrategyMin,
+        "simplex_price_strategy", "Strategy for PRICE in simplex",
+        kAdvancedOption, &simplex_price_strategy, kSimplexPriceStrategyMin,
         kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("simplex_unscaled_solution_strategy",
-                            "Strategy for solving unscaled LP in simplex",
-                            kAdvancedOption, &simplex_unscaled_solution_strategy,
-                            kSimplexUnscaledSolutionStrategyMin,
-                            kSimplexUnscaledSolutionStrategyRefine,
-                            kSimplexUnscaledSolutionStrategyMax);
+    record_int = new OptionRecordInt(
+        "simplex_unscaled_solution_strategy",
+        "Strategy for solving unscaled LP in simplex", kAdvancedOption,
+        &simplex_unscaled_solution_strategy,
+        kSimplexUnscaledSolutionStrategyMin,
+        kSimplexUnscaledSolutionStrategyRefine,
+        kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("simplex_initial_condition_check",
-                             "Perform initial basis condition check in simplex",
-                             kAdvancedOption, &simplex_initial_condition_check, true);
+    record_bool = new OptionRecordBool(
+        "simplex_initial_condition_check",
+        "Perform initial basis condition check in simplex", kAdvancedOption,
+        &simplex_initial_condition_check, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
@@ -1399,8 +1403,8 @@ class HighsOptions : public HighsOptionsStruct {
         "rebuild_refactor_solution_error_tolerance",
         "Tolerance on solution error when considering refactorization on "
         "simplex rebuild",
-        kAdvancedOption, &rebuild_refactor_solution_error_tolerance, -kHighsInf, 1e-8,
-        kHighsInf);
+        kAdvancedOption, &rebuild_refactor_solution_error_tolerance, -kHighsInf,
+        1e-8, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1412,8 +1416,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "dual_steepest_edge_weight_log_error_threshold",
         "Threshold on dual steepest edge weight errors for Devex switch",
-        kAdvancedOption, &dual_steepest_edge_weight_log_error_threshold, 1.0, 1e1,
-        kHighsInf);
+        kAdvancedOption, &dual_steepest_edge_weight_log_error_threshold, 1.0,
+        1e1, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1426,8 +1430,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "primal_simplex_bound_perturbation_multiplier",
         "Primal simplex bound perturbation multiplier: 0 => no perturbation",
-        kAdvancedOption, &primal_simplex_bound_perturbation_multiplier, 0.0, 1.0,
-        kHighsInf);
+        kAdvancedOption, &primal_simplex_bound_perturbation_multiplier, 0.0,
+        1.0, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1445,8 +1449,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "presolve_reduction_limit",
-        "Limit on number of presolve reductions -1 => no limit", kAdvancedOption,
-        &presolve_reduction_limit, -1, -1, kHighsIInf);
+        "Limit on number of presolve reductions -1 => no limit",
+        kAdvancedOption, &presolve_reduction_limit, -1, -1, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -1466,9 +1470,9 @@ class HighsOptions : public HighsOptionsStruct {
         kAdvancedOption, &presolve_rule_logging, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("presolve_remove_slacks",
-                                       "Remove slacks after presolve", kAdvancedOption,
-                                       &presolve_remove_slacks, false);
+    record_bool = new OptionRecordBool(
+        "presolve_remove_slacks", "Remove slacks after presolve",
+        kAdvancedOption, &presolve_remove_slacks, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
@@ -1491,15 +1495,15 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "start_crossover_tolerance",
-        "Tolerance to be satisfied before IPM crossover will start", kAdvancedOption,
-        &start_crossover_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
-        kHighsInf);
+        "Tolerance to be satisfied before IPM crossover will start",
+        kAdvancedOption, &start_crossover_tolerance, 1e-12,
+        1e-1 * kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_bool = new OptionRecordBool(
         "use_original_HFactor_logic",
-        "Use original HFactor logic for sparse vs hyper-sparse TRANs", kAdvancedOption,
-        &use_original_HFactor_logic, true);
+        "Use original HFactor logic for sparse vs hyper-sparse TRANs",
+        kAdvancedOption, &use_original_HFactor_logic, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
@@ -1507,10 +1511,10 @@ class HighsOptions : public HighsOptionsStruct {
         kAdvancedOption, &less_infeasible_DSE_check, true);
     records.push_back(record_bool);
 
-    record_bool =
-        new OptionRecordBool("less_infeasible_DSE_choose_row",
-                             "Use LiDSE if LP has right properties", kAdvancedOption,
-                             &less_infeasible_DSE_choose_row, true);
+    record_bool = new OptionRecordBool("less_infeasible_DSE_choose_row",
+                                       "Use LiDSE if LP has right properties",
+                                       kAdvancedOption,
+                                       &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
     record_bool =
@@ -1522,15 +1526,15 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("allow_pdlp_cleanup",
                                        "Allow PDLP to be used to clean up "
                                        "model with unknown status and no basis",
-                                       kAdvancedOption, &allow_pdlp_cleanup, true);
-    records.push_back(record_bool);
+                                       kAdvancedOption, &allow_pdlp_cleanup,
+    true); records.push_back(record_bool);
     */
 
-    record_int =
-        new OptionRecordInt("max_centring_steps",
-                            "Maximum number of steps to use (default = 5) "
-                            "when computing the analytic centre",
-                            kAdvancedOption, &max_centring_steps, 0, 5, kHighsIInf);
+    record_int = new OptionRecordInt(
+        "max_centring_steps",
+        "Maximum number of steps to use (default = 5) "
+        "when computing the analytic centre",
+        kAdvancedOption, &max_centring_steps, 0, 5, kHighsIInf);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
