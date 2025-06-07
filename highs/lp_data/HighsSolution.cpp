@@ -199,7 +199,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double primal_infeasibility;
   double relative_primal_infeasibility;
   double dual_infeasibility;
-  double cost;
+  double cost = 0.0;
   double lower;
   double upper;
   double value;

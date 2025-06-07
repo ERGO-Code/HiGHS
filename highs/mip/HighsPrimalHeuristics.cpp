@@ -1152,7 +1152,7 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
         if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
 
         // lambda for finding best shift
-        auto repair = [this, &findPairByIndex, &current_fractional_integers,
+        auto repair = [&findPairByIndex, &current_fractional_integers,
                        &findShiftsByIndex, &shift_iterations_set, &t,
                        &score_min, &j_min, &aij_min, &x_j_min,
                        &current_relax_solution, &moveValueUp](
@@ -1274,8 +1274,8 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
         assert(col >= 0);
         assert(col < mipsolver.numCol());
 
-        auto isBetter = [this, &currentLp, &it, &xi_max, &delta_c_min,
-                         &pind_j_min, &j_min, &x_j_min, &sigma,
+        auto isBetter = [&currentLp, &it, &xi_max, &delta_c_min, &pind_j_min,
+                         &j_min, &x_j_min, &sigma,
                          &i](double col, double xi, double roundedval,
                              HighsInt direction) {
           double c_min = currentLp.col_cost_[col] * (roundedval - it.second);
