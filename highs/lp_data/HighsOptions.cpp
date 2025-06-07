@@ -831,7 +831,8 @@ void reportOptions(FILE* file, const HighsLogOptions& log_options,
     // Only report non-advanced options
     if (option_records[index]->advanced) {
       // Possibly skip the advanced options when creating Md file
-      if (!kAdvancedInDocumentation) continue;
+      if (!kAdvancedInDocumentation &&
+	  file_type == HighsFileType::kMd) continue;
     }
     if (type == HighsOptionType::kBool) {
       reportOption(file, log_options,

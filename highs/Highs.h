@@ -319,10 +319,10 @@ class Highs {
                            const bool report_only_deviations = false);
 
   /**
-   * @brief Returns the number of user-settable options
+   * @brief Returns the number of options
    */
   HighsInt getNumOptions() const {
-    return this->options_.num_user_settable_options_;
+    return this->options_.num_options_;
   }
 
   /**
@@ -405,7 +405,7 @@ class Highs {
    * @brief Get the size of HighsInt
    */
   HighsInt getSizeofHighsInt() const {
-    return sizeof(options_.num_user_settable_options_);
+    return sizeof(options_.num_options_);
   }
 
   /**
