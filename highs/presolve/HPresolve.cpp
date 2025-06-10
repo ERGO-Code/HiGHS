@@ -3165,9 +3165,9 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (isDualImpliedFree(row) && isImpliedFree(col) &&
       analysis_.allow_rule_[kPresolveRuleFreeColSubstitution]) {
     if (model->integrality_[col] == HighsVarType::kInteger) {
-      auto impliedInteger = isImpliedIntegral(col);
-      if (impliedInteger.second != Result::kOk) return impliedInteger.second;
-      if (!impliedInteger.first) return Result::kOk;
+      auto impliedIntegral = isImpliedIntegral(col);
+      if (impliedIntegral.second != Result::kOk) return impliedIntegral.second;
+      if (!impliedIntegral.first) return Result::kOk;
     }
     const bool logging_on = analysis_.logging_on_;
 
