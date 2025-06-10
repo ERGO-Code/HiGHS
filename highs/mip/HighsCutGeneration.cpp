@@ -523,7 +523,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   integerinds.clear();
   integerinds.reserve(rowlen);
 
-  bool strongcg = true;
+  bool strongcg = !onlyInitialCMIRScale;
   double maxabsdelta = 0.0;
   constexpr double maxCMirScale = 1e6;
   constexpr double f0min = 0.005;
@@ -693,7 +693,10 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
   }
 
-  // If inequality has no neg coef on cont vars: Calc strongcg cut
+  // Calc strongcg cut as potential alternative to CMIR
+  if (bestefficacy <= 0 || rowlen == 0) {
+    strongcg = false;
+  }
   if (strongcg) {
     double delta = bestdelta;
     double scale = 1.0 / delta;
@@ -702,7 +705,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     double f0 = scalrhs - downrhs;
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
     // TODO: Should stronger safeguards be used, i.e. multiply delta by 2, if f0 is too large?
-    double k = fast_ceil(1 / f0) - 1;
+    double k = fast_ceil((1 / f0) - kHighsTiny) - 1;
 
     // All coefficients of continuous variables are 0 in strong CG cut
     double sqrnorm = 0;
@@ -712,7 +715,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double scalaj = vals[j] * scale;
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      if (fj <= f0 + 0.001) {
+      if (fj <= f0 + 0.0001) {
         double aj = downaj;
         updateViolationAndNorm(j, aj, viol, sqrnorm);
       }
@@ -760,9 +763,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       HighsCDouble aj = downaj;
       if (fj > f0) {
         if (strongcg) {
-          if (fj - f0 > feastol) {
-            HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0 -
-              kHighsTiny);
+          if (fj - f0 > epsilon) {
+            HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0);
             aj += pj / (k + 1);
           }
         }
@@ -790,7 +792,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
              fabs(checkefficacy) >= 1e30);
     }
     else {
-      // We round conservatively for scoring => actual strongcg cut can be stronger
+      // Rounded conservatively for scoring => strongcg cut can be stronger
       assert(bestefficacy - checkefficacy < 0.001 ||
              fabs(checkefficacy) >= 1e30);
     }
