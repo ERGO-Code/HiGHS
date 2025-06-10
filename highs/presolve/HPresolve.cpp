@@ -388,7 +388,7 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
   if (!skipInputChecks) {
     if (model->integrality_[col] != HighsVarType::kContinuous)
       return StatusResult(false);
-    auto impliedInteger = isImpliedInteger(col);
+    StatusResult impliedInteger = isImpliedInteger(col);
     if (!impliedInteger) return impliedInteger;
   }
 
