@@ -52,7 +52,7 @@ void HpmSolver::solve() {
 
   runIpm();
   refineWithIpx();
-
+  it_->finalResiduals(info_);
   printSummary();
 
   DataCollector::get()->printTimes();
@@ -115,15 +115,6 @@ void HpmSolver::terminate() {
 
   info_.option_nla = options_.nla;
   info_.option_par = options_.parallel;
-
-  // compute final residuals and check if solution is imprecise
-  it_->finalResiduals(info_);
-  if (info_.ipm_status == kIpmStatusPDFeas &&
-      (info_.pd_gap > options_.optimality_tol ||
-       info_.p_res_rel > options_.feasibility_tol ||
-       info_.d_res_rel > options_.feasibility_tol)) {
-    info_.ipm_status = kIpmStatusImprecise;
-  }
 }
 
 bool HpmSolver::prepareIter() {
@@ -229,9 +220,7 @@ void HpmSolver::refineWithIpx() {
 
   if (checkInterrupt()) return;
 
-  if (info_.ipm_status == kIpmStatusImprecise && options_.refine_with_ipx) {
-    Log::printf("\nSolution is imprecise, restarting with IPX\n");
-  } else if (!statusIsOptimal() && options_.refine_with_ipx) {
+  if (!statusIsOptimal() && options_.refine_with_ipx) {
     Log::printf("\nHiGHSpm did not converge, restarting with IPX\n");
   } else if (options_.crossover == kOptionCrossoverOn ||
              options_.crossover == kOptionCrossoverChoose) {
@@ -246,8 +235,6 @@ void HpmSolver::refineWithIpx() {
   info_.ipx_used = true;
 
   info_.ipx_info = ipx_lps_.GetInfo();
-
-  it_->finalResiduals(info_);
 
   // Convert between ipx and highspm status
   info_.ipm_status = IpxToHpmStatus(info_.ipx_info.status_ipm);
