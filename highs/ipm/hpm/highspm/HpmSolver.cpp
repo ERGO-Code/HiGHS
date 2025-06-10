@@ -1557,5 +1557,7 @@ bool HpmSolver::crossoverIsOn() const {
   return options_.crossover == kOptionCrossoverOn ||
          options_.crossover == kOptionCrossoverChoose;
 }
+bool HpmSolver::solved() const { return statusIsSolved(); }
+bool HpmSolver::stopped() const { return statusIsStopped(); }
 
 }  // namespace highspm

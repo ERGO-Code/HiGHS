@@ -108,6 +108,9 @@ class HpmSolver {
                    std::vector<double>& y, std::vector<double>& z) const;
   const HpmInfo& getInfo() const;
 
+  bool solved() const;
+  bool stopped() const;
+
  private:
   // Functions to run the various stages of the ipm
   void runIpm();

@@ -15,10 +15,6 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
-#ifdef HPM
-#include "ipm/hpm/highspm/HpmSolver.h"
-#endif
-
 using std::min;
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
@@ -547,25 +543,38 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
 
   hpm.solve();
 
-  // todo: handle result as in solveLpIpx above
-
   const bool report_solve_data =
       kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
 
   // Get solver and solution information.
   const highspm::HpmInfo hpm_info = hpm.getInfo();
   highspm::Status solve_status = hpm_info.status;
-
   highs_info.ipm_iteration_count += hpm_info.ipm_iter;
   highs_info.crossover_iteration_count += hpm_info.ipx_info.updates_crossover;
 
-  // if (solve_status == ...
+  // Report hpm status
+  const HighsStatus solve_return_status =
+      reportHpmStatus(options, solve_status, hpm);
+  if (solve_return_status == HighsStatus::kError) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+
+  // Report crossover status
+  const HighsStatus crossover_return_status =
+      reportHpmCrossoverStatus(options, hpm_info.ipx_info.status_crossover);
+  if (crossover_return_status == HighsStatus::kError) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+
+  //
+  //
+  // The rest is still to do
+  //
+  //
 
   HighsStatus return_status = HighsStatus::kWarning;
-
-  std::cout << "solve_status" << std::endl;
-  std::cout << solve_status << std::endl;
-  std::cout << std::endl;
 
   if (solve_status == highspm::Status::kStatusPDFeas) {
     // todo: copy solution back etc
@@ -1268,4 +1277,119 @@ void reportSolveData(const HighsLogOptions& log_options,
   highsLogDev(log_options, HighsLogType::kInfo,
               "    Volume increase      = %11.4g\n\n",
               ipx_info.volume_increase);
+}
+
+HighsStatus reportHpmStatus(const HighsOptions& options,
+                            const highspm::Int status,
+                            const highspm::HpmSolver& hpm) {
+  if (hpm.solved()) {
+    highsLogUser(options.log_options, HighsLogType::kInfo, "Hpm: Solved\n");
+    return HighsStatus::kOk;
+  }
+
+  // these are warnings
+  else if (status == highspm::kStatusTimeLimit) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Time limit\n");
+    return HighsStatus::kWarning;
+  } else if (status == highspm::kStatusUserInterrupt) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: User interrupt\n");
+    return HighsStatus::kWarning;
+  } else if (status == highspm::kStatusMaxIter) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Reached maximum iterations\n");
+    return HighsStatus::kWarning;
+  } else if (status == highspm::kStatusNoProgress) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: No progress\n");
+    return HighsStatus::kWarning;
+  } else if (status == highspm::kStatusImprecise) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Imprecise solution\n");
+    return HighsStatus::kWarning;
+  }
+
+  // these are errors
+  else if (status == highspm::kStatusError) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Internal error\n");
+  } else if (status == highspm::kStatusOoM) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Out of memory\n");
+  } else if (status == highspm::kStatusErrorAnalyse) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Error in analyse phase\n");
+  } else if (status == highspm::kStatusErrorFactorise) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Error in factorise phase\n");
+  } else if (status == highspm::kStatusErrorSolve) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Error in solve phase\n");
+  } else if (status == highspm::kStatusBadModel) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Invalid model\n");
+  } else {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: unrecognized status\n");
+  }
+  return HighsStatus::kError;
+}
+
+HighsStatus reportHpmCrossoverStatus(const HighsOptions& options,
+                                     const ipx::Int status) {
+  if (status == IPX_STATUS_not_run) {
+    if (options.run_crossover == kHighsOnString) {
+      // Warn if crossover not run and run_crossover option is "on"
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "Hpm: Crossover not run\n");
+      return HighsStatus::kWarning;
+    }
+    return HighsStatus::kOk;
+  } else if (status == IPX_STATUS_optimal) {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Hpm: Crossover optimal\n");
+    return HighsStatus::kOk;
+  } else if (status == IPX_STATUS_imprecise) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Crossover imprecise\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_primal_infeas) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Crossover primal infeasible\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_dual_infeas) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Crossover dual infeasible\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_user_interrupt) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Crossover user interrupt\n");
+    return HighsStatus::kOk;
+  } else if (status == IPX_STATUS_time_limit) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Crossover reached time limit\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_iter_limit) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Crossover reached iteration limit\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_no_progress) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hpm: Crossover no progress\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_failed) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Crossover failed\n");
+    return HighsStatus::kError;
+  } else if (status == IPX_STATUS_debug) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Crossover debug\n");
+    return HighsStatus::kError;
+  } else {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hpm: Crossover unrecognised status\n");
+    return HighsStatus::kError;
+  }
+  return HighsStatus::kError;
 }

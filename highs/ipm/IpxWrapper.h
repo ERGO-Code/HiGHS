@@ -19,6 +19,10 @@
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsSolution.h"
 
+#ifdef HPM
+#include "ipm/hpm/highspm/HpmSolver.h"
+#endif
+
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
@@ -52,6 +56,13 @@ HighsStatus reportIpxSolveStatus(const HighsOptions& options,
 HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
                                         const ipx::Int status,
                                         const bool ipm_status);
+
+HighsStatus reportHpmStatus(const HighsOptions& options,
+                            const highspm::Int status,
+                            const highspm::HpmSolver& hpm);
+
+HighsStatus reportHpmCrossoverStatus(const HighsOptions& options,
+                                     const ipx::Int status);
 
 bool ipxStatusError(const bool status_error, const HighsOptions& options,
                     std::string message, const int value = -1);
