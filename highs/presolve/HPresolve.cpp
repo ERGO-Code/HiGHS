@@ -3150,7 +3150,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (colDeleted[col]) return Result::kOk;
 
   if (mipsolver != nullptr)
-    HPRESOLVE_CHECKED_CALL(convertImpliedInteger(col, row).result());
+    HPRESOLVE_CHECKED_CALL(
+        static_cast<Result>(convertImpliedInteger(col, row)));
 
   updateColImpliedBounds(row, col, colCoef);
 
@@ -3163,7 +3164,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       analysis_.allow_rule_[kPresolveRuleFreeColSubstitution]) {
     if (model->integrality_[col] == HighsVarType::kInteger) {
       StatusResult impliedIntegral = isImpliedIntegral(col);
-      HPRESOLVE_CHECKED_CALL(impliedIntegral.result());
+      HPRESOLVE_CHECKED_CALL(static_cast<Result>(impliedIntegral));
       if (!impliedIntegral) return Result::kOk;
     }
     const bool logging_on = analysis_.logging_on_;
@@ -3456,8 +3457,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               //     scale);
               transformColumn(postsolve_stack, continuousCol, scale, 0.0);
 
-              HPRESOLVE_CHECKED_CALL(
-                  convertImpliedInteger(continuousCol, -1, true).result());
+              HPRESOLVE_CHECKED_CALL(static_cast<Result>(
+                  convertImpliedInteger(continuousCol, -1, true)));
 
               if (intScale != 1.0) scaleStoredRow(row, intScale, true);
             }
@@ -4088,7 +4089,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       }
     }
 
-    HPRESOLVE_CHECKED_CALL(convertImpliedInteger(col).result());
+    HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
 
     // shift integral variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
@@ -5067,7 +5068,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     }
     if (model->integrality_[col] == HighsVarType::kInteger) {
       StatusResult impliedIntegral = isImpliedIntegral(col);
-      HPRESOLVE_CHECKED_CALL(impliedIntegral.result());
+      HPRESOLVE_CHECKED_CALL(static_cast<Result>(impliedIntegral));
       if (!impliedIntegral) continue;
     }
 
@@ -5651,7 +5652,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
 HPresolve::Result HPresolve::detectImpliedIntegers() {
   for (HighsInt col = 0; col != model->num_col_; ++col)
-    HPRESOLVE_CHECKED_CALL(convertImpliedInteger(col).result());
+    HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
   return Result::kOk;
 }
 
@@ -6133,7 +6134,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           if (rowsizeIntReduction && model->integrality_[duplicateCol] ==
                                          HighsVarType::kImplicitInteger) {
             StatusResult impliedInteger = isImpliedInteger(col);
-            HPRESOLVE_CHECKED_CALL(impliedInteger.result());
+            HPRESOLVE_CHECKED_CALL(static_cast<Result>(impliedInteger));
             if (impliedInteger) convertImpliedInteger(col, -1, true);
           }
           break;

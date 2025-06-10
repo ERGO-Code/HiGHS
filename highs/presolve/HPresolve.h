@@ -151,7 +151,7 @@ class HPresolve {
       my_flag = (result == Result::kOk);
     };
     explicit operator bool() const { return my_flag; };
-    Result result() const { return my_result; };
+    explicit operator Result() const { return my_result; };
   };
 
   HighsPresolveStatus presolve_status_;
