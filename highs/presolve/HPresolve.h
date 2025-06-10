@@ -148,7 +148,7 @@ class HPresolve {
    public:
     StatusResult(bool flag) : my_flag(flag), my_result(Result::kOk) {};
     StatusResult(Result result) : my_result(result) {
-      my_flag = (result != Result::kOk) ? false : true;
+      my_flag = (result == Result::kOk);
     };
     bool success() const { return my_flag; };
     Result result() const { return my_result; };
