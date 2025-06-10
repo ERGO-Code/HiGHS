@@ -42,6 +42,13 @@
     if (__result != presolve::HPresolve::Result::kOk) return __result; \
   } while (0)
 
+#define HPRESOLVE_CHECKED_CALL2(presolveCall)                \
+  do {                                                       \
+    auto __result = presolveCall;                            \
+    if (__result.second != presolve::HPresolve::Result::kOk) \
+      return __result.second;                                \
+  } while (0)
+
 namespace presolve {
 
 #ifndef NDEBUG
@@ -3153,7 +3160,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (colDeleted[col]) return Result::kOk;
 
-  if (mipsolver != nullptr) convertImpliedInteger(col, row);
+  if (mipsolver != nullptr)
+    HPRESOLVE_CHECKED_CALL2(convertImpliedInteger(col, row));
 
   updateColImpliedBounds(row, col, colCoef);
 
@@ -3459,7 +3467,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               //     scale);
               transformColumn(postsolve_stack, continuousCol, scale, 0.0);
 
-              convertImpliedInteger(continuousCol, -1, true);
+              HPRESOLVE_CHECKED_CALL2(
+                  convertImpliedInteger(continuousCol, -1, true));
 
               if (intScale != 1.0) scaleStoredRow(row, intScale, true);
             }
@@ -4090,7 +4099,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       }
     }
 
-    convertImpliedInteger(col);
+    HPRESOLVE_CHECKED_CALL2(convertImpliedInteger(col));
 
     // shift integral variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
@@ -5652,10 +5661,8 @@ HPresolve::Result HPresolve::strengthenInequalities(
 }
 
 HPresolve::Result HPresolve::detectImpliedIntegers() {
-  for (HighsInt col = 0; col != model->num_col_; ++col) {
-    auto impliedInteger = convertImpliedInteger(col);
-    if (impliedInteger.second != Result::kOk) return impliedInteger.second;
-  }
+  for (HighsInt col = 0; col != model->num_col_; ++col)
+    HPRESOLVE_CHECKED_CALL2(convertImpliedInteger(col));
   return Result::kOk;
 }
 
