@@ -389,7 +389,7 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
     if (model->integrality_[col] != HighsVarType::kContinuous)
       return StatusResult(false);
     auto impliedInteger = isImpliedInteger(col);
-    if (!impliedInteger.success()) return impliedInteger;
+    if (!impliedInteger) return impliedInteger;
   }
 
   // convert to implied integer
@@ -3164,7 +3164,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     if (model->integrality_[col] == HighsVarType::kInteger) {
       StatusResult impliedIntegral = isImpliedIntegral(col);
       HPRESOLVE_CHECKED_CALL(impliedIntegral.result());
-      if (!impliedIntegral.success()) return Result::kOk;
+      if (!impliedIntegral) return Result::kOk;
     }
     const bool logging_on = analysis_.logging_on_;
 
@@ -5068,7 +5068,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     if (model->integrality_[col] == HighsVarType::kInteger) {
       StatusResult impliedIntegral = isImpliedIntegral(col);
       HPRESOLVE_CHECKED_CALL(impliedIntegral.result());
-      if (!impliedIntegral.success()) continue;
+      if (!impliedIntegral) continue;
     }
 
     // in the case where the row has length two or the column has length two
@@ -6134,7 +6134,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                                          HighsVarType::kImplicitInteger) {
             StatusResult impliedInteger = isImpliedInteger(col);
             HPRESOLVE_CHECKED_CALL(impliedInteger.result());
-            if (impliedInteger.success()) convertImpliedInteger(col, -1, true);
+            if (impliedInteger) convertImpliedInteger(col, -1, true);
           }
           break;
       }
