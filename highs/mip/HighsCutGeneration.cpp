@@ -722,12 +722,16 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         updateViolationAndNorm(j, aj, viol, sqrnorm);
       }
     }
-    double efficacy = viol / sqrt(sqrnorm);
-    // Use the strong CG cut instead of the CMIR if efficacy is larger
-    if (efficacy < bestefficacy + 1e-5) {
+    if (sqrnorm <= kHighsTiny) {
       strongcg = false;
     } else {
-      bestefficacy = efficacy;
+      double efficacy = viol / sqrt(sqrnorm);
+      // Use the strong CG cut instead of the CMIR if efficacy is larger
+      if (efficacy < bestefficacy + 1e-5) {
+        strongcg = false;
+      } else {
+        bestefficacy = efficacy;
+      }
     }
   }
 
