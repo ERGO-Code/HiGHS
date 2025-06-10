@@ -270,19 +270,18 @@ HPresolve::StatusResult HPresolve::isImpliedIntegral(HighsInt col) {
       if (!rowCoefficientsIntegral(nz.index(), scale)) continue;
 
       if (fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
-        return StatusResult{false, Result::kPrimalInfeasible};
+        return StatusResult(Result::kPrimalInfeasible);
 
-      return StatusResult{true, Result::kOk};
+      return StatusResult(true);
     }
   }
 
-  if (!runDualDetection) return StatusResult{false, Result::kOk};
+  if (!runDualDetection) return StatusResult(false);
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
     // if row coefficients are not integral, variable is not (implied) integral
-    if (!rowCoefficientsIntegral(nz.index(), scale))
-      return StatusResult{false, Result::kOk};
+    if (!rowCoefficientsIntegral(nz.index(), scale)) return StatusResult(false);
     if (model->row_upper_[nz.index()] != kHighsInf) {
       // right-hand side: scale, round down and unscale again
       double rUpper =
@@ -313,7 +312,7 @@ HPresolve::StatusResult HPresolve::isImpliedIntegral(HighsInt col) {
     }
   }
 
-  return StatusResult{true, Result::kOk};
+  return StatusResult(true);
 }
 
 HPresolve::StatusResult HPresolve::isImpliedInteger(HighsInt col) const {
@@ -346,50 +345,49 @@ HPresolve::StatusResult HPresolve::isImpliedInteger(HighsInt col) const {
       double scale = 1.0 / nz.value();
 
       if (fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
-        return StatusResult{false, Result::kPrimalInfeasible};
+        return StatusResult(Result::kPrimalInfeasible);
 
       if (!rowCoefficientsIntegral(nz.index(), scale)) continue;
 
-      return StatusResult{true, Result::kOk};
+      return StatusResult(true);
     }
   }
 
-  if (!runDualDetection) return StatusResult{false, Result::kOk};
+  if (!runDualDetection) return StatusResult(false);
 
   if ((model->col_lower_[col] != -kHighsInf &&
        fractionality(model->col_lower_[col]) > options->small_matrix_value) ||
       (model->col_upper_[col] != kHighsInf &&
        fractionality(model->col_upper_[col]) > options->small_matrix_value))
-    return StatusResult{false, Result::kOk};
+    return StatusResult(false);
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
     if (model->row_upper_[nz.index()] != kHighsInf &&
         fractionality(model->row_upper_[nz.index()] * scale) > primal_feastol)
-      return StatusResult{false, Result::kOk};
+      return StatusResult(false);
 
     if (model->row_lower_[nz.index()] != -kHighsInf &&
         fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
-      return StatusResult{false, Result::kOk};
+      return StatusResult(false);
 
-    if (!rowCoefficientsIntegral(nz.index(), scale))
-      return StatusResult{false, Result::kOk};
+    if (!rowCoefficientsIntegral(nz.index(), scale)) return StatusResult(false);
   }
 
-  return StatusResult{true, Result::kOk};
+  return StatusResult(true);
 }
 
 HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
                                                          HighsInt row,
                                                          bool skipInputChecks) {
   // return if column was deleted
-  if (colDeleted[col]) return StatusResult{false, Result::kOk};
+  if (colDeleted[col]) return StatusResult(false);
 
   // return if column is not continuous or cannot be converted to an implied
   // integer
   if (!skipInputChecks) {
     if (model->integrality_[col] != HighsVarType::kContinuous)
-      return StatusResult{false, Result::kOk};
+      return StatusResult(false);
     auto impliedInteger = isImpliedInteger(col);
     if (!impliedInteger.success()) return impliedInteger;
   }
@@ -409,7 +407,7 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
   // round and update bounds
   changeColLower(col, model->col_lower_[col]);
   changeColUpper(col, model->col_upper_[col]);
-  return StatusResult{true, Result::kOk};
+  return StatusResult(true);
 }
 
 void HPresolve::link(HighsInt pos) {
