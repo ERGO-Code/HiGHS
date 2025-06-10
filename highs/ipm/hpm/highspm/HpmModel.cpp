@@ -14,7 +14,7 @@ Int HpmModel::init(const Int num_var, const Int num_con, const double* obj,
 
   if (checkData(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows, A_vals,
                 constraints))
-    return kIpmStatusBadModel;
+    return kStatusBadModel;
 
   n_orig_ = num_var;
   m_orig_ = num_con;
@@ -60,35 +60,35 @@ Int HpmModel::checkData(const Int num_var, const Int num_con, const double* obj,
                         const Int* A_rows, const double* A_vals,
                         const char* constraints) const {
   // Check if model provided by the user is ok.
-  // Return kIpmStatusBadModel if something is wrong.
+  // Return kStatusBadModel if something is wrong.
 
   // Pointers are valid
   if (!obj || !rhs || !lower || !upper || !A_ptr || !A_rows || !A_vals ||
       !constraints)
-    return kIpmStatusBadModel;
+    return kStatusBadModel;
 
   // Dimensions are valid
-  if (num_var <= 0 || num_con < 0) return kIpmStatusBadModel;
+  if (num_var <= 0 || num_con < 0) return kStatusBadModel;
 
   // Vectors are valid
   for (Int i = 0; i < num_var; ++i)
-    if (!std::isfinite(obj[i])) return kIpmStatusBadModel;
+    if (!std::isfinite(obj[i])) return kStatusBadModel;
   for (Int i = 0; i < num_con; ++i)
-    if (!std::isfinite(rhs[i])) return kIpmStatusBadModel;
+    if (!std::isfinite(rhs[i])) return kStatusBadModel;
   for (Int i = 0; i < num_var; ++i) {
     if (!std::isfinite(lower[i]) && lower[i] != -INFINITY)
-      return kIpmStatusBadModel;
+      return kStatusBadModel;
     if (!std::isfinite(upper[i]) && upper[i] != INFINITY)
-      return kIpmStatusBadModel;
-    if (lower[i] > upper[i]) return kIpmStatusBadModel;
+      return kStatusBadModel;
+    if (lower[i] > upper[i]) return kStatusBadModel;
   }
   for (Int i = 0; i < num_con; ++i)
     if (constraints[i] != '<' && constraints[i] != '=' && constraints[i] != '>')
-      return kIpmStatusBadModel;
+      return kStatusBadModel;
 
   // Matrix is valid
   for (Int i = 0; i < A_ptr[num_var]; ++i)
-    if (!std::isfinite(A_vals[i])) return kIpmStatusBadModel;
+    if (!std::isfinite(A_vals[i])) return kStatusBadModel;
 
   return 0;
 }

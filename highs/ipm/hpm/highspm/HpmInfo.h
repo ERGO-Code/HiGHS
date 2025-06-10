@@ -16,7 +16,7 @@ struct HpmInfo {
   Int m_original, n_original;
 
   // Status of solver, see IpmStatus.h
-  IpmStatus ipm_status = kIpmStatusNotRun;
+  Status status = kStatusNotRun;
 
   // residuals and objectives of final solution
   double p_res_rel, p_res_abs, d_res_rel, d_res_abs, p_obj, d_obj, pd_gap;

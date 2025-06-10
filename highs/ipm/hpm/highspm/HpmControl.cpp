@@ -20,7 +20,7 @@ Int HpmControl::interruptCheck(const Int ipm_iteration_count) const {
 
   if (options_ && options_->time_limit > 0 &&
       elapsed() > options_->time_limit) {
-    return kIpmStatusTimeLimit;
+    return kStatusTimeLimit;
   }
 
   if (callback_) {
@@ -28,7 +28,7 @@ Int HpmControl::interruptCheck(const Int ipm_iteration_count) const {
       callback_->clearHighsCallbackOutput();
       callback_->data_out.ipm_iteration_count = ipm_iteration_count;
       if (callback_->callbackAction(kCallbackIpmInterrupt, "IPM interrupt"))
-        return kIpmStatusUserInterrupt;
+        return kStatusUserInterrupt;
     }
   }
 

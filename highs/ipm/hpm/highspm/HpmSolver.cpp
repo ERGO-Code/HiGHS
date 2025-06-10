@@ -15,7 +15,7 @@ Int HpmSolver::load(const Int num_var, const Int num_con, const double* obj,
                     const char* constraints, double offset) {
   if (model_.init(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows,
                   A_vals, constraints, offset))
-    return kIpmStatusBadModel;
+    return kStatusBadModel;
 
   m_ = model_.m();
   n_ = model_.n();
@@ -41,7 +41,7 @@ void HpmSolver::set(const HpmOptions& options,
 
 void HpmSolver::solve() {
   if (!model_.ready()) {
-    info_.ipm_status = kIpmStatusNotRun;
+    info_.status = kStatusNotRun;
     return;
   }
 
@@ -84,8 +84,8 @@ bool HpmSolver::initialise() {
 
   // initialise linear solver
   LS_.reset(new FactorHiGHSSolver(options_, &info_));
-  if (LS_->setup(model_, options_)) {
-    info_.ipm_status = kIpmStatusError;
+  if (Int status = LS_->setup(model_, options_)) {
+    info_.status = (Status)status;
     return true;
   }
   LS_->clear();
@@ -95,7 +95,7 @@ bool HpmSolver::initialise() {
   // decide number of correctors to use
   maxCorrectors();
 
-  startingPoint();
+  if (startingPoint()) return true;
 
   it_->residual1234();
   it_->computeMu();
@@ -110,8 +110,7 @@ bool HpmSolver::initialise() {
 
 void HpmSolver::terminate() {
   info_.ipm_iter = iter_;
-  if (info_.ipm_status == kIpmStatusNotRun)
-    info_.ipm_status = kIpmStatusMaxIter;
+  if (info_.status == kStatusNotRun) info_.status = kStatusMaxIter;
 
   info_.option_nla = options_.nla;
   info_.option_par = options_.parallel;
@@ -216,14 +215,12 @@ bool HpmSolver::prepareIpx() {
 }
 
 void HpmSolver::refineWithIpx() {
-  if (statusIsStop()) return;
-
+  if (!statusAllowsRefinement()) return;
   if (checkInterrupt()) return;
 
-  if (!statusIsOptimal() && options_.refine_with_ipx) {
+  if (!statusIsSolved() && options_.refine_with_ipx) {
     Log::printf("\nHiGHSpm did not converge, restarting with IPX\n");
-  } else if (options_.crossover == kOptionCrossoverOn ||
-             options_.crossover == kOptionCrossoverChoose) {
+  } else if (statusAllowsCrossover() && crossoverIsOn()) {
     Log::printf("\nHiGHSpm converged, running crossover with IPX\n");
   } else {
     return;
@@ -237,7 +234,7 @@ void HpmSolver::refineWithIpx() {
   info_.ipx_info = ipx_lps_.GetInfo();
 
   // Convert between ipx and highspm status
-  info_.ipm_status = IpxToHpmStatus(info_.ipx_info.status_ipm);
+  info_.status = IpxToHpmStatus(info_.ipx_info.status_ipm);
 
   std::stringstream log_stream;
   log_stream << "IPX reports status: ipm "
@@ -249,7 +246,7 @@ void HpmSolver::refineWithIpx() {
   Log::print(log_stream);
 
   if (info_.ipx_info.status_crossover == IPX_STATUS_optimal) {
-    info_.ipm_status = kIpmStatusBasic;
+    info_.status = kStatusBasic;
   }
 }
 
@@ -279,10 +276,19 @@ bool HpmSolver::solveNewtonSystem(NewtonDir& delta) {
     std::vector<double> res8 = it_->residual8(res7);
 
     // factorise normal equations, if not yet done
-    if (!LS_->valid_ && LS_->factorNE(model_.A(), theta_inv)) goto failure;
+    if (!LS_->valid_)
+      if (Int status = LS_->factorNE(model_.A(), theta_inv)) {
+        Log::printe("Error while factorising normal equations\n");
+        info_.status = (Status)status;
+        return true;
+      }
 
     // solve with normal equations
-    if (LS_->solveNE(res8, delta.y)) goto failure;
+    if (Int status = LS_->solveNE(res8, delta.y)) {
+      Log::printe("Error while solving normal equations\n");
+      info_.status = (Status)status;
+      return true;
+    }
 
     // Compute delta.x
     // Deltax = A^T * Deltay - res7;
@@ -299,19 +305,22 @@ bool HpmSolver::solveNewtonSystem(NewtonDir& delta) {
   // AUGMENTED SYSTEM
   else {
     // factorise augmented system, if not yet done
-    if (!LS_->valid_ && LS_->factorAS(model_.A(), theta_inv)) goto failure;
+    if (!LS_->valid_)
+      if (Int status = LS_->factorAS(model_.A(), theta_inv)) {
+        Log::printe("Error while factorising augmented system\n");
+        info_.status = (Status)status;
+        return true;
+      }
 
     // solve with augmented system
-    if (LS_->solveAS(res7, it_->res1, delta.x, delta.y)) goto failure;
+    if (Int status = LS_->solveAS(res7, it_->res1, delta.x, delta.y)) {
+      Log::printe("Error while solving augmented system\n");
+      info_.status = (Status)status;
+      return true;
+    }
   }
 
   return false;
-
-// Failure occured in factorisation or solve
-failure:
-  Log::printe("Error while solving Newton system\n");
-  info_.ipm_status = kIpmStatusError;
-  return true;
 }
 
 bool HpmSolver::recoverDirection(NewtonDir& delta) {
@@ -368,11 +377,11 @@ bool HpmSolver::recoverDirection(NewtonDir& delta) {
   // Check for NaN of Inf
   if (it_->isDirNan()) {
     Log::printDevInfo("Direction is nan\n");
-    info_.ipm_status = kIpmStatusError;
+    info_.status = kStatusError;
     return true;
   } else if (it_->isDirInf()) {
     Log::printDevInfo("Direction is inf\n");
-    info_.ipm_status = kIpmStatusError;
+    info_.status = kStatusError;
     return true;
   }
   return false;
@@ -538,7 +547,9 @@ void HpmSolver::makeStep() {
   printOutput();
 }
 
-void HpmSolver::startingPoint() {
+bool HpmSolver::startingPoint() {
+  // Return true if an error occurred
+
   std::vector<double>& x = it_->x;
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -568,21 +579,37 @@ void HpmSolver::startingPoint() {
     // temp_m
 
     // factorise A*A^T
-    if (LS_->factorNE(model_.A(), temp_scaling)) goto failure;
+    if (Int status = LS_->factorNE(model_.A(), temp_scaling)) {
+      Log::printe("Error while factorising normal equations\n");
+      info_.status = (Status)status;
+      return true;
+    }
 
-    if (LS_->solveNE(y, temp_m)) goto failure;
+    if (Int status = LS_->solveNE(y, temp_m)) {
+      Log::printe("Error while solving normal equations\n");
+      info_.status = (Status)status;
+      return true;
+    }
 
   } else if (options_.nla == kOptionNlaAugmented) {
     // obtain solution of A*A^T * dx = b-A*x by solving
     // [ -I  A^T] [...] = [ -x]
     // [  A   0 ] [ dx] = [ b ]
 
-    if (LS_->factorAS(model_.A(), temp_scaling)) goto failure;
+    if (Int status = LS_->factorAS(model_.A(), temp_scaling)) {
+      Log::printe("Error while factorising augmented system\n");
+      info_.status = (Status)status;
+      return true;
+    }
 
     std::vector<double> rhs_x(n_);
     for (Int i = 0; i < n_; ++i) rhs_x[i] = -x[i];
     std::vector<double> lhs_x(n_);
-    if (LS_->solveAS(rhs_x, model_.b(), lhs_x, temp_m)) goto failure;
+    if (Int status = LS_->solveAS(rhs_x, model_.b(), lhs_x, temp_m)) {
+      Log::printe("Error while solving augmented system\n");
+      info_.status = (Status)status;
+      return true;
+    }
   }
 
   // compute dx = A^T * (A*A^T)^{-1} * (b-A*x) and store the result in xl
@@ -630,7 +657,11 @@ void HpmSolver::startingPoint() {
     std::fill(temp_m.begin(), temp_m.end(), 0.0);
     model_.A().alphaProductPlusY(1.0, model_.c(), temp_m);
 
-    if (LS_->solveNE(temp_m, y)) goto failure;
+    if (Int status = LS_->solveNE(temp_m, y)) {
+      Log::printe("Error while solvingF normal equations\n");
+      info_.status = (Status)status;
+      return true;
+    }
 
   } else if (options_.nla == kOptionNlaAugmented) {
     // obtain solution of A*A^T * y = A*c by solving
@@ -640,7 +671,11 @@ void HpmSolver::startingPoint() {
     std::vector<double> rhs_y(m_, 0.0);
     std::vector<double> lhs_x(n_);
 
-    if (LS_->solveAS(model_.c(), rhs_y, lhs_x, y)) goto failure;
+    if (Int status = LS_->solveAS(model_.c(), rhs_y, lhs_x, y)) {
+      Log::printe("Error while solving augmented system\n");
+      info_.status = (Status)status;
+      return true;
+    }
   }
   // *********************************************************************
 
@@ -723,11 +758,7 @@ void HpmSolver::startingPoint() {
   }
   // *********************************************************************
 
-  return;
-
-failure:
-  Log::printe("Error while computing starting point\n");
-  info_.ipm_status = kIpmStatusError;
+  return false;
 }
 
 void HpmSolver::sigmaAffine() {
@@ -931,11 +962,11 @@ bool HpmSolver::checkIterate() {
   // Check that iterate is not NaN or Inf
   if (it_->isNan()) {
     Log::printDevInfo("\nIterate is nan\n");
-    info_.ipm_status = kIpmStatusError;
+    info_.status = kStatusError;
     return true;
   } else if (it_->isInf()) {
     Log::printDevInfo("\nIterate is inf\n");
-    info_.ipm_status = kIpmStatusError;
+    info_.status = kStatusError;
     return true;
   }
 
@@ -971,17 +1002,16 @@ bool HpmSolver::checkBadIter() {
     if (pobj_is_large) {
       // problem is likely to be primal unbounded, i.e. dual infeasible
       Log::printf("=== Dual infeasible\n");
-      info_.ipm_status = kIpmStatusDualInfeasible;
+      info_.status = kStatusDualInfeasible;
       terminate = true;
     } else if (dobj_is_large) {
       // problem is likely to be dual unbounded, i.e. primal infeasible
       Log::printf("=== Primal infeasible\n");
-      info_.ipm_status = kIpmStatusPrimalInfeasible;
+      info_.status = kStatusPrimalInfeasible;
       terminate = true;
     } else {
       // Too many bad iterations in a row, abort the solver
-      Log::printf("=== No progress\n");
-      info_.ipm_status = kIpmStatusNoProgress;
+      info_.status = kStatusNoProgress;
       terminate = true;
     }
   }
@@ -997,10 +1027,10 @@ bool HpmSolver::checkTermination() {
   bool terminate = false;
 
   if (feasible && optimal) {
-    if (info_.ipm_status != kIpmStatusPDFeas)
+    if (info_.status != kStatusPDFeas)
       Log::printf("=== Primal-dual feasible point found\n");
 
-    info_.ipm_status = kIpmStatusPDFeas;
+    info_.status = kStatusPDFeas;
 
     if (options_.crossover == kOptionCrossoverOn ||
         options_.crossover == kOptionCrossoverChoose) {
@@ -1021,7 +1051,7 @@ bool HpmSolver::checkInterrupt() {
   bool terminate = false;
   Int status = control_.interruptCheck(iter_);
   if (status) {
-    info_.ipm_status = (IpmStatus)status;
+    info_.status = (Status)status;
     terminate = true;
   }
   return terminate;
@@ -1398,23 +1428,28 @@ void HpmSolver::printSummary() const {
     log_stream << textline("HiGHSpm runtime:")
                << fix(control_.elapsed() - start_time_, 0, 2) << "\n";
 
-  log_stream << textline("Status:") << statusString(info_.ipm_status) << "\n";
+  log_stream << textline("Status:") << statusString(info_.status) << "\n";
   log_stream << textline("iterations:") << integer(iter_) << "\n";
   if (info_.ipx_used)
     log_stream << textline("IPX iterations:") << integer(info_.ipx_info.iter)
                << "\n";
 
-  log_stream << textline("Primal residual rel/abs:")
-             << sci(info_.p_res_abs, 0, 2) << " / "
-             << sci(info_.p_res_rel, 0, 2) << '\n';
+  if (statusAllowsRefinement()) {
+    log_stream << textline("Primal residual rel/abs:")
+               << sci(info_.p_res_abs, 0, 2) << " / "
+               << sci(info_.p_res_rel, 0, 2) << '\n';
 
-  log_stream << textline("Dual residual rel/abs:") << sci(info_.d_res_abs, 0, 2)
-             << " / " << sci(info_.d_res_rel, 0, 2) << '\n';
+    log_stream << textline("Dual residual rel/abs:")
+               << sci(info_.d_res_abs, 0, 2) << " / "
+               << sci(info_.d_res_rel, 0, 2) << '\n';
 
-  log_stream << textline("Primal objective") << sci(info_.p_obj, 0, 8) << '\n';
-  log_stream << textline("Dual objective") << sci(info_.d_obj, 0, 8) << '\n';
+    log_stream << textline("Primal objective") << sci(info_.p_obj, 0, 8)
+               << '\n';
+    log_stream << textline("Dual objective") << sci(info_.d_obj, 0, 8) << '\n';
 
-  log_stream << textline("Primal-dual gap:") << sci(info_.pd_gap, 0, 2) << '\n';
+    log_stream << textline("Primal-dual gap:") << sci(info_.pd_gap, 0, 2)
+               << '\n';
+  }
 
   if (Log::debug(1)) {
     log_stream << textline("Correctors:") << integer(info_.correctors) << '\n';
@@ -1508,12 +1543,19 @@ void HpmSolver::maxCorrectors() {
   }
 }
 
-bool HpmSolver::statusIsOptimal() const {
-  return info_.ipm_status >= kIpmStatusOptimal;
+bool HpmSolver::statusIsSolved() const { return info_.status >= kStatusSolved; }
+bool HpmSolver::statusIsStopped() const {
+  return info_.status >= kStatusStop && info_.status < kStatusSolved;
 }
-bool HpmSolver::statusIsStop() const {
-  return info_.ipm_status >= kIpmStatusStop &&
-         info_.ipm_status < kIpmStatusOptimal;
+bool HpmSolver::statusAllowsCrossover() const {
+  return info_.status >= kStatusPDFeas;
+}
+bool HpmSolver::statusAllowsRefinement() const {
+  return info_.status < kStatusStop || info_.status >= kStatusPDFeas;
+}
+bool HpmSolver::crossoverIsOn() const {
+  return options_.crossover == kOptionCrossoverOn ||
+         options_.crossover == kOptionCrossoverChoose;
 }
 
 }  // namespace highspm

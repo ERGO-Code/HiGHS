@@ -554,8 +554,10 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
 
   // Get solver and solution information.
   const highspm::HpmInfo hpm_info = hpm.getInfo();
+  highspm::Status solve_status = hpm_info.status;
 
-  highspm::IpmStatus solve_status = hpm_info.ipm_status;
+  highs_info.ipm_iteration_count += hpm_info.ipm_iter;
+  highs_info.crossover_iteration_count += hpm_info.ipx_info.updates_crossover;
 
   // if (solve_status == ...
 
@@ -565,7 +567,7 @@ HighsStatus solveLpHpm(const HighsOptions& options, HighsTimer& timer,
   std::cout << solve_status << std::endl;
   std::cout << std::endl;
 
-  if (solve_status == highspm::IpmStatus::kIpmStatusPDFeas) {
+  if (solve_status == highspm::Status::kStatusPDFeas) {
     // todo: copy solution back etc
 
     // todo: not sure where this is set with ipx

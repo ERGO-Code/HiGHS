@@ -28,12 +28,12 @@ Int getNE(const HighsSparseMatrix& A, std::vector<Int>& ptr,
   std::vector<double> theta;
   HighsSparseMatrix AAt;
   Int status = computeLowerAThetaAT(A, theta, AAt, max_num_nz);
-  if (status) return kLinearSolverStatusErrorOom;
+  if (status) return status;
 
   rows = std::move(AAt.index_);
   ptr = std::move(AAt.start_);
 
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 Int getAS(const HighsSparseMatrix& A, std::vector<Int>& ptr,
@@ -70,7 +70,7 @@ Int getAS(const HighsSparseMatrix& A, std::vector<Int>& ptr,
     ptr[nA + i + 1] = ptr[nA + i] + 1;
   }
 
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 Int FactorHiGHSSolver::setup(const HpmModel& model, HpmOptions& options) {
@@ -78,7 +78,7 @@ Int FactorHiGHSSolver::setup(const HpmModel& model, HpmOptions& options) {
   setParallel(options);
 
   S_.print(Log::debug(1));
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
@@ -129,7 +129,7 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
   // factorise matrix
   clock.start();
   Factorise factorise(S_, rowsLower, ptrLower, valLower);
-  if (factorise.run(N_)) return kLinearSolverStatusErrorFactorise;
+  if (factorise.run(N_)) return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
     info_->factor_number++;
@@ -137,7 +137,7 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
 
   this->valid_ = true;
   use_as_ = true;
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
@@ -164,7 +164,7 @@ Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
   // factorise
   clock.start();
   Factorise factorise(S_, AAt.index_, AAt.start_, AAt.value_);
-  if (factorise.run(N_)) return kLinearSolverStatusErrorFactorise;
+  if (factorise.run(N_)) return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
     info_->factor_number++;
@@ -172,7 +172,7 @@ Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
 
   this->valid_ = true;
   use_as_ = false;
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
@@ -190,7 +190,7 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
     info_->solve_number += solves;
   }
 
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
@@ -218,7 +218,7 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   lhs_x = std::vector<double>(rhs.begin(), rhs.begin() + n);
   lhs_y = std::vector<double>(rhs.begin() + n, rhs.end());
 
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 Int computeLowerAThetaAT(const HighsSparseMatrix& matrix,
@@ -274,8 +274,7 @@ Int computeLowerAThetaAT(const HighsSparseMatrix& matrix,
 
       non_zero_values.emplace_back(iRow, iCol, value);
       const Int num_new_nz = 1;
-      if (AAT_num_nz + num_new_nz >= max_num_nz)
-        return kLinearSolverStatusErrorOom;
+      if (AAT_num_nz + num_new_nz >= max_num_nz) return kStatusOoM;
       AAT.start_[iRow + 1]++;
       AAT_num_nz += num_new_nz;
       AAT_col_in_index[iCol] = false;
@@ -305,7 +304,7 @@ Int computeLowerAThetaAT(const HighsSparseMatrix& matrix,
     AAT.p_end_[i] = current_positions[i];
   }
   AAT.p_end_.clear();
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 double FactorHiGHSSolver::flops() const { return S_.flops(); }
@@ -364,7 +363,7 @@ Int FactorHiGHSSolver::choose(const HpmModel& model, HpmOptions& options) {
     info_->max_col_density = model.maxColDensity();
   }
 
-  Int status = kLinearSolverStatusOk;
+  Int status = kStatusOk;
 
   std::stringstream log_stream;
 
@@ -376,7 +375,7 @@ Int FactorHiGHSSolver::choose(const HpmModel& model, HpmOptions& options) {
     options.nla = kOptionNlaNormEq;
     log_stream << textline("Newton system:") << "NE preferred (AS failed)\n";
   } else if (failure_AS && failure_NE) {
-    status = kLinearSolverStatusErrorAnalyse;
+    status = kStatusErrorAnalyse;
     Log::printe("Both NE and AS failed analyse phase\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
@@ -407,7 +406,7 @@ Int FactorHiGHSSolver::choose(const HpmModel& model, HpmOptions& options) {
 
   Log::print(log_stream);
 
-  if (status != kLinearSolverStatusErrorAnalyse) {
+  if (status != kStatusErrorAnalyse) {
     if (options.nla == kOptionNlaAugmented) {
       S_ = std::move(symb_AS);
     } else {
@@ -432,7 +431,7 @@ Int FactorHiGHSSolver::setNla(const HpmModel& model, HpmOptions& options) {
       Analyse analyse(S_, rowsLower, ptrLower, model.A().num_col_);
       if (analyse.run()) {
         Log::printe("AS requested, failed analyse phase\n");
-        return kLinearSolverStatusErrorAnalyse;
+        return kStatusErrorAnalyse;
       }
       if (info_) info_->analyse_AS_time = clock.stop();
       log_stream << textline("Newton system:") << "AS requested\n";
@@ -443,13 +442,13 @@ Int FactorHiGHSSolver::setNla(const HpmModel& model, HpmOptions& options) {
       Int NE_status = getNE(model.A(), ptrLower, rowsLower);
       if (NE_status) {
         Log::printe("NE requested, matrix is too large\n");
-        return kLinearSolverStatusErrorOom;
+        return kStatusOoM;
       }
       clock.start();
       Analyse analyse(S_, rowsLower, ptrLower, 0);
       if (analyse.run()) {
         Log::printe("NE requested, failed analyse phase\n");
-        return kLinearSolverStatusErrorAnalyse;
+        return kStatusErrorAnalyse;
       }
       if (info_) info_->analyse_NE_time = clock.stop();
       log_stream << textline("Newton system:") << "NE requested\n";
@@ -457,14 +456,14 @@ Int FactorHiGHSSolver::setNla(const HpmModel& model, HpmOptions& options) {
     }
 
     case kOptionNlaChoose: {
-      if (choose(model, options)) return kLinearSolverStatusErrorAnalyse;
+      if (Int status = choose(model, options)) return status;
       break;
     }
   }
 
   Log::print(log_stream);
 
-  return kLinearSolverStatusOk;
+  return kStatusOk;
 }
 
 void FactorHiGHSSolver::setParallel(HpmOptions& options) {

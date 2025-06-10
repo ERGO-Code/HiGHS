@@ -223,7 +223,7 @@ class HpmSolver {
   // Compute the Mehrotra starting point.
   // This requires to solve two linear systems with matrix A*A^T.
   // ===================================================================================
-  void startingPoint();
+  bool startingPoint();
 
   // ===================================================================================
   // Compute the sigma to use for affine scaling direction or correctors, based
@@ -296,12 +296,13 @@ class HpmSolver {
   bool checkInterrupt();
 
   // ===================================================================================
-  // Check if the current ipm status belongs to the optimal group (i.e., solver
-  // converged), or the stop group (i.e., the solver should not continue, for
-  // example with refinement with ipx).
+  // Check if the current status has various properties.
   // ===================================================================================
-  bool statusIsOptimal() const;
-  bool statusIsStop() const;
+  bool statusIsSolved() const;
+  bool statusIsStopped() const;
+  bool statusAllowsRefinement() const;
+  bool statusAllowsCrossover() const;
+  bool crossoverIsOn() const;
 
   // ===================================================================================
   // Compute the normwise and componentwise backward error for the large 6x6
