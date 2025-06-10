@@ -42,13 +42,6 @@
     if (__result != presolve::HPresolve::Result::kOk) return __result; \
   } while (0)
 
-#define HPRESOLVE_CHECKED_CALL2(presolveCall)                \
-  do {                                                       \
-    auto __result = presolveCall;                            \
-    if (__result.second != presolve::HPresolve::Result::kOk) \
-      return __result.second;                                \
-  } while (0)
-
 namespace presolve {
 
 #ifndef NDEBUG
@@ -247,7 +240,7 @@ bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
   return isUbndNegative;
 }
 
-std::pair<bool, HPresolve::Result> HPresolve::isImpliedIntegral(HighsInt col) {
+HPresolve::StatusResult HPresolve::isImpliedIntegral(HighsInt col) {
   // check if the integer constraint on a variable is implied by the model
   assert(model->integrality_[col] == HighsVarType::kInteger);
 
@@ -277,19 +270,19 @@ std::pair<bool, HPresolve::Result> HPresolve::isImpliedIntegral(HighsInt col) {
       if (!rowCoefficientsIntegral(nz.index(), scale)) continue;
 
       if (fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
-        return std::make_pair(false, Result::kPrimalInfeasible);
+        return StatusResult{false, Result::kPrimalInfeasible};
 
-      return std::make_pair(true, Result::kOk);
+      return StatusResult{true, Result::kOk};
     }
   }
 
-  if (!runDualDetection) return std::make_pair(false, Result::kOk);
+  if (!runDualDetection) return StatusResult{false, Result::kOk};
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
     // if row coefficients are not integral, variable is not (implied) integral
     if (!rowCoefficientsIntegral(nz.index(), scale))
-      return std::make_pair(false, Result::kOk);
+      return StatusResult{false, Result::kOk};
     if (model->row_upper_[nz.index()] != kHighsInf) {
       // right-hand side: scale, round down and unscale again
       double rUpper =
@@ -320,11 +313,10 @@ std::pair<bool, HPresolve::Result> HPresolve::isImpliedIntegral(HighsInt col) {
     }
   }
 
-  return std::make_pair(true, Result::kOk);
+  return StatusResult{true, Result::kOk};
 }
 
-std::pair<bool, HPresolve::Result> HPresolve::isImpliedInteger(
-    HighsInt col) const {
+HPresolve::StatusResult HPresolve::isImpliedInteger(HighsInt col) const {
   // check if a continuous variable is implied integer
   assert(model->integrality_[col] == HighsVarType::kContinuous);
 
@@ -353,54 +345,53 @@ std::pair<bool, HPresolve::Result> HPresolve::isImpliedInteger(
       runDualDetection = false;
       double scale = 1.0 / nz.value();
 
-      if (fractionality(model->row_lower_[nz.index()] * scale) >
-          primal_feastol) {
-        return std::make_pair(false, Result::kPrimalInfeasible);
-      }
+      if (fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
+        return StatusResult{false, Result::kPrimalInfeasible};
 
       if (!rowCoefficientsIntegral(nz.index(), scale)) continue;
 
-      return std::make_pair(true, Result::kOk);
+      return StatusResult{true, Result::kOk};
     }
   }
 
-  if (!runDualDetection) return std::make_pair(false, Result::kOk);
+  if (!runDualDetection) return StatusResult{false, Result::kOk};
 
   if ((model->col_lower_[col] != -kHighsInf &&
        fractionality(model->col_lower_[col]) > options->small_matrix_value) ||
       (model->col_upper_[col] != kHighsInf &&
        fractionality(model->col_upper_[col]) > options->small_matrix_value))
-    return std::make_pair(false, Result::kOk);
+    return StatusResult{false, Result::kOk};
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
     if (model->row_upper_[nz.index()] != kHighsInf &&
         fractionality(model->row_upper_[nz.index()] * scale) > primal_feastol)
-      return std::make_pair(false, Result::kOk);
+      return StatusResult{false, Result::kOk};
 
     if (model->row_lower_[nz.index()] != -kHighsInf &&
         fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
-      return std::make_pair(false, Result::kOk);
+      return StatusResult{false, Result::kOk};
 
     if (!rowCoefficientsIntegral(nz.index(), scale))
-      return std::make_pair(false, Result::kOk);
+      return StatusResult{false, Result::kOk};
   }
 
-  return std::make_pair(true, Result::kOk);
+  return StatusResult{true, Result::kOk};
 }
 
-std::pair<bool, HPresolve::Result> HPresolve::convertImpliedInteger(
-    HighsInt col, HighsInt row, bool skipInputChecks) {
+HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
+                                                         HighsInt row,
+                                                         bool skipInputChecks) {
   // return if column was deleted
-  if (colDeleted[col]) return std::make_pair(false, Result::kOk);
+  if (colDeleted[col]) return StatusResult{false, Result::kOk};
 
   // return if column is not continuous or cannot be converted to an implied
   // integer
   if (!skipInputChecks) {
     if (model->integrality_[col] != HighsVarType::kContinuous)
-      return std::make_pair(false, Result::kOk);
+      return StatusResult{false, Result::kOk};
     auto impliedInteger = isImpliedInteger(col);
-    if (!impliedInteger.first) return impliedInteger;
+    if (!impliedInteger.success()) return impliedInteger;
   }
 
   // convert to implied integer
@@ -418,7 +409,7 @@ std::pair<bool, HPresolve::Result> HPresolve::convertImpliedInteger(
   // round and update bounds
   changeColLower(col, model->col_lower_[col]);
   changeColUpper(col, model->col_upper_[col]);
-  return std::make_pair(true, Result::kOk);
+  return StatusResult{true, Result::kOk};
 }
 
 void HPresolve::link(HighsInt pos) {
@@ -3161,7 +3152,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (colDeleted[col]) return Result::kOk;
 
   if (mipsolver != nullptr)
-    HPRESOLVE_CHECKED_CALL2(convertImpliedInteger(col, row));
+    HPRESOLVE_CHECKED_CALL(convertImpliedInteger(col, row).result());
 
   updateColImpliedBounds(row, col, colCoef);
 
@@ -3173,9 +3164,9 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (isDualImpliedFree(row) && isImpliedFree(col) &&
       analysis_.allow_rule_[kPresolveRuleFreeColSubstitution]) {
     if (model->integrality_[col] == HighsVarType::kInteger) {
-      auto impliedIntegral = isImpliedIntegral(col);
-      if (impliedIntegral.second != Result::kOk) return impliedIntegral.second;
-      if (!impliedIntegral.first) return Result::kOk;
+      StatusResult impliedIntegral = isImpliedIntegral(col);
+      HPRESOLVE_CHECKED_CALL(impliedIntegral.result());
+      if (!impliedIntegral.success()) return Result::kOk;
     }
     const bool logging_on = analysis_.logging_on_;
 
@@ -3467,8 +3458,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               //     scale);
               transformColumn(postsolve_stack, continuousCol, scale, 0.0);
 
-              HPRESOLVE_CHECKED_CALL2(
-                  convertImpliedInteger(continuousCol, -1, true));
+              HPRESOLVE_CHECKED_CALL(
+                  convertImpliedInteger(continuousCol, -1, true).result());
 
               if (intScale != 1.0) scaleStoredRow(row, intScale, true);
             }
@@ -4099,7 +4090,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       }
     }
 
-    HPRESOLVE_CHECKED_CALL2(convertImpliedInteger(col));
+    HPRESOLVE_CHECKED_CALL(convertImpliedInteger(col).result());
 
     // shift integral variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
@@ -5077,9 +5068,9 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
       continue;
     }
     if (model->integrality_[col] == HighsVarType::kInteger) {
-      auto impliedIntegral = isImpliedIntegral(col);
-      if (impliedIntegral.second != Result::kOk) return impliedIntegral.second;
-      if (!impliedIntegral.first) continue;
+      StatusResult impliedIntegral = isImpliedIntegral(col);
+      HPRESOLVE_CHECKED_CALL(impliedIntegral.result());
+      if (!impliedIntegral.success()) continue;
     }
 
     // in the case where the row has length two or the column has length two
@@ -5662,7 +5653,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
 HPresolve::Result HPresolve::detectImpliedIntegers() {
   for (HighsInt col = 0; col != model->num_col_; ++col)
-    HPRESOLVE_CHECKED_CALL2(convertImpliedInteger(col));
+    HPRESOLVE_CHECKED_CALL(convertImpliedInteger(col).result());
   return Result::kOk;
 }
 
@@ -6143,10 +6134,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           // merged continuous column is implicit integer after merge
           if (rowsizeIntReduction && model->integrality_[duplicateCol] ==
                                          HighsVarType::kImplicitInteger) {
-            auto impliedInteger = isImpliedInteger(col);
-            if (impliedInteger.second != Result::kOk)
-              return impliedInteger.second;
-            if (impliedInteger.first) convertImpliedInteger(col, -1, true);
+            StatusResult impliedInteger = isImpliedInteger(col);
+            HPRESOLVE_CHECKED_CALL(impliedInteger.result());
+            if (impliedInteger.success()) convertImpliedInteger(col, -1, true);
           }
           break;
       }

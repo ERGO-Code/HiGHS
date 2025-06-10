@@ -139,6 +139,19 @@ class HPresolve {
     kDualInfeasible,
     kStopped,
   };
+
+  struct StatusResult {
+   private:
+    bool my_flag;
+    Result my_result;
+
+   public:
+      StatusResult(bool flag, Result result) : my_flag(flag), my_result(result) {};
+    bool success() const { return my_flag; };
+    Result result() const { return my_result; };
+    bool resultOk() const { return (my_result == Result::kOk); };
+  };
+
   HighsPresolveStatus presolve_status_;
   HPresolveAnalysis analysis_;
 
@@ -183,12 +196,12 @@ class HPresolve {
 
   bool isImpliedEquationAtUpper(HighsInt row) const;
 
-  std::pair<bool, HPresolve::Result> isImpliedIntegral(HighsInt col);
+  StatusResult isImpliedIntegral(HighsInt col);
 
-  std::pair<bool, Result> isImpliedInteger(HighsInt col) const;
+  StatusResult isImpliedInteger(HighsInt col) const;
 
-  std::pair<bool, HPresolve::Result> convertImpliedInteger(
-      HighsInt col, HighsInt row = -1, bool skipInputChecks = false);
+  StatusResult convertImpliedInteger(HighsInt col, HighsInt row = -1,
+                                     bool skipInputChecks = false);
 
   bool isLowerImplied(HighsInt col) const;
 
