@@ -183,12 +183,12 @@ class HPresolve {
 
   bool isImpliedEquationAtUpper(HighsInt row) const;
 
-  bool isImpliedIntegral(HighsInt col);
+  std::pair<bool, HPresolve::Result> isImpliedIntegral(HighsInt col);
 
-  bool isImpliedInteger(HighsInt col);
+  std::pair<bool, Result> isImpliedInteger(HighsInt col) const;
 
-  bool convertImpliedInteger(HighsInt col, HighsInt row = -1,
-                             bool skipInputChecks = false);
+  std::pair<bool, HPresolve::Result> convertImpliedInteger(
+      HighsInt col, HighsInt row = -1, bool skipInputChecks = false);
 
   bool isLowerImplied(HighsInt col) const;
 
@@ -375,7 +375,7 @@ class HPresolve {
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
                                 HighsInt& num_strenghtened);
 
-  HighsInt detectImpliedIntegers();
+  HPresolve::Result detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
 
