@@ -146,10 +146,10 @@ class HPresolve {
     Result my_result;
 
    public:
-      StatusResult(bool flag, Result result) : my_flag(flag), my_result(result) {};
+    StatusResult(bool flag, Result result)
+        : my_flag(flag), my_result(result) {};
     bool success() const { return my_flag; };
     Result result() const { return my_result; };
-    bool resultOk() const { return (my_result == Result::kOk); };
   };
 
   HighsPresolveStatus presolve_status_;
