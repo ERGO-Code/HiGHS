@@ -704,7 +704,6 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     double downrhs = fast_floor(scalrhs);
     double f0 = scalrhs - downrhs;
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
-    // TODO: Should stronger safeguards be used, i.e. multiply delta by 2, if f0 is too large?
     double k = fast_ceil((1 / f0) - kHighsTiny) - 1;
 
     // All coefficients of continuous variables are 0 in strong CG cut
@@ -715,7 +714,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double scalaj = vals[j] * scale;
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      if (fj <= f0 + 0.0001) {
+      if (fj <= f0 + 1e-5) {
         double aj = downaj;
         updateViolationAndNorm(j, aj, viol, sqrnorm);
       }
@@ -727,7 +726,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
     double efficacy = viol / sqrt(sqrnorm);
     // Use the strong CG cut instead of the CMIR if efficacy is larger
-    if (efficacy < bestefficacy + 10 * feastol) {
+    if (efficacy < bestefficacy + 1e-5) {
       strongcg = false;
     }
     else {
