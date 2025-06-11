@@ -703,34 +703,40 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     double downrhs = fast_floor(scalrhs);
     double f0 = scalrhs - downrhs;
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
+    // Skip numerically troublesome cuts
     double k = fast_ceil((1 / f0) - epsilon) - 1;
-
-    // All coefficients of continuous variables are 0 in strong CG cut
-    double sqrnorm = 0;
-    double viol = -downrhs;
-
-    for (HighsInt j : integerinds) {
-      double scalaj = vals[j] * scale;
-      double downaj = fast_floor(scalaj + kHighsTiny);
-      double fj = scalaj - downaj;
-      if (fj <= f0 + 1e-5) {
-        double aj = downaj;
-        updateViolationAndNorm(j, aj, viol, sqrnorm);
-      } else {
-        double pj = fast_ceil(k * (fj - f0) * oneoveroneminusf0 - kHighsTiny);
-        double aj = downaj + (pj / (k + 1));
-        updateViolationAndNorm(j, aj, viol, sqrnorm);
-      }
-    }
-    if (sqrnorm <= kHighsTiny) {
+    double checkk = fast_ceil((1 / f0) + epsilon) - 1;
+    if (fabs(k - checkk) >= 0.5) {
       strongcg = false;
     } else {
-      double efficacy = viol / sqrt(sqrnorm);
-      // Use the strong CG cut instead of the CMIR if efficacy is larger
-      if (efficacy < bestefficacy + 1e-5) {
+      // All coefficients of continuous variables are 0 in strong CG cut
+      double sqrnorm = 0;
+      double viol = -downrhs;
+
+      for (HighsInt j : integerinds) {
+        double scalaj = vals[j] * scale;
+        double downaj = fast_floor(scalaj + kHighsTiny);
+        double fj = scalaj - downaj;
+        if (fj <= f0 + 1e-5) {
+          double aj = downaj;
+          updateViolationAndNorm(j, aj, viol, sqrnorm);
+        } else {
+          double pj = fast_ceil(
+            k * (fj - f0) * oneoveroneminusf0 - kHighsTiny);
+          double aj = downaj + (pj / (k + 1));
+          updateViolationAndNorm(j, aj, viol, sqrnorm);
+        }
+      }
+      if (sqrnorm <= kHighsTiny) {
         strongcg = false;
       } else {
-        bestefficacy = efficacy;
+        double efficacy = viol / sqrt(sqrnorm);
+        // Use the strong CG cut instead of the CMIR if efficacy is larger
+        if (efficacy < bestefficacy + 1e-5) {
+          strongcg = false;
+        } else {
+          bestefficacy = efficacy;
+        }
       }
     }
   }
