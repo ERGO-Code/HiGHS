@@ -717,12 +717,12 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         double scalaj = vals[j] * scale;
         double downaj = fast_floor(scalaj + kHighsTiny);
         double fj = scalaj - downaj;
-        if (fj <= f0 + 1e-5) {
+        if (fj <= f0 + 1e-6) {
           double aj = downaj;
           updateViolationAndNorm(j, aj, viol, sqrnorm);
         } else {
-          double pj = fast_ceil(
-            k * (fj - f0) * oneoveroneminusf0 - kHighsTiny);
+          double pj =
+            fast_ceil(k * (fj - f0) * oneoveroneminusf0 - (10 * epsilon));
           double aj = downaj + (pj / (k + 1));
           updateViolationAndNorm(j, aj, viol, sqrnorm);
         }
@@ -732,7 +732,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       } else {
         double efficacy = viol / sqrt(sqrnorm);
         // Use the strong CG cut instead of the CMIR if efficacy is larger
-        if (efficacy < bestefficacy + 1e-5) {
+        if (efficacy < bestefficacy + 1e-6) {
           strongcg = false;
         } else {
           bestefficacy = efficacy;
@@ -770,7 +770,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       if (fj > f0) {
         if (strongcg) {
           if (fj - f0 > epsilon) {
-            HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0);
+            HighsCDouble pj =
+              ceil(k * (fj - f0) * oneoveroneminusf0 - epsilon);
             aj += pj / (k + 1);
           }
         } else {
