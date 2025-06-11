@@ -108,8 +108,10 @@ class HpmSolver {
                    std::vector<double>& y, std::vector<double>& z) const;
   const HpmInfo& getInfo() const;
 
+  // check the status of the solver
   bool solved() const;
   bool stopped() const;
+  bool failed() const;
 
  private:
   // Functions to run the various stages of the ipm
@@ -303,7 +305,8 @@ class HpmSolver {
   // ===================================================================================
   bool statusIsSolved() const;
   bool statusIsStopped() const;
-  bool statusAllowsRefinement() const;
+  bool statusIsFailed() const;
+  bool statusNeedsRefinement() const;
   bool statusAllowsCrossover() const;
   bool crossoverIsOn() const;
 

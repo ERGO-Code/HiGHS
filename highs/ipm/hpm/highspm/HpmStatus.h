@@ -15,28 +15,28 @@ enum Status {
   // used only to return positive status
   kStatusOk,
 
-  // solver did not converge and does not have errors
+  // Stopped status: solver did not converge and does not have errors
   kStatusNotRun,
-  kStatusMaxIter,
   kStatusNoProgress,
-  kStatusImprecise,
+  kStatusMaxIter,
+  kStatusTimeLimit,
+  kStatusUserInterrupt,
 
-  // solver has some error or interrupt
-  kStatusStop,
+  // Failed status: solver has some error or interrupt
+  kStatusFailed,
   kStatusError,
   kStatusOoM,
   kStatusErrorAnalyse,
   kStatusErrorFactorise,
   kStatusErrorSolve,
   kStatusBadModel,
-  kStatusTimeLimit,
-  kStatusUserInterrupt,
   kStatusUnknown,
 
-  // solver successfull
+  // Solved status: solver found a solution
   kStatusSolved,
   kStatusPrimalInfeasible,
   kStatusDualInfeasible,
+  kStatusImprecise,
   kStatusPDFeas,
   kStatusBasic
 };

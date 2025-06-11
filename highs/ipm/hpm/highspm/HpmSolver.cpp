@@ -41,7 +41,7 @@ void HpmSolver::set(const HpmOptions& options,
 
 void HpmSolver::solve() {
   if (!model_.ready()) {
-    info_.status = kStatusNotRun;
+    info_.status = kStatusBadModel;
     return;
   }
 
@@ -215,10 +215,9 @@ bool HpmSolver::prepareIpx() {
 }
 
 void HpmSolver::refineWithIpx() {
-  if (!statusAllowsRefinement()) return;
   if (checkInterrupt()) return;
 
-  if (!statusIsSolved() && options_.refine_with_ipx) {
+  if (statusNeedsRefinement() && options_.refine_with_ipx) {
     Log::printf("\nHiGHSpm did not converge, restarting with IPX\n");
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
     Log::printf("\nHiGHSpm converged, running crossover with IPX\n");
@@ -1434,7 +1433,7 @@ void HpmSolver::printSummary() const {
     log_stream << textline("IPX iterations:") << integer(info_.ipx_info.iter)
                << "\n";
 
-  if (statusAllowsRefinement()) {
+  if (info_.status >= kStatusImprecise) {
     log_stream << textline("Primal residual rel/abs:")
                << sci(info_.p_res_abs, 0, 2) << " / "
                << sci(info_.p_res_rel, 0, 2) << '\n';
@@ -1449,6 +1448,15 @@ void HpmSolver::printSummary() const {
 
     log_stream << textline("Primal-dual gap:") << sci(info_.pd_gap, 0, 2)
                << '\n';
+  }
+
+  if (info_.ipx_used &&
+      (info_.ipx_info.status_crossover == IPX_STATUS_optimal ||
+       info_.ipx_info.status_crossover == IPX_STATUS_imprecise)) {
+    log_stream << textline("Basis solution primal infeas:")
+               << sci(info_.ipx_info.primal_infeas, 0, 2) << '\n';
+    log_stream << textline("Basis solution dual infeas:")
+               << sci(info_.ipx_info.dual_infeas, 0, 2) << '\n';
   }
 
   if (Log::debug(1)) {
@@ -1544,14 +1552,15 @@ void HpmSolver::maxCorrectors() {
 }
 
 bool HpmSolver::statusIsSolved() const { return info_.status >= kStatusSolved; }
-bool HpmSolver::statusIsStopped() const {
-  return info_.status >= kStatusStop && info_.status < kStatusSolved;
+bool HpmSolver::statusIsStopped() const { return info_.status < kStatusFailed; }
+bool HpmSolver::statusIsFailed() const {
+  return info_.status >= kStatusFailed && info_.status < kStatusSolved;
 }
 bool HpmSolver::statusAllowsCrossover() const {
   return info_.status >= kStatusPDFeas;
 }
-bool HpmSolver::statusAllowsRefinement() const {
-  return info_.status < kStatusStop || info_.status >= kStatusPDFeas;
+bool HpmSolver::statusNeedsRefinement() const {
+  return info_.status == kStatusNoProgress || info_.status == kStatusImprecise;
 }
 bool HpmSolver::crossoverIsOn() const {
   return options_.crossover == kOptionCrossoverOn ||
@@ -1559,5 +1568,6 @@ bool HpmSolver::crossoverIsOn() const {
 }
 bool HpmSolver::solved() const { return statusIsSolved(); }
 bool HpmSolver::stopped() const { return statusIsStopped(); }
+bool HpmSolver::failed() const { return statusIsFailed(); }
 
 }  // namespace highspm
