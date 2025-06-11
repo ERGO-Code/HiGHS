@@ -706,7 +706,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     // Skip numerically troublesome cuts
     double k = fast_ceil((1 / f0) - epsilon) - 1;
     double checkk = fast_ceil((1 / f0) + epsilon) - 1;
-    if (fabs(k - checkk) >= 0.5) {
+    if (checkk - k > 0.5) {
       strongcg = false;
     } else {
       // All coefficients of continuous variables are 0 in strong CG cut
@@ -722,7 +722,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
           updateViolationAndNorm(j, aj, viol, sqrnorm);
         } else {
           double pj =
-            fast_ceil(k * (fj - f0) * oneoveroneminusf0 - (10 * epsilon));
+              fast_ceil(k * (fj - f0) * oneoveroneminusf0 - (10 * epsilon));
           double aj = downaj + (pj / (k + 1));
           updateViolationAndNorm(j, aj, viol, sqrnorm);
         }
@@ -770,8 +770,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       if (fj > f0) {
         if (strongcg) {
           if (fj - f0 > epsilon) {
-            HighsCDouble pj =
-              ceil(k * (fj - f0) * oneoveroneminusf0 - epsilon);
+            HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0 - epsilon);
             aj += pj / (k + 1);
           }
         } else {
