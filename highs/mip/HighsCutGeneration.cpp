@@ -703,7 +703,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     double downrhs = fast_floor(scalrhs);
     double f0 = scalrhs - downrhs;
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
-    double k = fast_ceil((1 / f0) - kHighsTiny) - 1;
+    double k = fast_ceil((1 / f0) - epsilon) - 1;
 
     // All coefficients of continuous variables are 0 in strong CG cut
     double sqrnorm = 0;
