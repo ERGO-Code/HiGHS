@@ -146,7 +146,9 @@ class HPresolve {
     Result my_result;
 
    public:
-    StatusResult(bool flag) : my_flag(flag), my_result(Result::kOk){};
+    // clang-format off
+    StatusResult(bool flag) : my_flag(flag), my_result(Result::kOk) {};
+    // clang-format on
     StatusResult(Result result) : my_result(result) {
       my_flag = (result == Result::kOk);
     };
