@@ -732,5 +732,6 @@ TEST_CASE("presolve-issue-2409", "[highs_test_presolve]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
-  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kOptimal);
+  REQUIRE(highs.getModelPresolveStatus() ==
+          HighsPresolveStatus::kReducedToEmpty);
 }
