@@ -809,7 +809,7 @@ else(FAST_BUILD)
     add_subdirectory(app)
     add_subdirectory(examples)
     if (HPM)
-      add_subdirectory(highs/ipm/hpm)
+      add_subdirectory(highs/ipm/hipo)
     endif()
   endif()
 

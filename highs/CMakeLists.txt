@@ -180,10 +180,10 @@ else()
   if (HPM)
 
     target_include_directories(highs PRIVATE 
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hpm>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hpm/auxiliary>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hpm/factorhighs>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hpm/highspm>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
     )
 
     if(APPLE)

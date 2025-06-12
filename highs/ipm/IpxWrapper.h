@@ -20,7 +20,7 @@
 #include "lp_data/HighsSolution.h"
 
 #ifdef HPM
-#include "ipm/hpm/highspm/Solver.h"
+#include "ipm/hipo/ipm/Solver.h"
 #endif
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);

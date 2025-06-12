@@ -177,78 +177,78 @@ set(ipx_headers
   ipm/ipx/utils.h)
 
 set(hpm_sources 
-    ipm/hpm/highspm/CurtisReidScaling.cpp 
-    ipm/hpm/highspm/FactorHiGHSSolver.cpp 
-    ipm/hpm/highspm/Control.cpp
-    ipm/hpm/highspm/Iterate.cpp 
-    ipm/hpm/highspm/Model.cpp
-    ipm/hpm/highspm/Solver.cpp)
+    ipm/hipo/ipm/CurtisReidScaling.cpp 
+    ipm/hipo/ipm/FactorHiGHSSolver.cpp 
+    ipm/hipo/ipm/Control.cpp
+    ipm/hipo/ipm/Iterate.cpp 
+    ipm/hipo/ipm/Model.cpp
+    ipm/hipo/ipm/Solver.cpp)
 
 set(hpm_headers
-    ipm/hpm/highspm/CurtisReidScaling.h
-    ipm/hpm/highspm/FactorHiGHSSolver.h
-    ipm/hpm/highspm/Parameters.h
-    ipm/hpm/highspm/Control.h
-    ipm/hpm/highspm/Info.h
-    ipm/hpm/highspm/Iterate.h
-    ipm/hpm/highspm/Model.h
-    ipm/hpm/highspm/Options.h
-    ipm/hpm/highspm/Solver.h
-    ipm/hpm/highspm/Status.h
-    ipm/hpm/highspm/LinearSolver.h)
+    ipm/hipo/ipm/CurtisReidScaling.h
+    ipm/hipo/ipm/FactorHiGHSSolver.h
+    ipm/hipo/ipm/Parameters.h
+    ipm/hipo/ipm/Control.h
+    ipm/hipo/ipm/Info.h
+    ipm/hipo/ipm/Iterate.h
+    ipm/hipo/ipm/Model.h
+    ipm/hipo/ipm/Options.h
+    ipm/hipo/ipm/Solver.h
+    ipm/hipo/ipm/Status.h
+    ipm/hipo/ipm/LinearSolver.h)
 
 set(factor_highs_sources
-    ipm/hpm/factorhighs/Analyse.cpp
-    ipm/hpm/factorhighs/CallAndTimeBlas.cpp
-    ipm/hpm/factorhighs/DataCollector.cpp
-    ipm/hpm/factorhighs/DenseFactHybrid.cpp
-    ipm/hpm/factorhighs/DenseFactKernel.cpp
-    ipm/hpm/factorhighs/DgemmParallel.cpp
-    ipm/hpm/factorhighs/Factorise.cpp
-    ipm/hpm/factorhighs/FormatHandler.cpp
-    ipm/hpm/factorhighs/HybridHybridFormatHandler.cpp
-    ipm/hpm/factorhighs/HybridSolveHandler.cpp
-    ipm/hpm/factorhighs/KrylovMethodsIpm.cpp
-    ipm/hpm/factorhighs/Numeric.cpp
-    ipm/hpm/factorhighs/SolveHandler.cpp
-    ipm/hpm/factorhighs/Swaps.cpp
-    ipm/hpm/factorhighs/SymScaling.cpp
-    ipm/hpm/factorhighs/Symbolic.cpp)
+    ipm/hipo/factorhighs/Analyse.cpp
+    ipm/hipo/factorhighs/CallAndTimeBlas.cpp
+    ipm/hipo/factorhighs/DataCollector.cpp
+    ipm/hipo/factorhighs/DenseFactHybrid.cpp
+    ipm/hipo/factorhighs/DenseFactKernel.cpp
+    ipm/hipo/factorhighs/DgemmParallel.cpp
+    ipm/hipo/factorhighs/Factorise.cpp
+    ipm/hipo/factorhighs/FormatHandler.cpp
+    ipm/hipo/factorhighs/HybridHybridFormatHandler.cpp
+    ipm/hipo/factorhighs/HybridSolveHandler.cpp
+    ipm/hipo/factorhighs/KrylovMethodsIpm.cpp
+    ipm/hipo/factorhighs/Numeric.cpp
+    ipm/hipo/factorhighs/SolveHandler.cpp
+    ipm/hipo/factorhighs/Swaps.cpp
+    ipm/hipo/factorhighs/SymScaling.cpp
+    ipm/hipo/factorhighs/Symbolic.cpp)
 
 set(factor_highs_headers
-    ipm/hpm/factorhighs/Analyse.h
-    ipm/hpm/factorhighs/CallAndTimeBlas.h
-    ipm/hpm/factorhighs/DataCollector.h
-    ipm/hpm/factorhighs/DenseFact.h
-    ipm/hpm/factorhighs/DgemmParallel.h
-    ipm/hpm/factorhighs/FactorHiGHS.h
-    ipm/hpm/factorhighs/FactorHiGHSSettings.h
-    ipm/hpm/factorhighs/Factorise.h
-    ipm/hpm/factorhighs/FormatHandler.h
-    ipm/hpm/factorhighs/HybridHybridFormatHandler.h
-    ipm/hpm/factorhighs/HybridSolveHandler.h
-    ipm/hpm/factorhighs/KrylovMethodsIpm.h
-    ipm/hpm/factorhighs/Numeric.h
-    ipm/hpm/factorhighs/ReturnValues.h
-    ipm/hpm/factorhighs/SolveHandler.h
-    ipm/hpm/factorhighs/Swaps.h
-    ipm/hpm/factorhighs/SymScaling.h
-    ipm/hpm/factorhighs/Symbolic.h
-    ipm/hpm/factorhighs/Timing.h)
+    ipm/hipo/factorhighs/Analyse.h
+    ipm/hipo/factorhighs/CallAndTimeBlas.h
+    ipm/hipo/factorhighs/DataCollector.h
+    ipm/hipo/factorhighs/DenseFact.h
+    ipm/hipo/factorhighs/DgemmParallel.h
+    ipm/hipo/factorhighs/FactorHiGHS.h
+    ipm/hipo/factorhighs/FactorHiGHSSettings.h
+    ipm/hipo/factorhighs/Factorise.h
+    ipm/hipo/factorhighs/FormatHandler.h
+    ipm/hipo/factorhighs/HybridHybridFormatHandler.h
+    ipm/hipo/factorhighs/HybridSolveHandler.h
+    ipm/hipo/factorhighs/KrylovMethodsIpm.h
+    ipm/hipo/factorhighs/Numeric.h
+    ipm/hipo/factorhighs/ReturnValues.h
+    ipm/hipo/factorhighs/SolveHandler.h
+    ipm/hipo/factorhighs/Swaps.h
+    ipm/hipo/factorhighs/SymScaling.h
+    ipm/hipo/factorhighs/Symbolic.h
+    ipm/hipo/factorhighs/Timing.h)
 
 set(hpm_util_sources
-    ipm/hpm/auxiliary/Auxiliary.cpp
-    ipm/hpm/auxiliary/KrylovMethods.cpp
-    ipm/hpm/auxiliary/Log.cpp
-    ipm/hpm/auxiliary/VectorOperations.cpp)
+    ipm/hipo/auxiliary/Auxiliary.cpp
+    ipm/hipo/auxiliary/KrylovMethods.cpp
+    ipm/hipo/auxiliary/Log.cpp
+    ipm/hipo/auxiliary/VectorOperations.cpp)
 
 set(hpm_util_headers
-    ipm/hpm/auxiliary/Auxiliary.h
-    ipm/hpm/auxiliary/IntConfig.h
-    ipm/hpm/auxiliary/KrylovMethods.h
-    ipm/hpm/auxiliary/Log.h
-    ipm/hpm/auxiliary/mycblas.h
-    ipm/hpm/auxiliary/VectorOperations.h)
+    ipm/hipo/auxiliary/Auxiliary.h
+    ipm/hipo/auxiliary/IntConfig.h
+    ipm/hipo/auxiliary/KrylovMethods.h
+    ipm/hipo/auxiliary/Log.h
+    ipm/hipo/auxiliary/mycblas.h
+    ipm/hipo/auxiliary/VectorOperations.h)
 
 set(highs_sources
     ../extern/filereaderlp/reader.cpp
