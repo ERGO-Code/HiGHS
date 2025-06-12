@@ -8,7 +8,7 @@
 #include "Symbolic.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 class Numeric {
   // columns of factorisation, stored by supernode
@@ -58,6 +58,6 @@ class Numeric {
   void conditionNumber() const;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

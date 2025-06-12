@@ -2,7 +2,7 @@
 
 #include <stack>
 
-namespace highspm {
+namespace hipo {
 
 void counts2Ptr(std::vector<Int>& ptr, std::vector<Int>& w) {
   // Given the column counts in the vector w (of size n),
@@ -273,4 +273,4 @@ double Clock::stop() const {
   return d.count();
 }
 
-}  // namespace highspm
+}  // namespace hipo

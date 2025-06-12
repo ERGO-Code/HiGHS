@@ -1,11 +1,11 @@
-#ifndef HIGHSPM_KRYLOV_METHODS_H
-#define HIGHSPM_KRYLOV_METHODS_H
+#ifndef HIPO_KRYLOV_METHODS_H
+#define HIPO_KRYLOV_METHODS_H
 
 #include <vector>
 
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 // Abstract class for matrices inside of a Krylov method
 class AbstractMatrix {
@@ -25,6 +25,6 @@ Int Cg(const AbstractMatrix* M, const AbstractMatrix* P,
        const std::vector<double>& b, std::vector<double>& x, double tol,
        Int maxit);
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

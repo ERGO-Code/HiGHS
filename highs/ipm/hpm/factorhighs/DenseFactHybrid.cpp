@@ -8,7 +8,7 @@
 #include "ipm/hpm/auxiliary/Auxiliary.h"
 #include "ipm/hpm/auxiliary/HpmLog.h"
 
-namespace highspm {
+namespace hipo {
 
 // Factorisation with "hybrid formats".
 
@@ -23,7 +23,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
   // BLAS calls: dcopy, dscal, daxpy, dgemm, dtrsm
   // ===========================================================================
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock;
 #endif
 
@@ -186,7 +186,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
         offset += jb * col_jj;
       }
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeDenseFact_main, clock.stop());
       clock.start();
 #endif
@@ -234,7 +234,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
           offset += jb * ncol;
         }
       }
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeDenseFact_schur, clock.stop());
       clock.start();
 #endif
@@ -252,7 +252,7 @@ Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb) {
   // BLAS calls: dcopy
   // ===========================================================================
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock;
 #endif
 
@@ -281,11 +281,11 @@ Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb) {
     }
   }
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeDenseFact_convert, clock.stop());
 #endif
 
   return kRetOk;
 }
 
-}  // namespace highspm
+}  // namespace hipo

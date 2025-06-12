@@ -20,63 +20,63 @@ enum CBLAS_SIDE { CblasLeft = 141, CblasRight = 142 };
 extern "C" {
 #endif
 
-using hpmint = highspm::Int;
+using hipoint = hipo::Int;
 
 // level 1
 
-void cblas_daxpy(const hpmint n, const double alpha, const double* x,
-                 const hpmint incx, double* y, const hpmint incy);
-void cblas_dcopy(const hpmint n, const double* x, const hpmint incx, double* y,
-                 const hpmint incy);
-void cblas_dscal(const hpmint n, const double alpha, double* x,
-                 const hpmint incx);
-void cblas_dswap(const hpmint n, double* x, const hpmint incx, double* y,
-                 const hpmint incy);
+void cblas_daxpy(const hipoint n, const double alpha, const double* x,
+                 const hipoint incx, double* y, const hipoint incy);
+void cblas_dcopy(const hipoint n, const double* x, const hipoint incx, double* y,
+                 const hipoint incy);
+void cblas_dscal(const hipoint n, const double alpha, double* x,
+                 const hipoint incx);
+void cblas_dswap(const hipoint n, double* x, const hipoint incx, double* y,
+                 const hipoint incy);
 
 // level 2
 
 void cblas_dgemv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE transa, const hpmint M,
-                 const hpmint n, const double alpha, const double* A,
-                 const hpmint lda, const double* x, const hpmint incx,
-                 const double beta, double* y, const hpmint incy);
+                 const enum CBLAS_TRANSPOSE transa, const hipoint M,
+                 const hipoint n, const double alpha, const double* A,
+                 const hipoint lda, const double* x, const hipoint incx,
+                 const double beta, double* y, const hipoint incy);
 
 void cblas_dtpsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
                  const enum CBLAS_TRANSPOSE transa, const enum CBLAS_DIAG diag,
-                 const hpmint n, const double* ap, double* x,
-                 const hpmint incx);
+                 const hipoint n, const double* ap, double* x,
+                 const hipoint incx);
 
 void cblas_dtrsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
                  const enum CBLAS_TRANSPOSE transa, const enum CBLAS_DIAG diag,
-                 const hpmint n, const double* a, const hpmint lda, double* x,
-                 const hpmint incx);
+                 const hipoint n, const double* a, const hipoint lda, double* x,
+                 const hipoint incx);
 
-void cblas_dger(const enum CBLAS_ORDER order, const hpmint m, const hpmint n,
-                const double alpha, const double* x, const hpmint incx,
-                const double* y, const hpmint incy, double* A,
-                const hpmint lda);
+void cblas_dger(const enum CBLAS_ORDER order, const hipoint m, const hipoint n,
+                const double alpha, const double* x, const hipoint incx,
+                const double* y, const hipoint incy, double* A,
+                const hipoint lda);
 
 // level 3
 
 void cblas_dgemm(const enum CBLAS_ORDER order,
                  const enum CBLAS_TRANSPOSE transa,
-                 const enum CBLAS_TRANSPOSE transb, const hpmint m,
-                 const hpmint n, const hpmint k, const double alpha,
-                 const double* A, const hpmint lda, const double* B,
-                 const hpmint ldb, const double beta, double* C,
-                 const hpmint ldc);
+                 const enum CBLAS_TRANSPOSE transb, const hipoint m,
+                 const hipoint n, const hipoint k, const double alpha,
+                 const double* A, const hipoint lda, const double* B,
+                 const hipoint ldb, const double beta, double* C,
+                 const hipoint ldc);
 
 void cblas_dsyrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
-                 const enum CBLAS_TRANSPOSE trans, const hpmint n,
-                 const hpmint k, const double alpha, const double* a,
-                 const hpmint lda, const double beta, double* C,
-                 const hpmint ldc);
+                 const enum CBLAS_TRANSPOSE trans, const hipoint n,
+                 const hipoint k, const double alpha, const double* a,
+                 const hipoint lda, const double beta, double* C,
+                 const hipoint ldc);
 
 void cblas_dtrsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
                  const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE transa,
-                 const enum CBLAS_DIAG diag, const hpmint m, const hpmint n,
-                 const double alpha, const double* a, const hpmint lda,
-                 double* b, const hpmint ldb);
+                 const enum CBLAS_DIAG diag, const hipoint m, const hipoint n,
+                 const double alpha, const double* a, const hipoint lda,
+                 double* b, const hipoint ldb);
 
 #ifdef __cplusplus
 }

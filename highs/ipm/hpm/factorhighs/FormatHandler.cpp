@@ -5,7 +5,7 @@
 #include "DenseFact.h"
 #include "ipm/hpm/auxiliary/Auxiliary.h"
 
-namespace highspm {
+namespace hipo {
 
 FormatHandler::FormatHandler(const Symbolic& S, Int sn)
     : S_{&S},
@@ -42,4 +42,4 @@ void FormatHandler::terminate(std::vector<double>& frontal,
   // locations within total_reg, sn_columns and schur_contribution.
 }
 
-}  // namespace highspm
+}  // namespace hipo

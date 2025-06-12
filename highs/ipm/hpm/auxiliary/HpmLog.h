@@ -1,5 +1,5 @@
-#ifndef HIGHSPM_LOG_H
-#define HIGHSPM_LOG_H
+#ifndef HIPO_LOG_H
+#define HIPO_LOG_H
 
 #include <sstream>
 
@@ -10,7 +10,7 @@
 // Call Log::setOptions to set the HighsLogOptions.
 // If log_options_ is null, nothing is printed.
 
-namespace highspm {
+namespace hipo {
 
 class Log {
   static const HighsLogOptions* log_options_;
@@ -87,6 +87,6 @@ std::string textline(const T& text) {
   return s.str();
 }
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

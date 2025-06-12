@@ -1,7 +1,7 @@
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 
-namespace highspm {
+namespace hipo {
 
 void permuteWithSwaps(double* x, const Int* swaps, Int n, bool reverse) {
   // Apply swaps to vector x of length n
@@ -64,4 +64,4 @@ void applySwaps(const Int* swaps, Int nrow, Int ncol, double* R) {
   }
 }
 
-}  // namespace highspm
+}  // namespace hipo

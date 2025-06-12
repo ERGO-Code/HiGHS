@@ -1,5 +1,5 @@
-#ifndef HIGHSPM_HPM_MODEL_H
-#define HIGHSPM_HPM_MODEL_H
+#ifndef HIPO_MODEL_H
+#define HIPO_MODEL_H
 
 #include <limits>
 #include <string>
@@ -10,7 +10,7 @@
 #include "ipm/ipx/lp_solver.h"
 #include "util/HighsSparseMatrix.h"
 
-namespace highspm {
+namespace hipo {
 
 // Optimization problem:
 // min  c^T * x
@@ -25,7 +25,7 @@ namespace highspm {
 // preconditioning", Math. Prog. Comput. 12, 2020
 //
 
-class HpmModel {
+class Model {
  private:
   // data of original problem
   Int n_orig_{};
@@ -124,6 +124,6 @@ class HpmModel {
   Int loadIntoIpx(ipx::LpSolver& lps) const;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

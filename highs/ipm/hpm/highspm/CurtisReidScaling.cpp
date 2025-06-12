@@ -5,7 +5,7 @@
 #include "ipm/hpm/auxiliary/HpmLog.h"
 #include "ipm/hpm/auxiliary/KrylovMethods.h"
 
-namespace highspm {
+namespace hipo {
 
 void product(const double* x, std::vector<double>& y,
              const std::vector<Int>& ptr, const std::vector<Int>& rows) {
@@ -136,4 +136,4 @@ void CurtisReidScaling(const std::vector<Int>& ptr,
   for (Int j = 0; j < n; ++j) colexp[j] = -std::round(exponents[m + j]);
 }
 
-}  // namespace highspm
+}  // namespace hipo

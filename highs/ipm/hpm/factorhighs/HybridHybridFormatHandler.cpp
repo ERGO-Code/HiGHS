@@ -5,7 +5,7 @@
 #include "DenseFact.h"
 #include "ipm/hpm/auxiliary/Auxiliary.h"
 
-namespace highspm {
+namespace hipo {
 
 HybridHybridFormatHandler::HybridHybridFormatHandler(const Symbolic& S, Int sn)
     : FormatHandler(S, sn) {
@@ -196,4 +196,4 @@ void HybridHybridFormatHandler::extremeEntries() {
   DataCollector::get()->setExtremeEntries(minD, maxD, minoffD, maxoffD);
 }
 
-}  // namespace highspm
+}  // namespace hipo

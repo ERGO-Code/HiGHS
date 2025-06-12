@@ -3,7 +3,7 @@
 #include "FactorHiGHSSettings.h"
 #include "ipm/hpm/auxiliary/HpmLog.h"
 
-namespace highspm {
+namespace hipo {
 
 // instance of DataCollector
 DataCollector* DataCollector::ptr_ = nullptr;
@@ -34,11 +34,11 @@ IterData& DataCollector::back() {
 // Expensive functions
 
 void DataCollector::sumTime(TimeItems i, double t) {
-#if HPM_TIMING_LEVEL > 0
+#if HIPO_TIMING_LEVEL > 0
   // Keep track of times and blas calls.
   std::lock_guard<std::mutex> lock(times_mutex_);
   counter_data_.times[i] += t;
-#if HPM_TIMING_LEVEL >= 3
+#if HIPO_TIMING_LEVEL >= 3
   if (i >= kTimeBlasStart && i <= kTimeBlasEnd)
     ++counter_data_.blas_calls[i - kTimeBlasStart];
 #endif
@@ -46,7 +46,7 @@ void DataCollector::sumTime(TimeItems i, double t) {
 }
 void DataCollector::setExtremeEntries(double minD, double maxD, double minoffD,
                                       double maxoffD) {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   // Store max and min entries of D and L.
   std::lock_guard<std::mutex> lock(iter_data_mutex_);
   back().minD = std::min(back().minD, minD);
@@ -56,40 +56,40 @@ void DataCollector::setExtremeEntries(double minD, double maxD, double minoffD,
 #endif
 }
 void DataCollector::countRegPiv() {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   // Increase the number of dynamically regularised pivots.
   std::lock_guard<std::mutex> lock(iter_data_mutex_);
   ++back().n_reg_piv;
 #endif
 }
 void DataCollector::countSwap() {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   std::lock_guard<std::mutex> lock(iter_data_mutex_);
   ++back().n_swap;
 #endif
 }
 void DataCollector::count2x2() {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   std::lock_guard<std::mutex> lock(iter_data_mutex_);
   ++back().n_2x2;
 #endif
 }
 void DataCollector::setWrongSign(double p) {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   std::lock_guard<std::mutex> lock(iter_data_mutex_);
   ++back().n_wrong_sign;
   back().max_wrong_sign = std::max(back().max_wrong_sign, std::abs(p));
 #endif
 }
 void DataCollector::setMaxReg(double new_reg) {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   // Keep track of maximum regularisation used.
   std::lock_guard<std::mutex> lock(iter_data_mutex_);
   back().max_reg = std::max(back().max_reg, new_reg);
 #endif
 }
 void DataCollector::setBackError(double nw, double cw, Int large_components) {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   back().nw_back_err = std::max(back().nw_back_err, nw);
   back().cw_back_err = std::max(back().cw_back_err, cw);
   back().large_components_cw =
@@ -135,14 +135,14 @@ void DataCollector::setProducts(double min_prod, double max_prod, Int num_small,
 }
 
 void DataCollector::printTimes() const {
-#if HPM_TIMING_LEVEL >= 1
+#if HIPO_TIMING_LEVEL >= 1
 
   const std::vector<double>& times = counter_data_.times;
 
   Log::printf("----------------------------------------------------\n");
   Log::printf("Analyse time            \t%8.4f\n", times[kTimeAnalyse]);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Log::printf("\tMetis:                  %8.4f (%4.1f%%)\n",
               times[kTimeAnalyseMetis],
               times[kTimeAnalyseMetis] / times[kTimeAnalyse] * 100);
@@ -169,7 +169,7 @@ void DataCollector::printTimes() const {
   Log::printf("----------------------------------------------------\n");
   Log::printf("Factorise time          \t%8.4f\n", times[kTimeFactorise]);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Log::printf("\tPrepare:                %8.4f (%4.1f%%)\n",
               times[kTimeFactorisePrepare],
               times[kTimeFactorisePrepare] / times[kTimeFactorise] * 100);
@@ -201,7 +201,7 @@ void DataCollector::printTimes() const {
   Log::printf("----------------------------------------------------\n");
   Log::printf("Solve time              \t%8.4f\n", times[kTimeSolve]);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Log::printf("\tPrepare:                %8.4f (%4.1f%%)\n",
               times[kTimeSolvePrepare],
               times[kTimeSolvePrepare] / times[kTimeSolve] * 100);
@@ -220,7 +220,7 @@ void DataCollector::printTimes() const {
 #endif
   Log::printf("----------------------------------------------------\n");
 
-#if HPM_TIMING_LEVEL >= 3
+#if HIPO_TIMING_LEVEL >= 3
 
   const std::vector<Int>& blas_calls = counter_data_.blas_calls;
 
@@ -281,7 +281,7 @@ void DataCollector::printTimes() const {
 }
 
 void DataCollector::printIter() const {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   Log::printf(
       "\niter |    min D     max D     min L     max L  |"
       "    reg   swap    2x2     ws | "
@@ -301,4 +301,4 @@ void DataCollector::printIter() const {
 #endif
 }
 
-}  // namespace highspm
+}  // namespace hipo

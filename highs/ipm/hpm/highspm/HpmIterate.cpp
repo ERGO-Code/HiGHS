@@ -4,56 +4,56 @@
 #include "ipm/hpm/factorhighs/DataCollector.h"
 #include "ipm/hpm/factorhighs/FactorHiGHSSettings.h"
 
-namespace highspm {
+namespace hipo {
 
 NewtonDir::NewtonDir(Int m, Int n)
     : x(n, 0.0), y(m, 0.0), xl(n, 0.0), xu(n, 0.0), zl(n, 0.0), zu(n, 0.0) {}
 
-HpmIterate::HpmIterate(const HpmModel& model_input)
+Iterate::Iterate(const Model& model_input)
     : model{&model_input}, delta(model->m(), model->n()) {
   clearIter();
   clearRes();
   best_mu = 0;
 }
 
-bool HpmIterate::isNan() const {
+bool Iterate::isNan() const {
   if (isNanVector(x) || isNanVector(xl) || isNanVector(xu) || isNanVector(y) ||
       isNanVector(zl) || isNanVector(zu))
     return true;
   return false;
 }
-bool HpmIterate::isInf() const {
+bool Iterate::isInf() const {
   if (isInfVector(x) || isInfVector(xl) || isInfVector(xu) || isInfVector(y) ||
       isInfVector(zl) || isInfVector(zu))
     return true;
   return false;
 }
-bool HpmIterate::isResNan() const {
+bool Iterate::isResNan() const {
   if (isNanVector(res1) || isNanVector(res2) || isNanVector(res3) ||
       isNanVector(res4) || isNanVector(res5) || isNanVector(res6))
     return true;
   return false;
 }
-bool HpmIterate::isResInf() const {
+bool Iterate::isResInf() const {
   if (isInfVector(res1) || isInfVector(res2) || isInfVector(res3) ||
       isInfVector(res4) || isInfVector(res5) || isInfVector(res6))
     return true;
   return false;
 }
-bool HpmIterate::isDirNan() const {
+bool Iterate::isDirNan() const {
   if (isNanVector(delta.x) || isNanVector(delta.xl) || isNanVector(delta.xu) ||
       isNanVector(delta.y) || isNanVector(delta.zl) || isNanVector(delta.zu))
     return true;
   return false;
 }
-bool HpmIterate::isDirInf() const {
+bool Iterate::isDirInf() const {
   if (isInfVector(delta.x) || isInfVector(delta.xl) || isInfVector(delta.xu) ||
       isInfVector(delta.y) || isInfVector(delta.zl) || isInfVector(delta.zu))
     return true;
   return false;
 }
 
-void HpmIterate::computeMu() {
+void Iterate::computeMu() {
   mu = 0.0;
   Int number_finite_bounds{};
   for (Int i = 0; i < model->n(); ++i) {
@@ -73,7 +73,7 @@ void HpmIterate::computeMu() {
   else
     best_mu = mu;
 }
-void HpmIterate::computeScaling() {
+void Iterate::computeScaling() {
   scaling.assign(model->n(), 0.0);
 
   for (Int i = 0; i < model->n(); ++i) {
@@ -86,7 +86,7 @@ void HpmIterate::computeScaling() {
 
   DataCollector::get()->setExtremeTheta(scaling);
 }
-void HpmIterate::products() {
+void Iterate::products() {
   double min_prod = std::numeric_limits<double>::max();
   double max_prod = 0.0;
   num_small = 0;
@@ -112,7 +112,7 @@ void HpmIterate::products() {
   DataCollector::get()->setProducts(min_prod, max_prod, num_small, num_large);
 }
 
-void HpmIterate::indicators() {
+void Iterate::indicators() {
   primalObj();
   dualObj();
   primalInfeasUnscaled();
@@ -121,33 +121,33 @@ void HpmIterate::indicators() {
   products();
 }
 
-void HpmIterate::primalObj() {
+void Iterate::primalObj() {
   pobj = model->offset() + dotProd(x, model->c());
 }
-void HpmIterate::dualObj() {
+void Iterate::dualObj() {
   dobj = model->offset() + dotProd(y, model->b());
   for (Int i = 0; i < model->n(); ++i) {
     if (model->hasLb(i)) dobj += model->lb(i) * zl[i];
     if (model->hasUb(i)) dobj -= model->ub(i) * zu[i];
   }
 }
-void HpmIterate::pdGap() {
+void Iterate::pdGap() {
   // relative primal-dual gap
   pdgap = std::abs(pobj - dobj) / (1.0 + 0.5 * std::abs(pobj + dobj));
 }
 
-void HpmIterate::primalInfeas() {
+void Iterate::primalInfeas() {
   // relative infinity norm of scaled primal residuals
   pinf = infNorm(res1);
   pinf = std::max(pinf, infNorm(res2));
   pinf = std::max(pinf, infNorm(res3));
   pinf /= (1.0 + model->normScaledRhs());
 }
-void HpmIterate::dualInfeas() {
+void Iterate::dualInfeas() {
   // relative infinity norm of scaled dual residual
   dinf = infNorm(res4) / (1.0 + model->normScaledObj());
 }
-void HpmIterate::primalInfeasUnscaled() {
+void Iterate::primalInfeasUnscaled() {
   // relative infinity norm of unscaled primal residuals
   pinf = 0.0;
   for (Int i = 0; i < model->m(); ++i) {
@@ -166,7 +166,7 @@ void HpmIterate::primalInfeasUnscaled() {
   }
   pinf /= (1.0 + model->normUnscaledRhs());
 }
-void HpmIterate::dualInfeasUnscaled() {
+void Iterate::dualInfeasUnscaled() {
   // relative infinity norm of unscaled dual residual
   dinf = 0.0;
   for (Int i = 0; i < model->n(); ++i) {
@@ -177,7 +177,7 @@ void HpmIterate::dualInfeasUnscaled() {
   dinf /= (1.0 + model->normUnscaledObj());
 }
 
-void HpmIterate::residual1234() {
+void Iterate::residual1234() {
   // res1
   res1 = model->b();
   model->A().alphaProductPlusY(-1.0, x, res1);
@@ -206,7 +206,7 @@ void HpmIterate::residual1234() {
     if (model->hasUb(i)) res4[i] += zu[i];
   }
 }
-void HpmIterate::residual56(double sigma) {
+void Iterate::residual56(double sigma) {
   for (Int i = 0; i < model->n(); ++i) {
     // res5
     if (model->hasLb(i))
@@ -222,7 +222,7 @@ void HpmIterate::residual56(double sigma) {
   }
 }
 
-std::vector<double> HpmIterate::residual7() const {
+std::vector<double> Iterate::residual7() const {
   std::vector<double> res7(res4);
   for (Int i = 0; i < model->n(); ++i) {
     if (model->hasLb(i)) res7[i] -= ((res5[i] + zl[i] * res2[i]) / xl[i]);
@@ -230,7 +230,7 @@ std::vector<double> HpmIterate::residual7() const {
   }
   return res7;
 }
-std::vector<double> HpmIterate::residual8(
+std::vector<double> Iterate::residual8(
     const std::vector<double>& res7) const {
   std::vector<double> res8(res1);
   std::vector<double> temp(res7);
@@ -245,7 +245,7 @@ std::vector<double> HpmIterate::residual8(
   return res8;
 }
 
-void HpmIterate::clearIter() {
+void Iterate::clearIter() {
   x.assign(model->n(), 0.0);
   xl.assign(model->n(), 0.0);
   xu.assign(model->n(), 0.0);
@@ -253,7 +253,7 @@ void HpmIterate::clearIter() {
   zl.assign(model->n(), 0.0);
   zu.assign(model->n(), 0.0);
 }
-void HpmIterate::clearRes() {
+void Iterate::clearRes() {
   res1.assign(model->m(), 0.0);
   res2.assign(model->n(), 0.0);
   res3.assign(model->n(), 0.0);
@@ -261,7 +261,7 @@ void HpmIterate::clearRes() {
   res5.assign(model->n(), 0.0);
   res6.assign(model->n(), 0.0);
 }
-void HpmIterate::clearDir() {
+void Iterate::clearDir() {
   delta.x.assign(model->n(), 0.0);
   delta.xl.assign(model->n(), 0.0);
   delta.xu.assign(model->n(), 0.0);
@@ -270,7 +270,7 @@ void HpmIterate::clearDir() {
   delta.zu.assign(model->n(), 0.0);
 }
 
-void HpmIterate::extract(std::vector<double>& x_user,
+void Iterate::extract(std::vector<double>& x_user,
                          std::vector<double>& xl_user,
                          std::vector<double>& xu_user,
                          std::vector<double>& slack_user,
@@ -327,7 +327,7 @@ void HpmIterate::extract(std::vector<double>& x_user,
   }
 }
 
-void HpmIterate::extract(std::vector<double>& x_user,
+void Iterate::extract(std::vector<double>& x_user,
                          std::vector<double>& slack_user,
                          std::vector<double>& y_user,
                          std::vector<double>& z_user) const {
@@ -382,7 +382,7 @@ void HpmIterate::extract(std::vector<double>& x_user,
   }
 }
 
-void HpmIterate::dropToComplementarity(std::vector<double>& x_cmp,
+void Iterate::dropToComplementarity(std::vector<double>& x_cmp,
                                        std::vector<double>& y_cmp,
                                        std::vector<double>& z_cmp) const {
   x_cmp.assign(model->n(), 0.0);
@@ -463,7 +463,7 @@ void HpmIterate::dropToComplementarity(std::vector<double>& x_cmp,
   }
 }
 
-double HpmIterate::infeasAfterDropping() const {
+double Iterate::infeasAfterDropping() const {
   // Compute estimate of residuals after dropping to complementarity (taken from
   // ipx).
 
@@ -520,7 +520,7 @@ double HpmIterate::infeasAfterDropping() const {
   return std::max(pinf_max, dinf_max);
 }
 
-void HpmIterate::finalResiduals(HpmInfo& info) const {
+void Iterate::finalResiduals(Info& info) const {
   // If ipx has been used, the information is already available, otherwise,
   // compute it.
 
@@ -596,4 +596,4 @@ void HpmIterate::finalResiduals(HpmInfo& info) const {
   }
 }
 
-}  // namespace highspm
+}  // namespace hipo

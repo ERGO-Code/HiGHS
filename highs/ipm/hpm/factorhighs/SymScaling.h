@@ -6,7 +6,7 @@
 
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 // Scalings for symmetric matrices, provided as lower triangular.
 
@@ -23,6 +23,6 @@ void JacekScalingSym(const std::vector<Int>& ptr, const std::vector<Int>& rows,
                      const std::vector<double>& val,
                      std::vector<double>& colscale);
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

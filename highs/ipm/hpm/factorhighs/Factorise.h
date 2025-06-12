@@ -7,7 +7,7 @@
 #include "Symbolic.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 class Factorise {
  public:
@@ -68,6 +68,6 @@ class Factorise {
   bool run(Numeric& num);
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

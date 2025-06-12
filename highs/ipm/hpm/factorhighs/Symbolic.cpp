@@ -5,7 +5,7 @@
 #include "FactorHiGHSSettings.h"
 #include "ipm/hpm/auxiliary/HpmLog.h"
 
-namespace highspm {
+namespace hipo {
 
 Symbolic::Symbolic() : block_size_{kBlockSize} {}
 
@@ -94,4 +94,4 @@ void Symbolic::print(bool verbose) const {
   Log::print(log_stream);
 }
 
-}  // namespace highspm
+}  // namespace hipo

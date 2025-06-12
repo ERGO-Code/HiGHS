@@ -1,9 +1,9 @@
-#ifndef HIGHSPM_INT_CONFIG_H
-#define HIGHSPM_INT_CONFIG_H
+#ifndef HIPO_INT_CONFIG_H
+#define HIPO_INT_CONFIG_H
 
 #include "util/HighsInt.h"
 
-namespace highspm {
+namespace hipo {
 
 typedef HighsInt Int;
 

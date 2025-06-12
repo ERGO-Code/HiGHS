@@ -4,9 +4,9 @@
 #include "HpmStatus.h"
 #include "ipm/hpm/auxiliary/HpmLog.h"
 
-namespace highspm {
+namespace hipo {
 
-Int HpmModel::init(const Int num_var, const Int num_con, const double* obj,
+Int Model::init(const Int num_var, const Int num_con, const double* obj,
                    const double* rhs, const double* lower, const double* upper,
                    const Int* A_ptr, const Int* A_rows, const double* A_vals,
                    const char* constraints, double offset) {
@@ -54,7 +54,7 @@ Int HpmModel::init(const Int num_var, const Int num_con, const double* obj,
   return 0;
 }
 
-Int HpmModel::checkData(const Int num_var, const Int num_con, const double* obj,
+Int Model::checkData(const Int num_var, const Int num_con, const double* obj,
                         const double* rhs, const double* lower,
                         const double* upper, const Int* A_ptr,
                         const Int* A_rows, const double* A_vals,
@@ -93,7 +93,7 @@ Int HpmModel::checkData(const Int num_var, const Int num_con, const double* obj,
   return 0;
 }
 
-void HpmModel::preprocess() {
+void Model::preprocess() {
   // Perform some basic preprocessing, in case the problem is run without
   // presolve
 
@@ -150,7 +150,7 @@ void HpmModel::preprocess() {
   }
 }
 
-void HpmModel::postprocess(std::vector<double>& slack,
+void Model::postprocess(std::vector<double>& slack,
                            std::vector<double>& y) const {
   // Add Lagrange multiplier for empty rows that were removed
   // Add slack for constraints that were removed
@@ -177,7 +177,7 @@ void HpmModel::postprocess(std::vector<double>& slack,
   slack = std::move(new_slack);
 }
 
-void HpmModel::reformulate() {
+void Model::reformulate() {
   // put the model into correct formulation
 
   Int Annz = A_.numNz();
@@ -211,7 +211,7 @@ void HpmModel::reformulate() {
   }
 }
 
-void HpmModel::print() const {
+void Model::print() const {
   std::stringstream log_stream;
 
   log_stream << textline("Rows:") << sci(m_, 0, 1) << '\n';
@@ -328,7 +328,7 @@ void HpmModel::print() const {
   Log::print(log_stream);
 }
 
-void HpmModel::scale() {
+void Model::scale() {
   // Apply Curtis-Reid scaling and scale the problem accordingly
 
   // check if scaling is needed
@@ -392,7 +392,7 @@ void HpmModel::scale() {
   }
 }
 
-void HpmModel::unscale(std::vector<double>& x, std::vector<double>& xl,
+void Model::unscale(std::vector<double>& x, std::vector<double>& xl,
                        std::vector<double>& xu, std::vector<double>& slack,
                        std::vector<double>& y, std::vector<double>& zl,
                        std::vector<double>& zu) const {
@@ -425,7 +425,7 @@ void HpmModel::unscale(std::vector<double>& x, std::vector<double>& xl,
   }
 }
 
-void HpmModel::unscale(std::vector<double>& x, std::vector<double>& slack,
+void Model::unscale(std::vector<double>& x, std::vector<double>& slack,
                        std::vector<double>& y, std::vector<double>& z) const {
   // Undo the scaling with format for crossover
 
@@ -441,7 +441,7 @@ void HpmModel::unscale(std::vector<double>& x, std::vector<double>& slack,
   }
 }
 
-void HpmModel::denseColumns() {
+void Model::denseColumns() {
   // Compute the maximum density of any column of A and count the number of
   // dense columns.
 
@@ -456,7 +456,7 @@ void HpmModel::denseColumns() {
   }
 }
 
-double HpmModel::normScaledRhs() const {
+double Model::normScaledRhs() const {
   double norm_rhs = infNorm(b_);
   for (double d : lower_)
     if (std::isfinite(d)) norm_rhs = std::max(norm_rhs, std::abs(d));
@@ -465,9 +465,9 @@ double HpmModel::normScaledRhs() const {
   return norm_rhs;
 }
 
-double HpmModel::normScaledObj() const { return infNorm(c_); }
+double Model::normScaledObj() const { return infNorm(c_); }
 
-double HpmModel::normUnscaledObj() const {
+double Model::normUnscaledObj() const {
   double norm_obj = 0.0;
   for (Int i = 0; i < n_; ++i) {
     double val = std::abs(c_[i]);
@@ -477,7 +477,7 @@ double HpmModel::normUnscaledObj() const {
   return norm_obj;
 }
 
-double HpmModel::normUnscaledRhs() const {
+double Model::normUnscaledRhs() const {
   double norm_rhs = 0.0;
   for (Int i = 0; i < m_; ++i) {
     double val = std::abs(b_[i]);
@@ -499,7 +499,7 @@ double HpmModel::normUnscaledRhs() const {
   return norm_rhs;
 }
 
-Int HpmModel::loadIntoIpx(ipx::LpSolver& lps) const {
+Int Model::loadIntoIpx(ipx::LpSolver& lps) const {
   Int load_status = lps.LoadModel(
       n_orig_, offset_, c_orig_, lower_orig_, upper_orig_, m_orig_, A_ptr_orig_,
       A_rows_orig_, A_vals_orig_, b_orig_, constraints_orig_);
@@ -507,7 +507,7 @@ Int HpmModel::loadIntoIpx(ipx::LpSolver& lps) const {
   return load_status;
 }
 
-void HpmModel::multWithoutSlack(double alpha, const std::vector<double>& x,
+void Model::multWithoutSlack(double alpha, const std::vector<double>& x,
                                 std::vector<double>& y, bool trans) const {
   assert(x.size() == trans ? m_ : n_orig_);
   assert(y.size() == trans ? n_orig_ : m_);
@@ -527,4 +527,4 @@ void HpmModel::multWithoutSlack(double alpha, const std::vector<double>& x,
   }
 }
 
-}  // namespace highspm
+}  // namespace hipo

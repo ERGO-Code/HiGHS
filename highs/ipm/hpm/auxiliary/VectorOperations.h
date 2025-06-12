@@ -1,11 +1,11 @@
-#ifndef HIGHSPM_VECTOR_OPERATIONS_H
-#define HIGHSPM_VECTOR_OPERATIONS_H
+#ifndef HIPO_VECTOR_OPERATIONS_H
+#define HIPO_VECTOR_OPERATIONS_H
 
 #include <vector>
 
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 // =======================================================================
 // COMPONENT-WISE VECTOR OPERATIONS
@@ -54,6 +54,6 @@ bool isNanVector(const std::vector<double>& x);
 // check for Inf
 bool isInfVector(const std::vector<double>& x);
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

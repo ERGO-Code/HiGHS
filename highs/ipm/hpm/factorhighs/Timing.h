@@ -1,7 +1,7 @@
 #ifndef FACTORHIGHS_TIMING_H
 #define FACTORHIGHS_TIMING_H
 
-namespace highspm {
+namespace hipo {
 
 enum TimeItems {
   kTimeAnalyse,                           // TIMING_LEVEL 1

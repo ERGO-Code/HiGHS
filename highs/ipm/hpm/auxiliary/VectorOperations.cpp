@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace highspm {
+namespace hipo {
 
 void vectorAdd(std::vector<double>& v1, const std::vector<double>& v2,
                double beta, double alpha) {
@@ -114,4 +114,4 @@ bool isInfVector(const std::vector<double>& x) {
   return false;
 }
 
-}  // namespace highspm
+}  // namespace hipo

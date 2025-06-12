@@ -1,5 +1,5 @@
-#ifndef HIGHSPM_AUXILIARY_H
-#define HIGHSPM_AUXILIARY_H
+#ifndef HIPO_AUXILIARY_H
+#define HIPO_AUXILIARY_H
 
 #include <chrono>
 #include <fstream>
@@ -10,7 +10,7 @@
 #include "ipm/hpm/auxiliary/IntConfig.h"
 #include "util/HighsCDouble.h"
 
-namespace highspm {
+namespace hipo {
 
 void counts2Ptr(std::vector<Int>& ptr, std::vector<Int>& w);
 void inversePerm(const std::vector<Int>& perm, std::vector<Int>& iperm);
@@ -73,6 +73,6 @@ class Clock {
   double stop() const;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

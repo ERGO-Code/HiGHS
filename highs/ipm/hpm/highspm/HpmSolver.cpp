@@ -7,9 +7,9 @@
 #include "ipm/hpm/auxiliary/HpmLog.h"
 #include "parallel/HighsParallel.h"
 
-namespace highspm {
+namespace hipo {
 
-Int HpmSolver::load(const Int num_var, const Int num_con, const double* obj,
+Int Solver::load(const Int num_var, const Int num_con, const double* obj,
                     const double* rhs, const double* lower, const double* upper,
                     const Int* A_ptr, const Int* A_rows, const double* A_vals,
                     const char* constraints, double offset) {
@@ -29,7 +29,7 @@ Int HpmSolver::load(const Int num_var, const Int num_con, const double* obj,
   return 0;
 }
 
-void HpmSolver::set(const HpmOptions& options,
+void Solver::set(const Options& options,
                     const HighsLogOptions& log_options, HighsCallback& callback,
                     const HighsTimer& timer) {
   options_ = options;
@@ -39,7 +39,7 @@ void HpmSolver::set(const HpmOptions& options,
   control_.setOptions(options);
 }
 
-void HpmSolver::solve() {
+void Solver::solve() {
   if (!model_.ready()) {
     info_.status = kStatusBadModel;
     return;
@@ -60,7 +60,7 @@ void HpmSolver::solve() {
   DataCollector::terminate();
 }
 
-void HpmSolver::runIpm() {
+void Solver::runIpm() {
   if (initialise()) return;
 
   while (iter_ < options_.max_iter) {
@@ -73,14 +73,14 @@ void HpmSolver::runIpm() {
   terminate();
 }
 
-bool HpmSolver::initialise() {
+bool Solver::initialise() {
   // Prepare ipm for execution.
   // Return true if an error occurred.
 
   start_time_ = control_.elapsed();
 
   // initialise iterate object
-  it_.reset(new HpmIterate(model_));
+  it_.reset(new Iterate(model_));
 
   // initialise linear solver
   LS_.reset(new FactorHiGHSSolver(options_, &info_));
@@ -108,7 +108,7 @@ bool HpmSolver::initialise() {
   return false;
 }
 
-void HpmSolver::terminate() {
+void Solver::terminate() {
   info_.ipm_iter = iter_;
   if (info_.status == kStatusNotRun) info_.status = kStatusMaxIter;
 
@@ -116,7 +116,7 @@ void HpmSolver::terminate() {
   info_.option_par = options_.parallel;
 }
 
-bool HpmSolver::prepareIter() {
+bool Solver::prepareIter() {
   // Prepare next iteration.
   // Return true if Ipm main loop should be stopped
 
@@ -139,7 +139,7 @@ bool HpmSolver::prepareIter() {
   return false;
 }
 
-bool HpmSolver::predictor() {
+bool Solver::predictor() {
   // Compute affine scaling direction.
   // Return true if an error occurred.
 
@@ -155,7 +155,7 @@ bool HpmSolver::predictor() {
   return false;
 }
 
-bool HpmSolver::correctors() {
+bool Solver::correctors() {
   // Compute multiple centrality correctors.
   // Return true if an error occurred.
 
@@ -167,7 +167,7 @@ bool HpmSolver::correctors() {
   return false;
 }
 
-bool HpmSolver::prepareIpx() {
+bool Solver::prepareIpx() {
   // Return true if an error occurred;
 
   ipx::Parameters ipx_param;
@@ -214,13 +214,13 @@ bool HpmSolver::prepareIpx() {
   return false;
 }
 
-void HpmSolver::refineWithIpx() {
+void Solver::refineWithIpx() {
   if (checkInterrupt()) return;
 
   if (statusNeedsRefinement() && options_.refine_with_ipx) {
-    Log::printf("\nHiGHSpm did not converge, restarting with IPX\n");
+    Log::printf("\nHiPO did not converge, restarting with IPX\n");
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
-    Log::printf("\nHiGHSpm converged, running crossover with IPX\n");
+    Log::printf("\nHiPO converged, running crossover with IPX\n");
   } else {
     return;
   }
@@ -232,8 +232,8 @@ void HpmSolver::refineWithIpx() {
 
   info_.ipx_info = ipx_lps_.GetInfo();
 
-  // Convert between ipx and highspm status
-  info_.status = IpxToHpmStatus(info_.ipx_info.status_ipm);
+  // Convert between ipx and hipo status
+  info_.status = IpxToHipoStatus(info_.ipx_info.status_ipm);
 
   std::stringstream log_stream;
   log_stream << "IPX reports status: ipm "
@@ -249,7 +249,7 @@ void HpmSolver::refineWithIpx() {
   }
 }
 
-void HpmSolver::runCrossover() {
+void Solver::runCrossover() {
   // run crossover directly, without refining with ipx.
   // not used for now.
 
@@ -265,7 +265,7 @@ void HpmSolver::runCrossover() {
   info_.ipx_used = true;
 }
 
-bool HpmSolver::solveNewtonSystem(NewtonDir& delta) {
+bool Solver::solveNewtonSystem(NewtonDir& delta) {
   std::vector<double>& theta_inv = it_->scaling;
 
   std::vector<double> res7 = it_->residual7();
@@ -322,7 +322,7 @@ bool HpmSolver::solveNewtonSystem(NewtonDir& delta) {
   return false;
 }
 
-bool HpmSolver::recoverDirection(NewtonDir& delta) {
+bool Solver::recoverDirection(NewtonDir& delta) {
   // Recover components xl, xu, zl, zu of partial direction delta.
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -386,7 +386,7 @@ bool HpmSolver::recoverDirection(NewtonDir& delta) {
   return false;
 }
 
-double HpmSolver::stepToBoundary(const std::vector<double>& x,
+double Solver::stepToBoundary(const std::vector<double>& x,
                                  const std::vector<double>& dx,
                                  const std::vector<double>* cor, double weight,
                                  bool lo, Int* block) const {
@@ -413,7 +413,7 @@ double HpmSolver::stepToBoundary(const std::vector<double>& x,
   return alpha;
 }
 
-void HpmSolver::stepsToBoundary(double& alpha_primal, double& alpha_dual,
+void Solver::stepsToBoundary(double& alpha_primal, double& alpha_dual,
                                 const NewtonDir& delta, const NewtonDir* cor,
                                 double weight) const {
   // compute primal and dual steps to boundary, given direction, corrector and
@@ -435,7 +435,7 @@ void HpmSolver::stepsToBoundary(double& alpha_primal, double& alpha_dual,
   alpha_dual = std::min(alpha_dual, 1.0);
 }
 
-void HpmSolver::stepSizes() {
+void Solver::stepSizes() {
   // Compute primal and dual stepsizes.
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -521,7 +521,7 @@ void HpmSolver::stepSizes() {
          alpha_dual_ < 1);
 }
 
-void HpmSolver::makeStep() {
+void Solver::makeStep() {
   stepSizes();
 
   // keep track of iterations with small stepsizes
@@ -546,7 +546,7 @@ void HpmSolver::makeStep() {
   printOutput();
 }
 
-bool HpmSolver::startingPoint() {
+bool Solver::startingPoint() {
   // Return true if an error occurred
 
   std::vector<double>& x = it_->x;
@@ -760,13 +760,13 @@ bool HpmSolver::startingPoint() {
   return false;
 }
 
-void HpmSolver::sigmaAffine() {
+void Solver::sigmaAffine() {
   sigma_ = kSigmaAffine;
 
   DataCollector::get()->setSigma(sigma_, true);
 }
 
-void HpmSolver::sigmaCorrectors() {
+void Solver::sigmaCorrectors() {
   if ((alpha_primal_ > 0.5 && alpha_dual_ > 0.5) || iter_ == 1) {
     sigma_ = 0.01;
   } else if (alpha_primal_ > 0.2 && alpha_dual_ > 0.2) {
@@ -782,7 +782,7 @@ void HpmSolver::sigmaCorrectors() {
   DataCollector::get()->setSigma(sigma_);
 }
 
-void HpmSolver::residualsMcc() {
+void Solver::residualsMcc() {
   // compute right-hand side for multiple centrality correctors
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -859,7 +859,7 @@ void HpmSolver::residualsMcc() {
   }
 }
 
-bool HpmSolver::centralityCorrectors() {
+bool Solver::centralityCorrectors() {
   // compute stepsizes of current direction
   double alpha_p_old, alpha_d_old;
   stepsToBoundary(alpha_p_old, alpha_d_old, it_->delta);
@@ -922,7 +922,7 @@ bool HpmSolver::centralityCorrectors() {
   return false;
 }
 
-void HpmSolver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
+void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
                            double& wp, double& wd, double& alpha_p,
                            double& alpha_d) const {
   // Find the best primal and dual weights for the corrector in the interval
@@ -957,7 +957,7 @@ void HpmSolver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
   }
 }
 
-bool HpmSolver::checkIterate() {
+bool Solver::checkIterate() {
   // Check that iterate is not NaN or Inf
   if (it_->isNan()) {
     Log::printDevInfo("\nIterate is nan\n");
@@ -983,7 +983,7 @@ bool HpmSolver::checkIterate() {
   return false;
 }
 
-bool HpmSolver::checkBadIter() {
+bool Solver::checkBadIter() {
   bool terminate = false;
 
   // check for bad iterations
@@ -1018,7 +1018,7 @@ bool HpmSolver::checkBadIter() {
   return terminate;
 }
 
-bool HpmSolver::checkTermination() {
+bool Solver::checkTermination() {
   bool feasible = it_->pinf < options_.feasibility_tol &&
                   it_->dinf < options_.feasibility_tol;
   bool optimal = it_->pdgap < options_.optimality_tol;
@@ -1046,7 +1046,7 @@ bool HpmSolver::checkTermination() {
   return terminate;
 }
 
-bool HpmSolver::checkInterrupt() {
+bool Solver::checkInterrupt() {
   bool terminate = false;
   Int status = control_.interruptCheck(iter_);
   if (status) {
@@ -1056,8 +1056,8 @@ bool HpmSolver::checkInterrupt() {
   return terminate;
 }
 
-void HpmSolver::backwardError(const NewtonDir& delta) const {
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+void Solver::backwardError(const NewtonDir& delta) const {
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   std::vector<double>& x = it_->x;
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -1342,7 +1342,7 @@ void HpmSolver::backwardError(const NewtonDir& delta) const {
 #endif
 }
 
-void HpmSolver::printHeader() const {
+void Solver::printHeader() const {
   if (iter_ % 20 == 0) {
     std::stringstream log_stream;
     log_stream << " iter       primal obj         dual obj"
@@ -1361,7 +1361,7 @@ void HpmSolver::printHeader() const {
   }
 }
 
-void HpmSolver::printOutput() const {
+void Solver::printOutput() const {
   printHeader();
 
   std::stringstream log_stream;
@@ -1398,9 +1398,9 @@ void HpmSolver::printOutput() const {
   Log::print(log_stream);
 }
 
-void HpmSolver::printInfo() const {
+void Solver::printInfo() const {
   std::stringstream log_stream;
-  log_stream << "\nRunning HiGHSpm\n";
+  log_stream << "\nRunning HiPO\n";
   if (options_.parallel == kOptionParallelOff)
     log_stream << textline("Threads:") << 1 << '\n';
   else
@@ -1408,10 +1408,10 @@ void HpmSolver::printInfo() const {
                << '\n';
   Log::print(log_stream);
 
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   Log::printw("Collecting expensive data\n");
 #endif
-#if HPM_TIMING_LEVEL > 0
+#if HIPO_TIMING_LEVEL > 0
   Log::printw("Collecting times\n");
 #endif
 
@@ -1419,12 +1419,12 @@ void HpmSolver::printInfo() const {
   model_.print();
 }
 
-void HpmSolver::printSummary() const {
+void Solver::printSummary() const {
   std::stringstream log_stream;
 
   log_stream << "\nSummary\n";
   if (!options_.timeless_log)
-    log_stream << textline("HiGHSpm runtime:")
+    log_stream << textline("HiPO runtime:")
                << fix(control_.elapsed() - start_time_, 0, 2) << "\n";
 
   log_stream << textline("Status:") << statusString(info_.status) << "\n";
@@ -1479,8 +1479,8 @@ void HpmSolver::printSummary() const {
   Log::print(log_stream);
 }
 
-const HpmInfo& HpmSolver::getInfo() const { return info_; }
-void HpmSolver::getInteriorSolution(
+const Info& Solver::getInfo() const { return info_; }
+void Solver::getInteriorSolution(
     std::vector<double>& x, std::vector<double>& xl, std::vector<double>& xu,
     std::vector<double>& slack, std::vector<double>& y, std::vector<double>& zl,
     std::vector<double>& zu) const {
@@ -1496,7 +1496,7 @@ void HpmSolver::getInteriorSolution(
   }
 }
 
-Int HpmSolver::getBasicSolution(std::vector<double>& x,
+Int Solver::getBasicSolution(std::vector<double>& x,
                                 std::vector<double>& slack,
                                 std::vector<double>& y, std::vector<double>& z,
                                 Int* cbasis, Int* vbasis) const {
@@ -1505,7 +1505,7 @@ Int HpmSolver::getBasicSolution(std::vector<double>& x,
                                    cbasis, vbasis);
 }
 
-void HpmSolver::getSolution(std::vector<double>& x, std::vector<double>& slack,
+void Solver::getSolution(std::vector<double>& x, std::vector<double>& slack,
                             std::vector<double>& y,
                             std::vector<double>& z) const {
   // prepare and return solution with format for crossover
@@ -1514,7 +1514,7 @@ void HpmSolver::getSolution(std::vector<double>& x, std::vector<double>& slack,
   model_.postprocess(slack, y);
 }
 
-void HpmSolver::maxCorrectors() {
+void Solver::maxCorrectors() {
   if (kMaxCorrectors > 0) {
     // Compute estimate of effort to factorise and solve
 
@@ -1551,23 +1551,23 @@ void HpmSolver::maxCorrectors() {
   }
 }
 
-bool HpmSolver::statusIsSolved() const { return info_.status >= kStatusSolved; }
-bool HpmSolver::statusIsStopped() const { return info_.status < kStatusFailed; }
-bool HpmSolver::statusIsFailed() const {
+bool Solver::statusIsSolved() const { return info_.status >= kStatusSolved; }
+bool Solver::statusIsStopped() const { return info_.status < kStatusFailed; }
+bool Solver::statusIsFailed() const {
   return info_.status >= kStatusFailed && info_.status < kStatusSolved;
 }
-bool HpmSolver::statusAllowsCrossover() const {
+bool Solver::statusAllowsCrossover() const {
   return info_.status >= kStatusPDFeas;
 }
-bool HpmSolver::statusNeedsRefinement() const {
+bool Solver::statusNeedsRefinement() const {
   return info_.status == kStatusNoProgress || info_.status == kStatusImprecise;
 }
-bool HpmSolver::crossoverIsOn() const {
+bool Solver::crossoverIsOn() const {
   return options_.crossover == kOptionCrossoverOn ||
          options_.crossover == kOptionCrossoverChoose;
 }
-bool HpmSolver::solved() const { return statusIsSolved(); }
-bool HpmSolver::stopped() const { return statusIsStopped(); }
-bool HpmSolver::failed() const { return statusIsFailed(); }
+bool Solver::solved() const { return statusIsSolved(); }
+bool Solver::stopped() const { return statusIsStopped(); }
+bool Solver::failed() const { return statusIsFailed(); }
 
-}  // namespace highspm
+}  // namespace hipo

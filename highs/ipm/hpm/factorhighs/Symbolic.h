@@ -5,7 +5,7 @@
 
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 // Symbolic factorisation object
 class Symbolic {
@@ -206,6 +206,6 @@ class Symbolic {
 // consecutive_sums_[i][4] = 3, which means that the next 3 indices need not be
 // summed by hand, but they can be done using daxpy.
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

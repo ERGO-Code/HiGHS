@@ -3,7 +3,7 @@
 
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 // parallelise dgemm for use within factorisation
 // Performs Q <- Q - R P^T in hybrid format.
@@ -25,6 +25,6 @@ class dgemmParalleliser {
 void dgemmParallel(const double* P, const double* R, double* Q, Int col, Int jb,
                    Int row, Int nb, double beta = 1.0);
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

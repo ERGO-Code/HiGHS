@@ -3,7 +3,7 @@
 
 #include "FormatHandler.h"
 
-namespace highspm {
+namespace hipo {
 
 class HybridHybridFormatHandler : public FormatHandler {
   std::vector<Int> diag_start_;
@@ -23,6 +23,6 @@ class HybridHybridFormatHandler : public FormatHandler {
   HybridHybridFormatHandler(const Symbolic& S, Int sn);
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

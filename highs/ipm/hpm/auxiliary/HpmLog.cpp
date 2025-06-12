@@ -1,6 +1,6 @@
 #include "HpmLog.h"
 
-namespace highspm {
+namespace hipo {
 
 const HighsLogOptions* Log::log_options_ = nullptr;
 
@@ -67,4 +67,4 @@ std::string integer(Int i, Int width) {
   return s.str();
 }
 
-}  // namespace highspm
+}  // namespace hipo

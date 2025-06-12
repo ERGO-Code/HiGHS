@@ -1,12 +1,12 @@
-#ifndef HIGHSPM_IPM_STATUS_H
-#define HIGHSPM_IPM_STATUS_H
+#ifndef HIPO_STATUS_H
+#define HIPO_STATUS_H
 
 #include <map>
 #include <string>
 
 #include "ipm/ipx/ipx_status.h"
 
-namespace highspm {
+namespace hipo {
 
 // Status is used both as return value for intermediate functions and as final
 // status of the solver.
@@ -41,7 +41,7 @@ enum Status {
   kStatusBasic
 };
 
-inline Status IpxToHpmStatus(Int ipx_status) {
+inline Status IpxToHipoStatus(Int ipx_status) {
   static const std::map<Int, Status> status_map{
       {IPX_STATUS_not_run, kStatusNotRun},
       {IPX_STATUS_iter_limit, kStatusMaxIter},
@@ -83,6 +83,6 @@ inline std::string statusString(Status status) {
   return "unknown";
 }
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

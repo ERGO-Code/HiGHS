@@ -1,5 +1,5 @@
-#ifndef HIGHSPM_SOLVER_H
-#define HIGHSPM_SOLVER_H
+#ifndef HIPO_SOLVER_H
+#define HIPO_SOLVER_H
 
 #include <string>
 
@@ -21,17 +21,17 @@
 #include "util/HighsSparseMatrix.h"
 #include "util/HighsTimer.h"
 
-namespace highspm {
+namespace hipo {
 
-class HpmSolver {
+class Solver {
   // LP model
-  HpmModel model_;
+  Model model_;
 
   // Linear solver interface
   std::unique_ptr<LinearSolver> LS_;
 
   // Iterate object interface
-  std::unique_ptr<HpmIterate> it_;
+  std::unique_ptr<Iterate> it_;
 
   // Size of the problem
   Int m_{}, n_{};
@@ -46,12 +46,12 @@ class HpmSolver {
   double sigma_{};
 
   // General information
-  HpmInfo info_;
+  Info info_;
 
-  HpmControl control_;
+  Control control_;
 
   // Run-time options
-  HpmOptions options_{};
+  Options options_{};
 
   // Interface to ipx
   ipx::LpSolver ipx_lps_;
@@ -86,7 +86,7 @@ class HpmSolver {
   // ===================================================================================
   // Specify options, callback and timer.
   // ===================================================================================
-  void set(const HpmOptions& options, const HighsLogOptions& log_options,
+  void set(const Options& options, const HighsLogOptions& log_options,
            HighsCallback& callback, const HighsTimer& timer);
 
   // ===================================================================================
@@ -106,7 +106,7 @@ class HpmSolver {
                        Int* cbasis, Int* vbasis) const;
   void getSolution(std::vector<double>& x, std::vector<double>& slack,
                    std::vector<double>& y, std::vector<double>& z) const;
-  const HpmInfo& getInfo() const;
+  const Info& getInfo() const;
 
   // check the status of the solver
   bool solved() const;
@@ -325,6 +325,6 @@ class HpmSolver {
   void printSummary() const;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

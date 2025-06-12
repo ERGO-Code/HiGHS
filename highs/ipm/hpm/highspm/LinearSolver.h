@@ -1,5 +1,5 @@
-#ifndef HIGHSPM_LINEAR_SOLVER_H
-#define HIGHSPM_LINEAR_SOLVER_H
+#ifndef HIPO_LINEAR_SOLVER_H
+#define HIPO_LINEAR_SOLVER_H
 
 #include <vector>
 
@@ -9,7 +9,7 @@
 #include "ipm/hpm/auxiliary/VectorOperations.h"
 #include "util/HighsSparseMatrix.h"
 
-namespace highspm {
+namespace hipo {
 
 // Interface class for solving augmented system or normal equations.
 //
@@ -70,7 +70,7 @@ class LinearSolver {
   // Virtual functions.
   // These may be overridden by derived classes, if needed.
   // =================================================================
-  virtual Int setup(const HpmModel& model, HpmOptions& options) { return 0; }
+  virtual Int setup(const Model& model, Options& options) { return 0; }
 
   virtual void refine(const HighsSparseMatrix& A,
                       const std::vector<double>& scaling,
@@ -85,6 +85,6 @@ class LinearSolver {
   virtual double nz() const { return 0; }
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

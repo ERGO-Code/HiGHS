@@ -1,5 +1,5 @@
-#ifndef HIGHSPM_IPM_ITERATE_H
-#define HIGHSPM_IPM_ITERATE_H
+#ifndef HIPO_ITERATE_H
+#define HIPO_ITERATE_H
 
 #include <vector>
 
@@ -7,7 +7,7 @@
 #include "ipm/hpm/auxiliary/IntConfig.h"
 #include "HpmInfo.h"
 
-namespace highspm {
+namespace hipo {
 
 // Holds the Newton direction Delta(x,y,xl,xu,zl,zu)
 struct NewtonDir {
@@ -21,9 +21,9 @@ struct NewtonDir {
   NewtonDir(Int m, Int n);
 };
 
-struct HpmIterate {
+struct Iterate {
   // lp model
-  const HpmModel* model;
+  const Model* model;
 
   // ipm point
   std::vector<double> x, xl, xu, y, zl, zu;
@@ -49,7 +49,7 @@ struct HpmIterate {
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
   // ===================================================================================
-  HpmIterate(const HpmModel& model_input);
+  Iterate(const Model& model_input);
 
   // clear existing data
   void clearIter();
@@ -170,9 +170,9 @@ struct HpmIterate {
   // Compute residuals after solution has been found, postprocessed and
   // unscaled.
   // ===================================================================================
-  void finalResiduals(HpmInfo& info) const;
+  void finalResiduals(Info& info) const;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

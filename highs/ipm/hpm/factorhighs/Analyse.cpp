@@ -14,7 +14,7 @@
 #include "ipm/hpm/auxiliary/HpmLog.h"
 #include "metis.h"
 
-namespace highspm {
+namespace hipo {
 
 Analyse::Analyse(Symbolic& S, const std::vector<Int>& rows,
                  const std::vector<Int>& ptr, Int negative_pivots)
@@ -1285,68 +1285,68 @@ Int Analyse::run() {
 
   if (!ready_) return kRetGeneric;
 
-#if HPM_TIMING_LEVEL >= 1
+#if HIPO_TIMING_LEVEL >= 1
   Clock clock_total;
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock_items;
 #endif
   if (Int metis_status = getPermutation()) return kRetMetisError;
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeAnalyseMetis, clock_items.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   clock_items.start();
 #endif
   permute(iperm_);
   eTree();
   postorder();
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeAnalyseTree, clock_items.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   clock_items.start();
 #endif
   colCount();
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeAnalyseCount, clock_items.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   clock_items.start();
 #endif
   fundamentalSupernodes();
   relaxSupernodes();
   afterRelaxSn();
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeAnalyseSn, clock_items.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   clock_items.start();
 #endif
   reorderChildren();
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeAnalyseReorder, clock_items.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   clock_items.start();
 #endif
   snPattern();
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeAnalysePattern, clock_items.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   clock_items.start();
 #endif
   relativeIndCols();
   relativeIndClique();
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeAnalyseRelInd, clock_items.stop());
 #endif
 
@@ -1404,11 +1404,11 @@ Int Analyse::run() {
   S_.consecutive_sums_ = std::move(consecutive_sums_);
   S_.clique_block_start_ = std::move(clique_block_start_);
 
-#if HPM_TIMING_LEVEL >= 1
+#if HIPO_TIMING_LEVEL >= 1
   DataCollector::get()->sumTime(kTimeAnalyse, clock_total.stop());
 #endif
 
   return kRetOk;
 }
 
-}  // namespace highspm
+}  // namespace hipo

@@ -5,7 +5,7 @@
 
 #include "ipm/hpm/auxiliary/VectorOperations.h"
 
-namespace highspm {
+namespace hipo {
 
 void product(const std::vector<double>& x, std::vector<double>& y,
              const std::vector<Int>& ptr, const std::vector<Int>& rows,
@@ -206,4 +206,4 @@ void JacekScalingSym(const std::vector<Int>& ptr, const std::vector<Int>& rows,
   }
 }
 
-}  // namespace highspm
+}  // namespace hipo

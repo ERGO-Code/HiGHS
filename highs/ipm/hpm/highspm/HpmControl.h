@@ -1,5 +1,5 @@
-#ifndef HIGHSPM_CONTROL_H
-#define HIGHSPM_CONTROL_H
+#ifndef HIPO_CONTROL_H
+#define HIPO_CONTROL_H
 
 #include "HpmOption.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
@@ -8,27 +8,27 @@
 
 // Interface to Highs timer and callback
 
-namespace highspm {
+namespace hipo {
 
-class HpmControl {
+class Control {
   // disallow copy and copy construction
-  HpmControl& operator=(const HpmControl&) = delete;
-  HpmControl(const HpmControl&) = delete;
+  Control& operator=(const Control&) = delete;
+  Control(const Control&) = delete;
 
   // disallow move and move construction
-  HpmControl& operator=(HpmControl&&) = delete;
-  HpmControl(const HpmControl&&) = delete;
+  Control& operator=(Control&&) = delete;
+  Control(const Control&&) = delete;
 
   HighsCallback* callback_ = nullptr;
   const HighsTimer* timer_ = nullptr;
-  const HpmOptions* options_ = nullptr;
+  const Options* options_ = nullptr;
 
  public:
-  HpmControl() = default;
+  Control() = default;
 
   void setCallback(HighsCallback& callback);
   void setTimer(const HighsTimer& timer);
-  void setOptions(const HpmOptions& options);
+  void setOptions(const Options& options);
 
   HighsCallback* callback() const;
 
@@ -36,6 +36,6 @@ class HpmControl {
   Int interruptCheck(const Int ipm_iteration_count = -1) const;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

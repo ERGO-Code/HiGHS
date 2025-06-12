@@ -6,7 +6,7 @@
 #include "Symbolic.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 // Interface class to handle different formats of dense matrices during the
 // solve phase.
@@ -40,6 +40,6 @@ class SolveHandler {
   virtual void diagSolve(std::vector<double>& x) const = 0;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

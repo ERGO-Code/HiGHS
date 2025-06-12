@@ -1,14 +1,14 @@
-#ifndef HIGHSPM_HPM_INFO_H
-#define HIGHSPM_HPM_INFO_H
+#ifndef HIPO_INFO_H
+#define HIPO_INFO_H
 
 #include "HpmOption.h"
 #include "HpmStatus.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 #include "ipm/ipx/info.h"
 
-namespace highspm {
+namespace hipo {
 
-struct HpmInfo {
+struct Info {
   // Size of problem, as seen by the solver
   Int m_solver, n_solver;
 
@@ -55,6 +55,6 @@ struct HpmInfo {
   double max_col_density{};
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

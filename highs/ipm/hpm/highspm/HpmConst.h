@@ -1,9 +1,9 @@
-#ifndef HIGHSPM_HPM_CONST_H
-#define HIGHSPM_HPM_CONST_H
+#ifndef HIPO_CONST_H
+#define HIPO_CONST_H
 
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 // parameters for termination
 const Int kMaxIterDefault = 200;
@@ -37,6 +37,6 @@ const Int kMinNumberSn = 10;
 const double kDenseColThresh = 0.5;
 const Int kMinRowsForDensity = 2000;
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

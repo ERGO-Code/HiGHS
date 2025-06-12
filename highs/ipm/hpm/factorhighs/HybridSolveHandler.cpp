@@ -7,7 +7,7 @@
 #include "Swaps.h"
 #include "ipm/hpm/auxiliary/Auxiliary.h"
 
-namespace highspm {
+namespace hipo {
 
 HybridSolveHandler::HybridSolveHandler(
     const Symbolic& S, const std::vector<std::vector<double>>& sn_columns,
@@ -21,7 +21,7 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
 
   // supernode columns in format FH
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock;
 #endif
 
@@ -58,18 +58,18 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
       const Int x_start = sn_start + nb * j;
 
 #ifdef PIVOTING
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       // apply swaps to portion of rhs that is affected
       const Int* current_swaps = &swaps_[sn][nb * j];
       permuteWithSwaps(&x[x_start], current_swaps, jb);
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_swap, clock.stop());
 #endif
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       callAndTime_dtrsv('U', 'T', 'U', jb, &sn_columns_[sn][SnCol_ind], jb,
@@ -84,11 +84,11 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
       callAndTime_dgemv('T', jb, gemv_space, 1.0, &sn_columns_[sn][SnCol_ind],
                         jb, &x[x_start], 1, 0.0, y.data(), 1);
       SnCol_ind += jb * gemv_space;
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_dense, clock.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       // scatter solution of gemv
@@ -96,17 +96,17 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
         const Int row = S_.rows(start_row + nb * j + jb + i);
         x[row] -= y[i];
       }
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_sparse, clock.stop());
 #endif
 
 #ifdef PIVOTING
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       // apply inverse swaps
       permuteWithSwaps(&x[x_start], current_swaps, jb, true);
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_swap, clock.stop());
 #endif
 #endif
@@ -120,7 +120,7 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
 
   // supernode columns in format FH
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock;
 #endif
 
@@ -159,13 +159,13 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
       const Int x_start = sn_start + nb * j;
 
 #ifdef PIVOTING
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       // apply swaps to portion of rhs that is affected
       const Int* current_swaps = &swaps_[sn][nb * j];
       permuteWithSwaps(&x[x_start], current_swaps, jb);
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_swap, clock.stop());
 #endif
 #endif
@@ -174,7 +174,7 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
       const Int gemv_space = ldSn - nb * j - jb;
       std::vector<double> y(gemv_space);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       // scatter entries into y
@@ -182,11 +182,11 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
         const Int row = S_.rows(start_row + nb * j + jb + i);
         y[i] = x[row];
       }
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_sparse, clock.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       SnCol_ind -= jb * gemv_space;
@@ -196,17 +196,17 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
       SnCol_ind -= diag_entries;
       callAndTime_dtrsv('U', 'N', 'U', jb, &sn_columns_[sn][SnCol_ind], jb,
                         &x[x_start], 1);
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_dense, clock.stop());
 #endif
 
 #ifdef PIVOTING
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       // apply inverse swaps
       permuteWithSwaps(&x[x_start], current_swaps, jb, true);
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_swap, clock.stop());
 #endif
 #endif
@@ -219,7 +219,7 @@ void HybridSolveHandler::diagSolve(std::vector<double>& x) const {
 
   // supernode columns in format FH
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock;
 #endif
 
@@ -247,18 +247,18 @@ void HybridSolveHandler::diagSolve(std::vector<double>& x) const {
       const Int jb = std::min(nb, sn_size - nb * j);
 
 #ifdef PIVOTING
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       // apply swaps to portion of rhs that is affected
       const Int* current_swaps = &swaps_[sn][nb * j];
       permuteWithSwaps(&x[sn_start + nb * j], current_swaps, jb);
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_swap, clock.stop());
 #endif
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
 
@@ -290,17 +290,17 @@ void HybridSolveHandler::diagSolve(std::vector<double>& x) const {
         }
       }
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_dense, clock.stop());
 #endif
 
 #ifdef PIVOTING
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
       // apply inverse swaps
       permuteWithSwaps(&x[sn_start + nb * j], current_swaps, jb, true);
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
       DataCollector::get()->sumTime(kTimeSolveSolve_swap, clock.stop());
 #endif
 #endif
@@ -314,4 +314,4 @@ void HybridSolveHandler::diagSolve(std::vector<double>& x) const {
   }
 }
 
-}  // namespace highspm
+}  // namespace hipo

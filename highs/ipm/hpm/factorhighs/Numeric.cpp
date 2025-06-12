@@ -10,7 +10,7 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsRandom.h"
 
-namespace highspm {
+namespace hipo {
 
 Numeric::Numeric(const Symbolic& S) : S_{S} {
   // initialise solve handler
@@ -20,11 +20,11 @@ Numeric::Numeric(const Symbolic& S) : S_{S} {
 Int Numeric::solve(std::vector<double>& x) const {
   // Return the number of solves performed
 
-#if HPM_TIMING_LEVEL >= 1
+#if HIPO_TIMING_LEVEL >= 1
   Clock clock{};
 #endif
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock_fine{};
 #endif
 
@@ -34,7 +34,7 @@ Int Numeric::solve(std::vector<double>& x) const {
   // make a copy of permuted rhs, for refinement
   const std::vector<double> rhs(x);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeSolvePrepare, clock_fine.stop());
   clock_fine.start();
 #endif
@@ -45,25 +45,25 @@ Int Numeric::solve(std::vector<double>& x) const {
   SH_->backwardSolve(x);
   DataCollector::get()->countSolves();
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeSolveSolve, clock_fine.stop());
 #endif
 
   // iterative refinement
   Int refine_solves = refine(rhs, x);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   clock_fine.start();
 #endif
 
   // unpermute solution
   permuteVector(x, S_.iperm());
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeSolvePrepare, clock_fine.stop());
 #endif
 
-#if HPM_TIMING_LEVEL >= 1
+#if HIPO_TIMING_LEVEL >= 1
   DataCollector::get()->sumTime(kTimeSolve, clock.stop());
 #endif
 
@@ -105,21 +105,21 @@ Int Numeric::refine(const std::vector<double>& rhs,
   double old_omega{};
   Int solves_counter{};
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock{};
 #endif
 
   // compute residual
   std::vector<double> res = residualQuad(rhs, x);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeSolveResidual, clock.stop());
   clock.start();
 #endif
 
   double omega = computeOmega(rhs, x, res);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeSolveOmega, clock.stop());
 #endif
 
@@ -130,7 +130,7 @@ Int Numeric::refine(const std::vector<double>& rhs,
     // termination criterion
     if (omega < kRefinementTolerance) break;
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
     clock.start();
 #endif
 
@@ -141,7 +141,7 @@ Int Numeric::refine(const std::vector<double>& rhs,
     DataCollector::get()->countSolves();
     ++solves_counter;
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
     DataCollector::get()->sumTime(kTimeSolveSolve, clock.stop());
     clock.start();
 #endif
@@ -150,7 +150,7 @@ Int Numeric::refine(const std::vector<double>& rhs,
     std::vector<double> temp(x);
     vectorAdd(temp, res);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
     DataCollector::get()->sumTime(kTimeSolvePrepare, clock.stop());
     clock.start();
 #endif
@@ -158,7 +158,7 @@ Int Numeric::refine(const std::vector<double>& rhs,
     // compute new residual
     res = residualQuad(rhs, temp);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
     DataCollector::get()->sumTime(kTimeSolveResidual, clock.stop());
     clock.start();
 #endif
@@ -168,7 +168,7 @@ Int Numeric::refine(const std::vector<double>& rhs,
 
     Log::printDevVerbose("   # refine %.2e\n", omega);
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
     DataCollector::get()->sumTime(kTimeSolveOmega, clock.stop());
 #endif
 
@@ -300,4 +300,4 @@ void Numeric::conditionNumber() const {
   double cond = lambda_large * lambda_small_inv;
 }
 
-}  // namespace highspm
+}  // namespace hipo

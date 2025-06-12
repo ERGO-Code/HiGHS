@@ -5,7 +5,7 @@
 
 // TO DO: what happens when Int is 64 bit? Does BLAS behave correctly?
 
-namespace highspm {
+namespace hipo {
 
 // level 1
 void callAndTime_daxpy(Int n, double da, const double* dx, Int incx, double* dy,
@@ -36,6 +36,6 @@ void callAndTime_dtrsm(char side, char uplo, char trans, char diag, Int m,
                        Int n, double alpha, const double* a, Int lda, double* b,
                        Int ldb);
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

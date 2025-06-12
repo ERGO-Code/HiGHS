@@ -4,7 +4,7 @@
 #include "FactorHiGHSSettings.h"
 #include "parallel/HighsParallel.h"
 
-namespace highspm {
+namespace hipo {
 
 dgemmParalleliser::dgemmParalleliser(const double* P, const double* R,
                                      double* Q, Int col, Int jb)
@@ -32,4 +32,4 @@ void dgemmParallel(const double* P, const double* R, double* Q, Int col, Int jb,
   }
 }
 
-}  // namespace highspm
+}  // namespace hipo

@@ -7,7 +7,7 @@
 #include "ipm/hpm/auxiliary/HpmLog.h"
 #include "util/HighsRandom.h"
 
-namespace highspm {
+namespace hipo {
 
 // Dense Factorisation kernel
 
@@ -58,7 +58,7 @@ bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
   // Swap of columns may be performed.
   // Regularisation of pivot may be performed.
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock;
 #endif
   bool flag_2x2 = false;
@@ -144,7 +144,7 @@ bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
     }
   }
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeDenseFact_pivoting, clock.stop());
 #endif
   return flag_2x2;
@@ -248,7 +248,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
   // quick return
   if (n == 0) return kRetOk;
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   Clock clock;
 #endif
 
@@ -417,11 +417,11 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
     }
   }
 
-#if HPM_TIMING_LEVEL >= 2
+#if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeDenseFact_kernel, clock.stop());
 #endif
 
   return kRetOk;
 }
 
-}  // namespace highspm
+}  // namespace hipo

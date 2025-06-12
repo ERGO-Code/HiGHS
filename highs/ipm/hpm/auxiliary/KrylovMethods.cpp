@@ -6,7 +6,7 @@
 #include "VectorOperations.h"
 #include "ipm/hpm/auxiliary/HpmLog.h"
 
-namespace highspm {
+namespace hipo {
 
 void applyRotation(double& x, double& y, double c, double s) {
   double t = c * x + s * y;
@@ -190,4 +190,4 @@ Int Cg(const AbstractMatrix* M, const AbstractMatrix* P,
   return iter;
 }
 
-}  // namespace highspm
+}  // namespace hipo

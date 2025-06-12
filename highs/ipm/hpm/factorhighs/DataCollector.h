@@ -10,13 +10,13 @@
 #include "Timing.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 
-namespace highspm {
+namespace hipo {
 
 struct IterData {
 // data of a given ipm iteration
 
 // factorisation data
-#ifdef HPM_COLLECT_EXPENSIVE_DATA
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   double minD = std::numeric_limits<double>::max();
   double maxD = 0.0;
   double minL = std::numeric_limits<double>::max();
@@ -62,16 +62,16 @@ struct CounterData {
 // - DataCollector::get()->... to access any non-static member function.
 //
 // Expensive data related to the factorisation is only collected if
-// HPM_COLLECT_EXPENSIVE_DATA is defined. "Cheaper" data related to the ipm is
+// HIPO_COLLECT_EXPENSIVE_DATA is defined. "Cheaper" data related to the ipm is
 // always collected and printed only if log_dev_level is high enough.
 //
-// HPM_COLLECT_EXPENSIVE_DATA is selected at compile time, because some data is
+// HIPO_COLLECT_EXPENSIVE_DATA is selected at compile time, because some data is
 // collected many times, during many steps of the factorisation, using locks; if
-// HPM_COLLECT_EXPENSIVE_DATA is off at compile time, then there is no
+// HIPO_COLLECT_EXPENSIVE_DATA is off at compile time, then there is no
 // performance hit, since the functions are empty and are completely ignored by
 // the compiler.
 //
-// Times are only collected if HPM_TIMING_LEVEL is defined at compile time, for
+// Times are only collected if HIPO_TIMING_LEVEL is defined at compile time, for
 // the same reason.
 
 class DataCollector {
@@ -131,6 +131,6 @@ class DataCollector {
   void printIter() const;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

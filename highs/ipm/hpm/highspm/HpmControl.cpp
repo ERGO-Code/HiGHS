@@ -5,17 +5,17 @@
 #include "HpmStatus.h"
 #include "parallel/HighsParallel.h"
 
-namespace highspm {
+namespace hipo {
 
-void HpmControl::setCallback(HighsCallback& callback) { callback_ = &callback; }
-void HpmControl::setTimer(const HighsTimer& timer) { timer_ = &timer; }
-void HpmControl::setOptions(const HpmOptions& options) { options_ = &options; }
+void Control::setCallback(HighsCallback& callback) { callback_ = &callback; }
+void Control::setTimer(const HighsTimer& timer) { timer_ = &timer; }
+void Control::setOptions(const Options& options) { options_ = &options; }
 
-HighsCallback* HpmControl::callback() const { return callback_; }
+HighsCallback* Control::callback() const { return callback_; }
 
-double HpmControl::elapsed() const { return timer_ ? timer_->read() : -1.0; }
+double Control::elapsed() const { return timer_ ? timer_->read() : -1.0; }
 
-Int HpmControl::interruptCheck(const Int ipm_iteration_count) const {
+Int Control::interruptCheck(const Int ipm_iteration_count) const {
   HighsTaskExecutor::getThisWorkerDeque()->checkInterrupt();
 
   if (options_ && options_->time_limit > 0 &&
@@ -35,4 +35,4 @@ Int HpmControl::interruptCheck(const Int ipm_iteration_count) const {
   return 0;
 }
 
-}  // namespace highspm
+}  // namespace hipo

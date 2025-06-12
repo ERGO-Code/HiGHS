@@ -1,10 +1,10 @@
-#ifndef HIGHSPM_HPM_OPTION_H
-#define HIGHSPM_HPM_OPTION_H
+#ifndef HIPO_OPTION_H
+#define HIPO_OPTION_H
 
 #include "HpmConst.h"
 #include "io/HighsIO.h"
 
-namespace highspm {
+namespace hipo {
 
 enum OptionNla {
   kOptionNlaMin = 0,
@@ -35,7 +35,7 @@ enum OptionParallel {
   kOptionParallelDefault = kOptionParallelChoose
 };
 
-struct HpmOptions {
+struct Options {
   // Solver options
   OptionNla nla = kOptionNlaDefault;
   OptionCrossover crossover = kOptionCrossoverDefault;
@@ -55,6 +55,6 @@ struct HpmOptions {
   bool timeless_log = false;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

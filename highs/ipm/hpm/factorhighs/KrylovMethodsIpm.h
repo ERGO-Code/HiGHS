@@ -8,7 +8,7 @@
 #include "ipm/hpm/auxiliary/KrylovMethods.h"
 #include "util/HighsSparseMatrix.h"
 
-namespace highspm {
+namespace hipo {
 
 // Class to perform matrix-vector products with ipm matrix
 class IpmMatrix : public AbstractMatrix {
@@ -40,6 +40,6 @@ class NeDiagPrec : public AbstractMatrix {
   void apply(std::vector<double>& x) const override;
 };
 
-}  // namespace highspm
+}  // namespace hipo
 
 #endif

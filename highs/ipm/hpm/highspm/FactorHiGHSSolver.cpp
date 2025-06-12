@@ -6,14 +6,14 @@
 #include "ipm/hpm/auxiliary/Auxiliary.h"
 #include "ipm/hpm/auxiliary/HpmLog.h"
 
-namespace highspm {
+namespace hipo {
 
 Int computeLowerAThetaAT(
     const HighsSparseMatrix& matrix, const std::vector<double>& scaling,
     HighsSparseMatrix& AAT,
     const int64_t max_num_nz = std::numeric_limits<Int>::max());
 
-FactorHiGHSSolver::FactorHiGHSSolver(const HpmOptions& options, HpmInfo* info)
+FactorHiGHSSolver::FactorHiGHSSolver(const Options& options, Info* info)
     : S_{}, N_(S_), info_{info} {}
 
 void FactorHiGHSSolver::clear() {
@@ -73,7 +73,7 @@ Int getAS(const HighsSparseMatrix& A, std::vector<Int>& ptr,
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::setup(const HpmModel& model, HpmOptions& options) {
+Int FactorHiGHSSolver::setup(const Model& model, Options& options) {
   if (Int status = setNla(model, options)) return status;
   setParallel(options);
 
@@ -311,7 +311,7 @@ double FactorHiGHSSolver::flops() const { return S_.flops(); }
 double FactorHiGHSSolver::spops() const { return S_.spops(); }
 double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
 
-Int FactorHiGHSSolver::choose(const HpmModel& model, HpmOptions& options) {
+Int FactorHiGHSSolver::choose(const Model& model, Options& options) {
   // Choose whether to use augmented system or normal equations.
 
   assert(options.nla == kOptionNlaChoose);
@@ -417,7 +417,7 @@ Int FactorHiGHSSolver::choose(const HpmModel& model, HpmOptions& options) {
   return status;
 }
 
-Int FactorHiGHSSolver::setNla(const HpmModel& model, HpmOptions& options) {
+Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
   std::vector<Int> ptrLower, rowsLower;
   Clock clock;
 
@@ -466,7 +466,7 @@ Int FactorHiGHSSolver::setNla(const HpmModel& model, HpmOptions& options) {
   return kStatusOk;
 }
 
-void FactorHiGHSSolver::setParallel(HpmOptions& options) {
+void FactorHiGHSSolver::setParallel(Options& options) {
   // Set parallel options
   bool parallel_tree = false;
   bool parallel_node = false;
@@ -544,4 +544,4 @@ void FactorHiGHSSolver::setParallel(HpmOptions& options) {
   S_.setParallel(parallel_tree, parallel_node);
 }
 
-}  // namespace highspm
+}  // namespace hipo
