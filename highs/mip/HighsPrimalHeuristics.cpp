@@ -1548,22 +1548,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
 void HighsPrimalHeuristics::fixAndPropagate() {
   if (mipsolver.mipdata_->domain.infeasible()) return;
 
-  HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
-  HighsSearch heur(mipsolver, pscost);
-  HighsDomain& localdom = heur.getLocalDomain();
-  heur.setHeuristic(true);
-
-  HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
-  // only use the global upper limit as LP limit so that dual proofs are valid
-  heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
-  heurlp.setAdjustSymmetricBranchingCol(false);
-  heur.setLpRelaxation(&heurlp);
-
-  heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
-                                        localdom.col_lower_.data(),
-                                        localdom.col_upper_.data());
-  localdom.clearChangedCols();
-  heur.createNewNode();
+  HighsDomain localdom = mipsolver.mipdata_->domain;
 
   // Sort integer variables into order they'll be branched on
   const auto& lpsol =
@@ -1583,7 +1568,7 @@ void HighsPrimalHeuristics::fixAndPropagate() {
         (rootsol[col] <= localdom.col_lower_[col] +feastol) ||
         (rootsol[col] >= localdom.col_upper_[col] - feastol),
         mipsolver.mipdata_->cliquetable.getNumImplications(col),
-        -heurlp.getLp().col_cost_[col],
+        -mipsolver.mipdata_->lp.getLp().col_cost_[col],
         col));
   }
   pdqsort(diveperm.begin(), diveperm.end(),
@@ -1591,43 +1576,17 @@ void HighsPrimalHeuristics::fixAndPropagate() {
     return permkey[c1] >= permkey[c2];
   });
 
-  HighsInt numpropagationcalls = 0;
-  const HighsInt kMaxPropagationCalls = std::min(std::max(
-    1000, 2 * static_cast<int>(intcols.size())), 10000);
-  bool evaluatenode = true;
-
-  // Continue branching and propagating until either (a) limit is hit,
-  // (b) backtracked to root, or (c) reached a potentially feasible leaf
-  while (true) {
-    if (evaluatenode) {
-      heur.evaluateNode();
-      // printf("done evaluating node\n");
-      if (heur.currentNodePruned()) {
-        if (mipsolver.mipdata_->domain.infeasible()) {
-          lp_iterations += heur.getLocalLpIterations();
-          return;
-        }
-
-        // TODO: Is this case only reached when the root is infeasible?
-        if (!heur.backtrack()) {
-          lp_iterations += heur.getLocalLpIterations();
-          return;
-        }
-      }
-    }
-    evaluatenode = false;
-    bool branched = false;
+  for (HighsInt k = 0; k < 3; ++k) {
+    bool probed = false;
     for (HighsInt col : diveperm) {
-      if (numpropagationcalls > kMaxPropagationCalls) {
-        return;
-      }
       if (localdom.col_lower_[col] == localdom.col_upper_[col]) continue;
+      probed = true;
       // Decide on the fix value
       double fixval = localdom.col_upper_[col];
-      if (rootsol[col] <= heurlp.colLower(col) + feastol) {
+      if (rootsol[col] <= localdom.col_lower_[col] + feastol) {
         fixval = localdom.col_lower_[col];
       }
-      else if (rootsol[col] >= heurlp.colUpper(col) - feastol) {
+      else if (rootsol[col] >= localdom.col_upper_[col] - feastol) {
         fixval = localdom.col_upper_[col];
       }
       else if (localdom.isBinary(col) && lpsol[col] < 0.1) {
@@ -1643,11 +1602,11 @@ void HighsPrimalHeuristics::fixAndPropagate() {
         if (fixval < localdom.col_lower_[col] - feastol) {
           fixval = std::floor(localdom.col_lower_[col] +
             (localdom.col_upper_[col] - localdom.col_lower_[col]) / 3);
-          }
+        }
         else if (fixval > localdom.col_upper_[col] + feastol) {
           fixval = std::ceil(localdom.col_upper_[col] -
             (localdom.col_upper_[col] - localdom.col_lower_[col]) / 3);
-          }
+        }
         }
       else {
         fixval = std::floor(
@@ -1662,44 +1621,82 @@ void HighsPrimalHeuristics::fixAndPropagate() {
         }
       }
 
-      if (fixval - localdom.col_lower_[col] >=
+      if (k >= 3) {
+        localdom.changeBound(HighsBoundType::kLower, col, fixval);
+        localdom.changeBound(HighsBoundType::kUpper, col, fixval);
+        localdom.propagate();
+        if (localdom.infeasible()) {
+          return;
+        }
+      } else if (fixval - localdom.col_lower_[col] >=
         localdom.col_upper_[col] - fixval) {
-        heur.branchUpwards(col, fixval, fixval - 0.5);
-      }
-      else {
-        heur.branchDownwards(col, fixval, fixval + 0.5);
-      }
-      branched = true;
-      localdom.propagate();
-      ++numpropagationcalls;
-      if (localdom.infeasible()) {
-        // TODO: Is this needed? Won't evaluateNode catch the conflict analysis?
-        localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-        evaluatenode = true;
-        break;
+        localdom.changeBound(HighsBoundType::kLower, col, fixval);
+        localdom.propagate();
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          localdom.backtrack();
+          localdom.changeBound(HighsBoundType::kUpper, col, fixval - 1);
+          if (localdom.infeasible()) {
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            return;
+          }
+        }
+      } else {
+        localdom.changeBound(HighsBoundType::kUpper, col, fixval);
+        localdom.propagate();
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          localdom.backtrack();
+          localdom.changeBound(HighsBoundType::kLower, col, fixval + 1);
+          if (localdom.infeasible()) {
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            return;
+          }
+        }
       }
     }
-    if (!branched) {
+    if (!probed) {
       break;
     }
   }
 
-  // Solve the LP with all integer variables fixed
-  if (!heur.hasNode()) return;
-  heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
-                                        localdom.col_lower_.data(),
-                                        localdom.col_upper_.data());
-  int64_t niters = -heurlp.getNumLpIterations();
-  HighsLpRelaxation::Status status = heurlp.resolveLp();
-  niters += heurlp.getNumLpIterations();
-  if (niters == 0) return;
-  lp_iterations += niters;
-  if (heurlp.getFractionalIntegers().empty() &&
-      heurlp.unscaledPrimalFeasible(status))
-    mipsolver.mipdata_->addIncumbent(
-        heurlp.getLpSolver().getSolution().col_value,
-        heurlp.getObjective(),
-        kSolutionSourceFixAndPropagate);
+  // All integer variables have been fixed. Solve the LP.
+  HighsLpRelaxation lprelax(mipsolver);
+  lprelax.loadModel();
+  lprelax.setIterationLimit(
+      std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
+  lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
+                                         localdom.col_lower_.data(),
+                                         localdom.col_upper_.data());
+
+  // check if only root presolve is allowed
+  if (mipsolver.options_mip_->mip_root_presolve_only)
+    lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+  if (!mipsolver.options_mip_->mip_root_presolve_only)
+    lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
+  else
+    lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis,
+                                   "HighsPrimalHeuristics::fixAndPropagate");
+
+  HighsLpRelaxation::Status st = lprelax.resolveLp();
+  lp_iterations += lprelax.getNumLpIterations();
+
+  if (st == HighsLpRelaxation::Status::kInfeasible) {
+    std::vector<HighsInt> inds;
+
+    std::vector<double> vals;
+    double rhs;
+    if (lprelax.computeDualInfProof(mipsolver.mipdata_->domain,
+                                    inds, vals,rhs)) {
+      HighsCutGeneration cutGen(lprelax, mipsolver.mipdata_->cutpool);
+      cutGen.generateConflict(localdom, inds, vals, rhs);
+    }
+  } else if (lprelax.unscaledPrimalFeasible(st)) {
+    const auto& intsol = lprelax.getLpSolver().getSolution().col_value;
+      // all integer variables are fixed -> add incumbent
+      mipsolver.mipdata_->addIncumbent(intsol, lprelax.getObjective(),
+                                       kSolutionSourceFixAndPropagate);
+  }
 }
 
 void HighsPrimalHeuristics::centralRounding() {
