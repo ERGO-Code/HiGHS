@@ -4190,7 +4190,7 @@ HPresolve::Result HPresolve::detectDominatedCol(
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
     } else if (analysis_.allow_rule_[kPresolveRuleForcingCol]) {
-      // get bound on dual (column) activity
+      // get bound on column dual using original bounds on row duals
       double sum = direction > 0 ? -impliedDualRowBounds.getSumUpperOrig(
                                        col, -model->col_cost_[col])
                                  : -impliedDualRowBounds.getSumLowerOrig(
