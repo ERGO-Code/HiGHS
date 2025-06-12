@@ -7,9 +7,9 @@ include(sources)
 set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
-if(HPM)
-  set(sources ${sources} ${hpm_sources} ${factor_highs_sources} ${hpm_util_sources})
-  set(headers ${headers} ${hpm_headers} ${factor_highs_headers} ${hpm_util_headers})
+if(HIPO)
+  set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
+  set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers})
 endif()
 
 # Configure the config windows version file
@@ -176,8 +176,8 @@ else()
 
   target_include_directories(highs PRIVATE ${include_dirs})
 
-  # Optional HPM
-  if (HPM)
+  # Optional HIPO
+  if (HIPO)
 
     target_include_directories(highs PRIVATE 
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>

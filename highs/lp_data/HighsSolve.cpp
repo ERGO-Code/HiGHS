@@ -42,7 +42,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-  } else if (options.solver == kIpmString || options.solver == kHpmString ||
+  } else if (options.solver == kIpmString || options.solver == kHipoString ||
              options.run_centring || options.solver == kPdlpString) {
     // Use IPM or PDLP
     if (options.solver == kIpmString || options.run_centring) {
@@ -56,22 +56,22 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       }
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLpIpx");
-    } else if (options.solver == kHpmString) {
-#ifndef HPM
+    } else if (options.solver == kHipoString) {
+#ifndef HIPO
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "HPM is not available in this build.\n");
+                   "HiPO is not available in this build.\n");
       return HighsStatus::kError;
 #else
-      // Use HPM to solve the LP
+      // Use HIPO to solve the LP
       try {
-        call_status = solveLpHpm(solver_object);
+        call_status = solveLpHipo(solver_object);
       } catch (const std::exception& exception) {
         highsLogDev(options.log_options, HighsLogType::kError,
-                    "Exception %s in solveLpHpm\n", exception.what());
+                    "Exception %s in solveLpHipo\n", exception.what());
         call_status = HighsStatus::kError;
       }
       return_status = interpretCallStatus(options.log_options, call_status,
-                                          return_status, "solveLpHpm");
+                                          return_status, "solveLpHipo");
 #endif
     } else {
       // Use cuPDLP-C to solve the LP

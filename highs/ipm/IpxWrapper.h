@@ -19,7 +19,7 @@
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsSolution.h"
 
-#ifdef HPM
+#ifdef HIPO
 #include "ipm/hipo/ipm/Solver.h"
 #endif
 
@@ -31,8 +31,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsModelStatus& model_status, HighsInfo& highs_info,
                        HighsCallback& callback);
 
-#ifdef HPM
-HighsStatus solveLpHpm(HighsLpSolverObject& solver_object);
+#ifdef HIPO
+HighsStatus solveLpHipo(HighsLpSolverObject& solver_object);
 
 HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
                         const HighsLp& lp, HighsBasis& highs_basis,

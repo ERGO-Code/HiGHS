@@ -1,4 +1,4 @@
-name: hpm-linux
+name: hipo-macos
 
 on: [push, pull_request]
 
@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [macos-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -54,23 +54,15 @@ jobs:
           ls 
           ls lib
 
-      # no default blas available on runner
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev 
-
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake, build and ctest
+         
+      - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DHPM=ON \
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs
+          -DGKLIB_ROOT=${{runner.workspace}}/installs 
 
       - name: Build and ctest
         working-directory: ${{runner.workspace}}/build
@@ -83,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [macos-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -129,21 +121,13 @@ jobs:
           ls 
           ls lib
 
-      # no default blas available on runner
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev 
-
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
-
+         
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DHPM=ON \
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
           -DGKLIB_ROOT=${{runner.workspace}}/installs \
           -DCMAKE_BUILD_TYPE=Debug

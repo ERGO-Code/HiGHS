@@ -399,8 +399,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   return return_status;
 }
 
-#ifdef HPM
-HighsStatus solveLpHpm(HighsLpSolverObject& solver_object) {
+#ifdef HIPO
+HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
   return solveLpHipo(solver_object.options_, solver_object.timer_,
                      solver_object.lp_, solver_object.basis_,
                      solver_object.solution_, solver_object.model_status_,
@@ -1177,7 +1177,7 @@ void reportIpmNoProgress(const HighsOptions& options,
                ipx_info.abs_dresidual);
 }
 
-#ifdef HPM
+#ifdef HIPO
 void reportHipoNoProgress(const HighsOptions& options,
                           const hipo::Info& hipo_info) {
   highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -1218,7 +1218,7 @@ void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                              num_row, x, slack, y, zl, zu, highs_solution);
 }
 
-#ifdef HPM
+#ifdef HIPO
 void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                               const hipo::Int num_col, const hipo::Int num_row,
                               const std::vector<double>& rhs,
@@ -1443,7 +1443,7 @@ void reportSolveData(const HighsLogOptions& log_options,
               ipx_info.volume_increase);
 }
 
-#ifdef HPM
+#ifdef HIPO
 HighsStatus reportHipoStatus(const HighsOptions& options,
                              const hipo::Int status, const hipo::Solver& hipo) {
   if (hipo.solved()) {

@@ -176,7 +176,7 @@ set(ipx_headers
   ipm/ipx/timer.h
   ipm/ipx/utils.h)
 
-set(hpm_sources 
+set(hipo_sources 
     ipm/hipo/ipm/CurtisReidScaling.cpp 
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
     ipm/hipo/ipm/Control.cpp
@@ -184,7 +184,7 @@ set(hpm_sources
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/Solver.cpp)
 
-set(hpm_headers
+set(hipo_headers
     ipm/hipo/ipm/CurtisReidScaling.h
     ipm/hipo/ipm/FactorHiGHSSolver.h
     ipm/hipo/ipm/Parameters.h
@@ -236,13 +236,13 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/Symbolic.h
     ipm/hipo/factorhighs/Timing.h)
 
-set(hpm_util_sources
+set(hipo_util_sources
     ipm/hipo/auxiliary/Auxiliary.cpp
     ipm/hipo/auxiliary/KrylovMethods.cpp
     ipm/hipo/auxiliary/Log.cpp
     ipm/hipo/auxiliary/VectorOperations.cpp)
 
-set(hpm_util_headers
+set(hipo_util_headers
     ipm/hipo/auxiliary/Auxiliary.h
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
