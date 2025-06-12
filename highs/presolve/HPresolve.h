@@ -146,7 +146,7 @@ class HPresolve {
     Result my_result;
 
    public:
-    StatusResult(bool flag) : my_flag(flag), my_result(Result::kOk) {};
+    StatusResult(bool flag) : my_flag(flag), my_result(Result::kOk){};
     StatusResult(Result result) : my_result(result) {
       my_flag = (result == Result::kOk);
     };
