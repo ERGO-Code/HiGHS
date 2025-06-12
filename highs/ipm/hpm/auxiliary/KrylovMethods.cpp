@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "VectorOperations.h"
-#include "ipm/hpm/auxiliary/HpmLog.h"
+#include "ipm/hpm/auxiliary/Log.h"
 
 namespace hipo {
 

@@ -1,5 +1,5 @@
-#ifndef HIPO_CONST_H
-#define HIPO_CONST_H
+#ifndef HIPO_PARAMETERS_H
+#define HIPO_PARAMETERS_H
 
 #include "ipm/hpm/auxiliary/IntConfig.h"
 

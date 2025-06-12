@@ -3,8 +3,9 @@
 
 #include <vector>
 
-#include "HpmConst.h"
-#include "HpmOption.h"
+#include "Model.h"
+#include "Options.h"
+#include "Parameters.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 #include "ipm/hpm/auxiliary/VectorOperations.h"
 #include "util/HighsSparseMatrix.h"

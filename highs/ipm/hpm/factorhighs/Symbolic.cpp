@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "FactorHiGHSSettings.h"
-#include "ipm/hpm/auxiliary/HpmLog.h"
+#include "ipm/hpm/auxiliary/Log.h"
 
 namespace hipo {
 

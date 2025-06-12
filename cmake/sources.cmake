@@ -179,22 +179,22 @@ set(ipx_headers
 set(hpm_sources 
     ipm/hpm/highspm/CurtisReidScaling.cpp 
     ipm/hpm/highspm/FactorHiGHSSolver.cpp 
-    ipm/hpm/highspm/HpmControl.cpp
-    ipm/hpm/highspm/HpmIterate.cpp 
-    ipm/hpm/highspm/HpmModel.cpp
-    ipm/hpm/highspm/HpmSolver.cpp)
+    ipm/hpm/highspm/Control.cpp
+    ipm/hpm/highspm/Iterate.cpp 
+    ipm/hpm/highspm/Model.cpp
+    ipm/hpm/highspm/Solver.cpp)
 
 set(hpm_headers
     ipm/hpm/highspm/CurtisReidScaling.h
     ipm/hpm/highspm/FactorHiGHSSolver.h
-    ipm/hpm/highspm/HpmConst.h
-    ipm/hpm/highspm/HpmControl.h
-    ipm/hpm/highspm/HpmInfo.h
-    ipm/hpm/highspm/HpmIterate.h
-    ipm/hpm/highspm/HpmModel.h
-    ipm/hpm/highspm/HpmOption.h
-    ipm/hpm/highspm/HpmSolver.h
-    ipm/hpm/highspm/HpmStatus.h
+    ipm/hpm/highspm/Parameters.h
+    ipm/hpm/highspm/Control.h
+    ipm/hpm/highspm/Info.h
+    ipm/hpm/highspm/Iterate.h
+    ipm/hpm/highspm/Model.h
+    ipm/hpm/highspm/Options.h
+    ipm/hpm/highspm/Solver.h
+    ipm/hpm/highspm/Status.h
     ipm/hpm/highspm/LinearSolver.h)
 
 set(factor_highs_sources
@@ -239,14 +239,14 @@ set(factor_highs_headers
 set(hpm_util_sources
     ipm/hpm/auxiliary/Auxiliary.cpp
     ipm/hpm/auxiliary/KrylovMethods.cpp
-    ipm/hpm/auxiliary/HpmLog.cpp
+    ipm/hpm/auxiliary/Log.cpp
     ipm/hpm/auxiliary/VectorOperations.cpp)
 
 set(hpm_util_headers
     ipm/hpm/auxiliary/Auxiliary.h
     ipm/hpm/auxiliary/IntConfig.h
     ipm/hpm/auxiliary/KrylovMethods.h
-    ipm/hpm/auxiliary/HpmLog.h
+    ipm/hpm/auxiliary/Log.h
     ipm/hpm/auxiliary/mycblas.h
     ipm/hpm/auxiliary/VectorOperations.h)
 

@@ -1,8 +1,8 @@
-#include "HpmControl.h"
+#include "Control.h"
 
 #include <cassert>
 
-#include "HpmStatus.h"
+#include "Status.h"
 #include "parallel/HighsParallel.h"
 
 namespace hipo {

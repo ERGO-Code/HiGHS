@@ -3,15 +3,15 @@
 
 #include <string>
 
+#include "Control.h"
 #include "FactorHiGHSSolver.h"
-#include "HpmConst.h"
-#include "HpmControl.h"
-#include "HpmInfo.h"
-#include "HpmIterate.h"
-#include "HpmModel.h"
-#include "HpmOption.h"
-#include "HpmStatus.h"
+#include "Info.h"
+#include "Iterate.h"
 #include "LinearSolver.h"
+#include "Model.h"
+#include "Options.h"
+#include "Parameters.h"
+#include "Status.h"
 #include "ipm/hpm/auxiliary/Auxiliary.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 #include "ipm/hpm/auxiliary/VectorOperations.h"

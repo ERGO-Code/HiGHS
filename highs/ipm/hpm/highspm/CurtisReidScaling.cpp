@@ -2,8 +2,8 @@
 
 #include <iostream>
 
-#include "ipm/hpm/auxiliary/HpmLog.h"
 #include "ipm/hpm/auxiliary/KrylovMethods.h"
+#include "ipm/hpm/auxiliary/Log.h"
 
 namespace hipo {
 

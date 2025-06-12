@@ -1,7 +1,7 @@
 #ifndef HIPO_CONTROL_H
 #define HIPO_CONTROL_H
 
-#include "HpmOption.h"
+#include "Options.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 #include "lp_data/HighsCallback.h"
 #include "util/HighsTimer.h"

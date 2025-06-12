@@ -1,18 +1,18 @@
-#include "HpmSolver.h"
+#include "Solver.h"
 
 #include <cassert>
 #include <cmath>
 #include <iostream>
 
-#include "ipm/hpm/auxiliary/HpmLog.h"
+#include "ipm/hpm/auxiliary/Log.h"
 #include "parallel/HighsParallel.h"
 
 namespace hipo {
 
 Int Solver::load(const Int num_var, const Int num_con, const double* obj,
-                    const double* rhs, const double* lower, const double* upper,
-                    const Int* A_ptr, const Int* A_rows, const double* A_vals,
-                    const char* constraints, double offset) {
+                 const double* rhs, const double* lower, const double* upper,
+                 const Int* A_ptr, const Int* A_rows, const double* A_vals,
+                 const char* constraints, double offset) {
   if (model_.init(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows,
                   A_vals, constraints, offset))
     return kStatusBadModel;
@@ -29,9 +29,8 @@ Int Solver::load(const Int num_var, const Int num_con, const double* obj,
   return 0;
 }
 
-void Solver::set(const Options& options,
-                    const HighsLogOptions& log_options, HighsCallback& callback,
-                    const HighsTimer& timer) {
+void Solver::set(const Options& options, const HighsLogOptions& log_options,
+                 HighsCallback& callback, const HighsTimer& timer) {
   options_ = options;
   if (options_.display) Log::setOptions(log_options);
   control_.setCallback(callback);
@@ -387,9 +386,9 @@ bool Solver::recoverDirection(NewtonDir& delta) {
 }
 
 double Solver::stepToBoundary(const std::vector<double>& x,
-                                 const std::vector<double>& dx,
-                                 const std::vector<double>* cor, double weight,
-                                 bool lo, Int* block) const {
+                              const std::vector<double>& dx,
+                              const std::vector<double>* cor, double weight,
+                              bool lo, Int* block) const {
   // Compute the largest alpha s.t. x + alpha * dx >= 0.
   // If cor is valid, consider x + alpha * (dx + w * cor) instead.
   // Use lo=1 for xl and zl, lo=0 for xu and zu.
@@ -414,8 +413,8 @@ double Solver::stepToBoundary(const std::vector<double>& x,
 }
 
 void Solver::stepsToBoundary(double& alpha_primal, double& alpha_dual,
-                                const NewtonDir& delta, const NewtonDir* cor,
-                                double weight) const {
+                             const NewtonDir& delta, const NewtonDir* cor,
+                             double weight) const {
   // compute primal and dual steps to boundary, given direction, corrector and
   // weight.
 
@@ -923,8 +922,8 @@ bool Solver::centralityCorrectors() {
 }
 
 void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
-                           double& wp, double& wd, double& alpha_p,
-                           double& alpha_d) const {
+                        double& wp, double& wd, double& alpha_p,
+                        double& alpha_d) const {
   // Find the best primal and dual weights for the corrector in the interval
   // [alpha_p_old * alpha_d_old, 1].
   // Upon return, wp and wd are the optimal weights, alpha_p and alpha_d are the
@@ -1496,18 +1495,16 @@ void Solver::getInteriorSolution(
   }
 }
 
-Int Solver::getBasicSolution(std::vector<double>& x,
-                                std::vector<double>& slack,
-                                std::vector<double>& y, std::vector<double>& z,
-                                Int* cbasis, Int* vbasis) const {
+Int Solver::getBasicSolution(std::vector<double>& x, std::vector<double>& slack,
+                             std::vector<double>& y, std::vector<double>& z,
+                             Int* cbasis, Int* vbasis) const {
   // interface to ipx getBasicSolution
   return ipx_lps_.GetBasicSolution(x.data(), slack.data(), y.data(), z.data(),
                                    cbasis, vbasis);
 }
 
 void Solver::getSolution(std::vector<double>& x, std::vector<double>& slack,
-                            std::vector<double>& y,
-                            std::vector<double>& z) const {
+                         std::vector<double>& y, std::vector<double>& z) const {
   // prepare and return solution with format for crossover
   it_->extract(x, slack, y, z);
   model_.unscale(x, slack, y, z);

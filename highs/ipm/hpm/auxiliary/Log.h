@@ -3,8 +3,8 @@
 
 #include <sstream>
 
-#include "ipm/hpm/auxiliary/IntConfig.h"
 #include "io/HighsIO.h"
+#include "ipm/hpm/auxiliary/IntConfig.h"
 
 // Interface to Highs logging.
 // Call Log::setOptions to set the HighsLogOptions.

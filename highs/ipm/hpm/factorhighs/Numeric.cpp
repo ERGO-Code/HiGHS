@@ -5,7 +5,7 @@
 #include "HybridSolveHandler.h"
 #include "Timing.h"
 #include "ipm/hpm/auxiliary/Auxiliary.h"
-#include "ipm/hpm/auxiliary/HpmLog.h"
+#include "ipm/hpm/auxiliary/Log.h"
 #include "ipm/hpm/auxiliary/VectorOperations.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsRandom.h"

@@ -1,8 +1,8 @@
 #ifndef HIPO_INFO_H
 #define HIPO_INFO_H
 
-#include "HpmOption.h"
-#include "HpmStatus.h"
+#include "Options.h"
+#include "Status.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 #include "ipm/ipx/info.h"
 

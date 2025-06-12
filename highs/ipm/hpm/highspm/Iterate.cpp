@@ -1,6 +1,6 @@
-#include "HpmIterate.h"
+#include "Iterate.h"
 
-#include "HpmConst.h"
+#include "Parameters.h"
 #include "ipm/hpm/factorhighs/DataCollector.h"
 #include "ipm/hpm/factorhighs/FactorHiGHSSettings.h"
 
@@ -121,9 +121,7 @@ void Iterate::indicators() {
   products();
 }
 
-void Iterate::primalObj() {
-  pobj = model->offset() + dotProd(x, model->c());
-}
+void Iterate::primalObj() { pobj = model->offset() + dotProd(x, model->c()); }
 void Iterate::dualObj() {
   dobj = model->offset() + dotProd(y, model->b());
   for (Int i = 0; i < model->n(); ++i) {
@@ -230,8 +228,7 @@ std::vector<double> Iterate::residual7() const {
   }
   return res7;
 }
-std::vector<double> Iterate::residual8(
-    const std::vector<double>& res7) const {
+std::vector<double> Iterate::residual8(const std::vector<double>& res7) const {
   std::vector<double> res8(res1);
   std::vector<double> temp(res7);
 
@@ -270,13 +267,11 @@ void Iterate::clearDir() {
   delta.zu.assign(model->n(), 0.0);
 }
 
-void Iterate::extract(std::vector<double>& x_user,
-                         std::vector<double>& xl_user,
-                         std::vector<double>& xu_user,
-                         std::vector<double>& slack_user,
-                         std::vector<double>& y_user,
-                         std::vector<double>& zl_user,
-                         std::vector<double>& zu_user) const {
+void Iterate::extract(std::vector<double>& x_user, std::vector<double>& xl_user,
+                      std::vector<double>& xu_user,
+                      std::vector<double>& slack_user,
+                      std::vector<double>& y_user, std::vector<double>& zl_user,
+                      std::vector<double>& zu_user) const {
   // Extract solution with internal format
 
   // Copy x, xl, xu, zl, zu without slacks
@@ -328,9 +323,9 @@ void Iterate::extract(std::vector<double>& x_user,
 }
 
 void Iterate::extract(std::vector<double>& x_user,
-                         std::vector<double>& slack_user,
-                         std::vector<double>& y_user,
-                         std::vector<double>& z_user) const {
+                      std::vector<double>& slack_user,
+                      std::vector<double>& y_user,
+                      std::vector<double>& z_user) const {
   // Extract solution with format for crossover
 
   // Construct complementary point (x_temp, y_temp, z_temp)
@@ -383,8 +378,8 @@ void Iterate::extract(std::vector<double>& x_user,
 }
 
 void Iterate::dropToComplementarity(std::vector<double>& x_cmp,
-                                       std::vector<double>& y_cmp,
-                                       std::vector<double>& z_cmp) const {
+                                    std::vector<double>& y_cmp,
+                                    std::vector<double>& z_cmp) const {
   x_cmp.assign(model->n(), 0.0);
   z_cmp.assign(model->n(), 0.0);
   y_cmp = y;

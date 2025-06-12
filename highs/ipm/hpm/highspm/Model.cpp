@@ -1,15 +1,15 @@
-#include "HpmModel.h"
+#include "Model.h"
 
-#include "HpmConst.h"
-#include "HpmStatus.h"
-#include "ipm/hpm/auxiliary/HpmLog.h"
+#include "Parameters.h"
+#include "Status.h"
+#include "ipm/hpm/auxiliary/Log.h"
 
 namespace hipo {
 
 Int Model::init(const Int num_var, const Int num_con, const double* obj,
-                   const double* rhs, const double* lower, const double* upper,
-                   const Int* A_ptr, const Int* A_rows, const double* A_vals,
-                   const char* constraints, double offset) {
+                const double* rhs, const double* lower, const double* upper,
+                const Int* A_ptr, const Int* A_rows, const double* A_vals,
+                const char* constraints, double offset) {
   // copy the input into the model
 
   if (checkData(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows, A_vals,
@@ -55,10 +55,9 @@ Int Model::init(const Int num_var, const Int num_con, const double* obj,
 }
 
 Int Model::checkData(const Int num_var, const Int num_con, const double* obj,
-                        const double* rhs, const double* lower,
-                        const double* upper, const Int* A_ptr,
-                        const Int* A_rows, const double* A_vals,
-                        const char* constraints) const {
+                     const double* rhs, const double* lower,
+                     const double* upper, const Int* A_ptr, const Int* A_rows,
+                     const double* A_vals, const char* constraints) const {
   // Check if model provided by the user is ok.
   // Return kStatusBadModel if something is wrong.
 
@@ -151,7 +150,7 @@ void Model::preprocess() {
 }
 
 void Model::postprocess(std::vector<double>& slack,
-                           std::vector<double>& y) const {
+                        std::vector<double>& y) const {
   // Add Lagrange multiplier for empty rows that were removed
   // Add slack for constraints that were removed
 
@@ -393,9 +392,9 @@ void Model::scale() {
 }
 
 void Model::unscale(std::vector<double>& x, std::vector<double>& xl,
-                       std::vector<double>& xu, std::vector<double>& slack,
-                       std::vector<double>& y, std::vector<double>& zl,
-                       std::vector<double>& zu) const {
+                    std::vector<double>& xu, std::vector<double>& slack,
+                    std::vector<double>& y, std::vector<double>& zl,
+                    std::vector<double>& zu) const {
   // Undo the scaling with internal format
 
   if (scaled()) {
@@ -426,7 +425,7 @@ void Model::unscale(std::vector<double>& x, std::vector<double>& xl,
 }
 
 void Model::unscale(std::vector<double>& x, std::vector<double>& slack,
-                       std::vector<double>& y, std::vector<double>& z) const {
+                    std::vector<double>& y, std::vector<double>& z) const {
   // Undo the scaling with format for crossover
 
   if (scaled()) {
@@ -508,7 +507,7 @@ Int Model::loadIntoIpx(ipx::LpSolver& lps) const {
 }
 
 void Model::multWithoutSlack(double alpha, const std::vector<double>& x,
-                                std::vector<double>& y, bool trans) const {
+                             std::vector<double>& y, bool trans) const {
   assert(x.size() == trans ? m_ : n_orig_);
   assert(y.size() == trans ? n_orig_ : m_);
 

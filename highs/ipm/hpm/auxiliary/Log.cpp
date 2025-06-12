@@ -1,4 +1,4 @@
-#include "HpmLog.h"
+#include "Log.h"
 
 namespace hipo {
 

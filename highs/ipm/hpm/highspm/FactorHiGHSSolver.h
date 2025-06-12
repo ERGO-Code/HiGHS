@@ -3,9 +3,9 @@
 
 #include <algorithm>
 
-#include "HpmInfo.h"
-#include "HpmModel.h"
+#include "Info.h"
 #include "LinearSolver.h"
+#include "Model.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
 #include "ipm/hpm/factorhighs/FactorHiGHS.h"
 

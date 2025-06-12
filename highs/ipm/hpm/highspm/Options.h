@@ -1,7 +1,7 @@
 #ifndef HIPO_OPTION_H
 #define HIPO_OPTION_H
 
-#include "HpmConst.h"
+#include "Parameters.h"
 #include "io/HighsIO.h"
 
 namespace hipo {

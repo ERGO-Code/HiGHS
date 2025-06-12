@@ -11,7 +11,7 @@
 #include "GKlib.h"
 #include "ReturnValues.h"
 #include "ipm/hpm/auxiliary/Auxiliary.h"
-#include "ipm/hpm/auxiliary/HpmLog.h"
+#include "ipm/hpm/auxiliary/Log.h"
 #include "metis.h"
 
 namespace hipo {

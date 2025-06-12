@@ -10,7 +10,7 @@
 #include "ReturnValues.h"
 #include "SymScaling.h"
 #include "ipm/hpm/auxiliary/Auxiliary.h"
-#include "ipm/hpm/auxiliary/HpmLog.h"
+#include "ipm/hpm/auxiliary/Log.h"
 #include "parallel/HighsParallel.h"
 
 namespace hipo {

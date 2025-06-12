@@ -3,9 +3,9 @@
 
 #include <vector>
 
-#include "HpmModel.h"
+#include "Info.h"
+#include "Model.h"
 #include "ipm/hpm/auxiliary/IntConfig.h"
-#include "HpmInfo.h"
 
 namespace hipo {
 
