@@ -16,7 +16,7 @@ including [pre-build libraries](https://github.com/coin-or/GAMSlinks/releases).
 
 ## Javascript
 
- * HiGHS can be used from javascript directly inside a web browser thanks to
+ * HiGHS can be used from Javascript directly inside a web browser thanks to
    [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/)
    and the [npm package](https://www.npmjs.com/package/highs).
  * Alternatively, HiGHS also has a [native Node.js](https://www.npmjs.com/package/highs-solver)
