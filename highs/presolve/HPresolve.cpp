@@ -4192,7 +4192,7 @@ HPresolve::Result HPresolve::detectDominatedCol(
     } else if (direction * otherBound != kHighsInf &&
                analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // get bound on dual (column) activity
-      HighsCDouble sum = 0;
+      double sum = 0;
       if (direction > 0)
         sum = impliedDualRowBounds.getSumUpperOrig(col);
       else
