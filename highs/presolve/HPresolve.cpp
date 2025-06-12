@@ -4189,7 +4189,8 @@ HPresolve::Result HPresolve::detectDominatedCol(
       if (handleSingletonRows)
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
-    } else if (analysis_.allow_rule_[kPresolveRuleForcingCol]) {
+    } else if (direction * otherBound != kHighsInf &&
+               analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // get bound on dual (column) activity
       HighsCDouble sum = 0;
       if (direction > 0)
