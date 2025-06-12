@@ -4189,14 +4189,12 @@ HPresolve::Result HPresolve::detectDominatedCol(
       if (handleSingletonRows)
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
-    } else if (direction * otherBound != kHighsInf &&
-               analysis_.allow_rule_[kPresolveRuleForcingCol]) {
+    } else if (analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // get bound on dual (column) activity
-      double sum = 0;
-      if (direction > 0)
-        sum = impliedDualRowBounds.getSumUpperOrig(col);
-      else
-        sum = impliedDualRowBounds.getSumLowerOrig(col);
+      double sum = direction > 0 ? -impliedDualRowBounds.getSumUpperOrig(
+                                       col, -model->col_cost_[col])
+                                 : -impliedDualRowBounds.getSumLowerOrig(
+                                       col, -model->col_cost_[col]);
       if (sum == 0.0) {
         // remove column and rows
         if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
