@@ -43,7 +43,7 @@ if(NOT FAST_BUILD)
   set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     PDB_NAME "libhighs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  )
 
   if(ZLIB AND ZLIB_FOUND)
     target_link_libraries(libhighs ZLIB::ZLIB)
