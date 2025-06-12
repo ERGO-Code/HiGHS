@@ -4191,11 +4191,12 @@ HPresolve::Result HPresolve::detectDominatedCol(
       return checkLimits(postsolve_stack);
     } else if (analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // get bound on column dual using original bounds on row duals
-      double sum = direction > 0 ? -impliedDualRowBounds.getSumUpperOrig(
-                                       col, -model->col_cost_[col])
-                                 : -impliedDualRowBounds.getSumLowerOrig(
-                                       col, -model->col_cost_[col]);
-      if (sum == 0.0) {
+      double boundOnColDual = direction > 0
+                                  ? -impliedDualRowBounds.getSumUpperOrig(
+                                        col, -model->col_cost_[col])
+                                  : -impliedDualRowBounds.getSumLowerOrig(
+                                        col, -model->col_cost_[col]);
+      if (boundOnColDual == 0.0) {
         // remove column and rows
         if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
         postsolve_stack.forcingColumn(
