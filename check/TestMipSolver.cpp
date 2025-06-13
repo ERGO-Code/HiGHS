@@ -946,9 +946,22 @@ TEST_CASE("issue-2409", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = {-1, 1, 1, 1};
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
   require_model_status = HighsModelStatus::kOptimal;
-  optimal_objective = 0.9;
+  optimal_objective = 0.1;
   Highs highs;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  //  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  if (dev_run) printf("Testing that presolve reduces the problem to empty\n");
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() ==
+          HighsPresolveStatus::kReducedToEmpty);
+
+  if (dev_run)
+    printf(
+        "\nTesting that with presolve the correct optimal objecive is found\n");
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  highs.clearSolver();
+  if (dev_run)
+    printf(
+        "\nTesting that without presolve the correct optimal objecive is "
+        "found\n");
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
