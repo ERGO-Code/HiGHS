@@ -390,7 +390,7 @@ class HPresolve {
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
                                 HighsInt& num_strenghtened);
 
-  HPresolve::Result detectImpliedIntegers();
+  Result detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
 
