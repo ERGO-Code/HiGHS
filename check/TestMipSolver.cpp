@@ -929,3 +929,26 @@ TEST_CASE("issue-2290", "[highs_test_mip_solver]") {
   const double optimal_objective = -1.6666666666;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("issue-2409", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-1, 1};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {0.1, 0.1};
+  lp.row_upper_ = {kHighsInf, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {-1, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = 0.9;
+  Highs highs;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  //  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
