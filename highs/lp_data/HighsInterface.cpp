@@ -1613,9 +1613,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
 
-  // Declare identifiers to save column costs, integrality, any Hessian and the
-  // presolve setting, and a flag to know when they should be
-  // recovered
+  // Declare identifiers to save column costs, integrality, any
+  // Hessian and the presolve setting, and a flag to know when they
+  // should be recovered
   std::vector<double> col_cost;
   HighsHessian hessian;
   bool solve_relaxation;
@@ -1711,6 +1711,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     if (is_qp) model_.hessian_ = hessian;
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
+    // The relaxation for an infeasible MIP may be feasible - so no
+    // ray is generated - so make sure (#2415) that the primal
+    // solution status is reset
+    this->info_.primal_solution_status = SolutionStatus::kSolutionStatusNone;
     // Modify the objective-related information
     this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
     this->info_.objective_function_value = 0;
@@ -1719,8 +1723,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       assert(this->info_.num_primal_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
     } else {
-      // If someone has tried to get a dual ray for a feasible
-      // problem, then any status of the original model has been lost
+      // If someone has tried to get a dual ray for a feasible problem
+      // - or if the relaxation is feasible - then any model and
+      // primal KKT status of the original model has been lost
+      this->info_.invalidatePrimalKkt();
       this->model_status_ = HighsModelStatus::kNotset;
     }
   }

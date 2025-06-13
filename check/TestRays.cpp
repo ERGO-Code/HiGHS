@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = true;//false;
+const bool dev_run = false;
 const double zero_ray_value_tolerance = 1e-14;
 
 void reportRay(std::string message, HighsInt dim, double* computed,
@@ -947,12 +947,19 @@ TEST_CASE("Rays-2415", "[highs_test_rays]") {
   lp.a_matrix_.index_ = {0};
   lp.a_matrix_.value_ = {1};
   Highs h;
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
+  if (dev_run)
+    printf("Solution values are col_value[0] = %g; row_value[0] = %g\n",
+           h.getSolution().col_value[0], h.getSolution().row_value[0]);
+  REQUIRE(h.getInfo().primal_solution_status != kSolutionStatusFeasible);
+  REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusNone);
+
   bool has_dual_ray;
   std::vector<double> dual_ray_value(lp.num_col_);
-  REQUIRE(h.getDualRay(has_dual_ray, dual_ray_value.data()) == HighsStatus::kOk);
+  REQUIRE(h.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+          HighsStatus::kOk);
   REQUIRE(h.getInfo().primal_solution_status != kSolutionStatusFeasible);
-  REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusInfeasible);
+  REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusNone);
 }
-
