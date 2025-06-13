@@ -932,3 +932,34 @@ TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("Rays-2415", "[highs_test_rays]") {
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {1};
+  lp.integrality_ = {HighsVarType::kInteger};
+  lp.row_lower_ = {0.5};
+  lp.row_upper_ = {0.5};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  if (dev_run)
+    printf("Solution values are col_value[0] = %g; row_value[0] = %g\n",
+           h.getSolution().col_value[0], h.getSolution().row_value[0]);
+  REQUIRE(h.getInfo().primal_solution_status != kSolutionStatusFeasible);
+  REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusNone);
+
+  bool has_dual_ray;
+  std::vector<double> dual_ray_value(lp.num_col_);
+  REQUIRE(h.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE(h.getInfo().primal_solution_status != kSolutionStatusFeasible);
+  REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusNone);
+}
