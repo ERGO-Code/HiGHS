@@ -4190,14 +4190,21 @@ HPresolve::Result HPresolve::detectDominatedCol(
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
     } else if (analysis_.allow_rule_[kPresolveRuleForcingCol]) {
-      // get bound on dual (column) activity
-      HighsCDouble sum = 0;
-      if (direction > 0)
-        sum = impliedDualRowBounds.getSumUpperOrig(col);
-      else
-        sum = impliedDualRowBounds.getSumLowerOrig(col);
-      if (sum == 0.0) {
-        // remove column and rows
+      // get bound on column dual using original bounds on row duals
+      double boundOnColDual = direction > 0
+                                  ? -impliedDualRowBounds.getSumUpperOrig(
+                                        col, -model->col_cost_[col])
+                                  : -impliedDualRowBounds.getSumLowerOrig(
+                                        col, -model->col_cost_[col]);
+      if (boundOnColDual == 0.0) {
+        // 1. column's lower bound is infinite (i.e. column dual has upper bound
+        // of zero) and column dual's lower bound is zero as well
+        // (direction = 1) or
+        // 2. column's upper bound is infinite (i.e. column dual has lower bound
+        // of zero) and column dual's upper bound is zero as well
+        // (direction = -1).
+        // thus, the column dual is zero, and we can remove the column and
+        // all its rows
         if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
         postsolve_stack.forcingColumn(
             col, getColumnVector(col), model->col_cost_[col], otherBound,
