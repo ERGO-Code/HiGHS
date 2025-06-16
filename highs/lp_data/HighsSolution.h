@@ -104,11 +104,16 @@ void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
-                                  const double complementarity_tolerance,
+                                  const double optimality_tolerance,
                                   HighsInt& num_complementarity_violations,
                                   double& max_complementarity_violation);
 
-bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
+bool computeDualObjectiveValue(const HighsModel& model,
+                               const HighsSolution& solution,
+                               double& dual_objective_value);
+
+bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
+                               const HighsSolution& solution,
                                double& dual_objective_value);
 
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);

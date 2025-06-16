@@ -1613,9 +1613,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
 
-  // Declare identifiers to save column costs, integrality, any Hessian and the
-  // presolve setting, and a flag to know when they should be
-  // recovered
+  // Declare identifiers to save column costs, integrality, any
+  // Hessian and the presolve setting, and a flag to know when they
+  // should be recovered
   std::vector<double> col_cost;
   HighsHessian hessian;
   bool solve_relaxation;
@@ -1711,6 +1711,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     if (is_qp) model_.hessian_ = hessian;
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
+    // The relaxation for an infeasible MIP may be feasible - so no
+    // ray is generated - so make sure (#2415) that the primal
+    // solution status is reset
+    this->info_.primal_solution_status = SolutionStatus::kSolutionStatusNone;
     // Modify the objective-related information
     this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
     this->info_.objective_function_value = 0;
@@ -1719,8 +1723,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       assert(this->info_.num_primal_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
     } else {
-      // If someone has tried to get a dual ray for a feasible
-      // problem, then any status of the original model has been lost
+      // If someone has tried to get a dual ray for a feasible problem
+      // - or if the relaxation is feasible - then any model and
+      // primal KKT status of the original model has been lost
+      this->info_.invalidatePrimalKkt();
       this->model_status_ = HighsModelStatus::kNotset;
     }
   }
@@ -2581,13 +2587,13 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
-  double complementarity_tolerance = options.complementarity_tolerance;
+  double optimality_tolerance = options.optimality_tolerance;
   if (options.kkt_tolerance != kDefaultKktTolerance) {
     primal_feasibility_tolerance = options.kkt_tolerance;
     dual_feasibility_tolerance = options.kkt_tolerance;
     primal_residual_tolerance = options.kkt_tolerance;
     dual_residual_tolerance = options.kkt_tolerance;
-    complementarity_tolerance = options.kkt_tolerance;
+    optimality_tolerance = options.kkt_tolerance;
   }
   info.objective_function_value =
       model_.lp_.objectiveValue(solution_.col_value);
@@ -2656,15 +2662,14 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     // objective error
     bool unexpected_error_if_optimal = info.num_complementarity_violations != 0;
     double local_dual_objective = 0;
-    if (info.primal_dual_objective_error > complementarity_tolerance) {
+    if (info.primal_dual_objective_error > optimality_tolerance) {
       // Ignore primal-dual objective errors if both objectives are small
       const bool ok_dual_objective = computeDualObjectiveValue(
-          this->model_.lp_, this->solution_, local_dual_objective);
+          nullptr, this->model_.lp_, this->solution_, local_dual_objective);
       assert(ok_dual_objective);
       if (info.objective_function_value * info.objective_function_value >
-              complementarity_tolerance &&
-          local_dual_objective * local_dual_objective >
-              complementarity_tolerance)
+              optimality_tolerance &&
+          local_dual_objective * local_dual_objective > optimality_tolerance)
         unexpected_error_if_optimal = true;
     }
     const bool have_residual_errors =
@@ -2682,7 +2687,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
           max_dual_tolerance_relative_violation);
     }
     primal_dual_objective_tolerance_relative_violation =
-        info.primal_dual_objective_error / complementarity_tolerance;
+        info.primal_dual_objective_error / optimality_tolerance;
 
     if (was_optimal && unexpected_error_if_optimal) {
       highsLogUser(
@@ -2708,7 +2713,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
             info.max_relative_dual_residual_error, dual_residual_tolerance);
       }
       assert(info.num_complementarity_violations == 0);
-      assert(info.primal_dual_objective_error <= complementarity_tolerance);
+      assert(info.primal_dual_objective_error <= optimality_tolerance);
       if (have_residual_errors) {
         assert(info.num_relative_primal_residual_errors == 0);
         assert(info.num_relative_dual_residual_errors == 0);
@@ -2798,16 +2803,15 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                      info.max_relative_dual_residual_error,
                      dual_residual_tolerance);
     }
-    if (info.primal_dual_objective_error > complementarity_tolerance) {
+    if (info.primal_dual_objective_error > optimality_tolerance) {
       primal_dual_objective_tolerance_relative_violation =
-          info.primal_dual_objective_error / complementarity_tolerance;
+          info.primal_dual_objective_error / optimality_tolerance;
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
                      "                 %8.3g relative P-D objective error    "
                      "(tolerance = %4.0e)\n",
-                     info.primal_dual_objective_error,
-                     complementarity_tolerance);
+                     info.primal_dual_objective_error, optimality_tolerance);
     }
     // Set the primal and dual solution status according to tolerance failure
     if (max_primal_tolerance_relative_violation >
@@ -4196,7 +4200,7 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
             this->options_.dual_residual_tolerance);
   noCleanup("Primal-dual objective error",
             this->info_.primal_dual_objective_error,
-            this->options_.complementarity_tolerance);
+            this->options_.optimality_tolerance);
   if (no_cleanup) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "No PDLP cleanup due to KKT errors exceeding tolerances by a "

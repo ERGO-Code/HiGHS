@@ -280,6 +280,9 @@ enum IisStrategy {
 // Default KKT tolerance
 const double kDefaultKktTolerance = 1e-7;
 
+// Default QP Hessian regularization value
+const double kHessianRegularizationValue = 1e-7;
+
 // Default and max allowed power-of-two matrix scale factor
 const HighsInt kDefaultAllowedMatrixPow2Scale = 20;
 const HighsInt kMaxAllowedMatrixPow2Scale = 30;

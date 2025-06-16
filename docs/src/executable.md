@@ -1,9 +1,16 @@
 # [Executable](@id executable)
 
-For convenience, the executable is assumed to be `bin/highs`.
+HiGHS can run as a stand-alone program with a command-line
+interface. It solves an optimization problem provided by either an
+[MPS](https://docs.gurobi.com/projects/optimizer/en/current/reference/fileformats/modelformats.html#mps-format)
+file, or
+[LP](https://docs.gurobi.com/projects/optimizer/en/current/reference/fileformats/modelformats.html#lp-format)
+file. Note that HiGHS cannot read the [lpsolve LP file
+format](https://lpsolve.sourceforge.net/5.5/lp-format.htm).
 
 ### Running the executable
 
+For convenience, the executable is assumed to be `bin/highs`.
 The model given by the MPS file `model.mps` is solved by the command:
 
 ```shell
@@ -15,9 +22,10 @@ path name can be given.
 
 ### Command line options
 
-When HiGHS is run from the command line, some fundamental option values may be
-specified directly. Many more may be specified via a file. Formally, the usage
-is:
+HiGHS is controlled by [option](@ref options-intro) values. When it is
+run from the command line, some fundamental option values may be
+specified directly. Many more may be specified via a file containing
+HiGHS options settings. Formally, the usage is:
 
 ```shell
 $ bin/highs --help
@@ -60,7 +68,16 @@ options:
 ```
 
 The [list of options](@ref option-definitions) section gives a full
-list of options, and the format in which they are specified.
+list of options, and their default values. In a file containing HiGHS
+options they are specified as `name = value`, with one per line, and
+any line beginning with `#` treated as a comment. For example, the
+primal-dual hybrid gradient method for LP (PDLP) is used with all
+feasibility and optimality tolerances set to `1e-4` if HiGHS reads the
+following in its options file.
+```shell
+solver = pdlp
+kkt_tolerance = 1e-4
+```
 
 ### Return code values
 
