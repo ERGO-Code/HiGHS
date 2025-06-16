@@ -265,8 +265,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   downscore.resize(numfrac, kHighsInf);
   upbound.resize(numfrac, getCurrentLowerBound());
   downbound.resize(numfrac, getCurrentLowerBound());
-  if (!mipsolver.submip) shadowscore.resize(numfrac, 0.0);
-  edgescore.resize(numfrac, 0.0);
+  if (!mipsolver.submip) {
+    shadowscore.resize(numfrac, 0.0);
+    edgescore.resize(numfrac, 0.0);
+  }
 
   upscorereliable.resize(numfrac, 0);
   downscorereliable.resize(numfrac, 0);
@@ -356,7 +358,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   // Get the edge weights assigned to the correct variables
   const double* edgeWt = lp->getLpSolver().getDualEdgeWeights();
   HighsInt numweightsstored = 0;
-  if (edgeWt) {
+  if (edgeWt && !mipsolver.submip) {
     const HighsInt* basisinds =
       lp->getLpSolver().getBasicVariablesArray();
     HighsInt numRow = lp->numRows();
@@ -817,16 +819,22 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   }
 
   if (!mipsolver.submip) {
-    sortCandidates(shadowscore);
-    if (numcands == 1) {
-      downNodeLb = downbound[perm[0]];
-      upNodeLb = upbound[perm[0]];
-      return perm[0];
+    double avgshadowscore = 0;
+    double avgedgescore = 0;
+    for (HighsInt i = 0; i < numfrac; i++) {
+      avgshadowscore += shadowscore[i];
+      avgedgescore += edgescore[i];
     }
-  }
-
-  if (edgeWt) {
-    sortCandidates(edgescore);
+    avgshadowscore /= numfrac;
+    avgedgescore /= numfrac;
+    for (HighsInt i = 0; i < numfrac; i++) {
+      shadowscore[i] = 1 - (1 / (1 + (shadowscore[i] / std::max(1e-6,
+        avgshadowscore))));
+      edgescore[i] = 1 - (1 / (1 + (edgescore[i] / std::max(1e-6,
+        avgedgescore))));
+      shadowscore[i] = shadowscore[i] + (1e-2 * edgescore[i]);
+    }
+    sortCandidates(shadowscore);
     if (numcands == 1) {
       downNodeLb = downbound[perm[0]];
       upNodeLb = upbound[perm[0]];
