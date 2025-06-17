@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;//false;
 const double zero_ray_value_tolerance = 1e-14;
 
 void reportRay(std::string message, HighsInt dim, double* computed,
@@ -962,4 +962,49 @@ TEST_CASE("Rays-2415", "[highs_test_rays]") {
           HighsStatus::kOk);
   REQUIRE(h.getInfo().primal_solution_status != kSolutionStatusFeasible);
   REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusNone);
+}
+
+TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {kHighsInf};
+  lp.row_lower_ = {0};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  if (dev_run) printf("For unbounded LP\n");
+  for (HighsInt k = 0; k< 2; k++) {
+    bool is_mip = k == 1;
+    HighsInt require_dual_solution_status = kSolutionStatusInfeasible;
+    if (is_mip) 
+      require_dual_solution_status = kSolutionStatusNone;
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    if (dev_run)
+      printf("Solution values are col_value[0] = %g; row_value[0] = %g\n",
+	     h.getSolution().col_value[0], h.getSolution().row_value[0]);
+    if (dev_run)
+      printf("Solution duals are col_dual[0] = %g; row_dual[0] = %g\n",
+	     h.getSolution().col_dual[0], h.getSolution().row_dual[0]);
+    if (dev_run)
+      printf("Dual Solution status is %d\n", int(h.getInfo().dual_solution_status));
+    REQUIRE(h.getInfo().dual_solution_status != kSolutionStatusFeasible);
+    REQUIRE(h.getInfo().dual_solution_status == require_dual_solution_status);
+
+    bool has_primal_ray;
+    std::vector<double> primal_ray_value(lp.num_col_);
+    REQUIRE(h.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+	    HighsStatus::kOk);
+    REQUIRE(h.getInfo().dual_solution_status != kSolutionStatusFeasible);
+    REQUIRE(h.getInfo().dual_solution_status == require_dual_solution_status);
+    if (k == 1) break;
+    lp.integrality_ = {HighsVarType::kInteger};
+    if (dev_run) printf("\nFor unbounded MIP\n");
+  }
 }
