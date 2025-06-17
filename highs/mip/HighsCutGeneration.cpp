@@ -523,7 +523,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   integerinds.clear();
   integerinds.reserve(rowlen);
 
-  bool strongcg = !onlyInitialCMIRScale;
+  bool strongcg = true;
   double maxabsdelta = 0.0;
   constexpr double maxCMirScale = 1e6;
   constexpr double f0min = 0.005;
