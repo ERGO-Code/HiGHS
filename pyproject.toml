@@ -202,7 +202,6 @@ testpaths = ["tests"]
 
 [tool.cibuildwheel]
 build = "*"
-skip = "cp3{6,7}-*"
 
 # Enable free-threaded support
 # free-threaded-support = true
