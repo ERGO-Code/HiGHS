@@ -33,7 +33,6 @@ jobs:
         # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
         buildplat:
           - [ubuntu-24.04, manylinux_x86_64]
-          - [ubuntu-24.04, manylinux_i686]
           - [ubuntu-24.04-arm, manylinux_aarch64]
           - [ubuntu-24.04, musllinux_x86_64] # No OpenBlas, no test
           - [ubuntu-24.04, musllinux_i686]
@@ -42,11 +41,21 @@ jobs:
           - [macos-14, macosx_arm64]
           - [windows-2022, win_amd64]
           - [windows-2022, win32]
+        buildplat_linux_32:
+          - [ubuntu-24.04, manylinux_i686]
+          - [ubuntu-24.04, musllinux_i686]
         python: ["cp38", "cp39","cp310", "cp311","cp312", "cp313"]
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.0
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
+
+      - name: Build linux 32bit wheels
+        uses: pypa/cibuildwheel@v3.0
+        env:
+          CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat_linux_32[1] }}
+          CIBW_ARCH: auto32
