@@ -205,7 +205,8 @@ build = "*"
 skip = "cp3{6,7}-*"
 
 # Enable free-threaded support
-free-threaded-support = true
+# free-threaded-support = true
+enable = ["cpython-freethreading"]
 
 test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
