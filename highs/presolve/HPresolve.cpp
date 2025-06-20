@@ -6648,22 +6648,26 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
 
     storeRow(eqrow);
 
-    HighsInt secondSparsestColumn = -1;
-    HighsInt sparsestCol = Acol[rowpositions[0]];
+    HighsInt sparsestCol = -1;
+    HighsInt secondSparsestCol = -1;
     HighsInt sparsestColLen = kHighsIInf;
-    for (size_t i = 1; i < rowpositions.size(); ++i) {
-      HighsInt col = Acol[rowpositions[i]];
+    HighsInt secondSparsestColLen = kHighsIInf;
+    for (HighsInt nzPos : rowpositions) {
+      HighsInt col = Acol[nzPos];
       if (colsize[col] < sparsestColLen) {
+        secondSparsestCol = sparsestCol;
+        secondSparsestColLen = sparsestColLen;
         sparsestColLen = colsize[col];
-        secondSparsestColumn = sparsestCol;
         sparsestCol = col;
+      } else if (colsize[col] < secondSparsestColLen) {
+        secondSparsestColLen = colsize[col];
+        secondSparsestCol = col;
       }
     }
 
-    if (colsize[secondSparsestColumn] < colsize[sparsestCol])
-      std::swap(sparsestCol, secondSparsestColumn);
+    assert(sparsestCol != -1 && secondSparsestCol != -1);
 
-    assert(sparsestCol != -1 && secondSparsestColumn != -1);
+    assert(colsize[sparsestCol] <= colsize[secondSparsestCol]);
 
     std::map<double, HighsInt> possibleScales;
     sparsifyRows.clear();
@@ -6759,7 +6763,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
       // now check for rows which do not contain the sparsest column but all
       // other columns by scanning the second sparsest column
       for (const HighsSliceNonzero& colNz :
-           getColumnVector(secondSparsestColumn)) {
+           getColumnVector(secondSparsestCol)) {
         HighsInt candRow = colNz.index();
         if (candRow == eqrow) continue;
 
@@ -6776,7 +6780,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
         bool skip = false;
         for (const HighsSliceNonzero& nonzero : getStoredRow()) {
           double candRowVal;
-          if (nonzero.index() == secondSparsestColumn) {
+          if (nonzero.index() == secondSparsestCol) {
             candRowVal = colNz.value();
           } else {
             HighsInt nzPos = findNonzero(candRow, nonzero.index());
