@@ -70,8 +70,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     //
     lp.offset_ = m.objective->offset;
     lp.col_cost_.resize(lp.num_col_, 0.0);
-    for (size_t i = 0; i < m.objective->linterms.size(); i++) {
-      std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
+    for (const auto& lt : m.objective->linterms) {
       lp.col_cost_[varindex[lt->var->name]] = lt->coef;
     }
 
@@ -94,8 +93,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // nonzero entries
     unsigned int qnnz = 0;
     for (std::shared_ptr<Variable> var : m.variables)
-      for (size_t i = 0; i < mat[var].size(); i++)
-        if (mat2[var][i]) qnnz++;
+      for (const auto& nonzero : mat[var])
+        if (nonzero) qnnz++;
     if (qnnz) {
       hessian.dim_ = m.variables.size();
       qnnz = 0;
@@ -177,8 +176,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // column 0, so have to clear this before pushing back start
     lp.a_matrix_.start_.clear();
     assert((int)lp.a_matrix_.start_.size() == 0);
-    for (HighsInt i = 0; i < lp.num_col_; i++) {
-      std::shared_ptr<Variable> var = m.variables[i];
+    for (const auto& var : m.variables) {
       lp.a_matrix_.start_.push_back(nz);
       for (size_t j = 0; j < consofvarmap_index[var].size(); j++) {
         double value = consofvarmap_value[var][j];

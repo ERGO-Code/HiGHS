@@ -108,8 +108,8 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
 
   // Only set up lp.integrality_ if non-continuous
   bool is_mip = false;
-  for (size_t iCol = 0; iCol < col_integrality.size(); iCol++) {
-    if (col_integrality[iCol] != HighsVarType::kContinuous) {
+  for (const auto& integrality : col_integrality) {
+    if (integrality != HighsVarType::kContinuous) {
       is_mip = true;
       break;
     }
