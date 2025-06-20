@@ -3252,8 +3252,8 @@ HighsStatus Highs::computeIllConditioning(
     }
   };
 
-  for (const auto& elm : abs_list) {
-    HighsInt iRow = elm.second;
+  for (HighsInt iX = int(abs_list.size()) - 1; iX >= 0; iX--) {
+    HighsInt iRow = abs_list[iX].second;
     HighsIllConditioningRecord record;
     record.index = iRow;
     record.multiplier = solution.col_value[iRow] / multiplier_norm;
