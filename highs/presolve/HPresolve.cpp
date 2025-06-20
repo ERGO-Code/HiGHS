@@ -6657,11 +6657,11 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
       if (colsize[col] < sparsestColLen) {
         secondSparsestCol = sparsestCol;
         secondSparsestColLen = sparsestColLen;
-        sparsestColLen = colsize[col];
         sparsestCol = col;
+        sparsestColLen = colsize[col];
       } else if (colsize[col] < secondSparsestColLen) {
-        secondSparsestColLen = colsize[col];
         secondSparsestCol = col;
+        secondSparsestColLen = colsize[col];
       }
     }
 
