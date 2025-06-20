@@ -93,8 +93,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // nonzero entries
     unsigned int qnnz = 0;
     for (std::shared_ptr<Variable> var : m.variables)
-      for (const auto& nonzero : mat[var])
-        if (nonzero) qnnz++;
+      for (size_t i = 0; i < mat[var].size(); i++)
+        if (mat2[var][i]) qnnz++;
     if (qnnz) {
       hessian.dim_ = m.variables.size();
       qnnz = 0;
