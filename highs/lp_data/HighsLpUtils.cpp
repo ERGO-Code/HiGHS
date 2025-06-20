@@ -788,9 +788,9 @@ bool costScaleOk(const vector<double>& cost, const HighsInt cost_scale,
                  const double infinite_cost) {
   if (!cost_scale) return true;
   double cost_scale_value = std::pow(2, cost_scale);
-  for (HighsInt iCol = 0; iCol < HighsInt(cost.size()); iCol++)
-    if (std::abs(cost[iCol]) < kHighsInf &&
-        std::abs(cost[iCol] * cost_scale_value) > infinite_cost)
+  for (double c : cost)
+    if (std::abs(c) < kHighsInf &&
+        std::abs(c * cost_scale_value) > infinite_cost)
       return false;
   return true;
 }
