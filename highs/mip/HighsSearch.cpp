@@ -344,11 +344,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           shadowdowncost -= s;
         }
         else if (s > 0) {
-          shadowupcost += s;
+          shadowupcost -= s;
         }
       }
-      shadowscore[k] = std::max(1e-6, shadowdowncost) *
-        std::max(1e-6, shadowupcost);
+      shadowscore[k] = std::max(1e-6, fabs(shadowdowncost)) *
+        std::max(1e-6, fabs(shadowupcost));
     }
     // Store the col to index mapping (need to get edge weights from basis)
     auto& idx = coltoidx[col];
@@ -791,7 +791,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         return sortscore[a] > sortscore[b];
     });
     for (HighsInt j = 0; j != numcands; j++) {
-      if ((sortscore[perm[j]] <= sortscore[perm[0]] * 0.67) &&
+      if ((sortscore[perm[j]] <= sortscore[perm[0]] * 0.75) &&
           (sortscore[perm[j]] <= sortscore[perm[0]] - 1e-6)) {
         numcands = j;
         break;
