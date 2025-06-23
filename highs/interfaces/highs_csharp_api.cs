@@ -73,6 +73,31 @@ public enum HighsIntegrality
     kImplicitInteger = 4,
 }
 
+/// <summary>A category of log message</summary>
+public enum HighsLogType
+{
+    Info = 1,
+    Detailed,
+    Verbose,
+    Warning,
+    Error
+}
+
+/// <summary>A category of callback</summary>
+internal enum HighsCallbackType
+{
+    Logging = 0,
+    SimplexInterrupt = 1,
+    IpmInterrupt = 2,
+    MipSolution = 3,
+    MipImprovingSolution = 4,
+    MipLogging = 5,
+    MipInterrupt = 6,
+    MipGetCutPool = 7,
+    MipDefineLazyConstraints = 8,
+}
+
+
 public class HighsModel
 {
     public HighsObjectiveSense sense;
@@ -180,9 +205,25 @@ public class HighsLpSolver : IDisposable
 {
     private IntPtr highs;
 
+    /// <summary>Read-only access to Highs instance pointer</summary>
+    /// <remarks>Allows sub-classes to do meaningful things using the HiGHS C API.</remarks>
+    protected IntPtr HighsObject => this.highs;
+
     private bool _disposed;
 
     private const string highslibname = "highs";
+
+    /// <summary>Signature of functions that can be called by HiGHS when callback events occur</summary>
+    private delegate void CallbackDelegate(
+        HighsCallbackType cbType, IntPtr messagePtr, [In] ref HighsCallbackDataOut cbDataOut,
+        ref HighsCallbackDataIn cbDataIn, IntPtr cbUserData);
+
+    /// <summary>Pointer to function that is called when HiGHS callbacks occur</summary>
+    private CallbackDelegate _cbDelegate;
+
+    /// <summary>A C function pointer to the event-generating callback delegate</summary>
+    /// <remarks>This property's primary purpose is to improve ability to test callback-triggered events</remarks>
+    protected IntPtr CallbackFunctionPtr => Marshal.GetFunctionPointerForDelegate(_cbDelegate);
 
     [DllImport(highslibname)]
     private static extern int Highs_call(
@@ -593,6 +634,15 @@ public class HighsLpSolver : IDisposable
     [DllImport(highslibname)]
     private static extern int Highs_writeOptionsDeviations(IntPtr highs, string filename);
 
+    [DllImport(highslibname)]
+    private static extern int Highs_setCallback(IntPtr highs, IntPtr cbFuncPtr, IntPtr cbUserData);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_startCallback(IntPtr highs, HighsCallbackType cbType);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_stopCallback(IntPtr highs, HighsCallbackType cbType);
+
     public static HighsStatus call(HighsModel model, ref HighsSolution sol, ref HighsBasis bas, ref HighsModelStatus modelstatus)
     {
         int nc = model.colcost.Length;
@@ -635,6 +685,8 @@ public class HighsLpSolver : IDisposable
     public HighsLpSolver()
     {
         this.highs = HighsLpSolver.Highs_create();
+        _cbDelegate = this.callbackFunction;
+        Highs_setCallback(this.highs, Marshal.GetFunctionPointerForDelegate(_cbDelegate), IntPtr.Zero);
     }
 
     ~HighsLpSolver()
@@ -656,6 +708,7 @@ public class HighsLpSolver : IDisposable
         }
 
         HighsLpSolver.Highs_destroy(this.highs);
+        this._cbDelegate = null;
         this._disposed = true;
     }
 
@@ -1096,7 +1149,316 @@ public class HighsLpSolver : IDisposable
     {
         return (HighsStatus)Highs_writeOptionsDeviations(this.highs, filename);
     }
+
+#region "Callbacks as events"
+    private HighsStatus startCallback(HighsCallbackType cbType)
+    {
+        return (HighsStatus)Highs_startCallback(this.highs, cbType);
+    }
+
+    private HighsStatus stopCallback(HighsCallbackType cbType)
+    {
+        return (HighsStatus)Highs_stopCallback(this.highs, cbType);
+    }
+
+    private void callbackFunction(HighsCallbackType cbType, IntPtr messagePtr,
+                                  [In] ref HighsCallbackDataOut cbDataOut,
+                                  [In, Out] ref HighsCallbackDataIn cbDataIn, IntPtr cbUserData)
+    {
+        switch (cbType)
+        {
+            case HighsCallbackType.Logging:
+                // We receive the message as an IntPtr instead of a string so that the marshaller
+                // doesn't attempt to free the C string.
+                string message = Marshal.PtrToStringAnsi(messagePtr);
+
+                var loggingEventData = new LoggingEventArgs(cbDataOut.log_type, message);
+                _innerLogReceived?.Invoke(this, loggingEventData);
+                break;
+
+            case HighsCallbackType.MipImprovingSolution:
+                var mipImpArgs = new MipEventArgs(cbDataOut);
+                _innerMipImproving?.Invoke(this, mipImpArgs);
+                break;
+
+            case HighsCallbackType.MipLogging:
+                var mipLogArgs = new MipEventArgs(cbDataOut);
+                _innerMipLogging?.Invoke(this, mipLogArgs);
+                break;
+
+            case HighsCallbackType.MipInterrupt:
+            case HighsCallbackType.IpmInterrupt:
+            case HighsCallbackType.SimplexInterrupt:
+                var interruptArgs = new InterruptCheckEventArgs(cbDataOut);
+                var evnt = cbType == HighsCallbackType.MipInterrupt ? _innerMipInterrupt :
+                           cbType == HighsCallbackType.SimplexInterrupt ? _innerSimplexInterrupt :
+                           cbType == HighsCallbackType.IpmInterrupt ? _innerIpmInterrupt :
+                           null;
+                evnt?.Invoke(this, interruptArgs);
+                if (interruptArgs.InterruptSolver)
+                    cbDataIn.user_interrupt = 1;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    // Expose callbacks as .NET events.
+    // Event declarations use custom add/remove accessors to automatically start and stop
+    // the relevant callbacks when the number of listeners moves between 0 and 1.
+
+    // kCallbackLogging as an event
+    private readonly object _logReceivedLockObject = new object();
+    private EventHandler<LoggingEventArgs> _innerLogReceived;
+    /// <summary>Occurs when a log message is generated by HiGHS</summary>
+    public event EventHandler<LoggingEventArgs> LogMessageReceived
+    {
+        add
+        {
+            lock (_logReceivedLockObject)
+            {
+                // If this is the first subscription to the event, start the callback
+                if (_innerLogReceived == null)
+                    this.startCallback(HighsCallbackType.Logging);
+                _innerLogReceived += value;
+            }
+        }
+        remove
+        {
+            lock (_logReceivedLockObject)
+            {
+                _innerLogReceived -= value;
+                // If this was the last subscription to the event, stop the callback
+                if (_innerLogReceived == null)
+                    this.stopCallback(HighsCallbackType.Logging);
+            }
+        }
+    }
+
+    // kCallbackMipImprovingSolution as an event
+    private readonly object _mipImprovingLockObject = new object();
+    private EventHandler<MipEventArgs> _innerMipImproving;
+    /// <summary>Occurs when the MIP solver identifies an improving integer feasible solution</summary>
+    public event EventHandler<MipEventArgs> MipImprovingSolutionFound
+    {
+        add
+        {
+            lock (_mipImprovingLockObject)
+            {
+                if (_innerMipImproving == null)
+                    this.startCallback(HighsCallbackType.MipImprovingSolution);
+                _innerMipImproving += value;
+            }
+        }
+        remove
+        {
+            lock (_mipImprovingLockObject)
+            {
+                _innerMipImproving -= value;
+                if (_innerMipImproving == null)
+                    this.stopCallback(HighsCallbackType.MipImprovingSolution);
+            }
+        }
+    }
+
+    // kCallbackMipLogging as an event
+    private readonly object _mipLoggingLockObject = new object();
+    private EventHandler<MipEventArgs> _innerMipLogging;
+    /// <summary>Occurs when the MIP solver receives a MIP status report</summary>
+    public event EventHandler<MipEventArgs> MipStatusReported
+    {
+        add
+        {
+            lock (_mipLoggingLockObject)
+            {
+                if (_innerMipLogging == null)
+                    this.startCallback(HighsCallbackType.MipLogging);
+                _innerMipLogging += value;
+            }
+        }
+        remove
+        {
+            lock (_mipLoggingLockObject)
+            {
+                _innerMipLogging -= value;
+                if (_innerMipLogging == null)
+                    this.stopCallback(HighsCallbackType.MipLogging);
+            }
+        }
+    }
+
+    // kCallbackMipInterrupt as an event
+    private readonly object _mipInterruptLockObject = new object();
+    private EventHandler<InterruptCheckEventArgs> _innerMipInterrupt;
+    /// <summary>Occurs when the solver checks whether MIP stopping criteria have been satisfied</summary>
+    /// <remarks>If the client wishes to terminate the solve, set the event's user_interrupt to true</remarks>
+    public event EventHandler<InterruptCheckEventArgs> MipInterruptCheck
+    {
+        add
+        {
+            lock (_mipInterruptLockObject)
+            {
+                if (_innerMipInterrupt == null)
+                {
+                    this.startCallback(HighsCallbackType.MipInterrupt);
+                }
+                _innerMipInterrupt += value;
+            }
+        }
+        remove
+        {
+            lock (_mipInterruptLockObject)
+            {
+                _innerMipInterrupt -= value;
+                if (_innerMipInterrupt == null)
+                {
+                    this.stopCallback(HighsCallbackType.MipInterrupt);
+                }
+            }
+        }
+    }
+
+    // kCallbackIpmInterrupt as an event
+    private readonly object _ipmInterruptLockObject = new object();
+    private EventHandler<InterruptCheckEventArgs> _innerIpmInterrupt;
+    /// <summary>Occurs when the solver checks whether MIP stopping criteria have been satisfied</summary>
+    /// <remarks>If the client wishes to terminate the solve, set the event's user_interrupt to true</remarks>
+    public event EventHandler<InterruptCheckEventArgs> IpmInterruptCheck
+    {
+        add
+        {
+            lock (_ipmInterruptLockObject)
+            {
+                if (_innerIpmInterrupt == null)
+                {
+                    this.startCallback(HighsCallbackType.IpmInterrupt);
+                }
+                _innerIpmInterrupt += value;
+            }
+        }
+        remove
+        {
+            lock (_ipmInterruptLockObject)
+            {
+                _innerIpmInterrupt -= value;
+                if (_innerIpmInterrupt == null)
+                {
+                    this.stopCallback(HighsCallbackType.IpmInterrupt);
+                }
+            }
+        }
+    }
+
+    // kCallbackSimplexInterrupt as an event
+    private readonly object _simplexInterruptLockObject = new object();
+    private EventHandler<InterruptCheckEventArgs> _innerSimplexInterrupt;
+    /// <summary>Occurs when the solver checks whether MIP stopping criteria have been satisfied</summary>
+    /// <remarks>If the client wishes to terminate the solve, set the event's user_interrupt to true</remarks>
+    public event EventHandler<InterruptCheckEventArgs> SimplexInterruptCheck
+    {
+        add
+        {
+            lock (_simplexInterruptLockObject)
+            {
+                if (_innerSimplexInterrupt == null)
+                {
+                    this.startCallback(HighsCallbackType.SimplexInterrupt);
+                }
+                _innerSimplexInterrupt += value;
+            }
+        }
+        remove
+        {
+            lock (_simplexInterruptLockObject)
+            {
+                _innerSimplexInterrupt -= value;
+                if (_innerSimplexInterrupt == null)
+                {
+                    this.stopCallback(HighsCallbackType.SimplexInterrupt);
+                }
+            }
+        }
+    }
+#endregion
 }
+
+    /// <summary>Data passed to the callback function from HiGHS</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct HighsCallbackDataOut
+    {
+        private IntPtr _ignore;
+        public HighsLogType log_type;
+        public double running_time;
+        public int simplex_iteration_count;
+        public int ipm_iteration_count;
+        public int pdlp_iteration_count;
+        public double objective_function_value;
+        public long mip_node_count;
+        public long mip_total_lp_iterations;
+        public double mip_primal_bound;
+        public double mip_dual_bound;
+        public double mip_gap;
+        // Additional fields omitted, .NET marshaller will just ignore any fields beyond this point
+    }
+
+    /// <summary>Data passed from the callback function to HiGHS</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct HighsCallbackDataIn
+    {
+        public int user_interrupt;
+    }
+
+    /// <summary>Data for message logging events</summary>
+    public class LoggingEventArgs : EventArgs
+    {
+        /// <summary>The type/level of log message</summary>
+        public HighsLogType LogType { get; }
+        /// <summary>The log message</summary>
+        public string Message { get; }
+
+        public LoggingEventArgs(HighsLogType log_type, string message)
+        {
+            this.LogType = log_type;
+            this.Message = message;
+        }
+    }
+
+    /// <summary>Data for MIP-related events</summary>
+    public class MipEventArgs : EventArgs
+    {
+        /// <summary>The execution time in seconds</summary>
+        public double RunningTime { get; }
+        /// <summary>The objective function value of the best integer feasible solution found so far</summary>
+        public double ObjectiveFunctionValue { get; }
+        /// <summary>The number of MIP nodes explored so far</summary>
+        public long MipNodeCount { get; }
+        /// <summary>The primal bound</summary>
+        public double MipPrimalBound { get; }
+        /// <summary>The dual bound</summary>
+        public double MipDualBound { get; }
+        /// <summary>The relative difference between the primal and dual bounds</summary>
+        public double MipGap { get; }
+
+        internal MipEventArgs(HighsCallbackDataOut data)
+        {
+            this.RunningTime = data.running_time;
+            this.ObjectiveFunctionValue = data.objective_function_value;
+            this.MipNodeCount = data.mip_node_count;
+            this.MipPrimalBound = data.mip_primal_bound;
+            this.MipDualBound = data.mip_dual_bound;
+            this.MipGap = data.mip_gap;
+        }
+    }
+
+    public class InterruptCheckEventArgs : EventArgs
+    {
+        internal InterruptCheckEventArgs(HighsCallbackDataOut data)
+        {}
+
+        /// <summary>Whether to interrupt the solver operation currently in progress</summary>
+        public bool InterruptSolver { get; set; } = false;
+    }
 
 /// <summary>
 /// The solution info.
