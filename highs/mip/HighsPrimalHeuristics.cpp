@@ -1181,9 +1181,9 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
               score = direction * (isMaximization ? -cost : cost);
             else {
               score = 0.0;
-              for (size_t s = 0; s != shifts.size(); ++s) {
-                if (direction * shifts[s] > 0)
-                  score += pow(1.1, direction * shifts[s] - t);
+              for (double shift : shifts) {
+                if (direction * shift > 0)
+                  score += pow(1.1, direction * shift - t);
               }
             }
             if (isInteger) score += 1;
