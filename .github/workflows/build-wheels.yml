@@ -58,4 +58,3 @@ jobs:
         uses: pypa/cibuildwheel@v3.0
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat_linux_32[1] }}
-          CIBW_ARCH: auto32

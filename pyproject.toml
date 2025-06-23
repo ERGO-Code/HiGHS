@@ -202,6 +202,7 @@ testpaths = ["tests"]
 
 [tool.cibuildwheel]
 build = "*"
+archs = ["auto64", "auto32"]
 
 # Enable free-threaded support
 # free-threaded-support = true
