@@ -1,12 +1,12 @@
 name: build-wheels-push
 
 # on: []
-on: push
+# on: push
  
-# on:
-#  release:
-#    types:
-#      - published
+on:
+ release:
+   types:
+     - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -127,7 +127,7 @@ jobs:
     needs: [build_wheels, build_sdist]
 
     # upload to PyPI on every tag starting with 'v'
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
 
     environment:
       name: pypi
