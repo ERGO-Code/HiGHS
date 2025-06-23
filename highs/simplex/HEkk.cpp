@@ -3156,11 +3156,10 @@ bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
   } else {
     // Look to see whether this basis change is in the list of bad
     // ones
-    for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-      if (bad_basis_change_[iX].variable_out == variable_out &&
-          bad_basis_change_[iX].variable_in == variable_in &&
-          bad_basis_change_[iX].row_out == row_out) {
-        bad_basis_change_[iX].taboo = true;
+    for (auto& change : bad_basis_change_) {
+      if (change.variable_out == variable_out &&
+          change.variable_in == variable_in && change.row_out == row_out) {
+        change.taboo = true;
         return true;
       }
     }
@@ -3946,24 +3945,23 @@ HighsInt HEkk::addBadBasisChange(const HighsInt row_out,
 }
 
 void HEkk::clearBadBasisChangeTabooFlag() {
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
-    bad_basis_change_[iX].taboo = false;
+  for (auto& change : bad_basis_change_) change.taboo = false;
 }
 
-bool HEkk::tabooBadBasisChange() {
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) return true;
+bool HEkk::tabooBadBasisChange() const {
+  for (const auto& change : bad_basis_change_) {
+    if (change.taboo) return true;
   }
   return false;
 }
 
 void HEkk::applyTabooRowOut(vector<double>& values,
                             const double overwrite_with) {
-  assert((HighsInt)values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) {
-      HighsInt iRow = bad_basis_change_[iX].row_out;
-      bad_basis_change_[iX].save_value = values[iRow];
+  assert(values.size() >= static_cast<size_t>(lp_.num_row_));
+  for (auto& change : bad_basis_change_) {
+    if (change.taboo) {
+      HighsInt iRow = change.row_out;
+      change.save_value = values[iRow];
       values[iRow] = overwrite_with;
     }
   }
@@ -3982,11 +3980,12 @@ void HEkk::unapplyTabooRowOut(vector<double>& values) {
 
 void HEkk::applyTabooVariableIn(vector<double>& values,
                                 const double overwrite_with) {
-  assert((HighsInt)values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) {
-      HighsInt iCol = bad_basis_change_[iX].variable_in;
-      bad_basis_change_[iX].save_value = values[iCol];
+  assert(values.size() >=
+         static_cast<size_t>(lp_.num_col_) + static_cast<size_t>(lp_.num_row_));
+  for (auto& change : bad_basis_change_) {
+    if (change.taboo) {
+      HighsInt iCol = change.variable_in;
+      change.save_value = values[iCol];
       values[iCol] = overwrite_with;
     }
   }
