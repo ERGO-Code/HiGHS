@@ -1772,8 +1772,8 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
 }
 
 bool HighsSolution::hasUndefined() const {
-  for (HighsInt iCol = 0; iCol < HighsInt(this->col_value.size()); iCol++)
-    if (this->col_value[iCol] == kHighsUndefined) return true;
+  for (double value : this->col_value)
+    if (value == kHighsUndefined) return true;
   return false;
 }
 
