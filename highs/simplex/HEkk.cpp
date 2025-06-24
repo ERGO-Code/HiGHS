@@ -3950,7 +3950,7 @@ void HEkk::clearBadBasisChangeTabooFlag() {
     bad_basis_change_[iX].taboo = false;
 }
 
-bool HEkk::tabooBadBasisChange() {
+bool HEkk::tabooBadBasisChange() const {
   for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
     if (bad_basis_change_[iX].taboo) return true;
   }
