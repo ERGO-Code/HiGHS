@@ -2924,8 +2924,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
   resolvedDomainChanges.clear();
   double covered = double(M - Mupper);
   if (covered > 0) {
-    for (HighsInt k = 0; k < (HighsInt)resolveBuffer.size(); ++k) {
-      ResolveCandidate& reasonDomchg = resolveBuffer[k];
+    for (const auto& reasonDomchg : resolveBuffer) {
       LocalDomChg locdomchg;
       locdomchg.pos = reasonDomchg.boundPos;
       locdomchg.domchg = localdom.domchgstack_[reasonDomchg.boundPos];
@@ -3034,8 +3033,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
   resolvedDomainChanges.clear();
   double covered = double(M - Mlower);
   if (covered < 0) {
-    for (HighsInt k = 0; k < (HighsInt)resolveBuffer.size(); ++k) {
-      ResolveCandidate& reasonDomchg = resolveBuffer[k];
+    for (const auto& reasonDomchg : resolveBuffer) {
       LocalDomChg locdomchg;
       locdomchg.pos = reasonDomchg.boundPos;
       locdomchg.domchg = localdom.domchgstack_[reasonDomchg.boundPos];
