@@ -633,7 +633,7 @@ void HEkkDualRow::computeDevexWeight(const HighsInt slice) {
 
 HighsInt HEkkDualRow::debugFindInWorkData(
     const HighsInt iCol, const HighsInt count,
-    const std::vector<std::pair<HighsInt, double>>& workData_) {
+    const std::vector<std::pair<HighsInt, double>>& workData_) const {
   for (HighsInt Ix = 0; Ix < count; Ix++)
     if (workData_[Ix].first == iCol) return Ix;
   return -1;

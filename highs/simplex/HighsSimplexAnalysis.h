@@ -196,7 +196,7 @@ class HighsSimplexAnalysis {
   void userInvertReport(const bool force);
   void userInvertReport(const bool header, const bool force);
   bool predictEndDensity(const HighsInt tran_stage_id,
-                         const double start_density, double& end_density);
+                         const double start_density, double& end_density) const;
   void afterTranStage(const HighsInt tran_stage_id, const double start_density,
                       const double end_density, const double historical_density,
                       const double predicted_end_density,
@@ -208,11 +208,11 @@ class HighsSimplexAnalysis {
   void simplexTimerStop(const HighsInt simplex_clock,
                         const HighsInt thread_id = 0);
   bool simplexTimerRunning(const HighsInt simplex_clock,
-                           const HighsInt thread_id = 0);
+                           const HighsInt thread_id = 0) const;
   HighsInt simplexTimerNumCall(const HighsInt simplex_clock,
-                               const HighsInt thread_id = 0);
+                               const HighsInt thread_id = 0) const;
   double simplexTimerRead(const HighsInt simplex_clock,
-                          const HighsInt thread_id = 0);
+                          const HighsInt thread_id = 0) const;
 
   HighsTimerClock* getThreadFactorTimerClockPointer();
 
@@ -407,7 +407,7 @@ class HighsSimplexAnalysis {
   void reportIterationData(const bool header);
   void reportRunTime(const bool header, const double run_time);
   void reportFreeListSize(const bool header);
-  HighsInt intLog10(const double v);
+  HighsInt intLog10(const double v) const;
   bool dualAlgorithm();
 
   //  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly

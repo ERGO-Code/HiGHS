@@ -1578,7 +1578,7 @@ void HEkk::initialiseEkk() {
   status_.initialised_for_new_lp = true;
 }
 
-bool HEkk::isUnconstrainedLp() {
+bool HEkk::isUnconstrainedLp() const {
   bool is_unconstrained_lp = lp_.num_row_ <= 0;
   if (is_unconstrained_lp)
     highsLogDev(
@@ -2796,7 +2796,7 @@ void HEkk::fullBtran(HVector& buffer) {
 void HEkk::choosePriceTechnique(const HighsInt price_strategy,
                                 const double row_ep_density,
                                 bool& use_col_price,
-                                bool& use_row_price_w_switch) {
+                                bool& use_row_price_w_switch) const {
   // By default switch to column PRICE when pi_p has at least this
   // density
   const double density_for_column_price_switch = 0.75;
@@ -2966,7 +2966,7 @@ void HEkk::computeDual() {
 }
 
 double HEkk::computeDualForTableauColumn(const HighsInt iVar,
-                                         const HVector& tableau_column) {
+                                         const HVector& tableau_column) const {
   const vector<double>& workCost = info_.workCost_;
   const vector<HighsInt>& basicIndex = basis_.basicIndex_;
 
@@ -3737,7 +3737,7 @@ void HEkk::initialiseAnalysis() {
   analysis_.setup(lp_name_, lp_, *options_, iteration_count_);
 }
 
-std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
+std::string HEkk::rebuildReason(const HighsInt rebuild_reason) const {
   std::string rebuild_reason_string;
   if (rebuild_reason == kRebuildReasonCleanup) {
     rebuild_reason_string = "Perturbation cleanup";
@@ -4219,7 +4219,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   return proof_of_primal_infeasibility;
 }
 
-double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
+double HEkk::getValueScale(const HighsInt count,
+                           const vector<double>& value) const {
   if (count <= 0) return 1;
   double max_abs_value = 0;
   for (HighsInt iX = 0; iX < count; iX++)
