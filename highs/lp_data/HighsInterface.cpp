@@ -1774,7 +1774,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->getOptionValue("allow_unbounded_or_infeasible",
                            allow_unbounded_or_infeasible);
       solve_unboundedness_problem = true;
-      lp.integrality_.clear();
       this->setOptionValue("presolve", kHighsOffString);
       this->setOptionValue("solve_relaxation", true);
       this->setOptionValue("allow_unbounded_or_infeasible", false);
@@ -1835,14 +1834,21 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       return_status = HighsStatus::kOk;
     }
   }
+  const bool is_mip = this->model_.isMip();
   if (solve_unboundedness_problem) {
+    if (is_mip) {
+      // Unboundedness LP has been solved, but that will give dual
+      // solution status kInfeasible which, for a MIP is not correct
+      this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
+      this->info_.invalidateDualKkt();
+    }
     // Restore the option values
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
     this->setOptionValue("allow_unbounded_or_infeasible",
                          allow_unbounded_or_infeasible);
     if (has_primal_ray) {
-      assert(this->info_.num_dual_infeasibilities > 0);
+      assert(is_mip || this->info_.num_dual_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kUnbounded);
     }
   }
@@ -2602,7 +2608,8 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                    primal_dual_errors, get_residuals);
   //  highsLogUser(options.log_options, HighsLogType::kInfo,
   //               "Highs::lpKktCheck: %s\n", message.c_str());
-  reportLpKktFailures(model_.lp_, options, info, "LP");
+  if (this->model_status_ == HighsModelStatus::kOptimal)
+    reportLpKktFailures(model_.lp_, options, info, "LP");
   // get_residuals is false when there is a valid basis, since
   // residual errors are assumed to be small, so
   // info.num_primal_residual_errors = -1, since they aren't
