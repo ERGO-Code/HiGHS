@@ -205,7 +205,6 @@ build = "*"
 archs = ["auto64", "auto32"]
 
 # Enable free-threaded support
-# free-threaded-support = true
 enable = ["cpython-freethreading"]
 
 test-command = "pytest {project}/tests"
