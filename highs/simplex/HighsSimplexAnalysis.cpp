@@ -1485,7 +1485,9 @@ void HighsSimplexAnalysis::reportRunTime(const bool header,
 }
 
 HighsInt HighsSimplexAnalysis::intLog10(const double v) const {
-  return static_cast<HighsInt>(v > 0 ? -2.0 * log(v) / log(10.0) : 99);
+  double log10V = v > 0 ? -2.0 * log(v) / log(10.0) : 99;
+  HighsInt intLog10V = log10V;
+  return intLog10V;
 }
 
 bool HighsSimplexAnalysis::dualAlgorithm() {
