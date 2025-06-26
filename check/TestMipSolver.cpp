@@ -985,8 +985,7 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   if (dev_run) printf("Testing that presolve reduces the problem to empty\n");
   REQUIRE(highs.presolve() == HighsStatus::kOk);
-  REQUIRE(highs.getModelPresolveStatus() ==
-          HighsPresolveStatus::kReducedToEmpty);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
 
   if (dev_run)
     printf(

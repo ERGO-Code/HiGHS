@@ -348,8 +348,7 @@ HPresolve::StatusResult HPresolve::isImpliedInteger(HighsInt col) const {
       runDualDetection = false;
       double scale = 1.0 / nz.value();
 
-      if (fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
-        return StatusResult(Result::kPrimalInfeasible);
+      if (fractionality(rowLower * scale) > primal_feastol) continue;
 
       if (!rowCoefficientsIntegral(nz.index(), scale)) continue;
 
