@@ -194,7 +194,7 @@ bool HPresolve::isImpliedFree(HighsInt col) const {
 }
 
 bool HPresolve::isDualImpliedFree(HighsInt row) const {
-  return model->row_lower_[row] == model->row_upper_[row] ||
+  return isEquation(row) ||
          (model->row_upper_[row] != kHighsInf &&
           implRowDualUpper[row] <= options->dual_feasibility_tolerance) ||
          (model->row_lower_[row] != -kHighsInf &&
@@ -205,7 +205,7 @@ void HPresolve::dualImpliedFreeGetRhsAndRowType(
     HighsInt row, double& rhs, HighsPostsolveStack::RowType& rowType,
     bool relaxRowDualBounds) {
   assert(isDualImpliedFree(row));
-  if (model->row_lower_[row] == model->row_upper_[row]) {
+  if (isEquation(row)) {
     rowType = HighsPostsolveStack::RowType::kEq;
     rhs = model->row_upper_[row];
   } else if (model->row_upper_[row] != kHighsInf &&
@@ -218,6 +218,10 @@ void HPresolve::dualImpliedFreeGetRhsAndRowType(
     rhs = model->row_lower_[row];
     if (relaxRowDualBounds) changeRowDualLower(row, -kHighsInf);
   }
+}
+
+bool HPresolve::isEquation(HighsInt row) const {
+  return (model->row_lower_[row] == model->row_lower_[row]);
 }
 
 bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
@@ -917,8 +921,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   equations.clear();
   eqiters.assign(model->num_row_, equations.end());
   for (HighsInt i = 0; i != model->num_row_; ++i) {
-    if (model->row_lower_[i] == model->row_upper_[i])
-      eqiters[i] = equations.emplace(rowsize[i], i).first;
+    if (isEquation(i)) eqiters[i] = equations.emplace(rowsize[i], i).first;
   }
 
   if (mipsolver != nullptr) {
@@ -1968,8 +1971,7 @@ void HPresolve::markRowDeleted(HighsInt row) {
   assert(!rowDeleted[row]);
 
   // remove equations from set of equations
-  if (model->row_lower_[row] == model->row_upper_[row] &&
-      eqiters[row] != equations.end()) {
+  if (isEquation(row) && eqiters[row] != equations.end()) {
     equations.erase(eqiters[row]);
     eqiters[row] = equations.end();
   }
@@ -2396,8 +2398,7 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
     }
     for (HighsInt i = 0; i != model->num_row_; ++i) {
       // register equation
-      if (model->row_lower_[i] == model->row_upper_[i])
-        eqiters[i] = equations.emplace(rowsize[i], i).first;
+      if (isEquation(i)) eqiters[i] = equations.emplace(rowsize[i], i).first;
     }
   }
   return true;
@@ -2460,8 +2461,7 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
     }
     for (HighsInt i = 0; i != nrow; ++i) {
       // register equation
-      if (model->row_lower_[i] == model->row_upper_[i])
-        eqiters[i] = equations.emplace(rowsize[i], i).first;
+      if (isEquation(i)) eqiters[i] = equations.emplace(rowsize[i], i).first;
     }
   }
   return true;
@@ -2538,8 +2538,8 @@ bool HPresolve::checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
 
 void HPresolve::reinsertEquation(HighsInt row) {
   // check if this is an equation row and it now has a different size
-  if (model->row_lower_[row] == model->row_upper_[row] &&
-      eqiters[row] != equations.end() && eqiters[row]->first != rowsize[row]) {
+  if (isEquation(row) && eqiters[row] != equations.end() &&
+      eqiters[row]->first != rowsize[row]) {
     // if that is the case reinsert it into the equation set that is ordered
     // by sparsity
     equations.erase(eqiters[row]);
@@ -2826,7 +2826,7 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
     analysis_.startPresolveRuleLog(kPresolveRuleDoubletonEquation);
   assert(!rowDeleted[row]);
   assert(rowsize[row] == 2);
-  assert(model->row_lower_[row] == model->row_upper_[row]);
+  assert(isEquation(row));
 
   // printf("doubleton equation: ");
   // debugPrintRow(row);
@@ -3276,7 +3276,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   double origRowUpper = model->row_upper_[row];
   double origRowLower = model->row_lower_[row];
 
-  if (model->row_lower_[row] != model->row_upper_[row]) {
+  if (!isEquation(row)) {
     if (isImpliedEquationAtLower(row)) {
       // Convert to equality constraint (note that currently postsolve will not
       // know about this conversion)
@@ -4553,7 +4553,7 @@ HPresolve::Result HPresolve::removeSlacks(
     HighsInt iRow = Arow[coliter];
     assert(Acol[coliter] == iCol);
     assert(!rowDeleted[iRow]);
-    if (model->row_lower_[iRow] != model->row_upper_[iRow]) continue;
+    if (!isEquation(iRow)) continue;
     double lower = model->col_lower_[iCol];
     double upper = model->col_upper_[iCol];
     double cost = model->col_cost_[iCol];
@@ -5405,7 +5405,7 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
     HighsInt eqrow = eq->second;
     assert(!rowDeleted[eqrow]);
     assert(eq->first == rowsize[eqrow]);
-    assert(model->row_lower_[eqrow] == model->row_upper_[eqrow]);
+    assert(isEquation(eqrow));
     if (rowsize[eqrow] > 2) return Result::kOk;
     HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, eqrow));
     if (rowDeleted[eqrow])
@@ -6166,8 +6166,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     if (rowDeleted[i]) continue;
-    if (rowsize[i] <= 1 ||
-        (rowsize[i] == 2 && model->row_lower_[i] == model->row_upper_[i])) {
+    if (rowsize[i] <= 1 || (rowsize[i] == 2 && isEquation(i))) {
       HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, i));
       continue;
     }
@@ -6210,11 +6209,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // equation. In that case we sparsify the other row by adding the
         // equation and can subsequently solve it as an individual component as
         // it is a row which only contains singletons
-        if ((numSingleton != 0 ||
-             model->row_lower_[i] != model->row_upper_[i]) &&
-            (numSingletonCandidate != 0 ||
-             model->row_lower_[parallelRowCand] !=
-                 model->row_upper_[parallelRowCand]))
+        if ((numSingleton != 0 || !isEquation(i)) &&
+            (numSingletonCandidate != 0 || !isEquation(parallelRowCand)))
           continue;
       } else if (numSingletonCandidate != numSingleton) {
         // if only one of the two constraints has an extra singleton,
@@ -6222,10 +6218,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // if that is the case we can add that equation to the other row
         // and will make it into either a row singleton or a doubleton equation
         // which is removed afterwards
-        if (model->row_lower_[i] != model->row_upper_[i] &&
-            model->row_lower_[parallelRowCand] !=
-                model->row_upper_[parallelRowCand])
-          continue;
+        if (!isEquation(i) && !isEquation(parallelRowCand)) continue;
       }
 
       double rowScale = rowMax[parallelRowCand].first / rowMax[i].first;
@@ -6325,7 +6318,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         markRowDeleted(i);
         for (HighsInt rowiter : rowpositions) unlink(rowiter);
         break;
-      } else if (model->row_lower_[i] == model->row_upper_[i]) {
+      } else if (isEquation(i)) {
         // row i is equation and parallel (except for singletons)
         // add to the row parallelRowCand
         // printf(
@@ -6337,8 +6330,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
         delRow = parallelRowCand;
-      } else if (model->row_lower_[parallelRowCand] ==
-                 model->row_upper_[parallelRowCand]) {
+      } else if (isEquation(parallelRowCand)) {
         // printf(
         //    "nearly parallel case with %" HIGHSINT_FORMAT " singletons in eq
         //    row and %" HIGHSINT_FORMAT " " "singletons in other inequality
@@ -6644,7 +6636,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
     if (rowDeleted[eqrow]) continue;
 
     assert(!rowDeleted[eqrow]);
-    assert(model->row_lower_[eqrow] == model->row_upper_[eqrow]);
+    assert(isEquation(eqrow));
 
     storeRow(eqrow);
 
