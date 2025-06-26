@@ -221,7 +221,7 @@ void HPresolve::dualImpliedFreeGetRhsAndRowType(
 }
 
 bool HPresolve::isEquation(HighsInt row) const {
-  return (model->row_lower_[row] == model->row_lower_[row]);
+  return (model->row_lower_[row] == model->row_upper_[row]);
 }
 
 bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
