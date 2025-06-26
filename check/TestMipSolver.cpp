@@ -983,7 +983,7 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
   const double optimal_objective = -3777.57124352;
   Highs highs;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  if (dev_run) printf("Testing that presolve reduces the problem to empty\n");
+  if (dev_run) printf("Testing that presolve reduces the problem\n");
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
 
