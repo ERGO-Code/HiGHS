@@ -819,21 +819,21 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   }
 
   if (!mipsolver.submip) {
-    double avgshadowscore = 0;
-    double avgedgescore = 0;
-    for (HighsInt i = 0; i < numfrac; i++) {
-      avgshadowscore += shadowscore[i];
-      avgedgescore += edgescore[i];
-    }
-    avgshadowscore /= numfrac;
-    avgedgescore /= numfrac;
-    for (HighsInt i = 0; i < numfrac; i++) {
-      shadowscore[i] = 1 - (1 / (1 + (shadowscore[i] / std::max(1e-6,
-        avgshadowscore))));
-      edgescore[i] = 1 - (1 / (1 + (edgescore[i] / std::max(1e-6,
-        avgedgescore))));
-      shadowscore[i] = shadowscore[i] + (1e-2 * edgescore[i]);
-    }
+    // double avgshadowscore = 0;
+    // double avgedgescore = 0;
+    // for (HighsInt i = 0; i < numfrac; i++) {
+    //   avgshadowscore += shadowscore[i];
+    //   avgedgescore += edgescore[i];
+    // }
+    // avgshadowscore /= numfrac;
+    // avgedgescore /= numfrac;
+    // for (HighsInt i = 0; i < numfrac; i++) {
+    //   shadowscore[i] = 1 - (1 / (1 + (shadowscore[i] / std::max(1e-6,
+    //     avgshadowscore))));
+    //   edgescore[i] = 1 - (1 / (1 + (edgescore[i] / std::max(1e-6,
+    //     avgedgescore))));
+    //   shadowscore[i] = shadowscore[i] + (1e-2 * edgescore[i]);
+    // }
     sortCandidates(shadowscore);
     if (numcands == 1) {
       downNodeLb = downbound[perm[0]];
@@ -1250,7 +1250,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
       }
     }
 
-    double degeneracyFac = std::min(1000.0, lp->computeLPDegneracy(localdom));
+    double degeneracyFac = std::min(10.0, lp->computeLPDegneracy(localdom));
     pseudocost.setDegeneracyFactor(degeneracyFac);
     if (degeneracyFac >= 10.0) pseudocost.setMinReliable(0);
     // if (!mipsolver.submip)
