@@ -974,9 +974,9 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
   lp.col_upper_ = {120, 10, 0};
   lp.row_lower_ = {3994.5, -4878.3, -4930};
   lp.row_upper_ = {kHighsInf, kHighsInf, kHighsInf};
-  lp.a_matrix_.start_ = {0, 3, 7, 10};
-  lp.a_matrix_.index_ = {1, 2, 3, 1, 2, 3, 1, 2, 3};
-  lp.a_matrix_.value_ = {-89, -40.7, -12, -0.1, 77.2, -23.7, -8.6, -6.5, 72.78};
+  lp.a_matrix_.start_ = {0, 3, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {-89, -0.1, -8.6, -40.7, 77.2, -6.5, -12, -23.7, 72.78};
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous,
                      HighsVarType::kInteger};
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
