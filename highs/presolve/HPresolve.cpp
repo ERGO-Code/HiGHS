@@ -271,6 +271,7 @@ HPresolve::StatusResult HPresolve::isImpliedIntegral(HighsInt col) {
       // if there is an equation the dual detection does not need to be tried
       runDualDetection = false;
       double scale = 1.0 / nz.value();
+
       if (!rowCoefficientsIntegral(nz.index(), scale)) continue;
 
       if (fractionality(rowLower * scale) > primal_feastol)
