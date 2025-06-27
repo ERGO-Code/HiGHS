@@ -245,12 +245,12 @@ class HighsSimplexAnalysis {
   void operationRecordAfter(const HighsInt operation_type,
                             const HighsInt result_count);
   void summaryReport();
-  void summaryReportFactor();
-  void reportSimplexTimer();
+  void summaryReportFactor() const;
+  void reportSimplexTimer() const;
   void reportFactorTimer();
   void updateInvertFormData(const HFactor& factor);
-  void reportInvertFormData();
-  HighsInt numInvert() { return num_invert; }
+  void reportInvertFormData() const;
+  HighsInt numInvert() const { return num_invert; }
 
   // Control methods to be moved to HEkkControl
   void dualSteepestEdgeWeightError(const double computed_edge_weight,
@@ -400,7 +400,7 @@ class HighsSimplexAnalysis {
   void reportThreads(const bool header);
   void reportMulti(const bool header);
   void reportOneDensity(const double density);
-  void printOneDensity(const double density);
+  void printOneDensity(const double density) const;
   void reportDensity(const bool header);
   void reportInvert(const bool header);
   //  void reportCondition(const bool header);
@@ -408,7 +408,7 @@ class HighsSimplexAnalysis {
   void reportRunTime(const bool header, const double run_time);
   void reportFreeListSize(const bool header);
   HighsInt intLog10(const double v) const;
-  bool dualAlgorithm();
+  bool dualAlgorithm() const;
 
   //  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
   //  double AnIterCostlyDseMeasure;

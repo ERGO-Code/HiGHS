@@ -1140,10 +1140,10 @@ void HighsSimplexAnalysis::summaryReport() {
   }
 }
 
-void HighsSimplexAnalysis::summaryReportFactor() {
+void HighsSimplexAnalysis::summaryReportFactor() const {
   for (HighsInt tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE;
        tran_stage_type++) {
-    TranStageAnalysis& stage = tran_stage[tran_stage_type];
+    const TranStageAnalysis& stage = tran_stage[tran_stage_type];
     //    printScatterData(stage.name_, stage.rhs_density_);
     printScatterDataRegressionComparison(stage.name_, stage.rhs_density_);
     if (!stage.num_decision_) return;
@@ -1163,7 +1163,7 @@ void HighsSimplexAnalysis::summaryReportFactor() {
   }
 }
 
-void HighsSimplexAnalysis::reportSimplexTimer() {
+void HighsSimplexAnalysis::reportSimplexTimer() const {
   assert(analyse_simplex_time);
   SimplexTimer simplex_timer;
   simplex_timer.reportSimplexInnerClock(thread_simplex_clocks[0]);
@@ -1247,7 +1247,7 @@ void HighsSimplexAnalysis::updateInvertFormData(const HFactor& factor) {
   if (report_kernel) printf("\n");
 }
 
-void HighsSimplexAnalysis::reportInvertFormData() {
+void HighsSimplexAnalysis::reportInvertFormData() const {
   assert(analyse_factor_data);
   printf("grep_kernel,%s,%s,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
          ",%" HIGHSINT_FORMAT ",",
@@ -1378,7 +1378,7 @@ void HighsSimplexAnalysis::reportOneDensity(const double density) {
   }
 }
 
-void HighsSimplexAnalysis::printOneDensity(const double density) {
+void HighsSimplexAnalysis::printOneDensity(const double density) const {
   assert(analyse_simplex_summary_data || analyse_simplex_runtime_data);
   const HighsInt log_10_density = intLog10(density);
   if (log_10_density > -99) {
@@ -1485,12 +1485,10 @@ void HighsSimplexAnalysis::reportRunTime(const bool header,
 }
 
 HighsInt HighsSimplexAnalysis::intLog10(const double v) const {
-  double log10V = v > 0 ? -2.0 * log(v) / log(10.0) : 99;
-  HighsInt intLog10V = log10V;
-  return intLog10V;
+  return static_cast<HighsInt>(v > 0 ? -2.0 * log(v) / log(10.0) : 99);
 }
 
-bool HighsSimplexAnalysis::dualAlgorithm() {
+bool HighsSimplexAnalysis::dualAlgorithm() const {
   return (simplex_strategy == kSimplexStrategyDual ||
           simplex_strategy == kSimplexStrategyDualTasks ||
           simplex_strategy == kSimplexStrategyDualMulti);
