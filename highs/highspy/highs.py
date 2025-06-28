@@ -4,6 +4,7 @@ import numpy as np
 from numbers import Integral
 from itertools import product
 from threading import Thread, local, RLock, Lock
+from multiprocessing import cpu_count
 from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast, Union
 
 from ._core import (
@@ -29,17 +30,19 @@ class Highs(_Highs):
     HiGHS solver interface
     """
 
-    __handle_keyboard_interrupt: bool = False
-    __handle_user_interrupt: bool = False
-    __solver_should_stop: bool = False
-    __solver_stopped: RLock = RLock()
-    __solver_started: Lock = Lock()
-    __solver_status: Optional[HighsStatus] = None
-
     def __init__(self):
         super().__init__()
         self.callbacks = [HighsCallback(cb.HighsCallbackType(_), self) for _ in range(int(cb.HighsCallbackType.kCallbackMax) + 1)]
         self.enableCallbacks()
+        
+        self.__handle_keyboard_interrupt: bool = False
+        self.__handle_user_interrupt: bool = False
+        self.__use_concurrent_solve: bool = False
+
+        self.__solver_should_stop: bool = False
+        self.__solver_stopped: RLock = RLock()
+        self.__solver_started: Lock = Lock()
+        self.__solver_status: Optional[HighsStatus] = None
 
     # Silence logging
     def silent(self, turn_off_output: bool = True):
@@ -55,10 +58,70 @@ class Highs(_Highs):
         Returns:
             A HighsStatus object containing the solve status.
         """
-        if not self.HandleKeyboardInterrupt:
-            return super().run()
+        if not self.ConcurrentSolve:
+            if not self.HandleKeyboardInterrupt:
+                return super().run()
+            else:
+                return self.joinSolve(self.startSolve())
         else:
-            return self.joinSolve(self.startSolve())
+            num_threads = self.getOptionValue("threads")
+            if num_threads == 0:
+                num_threads = int(cpu_count() / 2)
+
+            clones = [self] + [Highs() for _ in range(num_threads - 1)]
+
+            __best_solution = Lock()
+            __best = [None, np.zeros(self.getNumCol())]  # objective, solution
+
+            if self.getObjectiveSense()[1] == ObjSense.kMinimize:
+                is_better = lambda a,b: a < b
+                current_objective = [self.inf] * num_threads
+            else:
+                is_better = lambda a,b: a > b
+                current_objective = [-self.inf] * num_threads
+
+            def get_solution(e):
+                current_objective[int(e.user_data)] = e.data_out.objective_function_value
+
+                with __best_solution:
+                    if __best[0] == None or is_better(e.data_out.objective_function_value, __best[0]):
+                        __best[0] = e.data_out.objective_function_value
+                        __best[1][:] = e.data_out.mip_solution
+                #        print("Better incumbent found", int(e.user_data), __best[0])
+
+            def put_solution(e):
+                with __best_solution:
+                    if __best[0] != None and is_better(__best[0], current_objective[int(e.user_data)]):
+                #        print("Updating thread", int(e.user_data), __best[0], current_objective[int(e.user_data)])
+                        e.data_in.user_has_solution = True
+                        e.data_in.user_solution[:] = __best[1]
+                        current_objective[int(e.user_data)] = __best[0]
+
+            clones[0].cbMipImprovingSolution.subscribe(get_solution, 0)
+            clones[0].cbMipUserSolution.subscribe(put_solution, 0)
+            clones[0].HandleUserInterrupt = True
+
+            for i in range(1, num_threads):
+                clones[i].silent()
+                clones[i].setOptionValue("random_seed", i)
+                clones[i].HandleUserInterrupt = True
+                clones[i].passModel(self.getModel())
+                clones[i].cbMipImprovingSolution.subscribe(get_solution, i)
+                clones[i].cbMipUserSolution.subscribe(put_solution, i)
+
+            threads = []
+
+            for i in range(num_threads):
+                threads.append(clones[i].startSolve())
+
+            clones[0].joinSolve(threads[0])
+            clones[0].cbMipImprovingSolution.unsubscribe(get_solution)
+            clones[0].cbMipUserSolution.unsubscribe(put_solution)
+
+            for i in range(1, num_threads):
+                clones[i].cancelSolve()
+                clones[i].joinSolve(threads[i])
+
 
     def startSolve(self):
         """
@@ -1270,6 +1333,17 @@ class Highs(_Highs):
     def __user_interrupt_event(self, e: HighsCallbackEvent):
         if self.__solver_should_stop:
             e.interrupt()
+
+    @property
+    def ConcurrentSolve(self):
+        """
+        Get/Set whether the solver should run on separate threads with different random seeds
+        """
+        return self.__use_concurrent_solve
+
+    @ConcurrentSolve.setter
+    def ConcurrentSolve(self, value: bool):
+        self.__use_concurrent_solve = value
 
     @property
     def cbLogging(self):
