@@ -8,7 +8,7 @@ There is a C# example code in `examples/call_highs_from_csharp.cs`. From the HiG
 cmake -S. -Bbuild -DCSHARP=ON
 ```
 
-If a CSharp compiler is available, this builds the example using cmake and generates a binary in the build directory (`build/bin/csharpexample`).
+If a CSharp compiler is available, this builds the example using CMake and generates a binary in the build directory (`build/bin/csharpexample`).
 
 #### [NuGet](@id nuget)
 
@@ -17,7 +17,7 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.10.0
+dotnet add package Highs.Native --version 1.11.0
 ```
 
 The nuget package contains runtime libraries for 

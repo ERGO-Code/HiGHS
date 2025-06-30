@@ -102,41 +102,36 @@ class HighsLinearSumBounds {
   double getResidualSumUpperOrig(HighsInt sum, HighsInt var,
                                  double coefficient) const;
 
-  double getSumLowerOrig(HighsInt sum) const {
-    return numInfSumLowerOrig[sum] == 0 ? double(sumLowerOrig[sum])
-                                        : -kHighsInf;
+  template <typename T = double>
+  double getSumLowerOrig(HighsInt sum, T offset = T()) const {
+    return numInfSumLowerOrig[sum] == 0
+               ? static_cast<double>(sumLowerOrig[sum] +
+                                     static_cast<HighsCDouble>(offset))
+               : -kHighsInf;
   }
 
-  double getSumUpperOrig(HighsInt sum) const {
-    return numInfSumUpperOrig[sum] == 0 ? double(sumUpperOrig[sum]) : kHighsInf;
+  template <typename T = double>
+  double getSumUpperOrig(HighsInt sum, T offset = T()) const {
+    return numInfSumUpperOrig[sum] == 0
+               ? static_cast<double>(sumUpperOrig[sum] +
+                                     static_cast<HighsCDouble>(offset))
+               : kHighsInf;
   }
 
-  double getSumLower(HighsInt sum) const {
-    return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -kHighsInf;
+  template <typename T = double>
+  double getSumLower(HighsInt sum, T offset = T()) const {
+    return numInfSumLower[sum] == 0
+               ? static_cast<double>(sumLower[sum] +
+                                     static_cast<HighsCDouble>(offset))
+               : -kHighsInf;
   }
 
-  double getSumUpper(HighsInt sum) const {
-    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum]) : kHighsInf;
-  }
-
-  double getSumLower(HighsInt sum, double offset) const {
-    return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
-                                    : -kHighsInf;
-  }
-
-  double getSumUpper(HighsInt sum, double offset) const {
-    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
-                                    : kHighsInf;
-  }
-
-  double getSumLower(HighsInt sum, HighsCDouble offset) const {
-    return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
-                                    : -kHighsInf;
-  }
-
-  double getSumUpper(HighsInt sum, HighsCDouble offset) const {
-    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
-                                    : kHighsInf;
+  template <typename T = double>
+  double getSumUpper(HighsInt sum, T offset = T()) const {
+    return numInfSumUpper[sum] == 0
+               ? static_cast<double>(sumUpper[sum] +
+                                     static_cast<HighsCDouble>(offset))
+               : kHighsInf;
   }
 
   HighsInt getNumInfSumLower(HighsInt sum) const { return numInfSumLower[sum]; }
