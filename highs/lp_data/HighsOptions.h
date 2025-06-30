@@ -445,6 +445,7 @@ struct HighsOptionsStruct {
   bool mip_heuristic_run_root_reduced_cost;
   bool mip_heuristic_run_zi_round;
   bool mip_heuristic_run_shifting;
+  bool mip_heuristic_run_lns_carrara;
   double mip_min_logging_interval;
 
 #ifdef HIGHS_DEBUGSOL
@@ -596,6 +597,7 @@ struct HighsOptionsStruct {
         mip_heuristic_run_root_reduced_cost(false),
         mip_heuristic_run_zi_round(false),
         mip_heuristic_run_shifting(false),
+        mip_heuristic_run_lns_carrara(false),
         mip_min_logging_interval(0.0),
 #ifdef HIGHS_DEBUGSOL
         mip_debug_solution_file(""),
@@ -1166,6 +1168,12 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("mip_heuristic_run_shifting",
                                        "Use the Shifting heuristic", advanced,
                                        &mip_heuristic_run_shifting, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_lns_carrara",
+        "Use the large neighbourhood search (carrara) heuristic", advanced,
+        &mip_heuristic_run_lns_carrara, false);
     records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(

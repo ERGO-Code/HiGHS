@@ -1634,6 +1634,9 @@ void HighsPrimalHeuristics::clique() {
 }
 #endif
 
+void HighsPrimalHeuristics::lnsCarrara(
+    const std::vector<double>& relaxationsol) {}
+
 void HighsPrimalHeuristics::flushStatistics() {
   mipsolver.mipdata_->total_repair_lp += total_repair_lp;
   mipsolver.mipdata_->total_repair_lp_feasible += total_repair_lp_feasible;

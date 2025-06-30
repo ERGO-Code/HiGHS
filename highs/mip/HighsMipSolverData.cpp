@@ -1768,6 +1768,10 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
           mipsolver.options_mip_->mip_heuristic_run_zi_round)
         heuristics.ziRound(lp.getLpSolver().getSolution().col_value);
 
+      if (status == HighsLpRelaxation::Status::kOptimal &&
+          mipsolver.options_mip_->mip_heuristic_run_lns_carrara)
+        heuristics.lnsCarrara(lp.getLpSolver().getSolution().col_value);
+
     } else
       status = lp.getStatus();
 
