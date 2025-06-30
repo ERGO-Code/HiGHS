@@ -62,7 +62,7 @@ static inline double boundRange(double upper_bound, double lower_bound,
                                 double tolerance, HighsVarType var_type) {
   double range = upper_bound - lower_bound;
   return range - (var_type == HighsVarType::kContinuous
-                      ? std::max(0.3 * range, 1000.0 * tolerance)
+                      ? std::max(0.15 * range, 1000.0 * tolerance)
                       : tolerance);
 }
 
@@ -1353,7 +1353,7 @@ double HighsDomain::adjustedUb(HighsInt col, HighsCDouble boundVal,
       else
         relativeImprove /=
             std::max(std::fabs(col_upper_[col]), std::fabs(bound));
-      accept = relativeImprove >= 0.3;
+      accept = relativeImprove >= 0.15;
     } else
       accept = false;
   }
@@ -1385,7 +1385,7 @@ double HighsDomain::adjustedLb(HighsInt col, HighsCDouble boundVal,
       else
         relativeImprove /=
             std::max(std::fabs(col_lower_[col]), std::fabs(bound));
-      accept = relativeImprove >= 0.3;
+      accept = relativeImprove >= 0.15;
     } else
       accept = false;
   }
