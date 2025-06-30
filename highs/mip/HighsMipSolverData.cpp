@@ -57,6 +57,9 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceShifting) {
     if (code) return "I";
     return "Shifting";
+  } else if (solution_source == kSolutionSourceLnsCarrara) {
+    if (code) return "A";
+    return "LNS Carrara";
   } else if (solution_source == kSolutionSourceSolveLp) {
     if (code) return "S";
     return "Solve LP";
