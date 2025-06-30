@@ -151,6 +151,7 @@ function(highs_cxx_test FILE_NAME)
 
   target_compile_features(${TEST_NAME} PRIVATE cxx_std_11)
   target_link_libraries(${TEST_NAME} PRIVATE ${PROJECT_NAMESPACE}::highs)
+  set_target_properties(${TEST_NAME} PROPERTIES UNITY_BUILD OFF)
 
   # include(GNUInstallDirs)
   # if(APPLE)
@@ -197,6 +198,7 @@ function(highs_c_test FILE_NAME)
 
   target_compile_features(${TEST_NAME} PRIVATE cxx_std_11)
   target_link_libraries(${TEST_NAME} PRIVATE ${PROJECT_NAMESPACE}::highs)
+  set_target_properties(${TEST_NAME} PROPERTIES UNITY_BUILD OFF)
 
   # include(GNUInstallDirs)
   # if(APPLE)

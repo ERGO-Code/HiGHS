@@ -176,6 +176,9 @@ set(ipx_headers
   ipm/ipx/timer.h
   ipm/ipx/utils.h)
 
+# redefinition of 'kHighsInf'
+set_source_files_properties (../extern/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 set(highs_sources
     ../extern/filereaderlp/reader.cpp
     interfaces/highs_c_api.cpp
