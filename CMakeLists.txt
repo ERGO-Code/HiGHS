@@ -73,7 +73,7 @@ option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
 
 option(BUILD_CXX_EXE "Build C++ executable" ON)
-message(STATUS "Build C++ library: ${BUILD_CXX_EXE}")
+message(STATUS "Build C++ executable: ${BUILD_CXX_EXE}")
 
 option(BUILD_TESTING "Build Tests" ON)
 
