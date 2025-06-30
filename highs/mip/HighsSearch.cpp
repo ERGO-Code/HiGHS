@@ -254,6 +254,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   std::vector<double> downbound;
 
   HighsInt numfrac = lp->getFractionalIntegers().size();
+  if (numfrac == 1) return 0;
   const auto& fracints = lp->getFractionalIntegers();
 
   upscore.resize(numfrac, kHighsInf);
