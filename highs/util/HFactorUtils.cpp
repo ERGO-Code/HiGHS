@@ -98,7 +98,7 @@ void HFactor::reportDoubleVector(const std::string name,
   printf("\n");
 }
 
-void HFactor::reportAsm() {
+void HFactor::reportAsm() const {
   for (HighsInt count = 1; count <= num_row; count++) {
     if (col_link_first[count] < 0) continue;
     for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) {
