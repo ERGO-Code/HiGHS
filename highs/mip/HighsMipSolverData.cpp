@@ -20,7 +20,7 @@
 #include "util/HighsIntegers.h"
 
 std::string HighsMipSolverData::solutionSourceToString(
-    const int solution_source, const bool code) {
+    const int solution_source, const bool code) const {
   if (solution_source == kSolutionSourceNone) {
     if (code) return " ";
     return "None";
@@ -1179,9 +1179,10 @@ try_again:
 }
 
 double HighsMipSolverData::percentageInactiveIntegers() const {
-  return 100.0 * (1.0 - double(integer_cols.size() -
-                               cliquetable.getSubstitutions().size()) /
-                            numintegercols);
+  return 100.0 *
+         (1.0 - static_cast<double>(integer_cols.size() -
+                                    cliquetable.getSubstitutions().size()) /
+                    numintegercols);
 }
 
 void HighsMipSolverData::performRestart() {
@@ -1498,7 +1499,7 @@ static std::array<char, 22> convertToPrintString(double val,
   return printString;
 }
 
-void HighsMipSolverData::printSolutionSourceKey() {
+void HighsMipSolverData::printSolutionSourceKey() const {
   std::stringstream ss;
   // Last MipSolutionSource enum is kSolutionSourceCleanup - which is
   // not a solution source, but used to force the last logging line to
