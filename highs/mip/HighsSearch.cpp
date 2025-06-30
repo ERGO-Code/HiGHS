@@ -1208,7 +1208,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
       }
     }
 
-    double degeneracyFac = lp->computeLPDegneracy(localdom);
+    double degeneracyFac = std::min(10.0, lp->computeLPDegneracy(localdom));
     pseudocost.setDegeneracyFactor(degeneracyFac);
     if (degeneracyFac >= 10.0) pseudocost.setMinReliable(0);
     // if (!mipsolver.submip)
