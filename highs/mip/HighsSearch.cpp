@@ -533,8 +533,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
     auto strongBranch = [&](bool upbranch) {
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
-      HighsBoundType boundtype = upbranch ? HighsBoundType::kLower
-                                      : HighsBoundType::kUpper;
+      HighsBoundType boundtype =
+          upbranch ? HighsBoundType::kLower : HighsBoundType::kUpper;
       double boundval = upbranch ? upval : downval;
       HighsDomainChange domchg{boundval, col, boundtype};
 
@@ -559,8 +559,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
         if (upbranch) {
           branchDownwards(col, downval, fracval);
-        }
-        else {
+        } else {
           branchUpwards(col, upval, fracval);
         }
         nodestack[nodestack.size() - 2].opensubtrees = 0;
@@ -593,8 +592,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           upscore[candidate] = objdelta;
           upscorereliable[candidate] = true;
           markBranchingVarUpReliableAtNode(col);
-        }
-        else {
+        } else {
           downscore[candidate] = objdelta;
           downscorereliable[candidate] = true;
           markBranchingVarDownReliableAtNode(col);
@@ -616,8 +614,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         if (lp->unscaledDualFeasible(status)) {
           if (upbranch) {
             upbound[candidate] = solobj;
-          }
-          else {
+          } else {
             downbound[candidate] = solobj;
           }
           if (solobj > mipsolver.mipdata_->optimality_limit) {
@@ -631,8 +628,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
             if (upbranch) {
               branchDownwards(col, downval, fracval);
-            }
-            else {
+            } else {
               branchUpwards(col, upval, fracval);
             }
             nodestack[nodestack.size() - 2].opensubtrees = pruned ? 0 : 1;
@@ -652,8 +648,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
             if (upbranch) {
               branchDownwards(col, downval, fracval);
-            }
-            else {
+            } else {
               branchUpwards(col, upval, fracval);
             }
             nodestack[nodestack.size() - 2].opensubtrees = 0;
@@ -672,8 +667,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
         if (upbranch) {
           branchDownwards(col, downval, fracval);
-        }
-        else {
+        } else {
           branchUpwards(col, upval, fracval);
         }
         nodestack[nodestack.size() - 2].opensubtrees = 0;
