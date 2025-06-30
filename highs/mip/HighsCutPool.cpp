@@ -317,7 +317,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   for (const std::pair<double, HighsInt>& p : efficacious_cuts) {
     bool discard = false;
-    double maxpar = 0.1;
+    double maxpar = 0.05;
     for (HighsInt k : cutset.cutindices) {
       if (getParallelism(k, p.second) > maxpar) {
         discard = true;
