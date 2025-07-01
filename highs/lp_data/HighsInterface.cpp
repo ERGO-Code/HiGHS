@@ -3952,7 +3952,7 @@ HighsStatus Highs::multiobjectiveSolve() {
   // this->clearSolver() since this loses the current solution - that
   // may have been provided by the user (#2419). Just clear the dual
   // data.
-  // 
+  //
   this->clearSolverDualData();
   if (this->options_.blend_multi_objectives) {
     // Objectives are blended by weight and minimized
