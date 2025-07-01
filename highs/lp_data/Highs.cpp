@@ -67,6 +67,13 @@ HighsStatus Highs::clearSolver() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::clearSolverDualData() {
+  HighsStatus return_status = HighsStatus::kOk;
+  clearDerivedModelProperties();
+  invalidateSolverDualData();
+  return returnFromHighs(return_status);
+}
+
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
@@ -3635,13 +3642,17 @@ void Highs::clearStandardFormLp() {
 }
 
 void Highs::invalidateSolverData() {
-  invalidateModelStatus();
+  invalidateSolverDualData();
   invalidateSolution();
   invalidateBasis();
-  invalidateRanging();
-  invalidateInfo();
   invalidateEkk();
   invalidateIis();
+}
+
+void Highs::invalidateSolverDualData() {
+  invalidateModelStatus();
+  invalidateRanging();
+  invalidateInfo();
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {

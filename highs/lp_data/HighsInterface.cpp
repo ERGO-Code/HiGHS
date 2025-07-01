@@ -3948,7 +3948,12 @@ HighsStatus Highs::multiobjectiveSolve() {
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
                  multi_objective_log->str().c_str());
   }
-  this->clearSolver();
+  // Solving with a different objective, but don't call
+  // this->clearSolver() since this loses the current solution - that
+  // may have been provided by the user (#2419). Just clear the dual
+  // data.
+  // 
+  this->clearSolverDualData();
   if (this->options_.blend_multi_objectives) {
     // Objectives are blended by weight and minimized
     lp.offset_ = 0;
