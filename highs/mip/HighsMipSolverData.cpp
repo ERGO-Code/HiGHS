@@ -694,10 +694,6 @@ void HighsMipSolverData::init() {
 }
 
 void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
-#ifdef HIGHS_DEBUGSOL
-  bool debugSolActive = false;
-  std::swap(debugSolution.debugSolActive, debugSolActive);
-#endif
 
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
@@ -709,13 +705,6 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
     presolve_status = presolve.getPresolveStatus();
   }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
-
-#ifdef HIGHS_DEBUGSOL
-  debugSolution.debugSolActive = debugSolActive;
-  if (debugSolution.debugSolActive) debugSolution.registerDomain(domain);
-  assert(!debugSolution.debugSolActive ||
-         checkSolution(debugSolution.debugSolution));
-#endif
 }
 
 void HighsMipSolverData::runSetup() {
@@ -1022,10 +1011,18 @@ void HighsMipSolverData::runSetup() {
   heuristics.setupIntCols();
 
 #ifdef HIGHS_DEBUGSOL
-  if (numRestarts == 0) {
-    debugSolution.activate();
-    assert(!debugSolution.debugSolActive ||
-           checkSolution(debugSolution.debugSolution));
+  if (debugSolution.debugSolActive) {
+    debugSolution.debugSolution.clear();
+    debugSolution.debugSolution = postSolveStack.getReducedPrimalSolution(
+        debugSolution.debugOrigSolution);
+    // Do we even need to recalculate the objective?
+    debugSolution.debugSolObjective = 0;
+    for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
+      debugSolution.debugSolObjective +=
+          mipsolver.colCost(i) * debugSolution.debugSolution[i];
+    }
+    debugSolution.registerDomain(domain);
+    assert(checkSolution(debugSolution.debugSolution));
   }
 #endif
 
@@ -1218,6 +1215,10 @@ void HighsMipSolverData::performRestart() {
   presolvedModel = lp.getLp();
   presolvedModel.offset_ = offset;
   presolvedModel.integrality_ = std::move(integrality);
+#ifdef HIGHS_DEBUGSOL
+  bool debugSolActive = false;
+  std::swap(debugSolution.debugSolActive, debugSolActive);
+#endif
 
   const HighsBasis& basis = firstrootbasis;
   if (basis.valid) {
@@ -1321,6 +1322,9 @@ void HighsMipSolverData::performRestart() {
   }
   // Bounds are currently in the original space since presolve will have
   // changed offset_
+#ifdef HIGHS_DEBUGSOL
+  debugSolution.debugSolActive = debugSolActive;
+#endif
   runSetup();
 
   postSolveStack.removeCutsFromModel(numCuts);

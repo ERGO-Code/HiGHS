@@ -87,6 +87,9 @@ void HighsMipSolver::run() {
   analysis_.mipTimerStart(kMipClockInit);
   mipdata_->init();
   analysis_.mipTimerStop(kMipClockInit);
+#ifdef HIGHS_DEBUGSOL
+  mipdata_->debugSolution.activate();
+#endif
   analysis_.mipTimerStart(kMipClockRunPresolve);
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
