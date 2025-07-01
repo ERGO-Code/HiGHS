@@ -61,6 +61,9 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
+
+  highs.resetGlobalScheduler(true);
+
   return (HighsInt)status;
 }
 
@@ -104,6 +107,8 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
     }
   }
 
+  highs.resetGlobalScheduler(true);
+  
   return (HighsInt)status;
 }
 
@@ -160,6 +165,9 @@ HighsInt Highs_qpCall(
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
+
+  highs.resetGlobalScheduler(true);
+
   return (HighsInt)status;
 }
 
