@@ -3230,11 +3230,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         impliedRowBounds.getSumUpper(row) <=
             model->row_upper_[row] + primal_feastol) {
       // row is redundant
-      if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleRedundantRow);
+      int presolveRule =
+          rowsize[row] != 0 ? kPresolveRuleRedundantRow : kPresolveRuleEmptyRow;
+      if (logging_on) analysis_.startPresolveRuleLog(presolveRule);
       postsolve_stack.redundantRow(row);
       removeRow(row);
       analysis_.logging_on_ = logging_on;
-      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleRedundantRow);
+      if (logging_on) analysis_.stopPresolveRuleLog(presolveRule);
       return checkLimits(postsolve_stack);
     }
     return Result::kOk;
