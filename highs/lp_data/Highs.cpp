@@ -2261,16 +2261,17 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 HighsStatus Highs::setSolution(const HighsInt num_entries,
                                const HighsInt* index, const double* value) {
   HighsStatus return_status = HighsStatus::kOk;
+  if (model_.lp_.num_col_ == 0) return return_status;
   // Warn about duplicates in index
   HighsInt num_duplicates = 0;
   std::vector<bool> is_set;
   is_set.assign(model_.lp_.num_col_, false);
   for (HighsInt iX = 0; iX < num_entries; iX++) {
     HighsInt iCol = index[iX];
-    if (iCol < 0 || iCol > model_.lp_.num_col_) {
+    if (iCol < 0 || iCol >= model_.lp_.num_col_) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "setSolution: User solution index %d has value %d out of "
-                   "range [0, %d)",
+                   "range [0, %d)\n",
                    int(iX), int(iCol), int(model_.lp_.num_col_));
       return HighsStatus::kError;
     } else if (value[iX] < model_.lp_.col_lower_[iCol] -
@@ -2280,7 +2281,7 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
                    value[iX]) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "setSolution: User solution value %d of %g is infeasible "
-                   "for bounds [%g, %g]",
+                   "for bounds [%g, %g]\n",
                    int(iX), value[iX], model_.lp_.col_lower_[iCol],
                    model_.lp_.col_upper_[iCol]);
       return HighsStatus::kError;
