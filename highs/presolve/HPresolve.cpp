@@ -3220,8 +3220,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         impliedRowBounds.getSumUpper(row) <
             model->row_lower_[row] - primal_feastol)
       return Result::kPrimalInfeasible;
-    else
-      return Result::kOk;
+    return Result::kOk;
   };
 
   auto checkRowRedundant = [&](HighsInt row) {
