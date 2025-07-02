@@ -2328,9 +2328,10 @@ HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
                                       const HighsCallbackOutput* cb_out,
                                       HighsCallbackInput* cb_in, void* e) {
     HighsCallbackDataOut cc_out = static_cast<HighsCallbackDataOut>(*cb_out);
-    HighsCallbackDataIn cc_in = static_cast<HighsCallbackDataIn>(*cb_in);
+    HighsCallbackDataIn cc_in;
+    if (cb_in) cc_in = static_cast<HighsCallbackDataIn>(*cb_in);
     c_callback(a, b.c_str(), &cc_out, &cc_in, e);
-    *cb_in = cc_in;  // copy the data in
+    if (cb_in) *cb_in = cc_in;  // copy the data in
   };
   this->callback_.user_callback_data = user_callback_data;
 

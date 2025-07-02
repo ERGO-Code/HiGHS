@@ -960,7 +960,7 @@ void HEkkDual::majorRollback() {
   }
 }
 
-bool HEkkDual::checkNonUnitWeightError(std::string message) {
+bool HEkkDual::checkNonUnitWeightError(std::string message) const {
   bool error_found = false;
   if (edge_weight_mode == EdgeWeightMode::kDantzig) {
     std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
