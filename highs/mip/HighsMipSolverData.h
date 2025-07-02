@@ -277,8 +277,8 @@ struct HighsMipSolverData {
   const std::vector<double>& getSolution() const;
 
   std::string solutionSourceToString(const int solution_source,
-                                     const bool code = true);
-  void printSolutionSourceKey();
+                                     const bool code = true) const;
+  void printSolutionSourceKey() const;
   void printDisplayLine(const int solution_source = kSolutionSourceNone);
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,

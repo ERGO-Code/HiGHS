@@ -1243,7 +1243,7 @@ void HighsDomain::ObjectivePropagation::propagate() {
 void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmin,
-                                     HighsCDouble& activitymin) {
+                                     HighsCDouble& activitymin) const {
   if (infeasible_) {
     activitymin = 0.0;
     ninfmin = 0;
@@ -1288,7 +1288,7 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
 void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmax,
-                                     HighsCDouble& activitymax) {
+                                     HighsCDouble& activitymax) const {
   if (infeasible_) {
     activitymax = 0.0;
     ninfmax = 0;
@@ -1398,7 +1398,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
                                         double Rupper,
                                         const HighsCDouble& minactivity,
                                         HighsInt ninfmin,
-                                        HighsDomainChange* boundchgs) {
+                                        HighsDomainChange* boundchgs) const {
   assert(std::isfinite(double(minactivity)));
   if (ninfmin > 1) return 0;
   HighsInt numchgs = 0;
@@ -1442,7 +1442,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
                                         double Rlower,
                                         const HighsCDouble& maxactivity,
                                         HighsInt ninfmax,
-                                        HighsDomainChange* boundchgs) {
+                                        HighsDomainChange* boundchgs) const {
   assert(std::isfinite(double(maxactivity)));
   if (ninfmax > 1) return 0;
   HighsInt numchgs = 0;
@@ -1481,7 +1481,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
 }
 
 void HighsDomain::updateThresholdLbChange(HighsInt col, double newbound,
-                                          double val, double& threshold) {
+                                          double val, double& threshold) const {
   if (newbound != col_upper_[col]) {
     double thresholdNew =
         std::fabs(val) * boundRange(col_upper_[col], newbound,
@@ -1496,7 +1496,7 @@ void HighsDomain::updateThresholdLbChange(HighsInt col, double newbound,
 }
 
 void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
-                                          double val, double& threshold) {
+                                          double val, double& threshold) const {
   if (newbound != col_lower_[col]) {
     double thresholdNew =
         std::fabs(val) * boundRange(newbound, col_lower_[col],
@@ -3617,9 +3617,11 @@ HighsDomain::ConflictSet::popQueue() {
 
 void HighsDomain::ConflictSet::clearQueue() { resolveQueue.clear(); }
 
-HighsInt HighsDomain::ConflictSet::queueSize() { return resolveQueue.size(); }
+HighsInt HighsDomain::ConflictSet::queueSize() const {
+  return resolveQueue.size();
+}
 
-bool HighsDomain::ConflictSet::resolvable(HighsInt domChgPos) {
+bool HighsDomain::ConflictSet::resolvable(HighsInt domChgPos) const {
   assert(domChgPos >= 0);
   assert(domChgPos < (HighsInt)localdom.domchgreason_.size());
   // printf("domchgPos: %d\n", domChgPos);
