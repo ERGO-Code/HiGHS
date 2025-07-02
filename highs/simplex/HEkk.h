@@ -116,7 +116,7 @@ class HEkk {
   bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
                                   const HighsInt row_out);
 
-  double getValueScale(const HighsInt count, const vector<double>& value);
+  double getValueScale(const HighsInt count, const vector<double>& value) const;
   double getMaxAbsRowValue(HighsInt row);
 
   void unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep);
@@ -260,7 +260,7 @@ class HEkk {
   HighsSimplexStats simplex_stats_;
 
  private:
-  bool isUnconstrainedLp();
+  bool isUnconstrainedLp() const;
   void initialiseForSolve();
   void setSimplexOptions();
   void updateSimplexOptions();
@@ -301,7 +301,7 @@ class HEkk {
   void fullBtran(HVector& buffer);
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
-                            bool& use_row_price_w_switch);
+                            bool& use_row_price_w_switch) const;
   void tableauRowPrice(const bool quad_precision, const HVector& row_ep,
                        HVector& row_ap,
                        const HighsInt debug_report = kDebugReportOff);
@@ -309,7 +309,7 @@ class HEkk {
   void computePrimal();
   void computeDual();
   double computeDualForTableauColumn(const HighsInt iVar,
-                                     const HVector& tableau_column);
+                                     const HVector& tableau_column) const;
   bool reinvertOnNumericalTrouble(const std::string method_name,
                                   double& numerical_trouble_measure,
                                   const double alpha_from_col,
@@ -347,7 +347,7 @@ class HEkk {
   HighsStatus returnFromSolve(const HighsStatus return_status);
 
   void initialiseAnalysis();
-  std::string rebuildReason(const HighsInt rebuild_reason);
+  std::string rebuildReason(const HighsInt rebuild_reason) const;
 
   void clearBadBasisChange(
       const BadBasisChangeReason reason = BadBasisChangeReason::kAll);
@@ -371,7 +371,7 @@ class HEkk {
   void assessDSEWeightError(const double computed_edge_weight,
                             const double updated_edge_weight);
   void updateOperationResultDensity(const double local_density,
-                                    double& density);
+                                    double& density) const;
   bool switchToDevex();
 
   // private debug methods

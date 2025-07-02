@@ -207,7 +207,7 @@ class HighsSymmetryDetection {
   bool compareCurrentGraph(
       const HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>>&
           otherGraph,
-      HighsInt& wrongCell);
+      HighsInt& wrongCell) const;
 
   void removeFixPoints();
   void initializeGroundSet();
@@ -218,9 +218,9 @@ class HighsSymmetryDetection {
   void initializeHashValues();
   bool isomorphicToFirstLeave();
   bool partitionRefinement();
-  bool checkStoredAutomorphism(HighsInt vertex);
+  bool checkStoredAutomorphism(HighsInt vertex) const;
   u32 getVertexHash(HighsInt vertex);
-  HighsInt selectTargetCell();
+  HighsInt selectTargetCell() const;
 
   bool updateCellMembership(HighsInt vertex, HighsInt cell,
                             bool markForRefinement = true);
