@@ -174,7 +174,14 @@ class HPresolve {
 
   double getMaxAbsRowVal(HighsInt row) const;
 
+  bool checkUpdateColImpliedBounds(HighsInt row, double* rowLower = nullptr,
+                                   double* rowUpper = nullptr) const;
+
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
+
+  bool checkUpdateRowDualImpliedBounds(HighsInt col,
+                                       double* dualRowLower = nullptr,
+                                       double* dualRowUpper = nullptr) const;
 
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
 

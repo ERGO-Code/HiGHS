@@ -527,6 +527,37 @@ double HPresolve::getMaxAbsRowVal(HighsInt row) const {
   return maxVal;
 }
 
+bool HPresolve::checkUpdateRowDualImpliedBounds(HighsInt col,
+                                                double* dualRowLower,
+                                                double* dualRowUpper) const {
+  // if the column has an infinite lower bound the reduced cost cannot be
+  // positive, i.e. the column corresponds to a <= constraint in the dual with
+  // right hand side -cost which becomes a >= constraint with side +cost.
+  // Furthermore, we can ignore strictly redundant primal
+  // column bounds and treat them as if they are infinite
+  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
+
+  double myDualRowLower =
+      (model->col_lower_[col] == -kHighsInf) ||
+              (implColLower[col] > model->col_lower_[col] + impliedMargin)
+          ? model->col_cost_[col]
+          : -kHighsInf;
+
+  double myDualRowUpper =
+      (model->col_upper_[col] == kHighsInf) ||
+              (implColUpper[col] < model->col_upper_[col] - impliedMargin)
+          ? model->col_cost_[col]
+          : kHighsInf;
+
+  if (dualRowLower != nullptr) *dualRowLower = myDualRowLower;
+  if (dualRowUpper != nullptr) *dualRowUpper = myDualRowUpper;
+
+  return (myDualRowLower != -kHighsInf &&
+          impliedDualRowBounds.getNumInfSumUpperOrig(col) <= 1) ||
+         (myDualRowUpper != kHighsInf &&
+          impliedRowBounds.getNumInfSumLowerOrig(col) <= 1);
+}
+
 void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
                                            double val) {
   // propagate implied row dual bound
@@ -535,18 +566,9 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
   // right hand side -cost which becomes a >= constraint with side +cost.
   // Furthermore, we can ignore strictly redundant primal
   // column bounds and treat them as if they are infinite
-  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
-  double dualRowLower =
-      (model->col_lower_[col] == -kHighsInf) ||
-              (implColLower[col] > model->col_lower_[col] + impliedMargin)
-          ? model->col_cost_[col]
-          : -kHighsInf;
-
-  double dualRowUpper =
-      (model->col_upper_[col] == kHighsInf) ||
-              (implColUpper[col] < model->col_upper_[col] - impliedMargin)
-          ? model->col_cost_[col]
-          : kHighsInf;
+  double dualRowLower, dualRowUpper;
+  if (!checkUpdateRowDualImpliedBounds(col, &dualRowLower, &dualRowUpper))
+    return;
 
   const double threshold = 1000 * options->dual_feasibility_tolerance;
 
@@ -584,15 +606,28 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
         HighsInt{-1});
 }
 
+bool HPresolve::checkUpdateColImpliedBounds(HighsInt row, double* rowLower,
+                                            double* rowUpper) const {
+  double myRowLower = isImpliedEquationAtUpper(row) ? model->row_upper_[row]
+                                                    : model->row_lower_[row];
+  double myRowUpper = isImpliedEquationAtLower(row) ? model->row_lower_[row]
+                                                    : model->row_upper_[row];
+  assert(myRowLower != kHighsInf);
+  assert(myRowUpper != -kHighsInf);
+
+  if (rowLower != nullptr) *rowLower = myRowLower;
+  if (rowUpper != nullptr) *rowUpper = myRowUpper;
+
+  return (myRowLower != -kHighsInf &&
+          impliedRowBounds.getNumInfSumUpperOrig(row) <= 1) ||
+         (myRowUpper != kHighsInf &&
+          impliedRowBounds.getNumInfSumLowerOrig(row) <= 1);
+}
+
 void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
   // propagate implied column bound upper bound if row has an upper bound
-  double rowUpper = isImpliedEquationAtLower(row) ? model->row_lower_[row]
-                                                  : model->row_upper_[row];
-  double rowLower = isImpliedEquationAtUpper(row) ? model->row_upper_[row]
-                                                  : model->row_lower_[row];
-
-  assert(rowLower != kHighsInf);
-  assert(rowUpper != -kHighsInf);
+  double rowLower, rowUpper;
+  if (!checkUpdateColImpliedBounds(row, &rowLower, &rowUpper)) return;
 
   const double threshold = 1000 * primal_feastol;
 
@@ -3956,11 +3991,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
   // implied bounds can only be computed when row bounds are available and
   // bounds on activity contain at most one infinite bound
-  if (((model->row_upper_[row] != kHighsInf || isImpliedEquationAtLower(row)) &&
-       impliedRowBounds.getNumInfSumLowerOrig(row) <= 1) ||
-      ((model->row_lower_[row] != -kHighsInf ||
-        isImpliedEquationAtUpper(row)) &&
-       impliedRowBounds.getNumInfSumUpperOrig(row) <= 1)) {
+  if (checkUpdateColImpliedBounds(row)) {
     for (const HighsSliceNonzero& nonzero : getRowVector(row))
       updateColImpliedBounds(row, nonzero.index(), nonzero.value());
   }
@@ -4099,10 +4130,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   // now check if we can expect to tighten at least one bound
-  if ((isLowerImplied(col) &&
-       impliedDualRowBounds.getNumInfSumUpper(col) <= 1) ||
-      (isUpperImplied(col) &&
-       impliedDualRowBounds.getNumInfSumLower(col) <= 1)) {
+  if (checkUpdateRowDualImpliedBounds(col)) {
     for (const HighsSliceNonzero& nonzero : getColumnVector(col))
       updateRowDualImpliedBounds(nonzero.index(), col, nonzero.value());
   }
