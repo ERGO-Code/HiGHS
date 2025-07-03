@@ -4047,9 +4047,9 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
 
   // integer columns cannot be used to tighten bounds on dual multipliers
   if (mipsolver != nullptr) {
-    auto modifyImplRowDualBnd = [&](HighsInt col, HighsInt row,
-                                    HighsInt direction, bool isBoundImplied,
-                                    HighsInt numInf) {
+    auto modifyImpliedDualRowBnd = [&](HighsInt col, HighsInt row,
+                                       HighsInt direction, bool isBoundImplied,
+                                       HighsInt numInf) {
       if (isBoundImplied && row != -1 && numInf == 1 &&
           direction * model->col_cost_[col] >= 0) {
         if (model->row_lower_[row] == -kHighsInf ||
@@ -4068,13 +4068,13 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       }
     };
 
-    modifyImplRowDualBnd(col, colLowerSource[col], HighsInt{1},
-                         isLowerImplied(col),
-                         impliedDualRowBounds.getNumInfSumUpperOrig(col));
+    modifyImpliedDualRowBnd(col, colLowerSource[col], HighsInt{1},
+                            isLowerImplied(col),
+                            impliedDualRowBounds.getNumInfSumUpperOrig(col));
 
-    modifyImplRowDualBnd(col, colUpperSource[col], HighsInt{-1},
-                         isUpperImplied(col),
-                         impliedDualRowBounds.getNumInfSumLowerOrig(col));
+    modifyImpliedDualRowBnd(col, colUpperSource[col], HighsInt{-1},
+                            isUpperImplied(col),
+                            impliedDualRowBounds.getNumInfSumLowerOrig(col));
 
     HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
 
