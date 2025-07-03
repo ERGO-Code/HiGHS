@@ -4044,8 +4044,6 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   // the associated dual constraint has an upper bound if there is an infinite
   // or redundant column lower bound as then the reduced cost of the column must
   // not be positive i.e. <= 0
-  bool dualConsHasUpper = isUpperImplied(col);
-  bool dualConsHasLower = isLowerImplied(col);
 
   // integer columns cannot be used to tighten bounds on dual multipliers
   if (mipsolver != nullptr) {
@@ -4071,11 +4069,11 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     };
 
     modifyImplRowDualBnd(col, colLowerSource[col], HighsInt{1},
-                         dualConsHasLower,
+                         isLowerImplied(col),
                          impliedDualRowBounds.getNumInfSumUpperOrig(col));
 
     modifyImplRowDualBnd(col, colUpperSource[col], HighsInt{-1},
-                         dualConsHasUpper,
+                         isUpperImplied(col),
                          impliedDualRowBounds.getNumInfSumLowerOrig(col));
 
     HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
@@ -4101,8 +4099,10 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   // now check if we can expect to tighten at least one bound
-  if ((dualConsHasLower && impliedDualRowBounds.getNumInfSumUpper(col) <= 1) ||
-      (dualConsHasUpper && impliedDualRowBounds.getNumInfSumLower(col) <= 1)) {
+  if ((isLowerImplied(col) &&
+       impliedDualRowBounds.getNumInfSumUpper(col) <= 1) ||
+      (isUpperImplied(col) &&
+       impliedDualRowBounds.getNumInfSumLower(col) <= 1)) {
     for (const HighsSliceNonzero& nonzero : getColumnVector(col))
       updateRowDualImpliedBounds(nonzero.index(), col, nonzero.value());
   }
