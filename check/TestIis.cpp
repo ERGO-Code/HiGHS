@@ -8,8 +8,6 @@
 const bool dev_run = false;
 const double inf = kHighsInf;
 
-void checkIisLp(const HighsIis& iis, const HighsLp& iis_lp);
-		
 void testIis(const std::string& model, const HighsIis& iis);
 
 void testMps(std::string& model, const HighsInt iis_strategy,
@@ -21,6 +19,8 @@ void testFeasibilityRelaxation(
     const double rhs_penalty,
     const double require_feasibility_objective_function_value);
 
+void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp);
+		
 TEST_CASE("lp-incompatible-bounds", "[iis]") {
   // LP has row0 and col2 with inconsistent bounds.
   //
@@ -50,7 +50,7 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
-  checkIisLp(iis, iis_lp);  
+  checkIisLp(lp, iis, iis_lp);  
   /*
   // Perform full IIS
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -437,14 +437,6 @@ void testIis(const std::string& model, const HighsIis& iis) {
   highs.resetGlobalScheduler(true);
 }
 
-void checkIisLp(const HighsIis& iis, const HighsLp& iis_lp) {
-  HighsInt iis_num_col = iis.col_index_.size();
-  HighsInt iis_num_row = iis.row_index_.size();
-  REQUIRE(iis_lp.num_col_ == iis_num_col);
-  REQUIRE(iis_lp.num_row_ == iis_num_row);
-}
-
-
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status) {
   std::string model_file =
@@ -492,3 +484,38 @@ void testFeasibilityRelaxation(
   REQUIRE(h.getInfo().objective_function_value ==
           require_feasibility_objective_function_value);
 }
+
+void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
+  HighsInt iis_num_col = iis.col_index_.size();
+  HighsInt iis_num_row = iis.row_index_.size();
+  REQUIRE(iis_lp.num_col_ == iis_num_col);
+  REQUIRE(iis_lp.num_row_ == iis_num_row);
+
+  lp.a_matrix_.ensureColwise();
+  std::vector<HighsInt> iis_row;
+  iis_row.assign(lp.num_row_, -1);
+  for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
+    HighsInt iRow = iis.row_index_[iisRow];
+    iis_row[iRow] = iisRow;
+    REQUIRE(iis_lp.row_lower_[iisRow] == lp.row_lower_[iRow]);
+    REQUIRE(iis_lp.row_upper_[iisRow] == lp.row_upper_[iRow]);
+  }
+    
+  for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
+    HighsInt iCol = iis.col_index_[iisCol];
+    REQUIRE(iis_lp.col_cost_[iisCol] == lp.col_cost_[iCol]);
+    REQUIRE(iis_lp.col_lower_[iisCol] == lp.col_lower_[iCol]);
+    REQUIRE(iis_lp.col_upper_[iisCol] == lp.col_upper_[iCol]);
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	 iEl < lp.a_matrix_.start_[iCol+1]; iisCol++) {
+      HighsInt iRow = lp.a_matrix_.index_[iEl];
+      HighsInt iisRow = iis_row[iRow];
+      if (iisRow >= 0) {
+	REQUIRE(iis_lp.a_matrix_.index_[iisCol] == iisRow);
+	REQUIRE(iis_lp.a_matrix_.value_[iisCol] == lp.a_matrix_.value_[iEl]);
+      }
+    }
+  }
+
+}
+

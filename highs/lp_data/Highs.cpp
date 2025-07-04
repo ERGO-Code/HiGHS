@@ -1959,10 +1959,33 @@ HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
   HighsInt iis_num_row = this->iis_.row_index_.size();
   HighsLp& lp = this->model_.lp_;
   lp.a_matrix_.ensureColwise();
+  std::vector<HighsInt> iis_row;
+  iis_row.assign(lp.num_row_, -1);
+  for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
+    HighsInt iRow = this->iis_.row_index_[iisRow];
+    iis_row[iRow] = iisRow;
+    iis_lp.row_lower_.push_back(lp.row_lower_[iRow]);
+    iis_lp.row_upper_.push_back(lp.row_upper_[iRow]);
+  }
+    
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = this->iis_.col_index_[iisCol];
     iis_lp.col_cost_.push_back(lp.col_cost_[iCol]);
+    iis_lp.col_lower_.push_back(lp.col_lower_[iCol]);
+    iis_lp.col_upper_.push_back(lp.col_upper_[iCol]);
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	 iEl < lp.a_matrix_.start_[iCol+1]; iisCol++) {
+      HighsInt iRow = lp.a_matrix_.index_[iEl];
+      HighsInt iisRow = iis_row[iRow];
+      if (iisRow >= 0) {
+	iis_lp.a_matrix_.index_.push_back(iisRow);
+	iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+      }
+    }
+    iis_lp.a_matrix_.start_.push_back(iis_lp.a_matrix_.index_.size());
   }
+  iis_lp.num_col_ = iis_lp.col_cost_.size();
+  iis_lp.num_row_ = iis_lp.row_lower_.size();
   return return_status;
     
 }
