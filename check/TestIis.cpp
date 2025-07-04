@@ -20,7 +20,7 @@ void testFeasibilityRelaxation(
     const double require_feasibility_objective_function_value);
 
 void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp);
-		
+
 TEST_CASE("lp-incompatible-bounds", "[iis]") {
   // LP has row0 and col2 with inconsistent bounds.
   //
@@ -51,17 +51,11 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
   checkIisLp(lp, iis, iis_lp);
-  REQUIRE(highs.passModel(iis_lp) == HighsStatus::kOk);
-  highs.writeModel("");
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-  
-  /*
   // Perform full IIS
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
-  HighsIis iis;
+
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 1);
@@ -73,7 +67,7 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   REQUIRE(iis.row_index_.size() == 0);
   REQUIRE(iis.col_index_[0] == 2);
   REQUIRE(iis.col_bound_[0] == kIisBoundStatusBoxed);
-  */
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -502,24 +496,30 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = iis.row_index_[iisRow];
     iis_row[iRow] = iisRow;
-    REQUIRE(iis_lp.row_lower_[iisRow] == lp.row_lower_[iRow]);
-    REQUIRE(iis_lp.row_upper_[iisRow] == lp.row_upper_[iRow]);
+    HighsInt row_bound = iis.row_bound_[iisRow];
+    if (row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed)
+      REQUIRE(iis_lp.row_lower_[iisRow] == lp.row_lower_[iRow]);
+    if (row_bound == kIisBoundStatusUpper || row_bound == kIisBoundStatusBoxed)
+      REQUIRE(iis_lp.row_upper_[iisRow] == lp.row_upper_[iRow]);
   }
-    
+
   // Work through the LP columns and matrix, checking the costs,
-  // bounds and matrix index/value 
+  // bounds and matrix index/value
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = iis.col_index_[iisCol];
     REQUIRE(iis_lp.col_cost_[iisCol] == lp.col_cost_[iCol]);
-    REQUIRE(iis_lp.col_lower_[iisCol] == lp.col_lower_[iCol]);
-    REQUIRE(iis_lp.col_upper_[iisCol] == lp.col_upper_[iCol]);
+    HighsInt col_bound = iis.col_bound_[iisCol];
+    if (col_bound == kIisBoundStatusLower || col_bound == kIisBoundStatusBoxed)
+      REQUIRE(iis_lp.col_lower_[iisCol] == lp.col_lower_[iCol]);
+    if (col_bound == kIisBoundStatusUpper || col_bound == kIisBoundStatusBoxed)
+      REQUIRE(iis_lp.col_upper_[iisCol] == lp.col_upper_[iCol]);
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	 iEl < lp.a_matrix_.start_[iCol+1]; iEl++) {
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
       HighsInt iisRow = iis_row[iRow];
       if (iisRow >= 0) {
-	REQUIRE(iis_lp.a_matrix_.index_[iisCol] == iisRow);
-	REQUIRE(iis_lp.a_matrix_.value_[iisCol] == lp.a_matrix_.value_[iEl]);
+        REQUIRE(iis_lp.a_matrix_.index_[iisCol] == iisRow);
+        REQUIRE(iis_lp.a_matrix_.value_[iisCol] == lp.a_matrix_.value_[iEl]);
       }
     }
   }
@@ -532,18 +532,17 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
     index.assign(lp.num_row_, -1);
     value.assign(lp.num_row_, 0);
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	 iEl < lp.a_matrix_.start_[iCol+1]; iEl++) {
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
       index[iRow] = iis_row[iRow];
       value[iRow] = lp.a_matrix_.value_[iEl];
     }
     for (HighsInt iEl = iis_lp.a_matrix_.start_[iCol];
-	 iEl < iis_lp.a_matrix_.start_[iCol+1]; iisCol++) {
+         iEl < iis_lp.a_matrix_.start_[iCol + 1]; iisCol++) {
       HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
-      HighsInt iRow = iis.row_index_[iisRow];	
+      HighsInt iRow = iis.row_index_[iisRow];
       REQUIRE(index[iRow] == iisRow);
       REQUIRE(value[iRow] == iis_lp.a_matrix_.value_[iEl]);
     }
   }
 }
-

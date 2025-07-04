@@ -1947,11 +1947,11 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 
 HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
   HighsStatus return_status = HighsStatus::kOk;
-  
+
   if (!this->iis_.valid_) {
-    return_status = 
-      interpretCallStatus(options_.log_options, this->getIisInterface(),
-                          return_status, "getIisInterface");
+    return_status =
+        interpretCallStatus(options_.log_options, this->getIisInterface(),
+                            return_status, "getIisInterface");
     if (return_status == HighsStatus::kError) return return_status;
   }
   iis_lp.clear();
@@ -1964,22 +1964,28 @@ HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = this->iis_.row_index_[iisRow];
     iis_row[iRow] = iisRow;
-    iis_lp.row_lower_.push_back(lp.row_lower_[iRow]);
-    iis_lp.row_upper_.push_back(lp.row_upper_[iRow]);
+    HighsInt row_bound = this->iis_.row_bound_[iisRow];
+    if (row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed)
+      iis_lp.row_lower_.push_back(lp.row_lower_[iRow]);
+    if (row_bound == kIisBoundStatusUpper || row_bound == kIisBoundStatusBoxed)
+      iis_lp.row_upper_.push_back(lp.row_upper_[iRow]);
   }
-    
+
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = this->iis_.col_index_[iisCol];
     iis_lp.col_cost_.push_back(lp.col_cost_[iCol]);
-    iis_lp.col_lower_.push_back(lp.col_lower_[iCol]);
-    iis_lp.col_upper_.push_back(lp.col_upper_[iCol]);
+    HighsInt col_bound = this->iis_.col_bound_[iisCol];
+    if (col_bound == kIisBoundStatusLower || col_bound == kIisBoundStatusBoxed)
+      iis_lp.col_lower_.push_back(lp.col_lower_[iCol]);
+    if (col_bound == kIisBoundStatusUpper || col_bound == kIisBoundStatusBoxed)
+      iis_lp.col_upper_.push_back(lp.col_upper_[iCol]);
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	 iEl < lp.a_matrix_.start_[iCol+1]; iisCol++) {
+         iEl < lp.a_matrix_.start_[iCol + 1]; iisCol++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
       HighsInt iisRow = iis_row[iRow];
       if (iisRow >= 0) {
-	iis_lp.a_matrix_.index_.push_back(iisRow);
-	iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+        iis_lp.a_matrix_.index_.push_back(iisRow);
+        iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
       }
     }
     iis_lp.a_matrix_.start_.push_back(iis_lp.a_matrix_.index_.size());
@@ -1987,7 +1993,6 @@ HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
   iis_lp.num_col_ = iis_lp.col_cost_.size();
   iis_lp.num_row_ = iis_lp.row_lower_.size();
   return return_status;
-    
 }
 
 HighsStatus Highs::getDualObjectiveValue(

@@ -271,8 +271,8 @@ enum PresolveRuleType : int {
 enum IisStrategy {
   kIisStrategyMin = 0,
   kIisStrategyLight = kIisStrategyMin,  // 0
-  kIisStrategyFromLpRowPriority,                    // 1
-  kIisStrategyFromLpColPriority,                     // 2
+  kIisStrategyFromLpRowPriority,        // 1
+  kIisStrategyFromLpColPriority,        // 2
   //  kIisStrategyFromRayRowPriority,                     // 3
   //  kIisStrategyFromRayColPriority,                     // 4
   kIisStrategyMax = kIisStrategyFromLpColPriority

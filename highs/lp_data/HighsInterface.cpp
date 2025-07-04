@@ -1866,8 +1866,9 @@ HighsStatus Highs::getIisInterface() {
   if (this->model_status_ == HighsModelStatus::kOptimal ||
       this->model_status_ == HighsModelStatus::kUnbounded) {
     // Strange to call getIis for a model that's known to be feasible
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "Calling Highs::getIis for a model that is known to be feasible\n");
+    highsLogUser(
+        options_.log_options, HighsLogType::kInfo,
+        "Calling Highs::getIis for a model that is known to be feasible\n");
     this->iis_.invalidate();
     // No IIS exists, so validate the empty HighsIis instance
     this->iis_.valid_ = true;

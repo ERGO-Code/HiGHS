@@ -574,8 +574,8 @@ class Highs {
   HighsStatus getIis(HighsIis& iis);
 
   /**
-   * @brief Get an LP corresponding to (any) irreducible infeasible subsystem (IIS)
-   * information for the incumbent model
+   * @brief Get an LP corresponding to (any) irreducible infeasible subsystem
+   * (IIS) information for the incumbent model
    */
   HighsStatus getIisLp(HighsLp& lp);
 
