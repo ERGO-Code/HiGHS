@@ -50,7 +50,12 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
-  checkIisLp(lp, iis, iis_lp);  
+  checkIisLp(lp, iis, iis_lp);
+  REQUIRE(highs.passModel(iis_lp) == HighsStatus::kOk);
+  highs.writeModel("");
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  
   /*
   // Perform full IIS
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -501,13 +506,15 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
     REQUIRE(iis_lp.row_upper_[iisRow] == lp.row_upper_[iRow]);
   }
     
+  // Work through the LP columns and matrix, checking the costs,
+  // bounds and matrix index/value 
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = iis.col_index_[iisCol];
     REQUIRE(iis_lp.col_cost_[iisCol] == lp.col_cost_[iCol]);
     REQUIRE(iis_lp.col_lower_[iisCol] == lp.col_lower_[iCol]);
     REQUIRE(iis_lp.col_upper_[iisCol] == lp.col_upper_[iCol]);
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	 iEl < lp.a_matrix_.start_[iCol+1]; iisCol++) {
+	 iEl < lp.a_matrix_.start_[iCol+1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
       HighsInt iisRow = iis_row[iRow];
       if (iisRow >= 0) {
@@ -516,6 +523,27 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
       }
     }
   }
-
+  // Work through the IIS LP matrix, making sure that the index/value
+  // are correct
+  std::vector<HighsInt> index;
+  std::vector<double> value;
+  for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
+    HighsInt iCol = iis.col_index_[iisCol];
+    index.assign(lp.num_row_, -1);
+    value.assign(lp.num_row_, 0);
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	 iEl < lp.a_matrix_.start_[iCol+1]; iEl++) {
+      HighsInt iRow = lp.a_matrix_.index_[iEl];
+      index[iRow] = iis_row[iRow];
+      value[iRow] = lp.a_matrix_.value_[iEl];
+    }
+    for (HighsInt iEl = iis_lp.a_matrix_.start_[iCol];
+	 iEl < iis_lp.a_matrix_.start_[iCol+1]; iisCol++) {
+      HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
+      HighsInt iRow = iis.row_index_[iisRow];	
+      REQUIRE(index[iRow] == iisRow);
+      REQUIRE(value[iRow] == iis_lp.a_matrix_.value_[iEl]);
+    }
+  }
 }
 
