@@ -574,6 +574,12 @@ class Highs {
   HighsStatus getIis(HighsIis& iis);
 
   /**
+   * @brief Get an LP corresponding to (any) irreducible infeasible subsystem (IIS)
+   * information for the incumbent model
+   */
+  HighsStatus getIisLp(HighsLp& lp);
+
+  /**
    * @brief Get the current model objective function value
    */
   double getObjectiveValue() const { return info_.objective_function_value; }

@@ -1938,30 +1938,33 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
 }
 
 HighsStatus Highs::getIis(HighsIis& iis) {
-  if (this->model_status_ == HighsModelStatus::kOptimal ||
-      this->model_status_ == HighsModelStatus::kUnbounded) {
-    // Strange to call getIis for a model that's known to be feasible
-    highsLogUser(
-        options_.log_options, HighsLogType::kInfo,
-        "Calling Highs::getIis for a model that is known to be feasible\n");
-    iis.invalidate();
-    // No IIS exists, so validate the empty HighsIis instance
-    iis.valid_ = true;
-    return HighsStatus::kOk;
-  }
-  HighsStatus return_status = HighsStatus::kOk;
-  if (this->model_status_ != HighsModelStatus::kNotset &&
-      this->model_status_ != HighsModelStatus::kInfeasible) {
-    return_status = HighsStatus::kWarning;
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "Calling Highs::getIis for a model with status %s\n",
-                 this->modelStatusToString(this->model_status_).c_str());
-  }
-  return_status =
+  HighsStatus return_status =
       interpretCallStatus(options_.log_options, this->getIisInterface(),
                           return_status, "getIisInterface");
   iis = this->iis_;
   return return_status;
+}
+
+HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
+  HighsStatus return_status = HighsStatus::kOk;
+  
+  if (!this->iis_.valid_) {
+    return_status = 
+      interpretCallStatus(options_.log_options, this->getIisInterface(),
+                          return_status, "getIisInterface");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
+  iis_lp.clear();
+  HighsInt iis_num_col = this->iis_.col_index_.size();
+  HighsInt iis_num_row = this->iis_.row_index_.size();
+  HighsLp& lp = this->model_.lp_;
+  lp.a_matrix_.ensureColwise();
+  for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
+    HighsInt iCol = this->iis_.col_index_[iisCol];
+    iis_lp.col_cost_.push_back(lp.col_cost_[iCol]);
+  }
+  return return_status;
+    
 }
 
 HighsStatus Highs::getDualObjectiveValue(

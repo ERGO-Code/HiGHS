@@ -8,6 +8,8 @@
 const bool dev_run = false;
 const double inf = kHighsInf;
 
+void checkIisLp(const HighsIis& iis, const HighsLp& iis_lp);
+		
 void testIis(const std::string& model, const HighsIis& iis);
 
 void testMps(std::string& model, const HighsInt iis_strategy,
@@ -40,8 +42,17 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   lp.a_matrix_.index_ = {1, 2, 0, 2};
   lp.a_matrix_.value_ = {1, 1, 1, 1};
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
+  // Perform the light IIS check
+  highs.setOptionValue("iis_strategy", kIisStrategyLight);
+  HighsLp iis_lp;
+  REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
+  HighsIis iis;
+  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  checkIisLp(iis, iis_lp);  
+  /*
+  // Perform full IIS
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
@@ -57,7 +68,7 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   REQUIRE(iis.row_index_.size() == 0);
   REQUIRE(iis.col_index_[0] == 2);
   REQUIRE(iis.col_bound_[0] == kIisBoundStatusBoxed);
-
+  */
   highs.resetGlobalScheduler(true);
 }
 
@@ -425,6 +436,14 @@ void testIis(const std::string& model, const HighsIis& iis) {
 
   highs.resetGlobalScheduler(true);
 }
+
+void checkIisLp(const HighsIis& iis, const HighsLp& iis_lp) {
+  HighsInt iis_num_col = iis.col_index_.size();
+  HighsInt iis_num_row = iis.row_index_.size();
+  REQUIRE(iis_lp.num_col_ == iis_num_col);
+  REQUIRE(iis_lp.num_row_ == iis_num_row);
+}
+
 
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status) {

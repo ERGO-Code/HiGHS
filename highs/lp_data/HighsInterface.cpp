@@ -1863,6 +1863,24 @@ HighsStatus Highs::getRangingInterface() {
 }
 
 HighsStatus Highs::getIisInterface() {
+  if (this->model_status_ == HighsModelStatus::kOptimal ||
+      this->model_status_ == HighsModelStatus::kUnbounded) {
+    // Strange to call getIis for a model that's known to be feasible
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+		 "Calling Highs::getIis for a model that is known to be feasible\n");
+    this->iis_.invalidate();
+    // No IIS exists, so validate the empty HighsIis instance
+    this->iis_.valid_ = true;
+    return HighsStatus::kOk;
+  }
+  HighsStatus return_status = HighsStatus::kOk;
+  if (this->model_status_ != HighsModelStatus::kNotset &&
+      this->model_status_ != HighsModelStatus::kInfeasible) {
+    return_status = HighsStatus::kWarning;
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Calling Highs::getIis for a model with status %s\n",
+                 this->modelStatusToString(this->model_status_).c_str());
+  }
   if (this->iis_.valid_) return HighsStatus::kOk;
   this->iis_.invalidate();
   HighsLp& lp = model_.lp_;
@@ -1944,7 +1962,7 @@ HighsStatus Highs::getIisInterface() {
     assert(check_lp_before.equalButForScalingAndNames(check_lp_after));
     if (return_status != HighsStatus::kOk) return return_status;
   }
-  HighsStatus return_status = HighsStatus::kOk;
+  return_status = HighsStatus::kOk;
   if (infeasible_row_subset.size() == 0) {
     // No subset of infeasible rows, so model is feasible
     this->iis_.valid_ = true;

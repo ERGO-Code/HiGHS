@@ -1239,13 +1239,14 @@ class HighsOptions : public HighsOptionsStruct {
         "iis_strategy",
         "Strategy for IIS calculation: "
         //        "Use LP and p"
-        "Prioritise rows (default) / "
+        "Light test / "
+        "Full and prioritise rows / "
         //        "Use LP and p"
-        "Prioritise columns"
+        "Full and prioritise columns"
         //        "Use unbounded dual ray and prioritise low number of rows
         //        (default) / " "Use ray and prioritise low numbers of columns "
-        " (0/1"
-        //        "/2/3)",
+        " (0/1/2"
+        //        "/3/4)",
         ")",
         advanced, &iis_strategy, kIisStrategyMin, kIisStrategyFromLpRowPriority,
         kIisStrategyMax);
