@@ -42,7 +42,7 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   lp.a_matrix_.index_ = {1, 2, 0, 2};
   lp.a_matrix_.value_ = {1, 1, 1, 1};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   // Perform the light IIS check
   highs.setOptionValue("iis_strategy", kIisStrategyLight);
@@ -87,7 +87,7 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {2, 1, 1, 3};
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
@@ -97,7 +97,13 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusLower);
-  REQUIRE(highs.changeRowBounds(empty_row, -2, -1) == HighsStatus::kOk);
+  double new_lower = -2;
+  double new_upper = -1;
+  assert(new_upper < 0);
+  REQUIRE(highs.changeRowBounds(empty_row, new_lower, new_upper) ==
+          HighsStatus::kOk);
+  lp.row_lower_[empty_row] = new_lower;
+  lp.row_upper_[empty_row] = new_upper;
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
@@ -105,6 +111,16 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusUpper);
+
+  HighsLp iis_lp;
+  REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
+  highs.writeModel("");
+
+  printf("\nNow pass IIS LP\n");
+  highs.passModel(iis_lp);
+  highs.writeModel("");
+
+  checkIisLp(lp, iis, iis_lp);
 
   highs.resetGlobalScheduler(true);
 }
@@ -493,14 +509,21 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
   lp.a_matrix_.ensureColwise();
   std::vector<HighsInt> iis_row;
   iis_row.assign(lp.num_row_, -1);
+  double bound;
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = iis.row_index_[iisRow];
     iis_row[iRow] = iisRow;
     HighsInt row_bound = iis.row_bound_[iisRow];
-    if (row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed)
-      REQUIRE(iis_lp.row_lower_[iisRow] == lp.row_lower_[iRow]);
-    if (row_bound == kIisBoundStatusUpper || row_bound == kIisBoundStatusBoxed)
-      REQUIRE(iis_lp.row_upper_[iisRow] == lp.row_upper_[iRow]);
+    bound =
+        row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed
+            ? lp.row_lower_[iRow]
+            : -kHighsInf;
+    REQUIRE(iis_lp.row_lower_[iisRow] == bound);
+    bound =
+        row_bound == kIisBoundStatusUpper || row_bound == kIisBoundStatusBoxed
+            ? lp.row_upper_[iRow]
+            : kHighsInf;
+    REQUIRE(iis_lp.row_upper_[iisRow] == bound);
   }
 
   // Work through the LP columns and matrix, checking the costs,
@@ -509,10 +532,16 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
     HighsInt iCol = iis.col_index_[iisCol];
     REQUIRE(iis_lp.col_cost_[iisCol] == lp.col_cost_[iCol]);
     HighsInt col_bound = iis.col_bound_[iisCol];
-    if (col_bound == kIisBoundStatusLower || col_bound == kIisBoundStatusBoxed)
-      REQUIRE(iis_lp.col_lower_[iisCol] == lp.col_lower_[iCol]);
-    if (col_bound == kIisBoundStatusUpper || col_bound == kIisBoundStatusBoxed)
-      REQUIRE(iis_lp.col_upper_[iisCol] == lp.col_upper_[iCol]);
+    bound =
+        col_bound == kIisBoundStatusLower || col_bound == kIisBoundStatusBoxed
+            ? lp.col_lower_[iCol]
+            : -kHighsInf;
+    REQUIRE(iis_lp.col_lower_[iisCol] == bound);
+    bound =
+        col_bound == kIisBoundStatusUpper || col_bound == kIisBoundStatusBoxed
+            ? lp.col_upper_[iCol]
+            : kHighsInf;
+    REQUIRE(iis_lp.col_upper_[iisCol] == bound);
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
          iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];

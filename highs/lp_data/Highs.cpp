@@ -1961,24 +1961,37 @@ HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
   lp.a_matrix_.ensureColwise();
   std::vector<HighsInt> iis_row;
   iis_row.assign(lp.num_row_, -1);
+  double bound;
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = this->iis_.row_index_[iisRow];
     iis_row[iRow] = iisRow;
     HighsInt row_bound = this->iis_.row_bound_[iisRow];
-    if (row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed)
-      iis_lp.row_lower_.push_back(lp.row_lower_[iRow]);
-    if (row_bound == kIisBoundStatusUpper || row_bound == kIisBoundStatusBoxed)
-      iis_lp.row_upper_.push_back(lp.row_upper_[iRow]);
+    bound =
+        row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed
+            ? lp.row_lower_[iRow]
+            : -kHighsInf;
+    iis_lp.row_lower_.push_back(bound);
+    bound =
+        row_bound == kIisBoundStatusUpper || row_bound == kIisBoundStatusBoxed
+            ? lp.row_upper_[iRow]
+            : kHighsInf;
+    iis_lp.row_upper_.push_back(bound);
   }
 
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = this->iis_.col_index_[iisCol];
     iis_lp.col_cost_.push_back(lp.col_cost_[iCol]);
     HighsInt col_bound = this->iis_.col_bound_[iisCol];
-    if (col_bound == kIisBoundStatusLower || col_bound == kIisBoundStatusBoxed)
-      iis_lp.col_lower_.push_back(lp.col_lower_[iCol]);
-    if (col_bound == kIisBoundStatusUpper || col_bound == kIisBoundStatusBoxed)
-      iis_lp.col_upper_.push_back(lp.col_upper_[iCol]);
+    bound =
+        col_bound == kIisBoundStatusLower || col_bound == kIisBoundStatusBoxed
+            ? lp.col_lower_[iCol]
+            : -kHighsInf;
+    iis_lp.col_lower_.push_back(bound);
+    bound =
+        col_bound == kIisBoundStatusUpper || col_bound == kIisBoundStatusBoxed
+            ? lp.col_upper_[iCol]
+            : kHighsInf;
+    iis_lp.col_upper_.push_back(bound);
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
          iEl < lp.a_matrix_.start_[iCol + 1]; iisCol++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
