@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;  // false;
 const double inf = kHighsInf;
 
 void testIis(const std::string& model, const HighsIis& iis);
@@ -87,7 +87,7 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {2, 1, 1, 3};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
@@ -114,11 +114,6 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
 
   HighsLp iis_lp;
   REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
-  highs.writeModel("");
-
-  printf("\nNow pass IIS LP\n");
-  highs.passModel(iis_lp);
-  highs.writeModel("");
 
   checkIisLp(lp, iis, iis_lp);
 
@@ -127,6 +122,7 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
 
 TEST_CASE("lp-get-iis", "[iis]") {
   HighsLp lp;
+  lp.model_name_ = "lp-get-iis";
   lp.num_col_ = 2;
   lp.num_row_ = 3;
   lp.col_cost_ = {0, 0};
@@ -135,6 +131,8 @@ TEST_CASE("lp-get-iis", "[iis]") {
   lp.row_lower_ = {-inf, -inf, -inf};
   lp.row_upper_ = {8, 9, -2};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
   lp.a_matrix_.start_ = {0, 2, 4, 6};
   lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
   lp.a_matrix_.value_ = {2, 1, 1, 3, 1, 1};
@@ -153,6 +151,10 @@ TEST_CASE("lp-get-iis", "[iis]") {
   REQUIRE(iis.col_index_[0] == 0);
   REQUIRE(iis.col_index_[1] == 1);
   REQUIRE(iis.row_index_[0] == 2);
+
+  HighsLp iis_lp;
+  REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
+  checkIisLp(lp, iis, iis_lp);
 
   highs.resetGlobalScheduler(true);
 }
@@ -223,6 +225,7 @@ TEST_CASE("lp-get-iis-avgas", "[iis]") {
 TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   // Using infeasible LP from AMPL documentation
   HighsLp lp;
+  lp.model_name_ = "ampl_infeas";
   lp.num_col_ = 2;
   lp.num_row_ = 3;
   lp.col_cost_ = {1, -2};
@@ -479,6 +482,22 @@ void testMps(std::string& model, const HighsInt iis_strategy,
       printf("Model %s has IIS with %d columns and %d rows\n", model.c_str(),
              int(num_iis_col), int(num_iis_row));
     testIis(model, iis);
+
+    HighsLp iis_lp;
+    REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
+
+    const bool write_model = true;
+    if (dev_run && write_model) highs.writeModel("");
+    HighsLp lp = highs.getLp();
+
+    if (dev_run && write_model) {
+      printf("\nNow pass IIS LP to write it out\n");
+      highs.passModel(iis_lp);
+      highs.writeModel("");
+    }
+
+    checkIisLp(lp, iis, iis_lp);
+
   } else {
     REQUIRE(num_iis_col == 0);
     REQUIRE(num_iis_row == 0);
@@ -512,12 +531,22 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
   double bound;
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = iis.row_index_[iisRow];
+    printf("checkIisLp: iRow = %d\n", int(iRow));
+    if (iRow < 0 || iRow >= lp.num_row_) {
+      printf("iRow out of range\n");
+    }
     iis_row[iRow] = iisRow;
     HighsInt row_bound = iis.row_bound_[iisRow];
     bound =
         row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed
             ? lp.row_lower_[iRow]
             : -kHighsInf;
+    const bool lower_ok = iis_lp.row_lower_[iisRow] == bound;
+    if (!lower_ok)
+      printf(
+          "!lower_ok iis_lp.row_lower_[iisRow] = %g; bound = %g; "
+          "iis_lp.row_lower_[iisRow] - bound = %g\n",
+          iis_lp.row_lower_[iisRow], bound, iis_lp.row_lower_[iisRow] - bound);
     REQUIRE(iis_lp.row_lower_[iisRow] == bound);
     bound =
         row_bound == kIisBoundStatusUpper || row_bound == kIisBoundStatusBoxed
@@ -528,6 +557,10 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
 
   // Work through the LP columns and matrix, checking the costs,
   // bounds and matrix index/value
+  const HighsInt illegal_index = -1;
+  const double illegal_value = kHighsInf;
+  std::vector<HighsInt> index;
+  std::vector<double> value;
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = iis.col_index_[iisCol];
     REQUIRE(iis_lp.col_cost_[iisCol] == lp.col_cost_[iCol]);
@@ -542,36 +575,68 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
             ? lp.col_upper_[iCol]
             : kHighsInf;
     REQUIRE(iis_lp.col_upper_[iisCol] == bound);
+    // Use index/value to scatter the IIS matrix column
+    index.assign(iis_num_row, illegal_index);
+    value.assign(iis_num_row, illegal_value);
+    for (HighsInt iEl = iis_lp.a_matrix_.start_[iisCol];
+         iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
+      HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
+      HighsInt iRow = iis.row_index_[iisRow];
+      index[iisRow] = iRow;
+      value[iisRow] = iis_lp.a_matrix_.value_[iEl];
+    }
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
          iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
       HighsInt iisRow = iis_row[iRow];
       if (iisRow >= 0) {
-        REQUIRE(iis_lp.a_matrix_.index_[iisCol] == iisRow);
-        REQUIRE(iis_lp.a_matrix_.value_[iisCol] == lp.a_matrix_.value_[iEl]);
+        const bool index_ok = index[iisRow] == iRow;
+        if (!index_ok) {
+          printf("checkIisLp: IIS LP matrix index incorrect %d != %d\n",
+                 int(index[iisRow]), int(iRow));
+        }
+        REQUIRE(index_ok);
+        index[iisRow] = illegal_index;
+        const bool value_ok = value[iisRow] == lp.a_matrix_.value_[iEl];
+        if (!value_ok) {
+          printf("checkIisLp: IIS LP matrix value incorrect %g != %g\n",
+                 value[iisRow], lp.a_matrix_.value_[iEl]);
+        }
+        REQUIRE(value_ok);
+        value[iisRow] = illegal_value;
       }
     }
   }
   // Work through the IIS LP matrix, making sure that the index/value
   // are correct
-  std::vector<HighsInt> index;
-  std::vector<double> value;
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = iis.col_index_[iisCol];
-    index.assign(lp.num_row_, -1);
-    value.assign(lp.num_row_, 0);
+    // Use index/value to scatter the LP matrix column
+    index.assign(lp.num_row_, illegal_index);
+    value.assign(lp.num_row_, illegal_value);
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
          iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
-      index[iRow] = iis_row[iRow];
+      HighsInt iisRow = iis_row[iRow];
+      index[iRow] = iisRow;
       value[iRow] = lp.a_matrix_.value_[iEl];
     }
-    for (HighsInt iEl = iis_lp.a_matrix_.start_[iCol];
-         iEl < iis_lp.a_matrix_.start_[iCol + 1]; iisCol++) {
+    for (HighsInt iEl = iis_lp.a_matrix_.start_[iisCol];
+         iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
       HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
       HighsInt iRow = iis.row_index_[iisRow];
-      REQUIRE(index[iRow] == iisRow);
-      REQUIRE(value[iRow] == iis_lp.a_matrix_.value_[iEl]);
+      const bool index_ok = index[iRow] == iisRow;
+      if (!index_ok) {
+        printf("checkIisLp: IIS LP matrix index incorrect %d != %d\n",
+               int(index[iRow]), int(iisRow));
+      }
+      REQUIRE(index_ok);
+      const bool value_ok = value[iRow] == iis_lp.a_matrix_.value_[iEl];
+      if (!value_ok) {
+        printf("checkIisLp: IIS LP matrix value incorrect %g != %g\n",
+               value[iRow], iis_lp.a_matrix_.value_[iEl]);
+      }
+      REQUIRE(value_ok);
     }
   }
 }

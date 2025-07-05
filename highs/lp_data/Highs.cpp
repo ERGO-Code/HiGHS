@@ -657,11 +657,6 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
 }
 
 HighsStatus Highs::passModelName(const std::string& name) {
-  if (int(name.length()) <= 0) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Cannot define empty model names\n");
-    return HighsStatus::kError;
-  }
   this->model_.lp_.model_name_ = name;
   return HighsStatus::kOk;
 }
@@ -1938,10 +1933,8 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
 }
 
 HighsStatus Highs::getIis(HighsIis& iis) {
-  HighsStatus return_status =
-      interpretCallStatus(options_.log_options, this->getIisInterface(),
-                          return_status, "getIisInterface");
-  iis = this->iis_;
+  HighsStatus return_status = this->getIisInterface();
+  if (return_status != HighsStatus::kError) iis = this->iis_;
   return return_status;
 }
 
@@ -1959,12 +1952,16 @@ HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
   HighsInt iis_num_row = this->iis_.row_index_.size();
   HighsLp& lp = this->model_.lp_;
   lp.a_matrix_.ensureColwise();
+  // Scatter the IIS rows into a full-length vector to identify IIS
+  // rows with LP rows
   std::vector<HighsInt> iis_row;
   iis_row.assign(lp.num_row_, -1);
   double bound;
+  const bool has_row_name = lp.row_names_.size() > 0;
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = this->iis_.row_index_[iisRow];
     iis_row[iRow] = iisRow;
+    if (has_row_name) iis_lp.row_names_.push_back(lp.row_names_[iRow]);
     HighsInt row_bound = this->iis_.row_bound_[iisRow];
     bound =
         row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed
@@ -1978,9 +1975,11 @@ HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
     iis_lp.row_upper_.push_back(bound);
   }
 
+  const bool has_col_name = lp.col_names_.size() > 0;
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = this->iis_.col_index_[iisCol];
     iis_lp.col_cost_.push_back(lp.col_cost_[iCol]);
+    if (has_col_name) iis_lp.col_names_.push_back(lp.col_names_[iCol]);
     HighsInt col_bound = this->iis_.col_bound_[iisCol];
     bound =
         col_bound == kIisBoundStatusLower || col_bound == kIisBoundStatusBoxed
@@ -1993,7 +1992,7 @@ HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
             : kHighsInf;
     iis_lp.col_upper_.push_back(bound);
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; iisCol++) {
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
       HighsInt iisRow = iis_row[iRow];
       if (iisRow >= 0) {
@@ -2005,6 +2004,9 @@ HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
   }
   iis_lp.num_col_ = iis_lp.col_cost_.size();
   iis_lp.num_row_ = iis_lp.row_lower_.size();
+  iis_lp.a_matrix_.num_col_ = iis_lp.num_col_;
+  iis_lp.a_matrix_.num_row_ = iis_lp.num_row_;
+  iis_lp.model_name_ = lp.model_name_ + "_IIS";
   return return_status;
 }
 

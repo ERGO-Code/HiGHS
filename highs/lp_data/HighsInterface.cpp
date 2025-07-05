@@ -2009,7 +2009,8 @@ HighsStatus Highs::getIisInterface() {
 
 HighsStatus Highs::elasticityFilterReturn(
     const HighsStatus return_status, const bool feasible_model,
-    const HighsInt original_num_col, const HighsInt original_num_row,
+    const std::string& original_model_name, const HighsInt original_num_col,
+    const HighsInt original_num_row,
     const std::vector<double>& original_col_cost,
     const std::vector<double>& original_col_lower,
     const std::vector<double> original_col_upper,
@@ -2045,7 +2046,8 @@ HighsStatus Highs::elasticityFilterReturn(
                                 original_integrality.data());
     assert(run_status == HighsStatus::kOk);
   }
-
+  // Revert the model name
+  this->passModelName(original_model_name);
   assert(lp.num_col_ == original_num_col);
   assert(lp.num_row_ == original_num_row);
 
@@ -2121,14 +2123,18 @@ HighsStatus Highs::elasticityFilter(
   HighsInt evar_ix = lp.num_col_;
   HighsStatus run_status;
   const bool write_model = false;
-  // Take copies of the original model dimensions and column data
-  // vectors, as they will be modified in forming the e-LP
+  // Take copies of the original model name, dimensions and column
+  // data vectors, as they will be modified in forming the e-LP
+  const std::string original_model_name = lp.model_name_;
   const HighsInt original_num_col = lp.num_col_;
   const HighsInt original_num_row = lp.num_row_;
   const std::vector<double> original_col_cost = lp.col_cost_;
   const std::vector<double> original_col_lower = lp.col_lower_;
   const std::vector<double> original_col_upper = lp.col_upper_;
   const std::vector<HighsVarType> original_integrality = lp.integrality_;
+  // Give the model a new name to avoid confusing logging when the
+  // elastic LP is solved
+  this->passModelName(original_model_name + "_elastic");
   // Zero the column costs
   std::vector<double> zero_costs;
   zero_costs.assign(original_num_col, 0);
@@ -2379,20 +2385,20 @@ HighsStatus Highs::elasticityFilter(
   run_status = solveLp();
 
   if (run_status != HighsStatus::kOk)
-    return elasticityFilterReturn(run_status, false, original_num_col,
-                                  original_num_row, original_col_cost,
-                                  original_col_lower, original_col_upper,
-                                  original_integrality);
+    return elasticityFilterReturn(run_status, false, original_model_name,
+                                  original_num_col, original_num_row,
+                                  original_col_cost, original_col_lower,
+                                  original_col_upper, original_integrality);
   if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
   // Model status should be optimal, unless model is unbounded
   assert(this->model_status_ == HighsModelStatus::kOptimal ||
          this->model_status_ == HighsModelStatus::kUnbounded);
 
   if (!get_infeasible_row)
-    return elasticityFilterReturn(HighsStatus::kOk, false, original_num_col,
-                                  original_num_row, original_col_cost,
-                                  original_col_lower, original_col_upper,
-                                  original_integrality);
+    return elasticityFilterReturn(HighsStatus::kOk, false, original_model_name,
+                                  original_num_col, original_num_row,
+                                  original_col_cost, original_col_lower,
+                                  original_col_upper, original_integrality);
   const HighsSolution& solution = this->getSolution();
   // Now fix e-variables that are positive and re-solve until e-LP is infeasible
   HighsInt loop_k = 0;
@@ -2444,10 +2450,10 @@ HighsStatus Highs::elasticityFilter(
     }
     HighsStatus run_status = solveLp();
     if (run_status != HighsStatus::kOk)
-      return elasticityFilterReturn(run_status, feasible_model,
-                                    original_num_col, original_num_row,
-                                    original_col_cost, original_col_lower,
-                                    original_col_upper, original_integrality);
+      return elasticityFilterReturn(
+          run_status, feasible_model, original_model_name, original_num_col,
+          original_num_row, original_col_cost, original_col_lower,
+          original_col_upper, original_integrality);
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
     if (model_status == HighsModelStatus::kInfeasible) break;
@@ -2501,10 +2507,10 @@ HighsStatus Highs::elasticityFilter(
         "rows\n",
         int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
 
-  return elasticityFilterReturn(HighsStatus::kOk, feasible_model,
-                                original_num_col, original_num_row,
-                                original_col_cost, original_col_lower,
-                                original_col_upper, original_integrality);
+  return elasticityFilterReturn(
+      HighsStatus::kOk, feasible_model, original_model_name, original_num_col,
+      original_num_row, original_col_cost, original_col_lower,
+      original_col_upper, original_integrality);
 }
 
 HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
