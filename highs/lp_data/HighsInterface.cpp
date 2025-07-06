@@ -1884,9 +1884,12 @@ HighsStatus Highs::getIisInterface() {
   }
   if (this->iis_.valid_) return HighsStatus::kOk;
   this->iis_.invalidate();
-  HighsLp& lp = model_.lp_;
+  const HighsLp& lp = model_.lp_;
   // Check for trivial IIS: empty infeasible row or inconsistent bounds
-  if (this->iis_.trivial(lp, options_)) return HighsStatus::kOk;
+  if (this->iis_.trivial(lp, options_)) {
+    this->model_status_ = HighsModelStatus::kInfeasible;
+    return HighsStatus::kOk;
+  }
   HighsInt num_row = lp.num_row_;
   if (num_row == 0) {
     // For an LP with no rows, the only scope for infeasibility is
@@ -1895,6 +1898,14 @@ HighsStatus Highs::getIisInterface() {
     this->iis_.valid_ = true;
     return HighsStatus::kOk;
   }
+  // Look for infeasible rows based on row value bounds
+  if (this->iis_.rowValueBounds(lp, options_)) {
+    this->model_status_ = HighsModelStatus::kInfeasible;
+    return HighsStatus::kOk;
+  }
+  // Don't continue with more expensive techniques if using the IIS
+  // light strategy
+  if (options_.iis_strategy == kIisStrategyLight) return HighsStatus::kOk;
   const bool ray_option = false;
   //      options_.iis_strategy == kIisStrategyFromRayRowPriority ||
   //      options_.iis_strategy == kIisStrategyFromRayColPriority;

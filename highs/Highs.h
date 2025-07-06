@@ -574,6 +574,11 @@ class Highs {
   HighsStatus getIis(HighsIis& iis);
 
   /**
+   * @brief Checks the IIS information for the incumbent model
+   */
+  HighsStatus checkIis() const;
+
+  /**
    * @brief Get an LP corresponding to (any) irreducible infeasible subsystem
    * (IIS) information for the incumbent model
    */

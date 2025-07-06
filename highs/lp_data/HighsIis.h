@@ -48,6 +48,8 @@ class HighsIis {
                       const HighsBasis* basis = nullptr);
 
   bool trivial(const HighsLp& lp, const HighsOptions& options);
+  bool rowValueBounds(const HighsLp& lp, const HighsOptions& options);
+  bool ok(const HighsLp& lp, const HighsOptions& options) const;
 
   // Data members
   bool valid_ = false;
