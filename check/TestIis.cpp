@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;  // false; //
+const bool dev_run = false;  // true;  //
 const double inf = kHighsInf;
 
 void testIis(const std::string& model, const HighsIis& iis);
@@ -133,16 +133,16 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
   lp.col_lower_ = {10, 10, 10, 10};
   lp.col_upper_ = {20, 20, 20, 20};
   lp.row_lower_ = {-inf, -10, -34};
-  lp.row_upper_ = {  30,  15, inf};
+  lp.row_upper_ = {30, 15, inf};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   lp.a_matrix_.num_col_ = lp.num_col_;
   lp.a_matrix_.num_row_ = lp.num_row_;
   lp.a_matrix_.start_ = {0, 3, 7, 10};
-  lp.a_matrix_.index_ = {  0, 1, 2,  0,  1, 2, 3,   1,    2,  3};
-  lp.a_matrix_.value_ = {1.5, 2, 1,  4, -2, 1, 2,  -2, -1.5, -1};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {1.5, 2, 1, 4, -2, 1, 2, -2, -1.5, -1};
   //
   // 1.5w + 2x + y <= 30
-  // 
+  //
   // -10 <= 4w -2x + y + 2z <= 15
   //
   // -2x -1.5y -z >= -34
@@ -157,12 +157,12 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
     for (int k = 0; k < 2; k++) {
       REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-      const bool write_model = true;
+      const bool write_model = false;
       if (dev_run && write_model) {
-	highs.writeModel("");    
-	printf("\nNow pass IIS LP to write it out\n");
-	highs.passModel(iis.lp_);
-	highs.writeModel("");
+        highs.writeModel("");
+        printf("\nNow pass IIS LP to write it out\n");
+        highs.passModel(iis.lp_);
+        highs.writeModel("");
       }
       checkIisLp(lp, iis);
 
@@ -171,9 +171,9 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
       REQUIRE(highs.checkIis() == HighsStatus::kOk);
 
       if (k == 0) {
-	// Now flip to column-wise for code coverage
-	lp.a_matrix_.ensureColwise();
-	highs.passModel(lp);
+        // Now flip to column-wise for code coverage
+        lp.a_matrix_.ensureColwise();
+        highs.passModel(lp);
       }
     }
     if (l == 0) {
@@ -184,7 +184,6 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
     highs.passModel(lp);
   }
   highs.resetGlobalScheduler(true);
-
 }
 
 TEST_CASE("lp-get-iis", "[iis]") {
@@ -211,7 +210,7 @@ TEST_CASE("lp-get-iis", "[iis]") {
   // x +  y <= -2
   //
   // x, y \in [0, inf)
-  // 
+  //
   //  lp.col_name_ = {"Col0", "Col1"};
   //  lp.row_name_ = {"Row0", "Row1", "Row2"};
   Highs highs;
@@ -561,7 +560,7 @@ void testMps(std::string& model, const HighsInt iis_strategy,
              int(num_iis_col), int(num_iis_row));
     testIis(model, iis);
 
-    const bool write_model = true;
+    const bool write_model = false;
     if (dev_run && write_model) highs.writeModel("");
     HighsLp lp = highs.getLp();
 
@@ -605,6 +604,8 @@ void checkIisLp(HighsLp& lp, const HighsIis& iis) {
   REQUIRE(iis_lp.num_col_ == iis_num_col);
   REQUIRE(iis_lp.num_row_ == iis_num_row);
 
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
   lp.a_matrix_.ensureColwise();
   std::vector<HighsInt> iis_row;
   iis_row.assign(lp.num_row_, -1);

@@ -271,11 +271,12 @@ HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
   ok = legal_num_vec && ok;
   const bool legal_matrix_start_size =
       (HighsInt)matrix_start.size() >= num_vec + 1;
-  if (!legal_matrix_start_size)
+  if (!legal_matrix_start_size) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Matrix dimension validation fails on start size = %d < %d = "
                  "num vectors + 1\n",
                  (int)matrix_start.size(), (int)(num_vec + 1));
+  }
   ok = legal_matrix_start_size && ok;
   if (partitioned) {
     const bool legal_matrix_p_end_size =
