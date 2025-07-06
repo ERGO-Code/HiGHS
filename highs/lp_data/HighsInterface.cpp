@@ -2015,6 +2015,8 @@ HighsStatus Highs::getIisInterface() {
                  int(max_iterations), min_time,
                  num_lp_solved > 0 ? sum_time / num_lp_solved : 0, max_time);
   }
+  // Construct the ISS LP
+  this->iis_.getLp(lp);
   return return_status;
 }
 

@@ -20,6 +20,7 @@ void HighsIis::invalidate() {
   this->col_bound_.clear();
   this->row_bound_.clear();
   this->info_.clear();
+  this->lp_.clear();
 }
 
 std::string HighsIis::iisBoundStatusToString(HighsInt bound_status) const {
@@ -118,6 +119,8 @@ bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
            num_iis_col + num_iis_row < 2);
     this->valid_ = true;
     this->strategy_ = options.iis_strategy;
+    // Construct the ISS LP
+    this->getLp(lp);
     return true;
   }
   // Now look for empty rows that cannot have zero activity
@@ -139,6 +142,8 @@ bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
     if (this->row_index_.size() > 0) {
       this->valid_ = true;
       this->strategy_ = options.iis_strategy;
+      // Construct the ISS LP
+      this->getLp(lp);
       return true;
     }
   }
@@ -211,7 +216,8 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
   return HighsStatus::kOk;
 }
 
-void HighsIis::getLp(const HighsLp& lp, HighsLp& iis_lp) const {
+void HighsIis::getLp(const HighsLp& lp) {
+  HighsLp& iis_lp = this->lp_;
   iis_lp.clear();
   HighsInt iis_num_col = this->col_index_.size();
   HighsInt iis_num_row = this->row_index_.size();
@@ -711,6 +717,8 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
   assert(this->col_index_.size() == this->col_bound_.size());
   assert(this->row_index_.size() == this->row_bound_.size());
   this->valid_ = true;
+  // Construct the ISS LP
+  this->getLp(lp);
   return this->valid_;
 }
 
@@ -723,8 +731,7 @@ bool HighsIis::ok(const HighsLp& lp, const HighsOptions& options) const {
   // infeasible, but the IIS contains no columns
   if (num_iis_col == 0) return true;
   const HighsLogOptions& log_options = options.log_options;
-  HighsLp iis_lp;
-  this->getLp(lp, iis_lp);
+  const HighsLp& iis_lp = this->lp_;
   Highs h;
   h.passOptions(options);
   h.setOptionValue("output_flag", false);

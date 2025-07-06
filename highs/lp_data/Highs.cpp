@@ -1953,20 +1953,6 @@ HighsStatus Highs::checkIis() const {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getIisLp(HighsLp& iis_lp) {
-  HighsStatus return_status = HighsStatus::kOk;
-
-  if (!this->iis_.valid_) {
-    return_status =
-        interpretCallStatus(options_.log_options, this->getIisInterface(),
-                            return_status, "getIisInterface");
-    if (return_status == HighsStatus::kError) return return_status;
-  }
-  this->model_.lp_.a_matrix_.ensureColwise();
-  this->iis_.getLp(this->model_.lp_, iis_lp);
-  return HighsStatus::kOk;
-}
-
 HighsStatus Highs::getDualObjectiveValue(
     double& dual_objective_function_value) const {
   bool have_dual_objective_value = computeDualObjectiveValue(

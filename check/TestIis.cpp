@@ -19,7 +19,7 @@ void testFeasibilityRelaxation(
     const double rhs_penalty,
     const double require_feasibility_objective_function_value);
 
-void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp);
+void checkIisLp(HighsLp& lp, const HighsIis& iis);
 
 TEST_CASE("lp-incompatible-bounds", "[iis]") {
   // LP has row0 and col2 with inconsistent bounds.
@@ -46,11 +46,9 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   highs.passModel(lp);
   // Perform the light IIS check
   highs.setOptionValue("iis_strategy", kIisStrategyLight);
-  HighsLp iis_lp;
-  REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
-  checkIisLp(lp, iis, iis_lp);
+  checkIisLp(lp, iis);
 
   highs.passModel(lp);
   highs.getIis(iis);
@@ -117,10 +115,7 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   REQUIRE(iis.row_index_[0] == empty_row);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusUpper);
 
-  HighsLp iis_lp;
-  REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
-
-  checkIisLp(lp, iis, iis_lp);
+  checkIisLp(lp, iis);
 
   highs.passModel(lp);
   highs.getIis(iis);
@@ -157,21 +152,19 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
   highs.passModel(lp);
   highs.setOptionValue("iis_strategy", kIisStrategyLight);
   HighsIis iis;
-  HighsLp iis_lp;
 
   for (int l = 0; l < 3; l++) {
     for (int k = 0; k < 2; k++) {
       REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-      REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
       const bool write_model = true;
       if (dev_run && write_model) {
 	highs.writeModel("");    
 	printf("\nNow pass IIS LP to write it out\n");
-	highs.passModel(iis_lp);
+	highs.passModel(iis.lp_);
 	highs.writeModel("");
       }
-      checkIisLp(lp, iis, iis_lp);
+      checkIisLp(lp, iis);
 
       highs.passModel(lp);
       highs.getIis(iis);
@@ -235,9 +228,7 @@ TEST_CASE("lp-get-iis", "[iis]") {
   REQUIRE(iis.col_index_[1] == 1);
   REQUIRE(iis.row_index_[0] == 2);
 
-  HighsLp iis_lp;
-  REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
-  checkIisLp(lp, iis, iis_lp);
+  checkIisLp(lp, iis);
 
   highs.passModel(lp);
   highs.getIis(iis);
@@ -570,20 +561,17 @@ void testMps(std::string& model, const HighsInt iis_strategy,
              int(num_iis_col), int(num_iis_row));
     testIis(model, iis);
 
-    HighsLp iis_lp;
-    REQUIRE(highs.getIisLp(iis_lp) == HighsStatus::kOk);
-
     const bool write_model = true;
     if (dev_run && write_model) highs.writeModel("");
     HighsLp lp = highs.getLp();
 
     if (dev_run && write_model) {
       printf("\nNow pass IIS LP to write it out\n");
-      highs.passModel(iis_lp);
+      highs.passModel(iis.lp_);
       highs.writeModel("");
     }
 
-    checkIisLp(lp, iis, iis_lp);
+    checkIisLp(lp, iis);
 
     highs.passModel(lp);
     highs.getIis(iis);
@@ -610,7 +598,8 @@ void testFeasibilityRelaxation(
           require_feasibility_objective_function_value);
 }
 
-void checkIisLp(HighsLp& lp, const HighsIis& iis, const HighsLp& iis_lp) {
+void checkIisLp(HighsLp& lp, const HighsIis& iis) {
+  const HighsLp& iis_lp = iis.lp_;
   HighsInt iis_num_col = iis.col_index_.size();
   HighsInt iis_num_row = iis.row_index_.size();
   REQUIRE(iis_lp.num_col_ == iis_num_col);

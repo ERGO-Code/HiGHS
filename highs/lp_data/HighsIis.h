@@ -43,7 +43,7 @@ class HighsIis {
   HighsStatus getData(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis& basis,
                       const std::vector<HighsInt>& infeasible_row);
-  void getLp(const HighsLp& lp, HighsLp& iis_lp) const;
+  void getLp(const HighsLp& lp);
 
   HighsStatus compute(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis* basis = nullptr);
@@ -60,6 +60,7 @@ class HighsIis {
   std::vector<HighsInt> col_bound_;
   std::vector<HighsInt> row_bound_;
   std::vector<HighsIisInfo> info_;
+  HighsLp lp_;
 };
 
 #endif  // LP_DATA_HIGHSIIS_H_
