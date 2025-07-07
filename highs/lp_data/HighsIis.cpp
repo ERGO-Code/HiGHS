@@ -284,9 +284,9 @@ void HighsIis::getStatus(const HighsLp& lp) {
   this->row_status_.assign(lp.num_row_, kIisStatusNotInConflict);
   HighsInt iis_num_col = this->col_index_.size();
   HighsInt iis_num_row = this->row_index_.size();
-  for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) 
+  for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++)
     this->col_status_[this->col_index_[iisCol]] = kIisStatusInConflict;
-  for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) 
+  for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++)
     this->row_status_[this->row_index_[iisRow]] = kIisStatusInConflict;
 }
 

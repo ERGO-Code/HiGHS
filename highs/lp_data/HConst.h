@@ -281,8 +281,8 @@ enum IisStrategy : int {
 enum IisStatus {
   kIisStatusMin = 0,
   kIisStatusInConflict = kIisStatusMin,  // 0
-  kIisStatusNotInConflict,  // 1
-  kIisStatusMaybeInConflict,  // 2
+  kIisStatusNotInConflict,               // 1
+  kIisStatusMaybeInConflict,             // 2
   kIisStatusMax = kIisStatusMaybeInConflict
 };
 

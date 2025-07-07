@@ -1869,7 +1869,7 @@ HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status) {
     // Construct the ISS status vectors
     this->iis_.getStatus(model_.lp_);
   }
-  return return_status;  
+  return return_status;
 }
 
 HighsStatus Highs::getIisInterface() {
@@ -1915,7 +1915,8 @@ HighsStatus Highs::getIisInterface() {
   }
   // Don't continue with more expensive techniques if using the IIS
   // light strategy
-  if (options_.iis_strategy == kIisStrategyLight) return this->getIisInterfaceReturn(HighsStatus::kOk);
+  if (options_.iis_strategy == kIisStrategyLight)
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
   const bool ray_option = false;
   //      options_.iis_strategy == kIisStrategyFromRayRowPriority ||
   //      options_.iis_strategy == kIisStrategyFromRayColPriority;
