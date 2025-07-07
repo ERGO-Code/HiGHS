@@ -544,6 +544,10 @@ double HPresolve::getMaxAbsRowVal(HighsInt row) const {
 bool HPresolve::checkUpdateRowDualImpliedBounds(HighsInt col,
                                                 double* dualRowLower,
                                                 double* dualRowUpper) const {
+  // check if implied bounds of row duals in given column can be updated (i.e.
+  // dual row has finite bounds and number of infinite contributions to
+  // corresponding activity bounds is at most one)
+
   // if the column has an infinite lower bound the reduced cost cannot be
   // positive, i.e. the column corresponds to a <= constraint in the dual with
   // right hand side -cost which becomes a >= constraint with side +cost.
@@ -571,11 +575,6 @@ bool HPresolve::checkUpdateRowDualImpliedBounds(HighsInt col,
 void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
                                            double val) {
   // propagate implied row dual bound
-  // if the column has an infinite lower bound the reduced cost cannot be
-  // positive, i.e. the column corresponds to a <= constraint in the dual with
-  // right hand side -cost which becomes a >= constraint with side +cost.
-  // Furthermore, we can ignore strictly redundant primal
-  // column bounds and treat them as if they are infinite
   double dualRowLower, dualRowUpper;
   if (!checkUpdateRowDualImpliedBounds(col, &dualRowLower, &dualRowUpper))
     return;
@@ -627,6 +626,9 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt col) {
 
 bool HPresolve::checkUpdateColImpliedBounds(HighsInt row, double* rowLower,
                                             double* rowUpper) const {
+  // check if implied bounds of columns in given row can be updated (i.e. if
+  // row's left-hand or right-hand side is finite and number of infinite
+  // contributions to corresponding activity bounds is at most one)
   double myRowLower = isImpliedEquationAtUpper(row) ? model->row_upper_[row]
                                                     : model->row_lower_[row];
   double myRowUpper = isImpliedEquationAtLower(row) ? model->row_lower_[row]
