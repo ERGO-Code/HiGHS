@@ -1019,7 +1019,7 @@ bool HighsLpRelaxation::checkDualProof() const {
 bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
                                             std::vector<HighsInt>& inds,
                                             std::vector<double>& vals,
-                                            double& rhs) {
+                                            double& rhs) const {
   if (!hasdualproof) return false;
 
   assert(std::isfinite(dualproofrhs));
