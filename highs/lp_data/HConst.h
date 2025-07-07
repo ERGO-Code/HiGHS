@@ -268,7 +268,7 @@ enum PresolveRuleType : int {
   kPresolveRuleCount,
 };
 
-enum IisStrategy {
+enum IisStrategy : int {
   kIisStrategyMin = 0,
   kIisStrategyLight = kIisStrategyMin,  // 0
   kIisStrategyFromLpRowPriority,        // 1
@@ -276,6 +276,14 @@ enum IisStrategy {
   //  kIisStrategyFromRayRowPriority,                     // 3
   //  kIisStrategyFromRayColPriority,                     // 4
   kIisStrategyMax = kIisStrategyFromLpColPriority
+};
+
+enum IisStatus {
+  kIisStatusMin = 0,
+  kIisStatusInConflict = kIisStatusMin,  // 0
+  kIisStatusNotInConflict,  // 1
+  kIisStatusMaybeInConflict,  // 2
+  kIisStatusMax = kIisStatusMaybeInConflict
 };
 
 // Default KKT tolerance

@@ -1679,6 +1679,14 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kDevex", EdgeWeightMode::kDevex)
       .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
       .value("kCount", EdgeWeightMode::kCount);
+  
+  py::module_ iis = m.def_submodule("iis", "IIS interface submodule");
+  py::enum_<HighsIisStatus>(iis, "HighsIisStatus",
+			    py::module_local())
+    .value("kIisStatusInConflict", HighsIisStatus::kIisStatusInConflict)
+    .value("kIisStatusNotInConflict", HighsIisStatus::kIisStatusNotInConflict)
+    .value("kIisStatusMaybeInConflict", HighsIisStatus::kIisStatusMaybeInConflict);
+  
   py::module_ callbacks = m.def_submodule("cb", "Callback interface submodule");
   // Types for interface
   py::enum_<HighsCallbackType>(callbacks, "HighsCallbackType",

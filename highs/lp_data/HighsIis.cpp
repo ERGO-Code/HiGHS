@@ -20,6 +20,8 @@ void HighsIis::invalidate() {
   this->row_index_.clear();
   this->col_bound_.clear();
   this->row_bound_.clear();
+  this->col_status_.clear();
+  this->row_status_.clear();
   this->info_.clear();
   this->lp_.clear();
 }
@@ -120,8 +122,6 @@ bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
            num_iis_col + num_iis_row < 2);
     this->valid_ = true;
     this->strategy_ = options.iis_strategy;
-    // Construct the ISS LP
-    this->getLp(lp);
     return true;
   }
   // Now look for empty rows that cannot have zero activity
@@ -143,8 +143,6 @@ bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
     if (this->row_index_.size() > 0) {
       this->valid_ = true;
       this->strategy_ = options.iis_strategy;
-      // Construct the ISS LP
-      this->getLp(lp);
       return true;
     }
   }
@@ -278,6 +276,18 @@ void HighsIis::getLp(const HighsLp& lp) {
   iis_lp.a_matrix_.num_col_ = iis_lp.num_col_;
   iis_lp.a_matrix_.num_row_ = iis_lp.num_row_;
   iis_lp.model_name_ = lp.model_name_ + "_IIS";
+}
+
+void HighsIis::getStatus(const HighsLp& lp) {
+  if (!this->valid_) return;
+  this->col_status_.assign(lp.num_col_, kIisStatusNotInConflict);
+  this->row_status_.assign(lp.num_row_, kIisStatusNotInConflict);
+  HighsInt iis_num_col = this->col_index_.size();
+  HighsInt iis_num_row = this->row_index_.size();
+  for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) 
+    this->col_status_[this->col_index_[iisCol]] = kIisStatusInConflict;
+  for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) 
+    this->row_status_[this->row_index_[iisRow]] = kIisStatusInConflict;
 }
 
 HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,

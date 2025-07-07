@@ -1862,6 +1862,16 @@ HighsStatus Highs::getRangingInterface() {
   return getRangingData(this->ranging_, solver_object);
 }
 
+HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status) {
+  if (return_status != HighsStatus::kError) {
+    // Construct the ISS LP
+    this->iis_.getLp(model_.lp_);
+    // Construct the ISS status vectors
+    this->iis_.getStatus(model_.lp_);
+  }
+  return return_status;  
+}
+
 HighsStatus Highs::getIisInterface() {
   if (this->model_status_ == HighsModelStatus::kOptimal ||
       this->model_status_ == HighsModelStatus::kUnbounded) {
@@ -1872,7 +1882,7 @@ HighsStatus Highs::getIisInterface() {
     this->iis_.invalidate();
     // No IIS exists, so validate the empty HighsIis instance
     this->iis_.valid_ = true;
-    return HighsStatus::kOk;
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
   }
   HighsStatus return_status = HighsStatus::kOk;
   if (this->model_status_ != HighsModelStatus::kNotset &&
@@ -1882,13 +1892,13 @@ HighsStatus Highs::getIisInterface() {
                  "Calling Highs::getIis for a model with status %s\n",
                  this->modelStatusToString(this->model_status_).c_str());
   }
-  if (this->iis_.valid_) return HighsStatus::kOk;
+  if (this->iis_.valid_) return this->getIisInterfaceReturn(HighsStatus::kOk);
   this->iis_.invalidate();
   const HighsLp& lp = model_.lp_;
   // Check for trivial IIS: empty infeasible row or inconsistent bounds
   if (this->iis_.trivial(lp, options_)) {
     this->model_status_ = HighsModelStatus::kInfeasible;
-    return HighsStatus::kOk;
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
   }
   HighsInt num_row = lp.num_row_;
   if (num_row == 0) {
@@ -1896,16 +1906,16 @@ HighsStatus Highs::getIisInterface() {
     // inconsistent columns bounds - which has already been assessed,
     // so validate the empty HighsIis instance
     this->iis_.valid_ = true;
-    return HighsStatus::kOk;
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
   }
   // Look for infeasible rows based on row value bounds
   if (this->iis_.rowValueBounds(lp, options_)) {
     this->model_status_ = HighsModelStatus::kInfeasible;
-    return HighsStatus::kOk;
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
   }
   // Don't continue with more expensive techniques if using the IIS
   // light strategy
-  if (options_.iis_strategy == kIisStrategyLight) return HighsStatus::kOk;
+  if (options_.iis_strategy == kIisStrategyLight) return this->getIisInterfaceReturn(HighsStatus::kOk);
   const bool ray_option = false;
   //      options_.iis_strategy == kIisStrategyFromRayRowPriority ||
   //      options_.iis_strategy == kIisStrategyFromRayColPriority;
@@ -2015,9 +2025,7 @@ HighsStatus Highs::getIisInterface() {
                  int(max_iterations), min_time,
                  num_lp_solved > 0 ? sum_time / num_lp_solved : 0, max_time);
   }
-  // Construct the ISS LP
-  this->iis_.getLp(lp);
-  return return_status;
+  return this->getIisInterfaceReturn(return_status);
 }
 
 HighsStatus Highs::elasticityFilterReturn(

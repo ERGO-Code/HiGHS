@@ -1662,6 +1662,7 @@ class Highs {
   HighsStatus getRangingInterface();
 
   HighsStatus getIisInterface();
+  HighsStatus getIisInterfaceReturn(const HighsStatus return_status);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const bool feasible_model,

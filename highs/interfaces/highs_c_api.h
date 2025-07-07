@@ -133,6 +133,14 @@ const char* const kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
 const char* const kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
 const char* const kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
 
+const HighsInt kHighsIisStrategyLight = 0;
+// const HighsInt kHighsIisStrategyFromLpRowPriority = 1; // WIP
+// const HighsInt kHighsIisStrategyFromLpColPriority = 2; // WIP
+
+const HighsInt kHighsIisStatusInConflict = 0;
+const HighsInt kHighsIisStatusNotInConflict = 1;
+const HighsInt kHighsIisStatusMaybeInConflict = 2;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
