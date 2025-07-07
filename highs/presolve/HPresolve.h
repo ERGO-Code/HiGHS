@@ -218,7 +218,11 @@ class HPresolve {
 
   bool isLowerImplied(HighsInt col) const;
 
+  bool isLowerStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
+
   bool isUpperImplied(HighsInt col) const;
+
+  bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
   HighsInt countFillin(HighsInt row);
 

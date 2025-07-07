@@ -184,9 +184,23 @@ bool HPresolve::isLowerImplied(HighsInt col) const {
           implColLower[col] >= model->col_lower_[col] - primal_feastol);
 }
 
+bool HPresolve::isLowerStrictlyImplied(HighsInt col, double* tolerance) const {
+  return (model->col_lower_[col] == -kHighsInf ||
+          implColLower[col] >
+              model->col_lower_[col] +
+                  (tolerance != nullptr ? *tolerance : primal_feastol));
+}
+
 bool HPresolve::isUpperImplied(HighsInt col) const {
   return (model->col_upper_[col] == kHighsInf ||
           implColUpper[col] <= model->col_upper_[col] + primal_feastol);
+}
+
+bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
+  return (model->col_upper_[col] == kHighsInf ||
+          implColUpper[col] <
+              model->col_upper_[col] -
+                  (tolerance != nullptr ? *tolerance : primal_feastol));
 }
 
 bool HPresolve::isImpliedFree(HighsInt col) const {
@@ -537,17 +551,13 @@ bool HPresolve::checkUpdateRowDualImpliedBounds(HighsInt col,
   // column bounds and treat them as if they are infinite
   double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
 
-  double myDualRowLower =
-      (model->col_lower_[col] == -kHighsInf) ||
-              (implColLower[col] > model->col_lower_[col] + impliedMargin)
-          ? model->col_cost_[col]
-          : -kHighsInf;
+  double myDualRowLower = isLowerStrictlyImplied(col, &impliedMargin)
+                              ? model->col_cost_[col]
+                              : -kHighsInf;
 
-  double myDualRowUpper =
-      (model->col_upper_[col] == kHighsInf) ||
-              (implColUpper[col] < model->col_upper_[col] - impliedMargin)
-          ? model->col_cost_[col]
-          : kHighsInf;
+  double myDualRowUpper = isUpperStrictlyImplied(col, &impliedMargin)
+                              ? model->col_cost_[col]
+                              : kHighsInf;
 
   if (dualRowLower != nullptr) *dualRowLower = myDualRowLower;
   if (dualRowUpper != nullptr) *dualRowUpper = myDualRowUpper;
@@ -5812,14 +5822,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // compensating column is integral
       bool checkColImplBounds = true;
       bool checkDuplicateColImplBounds = true;
-      auto isLowerStrictlyImplied = [&](HighsInt col) {
-        return (model->col_lower_[col] == -kHighsInf ||
-                implColLower[col] > model->col_lower_[col] + primal_feastol);
-      };
-      auto isUpperStrictlyImplied = [&](HighsInt col) {
-        return (model->col_upper_[col] == kHighsInf ||
-                implColUpper[col] < model->col_upper_[col] - primal_feastol);
-      };
       auto colUpperInf = [&]() {
         if (!checkColImplBounds) return false;
         if (mipsolver == nullptr) {
