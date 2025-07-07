@@ -104,8 +104,8 @@ class HighsDomain {
     void pushQueue(std::set<LocalDomChg>::iterator domchgPos);
     std::set<LocalDomChg>::iterator popQueue();
     void clearQueue();
-    HighsInt queueSize();
-    bool resolvable(HighsInt domChgPos);
+    HighsInt queueSize() const;
+    bool resolvable(HighsInt domChgPos) const;
 
     HighsInt resolveDepth(std::set<LocalDomChg>& frontier, HighsInt depthLevel,
                           HighsInt stopSize, HighsInt minResolve = 0,
@@ -317,10 +317,10 @@ class HighsDomain {
   void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
 
   void updateThresholdLbChange(HighsInt col, double newbound, double val,
-                               double& threshold);
+                               double& threshold) const;
 
   void updateThresholdUbChange(HighsInt col, double newbound, double val,
-                               double& threshold);
+                               double& threshold) const;
 
   void recomputeCapacityThreshold(HighsInt row);
 
@@ -407,11 +407,11 @@ class HighsDomain {
 
   void computeMinActivity(HighsInt start, HighsInt end, const HighsInt* ARindex,
                           const double* ARvalue, HighsInt& ninfmin,
-                          HighsCDouble& activitymin);
+                          HighsCDouble& activitymin) const;
 
   void computeMaxActivity(HighsInt start, HighsInt end, const HighsInt* ARindex,
                           const double* ARvalue, HighsInt& ninfmax,
-                          HighsCDouble& activitymax);
+                          HighsCDouble& activitymax) const;
 
   double adjustedUb(HighsInt col, HighsCDouble boundVal, bool& accept) const;
 
@@ -420,12 +420,12 @@ class HighsDomain {
   HighsInt propagateRowUpper(const HighsInt* Rindex, const double* Rvalue,
                              HighsInt Rlen, double Rupper,
                              const HighsCDouble& minactivity, HighsInt ninfmin,
-                             HighsDomainChange* boundchgs);
+                             HighsDomainChange* boundchgs) const;
 
   HighsInt propagateRowLower(const HighsInt* Rindex, const double* Rvalue,
                              HighsInt Rlen, double Rlower,
                              const HighsCDouble& maxactivity, HighsInt ninfmax,
-                             HighsDomainChange* boundchgs);
+                             HighsDomainChange* boundchgs) const;
 
   const std::vector<HighsInt>& getChangedCols() const { return changedcols_; }
 
