@@ -3329,6 +3329,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       // equation
       double impliedRowLower = impliedRowBounds.getSumLower(row);
       double impliedRowUpper = impliedRowBounds.getSumUpper(row);
+      // see section 3.6 "Simple probing on a single equation", Achterberg et
+      // al., Presolve Reductions in Mixed Integer Programming, INFORMS Journal
+      // on Computing 32(2):473-506.
       if (impliedRowLower != -kHighsInf && impliedRowUpper != kHighsInf &&
           std::abs(impliedRowLower + impliedRowUpper - 2 * rowUpper) <=
               options->small_matrix_value) {
