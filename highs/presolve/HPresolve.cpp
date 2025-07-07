@@ -555,7 +555,7 @@ bool HPresolve::checkUpdateRowDualImpliedBounds(HighsInt col,
   return (myDualRowLower != -kHighsInf &&
           impliedDualRowBounds.getNumInfSumUpperOrig(col) <= 1) ||
          (myDualRowUpper != kHighsInf &&
-          impliedRowBounds.getNumInfSumLowerOrig(col) <= 1);
+          impliedDualRowBounds.getNumInfSumLowerOrig(col) <= 1);
 }
 
 void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
