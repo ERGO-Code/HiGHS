@@ -179,11 +179,15 @@ class HPresolve {
 
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
+  void updateColImpliedBounds(HighsInt row);
+
   bool checkUpdateRowDualImpliedBounds(HighsInt col,
                                        double* dualRowLower = nullptr,
                                        double* dualRowUpper = nullptr) const;
 
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
+
+  void updateRowDualImpliedBounds(HighsInt col);
 
   void resetColImpliedBounds(HighsInt col, HighsInt row = -1);
 

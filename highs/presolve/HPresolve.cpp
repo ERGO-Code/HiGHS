@@ -616,6 +616,15 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
         HighsInt{-1});
 }
 
+void HPresolve::updateRowDualImpliedBounds(HighsInt col) {
+  // update dual implied bounds of all rows in given column
+  assert(col >= 0 && col < model->num_col_);
+  if (checkUpdateRowDualImpliedBounds(col)) {
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col))
+      updateRowDualImpliedBounds(nonzero.index(), col, nonzero.value());
+  }
+}
+
 bool HPresolve::checkUpdateColImpliedBounds(HighsInt row, double* rowLower,
                                             double* rowUpper) const {
   double myRowLower = isImpliedEquationAtUpper(row) ? model->row_upper_[row]
@@ -710,6 +719,15 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
     checkImpliedBound(row, col, val, rowLower,
                       impliedRowBounds.getResidualSumUpperOrig(row, col, val),
                       HighsInt{-1});
+}
+
+void HPresolve::updateColImpliedBounds(HighsInt row) {
+  // update implied bounds of all columns in given row
+  assert(row >= 0 && row < model->num_row_);
+  if (checkUpdateColImpliedBounds(row)) {
+    for (const HighsSliceNonzero& nonzero : getRowVector(row))
+      updateColImpliedBounds(row, nonzero.index(), nonzero.value());
+  }
 }
 
 void HPresolve::resetColImpliedBounds(HighsInt col, HighsInt row) {
@@ -3999,12 +4017,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     if (rowDeleted[row]) return Result::kOk;
   }
 
-  // implied bounds can only be computed when row bounds are available and
-  // bounds on activity contain at most one infinite bound
-  if (checkUpdateColImpliedBounds(row)) {
-    for (const HighsSliceNonzero& nonzero : getRowVector(row))
-      updateColImpliedBounds(row, nonzero.index(), nonzero.value());
-  }
+  // update implied bounds of all columns in given row
+  updateColImpliedBounds(row);
 
   return checkLimits(postsolve_stack);
 }
@@ -4139,11 +4153,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     if (model->integrality_[col] == HighsVarType::kInteger) return Result::kOk;
   }
 
-  // now check if we can expect to tighten at least one bound
-  if (checkUpdateRowDualImpliedBounds(col)) {
-    for (const HighsSliceNonzero& nonzero : getColumnVector(col))
-      updateRowDualImpliedBounds(nonzero.index(), col, nonzero.value());
-  }
+  // update dual implied bounds of all rows in given column
+  updateRowDualImpliedBounds(col);
 
   return Result::kOk;
 }
