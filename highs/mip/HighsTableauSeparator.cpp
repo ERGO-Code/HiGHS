@@ -186,6 +186,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   pdqsort_branchless(fractionalBasisvars.begin(), fractionalBasisvars.end());
   double bestScore = -1.0;
 
+  HighsLpAggregator lpMultiAggregator = lpAggregator;
   HighsInt numCuts = cutpool.getNumCuts();
   const double bestScoreFac[] = {0.0025, 0.01};
 
@@ -197,45 +198,59 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       break;
 
     assert(lpAggregator.isEmpty());
-    for (std::pair<HighsInt, double> rowWeight : fracvar.row_ep)
+    for (std::pair<HighsInt, double> rowWeight : fracvar.row_ep) {
       lpAggregator.addRow(rowWeight.first, rowWeight.second);
-
-    lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
-
-    if (10 * (baseRowInds.size() - fracvar.row_ep.size()) >
-        10000 + static_cast<size_t>(mip.numCol())) {
-      lpAggregator.clear();
-      continue;
+      lpMultiAggregator.addRow(rowWeight.first, rowWeight.second);
     }
 
-    HighsInt len = baseRowInds.size();
-    if (len > (HighsInt)fracvar.row_ep.size()) {
-      double maxAbsVal = 0.0;
-      double minAbsVal = kHighsInf;
-      for (HighsInt i = 0; i < len; ++i) {
-        if (baseRowInds[i] < mip.numCol()) {
-          maxAbsVal = std::max(std::abs(baseRowVals[i]), maxAbsVal);
-          minAbsVal = std::min(std::abs(baseRowVals[i]), minAbsVal);
+    auto generateTableauCut = [&](HighsLpAggregator& aggregator) {
+      aggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
+
+      if (10 * (baseRowInds.size() - fracvar.row_ep.size()) >
+          10000 + static_cast<size_t>(mip.numCol())) {
+        aggregator.clear();
+        return false;
+          }
+
+      HighsInt len = baseRowInds.size();
+      if (len > (HighsInt)fracvar.row_ep.size()) {
+        double maxAbsVal = 0.0;
+        double minAbsVal = kHighsInf;
+        for (HighsInt i = 0; i < len; ++i) {
+          if (baseRowInds[i] < mip.numCol()) {
+            maxAbsVal = std::max(std::abs(baseRowVals[i]), maxAbsVal);
+            minAbsVal = std::min(std::abs(baseRowVals[i]), minAbsVal);
+          }
+        }
+        if (maxAbsVal / minAbsVal > 1e6) {
+          aggregator.clear();
+          return false;
         }
       }
-      if (maxAbsVal / minAbsVal > 1e6) {
-        lpAggregator.clear();
-        continue;
-      }
+
+      mip.mipdata_->debugSolution.checkRowAggregation(
+          lpSolver.getLp(), baseRowInds.data(), baseRowVals.data(),
+          baseRowInds.size());
+
+      double rhs = 0;
+      cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+      if (mip.mipdata_->domain.infeasible()) return true;
+
+      aggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
+      rhs = 0;
+      cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+      if (mip.mipdata_->domain.infeasible()) return true;
+      return false;
+    };
+
+    bool infeasible = generateTableauCut(lpAggregator);
+    if (infeasible) break;
+
+    if (bestScore != -1.0 || cutpool.getNumCuts() != numCuts) {
+      infeasible = generateTableauCut(lpMultiAggregator);
+      if (infeasible) break;
+      lpAggregator.swap(lpMultiAggregator);
     }
-
-    mip.mipdata_->debugSolution.checkRowAggregation(
-        lpSolver.getLp(), baseRowInds.data(), baseRowVals.data(),
-        baseRowInds.size());
-
-    double rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
-    if (mip.mipdata_->domain.infeasible()) break;
-
-    lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
-    rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
-    if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.clear();
     if (bestScore == -1.0 && cutpool.getNumCuts() != numCuts)

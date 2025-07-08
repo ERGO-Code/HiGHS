@@ -43,6 +43,13 @@ class HighsLpAggregator {
   /// clear the current aggregation
   void clear();
 
+  /// swaps data with another lpAggregator
+  void swap(HighsLpAggregator& lpAggregator) noexcept {
+    std::swap(this->vectorsum.values, lpAggregator.vectorsum.values);
+    std::swap(this->vectorsum.nonzeroinds,
+      lpAggregator.vectorsum.nonzeroinds);
+  }
+
   /// checks whether the current aggregation is empty
   bool isEmpty() { return vectorsum.nonzeroinds.empty(); }
 };
