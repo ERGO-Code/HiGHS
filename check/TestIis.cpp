@@ -6,6 +6,8 @@
 #include "catch.hpp"
 
 const bool dev_run = false;  // true;  //
+const bool write_model = false;
+
 const double inf = kHighsInf;
 
 void testMps(std::string& model, const HighsInt iis_strategy,
@@ -43,6 +45,7 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   // Perform the default (light) IIS check
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
   // Perform full IIS
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -83,12 +86,15 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  // Get IIS for empty row with positive lower bound
   HighsIis iis;
+  // Get IIS for empty row with positive lower bound
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  if (dev_run && write_model) {
+    highs.writeModel("");
+    highs.writeIisModel("");
+  }
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
@@ -102,9 +108,8 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
           HighsStatus::kOk);
   lp.row_lower_[empty_row] = new_lower;
   lp.row_upper_[empty_row] = new_upper;
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
@@ -130,6 +135,9 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
   lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 1, 2, 3};
   lp.a_matrix_.value_ = {1.5, 2, 1, 4, -2, 1, 2, -2, -1.5, -1};
   //
+  // Each of the three constraints constitutes an IIS. Find each by
+  // freeing the upper bounds in turn.
+  //
   // 1.5w + 2x + y <= 30
   //
   // -10 <= 4w -2x + y + 2z <= 15
@@ -141,23 +149,23 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
   highs.passModel(lp);
   HighsIis iis;
 
-  const bool write_model = false;
-
   for (int l = 0; l < 3; l++) {
     for (int k = 0; k < 2; k++) {
-      if (dev_run && write_model) {
-        highs.writeModel("");
-        highs.setOptionValue("write_iis_model", true);
-      }
       REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-
+      if (dev_run && write_model) {
+        highs.writeModel("");
+	highs.writeIisModel("");
+	highs.writeIisModel(lp.model_name_ + ".lp");
+      }
       if (k == 0) {
         // Now flip to column-wise for code coverage
         lp.a_matrix_.ensureColwise();
         highs.passModel(lp);
       }
     }
+    // Prevent the first and then the second constraints from being an
+    // IIS
     if (l == 0) {
       lp.row_upper_[0] = inf;
     } else if (l == 1) {
@@ -198,11 +206,9 @@ TEST_CASE("lp-get-iis", "[iis]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-  highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   REQUIRE(iis.col_index_.size() == 2);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.col_index_[0] == 0);
@@ -400,13 +406,12 @@ void testMps(std::string& model, const HighsInt iis_strategy,
   //    REQUIRE(highs.run() == HighsStatus::kOk);
   //  }
   highs.setOptionValue("iis_strategy", iis_strategy);
-  const bool write_model = false;
-  if (dev_run && write_model) {
-    highs.writeModel("");
-    highs.setOptionValue("write_iis_model", true);
-  }
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  if (dev_run && write_model) {
+    highs.writeModel("");
+    highs.writeIisModel("");
+  }
   HighsInt num_iis_col = iis.col_index_.size();
   HighsInt num_iis_row = iis.row_index_.size();
   HighsModelStatus model_status = highs.getModelStatus();

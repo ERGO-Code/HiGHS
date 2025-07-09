@@ -11,7 +11,7 @@
 #ifndef LP_DATA_HIGHSIIS_H_
 #define LP_DATA_HIGHSIIS_H_
 
-#include "lp_data/HighsLp.h"
+#include "model/HighsModel.h"
 
 const bool kIisDevReport = false;
 
@@ -65,7 +65,7 @@ class HighsIis {
   std::vector<HighsInt> col_status_;
   std::vector<HighsInt> row_status_;
   std::vector<HighsIisInfo> info_;
-  HighsLp lp_;
+  HighsModel model_;
 };
 
 #endif  // LP_DATA_HIGHSIIS_H_

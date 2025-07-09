@@ -850,6 +850,11 @@ class Highs {
   HighsStatus writePresolvedModel(const std::string& filename = "");
 
   /**
+   * @brief Write out the IIS model to a file
+   */
+  HighsStatus writeIisModel(const std::string& filename = "");
+
+  /**
    * @brief Write out the given model to a file
    */
   HighsStatus writeLocalModel(HighsModel& model,

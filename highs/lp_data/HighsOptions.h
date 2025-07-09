@@ -335,11 +335,6 @@ struct HighsOptionsStruct {
   bool write_model_to_file;
   bool write_presolved_model_to_file;
   bool write_solution_to_file;
-  // Replace with the following
-  //  bool write_model;
-  //  bool write_presolved_model;
-  //  bool write_iis_model;
-  //  bool write_solution;
 
   HighsInt write_solution_style;
   HighsInt glpsol_cost_row_location;
@@ -511,10 +506,6 @@ struct HighsOptionsStruct {
         write_model_to_file(false),
         write_presolved_model_to_file(false),
         write_solution_to_file(false),
-        //        write_model(false),
-        //        write_presolved_model(false),
-        //        write_iis_model(false),
-        //        write_solution(false),
         write_solution_style(0),
         glpsol_cost_row_location(0),
         write_presolved_model_file(""),
@@ -1019,29 +1010,6 @@ class HighsOptions : public HighsOptionsStruct {
         kWritePresolvedModelFileString, "Write presolved model file", advanced,
         &write_presolved_model_file, kHighsFilenameDefault);
     records.push_back(record_string);
-
-    /*
-    record_bool = new OptionRecordBool(
-        "write_presolved_model", "Write out the presolved model",
-        advanced, &write_presolved_model, false);
-    records.push_back(record_bool);
-
-    record_bool = new OptionRecordBool(
-        "write_presolved_model", "Write out the presolved model",
-        advanced, &write_presolved_model, false);
-    records.push_back(record_bool);
-
-    record_bool = new OptionRecordBool(
-        "write_iis_model", "Write out the IIS model",
-        advanced, &write_iis_model, false);
-    records.push_back(record_bool);
-
-    record_bool =
-        new OptionRecordBool("write_solution", "Write out the solution",
-                             advanced, &write_solution, false);
-    records.push_back(record_bool);
-
-    */
 
     record_string = new OptionRecordString(
         kWriteIisModelFileString, "Write IIS model file", advanced,

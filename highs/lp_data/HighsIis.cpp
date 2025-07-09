@@ -21,7 +21,7 @@ void HighsIis::invalidate() {
   this->col_status_.clear();
   this->row_status_.clear();
   this->info_.clear();
-  this->lp_.clear();
+  this->model_.clear();
 }
 
 std::string HighsIis::iisBoundStatusToString(HighsInt bound_status) const {
@@ -344,7 +344,7 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
 }
 
 void HighsIis::getLp(const HighsLp& lp) {
-  HighsLp& iis_lp = this->lp_;
+  HighsLp& iis_lp = this->model_.lp_;
   iis_lp.clear();
   HighsInt iis_num_col = this->col_index_.size();
   HighsInt iis_num_row = this->row_index_.size();
@@ -753,7 +753,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 }
 
 bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
-  const HighsLp& iis_lp = this->lp_;
+  const HighsLp& iis_lp = this->model_.lp_;
   HighsInt iis_num_col = this->col_index_.size();
   HighsInt iis_num_row = this->row_index_.size();
   if (!(iis_lp.num_col_ == iis_num_col)) return false;
@@ -861,7 +861,7 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
   // infeasible, but the IIS contains no columns
   if (num_iis_col == 0) return true;
   const HighsLogOptions& log_options = options.log_options;
-  const HighsLp& iis_lp = this->lp_;
+  const HighsLp& iis_lp = this->model_.lp_;
   assert(iis_lp.num_col_ == num_iis_col);
   assert(iis_lp.num_row_ == num_iis_row);
   Highs h;

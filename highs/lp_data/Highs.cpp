@@ -737,6 +737,10 @@ HighsStatus Highs::writePresolvedModel(const std::string& filename) {
   return writeLocalModel(presolved_model_, filename);
 }
 
+HighsStatus Highs::writeIisModel(const std::string& filename) {
+  return writeLocalModel(iis_.model_, filename);
+}
+
 HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
@@ -944,6 +948,8 @@ HighsStatus Highs::run() {
       // recover HiGHS files to options_
       this->getHighsFiles();
       this->files_.clear();
+      if (this->options_.write_iis_model_file != "")
+        status = this->writeIisModel(this->options_.write_iis_model_file);
       if (this->options_.solution_file != "")
         status = this->writeSolution(this->options_.solution_file,
                                      this->options_.write_solution_style);
@@ -4709,6 +4715,7 @@ void HighsFiles::clear() {
   this->read_solution_file = "";
   this->read_basis_file = "";
   this->write_model_file = "";
+  this->write_iis_model_file = "";
   this->write_solution_file = "";
   this->write_basis_file = "";
 }
@@ -4717,6 +4724,7 @@ bool Highs::optionsHasHighsFiles() const {
   if (this->options_.read_solution_file != "") return true;
   if (this->options_.read_basis_file != "") return true;
   if (this->options_.write_model_file != "") return true;
+  if (this->options_.write_iis_model_file != "") return true;
   if (this->options_.solution_file != "") return true;
   if (this->options_.write_basis_file != "") return true;
   return false;
@@ -4739,6 +4747,11 @@ void Highs::saveHighsFiles() {
     this->options_.write_model_file = "";
     this->files_.empty = false;
   }
+  if (this->options_.write_iis_model_file != "") {
+    this->files_.write_iis_model_file = this->options_.write_iis_model_file;
+    this->options_.write_iis_model_file = "";
+    this->files_.empty = false;
+  }
   if (this->options_.solution_file != "") {
     this->files_.write_solution_file = this->options_.solution_file;
     this->options_.solution_file = "";
@@ -4756,6 +4769,7 @@ void Highs::getHighsFiles() {
   this->options_.read_solution_file = this->files_.read_solution_file;
   this->options_.read_basis_file = this->files_.read_basis_file;
   this->options_.write_model_file = this->files_.write_model_file;
+  this->options_.write_iis_model_file = this->files_.write_iis_model_file;
   this->options_.solution_file = this->files_.write_solution_file;
   this->options_.write_basis_file = this->files_.write_basis_file;
   this->files_.clear();
