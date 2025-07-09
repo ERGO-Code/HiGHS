@@ -1938,20 +1938,6 @@ HighsStatus Highs::getIis(HighsIis& iis) {
   return return_status;
 }
 
-HighsStatus Highs::checkIis() const {
-  if (this->iis_.valid_) {
-    if (this->iis_.ok(this->model_.lp_, this->options_)) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "IIS is correct\n");
-      return HighsStatus::kOk;
-    } else {
-      return HighsStatus::kError;
-    }
-  }
-  highsLogUser(options_.log_options, HighsLogType::kInfo, "IIS is not known\n");
-  return HighsStatus::kOk;
-}
-
 HighsStatus Highs::getDualObjectiveValue(
     double& dual_objective_function_value) const {
   bool have_dual_objective_value = computeDualObjectiveValue(

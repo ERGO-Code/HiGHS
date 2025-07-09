@@ -1865,8 +1865,16 @@ HighsStatus Highs::getRangingInterface() {
 HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status) {
   if (return_status != HighsStatus::kError) {
     // Construct the ISS LP
-    this->iis_.getLp(model_.lp_);
-    // Construct the ISS status vectors
+    this->iis_.getLp(this->model_.lp_);
+    // Check that the IIS LP data are OK (correspond to original model
+    // reduced to IIS col/row and bound data).
+    if (!this->iis_.lpDataOk(this->model_.lp_, this->options_))
+      return HighsStatus::kError;
+    // Check that the IIS LP is OK (infeasible and optimal/unbounded
+    // is any bound is relaxed)
+    if (!this->iis_.lpOk(this->options_)) return HighsStatus::kError;
+    // Construct the ISS status vectors for cols and rows of original
+    // model
     this->iis_.getStatus(model_.lp_);
   }
   return return_status;

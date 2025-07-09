@@ -281,6 +281,7 @@ const string kRangingString = "ranging";
 const string kVersionString = "version";
 const string kWriteModelFileString = "write_model_file";
 const string kWritePresolvedModelFileString = "write_presolved_model_file";
+const string kWriteIisModelFileString = "write_iis_model_file";
 const string kReadSolutionFileString = "read_solution_file";
 
 // String for HiGHS log file option
@@ -334,9 +335,16 @@ struct HighsOptionsStruct {
   bool write_model_to_file;
   bool write_presolved_model_to_file;
   bool write_solution_to_file;
+  // Replace with the following
+  //  bool write_model;
+  //  bool write_presolved_model;
+  //  bool write_iis_model;
+  //  bool write_solution;
+
   HighsInt write_solution_style;
   HighsInt glpsol_cost_row_location;
   std::string write_presolved_model_file;
+  std::string write_iis_model_file;
 
   // Control of HiGHS log
   bool output_flag;
@@ -503,9 +511,14 @@ struct HighsOptionsStruct {
         write_model_to_file(false),
         write_presolved_model_to_file(false),
         write_solution_to_file(false),
+        //        write_model(false),
+        //        write_presolved_model(false),
+        //        write_iis_model(false),
+        //        write_solution(false),
         write_solution_style(0),
         glpsol_cost_row_location(0),
         write_presolved_model_file(""),
+        write_iis_model_file(""),
         output_flag(false),
         log_to_console(false),
         timeless_log(false),
@@ -902,6 +915,16 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_bool =
+        new OptionRecordBool("write_model_to_file", "Write the model to a file",
+                             advanced, &write_model_to_file, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "write_presolved_model_to_file", "Write the presolved model to a file",
+        advanced, &write_presolved_model_to_file, false);
+    records.push_back(record_bool);
+
+    record_bool =
         new OptionRecordBool("write_solution_to_file",
                              "Write the primal and dual solution to a file",
                              advanced, &write_solution_to_file, false);
@@ -992,20 +1015,38 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsFilenameDefault);
     records.push_back(record_string);
 
-    record_bool =
-        new OptionRecordBool("write_model_to_file", "Write the model to a file",
-                             advanced, &write_model_to_file, false);
-    records.push_back(record_bool);
-
     record_string = new OptionRecordString(
         kWritePresolvedModelFileString, "Write presolved model file", advanced,
         &write_presolved_model_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
+    /*
     record_bool = new OptionRecordBool(
-        "write_presolved_model_to_file", "Write the presolved model to a file",
-        advanced, &write_presolved_model_to_file, false);
+        "write_presolved_model", "Write out the presolved model",
+        advanced, &write_presolved_model, false);
     records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "write_presolved_model", "Write out the presolved model",
+        advanced, &write_presolved_model, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "write_iis_model", "Write out the IIS model",
+        advanced, &write_iis_model, false);
+    records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("write_solution", "Write out the solution",
+                             advanced, &write_solution, false);
+    records.push_back(record_bool);
+
+    */
+
+    record_string = new OptionRecordString(
+        kWriteIisModelFileString, "Write IIS model file", advanced,
+        &write_iis_model_file, kHighsFilenameDefault);
+    records.push_back(record_string);
 
     record_bool = new OptionRecordBool(
         "mip_detect_symmetry", "Whether MIP symmetry should be detected",
@@ -1243,19 +1284,19 @@ class HighsOptions : public HighsOptionsStruct {
         "Full and prioritise rows / "
         //        "Use LP and p"
         "Full and prioritise columns"
-        //        "Use unbounded dual ray and prioritise low number of rows
-        //        (default) / " "Use ray and prioritise low numbers of columns "
+        //        "Use unbounded dual ray and prioritise low number of rows / "
+        //        "Use ray and prioritise low numbers of columns "
         " (0/1/2"
         //        "/3/4)",
         ")",
-        advanced, &iis_strategy, kIisStrategyMin, kIisStrategyFromLpRowPriority,
+        advanced, &iis_strategy, kIisStrategyMin, kIisStrategyLight,
         kIisStrategyMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
         "blend_multi_objectives",
-        "Blend multiple objectives or apply lexicographically: Default = true",
-        advanced, &blend_multi_objectives, true);
+        "Blend multiple objectives or apply lexicographically", advanced,
+        &blend_multi_objectives, true);
     records.push_back(record_bool);
 
     // Fix the number of user settable options
