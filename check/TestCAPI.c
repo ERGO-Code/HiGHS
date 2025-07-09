@@ -1991,7 +1991,7 @@ void testDualRayTwice() {
   void* highs = Highs_create();
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   int ret;
-  double INF = Highs_getInfinity(highs);
+  double inf = Highs_getInfinity(highs);
   ret = Highs_changeObjectiveOffset(highs, 0.0);
   assert(ret == 0);
   ret = Highs_setStringOptionValue(highs, "presolve", "off");
@@ -2000,9 +2000,9 @@ void testDualRayTwice() {
   assert(ret == 0);
   ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
   assert(ret == 0);
-  ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
+  ret = Highs_addCol(highs, -1.0, 0.0, inf, 0, NULL, NULL);
   assert(ret == 0);
-  ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
+  ret = Highs_addCol(highs, -1.0, 0.0, inf, 0, NULL, NULL);
   assert(ret == 0);
   HighsInt index[2] = {2, 3};
   double value[2] = {1.0, -1.0};
@@ -2012,19 +2012,19 @@ void testDualRayTwice() {
   index[1] = 3;
   value[0] = 1.0;
   value[1] = 1.0;
-  ret = Highs_addRow(highs, 1.0, INF, 2, index, value);
+  ret = Highs_addRow(highs, 1.0, inf, 2, index, value);
   assert(ret == 0);
   index[0] = 0;
   index[1] = 2;
   value[0] = -2.0;
   value[1] = 1.0;
-  ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
+  ret = Highs_addRow(highs, -inf, 0.0, 2, index, value);
   assert(ret == 0);
   index[0] = 1;
   index[1] = 3;
   value[0] = -3.0;
   value[1] = 1.0;
-  ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
+  ret = Highs_addRow(highs, -inf, 0.0, 2, index, value);
   assert(ret == 0);
   ret = Highs_run(highs);
   assert(ret == 0);
@@ -2105,16 +2105,16 @@ void testDeleteRowResolveWithBasis() {
   void* highs = Highs_create();
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   HighsInt ret;
-  double INF = Highs_getInfinity(highs);
+  double inf = Highs_getInfinity(highs);
   ret = Highs_addCol(highs, 0.0, 2.0, 2.0, 0, NULL, NULL);
-  ret = Highs_addCol(highs, 0.0, -INF, INF, 0, NULL, NULL);
-  ret = Highs_addCol(highs, 0.0, -INF, INF, 0, NULL, NULL);
+  ret = Highs_addCol(highs, 0.0, -inf, inf, 0, NULL, NULL);
+  ret = Highs_addCol(highs, 0.0, -inf, inf, 0, NULL, NULL);
   HighsInt index_1[2] = {0, 2};
   double value_1[2] = {2.0, -1.0};
   ret = Highs_addRow(highs, 0.0, 0.0, 2, index_1, value_1);
   HighsInt index_2[1] = {1};
   double value_2[1] = {6.0};
-  ret = Highs_addRow(highs, 10.0, INF, 1, index_2, value_2);
+  ret = Highs_addRow(highs, 10.0, inf, 1, index_2, value_2);
   Highs_run(highs);
   double col_value[3] = {0.0, 0.0, 0.0};
   Highs_getSolution(highs, col_value, NULL, NULL, NULL);
@@ -2131,6 +2131,54 @@ void testDeleteRowResolveWithBasis() {
 
 void testIis() {
   void* highs = Highs_create();
+  //  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  HighsInt ret;
+  double inf = Highs_getInfinity(highs);
+  ret = Highs_addCol(highs, 0.0, 0.0, 1.0, 0, NULL, NULL);
+  assert(ret == 0);
+  ret = Highs_addCol(highs, 0.0, 0.0, 1.0, 0, NULL, NULL);
+  assert(ret == 0);
+  ret = Highs_addCol(highs, 0.0, 0.0, 1.0, 0, NULL, NULL);
+  assert(ret == 0);
+  HighsInt index[3] = {0, 1, 2};
+  double value_1[3] = {1, 1, -1};
+  double value_2[3] = {1, 1, 1};
+  double value_3[3] = {1, 2, 1};
+  ret = Highs_addRow(highs, 2.0, inf, 3, index, value_1);
+  assert(ret == 0);
+  ret = Highs_addRow(highs, -inf, 5.0, 3, index, value_2);
+  assert(ret == 0);
+  ret = Highs_addRow(highs, -inf, 1.0, 3, index, value_3);
+  assert(ret == 0);
+
+  HighsInt iis_num_col;
+  HighsInt iis_num_row;
+  ret = Highs_getIis(highs,
+		     &iis_num_col, &iis_num_row,
+		     NULL, NULL,
+		     NULL, NULL,
+		     NULL, NULL);
+  assert(ret == 0);
+
+  HighsInt* col_index = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_col);
+  HighsInt* row_index = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_row);
+  HighsInt* col_bound = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_col);
+  HighsInt* row_bound = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_row);
+
+  HighsInt num_col;
+  HighsInt num_row;
+  HighsInt num_nz;
+  HighsInt sense;
+  double offset;
+  ret = Highs_getLp(highs, kHighsMatrixFormatRowwise,
+		    &num_col, &num_row, &num_nz,
+		    &sense, &offset,
+		    NULL, NULL, NULL, 
+		    NULL, NULL,
+		    NULL, NULL, NULL,
+		    NULL);
+  Highs_run(highs);
+
   Highs_destroy(highs);
 }
 

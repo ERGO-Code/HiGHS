@@ -1299,9 +1299,9 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               a_start, a_index, a_value, integrality);
 }
 
-HighsInt Highs_getIis(const void* highs,
-		      HighsInt iis_num_col,
-		      HighsInt iis_num_row,
+HighsInt Highs_getIis(void* highs,
+		      HighsInt* iis_num_col,
+		      HighsInt* iis_num_row,
 		      HighsInt* col_index,
 		      HighsInt* row_index,
 		      HighsInt* col_bound,
@@ -1312,25 +1312,25 @@ HighsInt Highs_getIis(const void* highs,
   HighsIis iis;
   HighsInt status = (HighsInt)((Highs*)highs)->getIis(iis);
   if (status == (HighsInt)HighsStatus::kError) return status;
-  iis_num_col = iis.col_index_.size();
-  iis_num_row = iis.row_index_.size();
+  *iis_num_col = iis.col_index_.size();
+  *iis_num_row = iis.row_index_.size();
   if (col_index != nullptr) {
-    for (size_t i = 0; i < iis_num_col; i++) {
+    for (size_t i = 0; i < *iis_num_col; i++) {
       col_index[i] = iis.col_index_[i];
     }
   }
   if (row_index != nullptr) {
-    for (size_t i = 0; i < iis_num_row; i++) {
+    for (size_t i = 0; i < *iis_num_row; i++) {
       row_index[i] = iis.row_index_[i];
     }
   }
   if (col_bound != nullptr) {
-    for (size_t i = 0; i < iis_num_col; i++) {
+    for (size_t i = 0; i < *iis_num_col; i++) {
       col_bound[i] = iis.col_bound_[i];
     }
   }
   if (row_bound != nullptr) {
-    for (size_t i = 0; i < iis_num_row; i++) {
+    for (size_t i = 0; i < *iis_num_row; i++) {
       row_bound[i] = iis.row_bound_[i];
     }
   }

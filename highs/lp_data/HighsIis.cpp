@@ -189,8 +189,8 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
           upper_row_value += value * lower;
         }
       }
-      lower_value[iRow] = lower_row_value;
-      upper_value[iRow] = upper_row_value;
+      lower_value.push_back(lower_row_value);
+      upper_value.push_back(upper_row_value);
     }
   }
   bool below_lower;

@@ -2404,14 +2404,14 @@ HighsInt Highs_feasibilityRelaxation(void* highs,
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_getIis(void* highs,
-		      const HighsInt iis_num_col,
-		      const HighsInt iis_num_row,
-		      const HighsInt* col_index,
-		      const HighsInt* row_index,
-		      const HighsInt* col_bound,
-		      const HighsInt* row_bound,
-		      const HighsInt* col_status,
-		      const HighsInt* row_status);
+		      HighsInt* iis_num_col,
+		      HighsInt* iis_num_row,
+		      HighsInt* col_index,
+		      HighsInt* row_index,
+		      HighsInt* col_bound,
+		      HighsInt* row_bound,
+		      HighsInt* col_status,
+		      HighsInt* row_status);
 /**
  * Releases all resources held by the global scheduler instance.
  *
