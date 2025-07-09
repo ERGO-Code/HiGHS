@@ -155,8 +155,8 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
       if (dev_run && write_model) {
         highs.writeModel("");
-	highs.writeIisModel("");
-	highs.writeIisModel(lp.model_name_ + ".lp");
+        highs.writeIisModel("");
+        highs.writeIisModel(lp.model_name_ + ".lp");
       }
       if (k == 0) {
         // Now flip to column-wise for code coverage

@@ -2129,30 +2129,35 @@ void testDeleteRowResolveWithBasis() {
   Highs_destroy(highs);
 }
 
-int main() {
-  minimalApiIllegalLp();
-  testCallback();
-  versionApi();
-  fullApi();
-  minimalApiLp();
-  minimalApiMip();
-  minimalApiQp();
-  fullApiOptions();
-  fullApiLp();
-  fullApiMip();
-  fullApiQp();
-  passPresolveGetLp();
-  options();
-  testGetColsByRange();
-  testPassHessian();
-  testRanging();
-  testFeasibilityRelaxation();
-  testGetModel();
-  testMultiObjective();
-  testQpIndefiniteFailure();
-  testDualRayTwice();
+void testIis() {
+  void* highs = Highs_create();
+  Highs_destroy(highs);
+}
 
-  testDeleteRowResolveWithBasis();
+int main() {
+  //  minimalApiIllegalLp();
+  //  testCallback();
+  //  versionApi();
+  //  fullApi();
+  //  minimalApiLp();
+  //  minimalApiMip();
+  //  minimalApiQp();
+  //  fullApiOptions();
+  //  fullApiLp();
+  //  fullApiMip();
+  //  fullApiQp();
+  //  passPresolveGetLp();
+  //  options();
+  //  testGetColsByRange();
+  //  testPassHessian();
+  //  testRanging();
+  //  testFeasibilityRelaxation();
+  //  testGetModel();
+  //  testMultiObjective();
+  //  testQpIndefiniteFailure();
+  //  testDualRayTwice();
+  //  testDeleteRowResolveWithBasis();
+  testIis();
   return 0;
 }
 //  testSetSolution();

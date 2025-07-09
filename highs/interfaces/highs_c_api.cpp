@@ -1299,6 +1299,65 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               a_start, a_index, a_value, integrality);
 }
 
+HighsInt Highs_getIis(const void* highs,
+		      const HighsInt iis_num_col,
+		      const HighsInt iis_num_row,
+		      const HighsInt* col_index,
+		      const HighsInt* row_index,
+		      const HighsInt* col_bound,
+		      const HighsInt* row_bound,
+		      const HighsInt* col_status,
+		      const HighsInt* row_status) {
+
+  const HighsIis& iis = ((Highs*)highs)->getIis();
+  iis_num_col = iis.num_col_;
+  iis_num_row = iis.num_row_;
+  if (col_index != nullptr) {
+    for (size_t i = 0; i < iis_num_col; i++) {
+      col_index[i] = iis.col_index[i];
+    }
+  }
+  if (row_index != nullptr) {
+    for (size_t i = 0; i < iis_num_row; i++) {
+      row_index[i] = iis.row_index[i];
+    }
+  }
+  if (col_bound != nullptr) {
+    for (size_t i = 0; i < iis_num_col; i++) {
+      col_bound[i] = iis.col_bound[i];
+    }
+  }
+  if (row_bound != nullptr) {
+    for (size_t i = 0; i < iis_num_row; i++) {
+      row_bound[i] = iis.row_bound[i];
+    }
+  }
+  if (col_status != nullptr) {
+    for (size_t i = 0; i < ((Highs*)highs)->getLp().num_col_; i++) {
+      col_status[i] = iis.col_status[i];
+    }
+  }
+  if (row_status != nullptr) {
+    for (size_t i = 0; i < ((Highs*)highs)->getLp().num_row_; i++) {
+      row_status[i] = iis.row_status[i];
+    }
+  }
+}
+
+HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,
+			HighsInt* num_col, HighsInt* num_row,
+			HighsInt* num_nz, HighsInt* sense, double* offset,
+			double* col_cost, double* col_lower,
+			double* col_upper, double* row_lower,
+			double* row_upper, HighsInt* a_start,
+			HighsInt* a_index, double* a_value,
+			HighsInt* integrality) {
+  return Highs_getHighsLpData(((Highs*)highs)->getIisLp(), a_format,
+                              num_col, num_row, num_nz, sense, offset, col_cost,
+                              col_lower, col_upper, row_lower, row_upper,
+                              a_start, a_index, a_value, integrality);
+}
+
 HighsInt Highs_crossover(void* highs, const HighsInt num_col,
                          const HighsInt num_row, const double* col_value,
                          const double* col_dual, const double* row_dual) {

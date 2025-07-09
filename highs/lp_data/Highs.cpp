@@ -738,6 +738,8 @@ HighsStatus Highs::writePresolvedModel(const std::string& filename) {
 }
 
 HighsStatus Highs::writeIisModel(const std::string& filename) {
+  HighsStatus return_status = this->getIisInterface();
+  if (return_status == HighsStatus::kError) return return_status;
   return writeLocalModel(iis_.model_, filename);
 }
 

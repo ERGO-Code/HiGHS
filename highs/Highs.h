@@ -481,6 +481,12 @@ class Highs {
   const HighsSolution& getSolution() const { return solution_; }
 
   /**
+   * @brief Return a const reference to the presolved HighsModel instance in
+   * HiGHS
+   */
+  const HighsLp& getIisLp() const { return iis_.model_.lp_; }
+
+  /**
    * @brief Zero all clocks in the internal HighsTimer instance
    */
   void zeroAllClocks() { timer_.zeroAllClocks(); };

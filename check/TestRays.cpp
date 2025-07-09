@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false; //true;  
+const bool dev_run = false;  // true;
 const double zero_ray_value_tolerance = 1e-14;
 
 void reportRay(std::string message, HighsInt dim, double* computed,
