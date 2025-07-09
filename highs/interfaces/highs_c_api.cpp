@@ -1344,6 +1344,7 @@ HighsInt Highs_getIis(void* highs,
       row_status[i] = iis.row_status_[i];
     }
   }
+  return status;
 }
 
 HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,

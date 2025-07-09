@@ -348,16 +348,26 @@ void HighsIis::getLp(const HighsLp& lp) {
   iis_lp.clear();
   HighsInt iis_num_col = this->col_index_.size();
   HighsInt iis_num_row = this->row_index_.size();
-  assert(lp.a_matrix_.isColwise());
-  // Scatter the IIS rows into a full-length vector to identify IIS
-  // rows with LP rows
+  const bool colwise = lp.a_matrix_.isColwise();
+  // Scatter the IIS rows (cols) into a full-length vector to identify
+  // IIS rows (cols) with LP rows (cols) according to whether the
+  // incumbent matrix is col-wise or row-wise
   std::vector<HighsInt> iis_row;
-  iis_row.assign(lp.num_row_, -1);
+  std::vector<HighsInt> iis_col;
+  if (colwise) {
+    iis_row.assign(lp.num_row_, -1);
+    for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) 
+      iis_row[this->row_index_[iisRow]] = iisRow;
+  } else {
+    iis_col.assign(lp.num_col_, -1);
+    for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) 
+      iis_col[this->col_index_[iisCol]] = iisCol;
+  }
   double bound;
+
   const bool has_row_name = lp.row_names_.size() > 0;
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = this->row_index_[iisRow];
-    iis_row[iRow] = iisRow;
     if (has_row_name) iis_lp.row_names_.push_back(lp.row_names_[iRow]);
     HighsInt row_bound = this->row_bound_[iisRow];
     assert(row_bound == kIisBoundStatusLower ||
@@ -373,6 +383,17 @@ void HighsIis::getLp(const HighsLp& lp) {
             ? lp.row_upper_[iRow]
             : kHighsInf;
     iis_lp.row_upper_.push_back(bound);
+    if (!colwise) {
+      for (HighsInt iEl = lp.a_matrix_.start_[iRow];
+	   iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+	HighsInt iCol = lp.a_matrix_.index_[iEl];
+	HighsInt iisCol = iis_col[iCol];
+	if (iisCol >= 0) {
+	  iis_lp.a_matrix_.index_.push_back(iisCol);
+	  iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+	}
+      }
+    }
   }
 
   const bool has_col_name = lp.col_names_.size() > 0;
@@ -398,13 +419,15 @@ void HighsIis::getLp(const HighsLp& lp) {
             ? lp.col_upper_[iCol]
             : kHighsInf;
     iis_lp.col_upper_.push_back(bound);
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-      HighsInt iRow = lp.a_matrix_.index_[iEl];
-      HighsInt iisRow = iis_row[iRow];
-      if (iisRow >= 0) {
-        iis_lp.a_matrix_.index_.push_back(iisRow);
-        iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+    if (colwise) {
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	   iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+	HighsInt iRow = lp.a_matrix_.index_[iEl];
+	HighsInt iisRow = iis_row[iRow];
+	if (iisRow >= 0) {
+	  iis_lp.a_matrix_.index_.push_back(iisRow);
+	  iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+	}
       }
     }
     iis_lp.a_matrix_.start_.push_back(iis_lp.a_matrix_.index_.size());
@@ -759,16 +782,13 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
   if (!(iis_lp.num_col_ == iis_num_col)) return false;
   if (!(iis_lp.num_row_ == iis_num_row)) return false;
 
-  assert(lp.a_matrix_.isColwise());
+  const bool colwise = lp.a_matrix_.isColwise();
 
   std::vector<HighsInt> iis_row;
   iis_row.assign(lp.num_row_, -1);
   double bound;
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = this->row_index_[iisRow];
-    if (iRow < 0 || iRow >= lp.num_row_) {
-      printf("iRow out of range\n");
-    }
     iis_row[iRow] = iisRow;
     HighsInt row_bound = this->row_bound_[iisRow];
     bound =
@@ -783,12 +803,7 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
     if (iis_lp.row_upper_[iisRow] != bound) return false;
   }
 
-  // Work through the LP columns and matrix, checking the zero costs,
-  // bounds and matrix index/value
-  const HighsInt illegal_index = -1;
-  const double illegal_value = kHighsInf;
-  std::vector<HighsInt> index;
-  std::vector<double> value;
+  // Work through the LP columns checking the zero costs and bounds
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = this->col_index_[iisCol];
     if (iis_lp.col_cost_[iisCol]) return false;
@@ -803,48 +818,106 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
             ? lp.col_upper_[iCol]
             : kHighsInf;
     if (iis_lp.col_upper_[iisCol] != bound) return false;
-    // Use index/value to scatter the IIS matrix column
-    index.assign(iis_num_row, illegal_index);
-    value.assign(iis_num_row, illegal_value);
-    for (HighsInt iEl = iis_lp.a_matrix_.start_[iisCol];
-         iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
-      HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
-      HighsInt iRow = this->row_index_[iisRow];
-      index[iisRow] = iRow;
-      value[iisRow] = iis_lp.a_matrix_.value_[iEl];
+  }
+  const HighsInt illegal_index = -1;
+  const double illegal_value = kHighsInf;
+  std::vector<HighsInt> index;
+  std::vector<double> value;
+  // Work through the LP matrix, checking the matrix index/value
+  if (colwise) {
+    for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
+      HighsInt iCol = this->col_index_[iisCol];
+      // Use index/value to scatter the IIS matrix column
+      index.assign(iis_num_row, illegal_index);
+      value.assign(iis_num_row, illegal_value);
+      for (HighsInt iEl = iis_lp.a_matrix_.start_[iisCol];
+	   iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
+	HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
+	HighsInt iRow = this->row_index_[iisRow];
+	index[iisRow] = iRow;
+	value[iisRow] = iis_lp.a_matrix_.value_[iEl];
+      }
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	   iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+	HighsInt iRow = lp.a_matrix_.index_[iEl];
+	HighsInt iisRow = iis_row[iRow];
+	if (iisRow >= 0) {
+	  if (index[iisRow] != iRow) return false;
+	  if (value[iisRow] != lp.a_matrix_.value_[iEl]) return false;
+	  index[iisRow] = illegal_index;
+	  value[iisRow] = illegal_value;
+	}
+      }
     }
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-      HighsInt iRow = lp.a_matrix_.index_[iEl];
-      HighsInt iisRow = iis_row[iRow];
-      if (iisRow >= 0) {
-        if (index[iisRow] != iRow) return false;
-        if (value[iisRow] != lp.a_matrix_.value_[iEl]) return false;
-        index[iisRow] = illegal_index;
-        value[iisRow] = illegal_value;
+  } else {
+    for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
+      HighsInt iRow = this->row_index_[iisRow];
+      // Use index/value to scatter the IIS matrix row
+      index.assign(iis_num_row, illegal_index);
+      value.assign(iis_num_row, illegal_value);
+      for (HighsInt iEl = iis_lp.a_matrix_.start_[iisRow];
+	   iEl < iis_lp.a_matrix_.start_[iisRow + 1]; iEl++) {
+	HighsInt iisCol = iis_lp.a_matrix_.index_[iEl];
+	HighsInt iCol = this->row_index_[iisCol];
+	index[iisCol] = iCol;
+	value[iisCol] = iis_lp.a_matrix_.value_[iEl];
+      }
+      for (HighsInt iEl = lp.a_matrix_.start_[iRow];
+	   iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+	HighsInt iCol = lp.a_matrix_.index_[iEl];
+	HighsInt iisCol = iis_row[iCol];
+	if (iisCol >= 0) {
+	  if (index[iisCol] != iCol) return false;
+	  if (value[iisCol] != lp.a_matrix_.value_[iEl]) return false;
+	  index[iisCol] = illegal_index;
+	  value[iisCol] = illegal_value;
+	}
       }
     }
   }
   // Work through the IIS LP matrix, making sure that the index/value
   // are correct
-  for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
-    HighsInt iCol = this->col_index_[iisCol];
-    // Use index/value to scatter the LP matrix column
-    index.assign(lp.num_row_, illegal_index);
-    value.assign(lp.num_row_, illegal_value);
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-      HighsInt iRow = lp.a_matrix_.index_[iEl];
-      HighsInt iisRow = iis_row[iRow];
-      index[iRow] = iisRow;
-      value[iRow] = lp.a_matrix_.value_[iEl];
+  if (colwise) {
+    for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
+      HighsInt iCol = this->col_index_[iisCol];
+      // Use index/value to scatter the LP matrix column
+      index.assign(lp.num_row_, illegal_index);
+      value.assign(lp.num_row_, illegal_value);
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	   iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+	HighsInt iRow = lp.a_matrix_.index_[iEl];
+	HighsInt iisRow = iis_row[iRow];
+	index[iRow] = iisRow;
+	value[iRow] = lp.a_matrix_.value_[iEl];
+      }
+      for (HighsInt iEl = iis_lp.a_matrix_.start_[iisCol];
+	   iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
+	HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
+	HighsInt iRow = this->row_index_[iisRow];
+	if (index[iRow] != iisRow) return false;
+	if (value[iRow] != iis_lp.a_matrix_.value_[iEl]) return false;
+      }
     }
-    for (HighsInt iEl = iis_lp.a_matrix_.start_[iisCol];
-         iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
-      HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
+  } else {
+    for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
       HighsInt iRow = this->row_index_[iisRow];
-      if (index[iRow] != iisRow) return false;
-      if (value[iRow] != iis_lp.a_matrix_.value_[iEl]) return false;
+      // Use index/value to scatter the LP matrix row
+      index.assign(lp.num_row_, illegal_index);
+      value.assign(lp.num_row_, illegal_value);
+      for (HighsInt iEl = lp.a_matrix_.start_[iRow];
+	   iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+	HighsInt iCol = lp.a_matrix_.index_[iEl];
+	HighsInt iisCol = iis_row[iCol];
+	index[iCol] = iisCol;
+	value[iCol] = lp.a_matrix_.value_[iEl];
+      }
+      for (HighsInt iEl = iis_lp.a_matrix_.start_[iisRow];
+	   iEl < iis_lp.a_matrix_.start_[iisRow + 1]; iEl++) {
+	HighsInt iisCol = iis_lp.a_matrix_.index_[iEl];
+	HighsInt iCol = this->row_index_[iisCol];
+	if (index[iCol] != iisCol) return false;
+	if (value[iCol] != iis_lp.a_matrix_.value_[iEl]) return false;
+      }
     }
   }
   return true;

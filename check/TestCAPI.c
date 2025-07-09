@@ -2151,20 +2151,6 @@ void testIis() {
   ret = Highs_addRow(highs, -inf, 1.0, 3, index, value_3);
   assert(ret == 0);
 
-  HighsInt iis_num_col;
-  HighsInt iis_num_row;
-  ret = Highs_getIis(highs,
-		     &iis_num_col, &iis_num_row,
-		     NULL, NULL,
-		     NULL, NULL,
-		     NULL, NULL);
-  assert(ret == 0);
-
-  HighsInt* col_index = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_col);
-  HighsInt* row_index = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_row);
-  HighsInt* col_bound = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_col);
-  HighsInt* row_bound = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_row);
-
   HighsInt num_col;
   HighsInt num_row;
   HighsInt num_nz;
@@ -2177,7 +2163,46 @@ void testIis() {
 		    NULL, NULL,
 		    NULL, NULL, NULL,
 		    NULL);
-  Highs_run(highs);
+
+  for (int k = 0 ; k < 2; k++) {
+    HighsInt iis_num_col;
+    HighsInt iis_num_row;
+    ret = Highs_getIis(highs,
+		       &iis_num_col, &iis_num_row,
+		       NULL, NULL,
+		       NULL, NULL,
+		       NULL, NULL);
+    assert(ret == 0);
+
+    if (k == 0) {
+      // No IIS from kHighsIisStrategyLight
+      assert(iis_num_col == 0);
+      assert(iis_num_row == 0);
+      Highs_setIntOptionValue(highs, "iis_strategy",
+			      kHighsIisStrategyFromLpRowPriority);
+    } else {
+      assert(iis_num_col == 2);
+      assert(iis_num_row == 2);
+      HighsInt* col_index = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_col);
+      HighsInt* row_index = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_row);
+      HighsInt* col_bound = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_col);
+      HighsInt* row_bound = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_row);
+      HighsInt* col_status = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+      HighsInt* row_status = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+      ret = Highs_getIis(highs,
+			 &iis_num_col, &iis_num_row,
+			 col_index, row_index,
+			 col_bound, row_bound,
+			 col_status, row_status);
+      assert(ret == 0);
+      free(col_index);
+      free(row_index);
+      free(col_bound);
+      free(row_bound);
+      free(col_status);
+      free(row_status);
+    }
+  }
 
   Highs_destroy(highs);
 }
