@@ -356,11 +356,11 @@ void HighsIis::getLp(const HighsLp& lp) {
   std::vector<HighsInt> iis_col;
   if (colwise) {
     iis_row.assign(lp.num_row_, -1);
-    for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) 
+    for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++)
       iis_row[this->row_index_[iisRow]] = iisRow;
   } else {
     iis_col.assign(lp.num_col_, -1);
-    for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) 
+    for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++)
       iis_col[this->col_index_[iisCol]] = iisCol;
   }
   double bound;
@@ -385,13 +385,13 @@ void HighsIis::getLp(const HighsLp& lp) {
     iis_lp.row_upper_.push_back(bound);
     if (!colwise) {
       for (HighsInt iEl = lp.a_matrix_.start_[iRow];
-	   iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
-	HighsInt iCol = lp.a_matrix_.index_[iEl];
-	HighsInt iisCol = iis_col[iCol];
-	if (iisCol >= 0) {
-	  iis_lp.a_matrix_.index_.push_back(iisCol);
-	  iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
-	}
+           iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+        HighsInt iCol = lp.a_matrix_.index_[iEl];
+        HighsInt iisCol = iis_col[iCol];
+        if (iisCol >= 0) {
+          iis_lp.a_matrix_.index_.push_back(iisCol);
+          iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+        }
       }
     }
   }
@@ -421,13 +421,13 @@ void HighsIis::getLp(const HighsLp& lp) {
     iis_lp.col_upper_.push_back(bound);
     if (colwise) {
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	   iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-	HighsInt iRow = lp.a_matrix_.index_[iEl];
-	HighsInt iisRow = iis_row[iRow];
-	if (iisRow >= 0) {
-	  iis_lp.a_matrix_.index_.push_back(iisRow);
-	  iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
-	}
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsInt iRow = lp.a_matrix_.index_[iEl];
+        HighsInt iisRow = iis_row[iRow];
+        if (iisRow >= 0) {
+          iis_lp.a_matrix_.index_.push_back(iisRow);
+          iis_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+        }
       }
     }
     iis_lp.a_matrix_.start_.push_back(iis_lp.a_matrix_.index_.size());
@@ -831,22 +831,22 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
       index.assign(iis_num_row, illegal_index);
       value.assign(iis_num_row, illegal_value);
       for (HighsInt iEl = iis_lp.a_matrix_.start_[iisCol];
-	   iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
-	HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
-	HighsInt iRow = this->row_index_[iisRow];
-	index[iisRow] = iRow;
-	value[iisRow] = iis_lp.a_matrix_.value_[iEl];
+           iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
+        HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
+        HighsInt iRow = this->row_index_[iisRow];
+        index[iisRow] = iRow;
+        value[iisRow] = iis_lp.a_matrix_.value_[iEl];
       }
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	   iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-	HighsInt iRow = lp.a_matrix_.index_[iEl];
-	HighsInt iisRow = iis_row[iRow];
-	if (iisRow >= 0) {
-	  if (index[iisRow] != iRow) return false;
-	  if (value[iisRow] != lp.a_matrix_.value_[iEl]) return false;
-	  index[iisRow] = illegal_index;
-	  value[iisRow] = illegal_value;
-	}
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsInt iRow = lp.a_matrix_.index_[iEl];
+        HighsInt iisRow = iis_row[iRow];
+        if (iisRow >= 0) {
+          if (index[iisRow] != iRow) return false;
+          if (value[iisRow] != lp.a_matrix_.value_[iEl]) return false;
+          index[iisRow] = illegal_index;
+          value[iisRow] = illegal_value;
+        }
       }
     }
   } else {
@@ -856,22 +856,22 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
       index.assign(iis_num_row, illegal_index);
       value.assign(iis_num_row, illegal_value);
       for (HighsInt iEl = iis_lp.a_matrix_.start_[iisRow];
-	   iEl < iis_lp.a_matrix_.start_[iisRow + 1]; iEl++) {
-	HighsInt iisCol = iis_lp.a_matrix_.index_[iEl];
-	HighsInt iCol = this->row_index_[iisCol];
-	index[iisCol] = iCol;
-	value[iisCol] = iis_lp.a_matrix_.value_[iEl];
+           iEl < iis_lp.a_matrix_.start_[iisRow + 1]; iEl++) {
+        HighsInt iisCol = iis_lp.a_matrix_.index_[iEl];
+        HighsInt iCol = this->row_index_[iisCol];
+        index[iisCol] = iCol;
+        value[iisCol] = iis_lp.a_matrix_.value_[iEl];
       }
       for (HighsInt iEl = lp.a_matrix_.start_[iRow];
-	   iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
-	HighsInt iCol = lp.a_matrix_.index_[iEl];
-	HighsInt iisCol = iis_row[iCol];
-	if (iisCol >= 0) {
-	  if (index[iisCol] != iCol) return false;
-	  if (value[iisCol] != lp.a_matrix_.value_[iEl]) return false;
-	  index[iisCol] = illegal_index;
-	  value[iisCol] = illegal_value;
-	}
+           iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+        HighsInt iCol = lp.a_matrix_.index_[iEl];
+        HighsInt iisCol = iis_row[iCol];
+        if (iisCol >= 0) {
+          if (index[iisCol] != iCol) return false;
+          if (value[iisCol] != lp.a_matrix_.value_[iEl]) return false;
+          index[iisCol] = illegal_index;
+          value[iisCol] = illegal_value;
+        }
       }
     }
   }
@@ -884,18 +884,18 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
       index.assign(lp.num_row_, illegal_index);
       value.assign(lp.num_row_, illegal_value);
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	   iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-	HighsInt iRow = lp.a_matrix_.index_[iEl];
-	HighsInt iisRow = iis_row[iRow];
-	index[iRow] = iisRow;
-	value[iRow] = lp.a_matrix_.value_[iEl];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsInt iRow = lp.a_matrix_.index_[iEl];
+        HighsInt iisRow = iis_row[iRow];
+        index[iRow] = iisRow;
+        value[iRow] = lp.a_matrix_.value_[iEl];
       }
       for (HighsInt iEl = iis_lp.a_matrix_.start_[iisCol];
-	   iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
-	HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
-	HighsInt iRow = this->row_index_[iisRow];
-	if (index[iRow] != iisRow) return false;
-	if (value[iRow] != iis_lp.a_matrix_.value_[iEl]) return false;
+           iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
+        HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
+        HighsInt iRow = this->row_index_[iisRow];
+        if (index[iRow] != iisRow) return false;
+        if (value[iRow] != iis_lp.a_matrix_.value_[iEl]) return false;
       }
     }
   } else {
@@ -905,18 +905,18 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
       index.assign(lp.num_row_, illegal_index);
       value.assign(lp.num_row_, illegal_value);
       for (HighsInt iEl = lp.a_matrix_.start_[iRow];
-	   iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
-	HighsInt iCol = lp.a_matrix_.index_[iEl];
-	HighsInt iisCol = iis_row[iCol];
-	index[iCol] = iisCol;
-	value[iCol] = lp.a_matrix_.value_[iEl];
+           iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+        HighsInt iCol = lp.a_matrix_.index_[iEl];
+        HighsInt iisCol = iis_row[iCol];
+        index[iCol] = iisCol;
+        value[iCol] = lp.a_matrix_.value_[iEl];
       }
       for (HighsInt iEl = iis_lp.a_matrix_.start_[iisRow];
-	   iEl < iis_lp.a_matrix_.start_[iisRow + 1]; iEl++) {
-	HighsInt iisCol = iis_lp.a_matrix_.index_[iEl];
-	HighsInt iCol = this->row_index_[iisCol];
-	if (index[iCol] != iisCol) return false;
-	if (value[iCol] != iis_lp.a_matrix_.value_[iEl]) return false;
+           iEl < iis_lp.a_matrix_.start_[iisRow + 1]; iEl++) {
+        HighsInt iisCol = iis_lp.a_matrix_.index_[iEl];
+        HighsInt iCol = this->row_index_[iisCol];
+        if (index[iCol] != iisCol) return false;
+        if (value[iCol] != iis_lp.a_matrix_.value_[iEl]) return false;
       }
     }
   }

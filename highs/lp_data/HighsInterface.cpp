@@ -1990,7 +1990,8 @@ HighsStatus Highs::getIisInterface() {
         this->elasticityFilter(-1.0, -1.0, 1.0, nullptr, nullptr, nullptr, true,
                                infeasible_row_subset);
     HighsLp check_lp_after = this->model_.lp_;
-    assert(check_lp_before.equalButForScalingAndNames(check_lp_after));
+    assert(check_lp_before.equalVectors(check_lp_after));
+    assert(check_lp_before.a_matrix_.equivalent(check_lp_after.a_matrix_));
     if (return_status != HighsStatus::kOk) return return_status;
   }
   return_status = HighsStatus::kOk;

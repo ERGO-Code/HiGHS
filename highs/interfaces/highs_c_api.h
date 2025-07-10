@@ -134,8 +134,13 @@ const char* const kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
 const char* const kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
 
 const HighsInt kHighsIisStrategyLight = 0;
-const HighsInt kHighsIisStrategyFromLpRowPriority = 1; // WIP
-const HighsInt kHighsIisStrategyFromLpColPriority = 2; // WIP
+const HighsInt kHighsIisStrategyFromLpRowPriority = 1;  // WIP
+const HighsInt kHighsIisStrategyFromLpColPriority = 2;  // WIP
+
+const HighsInt kHighsIisBoundFree = 1;
+const HighsInt kHighsIisBoundLower = 2;
+const HighsInt kHighsIisBoundUpper = 3;
+const HighsInt kHighsIisBoundBoxed = 4;
 
 const HighsInt kHighsIisStatusInConflict = 0;
 const HighsInt kHighsIisStatusNotInConflict = 1;
@@ -2248,13 +2253,11 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,
-			HighsInt* num_col, HighsInt* num_row,
-			HighsInt* num_nz, HighsInt* sense, double* offset,
-			double* col_cost, double* col_lower,
-			double* col_upper, double* row_lower,
-			double* row_upper, HighsInt* a_start,
-			HighsInt* a_index, double* a_value,
-			HighsInt* integrality);
+                        HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz,
+                        HighsInt* sense, double* offset, double* col_cost,
+                        double* col_lower, double* col_upper, double* row_lower,
+                        double* row_upper, HighsInt* a_start, HighsInt* a_index,
+                        double* a_value, HighsInt* integrality);
 
 /**
  * Set a primal (and possibly dual) solution as a starting point, then run
@@ -2403,15 +2406,10 @@ HighsInt Highs_feasibilityRelaxation(void* highs,
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-HighsInt Highs_getIis(void* highs,
-		      HighsInt* iis_num_col,
-		      HighsInt* iis_num_row,
-		      HighsInt* col_index,
-		      HighsInt* row_index,
-		      HighsInt* col_bound,
-		      HighsInt* row_bound,
-		      HighsInt* col_status,
-		      HighsInt* row_status);
+HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
+                      HighsInt* col_index, HighsInt* row_index,
+                      HighsInt* col_bound, HighsInt* row_bound,
+                      HighsInt* col_status, HighsInt* row_status);
 /**
  * Releases all resources held by the global scheduler instance.
  *

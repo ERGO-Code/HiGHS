@@ -2131,9 +2131,23 @@ void testDeleteRowResolveWithBasis() {
 
 void testIis() {
   void* highs = Highs_create();
-  //  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   HighsInt ret;
   double inf = Highs_getInfinity(highs);
+  // For the constraints
+  //
+  // x + y - z = 2
+  //
+  // x + y + z <= 5
+  //
+  // x + 2y + z <= 1
+  //
+  // with variables in [0, 1], constraints 0 and 2 form an IIS with
+  // 
+  // x free (so should be removed?); 0 <= y; 0 <= z
+  //
+  // x + y - z >= 2; x + 2y + z <= 1
+  //
   ret = Highs_addCol(highs, 0.0, 0.0, 1.0, 0, NULL, NULL);
   assert(ret == 0);
   ret = Highs_addCol(highs, 0.0, 0.0, 1.0, 0, NULL, NULL);
@@ -2144,7 +2158,7 @@ void testIis() {
   double value_1[3] = {1, 1, -1};
   double value_2[3] = {1, 1, 1};
   double value_3[3] = {1, 2, 1};
-  ret = Highs_addRow(highs, 2.0, inf, 3, index, value_1);
+  ret = Highs_addRow(highs,  2.0, 2.0, 3, index, value_1);
   assert(ret == 0);
   ret = Highs_addRow(highs, -inf, 5.0, 3, index, value_2);
   assert(ret == 0);
@@ -2181,7 +2195,7 @@ void testIis() {
       Highs_setIntOptionValue(highs, "iis_strategy",
 			      kHighsIisStrategyFromLpRowPriority);
     } else {
-      assert(iis_num_col == 2);
+      assert(iis_num_col == 3);
       assert(iis_num_row == 2);
       HighsInt* col_index = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_col);
       HighsInt* row_index = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_row);
@@ -2195,6 +2209,29 @@ void testIis() {
 			 col_bound, row_bound,
 			 col_status, row_status);
       assert(ret == 0);
+      
+      assert(col_index[0] == 0);
+      assert(col_index[1] == 1);
+      assert(col_index[2] == 2);
+
+      assert(row_index[0] == 0);
+      assert(row_index[1] == 2);
+
+      assert(col_bound[0] == kHighsIisBoundFree);
+      assert(col_bound[1] == kHighsIisBoundLower);
+      assert(col_bound[2] == kHighsIisBoundLower);
+
+      assert(row_bound[0] == kHighsIisBoundLower);
+      assert(row_bound[1] == kHighsIisBoundUpper);
+
+      assert(col_status[0] == kHighsIisStatusInConflict);
+      assert(col_status[1] == kHighsIisStatusInConflict);
+      assert(col_status[2] == kHighsIisStatusInConflict);
+      
+      assert(row_status[0] == kHighsIisStatusInConflict);
+      assert(row_status[1] == kHighsIisStatusNotInConflict);
+      assert(row_status[2] == kHighsIisStatusInConflict);
+      
       free(col_index);
       free(row_index);
       free(col_bound);
@@ -2208,28 +2245,28 @@ void testIis() {
 }
 
 int main() {
-  //  minimalApiIllegalLp();
-  //  testCallback();
-  //  versionApi();
-  //  fullApi();
-  //  minimalApiLp();
-  //  minimalApiMip();
-  //  minimalApiQp();
-  //  fullApiOptions();
-  //  fullApiLp();
-  //  fullApiMip();
-  //  fullApiQp();
-  //  passPresolveGetLp();
-  //  options();
-  //  testGetColsByRange();
-  //  testPassHessian();
-  //  testRanging();
-  //  testFeasibilityRelaxation();
-  //  testGetModel();
-  //  testMultiObjective();
-  //  testQpIndefiniteFailure();
-  //  testDualRayTwice();
-  //  testDeleteRowResolveWithBasis();
+    minimalApiIllegalLp();
+    testCallback();
+    versionApi();
+    fullApi();
+    minimalApiLp();
+    minimalApiMip();
+    minimalApiQp();
+    fullApiOptions();
+    fullApiLp();
+    fullApiMip();
+    fullApiQp();
+    passPresolveGetLp();
+    options();
+    testGetColsByRange();
+    testPassHessian();
+    testRanging();
+    testFeasibilityRelaxation();
+    testGetModel();
+    testMultiObjective();
+    testQpIndefiniteFailure();
+    testDualRayTwice();
+    testDeleteRowResolveWithBasis();
   testIis();
   return 0;
 }
