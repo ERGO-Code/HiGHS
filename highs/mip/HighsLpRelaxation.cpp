@@ -1301,6 +1301,19 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
                   break;
               }
 
+              // Spot cases where a global domain change during the search has
+              // led to a clique and the local domain has branched into a state
+              // where the clique subst. would be invalid for the local domain.
+              // TODO: Turn into assert when search becomes parallel
+              if (domain) {
+                double replace_val = subst->replace.val == 0 ? 1.0 - val : val;
+                double replace_lb = domain->col_lower_[subst->replace.col];
+                double replace_ub = domain->col_upper_[subst->replace.col];
+                double feastol = mipsolver.mipdata_->feastol;
+                if ((replace_val < replace_lb - feastol) ||
+                    (replace_val > replace_ub + feastol)) break;
+              }
+
               col = subst->replace.col;
               if (subst->replace.val == 0) val = 1.0 - val;
 
