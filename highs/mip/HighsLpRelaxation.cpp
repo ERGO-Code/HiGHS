@@ -1311,7 +1311,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
                 double replace_ub = domain->col_upper_[subst->replace.col];
                 double feastol = mipsolver.mipdata_->feastol;
                 if ((replace_val < replace_lb - feastol) ||
-                    (replace_val > replace_ub + feastol)) break;
+                    (replace_val > replace_ub + feastol)) {
+                  break;
+                }
               }
 
               col = subst->replace.col;
