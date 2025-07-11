@@ -748,8 +748,13 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   HighsStatus call_status;
 
   HighsLp& lp = model.lp_;
+
   // Dimensions in a_matrix_ may not be set, so take them from lp
   lp.setMatrixDimensions();
+
+  // Replace any blank names and check for names with spaces
+  call_status = normaliseNames(this->options_.log_options, lp);
+  if (call_status == HighsStatus::kError) return call_status;
 
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -3369,6 +3374,10 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  // Replace any blank names and check for names with spaces
+  call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
+  if (call_status == HighsStatus::kError) return call_status;
+
   // Report to user that solution is being written
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,

@@ -382,7 +382,7 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
   h.setOptionValue("output_flag", dev_run);
   HighsModel model;
   HighsLp& lp = model.lp_;
-  ;
+
   lp.num_col_ = 2;
   lp.num_row_ = 3;
   lp.col_cost_ = {8, 10};
@@ -403,7 +403,7 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
   // Model has no dimensions for a_matrix_, but these are set in
   // writeLocalModel.
   if (dev_run) printf("\nModel with no column or row names\n");
-  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kWarning);
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kOk);
   lp.col_names_ = {"C0", "C1"};
   lp.row_names_ = {"R0", "R1", "R2"};
 
@@ -476,4 +476,45 @@ TEST_CASE("mps-silly-names", "[highs_filereader]") {
   h.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kOk);
+}
+
+TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {7, 12};
+  lp.row_upper_ = {inf, inf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 2, 4};
+  Highs h;
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.writeSolution("", 1) == HighsStatus::kOk);
+  REQUIRE(h.writeModel("") == HighsStatus::kOk);
+
+  lp.col_names_ = {"Column0", ""};
+  lp.row_names_ = {"Row0", "Row1"};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.writeSolution("") == HighsStatus::kOk);
+  REQUIRE(h.writeModel("") == HighsStatus::kOk);
+
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {2, 3};
+  REQUIRE(h.addRow(5, inf, 2, index.data(), value.data()) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.writeSolution("", 1) == HighsStatus::kOk);
+  REQUIRE(h.writeModel("") == HighsStatus::kOk);
+
+  lp.row_names_[1] = "Row 1";
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.writeSolution("", 1) == HighsStatus::kError);
+  REQUIRE(h.writeModel("") == HighsStatus::kError);
+
+  h.resetGlobalScheduler(true);
 }

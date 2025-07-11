@@ -163,6 +163,25 @@ void HighsLp::exactResize() {
   if ((int)this->integrality_.size()) this->integrality_.resize(this->num_col_);
 }
 
+bool HighsLp::okNames() const {
+  if (this->col_names_.size() != static_cast<size_t>(this->num_col_)) return false;
+  if (this->row_names_.size() != static_cast<size_t>(this->num_row_)) return false;
+  // Look for names that are empty or have spaces
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    const std::string& name = this->col_names_[iCol];
+    if (HighsInt(name.length()) == 0) return false;
+    size_t space_pos = name.find(" ");
+    if (space_pos != std::string::npos) return false;
+  }
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+    const std::string& name = this->row_names_[iRow];
+    if (HighsInt(name.length()) == 0) return false;
+    size_t space_pos = name.find(" ");
+    if (space_pos != std::string::npos) return false;
+  }
+  return true;
+}
+
 void HighsLp::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;
@@ -182,8 +201,10 @@ void HighsLp::clear() {
   this->origin_name_ = "";
   this->objective_name_ = "";
 
-  this->new_col_name_ix_ = 0;
-  this->new_row_name_ix_ = 0;
+  this->col_name_prefix_ = "";
+  this->row_name_prefix_ = "";
+  this->col_name_suffix_ = 0;
+  this->row_name_suffix_ = 0;
   this->col_names_.clear();
   this->row_names_.clear();
 
@@ -331,10 +352,11 @@ void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
     this->col_hash_.form(this->col_names_);
   // Handle the addition of user-defined names later
   assert(name == "");
+  if (this->col_name_prefix_ == "") col_name_prefix_ = kHighsUniqueColNamePrefix;
   for (HighsInt iCol = this->num_col_; iCol < this->num_col_ + num_new_col;
        iCol++) {
     const std::string col_name =
-        "col_ekk_" + std::to_string(this->new_col_name_ix_++);
+        this->col_name_prefix_ + std::to_string(this->col_name_suffix_++);
     bool added = false;
     auto search = this->col_hash_.name2index.find(col_name);
     if (search == this->col_hash_.name2index.end()) {
@@ -375,10 +397,11 @@ void HighsLp::addRowNames(const std::string name, const HighsInt num_new_row) {
     this->row_hash_.form(this->row_names_);
   // Handle the addition of user-defined names later
   assert(name == "");
+  if (this->row_name_prefix_ == "") row_name_prefix_ = kHighsUniquerowNamePrefix;
   for (HighsInt iRow = this->num_row_; iRow < this->num_row_ + num_new_row;
        iRow++) {
     const std::string row_name =
-        "row_ekk_" + std::to_string(this->new_row_name_ix_++);
+        this->row_name_prefix_ + std::to_string(this->row_name_suffix_++);
     bool added = false;
     auto search = this->row_hash_.name2index.find(row_name);
     if (search == this->row_hash_.name2index.end()) {

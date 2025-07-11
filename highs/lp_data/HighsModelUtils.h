@@ -24,9 +24,11 @@
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
                         const std::vector<double>& upper);
+bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp);
 bool hasNamesWithSpaces(const HighsLogOptions& log_options,
-                        const HighsInt num_name,
+			const bool col,
                         const std::vector<std::string>& names);
+
 void writeModelBoundSolution(
     FILE* file, const HighsLogOptions& log_options, const bool columns,
     const HighsInt dim, const std::vector<double>& lower,
@@ -56,12 +58,18 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model, const HighsSolution& solution,
                         const HighsInfo& info, const bool sparse = false);
 
-HighsInt maxNameLength(const HighsInt num_name,
-                       const std::vector<std::string>& names);
+HighsInt maxNameLength(const HighsLp& lp);
+HighsInt maxNameLength(const std::vector<std::string>& names);
+
+HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp);
+
 HighsStatus normaliseNames(const HighsLogOptions& log_options,
-                           const std::string name_type, const HighsInt num_name,
+			   bool column,
+			   HighsInt num_name_required,
+			   std::string& name_prefix,
+			   HighsInt& name_suffix,
                            std::vector<std::string>& names,
-                           HighsInt& max_name_length);
+			   HighsNameHash& name_hash);
 
 void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,

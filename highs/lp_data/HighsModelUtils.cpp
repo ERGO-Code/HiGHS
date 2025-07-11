@@ -336,75 +336,128 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
   }
 }
 
+bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp) {
+  if (hasNamesWithSpaces(log_options, true, lp.col_names_)) return true; 
+  return hasNamesWithSpaces(log_options, false, lp.row_names_);
+}
+
 bool hasNamesWithSpaces(const HighsLogOptions& log_options,
-                        const HighsInt num_name,
+			const bool col,
                         const std::vector<std::string>& names) {
   HighsInt num_names_with_spaces = 0;
+  HighsInt num_name = names.size();
   for (HighsInt ix = 0; ix < num_name; ix++) {
     size_t space_pos = names[ix].find(" ");
     if (space_pos != std::string::npos) {
       if (num_names_with_spaces == 0) {
         highsLogDev(
             log_options, HighsLogType::kInfo,
-            "Name |%s| contains a space character in position %" HIGHSINT_FORMAT
+            "%s name |%s| contains a space character in position %" HIGHSINT_FORMAT
             "\n",
-            names[ix].c_str(), space_pos);
+            col ? "Column" : "Row",
+	    names[ix].c_str(), space_pos);
         num_names_with_spaces++;
       }
     }
   }
   if (num_names_with_spaces)
     highsLogDev(log_options, HighsLogType::kInfo,
-                "There are %" HIGHSINT_FORMAT " names with spaces\n",
-                num_names_with_spaces);
+                "There are %d %s names with spaces\n",
+                HighsInt(num_names_with_spaces),
+		col ? "column" : "row");
   return num_names_with_spaces > 0;
 }
 
-HighsInt maxNameLength(const HighsInt num_name,
-                       const std::vector<std::string>& names) {
+HighsInt maxNameLength(const HighsLp& lp) {
+  return std::max(maxNameLength(lp.col_names_),
+		  maxNameLength(lp.row_names_));
+}
+  
+HighsInt maxNameLength(const std::vector<std::string>& names) {
+  HighsInt num_name = names.size();
   HighsInt max_name_length = 0;
   for (HighsInt ix = 0; ix < num_name; ix++)
-    max_name_length = std::max((HighsInt)names[ix].length(), max_name_length);
+    max_name_length = std::max(HighsInt(names[ix].length()), max_name_length);
   return max_name_length;
 }
 
-HighsStatus normaliseNames(const HighsLogOptions& log_options,
-                           const std::string name_type, const HighsInt num_name,
-                           std::vector<std::string>& names,
-                           HighsInt& max_name_length) {
-  // Record the desired maximum name length
-  HighsInt desired_max_name_length = max_name_length;
-  // First look for empty names
-  HighsInt num_empty_name = 0;
-  std::string name_prefix = name_type.substr(0, 1);
-  bool names_with_spaces = false;
-  for (HighsInt ix = 0; ix < num_name; ix++) {
-    if ((HighsInt)names[ix].length() == 0) num_empty_name++;
-  }
-  // If there are no empty names - in which case they will all be
-  // replaced - find the maximum name length
-  if (!num_empty_name) max_name_length = maxNameLength(num_name, names);
-  bool construct_names =
-      num_empty_name || max_name_length > desired_max_name_length;
-  if (construct_names) {
-    // Construct names, either because they are empty names, or
-    // because the existing names are too long
+HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp) {
+  HighsStatus call_status =
+    normaliseNames(log_options,
+		   true,
+		   lp.num_col_,
+		   lp.col_name_prefix_,
+		   lp.col_name_suffix_,
+		   lp.col_names_,
+		   lp.col_hash_);
+  if (call_status == HighsStatus::kError) return call_status;
+  return normaliseNames(log_options,
+			false,
+			lp.num_row_,
+			lp.row_name_prefix_,
+			lp.row_name_suffix_,
+			lp.row_names_,
+			lp.row_hash_);
+}
 
+HighsStatus normaliseNames(const HighsLogOptions& log_options,
+			   bool column,
+			   HighsInt num_name_required,
+			   std::string& name_prefix,
+			   HighsInt& name_suffix,
+                           std::vector<std::string>& names,
+			   HighsNameHash& name_hash) {
+  // First look for there being no names
+  
+  HighsInt max_name_length = maxNameLength(names);
+  if (max_name_length == 0) {
+    // No names or all blank, so use minimal prefix, and start suffix
+    // from 0
+    name_prefix = column ? kHighsMinimalColNamePrefix : kHighsMinimalrowNamePrefix;
+    name_suffix = 0;
+    names.resize(num_name_required);
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "There are empty or excessively-long %s names: using "
-                 "constructed names with prefix \"%s\"\n",
-                 name_type.c_str(), name_prefix.c_str());
-    for (HighsInt ix = 0; ix < num_name; ix++)
-      names[ix] = name_prefix + std::to_string(ix);
-  } else {
-    // Using original names, so look to see whether there are names with spaces
-    names_with_spaces = hasNamesWithSpaces(log_options, num_name, names);
+                 "%6s names are blank or not present: using "
+                 "names with prefix \"%s\", beginning with suffix %d\n",
+                 column ? "Column" : "Row", name_prefix.c_str(), int(name_suffix));
+    for (HighsInt ix = 0; ix < num_name_required; ix++)
+      names[ix] = name_prefix + std::to_string(name_suffix++);
+    return HighsStatus::kOk;
   }
-  // Find the final maximum name length
-  max_name_length = maxNameLength(num_name, names);
-  // Can't have names with spaces and more than 8 characters
-  if (max_name_length > 8 && names_with_spaces) return HighsStatus::kError;
-  if (construct_names) return HighsStatus::kWarning;
+  names.resize(num_name_required);
+  // Form the hash table to check for duplicates
+  if (!name_hash.name2index.size()) name_hash.form(names);
+
+  for (HighsInt ix = 0; ix < num_name_required; ix++) {
+    if (HighsInt(names[ix].length()) == 0) {
+      // Name is blank, so create one
+      name_prefix = column ? kHighsUniqueColNamePrefix : kHighsUniquerowNamePrefix;
+      std::string name = name_prefix + std::to_string(name_suffix++);
+      auto search = name_hash.name2index.find(name);
+      if (search == name_hash.name2index.end()) {
+	// Name not found in hash, so replace blank name
+	names[ix] = name;
+	// Add name to hash, checking for duplicate
+	const bool duplicate =
+          !name_hash.name2index.emplace(name, ix).second;
+	assert(!duplicate);
+	assert(names[ix] == name);
+	assert(name_hash.name2index.find(name)->second == ix);
+      } else {
+	name_hash.name2index.clear();
+	return HighsStatus::kError;
+      }
+    } else {
+      size_t space_pos = names[ix].find(" ");
+      if (space_pos != std::string::npos) {
+	highsLogUser(log_options, HighsLogType::kError,
+		     "%s %d name \"%s\" contains a space character\n",
+		     column ? "Column" : "Row",
+		     int(ix), names[ix].c_str());
+	return HighsStatus::kError;
+      }
+    }
+  }
   return HighsStatus::kOk;
 }
 

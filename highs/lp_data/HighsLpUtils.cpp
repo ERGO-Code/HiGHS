@@ -2417,7 +2417,9 @@ HighsStatus assessLpPrimalSolution(const std::string message,
   row_value.assign(lp.num_row_, 0);
   const bool have_integrality = (lp.integrality_.size() != 0);
   if (!solution.value_valid) return HighsStatus::kError;
+  const bool has_col_names = lp.col_names_.size() >= lp.num_col_;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    const std::string name_string = has_col_names ? (" (" + lp.col_names_[iCol] + ")") : "";
     const double primal = solution.col_value[iCol];
     const double lower = lp.col_lower_[iCol];
     const double upper = lp.col_upper_[iCol];
@@ -2433,9 +2435,11 @@ HighsStatus assessLpPrimalSolution(const std::string message,
       if (col_infeasibility > kPrimalFeasibilityTolerance) {
         if (col_infeasibility > 2 * max_col_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Col %6d has         infeasibility of %11.4g from "
+                       "Col %6d%s has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
-                       (int)iCol, col_infeasibility, lower, primal, upper);
+                       int(iCol),
+		       name_string.c_str(),
+		       col_infeasibility, lower, primal, upper);
         num_col_infeasibilities++;
       }
       max_col_infeasibility =
@@ -2446,8 +2450,9 @@ HighsStatus assessLpPrimalSolution(const std::string message,
       if (integer_infeasibility > options.mip_feasibility_tolerance) {
         if (integer_infeasibility > 2 * max_integer_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Col %6d has integer infeasibility of %11.4g\n",
-                       (int)iCol, integer_infeasibility);
+                       "Col %6d%s has integer infeasibility of %11.4g\n",
+                       (int)iCol, 
+		       name_string.c_str(), integer_infeasibility);
         num_integer_infeasibilities++;
       }
       max_integer_infeasibility =
@@ -2458,10 +2463,12 @@ HighsStatus assessLpPrimalSolution(const std::string message,
   HighsStatus return_status =
       calculateRowValuesQuad(lp, solution.col_value, row_value);
   if (return_status != HighsStatus::kOk) return return_status;
+  const bool has_row_names = lp.row_names_.size() >= lp.num_row_;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     const double primal = solution.row_value[iRow];
     const double lower = lp.row_lower_[iRow];
     const double upper = lp.row_upper_[iRow];
+    const std::string name_string = has_row_names ? (" (" + lp.row_names_[iRow] + ")") : "";
     // @primal_infeasibility calculation
     double row_infeasibility = 0;
     if (primal < lower - kPrimalFeasibilityTolerance) {
@@ -2473,9 +2480,10 @@ HighsStatus assessLpPrimalSolution(const std::string message,
       if (row_infeasibility > kPrimalFeasibilityTolerance) {
         if (row_infeasibility > 2 * max_row_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Row %6d has         infeasibility of %11.4g from "
+                       "Row %6d%s has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
-                       (int)iRow, row_infeasibility, lower, primal, upper);
+                       (int)iRow, 
+		       name_string.c_str(), row_infeasibility, lower, primal, upper);
         num_row_infeasibilities++;
       }
       max_row_infeasibility =
@@ -2486,7 +2494,8 @@ HighsStatus assessLpPrimalSolution(const std::string message,
     if (row_residual > kRowResidualTolerance) {
       if (row_residual > 2 * max_row_residual) {
         highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Row %6d has         residual      of %11.4g\n", (int)iRow,
+                     "Row %6d%s has         residual      of %11.4g\n", (int)iRow, 
+		       name_string.c_str(),
                      row_residual);
       }
       num_row_residuals++;
@@ -3283,3 +3292,4 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
     }
   }
 }
+
