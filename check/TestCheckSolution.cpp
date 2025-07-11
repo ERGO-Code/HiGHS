@@ -459,6 +459,40 @@ TEST_CASE("read-miplib-solution", "[highs_check_solution]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("read-lp-file-solution", "[highs_check_solution]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string model_file_name = test_name + ".lp";
+  const std::string solution_file_name = test_name + ".sol";
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0, 1, 1};
+  lp.col_lower_ = {0, 10, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf};
+  lp.col_names_ = {"x", "y", "z"};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {2};
+  lp.row_names_ = {"r"};
+  lp.a_matrix_.start_ = {0, 1, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous, HighsVarType::kInteger};
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  h.writeModel(model_file_name);
+  h.writeSolution(solution_file_name);
+
+  h.readModel(model_file_name);
+  h.readSolution(solution_file_name);
+  h.run();
+  
+  //  std::remove(model_file_name.c_str());
+  //  std::remove(solution_file_name.c_str());
+  h.resetGlobalScheduler(true);
+}
+
 void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
                                const std::string& model,
                                const HighsModelStatus require_model_status,
