@@ -3215,7 +3215,7 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
       HighsInt ninfmin;
       HighsCDouble minAct;
       globaldom.computeMinActivity(0, len, inds, vals, ninfmin, minAct);
-      assert(ninfmin == 0);
+      if (ninfmin > 0) return false;
 
       return explainInfeasibilityLeq(inds, vals, len, rhs, double(minAct));
     }
