@@ -496,17 +496,22 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   REQUIRE(h.writeSolution("", 1) == HighsStatus::kOk);
   REQUIRE(h.writeModel("") == HighsStatus::kOk);
 
-  lp.col_names_ = {"Column0", ""};
+  lp.col_names_ = {"Column", "Column"};
   lp.row_names_ = {"Row0", "Row1"};
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.writeModel("") == HighsStatus::kError);
+
+  lp.col_names_ = {"Column0", ""};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
-  REQUIRE(h.writeSolution("") == HighsStatus::kOk);
+  REQUIRE(h.writeSolution("", -1) == HighsStatus::kOk);
   REQUIRE(h.writeModel("") == HighsStatus::kOk);
 
   std::vector<HighsInt> index = {0, 1};
   std::vector<double> value = {2, 3};
   REQUIRE(h.addRow(5, inf, 2, index.data(), value.data()) == HighsStatus::kOk);
   h.run();
+  REQUIRE(h.writeBasis("") == HighsStatus::kOk);
   REQUIRE(h.writeSolution("", 1) == HighsStatus::kOk);
   REQUIRE(h.writeModel("") == HighsStatus::kOk);
 

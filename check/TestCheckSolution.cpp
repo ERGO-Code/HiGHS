@@ -496,6 +496,50 @@ TEST_CASE("read-lp-file-solution", "[highs_check_solution]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("read-lp-file-basis", "[highs_check_solution]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string model_file_name = test_name + ".lp";
+  const std::string basis_file_name = test_name + ".bas";
+  const bool with_names = false;
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 1, 1};
+  lp.col_lower_ = {0, 10, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf};
+  if (with_names) lp.col_names_ = {"x", "y", "z"};
+  lp.row_lower_ = {1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 2};
+  if (with_names) lp.row_names_ = {"r-lo", "r-up"};
+  lp.a_matrix_.start_ = {0, 2, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, 1};
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  // Optimally x - basic; y - lower; z - lower
+  h.writeModel(model_file_name);
+  h.writeSolution("", 1);
+  h.writeBasis("");
+  h.writeBasis(basis_file_name);
+
+  h.readModel(model_file_name);
+  // Variables now ordered y; z; x
+  h.writeModel("");
+  h.readBasis(basis_file_name);
+  // Initial basis: y - basic; z - lower; x - lower, using basis for
+  // original ordering with new ordering. Not optimal - in fact basis
+  // matrix B = [0] is singular!
+  h.run();
+  REQUIRE(h.getInfo().simplex_iteration_count == 0);
+  
+  std::remove(model_file_name.c_str());
+  // std::remove(basis_file_name.c_str());
+  
+  h.resetGlobalScheduler(true);
+}
+
 void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
                                const std::string& model,
                                const HighsModelStatus require_model_status,

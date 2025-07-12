@@ -417,47 +417,43 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
     name_suffix = 0;
     names.resize(num_name_required);
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "%6s names are blank or not present: using "
+                 "%s names are blank or not present: using "
                  "names with prefix \"%s\", beginning with suffix %d\n",
-                 column ? "Column" : "Row", name_prefix.c_str(), int(name_suffix));
+                 column ? "Column" : "Row   ", name_prefix.c_str(), int(name_suffix));
     for (HighsInt ix = 0; ix < num_name_required; ix++)
       names[ix] = name_prefix + std::to_string(name_suffix++);
     return HighsStatus::kOk;
   }
   names.resize(num_name_required);
-  // Form the hash table to check for duplicates
-  if (!name_hash.name2index.size()) name_hash.form(names);
-
+  HighsInt num_blank = 0;
+  const HighsInt from_name_suffix = name_suffix;
   for (HighsInt ix = 0; ix < num_name_required; ix++) {
     if (HighsInt(names[ix].length()) == 0) {
       // Name is blank, so create one
+      num_blank++;
       name_prefix = column ? kHighsUniqueColNamePrefix : kHighsUniquerowNamePrefix;
-      std::string name = name_prefix + std::to_string(name_suffix++);
-      auto search = name_hash.name2index.find(name);
-      if (search == name_hash.name2index.end()) {
-	// Name not found in hash, so replace blank name
-	names[ix] = name;
-	// Add name to hash, checking for duplicate
-	const bool duplicate =
-          !name_hash.name2index.emplace(name, ix).second;
-	assert(!duplicate);
-	assert(names[ix] == name);
-	assert(name_hash.name2index.find(name)->second == ix);
-      } else {
-	name_hash.name2index.clear();
-	return HighsStatus::kError;
-      }
-    } else {
-      size_t space_pos = names[ix].find(" ");
-      if (space_pos != std::string::npos) {
-	highsLogUser(log_options, HighsLogType::kError,
-		     "%s %d name \"%s\" contains a space character\n",
-		     column ? "Column" : "Row",
-		     int(ix), names[ix].c_str());
-	return HighsStatus::kError;
-      }
+      names[ix] = name_prefix + std::to_string(name_suffix++);
+    } else if (names[ix].find(" ") != std::string::npos) {
+      // Name contains a space, so return error
+      highsLogUser(log_options, HighsLogType::kError,
+		   "%s %d name \"%s\" contains a space character\n",
+		   column ? "Column" : "Row",
+		   int(ix), names[ix].c_str());
+      return HighsStatus::kError;
     }
   }
+  // Check for duplicates
+  if (name_hash.hasDuplicate(names)) {
+    name_hash.name2index.clear();
+    return HighsStatus::kError;
+  }
+  if (num_blank) 
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "Replaced %d blank %6s name%s by name%s with prefix \"%s\", beginning with suffix %d\n",
+		 int(num_blank), column ? "column" : "row",
+		 num_blank > 1 ? "s" : "",
+		 num_blank > 1 ? "s" : "",
+		 name_prefix.c_str(), int(from_name_suffix));
   return HighsStatus::kOk;
 }
 
