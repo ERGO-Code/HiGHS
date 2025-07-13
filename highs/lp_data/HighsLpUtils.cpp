@@ -2588,6 +2588,34 @@ void writeBasisFile(FILE*& file, const HighsOptions& options,
   }
 }
 
+HighsStatus getIndexFromName(const HighsLogOptions& log_options,
+			     std::string& from_method,
+			     const bool is_column,
+			     std::string& name,
+			     std::unordered_map<std::string, int> name2index,
+			     HighsInt& index,
+			     const std::vector<std::string>& names) {
+  auto search = name2index.find(name);
+  if (search == name2index.end()) {
+    highsLogUser(log_options, HighsLogType::kError,
+		 "%s: %s name %s is not found\n", from_method.c_str(),
+		 is_column ? "column" : "row",
+		 name.c_str());
+    return HighsStatus::kError;
+  }
+  if (search->second == kHashIsDuplicate) {
+    highsLogUser(log_options, HighsLogType::kError,
+		 "%s: %s name %s is duplicated\n", from_method.c_str(),
+		 is_column ? "column" : "row",
+		 name.c_str());
+    return HighsStatus::kError;
+  }
+  index = search->second;
+  assert(names[index] == name);
+  return HighsStatus::kOk;
+}
+
+
 HighsStatus readBasisFile(const HighsLogOptions& log_options,
 			  HighsLp& lp, HighsBasis& basis,
                           const std::string filename) {
