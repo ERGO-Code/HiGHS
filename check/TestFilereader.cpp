@@ -491,6 +491,7 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 2, 2, 4};
   Highs h;
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
   REQUIRE(h.writeSolution("", 1) == HighsStatus::kOk);
@@ -520,6 +521,36 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   h.run();
   REQUIRE(h.writeSolution("", 1) == HighsStatus::kError);
   REQUIRE(h.writeModel("") == HighsStatus::kError);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("read-highs-lp-file", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string model_name0 = test_name + "-0.lp";
+  const std::string model_name1 = test_name + "-1.lp";
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {8};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {inf};
+  lp.row_lower_ = {-21, 31, 43};
+  lp.row_upper_ = {inf, inf, inf};
+  lp.a_matrix_.start_ = {0, 3};
+  lp.a_matrix_.index_ = {0, 1, 2};
+  lp.a_matrix_.value_ = {2, -3, 7};
+  lp.col_names_ = {"col"};
+  lp.row_names_ = {"row", "55", "9.9"};
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_name0) == HighsStatus::kOk);
+  REQUIRE(h.readModel(model_name0) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_name1) == HighsStatus::kOk);
+  
+  //  std::remove(model_name0.c_str());
+  //  std::remove(model_name1.c_str());
 
   h.resetGlobalScheduler(true);
 }
