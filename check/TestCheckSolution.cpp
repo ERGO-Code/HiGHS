@@ -480,7 +480,7 @@ TEST_CASE("read-lp-file-solution", "[highs_check_solution]") {
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
                      HighsVarType::kInteger};
   Highs h;
-  // h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
   h.writeModel(model_file_name);
@@ -529,14 +529,44 @@ TEST_CASE("read-lp-file-basis", "[highs_check_solution]") {
   // Variables now ordered y; z; x
   h.writeModel("");
   h.readBasis(basis_file_name);
-  // Initial basis: y - basic; z - lower; x - lower, using basis for
-  // original ordering with new ordering. Not optimal - in fact basis
-  // matrix B = [0] is singular!
+  // Old read basis yields initial basis: y - basic; z - lower; x -
+  // lower, using basis for original ordering with new ordering. Not
+  // optimal - in fact basis matrix B = [0] is singular!
   h.run();
   REQUIRE(h.getInfo().simplex_iteration_count == 0);
 
   std::remove(model_file_name.c_str());
   std::remove(basis_file_name.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("read-lp-file-rgn", "[highs_check_solution]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+  const std::string model_file_name = test_name + ".lp";
+  const std::string solution_file_name = test_name + ".sol";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.writeSolution(solution_file_name) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_file_name) == HighsStatus::kOk);
+
+  REQUIRE(h.readModel(model_file_name) == HighsStatus::kOk);
+  REQUIRE(h.readSolution(solution_file_name) == HighsStatus::kOk);
+  bool valid;
+  bool integral;
+  bool feasible;
+  REQUIRE(h.assessPrimalSolution(valid, integral, feasible) ==
+          HighsStatus::kOk);
+  REQUIRE(valid);
+  REQUIRE(integral);
+  REQUIRE(feasible);
+
+  std::remove(model_file_name.c_str());
+  std::remove(solution_file_name.c_str());
 
   h.resetGlobalScheduler(true);
 }

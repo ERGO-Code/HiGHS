@@ -525,10 +525,12 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   h.resetGlobalScheduler(true);
 }
 
-TEST_CASE("read-highs-lp-file", "[highs_filereader]") {
+TEST_CASE("read-highs-lp-file0", "[highs_filereader]") {
+  // Identified when fixing #2463 that LP file reader cannot handle
+  // case where row names are numeric constants
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
-  const std::string model_name0 = test_name + "-0.lp";
-  const std::string model_name1 = test_name + "-1.lp";
+  const std::string model_file_name0 = test_name + "-0.lp";
+  const std::string model_file_name1 = test_name + "-1.lp";
   HighsLp lp;
   lp.num_col_ = 1;
   lp.num_row_ = 3;
@@ -543,14 +545,33 @@ TEST_CASE("read-highs-lp-file", "[highs_filereader]") {
   lp.col_names_ = {"col"};
   lp.row_names_ = {"row", "55", "9.9"};
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.writeModel(model_name0) == HighsStatus::kOk);
-  REQUIRE(h.readModel(model_name0) == HighsStatus::kOk);
-  REQUIRE(h.writeModel(model_name1) == HighsStatus::kOk);
+  // Create a .lp file for this model - that has numeric constants as
+  // row names
+  REQUIRE(h.writeModel(model_file_name0) == HighsStatus::kOk);
+  // Make sure that the .lp file for this model can be read OK
+  REQUIRE(h.readModel(model_file_name0) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_file_name1) == HighsStatus::kOk);
 
-  //  std::remove(model_name0.c_str());
-  //  std::remove(model_name1.c_str());
+  std::remove(model_file_name0.c_str());
+  std::remove(model_file_name1.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("read-highs-lp-file1", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+  std::string model_file_name = test_name + ".lp";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_file_name) == HighsStatus::kOk);
+  REQUIRE(h.readModel(model_file_name) == HighsStatus::kOk);
+
+  std::remove(model_file_name.c_str());
 
   h.resetGlobalScheduler(true);
 }
