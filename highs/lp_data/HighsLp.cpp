@@ -164,8 +164,10 @@ void HighsLp::exactResize() {
 }
 
 bool HighsLp::okNames() const {
-  if (this->col_names_.size() != static_cast<size_t>(this->num_col_)) return false;
-  if (this->row_names_.size() != static_cast<size_t>(this->num_row_)) return false;
+  if (this->col_names_.size() != static_cast<size_t>(this->num_col_))
+    return false;
+  if (this->row_names_.size() != static_cast<size_t>(this->num_row_))
+    return false;
   // Look for names that are empty or have spaces
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     const std::string& name = this->col_names_[iCol];
@@ -352,7 +354,8 @@ void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
     this->col_hash_.form(this->col_names_);
   // Handle the addition of user-defined names later
   assert(name == "");
-  if (this->col_name_prefix_ == "") col_name_prefix_ = kHighsUniqueColNamePrefix;
+  if (this->col_name_prefix_ == "")
+    col_name_prefix_ = kHighsUniqueColNamePrefix;
   for (HighsInt iCol = this->num_col_; iCol < this->num_col_ + num_new_col;
        iCol++) {
     const std::string col_name =
@@ -397,7 +400,8 @@ void HighsLp::addRowNames(const std::string name, const HighsInt num_new_row) {
     this->row_hash_.form(this->row_names_);
   // Handle the addition of user-defined names later
   assert(name == "");
-  if (this->row_name_prefix_ == "") row_name_prefix_ = kHighsUniquerowNamePrefix;
+  if (this->row_name_prefix_ == "")
+    row_name_prefix_ = kHighsUniquerowNamePrefix;
   for (HighsInt iRow = this->num_row_; iRow < this->num_row_ + num_new_row;
        iRow++) {
     const std::string row_name =

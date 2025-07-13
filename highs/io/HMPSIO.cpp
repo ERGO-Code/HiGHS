@@ -617,8 +617,8 @@ HighsStatus writeMps(
   }
   highsLogDev(log_options, HighsLogType::kInfo, "writeMPS: Opened file  OK\n");
   // Check that the names are no longer than 8 characters for fixed format write
-  HighsInt max_name_length = std::max(maxNameLength(col_names),
-				      maxNameLength(row_names));
+  HighsInt max_name_length =
+      std::max(maxNameLength(col_names), maxNameLength(row_names));
   if (!use_free_format && max_name_length > 8) {
     highsLogUser(
         log_options, HighsLogType::kError,

@@ -466,20 +466,21 @@ TEST_CASE("read-lp-file-solution", "[highs_check_solution]") {
   const bool with_names = false;
   HighsLp lp;
   lp.num_col_ = 3;
-  lp.num_row_ = 1;
+  lp.num_row_ = 2;
   lp.col_cost_ = {0, 1, 1};
   lp.col_lower_ = {0, 10, 0};
   lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf};
   if (with_names) lp.col_names_ = {"x", "y", "z"};
-  lp.row_lower_ = {1};
-  lp.row_upper_ = {2};
-  if (with_names) lp.row_names_ = {"r"};
-  lp.a_matrix_.start_ = {0, 1, 1, 2};
-  lp.a_matrix_.index_ = {0, 0};
-  lp.a_matrix_.value_ = {1, 1};
-  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous, HighsVarType::kInteger};
+  lp.row_lower_ = {1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 2};
+  if (with_names) lp.row_names_ = {"r-lo", "r-up"};
+  lp.a_matrix_.start_ = {0, 2, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+                     HighsVarType::kInteger};
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  // h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
   h.writeModel(model_file_name);
@@ -489,10 +490,10 @@ TEST_CASE("read-lp-file-solution", "[highs_check_solution]") {
   h.writeModel("");
   h.readSolution(solution_file_name);
   h.run();
-  
+
   std::remove(model_file_name.c_str());
   std::remove(solution_file_name.c_str());
-  
+
   h.resetGlobalScheduler(true);
 }
 
@@ -515,7 +516,7 @@ TEST_CASE("read-lp-file-basis", "[highs_check_solution]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 1, 1};
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
   // Optimally x - basic; y - lower; z - lower
@@ -532,11 +533,11 @@ TEST_CASE("read-lp-file-basis", "[highs_check_solution]") {
   // original ordering with new ordering. Not optimal - in fact basis
   // matrix B = [0] is singular!
   h.run();
-  //  REQUIRE(h.getInfo().simplex_iteration_count == 0);
-  
+  REQUIRE(h.getInfo().simplex_iteration_count == 0);
+
   std::remove(model_file_name.c_str());
-  // std::remove(basis_file_name.c_str());
-  
+  std::remove(basis_file_name.c_str());
+
   h.resetGlobalScheduler(true);
 }
 

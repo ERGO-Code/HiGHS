@@ -144,7 +144,7 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
-const std::string kHighsBasisFileV1 = "v1"; // Deprecated
+const std::string kHighsBasisFileV1 = "v1";  // Deprecated
 const std::string kHighsBasisFileV2 = "v2";
 
 enum SolutionStyle {

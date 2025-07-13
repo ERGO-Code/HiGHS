@@ -299,9 +299,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
           if (iCol != iRow) coef *= 2;
           if (coef != 0.0) {
             this->writeToFileValue(file, coef);
-	    this->writeToFileVar(file, lp.col_names_[iCol]);
-	    this->writeToFile(file, " *");
-	    this->writeToFileVar(file, lp.col_names_[iRow]);
+            this->writeToFileVar(file, lp.col_names_[iCol]);
+            this->writeToFile(file, " *");
+            this->writeToFileVar(file, lp.col_names_[iRow]);
           }
         }
       }
@@ -333,7 +333,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
           lp.row_lower_[iRow] > -kHighsInf && lp.row_upper_[iRow] < kHighsInf;
       if (lp.row_lower_[iRow] > -kHighsInf) {
         // Has a lower bound
-	this->writeToFileVar(file, lp.row_names_[iRow]);
+        this->writeToFileVar(file, lp.row_names_[iRow]);
         if (boxed) {
           this->writeToFile(file, "lo:");
         } else {
@@ -346,7 +346,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       }
       if (lp.row_upper_[iRow] < kHighsInf) {
         // Has an upper bound
-	this->writeToFileVar(file, lp.row_names_[iRow]);
+        this->writeToFileVar(file, lp.row_names_[iRow]);
         if (boxed) {
           this->writeToFile(file, "up:");
         } else {
@@ -400,7 +400,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] == HighsVarType::kInteger) {
         if (lp.col_lower_[iCol] == 0.0 && lp.col_upper_[iCol] == 1.0) {
-	  this->writeToFileVar(file, lp.col_names_[iCol]);
+          this->writeToFileVar(file, lp.col_names_[iCol]);
           this->writeToFileLineEnd(file);
         }
       }
@@ -412,7 +412,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] == HighsVarType::kInteger) {
         if (lp.col_lower_[iCol] != 0.0 || lp.col_upper_[iCol] != 1.0) {
-	  this->writeToFileVar(file, lp.col_names_[iCol]);
+          this->writeToFileVar(file, lp.col_names_[iCol]);
           this->writeToFileLineEnd(file);
         }
       }
@@ -424,7 +424,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
           lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-	this->writeToFileVar(file, lp.col_names_[iCol]);
+        this->writeToFileVar(file, lp.col_names_[iCol]);
         this->writeToFileLineEnd(file);
       }
     }

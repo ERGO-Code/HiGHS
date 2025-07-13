@@ -715,8 +715,8 @@ HighsStatus Highs::readBasis(const std::string& filename) {
   HighsBasis read_basis = basis_;
   return_status = interpretCallStatus(
       options_.log_options,
-      readBasisFile(options_.log_options, model_.lp_, read_basis, filename), return_status,
-      "readBasis");
+      readBasisFile(options_.log_options, model_.lp_, read_basis, filename),
+      return_status, "readBasis");
   if (return_status != HighsStatus::kOk) return return_status;
   // Basis read OK: check whether it's consistent with the LP
   if (!isBasisConsistent(model_.lp_, read_basis)) {
@@ -3081,20 +3081,10 @@ HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
   HighsLp& lp = model_.lp_;
   if (!lp.col_names_.size()) return HighsStatus::kError;
   if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
-  auto search = lp.col_hash_.name2index.find(name);
-  if (search == lp.col_hash_.name2index.end()) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::getColByName: name %s is not found\n", name.c_str());
-    return HighsStatus::kError;
-  }
-  if (search->second == kHashIsDuplicate) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::getColByName: name %s is duplicated\n", name.c_str());
-    return HighsStatus::kError;
-  }
-  col = search->second;
-  assert(lp.col_names_[col] == name);
-  return HighsStatus::kOk;
+  std::string from_method = "Highs::getColByName";
+  const bool is_column = true;
+  return getIndexFromName(options_.log_options, from_method, is_column, name,
+                          lp.col_hash_.name2index, col, lp.col_names_);
 }
 
 HighsStatus Highs::getColIntegrality(const HighsInt col,
@@ -3196,20 +3186,10 @@ HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
   HighsLp& lp = model_.lp_;
   if (!lp.row_names_.size()) return HighsStatus::kError;
   if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
-  auto search = lp.row_hash_.name2index.find(name);
-  if (search == lp.row_hash_.name2index.end()) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::getRowByName: name %s is not found\n", name.c_str());
-    return HighsStatus::kError;
-  }
-  if (search->second == kHashIsDuplicate) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::getRowByName: name %s is duplicated\n", name.c_str());
-    return HighsStatus::kError;
-  }
-  row = search->second;
-  assert(lp.row_names_[row] == name);
-  return HighsStatus::kOk;
+  std::string from_method = "Highs::getRowByName";
+  const bool is_column = false;
+  return getIndexFromName(options_.log_options, from_method, is_column, name,
+                          lp.row_hash_.name2index, row, lp.row_names_);
 }
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,

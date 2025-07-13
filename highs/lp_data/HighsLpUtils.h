@@ -27,23 +27,19 @@ class HighsOptions;
 
 using std::vector;
 
-void writeBasisFile(FILE*& file, const HighsOptions& options,
-                       const HighsLp& lp, const HighsBasis& basis);
+void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
+                    const HighsBasis& basis);
 
-HighsStatus getIndexFromName(const HighsLogOptions& log_options,
-			     std::string& from_method,
-			     const bool is_column,
-			     std::string& name,
-			     std::unordered_map<std::string, int> name2index,
-			     HighsInt& index,
-			     const std::vector<std::string>& names);
+HighsStatus getIndexFromName(
+    const HighsLogOptions& log_options, std::string& from_method,
+    const bool is_column, const std::string& name,
+    const std::unordered_map<std::string, int>& name2index, HighsInt& index,
+    const std::vector<std::string>& names);
 
-HighsStatus readBasisFile(const HighsLogOptions& log_options,
-			  HighsLp& lp, HighsBasis& basis,
-                          const std::string filename);
-HighsStatus readBasisStream(const HighsLogOptions& log_options,
-                            HighsLp& lp, HighsBasis& basis,
-			    std::ifstream& in_file);
+HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsLp& lp,
+                          HighsBasis& basis, const std::string filename);
+HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
+                            HighsBasis& basis, std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);

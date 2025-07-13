@@ -337,12 +337,11 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
 }
 
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp) {
-  if (hasNamesWithSpaces(log_options, true, lp.col_names_)) return true; 
+  if (hasNamesWithSpaces(log_options, true, lp.col_names_)) return true;
   return hasNamesWithSpaces(log_options, false, lp.row_names_);
 }
 
-bool hasNamesWithSpaces(const HighsLogOptions& log_options,
-			const bool col,
+bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
                         const std::vector<std::string>& names) {
   HighsInt num_names_with_spaces = 0;
   HighsInt num_name = names.size();
@@ -350,12 +349,10 @@ bool hasNamesWithSpaces(const HighsLogOptions& log_options,
     size_t space_pos = names[ix].find(" ");
     if (space_pos != std::string::npos) {
       if (num_names_with_spaces == 0) {
-        highsLogDev(
-            log_options, HighsLogType::kInfo,
-            "%s name |%s| contains a space character in position %" HIGHSINT_FORMAT
-            "\n",
-            col ? "Column" : "Row",
-	    names[ix].c_str(), space_pos);
+        highsLogDev(log_options, HighsLogType::kInfo,
+                    "%s name |%s| contains a space character in position "
+                    "%" HIGHSINT_FORMAT "\n",
+                    col ? "Column" : "Row", names[ix].c_str(), space_pos);
         num_names_with_spaces++;
       }
     }
@@ -363,16 +360,14 @@ bool hasNamesWithSpaces(const HighsLogOptions& log_options,
   if (num_names_with_spaces)
     highsLogDev(log_options, HighsLogType::kInfo,
                 "There are %d %s names with spaces\n",
-                HighsInt(num_names_with_spaces),
-		col ? "column" : "row");
+                HighsInt(num_names_with_spaces), col ? "column" : "row");
   return num_names_with_spaces > 0;
 }
 
 HighsInt maxNameLength(const HighsLp& lp) {
-  return std::max(maxNameLength(lp.col_names_),
-		  maxNameLength(lp.row_names_));
+  return std::max(maxNameLength(lp.col_names_), maxNameLength(lp.row_names_));
 }
-  
+
 HighsInt maxNameLength(const std::vector<std::string>& names) {
   HighsInt num_name = names.size();
   HighsInt max_name_length = 0;
@@ -383,43 +378,33 @@ HighsInt maxNameLength(const std::vector<std::string>& names) {
 
 HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp) {
   HighsStatus call_status =
-    normaliseNames(log_options,
-		   true,
-		   lp.num_col_,
-		   lp.col_name_prefix_,
-		   lp.col_name_suffix_,
-		   lp.col_names_,
-		   lp.col_hash_);
+      normaliseNames(log_options, true, lp.num_col_, lp.col_name_prefix_,
+                     lp.col_name_suffix_, lp.col_names_, lp.col_hash_);
   if (call_status == HighsStatus::kError) return call_status;
-  return normaliseNames(log_options,
-			false,
-			lp.num_row_,
-			lp.row_name_prefix_,
-			lp.row_name_suffix_,
-			lp.row_names_,
-			lp.row_hash_);
+  return normaliseNames(log_options, false, lp.num_row_, lp.row_name_prefix_,
+                        lp.row_name_suffix_, lp.row_names_, lp.row_hash_);
 }
 
-HighsStatus normaliseNames(const HighsLogOptions& log_options,
-			   bool column,
-			   HighsInt num_name_required,
-			   std::string& name_prefix,
-			   HighsInt& name_suffix,
+HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
+                           HighsInt num_name_required, std::string& name_prefix,
+                           HighsInt& name_suffix,
                            std::vector<std::string>& names,
-			   HighsNameHash& name_hash) {
+                           HighsNameHash& name_hash) {
   // First look for there being no names
-  
+
   HighsInt max_name_length = maxNameLength(names);
   if (max_name_length == 0) {
     // No names or all blank, so use minimal prefix, and start suffix
     // from 0
-    name_prefix = column ? kHighsMinimalColNamePrefix : kHighsMinimalrowNamePrefix;
+    name_prefix =
+        column ? kHighsMinimalColNamePrefix : kHighsMinimalrowNamePrefix;
     name_suffix = 0;
     names.resize(num_name_required);
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s names are blank or not present: using "
                  "names with prefix \"%s\", beginning with suffix %d\n",
-                 column ? "Column" : "Row   ", name_prefix.c_str(), int(name_suffix));
+                 column ? "Column" : "Row   ", name_prefix.c_str(),
+                 int(name_suffix));
     for (HighsInt ix = 0; ix < num_name_required; ix++)
       names[ix] = name_prefix + std::to_string(name_suffix++);
     return HighsStatus::kOk;
@@ -431,14 +416,14 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
     if (HighsInt(names[ix].length()) == 0) {
       // Name is blank, so create one
       num_blank++;
-      name_prefix = column ? kHighsUniqueColNamePrefix : kHighsUniquerowNamePrefix;
+      name_prefix =
+          column ? kHighsUniqueColNamePrefix : kHighsUniquerowNamePrefix;
       names[ix] = name_prefix + std::to_string(name_suffix++);
     } else if (names[ix].find(" ") != std::string::npos) {
       // Name contains a space, so return error
       highsLogUser(log_options, HighsLogType::kError,
-		   "%s %d name \"%s\" contains a space character\n",
-		   column ? "Column" : "Row",
-		   int(ix), names[ix].c_str());
+                   "%s %d name \"%s\" contains a space character\n",
+                   column ? "Column" : "Row", int(ix), names[ix].c_str());
       return HighsStatus::kError;
     }
   }
@@ -447,13 +432,13 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
     name_hash.name2index.clear();
     return HighsStatus::kError;
   }
-  if (num_blank) 
+  if (num_blank)
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "Replaced %d blank %6s name%s by name%s with prefix \"%s\", beginning with suffix %d\n",
-		 int(num_blank), column ? "column" : "row",
-		 num_blank > 1 ? "s" : "",
-		 num_blank > 1 ? "s" : "",
-		 name_prefix.c_str(), int(from_name_suffix));
+                 "Replaced %d blank %6s name%s by name%s with prefix \"%s\", "
+                 "beginning with suffix %d\n",
+                 int(num_blank), column ? "column" : "row",
+                 num_blank > 1 ? "s" : "", num_blank > 1 ? "s" : "",
+                 name_prefix.c_str(), int(from_name_suffix));
   return HighsStatus::kOk;
 }
 
