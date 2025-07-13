@@ -71,13 +71,6 @@ struct RawToken {
     type = RawTokenType::STR;
     return *this;
   }
-  /*
-  RawToken& operator=(const double v) {
-    dvalue = v;
-    type = RawTokenType::CONS;
-    return *this;
-  }
-  */
   RawToken& operator=(const std::pair<double, std::string> vs) {
     dvalue = vs.first;
     svalue = vs.second;
@@ -347,8 +340,6 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
           std::shared_ptr<LinTerm>(new LinTerm());
       linterm->coef = it->value;
       linterm->var = builder.getvarbyname(name);
-      //	 printf("LpReader: Term   %+g %s\n", linterm->coef,
-      //name.c_str());
       expr->linterms.push_back(linterm);
 
       ++it;
@@ -358,7 +349,6 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
 
     // const
     if (it->type == ProcessedTokenType::CONST) {
-      //      printf("LpReader: Offset change from %+g by %+g\n", expr->offset, it->value);
       expr->offset += it->value;
       ++it;
       continue;
@@ -372,8 +362,6 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
           std::shared_ptr<LinTerm>(new LinTerm());
       linterm->coef = 1.0;
       linterm->var = builder.getvarbyname(name);
-      //	 printf("LpReader: Term   %+g %s\n", linterm->coef,
-      //name.c_str());
       expr->linterms.push_back(linterm);
 
       ++it;
@@ -883,32 +871,7 @@ void Reader::splittokens() {
 
 void Reader::processtokens() {
   std::string svalue_lc;
-  int pass_n = 0;
-  const bool report_tokens = true;
-  printf("RawTokenType::NONE = %d\n", int(RawTokenType::NONE));
-  printf("RawTokenType::STR = %d\n", int(RawTokenType::STR));
-  printf("RawTokenType::CONS = %d\n", int(RawTokenType::CONS));
   while (!rawtokens[0].istype(RawTokenType::FLEND)) {
-    if (report_tokens) {
-      pass_n++;
-      if (pass_n == 9) {
-	printf("pass_n = 9\n");
-      }
-      printf("\nPass %d\n", pass_n);
-      /*
-      if (rawtokens[2].dvalue == 55) {
-	rawtokens[2].type = RawTokenType(1);
-	rawtokens[2].dvalue = 0;
-	rawtokens[2].svalue = "55";
-      }
-      */
-      for (int i = 0; i < NRAWTOKEN; i++) {
-	printf("Token %d: type = %2d; dvalue = %d; svalue = %s\n", i,
-	       int(rawtokens[i].type),
-	       int(rawtokens[i].dvalue),
-	       rawtokens[i].svalue.c_str());
-      }
-    }
     fflush(stdout);
 
     // Slash + asterisk: comment, skip everything up to next asterisk + slash
@@ -990,8 +953,6 @@ void Reader::processtokens() {
     // constraint identifier - with numeric constant value as name?
     if (rawtokens[0].istype(RawTokenType::CONS) &&
         rawtokens[1].istype(RawTokenType::COLON)) {
-      printf("rawtokens[0] - CONS; rawtokens[1] - COLON; rawtokens[0].dvalue = %g; rawtokens[0].svalue = %s\n", rawtokens[0].dvalue, rawtokens[0].svalue.c_str());
-      //      rawtokens[0].svalue = std::to_string(rawtokens[0].dvalue);
       processedtokens.emplace_back(ProcessedTokenType::CONID,
                                    rawtokens[0].svalue);
       nextrawtoken(2);
@@ -1157,14 +1118,6 @@ void Reader::processtokens() {
     // FILEEND should have been handled in condition of while()
     assert(!rawtokens[0].istype(RawTokenType::FLEND));
 
-    if (report_tokens) {
-      for (int i = 0; i < NRAWTOKEN; i++) {
-	printf("Token %d: type = %2d; dvalue = %d; svalue = %s\n", i,
-	       int(rawtokens[i].type),
-	       int(rawtokens[i].dvalue),
-	       rawtokens[i].svalue.c_str());
-      }
-    }
     // catch all unknown symbols
     lpassert(false);
     break;
@@ -1236,12 +1189,6 @@ bool Reader::readnexttoken(RawToken& t) {
 
   // check single character tokens
   char nextchar = this->linebuffer[this->linebufferpos];
-  printf("Reader::readnexttoken: nextchar = %c\n", nextchar);
-  char char_1 = '1';
-  char char_r = 'r';
-  if (nextchar == char_1 || nextchar == char_r) {
-    printf("Reader::readnexttoken: nextchar = %c!\n", nextchar);
-  }
   switch (nextchar) {
     // check for comment
     case '\\':
@@ -1341,8 +1288,7 @@ bool Reader::readnexttoken(RawToken& t) {
     // double is a constraint name
     size_t double_len = endptr - startptr;
     std::string double_name = this->linebuffer.substr(this->linebufferpos, double_len);
-    printf("double_len = %d; double_name = %s\n", int(double_len), double_name.c_str());
-    //    t = constant;
+    // t = constant;
     t = std::make_pair(constant, double_name);
     this->linebufferpos += endptr - startptr;
     return true;

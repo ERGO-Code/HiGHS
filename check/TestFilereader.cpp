@@ -548,7 +548,7 @@ TEST_CASE("read-highs-lp-file", "[highs_filereader]") {
   REQUIRE(h.writeModel(model_name0) == HighsStatus::kOk);
   REQUIRE(h.readModel(model_name0) == HighsStatus::kOk);
   REQUIRE(h.writeModel(model_name1) == HighsStatus::kOk);
-  
+
   //  std::remove(model_name0.c_str());
   //  std::remove(model_name1.c_str());
 
