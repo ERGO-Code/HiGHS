@@ -2273,7 +2273,7 @@ HighsStatus readSolutionFile(const std::string filename,
                                   read_solution, read_basis,
                                   in_file);  // # Basis
   HighsStatus basis_read_status =
-      readBasisStream(log_options, read_basis, in_file);
+    readBasisStream(log_options, lp, read_basis, in_file);
   // Return with basis read status
   return readSolutionFileReturn(basis_read_status, solution, basis,
                                 read_solution, read_basis, in_file);
@@ -2529,8 +2529,10 @@ HighsStatus assessLpPrimalSolution(const std::string message,
   return HighsStatus::kOk;
 }
 
-void writeBasisFile(FILE*& file, const HighsBasis& basis) {
-  fprintf(file, "HiGHS v%d\n", (int)HIGHS_VERSION_MAJOR);
+void writeBasisFile(FILE*& file, const HighsOptions& options,
+		    const HighsLp& lp, const HighsBasis& basis) {
+  /*
+  fprintf(file, "HiGHS_basis_file %s\n", kHighsBasisFileV2.c_str());
   if (basis.valid == false) {
     fprintf(file, "None\n");
     return;
@@ -2542,16 +2544,59 @@ void writeBasisFile(FILE*& file, const HighsBasis& basis) {
   fprintf(file, "# Rows %d\n", (int)basis.row_status.size());
   for (const auto& status : basis.row_status) fprintf(file, "%d ", (int)status);
   fprintf(file, "\n");
+  */
+  const HighsLogOptions& log_options = options.log_options;
+  std::stringstream ss;
+  // Basis version line
+  ss.str(std::string());
+  ss << highsFormatToString("HiGHS_basis_file %s\n", kHighsBasisFileV2.c_str());
+  highsFprintfString(file, log_options, ss.str());
+  // Basis validity line
+  ss.str(std::string());
+  if (basis.valid == false) {
+    ss << highsFormatToString("None\n");
+    highsFprintfString(file, log_options, ss.str());
+    return;
+  }
+  assert(basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+  assert(basis.row_status.size() == static_cast<size_t>(lp.num_row_));
+  assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
+  ss << highsFormatToString("Valid\n");
+  highsFprintfString(file, log_options, ss.str());
+  // Column count line
+  ss.str(std::string());
+  ss << highsFormatToString("# Columns %d\n", int(lp.num_col_));
+  highsFprintfString(file, log_options, ss.str());
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    const std::string& name = lp.col_names_[iCol];
+    assert(name.length() != 0);
+    ss.str(std::string());
+    ss << highsFormatToString("%s %d\n", name.c_str(), int(basis.col_status[iCol]));
+    highsFprintfString(file, log_options, ss.str());
+  }
+  // Row count line
+  ss.str(std::string());
+  ss << highsFormatToString("# Rows %d\n", int(lp.num_row_));
+  highsFprintfString(file, log_options, ss.str());
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    const std::string& name = lp.row_names_[iRow];
+    assert(name.length() != 0);
+    ss.str(std::string());
+    ss << highsFormatToString("%s %d\n", name.c_str(), int(basis.row_status[iRow]));
+    highsFprintfString(file, log_options, ss.str());
+  }
 }
 
-HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
+HighsStatus readBasisFile(const HighsLogOptions& log_options,
+			  HighsLp& lp, HighsBasis& basis,
                           const std::string filename) {
   // Opens a basis file as an ifstream
   HighsStatus return_status = HighsStatus::kOk;
   std::ifstream in_file;
   in_file.open(filename.c_str(), std::ios::in);
   if (in_file.is_open()) {
-    return_status = readBasisStream(log_options, basis, in_file);
+    return_status = readBasisStream(log_options, lp, basis, in_file);
     in_file.close();
   } else {
     highsLogUser(log_options, HighsLogType::kError,
@@ -2563,13 +2608,28 @@ HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
 }
 
 HighsStatus readBasisStream(const HighsLogOptions& log_options,
-                            HighsBasis& basis, std::ifstream& in_file) {
+                            HighsLp& lp, HighsBasis& basis,
+			    std::ifstream& in_file) {
   // Reads a basis as an ifstream, returning an error if what's read is
   // inconsistent with the sizes of the HighsBasis passed in
   HighsStatus return_status = HighsStatus::kOk;
   std::string string_highs, string_version;
   in_file >> string_highs >> string_version;
-  if (string_version == "v1") {
+  const bool v1 = string_version == kHighsBasisFileV1;
+  const bool v2 = string_version == kHighsBasisFileV2;
+  if (v2) {
+    // Form the column and row name hash 
+    assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+    assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
+    lp.col_hash_.form(lp.col_names_);
+    lp.row_hash_.form(lp.row_names_);
+  }
+  if (v1 || v2) {
+    if (v1) {
+      // Ability to read v1 basis files is deprecated
+      highsLogUser(log_options, HighsLogType::kWarning,
+		   "readBasisFile: Basis file format %s is deprecated\n", kHighsBasisFileV1.c_str());
+    }
     std::string keyword;
     in_file >> keyword;
     if (keyword == "None") {
@@ -2579,6 +2639,7 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
     const HighsInt basis_num_col = (HighsInt)basis.col_status.size();
     const HighsInt basis_num_row = (HighsInt)basis.row_status.size();
     HighsInt int_status;
+    std::string name;
     assert(keyword == "Valid");
     HighsInt num_col, num_row;
     // Read in the columns section
@@ -2592,9 +2653,28 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
                    num_col, basis_num_col);
       return HighsStatus::kError;
     }
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      in_file >> int_status;
-      basis.col_status[iCol] = (HighsBasisStatus)int_status;
+    if (v1) {
+      for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+	in_file >> int_status;
+	basis.col_status[iCol] = (HighsBasisStatus)int_status;
+      }
+    } else {
+      for (HighsInt iColBasis = 0; iColBasis < num_col; iColBasis++) {
+	in_file >> name >> int_status;
+	auto search = lp.col_hash_.name2index.find(name);
+	if (search == lp.col_hash_.name2index.end()) {
+	  highsLogUser(log_options, HighsLogType::kError,
+		       "Highs::readBasisStream: column name %s is not found\n", name.c_str());
+	  return HighsStatus::kError;
+	}
+	if (search->second == kHashIsDuplicate) {
+	  highsLogUser(log_options, HighsLogType::kError,
+		       "Highs::readBasisStream: column name %s is duplicated\n", name.c_str());
+	  return HighsStatus::kError;
+	}
+	HighsInt iCol = search->second;
+	basis.col_status[iCol] = HighsBasisStatus(int_status);
+      }
     }
     // Read in the rows section
     in_file >> keyword >> keyword;
@@ -2607,9 +2687,28 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
                    num_row, basis_num_row);
       return HighsStatus::kError;
     }
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      in_file >> int_status;
-      basis.row_status[iRow] = (HighsBasisStatus)int_status;
+    if (v1) {
+      for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+	in_file >> int_status;
+	basis.row_status[iRow] = (HighsBasisStatus)int_status;
+      }
+    } else {
+      for (HighsInt iRowBasis = 0; iRowBasis < num_row; iRowBasis++) {
+	in_file >> name >> int_status;
+	auto search = lp.row_hash_.name2index.find(name);
+	if (search == lp.row_hash_.name2index.end()) {
+	  highsLogUser(log_options, HighsLogType::kError,
+		       "Highs::readBasisStream: row name %s is not found\n", name.c_str());
+	  return HighsStatus::kError;
+	}
+	if (search->second == kHashIsDuplicate) {
+	  highsLogUser(log_options, HighsLogType::kError,
+		       "Highs::readBasisStream: row name %s is duplicated\n", name.c_str());
+	  return HighsStatus::kError;
+	}
+	HighsInt iRow = search->second;
+	basis.row_status[iRow] = HighsBasisStatus(int_status);
+      }
     }
   } else {
     highsLogUser(log_options, HighsLogType::kError,

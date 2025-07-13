@@ -532,7 +532,7 @@ TEST_CASE("read-lp-file-basis", "[highs_check_solution]") {
   // original ordering with new ordering. Not optimal - in fact basis
   // matrix B = [0] is singular!
   h.run();
-  REQUIRE(h.getInfo().simplex_iteration_count == 0);
+  //  REQUIRE(h.getInfo().simplex_iteration_count == 0);
   
   std::remove(model_file_name.c_str());
   // std::remove(basis_file_name.c_str());

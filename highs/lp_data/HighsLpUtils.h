@@ -27,12 +27,15 @@ class HighsOptions;
 
 using std::vector;
 
-void writeBasisFile(FILE*& file, const HighsBasis& basis);
+void writeBasisFile(FILE*& file, const HighsOptions& options,
+                       const HighsLp& lp, const HighsBasis& basis);
 
-HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
+HighsStatus readBasisFile(const HighsLogOptions& log_options,
+			  HighsLp& lp, HighsBasis& basis,
                           const std::string filename);
 HighsStatus readBasisStream(const HighsLogOptions& log_options,
-                            HighsBasis& basis, std::ifstream& in_file);
+                            HighsLp& lp, HighsBasis& basis,
+			    std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);

@@ -715,7 +715,7 @@ HighsStatus Highs::readBasis(const std::string& filename) {
   HighsBasis read_basis = basis_;
   return_status = interpretCallStatus(
       options_.log_options,
-      readBasisFile(options_.log_options, read_basis, filename), return_status,
+      readBasisFile(options_.log_options, model_.lp_, read_basis, filename), return_status,
       "readBasis");
   if (return_status != HighsStatus::kOk) return return_status;
   // Basis read OK: check whether it's consistent with the LP
@@ -811,20 +811,24 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::writeBasis(const std::string& filename) const {
+HighsStatus Highs::writeBasis(const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
   HighsFileType file_type;
-  call_status = openWriteFile(filename, "writebasis", file, file_type);
+  call_status = openWriteFile(filename, "writeBasis", file, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  // Replace any blank names and check for names with spaces
+  call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
+  if (call_status == HighsStatus::kError) return call_status;
+
   // Report to user that basis is being written
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the basis to %s\n", filename.c_str());
-  writeBasisFile(file, basis_);
+  writeBasisFile(file, options_, model_.lp_, basis_);
   if (file != stdout) fclose(file);
   return return_status;
 }
@@ -3388,7 +3392,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
     return returnFromWriteSolution(file, return_status);
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
-    writeBasisFile(file, basis_);
+    writeBasisFile(file, options_, model_.lp_, basis_);
   }
   if (options_.ranging == kHighsOnString) {
     if (model_.isMip() || model_.isQp()) {
