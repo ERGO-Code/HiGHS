@@ -3215,6 +3215,8 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
       HighsInt ninfmin;
       HighsCDouble minAct;
       globaldom.computeMinActivity(0, len, inds, vals, ninfmin, minAct);
+      // This case should only happen when a globally unbounded column is bounded
+      // in the local domain, e.g., by a branching choice in some heuristic.
       if (ninfmin > 0) return false;
 
       return explainInfeasibilityLeq(inds, vals, len, rhs, double(minAct));
