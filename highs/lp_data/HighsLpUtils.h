@@ -219,15 +219,15 @@ bool readSolutionFileIgnoreLineOk(std::ifstream& in_file);
 bool readSolutionFileKeywordLineOk(std::string& keyword,
                                    std::ifstream& in_file);
 bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
-					  std::string& keyword,
-					  std::string& value_string,
-					  HighsInt& value,
+                                          std::string& keyword,
+                                          std::string& value_string,
+                                          HighsInt& value,
                                           std::ifstream& in_file);
 bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
                                     std::ifstream& in_file);
-bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
-                                       std::ifstream& in_file);
+bool readSolutionFileIdDoubleIntLineOk(std::string& id, double& value,
+                                       HighsInt& index, std::ifstream& in_file);
 
 void assessColPrimalSolution(const HighsOptions& options, const double primal,
                              const double lower, const double upper,
