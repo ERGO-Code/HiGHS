@@ -1120,8 +1120,10 @@ try_again:
     }
   }
 
-  const double transformed_solobj = static_cast<double>(static_cast<HighsInt>(mipsolver.orig_model_->sense_) *
-    mipsolver_quad_objective_value - mipsolver.model_->offset_);
+  const double transformed_solobj =
+      static_cast<double>(static_cast<HighsInt>(mipsolver.orig_model_->sense_) *
+                              mipsolver_quad_objective_value -
+                          mipsolver.model_->offset_);
 
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
