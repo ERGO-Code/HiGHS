@@ -689,7 +689,7 @@ void runSetLpSolution(const std::string model) {
 
   highs.clear();
 
-  std::remove(solution_file.c_str());
+  //  std::remove(solution_file.c_str());
 
   highs.resetGlobalScheduler(true);
 }

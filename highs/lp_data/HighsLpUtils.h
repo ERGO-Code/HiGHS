@@ -218,7 +218,10 @@ HighsStatus readSolutionFileReturn(const HighsStatus status,
 bool readSolutionFileIgnoreLineOk(std::ifstream& in_file);
 bool readSolutionFileKeywordLineOk(std::string& keyword,
                                    std::ifstream& in_file);
-bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
+bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
+					  std::string& keyword,
+					  std::string& value_string,
+					  HighsInt& value,
                                           std::ifstream& in_file);
 bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,

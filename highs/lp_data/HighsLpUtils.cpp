@@ -2057,7 +2057,9 @@ HighsStatus readSolutionFile(const std::string filename,
     return HighsStatus::kError;
   }
   std::string from_method = "readSolutionFile";
+  std::string hash;
   std::string keyword;
+  std::string value_string;
   std::string name;
   double value;
   HighsInt num_col = -1;
@@ -2101,9 +2103,10 @@ HighsStatus readSolutionFile(const std::string filename,
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // Objective
     // Next line should be "Columns" and correct number
-    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file)) {
+    if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string, num_col, in_file)) {
       highsLogUser(log_options, HighsLogType::kError,
-		   "readSolutionFile: Error reading line \"# %s %d\"", keyword.c_str(), int(num_col));
+		   "readSolutionFile: Error reading line \"%s %s %s\"",
+		   hash.c_str(), keyword.c_str(), value_string.c_str());
       return readSolutionFileErrorReturn(in_file);
     }
     assert(keyword == "Columns");
@@ -2189,7 +2192,7 @@ HighsStatus readSolutionFile(const std::string filename,
   }
   // Read in the col values: OK to have none, otherwise next line
   // should be "Rows" and correct number
-  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file)) {
+  if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string, num_col, in_file)) {
     // Compute the row values since there are none to read
     if (calculateRowValuesQuad(lp, read_solution.col_value,
                                read_solution.row_value) != HighsStatus::kOk)
@@ -2262,9 +2265,13 @@ HighsStatus readSolutionFile(const std::string filename,
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // EOL
     // Next line should be "Columns" and correct number
-    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
+    if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string, num_col, in_file)) {
+      highsLogUser(log_options, HighsLogType::kError,
+		   "readSolutionFile: Error reading line \"%s %s %s\"",
+		   hash.c_str(), keyword.c_str(), value_string.c_str());
       return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                     read_solution, read_basis, in_file);
+    }
     assert(keyword == "Columns");
     double dual;
     is_column = true;
@@ -2280,9 +2287,13 @@ HighsStatus readSolutionFile(const std::string filename,
     }
     // Read in the col values: next line should be "Rows" and correct
     // number
-    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file))
+    if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string, num_col, in_file)) {
+      highsLogUser(log_options, HighsLogType::kError,
+		   "readSolutionFile: Error reading line \"%s %s %s\"",
+		   hash.c_str(), keyword.c_str(), value_string.c_str());
       return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                     read_solution, read_basis, in_file);
+    }
     assert(keyword == "Rows");
     is_column = false;
     assert(!is_column);
@@ -2350,14 +2361,29 @@ bool readSolutionFileKeywordLineOk(std::string& keyword,
   return true;
 }
 
-bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
+bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
+					  std::string& keyword,
+					  std::string& value_string,
+					  HighsInt& value,
                                           std::ifstream& in_file) {
+  hash = "";
+  keyword = "";
+  value_string = "";
+  // Read the hash symbol
   if (in_file.eof()) return false;
-  in_file >> keyword;  // #
+  in_file >> hash;  // #
+  if (hash != "#") return false;
+  
+  // Read the keyword
   if (in_file.eof()) return false;
   in_file >> keyword;  // keyword
+
+  // Read the value
   if (in_file.eof()) return false;
-  in_file >> value;  // integer value
+  // Read as a string, and then check it only contains digits
+  in_file >> value_string;
+  if (value_string[std::strspn(value_string.c_str(), "-0123456789")]) return false;
+  value = std::stoi(value_string);  // integer value
   return true;
 }
 
