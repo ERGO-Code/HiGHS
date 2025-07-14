@@ -565,7 +565,7 @@ TEST_CASE("read-lp-file-rgn", "[highs_check_solution]") {
   REQUIRE(integral);
   REQUIRE(feasible);
 
-  std::remove(model_file_name.c_str());
+  //  std::remove(model_file_name.c_str());
   std::remove(solution_file_name.c_str());
 
   h.resetGlobalScheduler(true);
