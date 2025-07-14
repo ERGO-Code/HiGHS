@@ -2129,7 +2129,7 @@ HighsStatus readSolutionFile(const std::string filename,
     if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string,
                                               num_col, in_file)) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Error reading line \"%s %s %s\"",
+                   "readSolutionFile: Error reading line \"%s %s %s\"\n",
                    hash.c_str(), keyword.c_str(), value_string.c_str());
       return readSolutionFileErrorReturn(in_file);
     }
@@ -2210,10 +2210,10 @@ HighsStatus readSolutionFile(const std::string filename,
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                   read_solution, read_basis, in_file);
   }
-  // Read in the col values: OK to have none, otherwise next line
+  // Read in the row values: OK to have none, otherwise next line
   // should be "Rows" and correct number
   if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string,
-                                            num_col, in_file)) {
+                                            num_row, in_file)) {
     // Compute the row values since there are none to read
     if (calculateRowValuesQuad(lp, read_solution.col_value,
                                read_solution.row_value) != HighsStatus::kOk)
@@ -2286,7 +2286,7 @@ HighsStatus readSolutionFile(const std::string filename,
     if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string,
                                               num_col, in_file)) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Error reading line \"%s %s %s\"",
+                   "readSolutionFile: Error reading line \"%s %s %s\"\n",
                    hash.c_str(), keyword.c_str(), value_string.c_str());
       return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                     read_solution, read_basis, in_file);
@@ -2310,12 +2310,12 @@ HighsStatus readSolutionFile(const std::string filename,
       }
       read_solution.col_dual[iCol] = dual;
     }
-    // Read in the col values: next line should be "Rows" and correct
+    // Read in the col dual values: next line should be "Rows" and correct
     // number
     if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string,
                                               num_col, in_file)) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Error reading line \"%s %s %s\"",
+                   "readSolutionFile: Error reading line \"%s %s %s\"\n",
                    hash.c_str(), keyword.c_str(), value_string.c_str());
       return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                     read_solution, read_basis, in_file);
