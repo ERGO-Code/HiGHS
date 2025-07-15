@@ -2785,3 +2785,49 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
 }
 
 void HighsPrimaDualIntegral::initialise() { this->value = -kHighsInf; }
+
+void MipRaceIncumbent::clear() {
+  this->start_write_incumbent = -1;
+  this->finish_write_incumbent = -1;
+  this->best_incumbent_objective = -kHighsInf;
+  this->best_incumbent_solution.clear();
+}
+
+void MipRaceIncumbent::initialise(const HighsInt num_col) {
+  this->clear();
+  this->best_incumbent_solution.resize(num_col);
+}
+
+void MipRaceIncumbent::write(const double objective,
+                             const std::vector<double>& solution) {
+  assert(this->best_incumbent_solution.size() == solution.size());
+  this->start_write_incumbent++;
+  this->best_incumbent_objective = objective;
+  this->best_incumbent_solution = solution;
+  this->finish_write_incumbent++;
+  assert(this->start_write_incumbent == this->finish_write_incumbent);
+}
+
+bool MipRaceIncumbent::readOk(double& objective,
+                              std::vector<double>& solution) const {
+  const HighsInt start_write_incumbent = this->start_write_incumbent;
+  assert(this->finish_write_incumbent <= start_write_incumbent);
+  // If a write call has not completed, return failure
+  if (this->finish_write_incumbent < start_write_incumbent) return false;
+  // finish_write_incumbent = start_write_incumbent so start reading
+  objective = this->best_incumbent_objective;
+  solution = this->best_incumbent_solution;
+  // Read is OK if no new write has started
+  return this->start_write_incumbent == start_write_incumbent;
+}
+
+void MipRaceRecord::clear() { this->record.clear(); }
+
+void MipRaceRecord::initialise(const HighsInt num_race_instance,
+                               const HighsInt num_col) {
+  this->clear();
+  MipRaceIncumbent mip_race_incumbent;
+  mip_race_incumbent.initialise(num_col);
+  for (HighsInt instance = 0; instance < num_race_instance; instance++)
+    this->record.push_back(mip_race_incumbent);
+}

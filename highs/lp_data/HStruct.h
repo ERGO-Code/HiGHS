@@ -61,6 +61,23 @@ struct HotStart {
   std::vector<int8_t> nonbasicMove;
 };
 
+struct MipRaceIncumbent {
+  HighsInt start_write_incumbent = -1;
+  HighsInt finish_write_incumbent = -1;
+  double best_incumbent_objective = -kHighsInf;
+  std::vector<double> best_incumbent_solution;
+  void clear();
+  void initialise(const HighsInt num_col);
+  void write(const double objective, const std::vector<double>& solution);
+  bool readOk(double& objective, std::vector<double>& solution) const;
+};
+
+struct MipRaceRecord {
+  std::vector<MipRaceIncumbent> record;
+  void clear();
+  void initialise(const HighsInt num_race_instance, const HighsInt num_col);
+};
+
 struct HighsBasis {
   // Logical flags for a HiGHS basis:
   //
