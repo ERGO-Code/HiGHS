@@ -64,19 +64,38 @@ struct HotStart {
 struct MipRaceIncumbent {
   HighsInt start_write_incumbent = -1;
   HighsInt finish_write_incumbent = -1;
-  double best_incumbent_objective = -kHighsInf;
-  std::vector<double> best_incumbent_solution;
+  double objective = -kHighsInf;
+  std::vector<double> solution;
   void clear();
   void initialise(const HighsInt num_col);
-  void write(const double objective, const std::vector<double>& solution);
-  bool readOk(double& objective, std::vector<double>& solution) const;
+  void update(const double objective,
+	      const std::vector<double>& solution);
+  bool readOk(double& objective_,
+	      std::vector<double>& solution_) const;
 };
 
 struct MipRaceRecord {
   std::vector<bool> terminate;
-  std::vector<MipRaceIncumbent> record;
+  std::vector<MipRaceIncumbent> incumbent;
   void clear();
-  void initialise(const HighsInt num_race_instance, const HighsInt num_col);
+  void initialise(const HighsInt mip_race_concurrency,
+		  const HighsInt num_col);
+  void update(const HighsInt instance,
+	      const double objective,
+	      const std::vector<double>& solution);
+  void report() const;
+};
+
+struct MipRace {
+  HighsInt my_instance;
+  MipRaceRecord* record;
+  std::vector<HighsInt> last_incumbent_read;
+  void clear();
+  void initialise(const HighsInt mip_race_concurrency,
+		  const HighsInt my_instance_,
+		  MipRaceRecord* record_);
+  void update(const double objective,
+	      const std::vector<double>& solution);
   void report() const;
 };
 

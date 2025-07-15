@@ -972,9 +972,3 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
                         row_violation <= mip_feasibility_tolerance;
   return feasible;
 }
-
-void HighsMipSolver::makeMipRaceRecord(const double objective,
-				       const std::vector<double>& solution) {
-  this->mip_race_record_->record[this->my_mip_race_instance_].write(objective, solution);
-  this->mip_race_record_->report();
-}

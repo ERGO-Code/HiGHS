@@ -424,6 +424,7 @@ struct HighsOptionsStruct {
   // Options for MIP solver
   bool mip_detect_symmetry;
   bool mip_allow_restart;
+  HighsInt mip_race_concurrency;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_start_nodes;
@@ -575,6 +576,7 @@ struct HighsOptionsStruct {
         icrash_breakpoints(false),
         mip_detect_symmetry(false),
         mip_allow_restart(false),
+	mip_race_concurrency(0),
         mip_max_nodes(0),
         mip_max_stall_nodes(0),
         mip_max_start_nodes(0),
@@ -1016,6 +1018,11 @@ class HighsOptions : public HighsOptionsStruct {
                                        "Whether MIP restart is permitted",
                                        advanced, &mip_allow_restart, true);
     records.push_back(record_bool);
+
+    record_int = new OptionRecordInt("mip_race_concurrency",
+                                     "Concurrency for non-deterministic MIP race", advanced,
+                                     &mip_race_concurrency, 0, 2, kHighsIInf);
+    records.push_back(record_int);
 
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
