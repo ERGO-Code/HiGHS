@@ -217,9 +217,9 @@ void Solver::refineWithIpx() {
   if (checkInterrupt()) return;
 
   if (statusNeedsRefinement() && options_.refine_with_ipx) {
-    Log::printf("\nHiPO did not converge, restarting with IPX\n");
+    Log::printf("\nRestarting with IPX\n");
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
-    Log::printf("\nHiPO converged, running crossover with IPX\n");
+    Log::printf("\nRunning crossover with IPX\n");
   } else {
     return;
   }
@@ -235,9 +235,9 @@ void Solver::refineWithIpx() {
   info_.status = IpxToHipoStatus(info_.ipx_info.status_ipm);
 
   std::stringstream log_stream;
-  log_stream << "IPX reports status: ipm "
+  log_stream << "IPX reports: ipm "
              << ipx::StatusString(info_.ipx_info.status_ipm);
-  if (options_.crossover == kOptionCrossoverOn)
+  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
     log_stream << ", crossover "
                << ipx::StatusString(info_.ipx_info.status_crossover);
   log_stream << '\n';
@@ -1007,7 +1007,7 @@ bool Solver::checkBadIter() {
       Log::printf("=== Primal infeasible\n");
       info_.status = kStatusPrimalInfeasible;
       terminate = true;
-    } else {
+    } else if (too_many_bad_iter) {
       // Too many bad iterations in a row, abort the solver
       info_.status = kStatusNoProgress;
       terminate = true;

@@ -52,6 +52,9 @@ class Model {
   Int num_dense_cols_{};
   double max_col_density_{};
 
+  double norm_unscaled_rhs_, norm_scaled_rhs_, norm_unscaled_obj_,
+      norm_scaled_obj_;
+
   bool ready_ = false;
 
   // coefficients for scaling
@@ -70,6 +73,7 @@ class Model {
                 const double* rhs, const double* lower, const double* upper,
                 const Int* A_ptr, const Int* A_rows, const double* A_vals,
                 const char* constraints) const;
+  void computeNorms();
 
  public:
   // Initialise the model
@@ -91,10 +95,10 @@ class Model {
   void unscale(std::vector<double>& x, std::vector<double>& slack,
                std::vector<double>& y, std::vector<double>& z) const;
 
-  double normScaledRhs() const;
-  double normScaledObj() const;
-  double normUnscaledRhs() const;
-  double normUnscaledObj() const;
+  double normScaledRhs() const { return norm_scaled_rhs_; }
+  double normScaledObj() const { return norm_scaled_obj_; }
+  double normUnscaledObj() const { return norm_unscaled_obj_; }
+  double normUnscaledRhs() const { return norm_unscaled_rhs_; }
 
   // multiply by A or A^T without slacks
   void multWithoutSlack(double alpha, const std::vector<double>& x,

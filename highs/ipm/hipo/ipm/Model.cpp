@@ -48,6 +48,7 @@ Int Model::init(const Int num_var, const Int num_con, const double* obj,
   scale();
   reformulate();
   denseColumns();
+  computeNorms();
 
   ready_ = true;
 
@@ -206,6 +207,44 @@ void Model::reformulate() {
 
       // set scaling to 1
       if (scaled()) colscale_.push_back(1.0);
+    }
+  }
+}
+
+void Model::computeNorms() {
+  norm_scaled_obj_ = infNorm(c_);
+
+  norm_unscaled_obj_ = 0.0;
+  for (Int i = 0; i < n_; ++i) {
+    double val = std::abs(c_[i]);
+    if (scaled()) val /= colscale_[i];
+    norm_unscaled_obj_ = std::max(norm_unscaled_obj_, val);
+  }
+
+  norm_scaled_rhs_ = infNorm(b_);
+  for (double d : lower_)
+    if (std::isfinite(d))
+      norm_scaled_rhs_ = std::max(norm_scaled_rhs_, std::abs(d));
+  for (double d : upper_)
+    if (std::isfinite(d))
+      norm_scaled_rhs_ = std::max(norm_scaled_rhs_, std::abs(d));
+
+  norm_unscaled_rhs_ = 0.0;
+  for (Int i = 0; i < m_; ++i) {
+    double val = std::abs(b_[i]);
+    if (scaled()) val /= rowscale_[i];
+    norm_unscaled_rhs_ = std::max(norm_unscaled_rhs_, val);
+  }
+  for (Int i = 0; i < n_; ++i) {
+    if (std::isfinite(lower_[i])) {
+      double val = std::abs(lower_[i]);
+      if (scaled()) val *= colscale_[i];
+      norm_unscaled_rhs_ = std::max(norm_unscaled_rhs_, val);
+    }
+    if (std::isfinite(upper_[i])) {
+      double val = std::abs(upper_[i]);
+      if (scaled()) val *= colscale_[i];
+      norm_unscaled_rhs_ = std::max(norm_unscaled_rhs_, val);
     }
   }
 }
@@ -453,49 +492,6 @@ void Model::denseColumns() {
     if (A_.num_row_ > kMinRowsForDensity && col_density > kDenseColThresh)
       ++num_dense_cols_;
   }
-}
-
-double Model::normScaledRhs() const {
-  double norm_rhs = infNorm(b_);
-  for (double d : lower_)
-    if (std::isfinite(d)) norm_rhs = std::max(norm_rhs, std::abs(d));
-  for (double d : upper_)
-    if (std::isfinite(d)) norm_rhs = std::max(norm_rhs, std::abs(d));
-  return norm_rhs;
-}
-
-double Model::normScaledObj() const { return infNorm(c_); }
-
-double Model::normUnscaledObj() const {
-  double norm_obj = 0.0;
-  for (Int i = 0; i < n_; ++i) {
-    double val = std::abs(c_[i]);
-    if (scaled()) val /= colscale_[i];
-    norm_obj = std::max(norm_obj, val);
-  }
-  return norm_obj;
-}
-
-double Model::normUnscaledRhs() const {
-  double norm_rhs = 0.0;
-  for (Int i = 0; i < m_; ++i) {
-    double val = std::abs(b_[i]);
-    if (scaled()) val /= rowscale_[i];
-    norm_rhs = std::max(norm_rhs, val);
-  }
-  for (Int i = 0; i < n_; ++i) {
-    if (std::isfinite(lower_[i])) {
-      double val = std::abs(lower_[i]);
-      if (scaled()) val *= colscale_[i];
-      norm_rhs = std::max(norm_rhs, val);
-    }
-    if (std::isfinite(upper_[i])) {
-      double val = std::abs(upper_[i]);
-      if (scaled()) val *= colscale_[i];
-      norm_rhs = std::max(norm_rhs, val);
-    }
-  }
-  return norm_rhs;
 }
 
 Int Model::loadIntoIpx(ipx::LpSolver& lps) const {

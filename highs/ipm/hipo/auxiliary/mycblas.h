@@ -26,8 +26,8 @@ using hipoint = hipo::Int;
 
 void cblas_daxpy(const hipoint n, const double alpha, const double* x,
                  const hipoint incx, double* y, const hipoint incy);
-void cblas_dcopy(const hipoint n, const double* x, const hipoint incx, double* y,
-                 const hipoint incy);
+void cblas_dcopy(const hipoint n, const double* x, const hipoint incx,
+                 double* y, const hipoint incy);
 void cblas_dscal(const hipoint n, const double alpha, double* x,
                  const hipoint incx);
 void cblas_dswap(const hipoint n, double* x, const hipoint incx, double* y,

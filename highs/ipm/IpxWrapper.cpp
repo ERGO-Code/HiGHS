@@ -560,7 +560,8 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   // Get solver and solution information.
   const hipo::Info hipo_info = hipo.getInfo();
   hipo::Status solve_status = hipo_info.status;
-  highs_info.ipm_iteration_count += hipo_info.ipm_iter;
+  highs_info.ipm_iteration_count +=
+      hipo_info.ipm_iter + hipo_info.ipx_info.iter;
   highs_info.crossover_iteration_count += hipo_info.ipx_info.updates_crossover;
 
   // Report hipo status
@@ -614,13 +615,12 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
       reportHipoNoProgress(options, hipo_info);
       model_status = HighsModelStatus::kUnknown;
       return HighsStatus::kWarning;
-    } else if (solve_status == hipo::kStatusNotRun) {
-      // this should not happen
+    } else {
       assert(1 == 0);
     }
   }
 
-  // Stopper status should have been handled. Status should be solved.
+  // Stopped status should have been handled. Status should be solved.
   if (ipxStatusError(!hipo.solved(), options, "Hipo",
                      "status should be solved but value is", solve_status))
     return HighsStatus::kError;

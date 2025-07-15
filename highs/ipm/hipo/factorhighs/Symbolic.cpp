@@ -63,31 +63,31 @@ std::string memoryString(double mem) {
 void Symbolic::print(bool verbose) const {
   std::stringstream log_stream;
   log_stream << "\nFactorisation statistics\n";
-  log_stream << textline("size:") << sci(n_, 0, 2) << '\n';
-  log_stream << textline("nnz:") << sci(nz_, 0, 2) << '\n';
-  log_stream << textline("fill-in:") << fix(fillin_, 0, 2) << '\n';
-  log_stream << textline("serial memory:") << memoryString(serial_storage_)
+  log_stream << textline("Size:") << sci(n_, 0, 2) << '\n';
+  log_stream << textline("Nnz:") << sci(nz_, 0, 2) << '\n';
+  log_stream << textline("Fill-in:") << fix(fillin_, 0, 2) << '\n';
+  log_stream << textline("Serial memory:") << memoryString(serial_storage_)
              << '\n';
-  log_stream << textline("flops:") << sci(flops_, 0, 1) << '\n';
+  log_stream << textline("Flops:") << sci(flops_, 0, 1) << '\n';
   if (verbose) {
-    log_stream << textline("sparse ops:") << sci(spops_, 0, 1) << '\n';
+    log_stream << textline("Sparse ops:") << sci(spops_, 0, 1) << '\n';
     log_stream << textline("critical ops:") << sci(critops_, 0, 1) << '\n';
-    log_stream << textline("max tree speedup:") << fix(flops_ / critops_, 0, 2)
+    log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)
                << '\n';
-    log_stream << textline("artificial nz:") << sci(artificial_nz_, 0, 1)
+    log_stream << textline("Artificial nz:") << sci(artificial_nz_, 0, 1)
                << '\n';
-    log_stream << textline("artificial ops:") << sci(artificial_ops_, 0, 1)
+    log_stream << textline("Artificial ops:") << sci(artificial_ops_, 0, 1)
                << '\n';
-    log_stream << textline("largest front:") << integer(largest_front_, 0)
+    log_stream << textline("Largest front:") << integer(largest_front_, 0)
                << '\n';
-    log_stream << textline("largest supernode:") << integer(largest_sn_, 0)
+    log_stream << textline("Largest supernode:") << integer(largest_sn_, 0)
                << '\n';
-    log_stream << textline("supernodes:") << integer(sn_, 0) << '\n';
-    log_stream << textline("sn size <= 1:") << integer(sn_size_1_, 0) << '\n';
-    log_stream << textline("sn size <= 10:") << integer(sn_size_10_, 0) << '\n';
-    log_stream << textline("sn size <= 100:") << integer(sn_size_100_, 0)
+    log_stream << textline("Supernodes:") << integer(sn_, 0) << '\n';
+    log_stream << textline("Sn size <= 1:") << integer(sn_size_1_, 0) << '\n';
+    log_stream << textline("Sn size <= 10:") << integer(sn_size_10_, 0) << '\n';
+    log_stream << textline("Sn size <= 100:") << integer(sn_size_100_, 0)
                << '\n';
-    log_stream << textline("sn avg size:") << sci(n_, 0, 1) << '\n';
+    log_stream << textline("Sn avg size:") << sci(n_, 0, 1) << '\n';
   }
 
   log_stream << '\n';

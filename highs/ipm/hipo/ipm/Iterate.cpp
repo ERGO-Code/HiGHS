@@ -488,16 +488,20 @@ double Iterate::infeasAfterDropping() const {
     else if (model->hasLb(j)) {
       if (zl[j] >= xl[j])
         xdrop = x[j] - model->lb(j);
-      else
-        zdrop = zl[j] - zu[j];
+      else {
+        // zu[j] is zero
+        zdrop = zl[j];
+      }
     }
 
     // UPPER BOUND FINITE
     else if (model->hasUb(j)) {
       if (zu[j] >= xu[j])
         xdrop = x[j] - model->ub(j);
-      else
-        zdrop = zl[j] - zu[j];
+      else {
+        // zl[j] is zero
+        zdrop = -zu[j];
+      }
     }
 
     // largest entry in column j of A
