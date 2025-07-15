@@ -4027,7 +4027,17 @@ HighsStatus Highs::callSolveMip() {
                                   options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
+  //
+  // Set up the shared memory for the MIP solver race
+  const HighsInt num_num_race_instance = 2;
+  MipRaceRecord mip_race_record;
+  mip_race_record.initialise(num_num_race_instance, lp.num_col_);
+  mip_race_record.report();
   HighsMipSolver solver(callback_, options_, lp, solution_);
+  // Initialise the pointer to the shared memory space
+  solver.mip_race_record_ = &mip_race_record;
+  solver.my_mip_race_instance_ = 0;
+  // Run the MIP solver!
   solver.run();
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled

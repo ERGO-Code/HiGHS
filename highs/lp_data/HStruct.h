@@ -73,9 +73,11 @@ struct MipRaceIncumbent {
 };
 
 struct MipRaceRecord {
+  std::vector<bool> terminate;
   std::vector<MipRaceIncumbent> record;
   void clear();
   void initialise(const HighsInt num_race_instance, const HighsInt num_col);
+  void report() const;
 };
 
 struct HighsBasis {

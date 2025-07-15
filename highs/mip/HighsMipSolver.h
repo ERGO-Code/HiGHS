@@ -55,6 +55,9 @@ class HighsMipSolver {
 
   HighsMipAnalysis analysis_;
 
+  HighsInt my_mip_race_instance_;
+  MipRaceRecord* mip_race_record_;  
+
   void run();
 
   HighsInt numCol() const { return model_->num_col_; }
@@ -107,6 +110,7 @@ class HighsMipSolver {
                         const std::vector<double>* pass_row_value,
                         double& bound_violation, double& row_violation,
                         double& integrality_violation, HighsCDouble& obj) const;
+  void makeMipRaceRecord(const double objective, const std::vector<double>& solution);
 };
 
 #endif

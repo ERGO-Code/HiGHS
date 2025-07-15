@@ -736,6 +736,7 @@ void HighsMipSolverData::runSetup() {
   upper_bound -= mipsolver.model_->offset_;
 
   if (mipsolver.solution_objective_ != kHighsInf) {
+    // Assigning new incumbent
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
     // return the objective value in the transformed space
     double solobj =
@@ -764,6 +765,10 @@ void HighsMipSolverData::runSetup() {
                                  upper_bound);
 
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
+      // Possibly write the improving solution to the shared memory space
+      if (!mipsolver.submip && mipsolver.mip_race_record_)
+	mipsolver.makeMipRaceRecord(solobj, incumbent);
+
       saveReportMipSolution(new_upper_limit);
       if (new_upper_limit < upper_limit) {
         upper_limit = new_upper_limit;
@@ -1399,6 +1404,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       updatePrimalDualIntegral(lower_bound, lower_bound, prev_upper_bound,
                                upper_bound);
 
+    // Assigning new incumbent
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
@@ -1406,6 +1412,9 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       saveReportMipSolution(new_upper_limit);
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
+      // Possibly write the improving solution to the shared memory space
+      if (!mipsolver.submip && mipsolver.mip_race_record_)
+	mipsolver.makeMipRaceRecord(solobj, incumbent);
       upper_limit = new_upper_limit;
       optimality_limit =
           computeNewUpperLimit(solobj, mipsolver.options_mip_->mip_abs_gap,
@@ -1438,6 +1447,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       printDisplayLine(solution_source);
     }
   } else if (incumbent.empty())
+    // Assigning new incumbent
     incumbent = sol;
 
   return true;
@@ -2821,13 +2831,38 @@ bool MipRaceIncumbent::readOk(double& objective,
   return this->start_write_incumbent == start_write_incumbent;
 }
 
-void MipRaceRecord::clear() { this->record.clear(); }
+void MipRaceRecord::clear() {
+  this->terminate.clear();
+  this->record.clear();
+}
 
 void MipRaceRecord::initialise(const HighsInt num_race_instance,
                                const HighsInt num_col) {
   this->clear();
+  this->terminate.assign(num_race_instance, false);
   MipRaceIncumbent mip_race_incumbent;
   mip_race_incumbent.initialise(num_col);
   for (HighsInt instance = 0; instance < num_race_instance; instance++)
     this->record.push_back(mip_race_incumbent);
 }
+
+void MipRaceRecord::report() const {
+  HighsInt num_race_instance = this->terminate.size();
+  printf("\nMipRaceRecord:");
+  for (HighsInt instance = 0; instance < num_race_instance; instance++)
+    printf(" %11d", int(instance));
+  printf("\nTerminate:    ");
+  for (HighsInt instance = 0; instance < num_race_instance; instance++)
+    printf(" %11s", this->terminate[instance] ? "T" : "F");
+  printf("\nStartWrite:   ");
+  for (HighsInt instance = 0; instance < num_race_instance; instance++)
+    printf(" %11d", this->record[instance].start_write_incumbent);
+  printf("\nObjective:    ");
+  for (HighsInt instance = 0; instance < num_race_instance; instance++)
+    printf(" %11.4g", this->record[instance].best_incumbent_objective);
+  printf("\nFinishWrite:  ");
+  for (HighsInt instance = 0; instance < num_race_instance; instance++)
+    printf(" %11d", this->record[instance].finish_write_incumbent);
+  printf("\n\n");
+}
+
