@@ -485,7 +485,7 @@ TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
   std::string file_content =
       "Minimize\n obj: 2 x + y + z\nSubject To\nr0: 2 x + y - x + 0 z >= "
       "2\nr1: y + x - y >= 1\nEnd\n";
-  printf("Using .lp file\n%s", file_content.c_str());
+  if (dev_run) printf("Using .lp file\n%s", file_content.c_str());
   fprintf(file, "%s", file_content.c_str());
   fclose(file);
   Highs h;
