@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Conda environment
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-name: highsdev
           create-args: >-
@@ -48,3 +48,37 @@ jobs:
       #     LD_LIBRARY_PATH=$(pwd)/bbdir/highs \
       #     PYTHONPATH=$(pwd)/bbdir \
       #     python examples/call_highs_from_python.py
+
+  buildmeson_win:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest] 
+    steps:
+      - uses: actions/checkout@v4
+        # with:
+        #   submodules: "recursive"
+        #   fetch-depth: 0
+
+      - name: Install Conda environment
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: highsdev
+          create-args: >-
+            python==3.8
+            meson
+            pkgconfig
+            ninja
+            zlib
+            catch2
+            numpy
+          cache-environment: true
+          init-shell: >-
+            bash
+            zsh
+
+      - name: Build and test
+        shell: bash -l {0}
+        run: |
+          meson setup bbdir -Duse_zlib=enabled -Dwith_tests=True
+          meson test -C bbdir

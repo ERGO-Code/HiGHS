@@ -70,6 +70,7 @@ _highs_c_suppressions = [
 
 if cppc.get_id() == 'msvc'
   add_project_arguments(
+      '/bigobj',
       '/wd4018',  # Disable warning: 'expression' : signed/unsigned mismatch
       '/wd4061',  # Disable warning: enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
       '/wd4100',  # Disable warning: 'identifier' : unreferenced formal parameter
