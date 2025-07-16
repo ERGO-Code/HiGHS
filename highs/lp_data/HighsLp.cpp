@@ -345,95 +345,26 @@ void HighsLp::userCostScale(const HighsInt user_cost_scale) {
 }
 
 void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
-  // Don't add names if there are no columns, or if the names are
-  // already incomplete
+  // Don't add names if there are no columns being added
   if (this->num_col_ == 0) return;
   HighsInt col_names_size = this->col_names_.size();
-  if (col_names_size < this->num_col_) return;
-  if (!this->col_hash_.name2index.size())
-    this->col_hash_.form(this->col_names_);
+  if (col_names_size <= 0) return;
+  assert(col_names_size == this->num_col_ + num_new_col);
   // Handle the addition of user-defined names later
   assert(name == "");
-  if (this->col_name_prefix_ == "")
-    col_name_prefix_ = kHighsUniqueColNamePrefix;
-  for (HighsInt iCol = this->num_col_; iCol < this->num_col_ + num_new_col;
-       iCol++) {
-    const std::string col_name =
-        this->col_name_prefix_ + std::to_string(this->col_name_suffix_++);
-    bool added = false;
-    auto search = this->col_hash_.name2index.find(col_name);
-    if (search == this->col_hash_.name2index.end()) {
-      // Name not found in hash
-      if (col_names_size == this->num_col_) {
-        // No space (or name) for this col name
-        this->col_names_.push_back(col_name);
-        added = true;
-      } else if (col_names_size > iCol) {
-        // Space for this col name. Only add if name is blank
-        if (this->col_names_[iCol] == "") {
-          this->col_names_[iCol] = col_name;
-          added = true;
-        }
-      }
-    }
-    if (added) {
-      const bool duplicate =
-          !this->col_hash_.name2index.emplace(col_name, iCol).second;
-      assert(!duplicate);
-      assert(this->col_names_[iCol] == col_name);
-      assert(this->col_hash_.name2index.find(col_name)->second == iCol);
-    } else {
-      // Duplicate name or other failure
-      this->col_hash_.name2index.clear();
-      return;
-    }
-  }
+  // Blank names for the new columns were added in
+  // appendColsToLpVectors
 }
 
 void HighsLp::addRowNames(const std::string name, const HighsInt num_new_row) {
-  // Don't add names if there are no rows, or if the names are already
-  // incomplete
+  // Don't add names if there are no rows being added
   if (this->num_row_ == 0) return;
   HighsInt row_names_size = this->row_names_.size();
-  if (row_names_size < this->num_row_) return;
-  if (!this->row_hash_.name2index.size())
-    this->row_hash_.form(this->row_names_);
+  if (row_names_size <= 0) return;
+  assert(row_names_size == this->num_row_ + num_new_row);
   // Handle the addition of user-defined names later
   assert(name == "");
-  if (this->row_name_prefix_ == "")
-    row_name_prefix_ = kHighsUniquerowNamePrefix;
-  for (HighsInt iRow = this->num_row_; iRow < this->num_row_ + num_new_row;
-       iRow++) {
-    const std::string row_name =
-        this->row_name_prefix_ + std::to_string(this->row_name_suffix_++);
-    bool added = false;
-    auto search = this->row_hash_.name2index.find(row_name);
-    if (search == this->row_hash_.name2index.end()) {
-      // Name not found in hash
-      if (row_names_size == this->num_row_) {
-        // No space (or name) for this row name
-        this->row_names_.push_back(row_name);
-        added = true;
-      } else if (row_names_size > iRow) {
-        // Space for this row name. Only add if name is blank
-        if (this->row_names_[iRow] == "") {
-          this->row_names_[iRow] = row_name;
-          added = true;
-        }
-      }
-    }
-    if (added) {
-      const bool duplicate =
-          !this->row_hash_.name2index.emplace(row_name, iRow).second;
-      assert(!duplicate);
-      assert(this->row_names_[iRow] == row_name);
-      assert(this->row_hash_.name2index.find(row_name)->second == iRow);
-    } else {
-      // Duplicate name or other failure
-      this->row_hash_.name2index.clear();
-      return;
-    }
-  }
+  // Blank names for the new rows were added in appendRowsToLpVectors
 }
 
 void HighsLp::deleteColsFromVectors(

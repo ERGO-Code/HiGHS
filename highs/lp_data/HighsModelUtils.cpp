@@ -205,8 +205,13 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
                          const HighsLp& lp,
                          const std::vector<double>& primal_solution,
                          const bool sparse) {
+  // Use when writing out the solution file (when names can be assumed
+  // to exist) and the improving solution in the MIP solver (when
+  // names cannot be assumed to exist)
   HighsInt num_nonzero_primal_value = 0;
-  assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  const bool have_col_names = lp.col_names_.size() > 0;
+  if (have_col_names)
+    assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
   if (sparse) {
     // Determine the number of nonzero primal solution values
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
@@ -225,8 +230,12 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
     if (sparse && !primal_solution[ix]) continue;
     auto valStr = highsDoubleToString(primal_solution[ix],
                                       kHighsSolutionValueToStringTolerance);
+    // Don't invent names locallty: if none exist, then indicate this
+    // - so that the (sparse) solution line format remains "name value
+    // (index)"
+    const std::string name = have_col_names ? lp.col_names_[ix] : "NoName";
     ss.str(std::string());
-    ss << highsFormatToString("%-s %s", lp.col_names_[ix].c_str(), valStr.data());
+    ss << highsFormatToString("%-s %s", name.c_str(), valStr.data());
     if (sparse) ss << highsFormatToString(" %d", int(ix));
     ss << "\n";
     highsFprintfString(file, log_options, ss.str());
@@ -273,9 +282,9 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
       auto valStr = highsDoubleToString(solution.row_value[ix],
                                         kHighsSolutionValueToStringTolerance);
-      // Create a row name
       ss.str(std::string());
-      ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(), valStr.data());
+      ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
+                                valStr.data());
       highsFprintfString(file, log_options, ss.str());
     }
   }
@@ -296,7 +305,8 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
       auto valStr = highsDoubleToString(solution.col_dual[ix],
                                         kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
-      ss << highsFormatToString("%-s %s\n", lp.col_names_[ix].c_str(), valStr.data());
+      ss << highsFormatToString("%-s %s\n", lp.col_names_[ix].c_str(),
+                                valStr.data());
       highsFprintfString(file, log_options, ss.str());
     }
     ss.str(std::string());
@@ -306,7 +316,8 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
       auto valStr = highsDoubleToString(solution.row_dual[ix],
                                         kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
-      ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(), valStr.data());
+      ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
+                                valStr.data());
       highsFprintfString(file, log_options, ss.str());
     }
   }
@@ -359,8 +370,8 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp) {
   if (call_status == HighsStatus::kError) return call_status;
   HighsStatus return_status = call_status;
   call_status =
-    normaliseNames(log_options, false, lp.num_row_, lp.row_name_prefix_,
-		   lp.row_name_suffix_, lp.row_names_, lp.row_hash_);
+      normaliseNames(log_options, false, lp.num_row_, lp.row_name_prefix_,
+                     lp.row_name_suffix_, lp.row_names_, lp.row_hash_);
   if (call_status != HighsStatus::kOk) return call_status;
   return return_status;
 }

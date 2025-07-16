@@ -755,9 +755,8 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   // Replace any blank names and return error if there are duplicates
   // or names with spaces
   call_status = normaliseNames(this->options_.log_options, lp);
-  return_status =
-        interpretCallStatus(options_.log_options, call_status,
-                            return_status, "normaliseNames");
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "normaliseNames");
   if (return_status == HighsStatus::kError) return return_status;
 
   // Ensure that the LP is column-wise
@@ -827,9 +826,8 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   // Replace any blank names and return error if there are duplicates
   // or names with spaces
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
-  return_status =
-        interpretCallStatus(options_.log_options, call_status,
-                            return_status, "normaliseNames");
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "normaliseNames");
   if (return_status == HighsStatus::kError) return return_status;
 
   // Report to user that basis is being written
@@ -3369,9 +3367,8 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   // Replace any blank names and return error if there are duplicates
   // or names with spaces
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
-  return_status =
-        interpretCallStatus(options_.log_options, call_status,
-                            return_status, "normaliseNames");
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "normaliseNames");
   if (return_status == HighsStatus::kError) return return_status;
 
   // Report to user that solution is being written

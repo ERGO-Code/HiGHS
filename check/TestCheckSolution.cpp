@@ -90,9 +90,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (dev_run) printf("Num nodes = %d\n", int(scratch_num_nodes));
 
   std::string solution_file = test_name + model + ".sol";
-  if (dev_run) return_status = highs.writeSolution("");
-  return_status = highs.writeSolution(solution_file);
-  REQUIRE(return_status == HighsStatus::kOk);
+  if (dev_run) REQUIRE(highs.writeSolution("") == HighsStatus::kOk);
+  ;
+  REQUIRE(highs.writeSolution(solution_file) == HighsStatus::kOk);
 
   highs.clear();
 
@@ -590,9 +590,15 @@ void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
   if (dev_run)
     printf("Writing solution in style %d to %s\n", int(write_solution_style),
            solution_file.c_str());
-  if (dev_run) return_status = highs.writeSolution("", write_solution_style);
-  return_status = highs.writeSolution(solution_file, write_solution_style);
-  REQUIRE(return_status == HighsStatus::kOk);
+  // For models without names, Highs::writeSolution will return
+  // HighsStatus::kWarning
+  HighsStatus require_status = highs.getLp().col_names_.size()
+                                   ? HighsStatus::kOk
+                                   : HighsStatus::kWarning;
+  REQUIRE(highs.writeSolution(solution_file, write_solution_style) ==
+          require_status);
+  if (dev_run)
+    REQUIRE(highs.writeSolution("", write_solution_style) == HighsStatus::kOk);
 
   const bool& value_valid = highs.getSolution().value_valid;
   bool valid, integral, feasible;

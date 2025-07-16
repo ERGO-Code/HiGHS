@@ -111,7 +111,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   local_lp.col_names_.clear();
   local_lp.row_names_.clear();
   highs.passModel(local_lp);
-  REQUIRE(highs.writeSolution(solution_file, 1) == HighsStatus::kOk);
+  REQUIRE(highs.writeSolution(solution_file, 1) == HighsStatus::kWarning);
 
   std::remove(solution_file.c_str());
 }

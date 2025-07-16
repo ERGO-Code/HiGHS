@@ -1864,7 +1864,8 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   std::string type;
   HighsInt count;
   bool have_integer_columns = (getNumInt(lp) != 0);
-  bool have_col_names = lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
+  bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
 
   highsLogUser(log_options, HighsLogType::kInfo,
                "  Column        Lower        Upper         Cost       "
@@ -2515,7 +2516,8 @@ HighsStatus assessLpPrimalSolution(const std::string message,
   row_value.assign(lp.num_row_, 0);
   const bool have_integrality = (lp.integrality_.size() != 0);
   if (!solution.value_valid) return HighsStatus::kError;
-  const bool have_col_names = lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
+  const bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const std::string name_string =
         have_col_names ? (" (" + lp.col_names_[iCol] + ")") : "";
@@ -3108,8 +3110,10 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   HighsInt semi_row_num = 0;
   // Insert the new variables and their coefficients
   std::stringstream ss;
-  const bool have_col_names = lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
-  const bool have_row_names = lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+  const bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
+  const bool have_row_names =
+      lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
   const bool have_solution = solution.value_valid;
   if (have_solution) {
     // Create zeroed row values for the new rows
