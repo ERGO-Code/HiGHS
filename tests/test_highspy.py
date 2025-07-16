@@ -990,7 +990,7 @@ class TestHighsPy(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as f:
                 h.writeBasis(f.name)
                 contents = f.read()
-                self.assertEqual(contents, b"HiGHS v2\nNone\n")
+                self.assertEqual(contents, b"HiGHS_basis_file v2\nNone\n")
 
     def test_write_basis_after_running(self):
         if platform == "linux" or platform == "darwin":
@@ -999,7 +999,7 @@ class TestHighsPy(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as f:
                 h.writeBasis(f.name)
                 contents = f.read()
-                self.assertEqual(contents, b"HiGHS v2\nValid\n# Columns 2\n1 1 \n# Rows 2\n0 0 \n")
+                self.assertEqual(contents, b"HiGHS_basis_file v2\nValid\n# Columns 2\nc0 1\nc1 1\n# Rows 2\nr0 0\nr1 0\n")
 
     def test_read_basis(self):
         if platform == "linux" or platform == "darwin":
