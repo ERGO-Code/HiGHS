@@ -752,9 +752,13 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   // Dimensions in a_matrix_ may not be set, so take them from lp
   lp.setMatrixDimensions();
 
-  // Replace any blank names and check for names with spaces
+  // Replace any blank names and return error if there are duplicates
+  // or names with spaces
   call_status = normaliseNames(this->options_.log_options, lp);
-  if (call_status == HighsStatus::kError) return call_status;
+  return_status =
+        interpretCallStatus(options_.log_options, call_status,
+                            return_status, "normaliseNames");
+  if (return_status == HighsStatus::kError) return return_status;
 
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -820,9 +824,13 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  // Replace any blank names and check for names with spaces
+  // Replace any blank names and return error if there are duplicates
+  // or names with spaces
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
-  if (call_status == HighsStatus::kError) return call_status;
+  return_status =
+        interpretCallStatus(options_.log_options, call_status,
+                            return_status, "normaliseNames");
+  if (return_status == HighsStatus::kError) return return_status;
 
   // Report to user that basis is being written
   if (filename != "")
@@ -3358,9 +3366,13 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  // Replace any blank names and check for names with spaces
+  // Replace any blank names and return error if there are duplicates
+  // or names with spaces
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
-  if (call_status == HighsStatus::kError) return call_status;
+  return_status =
+        interpretCallStatus(options_.log_options, call_status,
+                            return_status, "normaliseNames");
+  if (return_status == HighsStatus::kError) return return_status;
 
   // Report to user that solution is being written
   if (filename != "")

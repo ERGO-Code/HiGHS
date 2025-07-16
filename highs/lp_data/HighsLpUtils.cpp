@@ -1864,7 +1864,7 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   std::string type;
   HighsInt count;
   bool have_integer_columns = (getNumInt(lp) != 0);
-  bool have_col_names = (lp.col_names_.size() != 0);
+  bool have_col_names = lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
 
   highsLogUser(log_options, HighsLogType::kInfo,
                "  Column        Lower        Upper         Cost       "
@@ -2515,7 +2515,7 @@ HighsStatus assessLpPrimalSolution(const std::string message,
   row_value.assign(lp.num_row_, 0);
   const bool have_integrality = (lp.integrality_.size() != 0);
   if (!solution.value_valid) return HighsStatus::kError;
-  const bool have_col_names = lp.col_names_.size() >= lp.num_col_;
+  const bool have_col_names = lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const std::string name_string =
         have_col_names ? (" (" + lp.col_names_[iCol] + ")") : "";
@@ -2628,20 +2628,6 @@ HighsStatus assessLpPrimalSolution(const std::string message,
 
 void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
                     const HighsBasis& basis) {
-  /*
-  fprintf(file, "HiGHS_basis_file %s\n", kHighsBasisFileV2.c_str());
-  if (basis.valid == false) {
-    fprintf(file, "None\n");
-    return;
-  }
-  fprintf(file, "Valid\n");
-  fprintf(file, "# Columns %d\n", (int)basis.col_status.size());
-  for (const auto& status : basis.col_status) fprintf(file, "%d ", (int)status);
-  fprintf(file, "\n");
-  fprintf(file, "# Rows %d\n", (int)basis.row_status.size());
-  for (const auto& status : basis.row_status) fprintf(file, "%d ", (int)status);
-  fprintf(file, "\n");
-  */
   const HighsLogOptions& log_options = options.log_options;
   std::stringstream ss;
   // Basis version line
@@ -2734,6 +2720,7 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
   // Reads a basis as an ifstream, returning an error if what's read is
   // inconsistent with the sizes of the HighsBasis passed in
   HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status = HighsStatus::kOk;
   std::string from_method = "readBasisStream";
   std::string string_highs, string_version;
   in_file >> string_highs >> string_version;
@@ -2757,12 +2744,13 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
       highsLogUser(log_options, HighsLogType::kWarning,
                    "readBasisFile: Basis file format %s is deprecated\n",
                    kHighsBasisFileV1.c_str());
+      return_status = HighsStatus::kWarning;
     }
     std::string keyword;
     in_file >> keyword;
     if (keyword == "None") {
       basis.valid = false;
-      return HighsStatus::kOk;
+      return return_status;
     }
     const HighsInt basis_num_col = (HighsInt)basis.col_status.size();
     const HighsInt basis_num_row = (HighsInt)basis.row_status.size();
@@ -2793,10 +2781,10 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
         in_file >> name >> int_status;
         if (have_col_names) {
           // Use the column name if possible
-          return_status =
+          call_status =
               getIndexFromName(log_options, from_method, is_column, name,
                                lp.col_hash_.name2index, iCol, lp.col_names_);
-          if (return_status != HighsStatus::kOk) return return_status;
+          if (call_status != HighsStatus::kOk) return call_status;
         } else {
           // Have to assume column basis status are in the right order
           iCol = iX;
@@ -2827,10 +2815,10 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
         in_file >> name >> int_status;
         if (have_row_names) {
           // Use the row name if possible
-          return_status =
+          call_status =
               getIndexFromName(log_options, from_method, is_column, name,
                                lp.row_hash_.name2index, iRow, lp.row_names_);
-          if (return_status != HighsStatus::kOk) return return_status;
+          if (call_status != HighsStatus::kOk) return call_status;
         } else {
           // Have to assume row solution values are in the right order
           iRow = iX;
@@ -3120,8 +3108,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   HighsInt semi_row_num = 0;
   // Insert the new variables and their coefficients
   std::stringstream ss;
-  const bool have_col_names = (lp.col_names_.size() != 0);
-  const bool have_row_names = (lp.row_names_.size() != 0);
+  const bool have_col_names = lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
+  const bool have_row_names = lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
   const bool have_solution = solution.value_valid;
   if (have_solution) {
     // Create zeroed row values for the new rows

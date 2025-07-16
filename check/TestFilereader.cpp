@@ -491,10 +491,11 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 2, 2, 4};
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
-  REQUIRE(h.writeSolution("", 1) == HighsStatus::kOk);
+  // Names will be created when writing the solution
+  REQUIRE(h.writeSolution("", 1) == HighsStatus::kWarning);
   REQUIRE(h.writeModel("") == HighsStatus::kOk);
 
   lp.col_names_ = {"Column", "Column"};
@@ -505,15 +506,16 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   lp.col_names_ = {"Column0", ""};
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
-  REQUIRE(h.writeSolution("", -1) == HighsStatus::kOk);
+  REQUIRE(h.writeSolution("", kSolutionStyleOldRaw) == HighsStatus::kWarning);
   REQUIRE(h.writeModel("") == HighsStatus::kOk);
 
   std::vector<HighsInt> index = {0, 1};
   std::vector<double> value = {2, 3};
   REQUIRE(h.addRow(5, inf, 2, index.data(), value.data()) == HighsStatus::kOk);
   h.run();
-  REQUIRE(h.writeBasis("") == HighsStatus::kOk);
-  REQUIRE(h.writeSolution("", 1) == HighsStatus::kOk);
+  printf("h.getLP().row_names_[2] = %s\n", h.getLp().row_names_[2].c_str());
+  REQUIRE(h.writeBasis("") == HighsStatus::kWarning);
+  REQUIRE(h.writeSolution("", kSolutionStylePretty) == HighsStatus::kOk);
   REQUIRE(h.writeModel("") == HighsStatus::kOk);
 
   lp.row_names_[1] = "Row 1";
