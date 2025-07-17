@@ -2958,6 +2958,8 @@ void MipRace::terminate() {
 
 bool MipRace::terminated() const {
   assert(this->record);
+  for (HighsInt instance = 0; instance < this->concurrency(); instance++)
+    if (this->record->terminate[instance]) return true;
   return false;
 }
 
