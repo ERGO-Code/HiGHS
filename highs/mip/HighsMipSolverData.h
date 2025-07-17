@@ -300,10 +300,12 @@ struct HighsMipSolverData {
       const double mipsolver_objective_value,
       const userMipSolutionCallbackOrigin user_solution_callback_origin);
 
+  HighsInt mipRaceConcurrency() const;
   void mipRaceUpdate();
   bool mipRaceNewSolution(double& objective_value, std::vector<double>& solution);
   void mipRaceTerminate();
   bool mipRaceTerminated() const;
+  void mipRaceReport() const;
 };
 
 #endif

@@ -80,6 +80,7 @@ struct MipRaceRecord {
   void clear();
   void initialise(const HighsInt mip_race_concurrency,
 		  const HighsInt num_col);
+  HighsInt concurrency() const;
   void update(const HighsInt instance,
 	      const double objective,
 	      const std::vector<double>& solution);
@@ -94,6 +95,7 @@ struct MipRace {
   void initialise(const HighsInt mip_race_concurrency,
 		  const HighsInt my_instance_,
 		  MipRaceRecord* record_);
+  HighsInt concurrency() const;
   void update(const double objective,
 	      const std::vector<double>& solution);
   bool newSolution(double objective,

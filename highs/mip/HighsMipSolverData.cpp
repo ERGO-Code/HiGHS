@@ -2414,6 +2414,9 @@ restart:
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
 
+  // Possible termination of MIP race
+  if (!mipsolver.submip && this->mipRaceTerminated()) return true;  
+
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
     mipsolver.callback_->clearHighsCallbackOutput();
@@ -2660,6 +2663,12 @@ void HighsMipSolverData::callbackUserSolution(
   }
 }
 
+HighsInt HighsMipSolverData::mipRaceConcurrency() const {
+  if (!mipsolver.mip_race_.record) return;
+  assert(!mipsolver.submip);
+  return mipsolver.mip_race_.concurrency();
+}
+
 void HighsMipSolverData::mipRaceUpdate() {
   if (!mipsolver.mip_race_.record) return;
   assert(!mipsolver.submip);
@@ -2667,6 +2676,8 @@ void HighsMipSolverData::mipRaceUpdate() {
 }
 
 bool HighsMipSolverData::mipRaceNewSolution(double& objective_value, std::vector<double>& solution) {
+  if (!mipsolver.mip_race_.record) return false;
+  assert(!mipsolver.submip);
   return false;
 }
 
@@ -2677,11 +2688,16 @@ void HighsMipSolverData::mipRaceTerminate() {
 }
 
 bool HighsMipSolverData::mipRaceTerminated() const {
-  if (!mipsolver.mip_race_.record) return;
+  if (!mipsolver.mip_race_.record) return false;
   assert(!mipsolver.submip);
   return mipsolver.mip_race_.terminated();
 }
 
+void HighsMipSolverData::mipRaceReport() const {
+  if (!mipsolver.mip_race_.record) return;
+  assert(!mipsolver.submip);
+  mipsolver.mip_race_.report();
+}
 static double possInfRelDiff(const double v0, const double v1,
                              const double den) {
   double rel_diff;
@@ -2868,6 +2884,10 @@ void MipRaceRecord::initialise(const HighsInt mip_race_concurrency,
     this->incumbent.push_back(incumbent_);
 }
 
+HighsInt MipRaceRecord::concurrency() const {
+  return static_cast<HighsInt>(this->incumbent.size());
+}
+
 void MipRaceRecord::update(const HighsInt instance,
 			   const double objective,
 			   const std::vector<double>& solution) {
@@ -2875,7 +2895,7 @@ void MipRaceRecord::update(const HighsInt instance,
 }
 
 void MipRaceRecord::report() const {
-  HighsInt mip_race_concurrency = this->terminate.size();
+  HighsInt mip_race_concurrency = this->concurrency();
   printf("\nMipRaceRecord:     ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
     printf(" %11d", int(instance));
@@ -2910,6 +2930,11 @@ void MipRace::initialise(const HighsInt mip_race_concurrency,
   this->last_incumbent_read.assign(mip_race_concurrency, -1);
 }
 
+HighsInt MipRace::concurrency() const {
+  assert(this->record);
+  return static_cast<HighsInt>(this->last_incumbent_read.size());
+}
+
 void MipRace::update(const double objective,
 		     const std::vector<double>& solution) {
   assert(this->record);
@@ -2924,18 +2949,20 @@ bool MipRace::newSolution(double objective,
 }
 
 void MipRace::terminate() {
+  assert(this->record);
+  this->record->terminate.assign(this->concurrency(), true);
 }
 
 bool MipRace::terminated() const {
+  assert(this->record);
   return false;
 }
 
 void MipRace::report() const {
   assert(this->record);
   this->record->report();
-  HighsInt mip_race_concurrency = this->last_incumbent_read.size();
   printf("LastIncumbentRead: ");
-  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
+  for (HighsInt instance = 0; instance < this->concurrency(); instance++)
     printf(" %11d", this->last_incumbent_read[instance]);
   printf("\n\n");
 }

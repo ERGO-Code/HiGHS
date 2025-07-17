@@ -690,6 +690,12 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
+  // Terminate any MIP race
+  if (!submip) {
+    mipdata_->mipRaceTerminate();
+    mipdata_->mipRaceReport();
+  }
+ 
   // Force a final logging line
   mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve
