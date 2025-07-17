@@ -1021,7 +1021,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt("mip_race_concurrency",
                                      "Concurrency for non-deterministic MIP race", advanced,
-                                     &mip_race_concurrency, 0, 2, kHighsIInf);
+                                     &mip_race_concurrency, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("mip_max_nodes",
