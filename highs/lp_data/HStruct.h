@@ -96,6 +96,10 @@ struct MipRace {
 		  MipRaceRecord* record_);
   void update(const double objective,
 	      const std::vector<double>& solution);
+  bool newSolution(double objective,
+		   std::vector<double>& solution) const;
+  void terminate();
+  bool terminated() const;
   void report() const;
 };
 

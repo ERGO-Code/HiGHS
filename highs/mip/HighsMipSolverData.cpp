@@ -765,9 +765,9 @@ void HighsMipSolverData::runSetup() {
                                  upper_bound);
 
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
+
       // Possibly write the improving solution to the shared memory space
-      if (!mipsolver.submip && mipsolver.mip_race_.record)
-	mipsolver.mip_race_.update(solobj, incumbent);
+      if (!mipsolver.submip) this->mipRaceUpdate();
 
       saveReportMipSolution(new_upper_limit);
       if (new_upper_limit < upper_limit) {
@@ -1412,9 +1412,6 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       saveReportMipSolution(new_upper_limit);
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
-      // Possibly write the improving solution to the shared memory space
-      if (!mipsolver.submip && mipsolver.mip_race_.record)
-	mipsolver.mip_race_.update(solobj, incumbent);
       upper_limit = new_upper_limit;
       optimality_limit =
           computeNewUpperLimit(solobj, mipsolver.options_mip_->mip_abs_gap,
@@ -2546,6 +2543,9 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   if (mipsolver.submip) return;
   if (non_improving) return;
 
+  // Possibly write the improving solution to the shared memory space
+  this->mipRaceUpdate();
+
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackOutput();
@@ -2658,6 +2658,28 @@ void HighsMipSolverData::callbackUserSolution(
                  kSolutionSourceUserSolution, print_display_line,
                  is_user_solution);
   }
+}
+
+void HighsMipSolverData::mipRaceUpdate() {
+  if (!mipsolver.mip_race_.record) return;
+  assert(!mipsolver.submip);
+  mipsolver.mip_race_.update(mipsolver.solution_objective_, mipsolver.solution_);  
+}
+
+bool HighsMipSolverData::mipRaceNewSolution(double& objective_value, std::vector<double>& solution) {
+  return false;
+}
+
+void HighsMipSolverData::mipRaceTerminate() {
+  if (!mipsolver.mip_race_.record) return;
+  assert(!mipsolver.submip);
+  mipsolver.mip_race_.terminate();
+}
+
+bool HighsMipSolverData::mipRaceTerminated() const {
+  if (!mipsolver.mip_race_.record) return;
+  assert(!mipsolver.submip);
+  return mipsolver.mip_race_.terminated();
 }
 
 static double possInfRelDiff(const double v0, const double v1,
@@ -2895,6 +2917,19 @@ void MipRace::update(const double objective,
   this->report();
 }
 
+bool MipRace::newSolution(double objective,
+			  std::vector<double>& solution) const {
+  assert(this->record);
+  return false;
+}
+
+void MipRace::terminate() {
+}
+
+bool MipRace::terminated() const {
+  return false;
+}
+
 void MipRace::report() const {
   assert(this->record);
   this->record->report();
@@ -2904,3 +2939,4 @@ void MipRace::report() const {
     printf(" %11d", this->last_incumbent_read[instance]);
   printf("\n\n");
 }
+

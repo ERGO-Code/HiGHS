@@ -299,6 +299,11 @@ struct HighsMipSolverData {
   void callbackUserSolution(
       const double mipsolver_objective_value,
       const userMipSolutionCallbackOrigin user_solution_callback_origin);
+
+  void mipRaceUpdate();
+  bool mipRaceNewSolution(double& objective_value, std::vector<double>& solution);
+  void mipRaceTerminate();
+  bool mipRaceTerminated() const;
 };
 
 #endif
