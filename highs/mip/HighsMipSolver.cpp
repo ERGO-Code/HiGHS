@@ -134,8 +134,8 @@ restart:
     // Possibly look for primal solution from the user
     if (!submip && callback_->user_callback &&
         callback_->active[kCallbackMipUserSolution])
-      mipdata_->callbackUserSolution(solution_objective_,
-                                     kUserMipSolutionCallbackOriginAfterSetup);
+      mipdata_->queryExternalSolution(solution_objective_,
+                                     kExternalMipSolutionQueryOriginAfterSetup);
 
     if (options_mip_->mip_heuristic_run_feasibility_jump) {
       // Apply the feasibility jump before evaluating the root node
@@ -237,8 +237,8 @@ restart:
     // Possibly look for primal solution from the user
     if (!submip && callback_->user_callback &&
         callback_->active[kCallbackMipUserSolution])
-      mipdata_->callbackUserSolution(solution_objective_,
-                                     kUserMipSolutionCallbackOriginBeforeDive);
+      mipdata_->queryExternalSolution(solution_objective_,
+                                     kExternalMipSolutionQueryOriginBeforeDive);
 
     analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();

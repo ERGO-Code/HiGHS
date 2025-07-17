@@ -44,7 +44,7 @@ typedef struct {
   double* cutpool_value;
   double* cutpool_lower;
   double* cutpool_upper;
-  HighsInt user_solution_callback_origin;
+  HighsInt external_solution_query_origin;
 } HighsCallbackDataOut;
 
 // Some external packages (e.g., jump) currently assume that the first 2 fields

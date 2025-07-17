@@ -296,9 +296,9 @@ struct HighsMipSolverData {
   bool interruptFromCallbackWithData(const int callback_type,
                                      const double mipsolver_objective_value,
                                      const std::string message = "") const;
-  void callbackUserSolution(
+  void queryExternalSolution(
       const double mipsolver_objective_value,
-      const userMipSolutionCallbackOrigin user_solution_callback_origin);
+      const ExternalMipSolutionQueryOrigin external_solution_query_origin);
 
   HighsInt mipRaceConcurrency() const;
   void mipRaceUpdate();

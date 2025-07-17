@@ -35,8 +35,8 @@ void HighsCallback::clearHighsCallbackOutput() {
   this->data_out.cutpool_value.clear();
   this->data_out.cutpool_lower.clear();
   this->data_out.cutpool_upper.clear();
-  this->data_out.user_solution_callback_origin =
-      userMipSolutionCallbackOrigin::kUserMipSolutionCallbackOriginAfterSetup;
+  this->data_out.external_solution_query_origin =
+      ExternalMipSolutionQueryOrigin::kExternalMipSolutionQueryOriginAfterSetup;
 }
 
 void HighsCallback::clearHighsCallbackInput() {
@@ -134,8 +134,8 @@ HighsCallbackOutput::operator HighsCallbackDataOut() const {
                            ? nullptr
                            : const_cast<double*>(cutpool_upper.data());
 
-  data.user_solution_callback_origin =
-      static_cast<HighsInt>(user_solution_callback_origin);
+  data.external_solution_query_origin =
+      static_cast<HighsInt>(external_solution_query_origin);
   return data;
 }
 
