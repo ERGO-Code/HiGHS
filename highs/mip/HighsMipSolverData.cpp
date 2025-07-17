@@ -1899,9 +1899,8 @@ restart:
 
   printDisplayLine();
 
-  // Possibly look for primal solution from the user
-  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-      mipsolver.callback_->active[kCallbackMipUserSolution])
+  // Possibly query existence of an external solution
+  if (!mipsolver.submip)
     mipsolver.mipdata_->queryExternalSolution(
         mipsolver.solution_objective_,
         kExternalMipSolutionQueryOriginEvaluateRootNode0);
@@ -2152,9 +2151,8 @@ restart:
     lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
     if (ncuts == 0) break;
 
-    // Possibly look for primal solution from the user
-    if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-        mipsolver.callback_->active[kCallbackMipUserSolution])
+    // Possibly query existence of an external solution
+    if (!mipsolver.submip)
       mipsolver.mipdata_->queryExternalSolution(
           mipsolver.solution_objective_,
           kExternalMipSolutionQueryOriginEvaluateRootNode1);
@@ -2222,9 +2220,8 @@ restart:
   }
 
   printDisplayLine();
-  // Possibly look for primal solution from the user
-  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-      mipsolver.callback_->active[kCallbackMipUserSolution])
+  // Possibly query existence of an external solution
+  if (!mipsolver.submip)
     mipsolver.mipdata_->queryExternalSolution(
         mipsolver.solution_objective_,
         kExternalMipSolutionQueryOriginEvaluateRootNode2);
@@ -2298,9 +2295,8 @@ restart:
       ++nseparounds;
 
       printDisplayLine();
-      // Possibly look for primal solution from the user
-      if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-          mipsolver.callback_->active[kCallbackMipUserSolution])
+      // Possibly query existence of an external solution
+      if (!mipsolver.submip)
         mipsolver.mipdata_->queryExternalSolution(
             mipsolver.solution_objective_,
             kExternalMipSolutionQueryOriginEvaluateRootNode3);
@@ -2351,9 +2347,8 @@ restart:
     printDisplayLine();
   }
 
-  // Possibly look for primal solution from the user
-  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-      mipsolver.callback_->active[kCallbackMipUserSolution])
+  // Possibly query existence of an external solution
+  if (!mipsolver.submip)
     mipsolver.mipdata_->queryExternalSolution(
         mipsolver.solution_objective_,
         kExternalMipSolutionQueryOriginEvaluateRootNode4);
@@ -2624,20 +2619,21 @@ void HighsMipSolverData::queryExternalSolution(
     const double mipsolver_objective_value,
     const ExternalMipSolutionQueryOrigin external_solution_query_origin) {
 
-  const bool callback = mipsolver.callback_->user_callback &&
-    mipsolver.callback_->active[kCallbackMipUserSolution];
-  assert(callback);
-  if (callback) {
+  HighsCallback* callback = mipsolver.callback_;
+  const bool use_callback =
+    callback->user_callback &&
+    callback->active[kCallbackMipUserSolution];
+  if (use_callback) {
     setCallbackDataOut(mipsolver_objective_value);
-    mipsolver.callback_->data_out.external_solution_query_origin =
+    callback->data_out.external_solution_query_origin =
       external_solution_query_origin;
-    mipsolver.callback_->clearHighsCallbackInput();
+    callback->clearHighsCallbackInput();
 
     const bool interrupt =
-      mipsolver.callback_->callbackAction(kCallbackMipUserSolution, "MIP User solution");
+      callback->callbackAction(kCallbackMipUserSolution, "MIP User solution");
     assert(!interrupt);
-    if (mipsolver.callback_->data_in.user_has_solution) {
-      const auto& user_solution = mipsolver.callback_->data_in.user_solution;
+    if (callback->data_in.user_has_solution) {
+      const auto& user_solution = callback->data_in.user_solution;
       double bound_violation_ = 0;
       double row_violation_ = 0;
       double integrality_violation_ = 0;

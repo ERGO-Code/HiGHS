@@ -131,9 +131,8 @@ restart:
       cleanupSolve();
       return;
     }
-    // Possibly look for primal solution from the user
-    if (!submip && callback_->user_callback &&
-        callback_->active[kCallbackMipUserSolution])
+    // Possibly query existence of an external solution
+    if (!submip)
       mipdata_->queryExternalSolution(solution_objective_,
                                      kExternalMipSolutionQueryOriginAfterSetup);
 
@@ -234,9 +233,8 @@ restart:
   double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
   while (search.hasNode()) {
-    // Possibly look for primal solution from the user
-    if (!submip && callback_->user_callback &&
-        callback_->active[kCallbackMipUserSolution])
+    // Possibly query existence of an external solution
+    if (!submip)
       mipdata_->queryExternalSolution(solution_objective_,
                                      kExternalMipSolutionQueryOriginBeforeDive);
 
