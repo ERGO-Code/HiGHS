@@ -4027,19 +4027,43 @@ HighsStatus Highs::callSolveMip() {
                                   options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
-  // Set up the shared memory for the MIP solver race
-  const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
-  const bool mip_race = mip_race_concurrency > 1;
-  MipRaceRecord mip_race_record;
-  if (mip_race) mip_race_record.initialise(mip_race_concurrency, lp.num_col_);
+
+  // Create the master MIP solver instance that will exist beyond any
+  // race
   HighsMipSolver solver(callback_, options_, lp, solution_);
-  if (mip_race) {
-    // Initialise the MIP race data for this instance
-    const HighsInt my_mip_race_instance = 0;
-    solver.mip_race_.initialise(mip_race_concurrency, my_mip_race_instance, &mip_race_record);
+
+  const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
+  if (mip_race_concurrency > 1) {
+    // Set up the shared memory for the MIP solver race
+    MipRaceRecord mip_race_record;
+    mip_race_record.initialise(mip_race_concurrency, lp.num_col_);
+
+    // Don't allow callbacks for workers
+    HighsCallback worker_callback = callback_;
+    worker_callback.clear();
+    HighsOptions worker_options = options_;
+    // No workers log to console
+    worker_options.log_to_console = false;
+    // Race the MIP solver!
+    highs::parallel::for_each(0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
+      for (HighsInt instance = start; instance < end; instance++) {
+	printf("MIP race thread %d\n", int(instance));
+	if (instance == 0) {
+	  solver.mip_race_.initialise(mip_race_concurrency, instance, &mip_race_record);
+	  solver.run();
+	} else {
+	  worker_options.log_file = "mip_worker" + std::to_string(instance) + ".log";
+	  printf("Setting log_file to %s\n", worker_options.log_file.c_str());
+	  HighsMipSolver worker(worker_callback, worker_options, lp, solution_);
+	  worker.mip_race_.initialise(mip_race_concurrency, instance, &mip_race_record);
+	  worker.run();
+	}
+      }
+    });
+  } else {
+    // Run a single MIP solver
+    solver.run();
   }
-  // Run the MIP solver!
-  solver.run();
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
