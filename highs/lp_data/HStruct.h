@@ -89,12 +89,15 @@ struct MipRaceRecord {
 
 struct MipRace {
   HighsInt my_instance;
-  MipRaceRecord* record;
+  MipRaceRecord* record = nullptr;
+  //  HighsLogOptions log_options;
   std::vector<HighsInt> last_incumbent_read;
   void clear();
   void initialise(const HighsInt mip_race_concurrency,
 		  const HighsInt my_instance_,
-		  MipRaceRecord* record_);
+		  MipRaceRecord* record_
+		  //  , const HighsLogOptions log_options_
+		  );
   HighsInt concurrency() const;
   void update(const double objective,
 	      const std::vector<double>& solution);

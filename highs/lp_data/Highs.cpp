@@ -4044,18 +4044,27 @@ HighsStatus Highs::callSolveMip() {
     HighsOptions worker_options = options_;
     // No workers log to console
     worker_options.log_to_console = false;
+    worker_options.setLogOptions();
     // Race the MIP solver!
     highs::parallel::for_each(0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
       for (HighsInt instance = start; instance < end; instance++) {
 	printf("MIP race thread %d\n", int(instance));
 	if (instance == 0) {
-	  solver.mip_race_.initialise(mip_race_concurrency, instance, &mip_race_record);
+	  solver.mip_race_.initialise(mip_race_concurrency,
+				      instance,
+				      &mip_race_record
+				      //  , options_.log_options
+				      );
 	  solver.run();
 	} else {
 	  worker_options.log_file = "mip_worker" + std::to_string(instance) + ".log";
 	  printf("Setting log_file to %s\n", worker_options.log_file.c_str());
 	  HighsMipSolver worker(worker_callback, worker_options, lp, solution_);
-	  worker.mip_race_.initialise(mip_race_concurrency, instance, &mip_race_record);
+	  worker.mip_race_.initialise(mip_race_concurrency,
+				      instance,
+				      &mip_race_record
+				      //  , worker_options.log_options
+				      );
 	  worker.run();
 	}
       }

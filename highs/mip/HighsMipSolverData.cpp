@@ -2925,11 +2925,14 @@ void MipRace::clear() {
 
 void MipRace::initialise(const HighsInt mip_race_concurrency,
 			 const HighsInt my_instance_,
-			 MipRaceRecord* record_) {
+			 MipRaceRecord* record_
+			 //, const HighsLogOptions log_options_
+			 ) {
   this->clear();
   assert(mip_race_concurrency > 0);
   this->my_instance = my_instance_;
   this->record = record_;
+  //  this->log_options = log_options_;
   this->last_incumbent_read.assign(mip_race_concurrency, -1);
 }
 
