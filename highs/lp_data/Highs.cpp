@@ -4046,30 +4046,29 @@ HighsStatus Highs::callSolveMip() {
     worker_options.log_to_console = false;
     worker_options.setLogOptions();
     // Race the MIP solver!
-    highs::parallel::for_each(0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
-      for (HighsInt instance = start; instance < end; instance++) {
-	printf("MIP race thread %d\n", int(instance));
-	if (instance == 0) {
-	  solver.mip_race_.initialise(mip_race_concurrency,
-				      instance,
-				      &mip_race_record,
-				      options_.log_options
-				      );
-	  solver.run();
-	} else {
-	  std::string worker_log_file = "mip_worker" + std::to_string(instance) + ".log";
-	  highsOpenLogFile(worker_options, worker_log_file);
-	  printf("Setting log_file to %s\n", worker_options.log_file.c_str());
-	  HighsMipSolver worker(worker_callback, worker_options, lp, solution_);
-	  worker.mip_race_.initialise(mip_race_concurrency,
-				      instance,
-				      &mip_race_record,
-				      worker_options.log_options
-				      );
-	  worker.run();
-	}
-      }
-    });
+    highs::parallel::for_each(
+        0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
+          for (HighsInt instance = start; instance < end; instance++) {
+            if (instance == 0) {
+              solver.mip_race_.initialise(mip_race_concurrency, instance,
+                                          &mip_race_record,
+                                          options_.log_options);
+              solver.run();
+            } else {
+              // Use the instance ID as an offset to the random seed
+              worker_options.random_seed = options_.random_seed + instance;
+              std::string worker_log_file =
+                  "mip_worker" + std::to_string(instance) + ".log";
+              highsOpenLogFile(worker_options, worker_log_file);
+              HighsMipSolver worker(worker_callback, worker_options, lp,
+                                    solution_);
+              worker.mip_race_.initialise(mip_race_concurrency, instance,
+                                          &mip_race_record,
+                                          worker_options.log_options);
+              worker.run();
+            }
+          }
+        });
   } else {
     // Run a single MIP solver
     solver.run();
@@ -4544,6 +4543,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
     case HighsModelStatus::kInterrupt:
+    case HighsModelStatus::kHighsInterrupt:
     case HighsModelStatus::kUnknown:
       assert(return_status == HighsStatus::kWarning);
       break;
@@ -4584,6 +4584,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
     case HighsModelStatus::kInterrupt:
+    case HighsModelStatus::kHighsInterrupt:
     case HighsModelStatus::kUnknown:
       // Have info and primal solution (unless infeasible). No primal solution
       // in some other case, too!

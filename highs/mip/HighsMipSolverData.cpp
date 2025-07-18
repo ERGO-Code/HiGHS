@@ -2410,7 +2410,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
 
   // MIP race may have terminated
-  if (!mipsolver.submip && this->mipRaceTerminated()) return true;  
+  if (!mipsolver.submip && this->mipRaceTerminated()) return true;
 
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
@@ -2618,19 +2618,17 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
 void HighsMipSolverData::queryExternalSolution(
     const double mipsolver_objective_value,
     const ExternalMipSolutionQueryOrigin external_solution_query_origin) {
-
   HighsCallback* callback = mipsolver.callback_;
   const bool use_callback =
-    callback->user_callback &&
-    callback->active[kCallbackMipUserSolution];
+      callback->user_callback && callback->active[kCallbackMipUserSolution];
   if (use_callback) {
     setCallbackDataOut(mipsolver_objective_value);
     callback->data_out.external_solution_query_origin =
-      external_solution_query_origin;
+        external_solution_query_origin;
     callback->clearHighsCallbackInput();
 
     const bool interrupt =
-      callback->callbackAction(kCallbackMipUserSolution, "MIP User solution");
+        callback->callbackAction(kCallbackMipUserSolution, "MIP User solution");
     assert(!interrupt);
     if (callback->data_in.user_has_solution) {
       const auto& user_solution = callback->data_in.user_solution;
@@ -2638,30 +2636,29 @@ void HighsMipSolverData::queryExternalSolution(
       double row_violation_ = 0;
       double integrality_violation_ = 0;
       HighsCDouble user_solution_quad_objective_value = 0;
-      const bool feasible =
-	mipsolver.solutionFeasible(mipsolver.orig_model_, user_solution,
-				   nullptr, bound_violation_,
-				   row_violation_, integrality_violation_,
-				   user_solution_quad_objective_value);
+      const bool feasible = mipsolver.solutionFeasible(
+          mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
+          row_violation_, integrality_violation_,
+          user_solution_quad_objective_value);
       double user_solution_objective_value =
-        double(user_solution_quad_objective_value);
+          double(user_solution_quad_objective_value);
       if (!feasible) {
-	highsLogUser(
-		     mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-		     "User-supplied solution has with objective %g has violations: "
-		     "bound = %.4g; integrality = %.4g; row = %.4g\n",
-		     user_solution_objective_value, bound_violation_,
-		     integrality_violation_, row_violation_);
-	return;
+        highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+            "User-supplied solution has with objective %g has violations: "
+            "bound = %.4g; integrality = %.4g; row = %.4g\n",
+            user_solution_objective_value, bound_violation_,
+            integrality_violation_, row_violation_);
+        return;
       }
       std::vector<double> reduced_user_solution;
       reduced_user_solution =
-        postSolveStack.getReducedPrimalSolution(user_solution);
+          postSolveStack.getReducedPrimalSolution(user_solution);
       const bool print_display_line = true;
       const bool is_user_solution = true;
       addIncumbent(reduced_user_solution, user_solution_objective_value,
-		   kSolutionSourceUserSolution, print_display_line,
-		   is_user_solution);
+                   kSolutionSourceUserSolution, print_display_line,
+                   is_user_solution);
     }
   }
 }
@@ -2675,10 +2672,12 @@ HighsInt HighsMipSolverData::mipRaceConcurrency() const {
 void HighsMipSolverData::mipRaceUpdate() {
   if (!mipsolver.mip_race_.record) return;
   assert(!mipsolver.submip);
-  mipsolver.mip_race_.update(mipsolver.solution_objective_, mipsolver.solution_);  
+  mipsolver.mip_race_.update(mipsolver.solution_objective_,
+                             mipsolver.solution_);
 }
 
-bool HighsMipSolverData::mipRaceNewSolution(double& objective_value, std::vector<double>& solution) {
+bool HighsMipSolverData::mipRaceNewSolution(double& objective_value,
+                                            std::vector<double>& solution) {
   if (!mipsolver.mip_race_.record) return false;
   assert(!mipsolver.submip);
   return false;
@@ -2850,7 +2849,7 @@ void MipRaceIncumbent::initialise(const HighsInt num_col) {
 }
 
 void MipRaceIncumbent::update(const double objective_,
-                             const std::vector<double>& solution_) {
+                              const std::vector<double>& solution_) {
   assert(this->solution.size() == solution_.size());
   this->start_write_incumbent++;
   this->objective = objective_;
@@ -2891,9 +2890,8 @@ HighsInt MipRaceRecord::concurrency() const {
   return static_cast<HighsInt>(this->incumbent.size());
 }
 
-void MipRaceRecord::update(const HighsInt instance,
-			   const double objective,
-			   const std::vector<double>& solution) {
+void MipRaceRecord::update(const HighsInt instance, const double objective,
+                           const std::vector<double>& solution) {
   this->incumbent[instance].update(objective, solution);
 }
 
@@ -2904,16 +2902,20 @@ void MipRaceRecord::report(const HighsLogOptions log_options) const {
     highsLogUser(log_options, HighsLogType::kInfo, " %11d", int(instance));
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminated:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11s", this->terminated[instance] ? "T" : "F");
+    highsLogUser(log_options, HighsLogType::kInfo, " %11s",
+                 this->terminated[instance] ? "T" : "F");
   highsLogUser(log_options, HighsLogType::kInfo, "\nStartWrite:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11d", this->incumbent[instance].start_write_incumbent);
+    highsLogUser(log_options, HighsLogType::kInfo, " %11d",
+                 this->incumbent[instance].start_write_incumbent);
   highsLogUser(log_options, HighsLogType::kInfo, "\nObjective:         ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11.4g", this->incumbent[instance].objective);
+    highsLogUser(log_options, HighsLogType::kInfo, " %11.4g",
+                 this->incumbent[instance].objective);
   highsLogUser(log_options, HighsLogType::kInfo, "\nFinishWrite:       ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11d", this->incumbent[instance].finish_write_incumbent);
+    highsLogUser(log_options, HighsLogType::kInfo, " %11d",
+                 this->incumbent[instance].finish_write_incumbent);
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
 }
 
@@ -2924,10 +2926,8 @@ void MipRace::clear() {
 }
 
 void MipRace::initialise(const HighsInt mip_race_concurrency,
-			 const HighsInt my_instance_,
-			 MipRaceRecord* record_,
-			 const HighsLogOptions log_options_
-			 ) {
+                         const HighsInt my_instance_, MipRaceRecord* record_,
+                         const HighsLogOptions log_options_) {
   this->clear();
   assert(mip_race_concurrency > 0);
   this->my_instance = my_instance_;
@@ -2942,14 +2942,14 @@ HighsInt MipRace::concurrency() const {
 }
 
 void MipRace::update(const double objective,
-		     const std::vector<double>& solution) {
+                     const std::vector<double>& solution) {
   assert(this->record);
   this->record->update(this->my_instance, objective, solution);
   this->report();
 }
 
 bool MipRace::newSolution(double objective,
-			  std::vector<double>& solution) const {
+                          std::vector<double>& solution) const {
   assert(this->record);
   return false;
 }
@@ -2971,7 +2971,7 @@ void MipRace::report() const {
   this->record->report(this->log_options);
   highsLogUser(this->log_options, HighsLogType::kInfo, "LastIncumbentRead: ");
   for (HighsInt instance = 0; instance < this->concurrency(); instance++)
-    highsLogUser(this->log_options, HighsLogType::kInfo, " %11d", this->last_incumbent_read[instance]);
+    highsLogUser(this->log_options, HighsLogType::kInfo, " %11d",
+                 this->last_incumbent_read[instance]);
   highsLogUser(this->log_options, HighsLogType::kInfo, "\n\n");
 }
-

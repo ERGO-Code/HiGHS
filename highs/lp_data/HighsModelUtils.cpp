@@ -1387,6 +1387,9 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kInterrupt:
       return "Interrupted by user";
       break;
+    case HighsModelStatus::kHighsInterrupt:
+      return "Interrupted by HiGHS";
+      break;
     case HighsModelStatus::kUnknown:
       return "Unknown";
       break;
@@ -1470,6 +1473,8 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     case HighsModelStatus::kSolutionLimit:
       return HighsStatus::kWarning;
     case HighsModelStatus::kInterrupt:
+      return HighsStatus::kWarning;
+    case HighsModelStatus::kHighsInterrupt:
       return HighsStatus::kWarning;
     case HighsModelStatus::kUnknown:
       return HighsStatus::kWarning;

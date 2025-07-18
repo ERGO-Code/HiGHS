@@ -211,8 +211,9 @@ enum class HighsModelStatus {
   kSolutionLimit,
   kInterrupt,
   kMemoryLimit,
+  kHighsInterrupt,
   kMin = kNotset,
-  kMax = kMemoryLimit
+  kMax = kHighsInterrupt
 };
 
 enum HighsCallbackType : int {

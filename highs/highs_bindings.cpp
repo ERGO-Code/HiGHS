@@ -975,7 +975,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kUnknown", HighsModelStatus::kUnknown)
       .value("kSolutionLimit", HighsModelStatus::kSolutionLimit)
       .value("kInterrupt", HighsModelStatus::kInterrupt)
-      .value("kMemoryLimit", HighsModelStatus::kMemoryLimit);
+      .value("kMemoryLimit", HighsModelStatus::kMemoryLimit)
+      .value("kHighsInterrupt", HighsModelStatus::kHighsInterrupt);
   py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus", py::module_local())
       .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)
       .value("kNotReduced", HighsPresolveStatus::kNotReduced)

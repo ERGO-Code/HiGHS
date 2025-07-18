@@ -133,8 +133,8 @@ restart:
     }
     // Possibly query existence of an external solution
     if (!submip)
-      mipdata_->queryExternalSolution(solution_objective_,
-                                     kExternalMipSolutionQueryOriginAfterSetup);
+      mipdata_->queryExternalSolution(
+          solution_objective_, kExternalMipSolutionQueryOriginAfterSetup);
 
     if (options_mip_->mip_heuristic_run_feasibility_jump) {
       // Apply the feasibility jump before evaluating the root node
@@ -145,16 +145,6 @@ restart:
           returned_model_status == HighsModelStatus::kInfeasible) {
         // feasibilityJump can spot trivial infeasibility, so act on it
         modelstatus_ = returned_model_status;
-        cleanupSolve();
-        return;
-      }
-      const bool bailout_after_feasibility_jump = false;
-      if (bailout_after_feasibility_jump) {
-        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                     "HighsMipSolver: Bailing out after Feasibility Jump with "
-                     "model status = %s\n",
-                     utilModelStatusToString(returned_model_status).c_str());
-        modelstatus_ = HighsModelStatus::kInterrupt;
         cleanupSolve();
         return;
       }
@@ -235,8 +225,8 @@ restart:
   while (search.hasNode()) {
     // Possibly query existence of an external solution
     if (!submip)
-      mipdata_->queryExternalSolution(solution_objective_,
-                                     kExternalMipSolutionQueryOriginBeforeDive);
+      mipdata_->queryExternalSolution(
+          solution_objective_, kExternalMipSolutionQueryOriginBeforeDive);
 
     analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();
@@ -688,14 +678,18 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
-
   if (!submip) {
-    // If another instance has not terminated the MIP race, then
-    // terminate it
-    if (!mipdata_->mipRaceTerminated()) mipdata_->mipRaceTerminate();
+    if (!mipdata_->mipRaceTerminated()) {
+      // No other instance has terminated the MIP race, so terminate
+      // it
+      mipdata_->mipRaceTerminate();
+    } else {
+      // Indicate that this MIP race instance has been interrupted
+      modelstatus_ = HighsModelStatus::kHighsInterrupt;
+    }
     mipdata_->mipRaceReport();
   }
- 
+
   // Force a final logging line
   mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve

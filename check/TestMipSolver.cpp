@@ -1005,14 +1005,10 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
 TEST_CASE("mip-race", "[highs_test_mip_solver]") {
   const std::string model = "flugpl";
   const std::string model_file =
-    std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("mip_race_concurrency", 2);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
-  
-
-
 }
-
