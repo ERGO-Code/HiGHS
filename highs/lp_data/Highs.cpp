@@ -4057,7 +4057,8 @@ HighsStatus Highs::callSolveMip() {
 				      );
 	  solver.run();
 	} else {
-	  worker_options.log_file = "mip_worker" + std::to_string(instance) + ".log";
+	  std::string worker_log_file = "mip_worker" + std::to_string(instance) + ".log";
+	  highsOpenLogFile(worker_options, worker_log_file);
 	  printf("Setting log_file to %s\n", worker_options.log_file.c_str());
 	  HighsMipSolver worker(worker_callback, worker_options, lp, solution_);
 	  worker.mip_race_.initialise(mip_race_concurrency,
