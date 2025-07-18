@@ -2897,24 +2897,24 @@ void MipRaceRecord::update(const HighsInt instance,
   this->incumbent[instance].update(objective, solution);
 }
 
-void MipRaceRecord::report() const {
+void MipRaceRecord::report(const HighsLogOptions log_options) const {
   HighsInt mip_race_concurrency = this->concurrency();
-  printf("\nMipRaceRecord:     ");
+  highsLogUser(log_options, HighsLogType::kInfo, "\nMipRaceRecord:     ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    printf(" %11d", int(instance));
-  printf("\nTerminate:         ");
+    highsLogUser(log_options, HighsLogType::kInfo, " %11d", int(instance));
+  highsLogUser(log_options, HighsLogType::kInfo, "\nTerminate:         ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    printf(" %11s", this->terminate[instance] ? "T" : "F");
-  printf("\nStartWrite:        ");
+    highsLogUser(log_options, HighsLogType::kInfo, " %11s", this->terminate[instance] ? "T" : "F");
+  highsLogUser(log_options, HighsLogType::kInfo, "\nStartWrite:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    printf(" %11d", this->incumbent[instance].start_write_incumbent);
-  printf("\nObjective:         ");
+    highsLogUser(log_options, HighsLogType::kInfo, " %11d", this->incumbent[instance].start_write_incumbent);
+  highsLogUser(log_options, HighsLogType::kInfo, "\nObjective:         ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    printf(" %11.4g", this->incumbent[instance].objective);
-  printf("\nFinishWrite:       ");
+    highsLogUser(log_options, HighsLogType::kInfo, " %11.4g", this->incumbent[instance].objective);
+  highsLogUser(log_options, HighsLogType::kInfo, "\nFinishWrite:       ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    printf(" %11d", this->incumbent[instance].finish_write_incumbent);
-  printf("\n");
+    highsLogUser(log_options, HighsLogType::kInfo, " %11d", this->incumbent[instance].finish_write_incumbent);
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
 }
 
 void MipRace::clear() {
@@ -2956,7 +2956,7 @@ bool MipRace::newSolution(double objective,
 
 void MipRace::terminate() {
   assert(this->record);
-  this->record->terminate.assign(this->concurrency(), true);
+  this->record->terminate[this->my_instance] = true;
 }
 
 bool MipRace::terminated() const {
@@ -2968,10 +2968,10 @@ bool MipRace::terminated() const {
 
 void MipRace::report() const {
   assert(this->record);
-  this->record->report();
-  printf("LastIncumbentRead: ");
+  this->record->report(this->log_options);
+  highsLogUser(this->log_options, HighsLogType::kInfo, "LastIncumbentRead: ");
   for (HighsInt instance = 0; instance < this->concurrency(); instance++)
-    printf(" %11d", this->last_incumbent_read[instance]);
-  printf("\n\n");
+    highsLogUser(this->log_options, HighsLogType::kInfo, " %11d", this->last_incumbent_read[instance]);
+  highsLogUser(this->log_options, HighsLogType::kInfo, "\n\n");
 }
 

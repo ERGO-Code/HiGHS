@@ -42,7 +42,7 @@ struct MipRaceRecord {
   void update(const HighsInt instance,
 	      const double objective,
 	      const std::vector<double>& solution);
-  void report() const;
+  void report(const HighsLogOptions log_options) const;
 };
 
 struct MipRace {
