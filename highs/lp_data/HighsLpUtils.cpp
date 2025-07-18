@@ -2204,7 +2204,9 @@ HighsStatus readSolutionFile(const std::string filename,
     }
   }
   read_solution.value_valid = true;
-  if (sparse) {
+  if (miplib_sol || sparse) {
+    // MIPLIB and sparse format only have column values, so compute
+    // the row values and return
     if (calculateRowValuesQuad(lp, read_solution.col_value,
                                read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);

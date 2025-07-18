@@ -575,6 +575,7 @@ TEST_CASE("read-highs-lp-file1", "[highs_filereader]") {
   std::remove(model_file_name.c_str());
 
   h.resetGlobalScheduler(true);
+}
 
 TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
