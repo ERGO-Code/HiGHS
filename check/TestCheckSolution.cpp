@@ -699,3 +699,42 @@ void runSetLpSolution(const std::string model) {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("miplib-sol-file", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string sol_file = test_name + ".sol";
+  std::string lp_file = test_name + ".lp";
+  FILE* file = fopen(lp_file.c_str(), "w");
+  std::string file_content =
+      "Minimize\n obj: 2 sel_2 + sel_3\nSubject To\nr0: sel_0 - sel_1 + sel_4 "
+      ">= "
+      "2\nEnd\n";
+  if (dev_run) printf("Using .lp file\n%s", file_content.c_str());
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
+
+  file = fopen(sol_file.c_str(), "w");
+  file_content =
+      "=obj= 203672547.1\nsel_0 1\nsel_1 0\nsel_2 0\nsel_3 0\nsel_4 1\n";
+  if (dev_run) printf("Using .sol file\n%s", file_content.c_str());
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  REQUIRE(h.readSolution(sol_file) == HighsStatus::kOk);
+
+  std::vector<double> solution = h.getSolution().col_value;
+  REQUIRE(solution[0] == 0);
+  REQUIRE(solution[1] == 0);
+  REQUIRE(solution[2] == 1);
+  REQUIRE(solution[3] == 0);
+  REQUIRE(solution[4] == 1);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  std::remove(lp_file.c_str());
+  std::remove(sol_file.c_str());
+
+  h.resetGlobalScheduler(true);
+}
