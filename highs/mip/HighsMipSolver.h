@@ -19,6 +19,53 @@ struct HighsPseudocostInitialization;
 class HighsCliqueTable;
 class HighsImplications;
 
+struct MipRaceIncumbent {
+  HighsInt start_write_incumbent = -1;
+  HighsInt finish_write_incumbent = -1;
+  double objective = -kHighsInf;
+  std::vector<double> solution;
+  void clear();
+  void initialise(const HighsInt num_col);
+  void update(const double objective,
+	      const std::vector<double>& solution);
+  bool readOk(double& objective_,
+	      std::vector<double>& solution_) const;
+};
+
+struct MipRaceRecord {
+  std::vector<bool> terminate;
+  std::vector<MipRaceIncumbent> incumbent;
+  void clear();
+  void initialise(const HighsInt mip_race_concurrency,
+		  const HighsInt num_col);
+  HighsInt concurrency() const;
+  void update(const HighsInt instance,
+	      const double objective,
+	      const std::vector<double>& solution);
+  void report() const;
+};
+
+struct MipRace {
+  HighsInt my_instance;
+  MipRaceRecord* record = nullptr;
+  HighsLogOptions log_options;
+  std::vector<HighsInt> last_incumbent_read;
+  void clear();
+  void initialise(const HighsInt mip_race_concurrency,
+		  const HighsInt my_instance_,
+		  MipRaceRecord* record_,
+		  const HighsLogOptions log_options_
+		  );
+  HighsInt concurrency() const;
+  void update(const double objective,
+	      const std::vector<double>& solution);
+  bool newSolution(double objective,
+		   std::vector<double>& solution) const;
+  void terminate();
+  bool terminated() const;
+  void report() const;
+};
+
 class HighsMipSolver {
  public:
   HighsCallback* callback_;

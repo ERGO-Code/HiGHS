@@ -4052,8 +4052,8 @@ HighsStatus Highs::callSolveMip() {
 	if (instance == 0) {
 	  solver.mip_race_.initialise(mip_race_concurrency,
 				      instance,
-				      &mip_race_record
-				      //  , options_.log_options
+				      &mip_race_record,
+				      options_.log_options
 				      );
 	  solver.run();
 	} else {
@@ -4062,8 +4062,8 @@ HighsStatus Highs::callSolveMip() {
 	  HighsMipSolver worker(worker_callback, worker_options, lp, solution_);
 	  worker.mip_race_.initialise(mip_race_concurrency,
 				      instance,
-				      &mip_race_record
-				      //  , worker_options.log_options
+				      &mip_race_record,
+				      worker_options.log_options
 				      );
 	  worker.run();
 	}
