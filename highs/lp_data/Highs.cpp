@@ -4076,16 +4076,34 @@ HighsStatus Highs::callSolveMip() {
         });
     // Report on the solver and workers, and identify which has won!
     HighsInt winning_instance = -1;
+    HighsModelStatus winning_model_status = HighsModelStatus::kNotset;
     highsLogUser(options_.log_options, HighsLogType::kInfo,
 		 "MIP race results:\n");
     for (HighsInt instance = 0; instance < mip_race_concurrency; instance++) {
       const HighsMipSolverInfo& solver_info = instance == 0 ? mip_solver_info : worker_info[instance];
       HighsModelStatus instance_model_status = solver_info.modelstatus;
       highsLogUser(options_.log_options, HighsLogType::kInfo,
-		   "   Solver %d has best objective %.12g, gap %6.2f, and status %s\n",
+		   "   Solver %d has best objective %15.8g, gap %6.2f\%, and status %s\n",
 		   int(instance), solver_info.solution_objective, 1e2 * solver_info.gap,
 		   modelStatusToString(instance_model_status).c_str());
+      if (instance_model_status != HighsModelStatus::kHighsInterrupt) {
+	// Definitive status for this instance, so check compatibility
+	// with any current winning model status
+	if (winning_model_status != HighsModelStatus::kNotset) {
+	  if (winning_model_status != instance_model_status) {
+	    highsLogUser(options_.log_options, HighsLogType::kError,
+			 "MIP race: conflict between status \"%s\" for instance %d and status \"%s\" for instance %d\n",
+			 modelStatusToString(winning_model_status).c_str(), int(winning_instance),
+			 modelStatusToString(instance_model_status).c_str(), int(instance));
+	  }
+	} else {
+	  winning_model_status = instance_model_status;
+	  winning_instance = instance;
+	}
+      }
     }
+    if (winning_instance > 0) 
+      mip_solver_info = worker_info[winning_instance];
   } else {
     // Run a single MIP solver
     solver.run();
@@ -4101,6 +4119,10 @@ HighsStatus Highs::callSolveMip() {
   if (mip_solver_info.solution_objective != kHighsInf) {
     // There is a primal solution
     HighsInt solver_solution_size = mip_solver_info.solution.size();
+    const bool solver_solution_size_ok = solver_solution_size >= lp.num_col_;
+    if (!solver_solution_size)
+      highsLogUser(options_.log_options, HighsLogType::kError,
+		   "After MIP race, size of solution is %d < %d = lp.num_col_\n", int(solver_solution_size), int(lp.num_col_));
     assert(solver_solution_size >= lp.num_col_);
     // If the original model has semi-variables, its solution is
     // (still) given by the first model_.lp_.num_col_ entries of the
