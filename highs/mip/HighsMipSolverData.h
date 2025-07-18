@@ -42,25 +42,26 @@ struct HighsPrimaDualIntegral {
 enum MipSolutionSource : int {
   kSolutionSourceNone = -1,
   kSolutionSourceMin = kSolutionSourceNone,
-  kSolutionSourceBranching,
-  kSolutionSourceCentralRounding,
-  kSolutionSourceFeasibilityPump,
-  kSolutionSourceFeasibilityJump,
-  kSolutionSourceHeuristic,
-  //  kSolutionSourceInitial,
-  kSolutionSourceSubMip,
-  kSolutionSourceEmptyMip,
-  kSolutionSourceRandomizedRounding,
-  kSolutionSourceZiRound,
-  kSolutionSourceShifting,
-  kSolutionSourceSolveLp,
-  kSolutionSourceEvaluateNode,
-  kSolutionSourceUnbounded,
-  kSolutionSourceUserSolution,
-  kSolutionSourceTrivialZ,
-  kSolutionSourceTrivialL,
-  kSolutionSourceTrivialU,
-  kSolutionSourceTrivialP,
+  //  kSolutionSourceInitial, // 0
+  kSolutionSourceBranching, // B
+  kSolutionSourceCentralRounding, // C
+  kSolutionSourceFeasibilityPump, // F
+  kSolutionSourceHeuristic, // H
+  kSolutionSourceShifting, // I
+  kSolutionSourceFeasibilityJump, // J
+  kSolutionSourceSubMip, // L
+  kSolutionSourceEmptyMip, // P
+  kSolutionSourceRandomizedRounding, // R
+  kSolutionSourceSolveLp, // S
+  kSolutionSourceEvaluateNode, // T
+  kSolutionSourceUnbounded, // U
+  kSolutionSourceUserSolution, // X
+  kSolutionSourceHighsSolution, // Y
+  kSolutionSourceZiRound, // Z
+  kSolutionSourceTrivialL, // l
+  kSolutionSourceTrivialP, // p
+  kSolutionSourceTrivialU, // u
+  kSolutionSourceTrivialZ, // z
   kSolutionSourceCleanup,
   kSolutionSourceCount
 };

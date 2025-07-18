@@ -24,6 +24,9 @@ std::string HighsMipSolverData::solutionSourceToString(
   if (solution_source == kSolutionSourceNone) {
     if (code) return " ";
     return "None";
+    //  } else if (solution_source == kSolutionSourceInitial) {
+    //    if (code) return "0";
+    //    return "Initial";
   } else if (solution_source == kSolutionSourceBranching) {
     if (code) return "B";
     return "Branching";
@@ -33,15 +36,15 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceFeasibilityPump) {
     if (code) return "F";
     return "Feasibility pump";
-  } else if (solution_source == kSolutionSourceFeasibilityJump) {
-    if (code) return "J";
-    return "Feasibility jump";
   } else if (solution_source == kSolutionSourceHeuristic) {
     if (code) return "H";
     return "Heuristic";
-    //  } else if (solution_source == kSolutionSourceInitial) {
-    //    if (code) return "I";
-    //    return "Initial";
+  } else if (solution_source == kSolutionSourceShifting) {
+    if (code) return "I";
+    return "Shifting";
+  } else if (solution_source == kSolutionSourceFeasibilityJump) {
+    if (code) return "J";
+    return "Feasibility jump";
   } else if (solution_source == kSolutionSourceSubMip) {
     if (code) return "L";
     return "Sub-MIP";
@@ -51,12 +54,6 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceRandomizedRounding) {
     if (code) return "R";
     return "Randomized rounding";
-  } else if (solution_source == kSolutionSourceZiRound) {
-    if (code) return "Z";
-    return "ZI Round";
-  } else if (solution_source == kSolutionSourceShifting) {
-    if (code) return "I";
-    return "Shifting";
   } else if (solution_source == kSolutionSourceSolveLp) {
     if (code) return "S";
     return "Solve LP";
@@ -66,6 +63,15 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceUnbounded) {
     if (code) return "U";
     return "Unbounded";
+  } else if (solution_source == kSolutionSourceUserSolution) {
+    if (code) return "X";
+    return "User solution";
+  } else if (solution_source == kSolutionSourceHighsSolution) {
+    if (code) return "Y";
+    return "HiGHS solution";
+  } else if (solution_source == kSolutionSourceZiRound) {
+    if (code) return "Z";
+    return "ZI Round";
   } else if (solution_source == kSolutionSourceTrivialZ) {
     if (code) return "z";
     return "Trivial zero";
@@ -78,9 +84,6 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceTrivialP) {
     if (code) return "p";
     return "Trivial point";
-  } else if (solution_source == kSolutionSourceUserSolution) {
-    if (code) return "X";
-    return "User solution";
   } else if (solution_source == kSolutionSourceCleanup) {
     if (code) return " ";
     return "";

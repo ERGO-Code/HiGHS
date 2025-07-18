@@ -917,6 +917,8 @@ HighsStatus Highs::presolve() {
   return returnFromHighs(return_status);
 }
 
+HighsMipSolverInfo getMipSolverInfo(const HighsMipSolver& solver);
+
 HighsStatus Highs::run() {
   const bool options_had_highs_files = this->optionsHasHighsFiles();
   if (options_had_highs_files) {
@@ -4031,7 +4033,7 @@ HighsStatus Highs::callSolveMip() {
   // Create the master MIP solver instance that will exist beyond any
   // race
   HighsMipSolver solver(callback_, options_, lp, solution_);
-
+  HighsMipSolverInfo mip_solver_info;
   const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
   if (mip_race_concurrency > 1) {
     // Set up the shared memory for the MIP solver race
@@ -4073,6 +4075,7 @@ HighsStatus Highs::callSolveMip() {
     // Run a single MIP solver
     solver.run();
   }
+  mip_solver_info = getMipSolverInfo(solver);
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
@@ -4089,7 +4092,7 @@ HighsStatus Highs::callSolveMip() {
     // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
-    saved_objective_and_solution_ = solver.saved_objective_and_solution_;
+    this->saved_objective_and_solution_ = solver.saved_objective_and_solution_;
     model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
   } else {
@@ -4831,4 +4834,23 @@ void Highs::getHighsFiles() {
   this->options_.solution_file = this->files_.write_solution_file;
   this->options_.write_basis_file = this->files_.write_basis_file;
   this->files_.clear();
+}
+
+
+HighsMipSolverInfo getMipSolverInfo(const HighsMipSolver& mip_solver) {
+  HighsMipSolverInfo mip_solver_info;
+  mip_solver_info.clear();
+  mip_solver_info.modelstatus = mip_solver.modelstatus_;
+  mip_solver_info.solution = mip_solver.solution_;
+  mip_solver_info.solution_objective = mip_solver.solution_objective_;
+  mip_solver_info.bound_violation = mip_solver.bound_violation_;
+  mip_solver_info.integrality_violation = mip_solver.integrality_violation_;
+  mip_solver_info.row_violation = mip_solver.row_violation_;
+  mip_solver_info.dual_bound = mip_solver.dual_bound_;
+  mip_solver_info.primal_bound = mip_solver.primal_bound_;
+  mip_solver_info.gap = mip_solver.gap_;
+  mip_solver_info.node_count = mip_solver.node_count_;
+  mip_solver_info.total_lp_iterations = mip_solver.total_lp_iterations_;
+  mip_solver_info.primal_dual_integral = mip_solver.primal_dual_integral_;
+  return mip_solver_info;
 }
