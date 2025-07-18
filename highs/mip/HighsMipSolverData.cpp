@@ -2409,7 +2409,7 @@ restart:
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
 
-  // Possible termination of MIP race
+  // MIP race may have terminated
   if (!mipsolver.submip && this->mipRaceTerminated()) return true;  
 
   // Possible user interrupt
@@ -2873,14 +2873,14 @@ bool MipRaceIncumbent::readOk(double& objective_,
 }
 
 void MipRaceRecord::clear() {
-  this->terminate.clear();
+  this->terminated.clear();
   this->incumbent.clear();
 }
 
 void MipRaceRecord::initialise(const HighsInt mip_race_concurrency,
                                const HighsInt num_col) {
   this->clear();
-  this->terminate.assign(mip_race_concurrency, false);
+  this->terminated.assign(mip_race_concurrency, false);
   MipRaceIncumbent incumbent_;
   incumbent_.initialise(num_col);
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
@@ -2902,9 +2902,9 @@ void MipRaceRecord::report(const HighsLogOptions log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nMipRaceRecord:     ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %11d", int(instance));
-  highsLogUser(log_options, HighsLogType::kInfo, "\nTerminate:         ");
+  highsLogUser(log_options, HighsLogType::kInfo, "\nTerminated:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11s", this->terminate[instance] ? "T" : "F");
+    highsLogUser(log_options, HighsLogType::kInfo, " %11s", this->terminated[instance] ? "T" : "F");
   highsLogUser(log_options, HighsLogType::kInfo, "\nStartWrite:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %11d", this->incumbent[instance].start_write_incumbent);
@@ -2956,13 +2956,13 @@ bool MipRace::newSolution(double objective,
 
 void MipRace::terminate() {
   assert(this->record);
-  this->record->terminate[this->my_instance] = true;
+  this->record->terminated[this->my_instance] = true;
 }
 
 bool MipRace::terminated() const {
   assert(this->record);
   for (HighsInt instance = 0; instance < this->concurrency(); instance++)
-    if (this->record->terminate[instance]) return true;
+    if (this->record->terminated[instance]) return true;
   return false;
 }
 

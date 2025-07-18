@@ -33,7 +33,7 @@ struct MipRaceIncumbent {
 };
 
 struct MipRaceRecord {
-  std::vector<bool> terminate;
+  std::vector<bool> terminated;
   std::vector<MipRaceIncumbent> incumbent;
   void clear();
   void initialise(const HighsInt mip_race_concurrency,

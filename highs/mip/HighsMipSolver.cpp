@@ -688,9 +688,11 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
-  // Terminate any MIP race
+
   if (!submip) {
-    mipdata_->mipRaceTerminate();
+    // If another instance has not terminated the MIP race, then
+    // terminate it
+    if (!mipdata_->mipRaceTerminated()) mipdata_->mipRaceTerminate();
     mipdata_->mipRaceReport();
   }
  
