@@ -575,4 +575,20 @@ TEST_CASE("read-highs-lp-file1", "[highs_filereader]") {
   std::remove(model_file_name.c_str());
 
   h.resetGlobalScheduler(true);
+
+TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string lp_file = test_name + ".lp";
+  FILE* file = fopen(lp_file.c_str(), "w");
+  std::string file_content =
+      "Minimize\n obj: 2 x + y + z\nSubject To\nr0: 2 x + y - x + 0 z >= "
+      "2\nr1: y + x - y >= 1\nEnd\n";
+  if (dev_run) printf("Using .lp file\n%s", file_content.c_str());
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(lp_file) == HighsStatus::kWarning);
+
+  std::remove(lp_file.c_str());
 }

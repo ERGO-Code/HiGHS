@@ -22,6 +22,7 @@
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   const std::string filename,
                                                   HighsModel& model) {
+  bool warning_issued = false;
   HighsLp& lp = model.lp_;
   HighsHessian& hessian = model.hessian_;
   try {
@@ -168,26 +169,126 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                    "with same prefix: row names cleared\n");
     }
 
-    HighsInt nz = 0;
+    HighsInt num_nz = 0;
     // lp.a_matrix_ is initialised with start_[0] for fictitious
     // column 0, so have to clear this before pushing back start
     lp.a_matrix_.start_.clear();
     assert((int)lp.a_matrix_.start_.size() == 0);
     for (const auto& var : m.variables) {
-      lp.a_matrix_.start_.push_back(nz);
+      lp.a_matrix_.start_.push_back(num_nz);
       for (size_t j = 0; j < consofvarmap_index[var].size(); j++) {
         double value = consofvarmap_value[var][j];
         if (value) {
           lp.a_matrix_.index_.push_back(consofvarmap_index[var][j]);
           lp.a_matrix_.value_.push_back(value);
-          nz++;
+          num_nz++;
         }
       }
     }
-    lp.a_matrix_.start_.push_back(nz);
+    lp.a_matrix_.start_.push_back(num_nz);
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
+    // In a .lp file, more than one term involving the same variable
+    // can appear in a constraint, resulting in repeated row indices
+    // in a column
+    HighsSparseMatrix& matrix = lp.a_matrix_;
+    assert(matrix.isColwise());
+    num_nz = 0;
+    std::vector<double> column(lp.num_row_, 0);
+    std::vector<HighsInt> nz_count(lp.num_row_, 0);
+    std::vector<HighsInt> zero_count(lp.num_row_, 0);
+    HighsInt sum_num_duplicate = 0;
+    HighsInt sum_num_zero = 0;
+    HighsInt sum_cancellation = 0;
+    HighsInt num_report = 0;
+    HighsInt max_num_report = 10;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      // Save the start, since this will be reduced if there are
+      // repeated row indices in a column
+      const HighsInt from_el = matrix.start_[iCol];
+      for (HighsInt iEl = from_el; iEl < matrix.start_[iCol + 1]; iEl++) {
+        // Add in the value to zero or any previous nonzero in this
+        // row
+        HighsInt iRow = matrix.index_[iEl];
+        double value = matrix.value_[iEl];
+        if (value) {
+          column[iRow] += value;
+          nz_count[iRow]++;
+        } else {
+          zero_count[iRow]++;
+        }
+      }
+      // Pass through the column again, storing and then zeroing the
+      // entries in column - both to eliminate the duplicate and
+      // ensure that column is zeroed for the next matrix column.
+      matrix.start_[iCol] = num_nz;
+      for (HighsInt iEl = from_el; iEl < matrix.start_[iCol + 1]; iEl++) {
+        HighsInt iRow = matrix.index_[iEl];
+        if (column[iRow]) {
+          assert(num_nz <= iEl);
+          matrix.index_[num_nz] = iRow;
+          matrix.value_[num_nz] = column[iRow];
+          num_nz++;
+        }
+        // Report explicit zeros and/or sum to a nonzero value
+        HighsInt num_ocurrence = zero_count[iRow] + nz_count[iRow];
+        if (num_ocurrence > 1) {
+          if (nz_count[iRow] > 1) {
+            if (num_report < max_num_report)
+              highsLogUser(options.log_options, HighsLogType::kWarning,
+                           "Column %d (name \"%s\") occurs %d times in row %d "
+                           "(name \"%s\"): values summed to %g\n",
+                           int(iCol), lp.col_names_[iCol].c_str(),
+                           int(num_ocurrence), int(iRow),
+                           lp.row_names_[iRow].c_str(), column[iRow]);
+            num_report++;
+          }
+          if (zero_count[iRow] > 0) {
+            if (num_report < max_num_report)
+              highsLogUser(options.log_options, HighsLogType::kWarning,
+                           "Column %d (name \"%s\") contains %d explicit zero "
+                           "coefficient%s in row %d (name \"%s\")\n",
+                           int(iCol), lp.col_names_[iCol].c_str(),
+                           int(zero_count[iRow]),
+                           zero_count[iRow] > 1 ? "s" : "", int(iRow),
+                           lp.row_names_[iRow].c_str());
+            num_report++;
+          }
+          sum_num_duplicate += (num_ocurrence - 1);
+          sum_num_zero += zero_count[iRow];
+          if (column[iRow] == 0 && nz_count[iRow] > 0) sum_cancellation++;
+        }
+        zero_count[iRow] = 0;
+        nz_count[iRow] = 0;
+        column[iRow] = 0;
+      }
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+        assert(zero_count[iRow] == 0);
+        assert(nz_count[iRow] == 0);
+        assert(column[iRow] == 0);
+      }
+    }
+    matrix.start_[lp.num_col_] = num_nz;
+    warning_issued = sum_num_duplicate > 0 || sum_num_zero > 0;
+    HighsInt num_report_skipped = num_report - max_num_report;
+    if (num_report_skipped > 0)
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+                   "Skipped %d further warning%s of this kind\n",
+                   int(num_report_skipped), num_report_skipped > 1 ? "s" : "");
+
+    if (sum_num_duplicate > 0)
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "lp file contains %d repeated variable%s in constraints: "
+                   "summing them yielded %d cancellation%s\n",
+                   int(sum_num_duplicate), sum_num_duplicate > 1 ? "s" : "",
+                   int(sum_cancellation),
+                   (sum_cancellation == 0 || sum_cancellation > 1) ? "s" : "");
+    if (sum_num_zero > 0)
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "lp file contains %d explicit zero%s\n", int(sum_num_zero),
+                   sum_num_zero > 1 ? "s" : "");
+
   } catch (std::invalid_argument& ex) {
     // lpassert in extern/filereaderlp/def.hpp throws
     // std::invalid_argument whatever the error. Hence, unless
@@ -202,7 +303,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     return FilereaderRetcode::kParserError;
   }
   lp.ensureColwise();
-  return FilereaderRetcode::kOk;
+  return warning_issued ? FilereaderRetcode::kWarning : FilereaderRetcode::kOk;
 }
 
 void FilereaderLp::writeToFile(FILE* file, const char* format, ...) {
