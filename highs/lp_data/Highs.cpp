@@ -4043,12 +4043,31 @@ HighsStatus Highs::callSolveMip() {
     // Don't allow callbacks for workers
     HighsCallback worker_callback = callback_;
     worker_callback.clear();
-    HighsOptions worker_options = options_;
-    // No workers log to console
-    worker_options.log_to_console = false;
-    worker_options.setLogOptions();
     // Race the MIP solver!
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+		 "Starting MIP race with %d instances: performance is non-deterministic!\n", int(mip_race_concurrency));
+    // Define the HighsMipSolverInfo record for each worker
     std::vector<HighsMipSolverInfo> worker_info(mip_race_concurrency);
+    // Set up the vector of options settings for workers
+    std::vector<HighsOptions> worker_options;
+    //    std::vector<HighsMipSolver*> worker;
+    for (HighsInt instance = 0; instance < mip_race_concurrency; instance++) {
+      HighsOptions instance_options = options_;
+      // No workers log to console
+      instance_options.log_to_console = false;
+      instance_options.setLogOptions();
+      // Use the instance ID as an offset to the random seed
+      instance_options.random_seed = options_.random_seed + instance;
+      std::string worker_log_file =
+	"mip_worker" + std::to_string(instance) + ".log";
+      highsOpenLogFile(instance_options, worker_log_file);
+      worker_options.push_back(instance_options);
+      /*
+      HighsMipSolver worker_instance(worker_callback, worker_options[instance], lp,
+				     solution_);
+      worker.push_back(&worker_instance);
+      */
+    }
     highs::parallel::for_each(
         0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
           for (HighsInt instance = start; instance < end; instance++) {
@@ -4059,16 +4078,11 @@ HighsStatus Highs::callSolveMip() {
               solver.run();
 	      mip_solver_info = getMipSolverInfo(solver);
             } else {
-              // Use the instance ID as an offset to the random seed
-              worker_options.random_seed = options_.random_seed + instance;
-              std::string worker_log_file =
-                  "mip_worker" + std::to_string(instance) + ".log";
-              highsOpenLogFile(worker_options, worker_log_file);
-              HighsMipSolver worker(worker_callback, worker_options, lp,
+              HighsMipSolver worker(worker_callback, worker_options[instance], lp,
                                     solution_);
               worker.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
-                                          worker_options.log_options);
+                                          worker_options[instance].log_options);
               worker.run();
 	      worker_info[instance] = getMipSolverInfo(worker);
             }

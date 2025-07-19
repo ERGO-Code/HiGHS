@@ -67,6 +67,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
 HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
+  if (!submip) printf("HighsMipSolver::run() with random_seed = %d\n", int(options_mip_->random_seed));
   modelstatus_ = HighsModelStatus::kNotset;
 
   if (submip) {

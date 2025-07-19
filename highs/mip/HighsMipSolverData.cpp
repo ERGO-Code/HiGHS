@@ -2922,22 +2922,22 @@ void MipRaceRecord::report(const HighsLogOptions log_options) const {
   HighsInt mip_race_concurrency = this->concurrency();
   highsLogUser(log_options, HighsLogType::kInfo, "\nMipRaceRecord:     ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %16d", int(instance));
+    highsLogUser(log_options, HighsLogType::kInfo, " %20d", int(instance));
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminated:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %16s",
+    highsLogUser(log_options, HighsLogType::kInfo, " %20s",
                  this->terminated[instance] ? "T" : "F");
   highsLogUser(log_options, HighsLogType::kInfo, "\nStartWrite:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %16d",
+    highsLogUser(log_options, HighsLogType::kInfo, " %20d",
                  this->incumbent[instance].start_write_incumbent);
   highsLogUser(log_options, HighsLogType::kInfo, "\nObjective:         ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %16.8g",
+    highsLogUser(log_options, HighsLogType::kInfo, " %20.12g",
                  this->incumbent[instance].objective);
   highsLogUser(log_options, HighsLogType::kInfo, "\nFinishWrite:       ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %16d",
+    highsLogUser(log_options, HighsLogType::kInfo, " %20d",
                  this->incumbent[instance].finish_write_incumbent);
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
 }
@@ -2994,7 +2994,7 @@ void MipRace::report() const {
   this->record->report(this->log_options);
   highsLogUser(this->log_options, HighsLogType::kInfo, "LastIncumbentRead: ");
   for (HighsInt instance = 0; instance < this->concurrency(); instance++)
-    highsLogUser(this->log_options, HighsLogType::kInfo, " %16d",
+    highsLogUser(this->log_options, HighsLogType::kInfo, " %20d",
                  this->last_incumbent_read[instance]);
   highsLogUser(this->log_options, HighsLogType::kInfo, "\n\n");
 }
