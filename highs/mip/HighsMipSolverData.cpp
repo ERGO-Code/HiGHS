@@ -2621,6 +2621,7 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
 void HighsMipSolverData::queryExternalSolution(
     const double mipsolver_objective_value,
     const ExternalMipSolutionQueryOrigin external_solution_query_origin) {
+  assert(!mipsolver.submip);
   HighsCallback* callback = mipsolver.callback_;
   const bool use_callback =
       callback->user_callback && callback->active[kCallbackMipUserSolution];
@@ -2664,11 +2665,29 @@ void HighsMipSolverData::queryExternalSolution(
                    is_user_solution);
     }
   }
+  if (!mipsolver.options_mip_->mip_race_read_solutions) return;
+  MipRace& mip_race = mipsolver.mip_race_;
+  if (!mip_race.record) return;
+  double instance_solution_objective_value;
+  std::vector<double> instance_solution;
+  for (HighsInt instance = 0; instance < mip_race.concurrency(); instance++) {
+    if (instance == mip_race.my_instance) continue;
+    HighsInt read_incumbent = mip_race.newSolution(instance, instance_solution_objective_value, instance_solution);
+    if (read_incumbent < 0) continue;
+    if (read_incumbent <= mip_race.last_incumbent_read[instance]) continue;
+    // Have read a new incumbent
+    std::vector<double> reduced_instance_solution;
+    reduced_instance_solution =
+      postSolveStack.getReducedPrimalSolution(instance_solution);
+    addIncumbent(reduced_instance_solution, instance_solution_objective_value,
+		 kSolutionSourceHighsSolution);
+   
+  }
 }
 
 HighsInt HighsMipSolverData::mipRaceConcurrency() const {
-  if (!mipsolver.mip_race_.record) return;
   assert(!mipsolver.submip);
+  if (!mipsolver.mip_race_.record) return;
   return mipsolver.mip_race_.concurrency();
 }
 
@@ -2679,22 +2698,23 @@ void HighsMipSolverData::mipRaceUpdate() {
                              mipsolver.solution_);
 }
 
-bool HighsMipSolverData::mipRaceNewSolution(double& objective_value,
-                                            std::vector<double>& solution) {
-  if (!mipsolver.mip_race_.record) return false;
+HighsInt HighsMipSolverData::mipRaceNewSolution(const HighsInt instance,
+						double& objective_value,
+						std::vector<double>& solution) {
   assert(!mipsolver.submip);
-  return false;
+  if (!mipsolver.mip_race_.record) return kMipRaceNoSolution;
+  return mipsolver.mip_race_.newSolution(instance, objective_value, solution);
 }
 
 void HighsMipSolverData::mipRaceTerminate() {
-  if (!mipsolver.mip_race_.record) return;
   assert(!mipsolver.submip);
+  if (!mipsolver.mip_race_.record) return;
   mipsolver.mip_race_.terminate();
 }
 
 bool HighsMipSolverData::mipRaceTerminated() const {
-  if (!mipsolver.mip_race_.record) return false;
   assert(!mipsolver.submip);
+  if (!mipsolver.mip_race_.record) return false;
   return mipsolver.mip_race_.terminated();
 }
 
@@ -2840,8 +2860,8 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
 void HighsPrimaDualIntegral::initialise() { this->value = -kHighsInf; }
 
 void MipRaceIncumbent::clear() {
-  this->start_write_incumbent = -1;
-  this->finish_write_incumbent = -1;
+  this->start_write_incumbent = kMipRaceNoSolution;
+  this->finish_write_incumbent = kMipRaceNoSolution;
   this->objective = -kHighsInf;
   this->solution.clear();
 }
@@ -2861,17 +2881,17 @@ void MipRaceIncumbent::update(const double objective_,
   assert(this->start_write_incumbent == this->finish_write_incumbent);
 }
 
-bool MipRaceIncumbent::readOk(double& objective_,
-                              std::vector<double>& solution_) const {
+HighsInt MipRaceIncumbent::read(double& objective_,
+					 std::vector<double>& solution_) const {
   const HighsInt start_write_incumbent = this->start_write_incumbent;
   assert(this->finish_write_incumbent <= start_write_incumbent);
   // If a write call has not completed, return failure
-  if (this->finish_write_incumbent < start_write_incumbent) return false;
+  if (this->finish_write_incumbent < start_write_incumbent) return kMipRaceNoSolution;
   // finish_write_incumbent = start_write_incumbent so start reading
   objective_ = this->objective;
   solution_ = this->solution;
   // Read is OK if no new write has started
-  return this->start_write_incumbent == start_write_incumbent;
+  return this->start_write_incumbent == start_write_incumbent ? start_write_incumbent : kMipRaceNoSolution;
 }
 
 void MipRaceRecord::clear() {
@@ -2902,22 +2922,22 @@ void MipRaceRecord::report(const HighsLogOptions log_options) const {
   HighsInt mip_race_concurrency = this->concurrency();
   highsLogUser(log_options, HighsLogType::kInfo, "\nMipRaceRecord:     ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11d", int(instance));
+    highsLogUser(log_options, HighsLogType::kInfo, " %16d", int(instance));
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminated:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11s",
+    highsLogUser(log_options, HighsLogType::kInfo, " %16s",
                  this->terminated[instance] ? "T" : "F");
   highsLogUser(log_options, HighsLogType::kInfo, "\nStartWrite:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11d",
+    highsLogUser(log_options, HighsLogType::kInfo, " %16d",
                  this->incumbent[instance].start_write_incumbent);
   highsLogUser(log_options, HighsLogType::kInfo, "\nObjective:         ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11.4g",
+    highsLogUser(log_options, HighsLogType::kInfo, " %16.8g",
                  this->incumbent[instance].objective);
   highsLogUser(log_options, HighsLogType::kInfo, "\nFinishWrite:       ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %11d",
+    highsLogUser(log_options, HighsLogType::kInfo, " %16d",
                  this->incumbent[instance].finish_write_incumbent);
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
 }
@@ -2936,7 +2956,7 @@ void MipRace::initialise(const HighsInt mip_race_concurrency,
   this->my_instance = my_instance_;
   this->record = record_;
   this->log_options = log_options_;
-  this->last_incumbent_read.assign(mip_race_concurrency, -1);
+  this->last_incumbent_read.assign(mip_race_concurrency, kMipRaceNoSolution);
 }
 
 HighsInt MipRace::concurrency() const {
@@ -2951,10 +2971,10 @@ void MipRace::update(const double objective,
   this->report();
 }
 
-bool MipRace::newSolution(double objective,
+HighsInt MipRace::newSolution(const HighsInt instance, double objective,
                           std::vector<double>& solution) const {
   assert(this->record);
-  return false;
+  return this->record->incumbent[instance].read(objective, solution);
 }
 
 void MipRace::terminate() {
@@ -2974,7 +2994,7 @@ void MipRace::report() const {
   this->record->report(this->log_options);
   highsLogUser(this->log_options, HighsLogType::kInfo, "LastIncumbentRead: ");
   for (HighsInt instance = 0; instance < this->concurrency(); instance++)
-    highsLogUser(this->log_options, HighsLogType::kInfo, " %11d",
+    highsLogUser(this->log_options, HighsLogType::kInfo, " %16d",
                  this->last_incumbent_read[instance]);
   highsLogUser(this->log_options, HighsLogType::kInfo, "\n\n");
 }

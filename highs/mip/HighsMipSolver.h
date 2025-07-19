@@ -19,15 +19,17 @@ struct HighsPseudocostInitialization;
 class HighsCliqueTable;
 class HighsImplications;
 
+const HighsInt kMipRaceNoSolution = -1;
+
 struct MipRaceIncumbent {
-  HighsInt start_write_incumbent = -1;
-  HighsInt finish_write_incumbent = -1;
+  HighsInt start_write_incumbent = kMipRaceNoSolution;
+  HighsInt finish_write_incumbent = kMipRaceNoSolution;
   double objective = -kHighsInf;
   std::vector<double> solution;
   void clear();
   void initialise(const HighsInt num_col);
   void update(const double objective, const std::vector<double>& solution);
-  bool readOk(double& objective_, std::vector<double>& solution_) const;
+  HighsInt read(double& objective_, std::vector<double>& solution_) const;
 };
 
 struct MipRaceRecord {
@@ -52,7 +54,7 @@ struct MipRace {
                   const HighsLogOptions log_options_);
   HighsInt concurrency() const;
   void update(const double objective, const std::vector<double>& solution);
-  bool newSolution(double objective, std::vector<double>& solution) const;
+  HighsInt newSolution(const HighsInt instance, double objective, std::vector<double>& solution) const;
   void terminate();
   bool terminated() const;
   void report() const;
