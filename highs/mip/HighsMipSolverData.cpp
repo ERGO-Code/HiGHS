@@ -2672,9 +2672,7 @@ void HighsMipSolverData::queryExternalSolution(
   std::vector<double> instance_solution;
   for (HighsInt instance = 0; instance < mip_race.concurrency(); instance++) {
     if (instance == mip_race.my_instance) continue;
-    HighsInt read_incumbent = mip_race.newSolution(instance, instance_solution_objective_value, instance_solution);
-    if (read_incumbent < 0) continue;
-    if (read_incumbent <= mip_race.last_incumbent_read[instance]) continue;
+    if (!mip_race.newSolution(instance, instance_solution_objective_value, instance_solution)) continue;
     // Have read a new incumbent
     std::vector<double> reduced_instance_solution;
     reduced_instance_solution =
@@ -2881,10 +2879,12 @@ void MipRaceIncumbent::update(const double objective_,
   assert(this->start_write_incumbent == this->finish_write_incumbent);
 }
 
-HighsInt MipRaceIncumbent::read(double& objective_,
-					 std::vector<double>& solution_) const {
+HighsInt MipRaceIncumbent::read(const HighsInt last_incumbent_read,
+				double& objective_,
+				std::vector<double>& solution_) const {
   const HighsInt start_write_incumbent = this->start_write_incumbent;
   assert(this->finish_write_incumbent <= start_write_incumbent);
+  if (start_write_incumbent < last_incumbent_read) return kMipRaceNoSolution;
   // If a write call has not completed, return failure
   if (this->finish_write_incumbent < start_write_incumbent) return kMipRaceNoSolution;
   // finish_write_incumbent = start_write_incumbent so start reading
@@ -2971,10 +2971,17 @@ void MipRace::update(const double objective,
   this->report();
 }
 
-HighsInt MipRace::newSolution(const HighsInt instance, double objective,
-                          std::vector<double>& solution) const {
+bool MipRace::newSolution(const HighsInt instance, double objective,
+                          std::vector<double>& solution) {
   assert(this->record);
-  return this->record->incumbent[instance].read(objective, solution);
+  HighsInt new_incumbent_read =
+    this->record->incumbent[instance].read(this->last_incumbent_read[instance],
+					   objective, solution);
+  if (new_incumbent_read != kMipRaceNoSolution) {
+    this->last_incumbent_read[instance] = new_incumbent_read;
+    return true;
+  }
+  return false;    
 }
 
 void MipRace::terminate() {
@@ -2993,8 +3000,13 @@ void MipRace::report() const {
   assert(this->record);
   this->record->report(this->log_options);
   highsLogUser(this->log_options, HighsLogType::kInfo, "LastIncumbentRead: ");
-  for (HighsInt instance = 0; instance < this->concurrency(); instance++)
-    highsLogUser(this->log_options, HighsLogType::kInfo, " %20d",
-                 this->last_incumbent_read[instance]);
+  for (HighsInt instance = 0; instance < this->concurrency(); instance++) {
+    if (instance == this->my_instance)  {
+      highsLogUser(this->log_options, HighsLogType::kInfo, " %20s", "");
+    } else {
+      highsLogUser(this->log_options, HighsLogType::kInfo, " %20d",
+		   this->last_incumbent_read[instance]);
+    }
+  }
   highsLogUser(this->log_options, HighsLogType::kInfo, "\n\n");
 }
