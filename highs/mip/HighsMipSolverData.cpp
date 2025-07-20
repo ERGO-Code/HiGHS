@@ -2668,9 +2668,9 @@ void HighsMipSolverData::queryExternalSolution(
   if (!mipsolver.options_mip_->mip_race_read_solutions) return;
   MipRace& mip_race = mipsolver.mip_race_;
   if (!mip_race.record) return;
-  double instance_solution_objective_value;
+  double instance_solution_objective_value = kHighsInf;
   std::vector<double> instance_solution;
-  for (HighsInt instance = 0; instance < mip_race.concurrency(); instance++) {
+  for (HighsInt instance = 0; instance < mipRaceConcurrency(); instance++) {
     if (instance == mip_race.my_instance) continue;
     if (!mip_race.newSolution(instance, instance_solution_objective_value,
                               instance_solution))
@@ -2686,7 +2686,7 @@ void HighsMipSolverData::queryExternalSolution(
 
 HighsInt HighsMipSolverData::mipRaceConcurrency() const {
   assert(!mipsolver.submip);
-  if (!mipsolver.mip_race_.record) return;
+  if (!mipsolver.mip_race_.record) return 0;
   return mipsolver.mip_race_.concurrency();
 }
 
@@ -2965,7 +2965,7 @@ void MipRace::initialise(const HighsInt mip_race_concurrency,
 
 HighsInt MipRace::concurrency() const {
   assert(this->record);
-  return static_cast<HighsInt>(this->last_incumbent_read.size());
+  return this->record->concurrency();
 }
 
 void MipRace::update(const double objective,
