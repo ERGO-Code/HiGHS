@@ -578,7 +578,7 @@ struct HighsOptionsStruct {
         mip_detect_symmetry(false),
         mip_allow_restart(false),
         mip_race_concurrency(0),
-	mip_race_read_solutions(false),
+        mip_race_read_solutions(false),
         mip_max_nodes(0),
         mip_max_stall_nodes(0),
         mip_max_start_nodes(0),
@@ -1026,9 +1026,10 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &mip_race_concurrency, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("mip_race_read_solutions",
-                                       "Whether the MIP races should read other racers' solutions",
-                                       advanced, &mip_race_read_solutions, true);
+    record_bool = new OptionRecordBool(
+        "mip_race_read_solutions",
+        "Whether the MIP races should read other racers' solutions", advanced,
+        &mip_race_read_solutions, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt("mip_max_nodes",

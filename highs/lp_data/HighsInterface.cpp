@@ -4244,7 +4244,6 @@ void HighsLinearObjective::clear() {
   this->priority = 0;
 }
 
-
 void HighsMipSolverInfo::clear() {
   this->modelstatus = HighsModelStatus::kNotset;
   this->solution.clear();

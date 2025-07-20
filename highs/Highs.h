@@ -1714,7 +1714,6 @@ class Highs {
   bool optionsHasHighsFiles() const;
   void saveHighsFiles();
   void getHighsFiles();
-
 };
 
 // Start of deprecated methods not in the Highs class

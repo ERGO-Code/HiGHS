@@ -2672,14 +2672,15 @@ void HighsMipSolverData::queryExternalSolution(
   std::vector<double> instance_solution;
   for (HighsInt instance = 0; instance < mip_race.concurrency(); instance++) {
     if (instance == mip_race.my_instance) continue;
-    if (!mip_race.newSolution(instance, instance_solution_objective_value, instance_solution)) continue;
+    if (!mip_race.newSolution(instance, instance_solution_objective_value,
+                              instance_solution))
+      continue;
     // Have read a new incumbent
     std::vector<double> reduced_instance_solution;
     reduced_instance_solution =
-      postSolveStack.getReducedPrimalSolution(instance_solution);
+        postSolveStack.getReducedPrimalSolution(instance_solution);
     addIncumbent(reduced_instance_solution, instance_solution_objective_value,
-		 kSolutionSourceHighsSolution);
-   
+                 kSolutionSourceHighsSolution);
   }
 }
 
@@ -2697,8 +2698,8 @@ void HighsMipSolverData::mipRaceUpdate() {
 }
 
 HighsInt HighsMipSolverData::mipRaceNewSolution(const HighsInt instance,
-						double& objective_value,
-						std::vector<double>& solution) {
+                                                double& objective_value,
+                                                std::vector<double>& solution) {
   assert(!mipsolver.submip);
   if (!mipsolver.mip_race_.record) return kMipRaceNoSolution;
   return mipsolver.mip_race_.newSolution(instance, objective_value, solution);
@@ -2880,18 +2881,21 @@ void MipRaceIncumbent::update(const double objective_,
 }
 
 HighsInt MipRaceIncumbent::read(const HighsInt last_incumbent_read,
-				double& objective_,
-				std::vector<double>& solution_) const {
+                                double& objective_,
+                                std::vector<double>& solution_) const {
   const HighsInt start_write_incumbent = this->start_write_incumbent;
   assert(this->finish_write_incumbent <= start_write_incumbent);
   if (start_write_incumbent < last_incumbent_read) return kMipRaceNoSolution;
   // If a write call has not completed, return failure
-  if (this->finish_write_incumbent < start_write_incumbent) return kMipRaceNoSolution;
+  if (this->finish_write_incumbent < start_write_incumbent)
+    return kMipRaceNoSolution;
   // finish_write_incumbent = start_write_incumbent so start reading
   objective_ = this->objective;
   solution_ = this->solution;
   // Read is OK if no new write has started
-  return this->start_write_incumbent == start_write_incumbent ? start_write_incumbent : kMipRaceNoSolution;
+  return this->start_write_incumbent == start_write_incumbent
+             ? start_write_incumbent
+             : kMipRaceNoSolution;
 }
 
 void MipRaceRecord::clear() {
@@ -2974,14 +2978,13 @@ void MipRace::update(const double objective,
 bool MipRace::newSolution(const HighsInt instance, double objective,
                           std::vector<double>& solution) {
   assert(this->record);
-  HighsInt new_incumbent_read =
-    this->record->incumbent[instance].read(this->last_incumbent_read[instance],
-					   objective, solution);
+  HighsInt new_incumbent_read = this->record->incumbent[instance].read(
+      this->last_incumbent_read[instance], objective, solution);
   if (new_incumbent_read != kMipRaceNoSolution) {
     this->last_incumbent_read[instance] = new_incumbent_read;
     return true;
   }
-  return false;    
+  return false;
 }
 
 void MipRace::terminate() {
@@ -3001,11 +3004,11 @@ void MipRace::report() const {
   this->record->report(this->log_options);
   highsLogUser(this->log_options, HighsLogType::kInfo, "LastIncumbentRead: ");
   for (HighsInt instance = 0; instance < this->concurrency(); instance++) {
-    if (instance == this->my_instance)  {
+    if (instance == this->my_instance) {
       highsLogUser(this->log_options, HighsLogType::kInfo, " %20s", "");
     } else {
       highsLogUser(this->log_options, HighsLogType::kInfo, " %20d",
-		   this->last_incumbent_read[instance]);
+                   this->last_incumbent_read[instance]);
     }
   }
   highsLogUser(this->log_options, HighsLogType::kInfo, "\n\n");

@@ -4045,12 +4045,15 @@ HighsStatus Highs::callSolveMip() {
     worker_callback.clear();
     // Race the MIP solver!
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "Starting MIP race with %d instances: performance is non-deterministic!\n", int(mip_race_concurrency));
+                 "Starting MIP race with %d instances: performance is "
+                 "non-deterministic!\n",
+                 int(mip_race_concurrency));
     // Define the HighsMipSolverInfo record for each worker
     std::vector<HighsMipSolverInfo> worker_info(mip_race_concurrency);
     // Set up the vector of options settings for workers
     std::vector<HighsOptions> worker_options;
     //    std::vector<HighsMipSolver*> worker;
+    std::vector<double> mip_time(mip_race_concurrency);
     for (HighsInt instance = 0; instance < mip_race_concurrency; instance++) {
       HighsOptions instance_options = options_;
       // No workers log to console
@@ -4059,13 +4062,12 @@ HighsStatus Highs::callSolveMip() {
       // Use the instance ID as an offset to the random seed
       instance_options.random_seed = options_.random_seed + instance;
       std::string worker_log_file =
-	"mip_worker" + std::to_string(instance) + ".log";
+          "mip_worker" + std::to_string(instance) + ".log";
       highsOpenLogFile(instance_options, worker_log_file);
       worker_options.push_back(instance_options);
       /*
-      HighsMipSolver worker_instance(worker_callback, worker_options[instance], lp,
-				     solution_);
-      worker.push_back(&worker_instance);
+      HighsMipSolver worker_instance(worker_callback, worker_options[instance],
+      lp, solution_); worker.push_back(&worker_instance);
       */
     }
     highs::parallel::for_each(
@@ -4075,16 +4077,20 @@ HighsStatus Highs::callSolveMip() {
               solver.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
                                           options_.log_options);
+              mip_time[instance] = -timer_.read();
               solver.run();
-	      mip_solver_info = getMipSolverInfo(solver);
+              mip_time[instance] += timer_.read();
+              mip_solver_info = getMipSolverInfo(solver);
             } else {
-              HighsMipSolver worker(worker_callback, worker_options[instance], lp,
-                                    solution_);
+              HighsMipSolver worker(worker_callback, worker_options[instance],
+                                    lp, solution_);
               worker.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
                                           worker_options[instance].log_options);
+              mip_time[instance] = -timer_.read();
               worker.run();
-	      worker_info[instance] = getMipSolverInfo(worker);
+              mip_time[instance] += timer_.read();
+              worker_info[instance] = getMipSolverInfo(worker);
             }
           }
         });
@@ -4092,32 +4098,37 @@ HighsStatus Highs::callSolveMip() {
     HighsInt winning_instance = -1;
     HighsModelStatus winning_model_status = HighsModelStatus::kNotset;
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "MIP race results:\n");
+                 "MIP race results:\n");
     for (HighsInt instance = 0; instance < mip_race_concurrency; instance++) {
-      const HighsMipSolverInfo& solver_info = instance == 0 ? mip_solver_info : worker_info[instance];
+      const HighsMipSolverInfo& solver_info =
+          instance == 0 ? mip_solver_info : worker_info[instance];
       HighsModelStatus instance_model_status = solver_info.modelstatus;
       highsLogUser(options_.log_options, HighsLogType::kInfo,
-		   "   Solver %d has best objective %15.8g, gap %6.2f\%, and status %s\n",
-		   int(instance), solver_info.solution_objective, 1e2 * solver_info.gap,
-		   modelStatusToString(instance_model_status).c_str());
+                   "   Solver %d has best objective %15.8g, gap %6.2f\% (time "
+                   "= %6.2f), and status %s\n",
+                   int(instance), solver_info.solution_objective,
+                   1e2 * solver_info.gap, mip_time[instance],
+                   modelStatusToString(instance_model_status).c_str());
       if (instance_model_status != HighsModelStatus::kHighsInterrupt) {
-	// Definitive status for this instance, so check compatibility
-	// with any current winning model status
-	if (winning_model_status != HighsModelStatus::kNotset) {
-	  if (winning_model_status != instance_model_status) {
-	    highsLogUser(options_.log_options, HighsLogType::kError,
-			 "MIP race: conflict between status \"%s\" for instance %d and status \"%s\" for instance %d\n",
-			 modelStatusToString(winning_model_status).c_str(), int(winning_instance),
-			 modelStatusToString(instance_model_status).c_str(), int(instance));
-	  }
-	} else {
-	  winning_model_status = instance_model_status;
-	  winning_instance = instance;
-	}
+        // Definitive status for this instance, so check compatibility
+        // with any current winning model status
+        if (winning_model_status != HighsModelStatus::kNotset) {
+          if (winning_model_status != instance_model_status) {
+            highsLogUser(options_.log_options, HighsLogType::kError,
+                         "MIP race: conflict between status \"%s\" for "
+                         "instance %d and status \"%s\" for instance %d\n",
+                         modelStatusToString(winning_model_status).c_str(),
+                         int(winning_instance),
+                         modelStatusToString(instance_model_status).c_str(),
+                         int(instance));
+          }
+        } else {
+          winning_model_status = instance_model_status;
+          winning_instance = instance;
+        }
       }
     }
-    if (winning_instance > 0) 
-      mip_solver_info = worker_info[winning_instance];
+    if (winning_instance > 0) mip_solver_info = worker_info[winning_instance];
   } else {
     // Run a single MIP solver
     solver.run();
@@ -4135,8 +4146,10 @@ HighsStatus Highs::callSolveMip() {
     HighsInt solver_solution_size = mip_solver_info.solution.size();
     const bool solver_solution_size_ok = solver_solution_size >= lp.num_col_;
     if (!solver_solution_size)
-      highsLogUser(options_.log_options, HighsLogType::kError,
-		   "After MIP race, size of solution is %d < %d = lp.num_col_\n", int(solver_solution_size), int(lp.num_col_));
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "After MIP race, size of solution is %d < %d = lp.num_col_\n",
+          int(solver_solution_size), int(lp.num_col_));
     assert(solver_solution_size >= lp.num_col_);
     // If the original model has semi-variables, its solution is
     // (still) given by the first model_.lp_.num_col_ entries of the
@@ -4186,8 +4199,8 @@ HighsStatus Highs::callSolveMip() {
     return_status = checkOptimality("MIP");
   // Overwrite max infeasibility to include integrality if there is a solution
   if (mip_solver_info.solution_objective != kHighsInf) {
-    const double mip_max_bound_violation =
-        std::max(mip_solver_info.row_violation, mip_solver_info.bound_violation);
+    const double mip_max_bound_violation = std::max(
+        mip_solver_info.row_violation, mip_solver_info.bound_violation);
     const double delta_max_bound_violation =
         std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
     // Possibly report a mis-match between the max bound violation
@@ -4886,7 +4899,6 @@ void Highs::getHighsFiles() {
   this->options_.write_basis_file = this->files_.write_basis_file;
   this->files_.clear();
 }
-
 
 HighsMipSolverInfo getMipSolverInfo(const HighsMipSolver& mip_solver) {
   HighsMipSolverInfo mip_solver_info;

@@ -43,25 +43,25 @@ enum MipSolutionSource : int {
   kSolutionSourceNone = -1,
   kSolutionSourceMin = kSolutionSourceNone,
   //  kSolutionSourceInitial, // 0
-  kSolutionSourceBranching, // B
-  kSolutionSourceCentralRounding, // C
-  kSolutionSourceFeasibilityPump, // F
-  kSolutionSourceHeuristic, // H
-  kSolutionSourceShifting, // I
-  kSolutionSourceFeasibilityJump, // J
-  kSolutionSourceSubMip, // L
-  kSolutionSourceEmptyMip, // P
-  kSolutionSourceRandomizedRounding, // R
-  kSolutionSourceSolveLp, // S
-  kSolutionSourceEvaluateNode, // T
-  kSolutionSourceUnbounded, // U
-  kSolutionSourceUserSolution, // X
-  kSolutionSourceHighsSolution, // Y
-  kSolutionSourceZiRound, // Z
-  kSolutionSourceTrivialL, // l
-  kSolutionSourceTrivialP, // p
-  kSolutionSourceTrivialU, // u
-  kSolutionSourceTrivialZ, // z
+  kSolutionSourceBranching,           // B
+  kSolutionSourceCentralRounding,     // C
+  kSolutionSourceFeasibilityPump,     // F
+  kSolutionSourceHeuristic,           // H
+  kSolutionSourceShifting,            // I
+  kSolutionSourceFeasibilityJump,     // J
+  kSolutionSourceSubMip,              // L
+  kSolutionSourceEmptyMip,            // P
+  kSolutionSourceRandomizedRounding,  // R
+  kSolutionSourceSolveLp,             // S
+  kSolutionSourceEvaluateNode,        // T
+  kSolutionSourceUnbounded,           // U
+  kSolutionSourceUserSolution,        // X
+  kSolutionSourceHighsSolution,       // Y
+  kSolutionSourceZiRound,             // Z
+  kSolutionSourceTrivialL,            // l
+  kSolutionSourceTrivialP,            // p
+  kSolutionSourceTrivialU,            // u
+  kSolutionSourceTrivialZ,            // z
   kSolutionSourceCleanup,
   kSolutionSourceCount
 };
@@ -303,9 +303,8 @@ struct HighsMipSolverData {
 
   HighsInt mipRaceConcurrency() const;
   void mipRaceUpdate();
-  HighsInt mipRaceNewSolution(const HighsInt instance,
-			      double& objective_value,
-			      std::vector<double>& solution);
+  HighsInt mipRaceNewSolution(const HighsInt instance, double& objective_value,
+                              std::vector<double>& solution);
   void mipRaceTerminate();
   bool mipRaceTerminated() const;
   void mipRaceReport() const;

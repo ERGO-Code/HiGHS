@@ -29,8 +29,8 @@ struct MipRaceIncumbent {
   void clear();
   void initialise(const HighsInt num_col);
   void update(const double objective, const std::vector<double>& solution);
-  HighsInt read(const HighsInt last_incumbent_read,
-		double& objective_, std::vector<double>& solution_) const;
+  HighsInt read(const HighsInt last_incumbent_read, double& objective_,
+                std::vector<double>& solution_) const;
 };
 
 struct MipRaceRecord {
@@ -55,7 +55,8 @@ struct MipRace {
                   const HighsLogOptions log_options_);
   HighsInt concurrency() const;
   void update(const double objective, const std::vector<double>& solution);
-  bool newSolution(const HighsInt instance, double objective, std::vector<double>& solution);
+  bool newSolution(const HighsInt instance, double objective,
+                   std::vector<double>& solution);
   void terminate();
   bool terminated() const;
   void report() const;
