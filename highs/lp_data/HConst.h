@@ -144,6 +144,9 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
+const std::string kHighsBasisFileV1 = "v1";  // Deprecated
+const std::string kHighsBasisFileV2 = "v2";
+
 enum SolutionStyle {
   kSolutionStyleOldRaw = -1,
   kSolutionStyleRaw = 0,
@@ -163,6 +166,10 @@ enum GlpsolCostRowLocation {
 };
 
 const std::string kHighsFilenameDefault = "";
+const std::string kHighsMinimalColNamePrefix = "c";
+const std::string kHighsMinimalrowNamePrefix = "r";
+const std::string kHighsUniqueColNamePrefix = "c_ekk";
+const std::string kHighsUniquerowNamePrefix = "r_ekk";
 
 enum class HighsPresolveStatus {
   kNotPresolved = -1,
