@@ -2423,6 +2423,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     }
   }
 
+  if (this->terminatedNw()) return true;
+
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
     mipsolver.callback_->clearHighsCallbackOutput();
@@ -2694,7 +2696,7 @@ void HighsMipSolverData::queryExternalSolution(
 
 HighsInt HighsMipSolverData::mipRaceMyInstance() const {
   assert(!mipsolver.submip);
-  if (!mipsolver.mip_race_.record) return kMipRaceNoInstance;
+  if (!mipsolver.mip_race_.record) return kNoThreadInstance;
   return mipsolver.mip_race_.my_instance;
 }
 
@@ -2732,10 +2734,22 @@ bool HighsMipSolverData::mipRaceTerminated() const {
 }
 
 void HighsMipSolverData::mipRaceReport() const {
-  if (!mipsolver.mip_race_.record) return;
   assert(!mipsolver.submip);
+  if (!mipsolver.mip_race_.record) return;
   mipsolver.mip_race_.report();
 }
+
+void HighsMipSolverData::terminateNw() {
+  if (mipsolver.terminator_.num_instance <= 0) return;
+  mipsolver.terminator_.terminateNw();
+}
+
+bool HighsMipSolverData::terminatedNw() const {
+  if (mipsolver.terminator_.num_instance > 0) 
+    mipsolver.termination_status_ = mipsolver.terminator_.terminatedNw();
+  return mipsolver.termination_status_ != HighsModelStatus::kNotset;
+}
+
 static double possInfRelDiff(const double v0, const double v1,
                              const double den) {
   double rel_diff;
@@ -3026,4 +3040,33 @@ void MipRace::report() const {
     }
   }
   highsLogUser(this->log_options, HighsLogType::kInfo, "\n\n");
+}
+
+void HighsTerminator::clear() {
+  this->num_instance = 0;
+  this->my_instance = kNoThreadInstance;
+  this->record = nullptr;
+}
+
+void HighsTerminator::initialise(HighsInt num_instance_,
+				 HighsInt my_instance_,
+				 HighsModelStatus* record_) {
+  this->num_instance = num_instance_;
+  this->my_instance = my_instance_;
+  this->record = record_;
+}
+
+void HighsTerminator::terminateNw() {
+  assert(this->record);
+  assert(this->my_instance < this->num_instance);
+  this->record[this->my_instance] = HighsModelStatus::kHighsInterrupt;
+}
+
+HighsModelStatus HighsTerminator::terminatedNw() const {
+  assert(this->record);
+  for (HighsInt instance = 0; instance < this->num_instance; instance++) {
+    if (this->record[instance] != HighsModelStatus::kNotset)
+      return this->record[instance];
+  }
+  return HighsModelStatus::kNotset;
 }

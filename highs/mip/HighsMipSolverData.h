@@ -309,6 +309,9 @@ struct HighsMipSolverData {
   void mipRaceTerminate();
   bool mipRaceTerminated() const;
   void mipRaceReport() const;
+
+  void terminateNw();
+  bool terminatedNw() const;
 };
 
 #endif

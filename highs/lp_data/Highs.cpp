@@ -4080,7 +4080,8 @@ HighsStatus Highs::callSolveMip() {
                                           &mip_race_record,
                                           options_.log_options);
 	      double this_time = timer_.read();
-	      printf("instance0: call  run() %f6.4\n", this_time);
+	      highsLogUser(options_.log_options, HighsLogType::kInfo,
+			   "instance0: call  run() %f6.4\n", this_time);
               mip_time[instance] = -this_time;
               solver.run();
               mip_time[instance] += timer_.read();
@@ -4092,7 +4093,8 @@ HighsStatus Highs::callSolveMip() {
                                           &mip_race_record,
                                           worker_options[instance].log_options);
 	      double this_time = timer_.read();
-	      printf("instance%d: call  run() %f6.4\n", int(instance), this_time);
+	      highsLogUser(options_.log_options, HighsLogType::kInfo,
+			   "instance%d: call  run() %f6.4\n", int(instance), this_time);
               mip_time[instance] = -this_time;
               worker.run();
               mip_time[instance] += timer_.read();

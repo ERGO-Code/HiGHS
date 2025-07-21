@@ -20,7 +20,6 @@ class HighsCliqueTable;
 class HighsImplications;
 
 const HighsInt kMipRaceNoSolution = -1;
-const HighsInt kMipRaceNoInstance = -1;
 
 struct MipRaceIncumbent {
   HighsInt start_write_incumbent = kMipRaceNoSolution;
@@ -63,6 +62,18 @@ struct MipRace {
   void report() const;
 };
 
+struct HighsTerminator {
+  HighsInt num_instance;
+  HighsInt my_instance;
+  HighsModelStatus* record;
+  void clear();
+  void initialise(HighsInt num_instance_,
+		  HighsInt my_instance_,
+		  HighsModelStatus*record_);
+  void terminateNw();
+  HighsModelStatus terminatedNw() const;
+};
+ 
 class HighsMipSolver {
  public:
   HighsCallback* callback_;
@@ -100,6 +111,9 @@ class HighsMipSolver {
   HighsMipAnalysis analysis_;
 
   MipRace mip_race_;
+
+  HighsModelStatus termination_status_;
+  HighsTerminator terminator_;
 
   void run();
 
@@ -153,6 +167,9 @@ class HighsMipSolver {
                         const std::vector<double>* pass_row_value,
                         double& bound_violation, double& row_violation,
                         double& integrality_violation, HighsCDouble& obj) const;
+  void initialiseTerminator(HighsInt num_instance_ = 0,
+			    HighsInt my_instance_ = kNoThreadInstance,
+			    HighsModelStatus* record_ = nullptr);
 };
 
 #endif

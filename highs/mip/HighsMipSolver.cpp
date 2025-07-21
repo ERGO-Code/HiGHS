@@ -44,6 +44,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       implicinit(nullptr) {
   assert(!submip || submip_level > 0);
   max_submip_level = 0;
+  initialiseTerminator();
   if (solution.value_valid) {
 #ifndef NDEBUG
     // MIP solver doesn't check row residuals, but they should be OK
@@ -979,3 +980,11 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
                         row_violation <= mip_feasibility_tolerance;
   return feasible;
 }
+
+void HighsMipSolver::initialiseTerminator(HighsInt num_instance_,
+					  HighsInt my_instance_,
+					  HighsModelStatus* record_) {
+  this->termination_status_ = HighsModelStatus::kNotset;
+  this->terminator_.initialise(num_instance_, my_instance_, record_);
+}
+

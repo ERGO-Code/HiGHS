@@ -1003,15 +1003,16 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("mip-race", "[highs_test_mip_solver]") {
-  const bool ci_test = false;
+  const bool ci_test = true;
   const std::string model = ci_test ? "flugpl" : "fiball";
   // "neos-3381206-awhea";
   const std::string model_file = ci_test ? 
     std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps" : 
     "/srv/miplib2017/" + model + ".mps.gz";
   Highs h;
-  if (ci_test) h.setOptionValue("output_flag", dev_run);
-  h.setOptionValue("mip_race_concurrency", 4);
+  // if (ci_test) h.setOptionValue("output_flag", dev_run);
+  const HighsInt mip_race_concurrency = ci_test ? 2 : 4;
+  h.setOptionValue("mip_race_concurrency", mip_race_concurrency);
   h.setOptionValue("mip_race_read_solutions", false);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
