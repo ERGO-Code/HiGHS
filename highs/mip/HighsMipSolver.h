@@ -72,6 +72,7 @@ struct HighsTerminator {
 		  HighsModelStatus*record_);
   void terminateNw();
   HighsModelStatus terminatedNw() const;
+  void report(const HighsLogOptions log_options) const;
 };
  
 class HighsMipSolver {

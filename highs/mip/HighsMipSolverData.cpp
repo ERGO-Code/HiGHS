@@ -3070,3 +3070,12 @@ HighsModelStatus HighsTerminator::terminatedNw() const {
   }
   return HighsModelStatus::kNotset;
 }
+
+void HighsTerminator::report(const HighsLogOptions log_options) const {
+  highsLogUser(log_options, HighsLogType::kInfo, "\nTerminator:        ");
+  for (HighsInt instance = 0; instance < this->num_instance; instance++) 
+    highsLogUser(log_options, HighsLogType::kInfo, " %20d",
+		 int(this->record[instance]));
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
+}
+
