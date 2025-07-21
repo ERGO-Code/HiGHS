@@ -64,15 +64,14 @@ struct HighsTerminator {
   HighsInt my_instance;
   HighsModelStatus* record;
   void clear();
-  void initialise(HighsInt num_instance_,
-		  HighsInt my_instance_,
-		  HighsModelStatus*record_);
-  void terminateNw();
-  HighsModelStatus terminatedNw() const;
-  bool notTerminatedNw() const;
+  void initialise(HighsInt num_instance_, HighsInt my_instance_,
+                  HighsModelStatus* record_);
+  void terminate();
+  HighsModelStatus terminated() const;
+  bool notTerminated() const;
   void report(const HighsLogOptions log_options) const;
 };
- 
+
 class HighsMipSolver {
  public:
   HighsCallback* callback_;
@@ -168,10 +167,14 @@ class HighsMipSolver {
                         double& integrality_violation, HighsCDouble& obj) const;
   std::vector<HighsModelStatus> initialiseRecord(HighsInt num_instance) const;
   void initialiseTerminator(HighsInt num_instance_ = 0,
-			    HighsInt my_instance_ = kNoThreadInstance,
-			    HighsModelStatus* record_ = nullptr);
-  bool terminate() const { return this->termination_status_ != HighsModelStatus::kNotset; } 
-  HighsModelStatus terminationStatus() const { return this->termination_status_; } 
+                            HighsInt my_instance_ = kNoThreadInstance,
+                            HighsModelStatus* record_ = nullptr);
+  bool terminate() const {
+    return this->termination_status_ != HighsModelStatus::kNotset;
+  }
+  HighsModelStatus terminationStatus() const {
+    return this->termination_status_;
+  }
 };
 
 #endif

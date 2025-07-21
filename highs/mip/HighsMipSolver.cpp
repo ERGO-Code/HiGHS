@@ -70,8 +70,10 @@ HighsMipSolver::~HighsMipSolver() = default;
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
 
-  if (!submip) highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "instance%d: top   run() %6.4f (MIP)\n", int(this->mip_race_.my_instance), this->timer_.read());
+  if (!submip)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "instance%d: top   run() %6.4f (MIP)\n",
+                 int(this->mip_race_.my_instance), this->timer_.read());
 
   if (submip) {
     analysis_.analyse_mip_time = false;
@@ -688,16 +690,20 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   if (!submip) {
-    if (terminator_.notTerminatedNw()) {
+    if (terminator_.notTerminated()) {
       // No other instance has terminated the MIP race, so terminate
       // it
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "instance%d: terminate   %6.4f (MIP)\n", int(this->mipdata_->mipRaceMyInstance()), this->timer_.read());
-      terminator_.terminateNw();
+                   "instance%d: terminate   %6.4f (MIP)\n",
+                   int(this->mipdata_->mipRaceMyInstance()),
+                   this->timer_.read());
+      terminator_.terminate();
     } else {
       // Indicate that this MIP race instance has been interrupted
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "instance%d: terminated  %6.4f (MIP)\n", int(this->mipdata_->mipRaceMyInstance()), this->timer_.read());
+                   "instance%d: terminated  %6.4f (MIP)\n",
+                   int(this->mipdata_->mipRaceMyInstance()),
+                   this->timer_.read());
       modelstatus_ = HighsModelStatus::kHighsInterrupt;
     }
     mipdata_->mipRaceReport();
@@ -987,14 +993,14 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
 }
 
 void HighsMipSolver::initialiseTerminator(HighsInt num_instance_,
-					  HighsInt my_instance_,
-					  HighsModelStatus* record_) {
+                                          HighsInt my_instance_,
+                                          HighsModelStatus* record_) {
   this->termination_status_ = HighsModelStatus::kNotset;
   this->terminator_.initialise(num_instance_, my_instance_, record_);
 }
 
-std::vector<HighsModelStatus> HighsMipSolver::initialiseRecord(HighsInt num_instance) const {
+std::vector<HighsModelStatus> HighsMipSolver::initialiseRecord(
+    HighsInt num_instance) const {
   std::vector<HighsModelStatus> record(num_instance, HighsModelStatus::kNotset);
   return record;
 }
-

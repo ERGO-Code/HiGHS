@@ -308,8 +308,8 @@ struct HighsMipSolverData {
                               std::vector<double>& solution);
   void mipRaceReport() const;
 
-  void terminateNw();
-  bool terminatedNw() const;
+  void terminate();
+  bool terminated() const;
 };
 
 #endif

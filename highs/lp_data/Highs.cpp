@@ -4080,10 +4080,11 @@ HighsStatus Highs::callSolveMip() {
               solver.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
                                           options_.log_options);
-	      solver.initialiseTerminator(mip_race_concurrency, instance, terminator_record.data());
-	      double this_time = timer_.read();
-	      highsLogUser(options_.log_options, HighsLogType::kInfo,
-			   "instance0: call  run() %f6.4\n", this_time);
+              solver.initialiseTerminator(mip_race_concurrency, instance,
+                                          terminator_record.data());
+              double this_time = timer_.read();
+              highsLogUser(options_.log_options, HighsLogType::kInfo,
+                           "instance0: call  run() %f6.4\n", this_time);
               mip_time[instance] = -this_time;
               solver.run();
               mip_time[instance] += timer_.read();
@@ -4094,10 +4095,12 @@ HighsStatus Highs::callSolveMip() {
               worker.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
                                           worker_options[instance].log_options);
-	      worker.initialiseTerminator(mip_race_concurrency, instance, terminator_record.data());
-	      double this_time = timer_.read();
-	      highsLogUser(options_.log_options, HighsLogType::kInfo,
-			   "instance%d: call  run() %f6.4\n", int(instance), this_time);
+              worker.initialiseTerminator(mip_race_concurrency, instance,
+                                          terminator_record.data());
+              double this_time = timer_.read();
+              highsLogUser(options_.log_options, HighsLogType::kInfo,
+                           "instance%d: call  run() %f6.4\n", int(instance),
+                           this_time);
               mip_time[instance] = -this_time;
               worker.run();
               mip_time[instance] += timer_.read();
