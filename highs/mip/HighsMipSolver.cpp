@@ -690,23 +690,25 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   if (!submip) {
-    if (terminator_.notTerminated()) {
-      // No other instance has terminated the MIP race, so terminate
-      // it
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "instance%d: terminate   %6.4f (MIP)\n",
-                   int(this->mipdata_->mipRaceMyInstance()),
-                   this->timer_.read());
-      terminator_.terminate();
-    } else {
-      // Indicate that this MIP race instance has been interrupted
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "instance%d: terminated  %6.4f (MIP)\n",
-                   int(this->mipdata_->mipRaceMyInstance()),
-                   this->timer_.read());
-      modelstatus_ = HighsModelStatus::kHighsInterrupt;
+    if (mipdata_->terminatorActive()) {
+      if (!mipdata_->terminatorTerminated()) {
+	// No other instance has terminated the MIP race, so terminate
+	// it
+	highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		     "instance%d: terminate   %6.4f (MIP)\n",
+		     int(this->mipdata_->mipRaceMyInstance()),
+		     this->timer_.read());
+	mipdata_->terminatorTerminate();
+      } else {
+	// Indicate that this instance has been interrupted
+	highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		     "instance%d: terminated  %6.4f (MIP)\n",
+		     int(this->mipdata_->mipRaceMyInstance()),
+		     this->timer_.read());
+	modelstatus_ = HighsModelStatus::kHighsInterrupt;
+      }
+      if (mipdata_->mipRaceActive()) mipdata_->mipRaceReport();
     }
-    mipdata_->mipRaceReport();
   }
 
   // Force a final logging line

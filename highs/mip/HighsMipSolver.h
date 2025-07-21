@@ -67,8 +67,8 @@ struct HighsTerminator {
   void initialise(HighsInt num_instance_, HighsInt my_instance_,
                   HighsModelStatus* record_);
   void terminate();
-  HighsModelStatus terminated() const;
-  bool notTerminated() const;
+  bool terminated() const;
+  HighsModelStatus terminationStatus() const;
   void report(const HighsLogOptions log_options) const;
 };
 

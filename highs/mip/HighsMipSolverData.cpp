@@ -2422,14 +2422,11 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   if (!mipsolver.submip) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
 		 "instance%d: terminated? %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
-    assert(this->terminated() == this->terminated());
-    if (this->terminated()) {
+    if (this->terminatorTerminated()) {
       highsLogUser(options.log_options, HighsLogType::kInfo,
 		 "instance%d: terminated  %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
       return true;
     }
-    assert(this->terminated() == this->terminated());
-    if (this->terminated()) return true;
   }
 
   // Possible user interrupt
@@ -2734,14 +2731,14 @@ void HighsMipSolverData::mipRaceReport() const {
   if (mipsolver.mip_race_.record) mipsolver.mip_race_.report();  
 }
 
-void HighsMipSolverData::terminate() {
-  if (mipsolver.terminator_.num_instance <= 0) return;
+void HighsMipSolverData::terminatorTerminate() {
+  assert(mipsolver.terminator_.num_instance > 0);
   mipsolver.terminator_.terminate();
 }
 
-bool HighsMipSolverData::terminated() const {
-  if (mipsolver.terminator_.num_instance > 0) 
-    mipsolver.termination_status_ = mipsolver.terminator_.terminated();
+bool HighsMipSolverData::terminatorTerminated() const {
+  if (this->terminatorActive()) 
+    mipsolver.termination_status_ = mipsolver.terminator_.terminationStatus();
   return mipsolver.termination_status_ != HighsModelStatus::kNotset;
 }
 
@@ -3039,22 +3036,13 @@ void HighsTerminator::terminate() {
   this->record[this->my_instance] = HighsModelStatus::kHighsInterrupt;
 }
 
-HighsModelStatus HighsTerminator::terminated() const {
+HighsModelStatus HighsTerminator::terminationStatus() const {
   assert(this->record);
   for (HighsInt instance = 0; instance < this->num_instance; instance++) {
     if (this->record[instance] != HighsModelStatus::kNotset)
       return this->record[instance];
   }
   return HighsModelStatus::kNotset;
-}
-
-bool HighsTerminator::notTerminated() const {
-  assert(this->record);
-  for (HighsInt instance = 0; instance < this->num_instance; instance++) {
-    if (this->record[instance] != HighsModelStatus::kNotset)
-      return false;
-  }
-  return true;
 }
 
 void HighsTerminator::report(const HighsLogOptions log_options) const {
