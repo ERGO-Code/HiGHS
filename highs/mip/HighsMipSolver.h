@@ -34,7 +34,6 @@ struct MipRaceIncumbent {
 };
 
 struct MipRaceRecord {
-  std::vector<bool> terminated;
   std::vector<MipRaceIncumbent> incumbent;
   void clear();
   void initialise(const HighsInt mip_race_concurrency, const HighsInt num_col);
@@ -57,8 +56,6 @@ struct MipRace {
   void update(const double objective, const std::vector<double>& solution);
   bool newSolution(const HighsInt instance, double objective,
                    std::vector<double>& solution);
-  void terminate();
-  bool terminated() const;
   void report() const;
 };
 
@@ -72,6 +69,7 @@ struct HighsTerminator {
 		  HighsModelStatus*record_);
   void terminateNw();
   HighsModelStatus terminatedNw() const;
+  bool notTerminatedNw() const;
   void report(const HighsLogOptions log_options) const;
 };
  

@@ -2422,13 +2422,13 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   if (!mipsolver.submip) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
 		 "instance%d: terminated? %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
-    assert(this->mipRaceTerminated() == this->terminatedNw());
-    if (this->mipRaceTerminated()) {
+    assert(this->terminatedNw() == this->terminatedNw());
+    if (this->terminatedNw()) {
       highsLogUser(options.log_options, HighsLogType::kInfo,
 		 "instance%d: terminated  %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
       return true;
     }
-    assert(this->mipRaceTerminated() == this->terminatedNw());
+    assert(this->terminatedNw() == this->terminatedNw());
     if (this->terminatedNw()) return true;
   }
 
@@ -2728,18 +2728,6 @@ HighsInt HighsMipSolverData::mipRaceNewSolution(const HighsInt instance,
   return mipsolver.mip_race_.newSolution(instance, objective_value, solution);
 }
 
-void HighsMipSolverData::mipRaceTerminate() {
-  assert(!mipsolver.submip);
-  if (!mipsolver.mip_race_.record) return;
-  mipsolver.mip_race_.terminate();
-}
-
-bool HighsMipSolverData::mipRaceTerminated() const {
-  assert(!mipsolver.submip);
-  if (!mipsolver.mip_race_.record) return false;
-  return mipsolver.mip_race_.terminated();
-}
-
 void HighsMipSolverData::mipRaceReport() const {
   assert(!mipsolver.submip);
   if (mipsolver.terminator_.record) mipsolver.terminator_.report(mipsolver.options_mip_->log_options);
@@ -2934,14 +2922,12 @@ HighsInt MipRaceIncumbent::read(const HighsInt last_incumbent_read,
 }
 
 void MipRaceRecord::clear() {
-  this->terminated.clear();
   this->incumbent.clear();
 }
 
 void MipRaceRecord::initialise(const HighsInt mip_race_concurrency,
                                const HighsInt num_col) {
   this->clear();
-  this->terminated.assign(mip_race_concurrency, false);
   MipRaceIncumbent incumbent_;
   incumbent_.initialise(num_col);
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
@@ -2962,10 +2948,6 @@ void MipRaceRecord::report(const HighsLogOptions log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nMipRaceRecord:     ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d", int(instance));
-  highsLogUser(log_options, HighsLogType::kInfo, "\nTerminated:        ");
-  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %20s",
-                 this->terminated[instance] ? "T" : "F");
   highsLogUser(log_options, HighsLogType::kInfo, "\nStartWrite:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",
@@ -3022,18 +3004,6 @@ bool MipRace::newSolution(const HighsInt instance, double objective,
   return false;
 }
 
-void MipRace::terminate() {
-  assert(this->record);
-  this->record->terminated[this->my_instance] = true;
-}
-
-bool MipRace::terminated() const {
-  assert(this->record);
-  for (HighsInt instance = 0; instance < this->concurrency(); instance++)
-    if (this->record->terminated[instance]) return true;
-  return false;
-}
-
 void MipRace::report() const {
   assert(this->record);
   this->record->report(this->log_options);
@@ -3076,6 +3046,15 @@ HighsModelStatus HighsTerminator::terminatedNw() const {
       return this->record[instance];
   }
   return HighsModelStatus::kNotset;
+}
+
+bool HighsTerminator::notTerminatedNw() const {
+  assert(this->record);
+  for (HighsInt instance = 0; instance < this->num_instance; instance++) {
+    if (this->record[instance] != HighsModelStatus::kNotset)
+      return false;
+  }
+  return true;
 }
 
 void HighsTerminator::report(const HighsLogOptions log_options) const {

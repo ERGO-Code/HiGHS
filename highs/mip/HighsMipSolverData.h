@@ -306,8 +306,6 @@ struct HighsMipSolverData {
   void mipRaceUpdate();
   HighsInt mipRaceNewSolution(const HighsInt instance, double& objective_value,
                               std::vector<double>& solution);
-  void mipRaceTerminate();
-  bool mipRaceTerminated() const;
   void mipRaceReport() const;
 
   void terminateNw();
