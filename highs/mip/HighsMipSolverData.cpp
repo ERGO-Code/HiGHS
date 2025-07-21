@@ -2413,7 +2413,15 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
 
   // MIP race may have terminated
-  if (!mipsolver.submip && this->mipRaceTerminated()) return true;
+  if (!mipsolver.submip) {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+		 "instance%d: terminated? %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
+    if (this->mipRaceTerminated()) {
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+		 "instance%d: terminated  %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
+      return true;
+    }
+  }
 
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
@@ -2682,6 +2690,12 @@ void HighsMipSolverData::queryExternalSolution(
     addIncumbent(reduced_instance_solution, instance_solution_objective_value,
                  kSolutionSourceHighsSolution);
   }
+}
+
+HighsInt HighsMipSolverData::mipRaceMyInstance() const {
+  assert(!mipsolver.submip);
+  if (!mipsolver.mip_race_.record) return kMipRaceNoInstance;
+  return mipsolver.mip_race_.my_instance;
 }
 
 HighsInt HighsMipSolverData::mipRaceConcurrency() const {

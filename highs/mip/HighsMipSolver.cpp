@@ -69,6 +69,9 @@ HighsMipSolver::~HighsMipSolver() = default;
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
 
+  if (!submip) highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		 "instance%d: top   run() %6.4f (MIP)\n", int(this->mip_race_.my_instance), this->timer_.read());
+
   if (submip) {
     analysis_.analyse_mip_time = false;
   } else {
@@ -682,9 +685,13 @@ void HighsMipSolver::cleanupSolve() {
     if (!mipdata_->mipRaceTerminated()) {
       // No other instance has terminated the MIP race, so terminate
       // it
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		 "instance%d: terminate   %6.4f (MIP)\n", int(this->mipdata_->mipRaceMyInstance()), this->timer_.read());
       mipdata_->mipRaceTerminate();
     } else {
       // Indicate that this MIP race instance has been interrupted
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		 "instance%d: terminated  %6.4f (MIP)\n", int(this->mipdata_->mipRaceMyInstance()), this->timer_.read());
       modelstatus_ = HighsModelStatus::kHighsInterrupt;
     }
     mipdata_->mipRaceReport();

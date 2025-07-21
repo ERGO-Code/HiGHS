@@ -20,6 +20,7 @@ class HighsCliqueTable;
 class HighsImplications;
 
 const HighsInt kMipRaceNoSolution = -1;
+const HighsInt kMipRaceNoInstance = -1;
 
 struct MipRaceIncumbent {
   HighsInt start_write_incumbent = kMipRaceNoSolution;

@@ -4079,7 +4079,9 @@ HighsStatus Highs::callSolveMip() {
               solver.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
                                           options_.log_options);
-              mip_time[instance] = -timer_.read();
+	      double this_time = timer_.read();
+	      printf("instance0: call  run() %f6.4\n", this_time);
+              mip_time[instance] = -this_time;
               solver.run();
               mip_time[instance] += timer_.read();
               mip_solver_info = getMipSolverInfo(solver);
@@ -4089,7 +4091,9 @@ HighsStatus Highs::callSolveMip() {
               worker.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
                                           worker_options[instance].log_options);
-              mip_time[instance] = -timer_.read();
+	      double this_time = timer_.read();
+	      printf("instance%d: call  run() %f6.4\n", int(instance), this_time);
+              mip_time[instance] = -this_time;
               worker.run();
               mip_time[instance] += timer_.read();
               worker_info[instance] = getMipSolverInfo(worker);
