@@ -1331,8 +1331,10 @@ void HighsMipSolverData::performRestart() {
   // changed offset_
   runSetup();
   if (mipsolver.terminate()) {
-    printf("HighsMipSolverData::performRestart() mipsolver.termination_status_ = %d\n",
-	   int(mipsolver.termination_status_));
+    printf(
+        "HighsMipSolverData::performRestart() mipsolver.termination_status_ = "
+        "%d\n",
+        int(mipsolver.termination_status_));
     return;
   }
 
@@ -2387,7 +2389,7 @@ restart:
         analysis.mipTimerStart(kMipClockPerformRestart);
         performRestart();
         analysis.mipTimerStop(kMipClockPerformRestart);
-	if (mipsolver.terminate()) return;
+        if (mipsolver.terminate()) return;
         ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
           clockOff(analysis);
@@ -2419,12 +2421,16 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
 
   // MIP race may have terminated
-  if (!mipsolver.submip) {
+  if (!mipsolver.submip && terminatorActive()) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
-		 "instance%d: terminated? %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
+                 "instance%d: terminated? %6.4f (MIP)\n",
+                 int(this->terminatorMyInstance()),
+                 this->mipsolver.timer_.read());
     if (this->terminatorTerminated()) {
       highsLogUser(options.log_options, HighsLogType::kInfo,
-		 "instance%d: terminated  %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
+                   "instance%d: terminated  %6.4f (MIP)\n",
+                   int(this->terminatorMyInstance()),
+                   this->mipsolver.timer_.read());
       return true;
     }
   }
@@ -2698,12 +2704,6 @@ void HighsMipSolverData::queryExternalSolution(
   }
 }
 
-HighsInt HighsMipSolverData::mipRaceMyInstance() const {
-  assert(!mipsolver.submip);
-  if (!mipsolver.mip_race_.record) return kNoThreadInstance;
-  return mipsolver.mip_race_.my_instance;
-}
-
 HighsInt HighsMipSolverData::mipRaceConcurrency() const {
   assert(!mipsolver.submip);
   if (!mipsolver.mip_race_.record) return 0;
@@ -2727,19 +2727,31 @@ HighsInt HighsMipSolverData::mipRaceNewSolution(const HighsInt instance,
 
 void HighsMipSolverData::mipRaceReport() const {
   assert(!mipsolver.submip);
-  if (mipsolver.terminator_.record) mipsolver.terminator_.report(mipsolver.options_mip_->log_options);
-  if (mipsolver.mip_race_.record) mipsolver.mip_race_.report();  
+  if (mipsolver.mip_race_.record) mipsolver.mip_race_.report();
+}
+
+HighsInt HighsMipSolverData::terminatorConcurrency() const {
+  return mipsolver.terminator_.num_instance;
+}
+
+HighsInt HighsMipSolverData::terminatorMyInstance() const {
+  return mipsolver.terminator_.my_instance;
 }
 
 void HighsMipSolverData::terminatorTerminate() {
-  assert(mipsolver.terminator_.num_instance > 0);
+  assert(terminatorActive());
   mipsolver.terminator_.terminate();
 }
 
 bool HighsMipSolverData::terminatorTerminated() const {
-  if (this->terminatorActive()) 
+  if (this->terminatorActive())
     mipsolver.termination_status_ = mipsolver.terminator_.terminationStatus();
   return mipsolver.termination_status_ != HighsModelStatus::kNotset;
+}
+
+void HighsMipSolverData::terminatorReport() const {
+  if (this->terminatorActive())
+    mipsolver.terminator_.report(mipsolver.options_mip_->log_options);
 }
 
 static double possInfRelDiff(const double v0, const double v1,
@@ -2918,9 +2930,7 @@ HighsInt MipRaceIncumbent::read(const HighsInt last_incumbent_read,
              : kMipRaceNoSolution;
 }
 
-void MipRaceRecord::clear() {
-  this->incumbent.clear();
-}
+void MipRaceRecord::clear() { this->incumbent.clear(); }
 
 void MipRaceRecord::initialise(const HighsInt mip_race_concurrency,
                                const HighsInt num_col) {
@@ -3022,13 +3032,14 @@ void HighsTerminator::clear() {
   this->record = nullptr;
 }
 
-void HighsTerminator::initialise(HighsInt num_instance_,
-				 HighsInt my_instance_,
-				 HighsModelStatus* record_) {
+void HighsTerminator::initialise(HighsInt num_instance_, HighsInt my_instance_,
+                                 HighsModelStatus* record_) {
   this->num_instance = num_instance_;
   this->my_instance = my_instance_;
   this->record = record_;
 }
+
+HighsInt HighsTerminator::concurrency() const { return this->num_instance; }
 
 void HighsTerminator::terminate() {
   assert(this->record);
@@ -3047,9 +3058,8 @@ HighsModelStatus HighsTerminator::terminationStatus() const {
 
 void HighsTerminator::report(const HighsLogOptions log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminator:        ");
-  for (HighsInt instance = 0; instance < this->num_instance; instance++) 
+  for (HighsInt instance = 0; instance < this->num_instance; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",
-		 int(this->record[instance]));
+                 int(this->record[instance]));
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
 }
-

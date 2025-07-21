@@ -1047,7 +1047,6 @@ TEST_CASE("mip-race", "[highs_test_mip_solver]") {
   if (ci_test) h.setOptionValue("output_flag", dev_run);
   const HighsInt mip_race_concurrency = ci_test ? 2 : 4;
   h.setOptionValue("mip_race_concurrency", mip_race_concurrency);
-  //  h.setOptionValue("mip_race_read_solutions", false);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
 

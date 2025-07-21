@@ -66,6 +66,7 @@ struct HighsTerminator {
   void clear();
   void initialise(HighsInt num_instance_, HighsInt my_instance_,
                   HighsModelStatus* record_);
+  HighsInt concurrency() const;
   void terminate();
   bool terminated() const;
   HighsModelStatus terminationStatus() const;
@@ -166,7 +167,8 @@ class HighsMipSolver {
                         double& bound_violation, double& row_violation,
                         double& integrality_violation, HighsCDouble& obj) const;
 
-  std::vector<HighsModelStatus> initialiseTerminatorRecord(HighsInt num_instance) const;
+  std::vector<HighsModelStatus> initialiseTerminatorRecord(
+      HighsInt num_instance) const;
   void initialiseTerminator(HighsInt num_instance_ = 0,
                             HighsInt my_instance_ = kNoThreadInstance,
                             HighsModelStatus* record_ = nullptr);
