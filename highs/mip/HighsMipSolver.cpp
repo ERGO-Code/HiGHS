@@ -172,6 +172,11 @@ restart:
     analysis_.mipTimerStart(kMipClockEvaluateRootNode);
     mipdata_->evaluateRootNode();
     analysis_.mipTimerStop(kMipClockEvaluateRootNode);
+    if (this->terminate()) {
+      modelstatus_ = this->terminationStatus();
+      cleanupSolve();
+      return;
+    }
     // Sometimes the analytic centre calculation is not completed when
     // evaluateRootNode returns, so stop its clock if it's running
     if (analysis_.analyse_mip_time &&
@@ -988,5 +993,10 @@ void HighsMipSolver::initialiseTerminator(HighsInt num_instance_,
 					  HighsModelStatus* record_) {
   this->termination_status_ = HighsModelStatus::kNotset;
   this->terminator_.initialise(num_instance_, my_instance_, record_);
+}
+
+std::vector<HighsModelStatus> HighsMipSolver::initialiseRecord(HighsInt num_instance) const {
+  std::vector<HighsModelStatus> record(num_instance, HighsModelStatus::kNotset);
+  return record;
 }
 

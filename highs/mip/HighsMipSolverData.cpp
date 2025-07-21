@@ -1330,6 +1330,11 @@ void HighsMipSolverData::performRestart() {
   // Bounds are currently in the original space since presolve will have
   // changed offset_
   runSetup();
+  if (mipsolver.terminate()) {
+    printf("HighsMipSolverData::performRestart() mipsolver.termination_status_ = %d\n",
+	   int(mipsolver.termination_status_));
+    return;
+  }
 
   postSolveStack.removeCutsFromModel(numCuts);
 
@@ -2382,6 +2387,7 @@ restart:
         analysis.mipTimerStart(kMipClockPerformRestart);
         performRestart();
         analysis.mipTimerStop(kMipClockPerformRestart);
+	if (mipsolver.terminate()) return;
         ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
           clockOff(analysis);
@@ -2422,10 +2428,9 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
 		 "instance%d: terminated  %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
       return true;
     }
+    assert(this->mipRaceTerminated() == this->terminatedNw());
+    if (this->terminatedNw()) return true;
   }
-
-  assert(this->mipRaceTerminated() == this->terminatedNw());
-  if (this->terminatedNw()) return true;
 
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
@@ -2737,8 +2742,8 @@ bool HighsMipSolverData::mipRaceTerminated() const {
 
 void HighsMipSolverData::mipRaceReport() const {
   assert(!mipsolver.submip);
-  if (!mipsolver.mip_race_.record) return;
-  mipsolver.mip_race_.report();
+  if (mipsolver.terminator_.record) mipsolver.terminator_.report(mipsolver.options_mip_->log_options);
+  if (mipsolver.mip_race_.record) mipsolver.mip_race_.report();  
 }
 
 void HighsMipSolverData::terminateNw() {

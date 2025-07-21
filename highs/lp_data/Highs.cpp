@@ -4041,7 +4041,8 @@ HighsStatus Highs::callSolveMip() {
     // Set up the shared memory for the MIP solver race
     MipRaceRecord mip_race_record;
     mip_race_record.initialise(mip_race_concurrency, lp.num_col_);
-
+    // Set up the shared memory for the concurrent MIP terminator
+    auto terminator_record = solver.initialiseRecord(mip_race_concurrency);
     // Don't allow callbacks for workers
     HighsCallback worker_callback = callback_;
     worker_callback.clear();
@@ -4079,6 +4080,7 @@ HighsStatus Highs::callSolveMip() {
               solver.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
                                           options_.log_options);
+	      solver.initialiseTerminator(mip_race_concurrency, instance, terminator_record.data());
 	      double this_time = timer_.read();
 	      highsLogUser(options_.log_options, HighsLogType::kInfo,
 			   "instance0: call  run() %f6.4\n", this_time);
@@ -4092,6 +4094,7 @@ HighsStatus Highs::callSolveMip() {
               worker.mip_race_.initialise(mip_race_concurrency, instance,
                                           &mip_race_record,
                                           worker_options[instance].log_options);
+	      worker.initialiseTerminator(mip_race_concurrency, instance, terminator_record.data());
 	      double this_time = timer_.read();
 	      highsLogUser(options_.log_options, HighsLogType::kInfo,
 			   "instance%d: call  run() %f6.4\n", int(instance), this_time);
