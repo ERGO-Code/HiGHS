@@ -167,6 +167,10 @@ class HighsMipSolver {
                         double& bound_violation, double& row_violation,
                         double& integrality_violation, HighsCDouble& obj) const;
 
+  void initialiseMipRace(const HighsInt mip_race_concurrency = 0,
+                         const HighsInt my_instance_ = kNoThreadInstance,
+			 MipRaceRecord* record_ = nullptr);
+  
   std::vector<HighsModelStatus> initialiseTerminatorRecord(
       HighsInt num_instance) const;
   void initialiseTerminator(HighsInt num_instance_ = 0,

@@ -2937,8 +2937,11 @@ void MipRaceRecord::initialise(const HighsInt mip_race_concurrency,
   this->clear();
   MipRaceIncumbent incumbent_;
   incumbent_.initialise(num_col);
-  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
+  // Loop from 1...
+  for (HighsInt instance = 1; instance < mip_race_concurrency; instance++)
     this->incumbent.push_back(incumbent_);
+  // ... and move incumbent_ to complete the vector of incumbents
+  this->incumbent.push_back(std::move(incumbent_));
 }
 
 HighsInt MipRaceRecord::concurrency() const {
@@ -2980,11 +2983,11 @@ void MipRace::initialise(const HighsInt mip_race_concurrency,
                          const HighsInt my_instance_, MipRaceRecord* record_,
                          const HighsLogOptions log_options_) {
   this->clear();
-  assert(mip_race_concurrency > 0);
   this->my_instance = my_instance_;
   this->record = record_;
   this->log_options = log_options_;
-  this->last_incumbent_read.assign(mip_race_concurrency, kMipRaceNoSolution);
+  if (mip_race_concurrency > 0)
+    this->last_incumbent_read.assign(mip_race_concurrency, kMipRaceNoSolution);
 }
 
 HighsInt MipRace::concurrency() const {
@@ -3034,6 +3037,7 @@ void HighsTerminator::clear() {
 
 void HighsTerminator::initialise(HighsInt num_instance_, HighsInt my_instance_,
                                  HighsModelStatus* record_) {
+  this->clear();
   this->num_instance = num_instance_;
   this->my_instance = my_instance_;
   this->record = record_;
