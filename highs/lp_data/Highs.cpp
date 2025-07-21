@@ -4079,11 +4079,10 @@ HighsStatus Highs::callSolveMip() {
         0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
           for (HighsInt instance = start; instance < end; instance++) {
             if (instance == 0) {
-              solver.mip_race_.initialise(mip_race_concurrency, instance,
-                                          &mip_race_record,
-                                          options_.log_options);
               solver.initialiseTerminator(mip_race_concurrency, instance,
                                           terminator_record.data());
+              solver.initialiseMipRace(mip_race_concurrency, instance,
+                                       &mip_race_record);
               double this_time = timer_.read();
               highsLogUser(options_.log_options, HighsLogType::kInfo,
                            "instance0: call  run() %f6.4\n", this_time);
@@ -4094,11 +4093,10 @@ HighsStatus Highs::callSolveMip() {
             } else {
               HighsMipSolver worker(worker_callback, worker_options[instance],
                                     lp, solution_);
-              worker.mip_race_.initialise(mip_race_concurrency, instance,
-                                          &mip_race_record,
-                                          worker_options[instance].log_options);
               worker.initialiseTerminator(mip_race_concurrency, instance,
                                           terminator_record.data());
+              worker.initialiseMipRace(mip_race_concurrency, instance,
+                                       &mip_race_record);
               double this_time = timer_.read();
               highsLogUser(options_.log_options, HighsLogType::kInfo,
                            "instance%d: call  run() %f6.4\n", int(instance),

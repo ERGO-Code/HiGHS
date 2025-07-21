@@ -1014,9 +1014,9 @@ void HighsMipSolver::initialiseTerminator(HighsInt num_instance_,
 }
 
 void HighsMipSolver::initialiseMipRace(const HighsInt mip_race_concurrency,
-				       const HighsInt my_instance,
-				       MipRaceRecord* record) {
+                                       const HighsInt my_instance,
+                                       MipRaceRecord* record) {
   this->mip_race_.clear();
   this->mip_race_.initialise(mip_race_concurrency, my_instance, record,
-			     this->options_mip_->log_options);
+                             this->options_mip_->log_options);
 }
