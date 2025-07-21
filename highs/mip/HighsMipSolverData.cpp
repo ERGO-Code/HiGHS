@@ -2416,6 +2416,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   if (!mipsolver.submip) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
 		 "instance%d: terminated? %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
+    assert(this->mipRaceTerminated() == this->terminatedNw());
     if (this->mipRaceTerminated()) {
       highsLogUser(options.log_options, HighsLogType::kInfo,
 		 "instance%d: terminated  %6.4f (MIP)\n", int(this->mipRaceMyInstance()), this->mipsolver.timer_.read());
@@ -2423,6 +2424,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     }
   }
 
+  assert(this->mipRaceTerminated() == this->terminatedNw());
   if (this->terminatedNw()) return true;
 
   // Possible user interrupt

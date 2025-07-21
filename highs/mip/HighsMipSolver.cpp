@@ -683,12 +683,14 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   if (!submip) {
+    assert(mipdata_->mipRaceTerminated() == (terminator_.terminatedNw() != HighsModelStatus::kNotset));
     if (!mipdata_->mipRaceTerminated()) {
       // No other instance has terminated the MIP race, so terminate
       // it
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
 		 "instance%d: terminate   %6.4f (MIP)\n", int(this->mipdata_->mipRaceMyInstance()), this->timer_.read());
       mipdata_->mipRaceTerminate();
+      terminator_.terminateNw();
     } else {
       // Indicate that this MIP race instance has been interrupted
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
