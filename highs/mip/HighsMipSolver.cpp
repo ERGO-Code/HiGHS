@@ -999,7 +999,7 @@ void HighsMipSolver::initialiseTerminator(HighsInt num_instance_,
   this->terminator_.initialise(num_instance_, my_instance_, record_);
 }
 
-std::vector<HighsModelStatus> HighsMipSolver::initialiseRecord(
+std::vector<HighsModelStatus> HighsMipSolver::initialiseTerminatorRecord(
     HighsInt num_instance) const {
   std::vector<HighsModelStatus> record(num_instance, HighsModelStatus::kNotset);
   return record;

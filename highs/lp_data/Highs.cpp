@@ -4042,7 +4042,7 @@ HighsStatus Highs::callSolveMip() {
     MipRaceRecord mip_race_record;
     mip_race_record.initialise(mip_race_concurrency, lp.num_col_);
     // Set up the shared memory for the concurrent MIP terminator
-    auto terminator_record = solver.initialiseRecord(mip_race_concurrency);
+    auto terminator_record = solver.initialiseTerminatorRecord(mip_race_concurrency);
     // Don't allow callbacks for workers
     HighsCallback worker_callback = callback_;
     worker_callback.clear();
