@@ -4049,7 +4049,7 @@ HighsStatus Highs::callSolveMip() {
     worker_callback.clear();
     // Race the MIP solver!
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Starting MIP race with %d instances: performance is "
+                 "Starting MIP race with %d instances: behaviour is "
                  "non-deterministic!\n",
                  int(mip_race_concurrency));
     // Define the HighsMipSolverInfo record for each worker
@@ -4083,10 +4083,7 @@ HighsStatus Highs::callSolveMip() {
                                           terminator_record.data());
               solver.initialiseMipRace(mip_race_concurrency, instance,
                                        &mip_race_record);
-              double this_time = timer_.read();
-              highsLogUser(options_.log_options, HighsLogType::kInfo,
-                           "instance0: call  run() %f6.4\n", this_time);
-              mip_time[instance] = -this_time;
+              mip_time[instance] = -timer_.read();
               solver.run();
               mip_time[instance] += timer_.read();
               mip_solver_info = getMipSolverInfo(solver);
@@ -4097,11 +4094,7 @@ HighsStatus Highs::callSolveMip() {
                                           terminator_record.data());
               worker.initialiseMipRace(mip_race_concurrency, instance,
                                        &mip_race_record);
-              double this_time = timer_.read();
-              highsLogUser(options_.log_options, HighsLogType::kInfo,
-                           "instance%d: call  run() %f6.4\n", int(instance),
-                           this_time);
-              mip_time[instance] = -this_time;
+              mip_time[instance] = -timer_.read();
               worker.run();
               mip_time[instance] += timer_.read();
               worker_info[instance] = getMipSolverInfo(worker);

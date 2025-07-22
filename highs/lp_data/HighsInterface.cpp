@@ -4269,7 +4269,7 @@ HighsStatus Highs::mipRaceResults(
   HighsInt winning_instance = -1;
   HighsModelStatus winning_model_status = HighsModelStatus::kNotset;
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "/nMIP race results\n");
+               "\nMIP race results\n");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++) {
     const HighsMipSolverInfo& solver_info =
         instance == 0 ? mip_solver_info : worker_info[instance];

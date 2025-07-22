@@ -75,11 +75,6 @@ HighsMipSolver::~HighsMipSolver() = default;
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
 
-  if (!submip)
-    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "instance%d: top   run() %6.4f (MIP)\n",
-                 int(this->mip_race_.my_instance), this->timer_.read());
-
   if (submip) {
     analysis_.analyse_mip_time = false;
   } else {
@@ -699,13 +694,8 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   if (mipdata_->terminatorActive()) {
-    mipdata_->terminatorReport();
     if (mipdata_->terminatorTerminated()) {
       // Indicate that this instance has been interrupted
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "instance%d: terminated  %6.4f (%sMIP)\n",
-                   int(this->mipdata_->terminatorMyInstance()),
-                   this->timer_.read(), submip ? "sub-" : "");
       modelstatus_ = HighsModelStatus::kHighsInterrupt;
     } else if (!submip) {
       // When sub-MIPs call cleanupSolve(), they generally don't have
@@ -715,15 +705,8 @@ void HighsMipSolver::cleanupSolve() {
       // reached
       //
       // No other instance has terminated, so terminate
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "instance%d: terminate   %6.4f (%sMIP)\n",
-                   int(this->mipdata_->terminatorMyInstance()),
-                   this->timer_.read(), submip ? "sub-" : "");
       mipdata_->terminatorTerminate();
     }
-    mipdata_->terminatorReport();
-    // Report on any active MIP race
-    mipdata_->mipRaceReport();
   }
 
   // Force a final logging line

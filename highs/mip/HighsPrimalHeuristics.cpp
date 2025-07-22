@@ -145,11 +145,6 @@ bool HighsPrimalHeuristics::solveSubMip(
   // Initialise termination_status_ and propagate any terminator to
   // the sub-MIP
   submipsolver.initialiseTerminator(mipsolver);
-  printf(
-      "HighsPrimalHeuristics::solveSubMip: %d submipsolver.termination_status_ "
-      "= %d\n",
-      int(submipsolver.terminator_.my_instance),
-      int(submipsolver.termination_status_));
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;
@@ -172,9 +167,6 @@ bool HighsPrimalHeuristics::solveSubMip(
     assert(submipsolver.mipdata_);
   }
   if (submipsolver.termination_status_ != HighsModelStatus::kNotset) {
-    printf("HighsPrimalHeuristics::solveSubMip: %d termination status is %d\n",
-           int(submipsolver.terminator_.my_instance),
-           int(submipsolver.termination_status_));
     mipsolver.termination_status_ = submipsolver.termination_status_;
     return false;
   }

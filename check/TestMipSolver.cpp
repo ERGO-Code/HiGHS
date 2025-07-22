@@ -1037,8 +1037,9 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("mip-race", "[highs_test_mip_solver]") {
-  const bool ci_test = true;
-  const std::string model = ci_test ? "flugpl" : "fiball";
+  const bool ci_test = false;
+  const std::string test_build_model = "fiball";
+  const std::string model = ci_test ? "flugpl" : test_build_model;
   // "neos-3381206-awhea";
   const std::string model_file =
       ci_test ? std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps"

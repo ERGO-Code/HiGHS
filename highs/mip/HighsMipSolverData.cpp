@@ -2421,20 +2421,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
 
   // This MIP instance may have been terminated
-  if (terminatorActive()) {
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "instance%d: terminated? %6.4f (%sMIP)\n",
-                 int(this->terminatorMyInstance()),
-                 this->mipsolver.timer_.read(), mipsolver.submip ? "sub-" : "");
-    if (this->terminatorTerminated()) {
-      highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "instance%d: terminated  %6.4f (%sMIP)\n",
-                   int(this->terminatorMyInstance()),
-                   this->mipsolver.timer_.read(),
-                   mipsolver.submip ? "sub-" : "");
-      return true;
-    }
-  }
+  if (terminatorActive()) 
+    if (this->terminatorTerminated()) return true;
 
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
@@ -2999,7 +2987,7 @@ void MipRace::update(const double objective,
                      const std::vector<double>& solution) {
   assert(this->record);
   this->record->update(this->my_instance, objective, solution);
-  this->report();
+  //  this->report();
 }
 
 bool MipRace::newSolution(const HighsInt instance, double objective,
