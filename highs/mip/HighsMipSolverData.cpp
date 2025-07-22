@@ -2420,17 +2420,19 @@ restart:
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
 
-  // MIP race may have terminated
-  if (!mipsolver.submip && terminatorActive()) {
+  // This MIP instance may have been terminated
+  if (terminatorActive()) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "instance%d: terminated? %6.4f (MIP)\n",
+                 "instance%d: terminated? %6.4f (%sMIP)\n",
                  int(this->terminatorMyInstance()),
-                 this->mipsolver.timer_.read());
+                 this->mipsolver.timer_.read(),
+		 mipsolver.submip ? "sub-" : "");
     if (this->terminatorTerminated()) {
       highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "instance%d: terminated  %6.4f (MIP)\n",
+                   "instance%d: terminated  %6.4f (%sMIP)\n",
                    int(this->terminatorMyInstance()),
-                   this->mipsolver.timer_.read());
+                   this->mipsolver.timer_.read(),
+		   mipsolver.submip ? "sub-" : "");
       return true;
     }
   }
@@ -2726,7 +2728,6 @@ HighsInt HighsMipSolverData::mipRaceNewSolution(const HighsInt instance,
 }
 
 void HighsMipSolverData::mipRaceReport() const {
-  assert(!mipsolver.submip);
   if (mipsolver.mip_race_.record) mipsolver.mip_race_.report();
 }
 

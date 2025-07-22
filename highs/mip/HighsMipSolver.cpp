@@ -302,6 +302,10 @@ restart:
 
           mipdata_->heuristics.flushStatistics();
           analysis_.mipTimerStop(kMipClockDivePrimalHeuristics);
+	  if (mipdata_->terminatorTerminated()) {
+	    cleanupSolve();
+	    return;
+	  }
         }
       }
 
@@ -694,21 +698,22 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
-  if (!submip && mipdata_->terminatorActive()) {
+  if (mipdata_->terminatorActive()) {
     if (!mipdata_->terminatorTerminated()) {
-      // No other instance has terminated the MIP race, so terminate
-      // it
+      // No other instance has terminated, so terminate it
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "instance%d: terminate   %6.4f (MIP)\n",
+                   "instance%d: terminate   %6.4f (%sMIP)\n",
                    int(this->mipdata_->terminatorMyInstance()),
-                   this->timer_.read());
+                   this->timer_.read(),
+		   submip ? "sub-" : "");
       mipdata_->terminatorTerminate();
     } else {
       // Indicate that this instance has been interrupted
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "instance%d: terminated  %6.4f (MIP)\n",
+                   "instance%d: terminated  %6.4f (%sMIP)\n",
                    int(this->mipdata_->terminatorMyInstance()),
-                   this->timer_.read());
+                   this->timer_.read(),
+		   submip ? "sub-" : "");
       modelstatus_ = HighsModelStatus::kHighsInterrupt;
     }
     mipdata_->terminatorReport();

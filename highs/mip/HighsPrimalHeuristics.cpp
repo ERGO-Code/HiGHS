@@ -145,6 +145,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   // Initialise termination_status_ and propagate any terminator to
   // the sub-MIP
   submipsolver.initialiseTerminator(mipsolver);
+  printf("HighsPrimalHeuristics::solveSubMip: %d submipsolver.termination_status_ = %d\n",
+	 int(submipsolver.terminator_.my_instance), int(submipsolver.termination_status_));
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;
@@ -165,10 +167,10 @@ bool HighsPrimalHeuristics::solveSubMip(
     assert(submipsolver.mipdata_);
   }
   if (submipsolver.termination_status_ != HighsModelStatus::kNotset) {
-    printf("HighsPrimalHeuristics::solveSubMip: termination status is %d\n", int(submipsolver.termination_status_));
+    printf("HighsPrimalHeuristics::solveSubMip: %d termination status is %d\n", 
+	 int(submipsolver.terminator_.my_instance), int(submipsolver.termination_status_));
     mipsolver.termination_status_ = submipsolver.termination_status_;
-    assert(111==333);
-    return;
+    return false;
   }
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
@@ -561,6 +563,7 @@ retry:
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  if (mipsolver.mipdata_->terminatorTerminated()) return;
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
@@ -853,6 +856,7 @@ retry:
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  if (mipsolver.mipdata_->terminatorTerminated()) return;
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
