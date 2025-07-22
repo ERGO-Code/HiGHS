@@ -1013,6 +1013,15 @@ void HighsMipSolver::initialiseTerminator(HighsInt num_instance_,
   this->terminator_.initialise(num_instance_, my_instance_, record_);
 }
 
+void HighsMipSolver::initialiseTerminator(const HighsMipSolver& mip_solver) {
+  this->terminator_.clear();
+  if (!mip_solver.mipdata_->terminatorActive()) return;
+  assert(mip_solver.mipdata_->terminatorConcurrency() > 0);
+  this->initialiseTerminator(mip_solver.mipdata_->terminatorConcurrency(),
+			     mip_solver.mipdata_->terminatorMyInstance(),
+			     mip_solver.terminator_.record);  
+}
+
 void HighsMipSolver::initialiseMipRace(const HighsInt mip_race_concurrency,
                                        const HighsInt my_instance,
                                        MipRaceRecord* record) {

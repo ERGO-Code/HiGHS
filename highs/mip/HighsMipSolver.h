@@ -176,6 +176,7 @@ class HighsMipSolver {
   void initialiseTerminator(HighsInt num_instance_ = 0,
                             HighsInt my_instance_ = kNoThreadInstance,
                             HighsModelStatus* record_ = nullptr);
+  void initialiseTerminator(const HighsMipSolver& mip_solver);
   bool terminate() const {
     return this->termination_status_ != HighsModelStatus::kNotset;
   }
