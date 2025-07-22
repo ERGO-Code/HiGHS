@@ -185,4 +185,7 @@ class HighsMipSolver {
   }
 };
 
+std::array<char, 128> getGapString(const double gap_,
+                                   const double primal_bound_,
+                                   const HighsOptions* options_mip_);
 #endif

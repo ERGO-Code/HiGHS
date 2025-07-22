@@ -194,6 +194,7 @@ struct HighsMipSolverInfo {
   double dual_bound;
   double primal_bound;
   double gap;
+  HighsInt max_submip_level;
   int64_t node_count;
   int64_t total_lp_iterations;
   double primal_dual_integral;

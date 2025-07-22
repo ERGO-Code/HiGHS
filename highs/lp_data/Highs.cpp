@@ -4109,9 +4109,10 @@ HighsStatus Highs::callSolveMip() {
           }
         });
     // Determine the winner and report on the solution
-    HighsStatus call_status = this->mipRaceResults(mip_solver_info, worker_info, mip_time);
+    HighsStatus call_status =
+        this->mipRaceResults(mip_solver_info, worker_info, mip_time);
     if (call_status == HighsStatus::kError) {
-      const bool undo_mods = true;      
+      const bool undo_mods = true;
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
     }
   } else {
@@ -4897,6 +4898,7 @@ HighsMipSolverInfo getMipSolverInfo(const HighsMipSolver& mip_solver) {
   mip_solver_info.dual_bound = mip_solver.dual_bound_;
   mip_solver_info.primal_bound = mip_solver.primal_bound_;
   mip_solver_info.gap = mip_solver.gap_;
+  mip_solver_info.max_submip_level = mip_solver.max_submip_level;
   mip_solver_info.node_count = mip_solver.node_count_;
   mip_solver_info.total_lp_iterations = mip_solver.total_lp_iterations_;
   mip_solver_info.primal_dual_integral = mip_solver.primal_dual_integral_;

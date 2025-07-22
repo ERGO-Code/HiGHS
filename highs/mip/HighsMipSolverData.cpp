@@ -2425,14 +2425,13 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "instance%d: terminated? %6.4f (%sMIP)\n",
                  int(this->terminatorMyInstance()),
-                 this->mipsolver.timer_.read(),
-		 mipsolver.submip ? "sub-" : "");
+                 this->mipsolver.timer_.read(), mipsolver.submip ? "sub-" : "");
     if (this->terminatorTerminated()) {
       highsLogUser(options.log_options, HighsLogType::kInfo,
                    "instance%d: terminated  %6.4f (%sMIP)\n",
                    int(this->terminatorMyInstance()),
                    this->mipsolver.timer_.read(),
-		   mipsolver.submip ? "sub-" : "");
+                   mipsolver.submip ? "sub-" : "");
       return true;
     }
   }

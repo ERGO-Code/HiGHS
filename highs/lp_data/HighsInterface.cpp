@@ -13,6 +13,7 @@
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
+#include "mip/HighsMipSolver.h"  // For getGapString
 #include "model/HighsHessianUtils.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
@@ -4254,79 +4255,109 @@ void HighsMipSolverInfo::clear() {
   this->dual_bound = -kHighsInf;
   this->primal_bound = -kHighsInf;
   this->gap = -kHighsInf;
+  this->max_submip_level = -1;
   this->node_count = -kHighsSize_tInf;
   this->total_lp_iterations = -kHighsSize_tInf;
   this->primal_dual_integral = -kHighsInf;
 }
 
-HighsStatus Highs::mipRaceResults(HighsMipSolverInfo& mip_solver_info,
-				  const std::vector<HighsMipSolverInfo>& worker_info,
-				  const std::vector<double>& mip_time) {
-
+HighsStatus Highs::mipRaceResults(
+    HighsMipSolverInfo& mip_solver_info,
+    const std::vector<HighsMipSolverInfo>& worker_info,
+    const std::vector<double>& mip_time) {
   const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
   HighsInt winning_instance = -1;
   HighsModelStatus winning_model_status = HighsModelStatus::kNotset;
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "/nMIP race results\n");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++) {
     const HighsMipSolverInfo& solver_info =
-      instance == 0 ? mip_solver_info : worker_info[instance];
+        instance == 0 ? mip_solver_info : worker_info[instance];
     HighsModelStatus instance_model_status = solver_info.modelstatus;
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "   Solver %d has best objective %15.8g, gap %6.2f\% (time "
-		 "= %6.2f), and status %s\n",
-		 int(instance), solver_info.solution_objective,
-		 1e2 * solver_info.gap, mip_time[instance],
-		 modelStatusToString(instance_model_status).c_str());
+                 "   Solver %d has best objective %15.8g, gap %6.2f\% (time "
+                 "= %6.2f), and status %s\n",
+                 int(instance), solver_info.solution_objective,
+                 1e2 * solver_info.gap, mip_time[instance],
+                 modelStatusToString(instance_model_status).c_str());
     if (instance_model_status != HighsModelStatus::kHighsInterrupt) {
       // Definitive status for this instance, so check compatibility
       // with any current winning model status
       if (winning_model_status != HighsModelStatus::kNotset) {
-	if (winning_model_status != instance_model_status) {
-	  highsLogUser(options_.log_options, HighsLogType::kError,
-		       "MIP race: conflict between status \"%s\" for "
-		       "instance %d and status \"%s\" for instance %d\n",
-		       modelStatusToString(winning_model_status).c_str(),
-		       int(winning_instance),
-		       modelStatusToString(instance_model_status).c_str(),
-		       int(instance));
-	  return HighsStatus::kError;
-	}
+        if (winning_model_status != instance_model_status) {
+          highsLogUser(options_.log_options, HighsLogType::kError,
+                       "MIP race: conflict between status \"%s\" for "
+                       "instance %d and status \"%s\" for instance %d\n",
+                       modelStatusToString(winning_model_status).c_str(),
+                       int(winning_instance),
+                       modelStatusToString(instance_model_status).c_str(),
+                       int(instance));
+          return HighsStatus::kError;
+        }
       } else {
-	winning_model_status = instance_model_status;
-	winning_instance = instance;
+        winning_model_status = instance_model_status;
+        winning_instance = instance;
       }
     }
   }
   if (winning_instance > 0) mip_solver_info = worker_info[winning_instance];
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "Solving report\n");
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  Model             %s\n",
-	       this->model_.lp_.model_name_.c_str());
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  Status            %s\n",
-	       modelStatusToString(mip_solver_info.modelstatus).c_str());
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  Primal bound      %.12g\n",
-	       mip_solver_info.primal_bound);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  Dual bound        %.12g\n",
-	       mip_solver_info.dual_bound);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  Gap               %g%% (tolerance: %g%%)\n",
-	       1e2*mip_solver_info.gap, 1e2*options_.mip_rel_gap);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  P-D integral      %.12g\n",
-	       mip_solver_info.primal_dual_integral);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  Solution status   %.12g\n",
-	       mip_solver_info.solution_objective);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "                    %.12g (bound viol.)\n",
-	       mip_solver_info.bound_violation);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "                    %.12g (int. viol.)\n",
-	       mip_solver_info.integrality_violation);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "                    %.12g (row viol.)\n",
-	       mip_solver_info.row_violation);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  Timing            %.2f\n",
-	       mip_time[winning_instance]);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  Nodes             %llu\n",
-	       mip_solver_info.node_count);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,  "  LP iterations     %llu\n",
-	       mip_solver_info.total_lp_iterations);
-  /*
-  Solution status   feasible
-  Max sub-MIP depth 1
-  */
+  std::array<char, 128> gapString = getGapString(
+      mip_solver_info.gap, mip_solver_info.primal_bound, &options_);
+
+  bool havesolution = mip_solver_info.solution_objective != kHighsInf;
+  bool feasible;
+  std::string solutionstatus = "-";
+  if (havesolution) {
+    feasible =
+        mip_solver_info.bound_violation <= options_.mip_feasibility_tolerance &&
+        mip_solver_info.integrality_violation <=
+            options_.mip_feasibility_tolerance &&
+        mip_solver_info.row_violation <= options_.mip_feasibility_tolerance;
+  } else {
+    feasible = false;
+  }
+  solutionstatus = feasible ? "feasible" : "infeasible";
+
+  highsLogUser(options_.log_options, HighsLogType::kInfo, "Solving report\n");
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Model             %s\n",
+               this->model_.lp_.model_name_.c_str());
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Status            %s\n",
+               modelStatusToString(mip_solver_info.modelstatus).c_str());
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Primal bound      %.12g\n", mip_solver_info.primal_bound);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Dual bound        %.12g\n", mip_solver_info.dual_bound);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Gap               %s\n", gapString.data());
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  P-D integral      %.12g\n",
+               mip_solver_info.primal_dual_integral);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Solution status   %s\n", solutionstatus.c_str());
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "                    %.12g\n",
+               mip_solver_info.solution_objective);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "                    %.12g (bound viol.)\n",
+               mip_solver_info.bound_violation);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "                    %.12g (int. viol.)\n",
+               mip_solver_info.integrality_violation);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "                    %.12g (row viol.)\n",
+               mip_solver_info.row_violation);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Timing            %.2f\n", mip_time[winning_instance]);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Max sub-MIP depth %d\n",
+               int(mip_solver_info.max_submip_level));
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  Nodes             %llu\n",
+               (long long unsigned)(mip_solver_info.node_count));
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "  LP iterations     %llu\n",
+               (long long unsigned)(mip_solver_info.total_lp_iterations));
   return HighsStatus::kOk;
 }
