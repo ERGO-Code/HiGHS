@@ -4108,41 +4108,12 @@ HighsStatus Highs::callSolveMip() {
             }
           }
         });
-    // Report on the solver and workers, and identify which has won!
-    HighsInt winning_instance = -1;
-    HighsModelStatus winning_model_status = HighsModelStatus::kNotset;
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "MIP race results:\n");
-    for (HighsInt instance = 0; instance < mip_race_concurrency; instance++) {
-      const HighsMipSolverInfo& solver_info =
-          instance == 0 ? mip_solver_info : worker_info[instance];
-      HighsModelStatus instance_model_status = solver_info.modelstatus;
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "   Solver %d has best objective %15.8g, gap %6.2f\% (time "
-                   "= %6.2f), and status %s\n",
-                   int(instance), solver_info.solution_objective,
-                   1e2 * solver_info.gap, mip_time[instance],
-                   modelStatusToString(instance_model_status).c_str());
-      if (instance_model_status != HighsModelStatus::kHighsInterrupt) {
-        // Definitive status for this instance, so check compatibility
-        // with any current winning model status
-        if (winning_model_status != HighsModelStatus::kNotset) {
-          if (winning_model_status != instance_model_status) {
-            highsLogUser(options_.log_options, HighsLogType::kError,
-                         "MIP race: conflict between status \"%s\" for "
-                         "instance %d and status \"%s\" for instance %d\n",
-                         modelStatusToString(winning_model_status).c_str(),
-                         int(winning_instance),
-                         modelStatusToString(instance_model_status).c_str(),
-                         int(instance));
-          }
-        } else {
-          winning_model_status = instance_model_status;
-          winning_instance = instance;
-        }
-      }
+    // Determine the winner and report on the solution
+    HighsStatus call_status = this->mipRaceResults(mip_solver_info, worker_info, mip_time);
+    if (call_status == HighsStatus::kError) {
+      const bool undo_mods = true;      
+      return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
     }
-    if (winning_instance > 0) mip_solver_info = worker_info[winning_instance];
   } else {
     // Run a single MIP solver
     solver.run();

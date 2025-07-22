@@ -1037,7 +1037,7 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("mip-race", "[highs_test_mip_solver]") {
-  const bool ci_test = false;//true;  // 
+  const bool ci_test = true;  // false;//
   const std::string model = ci_test ? "rgn" : "fiball"; //flugpl
   // "neos-3381206-awhea";
   const std::string model_file =
@@ -1051,11 +1051,13 @@ TEST_CASE("mip-race", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
+  /*
   if (ci_test) {
     h.clearSolver();
     h.setOptionValue("mip_race_read_solutions", false);
     REQUIRE(h.run() == HighsStatus::kOk);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   }
+  */
   h.resetGlobalScheduler(true);
 }

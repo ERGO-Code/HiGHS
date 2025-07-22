@@ -1714,6 +1714,9 @@ class Highs {
   bool optionsHasHighsFiles() const;
   void saveHighsFiles();
   void getHighsFiles();
+  HighsStatus mipRaceResults(HighsMipSolverInfo& mip_solver_info,
+			     const std::vector<HighsMipSolverInfo>& worker_info,
+			     const std::vector<double>& mip_time);
 };
 
 // Start of deprecated methods not in the Highs class
