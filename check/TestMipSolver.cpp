@@ -1049,11 +1049,13 @@ TEST_CASE("mip-race", "[highs_test_mip_solver]") {
   h.setOptionValue("mip_race_concurrency", mip_race_concurrency);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
   if (ci_test) {
     h.clearSolver();
     h.setOptionValue("mip_race_read_solutions", false);
     REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   }
   h.resetGlobalScheduler(true);
 }

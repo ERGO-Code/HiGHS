@@ -699,15 +699,8 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   if (mipdata_->terminatorActive()) {
-    if (!mipdata_->terminatorTerminated()) {
-      // No other instance has terminated, so terminate it
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "instance%d: terminate   %6.4f (%sMIP)\n",
-                   int(this->mipdata_->terminatorMyInstance()),
-                   this->timer_.read(),
-		   submip ? "sub-" : "");
-      mipdata_->terminatorTerminate();
-    } else {
+    mipdata_->terminatorReport();
+    if (mipdata_->terminatorTerminated()) {
       // Indicate that this instance has been interrupted
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "instance%d: terminated  %6.4f (%sMIP)\n",
@@ -715,6 +708,20 @@ void HighsMipSolver::cleanupSolve() {
                    this->timer_.read(),
 		   submip ? "sub-" : "");
       modelstatus_ = HighsModelStatus::kHighsInterrupt;
+    } else if (!submip) {
+      // When sub-MIPs call cleanupSolve(), they generally don't have
+      // a termination criterion for the whole MIP solver
+      //
+      // Possibly allow sub-MIPs to terminate if the time limit is
+      // reached
+      //
+      // No other instance has terminated, so terminate
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                   "instance%d: terminate   %6.4f (%sMIP)\n",
+                   int(this->mipdata_->terminatorMyInstance()),
+                   this->timer_.read(),
+		   submip ? "sub-" : "");
+      mipdata_->terminatorTerminate();
     }
     mipdata_->terminatorReport();
     // Report on any active MIP race
