@@ -16,12 +16,14 @@
 
 #include <vector>
 
+#include "HighsCutGeneration.h"
 #include "lp_data/HConst.h"
 #include "mip/HighsImplications.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsInt.h"
 #include "util/HighsSparseVectorSum.h"
 
+class HighsCutGeneration;
 class HighsLpRelaxation;
 
 /// Helper class to compute single-row relaxations from the current LP
@@ -58,6 +60,11 @@ class HighsTransformedLp {
 
   bool untransform(std::vector<double>& vals, std::vector<HighsInt>& inds,
                    double& rhs, bool integral = false);
+
+  bool transformSNFR(std::vector<double>& vals, std::vector<double>& upper,
+                     std::vector<double>& solval, std::vector<HighsInt>& inds,
+                     double& rhs, bool& integralPositive,
+                     HighsCutGeneration::SNFRelaxation& snfr);
 };
 
 #endif

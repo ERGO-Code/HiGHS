@@ -20,6 +20,7 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
+#include "util/HighsSparseVectorSum.h"
 
 class HighsLpRelaxation;
 class HighsTransformedLp;
@@ -103,6 +104,36 @@ class HighsCutGeneration {
   /// cutpool if it is violated enough
   bool finalizeAndAddCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
                          double& rhs);
+
+  /// Single Node Flow Relaxation for flow cover cuts
+  struct SNFRelaxation {
+    std::vector<bool> bincolused; // has col been used in a vub
+    std::vector<double> origbincolcoef; // original bin col coef
+
+    HighsInt nnzs; // number of nonzeros
+    std::vector<HighsInt> coef; // coefficients of cols in SNFR
+    std::vector<double> vubcoef; // coefficients in vub of cols in SNFR
+    std::vector<double> binsolval; // vub bin col sol in SNFR
+    std::vector<double> contsolval; // real sol in SNFR
+    std::vector<HighsInt> origbincols; // orig bin col used in SNFR
+    std::vector<HighsInt> origcontcols; // orig cont cols used in SNFR
+    std::vector<double> aggrbincoef; // aggr coef of orignal bin-col in SNFR
+    std::vector<double> aggrcontcoef; // aggr coef of original cont-col in SNFR
+    std::vector<double> aggrconstant; // aggr original constant in SNFR
+
+    std::vector<HighsInt> flowCoverStatus; // (+1) in fcover (-1) not in fcover
+    double rhs;
+    double lambda;
+    std::vector<BoundType> boundTypes;
+    HighsSparseVectorSum vectorsum;
+  };
+
+ private:
+  SNFRelaxation snfr;
+  void initSNFRelaxation(HighsInt numNonZero);
+
+ public:
+  SNFRelaxation& getSNFRelaxation() { return snfr; }
 };
 
 #endif

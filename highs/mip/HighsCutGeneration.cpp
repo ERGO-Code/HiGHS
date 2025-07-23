@@ -1110,6 +1110,10 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   }
 #endif
 
+  // TODO: Add attempt at flow cover generation
+  initSNFRelaxation(static_cast<HighsInt>(inds_.size()));
+  transLp.;
+
   bool intsPositive = true;
   if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
     return false;
@@ -1297,6 +1301,34 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
   return cutindex != -1;
+}
+
+void HighsCutGeneration::initSNFRelaxation(HighsInt numNonZero) {
+  HighsInt numTransformedCol = lpRelaxation.numCols() + lpRelaxation.numRows();
+  if (snfr.bincolused.size() > numTransformedCol) {
+    snfr.bincolused.resize(numTransformedCol, false);
+    snfr.origbincolcoef.resize(numTransformedCol, 0);
+  } else {
+    for (HighsInt i = 0; i != snfr.bincolused.size(); ++i) {
+      snfr.bincolused[i] = false;
+      snfr.origbincolcoef[i] = 0;
+    }
+  }
+
+  if (snfr.coef.size() < numNonZero) {
+    snfr.origbincols.resize(numNonZero);
+    snfr.origcontcols.resize(numNonZero);
+    snfr.binsolval.resize(numNonZero);
+    snfr.contsolval.resize(numNonZero);
+    snfr.coef.resize(numNonZero);
+    snfr.vubcoef.resize(numNonZero);
+    snfr.aggrconstant.resize(numNonZero);
+    snfr.aggrbincoef.resize(numNonZero);
+    snfr.aggrcontcoef.resize(numNonZero);
+    snfr.rhs = 0;
+    snfr.lambda = 0;
+    snfr.nnzs = 0;
+  }
 }
 
 bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
