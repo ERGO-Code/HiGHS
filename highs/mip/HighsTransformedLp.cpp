@@ -9,7 +9,6 @@
 
 #include "mip/HighsTransformedLp.h"
 
-#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
@@ -566,12 +565,9 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 
 // Create a single node flow relaxation (SNFR) from an aggregated
 // mixed-integer row and find a valid flow cover.
-bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
-                                                std::vector<double>& upper,
-                                                std::vector<double>& solval,
-                                                std::vector<HighsInt>& inds,
-                                                double& rhs,
-                                                bool& integersPositive,
+bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
+                                                std::vector<HighsInt> inds,
+                                                double rhs,
                                                 HighsCutGeneration::SNFRelaxation& snfr) {
 
   // Turn \sum c_i x_i + \sum a_i y_i <= a_0 (x_i binary, y_i real non-neg)
@@ -581,7 +577,6 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
   assert(snfr.vectorsum.getNonzeros().empty());
   const HighsSolution& lpSolution = lprelaxation.getLpSolver().getSolution();
 
-  HighsCDouble tmpRhs = rhs;
   HighsCDouble tmpSnfrRhs = rhs;
 
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
@@ -611,7 +606,8 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
                              double coef, double origbincoef, double lb,
                              double ub, bool isVub) {
     if (bincol == -1) return false;
-    if (snfr.bincolused[bincol]) return false;
+    if (snfr.binColUsed[bincol]) return false;
+    if (abs(vb.coef) >= 1e+6) return false;
     const double sign = coef >= 0 ? 1 : -1;
     if (isVub) {
       double val = sign * ((coef * vb.coef) + origbincoef);
@@ -631,16 +627,16 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
                           double binsolval, double contsolval, HighsInt coef,
                           double vubcoef, double aggrconstant,
                           double aggrbincoef, double aggrcontcoef) {
-    snfr.origbincols[snfr.nnzs] = origbincol;
-    snfr.origcontcols[snfr.nnzs] = origcontcol;
-    snfr.binsolval[snfr.nnzs] = binsolval;
-    snfr.contsolval[snfr.nnzs] = contsolval;
-    snfr.coef[snfr.nnzs] = coef;
-    snfr.vubcoef[snfr.nnzs] = vubcoef;
-    snfr.aggrconstant[snfr.nnzs] = aggrconstant;
-    snfr.aggrbincoef[snfr.nnzs] = aggrbincoef;
-    snfr.aggrcontcoef[snfr.nnzs] = aggrcontcoef;
-    snfr.nnzs++;
+    snfr.origBinCols[snfr.numNnzs] = origbincol;
+    snfr.origContCols[snfr.numNnzs] = origcontcol;
+    snfr.binSolval[snfr.numNnzs] = binsolval;
+    snfr.contSolval[snfr.numNnzs] = contsolval;
+    snfr.coef[snfr.numNnzs] = coef;
+    snfr.vubCoef[snfr.numNnzs] = vubcoef;
+    snfr.aggrConstant[snfr.numNnzs] = aggrconstant;
+    snfr.aggrBinCoef[snfr.numNnzs] = aggrbincoef;
+    snfr.aggrContCoef[snfr.numNnzs] = aggrcontcoef;
+    snfr.numNnzs++;
   };
 
   // Place the non-binary variables to the front (all general ints relaxed)
@@ -651,7 +647,7 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
     double ub = getUb(col);
     if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 0) {
       nbincols++;
-      snfr.origbincolcoef[col] = vals[i];
+      snfr.origBinColCoef[col] = vals[i];
       std::swap(inds[i], inds[numNz - nbincols]);
       std::swap(vals[i], vals[numNz - nbincols]);
     }
@@ -665,10 +661,10 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
     double ub = getUb(col);
 
     if (ub - lb < mip.options_mip_->small_matrix_value) {
-      tmpRhs -= std::min(lb, ub) * vals[i];
+      rhs -= std::min(lb, ub) * vals[i];
       tmpSnfrRhs -= std::min(lb, ub) * vals[i];
       if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 0) {
-        snfr.origbincolcoef[col] = 0;
+        snfr.origBinColCoef[col] = 0;
       }
       remove(i);
       continue;
@@ -718,11 +714,11 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
     // the non-relaxed column now be untransformed we would wrongly use the
     // variable bound even though this is not the correct way to untransform the
     // column.
-    BoundType oldBoundType = boundTypes[col];
+    // BoundType oldBoundType = boundTypes[col];
 
     // Transform entry into the SNFR
     if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 0) {
-      if (snfr.bincolused[col] != 1) {
+      if (snfr.binColUsed[col] != 1) {
         if (vals[i] >= 0) {
           addSNFRentry(col, -1, lpSolution.col_value[col],
                        lpSolution.col_value[col] * vals[i], 1, vals[i], 0,
@@ -736,123 +732,127 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
     } else {
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
         if (!checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
-                             snfr.origbincolcoef[bestVlb[col].first],
+                             snfr.origBinColCoef[bestVlb[col].first],
                              lb, ub, false)) {
           boundTypes[col] = BoundType::kSimpleLb;
         } else if (vals[i] > 0 ||
                    simpleLbDist[col] > lbDist[col] + mip.mipdata_->feastol) {
           boundTypes[col] = BoundType::kVariableLb;
-          snfr.bincolused[bestVlb[col].first] = true;
+          snfr.binColUsed[bestVlb[col].first] = true;
         } else
           boundTypes[col] = BoundType::kSimpleLb;
       } else if (ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
         if (!checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
-                             snfr.origbincolcoef[bestVub[col].first],
+                             snfr.origBinColCoef[bestVub[col].first],
                              lb, ub, true)) {
           boundTypes[col] = BoundType::kSimpleUb;
         } else if (vals[i] < 0 ||
                    simpleUbDist[col] > ubDist[col] + mip.mipdata_->feastol) {
           boundTypes[col] = BoundType::kVariableUb;
-          snfr.bincolused[bestVub[col].first] = true;
+          snfr.binColUsed[bestVub[col].first] = true;
         } else {
           boundTypes[col] = BoundType::kSimpleUb;
         }
       } else if (vals[i] > 0) {
         if (checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
-                            snfr.origbincolcoef[bestVlb[col].first],
+                            snfr.origBinColCoef[bestVlb[col].first],
                             lb, ub, false)) {
-          snfr.bincolused[bestVlb[col].first] = true;
+          snfr.binColUsed[bestVlb[col].first] = true;
           boundTypes[col] = BoundType::kVariableLb;
         } else {
           boundTypes[col] = BoundType::kSimpleLb;
         }
       } else {
         if (checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
-                            snfr.origbincolcoef[bestVub[col].first],
+                            snfr.origBinColCoef[bestVub[col].first],
                             lb, ub, true)) {
-          snfr.bincolused[bestVub[col].first] = true;
+          snfr.binColUsed[bestVub[col].first] = true;
           boundTypes[col] = BoundType::kVariableUb;
         } else {
           boundTypes[col] = BoundType::kSimpleUb;
         }
       }
 
+      double vbcoef;
+      double substsolval;
+      double aggrconstant;
+      HighsInt vbcol;
       switch (boundTypes[col]) {
         case BoundType::kSimpleLb:
-          double substsolval = static_cast<double>(
+          substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(lpSolution.col_value[col]) - ub));
-          double vubcoef =
+          vbcoef =
               static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
-          double valtimesub = static_cast<double>(HighsCDouble(vals[i]) * ub);
+          aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * ub);
           if (vals[i] >= 0) {
-            addSNFRentry(-1, col, 1.0, -substsolval, -1, vubcoef, valtimesub, 0,
+            addSNFRentry(-1, col, 1.0, -substsolval, -1, vbcoef, aggrconstant, 0,
                          -vals[i]);
           } else {
-            addSNFRentry(-1, col, 1, substsolval, 1, -vubcoef, -valtimesub, 0,
+            addSNFRentry(-1, col, 1, substsolval, 1, -vbcoef, -aggrconstant, 0,
                          vals[i]);
           }
-          tmpSnfrRhs -= valtimesub;
+          tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kSimpleUb:
-          double substsolval = static_cast<double>(
+          substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(lpSolution.col_value[col]) - lb));
-          double vubcoef =
+          vbcoef =
               static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
-          double valtimeslb = static_cast<double>(HighsCDouble(vals[i]) * lb);
+          aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * lb);
           if (vals[i] >= 0) {
-            addSNFRentry(-1, col, 1, substsolval, 1, vubcoef, -valtimeslb, 0,
+            addSNFRentry(-1, col, 1, substsolval, 1, vbcoef, -aggrconstant, 0,
                          vals[i]);
           } else {
-            addSNFRentry(-1, col, 1, -substsolval, -1, -vubcoef, valtimeslb, 0,
+            addSNFRentry(-1, col, 1, -substsolval, -1, -vbcoef, aggrconstant, 0,
                          -vals[i]);
           }
-          tmpSnfrRhs -= valtimeslb;
+          tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kVariableLb:
-          HighsInt vlbcol = bestVlb[col].first;
-          double substsolval = static_cast<double>(
+          vbcol = bestVlb[col].first;
+          substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(lpSolution.col_value[col]) -
                          bestVlb[col].second.constant) +
-              (HighsCDouble(lpSolution.col_value[vlbcol]) *
-               snfr.origbincolcoef[vlbcol]));
-          double vlbcoef = static_cast<double>(
+              (HighsCDouble(lpSolution.col_value[vbcol]) *
+               snfr.origBinColCoef[vbcol]));
+          vbcoef = static_cast<double>(
               HighsCDouble(vals[i]) * bestVlb[col].second.coef +
-              snfr.origbincolcoef[vlbcol]);
-          double valtimesvlbconst = static_cast<double>(
+              snfr.origBinColCoef[vbcol]);
+          aggrconstant = static_cast<double>(
               HighsCDouble(vals[i]) * bestVlb[col].second.constant);
           if (vals[i] >= 0) {
-            addSNFRentry(vlbcol, col, lpSolution.col_value[vlbcol],
-                         -substsolval, -1, -vlbcoef, valtimesvlbconst,
-                         -snfr.origbincolcoef[vlbcol], -vals[i]);
+            addSNFRentry(vbcol, col, lpSolution.col_value[vbcol],
+                         -substsolval, -1, -vbcoef, aggrconstant,
+                         -snfr.origBinColCoef[vbcol], -vals[i]);
           } else {
-            addSNFRentry(vlbcol, col, lpSolution.col_value[vlbcol], substsolval,
-                         1, vlbcoef, -valtimesvlbconst,
-                         snfr.origbincolcoef[vlbcol], vals[i]);
+            addSNFRentry(vbcol, col, lpSolution.col_value[vbcol], substsolval,
+                         1, vbcoef, -aggrconstant,
+                         snfr.origBinColCoef[vbcol], vals[i]);
           }
-          tmpSnfrRhs -= valtimesvlbconst;
+          tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kVariableUb:
-          HighsInt vubcol = bestVub[col].first;
-          double substsolval = static_cast<double>(
+          vbcol = bestVub[col].first;
+          substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(lpSolution.col_value[col]) -
                          bestVub[col].second.constant) +
-              (HighsCDouble(lpSolution.col_value[vubcol]) *
-               snfr.origbincolcoef[vubcol]));
-          double vubcoef = static_cast<double>(
+              (HighsCDouble(lpSolution.col_value[vbcol]) *
+               snfr.origBinColCoef[vbcol]));
+          vbcoef = static_cast<double>(
               HighsCDouble(vals[i]) * bestVub[col].second.coef +
-              snfr.origbincolcoef[vubcol]);
-          double valtimesvubconst = static_cast<double>(
+              snfr.origBinColCoef[vbcol]);
+          aggrconstant = static_cast<double>(
               HighsCDouble(vals[i]) * bestVub[col].second.constant);
           if (vals[i] >= 0) {
-            addSNFRentry(vubcol, col, lpSolution.col_value[vubcol], substsolval,
-                         1, vubcoef, -valtimesvubconst,
-                         snfr.origbincolcoef[vubcol], vals[i]);
+            addSNFRentry(vbcol, col, lpSolution.col_value[vbcol], substsolval,
+                         1, vbcoef, -aggrconstant,
+                         snfr.origBinColCoef[vbcol], vals[i]);
           } else {
-            addSNFRentry(vubcol, col, lpSolution.col_value[vubcol],
-                         -substsolval, -1, -vubcoef, valtimesvubconst,
-                         -snfr.origbincolcoef[vubcol], -vals[i]);
+            addSNFRentry(vbcol, col, lpSolution.col_value[vbcol],
+                         -substsolval, -1, -vbcoef, aggrconstant,
+                         -snfr.origBinColCoef[vbcol], -vals[i]);
           }
-          tmpSnfrRhs -= valtimesvubconst;
+          tmpSnfrRhs -= aggrconstant;
           break;
       }
     }
@@ -860,100 +860,7 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double>& vals,
     i++;
   }
 
-  snfr.rhs = double(tmpSnfrRhs);
+  snfr.rhs = static_cast<double>(tmpSnfrRhs);
   if (numNz == 0 && rhs >= -mip.mipdata_->feastol) return false;
-
-  // Compute the flow cover, i.e., get sets C1 subset N1 and C2 subset N2
-  // with sum_{j in C1} u_j - sum_{j in C2} u_j = b + lambda, lambda > 0
-  if (snfr.flowCoverStatus.size() < snfr.nnzs) {
-    snfr.flowCoverStatus.resize(snfr.nnzs);
-  }
-  std::vector<HighsInt> items(snfr.nnzs, -1);
-  HighsInt nNonFlowCover = 0;
-  HighsInt nFlowCover = 0;
-  HighsInt nitems = 0;
-  double n1itemsWeight = 0;
-  HighsCDouble flowCoverWeight = 0;
-  for (i = 0; i < snfr.nnzs; ++i) {
-    assert(snfr.coef[i] == 1 || snfr.coef[i] == -1);
-    if (abs(snfr.binsolval[i]) < mip.mipdata_->feastol) {
-      snfr.flowCoverStatus[i] = -1;
-      nNonFlowCover++;
-      continue;
-    }
-    if (fractionality(snfr.binsolval[i]) > mip.mipdata_->feastol) {
-      items[nitems] = i;
-      nitems++;
-      if (snfr.coef[i] == 1) {
-        n1itemsWeight += snfr.vubcoef[i];
-      }
-    } else if (snfr.coef[i] == 1 && snfr.binsolval[i] < 0.5) {
-      snfr.flowCoverStatus[i] = -1;
-      nNonFlowCover++;
-    } else if (snfr.coef[i] == 1 && snfr.binsolval[i] > 0.5) {
-      snfr.flowCoverStatus[i] = 1;
-      nFlowCover++;
-      flowCoverWeight += snfr.vubcoef[i];
-    } else if (snfr.coef[i] == -1 && snfr.binsolval[i] > 0.5) {
-      snfr.flowCoverStatus[i] = 1;
-      nNonFlowCover++;
-      flowCoverWeight -= snfr.vubcoef[i];
-    } else {
-      assert(snfr.coef[i] == -1 && snfr.binsolval[i] < 0.5);
-      snfr.flowCoverStatus[i] = -1;
-      nNonFlowCover++;
-    }
-  }
-  assert(nNonFlowCover + nFlowCover + nitems == snfr.nnzs);
-
-  double capacity = -snfr.rhs + static_cast<double>(flowCoverWeight) + n1itemsWeight;
-  // There is no flow cover if capacity is less than zero after fixing
-  if (capacity < mip.mipdata_->feastol) return false;
-  // Solve a knapsack greedily to assign items to C1, C2, N1\C1, N2\C2
-  double knapsackWeight = 0;
-  std::vector<double> weights(nitems);
-  std::vector<double> profits(nitems);
-  std::vector<HighsInt> perm(nitems);
-  std::iota(perm.begin(), perm.end(), 0);
-  for (i = 0; i < nitems; ++i) {
-    weights[i] = snfr.vubcoef[items[i]];
-    if (snfr.coef[items[i]] == 1) {
-      profits[i] = 1 - snfr.binsolval[items[i]];
-    } else {
-      profits[i] = snfr.binsolval[items[i]];
-    }
-  }
-  pdqsort(perm.begin(), perm.end(), [&](const HighsInt a, const HighsInt b) {
-    return profits[a] / weights[a] > profits[b] / weights[b];
-  });
-  // Greedily add items to knapsack
-  for (i = 0; i < nitems; ++i) {
-    HighsInt j = perm[i];
-    HighsInt k = items[j];
-    if (knapsackWeight + weights[j] < capacity) {
-      knapsackWeight += weights[j];
-      if (snfr.coef[k] == 1) {
-        snfr.flowCoverStatus[k] = -1;
-        nNonFlowCover++;
-      } else {
-        snfr.flowCoverStatus[k] = 1;
-        nFlowCover++;
-        flowCoverWeight -= snfr.vubcoef[k];
-      }
-    } else {
-      if (snfr.coef[k] == 1) {
-        snfr.flowCoverStatus[k] = 1;
-        nFlowCover++;
-        flowCoverWeight += snfr.vubcoef[k];
-      } else {
-        snfr.flowCoverStatus[k] = -1;
-        nNonFlowCover++;
-      }
-    }
-  }
-
-  snfr.lambda = static_cast<double>(flowCoverWeight) - snfr.rhs;
-  if (snfr.lambda < mip.mipdata_->feastol) return false;
-  rhs = static_cast<double>(tmpRhs);
   return true;
 }

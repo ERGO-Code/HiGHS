@@ -66,6 +66,10 @@ class HighsCutGeneration {
   bool cmirCutGenerationHeuristic(double minEfficacy,
                                   bool onlyInitialCMIRScale = false);
 
+  bool computeFlowCover();
+
+  bool separateLiftedFlowCover();
+
   double scale(double val);
 
   bool postprocessCut();
@@ -107,24 +111,23 @@ class HighsCutGeneration {
 
   /// Single Node Flow Relaxation for flow cover cuts
   struct SNFRelaxation {
-    std::vector<bool> bincolused; // has col been used in a vub
-    std::vector<double> origbincolcoef; // original bin col coef
+    std::vector<bool> binColUsed; // has col been used in a vub
+    std::vector<double> origBinColCoef; // original bin col coef
 
-    HighsInt nnzs; // number of nonzeros
+    HighsInt numNnzs; // number of nonzeros
     std::vector<HighsInt> coef; // coefficients of cols in SNFR
-    std::vector<double> vubcoef; // coefficients in vub of cols in SNFR
-    std::vector<double> binsolval; // vub bin col sol in SNFR
-    std::vector<double> contsolval; // real sol in SNFR
-    std::vector<HighsInt> origbincols; // orig bin col used in SNFR
-    std::vector<HighsInt> origcontcols; // orig cont cols used in SNFR
-    std::vector<double> aggrbincoef; // aggr coef of orignal bin-col in SNFR
-    std::vector<double> aggrcontcoef; // aggr coef of original cont-col in SNFR
-    std::vector<double> aggrconstant; // aggr original constant in SNFR
+    std::vector<double> vubCoef; // coefficients in vub of cols in SNFR
+    std::vector<double> binSolval; // vub bin col sol in SNFR
+    std::vector<double> contSolval; // real sol in SNFR
+    std::vector<HighsInt> origBinCols; // orig bin col used in SNFR
+    std::vector<HighsInt> origContCols; // orig cont cols used in SNFR
+    std::vector<double> aggrBinCoef; // aggr coef of orignal bin-col in SNFR
+    std::vector<double> aggrContCoef; // aggr coef of original cont-col in SNFR
+    std::vector<double> aggrConstant; // aggr original constant in SNFR
 
     std::vector<HighsInt> flowCoverStatus; // (+1) in fcover (-1) not in fcover
     double rhs;
     double lambda;
-    std::vector<BoundType> boundTypes;
     HighsSparseVectorSum vectorsum;
   };
 
