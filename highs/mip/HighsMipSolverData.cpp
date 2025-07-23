@@ -2421,7 +2421,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
 
   // This MIP instance may have been terminated
-  if (terminatorActive()) 
+  if (terminatorActive())
     if (this->terminatorTerminated()) return true;
 
   // Possible user interrupt

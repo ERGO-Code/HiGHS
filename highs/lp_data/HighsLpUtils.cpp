@@ -2564,7 +2564,8 @@ HighsStatus assessLpPrimalSolution(const std::string message,
   HighsStatus return_status =
       calculateRowValuesQuad(lp, solution.col_value, row_value);
   if (return_status != HighsStatus::kOk) return return_status;
-  const bool have_row_names = lp.row_names_.size() >= static_cast<size_t>(lp.num_row_);
+  const bool have_row_names =
+      lp.row_names_.size() >= static_cast<size_t>(lp.num_row_);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     const double primal = solution.row_value[iRow];
     const double lower = lp.row_lower_[iRow];

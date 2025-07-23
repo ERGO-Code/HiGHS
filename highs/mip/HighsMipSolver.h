@@ -33,7 +33,6 @@ struct MipRaceIncumbent {
                 std::vector<double>& solution_) const;
 };
 
-
 /*
   struct MipRaceIncumbent {
   std::atomic<HighsInt> start_write_incumbent = kMipRaceNoSolution;
