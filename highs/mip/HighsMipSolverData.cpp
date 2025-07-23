@@ -2923,6 +2923,12 @@ void MipRaceRecord::clear() { this->incumbent.clear(); }
 void MipRaceRecord::initialise(const HighsInt mip_race_concurrency,
                                const HighsInt num_col) {
   this->clear();
+  this->incumbent.resize(mip_race_concurrency);
+
+  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
+    this->incumbent[instance].initialise(num_col);
+
+  /*
   MipRaceIncumbent incumbent_;
   incumbent_.initialise(num_col);
   // Loop from 1...
@@ -2930,6 +2936,7 @@ void MipRaceRecord::initialise(const HighsInt mip_race_concurrency,
     this->incumbent.push_back(incumbent_);
   // ... and move incumbent_ to complete the vector of incumbents
   this->incumbent.push_back(std::move(incumbent_));
+  */
 }
 
 HighsInt MipRaceRecord::concurrency() const {

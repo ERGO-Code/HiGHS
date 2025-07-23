@@ -33,6 +33,36 @@ struct MipRaceIncumbent {
                 std::vector<double>& solution_) const;
 };
 
+
+/*
+  struct MipRaceIncumbent {
+  std::atomic<HighsInt> start_write_incumbent = kMipRaceNoSolution;
+  std::atomic<HighsInt> finish_write_incumbent = kMipRaceNoSolution;
+  double objective = -kHighsInf;
+  std::vector<double> solution;
+  void clear();
+  void initialise(const HighsInt num_col);
+  void update(const double objective, const std::vector<double>& solution);
+  HighsInt read(const HighsInt last_incumbent_read, double& objective_,
+                std::vector<double>& solution_) const;
+
+  MipRaceIncumbent() = default;
+
+  MipRaceIncumbent(const MipRaceIncumbent& copy) {
+    start_write_incumbent = copy.start_write_incumbent.load();
+    finish_write_incumbent = copy.finish_write_incumbent.load();
+    objective = copy.objective;
+    solution = copy.solution;
+  }
+
+  MipRaceIncumbent(MipRaceIncumbent&& moving) {
+    start_write_incumbent = moving.start_write_incumbent.load();
+    finish_write_incumbent = moving.finish_write_incumbent.load();
+    objective = moving.objective;
+    solution = std::move(moving.solution);
+  }
+};
+*/
 struct MipRaceRecord {
   std::vector<MipRaceIncumbent> incumbent;
   void clear();
