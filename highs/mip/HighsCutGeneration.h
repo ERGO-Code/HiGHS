@@ -68,7 +68,10 @@ class HighsCutGeneration {
 
   bool computeFlowCover();
 
-  bool separateLiftedFlowCover();
+  bool separateLiftedFlowCover(std::vector<double>& vals,
+                               std::vector<HighsInt>& inds,
+                               double& rhs,
+                               double& efficacy);
 
   double scale(double val);
 

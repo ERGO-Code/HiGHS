@@ -565,13 +565,12 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 
 // Create a single node flow relaxation (SNFR) from an aggregated
 // mixed-integer row and find a valid flow cover.
+// Turn \sum c_i x_i + \sum a_i y_i <= a_0 (x_i binary, y_i real non-neg)
+// into \sum_{j \in N1} y_j - \sum_{j \in N2} y_j <= b, where y_j <= u_j x_j
 bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
                                                 std::vector<HighsInt> inds,
                                                 double rhs,
                                                 HighsCutGeneration::SNFRelaxation& snfr) {
-
-  // Turn \sum c_i x_i + \sum a_i y_i <= a_0 (x_i binary, y_i real non-neg)
-  // into \sum_{j \in N1} y_j - \sum_{j \in N2} y_j <= b, where y_j <= u_j x_j
 
   // vector sum should be empty
   assert(snfr.vectorsum.getNonzeros().empty());
@@ -583,6 +582,7 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
   const HighsInt slackOffset = lprelaxation.numCols();
 
   HighsInt numNz = inds.size();
+  HighsInt numBinCols = 0;
 
   auto getLb = [&](HighsInt col) {
     return (col < slackOffset ? mip.mipdata_->domain.col_lower_[col]
@@ -596,10 +596,18 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
 
   auto remove = [&](HighsInt position) {
     numNz--;
-    inds[position] = inds[numNz];
-    vals[position] = vals[numNz];
+    if (position < numNz - numBinCols - 1) {
+      std::swap(vals[position], vals[numNz - numBinCols]);
+      std::swap(vals[numNz - numBinCols], vals[numNz]);
+      std::swap(inds[position], inds[numNz - numBinCols]);
+      std::swap(inds[numNz - numBinCols], inds[numNz]);
+    } else {
+      inds[position] = inds[numNz];
+      vals[position] = vals[numNz];
+    }
     inds[numNz] = 0;
     vals[numNz] = 0;
+    numNz--;
   };
 
   auto checkValidityVB = [&](HighsInt bincol, HighsImplications::VarBound vb,
@@ -616,7 +624,7 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
       if (val < 0) return false;
     } else {
       double val = sign * ((coef * vb.coef) + origbincoef);
-      if (val > 0 || val > kHighsInf) return false;
+      if (val > 0 || -val > kHighsInf) return false;
       val = sign * ((coef * (ub - vb.constant)) + origbincoef);
       if (val > 0) return false;
     }
@@ -627,6 +635,7 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
                           double binsolval, double contsolval, HighsInt coef,
                           double vubcoef, double aggrconstant,
                           double aggrbincoef, double aggrcontcoef) {
+    assert(binsolval >= -1e-6 && binsolval <= 1 + 1e-6);
     snfr.origBinCols[snfr.numNnzs] = origbincol;
     snfr.origContCols[snfr.numNnzs] = origcontcol;
     snfr.binSolval[snfr.numNnzs] = binsolval;
@@ -640,20 +649,22 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
   };
 
   // Place the non-binary variables to the front (all general ints relaxed)
-  HighsInt nbincols = 0;
-  for (HighsInt i = 0; i < numNz - nbincols; ++i) {
+  HighsInt i = 0;
+  while (i < numNz - numBinCols) {
     HighsInt col = inds[i];
     double lb = getLb(col);
     double ub = getUb(col);
-    if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 0) {
-      nbincols++;
+    if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1) {
+      numBinCols++;
       snfr.origBinColCoef[col] = vals[i];
-      std::swap(inds[i], inds[numNz - nbincols]);
-      std::swap(vals[i], vals[numNz - nbincols]);
+      std::swap(inds[i], inds[numNz - numBinCols]);
+      std::swap(vals[i], vals[numNz - numBinCols]);
+      continue;
     }
+    ++i;
   }
 
-  HighsInt i = 0;
+  i = 0;
   while (i < numNz) {
     HighsInt col = inds[i];
 
@@ -663,7 +674,7 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
     if (ub - lb < mip.options_mip_->small_matrix_value) {
       rhs -= std::min(lb, ub) * vals[i];
       tmpSnfrRhs -= std::min(lb, ub) * vals[i];
-      if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 0) {
+      if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1) {
         snfr.origBinColCoef[col] = 0;
       }
       remove(i);
@@ -671,7 +682,6 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
     }
 
     if (lb == -kHighsInf && ub == kHighsInf) {
-      vectorsum.clear();
       return false;
     }
 
@@ -717,8 +727,8 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
     // BoundType oldBoundType = boundTypes[col];
 
     // Transform entry into the SNFR
-    if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 0) {
-      if (snfr.binColUsed[col] != 1) {
+    if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1) {
+      if (snfr.binColUsed[col] == false) {
         if (vals[i] >= 0) {
           addSNFRentry(col, -1, lpSolution.col_value[col],
                        lpSolution.col_value[col] * vals[i], 1, vals[i], 0,
@@ -728,6 +738,7 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
                        -lpSolution.col_value[col] * vals[i], -1, -vals[i], 0,
                        -vals[i], 0);
         }
+        snfr.binColUsed[col] = true;
       }
     } else {
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
@@ -862,5 +873,138 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
 
   snfr.rhs = static_cast<double>(tmpSnfrRhs);
   if (numNz == 0 && rhs >= -mip.mipdata_->feastol) return false;
+  return true;
+}
+
+bool HighsTransformedLp::untransformSNFRelaxation(std::vector<double>& vals,
+                                     std::vector<HighsInt>& inds, double& rhs,
+                                     bool integral) {
+  HighsCDouble tmpRhs = rhs;
+  const HighsMipSolver& mip = lprelaxation.getMipSolver();
+  const HighsInt slackOffset = mip.numCol();
+
+  HighsInt numNz = static_cast<HighsInt>(inds.size());
+
+  for (HighsInt i = 0; i != numNz; ++i) {
+    if (vals[i] == 0.0) continue;
+    HighsInt col = inds[i];
+    if (col < slackOffset) {
+      vectorsum.add(col, vals[i]);
+    } else {
+
+    }
+  }
+
+  for (HighsInt i = 0; i != numNz; ++i) {
+    if (vals[i] == 0.0) continue;
+    HighsInt col = inds[i];
+
+    switch (boundTypes[col]) {
+      case BoundType::kVariableLb: {
+        tmpRhs += bestVlb[col].second.constant * vals[i];
+        vectorsum.add(bestVlb[col].first, -vals[i] * bestVlb[col].second.coef);
+        vectorsum.add(col, vals[i]);
+        break;
+      }
+      case BoundType::kVariableUb: {
+        tmpRhs -= bestVub[col].second.constant * vals[i];
+        vectorsum.add(bestVub[col].first, vals[i] * bestVub[col].second.coef);
+        vectorsum.add(col, -vals[i]);
+        break;
+      }
+      case BoundType::kSimpleLb: {
+        if (col < slackOffset) {
+          tmpRhs += vals[i] * mip.mipdata_->domain.col_lower_[col];
+          vectorsum.add(col, vals[i]);
+        } else {
+          HighsInt row = col - slackOffset;
+          tmpRhs += vals[i] * lprelaxation.slackLower(row);
+
+          HighsInt rowlen;
+          const HighsInt* rowinds;
+          const double* rowvals;
+          lprelaxation.getRow(row, rowlen, rowinds, rowvals);
+
+          for (HighsInt j = 0; j != rowlen; ++j)
+            vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
+        }
+        break;
+      }
+      case BoundType::kSimpleUb: {
+        if (col < slackOffset) {
+          tmpRhs -= vals[i] * mip.mipdata_->domain.col_upper_[col];
+          vectorsum.add(col, -vals[i]);
+        } else {
+          HighsInt row = col - slackOffset;
+          tmpRhs -= vals[i] * lprelaxation.slackUpper(row);
+          vals[i] = -vals[i];
+
+          HighsInt rowlen;
+          const HighsInt* rowinds;
+          const double* rowvals;
+          lprelaxation.getRow(row, rowlen, rowinds, rowvals);
+
+          for (HighsInt j = 0; j != rowlen; ++j)
+            vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
+        }
+      }
+    }
+  }
+
+  if (integral) {
+    // if the cut is integral, we just round all coefficient values and the
+    // right hand side to the nearest integral value, as small deviation
+    // only come from numerical errors during resubstitution of slack variables
+
+    auto IsZero = [&](HighsInt col, double val) {
+      assert(col < mip.numCol());
+      return fabs(val) < 0.5;
+    };
+
+    vectorsum.cleanup(IsZero);
+    rhs = std::round(double(tmpRhs));
+  } else {
+    bool abort = false;
+    auto IsZero = [&](HighsInt col, double val) {
+      assert(col < mip.numCol());
+      double absval = std::abs(val);
+      if (absval <= mip.options_mip_->small_matrix_value) return true;
+
+      if (absval <= mip.mipdata_->feastol) {
+        if (val > 0) {
+          if (mip.mipdata_->domain.col_lower_[col] == -kHighsInf)
+            abort = true;
+          else
+            tmpRhs -= val * mip.mipdata_->domain.col_lower_[col];
+        } else {
+          if (mip.mipdata_->domain.col_upper_[col] == kHighsInf)
+            abort = true;
+          else
+            tmpRhs -= val * mip.mipdata_->domain.col_upper_[col];
+        }
+        return true;
+      }
+      return false;
+    };
+
+    vectorsum.cleanup(IsZero);
+    if (abort) {
+      vectorsum.clear();
+      return false;
+    }
+    rhs = double(tmpRhs);
+  }
+
+  inds = vectorsum.getNonzeros();
+  numNz = inds.size();
+  vals.resize(numNz);
+
+  if (integral)
+    for (HighsInt i = 0; i != numNz; ++i)
+      vals[i] = std::round(vectorsum.getValue(inds[i]));
+  else
+    for (HighsInt i = 0; i != numNz; ++i) vals[i] = vectorsum.getValue(inds[i]);
+  vectorsum.clear();
+
   return true;
 }

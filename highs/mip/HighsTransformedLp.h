@@ -61,11 +61,13 @@ class HighsTransformedLp {
   bool untransform(std::vector<double>& vals, std::vector<HighsInt>& inds,
                    double& rhs, bool integral = false);
 
-  bool transformSNFRelaxation(std::vector<double>& vals,
-                              std::vector<double>& upper,
-                              std::vector<double>& solval,
-                              std::vector<HighsInt>& inds, double& rhs,
+  bool transformSNFRelaxation(std::vector<double> vals,
+                              std::vector<HighsInt> inds, double rhs,
                               HighsCutGeneration::SNFRelaxation& snfr);
+
+  bool untransformSNFRelaxation(std::vector<double>& vals,
+                                std::vector<HighsInt>& inds, double& rhs,
+                                bool integral);
 };
 
 #endif
