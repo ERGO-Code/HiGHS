@@ -6,7 +6,6 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
 #include "mip/HighsTransformedLp.h"
 
 #include "mip/HighsMipSolverData.h"
@@ -567,11 +566,9 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 // mixed-integer row and find a valid flow cover.
 // Turn \sum c_i x_i + \sum a_i y_i <= a_0 (x_i binary, y_i real non-neg)
 // into \sum_{j \in N1} y_j - \sum_{j \in N2} y_j <= b, where y_j <= u_j x_j
-bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
-                                                std::vector<HighsInt> inds,
-                                                double rhs,
-                                                HighsCutGeneration::SNFRelaxation& snfr) {
-
+bool HighsTransformedLp::transformSNFRelaxation(
+    std::vector<double> vals, std::vector<HighsInt> inds, double rhs,
+    HighsCutGeneration::SNFRelaxation& snfr) {
   // vector sum should be empty
   assert(snfr.vectorsum.getNonzeros().empty());
   const HighsSolution& lpSolution = lprelaxation.getLpSolver().getSolution();
@@ -592,6 +589,15 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
   auto getUb = [&](HighsInt col) {
     return (col < slackOffset ? mip.mipdata_->domain.col_upper_[col]
                               : lprelaxation.slackUpper(col - slackOffset));
+  };
+
+  auto getLpSolution = [&](HighsInt col) {
+    HighsInt numCols = lprelaxation.numCols();
+    if (col < numCols) {
+      return lpSolution.col_value[col];
+    } else {
+      return lpSolution.row_value[col - numCols];
+    }
   };
 
   auto remove = [&](HighsInt position) {
@@ -635,13 +641,15 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
                           double binsolval, double contsolval, HighsInt coef,
                           double vubcoef, double aggrconstant,
                           double aggrbincoef, double aggrcontcoef) {
-    assert(binsolval >= -1e-6 && binsolval <= 1 + 1e-6);
+    assert(binsolval >= -lprelaxation.getMipSolver().mipdata_->feastol &&
+           binsolval <= 1 + lprelaxation.getMipSolver().mipdata_->feastol);
+    assert(vubcoef >= -1e-10);
     snfr.origBinCols[snfr.numNnzs] = origbincol;
     snfr.origContCols[snfr.numNnzs] = origcontcol;
     snfr.binSolval[snfr.numNnzs] = binsolval;
     snfr.contSolval[snfr.numNnzs] = contsolval;
     snfr.coef[snfr.numNnzs] = coef;
-    snfr.vubCoef[snfr.numNnzs] = vubcoef;
+    snfr.vubCoef[snfr.numNnzs] = std::max(vubcoef, 0.0);
     snfr.aggrConstant[snfr.numNnzs] = aggrconstant;
     snfr.aggrBinCoef[snfr.numNnzs] = aggrbincoef;
     snfr.aggrContCoef[snfr.numNnzs] = aggrcontcoef;
@@ -730,21 +738,20 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
     if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1) {
       if (snfr.binColUsed[col] == false) {
         if (vals[i] >= 0) {
-          addSNFRentry(col, -1, lpSolution.col_value[col],
-                       lpSolution.col_value[col] * vals[i], 1, vals[i], 0,
-                       vals[i], 0);
+          addSNFRentry(col, -1, getLpSolution(col),
+                       getLpSolution(col) * vals[i], 1, vals[i], 0, vals[i], 0);
         } else {
-          addSNFRentry(col, -1, lpSolution.col_value[col],
-                       -lpSolution.col_value[col] * vals[i], -1, -vals[i], 0,
-                       -vals[i], 0);
+          addSNFRentry(col, -1, getLpSolution(col),
+                       -getLpSolution(col) * vals[i], -1, -vals[i], 0, -vals[i],
+                       0);
         }
         snfr.binColUsed[col] = true;
       }
     } else {
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
         if (!checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
-                             snfr.origBinColCoef[bestVlb[col].first],
-                             lb, ub, false)) {
+                             snfr.origBinColCoef[bestVlb[col].first], lb, ub,
+                             false)) {
           boundTypes[col] = BoundType::kSimpleLb;
         } else if (vals[i] > 0 ||
                    simpleLbDist[col] > lbDist[col] + mip.mipdata_->feastol) {
@@ -754,8 +761,8 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
           boundTypes[col] = BoundType::kSimpleLb;
       } else if (ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
         if (!checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
-                             snfr.origBinColCoef[bestVub[col].first],
-                             lb, ub, true)) {
+                             snfr.origBinColCoef[bestVub[col].first], lb, ub,
+                             true)) {
           boundTypes[col] = BoundType::kSimpleUb;
         } else if (vals[i] < 0 ||
                    simpleUbDist[col] > ubDist[col] + mip.mipdata_->feastol) {
@@ -766,8 +773,8 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
         }
       } else if (vals[i] > 0) {
         if (checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
-                            snfr.origBinColCoef[bestVlb[col].first],
-                            lb, ub, false)) {
+                            snfr.origBinColCoef[bestVlb[col].first], lb, ub,
+                            false)) {
           snfr.binColUsed[bestVlb[col].first] = true;
           boundTypes[col] = BoundType::kVariableLb;
         } else {
@@ -775,8 +782,8 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
         }
       } else {
         if (checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
-                            snfr.origBinColCoef[bestVub[col].first],
-                            lb, ub, true)) {
+                            snfr.origBinColCoef[bestVub[col].first], lb, ub,
+                            true)) {
           snfr.binColUsed[bestVub[col].first] = true;
           boundTypes[col] = BoundType::kVariableUb;
         } else {
@@ -792,12 +799,11 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
         case BoundType::kSimpleLb:
           substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(lpSolution.col_value[col]) - ub));
-          vbcoef =
-              static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
+          vbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * ub);
           if (vals[i] >= 0) {
-            addSNFRentry(-1, col, 1.0, -substsolval, -1, vbcoef, aggrconstant, 0,
-                         -vals[i]);
+            addSNFRentry(-1, col, 1.0, -substsolval, -1, vbcoef, aggrconstant,
+                         0, -vals[i]);
           } else {
             addSNFRentry(-1, col, 1, substsolval, 1, -vbcoef, -aggrconstant, 0,
                          vals[i]);
@@ -807,8 +813,7 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
         case BoundType::kSimpleUb:
           substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(lpSolution.col_value[col]) - lb));
-          vbcoef =
-              static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
+          vbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * lb);
           if (vals[i] >= 0) {
             addSNFRentry(-1, col, 1, substsolval, 1, vbcoef, -aggrconstant, 0,
@@ -826,19 +831,19 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
                          bestVlb[col].second.constant) +
               (HighsCDouble(lpSolution.col_value[vbcol]) *
                snfr.origBinColCoef[vbcol]));
-          vbcoef = static_cast<double>(
-              HighsCDouble(vals[i]) * bestVlb[col].second.coef +
-              snfr.origBinColCoef[vbcol]);
-          aggrconstant = static_cast<double>(
-              HighsCDouble(vals[i]) * bestVlb[col].second.constant);
+          vbcoef = static_cast<double>(HighsCDouble(vals[i]) *
+                                           bestVlb[col].second.coef +
+                                       snfr.origBinColCoef[vbcol]);
+          aggrconstant = static_cast<double>(HighsCDouble(vals[i]) *
+                                             bestVlb[col].second.constant);
           if (vals[i] >= 0) {
-            addSNFRentry(vbcol, col, lpSolution.col_value[vbcol],
-                         -substsolval, -1, -vbcoef, aggrconstant,
-                         -snfr.origBinColCoef[vbcol], -vals[i]);
+            addSNFRentry(vbcol, col, lpSolution.col_value[vbcol], -substsolval,
+                         -1, -vbcoef, aggrconstant, -snfr.origBinColCoef[vbcol],
+                         -vals[i]);
           } else {
             addSNFRentry(vbcol, col, lpSolution.col_value[vbcol], substsolval,
-                         1, vbcoef, -aggrconstant,
-                         snfr.origBinColCoef[vbcol], vals[i]);
+                         1, vbcoef, -aggrconstant, snfr.origBinColCoef[vbcol],
+                         vals[i]);
           }
           tmpSnfrRhs -= aggrconstant;
           break;
@@ -849,19 +854,19 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
                          bestVub[col].second.constant) +
               (HighsCDouble(lpSolution.col_value[vbcol]) *
                snfr.origBinColCoef[vbcol]));
-          vbcoef = static_cast<double>(
-              HighsCDouble(vals[i]) * bestVub[col].second.coef +
-              snfr.origBinColCoef[vbcol]);
-          aggrconstant = static_cast<double>(
-              HighsCDouble(vals[i]) * bestVub[col].second.constant);
+          vbcoef = static_cast<double>(HighsCDouble(vals[i]) *
+                                           bestVub[col].second.coef +
+                                       snfr.origBinColCoef[vbcol]);
+          aggrconstant = static_cast<double>(HighsCDouble(vals[i]) *
+                                             bestVub[col].second.constant);
           if (vals[i] >= 0) {
             addSNFRentry(vbcol, col, lpSolution.col_value[vbcol], substsolval,
-                         1, vbcoef, -aggrconstant,
-                         snfr.origBinColCoef[vbcol], vals[i]);
+                         1, vbcoef, -aggrconstant, snfr.origBinColCoef[vbcol],
+                         vals[i]);
           } else {
-            addSNFRentry(vbcol, col, lpSolution.col_value[vbcol],
-                         -substsolval, -1, -vbcoef, aggrconstant,
-                         -snfr.origBinColCoef[vbcol], -vals[i]);
+            addSNFRentry(vbcol, col, lpSolution.col_value[vbcol], -substsolval,
+                         -1, -vbcoef, aggrconstant, -snfr.origBinColCoef[vbcol],
+                         -vals[i]);
           }
           tmpSnfrRhs -= aggrconstant;
           break;
@@ -877,8 +882,8 @@ bool HighsTransformedLp::transformSNFRelaxation(std::vector<double> vals,
 }
 
 bool HighsTransformedLp::untransformSNFRelaxation(std::vector<double>& vals,
-                                     std::vector<HighsInt>& inds, double& rhs,
-                                     bool integral) {
+                                                  std::vector<HighsInt>& inds,
+                                                  double& rhs, bool integral) {
   HighsCDouble tmpRhs = rhs;
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
   const HighsInt slackOffset = mip.numCol();
@@ -891,7 +896,6 @@ bool HighsTransformedLp::untransformSNFRelaxation(std::vector<double>& vals,
     if (col < slackOffset) {
       vectorsum.add(col, vals[i]);
     } else {
-
     }
   }
 

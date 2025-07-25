@@ -719,6 +719,21 @@ bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
     }
   }
 
+  // shift all variables back to their original bounds (this was
+  // implicitly done to make everything >= 0).
+  // Then substitute the slack out additionally.
+  // This can be done by directly replacing it via its
+  // representation.
+  // TODO: All originally shiftings have been already made? (those are the
+  // changes to tmpRhs by some constant)
+
+  // TODO: Why not transform the cut back in the standard way?
+  // TODO: Change the definition of snfr.aggrConstant (remove val multiplier)
+  // TODO: Go through snfr.vectorsum and shift everything back:
+  // TODO: vectorsum.getval * constant
+  // TODO: For slack variables also substitute back the original variables
+  // TODO: Be careful of coefficients changing when substituting
+
   // substitute the slack out of the cut
   snfr.vectorsum.clear();
   return true;
@@ -1360,7 +1375,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   if (!onlyInitialCMIRScale) {
     initSNFRelaxation(static_cast<HighsInt>(inds_.size()));
     flowcoversuccess = transLp.transformSNFRelaxation(vals_, inds_, rhs_, snfr);
-    printf("%d\n", std::rand());
+    // printf("%d\n", std::rand());
     if (!flowcoversuccess) goto cmir;
     flowcoversuccess = computeFlowCover(); // TODO: When should this return false?
     if (!flowcoversuccess) goto cmir;
