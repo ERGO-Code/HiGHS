@@ -18,14 +18,24 @@ class FactorHiGHSSolver : public LinearSolver {
   // numeric factorisation
   Numeric N_;
 
-  // keep track of whether as or ne is being factorised
-  bool use_as_ = true;
+  // normal equations data
+  std::vector<Int> ptrNE_, rowsNE_;
+  std::vector<double> valNE_;
+  HighsSparseMatrix AT_;
 
   Info* info_ = nullptr;
 
-  Int choose(const Model& model, Options& options);
+  Int chooseNla(const Model& model, Options& options);
   Int setNla(const Model& model, Options& options);
   void setParallel(Options& options);
+  Int buildNEstructureDense(
+      const HighsSparseMatrix& A,
+      int64_t max_num_nz = std::numeric_limits<Int>::max());
+  Int buildNEstructureSparse(
+      const HighsSparseMatrix& A,
+      int64_t max_num_nz = std::numeric_limits<Int>::max());
+  Int buildNEvalues(const HighsSparseMatrix& A,
+                    const std::vector<double>& scaling);
 
  public:
   FactorHiGHSSolver(const Options& options, Info* info);

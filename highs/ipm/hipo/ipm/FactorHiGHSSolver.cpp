@@ -8,11 +8,6 @@
 
 namespace hipo {
 
-Int computeLowerAThetaAT(
-    const HighsSparseMatrix& matrix, const std::vector<double>& scaling,
-    HighsSparseMatrix& AAT,
-    const int64_t max_num_nz = std::numeric_limits<Int>::max());
-
 FactorHiGHSSolver::FactorHiGHSSolver(const Options& options, Info* info)
     : S_{}, N_(S_), info_{info} {}
 
@@ -21,24 +16,9 @@ void FactorHiGHSSolver::clear() {
   DataCollector::get()->append();
 }
 
-Int getNE(const HighsSparseMatrix& A, std::vector<Int>& ptr,
-          std::vector<Int>& rows,
-          const int64_t max_num_nz = std::numeric_limits<Int>::max()) {
-  // Normal equations, full matrix
-  std::vector<double> theta;
-  HighsSparseMatrix AAt;
-  Int status = computeLowerAThetaAT(A, theta, AAt, max_num_nz);
-  if (status) return status;
-
-  rows = std::move(AAt.index_);
-  ptr = std::move(AAt.start_);
-
-  return kStatusOk;
-}
-
-Int getAS(const HighsSparseMatrix& A, std::vector<Int>& ptr,
-          std::vector<Int>& rows) {
-  // Augmented system, lower triangular
+Int getASstructure(const HighsSparseMatrix& A, std::vector<Int>& ptr,
+                   std::vector<Int>& rows) {
+  // Augmented system structure
 
   Int nA = A.num_col_;
   Int mA = A.num_row_;
@@ -78,6 +58,184 @@ Int FactorHiGHSSolver::setup(const Model& model, Options& options) {
   setParallel(options);
 
   S_.print(Log::debug(1));
+  return kStatusOk;
+}
+
+Int FactorHiGHSSolver::buildNEstructureDense(const HighsSparseMatrix& A,
+                                             int64_t max_num_nz) {
+  // Build lower triangular structure of AAt.
+  // This approach should be advantageous if AAt is expected to be relatively
+  // dense.
+  // It actually seems to work well in general, so I use this for now.
+
+  // create row-wise copy of the matrix
+  AT_ = A;
+  AT_.ensureRowwise();
+
+  ptrNE_.clear();
+  rowsNE_.clear();
+
+  // ptr is allocated its exact size
+  ptrNE_.resize(A.num_row_ + 1, 0);
+
+  // temporary dense vector
+  std::vector<Int> work(A.num_row_);
+
+  int64_t AAt_nz = 0;
+
+  for (Int row = 0; row < A.num_row_; ++row) {
+    // work contains information about column "row".
+    // if there is a 1 in position pos, then AAt has nonzero in entry (pos,row).
+    // only entries below entry "row" (the diagonal) are used.
+
+    // go along the entries of the row, and then down each column.
+    // this builds the lower triangular part of the row-th column of AAt.
+    for (Int rowEl = AT_.start_[row]; rowEl < AT_.start_[row + 1]; ++rowEl) {
+      Int col = AT_.index_[rowEl];
+
+      // for each nonzero in the row, go down corresponding column
+      for (Int colEl = A.start_[col]; colEl < A.start_[col + 1]; ++colEl) {
+        Int row2 = A.index_[colEl];
+
+        // skip when row2 is above row
+        if (row2 < row) continue;
+
+        // save information that there is nonzero in position (row2,row).
+        work[row2] = 1;
+      }
+    }
+    // intersection of row with rows below finished.
+    // now work contains the sparsity pattern of AAt(row:end,row).
+
+    // now assign indices
+    Int col_nz = 0;
+    for (Int i = row; i < work.size(); ++i) {
+      if (work[i]) {
+        if (AAt_nz + 1 >= max_num_nz) return kStatusOoM;
+
+        rowsNE_.push_back(i);
+        work[i] = 0;
+        ++AAt_nz;
+        ++col_nz;
+      }
+    }
+
+    // update pointers
+    ptrNE_[row + 1] = ptrNE_[row] + col_nz;
+  }
+
+  return kStatusOk;
+}
+
+Int FactorHiGHSSolver::buildNEstructureSparse(const HighsSparseMatrix& A,
+                                              int64_t max_num_nz) {
+  // Build lower triangular structure of AAt.
+  // This approach should be advantageous if AAt is expected to be very sparse.
+
+  // create row-wise copy of the matrix
+  AT_ = A;
+  AT_.ensureRowwise();
+
+  ptrNE_.clear();
+  rowsNE_.clear();
+
+  // ptr is allocated its exact size
+  ptrNE_.resize(A.num_row_ + 1, 0);
+
+  // keep track if given entry is nonzero, in column considered
+  std::vector<bool> is_nz(A.num_row_, false);
+
+  // temporary storage of indices
+  std::vector<Int> temp_index(A.num_row_);
+
+  for (Int row = 0; row < A.num_row_; ++row) {
+    // go along the entries of the row, and then down each column.
+    // this builds the lower triangular part of the row-th column of AAt.
+
+    Int nz_in_col = 0;
+
+    for (Int rowEl = AT_.start_[row]; rowEl < AT_.start_[row + 1]; ++rowEl) {
+      Int col = AT_.index_[rowEl];
+
+      // for each nonzero in the row, go down corresponding column
+      for (Int colEl = A.start_[col]; colEl < A.start_[col + 1]; ++colEl) {
+        Int row2 = A.index_[colEl];
+
+        // skip when row2 is above row
+        if (row2 < row) continue;
+
+        // save information that there is nonzero in position (row2,row).
+        if (!is_nz[row2]) {
+          is_nz[row2] = true;
+          temp_index[nz_in_col] = row2;
+          ++nz_in_col;
+        }
+      }
+    }
+    // intersection of row with rows below finished.
+
+    // if the total number of nonzeros exceeds the maximum, return error
+    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= max_num_nz)
+      return kStatusOoM;
+
+    // update pointers
+    ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
+
+    // now assign indices
+    for (Int i = 0; i < nz_in_col; ++i) {
+      Int index = temp_index[i];
+      rowsNE_.push_back(index);
+      is_nz[index] = false;
+    }
+  }
+
+  return kStatusOk;
+}
+
+Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
+                                     const std::vector<double>& scaling) {
+  // given the NE structure already computed, fill in the NE values
+
+  assert(!ptrNE_.empty() && !rowsNE_.empty());
+
+  valNE_.assign(rowsNE_.size(), 0.0);
+
+  std::vector<double> work(A.num_row_, 0.0);
+
+  for (Int row = 0; row < A.num_row_; ++row) {
+    // go along the entries of the row, and then down each column.
+    // this builds the lower triangular part of the row-th column of AAt.
+    for (Int rowEl = AT_.start_[row]; rowEl < AT_.start_[row + 1]; ++rowEl) {
+      Int col = AT_.index_[rowEl];
+
+      const double theta =
+          scaling.empty() ? 1.0
+                          : 1.0 / (scaling[col] + kPrimalStaticRegularisation);
+
+      const double row_value = theta * AT_.value_[rowEl];
+
+      // for each nonzero in the row, go down corresponding column
+      for (Int colEl = A.start_[col]; colEl < A.start_[col + 1]; ++colEl) {
+        Int row2 = A.index_[colEl];
+
+        // skip when row2 is above row
+        if (row2 < row) continue;
+
+        // compute and accumulate value
+        double value = row_value * A.value_[colEl];
+        work[row2] += value;
+      }
+    }
+    // intersection of row with rows below finished.
+
+    // read from work, using indices of column "row" of AAt
+    for (Int el = ptrNE_[row]; el < ptrNE_[row + 1]; ++el) {
+      Int index = rowsNE_[el];
+      valNE_[el] = work[index];
+      work[index] = 0.0;
+    }
+  }
+
   return kStatusOk;
 }
 
@@ -136,7 +294,6 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
   }
 
   this->valid_ = true;
-  use_as_ = true;
   return kStatusOk;
 }
 
@@ -147,23 +304,21 @@ Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
 
   Clock clock;
 
-  // initialise
-  std::vector<Int> ptrLower;
-  std::vector<Int> rowsLower;
-  std::vector<double> valLower;
-
   Int nA = A.num_col_;
   Int mA = A.num_row_;
   Int nzA = A.numNz();
 
-  // build full matrix
-  HighsSparseMatrix AAt;
-  Int status = computeLowerAThetaAT(A, scaling, AAt);
+  // build matrix
+  Int status = buildNEvalues(A, scaling);
   if (info_) info_->matrix_time += clock.stop();
 
   // factorise
   clock.start();
-  Factorise factorise(S_, AAt.index_, AAt.start_, AAt.value_);
+  // make copies of structure, because factorise object will take ownership and
+  // modify them.
+  std::vector<Int> ptrNE(ptrNE_);
+  std::vector<Int> rowsNE(rowsNE_);
+  Factorise factorise(S_, rowsNE, ptrNE, valNE_);
   if (factorise.run(N_)) return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
@@ -171,7 +326,6 @@ Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
   }
 
   this->valid_ = true;
-  use_as_ = false;
   return kStatusOk;
 }
 
@@ -221,97 +375,11 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   return kStatusOk;
 }
 
-Int computeLowerAThetaAT(const HighsSparseMatrix& matrix,
-                         const std::vector<double>& scaling,
-                         HighsSparseMatrix& AAT, const int64_t max_num_nz) {
-  // Create a row-wise copy of the matrix
-  HighsSparseMatrix AT = matrix;
-  AT.ensureRowwise();
-
-  Int AAT_dim = matrix.num_row_;
-  AAT.num_col_ = AAT_dim;
-  AAT.num_row_ = AAT_dim;
-  AAT.start_.resize(AAT_dim + 1, 0);
-
-  std::vector<std::tuple<Int, Int, double>> non_zero_values;
-
-  // First pass to calculate the number of non-zero elements in each column
-  Int AAT_num_nz = 0;
-  std::vector<double> AAT_col_value(AAT_dim, 0);
-  std::vector<Int> AAT_col_index(AAT_dim);
-  std::vector<bool> AAT_col_in_index(AAT_dim, false);
-  for (Int iRow = 0; iRow < AAT_dim; iRow++) {
-    // Go along the row of A, and then down the columns corresponding
-    // to its nonzeros
-    Int num_col_el = 0;
-    for (Int iRowEl = AT.start_[iRow]; iRowEl < AT.start_[iRow + 1]; iRowEl++) {
-      Int iCol = AT.index_[iRowEl];
-      const double theta_value =
-          scaling.empty() ? 1.0
-                          : 1.0 / (scaling[iCol] + kPrimalStaticRegularisation);
-      if (!theta_value) continue;
-      const double row_value = theta_value * AT.value_[iRowEl];
-      for (Int iColEl = matrix.start_[iCol]; iColEl < matrix.start_[iCol + 1];
-           iColEl++) {
-        Int iRow1 = matrix.index_[iColEl];
-        if (iRow1 < iRow) continue;
-        double term = row_value * matrix.value_[iColEl];
-        if (!AAT_col_in_index[iRow1]) {
-          // This entry is not yet in the list of possible nonzeros
-          AAT_col_in_index[iRow1] = true;
-          AAT_col_index[num_col_el++] = iRow1;
-          AAT_col_value[iRow1] = term;
-        } else {
-          // This entry is in the list of possible nonzeros
-          AAT_col_value[iRow1] += term;
-        }
-      }
-    }
-    for (Int iEl = 0; iEl < num_col_el; iEl++) {
-      Int iCol = AAT_col_index[iEl];
-      assert(iCol >= iRow);
-      const double value = AAT_col_value[iCol];
-
-      non_zero_values.emplace_back(iRow, iCol, value);
-      const Int num_new_nz = 1;
-      if (AAT_num_nz + num_new_nz >= max_num_nz) return kStatusOoM;
-      AAT.start_[iRow + 1]++;
-      AAT_num_nz += num_new_nz;
-      AAT_col_in_index[iCol] = false;
-    }
-  }
-
-  // Prefix sum to get the correct column pointers
-  for (Int i = 0; i < AAT_dim; ++i) AAT.start_[i + 1] += AAT.start_[i];
-
-  AAT.index_.resize(AAT.start_.back());
-  AAT.value_.resize(AAT.start_.back());
-  AAT.p_end_ = AAT.start_;
-  AAT.p_end_.back() = AAT.index_.size();
-
-  std::vector<Int> current_positions = AAT.start_;
-
-  // Second pass to actually fill in the indices and values
-  for (const auto& val : non_zero_values) {
-    Int i = std::get<0>(val);
-    Int j = std::get<1>(val);
-    double dot = std::get<2>(val);
-
-    // i>=j, so to get lower triangle, i is the col, j is row
-    AAT.index_[current_positions[i]] = j;
-    AAT.value_[current_positions[i]] = dot;
-    current_positions[i]++;
-    AAT.p_end_[i] = current_positions[i];
-  }
-  AAT.p_end_.clear();
-  return kStatusOk;
-}
-
 double FactorHiGHSSolver::flops() const { return S_.flops(); }
 double FactorHiGHSSolver::spops() const { return S_.spops(); }
 double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
 
-Int FactorHiGHSSolver::choose(const Model& model, Options& options) {
+Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
   // Choose whether to use augmented system or normal equations.
 
   assert(options.nla == kOptionNlaChoose);
@@ -326,7 +394,7 @@ Int FactorHiGHSSolver::choose(const Model& model, Options& options) {
   // Perform analyse phase of augmented system
   {
     std::vector<Int> ptrLower, rowsLower;
-    getAS(model.A(), ptrLower, rowsLower);
+    getASstructure(model.A(), ptrLower, rowsLower);
     clock.start();
     Analyse analyse_AS(symb_AS, rowsLower, ptrLower, model.A().num_col_);
     Int AS_status = analyse_AS.run();
@@ -346,13 +414,12 @@ Int FactorHiGHSSolver::choose(const Model& model, Options& options) {
       // will be preferred, so stop computation of NE.
       const int64_t NE_nz_limit = symb_AS.nz() * kSymbNzMult;
 
-      std::vector<Int> ptrLower, rowsLower;
-      Int NE_status = getNE(model.A(), ptrLower, rowsLower, NE_nz_limit);
+      Int NE_status = buildNEstructureDense(model.A(), NE_nz_limit);
       if (NE_status)
         failure_NE = true;
       else {
         clock.start();
-        Analyse analyse_NE(symb_NE, rowsLower, ptrLower, 0);
+        Analyse analyse_NE(symb_NE, rowsNE_, ptrNE_, 0);
         NE_status = analyse_NE.run();
         if (NE_status) failure_NE = true;
         if (info_) info_->analyse_NE_time = clock.stop();
@@ -418,7 +485,6 @@ Int FactorHiGHSSolver::choose(const Model& model, Options& options) {
 }
 
 Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
-  std::vector<Int> ptrLower, rowsLower;
   Clock clock;
 
   std::stringstream log_stream;
@@ -426,7 +492,8 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
   // Build the matrix
   switch (options.nla) {
     case kOptionNlaAugmented: {
-      getAS(model.A(), ptrLower, rowsLower);
+      std::vector<Int> ptrLower, rowsLower;
+      getASstructure(model.A(), ptrLower, rowsLower);
       clock.start();
       Analyse analyse(S_, rowsLower, ptrLower, model.A().num_col_);
       if (analyse.run()) {
@@ -439,13 +506,13 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
     }
 
     case kOptionNlaNormEq: {
-      Int NE_status = getNE(model.A(), ptrLower, rowsLower);
+      Int NE_status = buildNEstructureDense(model.A());
       if (NE_status) {
         Log::printe("NE requested, matrix is too large\n");
         return kStatusOoM;
       }
       clock.start();
-      Analyse analyse(S_, rowsLower, ptrLower, 0);
+      Analyse analyse(S_, rowsNE_, ptrNE_, 0);
       if (analyse.run()) {
         Log::printe("NE requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
@@ -456,7 +523,7 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
     }
 
     case kOptionNlaChoose: {
-      if (Int status = choose(model, options)) return status;
+      if (Int status = chooseNla(model, options)) return status;
       break;
     }
   }
