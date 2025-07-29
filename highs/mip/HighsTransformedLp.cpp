@@ -942,13 +942,17 @@ bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
   double sqrnorm = 0;
   const std::vector<double>& lpSolution = lprelaxation.getSolution().col_value;
   for (HighsInt i = 0; i != numNz; ++i) {
-    if (lpSolution[i] >=
+    if (lpSolution[i] <=
         mip.mipdata_->domain.col_lower_[i] + mip.mipdata_->feastol)
       continue;
     viol += vals[i] * lpSolution[i];
     sqrnorm += vals[i] * vals[i];
   }
-  efficacy = viol / sqrt(sqrnorm);
+  if (sqrnorm == 0) {
+    efficacy = 0;
+  } else {
+    efficacy = viol / sqrt(sqrnorm);
+  }
 
   return true;
 }
