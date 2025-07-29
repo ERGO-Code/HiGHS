@@ -567,10 +567,8 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 // Turn \sum c_i x_i + \sum a_i y_i <= a_0 (x_i binary, y_i real non-neg)
 // into \sum_{j \in N1} y_j - \sum_{j \in N2} y_j <= b, where y_j <= u_j x_j
 bool HighsTransformedLp::transformSNFRelaxation(
-    std::vector<double> vals, std::vector<HighsInt> inds, double rhs,
+    std::vector<HighsInt>& inds, std::vector<double>& vals, double& rhs,
     HighsCutGeneration::SNFRelaxation& snfr) {
-  // vector sum should be empty
-  assert(snfr.vectorsum.getNonzeros().empty());
   const HighsSolution& lpSolution = lprelaxation.getLpSolver().getSolution();
 
   HighsCDouble tmpSnfrRhs = rhs;
@@ -644,6 +642,10 @@ bool HighsTransformedLp::transformSNFRelaxation(
     assert(binsolval >= -lprelaxation.getMipSolver().mipdata_->feastol &&
            binsolval <= 1 + lprelaxation.getMipSolver().mipdata_->feastol);
     assert(vubcoef >= -1e-10);
+    for (HighsInt j = 0; j < snfr.numNnzs; j++) {
+      assert(snfr.origBinCols[j] == -1 || snfr.origBinCols[j] != origbincol);
+      assert(snfr.origContCols[j] == -1 || snfr.origContCols[j] != origcontcol);
+    }
     snfr.origBinCols[snfr.numNnzs] = origbincol;
     snfr.origContCols[snfr.numNnzs] = origcontcol;
     snfr.binSolval[snfr.numNnzs] = binsolval;
@@ -689,7 +691,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
       continue;
     }
 
-    if (lb == -kHighsInf && ub == kHighsInf) {
+    if (lb == -kHighsInf || ub == kHighsInf) {
       return false;
     }
 
@@ -881,134 +883,82 @@ bool HighsTransformedLp::transformSNFRelaxation(
   return true;
 }
 
-bool HighsTransformedLp::untransformSNFRelaxation(std::vector<double>& vals,
-                                                  std::vector<HighsInt>& inds,
-                                                  double& rhs, bool integral) {
+bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
+                                 std::vector<double>& vals,
+                                 double& rhs,
+                                 double& efficacy) {
   HighsCDouble tmpRhs = rhs;
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
   const HighsInt slackOffset = mip.numCol();
 
-  HighsInt numNz = static_cast<HighsInt>(inds.size());
+  auto numNz = static_cast<HighsInt>(inds.size());
 
   for (HighsInt i = 0; i != numNz; ++i) {
     if (vals[i] == 0.0) continue;
-    HighsInt col = inds[i];
+    const HighsInt col = inds[i];
     if (col < slackOffset) {
       vectorsum.add(col, vals[i]);
     } else {
+      const HighsInt row = col - slackOffset;
+      HighsInt rowlen;
+      const HighsInt* rowinds;
+      const double* rowvals;
+      lprelaxation.getRow(row, rowlen, rowinds, rowvals);
+
+      for (HighsInt j = 0; j != rowlen; ++j)
+        vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
     }
   }
 
-  for (HighsInt i = 0; i != numNz; ++i) {
-    if (vals[i] == 0.0) continue;
-    HighsInt col = inds[i];
-
-    switch (boundTypes[col]) {
-      case BoundType::kVariableLb: {
-        tmpRhs += bestVlb[col].second.constant * vals[i];
-        vectorsum.add(bestVlb[col].first, -vals[i] * bestVlb[col].second.coef);
-        vectorsum.add(col, vals[i]);
-        break;
-      }
-      case BoundType::kVariableUb: {
-        tmpRhs -= bestVub[col].second.constant * vals[i];
-        vectorsum.add(bestVub[col].first, vals[i] * bestVub[col].second.coef);
-        vectorsum.add(col, -vals[i]);
-        break;
-      }
-      case BoundType::kSimpleLb: {
-        if (col < slackOffset) {
-          tmpRhs += vals[i] * mip.mipdata_->domain.col_lower_[col];
-          vectorsum.add(col, vals[i]);
-        } else {
-          HighsInt row = col - slackOffset;
-          tmpRhs += vals[i] * lprelaxation.slackLower(row);
-
-          HighsInt rowlen;
-          const HighsInt* rowinds;
-          const double* rowvals;
-          lprelaxation.getRow(row, rowlen, rowinds, rowvals);
-
-          for (HighsInt j = 0; j != rowlen; ++j)
-            vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
-        }
-        break;
-      }
-      case BoundType::kSimpleUb: {
-        if (col < slackOffset) {
-          tmpRhs -= vals[i] * mip.mipdata_->domain.col_upper_[col];
-          vectorsum.add(col, -vals[i]);
-        } else {
-          HighsInt row = col - slackOffset;
-          tmpRhs -= vals[i] * lprelaxation.slackUpper(row);
-          vals[i] = -vals[i];
-
-          HighsInt rowlen;
-          const HighsInt* rowinds;
-          const double* rowvals;
-          lprelaxation.getRow(row, rowlen, rowinds, rowvals);
-
-          for (HighsInt j = 0; j != rowlen; ++j)
-            vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
-        }
-      }
+  bool abort = false;
+  auto IsZero = [&](HighsInt col, double val) {
+    assert(col < mip.numCol());
+    double absval = std::abs(val);
+    if (absval <= mip.options_mip_->small_matrix_value) {
+      return true;
     }
-  }
 
-  if (integral) {
-    // if the cut is integral, we just round all coefficient values and the
-    // right hand side to the nearest integral value, as small deviation
-    // only come from numerical errors during resubstitution of slack variables
-
-    auto IsZero = [&](HighsInt col, double val) {
-      assert(col < mip.numCol());
-      return fabs(val) < 0.5;
-    };
-
-    vectorsum.cleanup(IsZero);
-    rhs = std::round(double(tmpRhs));
-  } else {
-    bool abort = false;
-    auto IsZero = [&](HighsInt col, double val) {
-      assert(col < mip.numCol());
-      double absval = std::abs(val);
-      if (absval <= mip.options_mip_->small_matrix_value) return true;
-
-      if (absval <= mip.mipdata_->feastol) {
-        if (val > 0) {
-          if (mip.mipdata_->domain.col_lower_[col] == -kHighsInf)
-            abort = true;
-          else
-            tmpRhs -= val * mip.mipdata_->domain.col_lower_[col];
-        } else {
-          if (mip.mipdata_->domain.col_upper_[col] == kHighsInf)
-            abort = true;
-          else
-            tmpRhs -= val * mip.mipdata_->domain.col_upper_[col];
-        }
-        return true;
+    if (absval <= mip.mipdata_->feastol) {
+      if (val > 0) {
+        if (mip.mipdata_->domain.col_lower_[col] == -kHighsInf)
+          abort = true;
+        else
+          tmpRhs -= val * mip.mipdata_->domain.col_lower_[col];
+      } else {
+        if (mip.mipdata_->domain.col_upper_[col] == kHighsInf)
+          abort = true;
+        else
+          tmpRhs -= val * mip.mipdata_->domain.col_upper_[col];
       }
-      return false;
-    };
-
-    vectorsum.cleanup(IsZero);
-    if (abort) {
-      vectorsum.clear();
-      return false;
+      return true;
     }
-    rhs = double(tmpRhs);
+    return false;
+  };
+
+  vectorsum.cleanup(IsZero);
+  if (abort) {
+    vectorsum.clear();
+    return false;
   }
+  rhs = static_cast<double>(tmpRhs);
 
   inds = vectorsum.getNonzeros();
-  numNz = inds.size();
+  numNz = static_cast<HighsInt>(inds.size());
   vals.resize(numNz);
-
-  if (integral)
-    for (HighsInt i = 0; i != numNz; ++i)
-      vals[i] = std::round(vectorsum.getValue(inds[i]));
-  else
-    for (HighsInt i = 0; i != numNz; ++i) vals[i] = vectorsum.getValue(inds[i]);
+  for (HighsInt i = 0; i != numNz; ++i) vals[i] = vectorsum.getValue(inds[i]);
   vectorsum.clear();
+
+  double viol = 0;
+  double sqrnorm = 0;
+  const std::vector<double>& lpSolution = lprelaxation.getSolution().col_value;
+  for (HighsInt i = 0; i != numNz; ++i) {
+    if (lpSolution[i] >=
+        mip.mipdata_->domain.col_lower_[i] + mip.mipdata_->feastol)
+      continue;
+    viol += vals[i] * lpSolution[i];
+    sqrnorm += vals[i] * vals[i];
+  }
+  efficacy = viol / sqrt(sqrnorm);
 
   return true;
 }

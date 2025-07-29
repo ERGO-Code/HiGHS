@@ -68,10 +68,9 @@ class HighsCutGeneration {
 
   bool computeFlowCover();
 
-  bool separateLiftedFlowCover(std::vector<double>& vals,
-                               std::vector<HighsInt>& inds,
-                               double& rhs,
-                               double& efficacy);
+  bool separateLiftedFlowCover();
+
+  bool preprocessSNFRelaxation();
 
   double scale(double val);
 
@@ -131,12 +130,11 @@ class HighsCutGeneration {
     std::vector<HighsInt> flowCoverStatus; // (+1) in fcover (-1) not in fcover
     double rhs;
     double lambda;
-    HighsSparseVectorSum vectorsum;
   };
 
  private:
   SNFRelaxation snfr;
-  void initSNFRelaxation(HighsInt numNonZero);
+  void initSNFRelaxation();
 
  public:
   SNFRelaxation& getSNFRelaxation() { return snfr; }

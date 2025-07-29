@@ -504,11 +504,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 // Gu, Z., Nemhauser, G. L., & Savelsbergh, M. W. (1999).
 // Lifted flow cover inequalities for mixed 0-1 integer programs.
 // Mathematical Programming, 85(3), 439-467.
-bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
-                                                 std::vector<HighsInt>& inds,
-                                                 double& rhs,
-                                                 double& efficacy) {
-
+bool HighsCutGeneration::separateLiftedFlowCover() {
   // Compute the lifting data (ld) first
   struct LiftingData {
     std::vector<HighsCDouble> m;
@@ -545,7 +541,7 @@ bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
     } else if (snfr.flowCoverStatus[i] == 1 && snfr.coef[i] == 1) {
       // col is in C1
       assert(snfr.vubCoef[i] > 0);
-      if ( snfr.vubCoef[i] > snfr.lambda + 1e-8) {
+      if (snfr.vubCoef[i] > snfr.lambda + 1e-8) {
         ld.m[ld.r] = snfr.vubCoef[i];
         ++ld.r;
         ld.mp = std::min(ld.mp, snfr.vubCoef[i]);
@@ -562,13 +558,13 @@ bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
 
   ld.M.resize(ld.r + 1);
   ld.ml = std::min(snfr.lambda, static_cast<double>(sumC1LE + sumN2mC2LE));
-  ld.d1 = sumC2 * snfr.rhs;
+  ld.d1 = sumC2 + snfr.rhs;
   ld.d2 = ld.d1 + sumN2mC2GT + sumN2mC2LE;
 
   // Sort into non-increasing order (TODO: Remove comment after checking)
-  pdqsort_branchless(ld.m.begin(), ld.m.end(), [&](const HighsCDouble a, const HighsCDouble b) {
-    return a > b;
-  });
+  pdqsort_branchless(
+      ld.m.begin(), ld.m.end(),
+      [&](const HighsCDouble a, const HighsCDouble b) { return a > b; });
 
   for (HighsInt i = 0; i != ld.r + 1; ++i) {
     if (i == 0) {
@@ -587,7 +583,7 @@ bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
 
   auto getAlphaBeta = [&](double vubcoef) {
     HighsInt alpha;
-    HighsCDouble beta;
+    HighsCDouble beta{};
     double vubcoefpluslambda = vubcoef + snfr.lambda;
 
     HighsInt i = 0;
@@ -613,10 +609,11 @@ bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
     }
     if (i < ld.t) {
       HighsCDouble liftedcoef = i * HighsCDouble(snfr.lambda);
-      if (ld.M[i] < vubcoef - 1e-8) {
+      if (ld.M[i] < vubcoef + 1e-8) {
         return static_cast<double>(liftedcoef);
       }
-      assert(i > 0 && ld.M[i] < vubcoef + snfr.lambda - 1e-8 && vubcoef <= ld.M[i]);
+      assert(i > 0 && ld.M[i] < vubcoef + snfr.lambda - 1e-8 &&
+             vubcoef <= ld.M[i]);
       liftedcoef += vubcoef;
       liftedcoef -= ld.M[i];
       return static_cast<double>(liftedcoef);
@@ -628,8 +625,12 @@ bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
       if (tmp < vubcoef + snfr.lambda - 1e-8) {
         return static_cast<double>(i * HighsCDouble(snfr.lambda));
       }
-      assert(ld.M[i] <= vubcoef + snfr.lambda + 1e-8 && snfr.lambda + vubcoef <= ld.M[i] + ld.ml + std::max(0.0, static_cast<double>(
-                                       ld.m[i] - (ld.mp - snfr.lambda) - ld.ml)));
+      assert(
+          ld.M[i] <= vubcoef + snfr.lambda + feastol &&
+          snfr.lambda + vubcoef <=
+              ld.M[i] + ld.ml + feastol +
+                  std::max(0.0, static_cast<double>(
+                                    ld.m[i] - (ld.mp - snfr.lambda) - ld.ml)));
       return static_cast<double>(i * HighsCDouble(snfr.lambda) + vubcoef -
                                  ld.M[i]);
     }
@@ -639,56 +640,63 @@ bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
   };
 
   // Lift the flow cover cut
-  assert(snfr.vectorsum.getNonzeros().empty());
   HighsCDouble tmpRhs = ld.d1;
+  rowlen = 0;
   for (HighsInt i = 0; i != snfr.numNnzs; ++i) {
     // col is in N2 \ C2
     if (snfr.flowCoverStatus[i] == -1 && snfr.coef[i] == -1) {
       if (snfr.vubCoef[i] > snfr.lambda + 1e-8) {
         if (snfr.origBinCols[i] != -1) {
           // col is in L-
-          assert(snfr.vectorsum.getValue(snfr.origBinCols[i]) == 0);
-          snfr.vectorsum.add(snfr.origBinCols[i], -snfr.lambda);
+          vals[rowlen] = -snfr.lambda;
+          inds[rowlen] = snfr.origBinCols[i];
+          rowlen++;
         } else {
           tmpRhs += snfr.lambda;
         }
       } else {
         // col is in L--
         if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
-          assert(snfr.vectorsum.getValue(snfr.origContCols[i]) == 0);
-          snfr.vectorsum.add(snfr.origContCols[i], -snfr.aggrContCoef[i]);
+          vals[rowlen] = -snfr.aggrContCoef[i];
+          inds[rowlen] = snfr.origContCols[i];
+          rowlen++;
         }
         if (snfr.origBinCols[i] != -1 && snfr.aggrBinCoef[i] != 0) {
-          assert(snfr.vectorsum.getValue(snfr.origBinCols[i]) == 0);
-          snfr.vectorsum.add(snfr.origBinCols[i], -snfr.aggrBinCoef[i]);
+          vals[rowlen] = -snfr.aggrBinCoef[i];
+          inds[rowlen] = snfr.origBinCols[i];
+          rowlen++;
         }
+        tmpRhs += snfr.aggrConstant[i];
       }
-      tmpRhs += snfr.aggrConstant[i];
     } else if (snfr.flowCoverStatus[i] == 1 && snfr.coef[i] == -1) {
       // col is in C2
       if (snfr.origBinCols[i] != -1) {
-        assert(snfr.vectorsum.getValue(snfr.origBinCols[i]) == 0);
         double liftedbincoef = evaluateLiftingFunction(snfr.vubCoef[i]);
         if (liftedbincoef != 0) {
-          snfr.vectorsum.add(snfr.origBinCols[i], -liftedbincoef);
+          vals[rowlen] = -liftedbincoef;
+          inds[rowlen] = snfr.origBinCols[i];
+          rowlen++;
           tmpRhs -= liftedbincoef;
         }
       }
     } else if (snfr.flowCoverStatus[i] == -1 && snfr.coef[i] == 1) {
       // col is in N1 \ C1
-      std::pair<HighsInt, HighsCDouble> alphabeta = getAlphaBeta(snfr.vubCoef[i]);
+      std::pair<HighsInt, HighsCDouble> alphabeta =
+          getAlphaBeta(snfr.vubCoef[i]);
       assert(alphabeta.first == 0 || alphabeta.first == 1);
       if (alphabeta.first == 1) {
         assert(alphabeta.second > 0);
         if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
-          assert(snfr.vectorsum.getValue(snfr.origContCols[i]) == 0);
-          snfr.vectorsum.add(snfr.origContCols[i], snfr.aggrContCoef[i]);
+          vals[rowlen] = snfr.aggrContCoef[i];
+          inds[rowlen] = snfr.origContCols[i];
+          rowlen++;
         }
         HighsCDouble binvarcoef = snfr.aggrBinCoef[i] - alphabeta.second;
         if (snfr.origBinCols[i] != -1) {
-          assert(snfr.vectorsum.getValue(snfr.origBinCols[i]) == 0);
           if (binvarcoef != 0) {
-            snfr.vectorsum.add(snfr.origBinCols[i], binvarcoef);
+            vals[rowlen] = static_cast<double>(binvarcoef);
+            inds[rowlen] = snfr.origBinCols[i];
+            rowlen++;
           }
         } else {
           tmpRhs -= binvarcoef;
@@ -702,57 +710,32 @@ bool HighsCutGeneration::separateLiftedFlowCover(std::vector<double>& vals,
       HighsCDouble constant = snfr.aggrConstant[i];
       if (snfr.origBinCols[i] != -1 && snfr.vubCoef[i] >= snfr.lambda + 1e-8) {
         // col is in C++
-        HighsCDouble tmp = HighsCDouble(snfr.vubCoef[i]) - snfr.lambda;
-        constant += tmp;
-        bincoef -= tmp;
+        constant += HighsCDouble(snfr.vubCoef[i]) - snfr.lambda;
+        bincoef -= HighsCDouble(snfr.vubCoef[i]) - snfr.lambda;
       }
       if (snfr.origBinCols[i] != -1 && bincoef != 0) {
-        assert(snfr.vectorsum.getValue(snfr.origBinCols[i]) == 0);
-        snfr.vectorsum.add(snfr.origBinCols[i], bincoef);
+        vals[rowlen] = static_cast<double>(bincoef);
+        inds[rowlen] = snfr.origBinCols[i];
+        rowlen++;
       }
-      // TODO: Should this value be constant instead of aggrconstant?
-      if (snfr.origContCols[i] != -1 && snfr.aggrConstant[i] != 0) {
-        assert(snfr.vectorsum.getValue(snfr.origContCols[i]) == 0);
-        snfr.vectorsum.add(snfr.origContCols[i], snfr.aggrContCoef[i]);
+      if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
+        vals[rowlen] = snfr.aggrContCoef[i];
+        inds[rowlen] = snfr.origContCols[i];
+        rowlen++;
       }
       tmpRhs -= constant;
     }
   }
 
-  // shift all variables back to their original bounds (this was
-  // implicitly done to make everything >= 0).
-  // Then substitute the slack out additionally.
-  // This can be done by directly replacing it via its
-  // representation.
-  // TODO: All originally shiftings have been already made? (those are the
-  // changes to tmpRhs by some constant)
-
-  // TODO: Why not transform the cut back in the standard way?
-  // TODO: Change the definition of snfr.aggrConstant (remove val multiplier)
-  // TODO: Go through snfr.vectorsum and shift everything back:
-  // TODO: vectorsum.getval * constant
-  // TODO: For slack variables also substitute back the original variables
-  // TODO: Be careful of coefficients changing when substituting
-
-  // substitute the slack out of the cut
-  snfr.vectorsum.clear();
-  return true;
-  // Now create the cut and calculate the efficacy
-  inds = snfr.vectorsum.getNonzeros();
-  auto numNz = static_cast<HighsInt>(inds.size());
-  vals.resize(numNz);
-  for (HighsInt j = 0; j != numNz; ++j) vals[j] = snfr.vectorsum.getValue(inds[j]);
-  rhs = static_cast<double>(tmpRhs);
-  snfr.vectorsum.clear();
-  double viol = -rhs;
-  double norm = 0.0;
-  for (HighsInt j = 0; j != numNz; ++j) {
-    if (vals[j] == 0.0) continue;
-    norm += vals[j] * vals[j];
-    // add viol
+#ifndef NDEBUG
+  // TODO: Remove this if algorithm changes to allow multiple bin col usages
+  for (HighsInt i = 0; i < rowlen; i++) {
+    for (HighsInt j = i + 1; j < rowlen; j++)
+    assert(inds[i] != inds[j]);
   }
-  efficacy = viol / sqrt(norm);
+#endif
 
+  rhs = static_cast<double>(tmpRhs);
   return true;
 }
 
@@ -1366,32 +1349,56 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   }
 #endif
 
-  // TODO: Add attempt at flow cover generation
-  bool flowcoversuccess = false;
-  std::vector<double> flowcovervals;
-  std::vector<HighsInt> flowcoverinds;
-  double flowcoverrhs = 0;
-  double flowcoverefficacy = 0;
+  bool flowCoverSuccess = false;
+  std::vector<double> flowCoverVals;
+  std::vector<HighsInt> flowCoverInds;
+  double flowCoverRhs = rhs_;
+  double flowCoverEfficacy = 0;
   if (!onlyInitialCMIRScale) {
-    initSNFRelaxation(static_cast<HighsInt>(inds_.size()));
-    flowcoversuccess = transLp.transformSNFRelaxation(vals_, inds_, rhs_, snfr);
-    // printf("%d\n", std::rand());
-    if (!flowcoversuccess) goto cmir;
-    flowcoversuccess = computeFlowCover(); // TODO: When should this return false?
-    if (!flowcoversuccess) goto cmir;
-    flowcoversuccess = separateLiftedFlowCover(flowcovervals, flowcoverinds, flowcoverrhs, flowcoverefficacy);
-    flowcoversuccess = false;
-    // TODO: Make sure to untransform at the end
+    flowCoverVals = vals_;
+    flowCoverInds = inds_;
+    rowlen = static_cast<HighsInt>(flowCoverInds.size());
+    this->inds = flowCoverInds.data();
+    this->vals = flowCoverVals.data();
+    this->rhs = rhs_;
+    flowCoverSuccess =
+        preprocessSNFRelaxation();
+    if (!flowCoverSuccess) goto cmir;
+    initSNFRelaxation();
+    assert(rowlen <= static_cast<HighsInt>(flowCoverVals.size()));
+    flowCoverVals.resize(rowlen);
+    flowCoverInds.resize(rowlen);
+    flowCoverRhs = static_cast<double>(rhs);
+    flowCoverSuccess = transLp.transformSNFRelaxation(
+        flowCoverInds, flowCoverVals, flowCoverRhs, snfr);
+    if (!flowCoverSuccess) goto cmir;
+    // Array resized as each continuous col may create a non-zero bin coef
+    flowCoverVals.resize(2 * snfr.numNnzs);
+    flowCoverInds.resize(2 * snfr.numNnzs);
+    this->inds = flowCoverInds.data();
+    this->vals = flowCoverVals.data();
+    this->rhs = flowCoverRhs;
+    flowCoverSuccess = computeFlowCover();
+    if (!flowCoverSuccess) goto cmir;
+    flowCoverSuccess =
+        separateLiftedFlowCover();
+    if (!flowCoverSuccess) goto cmir;
+    flowCoverInds.resize(rowlen);
+    flowCoverVals.resize(rowlen);
+    flowCoverRhs = static_cast<double>(rhs);
+    flowCoverSuccess = transLp.cleanup(flowCoverInds, flowCoverVals,
+                                       flowCoverRhs, flowCoverEfficacy);
+    if (flowCoverEfficacy < 10 * feastol) flowCoverSuccess = false;
   }
 
 cmir:
-  bool cmirsuccess = false;
+  bool cmirSuccess = false;
   bool intsPositive = true;
   bool hasUnboundedInts = false;
   bool hasGeneralInts = false;
   bool hasContinuous = false;
   if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive)) {
-    cmirsuccess = false;
+    cmirSuccess = false;
     goto untransform;
   }
 
@@ -1402,7 +1409,7 @@ cmir:
   complementation.clear();
   if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
                                 hasContinuous)) {
-    cmirsuccess = false;
+    cmirSuccess = false;
     goto untransform;
   }
 
@@ -1425,8 +1432,9 @@ cmir:
 
   // try to generate a cut
   if (!tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
-                      hasContinuous, 10 * feastol, onlyInitialCMIRScale)) {
-    cmirsuccess = false;
+                      hasContinuous, std::max(flowCoverEfficacy, 10 * feastol),
+                      onlyInitialCMIRScale)) {
+    cmirSuccess = false;
     goto untransform;
   }
 
@@ -1443,15 +1451,19 @@ cmir:
   }
 
 untransform:
-  if (!cmirsuccess && !flowcoversuccess) return false;
+  if (!cmirSuccess && !flowCoverSuccess) return false;
 
   // transform the cut back into the original space, i.e. remove the bound
   // substitution and replace implicit slack variables
-  if (cmirsuccess) {
+  if (cmirSuccess) {
     rhs_ = (double)rhs;
     vals_.resize(rowlen);
     inds_.resize(rowlen);
     if (!transLp.untransform(vals_, inds_, rhs_)) return false;
+  } else {
+    rhs_ = flowCoverRhs;
+    std::swap(vals_, flowCoverVals);
+    std::swap(inds_, flowCoverInds);
   }
 
   rowlen = inds_.size();
@@ -1586,32 +1598,110 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   return cutindex != -1;
 }
 
-void HighsCutGeneration::initSNFRelaxation(HighsInt numNonZero) {
+void HighsCutGeneration::initSNFRelaxation() {
   HighsInt numTransformedCol = lpRelaxation.numCols() + lpRelaxation.numRows();
   if (static_cast<HighsInt>(snfr.binColUsed.size()) < numTransformedCol) {
     snfr.binColUsed.resize(numTransformedCol);
     snfr.origBinColCoef.resize(numTransformedCol);
-    snfr.vectorsum.setDimension(numTransformedCol);
   }
-  for (HighsInt i = 0; i != static_cast<HighsInt>(snfr.binColUsed.size()); ++i) {
-      snfr.binColUsed[i] = false;
-      snfr.origBinColCoef[i] = 0;
+  for (HighsInt i = 0; i != static_cast<HighsInt>(snfr.binColUsed.size());
+       ++i) {
+    snfr.binColUsed[i] = false;
+    snfr.origBinColCoef[i] = 0;
   }
 
-  if (static_cast<HighsInt>(snfr.coef.size()) < numNonZero) {
-    snfr.origBinCols.resize(numNonZero);
-    snfr.origContCols.resize(numNonZero);
-    snfr.binSolval.resize(numNonZero);
-    snfr.contSolval.resize(numNonZero);
-    snfr.coef.resize(numNonZero);
-    snfr.vubCoef.resize(numNonZero);
-    snfr.aggrConstant.resize(numNonZero);
-    snfr.aggrBinCoef.resize(numNonZero);
-    snfr.aggrContCoef.resize(numNonZero);
+  if (static_cast<HighsInt>(snfr.coef.size()) < rowlen) {
+    snfr.origBinCols.resize(rowlen);
+    snfr.origContCols.resize(rowlen);
+    snfr.binSolval.resize(rowlen);
+    snfr.contSolval.resize(rowlen);
+    snfr.coef.resize(rowlen);
+    snfr.vubCoef.resize(rowlen);
+    snfr.aggrConstant.resize(rowlen);
+    snfr.aggrBinCoef.resize(rowlen);
+    snfr.aggrContCoef.resize(rowlen);
   }
   snfr.rhs = 0;
   snfr.lambda = 0;
   snfr.numNnzs = 0;
+}
+
+bool HighsCutGeneration::preprocessSNFRelaxation() {
+  // preprocess the inequality before generating a single node flow relaxation.
+  // 1. Determine the maximal activity to check for trivial redundancy
+  // 2. Check for presence of unbounded variables (the SNFR construction
+  // requires finite bounds on all non-zeros)
+  // 3. Remove coefficients that are below the feasibility tolerance to avoid
+  // numerical troubles, use bound constraints to cancel them and
+  // reject base inequalities where that is not possible due to unbounded
+  // variables
+
+  HighsInt numZeros = 0;
+  double maxact = -feastol;
+  double maxAbsVal = 0;
+  HighsInt slackOffset = lpRelaxation.getMipSolver().numCol();
+  const HighsDomain& domain = lpRelaxation.getMipSolver().mipdata_->domain;
+
+  auto getLb = [&](HighsInt col) {
+    return (col < slackOffset ? domain.col_lower_[col]
+                              : lpRelaxation.slackLower(col - slackOffset));
+  };
+
+  auto getUb = [&](HighsInt col) {
+    return (col < slackOffset ? domain.col_upper_[col]
+                              : lpRelaxation.slackUpper(col - slackOffset));
+  };
+
+  for (HighsInt i = 0; i < rowlen; ++i) {
+    maxAbsVal = std::max(std::abs(vals[i]), maxAbsVal);
+    if (getLb(inds[i]) == -kHighsInf || getUb(inds[i]) == kHighsInf) {
+      return false;
+    }
+  }
+
+  scale(maxAbsVal);
+
+  for (HighsInt i = 0; i != rowlen; ++i) {
+    HighsInt col = inds[i];
+
+    // relax variables with small contributions if possible
+    if (std::abs(vals[i]) * (getUb(col) - getLb(col)) <= 10 * feastol) {
+      if (vals[i] < 0) {
+        if (getUb(col) == kHighsInf) return false;
+        rhs -= vals[i] * getUb(col);
+        ++numZeros;
+        vals[i] = 0.0;
+      } else if (vals[i] > 0) {
+        if (getLb(col) == -kHighsInf) return false;
+        rhs -= vals[i] * getLb(col);
+        ++numZeros;
+        vals[i] = 0.0;
+      }
+    }
+
+    if (vals[i] > 0) {
+      maxact += vals[i] * getUb(col);
+    } else if (vals[i] < 0) {
+      maxact += vals[i] * getLb(col);
+    }
+  }
+
+  HighsInt maxLen = 100 + 0.15 * (lpRelaxation.numCols());
+  if (rowlen - numZeros > maxLen) return false;
+
+  if (numZeros != 0) {
+    // remove zeros in place
+    for (HighsInt i = rowlen - 1; i >= 0; --i) {
+      if (vals[i] == 0.0) {
+        --rowlen;
+        inds[i] = inds[rowlen];
+        vals[i] = vals[rowlen];
+        if (--numZeros == 0) break;
+      }
+    }
+  }
+
+  return maxact > rhs;
 }
 
 bool HighsCutGeneration::computeFlowCover() {
@@ -1665,7 +1755,8 @@ bool HighsCutGeneration::computeFlowCover() {
   }
   assert(nNonFlowCover + nFlowCover + nitems == snfr.numNnzs);
 
-  double capacity = -snfr.rhs + static_cast<double>(flowCoverWeight) + n1itemsWeight;
+  double capacity =
+      static_cast<double>(-snfr.rhs + flowCoverWeight + n1itemsWeight);
   // There is no flow cover if capacity is less than zero after fixing
   if (capacity < feastol) return false;
   // Solve a knapsack greedily to assign items to C1, C2, N1\C1, N2\C2
@@ -1682,9 +1773,10 @@ bool HighsCutGeneration::computeFlowCover() {
       profits[i] = snfr.binSolval[items[i]];
     }
   }
-  pdqsort_branchless(perm.begin(), perm.end(), [&](const HighsInt a, const HighsInt b) {
-    return profits[a] / weights[a] > profits[b] / weights[b];
-  });
+  pdqsort_branchless(perm.begin(), perm.end(),
+                     [&](const HighsInt a, const HighsInt b) {
+                       return profits[a] / weights[a] > profits[b] / weights[b];
+                     });
   // Greedily add items to knapsack
   for (HighsInt i = 0; i < nitems; ++i) {
     const HighsInt j = perm[i];
