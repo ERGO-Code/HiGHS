@@ -72,6 +72,11 @@ class HighsCutGeneration {
 
   bool preprocessSNFRelaxation();
 
+  bool tryGenerateFlowCoverCut(HighsTransformedLp& transLp,
+                               std::vector<HighsInt>& inds_,
+                               std::vector<double>& vals_, double& rhs_,
+                               double& efficacy);
+
   double scale(double val);
 
   bool postprocessCut();
@@ -113,21 +118,21 @@ class HighsCutGeneration {
 
   /// Single Node Flow Relaxation for flow cover cuts
   struct SNFRelaxation {
-    std::vector<bool> binColUsed; // has col been used in a vub
-    std::vector<double> origBinColCoef; // original bin col coef
+    std::vector<bool> binColUsed;        // has col been used in a vub
+    std::vector<double> origBinColCoef;  // original bin col coef
 
-    HighsInt numNnzs; // number of nonzeros
-    std::vector<HighsInt> coef; // coefficients of cols in SNFR
-    std::vector<double> vubCoef; // coefficients in vub of cols in SNFR
-    std::vector<double> binSolval; // vub bin col sol in SNFR
-    std::vector<double> contSolval; // real sol in SNFR
-    std::vector<HighsInt> origBinCols; // orig bin col used in SNFR
-    std::vector<HighsInt> origContCols; // orig cont cols used in SNFR
-    std::vector<double> aggrBinCoef; // aggr coef of orignal bin-col in SNFR
-    std::vector<double> aggrContCoef; // aggr coef of original cont-col in SNFR
-    std::vector<double> aggrConstant; // aggr original constant in SNFR
+    HighsInt numNnzs;                    // number of nonzeros
+    std::vector<HighsInt> coef;          // coefficients of cols in SNFR
+    std::vector<double> vubCoef;         // coefficients in vub of cols in SNFR
+    std::vector<double> binSolval;       // vub bin col sol in SNFR
+    std::vector<double> contSolval;      // real sol in SNFR
+    std::vector<HighsInt> origBinCols;   // orig bin col used in SNFR
+    std::vector<HighsInt> origContCols;  // orig cont cols used in SNFR
+    std::vector<double> aggrBinCoef;     // aggr coef of orignal bin-col in SNFR
+    std::vector<double> aggrContCoef;  // aggr coef of original cont-col in SNFR
+    std::vector<double> aggrConstant;  // aggr original constant in SNFR
 
-    std::vector<HighsInt> flowCoverStatus; // (+1) in fcover (-1) not in fcover
+    std::vector<HighsInt> flowCoverStatus;  // (+1) in fcover (-1) not in fcover
     double rhs;
     double lambda;
   };

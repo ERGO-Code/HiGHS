@@ -565,7 +565,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 // Create a single node flow relaxation (SNFR) from an aggregated
 // mixed-integer row and find a valid flow cover.
 // Turn \sum c_i x_i + \sum a_i y_i <= a_0 (x_i binary, y_i real non-neg)
-// into \sum_{j \in N1} y_j - \sum_{j \in N2} y_j <= b, where y_j <= u_j x_j
+// into \sum_{j \in N+} y_j - \sum_{j \in N-} y_j <= b, where y_j <= u_j x_j
 bool HighsTransformedLp::transformSNFRelaxation(
     std::vector<HighsInt>& inds, std::vector<double>& vals, double& rhs,
     HighsCutGeneration::SNFRelaxation& snfr) {
@@ -725,17 +725,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
                                             infeasible, false);
     }
 
-    // store the old bound type so that we can restore it if the continuous
-    // column is relaxed out anyways. This allows to correctly transform and
-    // then untransform multiple base rows which is useful to compute cuts based
-    // on several transformed base rows. It could otherwise lead to bugs if a
-    // column is first transformed with a simple bound and not relaxed but for
-    // another base row is transformed and relaxed with a variable bound. Should
-    // the non-relaxed column now be untransformed we would wrongly use the
-    // variable bound even though this is not the correct way to untransform the
-    // column.
-    // BoundType oldBoundType = boundTypes[col];
-
     // Transform entry into the SNFR
     if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1) {
       if (snfr.binColUsed[col] == false) {
@@ -883,6 +872,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
   return true;
 }
 
+// Remove slack, small coefficients, and calculate the efficacy
 bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
                                  std::vector<double>& vals,
                                  double& rhs,
