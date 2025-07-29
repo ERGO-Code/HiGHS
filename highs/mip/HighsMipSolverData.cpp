@@ -1401,18 +1401,17 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                      sol, possibly_store_as_new_incumbent)
                                : 0;
 
-  if (solution_source == kSolutionSourceHighsSolution) {
-    printf(
-        "HighsMipSolverData::addIncumbent HiGHS solution Offset = %15.8g; Obj "
-        "= %15.8g; UB = %15.8g; PossAdd = %s",
-        mipsolver.model_->offset_, solobj, upper_bound,
-        possibly_store_as_new_incumbent ? "T" : "F");
-    if (possibly_store_as_new_incumbent) {
-      printf("; TransObj = %15.8g; TransSolobj < UB %s \n", transformed_solobj,
-             transformed_solobj < upper_bound ? "T" : "F");
-    } else {
-      printf("\n");
-    }
+  if (solution_source == kSolutionSourceHighsSolution
+      //&& possibly_store_as_new_incumbent
+      ) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		 "HighsMipSolverData::addIncumbent HiGHS solution Offset = %15.8g; Obj "
+		 "= %15.8g; UB = %15.8g; Obj-UB = %11.4g; PossAdd = %s; TransObj = %15.8g; TransObj-UB = %11.4g; TransSolobj < UB %s \n",
+		 mipsolver.model_->offset_, solobj, upper_bound,
+		 solobj-upper_bound,
+		 possibly_store_as_new_incumbent ? "T" : "F", transformed_solobj,
+		 transformed_solobj - upper_bound,
+		 transformed_solobj < upper_bound ? "T" : "F");
     fflush(stdout);
   }
   if (possibly_store_as_new_incumbent) {
@@ -2718,9 +2717,15 @@ void HighsMipSolverData::queryExternalSolution(
     // (reduced_c)^T(reduced_x) = original_sense*[original_offset +
     // (original_c)^T(original_x) - reduced_offset]
     //
+    // However, this isn't right when one solver has performed
+    // restart, and another hasn't. So, ignore the objective value
+    // that's passed, and compute it anew
+
+    /*
     double reduced_instance_objective_value = instance_objective_value;
     reduced_instance_objective_value *= int(mipsolver.orig_model_->sense_);
     reduced_instance_objective_value -= mipsolver.model_->offset_;
+    */
     // Get the solution in the reduced space
     std::vector<double> reduced_instance_solution =
         postSolveStack.getReducedPrimalSolution(instance_solution);
@@ -2729,18 +2734,24 @@ void HighsMipSolverData::queryExternalSolution(
     for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
       check_objective_value +=
           mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
-    double dl_objective_value =
-        std::fabs(check_objective_value - reduced_instance_objective_value);
-    assert(dl_objective_value < 1e-12 * (1 + std::fabs(check_objective_value)));
-    printf(
-        "HighsMipSolverData::queryExternalSolution: (sense = %d; offset = "
-        "%11.4g) modified objective from %11.4g to %11.4g (Check = %11.4g; "
-        "Delta = %11.4g)\n",
-        int(mipsolver.orig_model_->sense_), mipsolver.model_->offset_,
-        instance_objective_value, reduced_instance_objective_value,
-        check_objective_value, dl_objective_value);
-    fflush(stdout);
-
+    double reduced_instance_objective_value = check_objective_value;
+    /*
+    double abs_dl_objective_value = std::fabs(check_objective_value - reduced_instance_objective_value);
+    double rlv_dl_objective_value = abs_dl_objective_value / (1 + std::fabs(check_objective_value));
+    if (rlv_dl_objective_value >= 0 ||
+	std::fabs(mipsolver.model_->offset_) > 1) {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		   "HighsMipSolverData::queryExternalSolution: Instance %1d (sense = %d; offset = "
+	     "%11.4g; OGoffset = %11.4g) modified objective from %11.4g to %11.4g (Check = %11.4g; "
+	     "Delta = (abs = %11.4g; rlv = %11.4g)\n",
+	     int(instance), int(mipsolver.orig_model_->sense_), mipsolver.model_->offset_, mipsolver.orig_model_->offset_,
+	     instance_objective_value, reduced_instance_objective_value,
+	     check_objective_value, abs_dl_objective_value, rlv_dl_objective_value);
+      fflush(stdout);
+      reduced_instance_objective_value = check_objective_value;
+      //    assert(rlv_dl_objective_value < 1e-12);
+    }
+    */
     addIncumbent(reduced_instance_solution, reduced_instance_objective_value,
                  kSolutionSourceHighsSolution);
   }
