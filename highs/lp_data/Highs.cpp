@@ -4075,6 +4075,9 @@ HighsStatus Highs::callSolveMip() {
       lp, solution_); worker.push_back(&worker_instance);
       */
     }
+    // Time the master outside the parallel loop so that this "real"
+    // time is reported
+    double loop_mip_time = -timer_.read();
     highs::parallel::for_each(
         0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
           for (HighsInt instance = start; instance < end; instance++) {
@@ -4101,9 +4104,11 @@ HighsStatus Highs::callSolveMip() {
             }
           }
         });
+    loop_mip_time += timer_.read();
     // Determine the winner and report on the solution
     HighsStatus call_status =
-        this->mipRaceResults(mip_solver_info, worker_info, mip_time);
+      this->mipRaceResults(mip_solver_info, worker_info, mip_time,
+			   loop_mip_time);
     if (call_status == HighsStatus::kError) {
       const bool undo_mods = true;
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
