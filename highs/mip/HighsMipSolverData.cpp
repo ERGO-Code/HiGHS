@@ -1401,6 +1401,20 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                      sol, possibly_store_as_new_incumbent)
                                : 0;
 
+  if (solution_source == kSolutionSourceHighsSolution) {
+    printf(
+        "HighsMipSolverData::addIncumbent HiGHS solution Offset = %15.8g; Obj "
+        "= %15.8g; UB = %15.8g; PossAdd = %s",
+        mipsolver.model_->offset_, solobj, upper_bound,
+        possibly_store_as_new_incumbent ? "T" : "F");
+    if (possibly_store_as_new_incumbent) {
+      printf("; TransObj = %15.8g; TransSolobj < UB %s \n", transformed_solobj,
+             transformed_solobj < upper_bound ? "T" : "F");
+    } else {
+      printf("\n");
+    }
+    fflush(stdout);
+  }
   if (possibly_store_as_new_incumbent) {
     solobj = transformed_solobj;
     if (solobj >= upper_bound) return false;
@@ -2677,18 +2691,57 @@ void HighsMipSolverData::queryExternalSolution(
   if (!mipsolver.options_mip_->mip_race_read_solutions) return;
   MipRace& mip_race = mipsolver.mip_race_;
   if (!mip_race.record) return;
-  double instance_solution_objective_value = kHighsInf;
+  double instance_objective_value = kHighsInf;
   std::vector<double> instance_solution;
   for (HighsInt instance = 0; instance < mipRaceConcurrency(); instance++) {
     if (instance == mip_race.my_instance) continue;
-    if (!mip_race.newSolution(instance, instance_solution_objective_value,
+    if (!mip_race.newSolution(instance, instance_objective_value,
                               instance_solution))
       continue;
     // Have read a new incumbent
-    std::vector<double> reduced_instance_solution;
-    reduced_instance_solution =
+    //
+    // Objective is assumed to be original_offset + (original_c)^T(original_x),
+    // but MIP solver bounds are based on the reduced objective
+    // (reduced_c)^T(reduced_x)
+    //
+    // Now, original_sense*[reduced_offset + (reduced_c)^T(reduced_x)] is an
+    // objective in the original space, so
+    //
+    // f0 + c0^Tx0 = s*(f1 + c1^Tx1)
+    //
+    // where 0 => original; 1 => reduced
+    //
+    // This allows the reduced objective value to be deduced as
+    //
+    // c1^Tx1 = s*(f0 + c0^Tx0) - f1
+    //
+    // (reduced_c)^T(reduced_x) = original_sense*[original_offset +
+    // (original_c)^T(original_x) - reduced_offset]
+    //
+    double reduced_instance_objective_value = instance_objective_value;
+    reduced_instance_objective_value *= int(mipsolver.orig_model_->sense_);
+    reduced_instance_objective_value -= mipsolver.model_->offset_;
+    // Get the solution in the reduced space
+    std::vector<double> reduced_instance_solution =
         postSolveStack.getReducedPrimalSolution(instance_solution);
-    addIncumbent(reduced_instance_solution, instance_solution_objective_value,
+
+    double check_objective_value = 0;
+    for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
+      check_objective_value +=
+          mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
+    double dl_objective_value =
+        std::fabs(check_objective_value - reduced_instance_objective_value);
+    assert(dl_objective_value < 1e-12 * (1 + std::fabs(check_objective_value)));
+    printf(
+        "HighsMipSolverData::queryExternalSolution: (sense = %d; offset = "
+        "%11.4g) modified objective from %11.4g to %11.4g (Check = %11.4g; "
+        "Delta = %11.4g)\n",
+        int(mipsolver.orig_model_->sense_), mipsolver.model_->offset_,
+        instance_objective_value, reduced_instance_objective_value,
+        check_objective_value, dl_objective_value);
+    fflush(stdout);
+
+    addIncumbent(reduced_instance_solution, reduced_instance_objective_value,
                  kSolutionSourceHighsSolution);
   }
 }
@@ -2956,7 +3009,7 @@ void MipRaceRecord::report(const HighsLogOptions log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nStartWrite:        ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",
-                 this->incumbent[instance].start_write_incumbent);
+                 int(this->incumbent[instance].start_write_incumbent));
   highsLogUser(log_options, HighsLogType::kInfo, "\nObjective:         ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20.12g",
@@ -2964,7 +3017,7 @@ void MipRaceRecord::report(const HighsLogOptions log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nFinishWrite:       ");
   for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",
-                 this->incumbent[instance].finish_write_incumbent);
+                 int(this->incumbent[instance].finish_write_incumbent));
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
 }
 
@@ -2997,7 +3050,7 @@ void MipRace::update(const double objective,
   //  this->report();
 }
 
-bool MipRace::newSolution(const HighsInt instance, double objective,
+bool MipRace::newSolution(const HighsInt instance, double& objective,
                           std::vector<double>& solution) {
   assert(this->record);
   HighsInt new_incumbent_read = this->record->incumbent[instance].read(

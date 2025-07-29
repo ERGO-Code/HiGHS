@@ -4106,9 +4106,8 @@ HighsStatus Highs::callSolveMip() {
         });
     loop_mip_time += timer_.read();
     // Determine the winner and report on the solution
-    HighsStatus call_status =
-      this->mipRaceResults(mip_solver_info, worker_info, mip_time,
-			   loop_mip_time);
+    HighsStatus call_status = this->mipRaceResults(mip_solver_info, worker_info,
+                                                   mip_time, loop_mip_time);
     if (call_status == HighsStatus::kError) {
       const bool undo_mods = true;
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);

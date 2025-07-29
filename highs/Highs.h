@@ -1717,7 +1717,7 @@ class Highs {
   HighsStatus mipRaceResults(HighsMipSolverInfo& mip_solver_info,
                              const std::vector<HighsMipSolverInfo>& worker_info,
                              const std::vector<double>& mip_time,
-			     const double& report_mip_time);
+                             const double& report_mip_time);
 };
 
 // Start of deprecated methods not in the Highs class

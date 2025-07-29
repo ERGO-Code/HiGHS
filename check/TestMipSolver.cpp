@@ -1037,8 +1037,8 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("mip-race", "[highs_test_mip_solver]") {
-  const bool ci_test = false;
-  const std::string test_build_model = "fiball";
+  const bool ci_test = true;
+  const std::string test_build_model = "neos-3381206-awhea";  //"fiball";
   const std::string model = ci_test ? "flugpl" : test_build_model;
   // "neos-3381206-awhea";
   const std::string model_file =
@@ -1050,8 +1050,18 @@ TEST_CASE("mip-race", "[highs_test_mip_solver]") {
   h.setOptionValue("mip_race_concurrency", mip_race_concurrency);
   h.setOptionValue("mip_race_read_solutions", true);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  for (int k = 0; k < 2; k++) {
+    if (k == 1) {
+      HighsLp lp = h.getLp();
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        lp.col_cost_[iCol] = -lp.col_cost_[iCol];
+      REQUIRE(h.changeColsCost(0, lp.num_col_ - 1, lp.col_cost_.data()) ==
+              HighsStatus::kOk);
+      REQUIRE(h.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
+    }
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  }
 
   if (ci_test) {
     h.clearSolver();

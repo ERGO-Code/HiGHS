@@ -4264,8 +4264,7 @@ void HighsMipSolverInfo::clear() {
 HighsStatus Highs::mipRaceResults(
     HighsMipSolverInfo& mip_solver_info,
     const std::vector<HighsMipSolverInfo>& worker_info,
-    const std::vector<double>& mip_time,
-    const double& report_mip_time) {
+    const std::vector<double>& mip_time, const double& report_mip_time) {
   const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
   HighsInt winning_instance = -1;
   HighsModelStatus winning_model_status = HighsModelStatus::kNotset;
@@ -4276,7 +4275,7 @@ HighsStatus Highs::mipRaceResults(
         instance == 0 ? mip_solver_info : worker_info[instance];
     HighsModelStatus instance_model_status = solver_info.modelstatus;
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "   Solver %2d has best objective %15.8g, gap %6.2f\% (time "
+                 "   Solver %2d has best objective %15.8g, gap %6.2f%% (time "
                  "= %6.2f), and status %s\n",
                  int(instance), solver_info.solution_objective,
                  1e2 * solver_info.gap, mip_time[instance],
