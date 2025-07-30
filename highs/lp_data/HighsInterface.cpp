@@ -4261,11 +4261,10 @@ void HighsMipSolverInfo::clear() {
   this->primal_dual_integral = -kHighsInf;
 }
 
-HighsStatus Highs::mipRaceResults(bool use_mip_race_single_presolve,
-				  HighsMipSolverInfo& mip_solver_info,
-				  const std::vector<HighsMipSolverInfo>& worker_info,
-				  const std::vector<double>& mip_time,
-				  double mip_race_time) {
+HighsStatus Highs::mipRaceResults(
+    bool use_mip_race_single_presolve, HighsMipSolverInfo& mip_solver_info,
+    const std::vector<HighsMipSolverInfo>& worker_info,
+    const std::vector<double>& mip_time, double mip_race_time) {
   const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
   HighsInt winning_instance = -1;
   HighsModelStatus winning_model_status = HighsModelStatus::kNotset;
@@ -4310,22 +4309,34 @@ HighsStatus Highs::mipRaceResults(bool use_mip_race_single_presolve,
     solution.col_value = mip_solver_info.solution;
     // Perform postsolve after the MIP race
     //
-    // NB Highs::postsolve() is normally called externally, so calls
-    // returnFromHighs(). This will stop the run clock, and check that
-    // called_return_from_optimize_model is true - when it isn't. So,
-    // add a hack to set called_return_from_optimize_model true before
-    // the call to postsolve...
-    assert(!this->called_return_from_optimize_model);
-    this->called_return_from_optimize_model = true;
-   
-    this->postsolve(solution);
-    // ... then set it back to false and restart the run clock
-    this->called_return_from_optimize_model = false;
-    this->timer_.start();
-    
+    // Set up an empty basis so that callRunPostsolve can be used
+    HighsBasis basis;
+    // Need to suppress the warning about the HighsModelStatus for
+    // MIPs that (in general) can't be set after postsolve
+    const bool suppress_mip_model_status_warning = true;
+    HighsStatus call_status = this->callRunPostsolve(
+        solution, basis, suppress_mip_model_status_warning);
+    // call_status will be HighsStatus::kWarning, since model_status_
+    // is typically HighsModelStatus::kUnknown due to the lack of
+    // optimality test for a MIP. However, since this postsolve was
+    // run for a solution that was optimal for the presolved problem
+    // (and that status is in mip_solver_info) the warning can be
+    // ignored.
+    if (call_status == HighsStatus::kError) return call_status;
     // Now update the MipSolverInfo with the postsolved solution
-    mip_solver_info.solution = this->getSolution().col_value;
+    mip_solver_info.solution = this->solution_.col_value;
   }
+  const HighsInt mip_solver_info_solution_size =
+      mip_solver_info.solution.size();
+  if (0 < mip_solver_info_solution_size &&
+      mip_solver_info_solution_size < this->model_.lp_.num_col_) {
+    printf(
+        "Highs::mipRaceResults MipSolverInfo solution size = %d < %d = "
+        "num_col\n",
+        int(mip_solver_info_solution_size), int(this->model_.lp_.num_col_));
+    assert(11 == 33);
+  }
+
   mip_race_time += this->timer_.read();
 
   std::array<char, 128> gapString = getGapString(

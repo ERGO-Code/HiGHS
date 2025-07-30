@@ -8,6 +8,7 @@
 #include "mip/HighsMipSolverData.h"
 
 #include <random>
+#include <sstream>
 
 // #include "lp_data/HighsLpUtils.h"
 #include "../extern/pdqsort/pdqsort.h"
@@ -1400,19 +1401,24 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       get_transformed_solution ? transformNewIntegerFeasibleSolution(
                                      sol, possibly_store_as_new_incumbent)
                                : 0;
-  const bool highs_solution_report = true;
-  if (solution_source == kSolutionSourceHighsSolution
-      && highs_solution_report
+  const bool highs_solution_report = false;
+  if (solution_source == kSolutionSourceHighsSolution && highs_solution_report
       //&& possibly_store_as_new_incumbent
-      ) {
+  ) {
+    std::stringstream ss;
+    ss.str(std::string());
+    ss << highsFormatToString(
+        "HighsMipSolverData::addIncumbent HiGHS solution Obj "
+        "= %15.8g; UB = %15.8g; Obj-UB = %11.4g; PossAdd = %s",
+        solobj, upper_bound, solobj - upper_bound,
+        possibly_store_as_new_incumbent ? "T" : "F");
+    if (possibly_store_as_new_incumbent)
+      ss << highsFormatToString(
+          "; TransObj = %15.8g; TransObj-UB = %11.4g; TransSolobj < UB %s",
+          transformed_solobj, transformed_solobj - upper_bound,
+          transformed_solobj < upper_bound ? "T" : "F");
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-		 "HighsMipSolverData::addIncumbent HiGHS solution Obj "
-		 "= %15.8g; UB = %15.8g; Obj-UB = %11.4g; PossAdd = %s; TransObj = %15.8g; TransObj-UB = %11.4g; TransSolobj < UB %s \n",
-		 solobj, upper_bound,
-		 solobj-upper_bound,
-		 possibly_store_as_new_incumbent ? "T" : "F", transformed_solobj,
-		 transformed_solobj - upper_bound,
-		 transformed_solobj < upper_bound ? "T" : "F");
+                 "%s\n", ss.str().c_str());
     fflush(stdout);
   }
   if (possibly_store_as_new_incumbent) {
@@ -2731,17 +2737,19 @@ void HighsMipSolverData::queryExternalSolution(
     if (!checkSolution(reduced_instance_solution)) {
       const bool feasibility_warning = true;
       if (feasibility_warning) {
-	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-		     "Solution from instance %2d is not feasible for instance %2d\n",
-		     int(instance), int(mip_race.my_instance));
+        highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+            "Solution from instance %2d is not feasible for instance %2d\n",
+            int(instance), int(mip_race.my_instance));
       }
       continue;
     }
     HighsCDouble reduced_instance_quad_objective_value = 0;
     for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
       reduced_instance_quad_objective_value +=
-	mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
-    double reduced_instance_objective_value = double(reduced_instance_quad_objective_value);
+          mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
+    double reduced_instance_objective_value =
+        double(reduced_instance_quad_objective_value);
     addIncumbent(reduced_instance_solution, reduced_instance_objective_value,
                  kSolutionSourceHighsSolution);
   }

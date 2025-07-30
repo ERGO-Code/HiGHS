@@ -4043,10 +4043,8 @@ HighsStatus Highs::callSolveMip() {
   // converted into the use_lp instance, and this->presolve(); works
   // on the incumbent model
   const bool use_mip_race_single_presolve =
-    run_mip_race &&
-    options_.mip_race_single_presolve &&
-    options_.presolve != kHighsOffString &&
-    !has_semi_variables;
+      run_mip_race && options_.mip_race_single_presolve &&
+      options_.presolve != kHighsOffString && !has_semi_variables;
   // Take a copy of the presolve option in case it's switched off for
   // a single presolve MIP race
   const std::string presolve = this->options_.presolve;
@@ -4060,16 +4058,20 @@ HighsStatus Highs::callSolveMip() {
     // the call to presolve...
     assert(!this->called_return_from_optimize_model);
     this->called_return_from_optimize_model = true;
-    this->presolve();
+    HighsStatus call_status = this->presolve();
     // ... then set it back to false and restart the run clock
     this->called_return_from_optimize_model = false;
     this->timer_.start();
+    if (call_status != HighsStatus::kOk) return call_status;
     presolved_lp = this->getPresolvedLp();
     this->options_.presolve = kHighsOffString;
   }
   // Create the master MIP solver instance that will exist beyond any
   // MIP race
-  HighsLp& lp = has_semi_variables ? use_lp : (use_mip_race_single_presolve ? presolved_lp : model_.lp_);
+  HighsLp& lp =
+      has_semi_variables
+          ? use_lp
+          : (use_mip_race_single_presolve ? presolved_lp : model_.lp_);
   HighsMipSolver solver(callback_, options_, lp, solution_);
   HighsMipSolverInfo mip_solver_info;
   if (run_mip_race) {
@@ -4084,7 +4086,7 @@ HighsStatus Highs::callSolveMip() {
     worker_callback.clear();
     // Race the MIP solver!
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Starting MIP race with %d instances: behaviour is "
+                 "\nStarting MIP race with %d instances: behaviour is "
                  "non-deterministic!\n",
                  int(mip_race_concurrency));
     // Define the HighsMipSolverInfo record for each worker
@@ -4133,9 +4135,9 @@ HighsStatus Highs::callSolveMip() {
           }
         });
     // Determine the winner and report on the solution
-    HighsStatus call_status = this->mipRaceResults(use_mip_race_single_presolve,
-						   mip_solver_info, worker_info,
-                                                   mip_time, mip_race_time);
+    HighsStatus call_status =
+        this->mipRaceResults(use_mip_race_single_presolve, mip_solver_info,
+                             worker_info, mip_time, mip_race_time);
     // Restore the presolve option - that will have been set to
     // kHighsOffString for a single presolve MIP race
     this->options_.presolve = presolve;
@@ -4238,9 +4240,10 @@ HighsStatus Highs::callSolveMip() {
   return return_status;
 }
 
-// Only called from Highs::postsolve
-HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
-                                    const HighsBasis& basis) {
+// Only called from Highs::postsolve and Highs::mipRaceResults
+HighsStatus Highs::callRunPostsolve(
+    const HighsSolution& solution, const HighsBasis& basis,
+    const bool suppress_mip_model_status_warning) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
@@ -4305,9 +4308,12 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                        max_integrality_violation);
         }
       }
-      highsLogUser(
-          options_.log_options, HighsLogType::kWarning,
-          "Postsolve performed for MIP, but model status cannot be known\n");
+      // When calling postsolve after MIP race on presolved model,
+      // model status can be trusted so suppress the warning message
+      if (!suppress_mip_model_status_warning)
+        highsLogUser(
+            options_.log_options, HighsLogType::kWarning,
+            "Postsolve performed for MIP, but model status cannot be known\n");
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "Postsolve return status is %d\n", (int)postsolve_status);

@@ -580,7 +580,7 @@ struct HighsOptionsStruct {
         mip_allow_restart(false),
         mip_race_concurrency(0),
         mip_race_read_solutions(false),
-	mip_race_single_presolve(false),
+        mip_race_single_presolve(false),
         mip_max_nodes(0),
         mip_max_stall_nodes(0),
         mip_max_start_nodes(0),

@@ -1503,8 +1503,9 @@ class Highs {
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
   HighsStatus callSolveMip();
-  HighsStatus callRunPostsolve(const HighsSolution& solution,
-                               const HighsBasis& basis);
+  HighsStatus callRunPostsolve(
+      const HighsSolution& solution, const HighsBasis& basis,
+      const bool suppress_mip_model_status_warning = false);
 
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve(const bool force_lp_presolve,
@@ -1715,7 +1716,7 @@ class Highs {
   void saveHighsFiles();
   void getHighsFiles();
   HighsStatus mipRaceResults(bool use_mip_race_single_presolve,
-			     HighsMipSolverInfo& mip_solver_info,
+                             HighsMipSolverInfo& mip_solver_info,
                              const std::vector<HighsMipSolverInfo>& worker_info,
                              const std::vector<double>& mip_time,
                              double mip_race_time);
