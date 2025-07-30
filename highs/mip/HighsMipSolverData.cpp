@@ -1400,8 +1400,9 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       get_transformed_solution ? transformNewIntegerFeasibleSolution(
                                      sol, possibly_store_as_new_incumbent)
                                : 0;
-  /*
+  const bool highs_solution_report = true;
   if (solution_source == kSolutionSourceHighsSolution
+      && highs_solution_report
       //&& possibly_store_as_new_incumbent
       ) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -1414,7 +1415,6 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 		 transformed_solobj < upper_bound ? "T" : "F");
     fflush(stdout);
   }
-  */
   if (possibly_store_as_new_incumbent) {
     solobj = transformed_solobj;
     if (solobj >= upper_bound) return false;
@@ -2729,20 +2729,19 @@ void HighsMipSolverData::queryExternalSolution(
     // Reduced solution can be infeasible if restart has been
     // performed
     if (!checkSolution(reduced_instance_solution)) {
-      /*
-	highsLogUser(
-            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-	    "Solution from instance %2d is not feasible for instance %2d\n",
-	    int(instance), int(mip_race.my_instance));
-      */
+      const bool feasibility_warning = true;
+      if (feasibility_warning) {
+	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+		     "Solution from instance %2d is not feasible for instance %2d\n",
+		     int(instance), int(mip_race.my_instance));
+      }
       continue;
     }
-
-
-    double reduced_instance_objective_value = 0;
+    HighsCDouble reduced_instance_quad_objective_value = 0;
     for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
-      reduced_instance_objective_value +=
-          mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
+      reduced_instance_quad_objective_value +=
+	mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
+    double reduced_instance_objective_value = double(reduced_instance_quad_objective_value);
     addIncumbent(reduced_instance_solution, reduced_instance_objective_value,
                  kSolutionSourceHighsSolution);
   }
