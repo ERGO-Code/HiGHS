@@ -16,9 +16,8 @@
 
 namespace hipo {
 
-Analyse::Analyse(Symbolic& S, const std::vector<Int>& rows,
-                 const std::vector<Int>& ptr, Int negative_pivots)
-    : S_{S} {
+Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
+                 Int negative_pivots) {
   // Input the symmetric matrix to be analysed in CSC format.
   // row_ind contains the row indices.
   // col_ptr contains the starting points of each column.
@@ -29,6 +28,7 @@ Analyse::Analyse(Symbolic& S, const std::vector<Int>& rows,
   n_ = ptr.size() - 1;
   nz_ = rows.size();
   negative_pivots_ = negative_pivots;
+  nb_ = kBlockSize;
 
   // Create upper triangular part
   rows_upper_.resize(nz_);
@@ -964,17 +964,16 @@ void Analyse::computeStorage(Int fr, Int sz, double& fr_entries,
 
   const Int cl = fr - sz;
 
-  const Int nb = S_.blockSize();
-  Int n_blocks = (sz - 1) / nb + 1;
+  Int n_blocks = (sz - 1) / nb_ + 1;
   std::vector<Int> temp;
-  fr_entries = getDiagStart(fr, sz, nb, n_blocks, temp);
+  fr_entries = getDiagStart(fr, sz, nb_, n_blocks, temp);
 
   // clique is stored as a collection of rectangles
-  n_blocks = (cl - 1) / nb + 1;
+  n_blocks = (cl - 1) / nb_ + 1;
   double schur_size{};
   for (Int j = 0; j < n_blocks; ++j) {
-    const Int jb = std::min(nb, cl - j * nb);
-    schur_size += (double)(cl - j * nb) * jb;
+    const Int jb = std::min(nb_, cl - j * nb_);
+    schur_size += (double)(cl - j * nb_) * jb;
   }
   cl_entries = schur_size;
 }
@@ -1270,16 +1269,15 @@ void Analyse::computeBlockStart() {
     const Int sn_size = sn_start_[sn + 1] - sn_start_[sn];
     const Int ldf = ptr_sn_[sn + 1] - ptr_sn_[sn];
     const Int ldc = ldf - sn_size;
-    const Int nb = S_.blockSize();
-    const Int n_blocks = (ldc - 1) / nb + 1;
+    const Int n_blocks = (ldc - 1) / nb_ + 1;
 
     Int schur_size =
-        getDiagStart(ldc, ldc, nb, n_blocks, clique_block_start_[sn]);
+        getDiagStart(ldc, ldc, nb_, n_blocks, clique_block_start_[sn]);
     clique_block_start_[sn].push_back(schur_size);
   }
 }
 
-Int Analyse::run() {
+Int Analyse::run(Symbolic& S) {
   // Perform analyse phase and store the result into the symbolic object S.
   // After Run returns, the Analyse object is not valid.
 
@@ -1355,54 +1353,57 @@ Int Analyse::run() {
   computeCriticalPath();
 
   // Too many nonzeros for the integer type selected
-  if (nz_factor_ >= std::numeric_limits<Int>::max()) return kRetIntOverflow;
+  if (nz_factor_ >= std::numeric_limits<Int>::max()) {
+    Log::printDevInfo("Integer overflow in analyse phase\n");
+    return kRetIntOverflow;
+  }
 
   // move relevant stuff into S
-  S_.n_ = n_;
-  S_.sn_ = sn_count_;
+  S.n_ = n_;
+  S.sn_ = sn_count_;
 
-  S_.sn_ = sn_count_;
-  S_.n_ = n_;
-  S_.nz_ = nz_factor_;
-  S_.fillin_ = (double)nz_factor_ / nz_;
-  S_.artificial_nz_ = artificial_nz_;
-  S_.artificial_ops_ = dense_ops_ - dense_ops_norelax_;
-  S_.spops_ = sparse_ops_;
-  S_.critops_ = critical_ops_;
-  S_.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
-  S_.serial_storage_ = serial_storage_;
-  S_.flops_ = dense_ops_;
+  S.sn_ = sn_count_;
+  S.n_ = n_;
+  S.nz_ = nz_factor_;
+  S.fillin_ = (double)nz_factor_ / nz_;
+  S.artificial_nz_ = artificial_nz_;
+  S.artificial_ops_ = dense_ops_ - dense_ops_norelax_;
+  S.spops_ = sparse_ops_;
+  S.critops_ = critical_ops_;
+  S.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
+  S.serial_storage_ = serial_storage_;
+  S.flops_ = dense_ops_;
 
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());
   for (Int i = sn_count_ - 1; i > 0; --i) sn_size[i] -= sn_size[i - 1];
-  S_.largest_sn_ = *std::max_element(sn_size.begin(), sn_size.end());
+  S.largest_sn_ = *std::max_element(sn_size.begin(), sn_size.end());
 
   // build statistics about supernodes size
   for (Int i : sn_size) {
-    if (i == 1) S_.sn_size_1_++;
-    if (i <= 10) S_.sn_size_10_++;
-    if (i <= 100) S_.sn_size_100_++;
+    if (i == 1) S.sn_size_1_++;
+    if (i <= 10) S.sn_size_10_++;
+    if (i <= 100) S.sn_size_100_++;
   }
 
   // initialise sign of pivots and permute them
-  S_.pivot_sign_.insert(S_.pivot_sign_.end(), negative_pivots_, -1);
-  S_.pivot_sign_.insert(S_.pivot_sign_.end(), n_ - negative_pivots_, 1);
-  permuteVector(S_.pivot_sign_, perm_);
+  S.pivot_sign_.insert(S.pivot_sign_.end(), negative_pivots_, -1);
+  S.pivot_sign_.insert(S.pivot_sign_.end(), n_ - negative_pivots_, 1);
+  permuteVector(S.pivot_sign_, perm_);
 
-  S_.nz_ = nz_factor_;
-  S_.flops_ = dense_ops_;
-  S_.spops_ = sparse_ops_;
-  S_.critops_ = critical_ops_;
-  S_.iperm_ = std::move(iperm_);
-  S_.rows_ = std::move(rows_sn_);
-  S_.ptr_ = std::move(ptr_sn_);
-  S_.sn_parent_ = std::move(sn_parent_);
-  S_.sn_start_ = std::move(sn_start_);
-  S_.relind_cols_ = std::move(relind_cols_);
-  S_.relind_clique_ = std::move(relind_clique_);
-  S_.consecutive_sums_ = std::move(consecutive_sums_);
-  S_.clique_block_start_ = std::move(clique_block_start_);
+  S.nz_ = nz_factor_;
+  S.flops_ = dense_ops_;
+  S.spops_ = sparse_ops_;
+  S.critops_ = critical_ops_;
+  S.iperm_ = std::move(iperm_);
+  S.rows_ = std::move(rows_sn_);
+  S.ptr_ = std::move(ptr_sn_);
+  S.sn_parent_ = std::move(sn_parent_);
+  S.sn_start_ = std::move(sn_start_);
+  S.relind_cols_ = std::move(relind_cols_);
+  S.relind_clique_ = std::move(relind_clique_);
+  S.consecutive_sums_ = std::move(consecutive_sums_);
+  S.clique_block_start_ = std::move(clique_block_start_);
 
 #if HIPO_TIMING_LEVEL >= 1
   DataCollector::get()->sumTime(kTimeAnalyse, clock_total.stop());

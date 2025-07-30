@@ -43,10 +43,12 @@ class Numeric {
   Numeric(const Symbolic& S);
 
   // Full solve with refinement
-  Int solve(std::vector<double>& x) const;
+  // Return pair (number of solves, final residual)
+  std::pair<Int, double> solve(std::vector<double>& x) const;
 
   // Iterative refinement
-  Int refine(const std::vector<double>& rhs, std::vector<double>& x) const;
+  std::pair<Int, double> refine(const std::vector<double>& rhs,
+                                std::vector<double>& x) const;
   std::vector<double> residual(const std::vector<double>& rhs,
                                const std::vector<double>& x) const;
   std::vector<double> residualQuad(const std::vector<double>& rhs,

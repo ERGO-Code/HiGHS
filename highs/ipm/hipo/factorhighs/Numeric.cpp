@@ -17,7 +17,7 @@ Numeric::Numeric(const Symbolic& S) : S_{S} {
   SH_.reset(new HybridSolveHandler(S_, sn_columns_, swaps_, pivot_2x2_));
 }
 
-Int Numeric::solve(std::vector<double>& x) const {
+std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
   // Return the number of solves performed
 
 #if HIPO_TIMING_LEVEL >= 1
@@ -43,14 +43,13 @@ Int Numeric::solve(std::vector<double>& x) const {
   SH_->forwardSolve(x);
   SH_->diagSolve(x);
   SH_->backwardSolve(x);
-  DataCollector::get()->countSolves();
 
 #if HIPO_TIMING_LEVEL >= 2
   DataCollector::get()->sumTime(kTimeSolveSolve, clock_fine.stop());
 #endif
 
   // iterative refinement
-  Int refine_solves = refine(rhs, x);
+  auto refine_data = refine(rhs, x);
 
 #if HIPO_TIMING_LEVEL >= 2
   clock_fine.start();
@@ -67,7 +66,7 @@ Int Numeric::solve(std::vector<double>& x) const {
   DataCollector::get()->sumTime(kTimeSolve, clock.stop());
 #endif
 
-  return refine_solves + 1;
+  return {refine_data.first + 1, refine_data.second};
 }
 
 std::vector<double> Numeric::residual(const std::vector<double>& rhs,
@@ -98,8 +97,8 @@ std::vector<double> Numeric::residualQuad(const std::vector<double>& rhs,
   return result;
 }
 
-Int Numeric::refine(const std::vector<double>& rhs,
-                    std::vector<double>& x) const {
+std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
+                                       std::vector<double>& x) const {
   // Return the number of solver performed
 
   double old_omega{};
@@ -138,7 +137,6 @@ Int Numeric::refine(const std::vector<double>& rhs,
     SH_->forwardSolve(res);
     SH_->diagSolve(res);
     SH_->backwardSolve(res);
-    DataCollector::get()->countSolves();
     ++solves_counter;
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -181,9 +179,7 @@ Int Numeric::refine(const std::vector<double>& rhs,
     }
   }
 
-  DataCollector::get()->setOmega(omega);
-
-  return solves_counter;
+  return {solves_counter, omega};
 }
 
 double Numeric::computeOmega(const std::vector<double>& b,

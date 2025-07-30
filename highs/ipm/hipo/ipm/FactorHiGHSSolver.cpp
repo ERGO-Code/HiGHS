@@ -8,12 +8,13 @@
 
 namespace hipo {
 
-FactorHiGHSSolver::FactorHiGHSSolver(const Options& options, Info* info)
-    : S_{}, N_(S_), info_{info} {}
+FactorHiGHSSolver::FactorHiGHSSolver(const Options& options, Info* info,
+                                     IpmData* record)
+    : S_{}, N_(S_), info_{info}, data_{record} {}
 
 void FactorHiGHSSolver::clear() {
   valid_ = false;
-  DataCollector::get()->append();
+  FH_.newIter();
 }
 
 Int getASstructure(const HighsSparseMatrix& A, std::vector<Int>& ptr,
@@ -286,8 +287,8 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
 
   // factorise matrix
   clock.start();
-  Factorise factorise(S_, rowsLower, ptrLower, valLower);
-  if (factorise.run(N_)) return kStatusErrorFactorise;
+  if (FH_.factorise(N_, S_, rowsLower, ptrLower, valLower))
+    return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
     info_->factor_number++;
@@ -318,8 +319,8 @@ Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
   // modify them.
   std::vector<Int> ptrNE(ptrNE_);
   std::vector<Int> rowsNE(rowsNE_);
-  Factorise factorise(S_, rowsNE, ptrNE, valNE_);
-  if (factorise.run(N_)) return kStatusErrorFactorise;
+  if (FH_.factorise(N_, S_, rowsNE, ptrNE, valNE_))
+    return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
     info_->factor_number++;
@@ -338,10 +339,14 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
   lhs = rhs;
 
   Clock clock;
-  Int solves = N_.solve(lhs);
+  auto solve_data = N_.solve(lhs);
   if (info_) {
     info_->solve_time += clock.stop();
-    info_->solve_number += solves;
+    info_->solve_number += solve_data.first;
+  }
+  if (data_) {
+    data_->back().num_solves += solve_data.first;
+    data_->back().omega = std::max(data_->back().omega, solve_data.second);
   }
 
   return kStatusOk;
@@ -362,10 +367,14 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
 
   Clock clock;
-  Int solves = N_.solve(rhs);
+  auto solve_data = N_.solve(rhs);
   if (info_) {
     info_->solve_time += clock.stop();
-    info_->solve_number += solves;
+    info_->solve_number += solve_data.first;
+  }
+  if (data_) {
+    data_->back().num_solves += solve_data.first;
+    data_->back().omega = std::max(data_->back().omega, solve_data.second);
   }
 
   // split lhs
@@ -396,8 +405,8 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
     std::vector<Int> ptrLower, rowsLower;
     getASstructure(model.A(), ptrLower, rowsLower);
     clock.start();
-    Analyse analyse_AS(symb_AS, rowsLower, ptrLower, model.A().num_col_);
-    Int AS_status = analyse_AS.run();
+    Int AS_status =
+        FH_.analyse(symb_AS, rowsLower, ptrLower, model.A().num_col_);
     if (AS_status) failure_AS = true;
     if (info_) info_->analyse_AS_time = clock.stop();
   }
@@ -419,8 +428,7 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
         failure_NE = true;
       else {
         clock.start();
-        Analyse analyse_NE(symb_NE, rowsNE_, ptrNE_, 0);
-        NE_status = analyse_NE.run();
+        NE_status = FH_.analyse(symb_NE, rowsNE_, ptrNE_, 0);
         if (NE_status) failure_NE = true;
         if (info_) info_->analyse_NE_time = clock.stop();
       }
@@ -495,11 +503,12 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
       std::vector<Int> ptrLower, rowsLower;
       getASstructure(model.A(), ptrLower, rowsLower);
       clock.start();
-      Analyse analyse(S_, rowsLower, ptrLower, model.A().num_col_);
-      if (analyse.run()) {
+
+      if (FH_.analyse(S_, rowsLower, ptrLower, model.A().num_col_)) {
         Log::printe("AS requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }
+
       if (info_) info_->analyse_AS_time = clock.stop();
       log_stream << textline("Newton system:") << "AS requested\n";
       break;
@@ -512,8 +521,7 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
         return kStatusOoM;
       }
       clock.start();
-      Analyse analyse(S_, rowsNE_, ptrNE_, 0);
-      if (analyse.run()) {
+      if (FH_.analyse(S_, rowsNE_, ptrNE_, 0)) {
         Log::printe("NE requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }

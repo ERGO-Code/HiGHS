@@ -11,12 +11,19 @@ DataCollector* DataCollector::ptr_ = nullptr;
 // Functions to manage DataCollector
 
 DataCollector::DataCollector() {
-  counter_data_.times.resize(kTimeSize);
-  counter_data_.blas_calls.resize(kTimeBlasEnd - kTimeBlasStart + 1);
+  times.resize(kTimeSize);
+  blas_calls.resize(kTimeBlasEnd - kTimeBlasStart + 1);
 }
 DataCollector* DataCollector::get() { return ptr_; }
 void DataCollector::initialise() {
   if (!ptr_) ptr_ = new DataCollector();
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
+  Log::printw(
+      "Running in debug mode: COLLECTING EXPENSIVE FACTORISATION DATA\n");
+#endif
+#if HIPO_TIMING_LEVEL > 0
+  Log::printw("Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
+#endif
 }
 void DataCollector::terminate() {
   delete ptr_;
@@ -31,16 +38,18 @@ IterData& DataCollector::back() {
   return iter_data_record_.back();
 }
 
-// Expensive functions
+//
+// Data-collecting functions
+//
 
 void DataCollector::sumTime(TimeItems i, double t) {
 #if HIPO_TIMING_LEVEL > 0
   // Keep track of times and blas calls.
-  std::lock_guard<std::mutex> lock(times_mutex_);
-  counter_data_.times[i] += t;
+  std::lock_guard<std::mutex> lock(mutex_);
+  times[i] += t;
 #if HIPO_TIMING_LEVEL >= 3
   if (i >= kTimeBlasStart && i <= kTimeBlasEnd)
-    ++counter_data_.blas_calls[i - kTimeBlasStart];
+    ++blas_calls[i - kTimeBlasStart];
 #endif
 #endif
 }
@@ -48,7 +57,7 @@ void DataCollector::setExtremeEntries(double minD, double maxD, double minoffD,
                                       double maxoffD) {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
   // Store max and min entries of D and L.
-  std::lock_guard<std::mutex> lock(iter_data_mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   back().minD = std::min(back().minD, minD);
   back().maxD = std::max(back().maxD, maxD);
   back().minL = std::min(back().minL, minoffD);
@@ -58,25 +67,25 @@ void DataCollector::setExtremeEntries(double minD, double maxD, double minoffD,
 void DataCollector::countRegPiv() {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
   // Increase the number of dynamically regularised pivots.
-  std::lock_guard<std::mutex> lock(iter_data_mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   ++back().n_reg_piv;
 #endif
 }
 void DataCollector::countSwap() {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  std::lock_guard<std::mutex> lock(iter_data_mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   ++back().n_swap;
 #endif
 }
 void DataCollector::count2x2() {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  std::lock_guard<std::mutex> lock(iter_data_mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   ++back().n_2x2;
 #endif
 }
 void DataCollector::setWrongSign(double p) {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  std::lock_guard<std::mutex> lock(iter_data_mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   ++back().n_wrong_sign;
   back().max_wrong_sign = std::max(back().max_wrong_sign, std::abs(p));
 #endif
@@ -84,60 +93,25 @@ void DataCollector::setWrongSign(double p) {
 void DataCollector::setMaxReg(double new_reg) {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
   // Keep track of maximum regularisation used.
-  std::lock_guard<std::mutex> lock(iter_data_mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   back().max_reg = std::max(back().max_reg, new_reg);
 #endif
 }
-void DataCollector::setBackError(double nw, double cw, Int large_components) {
+
+void DataCollector::setNorms(double norm1, double maxdiag) {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  back().nw_back_err = std::max(back().nw_back_err, nw);
-  back().cw_back_err = std::max(back().cw_back_err, cw);
-  back().large_components_cw =
-      std::max(back().large_components_cw, large_components);
+  std::lock_guard<std::mutex> lock(mutex_);
+  back().M_norm1 = norm1;
+  back().M_maxdiag = maxdiag;
 #endif
 }
 
-// Cheap functions
-
-void DataCollector::countSolves() { ++back().num_solves; }
-void DataCollector::setOmega(double omega) {
-  back().omega = std::max(back().omega, omega);
-}
-void DataCollector::setNorms(double norm1, double maxdiag) {
-  back().M_norm1 = norm1;
-  back().M_maxdiag = maxdiag;
-}
-void DataCollector::setSigma(double sigma, bool affinescaling) {
-  if (affinescaling)
-    back().sigma_aff = sigma;
-  else
-    back().sigma = sigma;
-}
-void DataCollector::setCorrectors(Int correctors) {
-  back().correctors = correctors;
-}
-void DataCollector::setExtremeTheta(const std::vector<double>& scaling) {
-  back().min_theta = std::numeric_limits<double>::infinity();
-  back().max_theta = 0.0;
-  for (double d : scaling) {
-    if (d != 0.0) {
-      back().min_theta = std::min(back().min_theta, 1.0 / d);
-      back().max_theta = std::max(back().max_theta, 1.0 / d);
-    }
-  }
-}
-void DataCollector::setProducts(double min_prod, double max_prod, Int num_small,
-                                Int num_large) {
-  back().min_prod = min_prod;
-  back().max_prod = max_prod;
-  back().num_small_prod = num_small;
-  back().num_large_prod = num_large;
-}
+//
+// Printing
+//
 
 void DataCollector::printTimes() const {
 #if HIPO_TIMING_LEVEL >= 1
-
-  const std::vector<double>& times = counter_data_.times;
 
   Log::printf("----------------------------------------------------\n");
   Log::printf("Analyse time            \t%8.4f\n", times[kTimeAnalyse]);
@@ -222,8 +196,6 @@ void DataCollector::printTimes() const {
 
 #if HIPO_TIMING_LEVEL >= 3
 
-  const std::vector<Int>& blas_calls = counter_data_.blas_calls;
-
   double total_blas_time =
       times[kTimeBlas_copy] + times[kTimeBlas_axpy] + times[kTimeBlas_scal] +
       times[kTimeBlas_swap] + times[kTimeBlas_gemv] + times[kTimeBlas_trsv] +
@@ -285,18 +257,17 @@ void DataCollector::printIter() const {
   Log::printf(
       "\niter |    min D     max D     min L     max L  |"
       "    reg   swap    2x2     ws | "
-      "  max_reg  solv   omega     nw_be     cw_be     cw_large  max_ws |\n");
+      "  max_reg   max_ws    norm1     maxdiag|\n");
   for (Int i = 0; i < iter_data_record_.size(); ++i) {
     const IterData& iter = iter_data_record_[i];
     Log::printf(
         "%3d  |"
         " %9.1e %9.1e %9.1e %9.1e |"
         " %6d %6d %6d %6d |"
-        " %9.1e %4d %9.1e %9.1e %9.1e %9d %9.1e |\n",
+        " %9.1e %9.1e %9.1e %9.1e|\n",
         i, iter.minD, iter.maxD, iter.minL, iter.maxL, iter.n_reg_piv,
         iter.n_swap, iter.n_2x2, iter.n_wrong_sign, iter.max_reg,
-        iter.num_solves, iter.omega, iter.nw_back_err, iter.cw_back_err,
-        iter.large_components_cw, iter.max_wrong_sign);
+        iter.max_wrong_sign, iter.M_norm1, iter.M_maxdiag);
   }
 #endif
 }

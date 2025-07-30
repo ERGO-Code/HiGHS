@@ -1,7 +1,6 @@
 #include "Iterate.h"
 
 #include "Parameters.h"
-#include "ipm/hipo/factorhighs/DataCollector.h"
 #include "ipm/hipo/factorhighs/FactorHiGHSSettings.h"
 
 namespace hipo {
@@ -84,11 +83,24 @@ void Iterate::computeScaling() {
     if (scaling[i] < 1e-12) scaling[i] = sqrt(1e-12 * scaling[i]);
   }
 
-  DataCollector::get()->setExtremeTheta(scaling);
+  // compute extremes of theta
+  data.back().min_theta = std::numeric_limits<double>::infinity();
+  data.back().max_theta = 0.0;
+  for (double d : scaling) {
+    if (d != 0.0) {
+      data.back().min_theta = std::min(data.back().min_theta, 1.0 / d);
+      data.back().max_theta = std::max(data.back().max_theta, 1.0 / d);
+    }
+  }
 }
 void Iterate::products() {
-  double min_prod = std::numeric_limits<double>::max();
-  double max_prod = 0.0;
+  double& min_prod = data.back().min_prod;
+  double& max_prod = data.back().max_prod;
+  Int& num_small = data.back().num_small_prod;
+  Int& num_large = data.back().num_large_prod;
+
+  min_prod = std::numeric_limits<double>::max();
+  max_prod = 0.0;
   num_small = 0;
   num_large = 0;
 
@@ -108,8 +120,6 @@ void Iterate::products() {
       if (prod > kLargeProduct) ++num_large;
     }
   }
-
-  DataCollector::get()->setProducts(min_prod, max_prod, num_small, num_large);
 }
 
 void Iterate::indicators() {

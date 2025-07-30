@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "Info.h"
+#include "IpmData.h"
 #include "LinearSolver.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -18,12 +19,16 @@ class FactorHiGHSSolver : public LinearSolver {
   // numeric factorisation
   Numeric N_;
 
+  // object to perform factorisation
+  FHsolver FH_;
+
   // normal equations data
   std::vector<Int> ptrNE_, rowsNE_;
   std::vector<double> valNE_;
   HighsSparseMatrix AT_;
 
   Info* info_ = nullptr;
+  IpmData* data_ = nullptr;
 
   Int chooseNla(const Model& model, Options& options);
   Int setNla(const Model& model, Options& options);
@@ -38,7 +43,7 @@ class FactorHiGHSSolver : public LinearSolver {
                     const std::vector<double>& scaling);
 
  public:
-  FactorHiGHSSolver(const Options& options, Info* info);
+  FactorHiGHSSolver(const Options& options, Info* info, IpmData* record);
 
   // Override functions
   Int factorAS(const HighsSparseMatrix& A,

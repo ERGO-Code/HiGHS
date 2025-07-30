@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Info.h"
+#include "IpmData.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
@@ -25,6 +26,9 @@ struct Iterate {
   // lp model
   const Model* model;
 
+  // record of data at each iteration
+  IpmData data;
+
   // ipm point
   std::vector<double> x, xl, xu, y, zl, zu;
 
@@ -42,9 +46,6 @@ struct Iterate {
 
   // smallest value of mu seen so far
   double best_mu;
-
-  // number of small/large complementarity products
-  Int num_small, num_large;
 
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf

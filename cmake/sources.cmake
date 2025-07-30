@@ -178,6 +178,7 @@ set(ipx_headers
 
 set(hipo_sources 
     ipm/hipo/ipm/CurtisReidScaling.cpp 
+    ipm/hipo/ipm/IpmData.cpp 
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp 
@@ -186,6 +187,7 @@ set(hipo_sources
 
 set(hipo_headers
     ipm/hipo/ipm/CurtisReidScaling.h
+    ipm/hipo/ipm/IpmData.h
     ipm/hipo/ipm/FactorHiGHSSolver.h
     ipm/hipo/ipm/Parameters.h
     ipm/hipo/ipm/Control.h
@@ -204,6 +206,7 @@ set(factor_highs_sources
     ipm/hipo/factorhighs/DenseFactHybrid.cpp
     ipm/hipo/factorhighs/DenseFactKernel.cpp
     ipm/hipo/factorhighs/DgemmParallel.cpp
+    ipm/hipo/factorhighs/FactorHiGHS.cpp
     ipm/hipo/factorhighs/Factorise.cpp
     ipm/hipo/factorhighs/FormatHandler.cpp
     ipm/hipo/factorhighs/HybridHybridFormatHandler.cpp

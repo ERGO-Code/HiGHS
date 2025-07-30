@@ -75,8 +75,8 @@ class Analyse {
 
   std::vector<std::vector<Int>> clique_block_start_{};
 
-  // symbolic object where to store result
-  Symbolic& S_;
+  // block size
+  Int nb_{};
 
   // Functions to perform analyse phase
   Int getPermutation();
@@ -100,11 +100,11 @@ class Analyse {
 
  public:
   // Constructor: matrix must be in lower triangular format
-  Analyse(Symbolic& S, const std::vector<Int>& rows,
-          const std::vector<Int>& ptr, Int negative_pivots = 0);
+  Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
+          Int negative_pivots = 0);
 
-  // Run analyse phase and save the result in Symbolic object S_
-  Int run();
+  // Run analyse phase and save the result in Symbolic object S
+  Int run(Symbolic& S);
 };
 
 }  // namespace hipo
