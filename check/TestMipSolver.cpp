@@ -1049,9 +1049,13 @@ TEST_CASE("mip-race", "[highs_test_mip_solver]") {
   const HighsInt mip_race_concurrency = ci_test ? 2 : 4;
   h.setOptionValue("mip_race_concurrency", mip_race_concurrency);
   h.setOptionValue("mip_race_read_solutions", true);
-  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  for (HighsInt k = 0; k < 1; k++) {
+    bool mip_race_single_presolve = k == 0 ? false : true;
+    h.setOptionValue("mip_race_single_presolve", mip_race_single_presolve);
+    REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  }
 
   if (ci_test) {
     h.clearSolver();

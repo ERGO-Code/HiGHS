@@ -4031,13 +4031,45 @@ HighsStatus Highs::callSolveMip() {
                                   options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
-
+  // Start timing any MIP race before its presolve and parallel MIP
+  // solver calls. This timer is stopped in Highs::mipRaceResults
+  // after any postsolve is performed
+  double mip_race_time = -this->timer_.read();
+  HighsLp presolved_lp;
+  const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
+  const bool run_mip_race = mip_race_concurrency > 1;
+  // Determine whether to do a single presolve before any MIP race
+  //
+  // Doesn't work when there are semi-variables since they have to be
+  // converted into the use_lp instance, and this->presolve(); works
+  // on the incumbent model
+  const bool use_mip_race_single_presolve =
+    run_mip_race &&
+    options_.mip_race_single_presolve &&
+    options_.presolve != kHighsOffString &&
+    !has_semi_variables;
+  if (use_mip_race_single_presolve) {
+    // Perform presolve before the MIP race
+    //
+    // NB This is normally called externally, so calls
+    // returnFromHighs(). This will stop the run clock, and check that
+    // called_return_from_optimize_model is true - when it isn't. So,
+    // add a hack to set called_return_from_optimize_model true before
+    // the call to presolve...
+    assert(!this->called_return_from_optimize_model);
+    this->called_return_from_optimize_model = true;
+    this->presolve();
+    // ... then set it back to false and restart the run clock
+    this->called_return_from_optimize_model = false;
+    this->timer_.start();
+    presolved_lp = this->getPresolvedLp();
+    lp = presolved_lp;
+  }
   // Create the master MIP solver instance that will exist beyond any
-  // race
+  // MIP race
   HighsMipSolver solver(callback_, options_, lp, solution_);
   HighsMipSolverInfo mip_solver_info;
-  const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
-  if (mip_race_concurrency > 1) {
+  if (run_mip_race) {
     // Set up the shared memory for the MIP solver race
     MipRaceRecord mip_race_record;
     mip_race_record.initialise(mip_race_concurrency, lp.num_col_);
@@ -4070,14 +4102,7 @@ HighsStatus Highs::callSolveMip() {
       if (options_.output_flag)
         highsOpenLogFile(instance_options, worker_log_file);
       worker_options.push_back(instance_options);
-      /*
-      HighsMipSolver worker_instance(worker_callback, worker_options[instance],
-      lp, solution_); worker.push_back(&worker_instance);
-      */
     }
-    // Time the master outside the parallel loop so that this "real"
-    // time is reported
-    double loop_mip_time = -timer_.read();
     highs::parallel::for_each(
         0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
           for (HighsInt instance = start; instance < end; instance++) {
@@ -4104,10 +4129,10 @@ HighsStatus Highs::callSolveMip() {
             }
           }
         });
-    loop_mip_time += timer_.read();
     // Determine the winner and report on the solution
-    HighsStatus call_status = this->mipRaceResults(mip_solver_info, worker_info,
-                                                   mip_time, loop_mip_time);
+    HighsStatus call_status = this->mipRaceResults(use_mip_race_single_presolve,
+						   mip_solver_info, worker_info,
+                                                   mip_time, mip_race_time);
     if (call_status == HighsStatus::kError) {
       const bool undo_mods = true;
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);

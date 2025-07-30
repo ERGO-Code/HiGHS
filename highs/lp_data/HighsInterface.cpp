@@ -4261,10 +4261,11 @@ void HighsMipSolverInfo::clear() {
   this->primal_dual_integral = -kHighsInf;
 }
 
-HighsStatus Highs::mipRaceResults(
-    HighsMipSolverInfo& mip_solver_info,
-    const std::vector<HighsMipSolverInfo>& worker_info,
-    const std::vector<double>& mip_time, const double& report_mip_time) {
+HighsStatus Highs::mipRaceResults(bool use_mip_race_single_presolve,
+				  HighsMipSolverInfo& mip_solver_info,
+				  const std::vector<HighsMipSolverInfo>& worker_info,
+				  const std::vector<double>& mip_time,
+				  double mip_race_time) {
   const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
   HighsInt winning_instance = -1;
   HighsModelStatus winning_model_status = HighsModelStatus::kNotset;
@@ -4301,6 +4302,10 @@ HighsStatus Highs::mipRaceResults(
     }
   }
   if (winning_instance > 0) mip_solver_info = worker_info[winning_instance];
+
+  if (use_mip_race_single_presolve) assert(111==444);
+  mip_race_time += this->timer_.read();
+
   std::array<char, 128> gapString = getGapString(
       mip_solver_info.gap, mip_solver_info.primal_bound, &options_);
 
@@ -4351,7 +4356,7 @@ HighsStatus Highs::mipRaceResults(
   // Report the solution time for the whole concurrent loop, as that's
   // "real" time
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "  Timing            %.2f\n", report_mip_time);
+               "  Timing            %.2f\n", mip_race_time);
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "  Max sub-MIP depth %d\n",
                int(mip_solver_info.max_submip_level));
