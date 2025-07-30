@@ -4030,7 +4030,6 @@ HighsStatus Highs::callSolveMip() {
     use_lp = withoutSemiVariables(model_.lp_, solution_,
                                   options_.primal_feasibility_tolerance);
   }
-  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   // Start timing any MIP race before its presolve and parallel MIP
   // solver calls. This timer is stopped in Highs::mipRaceResults
   // after any postsolve is performed
@@ -4048,10 +4047,13 @@ HighsStatus Highs::callSolveMip() {
     options_.mip_race_single_presolve &&
     options_.presolve != kHighsOffString &&
     !has_semi_variables;
+  // Take a copy of the presolve option in case it's switched off for
+  // a single presolve MIP race
+  const std::string presolve = this->options_.presolve;
   if (use_mip_race_single_presolve) {
     // Perform presolve before the MIP race
     //
-    // NB This is normally called externally, so calls
+    // NB Highs::presolve() is normally called externally, so calls
     // returnFromHighs(). This will stop the run clock, and check that
     // called_return_from_optimize_model is true - when it isn't. So,
     // add a hack to set called_return_from_optimize_model true before
@@ -4063,10 +4065,11 @@ HighsStatus Highs::callSolveMip() {
     this->called_return_from_optimize_model = false;
     this->timer_.start();
     presolved_lp = this->getPresolvedLp();
-    lp = presolved_lp;
+    this->options_.presolve = kHighsOffString;
   }
   // Create the master MIP solver instance that will exist beyond any
   // MIP race
+  HighsLp& lp = has_semi_variables ? use_lp : (use_mip_race_single_presolve ? presolved_lp : model_.lp_);
   HighsMipSolver solver(callback_, options_, lp, solution_);
   HighsMipSolverInfo mip_solver_info;
   if (run_mip_race) {
@@ -4133,6 +4136,10 @@ HighsStatus Highs::callSolveMip() {
     HighsStatus call_status = this->mipRaceResults(use_mip_race_single_presolve,
 						   mip_solver_info, worker_info,
                                                    mip_time, mip_race_time);
+    // Restore the presolve option - that will have been set to
+    // kHighsOffString for a single presolve MIP race
+    this->options_.presolve = presolve;
+
     if (call_status == HighsStatus::kError) {
       const bool undo_mods = true;
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);

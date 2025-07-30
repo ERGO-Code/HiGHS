@@ -4303,13 +4303,34 @@ HighsStatus Highs::mipRaceResults(bool use_mip_race_single_presolve,
   }
   if (winning_instance > 0) mip_solver_info = worker_info[winning_instance];
 
-  if (use_mip_race_single_presolve) assert(111==444);
+  const bool havesolution = mip_solver_info.solution_objective != kHighsInf;
+
+  if (use_mip_race_single_presolve && havesolution) {
+    HighsSolution solution;
+    solution.col_value = mip_solver_info.solution;
+    // Perform postsolve after the MIP race
+    //
+    // NB Highs::postsolve() is normally called externally, so calls
+    // returnFromHighs(). This will stop the run clock, and check that
+    // called_return_from_optimize_model is true - when it isn't. So,
+    // add a hack to set called_return_from_optimize_model true before
+    // the call to postsolve...
+    assert(!this->called_return_from_optimize_model);
+    this->called_return_from_optimize_model = true;
+   
+    this->postsolve(solution);
+    // ... then set it back to false and restart the run clock
+    this->called_return_from_optimize_model = false;
+    this->timer_.start();
+    
+    // Now update the MipSolverInfo with the postsolved solution
+    mip_solver_info.solution = this->getSolution().col_value;
+  }
   mip_race_time += this->timer_.read();
 
   std::array<char, 128> gapString = getGapString(
       mip_solver_info.gap, mip_solver_info.primal_bound, &options_);
 
-  bool havesolution = mip_solver_info.solution_objective != kHighsInf;
   bool feasible;
   std::string solutionstatus = "-";
   if (havesolution) {
