@@ -1400,20 +1400,21 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       get_transformed_solution ? transformNewIntegerFeasibleSolution(
                                      sol, possibly_store_as_new_incumbent)
                                : 0;
-
+  /*
   if (solution_source == kSolutionSourceHighsSolution
       //&& possibly_store_as_new_incumbent
       ) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-		 "HighsMipSolverData::addIncumbent HiGHS solution Offset = %15.8g; Obj "
+		 "HighsMipSolverData::addIncumbent HiGHS solution Obj "
 		 "= %15.8g; UB = %15.8g; Obj-UB = %11.4g; PossAdd = %s; TransObj = %15.8g; TransObj-UB = %11.4g; TransSolobj < UB %s \n",
-		 mipsolver.model_->offset_, solobj, upper_bound,
+		 solobj, upper_bound,
 		 solobj-upper_bound,
 		 possibly_store_as_new_incumbent ? "T" : "F", transformed_solobj,
 		 transformed_solobj - upper_bound,
 		 transformed_solobj < upper_bound ? "T" : "F");
     fflush(stdout);
   }
+  */
   if (possibly_store_as_new_incumbent) {
     solobj = transformed_solobj;
     if (solobj >= upper_bound) return false;
@@ -2721,37 +2722,27 @@ void HighsMipSolverData::queryExternalSolution(
     // restart, and another hasn't. So, ignore the objective value
     // that's passed, and compute it anew
 
-    /*
-    double reduced_instance_objective_value = instance_objective_value;
-    reduced_instance_objective_value *= int(mipsolver.orig_model_->sense_);
-    reduced_instance_objective_value -= mipsolver.model_->offset_;
-    */
     // Get the solution in the reduced space
     std::vector<double> reduced_instance_solution =
         postSolveStack.getReducedPrimalSolution(instance_solution);
 
-    double check_objective_value = 0;
-    for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
-      check_objective_value +=
-          mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
-    double reduced_instance_objective_value = check_objective_value;
-    /*
-    double abs_dl_objective_value = std::fabs(check_objective_value - reduced_instance_objective_value);
-    double rlv_dl_objective_value = abs_dl_objective_value / (1 + std::fabs(check_objective_value));
-    if (rlv_dl_objective_value >= 0 ||
-	std::fabs(mipsolver.model_->offset_) > 1) {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-		   "HighsMipSolverData::queryExternalSolution: Instance %1d (sense = %d; offset = "
-	     "%11.4g; OGoffset = %11.4g) modified objective from %11.4g to %11.4g (Check = %11.4g; "
-	     "Delta = (abs = %11.4g; rlv = %11.4g)\n",
-	     int(instance), int(mipsolver.orig_model_->sense_), mipsolver.model_->offset_, mipsolver.orig_model_->offset_,
-	     instance_objective_value, reduced_instance_objective_value,
-	     check_objective_value, abs_dl_objective_value, rlv_dl_objective_value);
-      fflush(stdout);
-      reduced_instance_objective_value = check_objective_value;
-      //    assert(rlv_dl_objective_value < 1e-12);
+    // Reduced solution can be infeasible if restart has been
+    // performed
+    if (!checkSolution(reduced_instance_solution)) {
+      /*
+	highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+	    "Solution from instance %2d is not feasible for instance %2d\n",
+	    int(instance), int(mip_race.my_instance));
+      */
+      continue;
     }
-    */
+
+
+    double reduced_instance_objective_value = 0;
+    for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
+      reduced_instance_objective_value +=
+          mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
     addIncumbent(reduced_instance_solution, reduced_instance_objective_value,
                  kSolutionSourceHighsSolution);
   }
