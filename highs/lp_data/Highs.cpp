@@ -4087,7 +4087,7 @@ HighsStatus Highs::callSolveMip() {
     // Race the MIP solver!
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "\nStarting MIP race with %d instances: behaviour is "
-                 "non-deterministic!\n",
+                 "non-deterministic!\n\n",
                  int(mip_race_concurrency));
     // Define the HighsMipSolverInfo record for each worker
     std::vector<HighsMipSolverInfo> worker_info(mip_race_concurrency);

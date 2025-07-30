@@ -1331,13 +1331,7 @@ void HighsMipSolverData::performRestart() {
   // Bounds are currently in the original space since presolve will have
   // changed offset_
   runSetup();
-  if (mipsolver.terminate()) {
-    printf(
-        "HighsMipSolverData::performRestart() mipsolver.termination_status_ = "
-        "%d\n",
-        int(mipsolver.termination_status_));
-    return;
-  }
+  if (mipsolver.terminate()) return;
 
   postSolveStack.removeCutsFromModel(numCuts);
 
