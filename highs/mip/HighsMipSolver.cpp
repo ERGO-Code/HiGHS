@@ -90,11 +90,11 @@ void HighsMipSolver::run() {
 
   // Determine whether this is a knapsack problem and, if so, at least
   // update the data on knapsack sub-MIPs
-  HighsInt knapsack_rhs = 0;
-  if (orig_model_->isKnapsack(knapsack_rhs)) {
+  HighsInt capacity = 0;
+  if (orig_model_->isKnapsack(capacity)) {
     mipdata_->knapsack_data_.num_problem++;
     mipdata_->knapsack_data_.sum_variables += orig_model_->num_col_;
-    mipdata_->knapsack_data_.sum_rhs += knapsack_rhs;
+    mipdata_->knapsack_data_.sum_capacity += capacity;
     // Solve as a knapsack
     HighsStatus call_status = mipdata_->heuristics.solveKnapsack();
     assert(call_status == HighsStatus::kOk);
@@ -868,9 +868,9 @@ void HighsMipSolver::cleanupSolve() {
                "  Knapsack sub-MIPs %d\n", knapsack_data.num_problem);
   if (knapsack_data.num_problem > 0)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "     Mean var count %d\n     Mean RHS       %d\n",
+               "     Mean var count %d\n     Mean capacity  %d\n",
 		 int((1.0 * knapsack_data.sum_variables) / knapsack_data.num_problem),
-		 int((1.0 * knapsack_data.sum_rhs) / knapsack_data.num_problem));
+		 int((1.0 * knapsack_data.sum_capacity) / knapsack_data.num_problem));
 
   if (!timeless_log) analysis_.reportMipTimer();
 

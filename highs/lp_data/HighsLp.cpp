@@ -37,7 +37,7 @@ bool HighsLp::isBip() const {
   return true;
 }
 
-bool HighsLp::isKnapsack(HighsInt& knapsack_rhs) const {
+bool HighsLp::isKnapsack(HighsInt& capacity) const {
   // Has to kave one constraint
   if (this->num_row_ != 1) return false;
   // Has to be a binary integer programming problem
@@ -51,9 +51,9 @@ bool HighsLp::isKnapsack(HighsInt& knapsack_rhs) const {
     if (constraint_sign * this->a_matrix_.value_[iEl] < 0) return false;
   // Problem is knapsack!
   //
-  // Get the RHS: if it is negative, then the problem is infeasible
-  knapsack_rhs = upper ? this->row_upper_[0] : constraint_sign*this->row_lower_[0];
-  assert(knapsack_rhs >= 0);
+  // Get the capacity: if it is negative, then the problem is infeasible
+  capacity = upper ? this->row_upper_[0] : constraint_sign*this->row_lower_[0];
+  assert(capacity >= 0);
   return true;
 }
 

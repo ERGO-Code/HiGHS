@@ -33,7 +33,7 @@
 struct HighsKnapsackData {
   HighsInt num_problem;
   int64_t sum_variables;
-  int64_t sum_rhs;
+  int64_t sum_capacity;
   void initialise();
   void add(const HighsKnapsackData& knapsack_data);
 };

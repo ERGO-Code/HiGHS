@@ -1647,31 +1647,31 @@ void HighsPrimalHeuristics::flushStatistics() {
   lp_iterations = 0;
 }
 
-double knapsackRecurrence(const std::vector<HighsInt>& weights,
-			  const std::vector<double>& values,
-			  const HighsInt num_col,
+double knapsackRecurrence(const std::vector<HighsInt>& weight,
+			  const std::vector<double>& value,
+			  const HighsInt num_item,
 			  const double rhs,
-			  std::vector<std::vector<double>> &dp,
-			  std::vector<std::vector<bool>> &use) {
-  if (num_col == 0 || rhs == 0)
+			  std::vector<std::vector<double>> &dp_result,
+			  std::vector<std::vector<bool>> &use_item) {
+  if (num_item == 0 || rhs == 0)
     return 0;  // Base case
 
-  if (dp[num_col][rhs] != -1) return dp[num_col][rhs];  // Check if result is already computed
+  if (dp_result[num_item][rhs] != -1) return dp_result[num_item][rhs];  // Check if result is already computed
 
   // Exclude the item
-  double exclude = knapsackRecurrence(weights, values, num_col-1, rhs, dp, use);
+  double exclude = knapsackRecurrence(weight, value, num_item-1, rhs, dp_result, use_item);
 
   // Include the item (if it fits in the knapsack)
   double include = 0;
-  if (weights[num_col-1] <= rhs)
-    include = values[num_col-1] + knapsackRecurrence(weights, values, num_col-1, rhs - weights[num_col-1], dp, use);
+  if (weight[num_item-1] <= rhs)
+    include = value[num_item-1] + knapsackRecurrence(weight, value, num_item-1, rhs - weight[num_item-1], dp_result, use_item);
 
   // Store whether the item is used with this RHS
-  use[num_col][rhs] = include > exclude;
+  use_item[num_item][rhs] = include > exclude;
   // Store the result
-  dp[num_col][rhs] = use[num_col][rhs] ? include : exclude;
+  dp_result[num_item][rhs] = use_item[num_item][rhs] ? include : exclude;
     
-  return dp[num_col][rhs];
+  return dp_result[num_item][rhs];
 
 }
 HighsStatus HighsPrimalHeuristics::solveKnapsackReturn(const HighsStatus& return_status) {
@@ -1698,57 +1698,58 @@ HighsStatus HighsPrimalHeuristics::solveKnapsackReturn(const HighsStatus& return
 HighsStatus HighsPrimalHeuristics::solveKnapsack() {
   HighsLp lp = *(mipsolver.model_);
   //  const HighsLp& lp = mipsolver.mipdata_->model_;
-  HighsInt knapsack_rhs_;
-  assert(lp.isKnapsack(knapsack_rhs_));
-  const HighsInt knapsack_rhs = knapsack_rhs_;
+  HighsInt capacity_;
+  assert(lp.isKnapsack(capacity_));
+  const HighsInt capacity = capacity_;
   
   const bool upper = lp.row_upper_[0] < kHighsInf;
   const HighsInt constraint_sign = upper ? 1 : -1;
-  if (knapsack_rhs < 0) {
+  if (capacity < 0) {
     mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
     return solveKnapsackReturn(HighsStatus::kOk);
-  } else if (knapsack_rhs == 0) {
+  } else if (capacity == 0) {
     // Trivial knapsack with zero solution
     mipsolver.solution_.assign(lp.num_col_, 0);
     mipsolver.solution_objective_ = lp.offset_;
     mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
     return solveKnapsackReturn(HighsStatus::kOk);
   }
-  // Set up the weightsfor the knapsack solver. They might not all be
+  // Set up the weights for the knapsack solver. They might not all be
   // nonzero, so have to scatter into a zeroed vector
-  std::vector<HighsInt> weights(lp.num_col_, 0);
+  std::vector<HighsInt> weight(lp.num_col_, 0);
   assert(lp.a_matrix_.format_ == MatrixFormat::kColwise);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     for (HighsInt iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol+1]; iEl++) 
-      weights[iCol] = HighsInt(constraint_sign * lp.a_matrix_.value_[iEl]);
+      weight[iCol] = HighsInt(constraint_sign * lp.a_matrix_.value_[iEl]);
   }
   HighsInt sense = HighsInt(lp.sense_);
   // Set up the values for the knapsack solver. Since it solves a
   // maximization problem, have to negate the costs if MIP is a
   // minimization  
-  std::vector<double> values;
+  std::vector<double> value;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    values.push_back(-sense * lp.col_cost_[iCol]);
-  // Set up the DP array, indicating that no objectives are know
-  std::vector<std::vector<double>> dp(lp.num_col_ + 1, std::vector<double>(knapsack_rhs + 1, -1));
+    value.push_back(-sense * lp.col_cost_[iCol]);
+  // Set up the DP result array, indicating that no objectives are
+  // know
+  std::vector<std::vector<double>> dp_result(lp.num_col_ + 1, std::vector<double>(capacity + 1, -1));
   // Set up the item use array, indicating that items are not used
-  std::vector<std::vector<bool>> use(lp.num_col_ + 1, std::vector<bool>(knapsack_rhs + 1, false));
+  std::vector<std::vector<bool>> use_item(lp.num_col_ + 1, std::vector<bool>(capacity + 1, false));
   // Solve the knapsack problem by DP
-  double knapsack_optimal_objective_value = knapsackRecurrence(weights, values, lp.num_col_, knapsack_rhs, dp, use);
+  double knapsack_optimal_objective_value = knapsackRecurrence(weight, value, lp.num_col_, capacity, dp_result, use_item);
   // Deduce the solution
   std::vector<HighsInt> knapsack_solution(lp.num_col_, 0);
   // Variables are set to 1 if "used", and have to track the RHS of
   // the subproblem after variables are assigned so that the correct
   // entry of use is accessed
-  HighsInt knapsack_solution_rhs = knapsack_rhs;
+  HighsInt knapsack_solution_rhs = capacity;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (use[iCol][knapsack_solution_rhs]) {
+    if (use_item[iCol][knapsack_solution_rhs]) {
       knapsack_solution[iCol] = 1;
-      knapsack_solution_rhs -= weights[iCol];
+      knapsack_solution_rhs -= weight[iCol];
     }
   }
   const double row_violation = std::max(0, -knapsack_solution_rhs);
-  const double rel_row_violation = row_violation / (1.0 * knapsack_rhs);
+  const double rel_row_violation = row_violation / (1.0 * capacity);
 
   if (rel_row_violation > 1e-12) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
