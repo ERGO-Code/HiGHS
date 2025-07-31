@@ -97,7 +97,7 @@ void HighsMipSolver::run() {
     mipdata_->knapsack_data_.sum_rhs += knapsack_rhs;
     // Solve as a knapsack
     HighsStatus call_status = mipdata_->heuristics.solveKnapsack();
-    printf("HighsMipSolver: Knapsack solver return status is %d\n", int(call_status));
+    assert(call_status == HighsStatus::kOk);
     cleanupSolve();
     return;
   }

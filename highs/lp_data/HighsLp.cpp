@@ -45,14 +45,14 @@ bool HighsLp::isKnapsack(HighsInt& knapsack_rhs) const {
   // Must be one-sided constraint
   if (this->row_lower_[0] > -kHighsInf && this->row_upper_[0] < kHighsInf) return false;
   const bool upper = this->row_upper_[0] < kHighsInf;
-  const HighsInt sign = upper ? 1 : -1;
+  const HighsInt constraint_sign = upper ? 1 : -1;
   // Now check that all the (signed) coefficients are non-negative
   for (HighsInt iEl = 0; iEl < this->a_matrix_.numNz(); iEl++)
-    if (sign * this->a_matrix_.value_[iEl] < 0) return false;
+    if (constraint_sign * this->a_matrix_.value_[iEl] < 0) return false;
   // Problem is knapsack!
   //
   // Get the RHS: if it is negative, then the problem is infeasible
-  knapsack_rhs = upper ? this->row_upper_[0] : sign*this->row_lower_[0];
+  knapsack_rhs = upper ? this->row_upper_[0] : constraint_sign*this->row_lower_[0];
   assert(knapsack_rhs >= 0);
   return true;
 }
