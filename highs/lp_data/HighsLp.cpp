@@ -25,6 +25,38 @@ bool HighsLp::isMip() const {
   return false;
 }
 
+bool HighsLp::isBip() const {
+  HighsInt integrality_size = this->integrality_.size();
+  if (integrality_size) {
+    assert(integrality_size == this->num_col_);
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      if (this->integrality_[iCol] == HighsVarType::kContinuous) return false;
+      if (this->col_lower_[iCol] != 0 || this->col_upper_[iCol] != 1) return false;
+    }
+  }
+  return true;
+}
+
+bool HighsLp::isKnapsack(double& knapsack_rhs) const {
+  // Has to kave one constraint
+  if (this->num_row_ != 1) return false;
+  // Has to be a binary integer programming problem
+  if (!this->isBip()) return false;
+  // Must be one-sided constraint
+  if (this->row_lower_[0] > -kHighsInf && this->row_upper_[0] < kHighsInf) return false;
+  const bool upper = this->row_upper_[0] < kHighsInf;
+  const HighsInt sign = upper ? 1 : -1;
+  // Now check that all the (signed) coefficients are non-negative
+  for (HighsInt iEl = 0; iEl < this->a_matrix_.numNz(); iEl++)
+    if (sign * this->a_matrix_.value_[iEl] < 0) return false;
+  // Problem is knapsack!
+  //
+  // Get the RHS: if it is negative, then the problem is infeasible
+  knapsack_rhs = upper ? this->row_upper_[0] : sign*this->row_lower_[0];
+  assert(knapsack_rhs >= 0);
+  return true;
+}
+
 bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     if (this->col_cost_[iCol] >= infinite_cost) return true;

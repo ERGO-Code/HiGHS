@@ -1001,3 +1001,27 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
         "found\n");
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("knapsack", "[highs_test_mip_solver]") {
+    HighsLp lp;
+    lp.sense_ = ObjSense::kMaximize;
+    lp.num_col_ = 6;
+    lp.num_row_ = 1;
+    lp.col_cost_ = {10, 20, 25, 40, 60, 70};
+    lp.col_lower_.assign(lp.num_col_, 0);
+    lp.col_upper_.assign(lp.num_col_, 1);
+    lp.integrality_.assign(lp.num_col_, HighsVarType::kInteger);
+    lp.row_lower_ = {-kHighsInf};   
+    lp.row_upper_ = {7};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+    lp.a_matrix_.start_ = {0, 6};
+    lp.a_matrix_.index_ = {0, 1, 2, 3, 4, 5};
+    lp.a_matrix_.value_ = {1, 2, 3, 6, 7, 4};
+    Highs h;
+    h.setOptionValue("presolve", kHighsOffString);
+    h.setOptionValue("threads", 1);
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);   
+}
+    
+
