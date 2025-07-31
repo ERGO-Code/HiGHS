@@ -90,11 +90,16 @@ void HighsMipSolver::run() {
 
   // Determine whether this is a knapsack problem and, if so, at least
   // update the data on knapsack sub-MIPs
-  double knapsack_rhs = 0;
+  HighsInt knapsack_rhs = 0;
   if (orig_model_->isKnapsack(knapsack_rhs)) {
     mipdata_->knapsack_data_.num_problem++;
     mipdata_->knapsack_data_.sum_variables += orig_model_->num_col_;
     mipdata_->knapsack_data_.sum_rhs += knapsack_rhs;
+    // Solve as a knapsack
+    HighsStatus call_status = mipdata_->heuristics.solveKnapsack();
+    printf("HighsMipSolver: Knapsack solver return status is %d\n", int(call_status));
+    cleanupSolve();
+    return;
   }
 
   analysis_.mipTimerStart(kMipClockRunPresolve);

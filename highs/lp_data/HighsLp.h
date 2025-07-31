@@ -66,7 +66,7 @@ class HighsLp {
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
   bool isBip() const;
-  bool isKnapsack(double& knapsack_rhs) const;
+  bool isKnapsack(HighsInt& knapsack_rhs) const;
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;

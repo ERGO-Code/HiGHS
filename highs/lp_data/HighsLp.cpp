@@ -37,7 +37,7 @@ bool HighsLp::isBip() const {
   return true;
 }
 
-bool HighsLp::isKnapsack(double& knapsack_rhs) const {
+bool HighsLp::isKnapsack(HighsInt& knapsack_rhs) const {
   // Has to kave one constraint
   if (this->num_row_ != 1) return false;
   // Has to be a binary integer programming problem
