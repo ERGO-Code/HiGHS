@@ -17,18 +17,17 @@
 namespace hipo {
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                 const Log* log, Int negative_pivots)
+                 const Log* log, const std::vector<Int>& signs)
     : log_{log} {
   // Input the symmetric matrix to be analysed in CSC format.
-  // row_ind contains the row indices.
-  // col_ptr contains the starting points of each column.
-  // size is the number of rows/columns.
-  // nonzeros is the number of nonzero entries.
+  // rows contains the row indices.
+  // ptr contains the starting points of each column.
   // Only the lower triangular part is used.
+  // signs contains the sign that each pivot should have.
 
   n_ = ptr.size() - 1;
   nz_ = rows.size();
-  negative_pivots_ = negative_pivots;
+  signs_ = signs;
   nb_ = kBlockSize;
 
   // Create upper triangular part
@@ -1387,9 +1386,8 @@ Int Analyse::run(Symbolic& S) {
     if (i <= 100) S.sn_size_100_++;
   }
 
-  // initialise sign of pivots and permute them
-  S.pivot_sign_.insert(S.pivot_sign_.end(), negative_pivots_, -1);
-  S.pivot_sign_.insert(S.pivot_sign_.end(), n_ - negative_pivots_, 1);
+  // permute signs of pivots
+  S.pivot_sign_ = std::move(signs_);
   permuteVector(S.pivot_sign_, perm_);
 
   S.nz_ = nz_factor_;

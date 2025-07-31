@@ -29,8 +29,9 @@ FHsolver::~FHsolver() {
 void FHsolver::newIter() const { DataCollector::get()->append(); }
 
 Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
-                      const std::vector<Int>& ptr, Int negative_pivots) const {
-  Analyse an_obj(rows, ptr, log_, negative_pivots);
+                      const std::vector<Int>& ptr,
+                      const std::vector<Int>& signs) const {
+  Analyse an_obj(rows, ptr, log_, signs);
   return an_obj.run(S);
 }
 

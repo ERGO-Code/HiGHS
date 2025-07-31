@@ -28,6 +28,7 @@ void DataCollector::append() {
 }
 IterData& DataCollector::back() {
   // access most recent record of data
+  if (iter_data_record_.empty()) append();
   return iter_data_record_.back();
 }
 

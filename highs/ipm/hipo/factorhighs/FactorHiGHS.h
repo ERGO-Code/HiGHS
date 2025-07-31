@@ -24,9 +24,7 @@ The direct solver uses the following objects:
 - Numeric, to store the numeric factorization;
 - FHsolver, to perform analyse and factorise phases.
 
-Define the integer neg, which contains the size of the (1,1)-block for the
-augmented system, or 0 for the normal equations.
-
+Define a vector signs that contains the expected sign of each pivot (1 or -1).
 Define a right-hand side rhs, which will be overwritten with the solution of
 M^{-1} * rhs.
 
@@ -35,9 +33,9 @@ Then, the factorization is performed as follows.
     Symbolic S;
     Numeric N(S);
 
-    FHsolver();
-    FHsolver.analyse(S, rows, ptr, neg);
-    FHsolver.factorise(N, S, rows, ptr, val);
+    FHsolver FH;
+    FH.analyse(S, rows, ptr, signs);
+    FH.factorise(N, S, rows, ptr, val);
 
     N.solve(rhs);
 
@@ -45,7 +43,7 @@ Printing to screen is achieved using the interface in auxiliary/Log.h. Pass an
 object of type Log for normal printing:
     ...
     Log log;
-    FHsolver(&log);
+    FHsolver FH(&log);
     ...
 Pass an object of type LogHighs for Highs logging:
 Pass nothing to suppress all logging.
@@ -68,7 +66,7 @@ class FHsolver {
   // ptr, and store symbolic factorisation in object S.
   // See ReturnValues.h for errors.
   Int analyse(Symbolic& S, const std::vector<Int>& rows,
-              const std::vector<Int>& ptr, Int negative_pivots = 0) const;
+              const std::vector<Int>& ptr, const std::vector<Int>& signs) const;
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
   // numerical factorisation in object N. Matrix is moved into the object, so

@@ -29,7 +29,7 @@ class Analyse {
   double dense_ops_norelax_{};
   double sparse_ops_{};
   double critical_ops_{};
-  Int negative_pivots_{};
+  std::vector<Int> signs_{};
 
   // Permutation and inverse permutation from Metis
   std::vector<Int> perm_{};
@@ -104,7 +104,7 @@ class Analyse {
  public:
   // Constructor: matrix must be in lower triangular format
   Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-          const Log* log, Int negative_pivots = 0);
+          const Log* log, const std::vector<Int>& signs);
 
   // Run analyse phase and save the result in Symbolic object S
   Int run(Symbolic& S);

@@ -404,9 +404,14 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
   {
     std::vector<Int> ptrLower, rowsLower;
     getASstructure(model.A(), ptrLower, rowsLower);
+
+    // create vector of signs of pivots
+    std::vector<Int> pivot_signs(model.A().num_col_ + model.A().num_row_, -1);
+    for (Int i = 0; i < model.A().num_row_; ++i)
+      pivot_signs[model.A().num_col_ + i] = 1;
+
     clock.start();
-    Int AS_status =
-        FH_.analyse(symb_AS, rowsLower, ptrLower, model.A().num_col_);
+    Int AS_status = FH_.analyse(symb_AS, rowsLower, ptrLower, pivot_signs);
     if (AS_status) failure_AS = true;
     if (info_) info_->analyse_AS_time = clock.stop();
   }
@@ -427,8 +432,11 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
       if (NE_status)
         failure_NE = true;
       else {
+        // create vector of signs of pivots
+        std::vector<Int> pivot_signs(model.A().num_row_, 1);
+
         clock.start();
-        NE_status = FH_.analyse(symb_NE, rowsNE_, ptrNE_, 0);
+        NE_status = FH_.analyse(symb_NE, rowsNE_, ptrNE_, pivot_signs);
         if (NE_status) failure_NE = true;
         if (info_) info_->analyse_NE_time = clock.stop();
       }
@@ -502,9 +510,14 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
     case kOptionNlaAugmented: {
       std::vector<Int> ptrLower, rowsLower;
       getASstructure(model.A(), ptrLower, rowsLower);
-      clock.start();
 
-      if (FH_.analyse(S_, rowsLower, ptrLower, model.A().num_col_)) {
+      // create vector of signs of pivots
+      std::vector<Int> pivot_signs(model.A().num_col_ + model.A().num_row_, -1);
+      for (Int i = 0; i < model.A().num_row_; ++i)
+        pivot_signs[model.A().num_col_ + i] = 1;
+
+      clock.start();
+      if (FH_.analyse(S_, rowsLower, ptrLower, pivot_signs)) {
         if (log_) log_->printe("AS requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }
@@ -520,8 +533,12 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
         if (log_) log_->printe("NE requested, matrix is too large\n");
         return kStatusOoM;
       }
+
+      // create vector of signs of pivots
+      std::vector<Int> pivot_signs(model.A().num_row_, 1);
+
       clock.start();
-      if (FH_.analyse(S_, rowsNE_, ptrNE_, 0)) {
+      if (FH_.analyse(S_, rowsNE_, ptrNE_, pivot_signs)) {
         if (log_) log_->printe("NE requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }
