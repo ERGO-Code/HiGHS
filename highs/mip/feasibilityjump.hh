@@ -495,10 +495,10 @@ class FeasibilityJumpSolver {
   int solve(double* initialValues,
             std::function<CallbackControlFlow(FJStatus)> callback) {
     assert(callback);
-    highsLogUser(logOptions, HighsLogType::kInfo,
-                 FJ_LOG_PREFIX
-                 "starting solve. weightUpdateDecay=%g, relaxContinuous=%d  \n",
-                 weightUpdateDecay, problem.usedRelaxContinuous);
+    highsLogDev(logOptions, HighsLogType::kInfo,
+                FJ_LOG_PREFIX
+                "starting solve. weightUpdateDecay=%g, relaxContinuous=%d  \n",
+                weightUpdateDecay, problem.usedRelaxContinuous);
 
     init(initialValues);
 
@@ -552,17 +552,16 @@ class FeasibilityJumpSolver {
   void logging(const int step, const bool header = false) {
     const HighsLogType logType = HighsLogType::kInfo;
     if (header) {
-      highsLogUser(
-          logOptions, logType,
-          FJ_LOG_PREFIX
-          "       step  violations     good    bumps       effort (per "
-          "step)          Objective\n");
+      highsLogDev(logOptions, logType,
+                  FJ_LOG_PREFIX
+                  "       step  violations     good    bumps       effort (per "
+                  "step)          Objective\n");
     } else {
-      highsLogUser(logOptions, logType,
-                   " %10d    %8zd   %6zd %8zd %12zd    %6zd          %10.4g\n",
-                   step, problem.violatedConstraints.size(), goodVarsSet.size(),
-                   nBumps, totalEffort, step > 0 ? totalEffort / step : 0,
-                   problem.incumbentObjective);
+      highsLogDev(logOptions, logType,
+                  " %10d    %8zd   %6zd %8zd %12zd    %6zd          %10.4g\n",
+                  step, problem.violatedConstraints.size(), goodVarsSet.size(),
+                  nBumps, totalEffort, step > 0 ? totalEffort / step : 0,
+                  problem.incumbentObjective);
       effortAtLastLogging = totalEffort;
     }
   }
