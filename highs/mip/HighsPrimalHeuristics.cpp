@@ -1743,10 +1743,13 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsack() {
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
   HighsInt capacity_;
   assert(lp.isKnapsack(capacity_));
-  const HighsInt capacity = capacity_;
   
   const bool upper = lp.row_upper_[0] < kHighsInf;
   const HighsInt constraint_sign = upper ? 1 : -1;
+  double double_capacity = upper ? lp.row_upper_[0] : constraint_sign * lp.row_lower_[0];
+  const double capacity_margin = 1e-6;
+  const HighsInt capacity = std::floor(double_capacity+capacity_margin);
+  
   if (capacity < 0) {
     mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
     return solveMipKnapsackReturn(HighsStatus::kOk);

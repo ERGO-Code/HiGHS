@@ -46,14 +46,18 @@ bool HighsLp::isKnapsack(HighsInt& capacity) const {
   if (this->row_lower_[0] > -kHighsInf && this->row_upper_[0] < kHighsInf) return false;
   const bool upper = this->row_upper_[0] < kHighsInf;
   const HighsInt constraint_sign = upper ? 1 : -1;
-  // Now check that all the (signed) coefficients are non-negative
-  for (HighsInt iEl = 0; iEl < this->a_matrix_.numNz(); iEl++)
-    if (constraint_sign * this->a_matrix_.value_[iEl] < 0) return false;
+  // Now check that all the (signed) coefficients are integer and non-negative
+  for (HighsInt iEl = 0; iEl < this->a_matrix_.numNz(); iEl++) {
+    double coeff = constraint_sign * this->a_matrix_.value_[iEl];
+    if (coeff < 0) return false;
+    if (fractionality(coeff) > 0) return false;
+  }
+  // Capacity must be integer, but OK to round down any fractional
+  // values since activity of constraint is integer
+  double double_capacity = upper ? this->row_upper_[0] : constraint_sign*this->row_lower_[0];
+  const double capacity_margin = 1e-6;
+  capacity = std::floor(double_capacity+capacity_margin);
   // Problem is knapsack!
-  //
-  // Get the capacity: if it is negative, then the problem is infeasible
-  capacity = upper ? this->row_upper_[0] : constraint_sign*this->row_lower_[0];
-  assert(capacity >= 0);
   return true;
 }
 
