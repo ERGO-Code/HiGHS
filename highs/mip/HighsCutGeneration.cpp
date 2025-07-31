@@ -1345,7 +1345,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   }
 #endif
 
-  // Generate a lifted simple generalized flow cover cut
+  // Try to generate a lifted simple generalized flow cover cut
   bool flowCoverSuccess = false;
   std::vector<double> flowCoverVals;
   std::vector<HighsInt> flowCoverInds;
