@@ -412,6 +412,7 @@ TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
 
 TEST_CASE("read-miplib-solution", "[highs_check_solution]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  // NB This also tests the knapsack solver
   HighsLp lp;
   lp.num_col_ = 5;
   lp.num_row_ = 1;

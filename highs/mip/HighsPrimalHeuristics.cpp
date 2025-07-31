@@ -1681,6 +1681,26 @@ double knapsackRecurrence(const HighsInt num_item,
   return dp_result[num_item][capacity];
 }
 
+/*
+void knapsackReport(const HighsInt num_item,
+                    const double capacity,
+                    std::vector<std::vector<double>>& dp_result,
+                    std::vector<std::vector<bool>>& use_item) {
+
+  printf("Knapsack data:\n     ");
+  for (HighsInt iCol = 0; iCol < num_item + 1; iCol++)
+    printf("  %2d  ", int(iCol-1));
+  printf("\n");
+  for (HighsInt iCap = 0; iCap < capacity + 1; iCap++) {
+    printf(" %2d", int(iCap));
+    for (HighsInt iCol = 0; iCol < num_item + 1; iCol++)
+      printf(" %s %3s", use_item[iCol][iCap] ? "T" : " ",
+             dp_result[iCol][iCap] == -1 ? "   " :
+std::to_string(int(dp_result[iCol][iCap])).c_str()); printf("\n");
+  }
+}
+*/
+
 HighsModelStatus solveKnapsack(const HighsLogOptions& log_options,
                                const HighsInt num_item,
                                const std::vector<double>& value,
@@ -1700,6 +1720,7 @@ HighsModelStatus solveKnapsack(const HighsLogOptions& log_options,
 
   solution_objective = knapsackRecurrence(num_item, value, weight, capacity,
                                           dp_result, use_item);
+  //  knapsackReport(num_item, capacity, dp_result, use_item);
 
   // Deduce the solution
   std::vector<HighsInt> knapsack_solution(num_item, 0);
@@ -1708,13 +1729,13 @@ HighsModelStatus solveKnapsack(const HighsLogOptions& log_options,
   // entry of use is accessed
   solution.resize(num_item);
   HighsInt capacity_slack = capacity;
-  for (HighsInt iCol = 0; iCol < num_item; iCol++) {
+  for (HighsInt iCol = num_item; iCol > 0; iCol--) {
     if (use_item[iCol][capacity_slack]) {
-      solution[iCol] = 1.0;
-      capacity_slack -= weight[iCol];
+      solution[iCol - 1] = 1.0;
+      capacity_slack -= weight[iCol - 1];
     }
   }
-  const HighsInt capacity_violation = std::max(0, -capacity_slack);
+  const HighsInt capacity_violation = std::max(HighsInt(0), -capacity_slack);
   if (capacity_violation > 0) {
     highsLogUser(
         log_options, HighsLogType::kError,
@@ -1826,13 +1847,12 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsack() {
   double abs_dl_solution_objective =
       std::fabs(solution_objective - check_objective);
   double rel_dl_solution_objective =
-      abs_dl_solution_objective /
-      (1.0 + std::fabs(mipsolver.solution_objective_));
+      abs_dl_solution_objective / (1.0 + std::fabs(solution_objective));
   if (rel_dl_solution_objective > 1e-12) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "HighsPrimalHeuristics::solveMipKnapsack() Relative optimal "
-                 "objective value mismatch of %g\n",
-                 rel_dl_solution_objective);
+                 "HighsPrimalHeuristics::solveMipKnapsack() Optimal "
+                 "objective value mismatch (abs = %g; rel = %g)\n",
+                 abs_dl_solution_objective, rel_dl_solution_objective);
     mipsolver.modelstatus_ = HighsModelStatus::kSolveError;
     return solveMipKnapsackReturn(HighsStatus::kError);
   }

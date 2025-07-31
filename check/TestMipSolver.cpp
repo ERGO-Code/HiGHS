@@ -1031,7 +1031,7 @@ TEST_CASE("knapsack", "[highs_test_mip_solver]") {
   lp.a_matrix_.index_ = {0, 1, 2, 3, 4, 5};
   lp.a_matrix_.value_ = weight;
   Highs h;
-  // highs.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("presolve", kHighsOffString);
   //  h.setOptionValue("threads", 1);
   double required_objective_value = 0;
@@ -1061,5 +1061,21 @@ TEST_CASE("knapsack", "[highs_test_mip_solver]") {
       REQUIRE(h.getInfo().objective_function_value == required_objective_value);
     }
   }
+
+  // Now test with an infeasible knapsack problem
+  lp.a_matrix_.value_ = weight;
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {-1};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  // Now test with an feasible knapsack problem with fractional
+  // capacity
+  lp.row_upper_ = {capacity + 0.2};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
   h.resetGlobalScheduler(true);
 }
