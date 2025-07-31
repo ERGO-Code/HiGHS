@@ -865,14 +865,17 @@ void HighsMipSolver::cleanupSolve(const bool mip_logging) {
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
   const HighsKnapsackData& knapsack_data = this->mipdata_->knapsack_data_;
-  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Knapsack MIPs     %d\n", knapsack_data.num_problem);
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << highsFormatToString("  Knapsack MIPs     %d",
+                            int(knapsack_data.num_problem));
   if (knapsack_data.num_problem > 0)
-    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "     Mean var count %d\n     Mean capacity  %d\n",
-		 int((1.0 * knapsack_data.sum_variables) / knapsack_data.num_problem),
-		 int((1.0 * knapsack_data.sum_capacity) / knapsack_data.num_problem));
-
+    ss << highsFormatToString(
+        " (mean items %d; mean capacity %d)",
+        int((1.0 * knapsack_data.sum_variables) / knapsack_data.num_problem),
+        int((1.0 * knapsack_data.sum_capacity) / knapsack_data.num_problem));
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
   if (!timeless_log) analysis_.reportMipTimer();
 
   assert(modelstatus_ != HighsModelStatus::kNotset);

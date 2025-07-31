@@ -31,7 +31,8 @@ bool HighsLp::isBip() const {
     assert(integrality_size == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
       if (this->integrality_[iCol] == HighsVarType::kContinuous) return false;
-      if (this->col_lower_[iCol] != 0 || this->col_upper_[iCol] != 1) return false;
+      if (this->col_lower_[iCol] != 0 || this->col_upper_[iCol] != 1)
+        return false;
     }
   }
   return true;
@@ -43,7 +44,8 @@ bool HighsLp::isKnapsack(HighsInt& capacity) const {
   // Has to be a binary integer programming problem
   if (!this->isBip()) return false;
   // Must be one-sided constraint
-  if (this->row_lower_[0] > -kHighsInf && this->row_upper_[0] < kHighsInf) return false;
+  if (this->row_lower_[0] > -kHighsInf && this->row_upper_[0] < kHighsInf)
+    return false;
   const bool upper = this->row_upper_[0] < kHighsInf;
   const HighsInt constraint_sign = upper ? 1 : -1;
   // Now check that all the (signed) coefficients are integer and non-negative
@@ -54,9 +56,10 @@ bool HighsLp::isKnapsack(HighsInt& capacity) const {
   }
   // Capacity must be integer, but OK to round down any fractional
   // values since activity of constraint is integer
-  double double_capacity = upper ? this->row_upper_[0] : constraint_sign*this->row_lower_[0];
+  double double_capacity =
+      upper ? this->row_upper_[0] : constraint_sign * this->row_lower_[0];
   const double capacity_margin = 1e-6;
-  capacity = std::floor(double_capacity+capacity_margin);
+  capacity = std::floor(double_capacity + capacity_margin);
   // Problem is knapsack!
   return true;
 }

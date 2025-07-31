@@ -1024,7 +1024,7 @@ TEST_CASE("knapsack", "[highs_test_mip_solver]") {
   lp.col_lower_.assign(lp.num_col_, 0);
   lp.col_upper_.assign(lp.num_col_, 1);
   lp.integrality_.assign(lp.num_col_, HighsVarType::kInteger);
-  lp.row_lower_ = {-kHighsInf};   
+  lp.row_lower_ = {-kHighsInf};
   lp.row_upper_ = {capacity};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   lp.a_matrix_.start_ = {0, 6};
@@ -1038,30 +1038,28 @@ TEST_CASE("knapsack", "[highs_test_mip_solver]") {
   for (int sense = 0; sense < 2; sense++) {
     for (int sign = 0; sign < 2; sign++) {
       if (sense == 0) {
-	lp.sense_ = ObjSense::kMaximize;
-	lp.col_cost_ = value;
-	required_objective_value = 0;
+        lp.sense_ = ObjSense::kMaximize;
+        lp.col_cost_ = value;
+        required_objective_value = 0;
       } else {
-	lp.sense_ = ObjSense::kMinimize;
-	lp.col_cost_ = neg_value;
-	required_objective_value = 2.0e0 * offset;
+        lp.sense_ = ObjSense::kMinimize;
+        lp.col_cost_ = neg_value;
+        required_objective_value = 2.0e0 * offset;
       }
       if (sign == 0) {
-	lp.a_matrix_.value_ = weight;
-	lp.row_lower_ = {-kHighsInf};
-	lp.row_upper_ = {capacity};
+        lp.a_matrix_.value_ = weight;
+        lp.row_lower_ = {-kHighsInf};
+        lp.row_upper_ = {capacity};
       } else {
-	lp.a_matrix_.value_ = neg_weight;
-	lp.row_lower_ = {-capacity};
-	lp.row_upper_ = {kHighsInf};
+        lp.a_matrix_.value_ = neg_weight;
+        lp.row_lower_ = {-capacity};
+        lp.row_upper_ = {kHighsInf};
       }
       REQUIRE(h.passModel(lp) == HighsStatus::kOk);
       REQUIRE(h.run() == HighsStatus::kOk);
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
       REQUIRE(h.getInfo().objective_function_value == required_objective_value);
     }
-  }  
+  }
   h.resetGlobalScheduler(true);
 }
-    
-

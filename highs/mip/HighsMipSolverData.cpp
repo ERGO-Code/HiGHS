@@ -2798,5 +2798,3 @@ void HighsKnapsackData::add(const HighsKnapsackData& knapsack_data) {
   this->sum_variables += knapsack_data.sum_variables;
   this->sum_capacity += knapsack_data.sum_capacity;
 }
-
-
