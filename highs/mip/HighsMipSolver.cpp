@@ -8,7 +8,7 @@
 #include "mip/HighsMipSolver.h"
 
 #include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelUtils.h"
+#include "lp_data/HighsModelUtils.h"  // For utilModelStatusToString
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
@@ -98,7 +98,8 @@ void HighsMipSolver::run() {
     // Solve as a knapsack
     HighsStatus call_status = mipdata_->heuristics.solveMipKnapsack();
     assert(call_status == HighsStatus::kOk);
-    cleanupSolve();
+    const bool mip_logging = false;
+    cleanupSolve(mip_logging);
     return;
   }
 
@@ -704,9 +705,9 @@ restart:
   cleanupSolve();
 }
 
-void HighsMipSolver::cleanupSolve() {
-  // Force a final logging line
-  mipdata_->printDisplayLine(kSolutionSourceCleanup);
+void HighsMipSolver::cleanupSolve(const bool mip_logging) {
+  // Generally force a final MIP logging line
+  if (mip_logging) mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve
   // determines the model status
   if (analysis_.mipTimerRunning(kMipClockSolve))
@@ -865,7 +866,7 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->heuristic_lp_iterations);
   const HighsKnapsackData& knapsack_data = this->mipdata_->knapsack_data_;
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Knapsack sub-MIPs %d\n", knapsack_data.num_problem);
+               "  Knapsack MIPs     %d\n", knapsack_data.num_problem);
   if (knapsack_data.num_problem > 0)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "     Mean var count %d\n     Mean capacity  %d\n",

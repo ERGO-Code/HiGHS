@@ -95,7 +95,7 @@ class HighsMipSolver {
   }
 
   mutable HighsTimer timer_;
-  void cleanupSolve();
+  void cleanupSolve(const bool mip_logging = true);
 
   void runPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;

@@ -14,6 +14,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h" // For utilModelStatusToString
 #include "mip/HighsCutGeneration.h"
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsLpRelaxation.h"
@@ -1717,6 +1718,11 @@ HighsModelStatus solveKnapsack(const HighsLogOptions& log_options,
 
 HighsStatus HighsPrimalHeuristics::solveMipKnapsackReturn(const HighsStatus& return_status) {
   const HighsLp& lp = *(mipsolver.model_);
+  std::stringstream ss;
+  if (!mipsolver.submip) {
+    ss.str(std::string());
+    ss << "MIP is a knapsack problem: ";
+  }
   if (mipsolver.modelstatus_ == HighsModelStatus::kOptimal) {
     // mipsolver.solution_objective_ is the objective value for the
     // original problem - using the offset and ignoring the
@@ -1731,9 +1737,17 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsackReturn(const HighsStatus& ret
     mipsolver.mipdata_->lower_bound = mipsolver_objective;
     mipsolver.mipdata_->upper_bound = mipsolver_objective;
     mipsolver.gap_ = 0;
+    if (!mipsolver.submip)
+      ss << highsFormatToString("optimal objective by dynamic programming is %g",
+				mipsolver.solution_objective_);
   } else {
+    if (!mipsolver.submip)
+      ss << highsFormatToString("model status is %s",
+				utilModelStatusToString(mipsolver.modelstatus_).c_str());
     mipsolver.solution_.clear();
   }
+  if (!mipsolver.submip) highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+				      "\n%s\n", ss.str().c_str());
   return return_status;
 }
 
