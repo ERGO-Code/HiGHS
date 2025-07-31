@@ -1647,9 +1647,9 @@ void HighsPrimalHeuristics::flushStatistics() {
   lp_iterations = 0;
 }
 
-double knapsackRecurrence(const std::vector<HighsInt>& weight,
+double knapsackRecurrence(const HighsInt num_item,
 			  const std::vector<double>& value,
-			  const HighsInt num_item,
+			  const std::vector<HighsInt>& weight,
 			  const double capacity,
 			  std::vector<std::vector<double>> &dp_result,
 			  std::vector<std::vector<bool>> &use_item) {
@@ -1659,12 +1659,12 @@ double knapsackRecurrence(const std::vector<HighsInt>& weight,
   if (dp_result[num_item][capacity] != -1) return dp_result[num_item][capacity];  // Check if result is already computed
 
   // Exclude the item
-  double exclude = knapsackRecurrence(weight, value, num_item-1, capacity, dp_result, use_item);
+  double exclude = knapsackRecurrence(num_item-1, value, weight, capacity, dp_result, use_item);
 
   // Include the item (if it fits in the knapsack)
   double include = 0;
   if (weight[num_item-1] <= capacity)
-    include = value[num_item-1] + knapsackRecurrence(weight, value, num_item-1, capacity - weight[num_item-1], dp_result, use_item);
+    include = value[num_item-1] + knapsackRecurrence(num_item-1, value, weight, capacity - weight[num_item-1], dp_result, use_item);
 
   // Store whether the item is used with this capacity
   use_item[num_item][capacity] = include > exclude;
@@ -1690,7 +1690,7 @@ HighsModelStatus solveKnapsack(const HighsLogOptions& log_options,
   // Set up the item use array, indicating that items are not used
   std::vector<std::vector<bool>> use_item(num_item + 1, std::vector<bool>(capacity + 1, false));
 
-  solution_objective = knapsackRecurrence(weight, value, num_item, capacity, dp_result, use_item);
+  solution_objective = knapsackRecurrence(num_item, value, weight, capacity, dp_result, use_item);
 
   // Deduce the solution
   std::vector<HighsInt> knapsack_solution(num_item, 0);
