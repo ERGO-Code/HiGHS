@@ -99,7 +99,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
                           j, max_in_R);
     if (info != 0) return info;
 
-#ifdef PIVOTING
+#ifdef HIPO_PIVOTING
     // swap columns in R
     applySwaps(swaps_current, M, jb, R);
 

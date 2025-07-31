@@ -150,86 +150,6 @@ bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
   return flag_2x2;
 }
 
-double regularisePivot(double pivot, double thresh, const Int* sign,
-                       const double* A, Int lda, Int j, Int n, char uplo,
-                       Int sn, Int bl) {
-  // add static regularisation
-  if (sign[j] == 1)
-    pivot += kDualStaticRegularisation;
-  else
-    pivot -= kPrimalStaticRegularisation;
-
-  double s = (double)sign[j];
-  double old_pivot = pivot;
-
-  double spivot = s * pivot;
-  double K = 1e12;
-
-  bool adjust = false;
-  bool modified_pivot = false;
-
-  if (spivot <= thresh && spivot >= -thresh) {
-    // small pivot, lift to thresh
-    pivot = s * thresh;
-    adjust = true;
-    modified_pivot = true;
-
-  } else if (spivot < -thresh && spivot >= -thresh * K) {
-    // wrong sign, lift more
-    pivot = s * thresh * 10;
-    adjust = true;
-    modified_pivot = true;
-
-  } else if (spivot < -thresh * K) {
-    // pivot is completely lost
-    pivot = s * 1e100;
-    modified_pivot = true;
-  }
-
-  if (adjust) {
-    // compute the minimum pivot required to keep the diagonal of the
-    // current block acceptable:
-    // b is column below pivot, d is diagonal of block, p is pivot
-    // we want d_k - b_k^2 / p \ge thresh
-    // i.e.
-    // p \ge b_k^2 / (d_k - thresh)
-    //
-    double required_pivot = pivot;
-    for (Int k = j + 1; k < n; ++k) {
-      double bk = uplo == 'L' ? A[k + j * lda] : A[j + k * lda];
-      double dk = A[k + k * lda];
-
-      // if pivot and dk have different sign, skip
-      double sk = sign[k];
-      if (s * sk < 0) continue;
-
-      double temp = (dk - sk * thresh);
-      temp = (bk * bk) / temp;
-
-      if (s > 0) {
-        required_pivot = std::max(required_pivot, temp);
-        required_pivot = std::min(required_pivot, 1e100);
-      } else {
-        required_pivot = std::min(required_pivot, temp);
-        required_pivot = std::max(required_pivot, -1e100);
-      }
-    }
-
-    if (required_pivot != pivot) {
-      modified_pivot = true;
-
-      if (s > 0)
-        pivot = std::max(pivot, required_pivot);
-      else
-        pivot = std::min(pivot, required_pivot);
-    }
-  }
-
-  if (modified_pivot) DataCollector::get()->countRegPiv();
-
-  return pivot;
-}
-
 Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
                double thresh, double* regul, Int* swaps, double* pivot_2x2,
                Int sn, Int bl, double max_in_R) {
@@ -249,50 +169,9 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
   Clock clock;
 #endif
 
-  // ===========================================================================
-  // LOWER TRIANGULAR
-  // ===========================================================================
-  // No pivoting performed.
-  // This is kept only for reference, to use the formats F and FP.
   if (uplo == 'L') {
-    // allocate space for copy of col
-    std::vector<double> temp(n - 1);
-
-    for (Int j = 0; j < n; ++j) {
-      // diagonal element
-      double Ajj = A[j + lda * j];
-
-      if (std::isnan(Ajj)) return kRetInvalidPivot;
-
-      // add regularisation
-      double old_pivot = Ajj;
-      Ajj =
-          regularisePivot(Ajj, thresh, pivot_sign, A, lda, j, n, uplo, sn, bl);
-      regul[j] = Ajj - old_pivot;
-      DataCollector::get()->setMaxReg(std::abs(regul[j]));
-
-      // save diagonal element
-      A[j + lda * j] = Ajj;
-
-      const Int M = n - j - 1;
-      if (M > 0) {
-        // make copy of column
-        callAndTime_dcopy(M, &A[j + 1 + j * lda], 1, temp.data(), 1);
-
-        // scale column j
-        callAndTime_dscal(M, 1.0 / Ajj, &A[j + 1 + j * lda], 1);
-
-        // update rest of the matrix
-        callAndTime_dger(M, M, -1.0, temp.data(), 1, &A[j + 1 + j * lda], 1,
-                         &A[j + 1 + (j + 1) * lda], lda);
-      }
-    }
-  }
-
-  // ===========================================================================
-  // UPPER TRIANGULAR
-  // ===========================================================================
-  else {
+    assert(1 == 0);
+  } else {
     if (!swaps || !pivot_2x2) return kRetInvalidInput;
 
     // initialise order of pivots
@@ -307,7 +186,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
     for (Int j = 0; j < n; j += step) {
       bool flag_2x2 = false;
 
-#ifdef PIVOTING
+#ifdef HIPO_PIVOTING
       flag_2x2 = blockBunchKaufman(j, n, A, lda, swaps, pivot_sign, thresh,
                                    regul, sn, bl, max_in_R);
 #endif
@@ -324,12 +203,12 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
 
         if (std::isnan(Ajj)) return kRetInvalidPivot;
 
-#ifndef PIVOTING
         // add regularisation
-        double old_pivot = Ajj;
-        Ajj = regularisePivot(Ajj, thresh, pivot_sign, A, lda, j, n, uplo, sn,
-                              bl);
-        regul[j] = Ajj - old_pivot;
+        staticReg(Ajj, pivot_sign[j], regul[j]);
+
+#ifndef HIPO_PIVOTING
+        // add static regularisation
+        staticReg(Ajj, pivot_sign[j], regul[j]);
         DataCollector::get()->setMaxReg(std::abs(regul[j]));
 #endif
 

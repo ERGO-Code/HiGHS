@@ -9,10 +9,17 @@
 // SWITCHES
 // ===========================================================================
 
-#define PIVOTING
+// Switch on/off pivoting. It uses a static variation of Bunch-Kaufman pivoting,
+// with potential dynamic regularisation. If pivoting is switched off, only
+// static regularisation is applied.
+#define HIPO_PIVOTING
+
+// Collect data during regularisation, e.g. number of regularised pivots, 2x2
+// pivots, pivot swaps, pivots with wrong sign, min and max entry of L and D.
+// This can be quite expensive and should only be used for debugging.
 // #define HIPO_COLLECT_EXPENSIVE_DATA
 
-// choose level of timing:
+// Choose level of timing:
 // - 0: no timing
 // - 1: basic timing
 // - 2: advanced timing

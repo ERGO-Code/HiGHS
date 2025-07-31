@@ -57,7 +57,7 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
       // index to access vector x
       const Int x_start = sn_start + nb * j;
 
-#ifdef PIVOTING
+#ifdef HIPO_PIVOTING
 #if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
@@ -100,7 +100,7 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
       DataCollector::get()->sumTime(kTimeSolveSolve_sparse, clock.stop());
 #endif
 
-#ifdef PIVOTING
+#ifdef HIPO_PIVOTING
 #if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
@@ -158,7 +158,7 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
       // index to access vector x
       const Int x_start = sn_start + nb * j;
 
-#ifdef PIVOTING
+#ifdef HIPO_PIVOTING
 #if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
@@ -200,7 +200,7 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
       DataCollector::get()->sumTime(kTimeSolveSolve_dense, clock.stop());
 #endif
 
-#ifdef PIVOTING
+#ifdef HIPO_PIVOTING
 #if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
@@ -246,7 +246,7 @@ void HybridSolveHandler::diagSolve(std::vector<double>& x) const {
       // number of columns in the block
       const Int jb = std::min(nb, sn_size - nb * j);
 
-#ifdef PIVOTING
+#ifdef HIPO_PIVOTING
 #if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
@@ -294,7 +294,7 @@ void HybridSolveHandler::diagSolve(std::vector<double>& x) const {
       DataCollector::get()->sumTime(kTimeSolveSolve_dense, clock.stop());
 #endif
 
-#ifdef PIVOTING
+#ifdef HIPO_PIVOTING
 #if HIPO_TIMING_LEVEL >= 2
       clock.start();
 #endif
