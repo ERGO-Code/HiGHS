@@ -30,6 +30,7 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
   // Configure Feasibility Jump and pass it the problem
   int verbosity = mipsolver.submip ? 0 : mipsolver.options_mip_->log_dev_level;
   auto solver = external_feasibilityjump::FeasibilityJumpSolver(
+      log_options,
       /* seed = */ mipsolver.options_mip_->random_seed,
       /* verbosity = */ verbosity,
       /* equalityTolerance = */ epsilon,
