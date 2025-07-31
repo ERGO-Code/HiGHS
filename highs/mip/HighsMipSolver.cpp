@@ -96,7 +96,7 @@ void HighsMipSolver::run() {
     mipdata_->knapsack_data_.sum_variables += orig_model_->num_col_;
     mipdata_->knapsack_data_.sum_capacity += capacity;
     // Solve as a knapsack
-    HighsStatus call_status = mipdata_->heuristics.solveKnapsack();
+    HighsStatus call_status = mipdata_->heuristics.solveMipKnapsack();
     assert(call_status == HighsStatus::kOk);
     cleanupSolve();
     return;

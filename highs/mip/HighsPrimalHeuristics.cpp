@@ -1650,31 +1650,72 @@ void HighsPrimalHeuristics::flushStatistics() {
 double knapsackRecurrence(const std::vector<HighsInt>& weight,
 			  const std::vector<double>& value,
 			  const HighsInt num_item,
-			  const double rhs,
+			  const double capacity,
 			  std::vector<std::vector<double>> &dp_result,
 			  std::vector<std::vector<bool>> &use_item) {
-  if (num_item == 0 || rhs == 0)
+  if (num_item == 0 || capacity == 0)
     return 0;  // Base case
 
-  if (dp_result[num_item][rhs] != -1) return dp_result[num_item][rhs];  // Check if result is already computed
+  if (dp_result[num_item][capacity] != -1) return dp_result[num_item][capacity];  // Check if result is already computed
 
   // Exclude the item
-  double exclude = knapsackRecurrence(weight, value, num_item-1, rhs, dp_result, use_item);
+  double exclude = knapsackRecurrence(weight, value, num_item-1, capacity, dp_result, use_item);
 
   // Include the item (if it fits in the knapsack)
   double include = 0;
-  if (weight[num_item-1] <= rhs)
-    include = value[num_item-1] + knapsackRecurrence(weight, value, num_item-1, rhs - weight[num_item-1], dp_result, use_item);
+  if (weight[num_item-1] <= capacity)
+    include = value[num_item-1] + knapsackRecurrence(weight, value, num_item-1, capacity - weight[num_item-1], dp_result, use_item);
 
-  // Store whether the item is used with this RHS
-  use_item[num_item][rhs] = include > exclude;
+  // Store whether the item is used with this capacity
+  use_item[num_item][capacity] = include > exclude;
   // Store the result
-  dp_result[num_item][rhs] = use_item[num_item][rhs] ? include : exclude;
+  dp_result[num_item][capacity] = use_item[num_item][capacity] ? include : exclude;
     
-  return dp_result[num_item][rhs];
+  return dp_result[num_item][capacity];
 
 }
-HighsStatus HighsPrimalHeuristics::solveKnapsackReturn(const HighsStatus& return_status) {
+
+HighsModelStatus solveKnapsack(const HighsLogOptions& log_options,
+			       const HighsInt num_item,
+			       const std::vector<double>& value,
+			       const std::vector<HighsInt>& weight,
+			       const HighsInt capacity,
+			       double& solution_objective,
+			       std::vector<double>& solution) {
+  assert(capacity > 0);
+  
+  // Set up the DP result array, indicating that no optimal objective
+  // values are known
+  std::vector<std::vector<double>> dp_result(num_item + 1, std::vector<double>(capacity + 1, -1));
+  // Set up the item use array, indicating that items are not used
+  std::vector<std::vector<bool>> use_item(num_item + 1, std::vector<bool>(capacity + 1, false));
+
+  solution_objective = knapsackRecurrence(weight, value, num_item, capacity, dp_result, use_item);
+
+  // Deduce the solution
+  std::vector<HighsInt> knapsack_solution(num_item, 0);
+  // Variables are set to 1 if "used", and have to track the RHS of
+  // the subproblem after variables are assigned so that the correct
+  // entry of use is accessed
+  solution.resize(num_item);
+  HighsInt capacity_slack = capacity;
+  for (HighsInt iCol = 0; iCol < num_item; iCol++) {
+    if (use_item[iCol][capacity_slack]) {
+      solution[iCol] = 1.0;
+      capacity_slack -= weight[iCol];
+    }
+  }
+  const HighsInt capacity_violation = std::max(0, -capacity_slack);
+  if (capacity_violation > 0) {
+    highsLogUser(log_options, HighsLogType::kError,
+		 "HighsPrimalHeuristics::solveKnapsack() Capacity violation is (%d)\n",
+		 int(capacity_violation));
+   return HighsModelStatus::kSolveError;
+  }
+  return HighsModelStatus::kOptimal;
+}
+
+HighsStatus HighsPrimalHeuristics::solveMipKnapsackReturn(const HighsStatus& return_status) {
   const HighsLp& lp = *(mipsolver.model_);
   if (mipsolver.modelstatus_ == HighsModelStatus::kOptimal) {
     // mipsolver.solution_objective_ is the objective value for the
@@ -1690,14 +1731,16 @@ HighsStatus HighsPrimalHeuristics::solveKnapsackReturn(const HighsStatus& return
     mipsolver.mipdata_->lower_bound = mipsolver_objective;
     mipsolver.mipdata_->upper_bound = mipsolver_objective;
     mipsolver.gap_ = 0;
+  } else {
+    mipsolver.solution_.clear();
   }
   return return_status;
-
 }
 
-HighsStatus HighsPrimalHeuristics::solveKnapsack() {
+HighsStatus HighsPrimalHeuristics::solveMipKnapsack() {
   HighsLp lp = *(mipsolver.model_);
   //  const HighsLp& lp = mipsolver.mipdata_->model_;
+  const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
   HighsInt capacity_;
   assert(lp.isKnapsack(capacity_));
   const HighsInt capacity = capacity_;
@@ -1706,13 +1749,13 @@ HighsStatus HighsPrimalHeuristics::solveKnapsack() {
   const HighsInt constraint_sign = upper ? 1 : -1;
   if (capacity < 0) {
     mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
-    return solveKnapsackReturn(HighsStatus::kOk);
+    return solveMipKnapsackReturn(HighsStatus::kOk);
   } else if (capacity == 0) {
     // Trivial knapsack with zero solution
     mipsolver.solution_.assign(lp.num_col_, 0);
     mipsolver.solution_objective_ = lp.offset_;
     mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
-    return solveKnapsackReturn(HighsStatus::kOk);
+    return solveMipKnapsackReturn(HighsStatus::kOk);
   }
   // Set up the weights for the knapsack solver. They might not all be
   // nonzero, so have to scatter into a zeroed vector
@@ -1729,57 +1772,35 @@ HighsStatus HighsPrimalHeuristics::solveKnapsack() {
   std::vector<double> value;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     value.push_back(-sense * lp.col_cost_[iCol]);
-  // Set up the DP result array, indicating that no objectives are
-  // know
-  std::vector<std::vector<double>> dp_result(lp.num_col_ + 1, std::vector<double>(capacity + 1, -1));
-  // Set up the item use array, indicating that items are not used
-  std::vector<std::vector<bool>> use_item(lp.num_col_ + 1, std::vector<bool>(capacity + 1, false));
   // Solve the knapsack problem by DP
-  double knapsack_optimal_objective_value = knapsackRecurrence(weight, value, lp.num_col_, capacity, dp_result, use_item);
-  // Deduce the solution
-  std::vector<HighsInt> knapsack_solution(lp.num_col_, 0);
-  // Variables are set to 1 if "used", and have to track the RHS of
-  // the subproblem after variables are assigned so that the correct
-  // entry of use is accessed
-  HighsInt knapsack_solution_rhs = capacity;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (use_item[iCol][knapsack_solution_rhs]) {
-      knapsack_solution[iCol] = 1;
-      knapsack_solution_rhs -= weight[iCol];
-    }
-  }
-  const double row_violation = std::max(0, -knapsack_solution_rhs);
-  const double rel_row_violation = row_violation / (1.0 * capacity);
+  double knapsack_optimal_objective_value;
+  std::vector<double>& solution = mipsolver.solution_;
+  mipsolver.modelstatus_ = solveKnapsack(log_options,
+					 lp.num_col_, value, weight, capacity,
+					 knapsack_optimal_objective_value, solution);
+  if (mipsolver.modelstatus_ != HighsModelStatus::kOptimal)
+    return solveMipKnapsackReturn(HighsStatus::kError);
 
-  if (rel_row_violation > 1e-12) {
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
-		 "HighsPrimalHeuristics::solveKnapsack() (Abs; rel) capacity violation is (%g, %g)\n", row_violation, rel_row_violation);
-   mipsolver.modelstatus_ = HighsModelStatus::kSolveError;
-   return solveKnapsackReturn(HighsStatus::kError);
-  }
   // Get the objective value corresponding to the original problem
   const double solution_objective = lp.offset_ - sense * knapsack_optimal_objective_value;
 
   // Compute the objective directly as a check
   double check_objective = lp.offset_;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
-    check_objective += knapsack_solution[iCol] * lp.col_cost_[iCol];
+    check_objective += solution[iCol] * lp.col_cost_[iCol];
 
   double abs_dl_solution_objective = std::fabs(solution_objective - check_objective);
   double rel_dl_solution_objective = abs_dl_solution_objective / (1.0 + std::fabs(mipsolver.solution_objective_));
   if (rel_dl_solution_objective > 1e-12) {
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
-		 "HighsPrimalHeuristics::solveKnapsack() Relative optimal objective value mismatch of %g\n", rel_dl_solution_objective);
+    highsLogUser(log_options, HighsLogType::kError,
+		 "HighsPrimalHeuristics::solveMipKnapsack() Relative optimal objective value mismatch of %g\n",
+		 rel_dl_solution_objective);
    mipsolver.modelstatus_ = HighsModelStatus::kSolveError;
-   return solveKnapsackReturn(HighsStatus::kError);
+   return solveMipKnapsackReturn(HighsStatus::kError);
   }
-  // Copy in the solution
-  mipsolver.solution_.resize(lp.num_col_);
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
-    mipsolver.solution_[iCol] = knapsack_solution[iCol];
   mipsolver.solution_objective_ = solution_objective;
 
-  mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
-  return solveKnapsackReturn(HighsStatus::kOk);
+  assert(mipsolver.modelstatus_ == HighsModelStatus::kOptimal);
+  return solveMipKnapsackReturn(HighsStatus::kOk);
 }
 

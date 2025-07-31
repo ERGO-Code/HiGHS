@@ -70,8 +70,8 @@ class HighsPrimalHeuristics {
 
   void ziRound(const std::vector<double>& relaxationsol);
 
-  HighsStatus solveKnapsackReturn(const HighsStatus& return_status);
-  HighsStatus solveKnapsack();
+  HighsStatus solveMipKnapsackReturn(const HighsStatus& return_status);
+  HighsStatus solveMipKnapsack();
 };
 
 #endif
