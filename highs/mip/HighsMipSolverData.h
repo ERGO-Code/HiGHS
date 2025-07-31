@@ -30,6 +30,14 @@
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
+struct HighsKnapsackData {
+  HighsInt num_problem;
+  int64_t sum_variables;
+  int64_t sum_rhs;
+  void initialise();
+  void add(const HighsKnapsackData& knapsack_data);
+};
+
 struct HighsPrimaDualIntegral {
   double value;
   double prev_lb;
@@ -152,6 +160,8 @@ struct HighsMipSolverData {
   HighsPrimaDualIntegral primal_dual_integral;
 
   HighsDebugSol debugSolution;
+
+  HighsKnapsackData knapsack_data_;
 
   HighsMipSolverData(HighsMipSolver& mipsolver)
       : mipsolver(mipsolver),

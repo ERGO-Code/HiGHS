@@ -684,6 +684,7 @@ void HighsMipSolverData::init() {
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
   primal_dual_integral.initialise();
+  knapsack_data_.initialise();
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -2785,3 +2786,17 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
 }
 
 void HighsPrimaDualIntegral::initialise() { this->value = -kHighsInf; }
+
+void HighsKnapsackData::initialise() {
+  num_problem = 0;
+  sum_variables = 0;
+  sum_rhs = 0;
+}
+
+void HighsKnapsackData::add(const HighsKnapsackData& knapsack_data) {
+  this->num_problem += knapsack_data.num_problem;
+  this->sum_variables += knapsack_data.sum_variables;
+  this->sum_rhs += knapsack_data.sum_rhs;
+}
+
+

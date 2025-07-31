@@ -43,7 +43,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       clqtableinit(nullptr),
       implicinit(nullptr) {
   assert(!submip || submip_level > 0);
-  max_submip_level = 0;
+  this->max_submip_level = 0;
   if (solution.value_valid) {
 #ifndef NDEBUG
     // MIP solver doesn't check row residuals, but they should be OK
@@ -848,6 +848,14 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
+  const HighsKnapsackData& knapsack_data = this->mipdata_->knapsack_data_;
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+               "  Knapsack sub-MIPs %d\n", knapsack_data.num_problem);
+  if (knapsack_data.num_problem > 0)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+               "     Mean var count %d\n     Mean RHS       %d\n",
+		 int((1.0 * knapsack_data.sum_variables) / knapsack_data.num_problem),
+		 int((1.0 * knapsack_data.sum_rhs) / knapsack_data.num_problem));
 
   if (!timeless_log) analysis_.reportMipTimer();
 

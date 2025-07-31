@@ -151,6 +151,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.run();
   mipsolver.max_submip_level =
       std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
+  mipsolver.mipdata_->knapsack_data_.add(submipsolver.mipdata_->knapsack_data_);
   if (!mipsolver.submip) mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
