@@ -4,6 +4,7 @@
 #include "FactorHiGHSSettings.h"
 #include "Numeric.h"
 #include "Symbolic.h"
+#include "ipm/hipo/auxiliary/Log.h"
 
 /*
 
@@ -40,18 +41,25 @@ Then, the factorization is performed as follows.
 
     N.solve(rhs);
 
-Printing to screen is achieved using the interface in auxiliary/Log.h, which
-uses Highs logging. To use the linear solver outside of Highs, redefine the
-functions in auxiliary/Log.h to print in other ways.
+Printing to screen is achieved using the interface in auxiliary/Log.h. Pass an
+object of type Log for normal printing:
+    ...
+    Log log;
+    FHsolver(&log);
+    ...
+Pass an object of type LogHighs for Highs logging:
+Pass nothing to suppress all logging.
 
 */
 
 namespace hipo {
 
 class FHsolver {
+  const Log* log_;
+
  public:
   // Create object and initialise DataCollector
-  FHsolver();
+  FHsolver(const Log* log = nullptr);
 
   // Print collected data (if any) and terminate DataCollector
   ~FHsolver();

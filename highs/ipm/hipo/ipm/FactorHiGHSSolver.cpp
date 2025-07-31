@@ -9,8 +9,8 @@
 namespace hipo {
 
 FactorHiGHSSolver::FactorHiGHSSolver(const Options& options, Info* info,
-                                     IpmData* record)
-    : S_{}, N_(S_), info_{info}, data_{record} {}
+                                     IpmData* record, const LogHighs* log)
+    : S_{}, N_(S_), FH_(log), info_{info}, data_{record}, log_{log} {}
 
 void FactorHiGHSSolver::clear() {
   valid_ = false;
@@ -58,7 +58,7 @@ Int FactorHiGHSSolver::setup(const Model& model, Options& options) {
   if (Int status = setNla(model, options)) return status;
   setParallel(options);
 
-  S_.print(Log::debug(1));
+  S_.print(log_, log_->debug(1));
   return kStatusOk;
 }
 
@@ -451,7 +451,7 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
     log_stream << textline("Newton system:") << "NE preferred (AS failed)\n";
   } else if (failure_AS && failure_NE) {
     status = kStatusErrorAnalyse;
-    Log::printe("Both NE and AS failed analyse phase\n");
+    if (log_) log_->printe("Both NE and AS failed analyse phase\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
@@ -479,7 +479,7 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
     }
   }
 
-  Log::print(log_stream);
+  if (log_) log_->print(log_stream);
 
   if (status != kStatusErrorAnalyse) {
     if (options.nla == kOptionNlaAugmented) {
@@ -505,7 +505,7 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
       clock.start();
 
       if (FH_.analyse(S_, rowsLower, ptrLower, model.A().num_col_)) {
-        Log::printe("AS requested, failed analyse phase\n");
+        if (log_) log_->printe("AS requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }
 
@@ -517,12 +517,12 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
     case kOptionNlaNormEq: {
       Int NE_status = buildNEstructureDense(model.A());
       if (NE_status) {
-        Log::printe("NE requested, matrix is too large\n");
+        if (log_) log_->printe("NE requested, matrix is too large\n");
         return kStatusOoM;
       }
       clock.start();
       if (FH_.analyse(S_, rowsNE_, ptrNE_, 0)) {
-        Log::printe("NE requested, failed analyse phase\n");
+        if (log_) log_->printe("NE requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }
       if (info_) info_->analyse_NE_time = clock.stop();
@@ -536,7 +536,7 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
     }
   }
 
-  Log::print(log_stream);
+  if (log_) log_->print(log_stream);
 
   return kStatusOk;
 }
@@ -615,7 +615,7 @@ void FactorHiGHSSolver::setParallel(Options& options) {
       break;
   }
 
-  Log::print(log_stream);
+  if (log_) log_->print(log_stream);
   S_.setParallel(parallel_tree, parallel_node);
 }
 

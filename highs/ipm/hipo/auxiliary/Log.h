@@ -6,66 +6,34 @@
 #include "io/HighsIO.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
-// Interface to Highs logging.
-// Call Log::setOptions to set the HighsLogOptions.
-// If log_options_ is null, nothing is printed.
+// Base class for logging.
+// Use print for normal logging, printw for warnings, printe for errors.
+// dev_level = 0 does not print any debug information.
+// dev_level = 1 prints debug level Info.
+// dev_level = 2 prints debug levels Info, Detailed.
+// dev_level = 3 prints debug levels Info, Detailed, Verbose.
 
 namespace hipo {
 
 class Log {
-  static const HighsLogOptions* log_options_;
-
-  // Private ctor and dtor
-  Log();
-  ~Log() = default;
+  Int dev_level_ = 0;
 
  public:
-  static void setOptions(const HighsLogOptions& log_options);
-  static bool debug(Int level);
+  Log(Int level = 0);
 
-  // Logging normal, warning and error, with stream
-  static void print(std::stringstream& ss);
-  static void printw(std::stringstream& ss);
-  static void printe(std::stringstream& ss);
+  virtual void print(std::stringstream& ss) const;
+  virtual void printw(std::stringstream& ss) const;
+  virtual void printe(std::stringstream& ss) const;
+  virtual void print(const char* c) const;
+  virtual void printw(const char* c) const;
+  virtual void printe(const char* c) const;
 
-  // Logging normal, warning and error, formatted
-  template <typename... Args>
-  static void printf(const char* format, Args... args) {
-    if (log_options_)
-      highsLogUser(*log_options_, HighsLogType::kInfo, format, args...);
-  }
-  template <typename... Args>
-  static void printw(const char* format, Args... args) {
-    if (log_options_)
-      highsLogUser(*log_options_, HighsLogType::kWarning, format, args...);
-  }
-  template <typename... Args>
-  static void printe(const char* format, Args... args) {
-    if (log_options_)
-      highsLogUser(*log_options_, HighsLogType::kError, format, args...);
-  }
-
-  // Dev logging info, detailed and verbose, with stream
-  static void printDevInfo(std::stringstream& ss);
-  static void printDevDetailed(std::stringstream& ss);
-  static void printDevVerbose(std::stringstream& ss);
-
-  // Dev logging info, detailed and verbose, formatted
-  template <typename... Args>
-  static void printDevInfo(const char* format, Args... args) {
-    if (log_options_)
-      highsLogDev(*log_options_, HighsLogType::kInfo, format, args...);
-  }
-  template <typename... Args>
-  static void printDevDetailed(const char* format, Args... args) {
-    if (log_options_)
-      highsLogDev(*log_options_, HighsLogType::kDetailed, format, args...);
-  }
-  template <typename... Args>
-  static void printDevVerbose(const char* format, Args... args) {
-    if (log_options_)
-      highsLogDev(*log_options_, HighsLogType::kVerbose, format, args...);
-  }
+  virtual void printDevInfo(std::stringstream& ss) const;
+  virtual void printDevDetailed(std::stringstream& ss) const;
+  virtual void printDevVerbose(std::stringstream& ss) const;
+  virtual void printDevInfo(const char* c) const;
+  virtual void printDevDetailed(const char* c) const;
+  virtual void printDevVerbose(const char* c) const;
 };
 
 // Functions to print using streams, taken from IPX.

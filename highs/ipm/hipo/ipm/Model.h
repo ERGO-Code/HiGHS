@@ -9,6 +9,7 @@
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/ipx/lp_solver.h"
 #include "util/HighsSparseMatrix.h"
+#include "LogHighs.h"
 
 namespace hipo {
 
@@ -60,6 +61,7 @@ class Model {
   // coefficients for scaling
   std::vector<double> colscale_{};
   std::vector<double> rowscale_{};
+  Int CG_iter_scaling_{};
 
   // information about empty rows, for postprocessing
   std::vector<Int> rows_shift_{};
@@ -83,7 +85,7 @@ class Model {
            const char* constraints, double offset);
 
   // Print information of model
-  void print() const;
+  void print(const LogHighs& log) const;
 
   void postprocess(std::vector<double>& slack, std::vector<double>& y) const;
 

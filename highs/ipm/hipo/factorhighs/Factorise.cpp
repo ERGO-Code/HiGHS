@@ -17,8 +17,8 @@ namespace hipo {
 
 Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
                      const std::vector<Int>& ptrA,
-                     const std::vector<double>& valA)
-    : S_{S} {
+                     const std::vector<double>& valA, const Log* log)
+    : S_{S}, log_{log} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -28,9 +28,10 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
   n_ = ptrA.size() - 1;
 
   if (n_ != S_.size()) {
-    Log::printDevInfo(
-        "Matrix provided to Factorise has size incompatible with symbolic "
-        "object.\n");
+    if (log_)
+      log_->printDevInfo(
+          "Matrix provided to Factorise has size incompatible with symbolic "
+          "object.\n");
     return;
   }
 
@@ -247,7 +248,7 @@ void Factorise::processSupernode(Int sn) {
       if (flag_stop_) return;
 
       if (child_clique.size() == 0) {
-        Log::printDevInfo("Missing child supernode contribution\n");
+        if (log_) log_->printDevInfo("Missing child supernode contribution\n");
         flag_stop_ = true;
         return;
       }
@@ -327,8 +328,14 @@ void Factorise::processSupernode(Int sn) {
   // const double reg_thresh = max_diag_ * kDynamicDiagCoeff;
   const double reg_thresh = A_norm1_ * kDynamicDiagCoeff;
 
-  if (FH->denseFactorise(reg_thresh)) {
+  if (Int flag = FH->denseFactorise(reg_thresh)) {
     flag_stop_ = true;
+
+    if (log_ && flag == kRetInvalidInput)
+      log_->printDevInfo("DenseFact: invalid input\n");
+    else if (log_ && flag == kRetInvalidPivot)
+      log_->printDevInfo("DenseFact: invalid pivot\n");
+
     return;
   }
 #if HIPO_TIMING_LEVEL >= 2

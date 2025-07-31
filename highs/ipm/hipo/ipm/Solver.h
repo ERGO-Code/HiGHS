@@ -8,6 +8,7 @@
 #include "Info.h"
 #include "Iterate.h"
 #include "LinearSolver.h"
+#include "LogHighs.h"
 #include "Model.h"
 #include "Options.h"
 #include "Parameters.h"
@@ -55,6 +56,9 @@ class Solver {
 
   // Interface to ipx
   ipx::LpSolver ipx_lps_;
+
+  // Interface to Highs logging
+  LogHighs logH_;
 
   double start_time_;
 

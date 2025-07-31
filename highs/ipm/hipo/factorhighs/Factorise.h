@@ -6,6 +6,7 @@
 #include "Numeric.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "ipm/hipo/auxiliary/Log.h"
 
 namespace hipo {
 
@@ -57,13 +58,16 @@ class Factorise {
   // flag to stop computation
   bool flag_stop_ = false;
 
+  const Log* log_;
+
  public:
   void permute(const std::vector<Int>& iperm);
   void processSupernode(Int sn);
 
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
-            const std::vector<Int>& ptrA, const std::vector<double>& valA);
+            const std::vector<Int>& ptrA, const std::vector<double>& valA,
+            const Log* log);
 
   bool run(Numeric& num);
 };

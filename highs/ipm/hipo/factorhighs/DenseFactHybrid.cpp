@@ -28,10 +28,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
 #endif
 
   // check input
-  if (n < 0 || k < 0 || !A || (k < n && !B)) {
-    Log::printDevInfo("\ndenseFactFH: invalid input\n");
-    return kRetInvalidInput;
-  }
+  if (n < 0 || k < 0 || !A || (k < n && !B)) return kRetInvalidInput;
 
   // quick return
   if (n == 0) return kRetOk;

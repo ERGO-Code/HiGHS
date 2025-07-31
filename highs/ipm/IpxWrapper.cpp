@@ -454,7 +454,7 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
     hipo_options.display = false;
 
   // Debug option is already considered through log_options.log_dev_level in
-  // hipo::Log::debug
+  // hipo::LogHighs::debug
 
   hipo_options.timeless_log = options.timeless_log;
   hipo_options.feasibility_tol = std::min(options.primal_feasibility_tolerance,

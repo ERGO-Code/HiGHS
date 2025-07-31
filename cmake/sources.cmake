@@ -182,6 +182,7 @@ set(hipo_sources
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp 
+    ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/Solver.cpp)
 
@@ -193,11 +194,12 @@ set(hipo_headers
     ipm/hipo/ipm/Control.h
     ipm/hipo/ipm/Info.h
     ipm/hipo/ipm/Iterate.h
+    ipm/hipo/ipm/LinearSolver.h
+    ipm/hipo/ipm/LogHighs.h
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
     ipm/hipo/ipm/Solver.h
-    ipm/hipo/ipm/Status.h
-    ipm/hipo/ipm/LinearSolver.h)
+    ipm/hipo/ipm/Status.h)
 
 set(factor_highs_sources
     ipm/hipo/factorhighs/Analyse.cpp

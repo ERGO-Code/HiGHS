@@ -122,7 +122,7 @@ std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
   DataCollector::get()->sumTime(kTimeSolveOmega, clock.stop());
 #endif
 
-  Log::printDevVerbose("   # start  %.2e\n", omega);
+  // if(log_) log_->printDevVerbose("   # start  %.2e\n", omega);
 
   Int iter = 0;
   for (; iter < kMaxRefinementIter; ++iter) {
@@ -164,7 +164,7 @@ std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
     old_omega = omega;
     omega = computeOmega(rhs, temp, res);
 
-    Log::printDevVerbose("   # refine %.2e\n", omega);
+    // if(log_) log_->printDevVerbose("   # refine %.2e\n", omega);
 
 #if HIPO_TIMING_LEVEL >= 2
     DataCollector::get()->sumTime(kTimeSolveOmega, clock.stop());
@@ -174,7 +174,7 @@ std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
       x = temp;
     } else {
       omega = old_omega;
-      Log::printDevVerbose("   ## reject\n");
+      // if(log_) log_->printDevVerbose("   ## reject\n");
       break;
     }
   }

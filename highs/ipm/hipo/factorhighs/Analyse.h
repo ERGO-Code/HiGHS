@@ -6,6 +6,7 @@
 
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "ipm/hipo/auxiliary/Log.h"
 
 namespace hipo {
 
@@ -78,6 +79,8 @@ class Analyse {
   // block size
   Int nb_{};
 
+  const Log* log_;
+
   // Functions to perform analyse phase
   Int getPermutation();
   void permute(const std::vector<Int>& iperm);
@@ -101,7 +104,7 @@ class Analyse {
  public:
   // Constructor: matrix must be in lower triangular format
   Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-          Int negative_pivots = 0);
+          const Log* log, Int negative_pivots = 0);
 
   // Run analyse phase and save the result in Symbolic object S
   Int run(Symbolic& S);

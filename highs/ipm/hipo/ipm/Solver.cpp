@@ -32,7 +32,7 @@ Int Solver::load(const Int num_var, const Int num_con, const double* obj,
 void Solver::set(const Options& options, const HighsLogOptions& log_options,
                  HighsCallback& callback, const HighsTimer& timer) {
   options_ = options;
-  if (options_.display) Log::setOptions(log_options);
+  if (options_.display) logH_.setOptions(log_options);
   control_.setCallback(callback);
   control_.setTimer(timer);
   control_.setOptions(options);
@@ -77,7 +77,7 @@ bool Solver::initialise() {
   it_.reset(new Iterate(model_));
 
   // initialise linear solver
-  LS_.reset(new FactorHiGHSSolver(options_, &info_, &it_->data));
+  LS_.reset(new FactorHiGHSSolver(options_, &info_, &it_->data, &logH_));
   if (Int status = LS_->setup(model_, options_)) {
     info_.status = (Status)status;
     return true;
@@ -193,7 +193,7 @@ bool Solver::prepareIpx() {
   Int load_status = model_.loadIntoIpx(ipx_lps_);
 
   if (load_status) {
-    Log::printDevInfo("Error loading model into IPX\n");
+    logH_.printDevInfo("Error loading model into IPX\n");
     return true;
   }
 
@@ -205,7 +205,7 @@ bool Solver::prepareIpx() {
       zu.data());
 
   if (start_point_status) {
-    Log::printDevInfo("Error loading starting point into IPX\n");
+    logH_.printDevInfo("Error loading starting point into IPX\n");
     return true;
   }
 
@@ -216,9 +216,9 @@ void Solver::refineWithIpx() {
   if (checkInterrupt()) return;
 
   if (statusNeedsRefinement() && options_.refine_with_ipx) {
-    Log::printf("\nRestarting with IPX\n");
+    logH_.print("\nRestarting with IPX\n");
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
-    Log::printf("\nRunning crossover with IPX\n");
+    logH_.print("\nRunning crossover with IPX\n");
   } else {
     return;
   }
@@ -240,7 +240,7 @@ void Solver::refineWithIpx() {
     log_stream << ", crossover "
                << ipx::StatusString(info_.ipx_info.status_crossover);
   log_stream << '\n';
-  Log::print(log_stream);
+  logH_.print(log_stream);
 
   if (info_.ipx_info.status_crossover == IPX_STATUS_optimal) {
     info_.status = kStatusBasic;
@@ -275,14 +275,14 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
     // factorise normal equations, if not yet done
     if (!LS_->valid_)
       if (Int status = LS_->factorNE(model_.A(), theta_inv)) {
-        Log::printe("Error while factorising normal equations\n");
+        logH_.printe("Error while factorising normal equations\n");
         info_.status = (Status)status;
         return true;
       }
 
     // solve with normal equations
     if (Int status = LS_->solveNE(res8, delta.y)) {
-      Log::printe("Error while solving normal equations\n");
+      logH_.printe("Error while solving normal equations\n");
       info_.status = (Status)status;
       return true;
     }
@@ -304,14 +304,14 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
     // factorise augmented system, if not yet done
     if (!LS_->valid_)
       if (Int status = LS_->factorAS(model_.A(), theta_inv)) {
-        Log::printe("Error while factorising augmented system\n");
+        logH_.printe("Error while factorising augmented system\n");
         info_.status = (Status)status;
         return true;
       }
 
     // solve with augmented system
     if (Int status = LS_->solveAS(res7, it_->res1, delta.x, delta.y)) {
-      Log::printe("Error while solving augmented system\n");
+      logH_.printe("Error while solving augmented system\n");
       info_.status = (Status)status;
       return true;
     }
@@ -373,11 +373,11 @@ bool Solver::recoverDirection(NewtonDir& delta) {
 
   // Check for NaN of Inf
   if (it_->isDirNan()) {
-    Log::printDevInfo("Direction is nan\n");
+    logH_.printDevInfo("Direction is nan\n");
     info_.status = kStatusError;
     return true;
   } else if (it_->isDirInf()) {
-    Log::printDevInfo("Direction is inf\n");
+    logH_.printDevInfo("Direction is inf\n");
     info_.status = kStatusError;
     return true;
   }
@@ -577,13 +577,13 @@ bool Solver::startingPoint() {
 
     // factorise A*A^T
     if (Int status = LS_->factorNE(model_.A(), temp_scaling)) {
-      Log::printe("Error while factorising normal equations\n");
+      logH_.printe("Error while factorising normal equations\n");
       info_.status = (Status)status;
       return true;
     }
 
     if (Int status = LS_->solveNE(y, temp_m)) {
-      Log::printe("Error while solving normal equations\n");
+      logH_.printe("Error while solving normal equations\n");
       info_.status = (Status)status;
       return true;
     }
@@ -594,7 +594,7 @@ bool Solver::startingPoint() {
     // [  A   0 ] [ dx] = [ b ]
 
     if (Int status = LS_->factorAS(model_.A(), temp_scaling)) {
-      Log::printe("Error while factorising augmented system\n");
+      logH_.printe("Error while factorising augmented system\n");
       info_.status = (Status)status;
       return true;
     }
@@ -603,7 +603,7 @@ bool Solver::startingPoint() {
     for (Int i = 0; i < n_; ++i) rhs_x[i] = -x[i];
     std::vector<double> lhs_x(n_);
     if (Int status = LS_->solveAS(rhs_x, model_.b(), lhs_x, temp_m)) {
-      Log::printe("Error while solving augmented system\n");
+      logH_.printe("Error while solving augmented system\n");
       info_.status = (Status)status;
       return true;
     }
@@ -655,7 +655,7 @@ bool Solver::startingPoint() {
     model_.A().alphaProductPlusY(1.0, model_.c(), temp_m);
 
     if (Int status = LS_->solveNE(temp_m, y)) {
-      Log::printe("Error while solvingF normal equations\n");
+      logH_.printe("Error while solvingF normal equations\n");
       info_.status = (Status)status;
       return true;
     }
@@ -669,7 +669,7 @@ bool Solver::startingPoint() {
     std::vector<double> lhs_x(n_);
 
     if (Int status = LS_->solveAS(model_.c(), rhs_y, lhs_x, y)) {
-      Log::printe("Error while solving augmented system\n");
+      logH_.printe("Error while solving augmented system\n");
       info_.status = (Status)status;
       return true;
     }
@@ -862,7 +862,10 @@ bool Solver::centralityCorrectors() {
   double alpha_p_old, alpha_d_old;
   stepsToBoundary(alpha_p_old, alpha_d_old, it_->delta);
 
-  Log::printDevDetailed(" * Pred %.2f %.2f\n", alpha_p_old, alpha_d_old);
+  std::stringstream log_stream;
+
+  log_stream << " * Pred " << fix(alpha_p_old, 0, 2) << " "
+             << fix(alpha_d_old, 0, 2) << "\n";
 
   Int cor;
   for (cor = 0; cor < info_.correctors; ++cor) {
@@ -879,13 +882,13 @@ bool Solver::centralityCorrectors() {
     double wd = wp;
     bestWeight(it_->delta, corr, wp, wd, alpha_p, alpha_d);
 
-    Log::printDevDetailed(" * Corr %.2f %.2f, weight %.2f %.2f\n", alpha_p,
-                          alpha_d, wp, wd);
+    log_stream << " * Corr " << fix(alpha_p, 0, 2) << " " << fix(alpha_d, 0, 2)
+               << ", weight " << fix(wp, 0, 2) << " " << fix(wd, 0, 2) << "\n";
 
     if (alpha_p < alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin &&
         alpha_d < alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // reject corrector
-      Log::printDevDetailed("  ** Rejected\n");
+      log_stream << "  ** Rejected\n";
       break;
     }
 
@@ -895,7 +898,7 @@ bool Solver::centralityCorrectors() {
       vectorAdd(it_->delta.xl, corr.xl, wp);
       vectorAdd(it_->delta.xu, corr.xu, wp);
       alpha_p_old = alpha_p;
-      Log::printDevDetailed("  ** Primal accepted\n");
+      log_stream << "  ** Primal accepted\n";
     }
     if (alpha_d >= alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // accept dual corrector
@@ -903,7 +906,7 @@ bool Solver::centralityCorrectors() {
       vectorAdd(it_->delta.zl, corr.zl, wd);
       vectorAdd(it_->delta.zu, corr.zu, wd);
       alpha_d_old = alpha_d;
-      Log::printDevDetailed("  ** Dual accepted\n");
+      log_stream << "  ** Dual accepted\n";
     }
 
     if (alpha_p > 0.95 && alpha_d > 0.95) {
@@ -916,6 +919,8 @@ bool Solver::centralityCorrectors() {
   }
 
   it_->data.back().correctors = cor;
+
+  logH_.printDevDetailed(log_stream);
 
   return false;
 }
@@ -958,11 +963,11 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
 bool Solver::checkIterate() {
   // Check that iterate is not NaN or Inf
   if (it_->isNan()) {
-    Log::printDevInfo("\nIterate is nan\n");
+    logH_.printDevInfo("\nIterate is nan\n");
     info_.status = kStatusError;
     return true;
   } else if (it_->isInf()) {
-    Log::printDevInfo("\nIterate is inf\n");
+    logH_.printDevInfo("\nIterate is inf\n");
     info_.status = kStatusError;
     return true;
   }
@@ -973,7 +978,7 @@ bool Solver::checkIterate() {
         (model_.hasLb(i) && it_->zl[i] < 0) ||
         (model_.hasUb(i) && it_->xu[i] < 0) ||
         (model_.hasUb(i) && it_->zu[i] < 0)) {
-      Log::printDevInfo("\nIterate has negative component\n");
+      logH_.printDevInfo("\nIterate has negative component\n");
       return true;
     }
   }
@@ -998,12 +1003,12 @@ bool Solver::checkBadIter() {
   if (too_many_bad_iter || mu_is_large) {
     if (pobj_is_large) {
       // problem is likely to be primal unbounded, i.e. dual infeasible
-      Log::printf("=== Dual infeasible\n");
+      logH_.print("=== Dual infeasible\n");
       info_.status = kStatusDualInfeasible;
       terminate = true;
     } else if (dobj_is_large) {
       // problem is likely to be dual unbounded, i.e. primal infeasible
-      Log::printf("=== Primal infeasible\n");
+      logH_.print("=== Primal infeasible\n");
       info_.status = kStatusPrimalInfeasible;
       terminate = true;
     } else if (too_many_bad_iter) {
@@ -1025,7 +1030,7 @@ bool Solver::checkTermination() {
 
   if (feasible && optimal) {
     if (info_.status != kStatusPDFeas)
-      Log::printf("=== Primal-dual feasible point found\n");
+      logH_.print("=== Primal-dual feasible point found\n");
 
     info_.status = kStatusPDFeas;
 
@@ -1034,7 +1039,7 @@ bool Solver::checkTermination() {
       bool ready_for_crossover =
           it_->infeasAfterDropping() < options_.crossover_tol;
       if (ready_for_crossover) {
-        Log::printf("=== Ready for crossover\n");
+        logH_.print("=== Ready for crossover\n");
         terminate = true;
       }
     } else {
@@ -1055,7 +1060,7 @@ bool Solver::checkInterrupt() {
 }
 
 void Solver::backwardError(const NewtonDir& delta) const {
-  if (Log::debug(1)) {
+  if (logH_.debug(1)) {
     std::vector<double>& x = it_->x;
     std::vector<double>& xl = it_->xl;
     std::vector<double>& xu = it_->xu;
@@ -1354,14 +1359,14 @@ void Solver::printHeader() const {
 
     if (!options_.timeless_log) log_stream << "    time";
 
-    if (Log::debug(1)) {
+    if (logH_.debug(1)) {
       log_stream << "     alpha p/d   sigma af/co   cor  solv"
                  << "     minT     maxT  (xj * zj / mu)_range_&_num"
                  << "   max_res";
     }
 
     log_stream << "\n";
-    Log::print(log_stream);
+    logH_.print(log_stream);
   }
 }
 
@@ -1378,7 +1383,7 @@ void Solver::printOutput() const {
   if (!options_.timeless_log)
     log_stream << " " << fix(control_.elapsed(), 7, 1);
 
-  if (Log::debug(1)) {
+  if (logH_.debug(1)) {
     const IpmIterData& data = it_->data.back();
 
     log_stream << " " << fix(alpha_primal_, 6, 2);
@@ -1397,7 +1402,7 @@ void Solver::printOutput() const {
   }
 
   log_stream << "\n";
-  Log::print(log_stream);
+  logH_.print(log_stream);
 }
 
 void Solver::printInfo() const {
@@ -1408,10 +1413,10 @@ void Solver::printInfo() const {
   else
     log_stream << textline("Threads:") << highs::parallel::num_threads()
                << '\n';
-  Log::print(log_stream);
+  logH_.print(log_stream);
 
-  // print range of coefficients
-  model_.print();
+  // print information about model
+  model_.print(logH_);
 }
 
 void Solver::printSummary() const {
@@ -1454,7 +1459,7 @@ void Solver::printSummary() const {
                << sci(info_.ipx_info.dual_infeas, 0, 2) << '\n';
   }
 
-  if (Log::debug(1)) {
+  if (logH_.debug(1)) {
     log_stream << textline("Correctors:") << integer(info_.correctors) << '\n';
     log_stream << textline("Analyse AS time:")
                << fix(info_.analyse_AS_time, 0, 2) << '\n';
@@ -1471,7 +1476,7 @@ void Solver::printSummary() const {
     log_stream << textline("Solves:") << integer(info_.solve_number) << '\n';
   }
 
-  Log::print(log_stream);
+  logH_.print(log_stream);
 }
 
 const Info& Solver::getInfo() const { return info_; }

@@ -17,7 +17,8 @@
 namespace hipo {
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                 Int negative_pivots) {
+                 const Log* log, Int negative_pivots)
+    : log_{log} {
   // Input the symmetric matrix to be analysed in CSC format.
   // row_ind contains the row indices.
   // col_ptr contains the starting points of each column.
@@ -113,7 +114,7 @@ Int Analyse::getPermutation() {
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                             options, perm_.data(), iperm_.data());
   if (status != METIS_OK) {
-    Log::printDevInfo("Error with Metis\n");
+    if (log_) log_->printDevInfo("Error with Metis\n");
     return kRetMetisError;
   }
 
@@ -952,7 +953,7 @@ void Analyse::relativeIndClique() {
       } else if (consecutive_sums_[sn][i] == 1) {
         consecutive_sums_[sn][i] = consecutive_sums_[sn][i + 1] + 1;
       } else {
-        Log::printDevInfo("Error in consecutiveSums\n");
+        if (log_) log_->printDevInfo("Error in consecutiveSums\n");
       }
     }
   }
@@ -1354,7 +1355,7 @@ Int Analyse::run(Symbolic& S) {
 
   // Too many nonzeros for the integer type selected
   if (nz_factor_ >= std::numeric_limits<Int>::max()) {
-    Log::printDevInfo("Integer overflow in analyse phase\n");
+    if (log_) log_->printDevInfo("Integer overflow in analyse phase\n");
     return kRetIntOverflow;
   }
 

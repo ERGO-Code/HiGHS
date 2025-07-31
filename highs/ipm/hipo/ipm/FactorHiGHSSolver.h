@@ -29,6 +29,7 @@ class FactorHiGHSSolver : public LinearSolver {
 
   Info* info_ = nullptr;
   IpmData* data_ = nullptr;
+  const LogHighs* log_ = nullptr;
 
   Int chooseNla(const Model& model, Options& options);
   Int setNla(const Model& model, Options& options);
@@ -43,7 +44,8 @@ class FactorHiGHSSolver : public LinearSolver {
                     const std::vector<double>& scaling);
 
  public:
-  FactorHiGHSSolver(const Options& options, Info* info, IpmData* record);
+  FactorHiGHSSolver(const Options& options, Info* info, IpmData* record,
+                    const LogHighs* log);
 
   // Override functions
   Int factorAS(const HighsSparseMatrix& A,

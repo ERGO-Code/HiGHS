@@ -2,52 +2,37 @@
 
 namespace hipo {
 
-const HighsLogOptions* Log::log_options_ = nullptr;
+Log::Log(Int level) : dev_level_{level} {}
 
-void Log::setOptions(const HighsLogOptions& log_options) {
-  log_options_ = &log_options;
+void Log::print(std::stringstream& ss) const {
+  printf("%s", ss.str().c_str());
 }
-
-bool Log::debug(Int level) {
-  // Return true if level agrees with log_dev_level
-
-  if (log_options_ && log_options_->log_dev_level) {
-    if (*log_options_->log_dev_level == kHighsLogDevLevelInfo)
-      return level == 1;
-
-    if (*log_options_->log_dev_level == kHighsLogDevLevelDetailed)
-      return level == 1 || level == 2;
-
-    if (*log_options_->log_dev_level == kHighsLogDevLevelVerbose)
-      return level == 1 || level == 2 || level == 3;
-  }
-  return false;
+void Log::printw(std::stringstream& ss) const {
+  printf("WARNING: %s", ss.str().c_str());
 }
-
-void Log::print(std::stringstream& ss) {
-  if (log_options_)
-    highsLogUser(*log_options_, HighsLogType::kInfo, "%s", ss.str().c_str());
+void Log::printe(std::stringstream& ss) const {
+  printf("ERROR: %s", ss.str().c_str());
 }
-void Log::printw(std::stringstream& ss) {
-  if (log_options_)
-    highsLogUser(*log_options_, HighsLogType::kWarning, "%s", ss.str().c_str());
+void Log::print(const char* c) const { printf("%s", c); }
+void Log::printw(const char* c) const { printf("WARNING: %s", c); }
+void Log::printe(const char* c) const { printf("ERROR: %s", c); }
+void Log::printDevInfo(std::stringstream& ss) const {
+  if (dev_level_ >= 1) printf("%s", ss.str().c_str());
 }
-void Log::printe(std::stringstream& ss) {
-  if (log_options_)
-    highsLogUser(*log_options_, HighsLogType::kError, "%s", ss.str().c_str());
+void Log::printDevDetailed(std::stringstream& ss) const {
+  if (dev_level_ >= 2) printf("%s", ss.str().c_str());
 }
-
-void Log::printDevInfo(std::stringstream& ss) {
-  if (log_options_)
-    highsLogDev(*log_options_, HighsLogType::kInfo, "%s", ss.str().c_str());
+void Log::printDevVerbose(std::stringstream& ss) const {
+  if (dev_level_ >= 3) printf("%s", ss.str().c_str());
 }
-void Log::printDevDetailed(std::stringstream& ss) {
-  if (log_options_)
-    highsLogDev(*log_options_, HighsLogType::kDetailed, "%s", ss.str().c_str());
+void Log::printDevInfo(const char* c) const {
+  if (dev_level_ >= 1) printf("%s", c);
 }
-void Log::printDevVerbose(std::stringstream& ss) {
-  if (log_options_)
-    highsLogDev(*log_options_, HighsLogType::kVerbose, "%s", ss.str().c_str());
+void Log::printDevDetailed(const char* c) const {
+  if (dev_level_ >= 2) printf("%s", c);
+}
+void Log::printDevVerbose(const char* c) const {
+  if (dev_level_ >= 3) printf("%s", c);
 }
 
 std::string format(double d, Int width, Int prec,

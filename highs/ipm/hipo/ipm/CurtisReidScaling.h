@@ -9,10 +9,9 @@
 
 namespace hipo {
 
-void CurtisReidScaling(const std::vector<Int>& ptr,
-                       const std::vector<Int>& rows,
-                       const std::vector<double>& val, std::vector<Int>& rowexp,
-                       std::vector<Int>& colexp);
+Int CurtisReidScaling(const std::vector<Int>& ptr, const std::vector<Int>& rows,
+                      const std::vector<double>& val, std::vector<Int>& rowexp,
+                      std::vector<Int>& colexp);
 
 }
 

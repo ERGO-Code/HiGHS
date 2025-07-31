@@ -182,7 +182,7 @@ Int Cg(const AbstractMatrix* M, const AbstractMatrix* P,
     ++iter;
 
     if (isNanVector(x)) {
-      Log::printDevInfo("CG: x is nan at iter %d\n", (int)iter);
+      // log->printDevInfo("CG: x is nan at iter %d\n", (int)iter);
       break;
     }
   }

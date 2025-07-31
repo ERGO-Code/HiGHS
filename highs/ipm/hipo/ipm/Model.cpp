@@ -249,7 +249,7 @@ void Model::computeNorms() {
   }
 }
 
-void Model::print() const {
+void Model::print(const LogHighs& log) const {
   std::stringstream log_stream;
 
   log_stream << textline("Rows:") << sci(m_, 0, 1) << '\n';
@@ -363,7 +363,9 @@ void Model::print() const {
   else
     log_stream << "-\n";
 
-  Log::print(log_stream);
+  log_stream << textline("Scaling CG iterations:") << CG_iter_scaling_ << '\n';
+
+  log.print(log_stream);
 }
 
 void Model::scale() {
@@ -397,7 +399,8 @@ void Model::scale() {
   // Compute exponents for CR scaling of matrix A
   std::vector<Int> colexp(n_);
   std::vector<Int> rowexp(m_);
-  CurtisReidScaling(A_.start_, A_.index_, A_.value_, rowexp, colexp);
+  CG_iter_scaling_ =
+      CurtisReidScaling(A_.start_, A_.index_, A_.value_, rowexp, colexp);
 
   // Compute scaling from exponents
   colscale_.resize(n_);

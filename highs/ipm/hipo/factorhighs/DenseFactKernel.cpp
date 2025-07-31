@@ -240,10 +240,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
   // ===========================================================================
 
   // check input
-  if (n < 0 || !A || lda < n) {
-    Log::printDevInfo("\ndenseFactK: invalid input\n");
-    return kRetInvalidInput;
-  }
+  if (n < 0 || !A || lda < n) return kRetInvalidInput;
 
   // quick return
   if (n == 0) return kRetOk;
@@ -265,10 +262,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
       // diagonal element
       double Ajj = A[j + lda * j];
 
-      if (std::isnan(Ajj)) {
-        Log::printDevInfo("\ndenseFactK: invalid pivot\n");
-        return kRetInvalidPivot;
-      }
+      if (std::isnan(Ajj)) return kRetInvalidPivot;
 
       // add regularisation
       double old_pivot = Ajj;
@@ -299,10 +293,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
   // UPPER TRIANGULAR
   // ===========================================================================
   else {
-    if (!swaps || !pivot_2x2) {
-      Log::printDevInfo("\ndenseFactK: invalid input\n");
-      return kRetInvalidInput;
-    }
+    if (!swaps || !pivot_2x2) return kRetInvalidInput;
 
     // initialise order of pivots
     for (Int i = 0; i < n; ++i) swaps[i] = i;
@@ -331,10 +322,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
         // diagonal element
         double Ajj = A[j + lda * j];
 
-        if (std::isnan(Ajj)) {
-          Log::printDevInfo("\ndenseFactK: invalid pivot\n");
-          return kRetInvalidPivot;
-        }
+        if (std::isnan(Ajj)) return kRetInvalidPivot;
 
 #ifndef PIVOTING
         // add regularisation
@@ -368,10 +356,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
         const double d1 = A[j + lda * j];
         const double d2 = A[j + 1 + lda * (j + 1)];
 
-        if (std::isnan(d1) || std::isnan(d2)) {
-          Log::printDevInfo("\ndenseFactK: invalid pivot\n");
-          return kRetInvalidPivot;
-        }
+        if (std::isnan(d1) || std::isnan(d2)) return kRetInvalidPivot;
 
         // off-diagonal pivot element
         const double offd = A[j + lda * (j + 1)];

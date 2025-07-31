@@ -86,10 +86,9 @@ class CRscalingPrec : public AbstractMatrix {
   }
 };
 
-void CurtisReidScaling(const std::vector<Int>& ptr,
-                       const std::vector<Int>& rows,
-                       const std::vector<double>& val, std::vector<Int>& rowexp,
-                       std::vector<Int>& colexp) {
+Int CurtisReidScaling(const std::vector<Int>& ptr, const std::vector<Int>& rows,
+                      const std::vector<double>& val, std::vector<Int>& rowexp,
+                      std::vector<Int>& colexp) {
   // Takes as input the CSC matrix A.
   // Computes Curtis-Reid scaling exponents for the matrix, using powers of 2.
 
@@ -128,12 +127,12 @@ void CurtisReidScaling(const std::vector<Int>& ptr,
   CRscalingMatrix CRmat(row_entries, col_entries, ptr, rows);
   CRscalingPrec CRprec(row_entries, col_entries);
   Int cgiter = Cg(&CRmat, &CRprec, rhs, exponents, 1e-6, 1000);
-  Log::printDevInfo("CR scaling required %" HIGHSINT_FORMAT " CG iterations\n",
-                    cgiter);
 
   // unpack exponents into various components
   for (Int i = 0; i < m; ++i) rowexp[i] = -std::round(exponents[i]);
   for (Int j = 0; j < n; ++j) colexp[j] = -std::round(exponents[m + j]);
+
+  return cgiter;
 }
 
 }  // namespace hipo
