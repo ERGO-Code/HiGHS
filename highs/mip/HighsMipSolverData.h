@@ -309,6 +309,7 @@ struct HighsMipSolverData {
   void callbackUserSolution(
       const double mipsolver_objective_value,
       const userMipSolutionCallbackOrigin user_solution_callback_origin);
+  bool mipIsKnapsack(HighsInt& capacity);
 };
 
 #endif

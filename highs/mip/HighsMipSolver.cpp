@@ -91,7 +91,7 @@ void HighsMipSolver::run() {
   // Determine whether this is a knapsack problem and, if so, at least
   // update the data on knapsack sub-MIPs
   HighsInt capacity = 0;
-  if (orig_model_->isKnapsack(capacity)) {
+  if (mipdata_->mipIsKnapsack(capacity)) {
     mipdata_->knapsack_data_.num_problem++;
     mipdata_->knapsack_data_.sum_variables += orig_model_->num_col_;
     mipdata_->knapsack_data_.sum_capacity += capacity;

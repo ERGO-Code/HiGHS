@@ -1787,11 +1787,10 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsackReturn(
 }
 
 HighsStatus HighsPrimalHeuristics::solveMipKnapsack() {
-  HighsLp lp = *(mipsolver.model_);
-  //  const HighsLp& lp = mipsolver.mipdata_->model_;
+  const HighsLp& lp = *(mipsolver.model_);
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
   HighsInt capacity_;
-  assert(lp.isKnapsack(capacity_));
+  assert(mipsolver.mipdata_->mipIsKnapsack(capacity_));
 
   const bool upper = lp.row_upper_[0] < kHighsInf;
   const HighsInt constraint_sign = upper ? 1 : -1;
