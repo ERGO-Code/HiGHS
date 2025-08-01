@@ -314,8 +314,9 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
 
   std::set<std::pair<HighsInt, int>>::iterator it;
   HighsInt maxEnd;
-  if (freespaces.empty() || (it = freespaces.lower_bound(std::make_pair(
-                                 numcliquevars, -1))) == freespaces.end()) {
+  if (freespaces.empty() ||
+      (it = freespaces.lower_bound(
+           std::make_pair(numcliquevars, HighsInt{-1}))) == freespaces.end()) {
     cliques[cliqueid].start = cliqueentries.size();
     cliques[cliqueid].end = cliques[cliqueid].start + numcliquevars;
     maxEnd = cliques[cliqueid].end;
