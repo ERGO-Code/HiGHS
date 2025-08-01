@@ -1011,9 +1011,11 @@ TEST_CASE("knapsack", "[highs_test_mip_solver]") {
   const double offset = -100;
   std::vector<double> neg_value(num_item);
   std::vector<double> neg_weight(num_item);
+  std::vector<double> half_weight(num_item);
   for (HighsInt iItem = 0; iItem < num_item; iItem++) {
     neg_value[iItem] = -value[iItem];
     neg_weight[iItem] = -weight[iItem];
+    half_weight[iItem] = 0.5 * weight[iItem];
   }
   HighsLp lp;
   lp.sense_ = ObjSense::kMaximize;
@@ -1076,6 +1078,34 @@ TEST_CASE("knapsack", "[highs_test_mip_solver]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == required_objective_value);
+
+  lp.a_matrix_.value_ = half_weight;
+  lp.row_upper_ = {0.5 * capacity};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == required_objective_value);
+
+  lp.a_matrix_.value_ = {1.1, 2.25, 3.05, 6.25, 7, 4.125};
+  lp.row_upper_ = {capacity};
+  required_objective_value = -190;
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == required_objective_value);
+
+  lp.a_matrix_.value_ = {1.1334, 2.2501, 3.0534, 6.251, 7, 4.125};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == required_objective_value);
+
+  lp.a_matrix_.value_[1] = 2.250001;
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == required_objective_value);
 
   h.resetGlobalScheduler(true);
 }

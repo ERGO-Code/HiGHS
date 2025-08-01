@@ -1750,10 +1750,7 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsackReturn(
     const HighsStatus& return_status) {
   const HighsLp& lp = *(mipsolver.model_);
   std::stringstream ss;
-  if (!mipsolver.submip) {
-    ss.str(std::string());
-    ss << "MIP is a knapsack problem: ";
-  }
+  if (!mipsolver.submip) ss.str(std::string());
   if (mipsolver.modelstatus_ == HighsModelStatus::kOptimal) {
     // mipsolver.solution_objective_ is the objective value for the
     // original problem - using the offset and ignoring the
@@ -1771,12 +1768,12 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsackReturn(
     mipsolver.gap_ = 0;
     if (!mipsolver.submip)
       ss << highsFormatToString(
-          "optimal objective by dynamic programming is %g",
+          "Optimal objective by dynamic programming is %g",
           mipsolver.solution_objective_);
   } else {
     if (!mipsolver.submip)
       ss << highsFormatToString(
-          "model status is %s",
+          "Model status is %s",
           utilModelStatusToString(mipsolver.modelstatus_).c_str());
     mipsolver.solution_.clear();
   }
@@ -1789,16 +1786,13 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsackReturn(
 HighsStatus HighsPrimalHeuristics::solveMipKnapsack() {
   const HighsLp& lp = *(mipsolver.model_);
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
-  HighsInt capacity_;
-  assert(mipsolver.mipdata_->mipIsKnapsack(capacity_));
+  assert(mipsolver.mipdata_->mipIsKnapsack(false));
 
   const bool upper = lp.row_upper_[0] < kHighsInf;
   const HighsInt constraint_sign = upper ? 1 : -1;
-  double double_capacity =
-      upper ? lp.row_upper_[0] : constraint_sign * lp.row_lower_[0];
-  const double capacity_margin = 1e-6;
-  const HighsInt capacity = std::floor(double_capacity + capacity_margin);
-
+  const HighsInt integral_scale = mipsolver.mipdata_->knapsack_integral_scale_;
+  assert(integral_scale > 0);
+  const HighsInt capacity = mipsolver.mipdata_->knapsack_capacity_;
   if (capacity < 0) {
     mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
     return solveMipKnapsackReturn(HighsStatus::kOk);
@@ -1816,7 +1810,8 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsack() {
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
          iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-      weight[iCol] = HighsInt(constraint_sign * lp.a_matrix_.value_[iEl]);
+      weight[iCol] = HighsInt(integral_scale *
+                              (constraint_sign * lp.a_matrix_.value_[iEl]));
   }
   HighsInt sense = HighsInt(lp.sense_);
   // Set up the values for the knapsack solver. Since it solves a

@@ -162,6 +162,8 @@ struct HighsMipSolverData {
   HighsDebugSol debugSolution;
 
   HighsKnapsackData knapsack_data_;
+  HighsInt knapsack_capacity_;
+  HighsInt knapsack_integral_scale_;
 
   HighsMipSolverData(HighsMipSolver& mipsolver)
       : mipsolver(mipsolver),
@@ -220,7 +222,9 @@ struct HighsMipSolverData {
         upper_bound(kHighsInf),
         upper_limit(kHighsInf),
         optimality_limit(kHighsInf),
-        debugSolution(mipsolver) {
+        debugSolution(mipsolver),
+        knapsack_capacity_(0),
+        knapsack_integral_scale_(0) {
     domain.addCutpool(cutpool);
     domain.addConflictPool(conflictPool);
   }
@@ -309,7 +313,7 @@ struct HighsMipSolverData {
   void callbackUserSolution(
       const double mipsolver_objective_value,
       const userMipSolutionCallbackOrigin user_solution_callback_origin);
-  bool mipIsKnapsack(HighsInt& capacity);
+  bool mipIsKnapsack(const bool logging = true);
 };
 
 #endif

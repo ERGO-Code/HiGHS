@@ -685,6 +685,8 @@ void HighsMipSolverData::init() {
   optimality_limit = mipsolver.options_mip_->objective_bound;
   primal_dual_integral.initialise();
   knapsack_data_.initialise();
+  knapsack_capacity_ = 0;
+  knapsack_integral_scale_ = 0;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -2651,7 +2653,7 @@ void HighsMipSolverData::callbackUserSolution(
   }
 }
 
-bool HighsMipSolverData::mipIsKnapsack(HighsInt& capacity) {
+bool HighsMipSolverData::mipIsKnapsack(const bool logging) {
   const HighsLp& lp = *(mipsolver.model_);
   // Has to have one constraint
   if (lp.num_row_ != 1) return false;
@@ -2662,18 +2664,24 @@ bool HighsMipSolverData::mipIsKnapsack(HighsInt& capacity) {
     return false;
   const bool upper = lp.row_upper_[0] < kHighsInf;
   const HighsInt constraint_sign = upper ? 1 : -1;
-  // Now check that all the (signed) coefficients are integer and non-negative
-  for (HighsInt iEl = 0; iEl < lp.a_matrix_.numNz(); iEl++) {
-    double coeff = constraint_sign * lp.a_matrix_.value_[iEl];
-    if (coeff < 0) return false;
-    if (fractionality(coeff) > 0) return false;
-  }
+  // Now check that all the (signed) coefficients are non-negative
+  for (HighsInt iEl = 0; iEl < lp.a_matrix_.numNz(); iEl++)
+    if (constraint_sign * lp.a_matrix_.value_[iEl] < 0) return false;
+  this->knapsack_integral_scale_ =
+      HighsIntegers::integralScale(lp.a_matrix_.value_, 1e-6, 1e-6);
+  if (this->knapsack_integral_scale_ == 0) return false;
+  if (this->knapsack_integral_scale_ > 1000000) return false;
+  if (logging)
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "MIP is a knapsack problem with with scale %d\n",
+                 int(this->knapsack_integral_scale_));
   // Capacity must be integer, but OK to round down any fractional
   // values since activity of constraint is integer
   double double_capacity =
       upper ? lp.row_upper_[0] : constraint_sign * lp.row_lower_[0];
+  double_capacity *= this->knapsack_integral_scale_;
   const double capacity_margin = 1e-6;
-  capacity = std::floor(double_capacity + capacity_margin);
+  this->knapsack_capacity_ = std::floor(double_capacity + capacity_margin);
   // Problem is knapsack!
   return true;
 }
