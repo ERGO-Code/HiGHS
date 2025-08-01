@@ -1,6 +1,3 @@
-#include <HConst.h>
-#include <io/HighsIO.h>
-
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -9,6 +6,9 @@
 #include <numeric>
 #include <random>
 #include <vector>
+
+#include "io/HighsIO.h"
+#include "lp_data/HConst.h"
 
 #define FJ_LOG_PREFIX "Feasibility Jump: "
 
