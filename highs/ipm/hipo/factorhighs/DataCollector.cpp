@@ -93,7 +93,7 @@ void DataCollector::setNorms(double norm1, double maxdiag) {
 // Printing
 //
 
-void DataCollector::printTimes(const Log* log) const {
+void DataCollector::printTimes(const Log& log) const {
 #if HIPO_TIMING_LEVEL >= 1
 
   std::stringstream log_stream;
@@ -293,11 +293,11 @@ void DataCollector::printTimes(const Log* log) const {
   log_stream << "----------------------------------------------------\n";
 #endif
 
-  if (log) log->print(log_stream);
+  log.print(log_stream);
 #endif
 }
 
-void DataCollector::printIter(const Log* log) const {
+void DataCollector::printIter(const Log& log) const {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
 
   std::stringstream log_stream;
@@ -323,7 +323,7 @@ void DataCollector::printIter(const Log* log) const {
     log_stream << sci(iter.M_norm1, 9, 1) << " ";
     log_stream << sci(iter.M_maxdiag, 9, 1) << "|\n";
   }
-  if (log) log->print(log_stream);
+  log.print(log_stream);
 #endif
 }
 

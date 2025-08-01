@@ -77,7 +77,7 @@ bool Solver::initialise() {
   it_.reset(new Iterate(model_));
 
   // initialise linear solver
-  LS_.reset(new FactorHiGHSSolver(options_, &info_, &it_->data, &logH_));
+  LS_.reset(new FactorHiGHSSolver(options_, &info_, &it_->data, logH_));
   if (Int status = LS_->setup(model_, options_)) {
     info_.status = (Status)status;
     return true;

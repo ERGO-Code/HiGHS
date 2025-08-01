@@ -125,7 +125,7 @@ class Symbolic {
   const std::vector<Int>& snStart() const;
   const std::vector<Int>& pivotSign() const;
 
-  void print(const Log* log, bool verbose = false) const;
+  void print(const Log& log, bool verbose = false) const;
 };
 
 // Explanation of relative indices:

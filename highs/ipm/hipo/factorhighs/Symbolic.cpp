@@ -60,7 +60,7 @@ std::string memoryString(double mem) {
   return ss.str();
 }
 
-void Symbolic::print(const Log* log, bool verbose) const {
+void Symbolic::print(const Log& log, bool verbose) const {
   std::stringstream log_stream;
   log_stream << "\nFactorisation statistics\n";
   log_stream << textline("Size:") << sci(n_, 0, 2) << '\n';
@@ -91,7 +91,7 @@ void Symbolic::print(const Log* log, bool verbose) const {
   }
 
   log_stream << '\n';
-  if (log) log->print(log_stream);
+  log.print(log_stream);
 }
 
 }  // namespace hipo

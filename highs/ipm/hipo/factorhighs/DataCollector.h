@@ -77,8 +77,8 @@ class DataCollector {
                          double maxoffD);
   void setNorms(double norm1, double maxdiag);
 
-  void printTimes(const Log* log) const;
-  void printIter(const Log* log) const;
+  void printTimes(const Log& log) const;
+  void printIter(const Log& log) const;
 };
 
 }  // namespace hipo
