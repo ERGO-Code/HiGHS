@@ -321,7 +321,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
     maxEnd = cliques[cliqueid].end;
     cliqueentries.resize(cliques[cliqueid].end);
   } else {
-    std::pair<HighsInt, int> freespace = *it;
+    auto freespace = *it;
     freespaces.erase(it);
 
     cliques[cliqueid].start = freespace.second;
@@ -962,7 +962,7 @@ void HighsCliqueTable::extractCliques(
       // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
       // runCliqueMerging(globaldom, clique);
       // if (clique.size() >= 2) {
-      addClique(mipsolver, clique.data(), clique.size());
+      addClique(mipsolver, clique.data(), static_cast<HighsInt>(clique.size()));
       if (globaldom.infeasible()) return;
       //}
     }
@@ -1259,7 +1259,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
       // printf("extracted clique from cut\n");
       // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
 
-      addClique(mipsolver, clique.data(), clique.size());
+      addClique(mipsolver, clique.data(), static_cast<HighsInt>(clique.size()));
       if (globaldom.infeasible() || numEntries >= maxNewEntries) return;
     }
 
@@ -1318,7 +1318,8 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
       if (issetppc) {
         bool equality = mipsolver.rowLower(i) == 1.0;
-        addClique(mipsolver, clique.data(), clique.size(), equality, i);
+        addClique(mipsolver, clique.data(),
+                  static_cast<HighsInt>(clique.size()), equality, i);
         if (globaldom.infeasible()) return;
         continue;
       }
@@ -1509,7 +1510,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
       // printf("extracted clique from obj\n");
       // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
 
-      addClique(mipsolver, clique.data(), clique.size());
+      addClique(mipsolver, clique.data(), static_cast<HighsInt>(clique.size()));
       if (globaldom.infeasible()) return;
     }
 
