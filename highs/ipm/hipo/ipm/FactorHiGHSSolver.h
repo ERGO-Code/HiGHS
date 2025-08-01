@@ -27,6 +27,8 @@ class FactorHiGHSSolver : public LinearSolver {
   std::vector<double> valNE_;
   HighsSparseMatrix AT_;
 
+  const Regularisation& regul_;
+
   Info* info_ = nullptr;
   IpmData* data_ = nullptr;
   const LogHighs& log_;
@@ -44,8 +46,8 @@ class FactorHiGHSSolver : public LinearSolver {
                     const std::vector<double>& scaling);
 
  public:
-  FactorHiGHSSolver(const Options& options, Info* info, IpmData* record,
-                    const LogHighs& log);
+  FactorHiGHSSolver(const Options& options, const Regularisation& regul, Info* info,
+                    IpmData* record, const LogHighs& log);
 
   // Override functions
   Int factorAS(const HighsSparseMatrix& A,

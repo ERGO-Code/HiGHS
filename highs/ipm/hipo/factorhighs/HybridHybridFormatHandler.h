@@ -1,8 +1,8 @@
 #ifndef FACTORHIGHS_HYBRID_HYBRID_FORMAT_H
 #define FACTORHIGHS_HYBRID_HYBRID_FORMAT_H
 
-#include "FormatHandler.h"
 #include "DataCollector.h"
+#include "FormatHandler.h"
 
 namespace hipo {
 
@@ -22,7 +22,8 @@ class HybridHybridFormatHandler : public FormatHandler {
   void extremeEntries() override;
 
  public:
-  HybridHybridFormatHandler(const Symbolic& S, Int sn, DataCollector& data);
+  HybridHybridFormatHandler(const Symbolic& S, Int sn, const Regul& regul,
+                            DataCollector& data);
 };
 
 }  // namespace hipo

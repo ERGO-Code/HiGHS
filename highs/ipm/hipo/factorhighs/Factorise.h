@@ -55,6 +55,9 @@ class Factorise {
   // regularisation
   std::vector<double> total_reg_{};
 
+  // values for static regularisation
+  const Regul& regul_;
+
   // flag to stop computation
   bool flag_stop_ = false;
 
@@ -68,7 +71,7 @@ class Factorise {
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
             const std::vector<Int>& ptrA, const std::vector<double>& valA,
-            const Log* log, DataCollector& data);
+            const Regul& regul, const Log* log, DataCollector& data);
 
   bool run(Numeric& num);
 };

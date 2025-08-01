@@ -2,7 +2,6 @@
 #define FACTOR_HIGHS_H
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
 #include "Numeric.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/Log.h"
@@ -49,6 +48,10 @@ object of type Log for normal printing:
 Pass an object of type LogHighs for Highs logging:
 Pass nothing to suppress all logging.
 
+To add static regularisation when the pivots are selected, use
+setRegularisation(reg_p,reg_d) to choose values of primal and dual
+regularisation. If regularisation is already added to the matrix, ignore.
+
 */
 
 namespace hipo {
@@ -56,6 +59,7 @@ namespace hipo {
 class FHsolver {
   const Log* log_;
   DataCollector data_;
+  Regul regul_;
 
  public:
   // Create object and initialise DataCollector
@@ -81,6 +85,10 @@ class FHsolver {
   // factorisation. This is used only to collect data for debugging, if
   // expensive data collection is turned on at compile time.
   void newIter();
+
+  // Set values for static regularisation to be added when a pivot is selected.
+  // If regularisation is already added to the matrix, ignore.
+  void setRegularisation(double reg_p, double reg_d);
 };
 
 }  // namespace hipo

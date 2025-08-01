@@ -8,9 +8,16 @@
 
 namespace hipo {
 
-FactorHiGHSSolver::FactorHiGHSSolver(const Options& options, Info* info,
+FactorHiGHSSolver::FactorHiGHSSolver(const Options& options,
+                                     const Regularisation& regul, Info* info,
                                      IpmData* record, const LogHighs& log)
-    : S_{}, N_(S_), FH_(&log), info_{info}, data_{record}, log_{log} {}
+    : S_{},
+      N_(S_),
+      FH_(&log),
+      regul_{regul},
+      info_{info},
+      data_{record},
+      log_{log} {}
 
 void FactorHiGHSSolver::clear() {
   valid_ = false;
@@ -210,8 +217,7 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
       Int col = AT_.index_[rowEl];
 
       const double theta =
-          scaling.empty() ? 1.0
-                          : 1.0 / (scaling[col] + kPrimalStaticRegularisation);
+          scaling.empty() ? 1.0 : 1.0 / (scaling[col] + regul_.primal);
 
       const double row_value = theta * AT_.value_[rowEl];
 
@@ -285,6 +291,9 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
   }
   if (info_) info_->matrix_time += clock.stop();
 
+  // set static regularisation, since it may have changed
+  FH_.setRegularisation(regul_.primal, regul_.dual);
+
   // factorise matrix
   clock.start();
   if (FH_.factorise(N_, S_, rowsLower, ptrLower, valLower))
@@ -312,6 +321,9 @@ Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
   // build matrix
   Int status = buildNEvalues(A, scaling);
   if (info_) info_->matrix_time += clock.stop();
+
+  // set static regularisation, since it may have changed
+  FH_.setRegularisation(regul_.primal, regul_.dual);
 
   // factorise
   clock.start();

@@ -74,10 +74,10 @@ bool Solver::initialise() {
   start_time_ = control_.elapsed();
 
   // initialise iterate object
-  it_.reset(new Iterate(model_));
+  it_.reset(new Iterate(model_, regul_));
 
   // initialise linear solver
-  LS_.reset(new FactorHiGHSSolver(options_, &info_, &it_->data, logH_));
+  LS_.reset(new FactorHiGHSSolver(options_, regul_, &info_, &it_->data, logH_));
   if (Int status = LS_->setup(model_, options_)) {
     info_.status = (Status)status;
     return true;
@@ -294,8 +294,7 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
     vectorScale(delta.x, -1.0);
 
     // Deltax = (Theta^-1+Rp)^-1 * Deltax
-    for (Int i = 0; i < n_; ++i)
-      delta.x[i] /= theta_inv[i] + kPrimalStaticRegularisation;
+    for (Int i = 0; i < n_; ++i) delta.x[i] /= theta_inv[i] + regul_.primal;
 
   }
 

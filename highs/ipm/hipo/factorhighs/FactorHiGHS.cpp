@@ -26,6 +26,11 @@ FHsolver::~FHsolver() {
 
 void FHsolver::newIter() { data_.append(); }
 
+void FHsolver::setRegularisation(double reg_p, double reg_d) {
+  regul_.primal = reg_p;
+  regul_.dual = reg_d;
+}
+
 Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
                       const std::vector<Int>& ptr,
                       const std::vector<Int>& signs) {
@@ -37,7 +42,7 @@ Int FHsolver::factorise(Numeric& N, const Symbolic& S,
                         const std::vector<Int>& rows,
                         const std::vector<Int>& ptr,
                         const std::vector<double>& vals) {
-  Factorise fact_obj(S, rows, ptr, vals, log_, data_);
+  Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_);
   return fact_obj.run(N);
 }
 

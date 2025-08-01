@@ -2,7 +2,6 @@
 #include "DataCollector.h"
 #include "DenseFact.h"
 #include "DgemmParallel.h"
-#include "FactorHiGHSSettings.h"
 #include "ReturnValues.h"
 #include "Swaps.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
@@ -13,8 +12,9 @@ namespace hipo {
 // Factorisation with "hybrid formats".
 
 Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
-                const Int* pivot_sign, double thresh, double* regul, Int* swaps,
-                double* pivot_2x2, bool parnode, DataCollector& data) {
+                const Int* pivot_sign, double thresh, const Regul& regval,
+                double* totalreg, Int* swaps, double* pivot_2x2, bool parnode,
+                DataCollector& data) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
@@ -89,13 +89,13 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
         max_in_R = std::max(max_in_R, std::abs(R[i]));
     }
 
-    double* regul_current = &regul[j * nb];
+    double* regul_current = &totalreg[j * nb];
     std::vector<Int> pivot_sign_current(&pivot_sign[j * nb],
                                         &pivot_sign[j * nb] + jb);
     Int* swaps_current = &swaps[j * nb];
     double* pivot_2x2_current = &pivot_2x2[j * nb];
     Int info =
-        denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh,
+        denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh, regval,
                    regul_current, swaps_current, pivot_2x2_current, data);
     if (info != 0) return info;
 

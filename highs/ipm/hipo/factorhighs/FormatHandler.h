@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "FactorHiGHSSettings.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
@@ -29,6 +30,8 @@ class FormatHandler {
   // symbolic object
   const Symbolic* S_;
 
+  const Regul& regul_;
+
   // supernode being processed
   const Int sn_{};
 
@@ -52,7 +55,7 @@ class FormatHandler {
   std::vector<double> pivot_2x2_{};
 
  public:
-  FormatHandler(const Symbolic& S, Int sn);
+  FormatHandler(const Symbolic& S, Int sn, const Regul& regul);
   void terminate(std::vector<double>& frontal, std::vector<double>& clique,
                  std::vector<double>& total_reg, std::vector<Int>& swaps,
                  std::vector<double>& pivot_2x2);

@@ -46,6 +46,9 @@ class Solver {
   // Coefficient for reduction of mu
   double sigma_{};
 
+  // Values for static regularisation
+  Regularisation regul_{};
+
   // General information
   Info info_;
 

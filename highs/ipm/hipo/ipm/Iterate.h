@@ -47,10 +47,13 @@ struct Iterate {
   // smallest value of mu seen so far
   double best_mu;
 
+  // regularisation values
+  Regularisation& regul;
+
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
   // ===================================================================================
-  Iterate(const Model& model_input);
+  Iterate(const Model& model_input, Regularisation& r);
 
   // clear existing data
   void clearIter();

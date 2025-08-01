@@ -6,8 +6,9 @@
 
 namespace hipo {
 
-FormatHandler::FormatHandler(const Symbolic& S, Int sn)
+FormatHandler::FormatHandler(const Symbolic& S, Int sn, const Regul& regul)
     : S_{&S},
+      regul_{regul},
       sn_{sn},
       nb_{S_->blockSize()},
       sn_size_{S_->snStart(sn_ + 1) - S_->snStart(sn_)},

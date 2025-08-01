@@ -8,8 +8,8 @@ namespace hipo {
 NewtonDir::NewtonDir(Int m, Int n)
     : x(n, 0.0), y(m, 0.0), xl(n, 0.0), xu(n, 0.0), zl(n, 0.0), zu(n, 0.0) {}
 
-Iterate::Iterate(const Model& model_input)
-    : model{&model_input}, delta(model->m(), model->n()) {
+Iterate::Iterate(const Model& model_input, Regularisation& r)
+    : model{&model_input}, delta(model->m(), model->n()), regul{r} {
   clearIter();
   clearRes();
   best_mu = 0;
@@ -243,8 +243,7 @@ std::vector<double> Iterate::residual8(const std::vector<double>& res7) const {
   std::vector<double> temp(res7);
 
   // temp = (Theta^-1+Rp)^-1 * res7
-  for (Int i = 0; i < model->n(); ++i)
-    temp[i] /= scaling[i] + kPrimalStaticRegularisation;
+  for (Int i = 0; i < model->n(); ++i) temp[i] /= scaling[i] + regul.primal;
 
   // res8 += A * temp
   model->A().alphaProductPlusY(1.0, temp, res8);

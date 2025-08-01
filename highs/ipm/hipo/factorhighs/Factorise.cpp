@@ -17,9 +17,9 @@ namespace hipo {
 
 Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
                      const std::vector<Int>& ptrA,
-                     const std::vector<double>& valA, const Log* log,
-                     DataCollector& data)
-    : S_{S}, log_{log}, data_{data} {
+                     const std::vector<double>& valA, const Regul& regul,
+                     const Log* log, DataCollector& data)
+    : S_{S}, regul_{regul}, log_{log}, data_{data} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -200,7 +200,7 @@ void Factorise::processSupernode(Int sn) {
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
   std::unique_ptr<FormatHandler> FH(
-      new HybridHybridFormatHandler(S_, sn, data_));
+      new HybridHybridFormatHandler(S_, sn, regul_, data_));
 
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactorisePrepare, clock.stop());
