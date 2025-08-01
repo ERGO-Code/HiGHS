@@ -7,8 +7,9 @@
 
 namespace hipo {
 
-HybridHybridFormatHandler::HybridHybridFormatHandler(const Symbolic& S, Int sn)
-    : FormatHandler(S, sn) {
+HybridHybridFormatHandler::HybridHybridFormatHandler(const Symbolic& S, Int sn,
+                                                     DataCollector& data)
+    : FormatHandler(S, sn), data_{data} {
   // initialise frontal and clique
   initFrontal();
   initClique();
@@ -49,13 +50,13 @@ void HybridHybridFormatHandler::assembleFrontalMultiple(
   Int jj = j - block * nb_;
 
   callAndTime_daxpy(num, 1.0, &child[start_block + col_ + jb * row_], jb,
-                    &frontal_[diag_start_[block] + ii + ldb * jj], 1);
+                    &frontal_[diag_start_[block] + ii + ldb * jj], 1, data_);
 }
 
 Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
   Int status;
 
-  status = denseFactFP2FH(frontal_.data(), ldf_, sn_size_, nb_);
+  status = denseFactFP2FH(frontal_.data(), ldf_, sn_size_, nb_, data_);
   if (status) return status;
 
   // find the position within pivot_sign corresponding to this supernode
@@ -65,7 +66,7 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
   status =
       denseFactFH('H', ldf_, sn_size_, S_->blockSize(), frontal_.data(),
                   clique_.data(), pivot_sign, reg_thresh, local_reg_.data(),
-                  swaps_.data(), pivot_2x2_.data(), sn_, S_->parNode());
+                  swaps_.data(), pivot_2x2_.data(), S_->parNode(), data_);
 
   return status;
 }
@@ -138,7 +139,7 @@ void HybridHybridFormatHandler::assembleClique(const std::vector<double>& child,
         const Int i_one = 1;
         callAndTime_daxpy(consecutive, 1.0,
                           &child[start_block_c + col_ + jb_c * row_], 1,
-                          &clique_[start_block + j_ + jb * i_], 1);
+                          &clique_[start_block + j_ + jb * i_], 1, data_);
 
         col += consecutive;
       }
@@ -193,7 +194,7 @@ void HybridHybridFormatHandler::extremeEntries() {
     }
   }
 
-  DataCollector::get()->setExtremeEntries(minD, maxD, minoffD, maxoffD);
+  data_.setExtremeEntries(minD, maxD, minoffD, maxoffD);
 }
 
 }  // namespace hipo

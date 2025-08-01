@@ -2,11 +2,13 @@
 #define FACTORHIGHS_HYBRID_HYBRID_FORMAT_H
 
 #include "FormatHandler.h"
+#include "DataCollector.h"
 
 namespace hipo {
 
 class HybridHybridFormatHandler : public FormatHandler {
   std::vector<Int> diag_start_;
+  DataCollector& data_;
 
   void initFrontal() override;
   void initClique() override;
@@ -20,7 +22,7 @@ class HybridHybridFormatHandler : public FormatHandler {
   void extremeEntries() override;
 
  public:
-  HybridHybridFormatHandler(const Symbolic& S, Int sn);
+  HybridHybridFormatHandler(const Symbolic& S, Int sn, DataCollector& data);
 };
 
 }  // namespace hipo

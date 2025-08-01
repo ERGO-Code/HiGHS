@@ -5,22 +5,11 @@
 
 namespace hipo {
 
-// instance of DataCollector
-DataCollector* DataCollector::ptr_ = nullptr;
-
 // Functions to manage DataCollector
 
 DataCollector::DataCollector() {
   times.resize(kTimeSize);
   blas_calls.resize(kTimeBlasEnd - kTimeBlasStart + 1);
-}
-DataCollector* DataCollector::get() { return ptr_; }
-void DataCollector::initialise() {
-  if (!ptr_) ptr_ = new DataCollector();
-}
-void DataCollector::terminate() {
-  delete ptr_;
-  ptr_ = nullptr;
 }
 void DataCollector::append() {
   // add an empty IterData object to the record

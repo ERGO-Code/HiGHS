@@ -49,8 +49,7 @@ void staticReg(double& pivot, Int sign, double& regul) {
 }
 
 bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
-                       double thresh, double* regul, Int sn, Int bl,
-                       double max_in_R) {
+                       double thresh, double* regul, DataCollector& data) {
   // Perform Bunch-Kaufman pivoting within a block of the supernode (see Schenk,
   // Gartner, ETNA 2006).
   // It works only for upper triangular A.
@@ -76,7 +75,7 @@ bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
   assert(ind_max_diag >= j);
 
   // put column with max pivot as first column
-  swapCols('U', n, A, lda, j, ind_max_diag, swaps, sign);
+  swapCols('U', n, A, lda, j, ind_max_diag, swaps, sign, data);
 
   // Max in column j of diagonal block
   auto res = maxInCol(j, n, j, A, lda);
@@ -92,17 +91,17 @@ bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
     staticReg(A[j + lda * j], sign[j], regul[j]);
 
     if (sign[j] * A[j + lda * j] < 0) {
-      DataCollector::get()->setWrongSign(A[j + lda * j]);
+      data.setWrongSign(A[j + lda * j]);
       // A[j + lda * j] = sign[j] * thresh;
     }
 
     if (std::max(std::abs(Ajj), gamma_j) < thresh) {
       // perturbe pivot
       A[j + lda * j] = sign[j] * thresh;
-      DataCollector::get()->countRegPiv();
+      data.countRegPiv();
     }
     regul[j] = A[j + lda * j] - old_pivot;
-    DataCollector::get()->setMaxReg(std::abs(regul[j]));
+    data.setMaxReg(std::abs(regul[j]));
 
   } else {
     // Max in column r of diagonal block
@@ -117,42 +116,39 @@ bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
       // Accept current pivot
       staticReg(A[j + lda * j], sign[j], regul[j]);
 
-      if (sign[j] * A[j + lda * j] < 0)
-        DataCollector::get()->setWrongSign(A[j + lda * j]);
+      if (sign[j] * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
     } else if (std::abs(Arr) >= kAlphaBK * gamma_r) {
       // Use pivot r
 
-      swapCols('U', n, A, lda, j, r, swaps, sign);
+      swapCols('U', n, A, lda, j, r, swaps, sign, data);
       staticReg(A[j + lda * j], sign[j], regul[j]);
 
-      if (sign[j] * A[j + lda * j] < 0)
-        DataCollector::get()->setWrongSign(A[j + lda * j]);
+      if (sign[j] * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
     } else {
       // Use 2x2 pivot (j,r)
 
-      swapCols('U', n, A, lda, j + 1, r, swaps, sign);
+      swapCols('U', n, A, lda, j + 1, r, swaps, sign, data);
       flag_2x2 = true;
       staticReg(A[j + lda * j], sign[j], regul[j]);
       staticReg(A[j + 1 + lda * (j + 1)], sign[j + 1], regul[j + 1]);
 
-      if (sign[j] * A[j + lda * j] < 0)
-        DataCollector::get()->setWrongSign(A[j + lda * j]);
+      if (sign[j] * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
       if (sign[j + 1] * A[j + 1 + lda * (j + 1)] < 0)
-        DataCollector::get()->setWrongSign(A[j + 1 + lda * (j + 1)]);
+        data.setWrongSign(A[j + 1 + lda * (j + 1)]);
     }
   }
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeDenseFact_pivoting, clock.stop());
+  data.sumTime(kTimeDenseFact_pivoting, clock.stop());
 #endif
   return flag_2x2;
 }
 
 Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
                double thresh, double* regul, Int* swaps, double* pivot_2x2,
-               Int sn, Int bl, double max_in_R) {
+               DataCollector& data) {
   // ===========================================================================
   // Factorisation kernel
   // Matrix A is in format F
@@ -188,7 +184,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
 
 #ifdef HIPO_PIVOTING
       flag_2x2 = blockBunchKaufman(j, n, A, lda, swaps, pivot_sign, thresh,
-                                   regul, sn, bl, max_in_R);
+                                   regul, data);
 #endif
 
       // cannot do 2x2 pivoting on last column
@@ -209,7 +205,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
 #ifndef HIPO_PIVOTING
         // add static regularisation
         staticReg(Ajj, pivot_sign[j], regul[j]);
-        DataCollector::get()->setMaxReg(std::abs(regul[j]));
+        data.setMaxReg(std::abs(regul[j]));
 #endif
 
         // save reciprocal of pivot
@@ -218,14 +214,15 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
         const Int M = n - j - 1;
         if (M > 0) {
           // make copy of row
-          callAndTime_dcopy(M, &A[j + (j + 1) * lda], lda, temp.data(), 1);
+          callAndTime_dcopy(M, &A[j + (j + 1) * lda], lda, temp.data(), 1,
+                            data);
 
           // scale row j
-          callAndTime_dscal(M, 1.0 / Ajj, &A[j + (j + 1) * lda], lda);
+          callAndTime_dscal(M, 1.0 / Ajj, &A[j + (j + 1) * lda], lda, data);
 
           // update rest of the matrix
           callAndTime_dger(M, M, -1.0, temp.data(), 1, &A[j + (j + 1) * lda],
-                           lda, &A[j + 1 + (j + 1) * lda], lda);
+                           lda, &A[j + 1 + (j + 1) * lda], lda, data);
         }
       } else {
         // 2x2 pivots
@@ -258,31 +255,31 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
           double* r2 = &A[j + 1 + (j + 2) * lda];
 
           // make a copy of first row
-          callAndTime_dcopy(M, r1, lda, temp.data(), 1);
+          callAndTime_dcopy(M, r1, lda, temp.data(), 1, data);
 
           // make a copy of second row
-          callAndTime_dcopy(M, r2, lda, temp2.data(), 1);
+          callAndTime_dcopy(M, r2, lda, temp2.data(), 1, data);
 
           // solve rows j,j+1
-          callAndTime_dscal(M, i_d1, r1, lda);
-          callAndTime_daxpy(M, i_off, temp2.data(), 1, r1, lda);
-          callAndTime_dscal(M, i_d2, r2, lda);
-          callAndTime_daxpy(M, i_off, temp.data(), 1, r2, lda);
+          callAndTime_dscal(M, i_d1, r1, lda, data);
+          callAndTime_daxpy(M, i_off, temp2.data(), 1, r1, lda, data);
+          callAndTime_dscal(M, i_d2, r2, lda, data);
+          callAndTime_daxpy(M, i_off, temp.data(), 1, r2, lda, data);
 
           // update rest of the matrix
           callAndTime_dger(M, M, -1.0, temp.data(), 1, r1, lda,
-                           &A[j + 2 + (j + 2) * lda], lda);
+                           &A[j + 2 + (j + 2) * lda], lda, data);
           callAndTime_dger(M, M, -1.0, temp2.data(), 1, r2, lda,
-                           &A[j + 2 + (j + 2) * lda], lda);
+                           &A[j + 2 + (j + 2) * lda], lda, data);
         }
 
-        DataCollector::get()->count2x2();
+        data.count2x2();
       }
     }
   }
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeDenseFact_kernel, clock.stop());
+  data.sumTime(kTimeDenseFact_kernel, clock.stop());
 #endif
 
   return kRetOk;

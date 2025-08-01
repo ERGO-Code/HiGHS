@@ -1,7 +1,6 @@
 #include "FormatHandler.h"
 
 #include "CallAndTimeBlas.h"
-#include "DataCollector.h"
 #include "DenseFact.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 

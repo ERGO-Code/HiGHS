@@ -31,12 +31,7 @@ struct IterData {
 #endif
 };
 
-// DataCollector is used to collect debug data during the ipm and factorisation.
-// DataCollector is a singleton object. Only one copy of it can exist and it
-// does not have a public constructor or destructor. Use:
-// - DataCollector::initialise() to allocate the DataCollector.
-// - DataCollector::terminate() to deallocate the DataCollector.
-// - DataCollector::get()->... to access any non-static member function.
+// DataCollector is used to collect debug data during the factorisations.
 //
 // Expensive data related to the factorisation is only collected if
 // HIPO_COLLECT_EXPENSIVE_DATA is defined.
@@ -54,10 +49,6 @@ struct IterData {
 // collection is possible. However, data collection should be used only for
 // debugging.
 //
-// Since only a single DataCollector can exist, creating multiple instances of
-// the linear solver means that the wrong data is collected. Since this feature
-// should be used only for debugging, this should not be an issue.
-//
 
 class DataCollector {
   // Record of times and BLAS calls
@@ -67,25 +58,11 @@ class DataCollector {
   // record of data of ipm iterations
   std::vector<IterData> iter_data_record_{};
 
-  // Mutexes for concurrent access
+  // Mutex for concurrent access
   std::mutex mutex_;
 
-  // Instance of DataCollector
-  static DataCollector* ptr_;
-
-  // Private ctor and dtor
-  DataCollector();
-  ~DataCollector() = default;
-
  public:
-  // Access to the object
-  static DataCollector* get();
-  static void initialise();
-  static void terminate();
-
-  // ========================================================================
-  // The functions below can only be accessed via DataCollector::get()->
-  // ========================================================================
+  DataCollector();
 
   IterData& back();
   void append();

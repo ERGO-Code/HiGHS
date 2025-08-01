@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "DataCollector.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
@@ -19,6 +20,7 @@ class SolveHandler {
  protected:
   const Symbolic& S_;
   const std::vector<std::vector<double>>& sn_columns_;
+  DataCollector* data_;
 
  public:
   SolveHandler(const Symbolic& S,
@@ -38,6 +40,8 @@ class SolveHandler {
   virtual void forwardSolve(std::vector<double>& x) const = 0;
   virtual void backwardSolve(std::vector<double>& x) const = 0;
   virtual void diagSolve(std::vector<double>& x) const = 0;
+
+  void setData(DataCollector* data);
 };
 
 }  // namespace hipo

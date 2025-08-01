@@ -20,6 +20,8 @@ Numeric::Numeric(const Symbolic& S) : S_{S} {
 std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
   // Return the number of solves performed
 
+  SH_->setData(data_);
+
 #if HIPO_TIMING_LEVEL >= 1
   Clock clock{};
 #endif
@@ -35,7 +37,7 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
   const std::vector<double> rhs(x);
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeSolvePrepare, clock_fine.stop());
+  if (data_) data_->sumTime(kTimeSolvePrepare, clock_fine.stop());
   clock_fine.start();
 #endif
 
@@ -45,7 +47,7 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
   SH_->backwardSolve(x);
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeSolveSolve, clock_fine.stop());
+  if (data_) data_->sumTime(kTimeSolveSolve, clock_fine.stop());
 #endif
 
   // iterative refinement
@@ -59,11 +61,11 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
   permuteVector(x, S_.iperm());
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeSolvePrepare, clock_fine.stop());
+  if (data_) data_->sumTime(kTimeSolvePrepare, clock_fine.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 1
-  DataCollector::get()->sumTime(kTimeSolve, clock.stop());
+  if (data_) data_->sumTime(kTimeSolve, clock.stop());
 #endif
 
   return {refine_data.first + 1, refine_data.second};
@@ -112,14 +114,14 @@ std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
   std::vector<double> res = residualQuad(rhs, x);
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeSolveResidual, clock.stop());
+  if (data_) data_->sumTime(kTimeSolveResidual, clock.stop());
   clock.start();
 #endif
 
   double omega = computeOmega(rhs, x, res);
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeSolveOmega, clock.stop());
+  if (data_) data_->sumTime(kTimeSolveOmega, clock.stop());
 #endif
 
   // if(log_) log_->printDevVerbose("   # start  %.2e\n", omega);
@@ -140,7 +142,7 @@ std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
     ++solves_counter;
 
 #if HIPO_TIMING_LEVEL >= 2
-    DataCollector::get()->sumTime(kTimeSolveSolve, clock.stop());
+    if (data_) data_->sumTime(kTimeSolveSolve, clock.stop());
     clock.start();
 #endif
 
@@ -149,7 +151,7 @@ std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
     vectorAdd(temp, res);
 
 #if HIPO_TIMING_LEVEL >= 2
-    DataCollector::get()->sumTime(kTimeSolvePrepare, clock.stop());
+    if (data_) data_->sumTime(kTimeSolvePrepare, clock.stop());
     clock.start();
 #endif
 
@@ -157,7 +159,7 @@ std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
     res = residualQuad(rhs, temp);
 
 #if HIPO_TIMING_LEVEL >= 2
-    DataCollector::get()->sumTime(kTimeSolveResidual, clock.stop());
+    if (data_) data_->sumTime(kTimeSolveResidual, clock.stop());
     clock.start();
 #endif
 
@@ -167,7 +169,7 @@ std::pair<Int, double> Numeric::refine(const std::vector<double>& rhs,
     // if(log_) log_->printDevVerbose("   # refine %.2e\n", omega);
 
 #if HIPO_TIMING_LEVEL >= 2
-    DataCollector::get()->sumTime(kTimeSolveOmega, clock.stop());
+    if (data_) data_->sumTime(kTimeSolveOmega, clock.stop());
 #endif
 
     if (omega < old_omega) {

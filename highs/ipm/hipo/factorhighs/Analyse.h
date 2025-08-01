@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "DataCollector.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Log.h"
@@ -80,6 +81,7 @@ class Analyse {
   Int nb_{};
 
   const Log* log_;
+  DataCollector& data_;
 
   // Functions to perform analyse phase
   Int getPermutation();
@@ -104,7 +106,7 @@ class Analyse {
  public:
   // Constructor: matrix must be in lower triangular format
   Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-          const Log* log, const std::vector<Int>& signs);
+          const std::vector<Int>& signs, const Log* log, DataCollector& data);
 
   // Run analyse phase and save the result in Symbolic object S
   Int run(Symbolic& S);

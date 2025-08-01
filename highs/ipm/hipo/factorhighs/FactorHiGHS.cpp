@@ -8,7 +8,6 @@
 namespace hipo {
 
 FHsolver::FHsolver(const Log* log) : log_{log} {
-  DataCollector::initialise();
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
   if (log_)
     log_->printw(
@@ -21,25 +20,24 @@ FHsolver::FHsolver(const Log* log) : log_{log} {
 }
 
 FHsolver::~FHsolver() {
-  DataCollector::get()->printTimes(log_);
-  DataCollector::get()->printIter(log_);
-  DataCollector::terminate();
+  data_.printTimes(log_);
+  data_.printIter(log_);
 }
 
-void FHsolver::newIter() const { DataCollector::get()->append(); }
+void FHsolver::newIter() { data_.append(); }
 
 Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
                       const std::vector<Int>& ptr,
-                      const std::vector<Int>& signs) const {
-  Analyse an_obj(rows, ptr, log_, signs);
+                      const std::vector<Int>& signs) {
+  Analyse an_obj(rows, ptr, signs, log_, data_);
   return an_obj.run(S);
 }
 
 Int FHsolver::factorise(Numeric& N, const Symbolic& S,
                         const std::vector<Int>& rows,
                         const std::vector<Int>& ptr,
-                        const std::vector<double>& vals) const {
-  Factorise fact_obj(S, rows, ptr, vals, log_);
+                        const std::vector<double>& vals) {
+  Factorise fact_obj(S, rows, ptr, vals, log_, data_);
   return fact_obj.run(N);
 }
 

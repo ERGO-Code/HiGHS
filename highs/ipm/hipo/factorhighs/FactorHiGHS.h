@@ -1,6 +1,7 @@
 #ifndef FACTOR_HIGHS_H
 #define FACTOR_HIGHS_H
 
+#include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "Numeric.h"
 #include "Symbolic.h"
@@ -54,6 +55,7 @@ namespace hipo {
 
 class FHsolver {
   const Log* log_;
+  DataCollector data_;
 
  public:
   // Create object and initialise DataCollector
@@ -66,20 +68,19 @@ class FHsolver {
   // ptr, and store symbolic factorisation in object S.
   // See ReturnValues.h for errors.
   Int analyse(Symbolic& S, const std::vector<Int>& rows,
-              const std::vector<Int>& ptr, const std::vector<Int>& signs) const;
+              const std::vector<Int>& ptr, const std::vector<Int>& signs);
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
   // numerical factorisation in object N. Matrix is moved into the object, so
   // rows, ptr, vals are invalid afterwards.
   // See ReturnValues.h for errors.
   Int factorise(Numeric& N, const Symbolic& S, const std::vector<Int>& rows,
-                const std::vector<Int>& ptr,
-                const std::vector<double>& vals) const;
+                const std::vector<Int>& ptr, const std::vector<double>& vals);
 
   // If multiple factorisation are performed, call newIter() before each
   // factorisation. This is used only to collect data for debugging, if
   // expensive data collection is turned on at compile time.
-  void newIter() const;
+  void newIter();
 };
 
 }  // namespace hipo

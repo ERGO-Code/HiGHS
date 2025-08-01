@@ -59,6 +59,7 @@ class Factorise {
   bool flag_stop_ = false;
 
   const Log* log_;
+  DataCollector& data_;
 
  public:
   void permute(const std::vector<Int>& iperm);
@@ -67,7 +68,7 @@ class Factorise {
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
             const std::vector<Int>& ptrA, const std::vector<double>& valA,
-            const Log* log);
+            const Log* log, DataCollector& data);
 
   bool run(Numeric& num);
 };

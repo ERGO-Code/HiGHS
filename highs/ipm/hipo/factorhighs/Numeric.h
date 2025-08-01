@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "DataCollector.h"
 #include "SolveHandler.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -33,6 +34,8 @@ class Numeric {
 
   // norms of columns of matrix
   std::vector<double> inf_norm_cols_, one_norm_cols_;
+
+  DataCollector* data_ = nullptr;
 
   friend class Factorise;
 

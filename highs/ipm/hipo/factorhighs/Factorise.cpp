@@ -17,8 +17,9 @@ namespace hipo {
 
 Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
                      const std::vector<Int>& ptrA,
-                     const std::vector<double>& valA, const Log* log)
-    : S_{S}, log_{log} {
+                     const std::vector<double>& valA, const Log* log,
+                     DataCollector& data)
+    : S_{S}, log_{log}, data_{data} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -96,7 +97,7 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
   }
   A_norm1_ = *std::max_element(one_norm_cols_.begin(), one_norm_cols_.end());
 
-  DataCollector::get()->setNorms(A_norm1_, max_diag_);
+  data_.setNorms(A_norm1_, max_diag_);
 }
 
 void Factorise::permute(const std::vector<Int>& iperm) {
@@ -166,12 +167,6 @@ void Factorise::permute(const std::vector<Int>& iperm) {
   valA_ = std::move(new_val);
 }
 
-std::unique_ptr<FormatHandler> getFormatHandler(const Symbolic& S, Int sn) {
-  std::unique_ptr<FormatHandler> ptr;
-  ptr.reset(new HybridHybridFormatHandler(S, sn));
-  return ptr;
-}
-
 void Factorise::processSupernode(Int sn) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
@@ -204,10 +199,11 @@ void Factorise::processSupernode(Int sn) {
 
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
-  std::unique_ptr<FormatHandler> FH = getFormatHandler(S_, sn);
+  std::unique_ptr<FormatHandler> FH(
+      new HybridHybridFormatHandler(S_, sn, data_));
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeFactorisePrepare, clock.stop());
+  data_.sumTime(kTimeFactorisePrepare, clock.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -230,7 +226,7 @@ void Factorise::processSupernode(Int sn) {
     }
   }
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeFactoriseAssembleOriginal, clock.stop());
+  data_.sumTime(kTimeFactoriseAssembleOriginal, clock.stop());
 #endif
 
   // ===================================================
@@ -293,8 +289,7 @@ void Factorise::processSupernode(Int sn) {
       }
     }
 #if HIPO_TIMING_LEVEL >= 2
-    DataCollector::get()->sumTime(kTimeFactoriseAssembleChildrenFrontal,
-                                  clock.stop());
+    data_.sumTime(kTimeFactoriseAssembleChildrenFrontal, clock.stop());
 #endif
 
 // ASSEMBLE INTO CLIQUE
@@ -303,8 +298,7 @@ void Factorise::processSupernode(Int sn) {
 #endif
     FH->assembleClique(child_clique, nc, child_sn);
 #if HIPO_TIMING_LEVEL >= 2
-    DataCollector::get()->sumTime(kTimeFactoriseAssembleChildrenClique,
-                                  clock.stop());
+    data_.sumTime(kTimeFactoriseAssembleChildrenClique, clock.stop());
 #endif
 
     // Schur contribution of the child is no longer needed
@@ -339,7 +333,7 @@ void Factorise::processSupernode(Int sn) {
     return;
   }
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeFactoriseDenseFact, clock.stop());
+  data_.sumTime(kTimeFactoriseDenseFact, clock.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -352,7 +346,7 @@ void Factorise::processSupernode(Int sn) {
   FH->terminate(sn_columns_[sn], schur_contribution_[sn], total_reg_,
                 swaps_[sn], pivot_2x2_[sn]);
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeFactoriseTerminate, clock.stop());
+  data_.sumTime(kTimeFactoriseTerminate, clock.stop());
 #endif
 }
 
@@ -402,9 +396,10 @@ bool Factorise::run(Numeric& num) {
   num.valA_ = std::move(valA_);
   num.one_norm_cols_ = std::move(one_norm_cols_);
   num.inf_norm_cols_ = std::move(inf_norm_cols_);
+  num.data_ = &data_;
 
 #if HIPO_TIMING_LEVEL >= 1
-  DataCollector::get()->sumTime(kTimeFactorise, clock.stop());
+  data_.sumTime(kTimeFactorise, clock.stop());
 #endif
 
   return false;

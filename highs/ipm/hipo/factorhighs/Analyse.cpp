@@ -17,8 +17,9 @@
 namespace hipo {
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                 const Log* log, const std::vector<Int>& signs)
-    : log_{log} {
+                 const std::vector<Int>& signs, const Log* log,
+                 DataCollector& data)
+    : log_{log}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
   // ptr contains the starting points of each column.
@@ -1292,7 +1293,7 @@ Int Analyse::run(Symbolic& S) {
 #endif
   if (Int metis_status = getPermutation()) return kRetMetisError;
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeAnalyseMetis, clock_items.stop());
+  data_.sumTime(kTimeAnalyseMetis, clock_items.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -1302,7 +1303,7 @@ Int Analyse::run(Symbolic& S) {
   eTree();
   postorder();
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeAnalyseTree, clock_items.stop());
+  data_.sumTime(kTimeAnalyseTree, clock_items.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -1310,7 +1311,7 @@ Int Analyse::run(Symbolic& S) {
 #endif
   colCount();
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeAnalyseCount, clock_items.stop());
+  data_.sumTime(kTimeAnalyseCount, clock_items.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -1320,7 +1321,7 @@ Int Analyse::run(Symbolic& S) {
   relaxSupernodes();
   afterRelaxSn();
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeAnalyseSn, clock_items.stop());
+  data_.sumTime(kTimeAnalyseSn, clock_items.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -1328,7 +1329,7 @@ Int Analyse::run(Symbolic& S) {
 #endif
   reorderChildren();
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeAnalyseReorder, clock_items.stop());
+  data_.sumTime(kTimeAnalyseReorder, clock_items.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -1336,7 +1337,7 @@ Int Analyse::run(Symbolic& S) {
 #endif
   snPattern();
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeAnalysePattern, clock_items.stop());
+  data_.sumTime(kTimeAnalysePattern, clock_items.stop());
 #endif
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -1345,7 +1346,7 @@ Int Analyse::run(Symbolic& S) {
   relativeIndCols();
   relativeIndClique();
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeAnalyseRelInd, clock_items.stop());
+  data_.sumTime(kTimeAnalyseRelInd, clock_items.stop());
 #endif
 
   computeStorage();
@@ -1405,7 +1406,7 @@ Int Analyse::run(Symbolic& S) {
   S.clique_block_start_ = std::move(clique_block_start_);
 
 #if HIPO_TIMING_LEVEL >= 1
-  DataCollector::get()->sumTime(kTimeAnalyse, clock_total.stop());
+  data_.sumTime(kTimeAnalyse, clock_total.stop());
 #endif
 
   return kRetOk;

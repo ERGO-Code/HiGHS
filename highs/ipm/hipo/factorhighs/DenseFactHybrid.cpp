@@ -14,7 +14,7 @@ namespace hipo {
 
 Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
                 const Int* pivot_sign, double thresh, double* regul, Int* swaps,
-                double* pivot_2x2, Int sn, bool parnode) {
+                double* pivot_2x2, bool parnode, DataCollector& data) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
@@ -94,14 +94,14 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
                                         &pivot_sign[j * nb] + jb);
     Int* swaps_current = &swaps[j * nb];
     double* pivot_2x2_current = &pivot_2x2[j * nb];
-    Int info = denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh,
-                          regul_current, swaps_current, pivot_2x2_current, sn,
-                          j, max_in_R);
+    Int info =
+        denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh,
+                   regul_current, swaps_current, pivot_2x2_current, data);
     if (info != 0) return info;
 
 #ifdef HIPO_PIVOTING
     // swap columns in R
-    applySwaps(swaps_current, M, jb, R);
+    applySwaps(swaps_current, M, jb, R, data);
 
     // unswap regularisation, to keep it with original ordering
     permuteWithSwaps(regul_current, swaps_current, jb, true);
@@ -112,10 +112,10 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
       // SOLVE COLUMNS
       // ===========================================================================
       // solve block R with D
-      callAndTime_dtrsm('L', 'U', 'T', 'U', jb, M, 1.0, D, jb, R, jb);
+      callAndTime_dtrsm('L', 'U', 'T', 'U', jb, M, 1.0, D, jb, R, jb, data);
 
       // make copy of partially solved columns
-      callAndTime_dcopy(jb * M, R, 1, T.data(), 1);
+      callAndTime_dcopy(jb * M, R, 1, T.data(), 1, data);
 
       // solve block R with pivots
       Int step = 1;
@@ -123,7 +123,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
         if (pivot_2x2_current[col] == 0.0) {
           // 1x1 pivots
           step = 1;
-          callAndTime_dscal(M, D[col + jb * col], &R[col], jb);
+          callAndTime_dscal(M, D[col + jb * col], &R[col], jb, data);
         } else {
           // 2x2 pivots
           step = 2;
@@ -139,13 +139,13 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
 
           // copy of original col1
           std::vector<double> c1_temp(M);
-          callAndTime_dcopy(M, c1, jb, c1_temp.data(), 1);
+          callAndTime_dcopy(M, c1, jb, c1_temp.data(), 1, data);
 
           // solve col and col+1
-          callAndTime_dscal(M, i_d1, c1, jb);
-          callAndTime_daxpy(M, i_off, c2, jb, c1, jb);
-          callAndTime_dscal(M, i_d2, c2, jb);
-          callAndTime_daxpy(M, i_off, c1_temp.data(), 1, c2, jb);
+          callAndTime_dscal(M, i_d1, c1, jb, data);
+          callAndTime_daxpy(M, i_off, c2, jb, c1, jb, data);
+          callAndTime_dscal(M, i_d2, c2, jb, data);
+          callAndTime_daxpy(M, i_off, c1_temp.data(), 1, c2, jb, data);
         }
       }
 
@@ -175,16 +175,16 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
 
         // perform gemm (potentially) in parallel
         if (parnode)
-          dgemmParallel(P, Rjj, Q, col_jj, jb, row_jj, nb);
+          dgemmParallel(P, Rjj, Q, col_jj, jb, row_jj, nb, 1.0, data);
         else
           callAndTime_dgemm('T', 'N', col_jj, row_jj, jb, -1.0, P, jb, Rjj, jb,
-                            1.0, Q, col_jj);
+                            1.0, Q, col_jj, data);
 
         offset += jb * col_jj;
       }
 
 #if HIPO_TIMING_LEVEL >= 2
-      DataCollector::get()->sumTime(kTimeDenseFact_main, clock.stop());
+      data.sumTime(kTimeDenseFact_main, clock.stop());
       clock.start();
 #endif
 
@@ -211,10 +211,10 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
 
           // perform gemm (potentially) in parallel
           if (parnode)
-            dgemmParallel(P, Rjj, Q, ncol, jb, nrow, nb, beta);
+            dgemmParallel(P, Rjj, Q, ncol, jb, nrow, nb, beta, data);
           else
             callAndTime_dgemm('T', 'N', ncol, nrow, jb, -1.0, P, jb, Rjj, jb,
-                              beta, Q, ncol);
+                              beta, Q, ncol, data);
 
           if (format == 'P') {
             // schur_buf contains Schur complement in hybrid format (with full
@@ -223,7 +223,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
             for (Int buf_row = 0; buf_row < nrow; ++buf_row) {
               const Int N = ncol;
               callAndTime_daxpy(N, 1.0, &schur_buf[buf_row * ncol], 1,
-                                &B[B_offset + buf_row], nrow);
+                                &B[B_offset + buf_row], nrow, data);
             }
           }
 
@@ -232,7 +232,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
         }
       }
 #if HIPO_TIMING_LEVEL >= 2
-      DataCollector::get()->sumTime(kTimeDenseFact_schur, clock.stop());
+      data.sumTime(kTimeDenseFact_schur, clock.stop());
       clock.start();
 #endif
     }
@@ -241,7 +241,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
   return kRetOk;
 }
 
-Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb) {
+Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb, DataCollector& data) {
   // ===========================================================================
   // Packed to Hybrid conversion
   // Matrix A on  input is in format FP
@@ -266,20 +266,21 @@ Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb) {
     const Int row_size = nrow - k * nb;
 
     // Copy block into buf
-    callAndTime_dcopy(row_size * block_size, &A[startAtoBuf], 1, buf.data(), 1);
+    callAndTime_dcopy(row_size * block_size, &A[startAtoBuf], 1, buf.data(), 1,
+                      data);
     startAtoBuf += row_size * block_size;
 
     // Copy columns back into A, row by row.
     // One call of dcopy_ for each row of the block of columns.
     for (Int i = 0; i < row_size; ++i) {
       const Int N = block_size;
-      callAndTime_dcopy(N, &buf[i], row_size, &A[startBuftoA], 1);
+      callAndTime_dcopy(N, &buf[i], row_size, &A[startBuftoA], 1, data);
       startBuftoA += N;
     }
   }
 
 #if HIPO_TIMING_LEVEL >= 2
-  DataCollector::get()->sumTime(kTimeDenseFact_convert, clock.stop());
+  data.sumTime(kTimeDenseFact_convert, clock.stop());
 #endif
 
   return kRetOk;
