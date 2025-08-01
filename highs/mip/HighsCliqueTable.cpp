@@ -312,7 +312,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
   cliques[cliqueid].equality = equality;
   cliques[cliqueid].origin = origin;
 
-  std::set<std::pair<HighsInt, int>>::iterator it;
+  std::set<std::pair<HighsInt, HighsInt>>::iterator it;
   HighsInt maxEnd;
   if (freespaces.empty() ||
       (it = freespaces.lower_bound(
