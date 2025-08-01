@@ -550,7 +550,7 @@ class FeasibilityJumpSolver {
 
  private:
   void logging(const int step, const bool header = false) {
-    const HighsLogType logType = HighsLogType::kInfo;
+    const HighsLogType logType = HighsLogType::kDetailed;
     if (header) {
       highsLogDev(logOptions, logType,
                   FJ_LOG_PREFIX
