@@ -19,6 +19,7 @@ enum iClockMip {
   kMipClockPostsolve,
   // Level 1
   kMipClockInit,
+  kMipClockKnapsack,
   kMipClockRunPresolve,
   kMipClockRunSetup,
   kMipClockFeasibilityJump,
@@ -134,6 +135,7 @@ class MipTimer {
 
     // Level 1 - Should correspond to kMipClockTotal
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
+    clock[kMipClockKnapsack] = timer_pointer->clock_def("Knapsack test+solve");
     clock[kMipClockRunPresolve] = timer_pointer->clock_def("Run presolve");
     clock[kMipClockRunSetup] = timer_pointer->clock_def("Run setup");
     clock[kMipClockFeasibilityJump] =
@@ -321,6 +323,7 @@ class MipTimer {
 
   void reportMipLevel1Clock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{kMipClockInit,
+                                               kMipClockKnapsack,
                                                kMipClockRunPresolve,
                                                kMipClockRunSetup,
                                                kMipClockFeasibilityJump,
@@ -330,7 +333,7 @@ class MipTimer {
                                                kMipClockSearch,
                                                kMipClockPostsolve};
     reportMipClockList("MipLevl1", mip_clock_list, mip_timer_clock,
-                       kMipClockTotal, tolerance_percent_report);
+                       kMipClockTotal);  //, tolerance_percent_report);
   };
 
   void reportMipSolveLpClock(const HighsTimerClock& mip_timer_clock) {
@@ -441,8 +444,9 @@ class MipTimer {
                    const HighsTimerClock& mip_timer_clock, const bool header,
                    const bool end_line) {
     const std::vector<HighsInt> mip_clock_list{
-        kMipClockRunPresolve, kMipClockEvaluateRootNode,
-        kMipClockDivePrimalHeuristics, kMipClockTheDive, kMipClockNodeSearch};
+        kMipClockKnapsack,         kMipClockRunPresolve,
+        kMipClockEvaluateRootNode, kMipClockDivePrimalHeuristics,
+        kMipClockTheDive,          kMipClockNodeSearch};
     csvMipClockList("csvMIP", model_name, mip_clock_list, mip_timer_clock,
                     kMipClockTotal, header, end_line);
   };

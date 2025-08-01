@@ -132,6 +132,7 @@ class HPresolve {
   HighsInt oldNumCol;
   HighsInt oldNumRow;
   bool probingEarlyAbort;
+  int64_t num_true_reductions_;
 
   enum class Result {
     kOk,

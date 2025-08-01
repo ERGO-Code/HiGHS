@@ -85,18 +85,57 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
 }
 
 bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
+  bool equal;
   bool equal_vectors = true;
-  equal_vectors = this->num_col_ == lp.num_col_ && equal_vectors;
-  equal_vectors = this->num_row_ == lp.num_row_ && equal_vectors;
-  equal_vectors = this->sense_ == lp.sense_ && equal_vectors;
-  equal_vectors = this->offset_ == lp.offset_ && equal_vectors;
-  equal_vectors = this->model_name_ == lp.model_name_ && equal_vectors;
-  equal_vectors = this->col_cost_ == lp.col_cost_ && equal_vectors;
-  equal_vectors = this->col_upper_ == lp.col_upper_ && equal_vectors;
-  equal_vectors = this->col_lower_ == lp.col_lower_ && equal_vectors;
-  equal_vectors = this->row_upper_ == lp.row_upper_ && equal_vectors;
-  equal_vectors = this->row_lower_ == lp.row_lower_ && equal_vectors;
+  equal = this->num_col_ == lp.num_col_;
+  equal_vectors = equal && equal_vectors;
 #ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal col dim\n");
+#endif
+  equal = this->num_row_ == lp.num_row_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal row dim\n");
+#endif
+  equal = this->sense_ == lp.sense_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal sense\n");
+#endif
+  equal = this->offset_ == lp.offset_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal offset\n");
+#endif
+  equal = this->model_name_ == lp.model_name_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal model name\n");
+#endif
+  equal = this->col_cost_ == lp.col_cost_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal col cost\n");
+#endif
+  equal = this->col_lower_ == lp.col_lower_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal col lower\n");
+#endif
+  equal = this->col_upper_ == lp.col_upper_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal col upper\n");
+#endif
+  equal = this->row_lower_ == lp.row_lower_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal row lower\n");
+#endif
+  equal = this->row_upper_ == lp.row_upper_;
+  equal_vectors = equal && equal_vectors;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalButForNames: unequal row upper\n");
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif
   const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;

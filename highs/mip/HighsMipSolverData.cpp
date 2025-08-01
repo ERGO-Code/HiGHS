@@ -2653,7 +2653,9 @@ void HighsMipSolverData::callbackUserSolution(
   }
 }
 
-bool HighsMipSolverData::mipIsKnapsack(const bool logging) {
+bool HighsMipSolverData::mipIsKnapsack(const bool silent) {
+  // Silent is to prevent duplicate logging and data collection when
+  // using assert(mipIsKnapsack(true));
   const HighsLp& lp = *(mipsolver.model_);
   // Has to have one constraint
   if (lp.num_row_ != 1) return false;
@@ -2671,7 +2673,7 @@ bool HighsMipSolverData::mipIsKnapsack(const bool logging) {
       HighsIntegers::integralScale(lp.a_matrix_.value_, 1e-6, 1e-6);
   if (this->knapsack_integral_scale_ == 0) return false;
   if (this->knapsack_integral_scale_ > 1000000) return false;
-  if (logging)
+  if (!silent)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP is a knapsack problem with with scale %d\n",
                  int(this->knapsack_integral_scale_));
@@ -2683,6 +2685,11 @@ bool HighsMipSolverData::mipIsKnapsack(const bool logging) {
   const double capacity_margin = 1e-6;
   this->knapsack_capacity_ = std::floor(double_capacity + capacity_margin);
   // Problem is knapsack!
+  if (!silent) {
+    this->knapsack_data_.num_problem++;
+    this->knapsack_data_.sum_variables += lp.num_col_;
+    this->knapsack_data_.sum_capacity += this->knapsack_capacity_;
+  }
   return true;
 }
 

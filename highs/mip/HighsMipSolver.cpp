@@ -88,22 +88,31 @@ void HighsMipSolver::run() {
   mipdata_->init();
   analysis_.mipTimerStop(kMipClockInit);
 
-  // Determine whether this is a knapsack problem and, if so, at least
-  // update the data on knapsack sub-MIPs
-  HighsInt capacity = 0;
+  // If this is a knapsack problem, don't do MIP logging in
+  // cleanupSolve
+  const bool mip_logging_for_knapsack = false;
+
+  // Look for knapsack before presolve
+  analysis_.mipTimerStart(kMipClockKnapsack);
   if (mipdata_->mipIsKnapsack()) {
-    mipdata_->knapsack_data_.num_problem++;
-    mipdata_->knapsack_data_.sum_variables += orig_model_->num_col_;
-    mipdata_->knapsack_data_.sum_capacity += mipdata_->knapsack_capacity_;
     // Solve as a knapsack
     HighsStatus call_status = mipdata_->heuristics.solveMipKnapsack();
     assert(call_status == HighsStatus::kOk);
-    const bool mip_logging = false;
-    cleanupSolve(mip_logging);
+    cleanupSolve(mip_logging_for_knapsack);
+    analysis_.mipTimerStop(kMipClockKnapsack);
     return;
   }
+  analysis_.mipTimerStop(kMipClockKnapsack);
 
+  const HighsInt num_col_before_presolve = model_->num_col_;
+  const HighsInt num_row_before_presolve = model_->num_row_;
   analysis_.mipTimerStart(kMipClockRunPresolve);
+  // Run presolve
+  //
+  // Note that, even with presolve=off and presolve_reduction_limit=0,
+  // reductions can occur. This is because presolve scales the MIP -
+  // and must do - using HighsPresolve::transformColumn. Note that
+  // presolve is where a maximization is converted to a minimization.
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
   analysis_.mipTimerStop(kMipClockPresolve);
@@ -127,6 +136,21 @@ void HighsMipSolver::run() {
     }
     cleanupSolve();
     return;
+  }
+  // Possibly look for knapsack after presolve
+  const bool reduced = num_col_before_presolve > model_->num_col_ ||
+                       num_row_before_presolve > model_->num_row_;
+  if (reduced) {
+    analysis_.mipTimerStart(kMipClockKnapsack);
+    if (mipdata_->mipIsKnapsack()) {
+      // Solve as a knapsack
+      HighsStatus call_status = mipdata_->heuristics.solveMipKnapsack();
+      assert(call_status == HighsStatus::kOk);
+      cleanupSolve(mip_logging_for_knapsack);
+      analysis_.mipTimerStop(kMipClockKnapsack);
+      return;
+    }
+    analysis_.mipTimerStop(kMipClockKnapsack);
   }
 
   analysis_.mipTimerStart(kMipClockSolve);

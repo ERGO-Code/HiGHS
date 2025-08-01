@@ -4339,7 +4339,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   analysis_.setup(this->model, this->options, this->numDeletedRows,
                   this->numDeletedCols);
 
-  if (options->presolve != kHighsOffString) {
+  if (options->presolve != kHighsOffString && reductionLimit > 0) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
     if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
       highsLogUser(options->log_options, HighsLogType::kInfo,
@@ -4529,10 +4529,18 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     report();
   } else {
     highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "\nPresolve is switched off\n");
+                 "\nPresolve: Model reduction is switched off\n");
   }
 
+  this->num_true_reductions_ = postsolve_stack.numReductions();
   if (mipsolver != nullptr) scaleMIP(postsolve_stack);
+  const size_t num_scaling_reductions =
+      postsolve_stack.numReductions() - this->num_true_reductions_;
+  if (num_scaling_reductions)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "\nPresolve: MIP scaling requires %" PRId64
+                 " reduction operation%s\n",
+                 num_scaling_reductions, num_scaling_reductions > 1 ? "s" : "");
 
   // analysePresolveRuleLog() should return true - no errors
   assert(analysis_.analysePresolveRuleLog());
@@ -4680,11 +4688,12 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     if (options->presolve != kHighsOffString &&
         reductionLimit < kHighsSize_tInf) {
       highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "Presolve performed %" PRId64 " of %" PRId64
-                   " permitted reductions\n",
-                   postsolve_stack.numReductions(), reductionLimit);
+                   "\nPresolve: Performed %" PRId64 " of %" PRId64
+                   " permitted true reductions\n",
+                   this->num_true_reductions_, reductionLimit);
     }
   };
+  this->num_true_reductions_ = 0;
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:

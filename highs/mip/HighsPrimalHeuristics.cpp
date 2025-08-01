@@ -1786,7 +1786,8 @@ HighsStatus HighsPrimalHeuristics::solveMipKnapsackReturn(
 HighsStatus HighsPrimalHeuristics::solveMipKnapsack() {
   const HighsLp& lp = *(mipsolver.model_);
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
-  assert(mipsolver.mipdata_->mipIsKnapsack(false));
+  // Check silently that this really is a knapsack
+  assert(mipsolver.mipdata_->mipIsKnapsack(true));
 
   const bool upper = lp.row_upper_[0] < kHighsInf;
   const HighsInt constraint_sign = upper ? 1 : -1;
