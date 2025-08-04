@@ -290,6 +290,18 @@ void Iterate::extract(std::vector<double>& x_user, std::vector<double>& xl_user,
   zl_user = std::vector<double>(zl.begin(), zl.begin() + model->n_orig());
   zu_user = std::vector<double>(zu.begin(), zu.begin() + model->n_orig());
 
+  // force unused entries to have correct value
+  for (int i = 0; i < model->n_orig(); ++i) {
+    if (!model->hasLb(i)) {
+      xl_user[i] = kHighsInf;
+      zl_user[i] = 0.0;
+    }
+    if (!model->hasUb(i)) {
+      xu_user[i] = kHighsInf;
+      zu_user[i] = 0.0;
+    }
+  }
+
   // For the Lagrange multipliers, use slacks from zl and zu, to get correct
   // sign. NB: there is no explicit slack stored for equality constraints.
   y_user.resize(model->m());
@@ -568,7 +580,9 @@ void Iterate::finalResiduals(Info& info) const {
     std::vector<double> res4(n_orig);
     model->multWithoutSlack(-1.0, y_local, res4, true);
     for (Int i = 0; i < n_orig; ++i) {
-      res4[i] = res4[i] - zl_local[i] + zu_local[i] + model->c()[i];
+      if (model->hasLb(i)) res4[i] -= zl_local[i];
+      if (model->hasUb(i)) res4[i] += zu_local[i];
+      res4[i] += model->c()[i];
       if (model->scaled()) res4[i] /= model->colScale(i);
     }
 
