@@ -704,9 +704,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     double f0 = scalrhs - downrhs;
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
     // Skip numerically troublesome cuts
-    double k = fast_ceil((1 / f0) - epsilon) - 1;
-    double checkk = fast_ceil((1 / f0) + epsilon) - 1;
-    if (checkk - k > 0.5) {
+    double oneoverf0 = 1 / f0;
+    double k = fast_ceil(oneoverf0) - 1;
+    if (oneoverf0 - k < 1e-3 || oneoverf0 - k > 1 - 1e-3) {
       strongcg = false;
     } else {
       // All coefficients of continuous variables are 0 in strong CG cut
@@ -717,12 +717,12 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         double scalaj = vals[j] * scale;
         double downaj = fast_floor(scalaj + kHighsTiny);
         double fj = scalaj - downaj;
-        if (fj <= f0 + 1e-6) {
+        if (fj <= f0 + feastol) {
           double aj = downaj;
           updateViolationAndNorm(j, aj, viol, sqrnorm);
         } else {
           double pj =
-              fast_ceil(k * (fj - f0) * oneoveroneminusf0 - (10 * epsilon));
+              fast_ceil(k * (fj - f0) * oneoveroneminusf0 - feastol);
           double aj = downaj + (pj / (k + 1));
           updateViolationAndNorm(j, aj, viol, sqrnorm);
         }
@@ -732,7 +732,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       } else {
         double efficacy = viol / sqrt(sqrnorm);
         // Use the strong CG cut instead of the CMIR if efficacy is larger
-        if (efficacy < bestefficacy + 1e-6) {
+        if (efficacy < bestefficacy + epsilon) {
           strongcg = false;
         } else {
           bestefficacy = efficacy;
