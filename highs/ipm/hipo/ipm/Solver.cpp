@@ -760,7 +760,7 @@ bool Solver::startingPoint() {
 void Solver::sigmaAffine() {
   sigma_ = kSigmaAffine;
 
-  it_->data.back().sigma = sigma_;
+  it_->data.back().sigma_aff = sigma_;
 }
 
 void Solver::sigmaCorrectors() {
@@ -776,7 +776,7 @@ void Solver::sigmaCorrectors() {
     sigma_ = 0.9;
   }
 
-  it_->data.back().sigma_aff = sigma_;
+  it_->data.back().sigma = sigma_;
 }
 
 void Solver::residualsMcc() {
@@ -1360,8 +1360,8 @@ void Solver::printHeader() const {
 
     if (logH_.debug(1)) {
       log_stream << "     alpha p/d   sigma af/co   cor  solv"
-                 << "     minT     maxT  (xj * zj / mu)_range_&_num"
-                 << "   max_res";
+                 << "    static reg p/d     minT     maxT"
+                 << "  (xj * zj / mu)_range_&_num   max_res";
     }
 
     log_stream << "\n";
@@ -1391,6 +1391,8 @@ void Solver::printOutput() const {
     log_stream << " " << fix(data.sigma, 6, 2);
     log_stream << " " << integer(data.correctors, 5);
     log_stream << " " << integer(data.num_solves, 5);
+    log_stream << " " << sci(regul_.primal, 8, 1);
+    log_stream << " " << sci(regul_.dual, 8, 1);
     log_stream << " " << sci(data.min_theta, 8, 1);
     log_stream << " " << sci(data.max_theta, 8, 1);
     log_stream << " " << sci(data.min_prod, 8, 1);
@@ -1434,12 +1436,12 @@ void Solver::printSummary() const {
 
   if (info_.status >= kStatusImprecise) {
     log_stream << textline("Primal residual rel/abs:")
-               << sci(info_.p_res_abs, 0, 2) << " / "
-               << sci(info_.p_res_rel, 0, 2) << '\n';
+               << sci(info_.p_res_rel, 0, 2) << " / "
+               << sci(info_.p_res_abs, 0, 2) << '\n';
 
     log_stream << textline("Dual residual rel/abs:")
-               << sci(info_.d_res_abs, 0, 2) << " / "
-               << sci(info_.d_res_rel, 0, 2) << '\n';
+               << sci(info_.d_res_rel, 0, 2) << " / "
+               << sci(info_.d_res_abs, 0, 2) << '\n';
 
     log_stream << textline("Primal objective") << sci(info_.p_obj, 0, 8)
                << '\n';
@@ -1473,6 +1475,10 @@ void Solver::printSummary() const {
     log_stream << textline("Factorisations:") << integer(info_.factor_number)
                << '\n';
     log_stream << textline("Solves:") << integer(info_.solve_number) << '\n';
+    log_stream << textline("Avg time per factorisation:")
+               << sci(info_.factor_time / info_.factor_number, 0, 2) << '\n';
+    log_stream << textline("Avg time per solve:")
+               << sci(info_.solve_time / info_.solve_number, 0, 2) << '\n';
   }
 
   logH_.print(log_stream);

@@ -111,8 +111,12 @@ Int Analyse::getPermutation() {
   // fix seed of rng inside Metis, to make it deterministic (?)
   options[METIS_OPTION_SEED] = 42;
 
+  if (log_) log_->printDevInfo("Metis...");
+
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                             options, perm_.data(), iperm_.data());
+
+  if (log_) log_->printDevInfo("done\n");
   if (status != METIS_OK) {
     if (log_) log_->printDevInfo("Error with Metis\n");
     return kRetMetisError;

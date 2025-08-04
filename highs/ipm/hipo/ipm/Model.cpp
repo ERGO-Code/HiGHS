@@ -363,7 +363,18 @@ void Model::print(const LogHighs& log) const {
   else
     log_stream << "-\n";
 
-  log_stream << textline("Scaling CG iterations:") << CG_iter_scaling_ << '\n';
+  if (log.debug(1)) {
+    log_stream << textline("Scaling CG iterations:")
+               << integer(CG_iter_scaling_) << '\n';
+    log_stream << textline("Norm b unscaled") << sci(norm_unscaled_rhs_, 0, 1)
+               << '\n';
+    log_stream << textline("Norm b scaled") << sci(norm_scaled_rhs_, 0, 1)
+               << '\n';
+    log_stream << textline("Norm c unscaled") << sci(norm_unscaled_obj_, 0, 1)
+               << '\n';
+    log_stream << textline("Norm c scaled") << sci(norm_scaled_obj_, 0, 1)
+               << '\n';
+  }
 
   log.print(log_stream);
 }
