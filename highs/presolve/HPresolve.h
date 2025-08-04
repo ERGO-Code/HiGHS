@@ -146,7 +146,9 @@ class HPresolve {
     Result my_result;
 
    public:
+    // clang-format off
     StatusResult(bool flag) : my_flag(flag), my_result(Result::kOk) {};
+    // clang-format on
     StatusResult(Result result) : my_result(result) {
       my_flag = (result == Result::kOk);
     };
@@ -193,6 +195,8 @@ class HPresolve {
   void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
                                        HighsPostsolveStack::RowType& rowType,
                                        bool relaxRowDualBounds = false);
+
+  bool isEquation(HighsInt row) const;
 
   bool isImpliedEquationAtLower(HighsInt row) const;
 
@@ -390,7 +394,7 @@ class HPresolve {
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
                                 HighsInt& num_strenghtened);
 
-  HPresolve::Result detectImpliedIntegers();
+  Result detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
 

@@ -1019,7 +1019,7 @@ bool HighsLpRelaxation::checkDualProof() const {
 bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
                                             std::vector<HighsInt>& inds,
                                             std::vector<double>& vals,
-                                            double& rhs) {
+                                            double& rhs) const {
   if (!hasdualproof) return false;
 
   assert(std::isfinite(dualproofrhs));
@@ -1299,6 +1299,21 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
                   }
                 } else
                   break;
+              }
+
+              // Spot cases where a global domain change during the search has
+              // led to a clique and the local domain has branched into a state
+              // where the clique subst. would be invalid for the local domain.
+              // TODO: Turn into assert when search becomes parallel
+              if (domain) {
+                double replace_val = subst->replace.val == 0 ? 1.0 - val : val;
+                double replace_lb = domain->col_lower_[subst->replace.col];
+                double replace_ub = domain->col_upper_[subst->replace.col];
+                double feastol = mipsolver.mipdata_->feastol;
+                if ((replace_val < replace_lb - feastol) ||
+                    (replace_val > replace_ub + feastol)) {
+                  break;
+                }
               }
 
               col = subst->replace.col;

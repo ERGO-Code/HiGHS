@@ -308,8 +308,7 @@ HighsStatus Highs::formStandardFormLp() {
     }
   }
   // Now add the slack variables
-  for (HighsInt iX = 0; iX < HighsInt(slack_ix.size()); iX++) {
-    HighsInt iRow = slack_ix[iX];
+  for (HighsInt iRow : slack_ix) {
     this->standard_form_cost_.push_back(0);
     if (iRow > 0) {
       this->standard_form_matrix_.index_.push_back(iRow - 1);
@@ -514,7 +513,7 @@ HighsStatus Highs::addColsInterface(
   // Update the basis corresponding to new nonbasic columns
   if (useful_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
 
-  // Possibly add column names
+  // Possibly add blank column names
   lp.addColNames("", ext_num_new_col);
 
   // Increase the number of columns in the LP
@@ -659,7 +658,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // Update the basis corresponding to new basic rows
   if (useful_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
-  // Possibly add row names
+  // Possibly add blank row names
   lp.addRowNames("", ext_num_new_row);
 
   // Increase the number of rows in the LP
@@ -1613,9 +1612,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
 
-  // Declare identifiers to save column costs, integrality, any Hessian and the
-  // presolve setting, and a flag to know when they should be
-  // recovered
+  // Declare identifiers to save column costs, integrality, any
+  // Hessian and the presolve setting, and a flag to know when they
+  // should be recovered
   std::vector<double> col_cost;
   HighsHessian hessian;
   bool solve_relaxation;
@@ -1711,6 +1710,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     if (is_qp) model_.hessian_ = hessian;
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
+    // The relaxation for an infeasible MIP may be feasible - so no
+    // ray is generated - so make sure (#2415) that the primal
+    // solution status is reset
+    this->info_.primal_solution_status = SolutionStatus::kSolutionStatusNone;
     // Modify the objective-related information
     this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
     this->info_.objective_function_value = 0;
@@ -1719,8 +1722,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       assert(this->info_.num_primal_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
     } else {
-      // If someone has tried to get a dual ray for a feasible
-      // problem, then any status of the original model has been lost
+      // If someone has tried to get a dual ray for a feasible problem
+      // - or if the relaxation is feasible - then any model and
+      // primal KKT status of the original model has been lost
+      this->info_.invalidatePrimalKkt();
       this->model_status_ = HighsModelStatus::kNotset;
     }
   }
@@ -1769,7 +1774,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->getOptionValue("allow_unbounded_or_infeasible",
                            allow_unbounded_or_infeasible);
       solve_unboundedness_problem = true;
-      lp.integrality_.clear();
       this->setOptionValue("presolve", kHighsOffString);
       this->setOptionValue("solve_relaxation", true);
       this->setOptionValue("allow_unbounded_or_infeasible", false);
@@ -1830,14 +1834,21 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       return_status = HighsStatus::kOk;
     }
   }
+  const bool is_mip = this->model_.isMip();
   if (solve_unboundedness_problem) {
+    if (is_mip) {
+      // Unboundedness LP has been solved, but that will give dual
+      // solution status kInfeasible which, for a MIP is not correct
+      this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
+      this->info_.invalidateDualKkt();
+    }
     // Restore the option values
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
     this->setOptionValue("allow_unbounded_or_infeasible",
                          allow_unbounded_or_infeasible);
     if (has_primal_ray) {
-      assert(this->info_.num_dual_infeasibilities > 0);
+      assert(is_mip || this->info_.num_dual_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kUnbounded);
     }
   }
@@ -2597,7 +2608,8 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                    primal_dual_errors, get_residuals);
   //  highsLogUser(options.log_options, HighsLogType::kInfo,
   //               "Highs::lpKktCheck: %s\n", message.c_str());
-  reportLpKktFailures(model_.lp_, options, info, "LP");
+  if (this->model_status_ == HighsModelStatus::kOptimal)
+    reportLpKktFailures(model_.lp_, options, info, "LP");
   // get_residuals is false when there is a valid basis, since
   // residual errors are assumed to be small, so
   // info.num_primal_residual_errors = -1, since they aren't
@@ -3306,11 +3318,11 @@ HighsStatus Highs::computeIllConditioning(
                      ss.str().c_str());
     }
   } else {
-    for (HighsInt iX = 0; iX < HighsInt(ill_conditioning.record.size()); iX++) {
+    for (const auto& rec : ill_conditioning.record) {
       ss.str(std::string());
       bool newline = false;
-      double multiplier = ill_conditioning.record[iX].multiplier;
-      HighsInt iCol = basic_var[ill_conditioning.record[iX].index];
+      double multiplier = rec.multiplier;
+      HighsInt iCol = basic_var[rec.index];
       if (iCol < incumbent_lp.num_col_) {
         std::string col_name = has_col_names ? incumbent_lp.col_names_[iCol]
                                              : "C" + std::to_string(iCol);
@@ -3936,7 +3948,12 @@ HighsStatus Highs::multiobjectiveSolve() {
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
                  multi_objective_log->str().c_str());
   }
-  this->clearSolver();
+  // Solving with a different objective, but don't call
+  // this->clearSolver() since this loses the current solution - that
+  // may have been provided by the user (#2419). Just clear the dual
+  // data.
+  //
+  this->clearSolverDualData();
   if (this->options_.blend_multi_objectives) {
     // Objectives are blended by weight and minimized
     lp.offset_ = 0;

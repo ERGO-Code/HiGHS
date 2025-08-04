@@ -527,7 +527,7 @@ void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
 
 void HighsSparseMatrix::getCol(const HighsInt iCol, HighsInt& num_nz,
                                HighsInt* index, double* value) const {
-  assert(iCol >= 0 && iCol < this->num_row_);
+  assert(iCol >= 0 && iCol < this->num_col_);
   num_nz = 0;
   if (this->isColwise()) {
     for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];

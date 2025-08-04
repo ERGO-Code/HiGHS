@@ -15,20 +15,18 @@ HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) const {
   if (lurkingColLower.empty()) return domchgs;
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
-    for (auto it = lurkingColLower[col].begin();
-         it != lurkingColLower[col].end(); ++it) {
-      if (it->second > mipsolver.mipdata_->domain.col_lower_[col])
+    for (const auto& lower : lurkingColLower[col]) {
+      if (lower.second > mipsolver.mipdata_->domain.col_lower_[col])
         domchgs.emplace_back(
-            it->first,
-            HighsDomainChange{(double)it->second, col, HighsBoundType::kLower});
+            lower.first, HighsDomainChange{static_cast<double>(lower.second),
+                                           col, HighsBoundType::kLower});
     }
 
-    for (auto it = lurkingColUpper[col].begin();
-         it != lurkingColUpper[col].end(); ++it) {
-      if (it->second < mipsolver.mipdata_->domain.col_upper_[col])
+    for (const auto& upper : lurkingColUpper[col]) {
+      if (upper.second < mipsolver.mipdata_->domain.col_upper_[col])
         domchgs.emplace_back(
-            it->first,
-            HighsDomainChange{(double)it->second, col, HighsBoundType::kUpper});
+            upper.first, HighsDomainChange{static_cast<double>(upper.second),
+                                           col, HighsBoundType::kUpper});
     }
   }
 

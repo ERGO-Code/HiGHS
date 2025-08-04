@@ -67,6 +67,13 @@ HighsStatus Highs::clearSolver() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::clearSolverDualData() {
+  HighsStatus return_status = HighsStatus::kOk;
+  clearDerivedModelProperties();
+  invalidateSolverDualData();
+  return returnFromHighs(return_status);
+}
+
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
@@ -708,8 +715,8 @@ HighsStatus Highs::readBasis(const std::string& filename) {
   HighsBasis read_basis = basis_;
   return_status = interpretCallStatus(
       options_.log_options,
-      readBasisFile(options_.log_options, read_basis, filename), return_status,
-      "readBasis");
+      readBasisFile(options_.log_options, model_.lp_, read_basis, filename),
+      return_status, "readBasis");
   if (return_status != HighsStatus::kOk) return return_status;
   // Basis read OK: check whether it's consistent with the LP
   if (!isBasisConsistent(model_.lp_, read_basis)) {
@@ -741,8 +748,16 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   HighsStatus call_status;
 
   HighsLp& lp = model.lp_;
+
   // Dimensions in a_matrix_ may not be set, so take them from lp
   lp.setMatrixDimensions();
+
+  // Replace any blank names and return error if there are duplicates
+  // or names with spaces
+  call_status = normaliseNames(this->options_.log_options, lp);
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "normaliseNames");
+  if (return_status == HighsStatus::kError) return return_status;
 
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -799,20 +814,27 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::writeBasis(const std::string& filename) const {
+HighsStatus Highs::writeBasis(const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
   HighsFileType file_type;
-  call_status = openWriteFile(filename, "writebasis", file, file_type);
+  call_status = openWriteFile(filename, "writeBasis", file, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  // Replace any blank names and return error if there are duplicates
+  // or names with spaces
+  call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "normaliseNames");
+  if (return_status == HighsStatus::kError) return return_status;
+
   // Report to user that basis is being written
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the basis to %s\n", filename.c_str());
-  writeBasisFile(file, basis_);
+  writeBasisFile(file, options_, model_.lp_, basis_);
   if (file != stdout) fclose(file);
   return return_status;
 }
@@ -2261,16 +2283,17 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 HighsStatus Highs::setSolution(const HighsInt num_entries,
                                const HighsInt* index, const double* value) {
   HighsStatus return_status = HighsStatus::kOk;
+  if (model_.lp_.num_col_ == 0) return return_status;
   // Warn about duplicates in index
   HighsInt num_duplicates = 0;
   std::vector<bool> is_set;
   is_set.assign(model_.lp_.num_col_, false);
   for (HighsInt iX = 0; iX < num_entries; iX++) {
     HighsInt iCol = index[iX];
-    if (iCol < 0 || iCol > model_.lp_.num_col_) {
+    if (iCol < 0 || iCol >= model_.lp_.num_col_) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "setSolution: User solution index %d has value %d out of "
-                   "range [0, %d)",
+                   "range [0, %d)\n",
                    int(iX), int(iCol), int(model_.lp_.num_col_));
       return HighsStatus::kError;
     } else if (value[iX] < model_.lp_.col_lower_[iCol] -
@@ -2280,7 +2303,7 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
                    value[iX]) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "setSolution: User solution value %d of %g is infeasible "
-                   "for bounds [%g, %g]",
+                   "for bounds [%g, %g]\n",
                    int(iX), value[iX], model_.lp_.col_lower_[iCol],
                    model_.lp_.col_upper_[iCol]);
       return HighsStatus::kError;
@@ -2328,9 +2351,10 @@ HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
                                       const HighsCallbackOutput* cb_out,
                                       HighsCallbackInput* cb_in, void* e) {
     HighsCallbackDataOut cc_out = static_cast<HighsCallbackDataOut>(*cb_out);
-    HighsCallbackDataIn cc_in = static_cast<HighsCallbackDataIn>(*cb_in);
+    HighsCallbackDataIn cc_in;
+    if (cb_in) cc_in = static_cast<HighsCallbackDataIn>(*cb_in);
     c_callback(a, b.c_str(), &cc_out, &cc_in, e);
-    *cb_in = cc_in;  // copy the data in
+    if (cb_in) *cb_in = cc_in;  // copy the data in
   };
   this->callback_.user_callback_data = user_callback_data;
 
@@ -3063,20 +3087,10 @@ HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
   HighsLp& lp = model_.lp_;
   if (!lp.col_names_.size()) return HighsStatus::kError;
   if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
-  auto search = lp.col_hash_.name2index.find(name);
-  if (search == lp.col_hash_.name2index.end()) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::getColByName: name %s is not found\n", name.c_str());
-    return HighsStatus::kError;
-  }
-  if (search->second == kHashIsDuplicate) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::getColByName: name %s is duplicated\n", name.c_str());
-    return HighsStatus::kError;
-  }
-  col = search->second;
-  assert(lp.col_names_[col] == name);
-  return HighsStatus::kOk;
+  std::string from_method = "Highs::getColByName";
+  const bool is_column = true;
+  return getIndexFromName(options_.log_options, from_method, is_column, name,
+                          lp.col_hash_.name2index, col, lp.col_names_);
 }
 
 HighsStatus Highs::getColIntegrality(const HighsInt col,
@@ -3178,20 +3192,10 @@ HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
   HighsLp& lp = model_.lp_;
   if (!lp.row_names_.size()) return HighsStatus::kError;
   if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
-  auto search = lp.row_hash_.name2index.find(name);
-  if (search == lp.row_hash_.name2index.end()) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::getRowByName: name %s is not found\n", name.c_str());
-    return HighsStatus::kError;
-  }
-  if (search->second == kHashIsDuplicate) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::getRowByName: name %s is duplicated\n", name.c_str());
-    return HighsStatus::kError;
-  }
-  row = search->second;
-  assert(lp.row_names_[row] == name);
-  return HighsStatus::kOk;
+  std::string from_method = "Highs::getRowByName";
+  const bool is_column = false;
+  return getIndexFromName(options_.log_options, from_method, is_column, name,
+                          lp.row_hash_.name2index, row, lp.row_names_);
 }
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
@@ -3360,6 +3364,13 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  // Replace any blank names and return error if there are duplicates
+  // or names with spaces
+  call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "normaliseNames");
+  if (return_status == HighsStatus::kError) return return_status;
+
   // Report to user that solution is being written
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -3370,7 +3381,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
     return returnFromWriteSolution(file, return_status);
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
-    writeBasisFile(file, basis_);
+    writeBasisFile(file, options_, model_.lp_, basis_);
   }
   if (options_.ranging == kHighsOnString) {
     if (model_.isMip() || model_.isQp()) {
@@ -3633,13 +3644,17 @@ void Highs::clearStandardFormLp() {
 }
 
 void Highs::invalidateSolverData() {
-  invalidateModelStatus();
+  invalidateSolverDualData();
   invalidateSolution();
   invalidateBasis();
-  invalidateRanging();
-  invalidateInfo();
   invalidateEkk();
   invalidateIis();
+}
+
+void Highs::invalidateSolverDualData() {
+  invalidateModelStatus();
+  invalidateRanging();
+  invalidateInfo();
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {

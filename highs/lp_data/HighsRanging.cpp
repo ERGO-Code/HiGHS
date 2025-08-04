@@ -610,8 +610,8 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
   }
   fprintf(file, "Valid\n");
   std::stringstream ss;
-  const bool have_col_names = lp.col_names_.size() > 0;
-  const bool have_row_names = lp.row_names_.size() > 0;
+  assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
   const bool pretty = style == kSolutionStylePretty;
   const char* pretty_cost_format =
       "%6d   %4s  %-10.4g %-10.4g            %-10.4g            %-10.4g "
@@ -640,10 +640,7 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
     fprintf(file, "\n# Cost ranging\n");
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    // Create a column name
-    ss.str(std::string());
-    ss << "C" << iCol;
-    const std::string name = have_col_names ? lp.col_names_[iCol] : ss.str();
+    const std::string name = lp.col_names_[iCol];
     if (pretty) {
       fprintf(file, pretty_cost_format, (int)iCol,
               statusToString(basis.col_status[iCol], lp.col_lower_[iCol],
@@ -675,10 +672,7 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
     fprintf(file, "\n# Bound ranging\n# Columns\n");
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    // Create a column name
-    ss.str(std::string());
-    ss << "C" << iCol;
-    const std::string name = have_col_names ? lp.col_names_[iCol] : ss.str();
+    const std::string name = lp.col_names_[iCol];
     if (pretty) {
       fprintf(file, pretty_bound_format, (int)iCol,
               statusToString(basis.col_status[iCol], lp.col_lower_[iCol],
@@ -712,10 +706,7 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
     fprintf(file, "# Rows\n");
   }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    // Create a row name
-    ss.str(std::string());
-    ss << "R" << iRow;
-    const std::string name = have_row_names ? lp.row_names_[iRow] : ss.str();
+    const std::string name = lp.row_names_[iRow];
     if (pretty) {
       fprintf(file, pretty_bound_format, (int)iRow,
               statusToString(basis.row_status[iRow], lp.row_lower_[iRow],

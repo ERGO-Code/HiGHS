@@ -202,12 +202,11 @@ testpaths = ["tests"]
 
 [tool.cibuildwheel]
 build = "*"
-skip = "cp3{6,7}-*"
+archs = ["auto64", "auto32"]
 
 # Enable free-threaded support
-free-threaded-support = true
+enable = ["cpython-freethreading"]
 
 test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
-test-skip = ["*universal2:arm64"]
 build-verbosity = 1
