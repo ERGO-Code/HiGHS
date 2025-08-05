@@ -2120,8 +2120,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
     dwork[iRow[cp]] = 0;
     HighsInt u_countX = t_start[cp];
     HighsInt u_startX = u_countX;
-    for (unsigned i = 0; i < iwork.size(); i++) {
-      HighsInt index = iwork[i];
+    for (HighsInt index : iwork) {
       double value = dwork[index];
       dwork[index] = 0;  // This effectively removes all duplication
       if (fabs(value) > kHighsTiny) {
@@ -2181,8 +2180,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
     // 7. Store BTRAN result to FT elimination, update logic helper
     dwork[iRow[cp]] = 0;
     double pivot_multiplier = -p_value[cp];
-    for (unsigned i = 0; i < iwork.size(); i++) {
-      HighsInt index = iwork[i];
+    for (HighsInt index : iwork) {
       double value = dwork[index];
       dwork[index] = 0;
       if (fabs(value) > kHighsTiny) {
