@@ -589,6 +589,15 @@ bool HighsTransformedLp::transformSNFRelaxation(
                               : lprelaxation.slackUpper(col - slackOffset));
   };
 
+  auto colIsBinary = [&](const HighsInt col, const double lb, const double ub) {
+    // Check local domain too. Global domain change may not yet be reflected
+    if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1 &&
+        lprelaxation.colLower(col) >= 0 && lprelaxation.colUpper(col) <= 1) {
+      return true;
+    }
+    return false;
+  };
+
   auto getLpSolution = [&](HighsInt col) {
     HighsInt numCols = lprelaxation.numCols();
     if (col < numCols) {
@@ -664,7 +673,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     HighsInt col = inds[i];
     double lb = getLb(col);
     double ub = getUb(col);
-    if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1) {
+    if (colIsBinary(col, lb, ub)) {
       numBinCols++;
       snfr.origBinColCoef[col] = vals[i];
       std::swap(inds[i], inds[numNz - numBinCols]);
@@ -684,7 +693,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     if (ub - lb < mip.options_mip_->small_matrix_value) {
       rhs -= std::min(lb, ub) * vals[i];
       tmpSnfrRhs -= std::min(lb, ub) * vals[i];
-      if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1) {
+      if (colIsBinary(col, lb, ub)) {
         snfr.origBinColCoef[col] = 0;
       }
       remove(i);
@@ -726,7 +735,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     }
 
     // Transform entry into the SNFR
-    if (lprelaxation.isColIntegral(col) && lb == 0 && ub == 1) {
+    if (colIsBinary(col, lb, ub)) {
       if (snfr.binColUsed[col] == false) {
         if (vals[i] >= 0) {
           addSNFRentry(col, -1, getLpSolution(col),
@@ -874,8 +883,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
 // Remove slack, small coefficients, and calculate the efficacy
 bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
-                                 std::vector<double>& vals,
-                                 double& rhs,
+                                 std::vector<double>& vals, double& rhs,
                                  double& efficacy) {
   HighsCDouble tmpRhs = rhs;
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
@@ -942,11 +950,11 @@ bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
   double sqrnorm = 0;
   const std::vector<double>& lpSolution = lprelaxation.getSolution().col_value;
   for (HighsInt i = 0; i != numNz; ++i) {
-    if (vals[i] >= 0 && lpSolution[i] <=
-        mip.mipdata_->domain.col_lower_[i] + mip.mipdata_->feastol)
+    if (vals[i] >= 0 && lpSolution[i] <= mip.mipdata_->domain.col_lower_[i] +
+                                             mip.mipdata_->feastol)
       continue;
-    if (vals[i] < 0 && lpSolution[i] >=
-        mip.mipdata_->domain.col_upper_[i] - mip.mipdata_->feastol)
+    if (vals[i] < 0 && lpSolution[i] >= mip.mipdata_->domain.col_upper_[i] -
+                                            mip.mipdata_->feastol)
       continue;
     viol += vals[i] * lpSolution[i];
     sqrnorm += vals[i] * vals[i];
