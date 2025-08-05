@@ -1476,7 +1476,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         HighsInt implicsDown = cliquetable.getNumImplications(i, 0);
         binaries.emplace_back(
             -std::min(int64_t{5000}, int64_t(implicsUp) * implicsDown) /
-                (1.0 + numProbes[i]),
+                (int64_t{1} + static_cast<int64_t>(numProbes[i])),
             -std::min(HighsInt{100}, implicsUp + implicsDown), random.integer(),
             i);
       }

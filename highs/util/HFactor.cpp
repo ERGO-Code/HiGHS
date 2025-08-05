@@ -2091,7 +2091,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
   t_start[0] = u_index.size();
 
   // Logically sorted previous row_ep
-  vector<pair<HighsInt, int> > sorted_pp;
+  vector<pair<HighsInt, HighsInt>> sorted_pp;
 
   // Major update loop
   for (HighsInt cp = 0; cp < num_update; cp++) {
