@@ -3369,7 +3369,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           // performed in HPresolve::addToMatrix).
           for (HighsInt rowiter : rowpositions) {
             HighsInt col = Acol[rowiter];
-            double coef = Avalue[rowiter];
             assert(Arow[rowiter] == row);
 
             // skip binary column
@@ -3422,11 +3421,12 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             // nonzCol = colLb + (colUb - colLb)(binCol - binLb)
             // nonzCol =
             //    colLb - binLb*(colUb - colLb) + (colUb - colLb)*binCol
-            remDoubletonEq(col, binCol,
-                           std::signbit(binCoef) == std::signbit(coef)
-                               ? HighsInt{1}
-                               : HighsInt{-1},
-                           col_lower, col_upper);
+            remDoubletonEq(
+                col, binCol,
+                std::signbit(binCoef) == std::signbit(Avalue[rowiter])
+                    ? HighsInt{1}
+                    : HighsInt{-1},
+                col_lower, col_upper);
           }
 
           removeRow(row);
