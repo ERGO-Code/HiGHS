@@ -40,7 +40,7 @@ message("Found Metis library at ${METIS_LIB}")
 
 # GKlib
 option(GKLIB_ROOT "Root directory of GKlib" "")
-message(STATUS "GKlib_ROOT is " ${GKLIB_ROOT})
+message(STATUS "GKLIB_ROOT is " ${GKLIB_ROOT})
 
 find_path(GKLIB_PATH 
     NAMES "GKlib.h" REQUIRED
