@@ -798,7 +798,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
       switch (boundTypes[col]) {
         case BoundType::kSimpleLb:
           substsolval = static_cast<double>(
-              vals[i] * (HighsCDouble(lpSolution.col_value[col]) - ub));
+              vals[i] * (HighsCDouble(getLpSolution(col)) - ub));
           vbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * ub);
           if (vals[i] >= 0) {
@@ -812,7 +812,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           break;
         case BoundType::kSimpleUb:
           substsolval = static_cast<double>(
-              vals[i] * (HighsCDouble(lpSolution.col_value[col]) - lb));
+              vals[i] * (HighsCDouble(getLpSolution(col)) - lb));
           vbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * lb);
           if (vals[i] >= 0) {
@@ -827,7 +827,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
         case BoundType::kVariableLb:
           vbcol = bestVlb[col].first;
           substsolval = static_cast<double>(
-              vals[i] * (HighsCDouble(lpSolution.col_value[col]) -
+              vals[i] * (HighsCDouble(getLpSolution(col)) -
                          bestVlb[col].second.constant) +
               (HighsCDouble(lpSolution.col_value[vbcol]) *
                snfr.origBinColCoef[vbcol]));
@@ -850,7 +850,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
         case BoundType::kVariableUb:
           vbcol = bestVub[col].first;
           substsolval = static_cast<double>(
-              vals[i] * (HighsCDouble(lpSolution.col_value[col]) -
+              vals[i] * (HighsCDouble(getLpSolution(col)) -
                          bestVub[col].second.constant) +
               (HighsCDouble(lpSolution.col_value[vbcol]) *
                snfr.origBinColCoef[vbcol]));
@@ -950,13 +950,15 @@ bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
   double sqrnorm = 0;
   const std::vector<double>& lpSolution = lprelaxation.getSolution().col_value;
   for (HighsInt i = 0; i != numNz; ++i) {
-    if (vals[i] >= 0 && lpSolution[i] <= mip.mipdata_->domain.col_lower_[i] +
-                                             mip.mipdata_->feastol)
+    HighsInt col = inds[i];
+    if (vals[i] >= 0 &&
+        lpSolution[col] <=
+            mip.mipdata_->domain.col_lower_[col] + mip.mipdata_->feastol)
       continue;
-    if (vals[i] < 0 && lpSolution[i] >= mip.mipdata_->domain.col_upper_[i] -
-                                            mip.mipdata_->feastol)
+    if (vals[i] < 0 && lpSolution[col] >= mip.mipdata_->domain.col_upper_[col] -
+                                              mip.mipdata_->feastol)
       continue;
-    viol += vals[i] * lpSolution[i];
+    viol += vals[i] * lpSolution[col];
     sqrnorm += vals[i] * vals[i];
   }
   if (sqrnorm == 0) {

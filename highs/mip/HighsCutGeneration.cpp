@@ -575,6 +575,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
       break;
     }
   }
+  ld.t++;
 
   auto getAlphaBeta = [&](double vubcoef) {
     HighsInt alpha;
