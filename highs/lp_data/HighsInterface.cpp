@@ -513,7 +513,7 @@ HighsStatus Highs::addColsInterface(
   // Update the basis corresponding to new nonbasic columns
   if (useful_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
 
-  // Possibly add column names
+  // Possibly add blank column names
   lp.addColNames("", ext_num_new_col);
 
   // Increase the number of columns in the LP
@@ -658,7 +658,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // Update the basis corresponding to new basic rows
   if (useful_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
-  // Possibly add row names
+  // Possibly add blank row names
   lp.addRowNames("", ext_num_new_row);
 
   // Increase the number of rows in the LP

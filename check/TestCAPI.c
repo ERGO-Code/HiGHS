@@ -617,7 +617,6 @@ void fullApi() {
 
   // Define all column names to be different
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    const char suffix = iCol + '0';
     char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", col_prefix, iCol);
     const char* name_p = name;
@@ -650,7 +649,6 @@ void fullApi() {
 
   // Define all row names to be different
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    const char suffix = iRow + '0';
     char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", row_prefix, iRow);
     const char* name_p = name;

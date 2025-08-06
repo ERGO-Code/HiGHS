@@ -185,8 +185,8 @@ class HMpsFF {
   std::vector<ConeType> cone_type;
   std::vector<double> cone_param;
   std::vector<std::vector<HighsInt>> cone_entries;
-  std::unordered_map<std::string, int> rowname2idx;
-  std::unordered_map<std::string, int> colname2idx;
+  std::unordered_map<std::string, HighsInt> rowname2idx;
+  std::unordered_map<std::string, HighsInt> colname2idx;
 
   mutable std::string section_args;
 
