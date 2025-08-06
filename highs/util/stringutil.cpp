@@ -9,6 +9,7 @@
 
 #include <algorithm>  // for std::transform
 #include <cassert>
+#include <cctype>
 
 /*
 void strRemoveWhitespace(char* str) {

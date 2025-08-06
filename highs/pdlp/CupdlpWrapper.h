@@ -79,6 +79,12 @@ cupdlp_retcode data_alloc(CUPDLPdata* data, cupdlp_int nRows, cupdlp_int nCols,
 
 double infNorm(double* x, cupdlp_int n);
 
+void cupdlp_hasLower(cupdlp_float* haslb, const cupdlp_float* lb,
+                     const cupdlp_float bound, const cupdlp_int len);
+
+void cupdlp_hasUpper(cupdlp_float* hasub, const cupdlp_float* ub,
+                     const cupdlp_float bound, const cupdlp_int len);
+
 void cupdlp_haslb(cupdlp_float* haslb, const cupdlp_float* lb,
                   const cupdlp_float bound, const cupdlp_int len);
 
@@ -92,12 +98,12 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
                           HighsSolution& highs_solution,
                           HighsModelStatus& model_status, HighsInfo& highs_info,
                           HighsCallback& callback);
-int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
-                      int* nnz, int* nEqs, int** csc_beg, int** csc_idx,
-                      double** csc_val, double** rhs, double** lower,
-                      double** upper, double* offset, double* sign_origin,
-                      int* nCols_origin, int** constraint_new_idx,
-                      int** constraint_type);
+int formulateLP_highs(const cupdlp_int local_log_level, const HighsLp& lp,
+                      double** cost, int* nCols, int* nRows, int* nnz,
+                      int* nEqs, int** csc_beg, int** csc_idx, double** csc_val,
+                      double** rhs, double** lower, double** upper,
+                      double* offset, double* sign_origin, int* nCols_origin,
+                      int** constraint_new_idx, int** constraint_type);
 
 cupdlp_int getCupdlpLogLevel(const HighsOptions& options);
 

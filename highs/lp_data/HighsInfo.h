@@ -110,8 +110,21 @@ struct HighsInfoStruct {
   HighsInt num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
+  HighsInt num_relative_primal_infeasibilities;
+  double max_relative_primal_infeasibility;
+  HighsInt num_relative_dual_infeasibilities;
+  double max_relative_dual_infeasibility;
+  HighsInt num_primal_residual_errors;
+  double max_primal_residual_error;
+  HighsInt num_dual_residual_errors;
+  double max_dual_residual_error;
+  HighsInt num_relative_primal_residual_errors;
+  double max_relative_primal_residual_error;
+  HighsInt num_relative_dual_residual_errors;
+  double max_relative_dual_residual_error;
+  HighsInt num_complementarity_violations;
   double max_complementarity_violation;
-  double sum_complementarity_violations;
+  double primal_dual_objective_error;
   double primal_dual_integral;
 };
 
@@ -150,10 +163,13 @@ class HighsInfo : public HighsInfoStruct {
   }
 
   void invalidate();
+  void invalidateKkt();
+  void invalidatePrimalKkt();
+  void invalidateDualKkt();
 
  private:
   void deleteRecords() {
-    for (size_t i = 0; i < records.size(); i++) delete records[i];
+    for (auto record : records) delete record;
   }
 
   void initRecords() {
@@ -262,14 +278,88 @@ class HighsInfo : public HighsInfoStruct {
         &sum_dual_infeasibilities, 0);
     records.push_back(record_double);
 
+    record_int =
+        new InfoRecordInt("num_relative_primal_infeasibilities",
+                          "Number of relative primal infeasibilities", advanced,
+                          &num_relative_primal_infeasibilities, -1);
+    records.push_back(record_int);
+
+    record_double =
+        new InfoRecordDouble("max_relative_primal_infeasibility",
+                             "Maximum relative primal infeasibility", advanced,
+                             &max_relative_primal_infeasibility, 0);
+    records.push_back(record_double);
+
+    record_int =
+        new InfoRecordInt("num_relative_dual_infeasibilities",
+                          "Number of relative dual infeasibilities", advanced,
+                          &num_relative_dual_infeasibilities, -1);
+    records.push_back(record_int);
+
+    record_double =
+        new InfoRecordDouble("max_relative_dual_infeasibility",
+                             "Maximum relative dual infeasibility", advanced,
+                             &max_relative_dual_infeasibility, 0);
+    records.push_back(record_double);
+
+    record_int = new InfoRecordInt("num_primal_residual_errors",
+                                   "Number of primal residual errors", advanced,
+                                   &num_primal_residual_errors, -1);
+    records.push_back(record_int);
+
+    record_double = new InfoRecordDouble(
+        "max_primal_residual_error", "Maximum primal residual error", advanced,
+        &max_primal_residual_error, 0);
+    records.push_back(record_double);
+
+    record_int = new InfoRecordInt("num_dual_residual_errors",
+                                   "Number of dual residual errors", advanced,
+                                   &num_dual_residual_errors, -1);
+    records.push_back(record_int);
+
+    record_double = new InfoRecordDouble("max_dual_residual_error",
+                                         "Maximum dual residual error",
+                                         advanced, &max_dual_residual_error, 0);
+    records.push_back(record_double);
+
+    record_int =
+        new InfoRecordInt("num_relative_primal_residual_errors",
+                          "Number of relative primal residual errors", advanced,
+                          &num_relative_primal_residual_errors, -1);
+    records.push_back(record_int);
+
+    record_double =
+        new InfoRecordDouble("max_relative_primal_residual_error",
+                             "Maximum relative primal residual error", advanced,
+                             &max_relative_primal_residual_error, 0);
+    records.push_back(record_double);
+
+    record_int =
+        new InfoRecordInt("num_relative_dual_residual_errors",
+                          "Number of relative dual residual errors", advanced,
+                          &num_relative_dual_residual_errors, -1);
+    records.push_back(record_int);
+
+    record_double =
+        new InfoRecordDouble("max_relative_dual_residual_error",
+                             "Maximum relative dual residual error", advanced,
+                             &max_relative_dual_residual_error, 0);
+    records.push_back(record_double);
+
+    record_int =
+        new InfoRecordInt("num_complementarity_violations",
+                          "Number of complementarity violations", advanced,
+                          &num_complementarity_violations, -1);
+    records.push_back(record_int);
+
     record_double = new InfoRecordDouble(
         "max_complementarity_violation", "Max complementarity violation",
         advanced, &max_complementarity_violation, 0);
     records.push_back(record_double);
 
     record_double = new InfoRecordDouble(
-        "sum_complementarity_violations", "Sum of complementarity violations",
-        advanced, &sum_complementarity_violations, 0);
+        "primal_dual_objective_error", "Primal-dual objective error", advanced,
+        &primal_dual_objective_error, 0);
     records.push_back(record_double);
 
     record_double =

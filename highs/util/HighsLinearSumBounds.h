@@ -102,41 +102,36 @@ class HighsLinearSumBounds {
   double getResidualSumUpperOrig(HighsInt sum, HighsInt var,
                                  double coefficient) const;
 
-  double getSumLowerOrig(HighsInt sum) const {
-    return numInfSumLowerOrig[sum] == 0 ? double(sumLowerOrig[sum])
-                                        : -kHighsInf;
+  template <typename T = double>
+  double getSumLowerOrig(HighsInt sum, T offset = T()) const {
+    return numInfSumLowerOrig[sum] == 0
+               ? static_cast<double>(sumLowerOrig[sum] +
+                                     static_cast<HighsCDouble>(offset))
+               : -kHighsInf;
   }
 
-  double getSumUpperOrig(HighsInt sum) const {
-    return numInfSumUpperOrig[sum] == 0 ? double(sumUpperOrig[sum]) : kHighsInf;
+  template <typename T = double>
+  double getSumUpperOrig(HighsInt sum, T offset = T()) const {
+    return numInfSumUpperOrig[sum] == 0
+               ? static_cast<double>(sumUpperOrig[sum] +
+                                     static_cast<HighsCDouble>(offset))
+               : kHighsInf;
   }
 
-  double getSumLower(HighsInt sum) const {
-    return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -kHighsInf;
+  template <typename T = double>
+  double getSumLower(HighsInt sum, T offset = T()) const {
+    return numInfSumLower[sum] == 0
+               ? static_cast<double>(sumLower[sum] +
+                                     static_cast<HighsCDouble>(offset))
+               : -kHighsInf;
   }
 
-  double getSumUpper(HighsInt sum) const {
-    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum]) : kHighsInf;
-  }
-
-  double getSumLower(HighsInt sum, double offset) const {
-    return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
-                                    : -kHighsInf;
-  }
-
-  double getSumUpper(HighsInt sum, double offset) const {
-    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
-                                    : kHighsInf;
-  }
-
-  double getSumLower(HighsInt sum, HighsCDouble offset) const {
-    return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
-                                    : -kHighsInf;
-  }
-
-  double getSumUpper(HighsInt sum, HighsCDouble offset) const {
-    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
-                                    : kHighsInf;
+  template <typename T = double>
+  double getSumUpper(HighsInt sum, T offset = T()) const {
+    return numInfSumUpper[sum] == 0
+               ? static_cast<double>(sumUpper[sum] +
+                                     static_cast<HighsCDouble>(offset))
+               : kHighsInf;
   }
 
   HighsInt getNumInfSumLower(HighsInt sum) const { return numInfSumLower[sum]; }
@@ -152,6 +147,40 @@ class HighsLinearSumBounds {
   }
 
   void shrink(const std::vector<HighsInt>& newIndices, HighsInt newSize);
+
+  double getImplVarUpper(HighsInt sum, HighsInt var) const;
+
+  double getImplVarLower(HighsInt sum, HighsInt var) const;
+
+ private:
+  double getImplVarUpper(HighsInt sum, double myVarUpper, double myImplVarUpper,
+                         HighsInt myImplVarUpperSource) const;
+
+  double getImplVarLower(HighsInt sum, double myVarLower, double myImplVarLower,
+                         HighsInt myImplVarLowerSource) const;
+
+  void update(HighsInt& numInf, HighsCDouble& sum, bool isBoundFinite,
+              HighsInt direction, double bound, double coefficient);
+
+  void handleVarUpper(HighsInt sum, double coefficient, double myVarUpper,
+                      HighsInt direction);
+
+  void handleVarLower(HighsInt sum, double coefficient, double myVarLower,
+                      HighsInt direction);
+
+  void handleImplVarUpper(HighsInt sum, double coefficient,
+                          double myImplVarUpper, HighsInt direction);
+
+  void handleImplVarLower(HighsInt sum, double coefficient,
+                          double myImplVarLower, HighsInt direction);
+
+  void updatedImplVarUpper(HighsInt sum, HighsInt var, double coefficient,
+                           double oldVarUpper, double oldImplVarUpper,
+                           HighsInt oldImplVarUpperSource);
+
+  void updatedImplVarLower(HighsInt sum, HighsInt var, double coefficient,
+                           double oldVarLower, double oldImplVarLower,
+                           HighsInt oldImplVarLowerSource);
 };
 
 #endif

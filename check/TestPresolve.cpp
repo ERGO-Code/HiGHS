@@ -320,6 +320,7 @@ HighsStatus colSingDoubletonEquality() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -378,6 +379,7 @@ HighsStatus colSingDoubletonInequality() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -417,6 +419,7 @@ HighsStatus twoColSingDoubletonEquality() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -457,6 +460,7 @@ HighsStatus twoColSingDoubletonInequality() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -546,6 +550,7 @@ HighsStatus issue425() {
   status = highs.run();
 
   highs.resetGlobalScheduler(true);
+
   return status;
 }
 
@@ -697,4 +702,25 @@ TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {
   highs.setOptionValue("mip_lifting_for_probing", 1);
   highs.readModel(model_file);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
+}
+
+TEST_CASE("presolve-issue-2388", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2388.lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() ==
+          HighsPresolveStatus::kReducedToEmpty);
+}
+
+TEST_CASE("presolve-issue-2402", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2402.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
 }

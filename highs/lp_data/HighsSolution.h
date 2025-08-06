@@ -27,6 +27,8 @@ class HighsOptions;
 
 using std::string;
 
+// Collecting absolute and relative errors, and the corresponding
+// indices is required for Glpsol output
 struct HighsError {
   double absolute_value;
   HighsInt absolute_index;
@@ -37,22 +39,23 @@ struct HighsError {
   void invalidate();
 };
 
+// These are values used for HighsSolutionDebug, or for Glpsol output,
+// so not worthy of being in HighsInfo
 struct HighsPrimalDualErrors {
   HighsInt num_nonzero_basic_duals;
-  HighsInt num_large_nonzero_basic_duals;
   double max_nonzero_basic_dual;
   double sum_nonzero_basic_duals;
   HighsInt num_off_bound_nonbasic;
   double max_off_bound_nonbasic;
   double sum_off_bound_nonbasic;
-  HighsInt num_primal_residual;
-  double sum_primal_residual;
-  HighsInt num_dual_residual;
-  double sum_dual_residual;
-  HighsError max_primal_residual;
-  HighsError max_primal_infeasibility;
-  HighsError max_dual_residual;
-  HighsError max_dual_infeasibility;
+  HighsInt glpsol_num_primal_residual_errors;
+  double glpsol_sum_primal_residual_errors;
+  HighsInt glpsol_num_dual_residual_errors;
+  double glpsol_sum_dual_residual_errors;
+  HighsError glpsol_max_primal_residual;
+  HighsError glpsol_max_primal_infeasibility;
+  HighsError glpsol_max_dual_residual;
+  HighsError glpsol_max_dual_infeasibility;
 };
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
@@ -75,29 +78,42 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals = false);
 
-void getKktFailures(const HighsOptions& options, const HighsLp& lp,
-                    const std::vector<double>& gradient,
-                    const HighsSolution& solution, const HighsBasis& basis,
-                    HighsInfo& highs_info,
-                    HighsPrimalDualErrors& primal_dual_errors,
+void getKktFailures(const HighsOptions& options, const bool is_qp,
+                    const HighsLp& lp, const std::vector<double>& gradient,
+                    const HighsSolution& solution, HighsInfo& highs_info,
                     const bool get_residuals = false);
 
-bool getVariableKktFailures(const double primal_feasibility_tolerance,
+void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
-                            const HighsBasisStatus* status_pointer,
                             const HighsVarType integrality,
-                            double& absolute_primal_infeasibility,
-                            double& relative_primal_infeasibility,
-                            double& dual_infeasibility, double& value_residual);
+                            double& primal_infeasibility,
+                            double& dual_infeasibility, uint8_t& at_status,
+                            uint8_t& mid_status);
+
+void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
+                               const std::vector<double>& gradient,
+                               const HighsSolution& solution,
+                               HighsPrimalDualErrors& primal_dual_errors);
+
+void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
+                              const HighsSolution& solution,
+                              const HighsBasis& basis,
+                              HighsPrimalDualErrors& primal_dual_errors);
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
-                                  double& max_complementarity_violation,
-                                  double& sum_complementarity_violations);
+                                  const double optimality_tolerance,
+                                  HighsInt& num_complementarity_violations,
+                                  double& max_complementarity_violation);
 
-bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
+bool computeDualObjectiveValue(const HighsModel& model,
+                               const HighsSolution& solution,
+                               double& dual_objective_value);
+
+bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
+                               const HighsSolution& solution,
                                double& dual_objective_value);
 
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);
@@ -111,8 +127,7 @@ HighsStatus ipxSolutionToHighsSolution(
     const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
     const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
-    const std::vector<double>& ipx_zu, const HighsModelStatus model_status,
-    HighsSolution& highs_solution);
+    const std::vector<double>& ipx_zu, HighsSolution& highs_solution);
 
 HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const HighsLogOptions& log_options, const HighsLp& lp,
@@ -128,8 +143,6 @@ HighsStatus formSimplexLpBasisAndFactor(
 
 void accommodateAlienBasis(HighsLpSolverObject& solver_object);
 
-void correctResiduals(HighsLpSolverObject& solver_object);
-
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object);
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
                                   HighsInfo& highs_info);
@@ -140,5 +153,9 @@ bool isPrimalSolutionRightSize(const HighsLp& lp,
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
+
+void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
+                         const HighsInfo& highs_info,
+                         const std::string& solver = "");
 
 #endif  // LP_DATA_HIGHSSOLUTION_H_

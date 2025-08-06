@@ -98,10 +98,19 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
     }
 
     if (test_garbage_lp) {
+      // Since #2316, reading an LP file of garbage yields an empty
+      // model, since the absence of an objecive is (rightly) no
+      // longer an error. However the LP file reader should fail due
+      // to the requirement that a LP format file must begin with a
+      // keyword.
       if (dev_run) printf("\ngarbage.lp\n");
       model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
       read_status = highs.readModel(model_file);
-      REQUIRE(read_status == HighsStatus::kError);
+      // Should be HighsStatus::kError); #2316
+      REQUIRE(read_status == HighsStatus::kOk);
+      REQUIRE(highs.getLp().num_col_ == 0);
+      REQUIRE(highs.getLp().num_row_ == 0);
+      REQUIRE(highs.getLp().a_matrix_.numNz() == 0);
     }
   }
 
@@ -110,7 +119,8 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   if (dev_run) printf("\n%s.mps\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::kError);
+  // Should be HighsStatus::kError); #2316
+  REQUIRE(read_status == HighsStatus::kOk);
 
   // Gurobi cannot read
   //
@@ -372,7 +382,7 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
   h.setOptionValue("output_flag", dev_run);
   HighsModel model;
   HighsLp& lp = model.lp_;
-  ;
+
   lp.num_col_ = 2;
   lp.num_row_ = 3;
   lp.col_cost_ = {8, 10};
@@ -393,7 +403,7 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
   // Model has no dimensions for a_matrix_, but these are set in
   // writeLocalModel.
   if (dev_run) printf("\nModel with no column or row names\n");
-  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kWarning);
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kOk);
   lp.col_names_ = {"C0", "C1"};
   lp.row_names_ = {"R0", "R1", "R2"};
 
@@ -466,4 +476,120 @@ TEST_CASE("mps-silly-names", "[highs_filereader]") {
   h.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kOk);
+}
+
+TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {7, 12};
+  lp.row_upper_ = {inf, inf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 2, 4};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  // Names will be created when writing the solution
+  REQUIRE(h.writeSolution("", 1) == HighsStatus::kWarning);
+  REQUIRE(h.writeModel("") == HighsStatus::kOk);
+
+  lp.col_names_ = {"Column", "Column"};
+  lp.row_names_ = {"Row0", "Row1"};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.writeModel("") == HighsStatus::kError);
+
+  lp.col_names_ = {"Column0", ""};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.writeSolution("", kSolutionStyleOldRaw) == HighsStatus::kWarning);
+  REQUIRE(h.writeModel("") == HighsStatus::kOk);
+
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {2, 3};
+  REQUIRE(h.addRow(5, inf, 2, index.data(), value.data()) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.writeBasis("") == HighsStatus::kWarning);
+  REQUIRE(h.writeSolution("", kSolutionStylePretty) == HighsStatus::kOk);
+  REQUIRE(h.writeModel("") == HighsStatus::kOk);
+
+  lp.row_names_[1] = "Row 1";
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.writeSolution("", 1) == HighsStatus::kError);
+  REQUIRE(h.writeModel("") == HighsStatus::kError);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("read-highs-lp-file0", "[highs_filereader]") {
+  // Identified when fixing #2463 that LP file reader cannot handle
+  // case where row names are numeric constants
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string model_file_name0 = test_name + "-0.lp";
+  const std::string model_file_name1 = test_name + "-1.lp";
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {8};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {inf};
+  lp.row_lower_ = {-21, 31, 43};
+  lp.row_upper_ = {inf, inf, inf};
+  lp.a_matrix_.start_ = {0, 3};
+  lp.a_matrix_.index_ = {0, 1, 2};
+  lp.a_matrix_.value_ = {2, -3, 7};
+  lp.col_names_ = {"col"};
+  lp.row_names_ = {"row", "55", "9.9"};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  // Create a .lp file for this model - that has numeric constants as
+  // row names
+  REQUIRE(h.writeModel(model_file_name0) == HighsStatus::kOk);
+  // Make sure that the .lp file for this model can be read OK
+  REQUIRE(h.readModel(model_file_name0) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_file_name1) == HighsStatus::kOk);
+
+  std::remove(model_file_name0.c_str());
+  std::remove(model_file_name1.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("read-highs-lp-file1", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+  std::string model_file_name = test_name + ".lp";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_file_name) == HighsStatus::kOk);
+  REQUIRE(h.readModel(model_file_name) == HighsStatus::kOk);
+
+  std::remove(model_file_name.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string lp_file = test_name + ".lp";
+  FILE* file = fopen(lp_file.c_str(), "w");
+  std::string file_content =
+      "Minimize\n obj: 2 x + y + z\nSubject To\nr0: 2 x + y - x + 0 z >= "
+      "2\nr1: y + x - y >= 1\nEnd\n";
+  if (dev_run) printf("Using .lp file\n%s", file_content.c_str());
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(lp_file) == HighsStatus::kWarning);
+
+  std::remove(lp_file.c_str());
 }

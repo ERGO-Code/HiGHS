@@ -45,6 +45,7 @@ class HighsTimer {
     num_clock = 0;
     HighsInt i_clock = clock_def("Run HiGHS");
     assert(i_clock == 0);
+    (void)i_clock;
 
     presolve_clock = clock_def("Presolve");
     solve_clock = clock_def("Solve");
@@ -102,6 +103,7 @@ class HighsTimer {
     this->clock_names.clear();
     HighsInt i_clock = clock_def("Run HiGHS");
     assert(i_clock == 0);
+    (void)i_clock;
     this->presolve_clock = clock_def("Presolve");
     this->solve_clock = clock_def("Solve");
     this->postsolve_clock = clock_def("Postsolve");
@@ -214,7 +216,7 @@ class HighsTimer {
    * @brief Return whether a clock is running
    */
   bool running(const HighsInt i_clock = 0  //!< Index of the clock to be read
-  ) {
+  ) const {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
@@ -230,7 +232,7 @@ class HighsTimer {
    */
   HighsInt numCall(
       const HighsInt i_clock = 0  //!< Index of the clock to be read
-  ) {
+  ) const {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     return clock_num_call[i_clock];
@@ -243,7 +245,7 @@ class HighsTimer {
                                        //!< output using grep
               std::vector<HighsInt>& clock_list,  //!< List of indices to report
               double ideal_sum_time = 0  //!< Ideal value for times to sum to
-  ) {
+  ) const {
     const double tolerance_percent_report = 1.0;
     return reportOnTolerance(grep_stamp, clock_list, ideal_sum_time,
                              tolerance_percent_report);
@@ -257,7 +259,7 @@ class HighsTimer {
       double tolerance_percent_report =
           0  //!< Lower bound on percentage of total time
              //!< before an individual clock is reported
-  ) {
+  ) const {
     size_t num_clock_list_entries = clock_list.size();
     double current_run_highs_time = read();
     bool non_null_report = false;

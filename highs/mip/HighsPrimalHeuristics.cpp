@@ -1107,7 +1107,7 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
 
   while ((current_fractional_integers.size() > 0 || hasInfeasibleConstraints) &&
          iterationsWithoutReductions <= maxIterationsWithoutReductions &&
-         t <= mipsolver.mipdata_->integer_cols.size()) {
+         t <= static_cast<HighsInt>(mipsolver.mipdata_->integer_cols.size())) {
     t++;
     bool fractionalIntegersReduced = false;
     iterationsWithoutReductions++;
@@ -1117,7 +1117,7 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
       bool fractionalIntegerFound = false;
       HighsInt rIndex = 0;
       while (!fractionalIntegerFound &&
-             rIndex != current_infeasible_rows.size()) {
+             rIndex != static_cast<HighsInt>(current_infeasible_rows.size())) {
         HighsInt r = std::get<0>(current_infeasible_rows[rIndex]);
         HighsInt start = mipsolver.mipdata_->ARstart_[r];
         HighsInt end = mipsolver.mipdata_->ARstart_[r + 1];
@@ -1152,7 +1152,7 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
         if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
 
         // lambda for finding best shift
-        auto repair = [this, &findPairByIndex, &current_fractional_integers,
+        auto repair = [&findPairByIndex, &current_fractional_integers,
                        &findShiftsByIndex, &shift_iterations_set, &t,
                        &score_min, &j_min, &aij_min, &x_j_min,
                        &current_relax_solution, &moveValueUp](
@@ -1181,9 +1181,9 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
               score = direction * (isMaximization ? -cost : cost);
             else {
               score = 0.0;
-              for (size_t s = 0; s != shifts.size(); ++s) {
-                if (direction * shifts[s] > 0)
-                  score += pow(1.1, direction * shifts[s] - t);
+              for (double shift : shifts) {
+                if (direction * shift > 0)
+                  score += pow(1.1, direction * shift - t);
               }
             }
             if (isInteger) score += 1;
@@ -1266,14 +1266,16 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
       HighsInt j_min = std::numeric_limits<HighsInt>::max();
       double x_j_min = kHighsInf;
       HighsInt sigma = 0;
-      for (HighsInt i = 0; i != current_fractional_integers.size(); ++i) {
+      for (HighsInt i = 0;
+           i != static_cast<HighsInt>(current_fractional_integers.size());
+           ++i) {
         std::pair<HighsInt, double> it = current_fractional_integers[i];
         HighsInt col = it.first;
         assert(col >= 0);
         assert(col < mipsolver.numCol());
 
-        auto isBetter = [this, &currentLp, &it, &xi_max, &delta_c_min,
-                         &pind_j_min, &j_min, &x_j_min, &sigma,
+        auto isBetter = [&currentLp, &it, &xi_max, &delta_c_min, &pind_j_min,
+                         &j_min, &x_j_min, &sigma,
                          &i](double col, double xi, double roundedval,
                              HighsInt direction) {
           double c_min = currentLp.col_cost_[col] * (roundedval - it.second);

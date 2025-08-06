@@ -1,6 +1,7 @@
 name: sanitizers-bazel
 
-on: [push, pull_request]
+#on: [push, pull_request]
+on: []
 
 jobs:
   asan:

@@ -7,6 +7,9 @@
 #include <random>
 #include <vector>
 
+#include "io/HighsIO.h"
+#include "lp_data/HConst.h"
+
 #define FJ_LOG_PREFIX "Feasibility Jump: "
 
 // TIP: clang-format the reference feasibilityjump.hh before diffing with this
@@ -34,7 +37,7 @@ struct FJStatus {
 };
 
 // Measures if two doubles are equal within a tolerance
-bool eq(double a, double b, double tol) { return fabs(a - b) < tol; }
+static bool eq(double a, double b, double tol) { return fabs(a - b) < tol; }
 
 struct IdxCoeff {
   uint32_t idx;
@@ -286,7 +289,7 @@ class Problem {
   }
 };
 
-void modifyMove(LhsModification mod, Problem& problem, Move& move) {
+static void modifyMove(LhsModification mod, Problem& problem, Move& move) {
   Constraint& c = problem.constraints[mod.constraintIdx];
   auto incumbent = problem.incumbentAssignment[mod.varIdx];
   double oldModifiedLhs = mod.oldLhs + mod.coeff * (move.value - incumbent);
@@ -424,7 +427,6 @@ class JumpMove {
 };
 
 class FeasibilityJumpSolver {
-  int verbosity;
   Problem problem;
   JumpMove jumpMove;
 
@@ -465,14 +467,16 @@ class FeasibilityJumpSolver {
   const size_t kMinEffortToLogging = 500 * kLoggingFrequency;
   const double kMinRelativeObjectiveImprovement = 1e-4;
 
+  const HighsLogOptions& logOptions;
+
  public:
-  FeasibilityJumpSolver(int seed = 0, int _verbosity = 0,
-                        double _weightUpdateDecay = 1.0,
+  FeasibilityJumpSolver(const HighsLogOptions& _logOptions, int seed = 0,
                         double equalityTolerance = 1e-5,
-                        double violationTolerance = 1e-5)
+                        double violationTolerance = 1e-5,
+                        double _weightUpdateDecay = 1.0)
       : problem(equalityTolerance, violationTolerance),
-        jumpMove(equalityTolerance) {
-    verbosity = _verbosity;
+        jumpMove(equalityTolerance),
+        logOptions(_logOptions) {
     weightUpdateDecay = _weightUpdateDecay;
     rng = std::mt19937(seed);
   }
@@ -491,10 +495,10 @@ class FeasibilityJumpSolver {
   int solve(double* initialValues,
             std::function<CallbackControlFlow(FJStatus)> callback) {
     assert(callback);
-    if (verbosity >= 1)
-      printf(FJ_LOG_PREFIX
-             "starting solve. weightUpdateDecay=%g, relaxContinuous=%d  \n",
-             weightUpdateDecay, problem.usedRelaxContinuous);
+    highsLogDev(logOptions, HighsLogType::kInfo,
+                FJ_LOG_PREFIX
+                "starting solve. weightUpdateDecay=%g, relaxContinuous=%d  \n",
+                weightUpdateDecay, problem.usedRelaxContinuous);
 
     init(initialValues);
 
@@ -504,8 +508,7 @@ class FeasibilityJumpSolver {
       if (user_terminate(callback, nullptr)) break;
 
       if (step % kLoggingFrequency == 0 &&
-          totalEffort > effortAtLastLogging + kMinEffortToLogging &&
-          verbosity >= 1) {
+          totalEffort > effortAtLastLogging + kMinEffortToLogging) {
         if (need_logging_header) {
           logging(0, true);
           num_logging_lines_since_header = 0;
@@ -532,7 +535,7 @@ class FeasibilityJumpSolver {
           if (user_terminate(callback, problem.incumbentAssignment.data()))
             break;
           // Repeat the header in case user callback logs new solution
-          if (verbosity >= 1) need_logging_header = true;
+          need_logging_header = true;
         }
       }
 
@@ -547,16 +550,18 @@ class FeasibilityJumpSolver {
 
  private:
   void logging(const int step, const bool header = false) {
+    const HighsLogType logType = HighsLogType::kDetailed;
     if (header) {
-      printf(FJ_LOG_PREFIX
-             "       step  violations     good    bumps       effort (per "
-             "step)          Objective\n");
+      highsLogDev(logOptions, logType,
+                  FJ_LOG_PREFIX
+                  "       step  violations     good    bumps       effort (per "
+                  "step)          Objective\n");
     } else {
-      printf(FJ_LOG_PREFIX
-             " %10d    %8zd   %6zd %8zd %12zd    %6zd          %10.4g\n",
-             step, problem.violatedConstraints.size(), goodVarsSet.size(),
-             nBumps, totalEffort, step > 0 ? totalEffort / step : 0,
-             problem.incumbentObjective);
+      highsLogDev(logOptions, logType,
+                  " %10d    %8zd   %6zd %8zd %12zd    %6zd          %10.4g\n",
+                  step, problem.violatedConstraints.size(), goodVarsSet.size(),
+                  nBumps, totalEffort, step > 0 ? totalEffort / step : 0,
+                  problem.incumbentObjective);
       effortAtLastLogging = totalEffort;
     }
   }
@@ -626,7 +631,8 @@ class FeasibilityJumpSolver {
   }
 
   void updateWeights() {
-    if (verbosity >= 2) printf(FJ_LOG_PREFIX "Reached a local minimum.\n");
+    highsLogDev(logOptions, HighsLogType::kVerbose,
+                FJ_LOG_PREFIX "Reached a local minimum.\n");
     nBumps += 1;
     bool rescaleAllWeights = false;
     size_t dt = 0;
@@ -761,7 +767,8 @@ class FeasibilityJumpSolver {
     const int CALLBACK_EFFORT = 500000;  // Originally 500000
     if (solution != nullptr ||
         totalEffort - effortAtLastCallback > CALLBACK_EFFORT) {
-      if (verbosity >= 2) printf(FJ_LOG_PREFIX "calling user termination.\n");
+      highsLogDev(logOptions, HighsLogType::kVerbose,
+                  FJ_LOG_PREFIX "calling user termination.\n");
       effortAtLastCallback = totalEffort;
 
       FJStatus status;
@@ -774,7 +781,8 @@ class FeasibilityJumpSolver {
 
       auto result = callback(status);
       if (result == CallbackControlFlow::Terminate) {
-        if (verbosity >= 2) printf(FJ_LOG_PREFIX "quitting.\n");
+        highsLogDev(logOptions, HighsLogType::kVerbose,
+                    FJ_LOG_PREFIX "quitting.\n");
         return true;
       }
     }

@@ -55,6 +55,7 @@ struct Parameters : public ipx_parameters {
     centring_alpha_scaling = 0.5;
     bad_products_tolerance = 3;
     highs_logging = false;
+    timeless_log = false;
     log_options = nullptr;
   }
 

@@ -45,9 +45,9 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
   assert(!submip || submip_level > 0);
   max_submip_level = 0;
   if (solution.value_valid) {
+#ifndef NDEBUG
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
-#ifndef NDEBUG
     bool valid, integral, feasible;
     assessLpPrimalSolution("For debugging: ", options, lp, solution, valid,
                            integral, feasible);
@@ -137,7 +137,7 @@ restart:
       mipdata_->callbackUserSolution(solution_objective_,
                                      kUserMipSolutionCallbackOriginAfterSetup);
 
-    if (options_mip_->mip_allow_feasibility_jump) {
+    if (options_mip_->mip_heuristic_run_feasibility_jump) {
       // Apply the feasibility jump before evaluating the root node
       analysis_.mipTimerStart(kMipClockFeasibilityJump);
       HighsModelStatus returned_model_status = mipdata_->feasibilityJump();
@@ -852,6 +852,8 @@ void HighsMipSolver::cleanupSolve() {
   if (!timeless_log) analysis_.reportMipTimer();
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
+
+  if (improving_solution_file_ != nullptr) fclose(improving_solution_file_);
 }
 
 // Only called in Highs::runPresolve
@@ -876,30 +878,30 @@ presolve::HighsPostsolveStack HighsMipSolver::getPostsolveStack() const {
 void HighsMipSolver::callbackGetCutPool() const {
   assert(callback_->user_callback);
   assert(callback_->callbackActive(kCallbackMipGetCutPool));
-  HighsCallbackDataOut& data_out = callback_->data_out;
+  HighsCallbackOutput& data_out = callback_->data_out;
 
-  std::vector<double> cut_lower;
-  std::vector<double> cut_upper;
   HighsSparseMatrix cut_matrix;
-
   mipdata_->lp.getCutPool(data_out.cutpool_num_col, data_out.cutpool_num_cut,
-                          cut_lower, cut_upper, cut_matrix);
+                          data_out.cutpool_lower, data_out.cutpool_upper,
+                          cut_matrix);
 
-  data_out.cutpool_num_nz = cut_matrix.numNz();
-  data_out.cutpool_start = cut_matrix.start_.data();
-  data_out.cutpool_index = cut_matrix.index_.data();
-  data_out.cutpool_value = cut_matrix.value_.data();
-  data_out.cutpool_lower = cut_lower.data();
-  data_out.cutpool_upper = cut_upper.data();
+  // take ownership
+  data_out.cutpool_start = std::move(cut_matrix.start_);
+  data_out.cutpool_index = std::move(cut_matrix.index_);
+  data_out.cutpool_value = std::move(cut_matrix.value_);
+
   callback_->user_callback(kCallbackMipGetCutPool, "MIP cut pool",
                            &callback_->data_out, &callback_->data_in,
                            callback_->user_callback_data);
 }
 
-bool HighsMipSolver::solutionFeasible(
-    const HighsLp* lp, const std::vector<double>& col_value,
-    const std::vector<double>* pass_row_value, double& bound_violation,
-    double& row_violation, double& integrality_violation, HighsCDouble& obj) {
+bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
+                                      const std::vector<double>& col_value,
+                                      const std::vector<double>* pass_row_value,
+                                      double& bound_violation,
+                                      double& row_violation,
+                                      double& integrality_violation,
+                                      HighsCDouble& obj) const {
   bound_violation = 0;
   row_violation = 0;
   integrality_violation = 0;

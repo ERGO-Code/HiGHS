@@ -110,9 +110,15 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
   parameters.ipm_feasibility_tol = min(options.primal_feasibility_tolerance,
                                        options.dual_feasibility_tolerance);
-
   parameters.ipm_optimality_tol = options.ipm_optimality_tolerance;
   parameters.start_crossover_tol = options.start_crossover_tolerance;
+
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    parameters.ipm_feasibility_tol = options.kkt_tolerance;
+    parameters.ipm_optimality_tol = 1e-1 * options.kkt_tolerance;
+    parameters.start_crossover_tol = 1e-1 * options.kkt_tolerance;
+  }
+
   parameters.analyse_basis_data =
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   // Determine the run time allowed for IPX
@@ -134,7 +140,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     parameters.run_crossover = -1;
   }
   if (!parameters.run_crossover) {
-    // If crossover is sure not to be run, then set crossover_start to
+    // If crossover is sure not to be run, then set crossover_start_ to
     // -1 so that IPX can terminate according to its feasibility and
     // optimality tolerances
     parameters.start_crossover_tol = -1;
@@ -868,8 +874,7 @@ void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                           y.data(), zl.data(), zu.data());
 
   ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
-                             num_row, x, slack, y, zl, zu, model_status,
-                             highs_solution);
+                             num_row, x, slack, y, zl, zu, highs_solution);
 }
 
 void reportSolveData(const HighsLogOptions& log_options,

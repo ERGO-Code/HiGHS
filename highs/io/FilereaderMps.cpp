@@ -70,8 +70,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
               warning_issued, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) lp.ensureColwise();
   // Comment on existence of names with spaces
-  hasNamesWithSpaces(options.log_options, lp.num_col_, lp.col_names_);
-  hasNamesWithSpaces(options.log_options, lp.num_row_, lp.row_names_);
+  hasNamesWithSpaces(options.log_options, lp);
   assert(model.lp_.objective_name_ != "");
   if (return_code == FilereaderRetcode::kOk && warning_issued)
     return_code = FilereaderRetcode::kWarning;

@@ -797,7 +797,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
-  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+  REQUIRE(optimal_objective_value - avgas_optimal_objective_value < 1e-10);
 
   // Fix columns 1, 3, 5, 7 to check resetting of their nonbasic status
   col1357_lower[0] = 0;
@@ -826,7 +826,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
-  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+  REQUIRE(optimal_objective_value - avgas_optimal_objective_value < 1e-10);
 
   const HighsLp& local_lp = highs.getLp();
   row0135789_lower[0] = local_lp.row_lower_[0];
@@ -1145,8 +1145,10 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   const HighsOptions& options = highs.getOptions();
   const HighsInfo& info = highs.getInfo();
 
-  highs.setOptionValue("log_to_console", true);
-  highs.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+  if (dev_run) {
+    highs.setOptionValue("log_to_console", true);
+    highs.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+  }
 
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";

@@ -47,6 +47,18 @@ jobs:
           source /opt/intel/oneapi/setvars.sh
           cmake --build build --parallel
 
+      # If the unit tests below are failing run to see details.
+      # - name: Unit Test
+      #   shell: bash
+      #   run: |
+      #     source /opt/intel/oneapi/setvars.sh
+      #     export SYCL_DEVICE_FILTER=opencl.cpu
+      #     pwd
+      #     ls
+      #     ls build
+      #     ls build/bin
+      #     ./build/bin/unit_tests 
+
       - name: Test
         shell: bash
         run: |

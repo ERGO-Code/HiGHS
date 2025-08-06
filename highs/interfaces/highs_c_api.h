@@ -105,6 +105,7 @@ const HighsInt kHighsCallbackMipLogging = 5;
 const HighsInt kHighsCallbackMipInterrupt = 6;
 const HighsInt kHighsCallbackMipGetCutPool = 7;
 const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
+const HighsInt kHighsCallbackCallbackMipUserSolution = 9;
 
 const char* const kHighsCallbackDataOutLogTypeName = "log_type";
 const char* const kHighsCallbackDataOutRunningTimeName = "running_time";
@@ -1164,15 +1165,15 @@ HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
  * See `Highs_getBasicVariables` for a description of the ``B`` matrix.
  *
  * The arrays `row_vector` and `row_index` must have an allocated length of
- * [num_row]. However, check `row_num_nz` to see how many non-zero elements are
+ * [num_col]. However, check `row_num_nz` to see how many non-zero elements are
  * actually stored.
  *
  * @param highs         A pointer to the Highs instance.
  * @param row           The index of the row to compute.
- * @param row_vector    An array of length [num_row] in which to store the
+ * @param row_vector    An array of length [num_col] in which to store the
  *                      values of the non-zero elements.
  * @param row_num_nz    The number of non-zeros in the row.
- * @param row_index     An array of length [num_row] in which to store the
+ * @param row_index     An array of length [num_col] in which to store the
  *                      indices of the non-zero elements.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
@@ -2379,6 +2380,49 @@ void Highs_resetGlobalScheduler(const HighsInt blocking);
  */
 const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
                                          const char* item_name);
+
+/**
+ * Set a solution within a callback by passing a subset of the values.
+ *
+ * For any values that are unavailable/unknown, pass kHighsUndefined.
+ *
+ * @param data_in     A pointer to the callback input data instance.
+ * @param num_entries Number of variables in the set
+ * @param value       An array of length [num_entries <= num_col] with
+ *                    column solution values.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_setCallbackSolution(HighsCallbackDataIn* data_in,
+                                   const HighsInt num_entries,
+                                   const double* value);
+
+/**
+ * Set a partial primal solution by passing values for a set of variables,
+ * within a valid callback.
+ *
+ * @param data_in     A pointer to the callback input data instance.
+ * @param num_entries Number of variables in the set
+ * @param index       Indices of variables in the set
+ * @param value       Values of variables in the set
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_setCallbackSparseSolution(HighsCallbackDataIn* data_in,
+                                         const HighsInt num_entries,
+                                         const HighsInt* index,
+                                         const double* value);
+
+/**
+ * Finds a feasible solution for a given (partial) primal user solution,
+ * within a valid callback.
+ *
+ * On success, the user solution is updated within the callback input data
+ * instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 
 // *********************
 // * Deprecated methods*

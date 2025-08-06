@@ -1,7 +1,7 @@
 if (NOT BUILD_CXX)
   return()
 endif()
-  
+
 # Define library.
 include(sources)
 set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
@@ -43,7 +43,7 @@ if(NOT FAST_BUILD)
   set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     PDB_NAME "libhighs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  )
 
   if(ZLIB AND ZLIB_FOUND)
     target_link_libraries(libhighs ZLIB::ZLIB)
@@ -84,7 +84,7 @@ if(NOT FAST_BUILD)
     # target_compile_options(libipx PRIVATE "-Wno-sign-compare")
     # target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
   endif()
-  
+
   install(TARGETS libhighs EXPORT highs-targets
     LIBRARY
     ARCHIVE
@@ -150,8 +150,8 @@ else()
 
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
-  
-  # Optional Cuda 
+
+  # Optional Cuda
   if (CUPDLP_GPU)
 
     target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
@@ -164,7 +164,7 @@ else()
     else()
       target_link_libraries(highs cudalin ${CUDA_LIBRARY} m)
     endif()
-    
+
     set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
   endif()
@@ -221,7 +221,7 @@ else()
     )
     target_link_libraries(highs ZLIB::ZLIB)
   endif()
-    
+
   # install the header files of highs
   foreach(file ${headers})
     get_filename_component(dir ${file} DIRECTORY)
@@ -236,10 +236,26 @@ else()
 
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
-  
+
   if (UNIX)
-    target_compile_options(highs PRIVATE "-Wno-unused-variable")
-    target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
+    if ( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      target_compile_options(highs PRIVATE "-Wall")
+      target_compile_options(highs PRIVATE "-Wreturn-type")
+      target_compile_options(highs PRIVATE "-Wmissing-declarations")
+      target_compile_options(highs PRIVATE "-Wno-unused-variable")
+      target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
+      target_compile_options(highs PRIVATE "-Wno-unused-but-set-variable")
+      target_compile_options(highs PRIVATE "-Wno-comment")
+      target_compile_options(highs PRIVATE "-Wno-unused-label")
+
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(highs PRIVATE "-Wno-unused-lambda-capture")
+      endif()
+
+    else()
+      target_compile_options(highs PRIVATE "-Wno-unused-variable")
+      target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
+    endif()
   endif()
   if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     target_compile_options(highs PUBLIC "-Wno-invalid-offsetof")
@@ -251,7 +267,7 @@ else()
   endif()
 
   if (BUILD_DOTNET)
-  
+
       # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
       if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
         set(DOTNET_PLATFORM arm64)
@@ -282,8 +298,8 @@ else()
         set(TARGET_FILE_NAME "highs.dll")
       endif()
 
-      add_custom_command(TARGET highs POST_BUILD 
-        COMMAND "${CMAKE_COMMAND}" -E copy 
+      add_custom_command(TARGET highs POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy
           "$<TARGET_FILE:highs>"
         ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native/${TARGET_FILE_NAME}
         COMMENT "Copying to output directory")
@@ -302,7 +318,7 @@ if(FORTRAN_FOUND)
     target_link_libraries(FortranHighs PUBLIC highs)
   endif()
 
-  install(TARGETS FortranHighs 
+  install(TARGETS FortranHighs
     LIBRARY
     ARCHIVE
     RUNTIME

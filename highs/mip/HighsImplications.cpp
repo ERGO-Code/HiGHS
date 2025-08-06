@@ -635,7 +635,7 @@ void HighsImplications::separateImpliedBounds(
           vals[0] = -1.0;
           inds[0] = implics[i].column;
           vals[1] =
-              globaldomain.col_lower_[implics[i].column] - implics[i].boundval;
+              implics[i].boundval - globaldomain.col_lower_[implics[i].column];
           inds[1] = col;
           rhs = -globaldomain.col_lower_[implics[i].column];
         }

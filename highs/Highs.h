@@ -91,6 +91,11 @@ class Highs {
   HighsStatus clearSolver();
 
   /**
+   * @brief Clear all dual data associated with the model
+   */
+  HighsStatus clearSolverDualData();
+
+  /**
    * Methods for model input
    */
 
@@ -853,7 +858,7 @@ class Highs {
   /**
    * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string& filename = "") const;
+  HighsStatus writeBasis(const std::string& filename = "");
 
   /**
    * Methods for incumbent model modification
@@ -1477,16 +1482,16 @@ class Highs {
 
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether
-  // returnFromRun() was called after the previous call to
-  // Highs::run() and, assuming that this is always done, it checks
-  // whether Highs::run() is called recursively.
-  bool called_return_from_run = true;
-  HighsInt debug_run_call_num_ = 0;
+  // returnFromOptimizeModel() was called after the previous call to
+  // Highs::optimizeModel() and, assuming that this is always done, it checks
+  // whether Highs::optimizeModel() is called recursively.
+  bool called_return_from_optimize_model = true;
+  HighsInt debug_optimize_call_num_ = 0;
 
   bool written_log_header_ = false;
 
   void reportModelStats() const;
-  HighsStatus solve();
+  HighsStatus optimizeModel();
 
   void exactResizeModel() {
     this->model_.lp_.exactResize();
@@ -1542,6 +1547,12 @@ class Highs {
   // invalidateRanging(), invalidateInfo(), invalidateEkk() and
   // invalidateIis()
   void invalidateSolverData();
+
+  // Invalidates all solver dual data in Highs class members by calling
+  // invalidateModelStatus(), invalidateRanging(), and invalidateInfo()
+  //
+  // Used when only the objective changes
+  void invalidateSolverDualData();
   //
   // Invalidates the model status, solution_ and info_
   void invalidateModelStatusSolutionAndInfo();
@@ -1569,8 +1580,8 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromRun(const HighsStatus return_status,
-                            const bool undo_mods);
+  HighsStatus returnFromOptimizeModel(const HighsStatus return_status,
+                                      const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
@@ -1674,6 +1685,7 @@ class Highs {
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   HighsStatus checkOptimality(const std::string& solver_type);
+  HighsStatus lpKktCheck(const std::string& message);
   HighsStatus invertRequirementError(std::string method_name) const;
 
   HighsStatus handleInfCost();
@@ -1695,6 +1707,9 @@ class Highs {
                             const HighsInt iObj) const;
   bool hasRepeatedLinearObjectivePriorities(
       const HighsLinearObjective* linear_objective = nullptr) const;
+
+  bool tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
+                      const HighsInfo& presolved_lp_info) const;
 
   bool optionsHasHighsFiles() const;
   void saveHighsFiles();

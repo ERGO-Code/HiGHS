@@ -108,8 +108,8 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
 
   // Only set up lp.integrality_ if non-continuous
   bool is_mip = false;
-  for (size_t iCol = 0; iCol < col_integrality.size(); iCol++) {
-    if (col_integrality[iCol] != HighsVarType::kContinuous) {
+  for (const auto& var_type : col_integrality) {
+    if (var_type != HighsVarType::kContinuous) {
       is_mip = true;
       break;
     }
@@ -475,9 +475,10 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, size_t& start,
   // Can have keywords used as column names or names of RHS, BOUND,
   // RANGES etc, so assume this if there are non-blanks after the
   // apparent keyword. Only cases that don't work are NAME, OBJSENSE,
-  // QCMATRIX and QSECTION, since they can be followed by text
+  // QCMATRIX, QSECTION, and CSECTION since they can be followed by text
   if (key == HMpsFF::Parsekey::kName || key == HMpsFF::Parsekey::kObjsense ||
-      key == HMpsFF::Parsekey::kQcmatrix || key == HMpsFF::Parsekey::kQsection)
+      key == HMpsFF::Parsekey::kQcmatrix ||
+      key == HMpsFF::Parsekey::kQsection || key == HMpsFF::Parsekey::kCsection)
     return key;
   assert(key != HMpsFF::Parsekey::kNone);
 
@@ -621,7 +622,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
         warning_issued_ = true;
         highsLogUser(log_options, HighsLogType::kWarning,
                      "No objective row found\n");
-        rowname2idx.emplace("artificial_empty_objective", -1);
+        rowname2idx.emplace("artificial_empty_objective", HighsInt{-1});
       };
       return key;
     }
@@ -670,12 +671,12 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     // Do not add to matrix if row is free.
     if (isFreeRow) {
-      rowname2idx.emplace(rowname, -2);
+      rowname2idx.emplace(rowname, HighsInt{-2});
       continue;
     }
 
     // so in rowname2idx -1 is the objective, -2 is all the free rows
-    auto ret = rowname2idx.emplace(rowname, isobj ? (-1) : (num_row++));
+    auto ret = rowname2idx.emplace(rowname, isobj ? HighsInt{-1} : (num_row++));
     // ret is a pair consisting of an iterator to the inserted
     // element (or the already-existing element if no insertion
     // happened) and a bool denoting whether the insertion took place
@@ -1860,7 +1861,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
 
   auto mit = rowname2idx.find(rowname);
   // if row of section does not exist or is free (index -2), then skip
-  if (mit == rowname2idx.end() || mit->second == -2) {
+  if (mit == rowname2idx.end() || mit->second == HighsInt{-2}) {
     if (mit == rowname2idx.end()) {
       warning_issued_ = true;
       highsLogUser(log_options, HighsLogType::kWarning,

@@ -51,15 +51,15 @@ jobs:
           - [ubuntu-24.04-arm, musllinux_aarch64]
           - [macos-13, macosx_x86_64]
           - [macos-14, macosx_arm64]
-          - [windows-2019, win_amd64]
-          - [windows-2019, win32]
+          - [windows-2022, win_amd64]
+          - [windows-2022, win32]
         python: ["cp38", "cp39","cp310", "cp311","cp312", "cp313"]
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21
+        uses: pypa/cibuildwheel@v3.0
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
 

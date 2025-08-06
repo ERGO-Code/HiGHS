@@ -553,36 +553,14 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
                             const bool free_format) {
   bool warning_found = false;
   const HighsLp& lp = model.lp_;
-  const HighsHessian& hessian = model.hessian_;
-  bool have_col_names = (lp.col_names_.size() != 0);
-  bool have_row_names = (lp.row_names_.size() != 0);
-  std::vector<std::string> local_col_names;
-  std::vector<std::string> local_row_names;
-  local_col_names.resize(lp.num_col_);
-  local_row_names.resize(lp.num_row_);
-  // Initialise the local names to any existing names
-  if (have_col_names) local_col_names = lp.col_names_;
-  if (have_row_names) local_row_names = lp.row_names_;
-  //
-  // Normalise the column names
-  HighsInt max_col_name_length = kHighsIInf;
-  if (!free_format) max_col_name_length = 8;
-  HighsStatus col_name_status =
-      normaliseNames(options.log_options, "column", lp.num_col_,
-                     local_col_names, max_col_name_length);
-  if (col_name_status == HighsStatus::kError) return col_name_status;
-  warning_found = col_name_status == HighsStatus::kWarning || warning_found;
-  //
-  // Normalise the row names
-  HighsInt max_row_name_length = kHighsIInf;
-  if (!free_format) max_row_name_length = 8;
-  HighsStatus row_name_status =
-      normaliseNames(options.log_options, "row", lp.num_row_, local_row_names,
-                     max_row_name_length);
-  if (row_name_status == HighsStatus::kError) return row_name_status;
-  warning_found = row_name_status == HighsStatus::kWarning || warning_found;
 
-  HighsInt max_name_length = std::max(max_col_name_length, max_row_name_length);
+  const bool ok_names = lp.okNames();
+  assert(ok_names);
+  if (!ok_names) return HighsStatus::kError;
+
+  const HighsHessian& hessian = model.hessian_;
+
+  HighsInt max_name_length = maxNameLength(lp);
   bool use_free_format = free_format;
   if (!free_format) {
     if (max_name_length > 8) {
@@ -607,8 +585,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       hessian.dim_, lp.sense_, lp.offset_, lp.col_cost_, lp.col_lower_,
       lp.col_upper_, lp.row_lower_, lp.row_upper_, lp.a_matrix_.start_,
       lp.a_matrix_.index_, lp.a_matrix_.value_, hessian.start_, hessian.index_,
-      hessian.value_, lp.integrality_, local_objective_name, local_col_names,
-      local_row_names, use_free_format);
+      hessian.value_, lp.integrality_, local_objective_name, lp.col_names_,
+      lp.row_names_, use_free_format);
   if (write_status == HighsStatus::kOk && warning_found)
     return HighsStatus::kWarning;
   return write_status;
@@ -639,9 +617,8 @@ HighsStatus writeMps(
   }
   highsLogDev(log_options, HighsLogType::kInfo, "writeMPS: Opened file  OK\n");
   // Check that the names are no longer than 8 characters for fixed format write
-  HighsInt max_col_name_length = maxNameLength(num_col, col_names);
-  HighsInt max_row_name_length = maxNameLength(num_row, row_names);
-  HighsInt max_name_length = std::max(max_col_name_length, max_row_name_length);
+  HighsInt max_name_length =
+      std::max(maxNameLength(col_names), maxNameLength(row_names));
   if (!use_free_format && max_name_length > 8) {
     highsLogUser(
         log_options, HighsLogType::kError,
@@ -798,7 +775,7 @@ HighsStatus writeMps(
       num_no_cost_zero_columns++;
       if (write_no_cost_zero_columns) {
         // Give the column a presence by writing out a zero cost
-        fprintf(file, "    %-8s  %-8s  %.10g\n", col_names[c_n].c_str(),
+        fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
                 objective_name.c_str(), 0.0);
       }
       continue;
@@ -822,13 +799,13 @@ HighsStatus writeMps(
     }
     if (col_cost[c_n] != 0) {
       double v = use_sense * col_cost[c_n];
-      fprintf(file, "    %-8s  %-8s  %.10g\n", col_names[c_n].c_str(),
+      fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
               objective_name.c_str(), v);
     }
     for (HighsInt el_n = a_start[c_n]; el_n < a_start[c_n + 1]; el_n++) {
       double v = a_value[el_n];
       HighsInt r_n = a_index[el_n];
-      fprintf(file, "    %-8s  %-8s  %.10g\n", col_names[c_n].c_str(),
+      fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
               row_names[r_n].c_str(), v);
     }
   }
@@ -844,12 +821,12 @@ HighsStatus writeMps(
     if (offset) {
       // Handle the objective offset as a RHS entry for the cost row
       double v = -use_sense * offset;
-      fprintf(file, "    RHS_V     %-8s  %.10g\n", objective_name.c_str(), v);
+      fprintf(file, "    RHS_V     %-8s  %.15g\n", objective_name.c_str(), v);
     }
     for (HighsInt r_n = 0; r_n < num_row; r_n++) {
       double v = rhs[r_n];
       if (v) {
-        fprintf(file, "    RHS_V     %-8s  %.10g\n", row_names[r_n].c_str(), v);
+        fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
       }
     }
   }
@@ -858,7 +835,7 @@ HighsStatus writeMps(
     for (HighsInt r_n = 0; r_n < num_row; r_n++) {
       double v = ranges[r_n];
       if (v) {
-        fprintf(file, "    RANGE     %-8s  %.10g\n", row_names[r_n].c_str(), v);
+        fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
       }
     }
   }
@@ -884,7 +861,7 @@ HighsStatus writeMps(
       }
       if (lb == ub) {
         // Equal lower and upper bounds: Fixed
-        fprintf(file, " FX BOUND     %-8s  %.10g\n", col_names[c_n].c_str(),
+        fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
                 lb);
       } else if (highs_isInfinity(-lb) && highs_isInfinity(ub)) {
         // Infinite lower and upper bounds: Free
@@ -923,7 +900,7 @@ HighsStatus writeMps(
                 // Finite lower bound. No need to state this if LB is
                 // zero unless UB is infinite
                 if (lb || highs_isInfinity(ub))
-                  fprintf(file, " LI BOUND     %-8s  %.10g\n",
+                  fprintf(file, " LI BOUND     %-8s  %.15g\n",
                           col_names[c_n].c_str(), lb);
               } else {
                 // Infinite lower bound
@@ -931,7 +908,7 @@ HighsStatus writeMps(
               }
               if (!highs_isInfinity(ub)) {
                 // Finite upper bound
-                fprintf(file, " UI BOUND     %-8s  %.10g\n",
+                fprintf(file, " UI BOUND     %-8s  %.15g\n",
                         col_names[c_n].c_str(), ub);
               }
             }
@@ -959,14 +936,14 @@ HighsStatus writeMps(
                   log_options, HighsLogType::kWarning,
                   "Upper bound for semi-variable \"%s\" is %g but writing %g\n",
                   col_names[c_n].c_str(), ub, use_ub);
-            fprintf(file, " LO BOUND     %-8s  %.10g\n", col_names[c_n].c_str(),
+            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
                     use_lb);
             if (integrality[c_n] == HighsVarType::kSemiInteger) {
-              fprintf(file, " SI BOUND     %-8s  %.10g\n",
+              fprintf(file, " SI BOUND     %-8s  %.15g\n",
                       col_names[c_n].c_str(), use_ub);
             } else {
               // Semi-continuous
-              fprintf(file, " SC BOUND     %-8s  %.10g\n",
+              fprintf(file, " SC BOUND     %-8s  %.15g\n",
                       col_names[c_n].c_str(), use_ub);
             }
           }
@@ -974,7 +951,7 @@ HighsStatus writeMps(
           if (!highs_isInfinity(-lb)) {
             // Lower bounded variable - default is 0
             if (lb) {
-              fprintf(file, " LO BOUND     %-8s  %.10g\n",
+              fprintf(file, " LO BOUND     %-8s  %.15g\n",
                       col_names[c_n].c_str(), lb);
             }
           } else {
@@ -983,7 +960,7 @@ HighsStatus writeMps(
           }
           if (!highs_isInfinity(ub)) {
             // Upper bounded variable
-            fprintf(file, " UP BOUND     %-8s  %.10g\n", col_names[c_n].c_str(),
+            fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
                     ub);
           }
         }
@@ -1004,7 +981,7 @@ HighsStatus writeMps(
         assert(row >= col);
         // May have explicit zeroes on the diagonal
         if (q_value[el])
-          fprintf(file, "    %-8s  %-8s  %.10g\n", col_names[col].c_str(),
+          fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
                   col_names[row].c_str(), use_sense * q_value[el]);
       }
     }

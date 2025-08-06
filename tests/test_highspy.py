@@ -112,9 +112,9 @@ class TestHighsPy(unittest.TestCase):
 
     def test_version(self):
         h = self.get_basic_model()
-        self.assertEqual(h.version(), "1.10.0")
+        self.assertEqual(h.version(), "1.11.0")
         self.assertEqual(h.versionMajor(), 1)
-        self.assertEqual(h.versionMinor(), 10)
+        self.assertEqual(h.versionMinor(), 11)
         self.assertEqual(h.versionPatch(), 0)
 
     def test_basics(self):
@@ -990,7 +990,7 @@ class TestHighsPy(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as f:
                 h.writeBasis(f.name)
                 contents = f.read()
-                self.assertEqual(contents, b"HiGHS v1\nNone\n")
+                self.assertEqual(contents, b"HiGHS_basis_file v2\nNone\n")
 
     def test_write_basis_after_running(self):
         if platform == "linux" or platform == "darwin":
@@ -999,7 +999,7 @@ class TestHighsPy(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as f:
                 h.writeBasis(f.name)
                 contents = f.read()
-                self.assertEqual(contents, b"HiGHS v1\nValid\n# Columns 2\n1 1 \n# Rows 2\n0 0 \n")
+                self.assertEqual(contents, b"HiGHS_basis_file v2\nValid\n# Columns 2\nc0 1\nc1 1\n# Rows 2\nr0 0\nr1 0\n")
 
     def test_read_basis(self):
         if platform == "linux" or platform == "darwin":
@@ -1416,6 +1416,79 @@ class TestHighsPy(unittest.TestCase):
         self.assertRaises(Exception, lambda: h.__setattr__("cbMipInterrupt", None))
         self.assertRaises(Exception, lambda: h.__setattr__("cbMipGetCutPool", None))
         self.assertRaises(Exception, lambda: h.__setattr__("cbMipDefineLazyConstraints", None))
+
+
+    def test_usercallbacks(self):
+        N = 8
+        h = highspy.Highs()
+        h.silent()
+
+        x = h.addBinaries(N, N)
+        y = np.fliplr(x)
+
+        h.addConstrs(h.qsum(x[i, :]) == 1 for i in range(N))  # each row has exactly one queen
+        h.addConstrs(h.qsum(x[:, j]) == 1 for j in range(N))  # each col has exactly one queen
+
+        h.addConstrs(h.qsum(x.diagonal(k)) <= 1 for k in range(-N + 1, N))  # each diagonal has at most one queen
+        h.addConstrs(h.qsum(y.diagonal(k)) <= 1 for k in range(-N + 1, N))  # each 'reverse' diagonal has at most one queen
+
+        # minimize index where queen is placed
+        h.minimize((x.astype(int) * x).sum())
+        sol = h.val(x)
+        self.assertEqual(sol.shape, (N, N))
+
+        # verify callback called
+        check_called = [False]
+
+        def check_called_func(e):
+            check_called[0] = True
+
+        h.cbMipUserSolution += check_called_func
+
+        # verify initialization
+        h.cbMipUserSolution += lambda e: self.assertEqual(e.data_in.user_has_solution, False)
+
+        def partial_solution(e):
+            # different sizes
+            self.assertEqual(e.data_in.setSolution(range(N*N), sol[::2]), highspy.HighsStatus.kError)
+
+            # get every 2nd element from 2d numpy sol array
+            self.assertEqual(e.data_in.setSolution(x[:, ::2], sol[:, ::2]), highspy.HighsStatus.kOk)
+            self.assertEqual(list(e.data_in.user_solution[0:4]), [sol[0,0],highspy.kHighsUndefined,sol[0,2],highspy.kHighsUndefined])
+            self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kOk)
+            self.assertEqual(list(e.data_in.user_solution[0:8]), list(sol[0,0:8]))
+
+            def try_change_ptr(e):
+                e.data_in.user_solution = [0] * (N*N)
+
+            self.assertRaises(Exception, lambda: try_change_ptr(e))
+
+            # modify directly
+            e.data_in.user_solution[:] = highspy.kHighsUndefined
+            self.assertEqual(e.data_in.user_solution[8], highspy.kHighsUndefined)
+            e.data_in.user_has_solution = False
+
+            # set subset partial without index
+            # note: we're setting a sub-optimal feasible solution here
+            self.assertEqual(e.data_in.setSolution([0., 0., 0., 0., 0., 0., highspy.kHighsUndefined, 0.]), highspy.HighsStatus.kOk)
+            self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kOk)
+            self.assertEqual(list(e.data_in.user_solution[0:8]), [0., 0., 0., 0., 0., 0., 1., 0.])
+            self.assertEqual(e.data_in.user_has_solution, True)
+
+            # set partial solution with fractional value
+            self.assertEqual(e.data_in.setSolution([0., 0.5]), highspy.HighsStatus.kOk)
+            self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kError)
+
+        # verify partial solution
+        h.cbMipUserSolution += partial_solution
+
+        # verify full solution
+        h.cbMipUserSolution += lambda e: self.assertEqual(e.data_in.setSolution([0] * (N * N + 1)), highspy.HighsStatus.kError)
+        h.cbMipUserSolution += lambda e: self.assertEqual(e.data_in.setSolution(sol), highspy.HighsStatus.kOk)
+
+        h.clearSolver()
+        h.solve()
+        self.assertEqual(check_called[0], True)
 
 
 class TestHighsLinearExpressionPy(unittest.TestCase):

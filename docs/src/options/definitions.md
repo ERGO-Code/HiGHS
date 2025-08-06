@@ -55,32 +55,38 @@
 - Range: [1, inf]
 - Default: 1e+15
 
-## primal\_feasibility\_tolerance
+## [kkt\_tolerance](@id option-kkt-tolerance)
+- If changed from its default value, this tolerance is used for all feasibility and optimality (KKT) measures
+- Type: double
+- Range: [1e-10, inf]
+- Default: 1e-07
+
+## [primal\_feasibility\_tolerance](@id option-primal-feasibility-tolerance)
 - Primal feasibility tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## dual\_feasibility\_tolerance
+## [dual\_feasibility\_tolerance](@id option-dual-feasibility-tolerance)
 - Dual feasibility tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## ipm\_optimality\_tolerance
-- IPM optimality tolerance
-- Type: double
-- Range: [1e-12, inf]
-- Default: 1e-08
-
-## primal\_residual\_tolerance
+## [primal\_residual\_tolerance](@id option-primal-residual-tolerance)
 - Primal residual tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## dual\_residual\_tolerance
+## [dual\_residual\_tolerance](@id option-dual-residual-tolerance)
 - Dual residual tolerance
+- Type: double
+- Range: [1e-10, inf]
+- Default: 1e-07
+
+## [optimality\_tolerance](@id option-optimality-tolerance)
+- Optimality tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
@@ -130,8 +136,8 @@
 ## simplex\_scale\_strategy
 - Simplex scaling strategy: off / choose / equilibration (default) / forced equilibration / max value (0/1/2/3/4)
 - Type: integer
-- Range: {0, 5}
-- Default: 1
+- Range: {0, 4}
+- Default: 2
 
 ## simplex\_dual\_edge\_weight\_strategy
 - Strategy for simplex dual edge weights: Choose / Dantzig / Devex / Steepest Edge (-1/0/1/2)
@@ -173,11 +179,6 @@
 - Type: boolean
 - Default: "true"
 
-## solution\_file
-- Solution file
-- Type: string
-- Default: ""
-
 ## log\_file
 - Log file
 - Type: string
@@ -200,8 +201,28 @@
 - Range: {-2, 2147483647}
 - Default: 0
 
+## read\_solution\_file
+- Read solution file
+- Type: string
+- Default: ""
+
+## read\_basis\_file
+- Read basis file
+- Type: string
+- Default: ""
+
 ## write\_model\_file
 - Write model file
+- Type: string
+- Default: ""
+
+## solution\_file
+- Write solution file
+- Type: string
+- Default: ""
+
+## write\_basis\_file
+- Write basis file
 - Type: string
 - Default: ""
 
@@ -263,6 +284,17 @@
 - Type: string
 - Default: ""
 
+## mip\_root\_presolve\_only
+- Whether MIP presolve is only applied at the root node
+- Type: boolean
+- Default: "false"
+
+## mip\_lifting\_for\_probing
+- Level of lifting for probing that is used
+- Type: integer
+- Range: {-1, 2147483647}
+- Default: -1
+
 ## mip\_max\_leaves
 - MIP solver max number of leaf nodes
 - Type: integer
@@ -306,7 +338,7 @@
 - Default: 100000
 
 ## mip\_feasibility\_tolerance
-- MIP feasibility tolerance
+- MIP integrality tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-06
@@ -316,6 +348,36 @@
 - Type: double
 - Range: [0, 1]
 - Default: 0.05
+
+## mip\_heuristic\_run\_feasibility\_jump
+- Use the feasibility jump heuristic
+- Type: boolean
+- Default: "true"
+
+## mip\_heuristic\_run\_rins
+- Use the RINS heuristic
+- Type: boolean
+- Default: "true"
+
+## mip\_heuristic\_run\_rens
+- Use the RENS heuristic
+- Type: boolean
+- Default: "true"
+
+## mip\_heuristic\_run\_root\_reduced\_cost
+- Use the rootReducedCost heuristic
+- Type: boolean
+- Default: "true"
+
+## mip\_heuristic\_run\_zi\_round
+- Use the ZI Round heuristic
+- Type: boolean
+- Default: "false"
+
+## mip\_heuristic\_run\_shifting
+- Use the Shifting heuristic
+- Type: boolean
+- Default: "false"
 
 ## mip\_rel\_gap
 - Tolerance on relative gap, |ub-lb|/|ub|, to determine whether optimality has been reached for a MIP instance
@@ -335,16 +397,17 @@
 - Range: [0, inf]
 - Default: 5
 
+## [ipm\_optimality\_tolerance](@id option-ipm-optimality-tolerance)
+- IPM optimality tolerance
+- Type: double
+- Range: [1e-12, inf]
+- Default: 1e-08
+
 ## ipm\_iteration\_limit
 - Iteration limit for IPM solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
-
-## pdlp\_native\_termination
-- Use native termination for PDLP solver: Default = false
-- Type: boolean
-- Default: "false"
 
 ## pdlp\_scaling
 - Scaling option for PDLP solver: Default = true
@@ -363,11 +426,11 @@
 - Range: {0, 2}
 - Default: 1
 
-## pdlp\_d\_gap\_tol
-- Duality gap tolerance for PDLP solver: Default = 1e-4
+## [pdlp\_optimality\_tolerance](@id option-pdlp-optimality-tolerance)
+- PDLP optimality tolerance
 - Type: double
 - Range: [1e-12, inf]
-- Default: 0.0001
+- Default: 1e-07
 
 ## qp\_iteration\_limit
 - Iteration limit for QP solver
@@ -380,6 +443,12 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 4000
+
+## qp\_regularization\_value
+- Regularization value added to the Hessian
+- Type: double
+- Range: [0, inf]
+- Default: 1e-07
 
 ## blend\_multi\_objectives
 - Blend multiple objectives or apply lexicographically: Default = true

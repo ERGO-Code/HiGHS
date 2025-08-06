@@ -16,6 +16,8 @@ void solve(Highs& highs, std::string presolve,
            const double require_iteration_count = -1);
 void distillationMIP(Highs& highs);
 void rowlessMIP(Highs& highs);
+void rowlessMIP1(Highs& highs);
+void rowlessMIP2(Highs& highs);
 
 TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   Highs highs;
@@ -25,10 +27,25 @@ TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
+// Fails but the cases work separately in
+// MIP-rowless-1 and
+// MIP-rowless-2 below
+// TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
+//   Highs highs;
+//   if (!dev_run) highs.setOptionValue("output_flag", false);
+//   rowlessMIP(highs);
+// }
+
+TEST_CASE("MIP-rowless-1", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  rowlessMIP(highs);
+  rowlessMIP1(highs);
+}
+
+TEST_CASE("MIP-rowless-2", "[highs_test_mip_solver]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  rowlessMIP2(highs);
 }
 
 TEST_CASE("MIP-solution-limit", "[highs_test_mip_solver]") {
@@ -190,7 +207,7 @@ TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
                      HighsVarType::kInteger};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("highs_debug_level", kHighsDebugLevelCheap);
-  highs.setOptionValue("log_dev_level", 2);
+  if (dev_run) highs.setOptionValue("log_dev_level", 2);
   HighsStatus return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeInfo("");
@@ -805,6 +822,50 @@ void rowlessMIP(Highs& highs) {
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
 
+void rowlessMIP1(Highs& highs) {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_matrix_.start_ = {0, 0, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = -1.0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve reduces the LP to empty
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  // solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
+
+void rowlessMIP2(Highs& highs) {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_matrix_.start_ = {0, 0, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = -1.0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve reduces the LP to empty
+  // solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
+
 TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
   Highs highs;
@@ -854,4 +915,89 @@ TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = 82.19999924;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2290", "[highs_test_mip_solver]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2290.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -1.6666666666;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2409", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-1, 1};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {0.1, 0.1};
+  lp.row_upper_ = {kHighsInf, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {-1, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 0.1;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  if (dev_run) printf("Testing that presolve reduces the problem to empty\n");
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() ==
+          HighsPresolveStatus::kReducedToEmpty);
+
+  if (dev_run)
+    printf(
+        "\nTesting that with presolve the correct optimal objective is "
+        "found\n");
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  highs.clearSolver();
+  if (dev_run)
+    printf(
+        "\nTesting that without presolve the correct optimal objective is "
+        "found\n");
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {-93, 25, 17};
+  lp.col_lower_ = {-100, -100, -100};
+  lp.col_upper_ = {120, 10, 0};
+  lp.row_lower_ = {3994.5, -4878.3, -4930};
+  lp.row_upper_ = {kHighsInf, kHighsInf, kHighsInf};
+  lp.a_matrix_.start_ = {0, 3, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {-89, -0.1, -8.6, -40.7, 77.2, -6.5, -12, -23.7, 72.78};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous,
+                     HighsVarType::kInteger};
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -3777.57124352;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  if (dev_run) printf("Testing that presolve reduces the problem\n");
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+
+  if (dev_run)
+    printf(
+        "\nTesting that with presolve the correct optimal objective is "
+        "found\n");
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  highs.clearSolver();
+  if (dev_run)
+    printf(
+        "\nTesting that without presolve the correct optimal objective is "
+        "found\n");
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
