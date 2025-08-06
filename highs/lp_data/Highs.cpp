@@ -845,7 +845,12 @@ HighsStatus Highs::presolve() {
           (int)options_.threads, max_threads);
       return HighsStatus::kError;
     }
-    const bool force_lp_presolve = false;
+    // If problem is a MIP and solve_relaxation is true, it's natural
+    // to force LP presolve. It means that someone wanting the
+    // presolved relaxation of a MIP just has to set solve_relaxation
+    // to true, rather than clearing the integrality of the model (cf
+    // #2234)
+    const bool force_lp_presolve = options_.solve_relaxation;
     model_presolve_status_ = runPresolve(force_lp_presolve, force_presolve);
   }
 
@@ -1153,56 +1158,47 @@ HighsStatus Highs::optimizeModel() {
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
     }
   }
-  const bool use_simplex_or_ipm =
-      (options_.solver.compare(kHighsChooseString) != 0);
-  if (!use_simplex_or_ipm) {
-    // Leaving HiGHS to choose method according to model class
-    if (model_.isQp()) {
-      if (model_.isMip()) {
-        if (options_.solve_relaxation) {
-          // Relax any semi-variables
-          bool made_semi_variable_mods = false;
-          relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-          undo_mods = undo_mods || made_semi_variable_mods;
-        } else {
-          highsLogUser(options_.log_options, HighsLogType::kError,
-                       "Cannot solve MIQP problems with HiGHS\n");
-          return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-        }
-      }
-      // Ensure that its diagonal entries are OK in the context of the
-      // objective sense. It's OK to be semi-definite
-      if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+  // Choose method according to model class
+  if (model_.isQp()) {
+    if (model_.isMip()) {
+      if (options_.solve_relaxation) {
+        // Relax any semi-variables
+        bool made_semi_variable_mods = false;
+        relaxSemiVariables(model_.lp_, made_semi_variable_mods);
+        undo_mods = undo_mods || made_semi_variable_mods;
+      } else {
         highsLogUser(options_.log_options, HighsLogType::kError,
-                     "Cannot solve non-convex QP problems with HiGHS\n");
+                     "Cannot solve MIQP problems with HiGHS\n");
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
-      call_status = callSolveQp();
-      return_status = interpretCallStatus(options_.log_options, call_status,
-                                          return_status, "callSolveQp");
-      return returnFromOptimizeModel(return_status, undo_mods);
-    } else if (model_.isMip() && !options_.solve_relaxation) {
-      // Model is a MIP and not solving just the relaxation
+    }
+    // Ensure that its diagonal entries are OK in the context of the
+    // objective sense. It's OK to be semi-definite
+    if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot solve non-convex QP problems with HiGHS\n");
+      return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+    }
+    call_status = callSolveQp();
+    return_status = interpretCallStatus(options_.log_options, call_status,
+                                        return_status, "callSolveQp");
+    return returnFromOptimizeModel(return_status, undo_mods);
+  } else if (model_.isMip()) {
+    // Model is MIP
+    if (options_.solve_relaxation) {
+      // Solving just the relaxation, so relax any semi-variables
+      bool made_semi_variable_mods = false;
+      relaxSemiVariables(model_.lp_, made_semi_variable_mods);
+      undo_mods = undo_mods || made_semi_variable_mods;
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Solving LP relaxation since solve_relaxation is true\n");
+    } else {
+      // Solve model as a MIP
       call_status = callSolveMip();
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
       return returnFromOptimizeModel(return_status, undo_mods);
     }
-  }
-  // If model is MIP, must be solving the relaxation or not leaving
-  // HiGHS to choose method according to model class
-  if (model_.isMip()) {
-    assert(options_.solve_relaxation || use_simplex_or_ipm);
-    // Relax any semi-variables
-    bool made_semi_variable_mods = false;
-    relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-    undo_mods = undo_mods || made_semi_variable_mods;
-    highsLogUser(
-        options_.log_options, HighsLogType::kInfo,
-        "Solving LP relaxation since%s%s%s\n",
-        options_.solve_relaxation ? " solve_relaxation is true" : "",
-        options_.solve_relaxation && use_simplex_or_ipm ? " and" : "",
-        use_simplex_or_ipm ? (" solver = " + options_.solver).c_str() : "");
   }
   // Solve the model as an LP
   HighsLp& incumbent_lp = model_.lp_;
