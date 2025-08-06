@@ -133,6 +133,19 @@ const char* const kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
 const char* const kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
 const char* const kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
 
+const HighsInt kHighsIisStrategyLight = 0;
+const HighsInt kHighsIisStrategyFromLpRowPriority = 1;  // WIP
+const HighsInt kHighsIisStrategyFromLpColPriority = 2;  // WIP
+
+const HighsInt kHighsIisBoundFree = 1;
+const HighsInt kHighsIisBoundLower = 2;
+const HighsInt kHighsIisBoundUpper = 3;
+const HighsInt kHighsIisBoundBoxed = 4;
+
+const HighsInt kHighsIisStatusInConflict = 0;
+const HighsInt kHighsIisStatusNotInConflict = 1;
+const HighsInt kHighsIisStatusMaybeInConflict = 2;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2225,6 +2238,28 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               HighsInt* integrality);
 
 /**
+ * Get the data from a HiGHS IIS LP.
+ *
+ * The input arguments have the same meaning (in a different order) to those
+ * used in `Highs_passModel`.
+ *
+ * Note that all arrays must be pre-allocated to the correct size before calling
+ * `Highs_getModel`. Use the following query methods to check the appropriate
+ * size:
+ *  - `Highs_getPresolvedNumCol`
+ *  - `Highs_getPresolvedNumRow`
+ *  - `Highs_getPresolvedNumNz`
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,
+                        HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz,
+                        HighsInt* sense, double* offset, double* col_cost,
+                        double* col_lower, double* col_upper, double* row_lower,
+                        double* row_upper, HighsInt* a_start, HighsInt* a_index,
+                        double* a_value, HighsInt* integrality);
+
+/**
  * Set a primal (and possibly dual) solution as a starting point, then run
  * crossover to compute a basic feasible solution.
  *
@@ -2342,6 +2377,39 @@ HighsInt Highs_feasibilityRelaxation(void* highs,
                                      const double* local_upper_penalty,
                                      const double* local_rhs_penalty);
 
+/**
+ * Attempt to compute an irreducible infeasibility subsystem (IIS) for
+ * an LP, QP, or the relaxation of a MIP. If no IIS is found, then the
+ * number of IIS columns and rows will be zero.
+ *
+ * @param highs                      A pointer to the Highs instance.
+ * @param const HighsInt iis_num_col Number of columns in the IIS.
+ * @param const HighsInt iis_num_row Number of rows in the IIS.
+ * @param const HighsInt* col_index  An array of length [iis_num_col], to be
+ *                                   filled with the indices of original
+ *                                   variables in the IIS.
+ * @param const HighsInt* row_index  An array of length [iis_num_col], to be
+ *                                   filled with the indices of original
+ *                                   constraints in the IIS.
+ * @param const HighsInt* col_bound  An array of length [iis_num_col], to be
+ *                                   filled with the bound status of variables
+ *                                   in the IIS.
+ * @param const HighsInt* row_bound  An array of length [iis_num_col], to be
+ *                                   filled with the bound status of constraints
+ *                                   in the IIS.
+ * @param const HighsInt* col_status An array of length [num_col], to be
+ *                                   filled with the IIS status of all original
+ *                                   variables.
+ * @param const HighsInt* row_status n array of length [num_col], to be
+ *                                   filled with the IIS status of all original
+ *                                   constraints.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
+                      HighsInt* col_index, HighsInt* row_index,
+                      HighsInt* col_bound, HighsInt* row_bound,
+                      HighsInt* col_status, HighsInt* row_status);
 /**
  * Releases all resources held by the global scheduler instance.
  *

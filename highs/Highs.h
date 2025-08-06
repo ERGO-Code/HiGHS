@@ -434,13 +434,14 @@ class Highs {
                                 double* value = nullptr);
 
   /**
-   * @brief Return a const reference to the presolved HighsLp instance in HiGHS
+   * @brief Return a const reference to the internal presolved HighsLp
+   * instance
    */
   const HighsLp& getPresolvedLp() const { return presolved_model_.lp_; }
 
   /**
-   * @brief Return a const reference to the presolved HighsModel instance in
-   * HiGHS
+   * @brief Return a const reference to the internal presolved
+   * HighsModel instance
    */
   const HighsModel& getPresolvedModel() const { return presolved_model_; }
 
@@ -476,9 +477,15 @@ class Highs {
   const HighsModel& getModel() const { return model_; }
 
   /**
-   * @brief Return a const reference to the internal HighsSolution instance
+   * @brief Return a const reference to the internal HighsSolution
+   * instance
    */
   const HighsSolution& getSolution() const { return solution_; }
+
+  /**
+   * @brief Return a const reference to the internal IIS LP instance
+   */
+  const HighsLp& getIisLp() const { return iis_.model_.lp_; }
 
   /**
    * @brief Zero all clocks in the internal HighsTimer instance
@@ -486,7 +493,8 @@ class Highs {
   void zeroAllClocks() { timer_.zeroAllClocks(); };
 
   /**
-   * @brief Return a const reference to the internal HighsSolution instance
+   * @brief Return a const reference to the internal HighsSolution
+   * instance
    */
   const std::vector<HighsObjectiveSolution>& getSavedMipSolutions() const {
     return saved_objective_and_solution_;
@@ -848,6 +856,11 @@ class Highs {
    * @brief Write out the incumbent presolved model to a file
    */
   HighsStatus writePresolvedModel(const std::string& filename = "");
+
+  /**
+   * @brief Write out the internal IIS LP instance to a file
+   */
+  HighsStatus writeIisModel(const std::string& filename = "");
 
   /**
    * @brief Write out the given model to a file
@@ -1657,10 +1670,12 @@ class Highs {
   HighsStatus getRangingInterface();
 
   HighsStatus getIisInterface();
+  HighsStatus getIisInterfaceReturn(const HighsStatus return_status);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const bool feasible_model,
-      const HighsInt original_num_col, const HighsInt original_num_row,
+      const std::string& original_model_name, const HighsInt original_num_col,
+      const HighsInt original_num_row,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
       const std::vector<double> original_col_upper,

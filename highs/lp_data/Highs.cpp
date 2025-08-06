@@ -657,11 +657,6 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
 }
 
 HighsStatus Highs::passModelName(const std::string& name) {
-  if (int(name.length()) <= 0) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Cannot define empty model names\n");
-    return HighsStatus::kError;
-  }
   this->model_.lp_.model_name_ = name;
   return HighsStatus::kOk;
 }
@@ -740,6 +735,12 @@ HighsStatus Highs::writeModel(const std::string& filename) {
 
 HighsStatus Highs::writePresolvedModel(const std::string& filename) {
   return writeLocalModel(presolved_model_, filename);
+}
+
+HighsStatus Highs::writeIisModel(const std::string& filename) {
+  HighsStatus return_status = this->getIisInterface();
+  if (return_status == HighsStatus::kError) return return_status;
+  return writeLocalModel(iis_.model_, filename);
 }
 
 HighsStatus Highs::writeLocalModel(HighsModel& model,
@@ -964,6 +965,8 @@ HighsStatus Highs::run() {
       // recover HiGHS files to options_
       this->getHighsFiles();
       this->files_.clear();
+      if (this->options_.write_iis_model_file != "")
+        status = this->writeIisModel(this->options_.write_iis_model_file);
       if (this->options_.solution_file != "")
         status = this->writeSolution(this->options_.solution_file,
                                      this->options_.write_solution_style);
@@ -1953,29 +1956,8 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
 }
 
 HighsStatus Highs::getIis(HighsIis& iis) {
-  if (this->model_status_ == HighsModelStatus::kOptimal ||
-      this->model_status_ == HighsModelStatus::kUnbounded) {
-    // Strange to call getIis for a model that's known to be feasible
-    highsLogUser(
-        options_.log_options, HighsLogType::kInfo,
-        "Calling Highs::getIis for a model that is known to be feasible\n");
-    iis.invalidate();
-    // No IIS exists, so validate the empty HighsIis instance
-    iis.valid_ = true;
-    return HighsStatus::kOk;
-  }
-  HighsStatus return_status = HighsStatus::kOk;
-  if (this->model_status_ != HighsModelStatus::kNotset &&
-      this->model_status_ != HighsModelStatus::kInfeasible) {
-    return_status = HighsStatus::kWarning;
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "Calling Highs::getIis for a model with status %s\n",
-                 this->modelStatusToString(this->model_status_).c_str());
-  }
-  return_status =
-      interpretCallStatus(options_.log_options, this->getIisInterface(),
-                          return_status, "getIisInterface");
-  iis = this->iis_;
+  HighsStatus return_status = this->getIisInterface();
+  if (return_status != HighsStatus::kError) iis = this->iis_;
   return return_status;
 }
 
@@ -4737,6 +4719,7 @@ void HighsFiles::clear() {
   this->read_solution_file = "";
   this->read_basis_file = "";
   this->write_model_file = "";
+  this->write_iis_model_file = "";
   this->write_solution_file = "";
   this->write_basis_file = "";
 }
@@ -4745,6 +4728,7 @@ bool Highs::optionsHasHighsFiles() const {
   if (this->options_.read_solution_file != "") return true;
   if (this->options_.read_basis_file != "") return true;
   if (this->options_.write_model_file != "") return true;
+  if (this->options_.write_iis_model_file != "") return true;
   if (this->options_.solution_file != "") return true;
   if (this->options_.write_basis_file != "") return true;
   return false;
@@ -4767,6 +4751,11 @@ void Highs::saveHighsFiles() {
     this->options_.write_model_file = "";
     this->files_.empty = false;
   }
+  if (this->options_.write_iis_model_file != "") {
+    this->files_.write_iis_model_file = this->options_.write_iis_model_file;
+    this->options_.write_iis_model_file = "";
+    this->files_.empty = false;
+  }
   if (this->options_.solution_file != "") {
     this->files_.write_solution_file = this->options_.solution_file;
     this->options_.solution_file = "";
@@ -4784,6 +4773,7 @@ void Highs::getHighsFiles() {
   this->options_.read_solution_file = this->files_.read_solution_file;
   this->options_.read_basis_file = this->files_.read_basis_file;
   this->options_.write_model_file = this->files_.write_model_file;
+  this->options_.write_iis_model_file = this->files_.write_iis_model_file;
   this->options_.solution_file = this->files_.write_solution_file;
   this->options_.write_basis_file = this->files_.write_basis_file;
   this->files_.clear();

@@ -72,6 +72,15 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
 }
 
 bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
+  const bool equal_vectors = equalVectors(lp);
+  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
+#ifndef NDEBUG
+  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
+#endif
+  return equal_vectors && equal_matrix;
+}
+
+bool HighsLp::equalVectors(const HighsLp& lp) const {
   bool equal_vectors = true;
   equal_vectors = this->num_col_ == lp.num_col_ && equal_vectors;
   equal_vectors = this->num_row_ == lp.num_row_ && equal_vectors;
@@ -86,11 +95,7 @@ bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
 #ifndef NDEBUG
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif
-  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
-#ifndef NDEBUG
-  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
-#endif
-  return equal_vectors && equal_matrix;
+  return equal_vectors;
 }
 
 bool HighsLp::equalNames(const HighsLp& lp) const {
