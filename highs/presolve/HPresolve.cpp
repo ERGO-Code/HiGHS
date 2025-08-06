@@ -3369,7 +3369,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           // performed in HPresolve::addToMatrix).
           for (HighsInt rowiter : rowpositions) {
             HighsInt col = Acol[rowiter];
-            HighsInt coef = Avalue[rowiter];
+            double coef = Avalue[rowiter];
             assert(Arow[rowiter] == row);
 
             // skip binary column
