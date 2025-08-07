@@ -11,7 +11,7 @@ git clone https://github.com/KarypisLab/GKlib.git
 
 2. Clone METIS
 ```
-git clone https://github.com/KarypisLab/GKlib.git
+git clone https://github.com/KarypisLab/METIS.git
 ```
 
 3. Create installs dir 
