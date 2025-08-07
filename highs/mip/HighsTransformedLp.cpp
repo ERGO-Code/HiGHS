@@ -753,8 +753,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
                              snfr.origBinColCoef[bestVlb[col].first], lb, ub,
                              false)) {
           boundTypes[col] = BoundType::kSimpleLb;
-        } else if (vals[i] > 0 ||
-                   simpleLbDist[col] > lbDist[col] + mip.mipdata_->feastol) {
+        } else if (simpleLbDist[col] > lbDist[col] + mip.mipdata_->feastol) {
           boundTypes[col] = BoundType::kVariableLb;
           snfr.binColUsed[bestVlb[col].first] = true;
         } else
@@ -764,8 +763,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
                              snfr.origBinColCoef[bestVub[col].first], lb, ub,
                              true)) {
           boundTypes[col] = BoundType::kSimpleUb;
-        } else if (vals[i] < 0 ||
-                   simpleUbDist[col] > ubDist[col] + mip.mipdata_->feastol) {
+        } else if (simpleUbDist[col] > ubDist[col] + mip.mipdata_->feastol) {
           boundTypes[col] = BoundType::kVariableUb;
           snfr.binColUsed[bestVub[col].first] = true;
         } else {

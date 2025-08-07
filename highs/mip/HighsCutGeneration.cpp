@@ -632,7 +632,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
     }
     assert(i == ld.r && ld.M[i] <= vubcoef + snfr.lambda + 1e-8);
     return static_cast<double>(ld.r * HighsCDouble(snfr.lambda) + vubcoef -
-                               ld.M[i]);
+                               ld.M[ld.r]);
   };
 
   // Calculate the lifted simple generalized flow cover cut
