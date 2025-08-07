@@ -346,7 +346,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // due to early return in the root node evaluation
     Highs ipm;
     const std::vector<double>& sol = ipm.getSolution().col_value;
-    const bool use_hipo = useHipo(ipm.getOptions(),
+    const bool use_hipo = useHipo(*mipsolver.options_mip_,
 				  kMipIpmSolverString,
 				  *mipsolver.model_, true);
     printf("In HighsMipSolverData::startAnalyticCenterComputation use_hipo = %s\n",
@@ -357,7 +357,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.setOptionValue("run_crossover", kHighsOffString);
     //    ipm.setOptionValue("allow_pdlp_cleanup", false);
     ipm.setOptionValue("presolve", kHighsOffString);
-    ipm.setOptionValue("output_flag", !mipsolver.submip);
+    // ipm.setOptionValue("output_flag", !mipsolver.submip);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     ipm.setOptionValue("solve_relaxation", true);
     HighsLp lpmodel(*mipsolver.model_);

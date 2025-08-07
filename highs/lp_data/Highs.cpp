@@ -4458,6 +4458,12 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
 
     case HighsModelStatus::kUnboundedOrInfeasible:
       if (options_.allow_unbounded_or_infeasible ||
+	  /*
+          ((options_.solver == kIpmString ||
+	    options_.solver == kHipoString ||
+	    options_.solver == kIpxString) &&
+           options_.run_crossover == kHighsOnString) ||
+	  */
           (options_.solver == kIpmString &&
            options_.run_crossover == kHighsOnString) ||
           (options_.solver == kPdlpString) || model_.isMip()) {

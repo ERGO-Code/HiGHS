@@ -141,8 +141,7 @@ class HighsTimer {
     // Check that the clock's been stopped. It should be set to
     // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
     const bool clock_stopped = clock_start[i_clock] > 0;
-    if (i_clock != hipo_clock &&
-	i_clock != ipx_clock) {
+    if (i_clock != hipo_clock && i_clock != ipx_clock) {
       // Sometimes the analytic centre clock isn't stopped - because
       // it runs on a separate thread. Although it would be good to
       // understand this better, for now don't assert that this clock
@@ -278,11 +277,17 @@ class HighsTimer {
       // Check that the clock's not still running. It should be set to
       // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
       const bool clock_stopped = clock_start[iClock] > 0;
-      if (!clock_stopped) {
-        printf("Clock %d - %s - still running\n", int(iClock),
-               clock_names[iClock].c_str());
+      if (iClock != hipo_clock && iClock != ipx_clock) {
+	// Sometimes the analytic centre clock isn't stopped - because
+	// it runs on a separate thread. Although it would be good to
+	// understand this better, for now don't assert that this clock
+	// has stopped
+	if (!clock_stopped) {
+	  printf("Clock %d - %s - still running\n", int(iClock),
+		 clock_names[iClock].c_str());
+	}
+	assert(clock_stopped);
       }
-      assert(clock_stopped);
       sum_calls += clock_num_call[iClock];
       sum_clock_times += clock_time[iClock];
     }
