@@ -9,9 +9,9 @@
 
 #include <random>
 
-// #include "lp_data/HighsLpUtils.h"
 #include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HighsModelUtils.h"
+#include "lp_data/HighsSolve.h" // For useHipo()
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
 #include "mip/MipTimer.h"
@@ -345,14 +345,22 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
     Highs ipm;
+    const std::vector<double>& sol = ipm.getSolution().col_value;
+    ipm.setOptionValue("output_flag", false);
     ipm.setOptionValue("solver", "ipm");
     ipm.setOptionValue("run_crossover", kHighsOffString);
     //    ipm.setOptionValue("allow_pdlp_cleanup", false);
     ipm.setOptionValue("presolve", kHighsOffString);
-    ipm.setOptionValue("output_flag", false);
     // ipm.setOptionValue("output_flag", !mipsolver.submip);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     ipm.setOptionValue("solve_relaxation", true);
+    const bool use_hipo = useHipo(ipm.getOptions(),
+				  kMipIpmSolverString,
+				  *mipsolver.model_);
+    printf("In HighsMipSolverData::startAnalyticCenterComputation use_hipo = %s\n",
+	   use_hipo ? "T" : "F");
+    const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
+    ipm.setOptionValue(kMipIpmSolverString, mip_ipm_solver);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
@@ -363,10 +371,17 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //      file_name.c_str()); fflush(stdout); ipm.writeModel(file_name);
     //    }
 
-    mipsolver.analysis_.mipTimerStart(kMipClockIpxSolveLp);
+    HighsInt ipm_clock = use_hipo ? kMipClockHipoSolveLp : kMipClockIpxSolveLp;
+    mipsolver.analysis_.mipTimerStart(ipm_clock);
     ipm.run();
-    mipsolver.analysis_.mipTimerStop(kMipClockIpxSolveLp);
-    const std::vector<double>& sol = ipm.getSolution().col_value;
+    mipsolver.analysis_.mipTimerStop(ipm_clock);
+    if (use_hipo && HighsInt(sol.size()) != mipsolver.numCol()) {
+      // HiPO has failed to get a solution, so try IPX
+      ipm_clock = kMipClockIpxSolveLp;
+      mipsolver.analysis_.mipTimerStart(ipm_clock);
+      ipm.run();
+      mipsolver.analysis_.mipTimerStop(ipm_clock);      
+    }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
     analyticCenter = sol;
