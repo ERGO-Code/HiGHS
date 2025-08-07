@@ -308,8 +308,7 @@ HighsStatus Highs::formStandardFormLp() {
     }
   }
   // Now add the slack variables
-  for (HighsInt iX = 0; iX < HighsInt(slack_ix.size()); iX++) {
-    HighsInt iRow = slack_ix[iX];
+  for (HighsInt iRow : slack_ix) {
     this->standard_form_cost_.push_back(0);
     if (iRow > 0) {
       this->standard_form_matrix_.index_.push_back(iRow - 1);
@@ -514,7 +513,7 @@ HighsStatus Highs::addColsInterface(
   // Update the basis corresponding to new nonbasic columns
   if (useful_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
 
-  // Possibly add column names
+  // Possibly add blank column names
   lp.addColNames("", ext_num_new_col);
 
   // Increase the number of columns in the LP
@@ -659,7 +658,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // Update the basis corresponding to new basic rows
   if (useful_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
-  // Possibly add row names
+  // Possibly add blank row names
   lp.addRowNames("", ext_num_new_row);
 
   // Increase the number of rows in the LP
@@ -1613,9 +1612,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
 
-  // Declare identifiers to save column costs, integrality, any Hessian and the
-  // presolve setting, and a flag to know when they should be
-  // recovered
+  // Declare identifiers to save column costs, integrality, any
+  // Hessian and the presolve setting, and a flag to know when they
+  // should be recovered
   std::vector<double> col_cost;
   HighsHessian hessian;
   bool solve_relaxation;
@@ -1711,6 +1710,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     if (is_qp) model_.hessian_ = hessian;
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
+    // The relaxation for an infeasible MIP may be feasible - so no
+    // ray is generated - so make sure (#2415) that the primal
+    // solution status is reset
+    this->info_.primal_solution_status = SolutionStatus::kSolutionStatusNone;
     // Modify the objective-related information
     this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
     this->info_.objective_function_value = 0;
@@ -1719,8 +1722,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       assert(this->info_.num_primal_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
     } else {
-      // If someone has tried to get a dual ray for a feasible
-      // problem, then any status of the original model has been lost
+      // If someone has tried to get a dual ray for a feasible problem
+      // - or if the relaxation is feasible - then any model and
+      // primal KKT status of the original model has been lost
+      this->info_.invalidatePrimalKkt();
       this->model_status_ = HighsModelStatus::kNotset;
     }
   }
@@ -1769,7 +1774,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->getOptionValue("allow_unbounded_or_infeasible",
                            allow_unbounded_or_infeasible);
       solve_unboundedness_problem = true;
-      lp.integrality_.clear();
       this->setOptionValue("presolve", kHighsOffString);
       this->setOptionValue("solve_relaxation", true);
       this->setOptionValue("allow_unbounded_or_infeasible", false);
@@ -1830,14 +1834,21 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       return_status = HighsStatus::kOk;
     }
   }
+  const bool is_mip = this->model_.isMip();
   if (solve_unboundedness_problem) {
+    if (is_mip) {
+      // Unboundedness LP has been solved, but that will give dual
+      // solution status kInfeasible which, for a MIP is not correct
+      this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
+      this->info_.invalidateDualKkt();
+    }
     // Restore the option values
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
     this->setOptionValue("allow_unbounded_or_infeasible",
                          allow_unbounded_or_infeasible);
     if (has_primal_ray) {
-      assert(this->info_.num_dual_infeasibilities > 0);
+      assert(is_mip || this->info_.num_dual_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kUnbounded);
     }
   }
@@ -1851,20 +1862,69 @@ HighsStatus Highs::getRangingInterface() {
   return getRangingData(this->ranging_, solver_object);
 }
 
+HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status) {
+  if (return_status != HighsStatus::kError) {
+    // Construct the ISS LP
+    this->iis_.getLp(this->model_.lp_);
+    // Check that the IIS LP data are OK (correspond to original model
+    // reduced to IIS col/row and bound data).
+    if (!this->iis_.lpDataOk(this->model_.lp_, this->options_))
+      return HighsStatus::kError;
+    // Check that the IIS LP is OK (infeasible and optimal/unbounded
+    // is any bound is relaxed)
+    if (!this->iis_.lpOk(this->options_)) return HighsStatus::kError;
+    // Construct the ISS status vectors for cols and rows of original
+    // model
+    this->iis_.getStatus(model_.lp_);
+  }
+  return return_status;
+}
+
 HighsStatus Highs::getIisInterface() {
-  if (this->iis_.valid_) return HighsStatus::kOk;
+  if (this->model_status_ == HighsModelStatus::kOptimal ||
+      this->model_status_ == HighsModelStatus::kUnbounded) {
+    // Strange to call getIis for a model that's known to be feasible
+    highsLogUser(
+        options_.log_options, HighsLogType::kInfo,
+        "Calling Highs::getIis for a model that is known to be feasible\n");
+    this->iis_.invalidate();
+    // No IIS exists, so validate the empty HighsIis instance
+    this->iis_.valid_ = true;
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
+  }
+  HighsStatus return_status = HighsStatus::kOk;
+  if (this->model_status_ != HighsModelStatus::kNotset &&
+      this->model_status_ != HighsModelStatus::kInfeasible) {
+    return_status = HighsStatus::kWarning;
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Calling Highs::getIis for a model with status %s\n",
+                 this->modelStatusToString(this->model_status_).c_str());
+  }
+  if (this->iis_.valid_) return this->getIisInterfaceReturn(HighsStatus::kOk);
   this->iis_.invalidate();
-  HighsLp& lp = model_.lp_;
+  const HighsLp& lp = model_.lp_;
   // Check for trivial IIS: empty infeasible row or inconsistent bounds
-  if (this->iis_.trivial(lp, options_)) return HighsStatus::kOk;
+  if (this->iis_.trivial(lp, options_)) {
+    this->model_status_ = HighsModelStatus::kInfeasible;
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
+  }
   HighsInt num_row = lp.num_row_;
   if (num_row == 0) {
     // For an LP with no rows, the only scope for infeasibility is
     // inconsistent columns bounds - which has already been assessed,
     // so validate the empty HighsIis instance
     this->iis_.valid_ = true;
-    return HighsStatus::kOk;
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
   }
+  // Look for infeasible rows based on row value bounds
+  if (this->iis_.rowValueBounds(lp, options_)) {
+    this->model_status_ = HighsModelStatus::kInfeasible;
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
+  }
+  // Don't continue with more expensive techniques if using the IIS
+  // light strategy
+  if (options_.iis_strategy == kIisStrategyLight)
+    return this->getIisInterfaceReturn(HighsStatus::kOk);
   const bool ray_option = false;
   //      options_.iis_strategy == kIisStrategyFromRayRowPriority ||
   //      options_.iis_strategy == kIisStrategyFromRayColPriority;
@@ -1930,10 +1990,11 @@ HighsStatus Highs::getIisInterface() {
         this->elasticityFilter(-1.0, -1.0, 1.0, nullptr, nullptr, nullptr, true,
                                infeasible_row_subset);
     HighsLp check_lp_after = this->model_.lp_;
-    assert(check_lp_before.equalButForScalingAndNames(check_lp_after));
+    assert(check_lp_before.equalVectors(check_lp_after));
+    assert(check_lp_before.a_matrix_.equivalent(check_lp_after.a_matrix_));
     if (return_status != HighsStatus::kOk) return return_status;
   }
-  HighsStatus return_status = HighsStatus::kOk;
+  return_status = HighsStatus::kOk;
   if (infeasible_row_subset.size() == 0) {
     // No subset of infeasible rows, so model is feasible
     this->iis_.valid_ = true;
@@ -1974,12 +2035,13 @@ HighsStatus Highs::getIisInterface() {
                  int(max_iterations), min_time,
                  num_lp_solved > 0 ? sum_time / num_lp_solved : 0, max_time);
   }
-  return return_status;
+  return this->getIisInterfaceReturn(return_status);
 }
 
 HighsStatus Highs::elasticityFilterReturn(
     const HighsStatus return_status, const bool feasible_model,
-    const HighsInt original_num_col, const HighsInt original_num_row,
+    const std::string& original_model_name, const HighsInt original_num_col,
+    const HighsInt original_num_row,
     const std::vector<double>& original_col_cost,
     const std::vector<double>& original_col_lower,
     const std::vector<double> original_col_upper,
@@ -2015,7 +2077,8 @@ HighsStatus Highs::elasticityFilterReturn(
                                 original_integrality.data());
     assert(run_status == HighsStatus::kOk);
   }
-
+  // Revert the model name
+  this->passModelName(original_model_name);
   assert(lp.num_col_ == original_num_col);
   assert(lp.num_row_ == original_num_row);
 
@@ -2091,14 +2154,18 @@ HighsStatus Highs::elasticityFilter(
   HighsInt evar_ix = lp.num_col_;
   HighsStatus run_status;
   const bool write_model = false;
-  // Take copies of the original model dimensions and column data
-  // vectors, as they will be modified in forming the e-LP
+  // Take copies of the original model name, dimensions and column
+  // data vectors, as they will be modified in forming the e-LP
+  const std::string original_model_name = lp.model_name_;
   const HighsInt original_num_col = lp.num_col_;
   const HighsInt original_num_row = lp.num_row_;
   const std::vector<double> original_col_cost = lp.col_cost_;
   const std::vector<double> original_col_lower = lp.col_lower_;
   const std::vector<double> original_col_upper = lp.col_upper_;
   const std::vector<HighsVarType> original_integrality = lp.integrality_;
+  // Give the model a new name to avoid confusing logging when the
+  // elastic LP is solved
+  this->passModelName(original_model_name + "_elastic");
   // Zero the column costs
   std::vector<double> zero_costs;
   zero_costs.assign(original_num_col, 0);
@@ -2349,20 +2416,20 @@ HighsStatus Highs::elasticityFilter(
   run_status = solveLp();
 
   if (run_status != HighsStatus::kOk)
-    return elasticityFilterReturn(run_status, false, original_num_col,
-                                  original_num_row, original_col_cost,
-                                  original_col_lower, original_col_upper,
-                                  original_integrality);
+    return elasticityFilterReturn(run_status, false, original_model_name,
+                                  original_num_col, original_num_row,
+                                  original_col_cost, original_col_lower,
+                                  original_col_upper, original_integrality);
   if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
   // Model status should be optimal, unless model is unbounded
   assert(this->model_status_ == HighsModelStatus::kOptimal ||
          this->model_status_ == HighsModelStatus::kUnbounded);
 
   if (!get_infeasible_row)
-    return elasticityFilterReturn(HighsStatus::kOk, false, original_num_col,
-                                  original_num_row, original_col_cost,
-                                  original_col_lower, original_col_upper,
-                                  original_integrality);
+    return elasticityFilterReturn(HighsStatus::kOk, false, original_model_name,
+                                  original_num_col, original_num_row,
+                                  original_col_cost, original_col_lower,
+                                  original_col_upper, original_integrality);
   const HighsSolution& solution = this->getSolution();
   // Now fix e-variables that are positive and re-solve until e-LP is infeasible
   HighsInt loop_k = 0;
@@ -2414,10 +2481,10 @@ HighsStatus Highs::elasticityFilter(
     }
     HighsStatus run_status = solveLp();
     if (run_status != HighsStatus::kOk)
-      return elasticityFilterReturn(run_status, feasible_model,
-                                    original_num_col, original_num_row,
-                                    original_col_cost, original_col_lower,
-                                    original_col_upper, original_integrality);
+      return elasticityFilterReturn(
+          run_status, feasible_model, original_model_name, original_num_col,
+          original_num_row, original_col_cost, original_col_lower,
+          original_col_upper, original_integrality);
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
     if (model_status == HighsModelStatus::kInfeasible) break;
@@ -2471,10 +2538,10 @@ HighsStatus Highs::elasticityFilter(
         "rows\n",
         int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
 
-  return elasticityFilterReturn(HighsStatus::kOk, feasible_model,
-                                original_num_col, original_num_row,
-                                original_col_cost, original_col_lower,
-                                original_col_upper, original_integrality);
+  return elasticityFilterReturn(
+      HighsStatus::kOk, feasible_model, original_model_name, original_num_col,
+      original_num_row, original_col_cost, original_col_lower,
+      original_col_upper, original_integrality);
 }
 
 HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
@@ -2581,13 +2648,13 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
-  double complementarity_tolerance = options.complementarity_tolerance;
+  double optimality_tolerance = options.optimality_tolerance;
   if (options.kkt_tolerance != kDefaultKktTolerance) {
     primal_feasibility_tolerance = options.kkt_tolerance;
     dual_feasibility_tolerance = options.kkt_tolerance;
     primal_residual_tolerance = options.kkt_tolerance;
     dual_residual_tolerance = options.kkt_tolerance;
-    complementarity_tolerance = options.kkt_tolerance;
+    optimality_tolerance = options.kkt_tolerance;
   }
   info.objective_function_value =
       model_.lp_.objectiveValue(solution_.col_value);
@@ -2597,7 +2664,8 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                    primal_dual_errors, get_residuals);
   //  highsLogUser(options.log_options, HighsLogType::kInfo,
   //               "Highs::lpKktCheck: %s\n", message.c_str());
-  reportLpKktFailures(model_.lp_, options, info, "LP");
+  if (this->model_status_ == HighsModelStatus::kOptimal)
+    reportLpKktFailures(model_.lp_, options, info, "LP");
   // get_residuals is false when there is a valid basis, since
   // residual errors are assumed to be small, so
   // info.num_primal_residual_errors = -1, since they aren't
@@ -2656,15 +2724,14 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     // objective error
     bool unexpected_error_if_optimal = info.num_complementarity_violations != 0;
     double local_dual_objective = 0;
-    if (info.primal_dual_objective_error > complementarity_tolerance) {
+    if (info.primal_dual_objective_error > optimality_tolerance) {
       // Ignore primal-dual objective errors if both objectives are small
       const bool ok_dual_objective = computeDualObjectiveValue(
-          this->model_.lp_, this->solution_, local_dual_objective);
+          nullptr, this->model_.lp_, this->solution_, local_dual_objective);
       assert(ok_dual_objective);
       if (info.objective_function_value * info.objective_function_value >
-              complementarity_tolerance &&
-          local_dual_objective * local_dual_objective >
-              complementarity_tolerance)
+              optimality_tolerance &&
+          local_dual_objective * local_dual_objective > optimality_tolerance)
         unexpected_error_if_optimal = true;
     }
     const bool have_residual_errors =
@@ -2682,7 +2749,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
           max_dual_tolerance_relative_violation);
     }
     primal_dual_objective_tolerance_relative_violation =
-        info.primal_dual_objective_error / complementarity_tolerance;
+        info.primal_dual_objective_error / optimality_tolerance;
 
     if (was_optimal && unexpected_error_if_optimal) {
       highsLogUser(
@@ -2708,7 +2775,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
             info.max_relative_dual_residual_error, dual_residual_tolerance);
       }
       assert(info.num_complementarity_violations == 0);
-      assert(info.primal_dual_objective_error <= complementarity_tolerance);
+      assert(info.primal_dual_objective_error <= optimality_tolerance);
       if (have_residual_errors) {
         assert(info.num_relative_primal_residual_errors == 0);
         assert(info.num_relative_dual_residual_errors == 0);
@@ -2798,16 +2865,15 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
                      info.max_relative_dual_residual_error,
                      dual_residual_tolerance);
     }
-    if (info.primal_dual_objective_error > complementarity_tolerance) {
+    if (info.primal_dual_objective_error > optimality_tolerance) {
       primal_dual_objective_tolerance_relative_violation =
-          info.primal_dual_objective_error / complementarity_tolerance;
+          info.primal_dual_objective_error / optimality_tolerance;
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
                      "                 %8.3g relative P-D objective error    "
                      "(tolerance = %4.0e)\n",
-                     info.primal_dual_objective_error,
-                     complementarity_tolerance);
+                     info.primal_dual_objective_error, optimality_tolerance);
     }
     // Set the primal and dual solution status according to tolerance failure
     if (max_primal_tolerance_relative_violation >
@@ -3308,11 +3374,11 @@ HighsStatus Highs::computeIllConditioning(
                      ss.str().c_str());
     }
   } else {
-    for (HighsInt iX = 0; iX < HighsInt(ill_conditioning.record.size()); iX++) {
+    for (const auto& rec : ill_conditioning.record) {
       ss.str(std::string());
       bool newline = false;
-      double multiplier = ill_conditioning.record[iX].multiplier;
-      HighsInt iCol = basic_var[ill_conditioning.record[iX].index];
+      double multiplier = rec.multiplier;
+      HighsInt iCol = basic_var[rec.index];
       if (iCol < incumbent_lp.num_col_) {
         std::string col_name = has_col_names ? incumbent_lp.col_names_[iCol]
                                              : "C" + std::to_string(iCol);
@@ -3938,7 +4004,12 @@ HighsStatus Highs::multiobjectiveSolve() {
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
                  multi_objective_log->str().c_str());
   }
-  this->clearSolver();
+  // Solving with a different objective, but don't call
+  // this->clearSolver() since this loses the current solution - that
+  // may have been provided by the user (#2419). Just clear the dual
+  // data.
+  //
+  this->clearSolverDualData();
   if (this->options_.blend_multi_objectives) {
     // Objectives are blended by weight and minimized
     lp.offset_ = 0;
@@ -4196,7 +4267,7 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
             this->options_.dual_residual_tolerance);
   noCleanup("Primal-dual objective error",
             this->info_.primal_dual_objective_error,
-            this->options_.complementarity_tolerance);
+            this->options_.optimality_tolerance);
   if (no_cleanup) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "No PDLP cleanup due to KKT errors exceeding tolerances by a "

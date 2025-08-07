@@ -112,9 +112,9 @@ class TestHighsPy(unittest.TestCase):
 
     def test_version(self):
         h = self.get_basic_model()
-        self.assertEqual(h.version(), "1.10.0")
+        self.assertEqual(h.version(), "1.11.0")
         self.assertEqual(h.versionMajor(), 1)
-        self.assertEqual(h.versionMinor(), 10)
+        self.assertEqual(h.versionMinor(), 11)
         self.assertEqual(h.versionPatch(), 0)
 
     def test_basics(self):
@@ -990,7 +990,7 @@ class TestHighsPy(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as f:
                 h.writeBasis(f.name)
                 contents = f.read()
-                self.assertEqual(contents, b"HiGHS v1\nNone\n")
+                self.assertEqual(contents, b"HiGHS_basis_file v2\nNone\n")
 
     def test_write_basis_after_running(self):
         if platform == "linux" or platform == "darwin":
@@ -999,7 +999,7 @@ class TestHighsPy(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as f:
                 h.writeBasis(f.name)
                 contents = f.read()
-                self.assertEqual(contents, b"HiGHS v1\nValid\n# Columns 2\n1 1 \n# Rows 2\n0 0 \n")
+                self.assertEqual(contents, b"HiGHS_basis_file v2\nValid\n# Columns 2\nc0 1\nc1 1\n# Rows 2\nr0 0\nr1 0\n")
 
     def test_read_basis(self):
         if platform == "linux" or platform == "darwin":

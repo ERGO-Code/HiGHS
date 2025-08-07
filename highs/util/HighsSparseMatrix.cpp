@@ -36,6 +36,20 @@ bool HighsSparseMatrix::operator==(const HighsSparseMatrix& matrix) const {
   return equal;
 }
 
+bool HighsSparseMatrix::equivalent(const HighsSparseMatrix& matrix) const {
+  // Use this to test when the matrices may be in opposite format
+  if (*this == matrix) return true;
+  // Creat a local copy in of matrix in the same format as this and
+  // test for it being equal to this
+  HighsSparseMatrix lc_matrix = matrix;
+  if (this->isColwise()) {
+    lc_matrix.ensureColwise();
+  } else {
+    lc_matrix.ensureRowwise();
+  }
+  return *this == lc_matrix;
+}
+
 void HighsSparseMatrix::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;
@@ -527,7 +541,7 @@ void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
 
 void HighsSparseMatrix::getCol(const HighsInt iCol, HighsInt& num_nz,
                                HighsInt* index, double* value) const {
-  assert(iCol >= 0 && iCol < this->num_row_);
+  assert(iCol >= 0 && iCol < this->num_col_);
   num_nz = 0;
   if (this->isColwise()) {
     for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];

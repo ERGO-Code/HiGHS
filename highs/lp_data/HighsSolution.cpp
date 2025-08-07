@@ -78,13 +78,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
-  double complementarity_tolerance = options.complementarity_tolerance;
+  double optimality_tolerance = options.optimality_tolerance;
   if (options.kkt_tolerance != kDefaultKktTolerance) {
     primal_feasibility_tolerance = options.kkt_tolerance;
     dual_feasibility_tolerance = options.kkt_tolerance;
     primal_residual_tolerance = options.kkt_tolerance;
     dual_residual_tolerance = options.kkt_tolerance;
-    complementarity_tolerance = options.kkt_tolerance;
+    optimality_tolerance = options.kkt_tolerance;
   }
   // highs_info are the values computed in this method
 
@@ -199,7 +199,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double primal_infeasibility;
   double relative_primal_infeasibility;
   double dual_infeasibility;
-  double cost;
+  double cost = 0.0;
   double lower;
   double upper;
   double value;
@@ -443,24 +443,30 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   if (have_dual_solution) {
     // Determine the sum of complementarity violations
     const bool have_values = getComplementarityViolations(
-        lp, solution, complementarity_tolerance, num_complementarity_violation,
+        lp, solution, optimality_tolerance, num_complementarity_violation,
         max_complementarity_violation);
     assert(have_values);
   }
 
-  if (!is_qp && have_dual_solution) {
+  if (have_dual_solution) {
     // Determine the primal-dual objective error
     //
     // IPX computes objective_gap = (pobjective-dobjective) / (1.0 +
-    // 0.5*std::abs(pobjective+dobjective));
+    // 0.5*std::fabs(pobjective+dobjective));
     //
     // PDLP computes dRelObjGap = fabs(dPrimalObj - dDualObj) / (1.0 +
     // fabs(dPrimalObj) + fabs(dDualObj));
     //
     // Use the PDLP relative primal-dual objective error
+    //
+    // The dual objective for a QP has a -(1/2)x^TQx term, and this
+    // can be computed from the gradient (g = Qx + c) as
+    // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, so pass a pointer to the
+    // gradient data if this is necessary
+    const double* gradient_p = is_qp ? gradient.data() : nullptr;
     double dual_objective_value;
-    bool dual_objective_status =
-        computeDualObjectiveValue(lp, solution, dual_objective_value);
+    bool dual_objective_status = computeDualObjectiveValue(
+        gradient_p, lp, solution, dual_objective_value);
     assert(dual_objective_status);
     const double abs_objective_difference =
         std::fabs(highs_info.objective_function_value - dual_objective_value);
@@ -621,7 +627,7 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
-  double complementarity_tolerance = options.complementarity_tolerance;
+  double optimality_tolerance = options.optimality_tolerance;
 
   // clang-format off
   HighsInt& num_primal_residual_error = primal_dual_errors.glpsol_num_primal_residual_errors;
@@ -947,7 +953,7 @@ void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
-                                  const double complementarity_tolerance,
+                                  const double optimality_tolerance,
                                   HighsInt& num_complementarity_violation,
                                   double& max_complementarity_violation) {
   num_complementarity_violation = kHighsIllegalComplementarityCount;
@@ -976,7 +982,7 @@ bool getComplementarityViolations(const HighsLp& lp,
     }
     const double dual_residual = std::fabs(dual);
     const double complementarity_violation = primal_residual * dual_residual;
-    if (complementarity_violation > complementarity_tolerance)
+    if (complementarity_violation > optimality_tolerance)
       num_complementarity_violation++;
     max_complementarity_violation =
         std::max(complementarity_violation, max_complementarity_violation);
@@ -984,7 +990,24 @@ bool getComplementarityViolations(const HighsLp& lp,
   return true;
 }
 
-bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
+bool computeDualObjectiveValue(const HighsModel& model,
+                               const HighsSolution& solution,
+                               double& dual_objective_value) {
+  const HighsLp& lp = model.lp_;
+  if (!model.isQp())
+    return computeDualObjectiveValue(nullptr, lp, solution,
+                                     dual_objective_value);
+  assert(solution.col_value.size() == static_cast<size_t>(lp.num_col_));
+  // Model is QP, so compute gradient Qx + c so generic
+  // computeDualObjectiveValue can be used
+  std::vector<double> gradient;
+  model.objectiveGradient(solution.col_value, gradient);
+  return computeDualObjectiveValue(gradient.data(), lp, solution,
+                                   dual_objective_value);
+}
+
+bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
+                               const HighsSolution& solution,
                                double& dual_objective_value) {
   dual_objective_value = 0;
   if (!solution.dual_valid) return false;
@@ -995,6 +1018,18 @@ bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
   assert(solution.row_dual.size() == static_cast<size_t>(lp.num_row_));
 
   dual_objective_value = lp.offset_;
+  if (gradient) {
+    // The dual objective for a QP has a -(1/2)x^TQx term, and this
+    // can be computed from the gradient (g = Qx + c) as
+    // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, a pointer to the gradient data
+    // is passed if this is necessary
+    double quad_value = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      quad_value +=
+          (lp.col_cost_[iCol] - gradient[iCol]) * solution.col_value[iCol];
+    }
+    dual_objective_value += 0.5 * quad_value;
+  }
   double bound = 0;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
     const bool is_col = iVar < lp.num_col_;
@@ -1658,13 +1693,13 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
-  double complementarity_tolerance = options.complementarity_tolerance;
+  double optimality_tolerance = options.optimality_tolerance;
   if (options.kkt_tolerance != kDefaultKktTolerance) {
     primal_feasibility_tolerance = options.kkt_tolerance;
     dual_feasibility_tolerance = options.kkt_tolerance;
     primal_residual_tolerance = options.kkt_tolerance;
     dual_residual_tolerance = options.kkt_tolerance;
-    complementarity_tolerance = options.kkt_tolerance;
+    optimality_tolerance = options.kkt_tolerance;
   }
 
   const bool force_report = false;
@@ -1673,7 +1708,7 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
       info.num_dual_infeasibilities > 0 ||
       info.num_primal_residual_errors > 0 ||
       info.num_dual_residual_errors > 0 ||
-      info.primal_dual_objective_error > complementarity_tolerance;
+      info.primal_dual_objective_error > optimality_tolerance;
   if (!has_kkt_failures && !force_report) return;
 
   HighsLogType log_type =
@@ -1718,8 +1753,8 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
         "                          "
         "               %1d / %8.3g  P-D objective error        "
         "(tolerance = %4.0e)\n",
-        info.primal_dual_objective_error > complementarity_tolerance ? 1 : 0,
-        info.primal_dual_objective_error, complementarity_tolerance);
+        info.primal_dual_objective_error > optimality_tolerance ? 1 : 0,
+        info.primal_dual_objective_error, optimality_tolerance);
   }
   if (printf_kkt) {
     printf("grepLpKktFailures,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",
@@ -1737,8 +1772,8 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
 }
 
 bool HighsSolution::hasUndefined() const {
-  for (HighsInt iCol = 0; iCol < HighsInt(this->col_value.size()); iCol++)
-    if (this->col_value[iCol] == kHighsUndefined) return true;
+  for (double value : this->col_value)
+    if (value == kHighsUndefined) return true;
   return false;
 }
 

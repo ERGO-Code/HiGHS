@@ -1,54 +1,16 @@
 ## Build changes
 
-Replace command line parsing library with Cpp11 [#2211](https://github.com/ERGO-Code/HiGHS/pull/2211)
-
-CMake updates [#2286](https://github.com/ERGO-Code/HiGHS/pull/2286), the root of the HiGHS source files is now `highs/`, rather than `src/`
-
-Add missing include to zstr needed for gcc v15 and clang v19 [#2313](https://github.com/ERGO-Code/HiGHS/pull/2313)
-
-Updates for intel llvm compiler on linux [#2257](https://github.com/ERGO-Code/HiGHS/pull/2257)
-
 ## Code changes
 
-Fixed incorrect assertion in `HighsMipSolver::solutionFeasible()` (fixing [#2204](https://github.com/ERGO-Code/HiGHS/issues/2204))
+Forcing column reduction now checks the bound on the column dual rather than whether the dual row activity is zero fixing [#2409](https://github.com/ERGO-Code/HiGHS/issues/2409)
 
-As part of [#2251](https://github.com/ERGO-Code/HiGHS/issues/2251) cuPDLP-C will start from the incumbent solution in HiGHS. For a model that has been changed, the user must supply a starting solution via a call to `Highs::setSolution`
+Now handling correctly the case where an infeasible MIP has a feasible relaxation, so no ray is computed fixing [#2415](https://github.com/ERGO-Code/HiGHS/issues/2415)
 
-getColIntegrality now returns `HighsVarType::kContinuous` when `model_.lp_.integrality_` is empty (fixing [#2261](https://github.com/ERGO-Code/HiGHS/issues/2261))
+Fixed minor bug exposed by [#2441](https://github.com/ERGO-Code/HiGHS/issues/2441) in `Highs::setSolution()` for a sparse user solution when the moidel is empty, and only clearing the dual data before solving with modified objective in `Highs::multiobjectiveSolve()` so that user-supplied solution is not cleared.
 
-Now ensuring that when solving a scaled LP with useful but unvalidated basis, it does not lose its scaling after validation, since the scaling factors will be applied to the solution (fixing [#2267](https://github.com/ERGO-Code/HiGHS/issues/2267))
+The irreducible infeasibility system (IIS) facility now detects infeasibility due to bounds on constraint activity values (implied by variable bounds) being incompatible with constraint bounds. A `kIisStrategyLight mode` for the `iis_strategy` option has been introduced so that only infeasibility due to incompatible variable/constraint bounds and constraint activity values is checked for. The LP corresponding to any known IIS is now formed and held as a data member of the `HighsIis` class. It can be obtained as a const reference using `Highs::getIisLp()`, and written to a file using `Highs::writeIisModel(const std::string& filename = "")`
 
-By setting non-empty values of options `read_solution_file`, `read_basis_file`, `write_model_file` (with extension `.lp` or `.mps`), `write_solution_file`, `solution_file`, `write_basis_file`, these files will be read or written when calling `Highs::run()`. Hence options previously only available via the command line interface can be use (for example) by modelling languages that only call `Highs::run()` (fixing [#2269](https://github.com/ERGO-Code/HiGHS/issues/2269)).
-
-Bug [#2273](https://github.com/ERGO-Code/HiGHS/issues/2273) fixed
-
-ZI rounding and shifting MIP primal heuristics have been added (see [#2287](https://github.com/ERGO-Code/HiGHS/pull/2287)). They are off by default, but can be activated by setting the options `mip_heuristic_run_zi_round` and `mip_heuristic_run_shifting` to be true. Options `mip_heuristic_run_rins`, `mip_heuristic_run_rens` and `mip_heuristic_run_root_reduced_cost` to run the RINS, RENS and rootReducedCost heuristics have been added. These are true by default, but setting them to be false can accelerate the MIP solver on easy problems.
-
-Added `Highs_changeRowsBoundsByRange` to C API, fixing [#2296](https://github.com/ERGO-Code/HiGHS/issues/2296)
-
-Corrected docstrings for `Highs_getReducedRow`, motivated by [#2312](https://github.com/ERGO-Code/HiGHS/issues/2312)
-
-LP file reader no longer fails when there is no objective section. Fix is [#2316](https://github.com/ERGO-Code/HiGHS/pull/2316), but this exposes code quality issue [#2318](https://github.com/ERGO-Code/HiGHS/issues/2318)
-
-Added a max scale factor (+1024) when scaling up coefficients in `preprocessBaseInequality` and `postprocessCut`. Fix is [#2337](https://github.com/ERGO-Code/HiGHS/pull/2337)
-
-Corrected the bounds used in when strengthening coefficients in `HPresolve::rowPresolve`, fixing [#1517](https://github.com/ERGO-Code/HiGHS/issues/1517)
-
-Fixed numerical error in `highs/mip/HighsCliqueTable.cpp`, closing [#2320](https://github.com/ERGO-Code/HiGHS/issues/2320)
-
-Fixed bug in `highs/mip/HighsFeasibilityJump.cpp`, closing [#2331](https://github.com/ERGO-Code/HiGHS/issues/2331)
-
-Tightened CMIR cuts, leading to small performance gain,  closing [#2333](https://github.com/ERGO-Code/HiGHS/issues/2333)
-
-Scaling the tolerance in forcing row reduction to avoid use of rows with small coefficients and bounds,  closing [#2290](https://github.com/ERGO-Code/HiGHS/issues/2290)
-
-Fixed bug when calculating a coefficient in one of the cuts in `separateImpliedBounds` in `highs/mip/HighsImplications.cpp`
-
-Added `CSECTION` to the exceptions for keywords that are followed by text, and thus cannot be used as names of columns, RHS, ranges, bounds etc.
-
-Introduced the following KKT error measures to `HighsInfo`: `num_relative_primal_infeasibilities`; `max_relative_primal_infeasibility`; `num_relative_dual_infeasibilities`; `max_relative_dual_infeasibility`; `num_primal_residual_errors`; `max_primal_residual_error`; `num_dual_residual_errors`; `max_dual_residual_error`; `num_relative_primal_residual_errors`; `max_relative_primal_residual_error`; `num_relative_dual_residual_errors`; `max_relative_dual_residual_error`; `num_complementarity_violations`; `max_complementarity_violation`; `primal_dual_objective_error.` The relative values are used to assess whether a solution deemed to be optimal by the first order LP solver `cuPDLP-C` or interior point solver `IPX` (without crossover) is truly acceptable. They also enable users to determine whether a solution corresponding to `HighsModelStatus::kUnknown` is acceptable to them as optimal. Also introduced options `complementarity_tolerance` used to assess whether the (relative) primal-dual objective error is acceptable, and `kkt_tolerance` which, if set to a value other than `kDefaultKktTolerance = 1e-7` is used as the tolerance for all the KKT error measures. The HiGHS documentation has been updated to reflect the new options and `HighsInfo` data, and logging messages indicate when KKT error measures are not satisfied, despite the solver considering the LP solution to be optimal.
-
-Added a max scale factor (+1024) when scaling up coefficients in `preprocessBaseInequality` and `postprocessCut`. Fix is [#2337](https://github.com/ERGO-Code/HiGHS/pull/2337).
+Prompted by [#2463](https://github.com/ERGO-Code/HiGHS/issues/2463), the HiGHS solution and basis files now match data to any column and row names in the model, only assuming that the data are aligned with column and row indices if there are no names in the model. This requires a new version (v2) of the HiGHS basis file. Basis files from v1 are still read, but deprecated. Now, when writing out a model, basis or solution, column and row names are added to the model - previously they were created temporarily and inconsistentyly on the fly. If the model has existing names, then distinctive names are created to replace any blank names, but names with spaces or duplicate names yield an error status return.
 
 Only for LPs is there a choice of solver. Previously, when setting the `solver` option to anything other than "choose", any incumbent model was solved as an LP, using that LP solver. This has caused confusiuon for users, and is unnecessary now that there is the `solve_relaxation` option. Now, if the incumbent model is a QP or MIP, it is solved as such (unless `solve_relaxation` is true for a MIP), and the value of the `solver` option only determines what solver is used to solve an LP. If the value of `solver` is "choose", then HiGHS will use what it expects to be the best solver for the problem; if value of `solver` is "ipm", then HiGHS will use what it expects to be the better IPM solver (of HiPO and IPX) for the problem; if value of `solver` is "hipo", then HiGHS will use the HiPO IPM solver (if available in the build); if value of `solver` is "ipx", then HiGHS will use the IPX IPM solver; if value of `solver` is "pdlp", then HiGHS will use the PDLP first-order solver. The option `mip_lp_solver` has been introduced to define which LP solver is used when solving LPs in the MIP solver for which an advanced basis is not known - typically the "root node" LP. Note that The PDLP solver cannot be used to solve such LPs, since it does not yield a basic solution. If an interior point solver fails to obtain a basic solution, the simplex solver will then be used. The option `mip_ipm_solver` has been introduced to define which IPM solver is used when solving LPs in the MIP solver for which IPM is mandatory - typically the analytic centre calculation. When LPs are to be solved by an IPM solver, the HiPO solver is used (if available in the build) unless IPX has been specified explicitly. 
 

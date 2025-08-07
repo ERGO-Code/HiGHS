@@ -255,6 +255,9 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/mycblas.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
+# redefinition of 'kHighsInf'
+set_source_files_properties (../extern/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 set(highs_sources
     ../extern/filereaderlp/reader.cpp
     interfaces/highs_c_api.cpp

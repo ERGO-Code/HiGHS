@@ -62,12 +62,12 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
   std::vector<BasisStatus> atlower;
 
   for (int i = 0; i < instance.num_var; i++) {
-    if (res.value[i] > 0.5 / settings.hessianregularizationfactor &&
+    if (res.value[i] > 0.5 / settings.hessian_regularization_value &&
         instance.var_up[i] == std::numeric_limits<double>::infinity() &&
         instance.c.value[i] < 0.0) {
       modelstatus = QpModelStatus::kUnbounded;
       return;
-    } else if (res.value[i] < 0.5 / settings.hessianregularizationfactor &&
+    } else if (res.value[i] < 0.5 / settings.hessian_regularization_value &&
                instance.var_lo[i] == std::numeric_limits<double>::infinity() &&
                instance.c.value[i] > 0.0) {
       modelstatus = QpModelStatus::kUnbounded;

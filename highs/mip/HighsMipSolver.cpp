@@ -45,9 +45,9 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
   assert(!submip || submip_level > 0);
   max_submip_level = 0;
   if (solution.value_valid) {
+#ifndef NDEBUG
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
-#ifndef NDEBUG
     bool valid, integral, feasible;
     assessLpPrimalSolution("For debugging: ", options, lp, solution, valid,
                            integral, feasible);
@@ -137,7 +137,7 @@ restart:
       mipdata_->callbackUserSolution(solution_objective_,
                                      kUserMipSolutionCallbackOriginAfterSetup);
 
-    if (options_mip_->mip_allow_feasibility_jump) {
+    if (options_mip_->mip_heuristic_run_feasibility_jump) {
       // Apply the feasibility jump before evaluating the root node
       analysis_.mipTimerStart(kMipClockFeasibilityJump);
       HighsModelStatus returned_model_status = mipdata_->feasibilityJump();
@@ -895,10 +895,13 @@ void HighsMipSolver::callbackGetCutPool() const {
                            callback_->user_callback_data);
 }
 
-bool HighsMipSolver::solutionFeasible(
-    const HighsLp* lp, const std::vector<double>& col_value,
-    const std::vector<double>* pass_row_value, double& bound_violation,
-    double& row_violation, double& integrality_violation, HighsCDouble& obj) {
+bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
+                                      const std::vector<double>& col_value,
+                                      const std::vector<double>* pass_row_value,
+                                      double& bound_violation,
+                                      double& row_violation,
+                                      double& integrality_violation,
+                                      HighsCDouble& obj) const {
   bound_violation = 0;
   row_violation = 0;
   integrality_violation = 0;

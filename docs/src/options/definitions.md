@@ -55,44 +55,38 @@
 - Range: [1, inf]
 - Default: 1e+15
 
-## kkt\_tolerance
-- KKT tolerance
+## [kkt\_tolerance](@id option-kkt-tolerance)
+- If changed from its default value, this tolerance is used for all feasibility and optimality (KKT) measures
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## primal\_feasibility\_tolerance
+## [primal\_feasibility\_tolerance](@id option-primal-feasibility-tolerance)
 - Primal feasibility tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## dual\_feasibility\_tolerance
+## [dual\_feasibility\_tolerance](@id option-dual-feasibility-tolerance)
 - Dual feasibility tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## ipm\_optimality\_tolerance
-- IPM optimality tolerance
-- Type: double
-- Range: [1e-12, inf]
-- Default: 1e-08
-
-## primal\_residual\_tolerance
+## [primal\_residual\_tolerance](@id option-primal-residual-tolerance)
 - Primal residual tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## complementarity\_tolerance
-- Primal-dual objective error tolerance
+## [dual\_residual\_tolerance](@id option-dual-residual-tolerance)
+- Dual residual tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
 
-## dual\_residual\_tolerance
-- Dual residual tolerance
+## [optimality\_tolerance](@id option-optimality-tolerance)
+- Optimality tolerance
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
@@ -185,11 +179,6 @@
 - Type: boolean
 - Default: "true"
 
-## solution\_file
-- Solution file
-- Type: string
-- Default: ""
-
 ## log\_file
 - Log file
 - Type: string
@@ -259,11 +248,6 @@
 
 ## mip\_allow\_restart
 - Whether MIP restart is permitted
-- Type: boolean
-- Default: "true"
-
-## mip\_allow\_feasibility\_jump
-- Whether MIP feasibility jump is permitted
 - Type: boolean
 - Default: "true"
 
@@ -365,28 +349,33 @@
 - Range: [0, 1]
 - Default: 0.05
 
+## mip\_heuristic\_run\_feasibility\_jump
+- Use the feasibility jump heuristic
+- Type: boolean
+- Default: "true"
+
 ## mip\_heuristic\_run\_rins
-- Run RINS heuristic: Default = true
+- Use the RINS heuristic
 - Type: boolean
 - Default: "true"
 
 ## mip\_heuristic\_run\_rens
-- Run RENS heuristic: Default = true
+- Use the RENS heuristic
 - Type: boolean
 - Default: "true"
 
 ## mip\_heuristic\_run\_root\_reduced\_cost
-- Run rootReducedCost heuristic: Default = true
+- Use the rootReducedCost heuristic
 - Type: boolean
 - Default: "true"
 
 ## mip\_heuristic\_run\_zi\_round
-- Run ZI Round heuristic: Default = false
+- Use the ZI Round heuristic
 - Type: boolean
 - Default: "false"
 
 ## mip\_heuristic\_run\_shifting
-- Run Shifting heuristic: Default = false
+- Use the Shifting heuristic
 - Type: boolean
 - Default: "false"
 
@@ -408,16 +397,17 @@
 - Range: [0, inf]
 - Default: 5
 
+## [ipm\_optimality\_tolerance](@id option-ipm-optimality-tolerance)
+- IPM optimality tolerance
+- Type: double
+- Range: [1e-12, inf]
+- Default: 1e-08
+
 ## ipm\_iteration\_limit
 - Iteration limit for IPM solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
-
-## pdlp\_native\_termination
-- Use native termination for PDLP solver: Default = false
-- Type: boolean
-- Default: "false"
 
 ## pdlp\_scaling
 - Scaling option for PDLP solver: Default = true
@@ -436,8 +426,8 @@
 - Range: {0, 2}
 - Default: 1
 
-## pdlp\_d\_gap\_tol
-- Duality gap tolerance for PDLP solver
+## [pdlp\_optimality\_tolerance](@id option-pdlp-optimality-tolerance)
+- PDLP optimality tolerance
 - Type: double
 - Range: [1e-12, inf]
 - Default: 1e-07
@@ -453,6 +443,12 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 4000
+
+## qp\_regularization\_value
+- Regularization value added to the Hessian
+- Type: double
+- Range: [0, inf]
+- Default: 1e-07
 
 ## blend\_multi\_objectives
 - Blend multiple objectives or apply lexicographically: Default = true
