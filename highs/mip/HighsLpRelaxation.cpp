@@ -1227,9 +1227,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
-        mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
+        mipsolver.analysis_.mipTimerStart(kMipClockIpxSolveLp);
         ipm.run();
-        mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
+        mipsolver.analysis_.mipTimerStop(kMipClockIpxSolveLp);
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }

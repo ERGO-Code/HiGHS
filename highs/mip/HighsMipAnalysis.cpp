@@ -99,7 +99,7 @@ void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
       mip_clocks.clock_[kMipClockSimplexBasisSolveLp];
   HighsInt simplex_no_basis_solve_iclock =
       mip_clocks.clock_[kMipClockSimplexNoBasisSolveLp];
-  HighsInt ipm_solve_iclock = mip_clocks.clock_[kMipClockIpmSolveLp];
+  HighsInt ipm_solve_iclock = mip_clocks.clock_[kMipClockIpxSolveLp];
   //  HighsInt num_no_basis_solve =
   //  mip_clocks.timer_pointer_->clock_num_call[no_basis_solve_iclock]; HighsInt
   //  num_basis_solve =

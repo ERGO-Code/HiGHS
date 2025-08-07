@@ -93,7 +93,8 @@ enum iClockMip {
   // LP solves
   kMipClockSimplexBasisSolveLp,
   kMipClockSimplexNoBasisSolveLp,
-  kMipClockIpmSolveLp,
+  kMipClockHipoSolveLp,
+  kMipClockIpxSolveLp,
 
   // Sub-MIP solves
   kMipClockSubMipSolve,
@@ -120,17 +121,20 @@ class MipTimer {
     // runs on a separate thread. Although it would be good to
     // understand this better, for now don't assert that this clock
     // has stopped in HighsTimer.h. This is done with a hard-coded
-    // clock ID that needs to equal clock[kMipClockIpmSolveLp]
+    // clock IDs that need to equal clock[kMipClockHipoSolveLp] and
+    // clock[kMipClockIpxSolveLp]
     //
     // Define the clocks for evaluating the LPs first, so that
-    // clock[kMipClockIpmSolveLp] isn't changed by inserting new
-    // clocks
+    // clock[kMipClockHipoSolveLp] and clock[kMipClockIpxSolveLp]
+    // aren't changed by inserting new clocks
     clock[kMipClockSimplexBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - simplex basis");
     clock[kMipClockSimplexNoBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - simplex no basis");
-    clock[kMipClockIpmSolveLp] = timer_pointer->clock_def("Solve LP: IPM");
-    assert(clock[kMipClockIpmSolveLp] == 9);
+    clock[kMipClockHipoSolveLp] = timer_pointer->clock_def("Solve LP: HiPO");
+    clock[kMipClockIpxSolveLp] = timer_pointer->clock_def("Solve LP: IPX");
+    assert(clock[kMipClockHipoSolveLp] == 9);
+    assert(clock[kMipClockIpxSolveLp] == 10);
 
     // Level 1 - Should correspond to kMipClockTotal
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
@@ -336,7 +340,8 @@ class MipTimer {
   void reportMipSolveLpClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{kMipClockSimplexBasisSolveLp,
                                                kMipClockSimplexNoBasisSolveLp,
-                                               kMipClockIpmSolveLp};
+                                               kMipClockHipoSolveLp,
+                                               kMipClockIpxSolveLp};
     reportMipClockList("MipSlvLp", mip_clock_list, mip_timer_clock,
                        kMipClockTotal);  //, tolerance_percent_report);
   };

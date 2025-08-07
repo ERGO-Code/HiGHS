@@ -363,9 +363,10 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //      file_name.c_str()); fflush(stdout); ipm.writeModel(file_name);
     //    }
 
-    mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
+
+    mipsolver.analysis_.mipTimerStart(kMipClockIpxSolveLp);
     ipm.run();
-    mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
+    mipsolver.analysis_.mipTimerStop(kMipClockIpxSolveLp);
     const std::vector<double>& sol = ipm.getSolution().col_value;
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
@@ -684,6 +685,7 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
+  //  use_hipo = 
   primal_dual_integral.initialise();
 
   if (mipsolver.options_mip_->mip_report_level == 0)

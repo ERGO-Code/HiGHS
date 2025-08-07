@@ -128,12 +128,16 @@ void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
                       const std::string log_file);
 
-bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
+bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
                               const string& name, const string& value);
-bool commandLineOffOnOk(const HighsLogOptions& report_log_options,
+bool optionOffOnOk(const HighsLogOptions& report_log_options,
                         const string& name, const string& value);
-bool commandLineSolverOk(const HighsLogOptions& report_log_options,
+bool optionSolverOk(const HighsLogOptions& report_log_options,
                          const string& value);
+bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
+			      const string& value);
+bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
+			       const string& value);
 
 bool boolFromString(std::string value, bool& bool_value);
 
@@ -260,6 +264,7 @@ void reportOption(FILE* file, const HighsLogOptions& report_log_options,
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";
 const string kHipoString = "hipo";
+const string kIpxString = "ipx";
 const string kPdlpString = "pdlp";
 
 const HighsInt kKeepNRowsDeleteRows = -1;
@@ -286,6 +291,10 @@ const string kReadSolutionFileString = "read_solution_file";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
+
+// Strings for MIP LP/IPM options
+const string kMipLpSolverString = "mip_lp_solver";
+const string kMipIpmSolverString = "mip_ipm_solver";
 
 struct HighsOptionsStruct {
   // Run-time options read from the command line
@@ -668,12 +677,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kSolverString,
-        "Solver option: \"simplex\", \"choose\", \"hipo\", \"ipm\" or "
-        "\"pdlp\". "
-        "If "
-        "\"simplex\"/\"ipm\"/\"pdlp\" is chosen then, for a MIP (QP) the "
-        "integrality "
-        "constraint (quadratic term) will be ignored",
+        "LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\", \"hipo\" or \"pdlp\".",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
@@ -1189,6 +1193,18 @@ class HighsOptions : public HighsOptionsStruct {
         "mip_min_logging_interval", "MIP minimum logging interval", advanced,
         &mip_min_logging_interval, 0, 5, kHighsInf);
     records.push_back(record_double);
+
+    record_string = new OptionRecordString(
+        kMipLpSolverString,
+        "MIP LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\" or \"hipo\"",
+        advanced, &solver, kMipLpSolverString);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kMipIpmSolverString,
+        "MIP IPM solver option: \"choose\", \"ipx\" or \"hipo\"",
+        advanced, &solver, kMipIpmSolverString);
+    records.push_back(record_string);
 
     record_int = new OptionRecordInt(
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,

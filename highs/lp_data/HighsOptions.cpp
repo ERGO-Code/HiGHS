@@ -54,7 +54,7 @@ static std::string optionEntryTypeToString(const HighsOptionType type) {
   }
 }
 
-bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
+bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
                               const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsChooseString ||
       value == kHighsOnString)
@@ -67,7 +67,7 @@ bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
-bool commandLineOffOnOk(const HighsLogOptions& report_log_options,
+bool optionOffOnOk(const HighsLogOptions& report_log_options,
                         const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsOnString) return true;
   highsLogUser(report_log_options, HighsLogType::kWarning,
@@ -77,17 +77,63 @@ bool commandLineOffOnOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
-bool commandLineSolverOk(const HighsLogOptions& report_log_options,
+bool optionSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
-  if (value == kSimplexString || value == kHighsChooseString ||
-      value == kHipoString || value == kIpmString || value == kPdlpString)
+  if (value == kHighsChooseString ||
+      value == kSimplexString || 
+      value == kIpmString ||
+      value == kHipoString ||
+      value == kIpxString ||
+      value == kPdlpString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", "
+               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", \"%s\", \"%s\", "
                "\"%s\" or \"%s\"\n",
-               value.c_str(), kSimplexString.c_str(),
-               kHighsChooseString.c_str(), kIpmString.c_str(),
+               value.c_str(),
+               kHighsChooseString.c_str(),
+	       kSimplexString.c_str(),
+	       kIpmString.c_str(),
+	       kHipoString.c_str(),
+	       kIpxString.c_str(),
                kPdlpString.c_str());
+  return false;
+}
+
+bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
+			      const string& value) {
+  if (value == kHighsChooseString ||
+      value == kSimplexString || 
+      value == kIpmString ||
+      value == kHipoString ||
+      value == kIpxString)
+    return true;
+  highsLogUser(report_log_options, HighsLogType::kWarning,
+               "Value \"%s\" for MIP LP solver option is not one of \"%s\", \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(),
+               kHighsChooseString.c_str(),
+	       kSimplexString.c_str(),
+	       kIpmString.c_str(),
+	       kHipoString.c_str(),
+	       kIpxString.c_str());
+  return false;
+}
+
+bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
+			      const string& value) {
+  if (value == kHighsChooseString ||
+      value == kIpmString ||
+      value == kHipoString ||
+      value == kIpxString)
+    return true;
+  highsLogUser(report_log_options, HighsLogType::kWarning,
+               "Value \"%s\" for MIP IPM solver option is not one of \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(),
+               kHighsChooseString.c_str(),
+	       kIpmString.c_str(),
+	       kHipoString.c_str(),
+	       kIpxString.c_str());
   return false;
 }
 
@@ -349,20 +395,26 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
   // Setting a string option. For some options only particular values
   // are permitted, so check them
   if (option.name == kPresolveString) {
-    if (!commandLineOffChooseOnOk(report_log_options, option.name, value) &&
+    if (!optionOffChooseOnOk(report_log_options, option.name, value) &&
         value != "mip")
       return OptionStatus::kIllegalValue;
   } else if (option.name == kSolverString) {
-    if (!commandLineSolverOk(report_log_options, value))
+    if (!optionSolverOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kMipLpSolverString) {
+    if (!optionMipLpSolverOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kMipIpmSolverString) {
+    if (!optionMipIpmSolverOk(report_log_options, value))
       return OptionStatus::kIllegalValue;
   } else if (option.name == kParallelString) {
-    if (!commandLineOffChooseOnOk(report_log_options, option.name, value))
+    if (!optionOffChooseOnOk(report_log_options, option.name, value))
       return OptionStatus::kIllegalValue;
   } else if (option.name == kRunCrossoverString) {
-    if (!commandLineOffChooseOnOk(report_log_options, option.name, value))
+    if (!optionOffChooseOnOk(report_log_options, option.name, value))
       return OptionStatus::kIllegalValue;
   } else if (option.name == kRangingString) {
-    if (!commandLineOffOnOk(report_log_options, option.name, value))
+    if (!optionOffOnOk(report_log_options, option.name, value))
       return OptionStatus::kIllegalValue;
   }
   return OptionStatus::kOk;

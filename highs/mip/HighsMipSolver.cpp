@@ -182,8 +182,8 @@ restart:
     // Sometimes the analytic centre calculation is not completed when
     // evaluateRootNode returns, so stop its clock if it's running
     if (analysis_.analyse_mip_time &&
-        analysis_.mipTimerRunning(kMipClockIpmSolveLp))
-      analysis_.mipTimerStop(kMipClockIpmSolveLp);
+        analysis_.mipTimerRunning(kMipClockIpxSolveLp))
+      analysis_.mipTimerStop(kMipClockIpxSolveLp);
     if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - completed evaluate root node\n",
