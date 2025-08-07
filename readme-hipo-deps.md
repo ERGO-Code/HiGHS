@@ -2,7 +2,7 @@
 
 ## Default: static
 
-This default setup works for the GitHub runner ubuntu-latest. 
+This default setup works for the GitHub runner `ubuntu-latest`. Please replace `${{runner.workspace}}` with the path to your working directory.
 
 1. Clone GKLib
 ```
@@ -78,9 +78,9 @@ make
 make install
 ```
 
-Check if the shared library with no numbers in the file name is in `..../installs/lib/`. If not, make a link to it with 
+Check if the shared library with no numbers in the file name is in `${{runner.workspace}}/installs/lib/`. If not, make a link to it with 
 ```
-ln ..../installs/lib/libGKlib.0.so ..../installs/lib/libGKlib.so
+ln ${{runner.workspace}}/installs/lib/libGKlib.0.so ${{runner.workspace}}/installs/lib/libGKlib.so
 ```
 
 5. Install METIS shared
