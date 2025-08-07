@@ -21,5 +21,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 void assessExcessiveBoundCost(const HighsLogOptions log_options,
                               const HighsModel& model);
 bool useHipo(const HighsOptions& options,
-             const std::string& specific_solver_option, const HighsLp& lp);
+             const std::string& specific_solver_option, const HighsLp& lp,
+	     const bool logging = false);
 #endif  // LP_DATA_HIGHSSOLVE_H_

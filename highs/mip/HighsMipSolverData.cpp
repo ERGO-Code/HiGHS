@@ -346,21 +346,20 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // due to early return in the root node evaluation
     Highs ipm;
     const std::vector<double>& sol = ipm.getSolution().col_value;
-    ipm.setOptionValue("output_flag", false);
-    ipm.setOptionValue("solver", "ipm");
-    ipm.setOptionValue("run_crossover", kHighsOffString);
-    //    ipm.setOptionValue("allow_pdlp_cleanup", false);
-    ipm.setOptionValue("presolve", kHighsOffString);
-    // ipm.setOptionValue("output_flag", !mipsolver.submip);
-    ipm.setOptionValue("ipm_iteration_limit", 200);
-    ipm.setOptionValue("solve_relaxation", true);
     const bool use_hipo = useHipo(ipm.getOptions(),
 				  kMipIpmSolverString,
-				  *mipsolver.model_);
+				  *mipsolver.model_, true);
     printf("In HighsMipSolverData::startAnalyticCenterComputation use_hipo = %s\n",
 	   use_hipo ? "T" : "F");
     const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
-    ipm.setOptionValue(kMipIpmSolverString, mip_ipm_solver);
+    ipm.setOptionValue("output_flag", false);
+    ipm.setOptionValue("solver", mip_ipm_solver);
+    ipm.setOptionValue("run_crossover", kHighsOffString);
+    //    ipm.setOptionValue("allow_pdlp_cleanup", false);
+    ipm.setOptionValue("presolve", kHighsOffString);
+    ipm.setOptionValue("output_flag", !mipsolver.submip);
+    ipm.setOptionValue("ipm_iteration_limit", 200);
+    ipm.setOptionValue("solve_relaxation", true);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
@@ -376,7 +375,10 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.run();
     mipsolver.analysis_.mipTimerStop(ipm_clock);
     if (use_hipo && HighsInt(sol.size()) != mipsolver.numCol()) {
+      printf("In HighsMipSolverData::startAnalyticCenterComputation HiPO has failed to get a solution: status = %s Try IPX\n",
+	     ipm.modelStatusToString(ipm.getModelStatus()).c_str());
       // HiPO has failed to get a solution, so try IPX
+      ipm.setOptionValue("solver", kIpxString);
       ipm_clock = kMipClockIpxSolveLp;
       mipsolver.analysis_.mipTimerStart(ipm_clock);
       ipm.run();
