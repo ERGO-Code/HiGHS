@@ -1209,7 +1209,7 @@ class HighsOptions : public HighsOptionsStruct {
 #else
         "or \"ipx\"",
 #endif
-        advanced, &mip_lp_solver, kMipLpSolverString);
+        advanced, &mip_lp_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string =
@@ -1220,7 +1220,7 @@ class HighsOptions : public HighsOptionsStruct {
 #else
                                "or \"ipx\"",
 #endif
-                               advanced, &mip_ipm_solver, kMipIpmSolverString);
+                               advanced, &mip_ipm_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(

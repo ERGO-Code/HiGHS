@@ -579,8 +579,6 @@ bool useHipo(const HighsOptions& options,
       specific_solver_option == kSolverString        ? options.solver
       : specific_solver_option == kMipLpSolverString ? options.mip_lp_solver
                                                      : options.mip_ipm_solver;
-  printf("Considering whether to use HiPO for option.%s = %s\n",
-         specific_solver_option.c_str(), specific_solver_option_value.c_str());
   // In the MIP solver there are situations where IPM must be used
   const bool force_ipm = specific_solver_option == kMipIpmSolverString;
   // HiPO is used by default if it's available and IPM is requested,
