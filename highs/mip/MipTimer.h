@@ -338,10 +338,9 @@ class MipTimer {
   };
 
   void reportMipSolveLpClock(const HighsTimerClock& mip_timer_clock) {
-    const std::vector<HighsInt> mip_clock_list{kMipClockSimplexBasisSolveLp,
-                                               kMipClockSimplexNoBasisSolveLp,
-                                               kMipClockHipoSolveLp,
-                                               kMipClockIpxSolveLp};
+    const std::vector<HighsInt> mip_clock_list{
+        kMipClockSimplexBasisSolveLp, kMipClockSimplexNoBasisSolveLp,
+        kMipClockHipoSolveLp, kMipClockIpxSolveLp};
     reportMipClockList("MipSlvLp", mip_clock_list, mip_timer_clock,
                        kMipClockTotal);  //, tolerance_percent_report);
   };

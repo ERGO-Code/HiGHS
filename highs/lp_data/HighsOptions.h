@@ -129,15 +129,15 @@ void highsOpenLogFile(HighsLogOptions& log_options,
                       const std::string log_file);
 
 bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
-                              const string& name, const string& value);
+                         const string& name, const string& value);
 bool optionOffOnOk(const HighsLogOptions& report_log_options,
-                        const string& name, const string& value);
+                   const string& name, const string& value);
 bool optionSolverOk(const HighsLogOptions& report_log_options,
-                         const string& value);
+                    const string& value);
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
-			      const string& value);
+                         const string& value);
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
-			       const string& value);
+                          const string& value);
 
 bool boolFromString(std::string value, bool& bool_value);
 
@@ -455,6 +455,8 @@ struct HighsOptionsStruct {
   bool mip_heuristic_run_root_reduced_cost;
   bool mip_heuristic_run_zi_round;
   bool mip_heuristic_run_shifting;
+  std::string mip_lp_solver;
+  std::string mip_ipm_solver;
 
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
@@ -677,7 +679,12 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kSolverString,
-        "LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\", \"hipo\" or \"pdlp\".",
+        "LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\""
+#ifdef HIPO
+        ", \"hipo\" or \"pdlp\"",
+#else
+        " or \"pdlp\"",
+#endif
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
@@ -1196,14 +1203,24 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kMipLpSolverString,
-        "MIP LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\" or \"hipo\"",
-        advanced, &solver, kMipLpSolverString);
+        "MIP LP solver option: \"choose\", \"simplex\", \"ipm\""
+#ifdef HIPO
+        ", \"ipx\" or \"hipo\"",
+#else
+        "or \"ipx\"",
+#endif
+        advanced, &mip_lp_solver, kMipLpSolverString);
     records.push_back(record_string);
 
-    record_string = new OptionRecordString(
-        kMipIpmSolverString,
-        "MIP IPM solver option: \"choose\", \"ipx\" or \"hipo\"",
-        advanced, &solver, kMipIpmSolverString);
+    record_string =
+        new OptionRecordString(kMipIpmSolverString,
+                               "MIP IPM solver option: \"choose\""
+#ifdef HIPO
+                               ", \"ipx\" or \"hipo\"",
+#else
+                               "or \"ipx\"",
+#endif
+                               advanced, &mip_ipm_solver, kMipIpmSolverString);
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(

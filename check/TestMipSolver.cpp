@@ -932,45 +932,65 @@ TEST_CASE("issue-2290", "[highs_test_mip_solver]") {
 
 TEST_CASE("mip-lp-solver-string", "[highs_test_mip_solver]") {
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.setOptionValue(kMipLpSolverString, "fred") == HighsStatus::kError);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kHighsChooseString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kSimplexString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kHighsChooseString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kSimplexString) ==
+          HighsStatus::kOk);
   REQUIRE(h.setOptionValue(kMipLpSolverString, kIpmString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) ==
+#ifdef HIPO
+          HighsStatus::kOk);
+#else
+          HighsStatus::kError);
+#endif
   REQUIRE(h.setOptionValue(kMipLpSolverString, kIpxString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kPdlpString) == HighsStatus::kError);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kPdlpString) ==
+          HighsStatus::kError);
 
   REQUIRE(h.setOptionValue(kMipIpmSolverString, "fred") == HighsStatus::kError);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHighsChooseString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kSimplexString) == HighsStatus::kError);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpmString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kPdlpString) == HighsStatus::kError);
-
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHighsChooseString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kSimplexString) ==
+          HighsStatus::kError);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpmString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) ==
+#ifdef HIPO
+          HighsStatus::kOk);
+#else
+          HighsStatus::kError);
+#endif
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kPdlpString) ==
+          HighsStatus::kError);
 }
 
 TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
-  std::string filename =
-    std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
   Highs h;
   // h.setOptionValue("output_flag", dev_run);
   /*
   REQUIRE(h.setOptionValue(kMipLpSolverString, "fred") == HighsStatus::kError);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kHighsChooseString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kSimplexString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kIpmString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kHighsChooseString) ==
+HighsStatus::kOk); REQUIRE(h.setOptionValue(kMipLpSolverString, kSimplexString)
+== HighsStatus::kOk); REQUIRE(h.setOptionValue(kMipLpSolverString, kIpmString)
+== HighsStatus::kOk); REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString)
+== HighsStatus::kOk); #ifdef HIPO #else #endif
   REQUIRE(h.setOptionValue(kMipLpSolverString, kIpxString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kPdlpString) == HighsStatus::kError);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kPdlpString) ==
+HighsStatus::kError);
 
   REQUIRE(h.setOptionValue(kMipIpmSolverString, "fred") == HighsStatus::kError);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHighsChooseString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kSimplexString) == HighsStatus::kError);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpmString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kPdlpString) == HighsStatus::kError);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHighsChooseString) ==
+HighsStatus::kOk); REQUIRE(h.setOptionValue(kMipIpmSolverString, kSimplexString)
+== HighsStatus::kError); REQUIRE(h.setOptionValue(kMipIpmSolverString,
+kIpmString) == HighsStatus::kOk); REQUIRE(h.setOptionValue(kMipIpmSolverString,
+kHipoString) == HighsStatus::kOk); #ifdef HIPO #else #endif
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) ==
+HighsStatus::kOk); REQUIRE(h.setOptionValue(kMipIpmSolverString, kPdlpString) ==
+HighsStatus::kError);
   */
 }

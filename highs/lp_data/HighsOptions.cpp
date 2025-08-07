@@ -55,12 +55,12 @@ static std::string optionEntryTypeToString(const HighsOptionType type) {
 }
 
 bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
-                              const string& name, const string& value) {
+                         const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsChooseString ||
       value == kHighsOnString)
     return true;
   highsLogUser(
-      report_log_options, HighsLogType::kWarning,
+      report_log_options, HighsLogType::kError,
       "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
       value.c_str(), name.c_str(), kHighsOffString.c_str(),
       kHighsChooseString.c_str(), kHighsOnString.c_str());
@@ -68,9 +68,9 @@ bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
 }
 
 bool optionOffOnOk(const HighsLogOptions& report_log_options,
-                        const string& name, const string& value) {
+                   const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsOnString) return true;
-  highsLogUser(report_log_options, HighsLogType::kWarning,
+  highsLogUser(report_log_options, HighsLogType::kError,
                "Value \"%s\" for %s option is not one of \"%s\" or \"%s\"\n",
                value.c_str(), name.c_str(), kHighsOffString.c_str(),
                kHighsOnString.c_str());
@@ -78,62 +78,72 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
 }
 
 bool optionSolverOk(const HighsLogOptions& report_log_options,
-                         const string& value) {
-  if (value == kHighsChooseString ||
-      value == kSimplexString || 
+                    const string& value) {
+  if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
+#ifdef HIPO
       value == kHipoString ||
-      value == kIpxString ||
-      value == kPdlpString)
+#endif
+      value == kIpxString || value == kPdlpString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", \"%s\", \"%s\", "
-               "\"%s\" or \"%s\"\n",
-               value.c_str(),
-               kHighsChooseString.c_str(),
-	       kSimplexString.c_str(),
-	       kIpmString.c_str(),
-	       kHipoString.c_str(),
-	       kIpxString.c_str(),
-               kPdlpString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for solver option is not one of "
+#ifdef HIPO
+               "\"%s\", "
+#endif
+               "\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+               value.c_str(), kHighsChooseString.c_str(),
+               kSimplexString.c_str(), kIpmString.c_str(),
+#ifdef HIPO
+               kHipoString.c_str(),
+#endif
+               kIpxString.c_str(), kPdlpString.c_str());
   return false;
 }
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
-			      const string& value) {
-  if (value == kHighsChooseString ||
-      value == kSimplexString || 
+                         const string& value) {
+  if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
+#ifdef HIPO
       value == kHipoString ||
+#endif
       value == kIpxString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" for MIP LP solver option is not one of \"%s\", \"%s\", \"%s\", "
-               "\"%s\" or \"%s\"\n",
-               value.c_str(),
-               kHighsChooseString.c_str(),
-	       kSimplexString.c_str(),
-	       kIpmString.c_str(),
-	       kHipoString.c_str(),
-	       kIpxString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for MIP LP solver option is not one of "
+#ifdef HIPO
+               "\"%s\", "
+#endif
+               "\"%s\", \"%s\", \"%s\" or \"%s\"\n",
+               value.c_str(), kHighsChooseString.c_str(),
+               kSimplexString.c_str(), kIpmString.c_str(),
+#ifdef HIPO
+               kHipoString.c_str(),
+#endif
+               kIpxString.c_str());
   return false;
 }
 
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
-			      const string& value) {
-  if (value == kHighsChooseString ||
-      value == kIpmString ||
+                          const string& value) {
+  if (value == kHighsChooseString || value == kIpmString ||
+#ifdef HIPO
       value == kHipoString ||
+#endif
       value == kIpxString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" for MIP IPM solver option is not one of \"%s\", \"%s\", "
-               "\"%s\" or \"%s\"\n",
-               value.c_str(),
-               kHighsChooseString.c_str(),
-	       kIpmString.c_str(),
-	       kHipoString.c_str(),
-	       kIpxString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for MIP IPM solver option is not one of "
+#ifdef HIPO
+               "\"%s\", "
+#endif
+               "\"%s\", \"%s\" or \"%s\"\n",
+               value.c_str(), kHighsChooseString.c_str(), kIpmString.c_str(),
+#ifdef HIPO
+               kHipoString.c_str(),
+#endif
+               kIpxString.c_str());
   return false;
 }
 
@@ -354,14 +364,14 @@ OptionStatus checkOption(const HighsLogOptions& report_log_options,
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
                               OptionRecordInt& option, const HighsInt value) {
   if (value < option.lower_bound) {
-    highsLogUser(report_log_options, HighsLogType::kWarning,
+    highsLogUser(report_log_options, HighsLogType::kError,
                  "checkOptionValue: Value %" HIGHSINT_FORMAT
                  " for option \"%s\" is below "
                  "lower bound of %" HIGHSINT_FORMAT "\n",
                  value, option.name.c_str(), option.lower_bound);
     return OptionStatus::kIllegalValue;
   } else if (value > option.upper_bound) {
-    highsLogUser(report_log_options, HighsLogType::kWarning,
+    highsLogUser(report_log_options, HighsLogType::kError,
                  "checkOptionValue: Value %" HIGHSINT_FORMAT
                  " for option \"%s\" is above "
                  "upper bound of %" HIGHSINT_FORMAT "\n",
@@ -374,13 +384,13 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
                               OptionRecordDouble& option, const double value) {
   if (value < option.lower_bound) {
-    highsLogUser(report_log_options, HighsLogType::kWarning,
+    highsLogUser(report_log_options, HighsLogType::kError,
                  "checkOptionValue: Value %g for option \"%s\" is below "
                  "lower bound of %g\n",
                  value, option.name.c_str(), option.lower_bound);
     return OptionStatus::kIllegalValue;
   } else if (value > option.upper_bound) {
-    highsLogUser(report_log_options, HighsLogType::kWarning,
+    highsLogUser(report_log_options, HighsLogType::kError,
                  "checkOptionValue: Value %g for option \"%s\" is above "
                  "upper bound of %g\n",
                  value, option.name.c_str(), option.upper_bound);

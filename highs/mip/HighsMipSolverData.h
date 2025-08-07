@@ -151,8 +151,6 @@ struct HighsMipSolverData {
 
   HighsPrimaDualIntegral primal_dual_integral;
 
-  //  bool use_hipo;
-
   HighsDebugSol debugSolution;
 
   HighsMipSolverData(HighsMipSolver& mipsolver)
@@ -212,7 +210,6 @@ struct HighsMipSolverData {
         upper_bound(kHighsInf),
         upper_limit(kHighsInf),
         optimality_limit(kHighsInf),
-	//	use_hipo(false),
         debugSolution(mipsolver) {
     domain.addCutpool(cutpool);
     domain.addConflictPool(conflictPool);
