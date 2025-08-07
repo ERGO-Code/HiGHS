@@ -54,7 +54,6 @@ jobs:
           cd installs
           ls 
           ls lib
-          ls lib/share
 
 
       - name: Install OpenBLAS
