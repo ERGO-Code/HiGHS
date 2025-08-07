@@ -33,12 +33,12 @@ jobs:
 
       - name: LS share cmake
         shell: bash
-        run: ls C:/vcpkg/packages/metis_x64-windows/share/cmake
+        run: ls C:/vcpkg/packages/metis_x64-windows/share/metis
 
       - name: Configure cmake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DPROTO_IPM=ON
+        run: cmake $GITHUB_WORKSPACE -DPROTO_IPM=ON -DCMAKE_PREFIX_PATH=C:/vcpkg/packages/metis_x64-windows/share/metis
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
