@@ -1,4 +1,4 @@
-name: proto
+name: proto-macos
 
 on: [push, pull_request]
 
@@ -54,10 +54,3 @@ jobs:
           cd installs
           ls 
           ls lib
-
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev 
