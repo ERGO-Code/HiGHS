@@ -19,6 +19,10 @@ jobs:
       - name: Create build dir
         run: cmake -E make_directory ${{runner.workspace}}/build
 
+      - name: LS 
+        shell: bash
+        run: ls C:/vcpkg/packages/metis_x64-windows/
+
       - name: Configure cmake
         shell: bash
         working-directory: ${{runner.workspace}}/build
