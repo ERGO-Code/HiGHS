@@ -41,8 +41,8 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE \
           -DPROTO_IPM=ON \
-          -DCMAKE_PREFIX_PATH=C:/vcpkg/packages/metis_x64-windows/share/metis \
-          -DCMAKE_PREFIX_PATH=C:/vcpkg/packages/gklib_x64-windows/share/gklib
+          -Dmetis_DIR=C:/vcpkg/packages/metis_x64-windows/share/metis \
+          -DGKlib_DIR=C:/vcpkg/packages/gklib_x64-windows/share/gklib
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
