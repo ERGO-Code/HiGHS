@@ -84,10 +84,10 @@ bool commandLineSolverOk(const HighsLogOptions& report_log_options,
     return true;
   highsLogUser(report_log_options, HighsLogType::kWarning,
                "Value \"%s\" for solver option is not one of \"%s\", \"%s\", "
-               "\"%s\" or \"%s\"\n",
+               "\"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kSimplexString.c_str(),
                kHighsChooseString.c_str(), kIpmString.c_str(),
-               kPdlpString.c_str());
+               kHipoString.c_str(), kPdlpString.c_str());
   return false;
 }
 

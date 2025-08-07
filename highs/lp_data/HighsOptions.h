@@ -287,6 +287,11 @@ const string kReadSolutionFileString = "read_solution_file";
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
 
+// Strings for HiPO system option
+const string kHipoSystemString = "hipo_system";
+const string kHipoAugmentedString = "augmented";
+const string kHipoNormalEqString = "normaleq";
+
 struct HighsOptionsStruct {
   // Run-time options read from the command line
   std::string presolve;
@@ -345,8 +350,9 @@ struct HighsOptionsStruct {
   bool log_to_console;
   bool timeless_log;
 
-  // Options for IPM solver
+  // Options for IPM solvers
   HighsInt ipm_iteration_limit;
+  std::string hipo_system;
 
   // Options for PDLP solver
   bool pdlp_scaling;
@@ -511,6 +517,7 @@ struct HighsOptionsStruct {
         log_to_console(false),
         timeless_log(false),
         ipm_iteration_limit(0),
+        hipo_system(""),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
@@ -668,9 +675,10 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kSolverString,
-        "Solver option: \"simplex\", \"choose\", \"hipo\", \"ipm\" or \"pdlp\". "
+        "Solver option: \"simplex\", \"choose\", \"hipo\", \"ipm\" or "
+        "\"pdlp\". "
         "If "
-        "\"simplex\"/\"ipm\"/\"pdlp\" is chosen then, for a MIP (QP) the "
+        "\"simplex\"/\"ipm\"/\"hipo\"/\"pdlp\" is chosen then, for a MIP (QP) the "
         "integrality "
         "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);
@@ -1193,6 +1201,12 @@ class HighsOptions : public HighsOptionsStruct {
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
+
+    record_string = new OptionRecordString(
+        kHipoSystemString,
+        "HiPO Newton system option: \"augmented\", \"normaleq\" or \"choose\".",
+        advanced, &hipo_system, kHighsChooseString);
+    records.push_back(record_string);
 
     record_bool = new OptionRecordBool(
         "pdlp_scaling", "Scaling option for PDLP solver: Default = true",

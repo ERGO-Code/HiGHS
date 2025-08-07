@@ -504,13 +504,22 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
     hipo_options.parallel = hipo::kOptionParallelChoose;
   }
 
-  // Highs does not have an option to select NE/AS approach.
-  // For now use choose, but an option should be added for the user to choose.
-  hipo_options.nla = hipo::kOptionNlaChoose;
+  // Parse hipo_system option
+  if (options.hipo_system == kHipoAugmentedString) {
+    hipo_options.nla = hipo::kOptionNlaAugmented;
+  } else if (options.hipo_system == kHipoNormalEqString) {
+    hipo_options.nla = hipo::kOptionNlaNormEq;
+  } else if (options.hipo_system == kHighsChooseString) {
+    hipo_options.nla = hipo::kOptionNlaChoose;
+  } else {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Unknown value of option hipo_system\n");
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
 
   // ===========================================================================
   // TO DO
-  // - add options for NE/AS
   // - consider adding options for parallel tree/node
   // - block size for dense factorisation can have large impact on performance
   //   and depends on the specific architecture. It may be worth exposing it to
