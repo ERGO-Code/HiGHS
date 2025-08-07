@@ -629,6 +629,8 @@ bool HighsTransformedLp::transformSNFRelaxation(
     if (bincol == -1) return false;
     if (snfr.binColUsed[bincol]) return false;
     if (abs(vb.coef) >= 1e+6) return false;
+    if (isVub && lb < vb.constant) return false;
+    if (!isVub && ub > vb.constant) return false;
     const double sign = coef >= 0 ? 1 : -1;
     if (isVub) {
       double val = sign * ((coef * vb.coef) + origbincoef);
