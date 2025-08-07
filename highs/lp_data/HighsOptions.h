@@ -1209,7 +1209,7 @@ class HighsOptions : public HighsOptionsStruct {
 #else
         "or \"ipx\"",
 #endif
-        advanced, &mip_lp_solver, kHighsChooseString);
+        advanced, &mip_lp_solver,kHighsChooseString);
     records.push_back(record_string);
 
     record_string =

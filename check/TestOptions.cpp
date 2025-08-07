@@ -516,3 +516,19 @@ TEST_CASE("inf-value-options", "[highs_options]") {
   highs.getOptionValue("objective_target", value);
   REQUIRE(value == kHighsInf);
 }
+
+TEST_CASE("default-options", "[highs_options]") {
+  // Makes sure that the default values of options are legal!
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const std::string illegal_solver_value = "fred";
+  HighsOptions options;
+  options.solver = illegal_solver_value;
+  REQUIRE(h.passOptions(options) == HighsStatus::kError);
+  options = h.getOptions();
+  REQUIRE(options.solver != illegal_solver_value);
+  options.solver = illegal_solver_value;
+  REQUIRE(h.passOptions(options) == HighsStatus::kError);
+  options.solver = kSimplexString;
+  REQUIRE(h.passOptions(options) == HighsStatus::kOk);  
+}

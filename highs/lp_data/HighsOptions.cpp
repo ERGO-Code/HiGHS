@@ -87,12 +87,14 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
       value == kIpxString || value == kPdlpString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for solver option is not one of "
+               "Value \"%s\" for LP solver option (\"%s\") is not one of "
 #ifdef HIPO
                "\"%s\", "
 #endif
                "\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kHighsChooseString.c_str(),
+               value.c_str(), 
+	       kSolverString.c_str(),
+	       kHighsChooseString.c_str(),
                kSimplexString.c_str(), kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
@@ -111,13 +113,16 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
       value == kIpxString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for MIP LP solver option is not one of "
+               "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
 #ifdef HIPO
                "\"%s\", "
 #endif
                "\"%s\", \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kHighsChooseString.c_str(),
-               kSimplexString.c_str(), kIpmString.c_str(),
+               value.c_str(),
+	       kMipLpSolverString.c_str(),
+	       kHighsChooseString.c_str(),
+               kSimplexString.c_str(),
+	       kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
 #endif
@@ -134,12 +139,15 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
       value == kIpxString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for MIP IPM solver option is not one of "
+               "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
 #ifdef HIPO
                "\"%s\", "
 #endif
                "\"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kHighsChooseString.c_str(), kIpmString.c_str(),
+               value.c_str(), 
+	       kMipIpmSolverString.c_str(),
+	       kHighsChooseString.c_str(),
+	       kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
 #endif

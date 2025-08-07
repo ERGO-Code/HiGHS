@@ -503,7 +503,7 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
 TEST_CASE("solver-string", "[highs_lp_solver]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.setOptionValue(kSolverString, "fred") == HighsStatus::kError);
   REQUIRE(h.setOptionValue(kSolverString, kHighsChooseString) ==
           HighsStatus::kOk);
@@ -523,7 +523,7 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs h;
-  // h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
   REQUIRE(h.setOptionValue(kSolverString, kPdlpString) == HighsStatus::kOk);
@@ -536,3 +536,4 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
