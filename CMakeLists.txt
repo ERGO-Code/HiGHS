@@ -151,7 +151,7 @@ message(STATUS "Build ProtoIPM: ${PROTO_IPM}")
 
 if (WIN32 AND PROTO_IPM)
     find_package(metis CONFIG REQUIRED)
-    add_executable(metis-test metis-test.c)
+    add_executable(metis-test metis-test.cpp)
     target_link_libraries(metis-test PRIVATE metis)
 endif()
 

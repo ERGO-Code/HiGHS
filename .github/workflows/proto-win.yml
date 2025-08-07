@@ -16,6 +16,24 @@ jobs:
       - name: Install METIS
         run: vcpkg install metis
 
+      - name: Create build dir
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure cmake
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DPROTO_IPM=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build . --target metis-test --config Release --parallel
+
+      - name: Run
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ./Release/bin/metis-test.exe
+
       #     repository: KarypisLab/GKlib
       #     ref: master
       #     path: GKlib
