@@ -1,0 +1,62 @@
+name: proto-win
+
+on: [push, pull_request]
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install METIS
+        run: vcpkg install metis
+
+      #     repository: KarypisLab/GKlib
+      #     ref: master
+      #     path: GKlib
+
+      # - name: Checkout METIS
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: KarypisLab/METIS
+      #     ref: master
+      #     path: METIS
+
+      # - name: Create installs dir
+      #   working-directory: ${{runner.workspace}}
+      #   run: | 
+      #     mkdir installs
+      #     ls
+
+      # - name: Install GKLIB
+      #   run: |
+      #     cd GKlib
+      #     make config prefix=${{runner.workspace}}/installs
+      #     make
+      #     make install
+
+      # - name: Install METIS
+      #   run: |
+      #     cd METIS
+      #     make config prefix=${{runner.workspace}}/installs
+      #     make
+      #     make install
+
+
+      # - name: Check METIS and GKlib
+      #   working-directory: ${{runner.workspace}}
+      #   run: |
+      #     cd installs
+      #     ls 
+      #     ls lib
+
+      # - name: Install OpenBLAS
+      #   shell: bash
+      #   run: |
+      #     sudo apt update
+      #     sudo apt install libopenblas-dev 
