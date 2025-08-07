@@ -31,9 +31,9 @@ jobs:
         shell: bash
         run: ls C:/vcpkg/packages/metis_x64-windows/share
 
-      - name: LS share cmake
+      - name: LS share gk
         shell: bash
-        run: ls C:/vcpkg/packages/metis_x64-windows/share/metis
+        run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
 
       - name: Configure cmake
         shell: bash
@@ -42,7 +42,7 @@ jobs:
           cmake $GITHUB_WORKSPACE \
           -DPROTO_IPM=ON \
           -DCMAKE_PREFIX_PATH=C:/vcpkg/packages/metis_x64-windows/share/metis \
-          -DCMAKE_PREFIX_PATH=-C:/vcpkg/packages/gklib_x64-windows/share/gklib
+          -DCMAKE_PREFIX_PATH=C:/vcpkg/packages/gklib_x64-windows/share/gklib
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
