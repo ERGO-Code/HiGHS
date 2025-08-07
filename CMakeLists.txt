@@ -149,6 +149,12 @@ endif()
 option(PROTO_IPM "Build ProtoIPM" OFF)
 message(STATUS "Build ProtoIPM: ${PROTO_IPM}")
 
+if (WIN32 AND PROTO_IPM)
+    find_package(metis CONFIG REQUIRED)
+    add_executable(metis-test metis-test.c)
+    target_link_libraries(metis-test PRIVATE metis)
+endif()
+
 if (CUPDLP_GPU)
   if (WIN32)
     set(BUILD_SHARED_LIBS ON)
