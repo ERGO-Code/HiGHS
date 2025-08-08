@@ -27,6 +27,7 @@ class HighsSeparator {
  private:
   HighsInt numCutsFound;
   HighsInt numCalls;
+  bool analyse_mip_time;
   int clockIndex;
 
  public:

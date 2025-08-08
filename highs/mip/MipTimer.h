@@ -329,6 +329,13 @@ class MipTimer {
   };
 
   void reportMipLevel1Clock(const HighsTimerClock& mip_timer_clock) {
+    HighsTimer* timer = mip_timer_clock.timer_pointer_;
+    printf("reportMipLevel1Clock: clock[kMipClockProbingImplications] = %d; timer_num_clock = %d\n",
+	   int(mip_timer_clock.clock_[kMipClockProbingImplications]),
+	   int(timer->num_clock));
+    for (HighsInt iClock = mip_timer_clock.clock_[kMipClockProbingImplications]; iClock < timer->num_clock; iClock++) {
+      printf("reportMipLevel1Clock: clock %2d is for \"%s\"\n", int(iClock), timer->clock_names[iClock].c_str());
+    }
     const std::vector<HighsInt> mip_clock_list{kMipClockInit,
                                                kMipClockRunPresolve,
                                                kMipClockRunSetup,

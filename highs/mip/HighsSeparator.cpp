@@ -16,7 +16,15 @@
 HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
                                const char* name)
     : numCutsFound(0), numCalls(0) {
-  clockIndex = mipsolver.timer_.clock_def(name);
+  this->analyse_mip_time = mipsolver.analysis_.analyse_mip_time;
+  this->clockIndex = -1;
+  // Don't define clocks when analyse_mip_time is false - as will
+  // generally be the case, and always so for sub-MIPs
+  if (this->analyse_mip_time) 
+    this->clockIndex = mipsolver.timer_.clock_def(name);
+  if (this->analyse_mip_time) {
+    printf("Defined clock %2d for %s\n", int(this->clockIndex), name);
+  }
 }
 
 void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
@@ -25,9 +33,12 @@ void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
   ++numCalls;
   HighsInt currNumCuts = cutpool.getNumCuts();
 
-  lpRelaxation.getMipSolver().timer_.start(clockIndex);
+  // Don't start/stop clocks when analyse_mip_time is false
+  if (this->analyse_mip_time) 
+    lpRelaxation.getMipSolver().timer_.start(clockIndex);
   separateLpSolution(lpRelaxation, lpAggregator, transLp, cutpool);
-  lpRelaxation.getMipSolver().timer_.stop(clockIndex);
+  if (this->analyse_mip_time) 
+    lpRelaxation.getMipSolver().timer_.stop(clockIndex);
 
   numCutsFound += cutpool.getNumCuts() - currNumCuts;
 }
