@@ -407,6 +407,13 @@ HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
                      solver_object.highs_info_, solver_object.callback_);
 }
 
+#ifdef HIPO_USES_OPENBLAS
+// function to set number of threads of openblas
+extern "C" {
+void openblas_set_num_threads(int num_threads);
+}
+#endif
+
 HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
                         const HighsLp& lp, HighsBasis& highs_basis,
                         HighsSolution& highs_solution,
@@ -443,6 +450,11 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   highs_solution.dual_valid = false;
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
+
+#ifdef HIPO_USES_OPENBLAS
+  // force openblas to run in serial, for determinism and better performance
+  openblas_set_num_threads(1);
+#endif
 
   // Create solver instance
   hipo::Solver hipo{};
