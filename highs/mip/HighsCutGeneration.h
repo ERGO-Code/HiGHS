@@ -119,9 +119,6 @@ class HighsCutGeneration {
 
   /// Single Node Flow Relaxation for flow cover cuts
   struct SNFRelaxation {
-    std::vector<bool> binColUsed;        // has col been used in a vub
-    std::vector<double> origBinColCoef;  // original bin col coef
-
     HighsInt numNnzs;                    // number of nonzeros
     std::vector<HighsInt> coef;          // coefficients of cols in SNFR
     std::vector<double> vubCoef;         // coefficients in vub of cols in SNFR

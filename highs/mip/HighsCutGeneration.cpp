@@ -725,13 +725,6 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
     }
   }
 
-#ifndef NDEBUG
-  // TODO: Remove this if algorithm changes to allow multiple bin col usages
-  for (HighsInt i = 0; i < rowlen; i++) {
-    for (HighsInt j = i + 1; j < rowlen; j++) assert(inds[i] != inds[j]);
-  }
-#endif
-
   rhs = static_cast<double>(tmpRhs);
   return true;
 }
@@ -1568,17 +1561,6 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 }
 
 void HighsCutGeneration::initSNFRelaxation() {
-  HighsInt numTransformedCol = lpRelaxation.numCols() + lpRelaxation.numRows();
-  if (static_cast<HighsInt>(snfr.binColUsed.size()) < numTransformedCol) {
-    snfr.binColUsed.resize(numTransformedCol);
-    snfr.origBinColCoef.resize(numTransformedCol);
-  }
-  for (HighsInt i = 0; i != static_cast<HighsInt>(snfr.binColUsed.size());
-       ++i) {
-    snfr.binColUsed[i] = false;
-    snfr.origBinColCoef[i] = 0;
-  }
-
   if (static_cast<HighsInt>(snfr.coef.size()) < rowlen) {
     snfr.origBinCols.resize(rowlen);
     snfr.origContCols.resize(rowlen);
