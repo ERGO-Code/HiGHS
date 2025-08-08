@@ -1069,8 +1069,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue("time_limit", this_time_limit);
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
-  if (!valid_basis) {
-    printf("HighsLpRelaxation::run without a valid basis\n");
+  if (!valid_basis && this->solved_first_root_node) {
+    printf("HighsLpRelaxation::run without a valid basis after solving root node LP\n");
   }
   const bool use_hipo = valid_basis ? false : useHipo(*mipsolver.options_mip_, kMipLpSolverString, *mipsolver.model_);
   bool use_simplex = !use_hipo;

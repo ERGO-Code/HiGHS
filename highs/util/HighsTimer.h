@@ -137,6 +137,9 @@ class HighsTimer {
    */
   void start(const HighsInt i_clock = 0  //!< Index of the clock to be started
   ) {
+    if (i_clock == simplex_no_basis_clock) {
+      printf("HighsTimer: Starting simplex_no_basis_clock\n");
+    }
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     // Check that the clock's been stopped. It should be set to

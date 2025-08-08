@@ -134,8 +134,8 @@ class MipTimer {
     clock[kMipClockSimplexNoBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - simplex no basis");
     assert(clock[kMipClockSimplexNoBasisSolveLp] == 8);
-    clock[kMipClockHipoSolveAnalyticCentreLp] = timer_pointer->clock_def("Solve analytic centre LP: HiPO");
-    clock[kMipClockIpxSolveAnalyticCentreLp] = timer_pointer->clock_def("Solve analytic centre LP: IPX");
+    clock[kMipClockHipoSolveAnalyticCentreLp] = timer_pointer->clock_def("Solve LP: HiPO analytic centre");
+    clock[kMipClockIpxSolveAnalyticCentreLp] = timer_pointer->clock_def("Solve LP: IPX analytic centre");
     assert(clock[kMipClockHipoSolveAnalyticCentreLp] == 9);
     assert(clock[kMipClockIpxSolveAnalyticCentreLp] == 10);
     clock[kMipClockHipoSolveLp] = timer_pointer->clock_def("Solve LP: HiPO");
