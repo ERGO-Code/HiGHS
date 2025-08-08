@@ -22,6 +22,7 @@ HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
   // will generally be the case, and always so for sub-MIPs
   if (this->analyse_mip_time) {
     this->clockIndex = mipsolver.analysis_.getSepaClockIndex(name);
+    assert(this->clockIndex > 0);
     printf("Using clock %2d for %s\n", int(this->clockIndex), name.c_str());
   }
 }

@@ -208,8 +208,13 @@ void issue425(Highs& highs) {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   solve(highs, "on", "simplex", require_model_status, 0, -1);
   solve(highs, "off", "simplex", require_model_status, 0, 3);
-  const bool use_hipo_if_in_build = true;
-  if (use_hipo_if_in_build) {
+  const bool use_hipo =
+#ifdef HIPO
+    true;
+#else
+  false;
+#endif
+  if (use_hipo) {
     solve(highs, "off", "ipm", require_model_status, 0, 15);
   } else {
     solve(highs, "off", "ipx", require_model_status, 0, 4);
