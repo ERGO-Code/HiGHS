@@ -22,8 +22,9 @@
 #include "util/HighsInt.h"
 
 const HighsInt check_clock = -46;
-const HighsInt hipo_clock = 9;
-const HighsInt ipx_clock = 10;
+const HighsInt simplex_no_basis_clock = 8;
+const HighsInt hipo_analytic_centre_clock = 9;
+const HighsInt ipx_analytic_centre_clock = 10;
 const bool kNoClockCalls = false;
 
 /**
@@ -141,7 +142,8 @@ class HighsTimer {
     // Check that the clock's been stopped. It should be set to
     // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
     const bool clock_stopped = clock_start[i_clock] > 0;
-    if (i_clock != hipo_clock && i_clock != ipx_clock) {
+    if (i_clock != hipo_analytic_centre_clock &&
+	i_clock != ipx_analytic_centre_clock) {
       // Sometimes the analytic centre clock isn't stopped - because
       // it runs on a separate thread. Although it would be good to
       // understand this better, for now don't assert that this clock
@@ -277,7 +279,8 @@ class HighsTimer {
       // Check that the clock's not still running. It should be set to
       // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
       const bool clock_stopped = clock_start[iClock] > 0;
-      if (iClock != hipo_clock && iClock != ipx_clock) {
+      if (iClock != hipo_analytic_centre_clock &&
+	  iClock != ipx_analytic_centre_clock) {
         // Sometimes the analytic centre clock isn't stopped - because
         // it runs on a separate thread. Although it would be good to
         // understand this better, for now don't assert that this clock

@@ -81,6 +81,7 @@ class HighsLpRelaxation {
   HighsInt maxNumFractional;
   Status status;
   bool adjustSymBranchingCol;
+  bool solved_first_root_node;
 
   void storeDualInfProof();
 

@@ -163,6 +163,8 @@ double HighsLpRelaxation::slackUpper(HighsInt row) const {
   return kHighsInf;
 }
 
+// Used when creating the instance of HighsMipSolverData in
+// HighsMipSolver::run()
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   lpsolver.setOptionValue("output_flag", false);
@@ -188,9 +190,15 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   objective = -kHighsInf;
   currentbasisstored = false;
   adjustSymBranchingCol = true;
+  // Interested in reporting time of return from solving the first
+  // root node LP
+  solved_first_root_node = false;
   row_ep.size = 0;
 }
 
+// Used in LP-based primal heuristics (RINS, RENS, tryRoundedPoint,
+// randomizedRounding, shifting, feasibilityPump) to create a local LP
+// relaxation using the MIP solver's LP relaxation
 HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
     : mipsolver(other.mipsolver),
       lprows(other.lprows),
@@ -213,6 +221,9 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   maxNumFractional = 0;
   lastAgeCall = 0;
   objective = -kHighsInf;
+  // Not interested in reporting time of return from solving the first
+  // root node LP
+  solved_first_root_node = true; 
   row_ep.size = 0;
 }
 
@@ -1050,6 +1061,7 @@ void HighsLpRelaxation::setObjectiveLimit(double objlim) {
 }
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
+  const HighsInfo& info = lpsolver.getInfo();
   const double this_time_limit =
       std::max(lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
                    mipsolver.timer_.read(),
@@ -1057,40 +1069,60 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue("time_limit", this_time_limit);
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
-  const HighsInt simplex_solve_clock = valid_basis
-                                           ? kMipClockSimplexBasisSolveLp
-                                           : kMipClockSimplexNoBasisSolveLp;
-  const bool dev_report = false;
-  if (dev_report && !mipsolver.submip) {
-    if (valid_basis) {
-      printf("Solving LP (%7d, %7d) with    a valid basis\n",
-             int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
-    } else {
-      printf("Solving LP (%7d, %7d) without a valid basis\n",
-             int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
+  if (!valid_basis) {
+    printf("HighsLpRelaxation::run without a valid basis\n");
+  }
+  const bool use_hipo = valid_basis ? false : useHipo(*mipsolver.options_mip_, kMipLpSolverString, *mipsolver.model_);
+  bool use_simplex = !use_hipo;
+  HighsStatus callstatus;
+  if (use_hipo) {
+    assert(!valid_basis);
+    mipsolver.analysis_.mipTimerStart(kMipClockHipoSolveLp);
+    callstatus = lpsolver.run();
+    mipsolver.analysis_.mipTimerStop(kMipClockHipoSolveLp);
+    if (callstatus == HighsStatus::kError) use_simplex = true;
+  }
+  if (use_simplex) {
+    const HighsInt simplex_solve_clock = valid_basis
+      ? kMipClockSimplexBasisSolveLp
+      : kMipClockSimplexNoBasisSolveLp;
+    const bool dev_report = false;
+    if (dev_report && !mipsolver.submip) {
+      if (valid_basis) {
+	printf("Solving LP (%7d, %7d) with    a valid basis\n",
+	       int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
+      } else {
+	printf("Solving LP (%7d, %7d) without a valid basis\n",
+	       int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
+      }
     }
-  }
-  const bool solver_logging = false;
-  const bool detailed_simplex_logging = false;
-  if (solver_logging) lpsolver.setOptionValue("output_flag", true);
-  if (detailed_simplex_logging) {
-    lpsolver.setOptionValue("output_flag", true);
-    lpsolver.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
-    lpsolver.setOptionValue("highs_analysis_level",
-                            kHighsAnalysisLevelSolverRuntimeData);
-  }
+    const bool solver_logging = false;
+    const bool detailed_simplex_logging = false;
+    if (solver_logging) lpsolver.setOptionValue("output_flag", true);
+    if (detailed_simplex_logging) {
+      lpsolver.setOptionValue("output_flag", true);
+      lpsolver.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+      lpsolver.setOptionValue("highs_analysis_level",
+			      kHighsAnalysisLevelSolverRuntimeData);
+    }
 
-  mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
-  HighsStatus callstatus = lpsolver.run();
-  mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
-  if (mipsolver.analysis_.analyse_mip_time && !valid_basis &&
-      mipsolver.analysis_.mipTimerNumCall(simplex_solve_clock) == 1)
+    mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
+    callstatus = lpsolver.run();
+    mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
+  }
+  if (mipsolver.analysis_.analyse_mip_time &&
+      !valid_basis &&
+      !this->solved_first_root_node) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - return from first root LP solve\n",
                  mipsolver.timer_.read());
-  const HighsInfo& info = lpsolver.getInfo();
-  HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
-  numlpiters += itercount;
+    this->solved_first_root_node = true;
+  }
+  HighsInt itercount = -1;
+  if (use_simplex) { 
+    itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
+    numlpiters += itercount;
+  }
 
   if (callstatus == HighsStatus::kError) {
     lpsolver.clearSolver();
@@ -1121,20 +1153,20 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     return Status::kError;
   }
 
-  // Was
-  //  HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
   HighsModelStatus model_status = lpsolver.getModelStatus();
   switch (model_status) {
     case HighsModelStatus::kObjectiveBound:
       ++numSolved;
-      avgSolveIters +=
+      if (itercount >= 0) 
+	avgSolveIters +=
           (itercount - avgSolveIters) / static_cast<double>(numSolved);
 
       storeDualUBProof();
       return Status::kInfeasible;
     case HighsModelStatus::kInfeasible: {
       ++numSolved;
-      avgSolveIters +=
+      if (itercount >= 0) 
+	avgSolveIters +=
           (itercount - avgSolveIters) / static_cast<double>(numSolved);
 
       storeDualInfProof();
@@ -1195,7 +1227,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
       ++numSolved;
-      avgSolveIters +=
+      if (itercount >= 0) 
+	avgSolveIters +=
           (itercount - avgSolveIters) / static_cast<double>(numSolved);
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)

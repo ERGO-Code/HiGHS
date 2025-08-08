@@ -93,6 +93,8 @@ enum iClockMip {
   // LP solves
   kMipClockSimplexBasisSolveLp,
   kMipClockSimplexNoBasisSolveLp,
+  kMipClockHipoSolveAnalyticCentreLp,
+  kMipClockIpxSolveAnalyticCentreLp,
   kMipClockHipoSolveLp,
   kMipClockIpxSolveLp,
 
@@ -121,20 +123,23 @@ class MipTimer {
     // runs on a separate thread. Although it would be good to
     // understand this better, for now don't assert that this clock
     // has stopped in HighsTimer.h. This is done with a hard-coded
-    // clock IDs that need to equal clock[kMipClockHipoSolveLp] and
-    // clock[kMipClockIpxSolveLp]
+    // clock IDs that need to equal clock[kMipClockHipoSolveAnalyticCentreLp] and
+    // clock[kMipClockIpxSolveAnalyticCentreLp]
     //
     // Define the clocks for evaluating the LPs first, so that
-    // clock[kMipClockHipoSolveLp] and clock[kMipClockIpxSolveLp]
+    // clock[kMipClockHipoSolveAnalyticCentreLp] and clock[kMipClockIpxSolveAnalyticCentreLp]
     // aren't changed by inserting new clocks
     clock[kMipClockSimplexBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - simplex basis");
     clock[kMipClockSimplexNoBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - simplex no basis");
+    assert(clock[kMipClockSimplexNoBasisSolveLp] == 8);
+    clock[kMipClockHipoSolveAnalyticCentreLp] = timer_pointer->clock_def("Solve analytic centre LP: HiPO");
+    clock[kMipClockIpxSolveAnalyticCentreLp] = timer_pointer->clock_def("Solve analytic centre LP: IPX");
+    assert(clock[kMipClockHipoSolveAnalyticCentreLp] == 9);
+    assert(clock[kMipClockIpxSolveAnalyticCentreLp] == 10);
     clock[kMipClockHipoSolveLp] = timer_pointer->clock_def("Solve LP: HiPO");
     clock[kMipClockIpxSolveLp] = timer_pointer->clock_def("Solve LP: IPX");
-    assert(clock[kMipClockHipoSolveLp] == 9);
-    assert(clock[kMipClockIpxSolveLp] == 10);
 
     // Level 1 - Should correspond to kMipClockTotal
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
@@ -340,7 +345,9 @@ class MipTimer {
   void reportMipSolveLpClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockSimplexBasisSolveLp, kMipClockSimplexNoBasisSolveLp,
-        kMipClockHipoSolveLp, kMipClockIpxSolveLp};
+        kMipClockHipoSolveAnalyticCentreLp,
+	kMipClockIpxSolveAnalyticCentreLp,
+	kMipClockHipoSolveLp, kMipClockIpxSolveLp};
     reportMipClockList("MipSlvLp", mip_clock_list, mip_timer_clock,
                        kMipClockTotal);  //, tolerance_percent_report);
   };
