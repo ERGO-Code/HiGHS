@@ -826,7 +826,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "highs_analysis_level", "Analysis level in HiGHS", now_advanced,
         &highs_analysis_level, kHighsAnalysisLevelMin,
-        kHighsAnalysisLevelMipTime,  //kHighsAnalysisLevelMin,  // 
+        kHighsAnalysisLevelMin,  // kHighsAnalysisLevelMipTime,  //
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
@@ -1218,7 +1218,7 @@ class HighsOptions : public HighsOptionsStruct {
 #else
         "or \"ipx\"",
 #endif
-        advanced, &mip_lp_solver,kHighsChooseString);
+        advanced, &mip_lp_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string =

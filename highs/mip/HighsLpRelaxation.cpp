@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-#include "lp_data/HighsSolve.h" // For useHipo()
+#include "lp_data/HighsSolve.h"  // For useHipo()
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
@@ -1217,12 +1217,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "error: lpsolver reached iteration limit, resolving with basis "
         //     "from ipm\n");
         Highs ipm;
-	const bool use_hipo = useHipo(*mipsolver.options_mip_,
-				      kMipIpmSolverString,
-				      *mipsolver.model_, true);
-	const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
+        const bool use_hipo =
+            useHipo(*mipsolver.options_mip_, kMipIpmSolverString, *mipsolver.model_);
+        const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
         ipm.setOptionValue("output_flag", false);
-	ipm.setOptionValue("solver", mip_ipm_solver);
+        ipm.setOptionValue("solver", mip_ipm_solver);
         ipm.setOptionValue("ipm_iteration_limit", 200);
         // check if only root presolve is allowed
         if (mipsolver.options_mip_->mip_root_presolve_only)
@@ -1232,20 +1231,23 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
-	HighsInt ipm_clock = use_hipo ? kMipClockHipoSolveLp : kMipClockIpxSolveLp;
-	mipsolver.analysis_.mipTimerStart(ipm_clock);
+        HighsInt ipm_clock =
+            use_hipo ? kMipClockHipoSolveLp : kMipClockIpxSolveLp;
+        mipsolver.analysis_.mipTimerStart(ipm_clock);
         ipm.run();
         mipsolver.analysis_.mipTimerStop(ipm_clock);
-	if (use_hipo && !ipm.getBasis().valid) {
-	  printf("In HighsLpRelaxation::run HiPO has failed to get a valid basis: status = %s Try IPX\n",
-		 ipm.modelStatusToString(ipm.getModelStatus()).c_str());
-	  // HiPO has failed to get a solution, so try IPX
-	  ipm.setOptionValue("solver", kIpxString);
-	  ipm_clock = kMipClockIpxSolveLp;
-	  mipsolver.analysis_.mipTimerStart(ipm_clock);
-	  ipm.run();
-	  mipsolver.analysis_.mipTimerStop(ipm_clock);      
-	}
+        if (use_hipo && !ipm.getBasis().valid) {
+          printf(
+              "In HighsLpRelaxation::run HiPO has failed to get a valid basis: "
+              "status = %s Try IPX\n",
+              ipm.modelStatusToString(ipm.getModelStatus()).c_str());
+          // HiPO has failed to get a solution, so try IPX
+          ipm.setOptionValue("solver", kIpxString);
+          ipm_clock = kMipClockIpxSolveLp;
+          mipsolver.analysis_.mipTimerStart(ipm_clock);
+          ipm.run();
+          mipsolver.analysis_.mipTimerStop(ipm_clock);
+        }
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }

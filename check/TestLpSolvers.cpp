@@ -536,4 +536,3 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
-

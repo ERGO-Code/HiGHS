@@ -530,5 +530,5 @@ TEST_CASE("default-options", "[highs_options]") {
   options.solver = illegal_solver_value;
   REQUIRE(h.passOptions(options) == HighsStatus::kError);
   options.solver = kSimplexString;
-  REQUIRE(h.passOptions(options) == HighsStatus::kOk);  
+  REQUIRE(h.passOptions(options) == HighsStatus::kOk);
 }

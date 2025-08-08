@@ -11,7 +11,7 @@
 
 #include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolve.h" // For useHipo()
+#include "lp_data/HighsSolve.h"  // For useHipo()
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
 #include "mip/MipTimer.h"
@@ -346,11 +346,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // due to early return in the root node evaluation
     Highs ipm;
     const std::vector<double>& sol = ipm.getSolution().col_value;
-    const bool use_hipo = useHipo(*mipsolver.options_mip_,
-				  kMipIpmSolverString,
-				  *mipsolver.model_, true);
-    printf("In HighsMipSolverData::startAnalyticCenterComputation use_hipo = %s\n",
-	   use_hipo ? "T" : "F");
+    const bool use_hipo = useHipo(*mipsolver.options_mip_, kMipIpmSolverString,
+                                  *mipsolver.model_);
     const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
     ipm.setOptionValue("output_flag", false);
     ipm.setOptionValue("solver", mip_ipm_solver);
@@ -375,14 +372,16 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.run();
     mipsolver.analysis_.mipTimerStop(ipm_clock);
     if (use_hipo && HighsInt(sol.size()) != mipsolver.numCol()) {
-      printf("In HighsMipSolverData::startAnalyticCenterComputation HiPO has failed to get a solution: status = %s Try IPX\n",
-	     ipm.modelStatusToString(ipm.getModelStatus()).c_str());
+      printf(
+          "In HighsMipSolverData::startAnalyticCenterComputation HiPO has "
+          "failed to get a solution: status = %s Try IPX\n",
+          ipm.modelStatusToString(ipm.getModelStatus()).c_str());
       // HiPO has failed to get a solution, so try IPX
       ipm.setOptionValue("solver", kIpxString);
       ipm_clock = kMipClockIpxSolveLp;
       mipsolver.analysis_.mipTimerStart(ipm_clock);
       ipm.run();
-      mipsolver.analysis_.mipTimerStop(ipm_clock);      
+      mipsolver.analysis_.mipTimerStop(ipm_clock);
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();

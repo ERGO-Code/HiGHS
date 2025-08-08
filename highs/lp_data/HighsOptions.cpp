@@ -92,9 +92,7 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
                "\"%s\", "
 #endif
                "\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), 
-	       kSolverString.c_str(),
-	       kHighsChooseString.c_str(),
+               value.c_str(), kSolverString.c_str(), kHighsChooseString.c_str(),
                kSimplexString.c_str(), kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
@@ -118,11 +116,9 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                "\"%s\", "
 #endif
                "\"%s\", \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(),
-	       kMipLpSolverString.c_str(),
-	       kHighsChooseString.c_str(),
-               kSimplexString.c_str(),
-	       kIpmString.c_str(),
+               value.c_str(), kMipLpSolverString.c_str(),
+               kHighsChooseString.c_str(), kSimplexString.c_str(),
+               kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
 #endif
@@ -144,10 +140,8 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                "\"%s\", "
 #endif
                "\"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), 
-	       kMipIpmSolverString.c_str(),
-	       kHighsChooseString.c_str(),
-	       kIpmString.c_str(),
+               value.c_str(), kMipIpmSolverString.c_str(),
+               kHighsChooseString.c_str(), kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
 #endif

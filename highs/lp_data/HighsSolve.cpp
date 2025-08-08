@@ -35,9 +35,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                         return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
-  const bool use_ipm = options.solver == kIpmString ||
-                       options.solver == kHipoString ||
-                       options.solver == kIpxString || options.run_centring;
+  const bool use_ipm = useIpm(options.solver) || options.run_centring;
   const bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
   const bool use_ipx = use_ipm && !use_hipo;
   // Now actually solve LPs!
@@ -98,7 +96,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // Non-error return requires a primal solution
     assert(solver_object.solution_.value_valid);
 
-    if (options.solver == kIpmString || options.run_centring) {
+    if (useIpm(options.solver) || options.run_centring) {
       // Setting the IPM-specific values of (highs_)info_ has been done in
       // solveLpHipo/Ipx
       const bool unwelcome_ipx_status =
@@ -567,10 +565,14 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
   }
 }
 
+bool useIpm(const std::string& solver) {
+  return solver == kIpmString || solver == kHipoString || solver == kIpxString;
+}
+
 // Decide whether to use the HiPO IPM solver
 bool useHipo(const HighsOptions& options,
              const std::string& specific_solver_option, const HighsLp& lp,
-	     const bool logging) {
+             const bool logging) {
   // specific_solver_option wll be "solver", "mip_lp_solver" or
   // "mip_ipm_solver" according to context
   assert(specific_solver_option == kSolverString ||
@@ -582,20 +584,21 @@ bool useHipo(const HighsOptions& options,
                                                      : options.mip_ipm_solver;
   // In the MIP solver there are situations where IPM must be used
   const bool force_ipm = specific_solver_option == kMipIpmSolverString;
-  // HiPO is used by default if it's available and IPM is requested,
-  // or if HiPO is requested explicitly, but can't be used for true
-  // analytic centre calculations
-  #ifdef HIPO
+// HiPO is used by default if it's available and IPM is requested,
+// or if HiPO is requested explicitly, but can't be used for true
+// analytic centre calculations
+#ifdef HIPO
   if (logging) {
-    printf("HIPO is available: specific_solver_option is %s = %s\n", specific_solver_option.c_str(), specific_solver_option_value.c_str());
+    printf("HIPO is available: specific_solver_option is %s = %s\n",
+           specific_solver_option.c_str(),
+           specific_solver_option_value.c_str());
   }
-  #endif
+#endif
   bool use_hipo = (
 #ifdef HIPO
-		   force_ipm ||
-		   specific_solver_option_value == kIpmString ||
+                      force_ipm || specific_solver_option_value == kIpmString ||
 #endif
-		   specific_solver_option_value == kHipoString) &&
+                      specific_solver_option_value == kHipoString) &&
                   !options.run_centring;
   // Later decide between HiPO and IPX based on LP properties
   if (specific_solver_option == kMipIpmSolverString) return use_hipo;

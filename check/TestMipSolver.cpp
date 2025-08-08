@@ -1004,7 +1004,7 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
 
 TEST_CASE("mip-lp-solver-string", "[highs_test_mip_solver]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.setOptionValue(kMipLpSolverString, "fred") == HighsStatus::kError);
   REQUIRE(h.setOptionValue(kMipLpSolverString, kHighsChooseString) ==
           HighsStatus::kOk);
@@ -1041,7 +1041,8 @@ TEST_CASE("mip-lp-solver-string", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
-  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
   Highs h;
   // h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);

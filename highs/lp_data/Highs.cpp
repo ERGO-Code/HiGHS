@@ -1238,8 +1238,8 @@ HighsStatus Highs::optimizeModel() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-  const bool ipx_no_crossover = options_.solver == kIpmString &&
-                                options_.run_crossover == kHighsOffString;
+  const bool ipm_no_crossover =
+      useIpm(options_.solver) && options_.run_crossover == kHighsOffString;
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
@@ -1358,12 +1358,12 @@ HighsStatus Highs::optimizeModel() {
   } else {
     // Otherwise, consider presolve
     //
-    // If using IPX to solve the reduced LP, but not crossover, set
+    // If using IPM to solve the reduced LP, but not crossover, set
     // lp_presolve_requires_basis_postsolve so that presolve can use
     // rules for which postsolve does not generate a basis.
     const bool lp_presolve_requires_basis_postsolve =
         options_.lp_presolve_requires_basis_postsolve;
-    if (ipx_no_crossover) options_.lp_presolve_requires_basis_postsolve = false;
+    if (ipm_no_crossover) options_.lp_presolve_requires_basis_postsolve = false;
     // Possibly presolve - according to option_.presolve
     //
     // If solving the relaxation of a MIP, make sure that LP presolve
@@ -1730,7 +1730,7 @@ HighsStatus Highs::optimizeModel() {
         // incumbent solution
         const std::string solver = options_.solver;
         const HighsInt pdlp_iteration_limit = options_.pdlp_iteration_limit;
-        assert(solver == kIpmString || solver == kPdlpString);
+        assert(useIpm(solver) || solver == kPdlpString);
         highsLogUser(
             log_options, HighsLogType::kInfo,
             "Unknown model status and no basis after initial solve "
@@ -4458,13 +4458,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
 
     case HighsModelStatus::kUnboundedOrInfeasible:
       if (options_.allow_unbounded_or_infeasible ||
-	  /*
-          ((options_.solver == kIpmString ||
-	    options_.solver == kHipoString ||
-	    options_.solver == kIpxString) &&
-           options_.run_crossover == kHighsOnString) ||
-	  */
-          (options_.solver == kIpmString &&
+          (useIpm(options_.solver) &&
            options_.run_crossover == kHighsOnString) ||
           (options_.solver == kPdlpString) || model_.isMip()) {
         assert(return_status == HighsStatus::kOk);
