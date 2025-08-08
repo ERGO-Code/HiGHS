@@ -1015,12 +1015,11 @@ void HighsMipSolverData::runSetup() {
     debugSolution.debugSolution.clear();
     debugSolution.debugSolution = postSolveStack.getReducedPrimalSolution(
         debugSolution.debugOrigSolution);
-    // Do we even need to recalculate the objective?
     debugSolution.debugSolObjective = 0;
-    for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
-      debugSolution.debugSolObjective +=
-          mipsolver.colCost(i) * debugSolution.debugSolution[i];
-    }
+    HighsCDouble debugsolobj = 0.0;
+    for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i)
+      debugsolobj += mipsolver.colCost(i) * debugSolution.debugSolution[i];
+    debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
     debugSolution.registerDomain(domain);
     assert(checkSolution(debugSolution.debugSolution));
   }
