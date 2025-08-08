@@ -12,6 +12,7 @@
 
 #include <cmath>
 
+#include "mip/HighsSeparator.h"
 #include "mip/MipTimer.h"
 #include "util/HighsUtils.h"
 
@@ -30,6 +31,16 @@ void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
     MipTimer mip_timer;
     mip_timer.initialiseMipClocks(clock);
     mip_clocks = clock;
+    sepa_name_clock.push_back(
+        std::make_pair(kImplboundSepaString, kMipClockImplboundSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kCliqueSepaString, kMipClockCliqueSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kTableauSepaString, kMipClockTableauSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kPathAggrSepaString, kMipClockPathAggrSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kModKSepaString, kMipClockModKSepa));
   }
 }
 
@@ -153,12 +164,13 @@ void HighsMipAnalysis::reportMipTimer() {
   mip_timer.reportMipEvaluateRootNodeClock(mip_clocks);
   //  mip_timer.reportAltEvaluateRootNodeClock(mip_clocks);
   //  mip_timer.reportMipPresolveClock(mip_clocks);
-  //  mip_timer.reportMipSeparationClock(mip_clocks);
+  //  mip_timer.reportMipRootSeparationClock(mip_clocks);
   //  mip_timer.reportMipSearchClock(mip_clocks);
   //  mip_timer.reportMipDiveClock(mip_clocks);
   //  mip_timer.reportMipNodeSearchClock(mip_clocks);
   //  mip_timer.reportMipDivePrimalHeuristicsClock(mip_clocks);
   //  mip_timer.reportMipSubMipSolveClock(mip_clocks);
+  mip_timer.reportMipSeparationClock(mip_clocks);
   mip_timer.reportMipSolveLpClock(mip_clocks);
   //  mip_timer.csvMipClock(this->model_name, mip_clocks, true, false);
   //  reportMipSolveLpClock(true);
@@ -169,7 +181,8 @@ void HighsMipAnalysis::reportMipTimer() {
   //  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, true,
   //  true);
   //
-  //  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, false, true);
+  //  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, false,
+  //  true);
   //
   //  analyseVectorValues(nullptr, "Node search time",
   //                      HighsInt(node_search_time.size()), node_search_time);
@@ -177,4 +190,14 @@ void HighsMipAnalysis::reportMipTimer() {
   //  analyseVectorValues(nullptr, "Dive time", HighsInt(dive_time.size()),
   //                      dive_time);
   // mip_timer.reportFjClock(this->model_name, mip_clocks);
+}
+
+HighsInt HighsMipAnalysis::getSepaClockIndex(const std::string& name) const {
+  HighsInt num_sepa_clock = this->sepa_name_clock.size();
+  assert(num_sepa_clock > 0);
+  for (HighsInt iSepaClock = 0; iSepaClock < num_sepa_clock; iSepaClock++) {
+    if (this->sepa_name_clock[iSepaClock].first == name)
+      return this->sepa_name_clock[iSepaClock].second;
+  }
+  return -1;
 }

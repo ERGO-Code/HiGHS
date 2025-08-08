@@ -367,9 +367,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //      file_name.c_str()); fflush(stdout); ipm.writeModel(file_name);
     //    }
 
-    HighsInt ipm_clock = use_hipo ?
-      kMipClockHipoSolveAnalyticCentreLp :
-      kMipClockIpxSolveAnalyticCentreLp;
+    HighsInt ipm_clock = use_hipo ? kMipClockHipoSolveAnalyticCentreLp
+                                  : kMipClockIpxSolveAnalyticCentreLp;
     mipsolver.analysis_.mipTimerStart(ipm_clock);
     ipm.run();
     mipsolver.analysis_.mipTimerStop(ipm_clock);
@@ -1124,7 +1123,8 @@ try_again:
     // check if only root presolve is allowed
     if (mipsolver.options_mip_->mip_root_presolve_only)
       tmpSolver.setOptionValue("presolve", kHighsOffString);
-    const bool use_hipo = useHipo(*mipsolver.options_mip_, kMipLpSolverString, fixedModel);
+    const bool use_hipo =
+        useHipo(*mipsolver.options_mip_, kMipLpSolverString, fixedModel);
     bool use_simplex = !use_hipo;
     tmpSolver.passModel(std::move(fixedModel));
     if (use_hipo) {
@@ -1138,7 +1138,7 @@ try_again:
       tmpSolver.run();
       mipsolver.analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
       this->total_repair_lp_iterations =
-        tmpSolver.getInfo().simplex_iteration_count;
+          tmpSolver.getInfo().simplex_iteration_count;
     }
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       this->total_repair_lp_feasible++;

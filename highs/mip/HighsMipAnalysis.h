@@ -42,11 +42,14 @@ class HighsMipAnalysis {
   void reportMipSolveLpClock(const bool header);
   void reportMipTimer();
 
+  HighsInt getSepaClockIndex(const std::string& name) const;
+
   std::string model_name;
   HighsTimerClock mip_clocks;
   bool analyse_mip_time;
   std::vector<double> dive_time;
   std::vector<double> node_search_time;
+  std::vector<std::pair<std::string, HighsInt>> sepa_name_clock;
 };
 
 #endif /* MIP_HIGHSMIPANALYSIS_H_ */

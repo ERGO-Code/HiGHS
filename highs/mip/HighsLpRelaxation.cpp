@@ -223,7 +223,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   objective = -kHighsInf;
   // Not interested in reporting time of return from solving the first
   // root node LP
-  solved_first_root_node = true; 
+  solved_first_root_node = true;
   row_ep.size = 0;
 }
 
@@ -1070,9 +1070,14 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
   if (!valid_basis && this->solved_first_root_node) {
-    printf("HighsLpRelaxation::run without a valid basis after solving root node LP\n");
+    printf(
+        "HighsLpRelaxation::run without a valid basis after solving root node "
+        "LP\n");
   }
-  const bool use_hipo = valid_basis ? false : useHipo(*mipsolver.options_mip_, kMipLpSolverString, *mipsolver.model_);
+  const bool use_hipo = valid_basis
+                            ? false
+                            : useHipo(*mipsolver.options_mip_,
+                                      kMipLpSolverString, *mipsolver.model_);
   bool use_simplex = !use_hipo;
   HighsStatus callstatus;
   if (use_hipo) {
@@ -1084,16 +1089,16 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
   if (use_simplex) {
     const HighsInt simplex_solve_clock = valid_basis
-      ? kMipClockSimplexBasisSolveLp
-      : kMipClockSimplexNoBasisSolveLp;
+                                             ? kMipClockSimplexBasisSolveLp
+                                             : kMipClockSimplexNoBasisSolveLp;
     const bool dev_report = false;
     if (dev_report && !mipsolver.submip) {
       if (valid_basis) {
-	printf("Solving LP (%7d, %7d) with    a valid basis\n",
-	       int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
+        printf("Solving LP (%7d, %7d) with    a valid basis\n",
+               int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
       } else {
-	printf("Solving LP (%7d, %7d) without a valid basis\n",
-	       int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
+        printf("Solving LP (%7d, %7d) without a valid basis\n",
+               int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
       }
     }
     const bool solver_logging = false;
@@ -1103,15 +1108,14 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       lpsolver.setOptionValue("output_flag", true);
       lpsolver.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
       lpsolver.setOptionValue("highs_analysis_level",
-			      kHighsAnalysisLevelSolverRuntimeData);
+                              kHighsAnalysisLevelSolverRuntimeData);
     }
 
     mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
     callstatus = lpsolver.run();
     mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
   }
-  if (mipsolver.analysis_.analyse_mip_time &&
-      !valid_basis &&
+  if (mipsolver.analysis_.analyse_mip_time && !valid_basis &&
       !this->solved_first_root_node) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - return from first root LP solve\n",
@@ -1119,7 +1123,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     this->solved_first_root_node = true;
   }
   HighsInt itercount = -1;
-  if (use_simplex) { 
+  if (use_simplex) {
     itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
     numlpiters += itercount;
   }
@@ -1157,17 +1161,17 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   switch (model_status) {
     case HighsModelStatus::kObjectiveBound:
       ++numSolved;
-      if (itercount >= 0) 
-	avgSolveIters +=
-          (itercount - avgSolveIters) / static_cast<double>(numSolved);
+      if (itercount >= 0)
+        avgSolveIters +=
+            (itercount - avgSolveIters) / static_cast<double>(numSolved);
 
       storeDualUBProof();
       return Status::kInfeasible;
     case HighsModelStatus::kInfeasible: {
       ++numSolved;
-      if (itercount >= 0) 
-	avgSolveIters +=
-          (itercount - avgSolveIters) / static_cast<double>(numSolved);
+      if (itercount >= 0)
+        avgSolveIters +=
+            (itercount - avgSolveIters) / static_cast<double>(numSolved);
 
       storeDualInfProof();
       if (true || checkDualProof()) return Status::kInfeasible;
@@ -1227,9 +1231,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
       ++numSolved;
-      if (itercount >= 0) 
-	avgSolveIters +=
-          (itercount - avgSolveIters) / static_cast<double>(numSolved);
+      if (itercount >= 0)
+        avgSolveIters +=
+            (itercount - avgSolveIters) / static_cast<double>(numSolved);
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kOptimal;
@@ -1250,8 +1254,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "error: lpsolver reached iteration limit, resolving with basis "
         //     "from ipm\n");
         Highs ipm;
-        const bool use_hipo =
-            useHipo(*mipsolver.options_mip_, kMipIpmSolverString, *mipsolver.model_);
+        const bool use_hipo = useHipo(*mipsolver.options_mip_,
+                                      kMipIpmSolverString, *mipsolver.model_);
         const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
         ipm.setOptionValue("output_flag", false);
         ipm.setOptionValue("solver", mip_ipm_solver);

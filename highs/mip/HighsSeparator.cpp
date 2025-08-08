@@ -14,16 +14,15 @@
 #include "mip/HighsMipSolver.h"
 
 HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
-                               const char* name)
+                               const std::string& name)
     : numCutsFound(0), numCalls(0) {
   this->analyse_mip_time = mipsolver.analysis_.analyse_mip_time;
   this->clockIndex = -1;
-  // Don't define clocks when analyse_mip_time is false - as will
-  // generally be the case, and always so for sub-MIPs
-  if (this->analyse_mip_time) 
-    this->clockIndex = mipsolver.timer_.clock_def(name);
+  // Don't get the clock index when analyse_mip_time is false - as
+  // will generally be the case, and always so for sub-MIPs
   if (this->analyse_mip_time) {
-    printf("Defined clock %2d for %s\n", int(this->clockIndex), name);
+    this->clockIndex = mipsolver.analysis_.getSepaClockIndex(name);
+    printf("Using clock %2d for %s\n", int(this->clockIndex), name.c_str());
   }
 }
 
@@ -33,12 +32,9 @@ void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
   ++numCalls;
   HighsInt currNumCuts = cutpool.getNumCuts();
 
-  // Don't start/stop clocks when analyse_mip_time is false
-  if (this->analyse_mip_time) 
-    lpRelaxation.getMipSolver().timer_.start(clockIndex);
+  lpRelaxation.getMipSolver().analysis_.mipTimerStart(clockIndex);
   separateLpSolution(lpRelaxation, lpAggregator, transLp, cutpool);
-  if (this->analyse_mip_time) 
-    lpRelaxation.getMipSolver().timer_.stop(clockIndex);
+  lpRelaxation.getMipSolver().analysis_.mipTimerStop(clockIndex);
 
   numCutsFound += cutpool.getNumCuts() - currNumCuts;
 }
