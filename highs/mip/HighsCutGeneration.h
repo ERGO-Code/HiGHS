@@ -104,7 +104,8 @@ class HighsCutGeneration {
   /// separates the LP solution for the given single row relaxation
   bool generateCut(HighsTransformedLp& transLp, std::vector<HighsInt>& inds,
                    std::vector<double>& vals, double& rhs,
-                   bool onlyInitialCMIRScale = false);
+                   bool onlyInitialCMIRScale = false,
+                   bool genFlowCover = false);
 
   /// generate a conflict from the given proof constraint which cuts of the
   /// given local domain

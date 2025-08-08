@@ -1302,7 +1302,8 @@ static void checkNumerics(const double* vals, HighsInt len, double rhs) {
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      std::vector<HighsInt>& inds_,
                                      std::vector<double>& vals_, double& rhs_,
-                                     bool onlyInitialCMIRScale) {
+                                     bool onlyInitialCMIRScale,
+                                     bool genFlowCover) {
 #if 0
   if (vals_.size() > 1) {
     std::vector<HighsInt> indsCheck_ = inds_;
@@ -1352,7 +1353,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   std::vector<HighsInt> flowCoverInds;
   double flowCoverRhs = rhs_;
   double flowCoverEfficacy = 0;
-  if (!onlyInitialCMIRScale) {
+  if (genFlowCover) {
     flowCoverVals = vals_;
     flowCoverInds = inds_;
     flowCoverSuccess = tryGenerateFlowCoverCut(
