@@ -1050,3 +1050,20 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
   REQUIRE(h.setOptionValue(kMipLpSolverString, kIpmString) == HighsStatus::kOk);
   h.run();
 }
+
+TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
+  std::string model_file =
+    std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  Highs h;
+  // h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  h.run();
+  const HighsSubSolverCallTime& sub_solver_call_time = h.getSubSolverCallTime();
+  printf("Solver   Calls    Time\n");
+  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++)
+    printf("%-7s    %3d  %6.4f\n",
+	   sub_solver_call_time.name[Ix].c_str(),
+	   int(sub_solver_call_time.num_call[Ix]),
+	   sub_solver_call_time.run_time[Ix]);
+}

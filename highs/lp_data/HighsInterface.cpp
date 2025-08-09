@@ -1487,7 +1487,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // for the current basis, so return_value is the rank deficiency.
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, callback_, options_,
-                                      timer_);
+                                      timer_, sub_solver_call_time_);
     const bool only_from_known_basis = true;
     return_status = interpretCallStatus(
         options_.log_options,
@@ -1857,7 +1857,8 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
 
 HighsStatus Highs::getRangingInterface() {
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
-                                    ekk_instance_, callback_, options_, timer_);
+                                    ekk_instance_, callback_, options_, timer_,
+				    sub_solver_call_time_);
   solver_object.model_status_ = model_status_;
   return getRangingData(this->ranging_, solver_object);
 }
@@ -4298,4 +4299,17 @@ void HighsLinearObjective::clear() {
   this->abs_tolerance = 0.0;
   this->rel_tolerance = 0.0;
   this->priority = 0;
+}
+
+void HighsSubSolverCallTime::initialise() {
+  this->num_call.assign(kSubSolverCount, 0);
+  this->run_time.assign(kSubSolverCount, 0);
+  this->name.assign(kSubSolverCount, "");
+  this->name[kSubSolverSimplex] = "Simplex";
+  this->name[kSubSolverHipo] = "HiPO";
+  this->name[kSubSolverIpx] = "IPX";
+  this->name[kSubSolverPdlp] = "PDLP";
+  this->name[kSubSolverQpAsm] = "QP ASM";
+  this->name[kSubSolverMip] = "MIP";
+  this->name[kSubSolverSubMip] = "Sub-MIP";
 }

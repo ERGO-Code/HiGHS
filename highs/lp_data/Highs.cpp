@@ -939,6 +939,7 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::run() {
+  this->sub_solver_call_time_.initialise();
   const bool options_had_highs_files = this->optionsHasHighsFiles();
   if (options_had_highs_files) {
     HighsStatus status = HighsStatus::kOk;
@@ -1204,7 +1205,10 @@ HighsStatus Highs::optimizeModel() {
                    "Cannot solve non-convex QP problems with HiGHS\n");
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
     }
+    sub_solver_call_time_.num_call[kSubSolverQpAsm]++;
+    sub_solver_call_time_.run_time[kSubSolverQpAsm] = -timer_.read();
     call_status = callSolveQp();
+    sub_solver_call_time_.run_time[kSubSolverQpAsm] += timer_.read();
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveQp");
     return returnFromOptimizeModel(return_status, undo_mods);
@@ -1219,7 +1223,10 @@ HighsStatus Highs::optimizeModel() {
                    "Solving LP relaxation since solve_relaxation is true\n");
     } else {
       // Solve model as a MIP
+      sub_solver_call_time_.num_call[kSubSolverMip]++;
+      sub_solver_call_time_.run_time[kSubSolverMip] = -timer_.read();
       call_status = callSolveMip();
+      sub_solver_call_time_.run_time[kSubSolverMip] += timer_.read();
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
       return returnFromOptimizeModel(return_status, undo_mods);
@@ -2444,7 +2451,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
                                         info_, ekk_instance_, callback_,
-                                        options_, timer_);
+                                        options_, timer_,
+					sub_solver_call_time_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -3792,7 +3800,19 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     options_.mip_max_nodes = options_.mip_max_start_nodes;
     // Solve the model
     basis_.clear();
+    HighsSubSolverCallTime sub_solver_call_time = this->sub_solver_call_time_;
+    double mip_solve_time = -sub_solver_call_time_.run_time[kSubSolverMip];
     return_status = this->optimizeModel();
+    if (model_.lp_.isMip()) {
+      // If a MIP was solved, it counts as a sub-MIP, but the MIP and
+      // LP call-time data will be recorded as if it were a MIP so,
+      // extract the MIP solve time, revert
+      // this->sub_solver_call_time_ and update the sub-MIP record
+      mip_solve_time += sub_solver_call_time_.run_time[kSubSolverMip];
+      this->sub_solver_call_time_ = sub_solver_call_time;
+      this->sub_solver_call_time_.num_call[kSubSolverSubMip]++;
+      this->sub_solver_call_time_.run_time[kSubSolverSubMip] += mip_solve_time;
+    }
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
   }
@@ -3815,7 +3835,8 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
-                                    callback_, options_, timer_);
+                                    callback_, options_, timer_,
+				    sub_solver_call_time_);
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
