@@ -17,11 +17,11 @@
 
 #include "util/HighsInt.h"
 
-const std::string kImplboundSepaString = "Implbound sepa";
-const std::string kCliqueSepaString = "Clique sepa";
-const std::string kTableauSepaString = "Tableau sepa";
-const std::string kPathAggrSepaString = "PathAggr sepa";
-const std::string kModKSepaString = "Mod-k sepa";
+const std::string kImplboundSepaString = "Separation: Implied bounds";
+const std::string kCliqueSepaString = "Separation: Clique";
+const std::string kTableauSepaString = "Separation: Tableau";
+const std::string kPathAggrSepaString = "Separation: Path aggregation";
+const std::string kModKSepaString = "Separation: Mod-k";
 
 class HighsLpRelaxation;
 class HighsTransformedLp;
@@ -35,7 +35,6 @@ class HighsSeparator {
  private:
   HighsInt numCutsFound;
   HighsInt numCalls;
-  bool analyse_mip_time;
   int clockIndex;
 
  public:

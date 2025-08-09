@@ -739,6 +739,9 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
 
+  // Indicate that the first LP has not been solved
+  this->lp.setSolvedFirstLp(false);
+
   last_disptime = -kHighsInf;
   disptime = 0;
 
@@ -1056,6 +1059,7 @@ void HighsMipSolverData::runSetup() {
   if (numRestarts != 0)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\n");
+
 }
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(

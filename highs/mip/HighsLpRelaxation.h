@@ -81,7 +81,7 @@ class HighsLpRelaxation {
   HighsInt maxNumFractional;
   Status status;
   bool adjustSymBranchingCol;
-  bool solved_first_root_node;
+  bool solved_first_lp;
 
   void storeDualInfProof();
 
@@ -352,6 +352,9 @@ class HighsLpRelaxation {
 
   void setIterationLimit(HighsInt limit = kHighsIInf) {
     lpsolver.setOptionValue("simplex_iteration_limit", limit);
+  }
+  void setSolvedFirstLp(const bool solved_first_lp_) {
+    this->solved_first_lp = solved_first_lp_;
   }
 };
 

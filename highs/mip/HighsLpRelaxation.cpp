@@ -165,6 +165,10 @@ double HighsLpRelaxation::slackUpper(HighsInt row) const {
 
 // Used when creating the instance of HighsMipSolverData in
 // HighsMipSolver::run()
+//
+// Parameter creating_mip_solver_data is false by default, and is only
+// set true when the HighsLpRelaxation instance is created as part of
+// a new HighsMipSolverData instance
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   lpsolver.setOptionValue("output_flag", false);
@@ -190,9 +194,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   objective = -kHighsInf;
   currentbasisstored = false;
   adjustSymBranchingCol = true;
-  // Interested in reporting time of return from solving the first
-  // root node LP
-  solved_first_root_node = false;
+  solved_first_lp = true;
   row_ep.size = 0;
 }
 
@@ -221,9 +223,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   maxNumFractional = 0;
   lastAgeCall = 0;
   objective = -kHighsInf;
-  // Not interested in reporting time of return from solving the first
-  // root node LP
-  solved_first_root_node = true;
+  solved_first_lp = true;
   row_ep.size = 0;
 }
 
@@ -1069,10 +1069,22 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue("time_limit", this_time_limit);
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
-  if (!valid_basis && this->solved_first_root_node) {
-    printf(
-        "HighsLpRelaxation::run without a valid basis after solving root node "
-        "LP\n");
+
+  if (!valid_basis && this->solved_first_lp) {
+    std::string get_presolve;
+    lpsolver.getOptionValue("presolve", get_presolve);
+    if (get_presolve != kHighsOffString)
+      printf("HighsLpRelaxation::run without a valid basis and with presolve = %s after solving root node LP\n",
+	     get_presolve.c_str());
+  }
+
+  if (mipsolver.analysis_.analyse_mip_time &&
+      !mipsolver.submip &&
+      !this->solved_first_lp) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "MIP-Timing: %11.2g - start first LP solve with%s basis\n",
+                 mipsolver.timer_.read(),
+		 valid_basis ? "" : "out");
   }
   const bool use_hipo = valid_basis
                             ? false
@@ -1115,13 +1127,14 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     callstatus = lpsolver.run();
     mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
   }
-  if (mipsolver.analysis_.analyse_mip_time && !valid_basis &&
-      !this->solved_first_root_node) {
+  if (mipsolver.analysis_.analyse_mip_time &&
+      !mipsolver.submip &&
+      !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: %11.2g - return from first root LP solve\n",
+                 "MIP-Timing: %11.2g - finish first LP solve\n",
                  mipsolver.timer_.read());
-    this->solved_first_root_node = true;
   }
+  this->solved_first_lp = true;
   HighsInt itercount = -1;
   if (use_simplex) {
     itercount = std::max(HighsInt{0}, info.simplex_iteration_count);

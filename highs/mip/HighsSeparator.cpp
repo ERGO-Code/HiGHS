@@ -16,14 +16,12 @@
 HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
                                const std::string& name)
     : numCutsFound(0), numCalls(0) {
-  this->analyse_mip_time = mipsolver.analysis_.analyse_mip_time;
   this->clockIndex = -1;
   // Don't get the clock index when analyse_mip_time is false - as
   // will generally be the case, and always so for sub-MIPs
-  if (this->analyse_mip_time) {
+  if (mipsolver.analysis_.analyse_mip_time) {
     this->clockIndex = mipsolver.analysis_.getSepaClockIndex(name);
     assert(this->clockIndex > 0);
-    printf("Using clock %2d for %s\n", int(this->clockIndex), name.c_str());
   }
 }
 
