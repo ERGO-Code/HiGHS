@@ -1172,7 +1172,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     return Status::kError;
   }
 
-  if (!mipsolver.submip) sub_solver_call_time_.add(lpsolver.getSubSolverCallTime());
+  if (!mipsolver.submip) addInitialiseSubSolverCallTime(lpsolver);
 
   HighsModelStatus model_status = lpsolver.getModelStatus();
   switch (model_status) {
@@ -1535,3 +1535,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
   return status;
 }
+
+void HighsLpRelaxation::addInitialiseSubSolverCallTime(Highs& highs) {
+  this->sub_solver_call_time_.add(highs.getSubSolverCallTime());
+  highs.initialiseSubSolverCallTime();  
+}
+  

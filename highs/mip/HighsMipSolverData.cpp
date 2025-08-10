@@ -372,7 +372,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     mipsolver.analysis_.mipTimerStart(ipm_clock);
     ipm.run();
     mipsolver.analysis_.mipTimerStop(ipm_clock);
-    mipsolver.sub_solver_call_time_.add(ipm.getSubSolverCallTime());
+    this->addInitialiseSubSolverCallTime(ipm);
     if (use_hipo && HighsInt(sol.size()) != mipsolver.numCol()) {
       printf(
           "In HighsMipSolverData::startAnalyticCenterComputation HiPO has "
@@ -1136,14 +1136,14 @@ try_again:
       mipsolver.analysis_.mipTimerStart(kMipClockHipoSolveLp);
       HighsStatus callstatus = tmpSolver.run();
       mipsolver.analysis_.mipTimerStop(kMipClockHipoSolveLp);
-      mipsolver.sub_solver_call_time_.add(tmpSolver.getSubSolverCallTime());
+      this->addInitialiseSubSolverCallTime(tmpSolver);
       if (callstatus == HighsStatus::kError) use_simplex = true;
     }
     if (use_simplex) {
       mipsolver.analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
       tmpSolver.run();
       mipsolver.analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
-      mipsolver.sub_solver_call_time_.add(tmpSolver.getSubSolverCallTime());
+      this->addInitialiseSubSolverCallTime(tmpSolver);
       this->total_repair_lp_iterations =
           tmpSolver.getInfo().simplex_iteration_count;
     }
@@ -1775,7 +1775,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       lpIters += lp.getNumLpIterations();
       total_lp_iterations += lpIters;
       avgrootlpiters = lp.getAvgSolveIters();
-      if (!mipsolver.submip) mipsolver.sub_solver_call_time_.add(lp.getSubSolverCallTime());
+      if (!mipsolver.submip) this->addInitialiseSubSolverCallTime(lp);
       lpWasSolved = true;
 
       if (status == HighsLpRelaxation::Status::kUnbounded) {
@@ -2705,6 +2705,16 @@ static double possInfRelDiff(const double v0, const double v1,
   return rel_diff;
 }
 
+void HighsMipSolverData::addInitialiseSubSolverCallTime(Highs& highs) {
+  this->mipsolver.sub_solver_call_time_.add(highs.getSubSolverCallTime());
+  highs.initialiseSubSolverCallTime();  
+}
+
+void HighsMipSolverData::addInitialiseSubSolverCallTime(HighsLpRelaxation& lprelax) {
+  this->mipsolver.sub_solver_call_time_.add(lprelax.getSubSolverCallTime());
+  lprelax.initialiseSubSolverCallTime();
+}
+
 void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
                                                   const double to_lower_bound,
                                                   const double from_upper_bound,
@@ -2821,3 +2831,4 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
 }
 
 void HighsPrimaDualIntegral::initialise() { this->value = -kHighsInf; }
+

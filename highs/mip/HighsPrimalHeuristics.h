@@ -15,6 +15,7 @@
 #include "util/HighsRandom.h"
 
 class HighsMipSolver;
+class HighsLpRelaxation;
 
 class HighsPrimalHeuristics {
  private:
@@ -69,6 +70,8 @@ class HighsPrimalHeuristics {
   void shifting(const std::vector<double>& relaxationsol);
 
   void ziRound(const std::vector<double>& relaxationsol);
+
+  void addInitialiseSubSolverCallTime(HighsLpRelaxation& lprelax);
 };
 
 #endif

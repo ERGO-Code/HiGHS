@@ -1205,9 +1205,14 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Clear the internal HighsBasis instance
+   * @brief Return a const reference to the internal sub-solver call and time instance
    */
-  const HighsSubSolverCallTime& getSubSolverCallTime() const { return sub_solver_call_time_; } 
+  const HighsSubSolverCallTime& getSubSolverCallTime() const { return sub_solver_call_time_; }
+
+  /**
+   * @brief Initialise the internal sub-solver call and time instance
+   */
+  void initialiseSubSolverCallTime() { this->sub_solver_call_time_.initialise(); }
 
   /**
    * @brief Run IPX crossover from a given HighsSolution instance and,

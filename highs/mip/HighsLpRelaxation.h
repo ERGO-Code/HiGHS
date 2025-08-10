@@ -359,8 +359,10 @@ class HighsLpRelaxation {
     this->solved_first_lp = solved_first_lp_;
   }
 
-  const HighsSubSolverCallTime& getSubSolverCallTime() const { return sub_solver_call_time_; }
-  
+  const HighsSubSolverCallTime& getSubSolverCallTime() const { return this->sub_solver_call_time_; }
+
+  void initialiseSubSolverCallTime() { this->sub_solver_call_time_.initialise(); }
+  void addInitialiseSubSolverCallTime(Highs& highs);
 };
 
 #endif
