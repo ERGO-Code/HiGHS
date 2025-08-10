@@ -196,7 +196,6 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   adjustSymBranchingCol = true;
   solved_first_lp = true;
   row_ep.size = 0;
-  sub_solver_call_time_.initialise();
 }
 
 // Used in LP-based primal heuristics (RINS, RENS, tryRoundedPoint,
@@ -226,7 +225,6 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   objective = -kHighsInf;
   solved_first_lp = true;
   row_ep.size = 0;
-  sub_solver_call_time_.initialise();
 }
 
 void HighsLpRelaxation::loadModel() {
@@ -1172,8 +1170,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     return Status::kError;
   }
 
-  if (!mipsolver.submip) addInitialiseSubSolverCallTime(lpsolver);
-
   HighsModelStatus model_status = lpsolver.getModelStatus();
   switch (model_status) {
     case HighsModelStatus::kObjectiveBound:
@@ -1536,8 +1532,3 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
   return status;
 }
 
-void HighsLpRelaxation::addInitialiseSubSolverCallTime(Highs& highs) {
-  this->sub_solver_call_time_.add(highs.getSubSolverCallTime());
-  highs.initialiseSubSolverCallTime();  
-}
-  

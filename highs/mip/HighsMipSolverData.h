@@ -300,8 +300,6 @@ struct HighsMipSolverData {
       const double mipsolver_objective_value,
       const userMipSolutionCallbackOrigin user_solution_callback_origin);
 
-  void addInitialiseSubSolverCallTime(Highs& highs);
-  void addInitialiseSubSolverCallTime(HighsLpRelaxation& lprelax);
 };
 
 #endif

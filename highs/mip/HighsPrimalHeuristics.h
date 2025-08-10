@@ -70,8 +70,6 @@ class HighsPrimalHeuristics {
   void shifting(const std::vector<double>& relaxationsol);
 
   void ziRound(const std::vector<double>& relaxationsol);
-
-  void addInitialiseSubSolverCallTime(HighsLpRelaxation& lprelax);
 };
 
 #endif

@@ -137,11 +137,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsSolution solution;
   solution.value_valid = false;
   solution.dual_valid = false;
-  // Create HighsMipSolver instance for sub-MIP
   if (!mipsolver.submip) {
     mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
     mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] = -mipsolver.timer_.read();
   }
+  // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true, mipsolver.submip_level + 1);
   submipsolver.rootbasis = &basis;
@@ -918,7 +918,6 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                      "HighsPrimalHeuristics::tryRoundedPoint");
 
     HighsLpRelaxation::Status st = lprelax.resolveLp();
-    if (!mipsolver.submip) this->addInitialiseSubSolverCallTime(lprelax);
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
       std::vector<HighsInt> inds;
@@ -1062,7 +1061,6 @@ void HighsPrimalHeuristics::randomizedRounding(
     }
 
     HighsLpRelaxation::Status st = lprelax.resolveLp();
-    if (!mipsolver.submip) this->addInitialiseSubSolverCallTime(lprelax);
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
       std::vector<HighsInt> inds;
@@ -1458,7 +1456,6 @@ void HighsPrimalHeuristics::feasibilityPump() {
       referencepoints;
   std::vector<double> roundedsol;
   HighsLpRelaxation::Status status = lprelax.resolveLp();
-  if (!mipsolver.submip) this->addInitialiseSubSolverCallTime(lprelax);
   lp_iterations += lprelax.getNumLpIterations();
 
   std::vector<double> fracintcost;
@@ -1548,7 +1545,6 @@ void HighsPrimalHeuristics::feasibilityPump() {
     lprelax.getLpSolver().changeColsCost(mask.data(), cost.data());
     int64_t niters = -lprelax.getNumLpIterations();
     status = lprelax.resolveLp();
-    if (!mipsolver.submip) this->addInitialiseSubSolverCallTime(lprelax);
     niters += lprelax.getNumLpIterations();
     if (niters == 0) break;
     lp_iterations += niters;
@@ -1660,10 +1656,5 @@ void HighsPrimalHeuristics::flushStatistics() {
   mipsolver.mipdata_->heuristic_lp_iterations += lp_iterations;
   mipsolver.mipdata_->total_lp_iterations += lp_iterations;
   lp_iterations = 0;
-}
-
-void HighsPrimalHeuristics::addInitialiseSubSolverCallTime(HighsLpRelaxation& lprelax) {
-  this->mipsolver.sub_solver_call_time_.add(lprelax.getSubSolverCallTime());
-  lprelax.initialiseSubSolverCallTime();
 }
 
