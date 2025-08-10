@@ -138,8 +138,10 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.value_valid = false;
   solution.dual_valid = false;
   // Create HighsMipSolver instance for sub-MIP
-  if (!mipsolver.submip)
+  if (!mipsolver.submip) {
     mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
+    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] = -mipsolver.timer_.read();
+  }
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true, mipsolver.submip_level + 1);
   submipsolver.rootbasis = &basis;
@@ -151,7 +153,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.run();
   mipsolver.max_submip_level =
       std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
-  if (!mipsolver.submip) mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
+  if (!mipsolver.submip) {
+    mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
+    mipsolver.sub_solver_call_time_.num_call[kSubSolverSubMip]++;
+    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] += mipsolver.timer_.read();
+  }
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
@@ -912,6 +918,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                      "HighsPrimalHeuristics::tryRoundedPoint");
 
     HighsLpRelaxation::Status st = lprelax.resolveLp();
+    if (!mipsolver.submip) mipsolver.sub_solver_call_time_.add(lprelax.getSubSolverCallTime());
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
       std::vector<HighsInt> inds;
@@ -1055,6 +1062,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     }
 
     HighsLpRelaxation::Status st = lprelax.resolveLp();
+    if (!mipsolver.submip) mipsolver.sub_solver_call_time_.add(lprelax.getSubSolverCallTime());
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
       std::vector<HighsInt> inds;
@@ -1450,6 +1458,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
       referencepoints;
   std::vector<double> roundedsol;
   HighsLpRelaxation::Status status = lprelax.resolveLp();
+  if (!mipsolver.submip) mipsolver.sub_solver_call_time_.add(lprelax.getSubSolverCallTime());
   lp_iterations += lprelax.getNumLpIterations();
 
   std::vector<double> fracintcost;
@@ -1539,6 +1548,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
     lprelax.getLpSolver().changeColsCost(mask.data(), cost.data());
     int64_t niters = -lprelax.getNumLpIterations();
     status = lprelax.resolveLp();
+    if (!mipsolver.submip) mipsolver.sub_solver_call_time_.add(lprelax.getSubSolverCallTime());
     niters += lprelax.getNumLpIterations();
     if (niters == 0) break;
     lp_iterations += niters;

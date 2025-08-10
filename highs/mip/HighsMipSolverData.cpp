@@ -372,6 +372,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     mipsolver.analysis_.mipTimerStart(ipm_clock);
     ipm.run();
     mipsolver.analysis_.mipTimerStop(ipm_clock);
+    mipsolver.sub_solver_call_time_.add(ipm.getSubSolverCallTime());
     if (use_hipo && HighsInt(sol.size()) != mipsolver.numCol()) {
       printf(
           "In HighsMipSolverData::startAnalyticCenterComputation HiPO has "
@@ -1135,12 +1136,14 @@ try_again:
       mipsolver.analysis_.mipTimerStart(kMipClockHipoSolveLp);
       HighsStatus callstatus = tmpSolver.run();
       mipsolver.analysis_.mipTimerStop(kMipClockHipoSolveLp);
+      mipsolver.sub_solver_call_time_.add(tmpSolver.getSubSolverCallTime());
       if (callstatus == HighsStatus::kError) use_simplex = true;
     }
     if (use_simplex) {
       mipsolver.analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
       tmpSolver.run();
       mipsolver.analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
+      mipsolver.sub_solver_call_time_.add(tmpSolver.getSubSolverCallTime());
       this->total_repair_lp_iterations =
           tmpSolver.getInfo().simplex_iteration_count;
     }
@@ -1772,6 +1775,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       lpIters += lp.getNumLpIterations();
       total_lp_iterations += lpIters;
       avgrootlpiters = lp.getAvgSolveIters();
+      if (!mipsolver.submip) mipsolver.sub_solver_call_time_.add(lp.getSubSolverCallTime());
       lpWasSolved = true;
 
       if (status == HighsLpRelaxation::Status::kUnbounded) {

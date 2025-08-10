@@ -83,6 +83,8 @@ class HighsLpRelaxation {
   bool adjustSymBranchingCol;
   bool solved_first_lp;
 
+  HighsSubSolverCallTime sub_solver_call_time_;
+
   void storeDualInfProof();
 
   void storeDualUBProof();
@@ -356,6 +358,9 @@ class HighsLpRelaxation {
   void setSolvedFirstLp(const bool solved_first_lp_) {
     this->solved_first_lp = solved_first_lp_;
   }
+
+  const HighsSubSolverCallTime& getSubSolverCallTime() const { return sub_solver_call_time_; }
+  
 };
 
 #endif

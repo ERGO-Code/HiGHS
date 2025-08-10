@@ -4313,3 +4313,13 @@ void HighsSubSolverCallTime::initialise() {
   this->name[kSubSolverMip] = "MIP";
   this->name[kSubSolverSubMip] = "Sub-MIP";
 }
+
+void HighsSubSolverCallTime::add(const HighsSubSolverCallTime& sub_solver_call_time) {
+  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
+    this->num_call[Ix] += sub_solver_call_time.num_call[Ix];
+    this->run_time[Ix] += sub_solver_call_time.run_time[Ix];
+  }
+  if (this->num_call[kSubSolverSimplex] > 100) {
+    printf("HighsSubSolverCallTime::add this->num_call[kSubSolverSimplex] = %d\n", int(this->num_call[kSubSolverSimplex]));
+  }
+}

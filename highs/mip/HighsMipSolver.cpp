@@ -44,6 +44,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       implicinit(nullptr) {
   assert(!submip || submip_level > 0);
   max_submip_level = 0;
+  this->sub_solver_call_time_.initialise();
   if (solution.value_valid) {
 #ifndef NDEBUG
     // MIP solver doesn't check row residuals, but they should be OK

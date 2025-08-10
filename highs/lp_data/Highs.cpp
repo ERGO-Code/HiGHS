@@ -940,6 +940,7 @@ HighsStatus Highs::presolve() {
 
 HighsStatus Highs::run() {
   this->sub_solver_call_time_.initialise();
+  if (this->options_.solver == kHighsChooseString) printf("Highs::run() solver == choose\n");
   const bool options_had_highs_files = this->optionsHasHighsFiles();
   if (options_had_highs_files) {
     HighsStatus status = HighsStatus::kOk;
@@ -4036,6 +4037,7 @@ HighsStatus Highs::callSolveMip() {
   HighsStatus return_status =
       highsStatusFromHighsModelStatus(solver.modelstatus_);
   model_status_ = solver.modelstatus_;
+  this->sub_solver_call_time_.add(solver.sub_solver_call_time_);
   // Extract the solution
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
