@@ -277,7 +277,6 @@ HighsInt HighsMipAnalysis::getSepaClockIndex(const std::string& name) const {
 
 void HighsMipAnalysis::addSubSolverCallTime(const HighsSubSolverCallTime& sub_solver_call_time,
 					    const bool analytic_centre) const {
-  assert(analyse_mip_time);
   this->sub_solver_call_time_->add(sub_solver_call_time, analytic_centre);
 }
 
