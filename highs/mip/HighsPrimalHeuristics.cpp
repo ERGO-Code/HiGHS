@@ -139,7 +139,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.dual_valid = false;
   if (!mipsolver.submip) {
     mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
-    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] = -mipsolver.timer_.read();
+    // Remember to accumulate time for sub-MIP solves!
+    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] -= mipsolver.timer_.read();
   }
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
@@ -1049,6 +1050,8 @@ void HighsPrimalHeuristics::randomizedRounding(
 
     if (!mipsolver.options_mip_->mip_root_presolve_only &&
         (5 * intcols.size()) / mipsolver.numCol() >= 1) {
+      // LP to solve is very much smaller, so use presolve rather than
+      // the root basis
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     } else {
       lprelax.getLpSolver().setBasis(

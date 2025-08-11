@@ -345,16 +345,19 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
     Highs ipm;
+    // Don't use presolve - because the MIP has already been presolved?
+    const bool use_presolve = false;
+    const std::string presolve = use_presolve ? kHighsChooseString : kHighsOffString;
     const std::vector<double>& sol = ipm.getSolution().col_value;
+    ipm.setOptionValue("output_flag", false);
+    // ipm.setOptionValue("output_flag", !mipsolver.submip);
     const bool use_hipo = useHipo(*mipsolver.options_mip_, kMipIpmSolverString,
                                   *mipsolver.model_);
     const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
-    ipm.setOptionValue("output_flag", false);
     ipm.setOptionValue("solver", mip_ipm_solver);
     ipm.setOptionValue("run_crossover", kHighsOffString);
     //    ipm.setOptionValue("allow_pdlp_cleanup", false);
     ipm.setOptionValue("presolve", kHighsOffString);
-    // ipm.setOptionValue("output_flag", !mipsolver.submip);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     ipm.setOptionValue("solve_relaxation", true);
     HighsLp lpmodel(*mipsolver.model_);
@@ -367,11 +370,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //      file_name.c_str()); fflush(stdout); ipm.writeModel(file_name);
     //    }
 
-    HighsInt ipm_clock = use_hipo ? kMipClockHipoSolveAnalyticCentreLp
-                                  : kMipClockIpxSolveAnalyticCentreLp;
-    mipsolver.analysis_.mipTimerStart(ipm_clock);
     ipm.run();
-    mipsolver.analysis_.mipTimerStop(ipm_clock);
     if (use_hipo && HighsInt(sol.size()) != mipsolver.numCol()) {
       printf(
           "In HighsMipSolverData::startAnalyticCenterComputation HiPO has "
@@ -379,10 +378,15 @@ void HighsMipSolverData::startAnalyticCenterComputation(
           ipm.modelStatusToString(ipm.getModelStatus()).c_str());
       // HiPO has failed to get a solution, so try IPX
       ipm.setOptionValue("solver", kIpxString);
-      ipm_clock = kMipClockIpxSolveAnalyticCentreLp;
-      mipsolver.analysis_.mipTimerStart(ipm_clock);
       ipm.run();
-      mipsolver.analysis_.mipTimerStop(ipm_clock);
+    }
+    if (!mipsolver.submip) {
+      const HighsSubSolverCallTime& sub_solver_call_time = ipm.getSubSolverCallTime();
+      const bool analytic_centre = true;
+      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time, analytic_centre);
+      // Go through sub_solver_call_time to update any MIP clocks
+      const bool valid_basis = false;
+      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis, use_presolve, analytic_centre);
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();

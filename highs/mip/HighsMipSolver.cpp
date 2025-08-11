@@ -852,7 +852,7 @@ void HighsMipSolver::cleanupSolve() {
 
   if (!timeless_log) analysis_.reportMipTimer();
 
-  //  analysis_.checkSubSolverCallTime(sub_solver_call_time_);
+  analysis_.checkSubSolverCallTime(sub_solver_call_time_);
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 
