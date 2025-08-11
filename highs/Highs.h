@@ -1210,6 +1210,11 @@ class Highs {
   const HighsSubSolverCallTime& getSubSolverCallTime() const { return sub_solver_call_time_; }
 
   /**
+   * @brief Report internal sub-solver call and time instance
+   */
+  void reportSubSolverCallTime() const;
+
+  /**
    * @brief Initialise the internal sub-solver call and time instance
    */
   void initialiseSubSolverCallTime() { this->sub_solver_call_time_.initialise(); }

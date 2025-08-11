@@ -295,9 +295,12 @@ enum IisStatus {
 
 enum SubSolverIndex : int {
   kSubSolverMip = 0,
-  kSubSolverSimplex,
+  kSubSolverSimplexBasis,
+  kSubSolverSimplexNoBasis,
   kSubSolverHipo,
   kSubSolverIpx,
+  kSubSolverHipoAc,
+  kSubSolverIpxAc,
   kSubSolverPdlp,
   kSubSolverQpAsm,
   kSubSolverSubMip,

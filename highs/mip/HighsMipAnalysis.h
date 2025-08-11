@@ -40,13 +40,22 @@ class HighsMipAnalysis {
   HighsInt mipTimerNumCall(const HighsInt mip_clock = 0
                            // , const HighsInt thread_id
   ) const;
+  void mipTimerAdd(const HighsInt mip_clock, const HighsInt num_call, const double time
+                           // , const HighsInt thread_id
+  ) const;
+  void mipTimerUpdate(const HighsSubSolverCallTime& sub_solver_call_time,
+		      const bool valid_basis,
+		      const bool presolve,
+		      const bool analytic_centre = false
+                           // , const HighsInt thread_id
+  ) const;
   void reportMipSolveLpClock(const bool header);
   void reportMipTimer();
 
   HighsInt getSepaClockIndex(const std::string& name) const;
-  void addSubSolverCallTime(const HighsSubSolverCallTime& sub_solver_call_time) const {
-    this->sub_solver_call_time_->add(sub_solver_call_time);
-  }
+  void addSubSolverCallTime(const HighsSubSolverCallTime& sub_solver_call_time,
+			    const bool analytic_centre = false) const;
+  void checkSubSolverCallTime(const HighsSubSolverCallTime& sub_solver_call_time);
   std::string model_name;
   HighsTimerClock mip_clocks;
   bool analyse_mip_time;

@@ -28,17 +28,6 @@ const HighsInt ipx_analytic_centre_clock = 10;
 const bool kNoClockCalls = false;
 
 /**
- * @brief Clock record structure
- */
-/*
-struct HighsClockRecord {
-  HighsInt calls;
-  double start;
-  double time;
-  std::string name;
-};
-*/
-/**
  * @brief Class for profiling facility for computational components in HiGHS
  */
 class HighsTimer {
@@ -68,31 +57,6 @@ class HighsTimer {
     num_clock++;
     return i_clock;
   }
-
-  /**
-   * @brief Zero an external clock record
-   */
-  /*
-    void clockInit(HighsClockRecord& x_clock  //!< Record for the external clock
-    ) {
-      x_clock.calls = 0;
-      x_clock.start = 0;
-      x_clock.time = 0;
-      x_clock.name = "";
-    }
-    */
-
-  /**
-   * @brief Add to an external clock record
-   */
-  /*
-    void clockAdd(HighsClockRecord x_clock,  //!< Record for the external clock
-                  HighsInt i_clock                //!< Clock of record to be
-    added ) { assert(i_clock >= 0); assert(i_clock < num_clock); x_clock.calls
-    += clock_num_call[i_clock]; x_clock.start = initial_clock_start;
-      x_clock.time += clock_time[i_clock];
-    }
-    */
 
   /**
    * @brief Reset a HighsTimer instance to its state after the
@@ -239,6 +203,19 @@ class HighsTimer {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     return clock_num_call[i_clock];
+  }
+
+  /**
+   * @brief Add number of calls and time to a clock
+   */
+  void add(
+      const HighsInt i_clock, //!< Index of the clock to be read
+      const HighsInt num_call, const double time = 0
+  ) {
+    assert(i_clock >= 0);
+    assert(i_clock < num_clock);
+    clock_num_call[i_clock] += num_call;
+    clock_time[i_clock] += time;
   }
 
   /**

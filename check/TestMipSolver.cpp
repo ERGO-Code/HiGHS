@@ -1057,16 +1057,9 @@ TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
     std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   h.setOptionValue("output_flag", dev_run);
-  //  h.setOptionValue("highs_analysis_level", kHighsAnalysisLevelMipTime);
+  h.setOptionValue("highs_analysis_level", kHighsAnalysisLevelMipTime);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
   h.run();
-  const HighsSubSolverCallTime& sub_solver_call_time = h.getSubSolverCallTime();
-  printf("\nSolver   Calls    Time\n");
-  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++)
-    if (sub_solver_call_time.num_call[Ix])
-    printf("%-7s    %3d  %6.4f\n",
-	   sub_solver_call_time.name[Ix].c_str(),
-	   int(sub_solver_call_time.num_call[Ix]),
-	   sub_solver_call_time.run_time[Ix]);
+  h.reportSubSolverCallTime();
 }

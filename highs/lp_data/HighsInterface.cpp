@@ -4305,21 +4305,60 @@ void HighsSubSolverCallTime::initialise() {
   this->num_call.assign(kSubSolverCount, 0);
   this->run_time.assign(kSubSolverCount, 0);
   this->name.assign(kSubSolverCount, "");
-  this->name[kSubSolverSimplex] = "Simplex";
+  this->name[kSubSolverSimplexBasis] = "Simplex (basis)";
+  this->name[kSubSolverSimplexNoBasis] = "Simplex (no basis)";
   this->name[kSubSolverHipo] = "HiPO";
   this->name[kSubSolverIpx] = "IPX";
+  this->name[kSubSolverHipoAc] = "HiPO (AC)";
+  this->name[kSubSolverIpxAc] = "IPX (AC)";
   this->name[kSubSolverPdlp] = "PDLP";
   this->name[kSubSolverQpAsm] = "QP ASM";
   this->name[kSubSolverMip] = "MIP";
   this->name[kSubSolverSubMip] = "Sub-MIP";
 }
 
-void HighsSubSolverCallTime::add(const HighsSubSolverCallTime& sub_solver_call_time) {
+void HighsSubSolverCallTime::add(const HighsSubSolverCallTime& sub_solver_call_time,
+				 const bool analytic_centre) {
   for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
-    this->num_call[Ix] += sub_solver_call_time.num_call[Ix];
-    this->run_time[Ix] += sub_solver_call_time.run_time[Ix];
-  }
-  if (this->num_call[kSubSolverSimplex] > 100) {
-    printf("HighsSubSolverCallTime::add this->num_call[kSubSolverSimplex] = %d\n", int(this->num_call[kSubSolverSimplex]));
+    HighsInt ToIx = Ix;
+    if (Ix == kSubSolverHipo) {
+      if (analytic_centre) ToIx = kSubSolverHipoAc;
+    } else if (Ix == kSubSolverIpx) {
+      if (analytic_centre) ToIx = kSubSolverIpxAc;
+    }
+    this->num_call[ToIx] += sub_solver_call_time.num_call[Ix];
+    this->run_time[ToIx] += sub_solver_call_time.run_time[Ix];
   }
 }
+
+void Highs::reportSubSolverCallTime() const {
+  double mip_time = this->sub_solver_call_time_.run_time[kSubSolverMip];
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << highsFormatToString("\nSub-solver timing\nSolver                 Calls    Time       Time/call");
+  if (mip_time > 0) ss <<  "  MIP%";
+  highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n", ss.str().c_str());
+  
+
+  double sum_mip_sub_solve_time = 0;
+  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
+    if (this->sub_solver_call_time_.num_call[Ix]) {
+      ss.str(std::string());
+      ss << highsFormatToString("%-18s %9d %11.4e %11.4e",
+				this->sub_solver_call_time_.name[Ix].c_str(),
+				int(this->sub_solver_call_time_.num_call[Ix]),
+				this->sub_solver_call_time_.run_time[Ix],
+				this->sub_solver_call_time_.run_time[Ix]/(1.0 * this->sub_solver_call_time_.num_call[Ix]));
+      if (mip_time > 0 && Ix != kSubSolverMip) {
+	if (Ix != kSubSolverHipoAc && Ix != kSubSolverIpxAc)
+	  sum_mip_sub_solve_time += this->sub_solver_call_time_.run_time[Ix];
+	ss << highsFormatToString(" %5.1f", 1e2 * this->sub_solver_call_time_.run_time[Ix] / mip_time);
+      }
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n", ss.str().c_str());
+    }
+  }
+  if (mip_time > 0)
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "TOTAL (excluding AC)         %11.4e             %5.1f\n",
+		 sum_mip_sub_solve_time, 1e2 * sum_mip_sub_solve_time / mip_time);
+}
+
