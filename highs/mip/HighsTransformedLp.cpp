@@ -565,7 +565,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 // Create a single node flow relaxation (SNFR) from an aggregated
 // mixed-integer row and find a valid flow cover.
 // Turn \sum c_i x_i + \sum a_i y_i <= a_0 (x_i binary, y_i real non-neg)
-// into \sum_{j \in N+} y_j - \sum_{j \in N-} y_j <= b, where y_j <= u_j x_j
+// into \sum_{j \in N+} y'_j - \sum_{j \in N-} y'_j <= b, where y'_j <= u_j x_j
 bool HighsTransformedLp::transformSNFRelaxation(
     std::vector<HighsInt>& inds, std::vector<double>& vals, double& rhs,
     HighsCutGeneration::SNFRelaxation& snfr) {
@@ -626,6 +626,26 @@ bool HighsTransformedLp::transformSNFRelaxation(
   auto checkValidityVB = [&](HighsInt bincol, HighsImplications::VarBound vb,
                              double coef, double origbincoef, double lb,
                              double ub, bool isVub) {
+    // a_j coefficient of y_j in row. c_j coefficient of x_j in row.
+    // u_j, l_j, closest simple bounds imposed on y_j.
+    // y_j <= l'_j x_j + d_j || y_j >= u'_j x_j + d_j
+    // variable bound can only be used if following properties respected:
+    // |l'_j| <= 1e6 && |u'_j| <= 1e6
+    // if a_j > 0
+    // !isVub: (1) u_j <= d_j
+    //         (2) a_j (u_j - d_j) + c_j <= 0
+    //         (3) a_j l'_j + c_j <= 0
+    // isVub: (1) l_j >= d_j
+    //        (2) a_j (l_j - d_j) + c_j >= 0
+    //        (3) a_j u'_j + c_j >= 0
+    // if a_j < 0
+    // !isVub: (1) u_j <= d_j
+    //         (2) a_j (u_j - d_j) + c_j >= 0
+    //         (3) a_j l'_j + c_j >= 0
+    // isVub: (1) l_j >= d_j
+    //        (2) a_j (l_j - d_j) + c_j <= 0
+    //        (3) a_j u'_j + c_j <= 0
+    // Note: c_j may change during transform if two columns use same bin col
     if (bincol == -1) return false;
     if (abs(vb.coef) >= 1e+6) return false;
     if (isVub && lb < vb.constant) return false;
@@ -664,7 +684,8 @@ bool HighsTransformedLp::transformSNFRelaxation(
     snfr.numNnzs++;
   };
 
-  // Place the non-binary variables to the front (all general ints relaxed)
+  // Place the non-binary columns to the front (all general ints relaxed)
+  // Use vectorsum to track original row coefficients of binary columns.
   HighsInt i = 0;
   while (i < numNz - numBinCols) {
     HighsInt col = inds[i];
@@ -737,6 +758,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
     // Transform entry into the SNFR
     if (colIsBinary(col, lb, ub)) {
+      // Binary columns can be added directly to the SNFR
       if (vals[i] >= 0) {
         addSNFRentry(col, -1, getLpSolution(col),
                      getLpSolution(col) * vals[i], 1, vals[i], 0, vals[i], 0);
@@ -746,6 +768,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
                      0);
       }
     } else {
+      // Decide whether to use {simple, variable} {lower, upper} bound
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
         if (!checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
                              vectorsum.getValue(bestVlb[col].first), lb, ub,
@@ -789,6 +812,10 @@ bool HighsTransformedLp::transformSNFRelaxation(
       HighsInt vbcol;
       switch (boundTypes[col]) {
         case BoundType::kSimpleLb:
+          // Case (1) -> a_j > 0, y'_j -> N- Case (2) -> a_j < 0, y'_j ->N+
+          // (1) y'_j = -a_j(y_j - u_j), 0 <= y'_j <= a_j(u_j - l_j)x_j, x_j = 1
+          // (2) y'_j = a_j(y_j - u_j), 0 <= y'_j <= -a_j(u_j - l_j)x_j, x_j = 1
+          // rhs -= a_j * u_j
           substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(getLpSolution(col)) - ub));
           vbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
@@ -803,6 +830,11 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kSimpleUb:
+          // Case (1) -> a_j > 0, y'_j -> N+ Case (2) -> a_j < 0, y'_j ->N-
+          // (1) y'_j = a_j(y_j - l_j), 0 <= y'_j <= a_j(u_j - l_j)x_j, x_j = 1
+          // (2) y'_j = -a_j(y_j - l_j), 0 <= y'_j <= -a_j(u_j - l_j)x_j,
+          // x_j = 1
+          // rhs -= a_j * l_j
           substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(getLpSolution(col)) - lb));
           vbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
@@ -817,6 +849,13 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kVariableLb:
+          // vlb: l'_j x_j + d_j <= y_j. c_j is the coefficient of x_j in row
+          // Case (1) -> a_j > 0, y'_j -> N- Case (2) -> a_j < 0, y'_j ->N+
+          // (1) y'_j = -(a_j(y_j - d_j) + c_j * x_j),
+          // 0 <= y'_j <= -(a_j l'_j + c_j)x_j
+          // (2) y'_j = a_j(y_j - d_j) + c_j * x_j,
+          // 0 <= y'_j <= (a_j l'_j + c_j)x_j
+          // rhs -= a_j * d_j
           vbcol = bestVlb[col].first;
           substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(getLpSolution(col)) -
@@ -841,6 +880,13 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kVariableUb:
+          // vub: y_j >= u'_j x_j + d_j. c_j is the coefficient of x_j in row
+          // Case (1) -> a_j > 0, y'_j -> N+ Case (2) -> a_j < 0, y'_j ->N-
+          // (1) y'_j = a_j(y_j - d_j) + c_j * x_j),
+          // 0 <= y'_j <= (a_j u'_j + c_j)x_j
+          // (2) y'_j = -(a_j(y_j - d_j) + c_j * x_j),
+          // 0 <= y'_j <= -(a_j u'_j + c_j)x_j
+          // rhs -= a_j * d_j
           vbcol = bestVub[col].first;
           substsolval = static_cast<double>(
               vals[i] * (HighsCDouble(getLpSolution(col)) -

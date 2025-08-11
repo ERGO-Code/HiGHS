@@ -1588,6 +1588,7 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
   // numerical troubles, use bound constraints to cancel them and
   // reject base inequalities where that is not possible due to unbounded
   // variables
+  // 4. Don't consider any inequality with too many non-zeros
 
   HighsInt numZeros = 0;
   double maxact = -feastol;
