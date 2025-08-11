@@ -618,10 +618,9 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
 void HPresolve::updateRowDualImpliedBounds(HighsInt col) {
   // update dual implied bounds of all rows in given column
   assert(col >= 0 && col < model->num_col_);
-  if (checkUpdateRowDualImpliedBounds(col)) {
-    for (const HighsSliceNonzero& nonzero : getColumnVector(col))
-      updateRowDualImpliedBounds(nonzero.index(), col, nonzero.value());
-  }
+  if (!checkUpdateRowDualImpliedBounds(col)) return;
+  for (const HighsSliceNonzero& nonzero : getColumnVector(col))
+    updateRowDualImpliedBounds(nonzero.index(), col, nonzero.value());
 }
 
 bool HPresolve::checkUpdateColImpliedBounds(HighsInt row, double* rowLower,
@@ -726,10 +725,9 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 void HPresolve::updateColImpliedBounds(HighsInt row) {
   // update implied bounds of all columns in given row
   assert(row >= 0 && row < model->num_row_);
-  if (checkUpdateColImpliedBounds(row)) {
-    for (const HighsSliceNonzero& nonzero : getRowVector(row))
-      updateColImpliedBounds(row, nonzero.index(), nonzero.value());
-  }
+  if (!checkUpdateColImpliedBounds(row)) return;
+  for (const HighsSliceNonzero& nonzero : getRowVector(row))
+    updateColImpliedBounds(row, nonzero.index(), nonzero.value());
 }
 
 void HPresolve::resetColImpliedBounds(HighsInt col, HighsInt row) {
