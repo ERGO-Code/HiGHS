@@ -979,6 +979,7 @@ HighsStatus Highs::run() {
       if (this->options_.write_basis_file != "")
         status = this->writeBasis(this->options_.write_basis_file);
     }
+    this->reportSubSolverCallTime();
     return status;
   }
   return this->multiobjectiveSolve();
