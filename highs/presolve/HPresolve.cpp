@@ -3263,7 +3263,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     // check if setting variable to opposite bound (with respect to bound used
     // in calculation of bounds on row activity) makes row infeasible.
     // this is a special case of bound tightening, but only performed once for
-    // binary variables here.
+    // binary variables here (see Suhl, Szymanski: Supernode processing of
+    // mixed-integer models. Comput. Optim. Appl. 3(4): 317-331 (1994)).
+
     for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
       // get column index and coefficient
       HighsInt col = nonzero.index();
@@ -3273,6 +3275,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       if (model->integrality_[col] == HighsVarType::kContinuous ||
           model->col_upper_[col] != model->col_lower_[col] + 1.0)
         continue;
+
+      // compute offset
+      HighsCDouble offset =
+          std::abs(val) * (static_cast<HighsCDouble>(model->col_upper_[col]) -
+                           static_cast<HighsCDouble>(model->col_lower_[col]));
 
       auto degree1Tests = [&](HighsInt col, double val, HighsInt direction,
                               double rowActivityBound, double rowBound) {
@@ -3288,22 +3295,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           changeColUpper(col, model->col_upper_[col] - 1.0);
       };
 
-      // lambda for computing offset
-      auto computeOffset = [&](HighsInt col, double val) {
-        return std::abs(val) *
-               (static_cast<HighsCDouble>(model->col_upper_[col]) -
-                static_cast<HighsCDouble>(model->col_lower_[col]));
-      };
-
       // perform tests
-      degree1Tests(
-          col, val, HighsInt{1},
-          impliedRowBounds.getSumUpperOrig(row, -computeOffset(col, val)),
-          model->row_lower_[row]);
-      degree1Tests(
-          col, val, HighsInt{-1},
-          impliedRowBounds.getSumLowerOrig(row, computeOffset(col, val)),
-          model->row_upper_[row]);
+      degree1Tests(col, val, HighsInt{1},
+                   impliedRowBounds.getSumUpperOrig(row, -offset),
+                   model->row_lower_[row]);
+      degree1Tests(col, val, HighsInt{-1},
+                   impliedRowBounds.getSumLowerOrig(row, offset),
+                   model->row_upper_[row]);
     }
   }
 
