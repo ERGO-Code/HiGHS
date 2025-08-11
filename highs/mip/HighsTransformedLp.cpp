@@ -946,6 +946,7 @@ bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
   const std::vector<double>& lpSolution = lprelaxation.getSolution().col_value;
   for (HighsInt i = 0; i != numNz; ++i) {
     HighsInt col = inds[i];
+    viol += vals[i] * lpSolution[col];
     if (vals[i] >= 0 &&
         lpSolution[col] <=
             mip.mipdata_->domain.col_lower_[col] + mip.mipdata_->feastol)
@@ -953,7 +954,6 @@ bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
     if (vals[i] < 0 && lpSolution[col] >= mip.mipdata_->domain.col_upper_[col] -
                                               mip.mipdata_->feastol)
       continue;
-    viol += vals[i] * lpSolution[col];
     sqrnorm += vals[i] * vals[i];
   }
   if (sqrnorm == 0) {
