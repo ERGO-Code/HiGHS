@@ -56,8 +56,16 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << "HiGHS v1" << std::endl;
   f << "None" << std::endl;
   f.close();
-  return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::kOk);
+  // HiGHS v1 basis file is deprecated, but read, so warning is
+  // returned
+  REQUIRE(highs.readBasis(invalid_basis_file) == HighsStatus::kWarning);
+
+  // Write and read a file for an invalid basis
+  f.open(invalid_basis_file, std::ios::out);
+  f << "HiGHS_basis_file v2" << std::endl;
+  f << "None" << std::endl;
+  f.close();
+  REQUIRE(highs.readBasis(invalid_basis_file) == HighsStatus::kOk);
 
   // Write and read a file for incompatible number of columns
   f.open(invalid_basis_file, std::ios::out);

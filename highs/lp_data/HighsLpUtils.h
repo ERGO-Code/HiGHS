@@ -27,11 +27,18 @@ class HighsOptions;
 
 using std::vector;
 
-void writeBasisFile(FILE*& file, const HighsBasis& basis);
+void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
+                    const HighsBasis& basis);
 
-HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
-                          const std::string filename);
-HighsStatus readBasisStream(const HighsLogOptions& log_options,
+HighsStatus getIndexFromName(
+    const HighsLogOptions& log_options, std::string& from_method,
+    const bool is_column, const std::string& name,
+    const std::unordered_map<std::string, int>& name2index, HighsInt& index,
+    const std::vector<std::string>& names);
+
+HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsLp& lp,
+                          HighsBasis& basis, const std::string filename);
+HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
                             HighsBasis& basis, std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
@@ -211,13 +218,16 @@ HighsStatus readSolutionFileReturn(const HighsStatus status,
 bool readSolutionFileIgnoreLineOk(std::ifstream& in_file);
 bool readSolutionFileKeywordLineOk(std::string& keyword,
                                    std::ifstream& in_file);
-bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
+bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
+                                          std::string& keyword,
+                                          std::string& value_string,
+                                          HighsInt& value,
                                           std::ifstream& in_file);
 bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
                                     std::ifstream& in_file);
-bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
-                                       std::ifstream& in_file);
+bool readSolutionFileIdDoubleIntLineOk(std::string& id, double& value,
+                                       HighsInt& index, std::ifstream& in_file);
 
 void assessColPrimalSolution(const HighsOptions& options, const double primal,
                              const double lower, const double upper,

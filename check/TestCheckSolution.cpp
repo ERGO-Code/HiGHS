@@ -90,9 +90,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (dev_run) printf("Num nodes = %d\n", int(scratch_num_nodes));
 
   std::string solution_file = test_name + model + ".sol";
-  if (dev_run) return_status = highs.writeSolution("");
-  return_status = highs.writeSolution(solution_file);
-  REQUIRE(return_status == HighsStatus::kOk);
+  if (dev_run) REQUIRE(highs.writeSolution("") == HighsStatus::kOk);
+  ;
+  REQUIRE(highs.writeSolution(solution_file) == HighsStatus::kOk);
 
   highs.clear();
 
@@ -459,6 +459,118 @@ TEST_CASE("read-miplib-solution", "[highs_check_solution]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("read-lp-file-solution", "[highs_check_solution]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string model_file_name = test_name + ".lp";
+  const std::string solution_file_name = test_name + ".sol";
+  const bool with_names = false;
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 1, 1};
+  lp.col_lower_ = {0, 10, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf};
+  if (with_names) lp.col_names_ = {"x", "y", "z"};
+  lp.row_lower_ = {1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 2};
+  if (with_names) lp.row_names_ = {"r-lo", "r-up"};
+  lp.a_matrix_.start_ = {0, 2, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+                     HighsVarType::kInteger};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  h.writeModel(model_file_name);
+  h.writeSolution(solution_file_name);
+
+  h.readModel(model_file_name);
+  h.writeModel("");
+  h.readSolution(solution_file_name);
+  h.run();
+
+  std::remove(model_file_name.c_str());
+  std::remove(solution_file_name.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("read-lp-file-basis", "[highs_check_solution]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string model_file_name = test_name + ".lp";
+  const std::string basis_file_name = test_name + ".bas";
+  const bool with_names = false;
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 1, 1};
+  lp.col_lower_ = {0, 10, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf};
+  if (with_names) lp.col_names_ = {"x", "y", "z"};
+  lp.row_lower_ = {1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 2};
+  if (with_names) lp.row_names_ = {"r-lo", "r-up"};
+  lp.a_matrix_.start_ = {0, 2, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, 1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  // Optimally x - basic; y - lower; z - lower
+  h.writeModel(model_file_name);
+  h.writeSolution("", 1);
+  h.writeBasis("");
+  h.writeBasis(basis_file_name);
+
+  h.readModel(model_file_name);
+  // Variables now ordered y; z; x
+  h.writeModel("");
+  h.readBasis(basis_file_name);
+  // Old read basis yields initial basis: y - basic; z - lower; x -
+  // lower, using basis for original ordering with new ordering. Not
+  // optimal - in fact basis matrix B = [0] is singular!
+  h.run();
+  REQUIRE(h.getInfo().simplex_iteration_count == 0);
+
+  std::remove(model_file_name.c_str());
+  std::remove(basis_file_name.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("read-lp-file-rgn", "[highs_check_solution]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+  const std::string model_file_name = test_name + ".lp";
+  const std::string solution_file_name = test_name + ".sol";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.writeSolution(solution_file_name) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_file_name) == HighsStatus::kOk);
+
+  REQUIRE(h.readModel(model_file_name) == HighsStatus::kOk);
+  REQUIRE(h.readSolution(solution_file_name) == HighsStatus::kOk);
+  bool valid;
+  bool integral;
+  bool feasible;
+  REQUIRE(h.assessPrimalSolution(valid, integral, feasible) ==
+          HighsStatus::kOk);
+  REQUIRE(valid);
+  REQUIRE(integral);
+  REQUIRE(feasible);
+
+  std::remove(model_file_name.c_str());
+  std::remove(solution_file_name.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
 void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
                                const std::string& model,
                                const HighsModelStatus require_model_status,
@@ -478,9 +590,15 @@ void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
   if (dev_run)
     printf("Writing solution in style %d to %s\n", int(write_solution_style),
            solution_file.c_str());
-  if (dev_run) return_status = highs.writeSolution("", write_solution_style);
-  return_status = highs.writeSolution(solution_file, write_solution_style);
-  REQUIRE(return_status == HighsStatus::kOk);
+  // For models without names, Highs::writeSolution will return
+  // HighsStatus::kWarning
+  HighsStatus require_status = highs.getLp().col_names_.size()
+                                   ? HighsStatus::kOk
+                                   : HighsStatus::kWarning;
+  REQUIRE(highs.writeSolution(solution_file, write_solution_style) ==
+          require_status);
+  if (dev_run)
+    REQUIRE(highs.writeSolution("", write_solution_style) == HighsStatus::kOk);
 
   const bool& value_valid = highs.getSolution().value_valid;
   bool valid, integral, feasible;
@@ -580,4 +698,43 @@ void runSetLpSolution(const std::string model) {
   std::remove(solution_file.c_str());
 
   highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("miplib-sol-file", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string sol_file = test_name + ".sol";
+  std::string lp_file = test_name + ".lp";
+  FILE* file = fopen(lp_file.c_str(), "w");
+  std::string file_content =
+      "Minimize\n obj: 2 sel_2 + sel_3\nSubject To\nr0: sel_0 - sel_1 + sel_4 "
+      ">= "
+      "2\nEnd\n";
+  if (dev_run) printf("Using .lp file\n%s", file_content.c_str());
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
+
+  file = fopen(sol_file.c_str(), "w");
+  file_content =
+      "=obj= 203672547.1\nsel_0 1\nsel_1 0\nsel_2 0\nsel_3 0\nsel_4 1\n";
+  if (dev_run) printf("Using .sol file\n%s", file_content.c_str());
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  REQUIRE(h.readSolution(sol_file) == HighsStatus::kOk);
+
+  std::vector<double> solution = h.getSolution().col_value;
+  REQUIRE(solution[0] == 0);
+  REQUIRE(solution[1] == 0);
+  REQUIRE(solution[2] == 1);
+  REQUIRE(solution[3] == 0);
+  REQUIRE(solution[4] == 1);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  std::remove(lp_file.c_str());
+  std::remove(sol_file.c_str());
+
+  h.resetGlobalScheduler(true);
 }
