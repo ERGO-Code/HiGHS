@@ -3276,10 +3276,12 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           model->col_upper_[col] != model->col_lower_[col] + 1.0)
         continue;
 
-      // compute offset
-      HighsCDouble offset =
-          std::abs(val) * (static_cast<HighsCDouble>(model->col_upper_[col]) -
-                           static_cast<HighsCDouble>(model->col_lower_[col]));
+      // lambda for computing offset
+      auto computeOffset = [&](HighsInt col, double val) {
+        return std::abs(val) *
+               (static_cast<HighsCDouble>(model->col_upper_[col]) -
+                static_cast<HighsCDouble>(model->col_lower_[col]));
+      };
 
       auto degree1Tests = [&](HighsInt col, double val, HighsInt direction,
                               double rowActivityBound, double rowBound) {
@@ -3297,12 +3299,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       };
 
       // perform tests
-      if (!degree1Tests(col, val, HighsInt{1},
-                        impliedRowBounds.getSumUpperOrig(row, -offset),
-                        model->row_lower_[row]))
-        degree1Tests(col, val, HighsInt{-1},
-                     impliedRowBounds.getSumLowerOrig(row, offset),
-                     model->row_upper_[row]);
+      degree1Tests(
+          col, val, HighsInt{1},
+          impliedRowBounds.getSumUpperOrig(row, -computeOffset(col, val)),
+          model->row_lower_[row]);
+      degree1Tests(
+          col, val, HighsInt{-1},
+          impliedRowBounds.getSumLowerOrig(row, computeOffset(col, val)),
+          model->row_upper_[row]);
     }
   }
 
