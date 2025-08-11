@@ -1073,9 +1073,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   if (!valid_basis && this->solved_first_lp) {
     std::string get_presolve;
     lpsolver.getOptionValue("presolve", get_presolve);
-    if (get_presolve != kHighsOffString)
-      printf("HighsLpRelaxation::run without a valid basis and with presolve = %s after solving root node LP\n",
-	     get_presolve.c_str());
   }
 
   if (mipsolver.analysis_.analyse_mip_time &&

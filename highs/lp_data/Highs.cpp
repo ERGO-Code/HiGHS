@@ -940,7 +940,6 @@ HighsStatus Highs::presolve() {
 
 HighsStatus Highs::run() {
   this->sub_solver_call_time_.initialise();
-  if (this->options_.solver == kHighsChooseString) printf("Highs::run() solver == choose\n");
   const bool options_had_highs_files = this->optionsHasHighsFiles();
   if (options_had_highs_files) {
     HighsStatus status = HighsStatus::kOk;
@@ -4263,6 +4262,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         ekk_instance_.lp_name_ = "Postsolve LP";
         // Set up the timing record so that adding the corresponding
         // values after callSolveLp gives difference
+	this->sub_solver_call_time_.initialise();
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(
             incumbent_lp,

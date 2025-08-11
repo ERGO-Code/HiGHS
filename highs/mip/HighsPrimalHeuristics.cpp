@@ -1046,18 +1046,14 @@ void HighsPrimalHeuristics::randomizedRounding(
     // check if only root presolve is allowed
     if (mipsolver.options_mip_->mip_root_presolve_only)
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
-    printf("HighsPrimalHeuristics::randomizedRounding mipsolver.mipdata_->firstrootbasis.valid = %s",
-	   mipsolver.mipdata_->firstrootbasis.valid ? "T" : "F");
 
     if (!mipsolver.options_mip_->mip_root_presolve_only &&
         (5 * intcols.size()) / mipsolver.numCol() >= 1) {
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
-      printf(": presolve = on\n");
     } else {
       lprelax.getLpSolver().setBasis(
           mipsolver.mipdata_->firstrootbasis,
           "HighsPrimalHeuristics::randomizedRounding");
-      printf(": use firstrootbasis\n");
     }
 
     HighsLpRelaxation::Status st = lprelax.resolveLp();
