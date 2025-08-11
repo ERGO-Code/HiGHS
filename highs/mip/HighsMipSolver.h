@@ -54,7 +54,6 @@ class HighsMipSolver {
   std::unique_ptr<HighsMipSolverData> mipdata_;
 
   HighsMipAnalysis analysis_;
-  HighsSubSolverCallTime sub_solver_call_time_;
 
   void run();
 
@@ -96,6 +95,8 @@ class HighsMipSolver {
   }
 
   mutable HighsTimer timer_;
+  mutable HighsSubSolverCallTime sub_solver_call_time_;
+
   void cleanupSolve();
 
   void runPresolve(const HighsInt presolve_reduction_limit);

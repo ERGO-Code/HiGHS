@@ -74,6 +74,7 @@ void HighsMipSolver::run() {
     analysis_.analyse_mip_time = false;
   } else {
     analysis_.timer_ = &this->timer_;
+    analysis_.sub_solver_call_time_ = &this->sub_solver_call_time_;
     analysis_.setup(*orig_model_, *options_mip_);
   }
   timer_.start();

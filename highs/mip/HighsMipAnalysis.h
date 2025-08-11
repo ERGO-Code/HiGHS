@@ -18,9 +18,10 @@
 
 class HighsMipAnalysis {
  public:
-  HighsMipAnalysis() : timer_(nullptr), analyse_mip_time(false) {}
+  HighsMipAnalysis() : timer_(nullptr), sub_solver_call_time_(nullptr), analyse_mip_time(false) {}
 
   HighsTimer* timer_;
+  HighsSubSolverCallTime* sub_solver_call_time_;
   void setup(const HighsLp& lp, const HighsOptions& options);
 
   void setupMipTime(const HighsOptions& options);
@@ -43,7 +44,9 @@ class HighsMipAnalysis {
   void reportMipTimer();
 
   HighsInt getSepaClockIndex(const std::string& name) const;
-
+  void addSubSolverCallTime(const HighsSubSolverCallTime& sub_solver_call_time) const {
+    this->sub_solver_call_time_->add(sub_solver_call_time);
+  }
   std::string model_name;
   HighsTimerClock mip_clocks;
   bool analyse_mip_time;
