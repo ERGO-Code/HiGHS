@@ -3286,22 +3286,23 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         // return if row is still feasible
         if (direction * rowActivityBound >=
             direction * rowBound - primal_feastol)
-          return;
+          return false;
 
         // tighten bound
         if (direction * val > 0)
           changeColLower(col, model->col_lower_[col] + 1.0);
         else
           changeColUpper(col, model->col_upper_[col] - 1.0);
+        return true;
       };
 
       // perform tests
-      degree1Tests(col, val, HighsInt{1},
-                   impliedRowBounds.getSumUpperOrig(row, -offset),
-                   model->row_lower_[row]);
-      degree1Tests(col, val, HighsInt{-1},
-                   impliedRowBounds.getSumLowerOrig(row, offset),
-                   model->row_upper_[row]);
+      if (!degree1Tests(col, val, HighsInt{1},
+                        impliedRowBounds.getSumUpperOrig(row, -offset),
+                        model->row_lower_[row]))
+        degree1Tests(col, val, HighsInt{-1},
+                     impliedRowBounds.getSumLowerOrig(row, offset),
+                     model->row_upper_[row]);
     }
   }
 
