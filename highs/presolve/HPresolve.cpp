@@ -1281,12 +1281,12 @@ HPresolve::Result HPresolve::dominatedColumns(
         double ak = nonz.value() * bestRowPlusScale;
 
         if (model->col_lower_[k] != -kHighsInf &&
-            (upperImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
-                                 HighsCliqueTable::CliqueVar(j, 1),
-                                 HighsCliqueTable::CliqueVar(k, 1))) &&
             ajBestRowPlus <= ak + options->small_matrix_value &&
             (!isEqOrRangedRow ||
              ajBestRowPlus >= ak - options->small_matrix_value) &&
+            (upperImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
+                                 HighsCliqueTable::CliqueVar(j, 1),
+                                 HighsCliqueTable::CliqueVar(k, 1))) &&
             checkDomination(1, j, 1, k)) {
           // case (i)  ub(x_j) = inf, x_j > x_k: set x_k = lb(x_k)
           ++numFixedCols;
@@ -1297,13 +1297,13 @@ HPresolve::Result HPresolve::dominatedColumns(
           }
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
         } else if (model->col_upper_[k] != kHighsInf &&
+                   ajBestRowPlus <= -ak + options->small_matrix_value &&
+                   (!isEqOrRangedRow ||
+                    ajBestRowPlus >= -ak - options->small_matrix_value) &&
                    (upperImplied ||
                     mipsolver->mipdata_->cliquetable.haveCommonClique(
                         HighsCliqueTable::CliqueVar(j, 1),
                         HighsCliqueTable::CliqueVar(k, 0))) &&
-                   ajBestRowPlus <= -ak + options->small_matrix_value &&
-                   (!isEqOrRangedRow ||
-                    ajBestRowPlus >= -ak - options->small_matrix_value) &&
                    checkDomination(1, j, -1, k)) {
           // case (ii)  ub(x_j) = inf, x_j > -x_k: set x_k = ub(x_k)
           ++numFixedCols;
@@ -1331,12 +1331,12 @@ HPresolve::Result HPresolve::dominatedColumns(
         double ak = nonz.value() * bestRowMinusScale;
 
         if (model->col_upper_[k] != kHighsInf &&
-            (lowerImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
-                                 HighsCliqueTable::CliqueVar(j, 0),
-                                 HighsCliqueTable::CliqueVar(k, 0))) &&
             -ajBestRowMinus <= -ak + options->small_matrix_value &&
             (!isEqOrRangedRow ||
              -ajBestRowMinus >= -ak - options->small_matrix_value) &&
+            (lowerImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
+                                 HighsCliqueTable::CliqueVar(j, 0),
+                                 HighsCliqueTable::CliqueVar(k, 0))) &&
             checkDomination(-1, j, -1, k)) {
           // case (iii)  lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
           ++numFixedCols;
@@ -1347,13 +1347,13 @@ HPresolve::Result HPresolve::dominatedColumns(
           }
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
         } else if (model->col_lower_[k] != -kHighsInf &&
+                   -ajBestRowMinus <= ak + options->small_matrix_value &&
+                   (!isEqOrRangedRow ||
+                    -ajBestRowMinus >= ak - options->small_matrix_value) &&
                    (lowerImplied ||
                     mipsolver->mipdata_->cliquetable.haveCommonClique(
                         HighsCliqueTable::CliqueVar(j, 0),
                         HighsCliqueTable::CliqueVar(k, 1))) &&
-                   -ajBestRowMinus <= ak + options->small_matrix_value &&
-                   (!isEqOrRangedRow ||
-                    -ajBestRowMinus >= ak - options->small_matrix_value) &&
                    checkDomination(-1, j, 1, k)) {
           // case (iv)  lb(x_j) = -inf, -x_j > x_k: set x_k = lb(x_k)
           ++numFixedCols;
