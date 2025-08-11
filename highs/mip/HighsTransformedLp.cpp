@@ -941,7 +941,7 @@ bool HighsTransformedLp::cleanup(std::vector<HighsInt>& inds,
   for (HighsInt i = 0; i != numNz; ++i) vals[i] = vectorsum.getValue(inds[i]);
   vectorsum.clear();
 
-  double viol = 0;
+  double viol = -rhs;
   double sqrnorm = 0;
   const std::vector<double>& lpSolution = lprelaxation.getSolution().col_value;
   for (HighsInt i = 0; i != numNz; ++i) {
