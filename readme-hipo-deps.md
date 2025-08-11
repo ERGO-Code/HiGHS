@@ -80,7 +80,7 @@ make install
 
 Check if the shared library with no numbers in the file name is in `${{runner.workspace}}/installs/lib/`. If not, make a link to it with 
 ```
-ln ${{runner.workspace}}/installs/lib/libGKlib.0.so ${{runner.workspace}}/installs/lib/libGKlib.so
+ln ${{runner.workspace}}/installs/lib/libGKlib.so.0 ${{runner.workspace}}/installs/lib/libGKlib.so
 ```
 
 5. Install METIS shared
