@@ -1046,9 +1046,22 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kIpxString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kIpmString) == HighsStatus::kOk);
-  h.run();
+#ifdef HIPO
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+#endif
 }
 
 TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
@@ -1060,6 +1073,6 @@ TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   // h.setOptionValue("highs_analysis_level", kHighsAnalysisLevelMipTime);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
-  h.run();
-  h.reportSubSolverCallTime();
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 }
