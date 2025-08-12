@@ -36,9 +36,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                         return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
-  const bool use_ipm = useIpm(options.solver) || options.run_centring;
+  const bool use_only_ipm = useIpm(options.solver) || options.run_centring;
   const bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
-  const bool use_ipx = use_ipm && !use_hipo;
+  const bool use_ipx = use_only_ipm && !use_hipo;
   // Now actually solve LPs!
   //
   // lambda for solving LP by simplex
@@ -52,7 +52,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
 			     solver_object.solution_)) {
       highsLogUser(options.log_options, HighsLogType::kError,
 		   "Inconsistent solution returned from solver\n");
-      return HighsStatus::kError;
+      return_status = HighsStatus::kError;
     }
     return return_status;
   };
@@ -63,9 +63,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-  } else if (use_ipm || options.solver == kPdlpString) {
+  } else if (use_only_ipm || options.solver == kPdlpString) {
     // Use IPM or PDLP
-    if (use_ipm) {
+    if (use_only_ipm) {
       // Use IPM to solve the LP
       if (use_hipo) {
 #ifdef HIPO
@@ -157,19 +157,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
           // returned by HiPO/IPX
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "IPM solution is imprecise, so clean up with simplex\n");
-          // Reset the return status since it will now be determined by
-          // the outcome of the simplex solve
-          return_status = HighsStatus::kOk;
-          call_status = solveLpSimplex(solver_object);
-          return_status = interpretCallStatus(options.log_options, call_status,
-                                              return_status, "solveLpSimplex");
-          if (return_status == HighsStatus::kError) return return_status;
-          if (!isSolutionRightSize(solver_object.lp_,
-                                   solver_object.solution_)) {
-            highsLogUser(options.log_options, HighsLogType::kError,
-                         "Inconsistent solution returned from solver\n");
-            return HighsStatus::kError;
-          }
+          return_status = simplexSolve();
+	  if (return_status == HighsStatus::kError) return return_status;
         }  // options.run_crossover == kHighsOnString
            // clang-format off
       }  // unwelcome_ipx_status
@@ -177,15 +166,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     }
   } else {
     // Use Simplex
-    call_status = solveLpSimplex(solver_object);
-    return_status = interpretCallStatus(options.log_options, call_status,
-                                        return_status, "solveLpSimplex");
+    return_status = simplexSolve();
     if (return_status == HighsStatus::kError) return return_status;
-    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Inconsistent solution returned from solver\n");
-      return HighsStatus::kError;
-    }
   }
   // Analyse the HiGHS (basic) solution
   if (debugHighsLpSolution(message, solver_object) ==
