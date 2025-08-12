@@ -592,22 +592,19 @@ bool useHipo(const HighsOptions& options,
                                                      : options.mip_ipm_solver;
   // In the MIP solver there are situations where IPM must be used
   const bool force_ipm = specific_solver_option == kMipIpmSolverString;
-// HiPO is used by default if it's available and IPM is requested,
-// or if HiPO is requested explicitly, but can't be used for true
-// analytic centre calculations
+  bool use_hipo;
+  if (specific_solver_option_value == kIpxString) {
+    use_hipo = false;
+  } else if (specific_solver_option_value == kIpmString ||
+	     specific_solver_option_value == kHipoString ||
+	     force_ipm) {
 #ifdef HIPO
-  if (logging) {
-    printf("HIPO is available: specific_solver_option is %s = %s\n",
-           specific_solver_option.c_str(),
-           specific_solver_option_value.c_str());
+   use_hipo = true;
+#else
+   use_hipo = false;
+#endif
   }
-#endif
-  bool use_hipo = (
-#ifdef HIPO
-                      force_ipm || specific_solver_option_value == kIpmString ||
-#endif
-                      specific_solver_option_value == kHipoString) &&
-                  !options.run_centring;
+  if (options.run_centring) use_hipo = false;
   // Later decide between HiPO and IPX based on LP properties
   if (specific_solver_option == kMipIpmSolverString) return use_hipo;
   // Later decide between simplex, HiPO and IPX based on LP properties
