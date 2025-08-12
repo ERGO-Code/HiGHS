@@ -351,13 +351,23 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     const std::vector<double>& sol = ipm.getSolution().col_value;
     ipm.setOptionValue("output_flag", false);
     // ipm.setOptionValue("output_flag", !mipsolver.submip);
-    const bool use_hipo = useHipo(*mipsolver.options_mip_, kMipIpmSolverString,
-                                  *mipsolver.model_);
-    const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
-    ipm.setOptionValue("solver", mip_ipm_solver);
+    const std::string mip_ipm_solver = mipsolver.options_mip_->mip_ipm_solver;
+    // Currently use HiPO by default and take action on failure
+    // here. Later pass mip_ipm_solver and take action on failure in
+    // solveLp
+    bool use_hipo =
+      mip_ipm_solver == kHighsChooseString ||
+      mip_ipm_solver == kHipoString;
+#ifndef HIPO
+    // Shouldn't be possible to choose HiPO if it's not in the build
+    assert(!use_hipo)
+    use_hipo = false;
+#endif
+    const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
+    ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("run_crossover", kHighsOffString);
     //    ipm.setOptionValue("allow_pdlp_cleanup", false);
-    ipm.setOptionValue("presolve", kHighsOffString);
+    ipm.setOptionValue("presolve", presolve);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     ipm.setOptionValue("solve_relaxation", true);
     HighsLp lpmodel(*mipsolver.model_);
@@ -371,7 +381,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //    }
 
     ipm.run();
-    if (use_hipo && HighsInt(sol.size()) != mipsolver.numCol()) {
+    if (use_hipo && mip_ipm_solver == kHighsChooseString && HighsInt(sol.size()) != mipsolver.numCol()) {
       printf(
           "In HighsMipSolverData::startAnalyticCenterComputation HiPO has "
           "failed to get a solution: status = %s Try IPX\n",
