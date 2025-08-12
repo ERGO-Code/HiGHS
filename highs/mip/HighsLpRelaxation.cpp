@@ -1117,16 +1117,22 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsStatus callstatus;
   // Over-write use_solver ATM
   use_solver = kSimplexString;
+  lpsolver.setOptionValue("solver", use_solver);
   bool use_ipm = useIpm(use_solver);
   bool use_simplex = !use_ipm;
   if (use_ipm) {
     assert(!valid_basis);
     callstatus = lpsolver.run();
-    if (callstatus == HighsStatus::kError) use_simplex = true;
+    if (callstatus == HighsStatus::kError) {
+      lpsolver.setOptionValue("solver", kSimplexString);
+      use_simplex = true;
+    }
   }
   if (use_simplex) {
     callstatus = lpsolver.run();
   }
+  // Revert the value of lpsolver.options_.solver
+  lpsolver.setOptionValue("solver", solver);
   if (!mipsolver.submip) {
     const HighsSubSolverCallTime& sub_solver_call_time = lpsolver.getSubSolverCallTime();
     mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
