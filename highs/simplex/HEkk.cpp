@@ -1578,7 +1578,7 @@ void HEkk::initialiseEkk() {
   status_.initialised_for_new_lp = true;
 }
 
-bool HEkk::isUnconstrainedLp() {
+bool HEkk::isUnconstrainedLp() const {
   bool is_unconstrained_lp = lp_.num_row_ <= 0;
   if (is_unconstrained_lp)
     highsLogDev(
@@ -2796,7 +2796,7 @@ void HEkk::fullBtran(HVector& buffer) {
 void HEkk::choosePriceTechnique(const HighsInt price_strategy,
                                 const double row_ep_density,
                                 bool& use_col_price,
-                                bool& use_row_price_w_switch) {
+                                bool& use_row_price_w_switch) const {
   // By default switch to column PRICE when pi_p has at least this
   // density
   const double density_for_column_price_switch = 0.75;
@@ -2966,7 +2966,7 @@ void HEkk::computeDual() {
 }
 
 double HEkk::computeDualForTableauColumn(const HighsInt iVar,
-                                         const HVector& tableau_column) {
+                                         const HVector& tableau_column) const {
   const vector<double>& workCost = info_.workCost_;
   const vector<HighsInt>& basicIndex = basis_.basicIndex_;
 
@@ -3156,11 +3156,10 @@ bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
   } else {
     // Look to see whether this basis change is in the list of bad
     // ones
-    for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-      if (bad_basis_change_[iX].variable_out == variable_out &&
-          bad_basis_change_[iX].variable_in == variable_in &&
-          bad_basis_change_[iX].row_out == row_out) {
-        bad_basis_change_[iX].taboo = true;
+    for (auto& change : bad_basis_change_) {
+      if (change.variable_out == variable_out &&
+          change.variable_in == variable_in && change.row_out == row_out) {
+        change.taboo = true;
         return true;
       }
     }
@@ -3737,7 +3736,7 @@ void HEkk::initialiseAnalysis() {
   analysis_.setup(lp_name_, lp_, *options_, iteration_count_);
 }
 
-std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
+std::string HEkk::rebuildReason(const HighsInt rebuild_reason) const {
   std::string rebuild_reason_string;
   if (rebuild_reason == kRebuildReasonCleanup) {
     rebuild_reason_string = "Perturbation cleanup";
@@ -3946,24 +3945,23 @@ HighsInt HEkk::addBadBasisChange(const HighsInt row_out,
 }
 
 void HEkk::clearBadBasisChangeTabooFlag() {
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
-    bad_basis_change_[iX].taboo = false;
+  for (auto& change : bad_basis_change_) change.taboo = false;
 }
 
 bool HEkk::tabooBadBasisChange() const {
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) return true;
+  for (const auto& change : bad_basis_change_) {
+    if (change.taboo) return true;
   }
   return false;
 }
 
 void HEkk::applyTabooRowOut(vector<double>& values,
                             const double overwrite_with) {
-  assert((HighsInt)values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) {
-      HighsInt iRow = bad_basis_change_[iX].row_out;
-      bad_basis_change_[iX].save_value = values[iRow];
+  assert(values.size() >= static_cast<size_t>(lp_.num_row_));
+  for (auto& change : bad_basis_change_) {
+    if (change.taboo) {
+      HighsInt iRow = change.row_out;
+      change.save_value = values[iRow];
       values[iRow] = overwrite_with;
     }
   }
@@ -3982,11 +3980,12 @@ void HEkk::unapplyTabooRowOut(vector<double>& values) {
 
 void HEkk::applyTabooVariableIn(vector<double>& values,
                                 const double overwrite_with) {
-  assert((HighsInt)values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) {
-      HighsInt iCol = bad_basis_change_[iX].variable_in;
-      bad_basis_change_[iX].save_value = values[iCol];
+  assert(values.size() >=
+         static_cast<size_t>(lp_.num_col_) + static_cast<size_t>(lp_.num_row_));
+  for (auto& change : bad_basis_change_) {
+    if (change.taboo) {
+      HighsInt iCol = change.variable_in;
+      change.save_value = values[iCol];
       values[iCol] = overwrite_with;
     }
   }
@@ -4219,7 +4218,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   return proof_of_primal_infeasibility;
 }
 
-double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
+double HEkk::getValueScale(const HighsInt count,
+                           const vector<double>& value) const {
   if (count <= 0) return 1;
   double max_abs_value = 0;
   for (HighsInt iX = 0; iX < count; iX++)

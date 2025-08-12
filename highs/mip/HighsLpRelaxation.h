@@ -329,7 +329,7 @@ class HighsLpRelaxation {
 
   bool computeDualInfProof(const HighsDomain& globaldomain,
                            std::vector<HighsInt>& inds,
-                           std::vector<double>& vals, double& rhs);
+                           std::vector<double>& vals, double& rhs) const;
 
   Status resolveLp(HighsDomain* domain = nullptr);
 
