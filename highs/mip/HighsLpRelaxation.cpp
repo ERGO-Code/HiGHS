@@ -1252,15 +1252,27 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "error: lpsolver reached iteration limit, resolving with basis "
         //     "from ipm\n");
         Highs ipm;
-        const bool use_hipo = useHipo(*mipsolver.options_mip_,
-                                      kMipIpmSolverString, *mipsolver.model_);
-        const std::string mip_ipm_solver = use_hipo ? kHipoString : kIpxString;
         ipm.setOptionValue("output_flag", false);
-        ipm.setOptionValue("solver", mip_ipm_solver);
-        ipm.setOptionValue("ipm_iteration_limit", 200);
         // check if only root presolve is allowed
-        if (mipsolver.options_mip_->mip_root_presolve_only)
-          ipm.setOptionValue("presolve", kHighsOffString);
+	const bool use_presolve = !mipsolver.options_mip_->mip_root_presolve_only;
+	const std::string presolve = use_presolve ? kHighsChooseString : kHighsOffString;
+	ipm.setOptionValue("presolve", presolve);
+	// Determine the solver
+	const std::string mip_ipm_solver = mipsolver.options_mip_->mip_ipm_solver;
+	// Currently use HiPO by default and take action on failure
+	// here. Later pass mip_ipm_solver and take action on failure in
+	// solveLp
+	bool use_hipo =
+	  mip_ipm_solver == kHighsChooseString ||
+	  mip_ipm_solver == kHipoString;
+#ifndef HIPO
+	// Shouldn't be possible to choose HiPO if it's not in the build
+	assert(!use_hipo);
+	use_hipo = false;
+#endif
+	const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
+        ipm.setOptionValue("solver", ipm_solver);
+        ipm.setOptionValue("ipm_iteration_limit", 200);
         ipm.passModel(lpsolver.getLp());
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff
@@ -1280,9 +1292,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 	mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
 	// Go through sub_solver_call_time to update any MIP clocks
 	const bool valid_basis = false;
-	std::string presolve;
-	ipm.getOptionValue("presolve", presolve);
-	const bool use_presolve = presolve != kHighsOffString;
 	mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis, use_presolve);
 
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
