@@ -37,7 +37,12 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   const bool use_only_ipm = useIpm(options.solver) || options.run_centring;
-  const bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
+  bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
+#ifndef HIPO
+  // Shouldn't be possible to choose HiPO if it's not in the build
+  assert(!use_hipo);
+  use_hipo = false;
+#endif
   const bool use_ipx = use_only_ipm && !use_hipo;
   // Now actually solve LPs!
   //

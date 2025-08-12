@@ -1292,7 +1292,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 	// here. Later pass mip_ipm_solver and take action on failure in
 	// solveLp
 	bool use_hipo =
+#ifdef HIPO
 	  mip_ipm_solver == kHighsChooseString ||
+#endif
 	  mip_ipm_solver == kHipoString;
 #ifndef HIPO
 	// Shouldn't be possible to choose HiPO if it's not in the build
