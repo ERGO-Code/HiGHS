@@ -1302,15 +1302,29 @@ HighsStatus Highs::optimizeModel() {
     // return HighsStatus::kOk;
   }
 
-  if (!basis_.valid && solution_.value_valid) {
-    // There is no valid basis, but there is a valid solution, so use
-    // it to construct a basis
-    return_status =
+  // Even if options_.solver == kHighsChooseString in isolation will,
+  // ultimately lead to a choice between simplex and IPM, if a basis
+  // is available, simplex should surely be chosen.
+  const bool solver_will_use_basis = options_.solver == kSimplexString ||
+                                     options_.solver == kHighsChooseString;
+
+  if (solver_will_use_basis) {
+    if (!basis_.valid && solution_.value_valid) {
+      // There is no valid basis, but there is a valid solution, so use
+      // it to construct a basis
+      return_status =
         interpretCallStatus(options_.log_options, basisForSolution(),
                             return_status, "basisForSolution");
-    if (return_status == HighsStatus::kError)
-      return returnFromOptimizeModel(return_status, undo_mods);
-    assert(basis_.valid);
+      if (return_status == HighsStatus::kError)
+	return returnFromOptimizeModel(return_status, undo_mods);
+      assert(basis_.valid);
+    }
+  } else {
+    // The basis won't be used, so clear it to ensure that, after any
+    // presolve the solver choice won't be over-ruled by choosing
+    // simplex due to the existence of a basis - which mustn't be used
+    // after a strict reduction due to presolve!
+    basis_.clear();
   }
 
   // lambda for Lp solving
@@ -1333,11 +1347,6 @@ HighsStatus Highs::optimizeModel() {
 
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
-  // Even if options_.solver == kHighsChooseString in isolation will,
-  // ultimately lead to a choice between simplex and IPM, if a basis
-  // is available, simplex should surely be chosen.
-  const bool solver_will_use_basis = options_.solver == kSimplexString ||
-                                     options_.solver == kHighsChooseString;
   const bool has_basis = basis_.useful;
   if (has_basis) {
     assert(basis_.col_status.size() ==
@@ -1347,10 +1356,7 @@ HighsStatus Highs::optimizeModel() {
   }
   if (basis_.valid) assert(basis_.useful);
 
-  if ((has_basis || options_.presolve == kHighsOffString || unconstrained_lp) &&
-      solver_will_use_basis) {
-    // There is a valid basis for the problem, presolve is off, or LP
-    // has no constraint matrix, and the solver will use the basis
+  if (((options_.presolve == kHighsOffString || has_basis) && solver_will_use_basis) || unconstrained_lp) {
     ekk_instance_.lp_name_ =
         "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that

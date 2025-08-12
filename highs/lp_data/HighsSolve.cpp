@@ -40,6 +40,22 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   const bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
   const bool use_ipx = use_ipm && !use_hipo;
   // Now actually solve LPs!
+  //
+  // lambda for solving LP by simplex
+  auto simplexSolve = [&]() -> HighsStatus {
+    return_status = HighsStatus::kOk;
+    call_status = solveLpSimplex(solver_object);
+    return_status = interpretCallStatus(options.log_options, call_status,
+					    return_status, "solveLpSimplex");
+    if (return_status == HighsStatus::kError) return return_status;
+    if (!isSolutionRightSize(solver_object.lp_,
+			     solver_object.solution_)) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "Inconsistent solution returned from solver\n");
+      return HighsStatus::kError;
+    }
+    return return_status;
+  };
   if (!solver_object.lp_.num_row_ || solver_object.lp_.a_matrix_.numNz() == 0) {
     // LP is unconstrained due to having no rows or a zero constraint
     // matrix, so solve directly

@@ -1793,8 +1793,8 @@ void HighsSolution::clear() {
 void HighsObjectiveSolution::clear() { this->col_value.clear(); }
 
 void HighsBasis::print(std::string message) const {
-  if (!this->useful) return;
   this->printScalars(message);
+  if (!this->useful) return;
   for (HighsInt iCol = 0; iCol < HighsInt(this->col_status.size()); iCol++)
     printf("Basis: col_status[%2d] = %d\n", int(iCol),
            int(this->col_status[iCol]));
