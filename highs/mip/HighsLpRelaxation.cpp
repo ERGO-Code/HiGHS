@@ -1103,7 +1103,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   } else {
     const std::string mip_lp_solver = mipsolver.options_mip_->mip_lp_solver;
     if (useIpm(mip_lp_solver)) {
-      bool use_hipo = mip_lp_solver == kIpxString;
+      bool use_hipo = mip_lp_solver == kHipoString;
 #ifndef HIPO
       // Shouldn't be possible to choose HiPO if it's not in the build
       assert(!use_hipo);
@@ -1115,8 +1115,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     }
   }
   HighsStatus callstatus;
-  // Over-write use_solver ATM
-  use_solver = kSimplexString;
+  // Now allowing the use of IPM at the root node
   lpsolver.setOptionValue("solver", use_solver);
   bool use_ipm = useIpm(use_solver);
   bool use_simplex = !use_ipm;

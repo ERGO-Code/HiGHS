@@ -1045,16 +1045,18 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
       std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
   Highs h;
   // h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const bool just_hipo_test = false;
+  if (!just_hipo_test) {
+    REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   
-  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kIpxString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) == HighsStatus::kOk);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-
+    REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+    REQUIRE(h.setOptionValue(kMipLpSolverString, kIpxString) == HighsStatus::kOk);
+    REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  }
 #ifdef HIPO
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) == HighsStatus::kOk);
