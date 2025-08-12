@@ -1089,13 +1089,37 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                  mipsolver.timer_.read(),
 		 valid_basis ? "" : "out");
   }
-  const bool use_hipo = valid_basis
-                            ? false
-                            : useHipo(*mipsolver.options_mip_,
-                                      kMipLpSolverString, *mipsolver.model_);
-  bool use_simplex = !use_hipo;
+
+  // Determine the solver
+  //
+  // Currently use simplex by default, unless IPM is requested
+  // explicitly and there is no basis. Later pass mip_lp_solver and
+  // take action on failure in SolveLp
+  std::string solver;
+  lpsolver.getOptionValue("solver", solver);
+  std::string use_solver;
+  if (valid_basis) {
+    use_solver = kSimplexString;
+  } else {
+    const std::string mip_lp_solver = mipsolver.options_mip_->mip_lp_solver;
+    if (useIpm(mip_lp_solver)) {
+      bool use_hipo = mip_lp_solver == kIpxString;
+#ifndef HIPO
+      // Shouldn't be possible to choose HiPO if it's not in the build
+      assert(!use_hipo);
+      use_hipo = false;
+#endif
+      use_solver = use_hipo ? kHipoString : kIpxString;
+    } else {
+      use_solver = kSimplexString;
+    }
+  }
   HighsStatus callstatus;
-  if (use_hipo) {
+  // Over-write use_solver ATM
+  use_solver = kSimplexString;
+  bool use_ipm = useIpm(use_solver);
+  bool use_simplex = !use_ipm;
+  if (use_ipm) {
     assert(!valid_basis);
     callstatus = lpsolver.run();
     if (callstatus == HighsStatus::kError) use_simplex = true;
