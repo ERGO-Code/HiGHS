@@ -4110,12 +4110,9 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
 
   // column is not (weakly) dominated
 
-  // the associated dual constraint has an upper bound if there is an infinite
-  // or redundant column lower bound as then the reduced cost of the column must
-  // not be positive i.e. <= 0
-
   // integer columns cannot be used to tighten bounds on dual multipliers
   if (mipsolver != nullptr) {
+    // lambda for changing implied row dual
     auto modifyImpliedRowDualBound = [&](HighsInt col, HighsInt row,
                                          HighsInt direction,
                                          bool isBoundImplied, HighsInt numInf) {
@@ -4137,10 +4134,16 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       }
     };
 
+    // if there is an infinite or redundant column lower bound, the reduced
+    // cost of the column must not be positive (i.e. <= 0; the upper bound on
+    // the reduced cost is zero).
     modifyImpliedRowDualBound(col, colLowerSource[col], HighsInt{1},
                               isLowerImplied(col),
                               impliedDualRowBounds.getNumInfSumUpperOrig(col));
 
+    // if there is an infinite or redundant column upper bound, the reduced
+    // cost of the column must not be negative (i.e. >= 0; the lower bound on
+    // the reduced cost is zero).
     modifyImpliedRowDualBound(col, colUpperSource[col], HighsInt{-1},
                               isUpperImplied(col),
                               impliedDualRowBounds.getNumInfSumLowerOrig(col));
