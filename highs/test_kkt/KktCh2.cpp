@@ -74,35 +74,35 @@ void KktChStep::addChange(int type, HighsInt row, HighsInt col, double valC,
     case 171:  // new bounds from doubleton equation, retrieve old ones
       upd = rLowers.top();
       rLowers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RrowLower[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RrowLower[ind] = get<1>(bound);
       }
       upd = rUppers.top();
       rUppers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RrowUpper[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RrowUpper[ind] = get<1>(bound);
       }
       break;
     case 1:  // row singleton
       upd = cLowers.top();
       cLowers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolLower[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RcolLower[ind] = get<1>(bound);
       }
       upd = cUppers.top();
       cUppers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolUpper[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RcolUpper[ind] = get<1>(bound);
       }
       upd = costs.top();
       costs.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolCost[ind] = get<1>(upd[i]);
+      for (const auto& cost : upd) {
+        HighsInt ind = get<0>(cost);
+        RcolCost[ind] = get<1>(cost);
       }
       break;
     case 2:  // each variable at forcing row: rowDual is cost here
@@ -111,79 +111,79 @@ void KktChStep::addChange(int type, HighsInt row, HighsInt col, double valC,
     case 22:  //
       upd = rLowers.top();
       rLowers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RrowLower[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RrowLower[ind] = get<1>(bound);
       }
       upd = rUppers.top();
       rUppers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RrowUpper[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RrowUpper[ind] = get<1>(bound);
       }
       break;
     case 3:  // the row that is forcing
       if (valC != 0) {
         upd = rLowers.top();
         rLowers.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          HighsInt ind = get<0>(upd[i]);
-          RrowLower[ind] = get<1>(upd[i]);
+        for (const auto& bound : upd) {
+          HighsInt ind = get<0>(bound);
+          RrowLower[ind] = get<1>(bound);
         }
         upd = rUppers.top();
         rUppers.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          HighsInt ind = get<0>(upd[i]);
-          RrowUpper[ind] = get<1>(upd[i]);
+        for (const auto& bound : upd) {
+          HighsInt ind = get<0>(bound);
+          RrowUpper[ind] = get<1>(bound);
         }
       }
       break;
     case 4:  // implied free column singleton (also from duplicate row)
       upd = costs.top();
       costs.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolCost[ind] = get<1>(upd[i]);
+      for (const auto& cost : upd) {
+        HighsInt ind = get<0>(cost);
+        RcolCost[ind] = get<1>(cost);
       }
       break;
     case 5:  // doubleton eq with singleton col
       upd = cLowers.top();
       cLowers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolLower[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RcolLower[ind] = get<1>(bound);
       }
       upd = cUppers.top();
       cUppers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolUpper[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RcolUpper[ind] = get<1>(bound);
       }
       upd = costs.top();
       costs.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolCost[ind] = get<1>(upd[i]);
+      for (const auto& cost : upd) {
+        HighsInt ind = get<0>(cost);
+        RcolCost[ind] = get<1>(cost);
       }
       break;
     case 17: {  // doubleton equation
       upd = cLowers.top();
       cLowers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolLower[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RcolLower[ind] = get<1>(bound);
       }
       upd = cUppers.top();
       cUppers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolUpper[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RcolUpper[ind] = get<1>(bound);
       }
       upd = costs.top();
       costs.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolCost[ind] = get<1>(upd[i]);
+      for (const auto& cost : upd) {
+        HighsInt ind = get<0>(cost);
+        RcolCost[ind] = get<1>(cost);
       }
       break;
     }
@@ -191,15 +191,15 @@ void KktChStep::addChange(int type, HighsInt row, HighsInt col, double valC,
       if (valC != 0) {
         upd = rLowers.top();
         rLowers.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          HighsInt ind = get<0>(upd[i]);
-          RrowLower[ind] = get<1>(upd[i]);
+        for (const auto& bound : upd) {
+          HighsInt ind = get<0>(bound);
+          RrowLower[ind] = get<1>(bound);
         }
         upd = rUppers.top();
         rUppers.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          HighsInt ind = get<0>(upd[i]);
-          RrowUpper[ind] = get<1>(upd[i]);
+        for (const auto& bound : upd) {
+          HighsInt ind = get<0>(bound);
+          RrowUpper[ind] = get<1>(bound);
         }
       }
       break;
@@ -207,50 +207,50 @@ void KktChStep::addChange(int type, HighsInt row, HighsInt col, double valC,
       if (valC != 0) {
         upd = rLowers.top();
         rLowers.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          HighsInt ind = get<0>(upd[i]);
-          RrowLower[ind] = get<1>(upd[i]);
+        for (const auto& bound : upd) {
+          HighsInt ind = get<0>(bound);
+          RrowLower[ind] = get<1>(bound);
         }
         upd = rUppers.top();
         rUppers.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          HighsInt ind = get<0>(upd[i]);
-          RrowUpper[ind] = get<1>(upd[i]);
+        for (const auto& bound : upd) {
+          HighsInt ind = get<0>(bound);
+          RrowUpper[ind] = get<1>(bound);
         }
       }
       break;
     case 11:  // empty row from duplicate rows
       upd = rLowers.top();
       rLowers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RrowLower[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RrowLower[ind] = get<1>(bound);
       }
       upd = rUppers.top();
       rUppers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RrowUpper[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RrowUpper[ind] = get<1>(bound);
       }
       break;
     case 12:  // doubleton eq from duplicate rows;
       upd = cLowers.top();
       cLowers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolLower[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RcolLower[ind] = get<1>(bound);
       }
       upd = cUppers.top();
       cUppers.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolUpper[ind] = get<1>(upd[i]);
+      for (const auto& bound : upd) {
+        HighsInt ind = get<0>(bound);
+        RcolUpper[ind] = get<1>(bound);
       }
       upd = costs.top();
       costs.pop();
-      for (size_t i = 0; i < upd.size(); i++) {
-        HighsInt ind = get<0>(upd[i]);
-        RcolCost[ind] = get<1>(upd[i]);
+      for (const auto& cost : upd) {
+        HighsInt ind = get<0>(cost);
+        RcolCost[ind] = get<1>(cost);
       }
       break;
     case 121:  //

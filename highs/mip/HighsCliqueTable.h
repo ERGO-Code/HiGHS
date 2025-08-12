@@ -72,7 +72,7 @@ class HighsCliqueTable {
   std::vector<HighsHashTree<HighsInt>> invertedHashListSizeTwo;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
 
-  std::set<std::pair<HighsInt, int>> freespaces;
+  std::set<std::pair<HighsInt, HighsInt>> freespaces;
   std::vector<HighsInt> freeslots;
   std::vector<Clique> cliques;
   std::vector<HighsInt> numcliquesvar;

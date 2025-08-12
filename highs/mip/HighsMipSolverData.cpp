@@ -1120,6 +1120,11 @@ try_again:
     }
   }
 
+  const double transformed_solobj =
+      static_cast<double>(static_cast<HighsInt>(mipsolver.orig_model_->sense_) *
+                              mipsolver_quad_objective_value -
+                          mipsolver.model_->offset_);
+
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
@@ -1128,6 +1133,12 @@ try_again:
     const bool interrupt = interruptFromCallbackWithData(
         kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
     assert(!interrupt);
+  }
+
+  // Catch the case where the repaired solution now has worse objective
+  // than the current stored solution
+  if (transformed_solobj >= upper_bound && !sol.empty()) {
+    return transformed_solobj;
   }
 
   if (possibly_store_as_new_incumbent) {
@@ -1171,11 +1182,9 @@ try_again:
       return kHighsInf;
     }
   }
-  // return the objective value in the transformed space
-  if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
-    return -double(mipsolver_quad_objective_value + mipsolver.model_->offset_);
 
-  return double(mipsolver_quad_objective_value - mipsolver.model_->offset_);
+  // return the objective value in the transformed space
+  return transformed_solobj;
 }
 
 double HighsMipSolverData::percentageInactiveIntegers() const {
