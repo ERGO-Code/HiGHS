@@ -131,10 +131,11 @@ void completeHessianDiagonal(const HighsOptions& options,
       num_missing_diagonal_entries++;
     }
   }
-  highsLogDev(options.log_options, HighsLogType::kInfo,
-              "Hessian has dimension %d and %d nonzeros: inserting %d zeros "
-              "onto the diagonal\n",
-              (int)dim, (int)num_nz, (int)num_missing_diagonal_entries);
+  if (num_missing_diagonal_entries > 0)
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Hessian has dimension %d and %d nonzeros: inserting %d zeros "
+                "onto the diagonal\n",
+                int(dim), int(num_nz), int(num_missing_diagonal_entries));
   assert(num_missing_diagonal_entries >= dim - num_nz);
   if (!num_missing_diagonal_entries) return;
   // There are missing diagonal entries to be inserted as explicit zeros

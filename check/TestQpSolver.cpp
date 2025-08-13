@@ -1138,3 +1138,31 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("2489", "[qpsolver]") {
+  // This QP is
+  //
+  // Min, x^2/2 + x
+  //
+  // 0*x + 0*y <= 1
+  //
+  // -10 <= (x, y) <= 10
+  //
+  // Hence it has a constraint, but its coefficients are zero
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  assert(h.setOptionValue("log_dev_level", 3) == HighsStatus::kOk);
+  assert(h.addCol(1.0, -10.0, 10.0, 0, NULL, NULL) == HighsStatus::kOk);
+  assert(h.addCol(0.0, -10.0, 10.0, 0, NULL, NULL) == HighsStatus::kOk);
+  assert(h.addRow(0.0, 0.0, 0, NULL, NULL) == HighsStatus::kOk);
+  HighsHessian hessian;
+  hessian.dim_ = 1;
+  hessian.format_ = HessianFormat::kTriangular;
+  hessian.start_ = {0, 1};
+  hessian.index_ = {0};
+  hessian.value_ = {1.0};
+  assert(h.passHessian(hessian) == HighsStatus::kOk);
+  assert(h.run() == HighsStatus::kOk);
+
+  h.resetGlobalScheduler(true);
+}

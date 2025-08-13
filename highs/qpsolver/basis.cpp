@@ -57,16 +57,6 @@ void Basis::build() {
     baseindex[counter++] = i;
   }
 
-  const bool empty_matrix = (int)Atran.index.size() == 0;
-  if (empty_matrix) {
-    // The index/value vectors have size zero if the matrix has no
-    // columns. However, in the Windows build, referring to index 0 of a
-    // vector of size zero causes a failure, so resize to 1 to prevent
-    // this.
-    assert(Atran.num_col == 0);
-    Atran.index.resize(1);
-    Atran.value.resize(1);
-  }
   basisfactor.setup(Atran.num_col, Atran.num_row, Atran.start.data(),
                     Atran.index.data(), Atran.value.data(), baseindex.data());
   basisfactor.build();
