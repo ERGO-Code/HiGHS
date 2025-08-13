@@ -1427,6 +1427,8 @@ postprocess:
     rhs_ = flowCoverRhs;
     std::swap(vals_, flowCoverVals);
     std::swap(inds_, flowCoverInds);
+    integralSupport = false;
+    integralCoefficients = false;
   }
 
   rowlen = inds_.size();
