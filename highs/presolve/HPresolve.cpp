@@ -3259,6 +3259,61 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(checkRowRedundant(row));
   if (rowDeleted[row]) return Result::kOk;
 
+  if (rowsizeInteger[row] != 0 || rowsizeImplInt[row] != 0) {
+    // check if setting variable to opposite bound (with respect to bound used
+    // in calculation of bounds on row activity) makes row infeasible.
+    // this is a special case of bound tightening, but only performed once for
+    // binary variables here (see Suhl, Szymanski: Supernode processing of
+    // mixed-integer models. Comput. Optim. Appl. 3(4): 317-331 (1994)).
+
+    for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+      // get column index and coefficient
+      HighsInt col = nonzero.index();
+      double val = nonzero.value();
+
+      // skip continuous variables and non-binary variables
+      if (model->integrality_[col] == HighsVarType::kContinuous ||
+          model->col_upper_[col] != model->col_lower_[col] + 1.0)
+        continue;
+
+      // lambda for computing offset
+      auto computeOffset = [&](HighsInt col, double val) {
+        return std::abs(val) *
+               (static_cast<HighsCDouble>(model->col_upper_[col]) -
+                static_cast<HighsCDouble>(model->col_lower_[col]));
+      };
+
+      auto degree1Tests = [&](HighsInt col, double val, HighsInt direction,
+                              double rowActivityBound, double rowBound) {
+        // return if row is still feasible
+        if (direction * rowActivityBound >=
+            direction * rowBound - primal_feastol)
+          return false;
+
+        // tighten bound
+        if (direction * val > 0)
+          changeColLower(col, model->col_lower_[col] + 1.0);
+        else
+          changeColUpper(col, model->col_upper_[col] - 1.0);
+        return true;
+      };
+
+      // perform tests
+      degree1Tests(
+          col, val, HighsInt{1},
+          impliedRowBounds.getSumUpperOrig(row, -computeOffset(col, val)),
+          model->row_lower_[row]);
+      degree1Tests(
+          col, val, HighsInt{-1},
+          impliedRowBounds.getSumLowerOrig(row, computeOffset(col, val)),
+          model->row_upper_[row]);
+    }
+  }
+
+  // check for redundancy again
+  HPRESOLVE_CHECKED_CALL(checkRowRedundant(row));
+  if (rowDeleted[row]) return Result::kOk;
+
   auto checkRedundantBounds = [&](HighsInt col, HighsInt row) {
     // check if column singleton has redundant bounds
     assert(model->col_cost_[col] != 0.0);
