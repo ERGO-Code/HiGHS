@@ -23,7 +23,6 @@
 #include "util/HighsInt.h"
 #include "util/HighsSparseVectorSum.h"
 
-class HighsCutGeneration;
 class HighsLpRelaxation;
 
 /// Helper class to compute single-row relaxations from the current LP
