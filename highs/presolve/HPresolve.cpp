@@ -4117,19 +4117,18 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                                          HighsInt direction,
                                          bool isBoundImplied, HighsInt numInf) {
       if (isBoundImplied && row != -1 && numInf == 1 &&
-          direction * model->col_cost_[col] >= 0) {
-        if (model->row_lower_[row] == -kHighsInf ||
-            model->row_upper_[row] == kHighsInf) {
-          HighsInt nzPos = findNonzero(row, col);
+          direction * model->col_cost_[col] >= 0 &&
+          (model->row_lower_[row] == -kHighsInf ||
+           model->row_upper_[row] == kHighsInf)) {
+        HighsInt nzPos = findNonzero(row, col);
 
-          if (model->integrality_[col] != HighsVarType::kInteger ||
-              (rowsizeInteger[row] == rowsize[row] &&
-               rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
-            if (direction * Avalue[nzPos] > 0)
-              changeImplRowDualLower(row, 0.0, col);
-            else
-              changeImplRowDualUpper(row, 0.0, col);
-          }
+        if (model->integrality_[col] != HighsVarType::kInteger ||
+            (rowsizeInteger[row] == rowsize[row] &&
+             rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
+          if (direction * Avalue[nzPos] > 0)
+            changeImplRowDualLower(row, 0.0, col);
+          else
+            changeImplRowDualUpper(row, 0.0, col);
         }
       }
     };
