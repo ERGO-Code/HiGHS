@@ -18,7 +18,7 @@
 bool HighsLp::isMip() const {
   size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
-    assert((HighsInt) integrality_size == this->num_col_);
+    assert((HighsInt)integrality_size == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
       if (this->integrality_[iCol] != HighsVarType::kContinuous) return true;
   }
