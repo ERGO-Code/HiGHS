@@ -770,8 +770,10 @@ bool HighsTransformedLp::transformSNFRelaxation(
       // Decide whether to use {simple, variable} {lower, upper} bound
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
         if (!checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
-                             vectorsum.getValue(bestVlb[col].first), lb, ub,
-                             false)) {
+                             bestVlb[col].first == -1
+                                 ? 0
+                                 : vectorsum.getValue(bestVlb[col].first),
+                             lb, ub, false)) {
           boundTypes[col] = BoundType::kSimpleLb;
         } else if (simpleLbDist[col] > lbDist[col] + mip.mipdata_->feastol) {
           boundTypes[col] = BoundType::kVariableLb;
@@ -779,8 +781,10 @@ bool HighsTransformedLp::transformSNFRelaxation(
           boundTypes[col] = BoundType::kSimpleLb;
       } else if (ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
         if (!checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
-                             vectorsum.getValue(bestVub[col].first), lb, ub,
-                             true)) {
+                             bestVub[col].first == -1
+                                 ? 0
+                                 : vectorsum.getValue(bestVub[col].first),
+                             lb, ub, true)) {
           boundTypes[col] = BoundType::kSimpleUb;
         } else if (simpleUbDist[col] > ubDist[col] + mip.mipdata_->feastol) {
           boundTypes[col] = BoundType::kVariableUb;
@@ -789,16 +793,20 @@ bool HighsTransformedLp::transformSNFRelaxation(
         }
       } else if (vals[i] > 0) {
         if (checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
-                            vectorsum.getValue(bestVlb[col].first), lb, ub,
-                            false)) {
+                            bestVlb[col].first == -1
+                                ? 0
+                                : vectorsum.getValue(bestVlb[col].first),
+                            lb, ub, false)) {
           boundTypes[col] = BoundType::kVariableLb;
         } else {
           boundTypes[col] = BoundType::kSimpleLb;
         }
       } else {
         if (checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
-                            vectorsum.getValue(bestVub[col].first), lb, ub,
-                            true)) {
+                            bestVub[col].first == -1
+                                ? 0
+                                : vectorsum.getValue(bestVub[col].first),
+                            lb, ub, true)) {
           boundTypes[col] = BoundType::kVariableUb;
         } else {
           boundTypes[col] = BoundType::kSimpleUb;
