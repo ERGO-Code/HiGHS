@@ -694,7 +694,6 @@ void HighsMipSolverData::init() {
 }
 
 void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
-
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
   if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
@@ -1018,7 +1017,8 @@ void HighsMipSolverData::runSetup() {
     debugSolution.debugSolObjective = 0;
     HighsCDouble debugsolobj = 0.0;
     for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i)
-      debugsolobj += mipsolver.colCost(i) * debugSolution.debugSolution[i];
+      debugsolobj +=
+          mipsolver.colCost(i) * HighsCDouble(debugSolution.debugSolution[i]);
     debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
     debugSolution.registerDomain(domain);
     assert(checkSolution(debugSolution.debugSolution));

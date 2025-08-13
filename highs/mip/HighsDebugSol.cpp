@@ -52,8 +52,7 @@ void HighsDebugSol::activate() {
         if (line.find("# Rows") != std::string::npos) {
           break;
         }
-        if (!incolsection)
-          continue;
+        if (!incolsection) continue;
 
         std::istringstream linestream(line);
         linestream >> varname;
@@ -70,8 +69,8 @@ void HighsDebugSol::activate() {
 
       HighsCDouble debugsolobj = 0.0;
       for (HighsInt i = 0; i != mipsolver->orig_model_->num_col_; ++i)
-        debugsolobj +=
-            mipsolver->orig_model_->col_cost_[i] * debugOrigSolution[i];
+        debugsolobj += mipsolver->orig_model_->col_cost_[i] *
+                       HighsCDouble(debugOrigSolution[i]);
 
       debugSolObjective = double(debugsolobj + mipsolver->orig_model_->offset_);
       debugSolActive = true;
