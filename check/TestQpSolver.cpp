@@ -1151,20 +1151,26 @@ TEST_CASE("2489", "[qpsolver]") {
   // Hence it has a constraint, but its coefficients are zero
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
-  assert(h.setOptionValue("log_dev_level", 3) == HighsStatus::kOk);
-  assert(h.setOptionValue("time_limit", 3) == HighsStatus::kOk);
-  assert(h.setOptionValue("qp_iteration_limit", 10) == HighsStatus::kOk);
-  assert(h.addCol(1.0, -10.0, 10.0, 0, NULL, NULL) == HighsStatus::kOk);
-  assert(h.addCol(0.0, -10.0, 10.0, 0, NULL, NULL) == HighsStatus::kOk);
-  assert(h.addRow(0.0, 0.0, 0, NULL, NULL) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("log_dev_level", 3) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("time_limit", 3) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("qp_iteration_limit", 10) == HighsStatus::kOk);
+  REQUIRE(h.addCol(1.0, -10.0, 10.0, 0, NULL, NULL) == HighsStatus::kOk);
+  REQUIRE(h.addCol(0.0, -10.0, 10.0, 0, NULL, NULL) == HighsStatus::kOk);
+  REQUIRE(h.addRow(0.0, 0.0, 0, NULL, NULL) == HighsStatus::kOk);
   HighsHessian hessian;
   hessian.dim_ = 1;
   hessian.format_ = HessianFormat::kTriangular;
   hessian.start_ = {0, 1};
   hessian.index_ = {0};
   hessian.value_ = {1.0};
-  assert(h.passHessian(hessian) == HighsStatus::kOk);
-  assert(h.run() == HighsStatus::kOk);
+  REQUIRE(h.passHessian(hessian) == HighsStatus::kOk);
+  HighsStatus run_status = h.run();
+  if (dev_run)
+    printf("Test 2489: run_status = %s\n",
+           run_status == HighsStatus::kError     ? "Error"
+           : run_status == HighsStatus::kWarning ? "Warning"
+                                                 : "OK");
+  REQUIRE(run_status == HighsStatus::kWarning);
 
   h.resetGlobalScheduler(true);
 }
