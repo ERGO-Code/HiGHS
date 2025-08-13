@@ -760,12 +760,11 @@ bool HighsTransformedLp::transformSNFRelaxation(
     if (colIsBinary(col, lb, ub)) {
       // Binary columns can be added directly to the SNFR
       if (vals[i] >= 0) {
-        addSNFRentry(col, -1, getLpSolution(col),
-                     getLpSolution(col) * vals[i], 1, vals[i], 0, vals[i], 0);
+        addSNFRentry(col, -1, getLpSolution(col), getLpSolution(col) * vals[i],
+                     1, vals[i], 0, vals[i], 0);
       } else {
-        addSNFRentry(col, -1, getLpSolution(col),
-                     -getLpSolution(col) * vals[i], -1, -vals[i], 0, -vals[i],
-                     0);
+        addSNFRentry(col, -1, getLpSolution(col), -getLpSolution(col) * vals[i],
+                     -1, -vals[i], 0, -vals[i], 0);
       }
     } else {
       // Decide whether to use {simple, variable} {lower, upper} bound
@@ -857,11 +856,11 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // 0 <= y'_j <= (a_j l'_j + c_j)x_j
           // rhs -= a_j * d_j
           vbcol = bestVlb[col].first;
-          substsolval = static_cast<double>(
-              vals[i] * (HighsCDouble(getLpSolution(col)) -
-                         bestVlb[col].second.constant) +
-              (HighsCDouble(lpSolution.col_value[vbcol]) *
-               vectorsum.getValue(vbcol)));
+          substsolval =
+              static_cast<double>(vals[i] * (HighsCDouble(getLpSolution(col)) -
+                                             bestVlb[col].second.constant) +
+                                  (HighsCDouble(lpSolution.col_value[vbcol]) *
+                                   vectorsum.getValue(vbcol)));
           vbcoef = static_cast<double>(HighsCDouble(vals[i]) *
                                            bestVlb[col].second.coef +
                                        vectorsum.getValue(vbcol));
@@ -888,11 +887,11 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // 0 <= y'_j <= -(a_j u'_j + c_j)x_j
           // rhs -= a_j * d_j
           vbcol = bestVub[col].first;
-          substsolval = static_cast<double>(
-              vals[i] * (HighsCDouble(getLpSolution(col)) -
-                         bestVub[col].second.constant) +
-              (HighsCDouble(lpSolution.col_value[vbcol]) *
-               vectorsum.getValue(vbcol)));
+          substsolval =
+              static_cast<double>(vals[i] * (HighsCDouble(getLpSolution(col)) -
+                                             bestVub[col].second.constant) +
+                                  (HighsCDouble(lpSolution.col_value[vbcol]) *
+                                   vectorsum.getValue(vbcol)));
           vbcoef = static_cast<double>(HighsCDouble(vals[i]) *
                                            bestVub[col].second.coef +
                                        vectorsum.getValue(vbcol));

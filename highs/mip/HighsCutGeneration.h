@@ -118,20 +118,21 @@ class HighsCutGeneration {
 
   /// Single Node Flow Relaxation for flow cover cuts
   struct SNFRelaxation {
-    HighsInt numNnzs; // |N-| + |N+|
-    std::vector<HighsInt> coef; // (+-1) coefficient of col in SNFR
-    std::vector<double> vubCoef; // u_j in y'_j <= u_j x_j in SNFR
-    std::vector<double> binSolval; // lp[x_j], y'_j <= u_j x_j in SNFR
-    std::vector<double> contSolval; // lp[y'_j] in y'_j <= u_j x_j in SNFR
-    std::vector<HighsInt> origBinCols; // orig x_i, y'_j <= u_j x_j in SNFR
-    std::vector<HighsInt> origContCols; // orig y_i used to make y'_j in SNFR
-    std::vector<double> aggrBinCoef; // c_i row coef of x_i in orig aggrrow
-    std::vector<double> aggrContCoef; // a_i row coef of y_i in orig aggrrow
-    std::vector<double> aggrConstant; // constant shift used in SNFR transform
+    HighsInt numNnzs;                    // |N-| + |N+|
+    std::vector<HighsInt> coef;          // (+-1) coefficient of col in SNFR
+    std::vector<double> vubCoef;         // u_j in y'_j <= u_j x_j in SNFR
+    std::vector<double> binSolval;       // lp[x_j], y'_j <= u_j x_j in SNFR
+    std::vector<double> contSolval;      // lp[y'_j] in y'_j <= u_j x_j in SNFR
+    std::vector<HighsInt> origBinCols;   // orig x_i, y'_j <= u_j x_j in SNFR
+    std::vector<HighsInt> origContCols;  // orig y_i used to make y'_j in SNFR
+    std::vector<double> aggrBinCoef;     // c_i row coef of x_i in orig aggrrow
+    std::vector<double> aggrContCoef;    // a_i row coef of y_i in orig aggrrow
+    std::vector<double> aggrConstant;  // constant shift used in SNFR transform
 
-    std::vector<HighsInt> flowCoverStatus; // (+1) in f-cover (-1) notin f-cover
-    double rhs; // in \sum_{j \in N+} y'_j - \sum_{j \in N-} y'_j <= b
-    double lambda; // in sum_{j in C+} u_j - sum_{j in C-} u_j = b + lambda
+    std::vector<HighsInt>
+        flowCoverStatus;  // (+1) in f-cover (-1) notin f-cover
+    double rhs;           // in \sum_{j \in N+} y'_j - \sum_{j \in N-} y'_j <= b
+    double lambda;  // in sum_{j in C+} u_j - sum_{j in C-} u_j = b + lambda
   };
 
  private:
