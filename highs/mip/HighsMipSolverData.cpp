@@ -1363,6 +1363,95 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
   return incumbent;
 }
 
+bool HighsMipSolverData::oneOptImprovement(std::vector<double>& sol,
+                                           double& solobj) {
+  bool success = false;
+  for (const HighsInt col : integer_cols) {
+    double max_movement = kHighsInf;
+    if (mipsolver.model_->col_cost_[col] > 0 &&
+        sol[col] > domain.col_lower_[col] + feastol) {
+      max_movement = 0;
+    } else if (mipsolver.model_->col_cost_[col] < 0 &&
+               sol[col] < domain.col_upper_[col] - feastol) {
+      max_movement = 0;
+    } else if (mipsolver.model_->col_cost_[col] == 0) {
+      max_movement = 0;
+    }
+    if (max_movement == 0) continue;
+    HighsInt dir = mipsolver.model_->col_cost_[col] > 0 ? 1 : -1;
+    max_movement = dir == 1 ? sol[col] - domain.col_lower_[col]
+                            : domain.col_upper_[col] - sol[col];
+    if (max_movement < 1 - feastol) continue;
+    const HighsInt start = mipsolver.model_->a_matrix_.start_[col];
+    const HighsInt end = mipsolver.model_->a_matrix_.start_[col + 1];
+    for (HighsInt i = start; i != end; ++i) {
+      HighsInt row = mipsolver.model_->a_matrix_.index_[i];
+      double val = mipsolver.model_->a_matrix_.value_[i];
+      if (mipsolver.model_->row_lower_[row] ==
+          mipsolver.model_->row_upper_[row]) {
+        max_movement = 0;
+        break;
+      }
+      // calc activity of row
+      double activity = 0;
+      for (HighsInt j = ARstart_[row]; j < ARstart_[row + 1]; j++) {
+        activity += ARvalue_[j] * sol[ARindex_[j]];
+      }
+      // if dir = 1 && val > 0 && row_lower_ is not tight -> can move
+      // if dir = 1 && val < 0 && row_upper_ is not tight -> can move
+      // if dir = -1 && val > 0 && row_upper_ is not tight -> can move
+      // if dir = -1 && val < 0 && row_lower_ is not tight -> can move
+      if (dir == 1 && val > 0) {
+        if (mipsolver.model_->row_lower_[row] + feastol < activity) {
+          max_movement =
+              std::min(max_movement,
+                       (activity - mipsolver.model_->row_lower_[row]) / val);
+        } else {
+          max_movement = 0;
+        }
+      } else if (dir == 1 && val < 0) {
+        if (mipsolver.model_->row_upper_[row] - feastol > activity) {
+          max_movement =
+              std::min(max_movement,
+                       (activity - mipsolver.model_->row_upper_[row]) / val);
+        } else {
+          max_movement = 0;
+        }
+      } else if (dir == -1 && val > 0) {
+        if (mipsolver.model_->row_upper_[row] - feastol > activity) {
+          max_movement =
+              std::min(max_movement,
+                       (mipsolver.model_->row_upper_[row] - activity) / val);
+        } else {
+          max_movement = 0;
+        }
+      } else {
+        assert(dir == -1 && val < 0);
+        if (mipsolver.model_->row_lower_[row] + feastol < activity) {
+          max_movement =
+              std::min(max_movement,
+                       (mipsolver.model_->row_lower_[row] - activity) / val);
+        } else {
+          max_movement = 0;
+        }
+      }
+      // Only move by integer amounts
+      max_movement = floor(max_movement + feastol);
+      if (max_movement <= 0) {
+        break;
+      }
+    }
+    if (max_movement >= 1) {
+      sol[col] -= dir * max_movement;
+      success = true;
+    }
+  }
+  if (success) {
+    solobj = transformNewIntegerFeasibleSolution(sol, true);
+  }
+  return success;
+}
+
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, const int solution_source,
                                       const bool print_display_line,
@@ -1386,8 +1475,26 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                      sol, possibly_store_as_new_incumbent)
                                : 0;
 
+  // Apply one-opt (check if any integral variable can be moved s.t
+  // objective improves and feasibility is maintained.
+  bool one_opt_success = false;
+  double one_opt_transformed_solobj = transformed_solobj;
+  std::vector<double> one_opt_sol;
+  if (possibly_store_as_new_incumbent && transformed_solobj != kHighsInf) {
+    one_opt_sol = sol;
+    one_opt_success =
+        oneOptImprovement(one_opt_sol, one_opt_transformed_solobj);
+    if (one_opt_success && one_opt_transformed_solobj >= transformed_solobj) {
+      one_opt_success = false;
+    }
+  }
+
   if (possibly_store_as_new_incumbent) {
-    solobj = transformed_solobj;
+    if (!one_opt_success) {
+      solobj = transformed_solobj;
+    } else {
+      solobj = one_opt_transformed_solobj;
+    }
     if (solobj >= upper_bound) return false;
 
     double prev_upper_bound = upper_bound;
@@ -1399,7 +1506,11 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       updatePrimalDualIntegral(lower_bound, lower_bound, prev_upper_bound,
                                upper_bound);
 
-    incumbent = sol;
+    if (!one_opt_success) {
+      incumbent = sol;
+    } else {
+      incumbent = one_opt_sol;
+    }
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
     if (!is_user_solution && !mipsolver.submip)
@@ -1437,8 +1548,13 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       pruned_treeweight += nodequeue.performBounding(upper_limit);
       printDisplayLine(solution_source);
     }
-  } else if (incumbent.empty())
-    incumbent = sol;
+  } else if (incumbent.empty()) {
+    if (!one_opt_success) {
+      incumbent = sol;
+    } else {
+      incumbent = one_opt_sol;
+    }
+  }
 
   return true;
 }

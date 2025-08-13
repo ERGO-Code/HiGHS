@@ -276,6 +276,8 @@ struct HighsMipSolverData {
 
   const std::vector<double>& getSolution() const;
 
+  bool oneOptImprovement(std::vector<double>& sol, double& solobj);
+
   std::string solutionSourceToString(const int solution_source,
                                      const bool code = true) const;
   void printSolutionSourceKey() const;
