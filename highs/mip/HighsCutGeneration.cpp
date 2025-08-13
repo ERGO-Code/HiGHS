@@ -806,7 +806,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
   deltas.erase(std::remove(deltas.begin(), deltas.end(), 0.0), deltas.end());
   double bestdelta = -1;
-  double bestefficacy = feastol;
+  double bestefficacy = minEfficacy;
 
   for (double delta : deltas) {
     double scale = 1.0 / delta;
@@ -915,8 +915,6 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       flipComplementation(k);
     }
   }
-
-  if (bestefficacy < minEfficacy) return false;
 
   HighsCDouble scale = 1.0 / HighsCDouble(bestdelta);
   HighsCDouble scalrhs = rhs * scale;
@@ -1953,7 +1951,7 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
       rhs = tmpRhs;
     } else {
       // accept cut and increase minimum efficiency requirement for cmir cut
-      minMirEfficacy += feastol;
+      minMirEfficacy = std::max(minEfficacy, efficacy) + feastol;
       std::swap(tmpRhs, rhs);
     }
   }
