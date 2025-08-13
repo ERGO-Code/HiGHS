@@ -16,7 +16,7 @@
 #include "util/HighsMatrixUtils.h"
 
 bool HighsLp::isMip() const {
-  HighsInt integrality_size = this->integrality_.size();
+  size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
     assert(integrality_size == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
@@ -34,7 +34,7 @@ bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
 }
 
 bool HighsLp::hasSemiVariables() const {
-  HighsInt integrality_size = this->integrality_.size();
+  size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
     assert(integrality_size == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
@@ -72,6 +72,15 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
 }
 
 bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
+  const bool equal_vectors = equalVectors(lp);
+  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
+#ifndef NDEBUG
+  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
+#endif
+  return equal_vectors && equal_matrix;
+}
+
+bool HighsLp::equalVectors(const HighsLp& lp) const {
   bool equal_vectors = true;
   equal_vectors = this->num_col_ == lp.num_col_ && equal_vectors;
   equal_vectors = this->num_row_ == lp.num_row_ && equal_vectors;
@@ -86,11 +95,7 @@ bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
 #ifndef NDEBUG
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif
-  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
-#ifndef NDEBUG
-  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
-#endif
-  return equal_vectors && equal_matrix;
+  return equal_vectors;
 }
 
 bool HighsLp::equalNames(const HighsLp& lp) const {
@@ -566,10 +571,10 @@ bool HighsLpMods::isClear() {
 }
 
 void HighsNameHash::form(const std::vector<std::string>& name) {
-  size_t num_name = name.size();
   this->clear();
-  for (size_t index = 0; index < num_name; index++) {
-    auto emplace_result = this->name2index.emplace(name[index], index);
+  for (size_t index = 0; index < name.size(); index++) {
+    auto emplace_result =
+        this->name2index.emplace(name[index], static_cast<int>(index));
     const bool duplicate = !emplace_result.second;
     if (duplicate) {
       // Find the original and mark it as duplicate
@@ -581,11 +586,11 @@ void HighsNameHash::form(const std::vector<std::string>& name) {
 }
 
 bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
-  size_t num_name = name.size();
   this->clear();
   bool has_duplicate = false;
-  for (size_t index = 0; index < num_name; index++) {
-    has_duplicate = !this->name2index.emplace(name[index], index).second;
+  for (size_t index = 0; index < name.size(); index++) {
+    has_duplicate =
+        !this->name2index.emplace(name[index], static_cast<int>(index)).second;
     if (has_duplicate) break;
   }
   this->clear();
@@ -596,8 +601,7 @@ void HighsNameHash::update(int index, const std::string& old_name,
                            const std::string& new_name) {
   this->name2index.erase(old_name);
   auto emplace_result = this->name2index.emplace(new_name, index);
-  const bool duplicate = !emplace_result.second;
-  if (duplicate) {
+  if (!emplace_result.second) {
     // Find the original and mark it as duplicate
     auto& search = emplace_result.first;
     assert(int(search->second) < int(this->name2index.size()));
