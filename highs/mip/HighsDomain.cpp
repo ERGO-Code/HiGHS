@@ -62,7 +62,8 @@ static inline double boundRange(double upper_bound, double lower_bound,
                                 double tolerance, HighsVarType var_type) {
   double range = upper_bound - lower_bound;
   return range - (var_type == HighsVarType::kContinuous
-                      ? std::max(0.2 * range, 1000.0 * tolerance)
+                      ? std::max(HighsDomain::cont_boundchg_threshold * range,
+                                 1000.0 * tolerance)
                       : tolerance);
 }
 
@@ -1353,7 +1354,7 @@ double HighsDomain::adjustedUb(HighsInt col, HighsCDouble boundVal,
       else
         relativeImprove /=
             std::max(std::fabs(col_upper_[col]), std::fabs(bound));
-      accept = relativeImprove >= 0.2;
+      accept = relativeImprove >= cont_boundchg_threshold;
     } else
       accept = false;
   }
@@ -1385,7 +1386,7 @@ double HighsDomain::adjustedLb(HighsInt col, HighsCDouble boundVal,
       else
         relativeImprove /=
             std::max(std::fabs(col_lower_[col]), std::fabs(bound));
-      accept = relativeImprove >= 0.2;
+      accept = relativeImprove >= cont_boundchg_threshold;
     } else
       accept = false;
   }

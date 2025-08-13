@@ -339,6 +339,8 @@ class HighsDomain {
   std::vector<double> col_lower_;
   std::vector<double> col_upper_;
 
+  static constexpr double cont_boundchg_threshold = 0.2;
+
   HighsDomain(HighsMipSolver& mipsolver);
 
   HighsDomain(const HighsDomain& other)
