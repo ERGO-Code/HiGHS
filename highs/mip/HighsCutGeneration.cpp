@@ -1395,7 +1395,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   // try to generate a cut
   if (!tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
-                      hasContinuous, std::max(flowCoverEfficacy, 10 * feastol),
+                      hasContinuous, std::max(flowCoverEfficacy - feastol, 10 * feastol),
                       onlyInitialCMIRScale)) {
     cmirSuccess = false;
     goto postprocess;
