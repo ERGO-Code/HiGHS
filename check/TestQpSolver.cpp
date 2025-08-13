@@ -1152,6 +1152,8 @@ TEST_CASE("2489", "[qpsolver]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   assert(h.setOptionValue("log_dev_level", 3) == HighsStatus::kOk);
+  assert(h.setOptionValue("time_limit", 3) == HighsStatus::kOk);
+  assert(h.setOptionValue("qp_iteration_limit", 10) == HighsStatus::kOk);
   assert(h.addCol(1.0, -10.0, 10.0, 0, NULL, NULL) == HighsStatus::kOk);
   assert(h.addCol(0.0, -10.0, 10.0, 0, NULL, NULL) == HighsStatus::kOk);
   assert(h.addRow(0.0, 0.0, 0, NULL, NULL) == HighsStatus::kOk);

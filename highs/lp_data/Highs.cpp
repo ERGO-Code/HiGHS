@@ -3890,7 +3890,11 @@ HighsStatus Highs::callSolveQp() {
   Statistics stats;
 
   settings.reportingfequency = 100;
-
+  if (options_.qp_iteration_limit <= 10) {
+    settings.reportingfequency = 1;
+  } else if (options_.qp_iteration_limit <= 100) {
+    settings.reportingfequency = 10;
+  }
   // Setting qp_update_limit = 10 leads to error with lpHighs3
   const HighsInt qp_update_limit = 1000;  // 1000; // default
   if (qp_update_limit != settings.reinvertfrequency) {
