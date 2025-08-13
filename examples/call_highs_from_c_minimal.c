@@ -188,9 +188,6 @@ void minimal_api() {
   }
   printf("Optimal objective value = %g\n", objective_value);
 
-  // Release resources held by the global scheduler.
-  // In Highs_lpCall(..) above.
-
   free(col_value);
   free(col_dual);
   free(row_value);
