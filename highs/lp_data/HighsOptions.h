@@ -293,6 +293,11 @@ const string kReadSolutionFileString = "read_solution_file";
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
 
+// Strings for HiPO system option
+const string kHipoSystemString = "hipo_system";
+const string kHipoAugmentedString = "augmented";
+const string kHipoNormalEqString = "normaleq";
+
 // Strings for MIP LP/IPM options
 const string kMipLpSolverString = "mip_lp_solver";
 const string kMipIpmSolverString = "mip_ipm_solver";
@@ -359,6 +364,7 @@ struct HighsOptionsStruct {
   // Options for IPM solver
   double ipm_optimality_tolerance;
   HighsInt ipm_iteration_limit;
+  std::string hipo_system;
 
   // Options for PDLP solver
   bool pdlp_scaling;
@@ -527,6 +533,7 @@ struct HighsOptionsStruct {
         timeless_log(false),
         ipm_optimality_tolerance(0.0),
         ipm_iteration_limit(0),
+        hipo_system(""),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
@@ -1242,6 +1249,12 @@ class HighsOptions : public HighsOptionsStruct {
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
+
+    record_string = new OptionRecordString(
+        kHipoSystemString,
+        "HiPO Newton system option: \"augmented\", \"normaleq\" or \"choose\".",
+        advanced, &hipo_system, kHighsChooseString);
+    records.push_back(record_string);
 
     record_bool = new OptionRecordBool(
         "pdlp_scaling", "Scaling option for PDLP solver: Default = true",

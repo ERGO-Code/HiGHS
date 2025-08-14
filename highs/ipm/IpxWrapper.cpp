@@ -402,6 +402,13 @@ HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
                      solver_object.highs_info_, solver_object.callback_);
 }
 
+#ifdef HIPO_USES_OPENBLAS
+// function to set number of threads of openblas
+extern "C" {
+void openblas_set_num_threads(int num_threads);
+}
+#endif
+
 HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
                         const HighsLp& lp, HighsBasis& highs_basis,
                         HighsSolution& highs_solution,
@@ -438,6 +445,11 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   highs_solution.dual_valid = false;
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
+
+#ifdef HIPO_USES_OPENBLAS
+  // force openblas to run in serial, for determinism and better performance
+  openblas_set_num_threads(1);
+#endif
 
   // Create solver instance
   hipo::Solver hipo{};
@@ -499,13 +511,22 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
     hipo_options.parallel = hipo::kOptionParallelChoose;
   }
 
-  // Highs does not have an option to select NE/AS approach.
-  // For now use choose, but an option should be added for the user to choose.
-  hipo_options.nla = hipo::kOptionNlaChoose;
+  // Parse hipo_system option
+  if (options.hipo_system == kHipoAugmentedString) {
+    hipo_options.nla = hipo::kOptionNlaAugmented;
+  } else if (options.hipo_system == kHipoNormalEqString) {
+    hipo_options.nla = hipo::kOptionNlaNormEq;
+  } else if (options.hipo_system == kHighsChooseString) {
+    hipo_options.nla = hipo::kOptionNlaChoose;
+  } else {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Unknown value of option hipo_system\n");
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
 
   // ===========================================================================
   // TO DO
-  // - add options for NE/AS
   // - consider adding options for parallel tree/node
   // - block size for dense factorisation can have large impact on performance
   //   and depends on the specific architecture. It may be worth exposing it to

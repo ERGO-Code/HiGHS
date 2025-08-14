@@ -3,22 +3,24 @@ option(BLAS_ROOT "Root directory of BLAS or OpenBLAS" "")
 message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
 
 if(NOT APPLE)
-    find_library(BLAS_LIB 
-        NAMES blas HINTS 
-        "${BLAS_ROOT}/lib")
+    find_library(OPENBLAS_LIB 
+        NAMES openblas 
+        HINTS "${BLAS_ROOT}/lib")
 
-    if(BLAS_LIB)
-        message("Found BLAS library at ${BLAS_LIB}")
-    else(BLAS_LIB)
-        find_library(OPENBLAS_LIB 
-            NAMES openblas 
-            HINTS "${BLAS_ROOT}/lib")
-        if(NOT OPENBLAS_LIB)
-            message(FATAL_ERROR "No BLAS library found")
-        endif(NOT OPENBLAS_LIB)
+    if(OPENBLAS_LIB)
         message("Found OpenBLAS library at ${OPENBLAS_LIB}")
-    endif(BLAS_LIB)
-    
+
+    else(OPENBLAS_LIB)
+        find_library(BLAS_LIB 
+            NAMES blas HINTS 
+            "${BLAS_ROOT}/lib")
+
+        if(NOT BLAS_LIB)
+            message(FATAL_ERROR "No BLAS library found")
+        endif(NOT BLAS_LIB)
+        message("Found BLAS library at ${BLAS_LIB}")
+    endif(OPENBLAS_LIB)
+
 endif(NOT APPLE)
 
 # METIS

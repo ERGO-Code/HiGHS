@@ -588,7 +588,7 @@ void FactorHiGHSSolver::setParallel(Options& options) {
       log_stream << "Full requested\n";
       break;
     case kOptionParallelChoose: {
-#ifdef FRAMEWORK_ACCELERATE
+#ifdef HIPO_USES_APPLE_BLAS
       // Blas on Apple do not work well with parallel_node, but parallel_tree
       // seems to always be beneficial.
       parallel_node = false;
