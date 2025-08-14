@@ -345,10 +345,9 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // due to early return in the root node evaluation
     Highs ipm;
     ipm.setOptionValue("output_flag", false);
-    // ipm.setOptionValue("output_flag", !mipsolver.submip);
     const std::vector<double>& sol = ipm.getSolution().col_value;
     // Don't use presolve - because the MIP has already been presolved?
-    const bool use_presolve = false;
+    const bool use_presolve = true;
     const std::string presolve = use_presolve ? kHighsChooseString : kHighsOffString;
     ipm.setOptionValue("presolve", presolve);
     // Determine the solver
@@ -370,18 +369,31 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     ipm.setOptionValue("run_crossover", kHighsOffString);
-    ipm.setOptionValue("solve_relaxation", true);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
+    lpmodel.integrality_.clear();
     ipm.passModel(std::move(lpmodel));
-
-    //    if (!mipsolver.submip) {
-    //      const std::string file_name = mipsolver.model_->model_name_ +
-    //      "_ipm.mps"; printf("Calling ipm.writeModel(%s)\n",
-    //      file_name.c_str()); fflush(stdout); ipm.writeModel(file_name);
-    //    }
-
+    const bool dump_ipm_lp = false;
+    if (dump_ipm_lp && !mipsolver.submip) {
+      const std::string file_name = mipsolver.model_->model_name_ + "_ac.mps";
+      printf("HighsMipSolverData::startAnalyticCenterComputation: Calling ipm.writeModel(%s)\n", file_name.c_str());
+      ipm.writeModel(file_name);
+      fflush(stdout);
+      exit(1);
+    }
+    const bool ipm_logging = false;
+    if (ipm_logging) {
+      std::string presolve;
+      ipm.getOptionValue("presolve", presolve);
+      printf("\nHighsMipSolverData::startAnalyticCenterComputation Solving for the AC with IPM, using presolve = %s\n", presolve.c_str());
+      bool output_flag;
+      ipm.getOptionValue("output_flag", output_flag);
+      assert(output_flag == false);
+      (void)output_flag;
+      ipm.setOptionValue("output_flag", !mipsolver.submip);
+    }
     ipm.run();
+    if (ipm_logging) ipm.setOptionValue("output_flag", false);
     if (use_hipo && mip_ipm_solver == kHighsChooseString && HighsInt(sol.size()) != mipsolver.numCol()) {
       printf(
           "In HighsMipSolverData::startAnalyticCenterComputation HiPO has "
