@@ -1392,10 +1392,10 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   }
 
   // try to generate a cut
-  if (!tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
-                      hasContinuous,
-                      std::max(flowCoverEfficacy - feastol, 10 * feastol),
-                      onlyInitialCMIRScale)) {
+  if (!tryGenerateCut(
+          inds_, vals_, hasUnboundedInts, hasGeneralInts, hasContinuous,
+          std::max(flowCoverEfficacy - (10 * feastol), 10 * feastol),
+          onlyInitialCMIRScale)) {
     cmirSuccess = false;
     goto postprocess;
   }
@@ -1957,7 +1957,7 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
       if (allowRejectCut) {
         minMirEfficacy = std::max(minEfficacy, efficacy + feastol);
       } else {
-        minMirEfficacy = efficacy + feastol;
+        minMirEfficacy = efficacy + (10 * feastol);
       }
       std::swap(tmpRhs, rhs);
     }
