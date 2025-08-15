@@ -4105,8 +4105,10 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 
   // Must at least have a primal column solution of the right size
   if (HighsInt(solution.col_value.size()) != presolved_lp.num_col_) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Primal solution provided to postsolve is incorrect size\n");
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Primal solution provided to postsolve is of size %d rather than %d\n",
+        int(solution.col_value.size()), int(presolved_lp.num_col_));
     return HighsStatus::kError;
   }
   // Check any basis that is supplied
@@ -4168,7 +4170,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
           "Postsolve performed for MIP, but model status cannot be known\n");
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Postsolve return status is %d\n", (int)postsolve_status);
+                   "Postsolve return status is %d\n", int(postsolve_status));
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPostsolveError);
     }
@@ -4183,10 +4185,20 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         presolve_.data_.recovered_solution_.row_dual.size() > 0 ||
         presolve_.data_.recovered_solution_.dual_valid;
     if (dual_supplied) {
-      if (!isDualSolutionRightSize(presolved_lp,
-                                   presolve_.data_.recovered_solution_)) {
+      if (!isRowDualSolutionRightSize(presolved_lp,
+                                      presolve_.data_.recovered_solution_)) {
         highsLogUser(options_.log_options, HighsLogType::kError,
-                     "Dual solution provided to postsolve is incorrect size\n");
+                     "Row dual solution provided to postsolve is of size %d "
+                     "rather than %d\n",
+                     int(solution.row_dual.size()), int(presolved_lp.num_row_));
+        return HighsStatus::kError;
+      }
+      if (!isColDualSolutionRightSize(presolved_lp,
+                                      presolve_.data_.recovered_solution_)) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Column dual solution provided to postsolve is of size %d "
+                     "rather than %d\n",
+                     int(solution.col_dual.size()), int(presolved_lp.num_col_));
         return HighsStatus::kError;
       }
       presolve_.data_.recovered_solution_.dual_valid = true;
@@ -4277,6 +4289,9 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         getKktFailures(this->options_, is_qp, this->model_.lp_,
                        this->model_.lp_.col_cost_, this->solution_, this->info_,
                        get_residuals);
+        highsLogUser(options_.log_options, HighsLogType::kInfo, "\n");
+        reportLpKktFailures(this->model_.lp_, this->options_, this->info_,
+                            "After postsolve");
         if (info_.num_primal_infeasibilities == 0 &&
             info_.num_dual_infeasibilities == 0) {
           model_status_ = HighsModelStatus::kOptimal;
@@ -4285,7 +4300,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         }
         highsLogUser(
             options_.log_options, HighsLogType::kInfo,
-            "Pure postsolve yields primal %ssolution, but no basis: model "
+            "\nPure postsolve yields primal %ssolution, but no basis: model "
             "status is %s\n",
             solution_.dual_valid ? "and dual " : "",
             modelStatusToString(model_status_).c_str());

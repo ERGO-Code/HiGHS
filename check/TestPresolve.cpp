@@ -734,3 +734,27 @@ TEST_CASE("presolve-issue-2446", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
 }
+
+TEST_CASE("presolve-solve-postsolve-no-col-dual", "[highs_test_presolve]") {
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  highs.readModel(model_file);
+  highs.presolve();
+  HighsLp presolved_lp = highs.getPresolvedLp();
+  Highs highs1;
+  //  highs1.setOptionValue("output_flag", dev_run);
+  highs1.setOptionValue("presolve", kHighsOffString);
+  highs1.setOptionValue("solver", kPdlpString);
+  highs1.passModel(presolved_lp);
+  highs1.run();
+  HighsSolution solution = highs1.getSolution();
+
+  // Perform postsolve using the optimal solution and basis for the
+  // presolved model
+  solution.col_dual.clear();
+  highs.postsolve(solution);
+
+  highs.resetGlobalScheduler(true);
+}
