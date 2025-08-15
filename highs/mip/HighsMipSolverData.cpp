@@ -1367,20 +1367,10 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& sol,
                                            double& solobj) {
   bool success = false;
   for (const HighsInt col : integer_cols) {
-    double max_movement = kHighsInf;
-    if (mipsolver.model_->col_cost_[col] > 0 &&
-        sol[col] > domain.col_lower_[col] + feastol) {
-      max_movement = 0;
-    } else if (mipsolver.model_->col_cost_[col] < 0 &&
-               sol[col] < domain.col_upper_[col] - feastol) {
-      max_movement = 0;
-    } else if (mipsolver.model_->col_cost_[col] == 0) {
-      max_movement = 0;
-    }
-    if (max_movement == 0) continue;
+    if (mipsolver.model_->col_cost_[col] == 0) continue;
     HighsInt dir = mipsolver.model_->col_cost_[col] > 0 ? 1 : -1;
-    max_movement = dir == 1 ? sol[col] - domain.col_lower_[col]
-                            : domain.col_upper_[col] - sol[col];
+    double max_movement = dir == 1 ? sol[col] - domain.col_lower_[col]
+                                   : domain.col_upper_[col] - sol[col];
     if (max_movement < 1 - feastol) continue;
     const HighsInt start = mipsolver.model_->a_matrix_.start_[col];
     const HighsInt end = mipsolver.model_->a_matrix_.start_[col + 1];
@@ -1435,18 +1425,22 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& sol,
           max_movement = 0;
         }
       }
-      // Only move by integer amounts
-      max_movement = floor(max_movement + feastol);
-      if (max_movement <= 0) {
+      if (max_movement < 1 - feastol) {
         break;
       }
     }
-    if (max_movement >= 1) {
+    if (max_movement >= 1 - feastol) {
+      if (max_movement >= kHighsInf) {
+        // instance is unbounded
+        printf("ONEOPT IS UNBOUNDED!!\n");
+        return false;
+      }
       sol[col] -= dir * max_movement;
       success = true;
     }
   }
   if (success) {
+    printf("ONEOPT DID SOMETHING!!!!\n");
     solobj = transformNewIntegerFeasibleSolution(sol, true);
   }
   return success;
@@ -1480,7 +1474,14 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   bool one_opt_success = false;
   double one_opt_transformed_solobj = transformed_solobj;
   std::vector<double> one_opt_sol;
-  if (possibly_store_as_new_incumbent && transformed_solobj != kHighsInf) {
+  if (possibly_store_as_new_incumbent && transformed_solobj != kHighsInf &&
+      (solution_source == kSolutionSourceRandomizedRounding ||
+        solution_source == kSolutionSourceFeasibilityJump ||
+        solution_source == kSolutionSourceTrivialZ ||
+        solution_source == kSolutionSourceTrivialL ||
+        solution_source == kSolutionSourceTrivialU ||
+        solution_source == kSolutionSourceTrivialP ||
+        solution_source == kSolutionSourceCentralRounding)) {
     one_opt_sol = sol;
     one_opt_success =
         oneOptImprovement(one_opt_sol, one_opt_transformed_solobj);
