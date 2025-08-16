@@ -11,7 +11,9 @@
 
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
+#ifndef DISABLE_PDLP
 #include "pdlp/CupdlpWrapper.h"
+#endif
 #include "simplex/HApp.h"
 
 // The method below runs simplex, ipx or pdlp solver on the lp.
@@ -57,6 +59,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLpIpx");
     } else {
+#ifndef DISABLE_PDLP
       // Use cuPDLP-C to solve the LP
       try {
         call_status = solveLpCupdlp(solver_object);
@@ -67,6 +70,12 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       }
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLpCupdlp");
+#else
+      // PDLP is disabled
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "PDLP solver is disabled in this build\n");
+      return_status = HighsStatus::kError;
+#endif
     }
     // Check for error return
     if (return_status == HighsStatus::kError) return return_status;

@@ -13,8 +13,6 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/mip>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/model>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
@@ -22,26 +20,39 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
-set(cupdlp_sources
-  pdlp/cupdlp/cupdlp_cs.c
-  pdlp/cupdlp/cupdlp_linalg.c
-  pdlp/cupdlp/cupdlp_proj.c
-  pdlp/cupdlp/cupdlp_restart.c
-  pdlp/cupdlp/cupdlp_scaling.c
-  pdlp/cupdlp/cupdlp_solver.c
-  pdlp/cupdlp/cupdlp_step.c
-  pdlp/cupdlp/cupdlp_utils.c)
+if(NOT DISABLE_PDLP)
+  list(APPEND include_dirs
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>)
+endif()
 
-set(cupdlp_headers
-  pdlp/cupdlp/cupdlp_cs.h
-  pdlp/cupdlp/cupdlp_defs.h
-  pdlp/cupdlp/cupdlp_linalg.h
-  pdlp/cupdlp/cupdlp_proj.h
-  pdlp/cupdlp/cupdlp_restart.h
-  pdlp/cupdlp/cupdlp_scaling.h
-  pdlp/cupdlp/cupdlp_solver.h
-  pdlp/cupdlp/cupdlp_step.h
-  pdlp/cupdlp/cupdlp_utils.c)
+if(NOT DISABLE_PDLP)
+  set(cupdlp_sources
+    pdlp/CupdlpWrapper.cpp
+    pdlp/cupdlp/cupdlp_cs.c
+    pdlp/cupdlp/cupdlp_linalg.c
+    pdlp/cupdlp/cupdlp_proj.c
+    pdlp/cupdlp/cupdlp_restart.c
+    pdlp/cupdlp/cupdlp_scaling.c
+    pdlp/cupdlp/cupdlp_solver.c
+    pdlp/cupdlp/cupdlp_step.c
+    pdlp/cupdlp/cupdlp_utils.c)
+
+  set(cupdlp_headers
+    pdlp/CupdlpWrapper.h
+    pdlp/cupdlp/cupdlp_cs.h
+    pdlp/cupdlp/cupdlp_defs.h
+    pdlp/cupdlp/cupdlp_linalg.h
+    pdlp/cupdlp/cupdlp_proj.h
+    pdlp/cupdlp/cupdlp_restart.h
+    pdlp/cupdlp/cupdlp_scaling.h
+    pdlp/cupdlp/cupdlp_solver.h
+    pdlp/cupdlp/cupdlp_step.h
+    pdlp/cupdlp/cupdlp_utils.c)
+else()
+  set(cupdlp_sources "")
+  set(cupdlp_headers "")
+endif()
 
 set(cuda_sources
   pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
@@ -236,7 +247,6 @@ set(highs_sources
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
-    pdlp/CupdlpWrapper.cpp
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
