@@ -447,7 +447,7 @@ retry:
           fixval = std::ceil(fracval);
         else if (rootchange <= -0.4)
           fixval = std::floor(fracval);
-        if (mipsolver.model_->col_cost_[col] > 0.0)
+        else if (mipsolver.model_->col_cost_[col] > 0.0)
           fixval = std::ceil(fracval);
         else if (mipsolver.model_->col_cost_[col] < 0.0)
           fixval = std::floor(fracval);
@@ -676,7 +676,7 @@ retry:
           fixval = std::ceil(fracval);
         else if (rootchange <= -0.4)
           fixval = std::floor(fracval);
-        if (mipsolver.model_->col_cost_[col] > 0.0)
+        else if (mipsolver.model_->col_cost_[col] > 0.0)
           fixval = std::ceil(fracval);
         else if (mipsolver.model_->col_cost_[col] < 0.0)
           fixval = std::floor(fracval);
