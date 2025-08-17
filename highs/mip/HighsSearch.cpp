@@ -254,7 +254,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   std::vector<double> downbound;
 
   HighsInt numfrac = lp->getFractionalIntegers().size();
-  if (numfrac == 1) return 0;
   const auto& fracints = lp->getFractionalIntegers();
 
   upscore.resize(numfrac, kHighsInf);
@@ -531,7 +530,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       }
     };
 
-    auto strongBranch = [&](bool upbranch) {
+    auto strongBranch = [&](bool upbranch) -> bool {
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
       HighsBoundType boundtype =
           upbranch ? HighsBoundType::kLower : HighsBoundType::kUpper;
