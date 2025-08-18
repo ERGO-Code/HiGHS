@@ -1115,7 +1115,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
       if (colIsBinary) {
-        auto getResidual = [&](HighsInt row, HighsInt col, HighsInt val,
+        auto getResidual = [&](HighsInt row, HighsInt col, double val,
                                HighsInt direction) {
           if (direction > 0)
             return impliedRowBounds.getResidualSumUpper(row, col, val);
