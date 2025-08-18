@@ -323,7 +323,8 @@ void HighsPrimalHeuristics::rootReducedCost() {
               12);
 }
 
-static double computeFixValue(double rootchange, double fracval, double cost) {
+constexpr static double calcFixVal(double rootchange, double fracval,
+                                   double cost) {
   // reinforce direction of this solution away from root
   // solution if the change is at least 0.4
   // otherwise take the direction where the objective gets worse
@@ -457,10 +458,10 @@ retry:
         // otherwise take the direction where the objective gets worse
         // if objective is zero round to nearest integer
         double fixval =
-            computeFixValue(mipsolver.mipdata_->rootlpsol.empty()
-                                ? 0.0
-                                : fracval - mipsolver.mipdata_->rootlpsol[col],
-                            fracval, mipsolver.model_->col_cost_[col]);
+            calcFixVal(mipsolver.mipdata_->rootlpsol.empty()
+                           ? 0.0
+                           : fracval - mipsolver.mipdata_->rootlpsol[col],
+                       fracval, mipsolver.model_->col_cost_[col]);
         // make sure we do not set an infeasible domain
         fixval = std::min(localdom.col_upper_[col], fixval);
         fixval = std::max(localdom.col_lower_[col], fixval);
@@ -679,8 +680,8 @@ retry:
         // solution if the change is at least 0.4
         // otherwise take the direction where the objective gets worse
         // if objective is zero round to nearest integer
-        fixval = computeFixValue(fracval - mipsolver.mipdata_->rootlpsol[col],
-                                 fracval, mipsolver.model_->col_cost_[col]);
+        fixval = calcFixVal(fracval - mipsolver.mipdata_->rootlpsol[col],
+                            fracval, mipsolver.model_->col_cost_[col]);
       }
       // make sure we do not set an infeasible domain
       fixval = std::min(localdom.col_upper_[col], fixval);
