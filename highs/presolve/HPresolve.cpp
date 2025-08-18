@@ -1557,7 +1557,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
             std::max(HighsInt{1000}, (model->num_row_ + model->num_col_) / 20);
       } else {
         probingEarlyAbort =
-            numDel > std::min(HighsInt{500}, model->num_col_ / 20);
+            numDel > std::min(HighsInt{1000}, (model->num_row_ + model->num_col_) / 40);
       }
       if (probingEarlyAbort) break;
 
