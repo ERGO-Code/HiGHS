@@ -323,8 +323,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
               12);
 }
 
-constexpr static double calcFixVal(double rootchange, double fracval,
-                                   double cost) {
+static double calcFixVal(double rootchange, double fracval, double cost) {
   // reinforce direction of this solution away from root
   // solution if the change is at least 0.4
   // otherwise take the direction where the objective gets worse
