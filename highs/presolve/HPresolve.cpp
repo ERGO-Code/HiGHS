@@ -1115,37 +1115,32 @@ HPresolve::Result HPresolve::dominatedColumns(
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
       if (colIsBinary) {
-        if (model->row_upper_[row] != kHighsInf) {
-          if (model->col_cost_[j] >= 0.0 && nonz.value() < 0.0) {
-            double maxresact =
-                impliedRowBounds.getResidualSumUpper(row, j, nonz.value());
-            double wcBound =
-                (model->row_upper_[row] - maxresact) / nonz.value();
-            worstCaseLb = std::max(wcBound, worstCaseLb);
-          } else if (model->col_cost_[j] <= 0.0 && nonz.value() > 0.0) {
-            double maxresact =
-                impliedRowBounds.getResidualSumUpper(row, j, nonz.value());
-            double wcBound =
-                (model->row_upper_[row] - maxresact) / nonz.value();
-            worstCaseUb = std::min(wcBound, worstCaseUb);
-          }
-        }
+        auto getResidual = [&](HighsInt row, HighsInt col, HighsInt val,
+                               HighsInt direction) {
+          if (direction > 0)
+            return impliedRowBounds.getResidualSumUpper(row, col, val);
+          else
+            return impliedRowBounds.getResidualSumLower(row, col, val);
+        };
 
-        if (model->row_lower_[row] != -kHighsInf) {
-          if (model->col_cost_[j] >= 0.0 && nonz.value() > 0.0) {
-            double minresact =
-                impliedRowBounds.getResidualSumLower(row, j, nonz.value());
+        auto updateWorstCaseBounds = [&](HighsInt row, HighsInt col, double val,
+                                         HighsInt direction, double rhs) {
+          if (direction * rhs == kHighsInf) return;
+          if (model->col_cost_[col] >= 0.0 && direction * val < 0.0) {
             double wcBound =
-                (model->row_lower_[row] - minresact) / nonz.value();
+                (rhs - getResidual(row, col, val, direction)) / val;
             worstCaseLb = std::max(wcBound, worstCaseLb);
-          } else if (model->col_cost_[j] <= 0.0 && nonz.value() < 0.0) {
-            double minresact =
-                impliedRowBounds.getResidualSumLower(row, j, nonz.value());
+          } else if (model->col_cost_[col] <= 0.0 && direction * val > 0.0) {
             double wcBound =
-                (model->row_lower_[row] - minresact) / nonz.value();
+                (rhs - getResidual(row, col, val, direction)) / val;
             worstCaseUb = std::min(wcBound, worstCaseUb);
           }
-        }
+        };
+
+        updateWorstCaseBounds(row, j, nonz.value(), HighsInt{1},
+                              model->row_upper_[row]);
+        updateWorstCaseBounds(row, j, nonz.value(), HighsInt{-1},
+                              model->row_lower_[row]);
       }
 
       double val = scale * nonz.value();
