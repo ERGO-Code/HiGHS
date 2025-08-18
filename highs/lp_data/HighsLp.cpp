@@ -18,7 +18,7 @@
 bool HighsLp::isMip() const {
   size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
-    assert((HighsInt)integrality_size == this->num_col_);
+    assert(static_cast<HighsInt>(integrality_size) == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
       if (this->integrality_[iCol] != HighsVarType::kContinuous) return true;
   }
@@ -36,7 +36,7 @@ bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
 bool HighsLp::hasSemiVariables() const {
   size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
-    assert((HighsInt)integrality_size == this->num_col_);
+    assert(static_cast<HighsInt>(integrality_size) == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
       if (this->integrality_[iCol] == HighsVarType::kSemiContinuous ||
           this->integrality_[iCol] == HighsVarType::kSemiInteger)
