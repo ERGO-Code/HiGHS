@@ -732,13 +732,9 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
     if (infeasible) return;
   });
 
-  if (!delVbds.empty()) {
-    for (HighsInt vubCol : delVbds) {
-      vubs[col].erase(vubCol);
-      numVarBounds--;
-    }
-    delVbds.clear();
-  }
+  for (HighsInt vubCol : delVbds) vubs[col].erase(vubCol);
+  numVarBounds -= delVbds.size();
+  delVbds.clear();
 
   vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) {
     bool redundant = false;
@@ -748,10 +744,8 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
     if (infeasible) return;
   });
 
-  for (HighsInt vlbCol : delVbds) {
-    vlbs[col].erase(vlbCol);
-    numVarBounds--;
-  }
+  for (HighsInt vlbCol : delVbds) vlbs[col].erase(vlbCol);
+  numVarBounds -= delVbds.size();
 }
 
 void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
