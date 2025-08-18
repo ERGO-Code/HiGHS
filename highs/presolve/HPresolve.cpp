@@ -1127,13 +1127,13 @@ HPresolve::Result HPresolve::dominatedColumns(
                                          HighsInt direction, double rhs) {
           if (direction * rhs == kHighsInf) return;
           if (model->col_cost_[col] >= 0.0 && direction * val < 0.0) {
-            double wcBound =
-                (rhs - getResidual(row, col, val, direction)) / val;
-            worstCaseLb = std::max(wcBound, worstCaseLb);
+            worstCaseLb =
+                std::max((rhs - getResidual(row, col, val, direction)) / val,
+                         worstCaseLb);
           } else if (model->col_cost_[col] <= 0.0 && direction * val > 0.0) {
-            double wcBound =
-                (rhs - getResidual(row, col, val, direction)) / val;
-            worstCaseUb = std::min(wcBound, worstCaseUb);
+            worstCaseUb =
+                std::min((rhs - getResidual(row, col, val, direction)) / val,
+                         worstCaseUb);
           }
         };
 
