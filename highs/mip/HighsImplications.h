@@ -120,9 +120,7 @@ class HighsImplications {
     return implications[loc].computed;
   }
 
-  int64_t getNumVarBounds() const { return numVarBounds; }
-
-  int64_t getMaxVarBounds() const { return maxVarBounds; }
+  bool tooManyVarBounds() const { return numVarBounds >= maxVarBounds; }
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
               double vubconstant);

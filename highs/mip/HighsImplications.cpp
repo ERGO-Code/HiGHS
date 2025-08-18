@@ -395,7 +395,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
   // assume that VUBs do not have infinite coefficients and infinite constant
   // terms since such VUBs effectively evaluate to NaN.
   assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
-  if (numVarBounds >= maxVarBounds) return;
+  if (tooManyVarBounds()) return;
 
   VarBound vub{vubcoef, vubconstant};
 
@@ -424,7 +424,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   // assume that VLBs do not have infinite coefficients and infinite constant
   // terms since such VLBs effectively evaluate to NaN.
   assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
-  if (numVarBounds >= maxVarBounds) return;
+  if (tooManyVarBounds()) return;
 
   VarBound vlb{vlbcoef, vlbconstant};
 
