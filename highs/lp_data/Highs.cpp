@@ -4417,11 +4417,11 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
   assert(!called_return_from_optimize_model);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   if (return_status != run_return_status) {
-    printf(
-        "Highs::returnFromOptimizeModel: return_status = %d != %d = "
-        "run_return_status "
-        "For model_status_ = %s\n",
-        int(return_status), int(run_return_status),
+    highsLogDev(
+        options_.log_options, HighsLogType::kError,
+        "Highs::returnFromOptimizeModel: run_return_status = %d != %d = "
+        "return_status = highsStatusFromHighsModelStatus(model_status_ = %s)\n",
+        int(run_return_status), int(return_status),
         modelStatusToString(model_status_).c_str());
   }
   assert(return_status == run_return_status);

@@ -478,13 +478,15 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   }
 
   if (printf_kkt || options.log_dev_level > 0) {
-    printf("getKktFailures:: cost norm = %8.3g; bound norm = %8.3g\n",
-           highs_norm_costs, highs_norm_bounds);
-    printf(
-        "getKktFailures:                      LP  (abs / rel)    "
-        "     Col (abs / rel)         Row (abs / rel)\n");
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "getKktFailures:: cost norm = %8.3g; bound norm = %8.3g\n",
+                highs_norm_costs, highs_norm_bounds);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "getKktFailures:                      LP  (abs / rel)    "
+                "     Col (abs / rel)         Row (abs / rel)\n");
 
-    printf(
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
         "getKktFailures: primal infeasibility %8.3g / %8.3g     %8.3g / "
         "%8.3g     %8.3g / %8.3g\n",
         highs_info.max_primal_infeasibility,
@@ -492,7 +494,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         max_col_primal_infeasibility, max_relative_col_primal_infeasibility,
         max_row_primal_infeasibility, max_relative_row_primal_infeasibility);
     if (have_dual_solution)
-      printf(
+      highsLogDev(
+          options.log_options, HighsLogType::kInfo,
           "getKktFailures:   dual infeasibility %8.3g / %8.3g     %8.3g / "
           "%8.3g     %8.3g / %8.3g\n",
           highs_info.max_dual_infeasibility,
@@ -500,19 +503,21 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           max_col_dual_infeasibility, max_relative_col_dual_infeasibility,
           max_row_dual_infeasibility, max_relative_row_dual_infeasibility);
     if (get_residuals) {
-      printf("getKktFailures: primal residual      %8.3g / %8.3g\n",
-             highs_info.max_primal_residual_error,
-             highs_info.max_relative_primal_residual_error);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "getKktFailures: primal residual      %8.3g / %8.3g\n",
+                  highs_info.max_primal_residual_error,
+                  highs_info.max_relative_primal_residual_error);
       if (have_dual_solution)
-        printf("getKktFailures:   dual residual      %8.3g / %8.3g\n",
-               highs_info.max_dual_residual_error,
-               highs_info.max_relative_dual_residual_error);
+        highsLogDev(options.log_options, HighsLogType::kInfo,
+                    "getKktFailures:   dual residual      %8.3g / %8.3g\n",
+                    highs_info.max_dual_residual_error,
+                    highs_info.max_relative_dual_residual_error);
     }
     if (!is_qp && have_dual_solution)
-      printf("getKktFailures: objective gap        %8.3g\n",
-             highs_info.primal_dual_objective_error);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "getKktFailures: objective gap        %8.3g\n",
+                  highs_info.primal_dual_objective_error);
   }
-
   // Assign primal (and possibly dual) solution status according to
   // existence of primal and dual feasibilities
   //

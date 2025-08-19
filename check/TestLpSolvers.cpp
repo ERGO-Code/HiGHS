@@ -500,3 +500,22 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+/*
+TEST_CASE("highs-debug-level", "[highs_lp_solver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+
+  h.readModel(model_file);
+  h.setOptionValue("solver", kIpmString);
+  h.setOptionValue("highs_debug_level",  1);
+  h.run();
+  h.setOptionValue("highs_debug_level",  2);
+  h.run();
+  h.setOptionValue("highs_debug_level",  3);
+  h.run();
+  h.resetGlobalScheduler(true);
+}
+*/
