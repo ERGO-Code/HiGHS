@@ -108,7 +108,7 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
   }
 
   highs.resetGlobalScheduler(true);
-  
+
   return (HighsInt)status;
 }
 
@@ -173,9 +173,9 @@ HighsInt Highs_qpCall(
 
 void* Highs_create(void) { return new Highs(); }
 
-void Highs_destroy(void* highs) { 
+void Highs_destroy(void* highs) {
   Highs::resetGlobalScheduler(true);
-  delete (Highs*)highs; 
+  delete (Highs*)highs;
 }
 
 const char* Highs_version(void) { return highsVersion(); }
