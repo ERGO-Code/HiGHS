@@ -1242,8 +1242,10 @@ HighsStatus Highs::optimizeModel() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-  const bool ipx_no_crossover = options_.solver == kIpmString &&
-                                options_.run_crossover == kHighsOffString;
+  const bool lp_no_solution_basis =
+      (options_.solver == kIpmString &&
+       options_.run_crossover == kHighsOffString) ||
+      options_.solver == kPdlpString;
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
@@ -1367,7 +1369,8 @@ HighsStatus Highs::optimizeModel() {
     // rules for which postsolve does not generate a basis.
     const bool lp_presolve_requires_basis_postsolve =
         options_.lp_presolve_requires_basis_postsolve;
-    if (ipx_no_crossover) options_.lp_presolve_requires_basis_postsolve = false;
+    if (lp_no_solution_basis)
+      options_.lp_presolve_requires_basis_postsolve = false;
     // Possibly presolve - according to option_.presolve
     //
     // If solving the relaxation of a MIP, make sure that LP presolve
@@ -1504,6 +1507,9 @@ HighsStatus Highs::optimizeModel() {
         solution_.value_valid = true;
         solution_.dual_valid = true;
         have_optimal_solution = true;
+        // Optimality will not be spotted if there's no basis
+        // postsolve
+        model_status_ = HighsModelStatus::kOptimal;
         break;
       }
       case HighsPresolveStatus::kInfeasible: {
@@ -1579,6 +1585,10 @@ HighsStatus Highs::optimizeModel() {
 
     // Postsolve. Does nothing if there were no reductions during presolve.
 
+    // If presolve has been run assuming that there's no basis
+    // postsolve - allowing sparsify to be used in presolve - so
+    // invalidate any basis
+    if (lp_no_solution_basis) this->invalidateBasis();
     const bool have_optimal_reduced_solution =
         model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
         (model_presolve_status_ == HighsPresolveStatus::kReduced &&
@@ -1635,7 +1645,7 @@ HighsStatus Highs::optimizeModel() {
           // was because either run_crossover was "off" or "choose"
           // and IPX determined optimality
           solution_.dual_valid = true;
-          basis_.invalidate();
+          this->invalidateBasis();
           this->lpKktCheck("After postsolve");
         } else {
           //
@@ -1829,11 +1839,12 @@ HighsStatus Highs::optimizeModel() {
     highsLogDev(log_options, HighsLogType::kInfo, "\n");
     double rlv_time_difference =
         fabs(sum_time - this_solve_time) / this_solve_time;
-    if (rlv_time_difference > 0.1)
+    if (rlv_time_difference > 0.1) {
       highsLogDev(options_.log_options, HighsLogType::kInfo,
                   "Strange: Solve time = %g; Sum times = %g: relative "
                   "difference = %g\n",
                   this_solve_time, sum_time, rlv_time_difference);
+    }
   }
   // Assess success according to the model status, regardless of
   // whether anything worse has happened earlier
@@ -2489,7 +2500,7 @@ HighsStatus Highs::setBasis() {
   //
   // Don't set to logical basis since that causes presolve to be
   // skipped
-  basis_.invalidate();
+  this->invalidateBasis();
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
