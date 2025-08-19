@@ -1195,7 +1195,7 @@ HPresolve::Result HPresolve::dominatedColumns(
               (!isEqOrRangedRow ||
                direction * bestVal >=
                    direction * ak - options->small_matrix_value) &&
-              checkDomination(direction, j, direction, k)) {
+              checkDomination(direction, col, direction, k)) {
             // direction =  1:
             // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
             // direction = -1:
@@ -1208,7 +1208,7 @@ HPresolve::Result HPresolve::dominatedColumns(
                      (!isEqOrRangedRow ||
                       direction * bestVal >=
                           -direction * ak - options->small_matrix_value) &&
-                     checkDomination(direction, j, -direction, k)) {
+                     checkDomination(direction, col, -direction, k)) {
             // direction =  1:
             // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
             // direction = -1:
@@ -1229,99 +1229,19 @@ HPresolve::Result HPresolve::dominatedColumns(
       if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
-          storeRow(bestRowMinus);
-
-          bool isEqOrRangedRow =
-              model->row_lower_[bestRowMinus] != -kHighsInf &&
-              model->row_upper_[bestRowMinus] != kHighsInf;
-
-          for (const HighsSliceNonzero& nonz : getStoredRow()) {
-            HighsInt k = nonz.index();
-            if (k == j || colDeleted[k]) continue;
-
-            double ak = nonz.value() * bestRowMinusScale;
-
-            if (-ajBestRowMinus <= -ak + options->small_matrix_value &&
-                (!isEqOrRangedRow ||
-                 -ajBestRowMinus >= -ak - options->small_matrix_value) &&
-                checkDomination(-1, j, -1, k)) {
-              // case (iii)  lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
-              ++numFixedCols;
-              if (fixColToLowerOrUnbounded(postsolve_stack, j)) {
-                // Handle unboundedness
-                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-                return Result::kDualInfeasible;
-              }
-              HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-              break;
-            } else if (-ajBestRowMinus <= ak + options->small_matrix_value &&
-                       (!isEqOrRangedRow ||
-                        -ajBestRowMinus >= ak - options->small_matrix_value) &&
-                       checkDomination(-1, j, 1, k)) {
-              // case (iv)  lb(x_j) = -inf, -x_j > x_k: set x_k = lb(x_k)
-              ++numFixedCols;
-              if (fixColToLowerOrUnbounded(postsolve_stack, j)) {
-                // Handle unboundedness
-                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-                return Result::kDualInfeasible;
-              }
-              HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-              break;
-            }
-          }
-
-          if (colDeleted[j]) {
-            HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
-            continue;
-          }
+          HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowMinus, j, HighsInt{-1},
+                                             bestRowMinusScale,
+                                             ajBestRowMinus));
+          if (colDeleted[j]) continue;
         }
       }
 
       if (model->col_cost_[j] <= 0.0 && worstCaseUb >= -primal_feastol) {
         lowerImplied = true;
         if (!upperImplied && bestRowPlus != -1) {
-          storeRow(bestRowPlus);
-          bool isEqOrRangedRow = model->row_lower_[bestRowPlus] != -kHighsInf &&
-                                 model->row_upper_[bestRowPlus] != kHighsInf;
-          for (const HighsSliceNonzero& nonz : getStoredRow()) {
-            HighsInt k = nonz.index();
-            if (k == j || colDeleted[k]) continue;
-
-            double ak = nonz.value() * bestRowPlusScale;
-
-            if (ajBestRowPlus <= ak + options->small_matrix_value &&
-                (!isEqOrRangedRow ||
-                 ajBestRowPlus >= ak - options->small_matrix_value) &&
-                checkDomination(1, j, 1, k)) {
-              // case (i)  ub(x_j) = inf, x_j > x_k: set x_k = lb(x_k)
-              ++numFixedCols;
-              if (fixColToUpperOrUnbounded(postsolve_stack, j)) {
-                // Handle unboundedness
-                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-                return Result::kDualInfeasible;
-              }
-              HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-              break;
-            } else if (ajBestRowPlus <= -ak + options->small_matrix_value &&
-                       (!isEqOrRangedRow ||
-                        ajBestRowPlus >= -ak - options->small_matrix_value) &&
-                       checkDomination(1, j, -1, k)) {
-              // case (ii)  ub(x_j) = inf, x_j > -x_k: set x_k = ub(x_k)
-              ++numFixedCols;
-              if (fixColToUpperOrUnbounded(postsolve_stack, j)) {
-                // Handle unboundedness
-                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-                return Result::kDualInfeasible;
-              }
-              HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-              break;
-            }
-          }
-
-          if (colDeleted[j]) {
-            HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
-            continue;
-          }
+          HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowPlus, j, HighsInt{1},
+                                             bestRowPlusScale, ajBestRowPlus));
+          if (colDeleted[j]) continue;
         }
       }
 
