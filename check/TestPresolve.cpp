@@ -724,3 +724,91 @@ TEST_CASE("presolve-issue-2402", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
 }
+
+TEST_CASE("presolve-issue-2446", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2446.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+}
+
+TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
+  // Tests the case where, for this model when run_crossover is off,
+  // sparsify is used to reduce the LP to empty. However, when
+  // starting from an empty LP, basis postsolve is always used
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/egout-ac.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  if (dev_run)
+    REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  // Firstly check that pure presolve reduces the LP to empty
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  // Ensure that sparsify isn't called
+  REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
+
+  const HighsLp& presolved_lp = h.getPresolvedLp();
+  REQUIRE(presolved_lp.num_col_ == 0);
+  REQUIRE(presolved_lp.num_row_ == 0);
+
+  HighsSolution solution;
+  HighsBasis basis;
+  basis.useful = true;
+  solution.value_valid = true;
+  solution.dual_valid = true;
+  // Check that postsolve with the empty solution and basis runs OK -
+  // ie doesn't trigger assert due to sparsify having been used
+  REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
+
+  // Check that using IPM with crossover runs OK without using
+  // sparsify
+  REQUIRE(h.setOptionValue("solver", kIpmString) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
+
+  // Check that pure presolve reduces the LP to empty without using
+  // sparsify
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
+  REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
+
+  // Check that pure presolve reduces the LP to empty using sparsify
+  // when lp_presolve_requires_basis_postsolve is false
+  bool lp_presolve_requires_basis_postsolve = false;
+  REQUIRE(h.setOptionValue("lp_presolve_requires_basis_postsolve",
+                           lp_presolve_requires_basis_postsolve) ==
+          HighsStatus::kOk);
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
+  REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
+  REQUIRE(h.getOptions().lp_presolve_requires_basis_postsolve ==
+          lp_presolve_requires_basis_postsolve);
+
+  // Now, with crossover off
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
+          HighsStatus::kOk);
+
+  // Now reset lp_presolve_requires_basis_postsolve default to true,
+  // to test whether it's set false due to running IPM without
+  // crossover
+  lp_presolve_requires_basis_postsolve = true;
+  REQUIRE(h.setOptionValue("lp_presolve_requires_basis_postsolve",
+                           lp_presolve_requires_basis_postsolve) ==
+          HighsStatus::kOk);
+
+  REQUIRE(h.clearSolver() == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
+  // Ensure that lp_presolve_requires_basis_postsolve has been reset
+  // to true, after being set false before presolve when using IPM
+  // without crossover
+  REQUIRE(h.getOptions().lp_presolve_requires_basis_postsolve ==
+          lp_presolve_requires_basis_postsolve);
+
+  h.resetGlobalScheduler(true);
+}

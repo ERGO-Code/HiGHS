@@ -16,7 +16,7 @@
 #include "util/HighsMatrixUtils.h"
 
 bool HighsLp::isMip() const {
-  HighsInt integrality_size = this->integrality_.size();
+  size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
     assert(integrality_size == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
@@ -34,7 +34,7 @@ bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
 }
 
 bool HighsLp::hasSemiVariables() const {
-  HighsInt integrality_size = this->integrality_.size();
+  size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
     assert(integrality_size == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
@@ -72,6 +72,15 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
 }
 
 bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
+  const bool equal_vectors = equalVectors(lp);
+  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
+#ifndef NDEBUG
+  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
+#endif
+  return equal_vectors && equal_matrix;
+}
+
+bool HighsLp::equalVectors(const HighsLp& lp) const {
   bool equal_vectors = true;
   equal_vectors = this->num_col_ == lp.num_col_ && equal_vectors;
   equal_vectors = this->num_row_ == lp.num_row_ && equal_vectors;
@@ -86,11 +95,7 @@ bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
 #ifndef NDEBUG
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif
-  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
-#ifndef NDEBUG
-  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
-#endif
-  return equal_vectors && equal_matrix;
+  return equal_vectors;
 }
 
 bool HighsLp::equalNames(const HighsLp& lp) const {
@@ -163,6 +168,27 @@ void HighsLp::exactResize() {
   if ((int)this->integrality_.size()) this->integrality_.resize(this->num_col_);
 }
 
+bool HighsLp::okNames() const {
+  if (this->col_names_.size() != static_cast<size_t>(this->num_col_))
+    return false;
+  if (this->row_names_.size() != static_cast<size_t>(this->num_row_))
+    return false;
+  // Look for names that are empty or have spaces
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    const std::string& name = this->col_names_[iCol];
+    if (HighsInt(name.length()) == 0) return false;
+    size_t space_pos = name.find(" ");
+    if (space_pos != std::string::npos) return false;
+  }
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+    const std::string& name = this->row_names_[iRow];
+    if (HighsInt(name.length()) == 0) return false;
+    size_t space_pos = name.find(" ");
+    if (space_pos != std::string::npos) return false;
+  }
+  return true;
+}
+
 void HighsLp::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;
@@ -182,8 +208,10 @@ void HighsLp::clear() {
   this->origin_name_ = "";
   this->objective_name_ = "";
 
-  this->new_col_name_ix_ = 0;
-  this->new_row_name_ix_ = 0;
+  this->col_name_prefix_ = "";
+  this->row_name_prefix_ = "";
+  this->col_name_suffix_ = 0;
+  this->row_name_suffix_ = 0;
   this->col_names_.clear();
   this->row_names_.clear();
 
@@ -322,91 +350,26 @@ void HighsLp::userCostScale(const HighsInt user_cost_scale) {
 }
 
 void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
-  // Don't add names if there are no columns, or if the names are
-  // already incomplete
+  // Don't add names if there are no columns being added
   if (this->num_col_ == 0) return;
   HighsInt col_names_size = this->col_names_.size();
-  if (col_names_size < this->num_col_) return;
-  if (!this->col_hash_.name2index.size())
-    this->col_hash_.form(this->col_names_);
+  if (col_names_size <= 0) return;
+  assert(col_names_size == this->num_col_ + num_new_col);
   // Handle the addition of user-defined names later
   assert(name == "");
-  for (HighsInt iCol = this->num_col_; iCol < this->num_col_ + num_new_col;
-       iCol++) {
-    const std::string col_name =
-        "col_ekk_" + std::to_string(this->new_col_name_ix_++);
-    bool added = false;
-    auto search = this->col_hash_.name2index.find(col_name);
-    if (search == this->col_hash_.name2index.end()) {
-      // Name not found in hash
-      if (col_names_size == this->num_col_) {
-        // No space (or name) for this col name
-        this->col_names_.push_back(col_name);
-        added = true;
-      } else if (col_names_size > iCol) {
-        // Space for this col name. Only add if name is blank
-        if (this->col_names_[iCol] == "") {
-          this->col_names_[iCol] = col_name;
-          added = true;
-        }
-      }
-    }
-    if (added) {
-      const bool duplicate =
-          !this->col_hash_.name2index.emplace(col_name, iCol).second;
-      assert(!duplicate);
-      assert(this->col_names_[iCol] == col_name);
-      assert(this->col_hash_.name2index.find(col_name)->second == iCol);
-    } else {
-      // Duplicate name or other failure
-      this->col_hash_.name2index.clear();
-      return;
-    }
-  }
+  // Blank names for the new columns were added in
+  // appendColsToLpVectors
 }
 
 void HighsLp::addRowNames(const std::string name, const HighsInt num_new_row) {
-  // Don't add names if there are no rows, or if the names are already
-  // incomplete
+  // Don't add names if there are no rows being added
   if (this->num_row_ == 0) return;
   HighsInt row_names_size = this->row_names_.size();
-  if (row_names_size < this->num_row_) return;
-  if (!this->row_hash_.name2index.size())
-    this->row_hash_.form(this->row_names_);
+  if (row_names_size <= 0) return;
+  assert(row_names_size == this->num_row_ + num_new_row);
   // Handle the addition of user-defined names later
   assert(name == "");
-  for (HighsInt iRow = this->num_row_; iRow < this->num_row_ + num_new_row;
-       iRow++) {
-    const std::string row_name =
-        "row_ekk_" + std::to_string(this->new_row_name_ix_++);
-    bool added = false;
-    auto search = this->row_hash_.name2index.find(row_name);
-    if (search == this->row_hash_.name2index.end()) {
-      // Name not found in hash
-      if (row_names_size == this->num_row_) {
-        // No space (or name) for this row name
-        this->row_names_.push_back(row_name);
-        added = true;
-      } else if (row_names_size > iRow) {
-        // Space for this row name. Only add if name is blank
-        if (this->row_names_[iRow] == "") {
-          this->row_names_[iRow] = row_name;
-          added = true;
-        }
-      }
-    }
-    if (added) {
-      const bool duplicate =
-          !this->row_hash_.name2index.emplace(row_name, iRow).second;
-      assert(!duplicate);
-      assert(this->row_names_[iRow] == row_name);
-      assert(this->row_hash_.name2index.find(row_name)->second == iRow);
-    } else {
-      // Duplicate name or other failure
-      this->row_hash_.name2index.clear();
-      return;
-    }
-  }
+  // Blank names for the new rows were added in appendRowsToLpVectors
 }
 
 void HighsLp::deleteColsFromVectors(
@@ -608,10 +571,10 @@ bool HighsLpMods::isClear() {
 }
 
 void HighsNameHash::form(const std::vector<std::string>& name) {
-  size_t num_name = name.size();
   this->clear();
-  for (size_t index = 0; index < num_name; index++) {
-    auto emplace_result = this->name2index.emplace(name[index], index);
+  for (size_t index = 0; index < name.size(); index++) {
+    auto emplace_result =
+        this->name2index.emplace(name[index], static_cast<int>(index));
     const bool duplicate = !emplace_result.second;
     if (duplicate) {
       // Find the original and mark it as duplicate
@@ -623,11 +586,11 @@ void HighsNameHash::form(const std::vector<std::string>& name) {
 }
 
 bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
-  size_t num_name = name.size();
   this->clear();
   bool has_duplicate = false;
-  for (size_t index = 0; index < num_name; index++) {
-    has_duplicate = !this->name2index.emplace(name[index], index).second;
+  for (size_t index = 0; index < name.size(); index++) {
+    has_duplicate =
+        !this->name2index.emplace(name[index], static_cast<int>(index)).second;
     if (has_duplicate) break;
   }
   this->clear();
@@ -638,8 +601,7 @@ void HighsNameHash::update(int index, const std::string& old_name,
                            const std::string& new_name) {
   this->name2index.erase(old_name);
   auto emplace_result = this->name2index.emplace(new_name, index);
-  const bool duplicate = !emplace_result.second;
-  if (duplicate) {
+  if (!emplace_result.second) {
     // Find the original and mark it as duplicate
     auto& search = emplace_result.first;
     assert(int(search->second) < int(this->name2index.size()));

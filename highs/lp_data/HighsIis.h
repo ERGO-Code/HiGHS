@@ -11,7 +11,7 @@
 #ifndef LP_DATA_HIGHSIIS_H_
 #define LP_DATA_HIGHSIIS_H_
 
-#include "lp_data/HighsLp.h"
+#include "model/HighsModel.h"
 
 const bool kIisDevReport = false;
 
@@ -43,11 +43,17 @@ class HighsIis {
   HighsStatus getData(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis& basis,
                       const std::vector<HighsInt>& infeasible_row);
+  void getLp(const HighsLp& lp);
+  void getStatus(const HighsLp& lp);
 
   HighsStatus compute(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis* basis = nullptr);
 
   bool trivial(const HighsLp& lp, const HighsOptions& options);
+  bool rowValueBounds(const HighsLp& lp, const HighsOptions& options);
+
+  bool lpDataOk(const HighsLp& lp, const HighsOptions& options) const;
+  bool lpOk(const HighsOptions& options) const;
 
   // Data members
   bool valid_ = false;
@@ -56,7 +62,10 @@ class HighsIis {
   std::vector<HighsInt> row_index_;
   std::vector<HighsInt> col_bound_;
   std::vector<HighsInt> row_bound_;
+  std::vector<HighsInt> col_status_;
+  std::vector<HighsInt> row_status_;
   std::vector<HighsIisInfo> info_;
+  HighsModel model_;
 };
 
 #endif  // LP_DATA_HIGHSIIS_H_

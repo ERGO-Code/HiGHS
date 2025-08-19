@@ -141,11 +141,10 @@ void writeModelBoundSolution(
     const bool have_dual, const std::vector<double>& dual,
     const bool have_basis, const std::vector<HighsBasisStatus>& status,
     const HighsVarType* integrality) {
-  const bool have_names = names.size() > 0;
-  if (have_names) assert((int)names.size() >= dim);
-  if (have_primal) assert((int)primal.size() >= dim);
-  if (have_dual) assert((int)dual.size() >= dim);
-  if (have_basis) assert((int)status.size() >= dim);
+  assert(names.size() == static_cast<size_t>(dim));
+  if (have_primal) assert(primal.size() == static_cast<size_t>(dim));
+  if (have_dual) assert(dual.size() == static_cast<size_t>(dim));
+  if (have_basis) assert(status.size() == static_cast<size_t>(dim));
   const bool have_integrality = integrality != NULL;
   std::stringstream ss;
   std::string s = columns ? "Columns\n" : "Rows\n";
@@ -153,11 +152,7 @@ void writeModelBoundSolution(
   ss.str(std::string());
   ss << "    Index Status        Lower        Upper       Primal         Dual";
   if (have_integrality) ss << "  Type      ";
-  if (have_names) {
-    ss << "  Name\n";
-  } else {
-    ss << "\n";
-  }
+  ss << "  Name\n";
   highsFprintfString(file, log_options, ss.str());
   for (HighsInt ix = 0; ix < dim; ix++) {
     ss.str(std::string());
@@ -177,11 +172,7 @@ void writeModelBoundSolution(
     }
     if (have_integrality)
       ss << highsFormatToString("  %s", typeToString(integrality[ix]).c_str());
-    if (have_names) {
-      ss << highsFormatToString("  %-s\n", names[ix].c_str());
-    } else {
-      ss << "\n";
-    }
+    ss << highsFormatToString("  %-s\n", names[ix].c_str());
     highsFprintfString(file, log_options, ss.str());
   }
 }
@@ -214,8 +205,13 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
                          const HighsLp& lp,
                          const std::vector<double>& primal_solution,
                          const bool sparse) {
+  // Use when writing out the solution file (when names can be assumed
+  // to exist) and the improving solution in the MIP solver (when
+  // names cannot be assumed to exist)
   HighsInt num_nonzero_primal_value = 0;
   const bool have_col_names = lp.col_names_.size() > 0;
+  if (have_col_names)
+    assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
   if (sparse) {
     // Determine the number of nonzero primal solution values
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
@@ -227,17 +223,17 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
 
   std::stringstream ss;
   ss.str(std::string());
-  ss << highsFormatToString("# Columns %" HIGHSINT_FORMAT "\n",
-                            sparse ? -num_nonzero_primal_value : lp.num_col_);
+  HighsInt num_col_field = sparse ? -num_nonzero_primal_value : lp.num_col_;
+  ss << highsFormatToString("# Columns %d\n", int(num_col_field));
   highsFprintfString(file, log_options, ss.str());
   for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
     if (sparse && !primal_solution[ix]) continue;
     auto valStr = highsDoubleToString(primal_solution[ix],
                                       kHighsSolutionValueToStringTolerance);
-    // Create a column name
-    ss.str(std::string());
-    ss << "C" << ix;
-    const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+    // Don't invent names locallty: if none exist, then indicate this
+    // - so that the (sparse) solution line format remains "name value
+    // (index)"
+    const std::string name = have_col_names ? lp.col_names_[ix] : "NoName";
     ss.str(std::string());
     ss << highsFormatToString("%-s %s", name.c_str(), valStr.data());
     if (sparse) ss << highsFormatToString(" %d", int(ix));
@@ -251,12 +247,10 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model, const HighsSolution& solution,
                         const HighsInfo& info, const bool sparse) {
   const HighsLp& lp = model.lp_;
-  const bool have_col_names = lp.col_names_.size() > 0;
-  const bool have_row_names = lp.row_names_.size() > 0;
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
-  if (have_col_names) assert((int)lp.col_names_.size() >= lp.num_col_);
-  if (have_row_names) assert((int)lp.row_names_.size() >= lp.num_row_);
+  assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
   if (have_primal) {
     assert((int)solution.col_value.size() >= lp.num_col_);
     assert((int)solution.row_value.size() >= lp.num_row_);
@@ -288,12 +282,9 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
       auto valStr = highsDoubleToString(solution.row_value[ix],
                                         kHighsSolutionValueToStringTolerance);
-      // Create a row name
       ss.str(std::string());
-      ss << "R" << ix;
-      const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
-      ss.str(std::string());
-      ss << highsFormatToString("%-s %s\n", name.c_str(), valStr.data());
+      ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
+                                valStr.data());
       highsFprintfString(file, log_options, ss.str());
     }
   }
@@ -314,10 +305,8 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
       auto valStr = highsDoubleToString(solution.col_dual[ix],
                                         kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
-      ss << "C" << ix;
-      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
-      ss.str(std::string());
-      ss << highsFormatToString("%-s %s\n", name.c_str(), valStr.data());
+      ss << highsFormatToString("%-s %s\n", lp.col_names_[ix].c_str(),
+                                valStr.data());
       highsFprintfString(file, log_options, ss.str());
     }
     ss.str(std::string());
@@ -327,84 +316,122 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
       auto valStr = highsDoubleToString(solution.row_dual[ix],
                                         kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
-      ss << "R" << ix;
-      const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
-      ss.str(std::string());
-      ss << highsFormatToString("%-s %s\n", name.c_str(), valStr.data());
+      ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
+                                valStr.data());
       highsFprintfString(file, log_options, ss.str());
     }
   }
 }
 
-bool hasNamesWithSpaces(const HighsLogOptions& log_options,
-                        const HighsInt num_name,
+bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp) {
+  if (hasNamesWithSpaces(log_options, true, lp.col_names_)) return true;
+  return hasNamesWithSpaces(log_options, false, lp.row_names_);
+}
+
+bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
                         const std::vector<std::string>& names) {
   HighsInt num_names_with_spaces = 0;
+  HighsInt num_name = names.size();
   for (HighsInt ix = 0; ix < num_name; ix++) {
     size_t space_pos = names[ix].find(" ");
     if (space_pos != std::string::npos) {
       if (num_names_with_spaces == 0) {
-        highsLogDev(
-            log_options, HighsLogType::kInfo,
-            "Name |%s| contains a space character in position %" HIGHSINT_FORMAT
-            "\n",
-            names[ix].c_str(), space_pos);
+        highsLogDev(log_options, HighsLogType::kInfo,
+                    "%s name |%s| contains a space character in position "
+                    "%" HIGHSINT_FORMAT "\n",
+                    col ? "Column" : "Row", names[ix].c_str(), space_pos);
         num_names_with_spaces++;
       }
     }
   }
   if (num_names_with_spaces)
     highsLogDev(log_options, HighsLogType::kInfo,
-                "There are %" HIGHSINT_FORMAT " names with spaces\n",
-                num_names_with_spaces);
+                "There are %d %s names with spaces\n",
+                HighsInt(num_names_with_spaces), col ? "column" : "row");
   return num_names_with_spaces > 0;
 }
 
-HighsInt maxNameLength(const HighsInt num_name,
-                       const std::vector<std::string>& names) {
+HighsInt maxNameLength(const HighsLp& lp) {
+  return std::max(maxNameLength(lp.col_names_), maxNameLength(lp.row_names_));
+}
+
+HighsInt maxNameLength(const std::vector<std::string>& names) {
+  HighsInt num_name = names.size();
   HighsInt max_name_length = 0;
   for (HighsInt ix = 0; ix < num_name; ix++)
-    max_name_length = std::max((HighsInt)names[ix].length(), max_name_length);
+    max_name_length = std::max(HighsInt(names[ix].length()), max_name_length);
   return max_name_length;
 }
 
-HighsStatus normaliseNames(const HighsLogOptions& log_options,
-                           const std::string name_type, const HighsInt num_name,
-                           std::vector<std::string>& names,
-                           HighsInt& max_name_length) {
-  // Record the desired maximum name length
-  HighsInt desired_max_name_length = max_name_length;
-  // First look for empty names
-  HighsInt num_empty_name = 0;
-  std::string name_prefix = name_type.substr(0, 1);
-  bool names_with_spaces = false;
-  for (HighsInt ix = 0; ix < num_name; ix++) {
-    if ((HighsInt)names[ix].length() == 0) num_empty_name++;
-  }
-  // If there are no empty names - in which case they will all be
-  // replaced - find the maximum name length
-  if (!num_empty_name) max_name_length = maxNameLength(num_name, names);
-  bool construct_names =
-      num_empty_name || max_name_length > desired_max_name_length;
-  if (construct_names) {
-    // Construct names, either because they are empty names, or
-    // because the existing names are too long
+HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp) {
+  HighsStatus call_status =
+      normaliseNames(log_options, true, lp.num_col_, lp.col_name_prefix_,
+                     lp.col_name_suffix_, lp.col_names_, lp.col_hash_);
+  if (call_status == HighsStatus::kError) return call_status;
+  HighsStatus return_status = call_status;
+  call_status =
+      normaliseNames(log_options, false, lp.num_row_, lp.row_name_prefix_,
+                     lp.row_name_suffix_, lp.row_names_, lp.row_hash_);
+  if (call_status != HighsStatus::kOk) return call_status;
+  return return_status;
+}
 
+HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
+                           HighsInt num_name_required, std::string& name_prefix,
+                           HighsInt& name_suffix,
+                           std::vector<std::string>& names,
+                           HighsNameHash& name_hash) {
+  // First look for there being no names
+
+  HighsInt max_name_length = maxNameLength(names);
+  if (max_name_length == 0) {
+    // No names or all blank, so use minimal prefix, and start suffix
+    // from 0
+    name_prefix =
+        column ? kHighsMinimalColNamePrefix : kHighsMinimalrowNamePrefix;
+    name_suffix = 0;
+    names.resize(num_name_required);
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "There are empty or excessively-long %s names: using "
-                 "constructed names with prefix \"%s\"\n",
-                 name_type.c_str(), name_prefix.c_str());
-    for (HighsInt ix = 0; ix < num_name; ix++)
-      names[ix] = name_prefix + std::to_string(ix);
-  } else {
-    // Using original names, so look to see whether there are names with spaces
-    names_with_spaces = hasNamesWithSpaces(log_options, num_name, names);
+                 "%s names are blank or not present: using "
+                 "names with prefix \"%s\", beginning with suffix %d\n",
+                 column ? "Column" : "Row   ", name_prefix.c_str(),
+                 int(name_suffix));
+    for (HighsInt ix = 0; ix < num_name_required; ix++)
+      names[ix] = name_prefix + std::to_string(name_suffix++);
+    return HighsStatus::kWarning;
   }
-  // Find the final maximum name length
-  max_name_length = maxNameLength(num_name, names);
-  // Can't have names with spaces and more than 8 characters
-  if (max_name_length > 8 && names_with_spaces) return HighsStatus::kError;
-  if (construct_names) return HighsStatus::kWarning;
+  names.resize(num_name_required);
+  HighsInt num_blank = 0;
+  const HighsInt from_name_suffix = name_suffix;
+  for (HighsInt ix = 0; ix < num_name_required; ix++) {
+    if (HighsInt(names[ix].length()) == 0) {
+      // Name is blank, so create one
+      num_blank++;
+      name_prefix =
+          column ? kHighsUniqueColNamePrefix : kHighsUniquerowNamePrefix;
+      names[ix] = name_prefix + std::to_string(name_suffix++);
+    } else if (names[ix].find(" ") != std::string::npos) {
+      // Name contains a space, so return error
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s %d name \"%s\" contains a space character\n",
+                   column ? "Column" : "Row", int(ix), names[ix].c_str());
+      return HighsStatus::kError;
+    }
+  }
+  // Check for duplicates
+  if (name_hash.hasDuplicate(names)) {
+    name_hash.name2index.clear();
+    return HighsStatus::kError;
+  }
+  if (num_blank) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "Replaced %d blank %6s name%s by name%s with prefix \"%s\", "
+                 "beginning with suffix %d\n",
+                 int(num_blank), column ? "column" : "row",
+                 num_blank > 1 ? "s" : "", num_blank > 1 ? "s" : "",
+                 name_prefix.c_str(), int(from_name_suffix));
+    return HighsStatus::kWarning;
+  }
   return HighsStatus::kOk;
 }
 
@@ -418,6 +445,8 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
   const bool have_basis = basis.valid;
   const HighsLp& lp = model.lp_;
   const HighsLogOptions& log_options = options.log_options;
+  assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
   if (style == kSolutionStyleOldRaw) {
     writeOldRawSolution(file, log_options, lp, basis, solution);
   } else if (style == kSolutionStylePretty) {
@@ -507,8 +536,8 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const double kGlpsolPrintAsZero = 1e-9;
   const HighsLp& lp = model.lp_;
   const HighsLogOptions& log_options = options.log_options;
-  const bool have_col_names = (lp.col_names_.size() != 0);
-  const bool have_row_names = (lp.row_names_.size() != 0);
+  assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
   // Determine number of nonzeros including the objective function
   // and, hence, determine whether there is an objective function
   HighsInt num_nz = lp.a_matrix_.numNz();
@@ -706,12 +735,9 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   //
   // Determine the objective name to write out
   std::string objective_name = lp.objective_name_;
-  // Make sure that no objective name is written out if there are rows
-  // and no row names
-  if (lp.num_row_ && !have_row_names) objective_name = "";
-  // if there are row names to be written out, there must be a
+  // There are row names to be written out, so there must be a
   // non-trivial objective name
-  if (have_row_names) assert(lp.objective_name_ != "");
+  assert(lp.objective_name_ != "");
   const bool has_objective_name = lp.objective_name_ != "";
   highsFprintfString(
       file, log_options,
@@ -804,8 +830,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       }
     } else {
       ss << highsFormatToString("%6d ", (int)row_id);
-      std::string row_name = "";
-      if (have_row_names) row_name = lp.row_names_[iRow];
+      std::string row_name = lp.row_names_[iRow];
       if (row_name.length() <= 12) {
         ss << highsFormatToString("%-12s ", row_name.c_str());
       } else {
@@ -929,11 +954,9 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       }
     } else {
       ss << highsFormatToString("%6d ", (int)(iCol + 1));
-      std::string col_name = "";
-      if (have_col_names) col_name = lp.col_names_[iCol];
-      if (!have_col_names || col_name.length() <= 12) {
-        ss << highsFormatToString("%-12s ",
-                                  !have_col_names ? "" : col_name.c_str());
+      std::string col_name = lp.col_names_[iCol];
+      if (col_name.length() <= 12) {
+        ss << highsFormatToString("%-12s ", col_name.c_str());
       } else {
         ss << highsFormatToString("%s\n", col_name.c_str());
         highsFprintfString(file, log_options, ss.str());
@@ -1425,6 +1448,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Aggregator";
   } else if (rule_type == kPresolveRuleParallelRowsAndCols) {
     return "Parallel rows and columns";
+  } else if (rule_type == kPresolveRuleSparsify) {
+    return "Sparsify";
   } else if (rule_type == kPresolveRuleProbing) {
     return "Probing";
   }

@@ -61,6 +61,9 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
+
+  highs.resetGlobalScheduler(true);
+
   return (HighsInt)status;
 }
 
@@ -103,6 +106,8 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
         row_value[i] = solution.row_value[i];
     }
   }
+
+  highs.resetGlobalScheduler(true);
 
   return (HighsInt)status;
 }
@@ -160,12 +165,18 @@ HighsInt Highs_qpCall(
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
+
+  highs.resetGlobalScheduler(true);
+
   return (HighsInt)status;
 }
 
 void* Highs_create(void) { return new Highs(); }
 
-void Highs_destroy(void* highs) { delete (Highs*)highs; }
+void Highs_destroy(void* highs) {
+  Highs::resetGlobalScheduler(true);
+  delete (Highs*)highs;
+}
 
 const char* Highs_version(void) { return highsVersion(); }
 HighsInt Highs_versionMajor(void) { return highsVersionMajor(); }
@@ -1295,6 +1306,60 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               HighsInt* integrality) {
   return Highs_getHighsLpData(((Highs*)highs)->getPresolvedLp(), a_format,
                               num_col, num_row, num_nz, sense, offset, col_cost,
+                              col_lower, col_upper, row_lower, row_upper,
+                              a_start, a_index, a_value, integrality);
+}
+
+HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
+                      HighsInt* col_index, HighsInt* row_index,
+                      HighsInt* col_bound, HighsInt* row_bound,
+                      HighsInt* col_status, HighsInt* row_status) {
+  HighsIis iis;
+  HighsInt status = (HighsInt)((Highs*)highs)->getIis(iis);
+  if (status == (HighsInt)HighsStatus::kError) return status;
+  *iis_num_col = iis.col_index_.size();
+  *iis_num_row = iis.row_index_.size();
+  if (col_index != nullptr) {
+    for (size_t i = 0; i < *iis_num_col; i++) {
+      col_index[i] = iis.col_index_[i];
+    }
+  }
+  if (row_index != nullptr) {
+    for (size_t i = 0; i < *iis_num_row; i++) {
+      row_index[i] = iis.row_index_[i];
+    }
+  }
+  if (col_bound != nullptr) {
+    for (size_t i = 0; i < *iis_num_col; i++) {
+      col_bound[i] = iis.col_bound_[i];
+    }
+  }
+  if (row_bound != nullptr) {
+    for (size_t i = 0; i < *iis_num_row; i++) {
+      row_bound[i] = iis.row_bound_[i];
+    }
+  }
+  if (col_status != nullptr) {
+    for (size_t i = 0; i < ((Highs*)highs)->getLp().num_col_; i++) {
+      col_status[i] = iis.col_status_[i];
+    }
+  }
+  if (row_status != nullptr) {
+    for (size_t i = 0; i < ((Highs*)highs)->getLp().num_row_; i++) {
+      row_status[i] = iis.row_status_[i];
+    }
+  }
+  return status;
+}
+
+HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,
+                        HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz,
+                        HighsInt* sense, double* offset, double* col_cost,
+                        double* col_lower, double* col_upper, double* row_lower,
+                        double* row_upper, HighsInt* a_start, HighsInt* a_index,
+                        double* a_value, HighsInt* integrality) {
+  return Highs_getHighsLpData(((Highs*)highs)->getIisLp(), a_format, num_col,
+                              num_row, num_nz, sense, offset, col_cost,
                               col_lower, col_upper, row_lower, row_upper,
                               a_start, a_index, a_value, integrality);
 }

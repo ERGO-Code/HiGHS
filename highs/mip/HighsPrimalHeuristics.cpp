@@ -155,7 +155,10 @@ bool HighsPrimalHeuristics::solveSubMip(
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
-    double adjustmentfactor = submipsolver.numCol() / std::max(1.0, numUnfixed);
+    double adjustmentfactor =
+        ((1 - fixingRate) * mipsolver.mipdata_->integral_cols.size() +
+         mipsolver.mipdata_->continuous_cols.size()) /
+        std::max(1.0, numUnfixed);
     // (double)mipsolver.orig_model_->a_matrix_.value_.size();
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
@@ -316,7 +319,25 @@ void HighsPrimalHeuristics::rootReducedCost() {
               localdom.col_lower_, localdom.col_upper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
-              200 + mipsolver.mipdata_->num_nodes / 20, 12);
+              200 + static_cast<HighsInt>(mipsolver.mipdata_->num_nodes / 20),
+              12);
+}
+
+static double calcFixVal(double rootchange, double fracval, double cost) {
+  // reinforce direction of this solution away from root
+  // solution if the change is at least 0.4
+  // otherwise take the direction where the objective gets worse
+  // if objective is zero round to nearest integer
+  if (rootchange >= 0.4)
+    return std::ceil(fracval);
+  else if (rootchange <= -0.4)
+    return std::floor(fracval);
+  else if (cost > 0.0)
+    return std::ceil(fracval);
+  else if (cost < 0.0)
+    return std::floor(fracval);
+  else
+    return std::floor(fracval + 0.5);
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
@@ -431,25 +452,15 @@ retry:
 
     if (numBranched == 0) {
       auto getFixVal = [&](HighsInt col, double fracval) {
-        double fixval;
-
         // reinforce direction of this solution away from root
         // solution if the change is at least 0.4
         // otherwise take the direction where the objective gets worse
         // if objective is zero round to nearest integer
-        double rootchange = mipsolver.mipdata_->rootlpsol.empty()
-                                ? 0.0
-                                : fracval - mipsolver.mipdata_->rootlpsol[col];
-        if (rootchange >= 0.4)
-          fixval = std::ceil(fracval);
-        else if (rootchange <= -0.4)
-          fixval = std::floor(fracval);
-        if (mipsolver.model_->col_cost_[col] > 0.0)
-          fixval = std::ceil(fracval);
-        else if (mipsolver.model_->col_cost_[col] < 0.0)
-          fixval = std::floor(fracval);
-        else
-          fixval = std::floor(fracval + 0.5);
+        double fixval =
+            calcFixVal(mipsolver.mipdata_->rootlpsol.empty()
+                           ? 0.0
+                           : fracval - mipsolver.mipdata_->rootlpsol[col],
+                       fracval, mipsolver.model_->col_cost_[col]);
         // make sure we do not set an infeasible domain
         fixval = std::min(localdom.col_upper_[col], fixval);
         fixval = std::max(localdom.col_lower_[col], fixval);
@@ -668,17 +679,8 @@ retry:
         // solution if the change is at least 0.4
         // otherwise take the direction where the objective gets worse
         // if objective is zero round to nearest integer
-        double rootchange = fracval - mipsolver.mipdata_->rootlpsol[col];
-        if (rootchange >= 0.4)
-          fixval = std::ceil(fracval);
-        else if (rootchange <= -0.4)
-          fixval = std::floor(fracval);
-        if (mipsolver.model_->col_cost_[col] > 0.0)
-          fixval = std::ceil(fracval);
-        else if (mipsolver.model_->col_cost_[col] < 0.0)
-          fixval = std::floor(fracval);
-        else
-          fixval = std::floor(fracval + 0.5);
+        fixval = calcFixVal(fracval - mipsolver.mipdata_->rootlpsol[col],
+                            fracval, mipsolver.model_->col_cost_[col]);
       }
       // make sure we do not set an infeasible domain
       fixval = std::min(localdom.col_upper_[col], fixval);

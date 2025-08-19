@@ -144,6 +144,9 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
+const std::string kHighsBasisFileV1 = "v1";  // Deprecated
+const std::string kHighsBasisFileV2 = "v2";
+
 enum SolutionStyle {
   kSolutionStyleOldRaw = -1,
   kSolutionStyleRaw = 0,
@@ -163,6 +166,10 @@ enum GlpsolCostRowLocation {
 };
 
 const std::string kHighsFilenameDefault = "";
+const std::string kHighsMinimalColNamePrefix = "c";
+const std::string kHighsMinimalrowNamePrefix = "r";
+const std::string kHighsUniqueColNamePrefix = "c_ekk";
+const std::string kHighsUniquerowNamePrefix = "r_ekk";
 
 enum class HighsPresolveStatus {
   kNotPresolved = -1,
@@ -262,19 +269,29 @@ enum PresolveRuleType : int {
   kPresolveRuleDependentFreeCols,
   kPresolveRuleAggregator,
   kPresolveRuleParallelRowsAndCols,
+  kPresolveRuleSparsify,
   kPresolveRuleProbing,
   kPresolveRuleMax = kPresolveRuleProbing,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount,
 };
 
-enum IisStrategy {
+enum IisStrategy : int {
   kIisStrategyMin = 0,
-  kIisStrategyFromLpRowPriority = kIisStrategyMin,  // 0
-  kIisStrategyFromLpColPriority,                    // 1
-  //  kIisStrategyFromRayRowPriority,                     // 2
-  //  kIisStrategyFromRayColPriority,                     // 3
+  kIisStrategyLight = kIisStrategyMin,  // 0
+  kIisStrategyFromLpRowPriority,        // 1
+  kIisStrategyFromLpColPriority,        // 2
+  //  kIisStrategyFromRayRowPriority,                     // 3
+  //  kIisStrategyFromRayColPriority,                     // 4
   kIisStrategyMax = kIisStrategyFromLpColPriority
+};
+
+enum IisStatus {
+  kIisStatusMin = 0,
+  kIisStatusInConflict = kIisStatusMin,  // 0
+  kIisStatusNotInConflict,               // 1
+  kIisStatusMaybeInConflict,             // 2
+  kIisStatusMax = kIisStatusMaybeInConflict
 };
 
 // Default KKT tolerance
