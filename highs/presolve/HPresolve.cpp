@@ -1160,6 +1160,72 @@ HPresolve::Result HPresolve::dominatedColumns(
     }
 
     if (colIsBinary) {
+      // lambda for fixing variables
+      auto fixCol = [&](HighsInt col, HighsInt direction) {
+        if (direction > 0) {
+          if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
+            // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
+          }
+        } else {
+          if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
+            // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
+          }
+        }
+        return Result::kOk;
+      };
+
+      auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
+                             double scale, double bestVal) {
+        storeRow(row);
+        bool isEqOrRangedRow = model->row_lower_[row] != -kHighsInf &&
+                               model->row_upper_[row] != kHighsInf;
+
+        for (const HighsSliceNonzero& nonz : getStoredRow()) {
+          HighsInt k = nonz.index();
+          if (k == col || colDeleted[k]) continue;
+
+          double ak = nonz.value() * scale;
+
+          if (direction * bestVal <=
+                  direction * ak + options->small_matrix_value &&
+              (!isEqOrRangedRow ||
+               direction * bestVal >=
+                   direction * ak - options->small_matrix_value) &&
+              checkDomination(direction, j, direction, k)) {
+            // direction =  1:
+            // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
+            // direction = -1:
+            // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
+            ++numFixedCols;
+            HPRESOLVE_CHECKED_CALL(fixCol(col, -direction));
+            break;
+          } else if (direction * bestVal <=
+                         -direction * ak + options->small_matrix_value &&
+                     (!isEqOrRangedRow ||
+                      direction * bestVal >=
+                          -direction * ak - options->small_matrix_value) &&
+                     checkDomination(direction, j, -direction, k)) {
+            // direction =  1:
+            // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
+            // direction = -1:
+            // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
+            ++numFixedCols;
+            HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
+            break;
+          }
+        }
+
+        if (colDeleted[col]) {
+          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+          HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
+        }
+        return Result::kOk;
+      };
+
       if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
