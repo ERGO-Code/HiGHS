@@ -1123,20 +1123,17 @@ HPresolve::Result HPresolve::dominatedColumns(
             return impliedRowBounds.getResidualSumLower(row, col, val);
         };
 
-        auto calcBound = [&](HighsInt row, HighsInt col, double val,
-                             HighsInt direction, double rhs) {
-          return (rhs - getResidual(row, col, val, direction)) / val;
-        };
-
         auto updateWorstCaseBounds = [&](HighsInt row, HighsInt col, double val,
                                          HighsInt direction, double rhs) {
           if (direction * rhs == kHighsInf) return;
           if (model->col_cost_[col] >= 0.0 && direction * val < 0.0) {
             worstCaseLb =
-                std::max(calcBound(row, col, val, direction, rhs), worstCaseLb);
+                std::max((rhs - getResidual(row, col, val, direction)) / val,
+                         worstCaseLb);
           } else if (model->col_cost_[col] <= 0.0 && direction * val > 0.0) {
             worstCaseUb =
-                std::min(calcBound(row, col, val, direction, rhs), worstCaseUb);
+                std::min((rhs - getResidual(row, col, val, direction)) / val,
+                         worstCaseUb);
           }
         };
 
