@@ -1121,7 +1121,8 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
   REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
           HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.writeSolution("", kSolutionStylePretty) == HighsStatus::kOk);
+  REQUIRE(highs.writeSolution("", kSolutionStylePretty) ==
+          HighsStatus::kWarning);
 
   const double required_objective_function_value = -2.25;
 

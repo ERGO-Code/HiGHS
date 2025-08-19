@@ -20,7 +20,7 @@
 #include "util/HighsIntegers.h"
 
 std::string HighsMipSolverData::solutionSourceToString(
-    const int solution_source, const bool code) {
+    const int solution_source, const bool code) const {
   if (solution_source == kSolutionSourceNone) {
     if (code) return " ";
     return "None";
@@ -1120,6 +1120,11 @@ try_again:
     }
   }
 
+  const double transformed_solobj =
+      static_cast<double>(static_cast<HighsInt>(mipsolver.orig_model_->sense_) *
+                              mipsolver_quad_objective_value -
+                          mipsolver.model_->offset_);
+
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
@@ -1128,6 +1133,12 @@ try_again:
     const bool interrupt = interruptFromCallbackWithData(
         kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
     assert(!interrupt);
+  }
+
+  // Catch the case where the repaired solution now has worse objective
+  // than the current stored solution
+  if (transformed_solobj >= upper_bound && !sol.empty()) {
+    return transformed_solobj;
   }
 
   if (possibly_store_as_new_incumbent) {
@@ -1171,17 +1182,16 @@ try_again:
       return kHighsInf;
     }
   }
-  // return the objective value in the transformed space
-  if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
-    return -double(mipsolver_quad_objective_value + mipsolver.model_->offset_);
 
-  return double(mipsolver_quad_objective_value - mipsolver.model_->offset_);
+  // return the objective value in the transformed space
+  return transformed_solobj;
 }
 
 double HighsMipSolverData::percentageInactiveIntegers() const {
-  return 100.0 * (1.0 - double(integer_cols.size() -
-                               cliquetable.getSubstitutions().size()) /
-                            numintegercols);
+  return 100.0 *
+         (1.0 - static_cast<double>(integer_cols.size() -
+                                    cliquetable.getSubstitutions().size()) /
+                    numintegercols);
 }
 
 void HighsMipSolverData::performRestart() {
@@ -1498,7 +1508,7 @@ static std::array<char, 22> convertToPrintString(double val,
   return printString;
 }
 
-void HighsMipSolverData::printSolutionSourceKey() {
+void HighsMipSolverData::printSolutionSourceKey() const {
   std::stringstream ss;
   // Last MipSolutionSource enum is kSolutionSourceCleanup - which is
   // not a solution source, but used to force the last logging line to

@@ -984,7 +984,7 @@ bool HighsSymmetryDetection::partitionRefinement() {
   return true;
 }
 
-HighsInt HighsSymmetryDetection::selectTargetCell() {
+HighsInt HighsSymmetryDetection::selectTargetCell() const {
   HighsInt i = 0;
   if (nodeStack.size() > 1) i = nodeStack[nodeStack.size() - 2].targetCell;
 
@@ -997,7 +997,7 @@ HighsInt HighsSymmetryDetection::selectTargetCell() {
   return -1;
 }
 
-bool HighsSymmetryDetection::checkStoredAutomorphism(HighsInt vertex) {
+bool HighsSymmetryDetection::checkStoredAutomorphism(HighsInt vertex) const {
   HighsInt numCheck = std::min(numAutomorphisms, (HighsInt)64);
 
   for (HighsInt i = 0; i < numCheck; ++i) {
@@ -1363,7 +1363,7 @@ void HighsSymmetryDetection::switchToNextNode(HighsInt backtrackDepth) {
 
 bool HighsSymmetryDetection::compareCurrentGraph(
     const HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>>& otherGraph,
-    HighsInt& wrongCell) {
+    HighsInt& wrongCell) const {
   for (HighsInt i = 0; i < numCol; ++i) {
     HighsInt colCell = vertexToCell[i];
 

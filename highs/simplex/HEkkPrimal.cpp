@@ -1214,9 +1214,9 @@ void HEkkPrimal::phase1ChooseRow() {
   pdqsort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR[0].first;
   double dGradient = fabs(theta_dual);
-  for (size_t i = 0; i < ph1SorterR.size(); i++) {
-    double dMyTheta = ph1SorterR[i].first;
-    HighsInt index = ph1SorterR[i].second;
+  for (const auto& candidate : ph1SorterR) {
+    double dMyTheta = candidate.first;
+    HighsInt index = candidate.second;
     HighsInt iRow = index >= 0 ? index : index + num_row;
     dGradient -= fabs(col_aq.array[iRow]);
     // Stop when the gradient start to decrease
