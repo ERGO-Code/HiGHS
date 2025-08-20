@@ -1085,14 +1085,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     if (colDeleted[j]) continue;
     bool upperImplied = isUpperImplied(j);
     bool lowerImplied = isLowerImplied(j);
-    bool hasPosCliques = false;
-    bool hasNegCliques = false;
     bool colIsBinary = isBinary(j);
-    if (colIsBinary) {
-      hasPosCliques = mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0;
-      hasNegCliques = mipsolver->mipdata_->cliquetable.numCliques(j, 0) > 0;
-    } else if (!upperImplied && !lowerImplied)
-      continue;
+    bool hasPosCliques =
+        colIsBinary && mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0;
+    bool hasNegCliques =
+        colIsBinary && mipsolver->mipdata_->cliquetable.numCliques(j, 0) > 0;
+
+    if (!colIsBinary && !upperImplied && !lowerImplied) continue;
 
     HighsInt oldNumFixed = numFixedCols;
 
