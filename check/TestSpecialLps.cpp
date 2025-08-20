@@ -210,9 +210,9 @@ void issue425(Highs& highs) {
   solve(highs, "off", "simplex", require_model_status, 0, 3);
   const bool use_hipo =
 #ifdef HIPO
-    true;
+      true;
 #else
-  false;
+      false;
 #endif
   if (use_hipo) {
     solve(highs, "off", "ipm", require_model_status, 0, 15);

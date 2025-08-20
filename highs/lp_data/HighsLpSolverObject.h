@@ -18,10 +18,10 @@
 class HighsLpSolverObject {
  public:
   HighsLpSolverObject(HighsLp& lp, HighsBasis& basis, HighsSolution& solution,
-                      HighsInfo& highs_info,
-		      HEkk& ekk_instance,
+                      HighsInfo& highs_info, HEkk& ekk_instance,
                       HighsCallback& callback, HighsOptions& options,
-                      HighsTimer& timer, HighsSubSolverCallTime& sub_solver_call_time)
+                      HighsTimer& timer,
+                      HighsSubSolverCallTime& sub_solver_call_time)
       : lp_(lp),
         basis_(basis),
         solution_(solution),
@@ -30,7 +30,7 @@ class HighsLpSolverObject {
         callback_(callback),
         options_(options),
         timer_(timer),
-	sub_solver_call_time_(sub_solver_call_time) {}
+        sub_solver_call_time_(sub_solver_call_time) {}
 
   HighsLp& lp_;
   HighsBasis& basis_;

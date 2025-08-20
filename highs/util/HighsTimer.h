@@ -101,8 +101,9 @@ class HighsTimer {
   void writeAllClocks() {
     for (HighsInt i = 0; i < num_clock; i++)
       if (clock_num_call[i])
-        if (printf_flag) printf("Time %7.5f for %9d calls of clock %3d: %s\n", clock_time[i],
-               int(clock_num_call[i]), int(i), clock_names[i].c_str());
+        if (printf_flag)
+          printf("Time %7.5f for %9d calls of clock %3d: %s\n", clock_time[i],
+                 int(clock_num_call[i]), int(i), clock_names[i].c_str());
   }
 
   /**
@@ -122,16 +123,18 @@ class HighsTimer {
       // understand this better, for now don't assert that this clock
       // has stopped
       if (!clock_stopped) {
-        if (printf_flag) printf("Clock %d - %s - still running\n", int(i_clock),
-               clock_names[i_clock].c_str());
+        if (printf_flag)
+          printf("Clock %d - %s - still running\n", int(i_clock),
+                 clock_names[i_clock].c_str());
       }
       assert(clock_stopped);
     }
     // Set the start to be the negation of the WallTick to check that
     // the clock's been started when it's next stopped
     if (i_clock == check_clock) {
-      if (printf_flag) printf("HighsTimer: starting clock %d: %s\n", int(check_clock),
-             this->clock_names[check_clock].c_str());
+      if (printf_flag)
+        printf("HighsTimer: starting clock %d: %s\n", int(check_clock),
+               this->clock_names[check_clock].c_str());
     }
     clock_start[i_clock] = -getWallTime();
   }
@@ -147,8 +150,9 @@ class HighsTimer {
     // -getWallTime() <= 0
     const bool clock_stopped = clock_start[i_clock] > 0;
     if (clock_stopped) {
-      if (printf_flag) printf("Clock %d - %s - not running\n", int(i_clock),
-             clock_names[i_clock].c_str());
+      if (printf_flag)
+        printf("Clock %d - %s - not running\n", int(i_clock),
+               clock_names[i_clock].c_str());
     }
     assert(!clock_stopped);
     double wall_time = getWallTime();
@@ -158,8 +162,9 @@ class HighsTimer {
     // Set the start to be the WallTick to check that the clock's been
     // stopped when it's next started
     if (i_clock == check_clock) {
-      if (printf_flag) printf("HighsTimer: stopping clock %d: %s\n", int(check_clock),
-             this->clock_names[check_clock].c_str());
+      if (printf_flag)
+        printf("HighsTimer: stopping clock %d: %s\n", int(check_clock),
+               this->clock_names[check_clock].c_str());
     }
     clock_start[i_clock] = wall_time;
   }
@@ -173,8 +178,9 @@ class HighsTimer {
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
       std::string clock_name = this->clock_names[check_clock];
-      if (printf_flag) printf("HighsTimer: reading clock %d: %s\n", int(check_clock),
-             clock_name.c_str());
+      if (printf_flag)
+        printf("HighsTimer: reading clock %d: %s\n", int(check_clock),
+               clock_name.c_str());
     }
     double read_time;
     if (clock_start[i_clock] < 0) {
@@ -196,9 +202,10 @@ class HighsTimer {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
-      if (printf_flag) printf("HighsTimer: querying clock %d: %s - with start record %g\n",
-             int(check_clock), this->clock_names[check_clock].c_str(),
-             clock_start[i_clock]);
+      if (printf_flag)
+        printf("HighsTimer: querying clock %d: %s - with start record %g\n",
+               int(check_clock), this->clock_names[check_clock].c_str(),
+               clock_start[i_clock]);
     }
     return clock_start[i_clock] < 0;
   }
@@ -217,10 +224,8 @@ class HighsTimer {
   /**
    * @brief Add number of calls and time to a clock
    */
-  void add(
-      const HighsInt i_clock, //!< Index of the clock to be read
-      const HighsInt num_call, const double time = 0
-  ) {
+  void add(const HighsInt i_clock,  //!< Index of the clock to be read
+           const HighsInt num_call, const double time = 0) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     clock_num_call[i_clock] += num_call;

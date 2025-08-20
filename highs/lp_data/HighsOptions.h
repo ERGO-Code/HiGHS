@@ -833,7 +833,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "highs_analysis_level", "Analysis level in HiGHS", now_advanced,
         &highs_analysis_level, kHighsAnalysisLevelMin,
-        kHighsAnalysisLevelMin,  //kHighsAnalysisLevelMipTime,  // 
+        kHighsAnalysisLevelMin,  // kHighsAnalysisLevelMipTime,  //
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 

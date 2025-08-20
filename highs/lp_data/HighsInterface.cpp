@@ -1858,7 +1858,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
 HighsStatus Highs::getRangingInterface() {
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
                                     ekk_instance_, callback_, options_, timer_,
-				    sub_solver_call_time_);
+                                    sub_solver_call_time_);
   solver_object.model_status_ = model_status_;
   return getRangingData(this->ranging_, solver_object);
 }
@@ -3062,8 +3062,7 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
 // Modify status and info if user bound or cost scaling, or
 // primal/dual feasibility tolerances have changed
 HighsStatus Highs::optionChangeAction() {
-  this->timer_.setPrintfFlag(options_.output_flag,
-			     options_.log_to_console);
+  this->timer_.setPrintfFlag(options_.output_flag, options_.log_to_console);
   HighsModel& model = this->model_;
   HighsLp& lp = model.lp_;
   HighsInfo& info = this->info_;
@@ -4319,8 +4318,9 @@ void HighsSubSolverCallTime::initialise() {
   this->name[kSubSolverSubMip] = "Sub-MIP";
 }
 
-void HighsSubSolverCallTime::add(const HighsSubSolverCallTime& sub_solver_call_time,
-				 const bool analytic_centre) {
+void HighsSubSolverCallTime::add(
+    const HighsSubSolverCallTime& sub_solver_call_time,
+    const bool analytic_centre) {
   for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
     HighsInt ToIx = Ix;
     if (Ix == kSubSolverHipo) {
@@ -4337,30 +4337,38 @@ void Highs::reportSubSolverCallTime() const {
   double mip_time = this->sub_solver_call_time_.run_time[kSubSolverMip];
   std::stringstream ss;
   ss.str(std::string());
-  ss << highsFormatToString("\nSub-solver timing\nSolver                 Calls    Time       Time/call");
-  if (mip_time > 0) ss <<  "  MIP%";
-  highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n", ss.str().c_str());
-  
+  ss << highsFormatToString(
+      "\nSub-solver timing\nSolver                 Calls    Time       "
+      "Time/call");
+  if (mip_time > 0) ss << "  MIP%";
+  highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
 
   double sum_mip_sub_solve_time = 0;
   for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
     if (this->sub_solver_call_time_.num_call[Ix]) {
       ss.str(std::string());
-      ss << highsFormatToString("%-18s %9d %11.4e %11.4e",
-				this->sub_solver_call_time_.name[Ix].c_str(),
-				int(this->sub_solver_call_time_.num_call[Ix]),
-				this->sub_solver_call_time_.run_time[Ix],
-				this->sub_solver_call_time_.run_time[Ix]/(1.0 * this->sub_solver_call_time_.num_call[Ix]));
+      ss << highsFormatToString(
+          "%-18s %9d %11.4e %11.4e",
+          this->sub_solver_call_time_.name[Ix].c_str(),
+          int(this->sub_solver_call_time_.num_call[Ix]),
+          this->sub_solver_call_time_.run_time[Ix],
+          this->sub_solver_call_time_.run_time[Ix] /
+              (1.0 * this->sub_solver_call_time_.num_call[Ix]));
       if (mip_time > 0 && Ix != kSubSolverMip) {
-	if (Ix != kSubSolverHipoAc && Ix != kSubSolverIpxAc)
-	  sum_mip_sub_solve_time += this->sub_solver_call_time_.run_time[Ix];
-	ss << highsFormatToString(" %5.1f", 1e2 * this->sub_solver_call_time_.run_time[Ix] / mip_time);
+        if (Ix != kSubSolverHipoAc && Ix != kSubSolverIpxAc)
+          sum_mip_sub_solve_time += this->sub_solver_call_time_.run_time[Ix];
+        ss << highsFormatToString(
+            " %5.1f",
+            1e2 * this->sub_solver_call_time_.run_time[Ix] / mip_time);
       }
-      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n", ss.str().c_str());
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                   ss.str().c_str());
     }
   }
   if (mip_time > 0)
-    highsLogUser(options_.log_options, HighsLogType::kInfo, "TOTAL (excluding AC)         %11.4e             %5.1f\n",
-		 sum_mip_sub_solve_time, 1e2 * sum_mip_sub_solve_time / mip_time);
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "TOTAL (excluding AC)         %11.4e             %5.1f\n",
+                 sum_mip_sub_solve_time,
+                 1e2 * sum_mip_sub_solve_time / mip_time);
 }
-

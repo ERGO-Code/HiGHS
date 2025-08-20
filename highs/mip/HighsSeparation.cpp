@@ -24,7 +24,8 @@
 
 HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
   if (mipsolver.analysis_.analyse_mip_time) {
-    implBoundClock = mipsolver.analysis_.getSepaClockIndex(kImplboundSepaString);
+    implBoundClock =
+        mipsolver.analysis_.getSepaClockIndex(kImplboundSepaString);
     cliqueClock = mipsolver.analysis_.getSepaClockIndex(kCliqueSepaString);
   }
   separators.emplace_back(new HighsTableauSeparator(mipsolver));

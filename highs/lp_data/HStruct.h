@@ -175,7 +175,7 @@ struct HighsSubSolverCallTime {
   std::vector<double> run_time;
   void initialise();
   void add(const HighsSubSolverCallTime& sub_solver_call_time,
-	   const bool analytic_centre = false);
+           const bool analytic_centre = false);
 };
 
 struct HighsSimplexStats {

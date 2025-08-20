@@ -358,9 +358,9 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // solveLp
     bool use_hipo =
 #ifdef HIPO
-      mip_ipm_solver == kHighsChooseString ||
+        mip_ipm_solver == kHighsChooseString ||
 #endif
-      mip_ipm_solver == kHipoString;
+        mip_ipm_solver == kHipoString;
 #ifndef HIPO
     // Shouldn't be possible to choose HiPO if it's not in the build
     assert(!use_hipo);
@@ -377,7 +377,10 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     const bool dump_ipm_lp = false;
     if (dump_ipm_lp && !mipsolver.submip) {
       const std::string file_name = mipsolver.model_->model_name_ + "_ac.mps";
-      printf("HighsMipSolverData::startAnalyticCenterComputation: Calling ipm.writeModel(%s)\n", file_name.c_str());
+      printf(
+          "HighsMipSolverData::startAnalyticCenterComputation: Calling "
+          "ipm.writeModel(%s)\n",
+          file_name.c_str());
       ipm.writeModel(file_name);
       fflush(stdout);
       exit(1);
@@ -392,7 +395,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     ipm.run();
     if (ipm_logging) ipm.setOptionValue("output_flag", false);
-    if (use_hipo && mip_ipm_solver == kHighsChooseString && HighsInt(sol.size()) != mipsolver.numCol()) {
+    if (use_hipo && mip_ipm_solver == kHighsChooseString &&
+        HighsInt(sol.size()) != mipsolver.numCol()) {
       printf(
           "In HighsMipSolverData::startAnalyticCenterComputation HiPO has "
           "failed to get a solution: status = %s Try IPX\n",
@@ -402,13 +406,16 @@ void HighsMipSolverData::startAnalyticCenterComputation(
       ipm.run();
     }
     if (!mipsolver.submip) {
-      const HighsSubSolverCallTime& sub_solver_call_time = ipm.getSubSolverCallTime();
+      const HighsSubSolverCallTime& sub_solver_call_time =
+          ipm.getSubSolverCallTime();
       const bool analytic_centre = true;
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time, analytic_centre);
+      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
+                                               analytic_centre);
       // Go through sub_solver_call_time to update any MIP clocks
       const bool valid_basis = false;
       const bool use_presolve = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis, use_presolve, analytic_centre);
+      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
+                                         use_presolve, analytic_centre);
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
@@ -1085,7 +1092,6 @@ void HighsMipSolverData::runSetup() {
   if (numRestarts != 0)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\n");
-
 }
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
@@ -1152,24 +1158,30 @@ try_again:
                              mip_primal_feasibility_tolerance);
     // check if only root presolve is allowed
     const bool use_presolve = !mipsolver.options_mip_->mip_root_presolve_only;
-    const std::string presolve = use_presolve ? kHighsChooseString : kHighsOffString;
+    const std::string presolve =
+        use_presolve ? kHighsChooseString : kHighsOffString;
     tmpSolver.setOptionValue("presolve", presolve);
     tmpSolver.passModel(std::move(fixedModel));
     // Until a good decision can be made on whether to use simplex,
     // HiPO or IPX to solve an LP without a basis, use simplex
-    printf("HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();\n");
+    printf(
+        "HighsMipSolverData::transformNewIntegerFeasibleSolution "
+        "tmpSolver.run();\n");
     tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.run();
     if (!mipsolver.submip) {
-      const HighsSubSolverCallTime& sub_solver_call_time = tmpSolver.getSubSolverCallTime();
+      const HighsSubSolverCallTime& sub_solver_call_time =
+          tmpSolver.getSubSolverCallTime();
       const bool analytic_centre = false;
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time, analytic_centre);
+      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
+                                               analytic_centre);
       // Go through sub_solver_call_time to update any MIP clocks
       const bool valid_basis = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis, use_presolve, analytic_centre);
+      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
+                                         use_presolve, analytic_centre);
     }
     this->total_repair_lp_iterations =
-      tmpSolver.getInfo().simplex_iteration_count;
+        tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       this->total_repair_lp_feasible++;
       solution = tmpSolver.getSolution();
@@ -2843,4 +2855,3 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
 }
 
 void HighsPrimaDualIntegral::initialise() { this->value = -kHighsInf; }
-

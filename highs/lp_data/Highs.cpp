@@ -1313,10 +1313,10 @@ HighsStatus Highs::optimizeModel() {
       // There is no valid basis, but there is a valid solution, so use
       // it to construct a basis
       return_status =
-        interpretCallStatus(options_.log_options, basisForSolution(),
-                            return_status, "basisForSolution");
+          interpretCallStatus(options_.log_options, basisForSolution(),
+                              return_status, "basisForSolution");
       if (return_status == HighsStatus::kError)
-	return returnFromOptimizeModel(return_status, undo_mods);
+        return returnFromOptimizeModel(return_status, undo_mods);
       assert(basis_.valid);
     }
   } else {
@@ -1356,7 +1356,9 @@ HighsStatus Highs::optimizeModel() {
   }
   if (basis_.valid) assert(basis_.useful);
 
-  if (((options_.presolve == kHighsOffString || has_basis) && solver_will_use_basis) || unconstrained_lp) {
+  if (((options_.presolve == kHighsOffString || has_basis) &&
+       solver_will_use_basis) ||
+      unconstrained_lp) {
     ekk_instance_.lp_name_ =
         "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that
@@ -2456,10 +2458,9 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       }
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
-      HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                        info_, ekk_instance_, callback_,
-                                        options_, timer_,
-					sub_solver_call_time_);
+      HighsLpSolverObject solver_object(
+          model_.lp_, modifiable_basis, solution_, info_, ekk_instance_,
+          callback_, options_, timer_, sub_solver_call_time_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -3843,7 +3844,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_,
-				    sub_solver_call_time_);
+                                    sub_solver_call_time_);
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
@@ -4269,7 +4270,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         ekk_instance_.lp_name_ = "Postsolve LP";
         // Set up the timing record so that adding the corresponding
         // values after callSolveLp gives difference
-	this->sub_solver_call_time_.initialise();
+        this->sub_solver_call_time_.initialise();
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(
             incumbent_lp,

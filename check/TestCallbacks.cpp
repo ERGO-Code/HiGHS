@@ -400,14 +400,17 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
   highs.setOptionValue("solver", kIpxString);
   REQUIRE(highs.run() == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
-  REQUIRE(highs.getInfo().ipm_iteration_count == adlittle_ipm_iteration_limit+1);
+  REQUIRE(highs.getInfo().ipm_iteration_count ==
+          adlittle_ipm_iteration_limit + 1);
 
   highs.readModel(filename);
 #ifdef HIPO
-  REQUIRE(highs.setOptionValue("solver", kHipoString) == HighsStatus::kOk);;
+  REQUIRE(highs.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
+  ;
   REQUIRE(highs.run() == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
-  REQUIRE(highs.getInfo().ipm_iteration_count == adlittle_ipm_iteration_limit+1);
+  REQUIRE(highs.getInfo().ipm_iteration_count ==
+          adlittle_ipm_iteration_limit + 1);
 #endif
   highs.resetGlobalScheduler(true);
 }

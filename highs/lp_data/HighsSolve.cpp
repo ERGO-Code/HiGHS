@@ -19,7 +19,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
-  HighsSubSolverCallTime& sub_solver_call_time = solver_object.sub_solver_call_time_;
+  HighsSubSolverCallTime& sub_solver_call_time =
+      solver_object.sub_solver_call_time_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);
@@ -51,12 +52,11 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = HighsStatus::kOk;
     call_status = solveLpSimplex(solver_object);
     return_status = interpretCallStatus(options.log_options, call_status,
-					    return_status, "solveLpSimplex");
+                                        return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
-    if (!isSolutionRightSize(solver_object.lp_,
-			     solver_object.solution_)) {
+    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
       highsLogUser(options.log_options, HighsLogType::kError,
-		   "Inconsistent solution returned from solver\n");
+                   "Inconsistent solution returned from solver\n");
       return_status = HighsStatus::kError;
     }
     return return_status;
@@ -75,8 +75,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       if (use_hipo) {
 #ifdef HIPO
         // Use HIPO to solve the LP
-	sub_solver_call_time.num_call[kSubSolverHipo]++;
-	sub_solver_call_time.run_time[kSubSolverHipo] = -solver_object.timer_.read();
+        sub_solver_call_time.num_call[kSubSolverHipo]++;
+        sub_solver_call_time.run_time[kSubSolverHipo] =
+            -solver_object.timer_.read();
         try {
           call_status = solveLpHipo(solver_object);
         } catch (const std::exception& exception) {
@@ -84,7 +85,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                       "Exception %s in solveLpHipo\n", exception.what());
           call_status = HighsStatus::kError;
         }
-	sub_solver_call_time.run_time[kSubSolverHipo] += solver_object.timer_.read();
+        sub_solver_call_time.run_time[kSubSolverHipo] +=
+            solver_object.timer_.read();
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
 #else
@@ -93,8 +95,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         return HighsStatus::kError;
 #endif
       } else if (use_ipx) {
-	sub_solver_call_time.num_call[kSubSolverIpx]++;
-	sub_solver_call_time.run_time[kSubSolverIpx] = -solver_object.timer_.read();
+        sub_solver_call_time.num_call[kSubSolverIpx]++;
+        sub_solver_call_time.run_time[kSubSolverIpx] =
+            -solver_object.timer_.read();
         try {
           call_status = solveLpIpx(solver_object);
         } catch (const std::exception& exception) {
@@ -102,14 +105,16 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                       "Exception %s in solveLpIpx\n", exception.what());
           call_status = HighsStatus::kError;
         }
-	sub_solver_call_time.run_time[kSubSolverIpx] += solver_object.timer_.read();
+        sub_solver_call_time.run_time[kSubSolverIpx] +=
+            solver_object.timer_.read();
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpIpx");
       }
     } else {
       // Use cuPDLP-C to solve the LP
       sub_solver_call_time.num_call[kSubSolverPdlp]++;
-      sub_solver_call_time.run_time[kSubSolverPdlp] = -solver_object.timer_.read();
+      sub_solver_call_time.run_time[kSubSolverPdlp] =
+          -solver_object.timer_.read();
       try {
         call_status = solveLpCupdlp(solver_object);
       } catch (const std::exception& exception) {
@@ -117,7 +122,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                     "Exception %s in solveLpCupdlp\n", exception.what());
         call_status = HighsStatus::kError;
       }
-      sub_solver_call_time.run_time[kSubSolverPdlp] += solver_object.timer_.read();
+      sub_solver_call_time.run_time[kSubSolverPdlp] +=
+          solver_object.timer_.read();
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLpCupdlp");
     }
@@ -163,7 +169,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "IPM solution is imprecise, so clean up with simplex\n");
           return_status = simplexSolve();
-	  if (return_status == HighsStatus::kError) return return_status;
+          if (return_status == HighsStatus::kError) return return_status;
         }  // options.run_crossover == kHighsOnString
            // clang-format off
       }  // unwelcome_ipx_status
@@ -601,12 +607,11 @@ bool useHipo(const HighsOptions& options,
   if (specific_solver_option_value == kIpxString) {
     use_hipo = false;
   } else if (specific_solver_option_value == kIpmString ||
-	     specific_solver_option_value == kHipoString ||
-	     force_ipm) {
+             specific_solver_option_value == kHipoString || force_ipm) {
 #ifdef HIPO
-   use_hipo = true;
+    use_hipo = true;
 #else
-   use_hipo = false;
+    use_hipo = false;
 #endif
   }
   if (options.run_centring) use_hipo = false;

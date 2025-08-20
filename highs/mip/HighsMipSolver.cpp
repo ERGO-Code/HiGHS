@@ -42,8 +42,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       pscostinit(nullptr),
       clqtableinit(nullptr),
       implicinit(nullptr) {
-  timer_.setPrintfFlag(options_mip_->output_flag,
-		       options_mip_->log_to_console);
+  timer_.setPrintfFlag(options_mip_->output_flag, options_mip_->log_to_console);
   assert(!submip || submip_level > 0);
   max_submip_level = 0;
   if (solution.value_valid) {

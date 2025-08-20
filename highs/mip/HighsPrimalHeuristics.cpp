@@ -140,7 +140,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   if (!mipsolver.submip) {
     mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
     // Remember to accumulate time for sub-MIP solves!
-    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] -= mipsolver.timer_.read();
+    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] -=
+        mipsolver.timer_.read();
   }
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
@@ -157,7 +158,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   if (!mipsolver.submip) {
     mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
     mipsolver.sub_solver_call_time_.num_call[kSubSolverSubMip]++;
-    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] += mipsolver.timer_.read();
+    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] +=
+        mipsolver.timer_.read();
   }
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
@@ -1656,4 +1658,3 @@ void HighsPrimalHeuristics::flushStatistics() {
   mipsolver.mipdata_->total_lp_iterations += lp_iterations;
   lp_iterations = 0;
 }
-

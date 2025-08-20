@@ -1050,26 +1050,30 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
     REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
     REQUIRE(h.run() == HighsStatus::kOk);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  
+
     REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
-    REQUIRE(h.setOptionValue(kMipLpSolverString, kIpxString) == HighsStatus::kOk);
-    REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) == HighsStatus::kOk);
+    REQUIRE(h.setOptionValue(kMipLpSolverString, kIpxString) ==
+            HighsStatus::kOk);
+    REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) ==
+            HighsStatus::kOk);
     REQUIRE(h.run() == HighsStatus::kOk);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   }
 #ifdef HIPO
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) ==
+          HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 #endif
 }
 
 TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
-  const std::string model = "flugpl"; //"rgn"; //
+  const std::string model = "flugpl";  //"rgn"; //
   std::string model_file =
-    std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("highs_analysis_level", kHighsAnalysisLevelMipTime);
