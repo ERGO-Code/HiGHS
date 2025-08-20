@@ -628,7 +628,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
                              double ub, bool isVub) {
     // a_j coefficient of y_j in row. c_j coefficient of x_j in row.
     // u_j, l_j, closest simple bounds imposed on y_j.
-    // y_j <= l'_j x_j + d_j || y_j >= u'_j x_j + d_j
+    // y_j <= u'_j x_j + d_j || y_j >= l'_j x_j + d_j
     // variable bound can only be used if following properties respected:
     // |l'_j| <= 1e6 && |u'_j| <= 1e6
     // if a_j > 0
@@ -768,56 +768,44 @@ bool HighsTransformedLp::transformSNFRelaxation(
       }
     } else {
       // Decide whether to use {simple, variable} {lower, upper} bound
-      if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
-        if (!checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
+      bool vlbValid = checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
                              bestVlb[col].first == -1
                                  ? 0
                                  : vectorsum.getValue(bestVlb[col].first),
-                             lb, ub, false)) {
-          boundTypes[col] = BoundType::kSimpleLb;
-        } else if (simpleLbDist[col] > lbDist[col] + mip.mipdata_->feastol) {
-          boundTypes[col] = BoundType::kVariableLb;
-        } else
-          boundTypes[col] = BoundType::kSimpleLb;
-      } else if (ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
-        if (!checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
+                             lb, ub, false);
+      bool vubValid = checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
                              bestVub[col].first == -1
                                  ? 0
                                  : vectorsum.getValue(bestVub[col].first),
-                             lb, ub, true)) {
-          boundTypes[col] = BoundType::kSimpleUb;
-        } else if (simpleUbDist[col] > ubDist[col] + mip.mipdata_->feastol) {
-          boundTypes[col] = BoundType::kVariableUb;
-        } else {
-          boundTypes[col] = BoundType::kSimpleUb;
-        }
+                             lb, ub, true);
+      BoundType boundType = BoundType::kSimpleLb;
+      if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol && vlbValid) {
+        boundType = BoundType::kVariableLb;
+      } else if (ubDist[col] < lbDist[col] - mip.mipdata_->feastol && vubValid) {
+        boundType = BoundType::kVariableUb;
+      } else if (vals[i] > 0 && vlbValid) {
+        boundType = BoundType::kVariableLb;
+      } else if (vals[i] < 0 && vubValid) {
+        boundType = BoundType::kVariableUb;
+      } else if (vlbValid) {
+        boundType =  BoundType::kVariableLb;
+      } else if (vubValid) {
+        boundType =  BoundType::kVariableUb;
+      } else if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
+        boundType = BoundType::kSimpleLb;
+      } else if (ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
+        boundType = BoundType::kSimpleUb;
       } else if (vals[i] > 0) {
-        if (checkValidityVB(bestVlb[col].first, bestVlb[col].second, vals[i],
-                            bestVlb[col].first == -1
-                                ? 0
-                                : vectorsum.getValue(bestVlb[col].first),
-                            lb, ub, false)) {
-          boundTypes[col] = BoundType::kVariableLb;
-        } else {
-          boundTypes[col] = BoundType::kSimpleLb;
-        }
+        boundType = BoundType::kSimpleLb;
       } else {
-        if (checkValidityVB(bestVub[col].first, bestVub[col].second, vals[i],
-                            bestVub[col].first == -1
-                                ? 0
-                                : vectorsum.getValue(bestVub[col].first),
-                            lb, ub, true)) {
-          boundTypes[col] = BoundType::kVariableUb;
-        } else {
-          boundTypes[col] = BoundType::kSimpleUb;
-        }
+        boundType = BoundType::kSimpleUb;
       }
 
       double vbcoef;
       double substsolval;
       double aggrconstant;
       HighsInt vbcol;
-      switch (boundTypes[col]) {
+      switch (boundType) {
         case BoundType::kSimpleLb:
           // Case (1) -> a_j > 0, y'_j -> N- Case (2) -> a_j < 0, y'_j ->N+
           // (1) y'_j = -a_j(y_j - u_j), 0 <= y'_j <= a_j(u_j - l_j)x_j, x_j = 1
@@ -887,7 +875,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kVariableUb:
-          // vub: y_j >= u'_j x_j + d_j. c_j is the coefficient of x_j in row
+          // vub: y_j <= u'_j x_j + d_j. c_j is the coefficient of x_j in row
           // Case (1) -> a_j > 0, y'_j -> N+ Case (2) -> a_j < 0, y'_j ->N-
           // (1) y'_j = a_j(y_j - d_j) + c_j * x_j),
           // 0 <= y'_j <= (a_j u'_j + c_j)x_j
