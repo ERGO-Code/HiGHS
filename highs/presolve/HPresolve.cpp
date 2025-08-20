@@ -1253,8 +1253,8 @@ HPresolve::Result HPresolve::dominatedColumns(
                checkDomination(direction, col, mydirection, k);
       };
 
-      auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
-                             double scale, double bestVal) {
+      auto checkFixBinary = [&](HighsInt row, HighsInt col, HighsInt direction,
+                                double scale, double bestVal) {
         storeRow(row);
         bool isEqOrRangedRow = model->row_lower_[row] != -kHighsInf &&
                                model->row_upper_[row] != kHighsInf;
@@ -1287,9 +1287,9 @@ HPresolve::Result HPresolve::dominatedColumns(
       if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
-          HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowMinus, j, HighsInt{-1},
-                                             bestRowMinusScale,
-                                             ajBestRowMinus));
+          HPRESOLVE_CHECKED_CALL(checkFixBinary(bestRowMinus, j, HighsInt{-1},
+                                                bestRowMinusScale,
+                                                ajBestRowMinus));
           if (colDeleted[j]) continue;
         }
       }
@@ -1297,8 +1297,8 @@ HPresolve::Result HPresolve::dominatedColumns(
       if (model->col_cost_[j] <= 0.0 && worstCaseUb >= -primal_feastol) {
         lowerImplied = true;
         if (!upperImplied && bestRowPlus != -1) {
-          HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowPlus, j, HighsInt{1},
-                                             bestRowPlusScale, ajBestRowPlus));
+          HPRESOLVE_CHECKED_CALL(checkFixBinary(
+              bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
           if (colDeleted[j]) continue;
         }
       }
