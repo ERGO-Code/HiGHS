@@ -1352,8 +1352,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           // direction = -1:
           // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
           ++numFixedCols;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, -direction));
-          break;
+          HPRESOLVE_CHECKED_CALL(fixCol(k, -direction));
         } else if (colCanBeFixed(col, k, bestVal, ak, direction, HighsInt{-1},
                                  boundImplied, isEqOrRangedRow)) {
           // direction =  1:
@@ -1361,13 +1360,11 @@ HPresolve::Result HPresolve::dominatedColumns(
           // direction = -1:
           // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
           ++numFixedCols;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-          break;
+          HPRESOLVE_CHECKED_CALL(fixCol(k, direction));
         }
+        if (colDeleted[k])
+          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       }
-
-      if (colDeleted[col])
-        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return Result::kOk;
     };
 
