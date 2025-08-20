@@ -200,6 +200,27 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   mipsolver.mipdata_->lp.computeBasicDegenerateDuals(
       mipsolver.mipdata_->feastol);
 
+  HighsInt numRedcostLargeDomainCols = 0;
+  for (HighsInt col : mipsolver.mipdata_->integral_cols) {
+    if (mipsolver.mipdata_->domain.col_upper_[col] -
+            mipsolver.mipdata_->domain.col_lower_[col] >=
+        512) {
+      if (lpredcost[col] > mipsolver.mipdata_->feastol) {
+        numRedcostLargeDomainCols++;
+      } else if (lpredcost[col] < -mipsolver.mipdata_->feastol) {
+        numRedcostLargeDomainCols++;
+      }
+    }
+  }
+  HighsInt maxNumStepsExp = 10;
+  HighsInt expshift = 0;
+  std::frexp(numRedcostLargeDomainCols / 10, &expshift);
+  if (expshift > 5) {
+    expshift = std::min(expshift, maxNumStepsExp);
+    maxNumStepsExp = maxNumStepsExp - expshift + 5;
+  }
+  auto maxNumSteps = static_cast<HighsInt>(1ULL << maxNumStepsExp);
+
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     if (lpredcost[col] > mipsolver.mipdata_->feastol) {
       // col <= (cutoffbound - lpobj)/redcost + lb
@@ -218,13 +239,14 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
 
       HighsInt maxub;
       if (mipsolver.mipdata_->domain.col_upper_[col] == kHighsInf)
-        maxub = lb + 1024;
+        maxub = lb + maxNumSteps;
       else
         maxub = (HighsInt)std::floor(
             mipsolver.mipdata_->domain.col_upper_[col] - 0.5);
 
       HighsInt step = 1;
-      if (maxub - lb > 1024) step = (maxub - lb + 1023) >> 10;
+      if (maxub - lb > maxNumSteps)
+        step = (maxub - lb + maxNumSteps - 1) >> maxNumStepsExp;
 
       for (HighsInt lurkub = lb; lurkub <= maxub; lurkub += step) {
         double fracbound = (lurkub - lb + 1) - 10 * mipsolver.mipdata_->feastol;
@@ -276,12 +298,13 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
 
       HighsInt minlb;
       if (mipsolver.mipdata_->domain.col_lower_[col] == -kHighsInf)
-        minlb = ub - 1024;
+        minlb = ub - maxNumSteps;
       else
         minlb = (HighsInt)(mipsolver.mipdata_->domain.col_lower_[col] + 1.5);
 
       HighsInt step = 1;
-      if (ub - minlb > 1024) step = (ub - minlb + 1023) >> 10;
+      if (ub - minlb > maxNumSteps)
+        step = (ub - minlb + maxNumSteps - 1) >> maxNumStepsExp;
 
       for (HighsInt lurklb = minlb; lurklb <= ub; lurklb += step) {
         double fracbound = (lurklb - ub - 1) + 10 * mipsolver.mipdata_->feastol;
