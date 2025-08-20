@@ -24,6 +24,8 @@ class HighsPostsolveStack;
 
 class HighsPseudocost;
 
+constexpr double minThreshold = 1e-6;
+
 struct HighsPseudocostInitialization {
   std::vector<double> pseudocostup;
   std::vector<double> pseudocostdown;
@@ -47,6 +49,7 @@ struct HighsPseudocostInitialization {
       const HighsPseudocost& pscost, HighsInt maxCount,
       const presolve::HighsPostsolveStack& postsolveStack);
 };
+
 class HighsPseudocost {
   friend struct HighsPseudocostInitialization;
   std::vector<double> pseudocostup;
@@ -77,9 +80,7 @@ class HighsPseudocost {
   HighsPseudocost(const HighsMipSolver& mipsolver);
 
   void subtractBase(const HighsPseudocost& base) {
-    HighsInt ncols = pseudocostup.size();
-
-    for (HighsInt i = 0; i != ncols; ++i) {
+    for (size_t i = 0; i != pseudocostup.size(); ++i) {
       pseudocostup[i] -= base.pseudocostup[i];
       pseudocostdown[i] -= base.pseudocostdown[i];
       nsamplesup[i] -= base.nsamplesup[i];
@@ -95,8 +96,7 @@ class HighsPseudocost {
       conflict_weight = 1.0;
       conflict_avg_score *= scale;
 
-      HighsInt numCol = conflictscoreup.size();
-      for (HighsInt i = 0; i < numCol; ++i) {
+      for (size_t i = 0; i != conflictscoreup.size(); ++i) {
         conflictscoreup[i] *= scale;
         conflictscoredown[i] *= scale;
       }
@@ -248,11 +248,13 @@ class HighsPseudocost {
   }
 
   double getScore(HighsInt col, double upcost, double downcost) const {
-    double costScore = std::max(upcost, 1e-6) * std::max(downcost, 1e-6) /
-                       std::max(1e-6, cost_total * cost_total);
-    double inferenceScore = std::max(inferencesup[col], 1e-6) *
-                            std::max(inferencesdown[col], 1e-6) /
-                            std::max(1e-6, inferences_total * inferences_total);
+    double costScore = std::max(upcost, minThreshold) *
+                       std::max(downcost, minThreshold) /
+                       std::max(minThreshold, cost_total * cost_total);
+    double inferenceScore =
+        std::max(inferencesup[col], minThreshold) *
+        std::max(inferencesdown[col], minThreshold) /
+        std::max(minThreshold, inferences_total * inferences_total);
 
     double cutOffScoreUp =
         ncutoffsup[col] /
@@ -266,18 +268,19 @@ class HighsPseudocost {
                         std::max(1.0, static_cast<double>(ncutoffstotal) +
                                           static_cast<double>(nsamplestotal));
 
-    double cutoffScore = std::max(cutOffScoreUp, 1e-6) *
-                         std::max(cutOffScoreDown, 1e-6) /
-                         std::max(1e-6, avgCutoffs * avgCutoffs);
+    double cutoffScore = std::max(cutOffScoreUp, minThreshold) *
+                         std::max(cutOffScoreDown, minThreshold) /
+                         std::max(minThreshold, avgCutoffs * avgCutoffs);
 
     double conflictScoreUp = conflictscoreup[col] / conflict_weight;
     double conflictScoreDown = conflictscoredown[col] / conflict_weight;
     double conflictScoreAvg =
         conflict_avg_score /
         (conflict_weight * static_cast<double>(conflictscoreup.size()));
-    double conflictScore = std::max(conflictScoreUp, 1e-6) *
-                           std::max(conflictScoreDown, 1e-6) /
-                           std::max(1e-6, conflictScoreAvg * conflictScoreAvg);
+    double conflictScore =
+        std::max(conflictScoreUp, minThreshold) *
+        std::max(conflictScoreDown, minThreshold) /
+        std::max(minThreshold, conflictScoreAvg * conflictScoreAvg);
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
     return mapScore(costScore) / degeneracyFactor +
@@ -294,9 +297,10 @@ class HighsPseudocost {
   }
 
   double getScoreUp(HighsInt col, double frac) const {
-    double costScore = getPseudocostUp(col, frac) / std::max(1e-6, cost_total);
+    double costScore =
+        getPseudocostUp(col, frac) / std::max(minThreshold, cost_total);
     double inferenceScore =
-        inferencesup[col] / std::max(1e-6, inferences_total);
+        inferencesup[col] / std::max(minThreshold, inferences_total);
 
     double cutOffScoreUp =
         ncutoffsup[col] /
@@ -306,13 +310,14 @@ class HighsPseudocost {
                         std::max(1.0, static_cast<double>(ncutoffstotal) +
                                           static_cast<double>(nsamplestotal));
 
-    double cutoffScore = cutOffScoreUp / std::max(1e-6, avgCutoffs);
+    double cutoffScore = cutOffScoreUp / std::max(minThreshold, avgCutoffs);
 
     double conflictScoreUp = conflictscoreup[col] / conflict_weight;
     double conflictScoreAvg =
         conflict_avg_score /
         (conflict_weight * static_cast<double>(conflictscoreup.size()));
-    double conflictScore = conflictScoreUp / std::max(1e-6, conflictScoreAvg);
+    double conflictScore =
+        conflictScoreUp / std::max(minThreshold, conflictScoreAvg);
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
 
@@ -323,9 +328,9 @@ class HighsPseudocost {
 
   double getScoreDown(HighsInt col, double frac) const {
     double costScore =
-        getPseudocostDown(col, frac) / std::max(1e-6, cost_total);
+        getPseudocostDown(col, frac) / std::max(minThreshold, cost_total);
     double inferenceScore =
-        inferencesdown[col] / std::max(1e-6, inferences_total);
+        inferencesdown[col] / std::max(minThreshold, inferences_total);
 
     double cutOffScoreDown =
         ncutoffsdown[col] /
@@ -335,13 +340,14 @@ class HighsPseudocost {
                         std::max(1.0, static_cast<double>(ncutoffstotal) +
                                           static_cast<double>(nsamplestotal));
 
-    double cutoffScore = cutOffScoreDown / std::max(1e-6, avgCutoffs);
+    double cutoffScore = cutOffScoreDown / std::max(minThreshold, avgCutoffs);
 
     double conflictScoreDown = conflictscoredown[col] / conflict_weight;
     double conflictScoreAvg =
         conflict_avg_score /
         (conflict_weight * static_cast<double>(conflictscoredown.size()));
-    double conflictScore = conflictScoreDown / std::max(1e-6, conflictScoreAvg);
+    double conflictScore =
+        conflictScoreDown / std::max(minThreshold, conflictScoreAvg);
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
 
