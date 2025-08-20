@@ -1300,9 +1300,12 @@ HighsStatus Highs::optimizeModel() {
     // return HighsStatus::kOk;
   }
 
-  if (!basis_.valid && solution_.value_valid) {
-    // There is no valid basis, but there is a valid solution, so use
-    // it to construct a basis
+  const bool can_use_basis =
+      !this->model_.lp_.isMip() || options_.solve_relaxation;
+  if (can_use_basis && !basis_.valid && solution_.value_valid) {
+    // Solver may be able to make use of basis, and there is no valid
+    // basis, but there is a valid solution, so use it to construct a
+    // basis
     return_status =
         interpretCallStatus(options_.log_options, basisForSolution(),
                             return_status, "basisForSolution");
