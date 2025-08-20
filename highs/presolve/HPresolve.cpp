@@ -1308,8 +1308,8 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
     }
 
-    auto isBoundFinite = [&](HighsInt col, HighsInt scaleOtherCol) {
-      if (scaleOtherCol < 0)
+    auto isBoundFinite = [&](HighsInt col, HighsInt direction) {
+      if (direction < 0)
         return model->col_upper_[col] != kHighsInf;
       else
         return model->col_lower_[col] != -kHighsInf;
@@ -1319,18 +1319,18 @@ HPresolve::Result HPresolve::dominatedColumns(
                              double val, HighsInt direction,
                              HighsInt multiplier, bool boundImplied,
                              bool isEqOrRangedRow) {
-      return isBoundFinite(k, direction * multiplier) &&
+      HighsInt mydirection = multiplier * direction;
+      return isBoundFinite(k, mydirection) &&
              direction * bestVal <=
-                 direction * multiplier * val + options->small_matrix_value &&
+                 mydirection * val + options->small_matrix_value &&
              (!isEqOrRangedRow ||
               direction * bestVal >=
-                  direction * multiplier * val - options->small_matrix_value) &&
+                  mydirection * val - options->small_matrix_value) &&
              (boundImplied ||
               mipsolver->mipdata_->cliquetable.haveCommonClique(
                   HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
-                  HighsCliqueTable::CliqueVar(
-                      k, multiplier * direction > 0 ? 1 : 0))) &&
-             checkDomination(direction, col, multiplier * direction, k);
+                  HighsCliqueTable::CliqueVar(k, mydirection > 0 ? 1 : 0))) &&
+             checkDomination(direction, col, mydirection, k);
     };
 
     auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
