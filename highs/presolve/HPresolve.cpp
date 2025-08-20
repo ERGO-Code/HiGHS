@@ -1241,6 +1241,18 @@ HPresolve::Result HPresolve::dominatedColumns(
     };
 
     if (colIsBinary) {
+      auto binaryCanBeFixed = [&](HighsInt col, HighsInt k, double bestVal,
+                                  double val, HighsInt direction,
+                                  HighsInt multiplier, bool isEqOrRangedRow) {
+        HighsInt mydirection = multiplier * direction;
+        return direction * bestVal <=
+                   mydirection * val + options->small_matrix_value &&
+               (!isEqOrRangedRow ||
+                direction * bestVal >=
+                    mydirection * val - options->small_matrix_value) &&
+               checkDomination(direction, col, mydirection, k);
+      };
+
       auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
                              double scale, double bestVal) {
         storeRow(row);
@@ -1253,18 +1265,10 @@ HPresolve::Result HPresolve::dominatedColumns(
 
           double ak = nonz.value() * scale;
 
-          if ((direction * bestVal <=
-                   direction * ak + options->small_matrix_value &&
-               (!isEqOrRangedRow ||
-                direction * bestVal >=
-                    direction * ak - options->small_matrix_value) &&
-               checkDomination(direction, col, direction, k)) ||
-              (direction * bestVal <=
-                   -direction * ak + options->small_matrix_value &&
-               (!isEqOrRangedRow ||
-                direction * bestVal >=
-                    -direction * ak - options->small_matrix_value) &&
-               checkDomination(direction, col, -direction, k))) {
+          if (binaryCanBeFixed(col, k, bestVal, ak, direction, HighsInt{1},
+                               isEqOrRangedRow) ||
+              binaryCanBeFixed(col, k, bestVal, ak, direction, HighsInt{-1},
+                               isEqOrRangedRow)) {
             // direction =  1: fix binary variable to one
             // direction = -1: fix binary variable to zero
             ++numFixedCols;
