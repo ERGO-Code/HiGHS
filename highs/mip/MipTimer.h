@@ -290,6 +290,7 @@ class MipTimer {
                           const HighsInt kMipClockIdeal = kMipClockTotal,
                           const double tolerance_percent_report_ = -1) {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
+    if (!timer_pointer->printf_flag) return false;
     const std::vector<HighsInt>& clock = mip_timer_clock.clock_;
     HighsInt mip_clock_list_size = mip_clock_list.size();
     std::vector<HighsInt> clockList;
@@ -312,6 +313,7 @@ class MipTimer {
                        const HighsInt kMipClockIdeal, const bool header,
                        const bool end_line) {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
+    if (!timer_pointer->printf_flag) return;
     const std::vector<HighsInt>& clock = mip_timer_clock.clock_;
     const double ideal_sum_time =
         timer_pointer->clock_time[clock[kMipClockIdeal]];
@@ -511,9 +513,11 @@ class MipTimer {
     csvMipClockList("csvRootNode", model_name, mip_clock_list, mip_timer_clock,
                     kMipClockEvaluateRootNode, header, end_line);
   };
+
   void reportFjClock(std::string& model,
                      const HighsTimerClock& mip_timer_clock) {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
+    if (!timer_pointer->printf_flag) return;
     HighsInt iClock = mip_timer_clock.clock_[kMipClockFeasibilityJump];
     const double fj_time = timer_pointer->read(iClock);
     const double total_time = timer_pointer->read();

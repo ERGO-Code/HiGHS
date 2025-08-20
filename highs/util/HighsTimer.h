@@ -41,6 +41,14 @@ class HighsTimer {
     presolve_clock = clock_def("Presolve");
     solve_clock = clock_def("Solve");
     postsolve_clock = clock_def("Postsolve");
+    printf_flag = true;
+  }
+
+  /**
+   * @brief Set the printf flag
+   */
+  void setPrintfFlag(const bool output_flag, const bool log_to_console) {
+    this->printf_flag = output_flag ? log_to_console : false;
   }
 
   /**
@@ -73,6 +81,7 @@ class HighsTimer {
     this->presolve_clock = clock_def("Presolve");
     this->solve_clock = clock_def("Solve");
     this->postsolve_clock = clock_def("Postsolve");
+    this->printf_flag = true;
   }
 
   /**
@@ -92,7 +101,7 @@ class HighsTimer {
   void writeAllClocks() {
     for (HighsInt i = 0; i < num_clock; i++)
       if (clock_num_call[i])
-        printf("Time %7.5f for %9d calls of clock %3d: %s\n", clock_time[i],
+        if (printf_flag) printf("Time %7.5f for %9d calls of clock %3d: %s\n", clock_time[i],
                int(clock_num_call[i]), int(i), clock_names[i].c_str());
   }
 
@@ -113,7 +122,7 @@ class HighsTimer {
       // understand this better, for now don't assert that this clock
       // has stopped
       if (!clock_stopped) {
-        printf("Clock %d - %s - still running\n", int(i_clock),
+        if (printf_flag) printf("Clock %d - %s - still running\n", int(i_clock),
                clock_names[i_clock].c_str());
       }
       assert(clock_stopped);
@@ -121,7 +130,7 @@ class HighsTimer {
     // Set the start to be the negation of the WallTick to check that
     // the clock's been started when it's next stopped
     if (i_clock == check_clock) {
-      printf("HighsTimer: starting clock %d: %s\n", int(check_clock),
+      if (printf_flag) printf("HighsTimer: starting clock %d: %s\n", int(check_clock),
              this->clock_names[check_clock].c_str());
     }
     clock_start[i_clock] = -getWallTime();
@@ -138,7 +147,7 @@ class HighsTimer {
     // -getWallTime() <= 0
     const bool clock_stopped = clock_start[i_clock] > 0;
     if (clock_stopped) {
-      printf("Clock %d - %s - not running\n", int(i_clock),
+      if (printf_flag) printf("Clock %d - %s - not running\n", int(i_clock),
              clock_names[i_clock].c_str());
     }
     assert(!clock_stopped);
@@ -149,7 +158,7 @@ class HighsTimer {
     // Set the start to be the WallTick to check that the clock's been
     // stopped when it's next started
     if (i_clock == check_clock) {
-      printf("HighsTimer: stopping clock %d: %s\n", int(check_clock),
+      if (printf_flag) printf("HighsTimer: stopping clock %d: %s\n", int(check_clock),
              this->clock_names[check_clock].c_str());
     }
     clock_start[i_clock] = wall_time;
@@ -164,7 +173,7 @@ class HighsTimer {
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
       std::string clock_name = this->clock_names[check_clock];
-      printf("HighsTimer: reading clock %d: %s\n", int(check_clock),
+      if (printf_flag) printf("HighsTimer: reading clock %d: %s\n", int(check_clock),
              clock_name.c_str());
     }
     double read_time;
@@ -187,7 +196,7 @@ class HighsTimer {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
-      printf("HighsTimer: querying clock %d: %s - with start record %g\n",
+      if (printf_flag) printf("HighsTimer: querying clock %d: %s - with start record %g\n",
              int(check_clock), this->clock_names[check_clock].c_str(),
              clock_start[i_clock]);
     }
@@ -243,7 +252,7 @@ class HighsTimer {
     size_t num_clock_list_entries = clock_list.size();
     double current_run_highs_time = read();
     bool non_null_report = false;
-
+    if (!printf_flag) return non_null_report;
     // Check validity of the clock list and check no clocks are still
     // running, determine whether there are any times to report and
     // determine the total clock times
@@ -365,6 +374,7 @@ class HighsTimer {
   HighsInt presolve_clock;
   HighsInt solve_clock;
   HighsInt postsolve_clock;
+  bool printf_flag;
 };
 
 #endif /* UTIL_HIGHSTIMER_H_ */

@@ -437,8 +437,6 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  std::vector<OptionRecord*>& option_records,
                                  const bool value) {
   HighsInt index;
-  //  printf("setLocalOptionValue: \"%s\" with bool %" HIGHSINT_FORMAT "\n",
-  //  name.c_str(), value);
   OptionStatus status =
       getOptionIndex(report_log_options, name, option_records, index);
   if (status != OptionStatus::kOk) return status;
@@ -459,8 +457,6 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  std::vector<OptionRecord*>& option_records,
                                  const HighsInt value) {
   HighsInt index;
-  //  printf("setLocalOptionValue: \"%s\" with HighsInt %" HIGHSINT_FORMAT "\n",
-  //  name.c_str(), value);
   OptionStatus status =
       getOptionIndex(report_log_options, name, option_records, index);
   if (status != OptionStatus::kOk) return status;
@@ -488,8 +484,6 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  std::vector<OptionRecord*>& option_records,
                                  const double value) {
   HighsInt index;
-  //  printf("setLocalOptionValue: \"%s\" with double %g\n", name.c_str(),
-  //  value);
   OptionStatus status =
       getOptionIndex(report_log_options, name, option_records, index);
   if (status != OptionStatus::kOk) return status;

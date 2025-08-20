@@ -3062,6 +3062,8 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
 // Modify status and info if user bound or cost scaling, or
 // primal/dual feasibility tolerances have changed
 HighsStatus Highs::optionChangeAction() {
+  this->timer_.setPrintfFlag(options_.output_flag,
+			     options_.log_to_console);
   HighsModel& model = this->model_;
   HighsLp& lp = model.lp_;
   HighsInfo& info = this->info_;

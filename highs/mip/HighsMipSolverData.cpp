@@ -346,10 +346,11 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     Highs ipm;
     ipm.setOptionValue("output_flag", false);
     const std::vector<double>& sol = ipm.getSolution().col_value;
-    // Don't use presolve - because the MIP has already been presolved?
-    const bool use_presolve = true;
-    const std::string presolve = use_presolve ? kHighsChooseString : kHighsOffString;
-    ipm.setOptionValue("presolve", presolve);
+    // Don't use presolve - because this can lead to postsolve putting
+    // integer variables onto bounds. This is not just a "less good"
+    // AC. It can have implications leading to erroneous fixing of
+    // variables and a suboptimal solution declared as optimal.
+    ipm.setOptionValue("presolve", kHighsOffString);
     // Determine the solver
     const std::string mip_ipm_solver = mipsolver.options_mip_->mip_ipm_solver;
     // Currently use HiPO by default and take action on failure
@@ -383,9 +384,6 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     const bool ipm_logging = false;
     if (ipm_logging) {
-      std::string presolve;
-      ipm.getOptionValue("presolve", presolve);
-      printf("\nHighsMipSolverData::startAnalyticCenterComputation Solving for the AC with IPM, using presolve = %s\n", presolve.c_str());
       bool output_flag;
       ipm.getOptionValue("output_flag", output_flag);
       assert(output_flag == false);
@@ -409,6 +407,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
       mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time, analytic_centre);
       // Go through sub_solver_call_time to update any MIP clocks
       const bool valid_basis = false;
+      const bool use_presolve = false;
       mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis, use_presolve, analytic_centre);
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;

@@ -1115,11 +1115,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   bool use_simplex = !use_ipm;
   if (use_ipm) {
     assert(!valid_basis);
-    const bool ipm_logging = true;
+    const bool ipm_logging = false;
     if (ipm_logging) {
       std::string presolve;
       lpsolver.getOptionValue("presolve", presolve);
-      printf("\nHighsLpRelaxation::run Solving the root node with IPM, using presolve = %s\n", presolve.c_str());
+      printf("HighsLpRelaxation::run Solving the root node with IPM, using presolve = %s\n", presolve.c_str());
       bool output_flag;
       lpsolver.getOptionValue("output_flag", output_flag);
       assert(output_flag == false);
@@ -1129,7 +1129,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     const bool dump_ipm_lp = false;
     if (dump_ipm_lp && !mipsolver.submip) {
       const std::string file_name = mipsolver.model_->model_name_ + "_root.mps";
-      printf("HighsMipSolverData::startAnalyticCenterComputation: Calling lpsolver.writeModel(%s)\n", file_name.c_str());
+      printf("HighsMipSolverData::run Calling lpsolver.writeModel(%s)\n", file_name.c_str());
       lpsolver.writeModel(file_name);
       fflush(stdout);
       exit(1);
@@ -1137,6 +1137,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     callstatus = lpsolver.run();
     if (ipm_logging) lpsolver.setOptionValue("output_flag", false);
     if (callstatus == HighsStatus::kError) {
+      highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		  "HighsLpRelaxation::run HiPO has failed : status = %s Try IPX\n",
+		  lpsolver.modelStatusToString(lpsolver.getModelStatus()).c_str());
       lpsolver.setOptionValue("solver", kSimplexString);
       use_simplex = true;
     }
@@ -1323,11 +1326,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
-	const bool ipm_logging = true;
+	const bool ipm_logging = false;
 	if (ipm_logging) {
 	  std::string presolve;
 	  ipm.getOptionValue("presolve", presolve);
-	  printf("\nHighsLpRelaxation::run After lpsolver reached iteration limit, solving with IPM, using presolve = %s\n", presolve.c_str());
+	  printf("HighsLpRelaxation::run After lpsolver reached iteration limit, solving with IPM, using presolve = %s\n", presolve.c_str());
 	  bool output_flag;
 	  ipm.getOptionValue("output_flag", output_flag);
 	  assert(output_flag == false);
@@ -1337,11 +1340,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.run();
 	if (ipm_logging) ipm.setOptionValue("output_flag", false);	
         if (use_hipo && !ipm.getBasis().valid) {
-          printf(
-              "In HighsLpRelaxation::run HiPO has failed to get a valid basis: "
-              "status = %s Try IPX\n",
-              ipm.modelStatusToString(ipm.getModelStatus()).c_str());
           // HiPO has failed to get a solution, so try IPX
+          highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+              "HighsLpRelaxation::run HiPO has failed to get a valid basis: status = %s Try IPX\n",
+              ipm.modelStatusToString(ipm.getModelStatus()).c_str());
           ipm.setOptionValue("solver", kIpxString);
           ipm.run();
         }

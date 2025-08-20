@@ -1044,7 +1044,7 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
   Highs h;
-  // h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   const bool just_hipo_test = false;
   if (!just_hipo_test) {
     REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
@@ -1071,7 +1071,7 @@ TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   std::string model_file =
     std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("highs_analysis_level", kHighsAnalysisLevelMipTime);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 

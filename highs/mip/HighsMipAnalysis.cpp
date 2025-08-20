@@ -282,13 +282,14 @@ void HighsMipAnalysis::addSubSolverCallTime(const HighsSubSolverCallTime& sub_so
 
 void HighsMipAnalysis::checkSubSolverCallTime(const HighsSubSolverCallTime& sub_solver_call_time) {
   if (!analyse_mip_time) return;
+  const bool printf_flag = mip_clocks.timer_pointer_->printf_flag;
   bool error = false;
   auto check = [&](const HighsInt& sub_solver_clock, const HighsInt& mip_clock) {
     HighsInt sub_solver_num_call = sub_solver_call_time.num_call[sub_solver_clock];
     HighsInt mip_clock_num_call = mip_clocks.timer_pointer_->numCall(mip_clocks.clock_[mip_clock]);
     const bool ok = sub_solver_num_call == mip_clock_num_call;
     if (!ok) {
-      printf("HighsMipAnalysis::checkSubSolverCallTime: Error for %s\n", sub_solver_call_time.name[sub_solver_clock].c_str());
+      if (printf_flag) printf("HighsMipAnalysis::checkSubSolverCallTime: Error for %s\n", sub_solver_call_time.name[sub_solver_clock].c_str());
       error = true;
     }
   };
@@ -299,6 +300,6 @@ void HighsMipAnalysis::checkSubSolverCallTime(const HighsSubSolverCallTime& sub_
   check(kSubSolverHipoAc, kMipClockHipoSolveAnalyticCentreLp);
   check(kSubSolverIpxAc, kMipClockIpxSolveAnalyticCentreLp);
   check(kSubSolverSubMip, kMipClockSubMipSolve);
-  printf("\nHighsMipAnalysis::checkSubSolverCallTime: %s\n", error ? "ERROR!" : "OK");
+  if (printf_flag) printf("\nHighsMipAnalysis::checkSubSolverCallTime: %s\n", error ? "ERROR!" : "OK");
   assert(!error);
 }
