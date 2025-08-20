@@ -1172,6 +1172,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     bool checkPosRow = upperImplied || colIsBinary;
     bool checkNegRow = lowerImplied || colIsBinary;
+
     for (const HighsSliceNonzero& nonz : getColumnVector(j)) {
       HighsInt row = nonz.index();
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
@@ -1252,29 +1253,20 @@ HPresolve::Result HPresolve::dominatedColumns(
 
           double ak = nonz.value() * scale;
 
-          if (direction * bestVal <=
-                  direction * ak + options->small_matrix_value &&
-              (!isEqOrRangedRow ||
-               direction * bestVal >=
-                   direction * ak - options->small_matrix_value) &&
-              checkDomination(direction, col, direction, k)) {
-            // direction =  1:
-            // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
-            // direction = -1:
-            // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
-            ++numFixedCols;
-            HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-            break;
-          } else if (direction * bestVal <=
-                         -direction * ak + options->small_matrix_value &&
-                     (!isEqOrRangedRow ||
-                      direction * bestVal >=
-                          -direction * ak - options->small_matrix_value) &&
-                     checkDomination(direction, col, -direction, k)) {
-            // direction =  1:
-            // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
-            // direction = -1:
-            // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
+          if ((direction * bestVal <=
+                   direction * ak + options->small_matrix_value &&
+               (!isEqOrRangedRow ||
+                direction * bestVal >=
+                    direction * ak - options->small_matrix_value) &&
+               checkDomination(direction, col, direction, k)) ||
+              (direction * bestVal <=
+                   -direction * ak + options->small_matrix_value &&
+               (!isEqOrRangedRow ||
+                direction * bestVal >=
+                    -direction * ak - options->small_matrix_value) &&
+               checkDomination(direction, col, -direction, k))) {
+            // direction =  1: fix binary variable to one
+            // direction = -1: fix binary variable to zero
             ++numFixedCols;
             HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
             break;
