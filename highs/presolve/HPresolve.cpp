@@ -1019,6 +1019,9 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
 
 HPresolve::Result HPresolve::dominatedColumns(
     HighsPostsolveStack& postsolve_stack) {
+  // See section 6.4 "Dominated columns", Achterberg et al., Presolve Reductions
+  // in Mixed Integer Programming, INFORMS Journal on Computing 32(2):473-506.
+
   std::vector<std::pair<uint32_t, uint32_t>> signatures(model->num_col_);
 
   auto isBinary = [&](HighsInt i) {
@@ -1176,6 +1179,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
       if (colIsBinary) {
+        // lambda for calculating residual minimum / maximum row activity
         auto getResidual = [&](HighsInt row, HighsInt col, double val,
                                HighsInt direction) {
           if (direction > 0)
@@ -1184,6 +1188,7 @@ HPresolve::Result HPresolve::dominatedColumns(
             return impliedRowBounds.getResidualSumLower(row, col, val);
         };
 
+        // lambda for updating worst-case bound on binary variables
         auto updateWorstCaseBounds = [&](HighsInt row, HighsInt col, double val,
                                          HighsInt direction, double rhs) {
           if (direction * rhs == kHighsInf) return;
@@ -1198,6 +1203,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           }
         };
 
+        // compute worst-case bounds for binary variables
         updateWorstCaseBounds(row, j, nonz.value(), HighsInt{1},
                               model->row_upper_[row]);
         updateWorstCaseBounds(row, j, nonz.value(), HighsInt{-1},
@@ -1239,6 +1245,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     };
 
     if (colIsBinary) {
+      // lambda for checking whether a binary variable can be fixed
       auto binaryCanBeFixed = [&](HighsInt col, HighsInt k, double bestVal,
                                   double val, HighsInt direction,
                                   HighsInt multiplier, bool isEqOrRangedRow) {
@@ -1251,6 +1258,7 @@ HPresolve::Result HPresolve::dominatedColumns(
                checkDomination(direction, col, mydirection, k);
       };
 
+      // lambda for fixing binary variables
       auto checkFixBinary = [&](HighsInt row, HighsInt col, HighsInt direction,
                                 double scale, double bestVal) {
         storeRow(row);
@@ -1275,6 +1283,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           }
         }
 
+        // remove row singletons and doubleton equations if binary was fixed
         if (colDeleted[col]) {
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
           HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
@@ -1302,6 +1311,8 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
     }
 
+    // lambda for determining whether column bound is finite (in given
+    // direction)
     auto isBoundFinite = [&](HighsInt col, HighsInt direction) {
       if (direction < 0)
         return model->col_upper_[col] != kHighsInf;
@@ -1309,6 +1320,7 @@ HPresolve::Result HPresolve::dominatedColumns(
         return model->col_lower_[col] != -kHighsInf;
     };
 
+    // lambda for checking whether a variable can be fixed
     auto colCanBeFixed = [&](HighsInt col, HighsInt k, double bestVal,
                              double val, HighsInt direction,
                              HighsInt multiplier, bool boundImplied,
@@ -1327,6 +1339,7 @@ HPresolve::Result HPresolve::dominatedColumns(
              checkDomination(direction, col, mydirection, k);
     };
 
+    // lambda for fixing variables
     auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
                            double scale, double bestVal, bool boundImplied) {
       storeRow(row);
@@ -1362,16 +1375,19 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
+    // try to fix variables using row 'bestRowMinus'
     if (bestRowMinus != -1 && (lowerImplied || hasNegCliques))
       HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowMinus, j, HighsInt{-1},
                                          bestRowMinusScale, ajBestRowMinus,
                                          lowerImplied));
 
+    // try to fix variables using row 'bestRowPlus'
     if (bestRowPlus != -1 && (upperImplied || hasPosCliques))
       HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowPlus, j, HighsInt{1},
                                          bestRowPlusScale, ajBestRowPlus,
                                          upperImplied));
 
+    // remove doubleton equations
     if (numFixedCols != oldNumFixed)
       HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
   }
