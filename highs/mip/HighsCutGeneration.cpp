@@ -682,7 +682,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
           vals[rowlen] = -liftedbincoef;
           inds[rowlen] = snfr.origBinCols[i];
           if (snfr.complementation[i]) {
-            tmpRhs -= -liftedbincoef;
+            tmpRhs -= vals[rowlen];
             vals[rowlen] = -vals[rowlen];
           }
           rowlen++;
