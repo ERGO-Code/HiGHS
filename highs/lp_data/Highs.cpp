@@ -1387,7 +1387,8 @@ HighsStatus Highs::optimizeModel() {
     const bool lp_presolve_requires_basis_postsolve =
         options_.lp_presolve_requires_basis_postsolve;
 
-    if (ipm_no_crossover) options_.lp_presolve_requires_basis_postsolve = false;
+    if (ipm_no_crossover)
+      options_.lp_presolve_requires_basis_postsolve = false;
 
     else if (lp_no_solution_basis)
       options_.lp_presolve_requires_basis_postsolve = false;

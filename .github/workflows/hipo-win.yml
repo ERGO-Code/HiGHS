@@ -1,4 +1,4 @@
-name: proto-win
+name: hipo-win
 
 on: [push, pull_request]
 
