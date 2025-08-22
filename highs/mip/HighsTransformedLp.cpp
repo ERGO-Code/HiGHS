@@ -673,7 +673,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     double val;
 
     if (isVub) {
-      val = sign * (coef * vbcoef + (sign >= 0 ? std::min(0.0, complorigbincoef) : std::max(0.0, complorigbincoef)));
+      val = sign * (coef * vbcoef + complorigbincoef);
       if (val > kHighsInf) return false;
       if (val < 0) {
         val = sign * (coef * vbcoef);
@@ -694,7 +694,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
         if (val < 0) return false;
       }
     } else {
-      val = sign * (coef * vbcoef + (sign >= 0 ? std::max(0.0, complorigbincoef) : std::min(0.0, complorigbincoef)));
+      val = sign * (coef * vbcoef + complorigbincoef);
       if (-val > kHighsInf) return false;
       if (val > 0) {
         val = sign * (coef * vbcoef);
@@ -981,6 +981,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
                          -vals[i], complementvub);
           }
           if (inclbincolvub) vectorsum.values[vbcol] = 0;
+        // TODO: CHECK IF THE RHS CHANGE SHOULD MATCH THE AGGRCONSTANT
           tmpSnfrRhs -= aggrconstant;
           break;
       }
