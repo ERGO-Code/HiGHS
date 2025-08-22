@@ -6,9 +6,11 @@ using Highs;
 
 class Program
 {
+
    static void Main(string[] args)
    {
       string model_name = "egout";
+      const double egout_optimal_objective = 568.1007;
 
       HighsLpSolver solver = new HighsLpSolver();
 
