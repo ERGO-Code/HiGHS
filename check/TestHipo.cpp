@@ -10,7 +10,7 @@
 // Example for using HiPO from its C++ interface. The program solves the Netlib
 // problem afiro.
 
-#include <unistd.h>
+// #include <unistd.h>
 
 #include <cmath>
 #include <iostream>

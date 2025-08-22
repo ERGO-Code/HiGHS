@@ -509,11 +509,11 @@ TEST_CASE("solver-string", "[highs_lp_solver]") {
           HighsStatus::kOk);
   REQUIRE(h.setOptionValue(kSolverString, kSimplexString) == HighsStatus::kOk);
   REQUIRE(h.setOptionValue(kSolverString, kIpmString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue(kSolverString, kHipoString) ==
+
 #ifdef HIPO
-          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kSolverString, kHipoString) == HighsStatus::kOk);
 #else
-          HighsStatus::kError);
+  REQUIRE(h.setOptionValue(kSolverString, kHipoString) == HighsStatus::kError);
 #endif
   REQUIRE(h.setOptionValue(kSolverString, kIpxString) == HighsStatus::kOk);
   REQUIRE(h.setOptionValue(kSolverString, kPdlpString) == HighsStatus::kOk);
