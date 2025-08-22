@@ -666,6 +666,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
       }
     }
     const double sign = coef >= 0 ? 1 : -1;
+    if (complement) origbincoef = -origbincoef;
     if (isVub) {
       double val = complement ? sign * (coef * -vb.coef + origbincoef)
                               : sign * (coef * vb.coef + origbincoef);
@@ -923,25 +924,25 @@ bool HighsTransformedLp::transformSNFRelaxation(
               HighsCDouble(vals[i]) * (complementvlb
                                            ? -bestVlb[col].second.coef
                                            : bestVlb[col].second.coef) +
-              (inclbincolvlb ? vectorsum.getValue(vbcol) : 0));
+              (inclbincolvlb ? (complementvlb ? -vectorsum.getValue(vbcol) : vectorsum.getValue(vbcol)) : 0));
           aggrconstant = static_cast<double>(
               HighsCDouble(vals[i]) *
               (complementvlb
                    ? bestVlb[col].second.constant + bestVlb[col].second.coef
-                   : bestVlb[col].second.constant));
+                   : bestVlb[col].second.constant)) + (complementvlb && inclbincolvlb ? vectorsum.getValue(vbcol) : 0);
           if (vals[i] >= 0) {
             addSNFRentry(vbcol, col,
                          complementvlb ? 1 - lpSolution.col_value[vbcol]
                                        : lpSolution.col_value[vbcol],
                          -substsolval, -1, -vbcoef, aggrconstant,
-                         inclbincolvlb ? -vectorsum.getValue(vbcol) : 0,
+                         inclbincolvlb ? (complementvlb ? vectorsum.getValue(vbcol) : -vectorsum.getValue(vbcol)) : 0,
                          -vals[i], complementvlb);
           } else {
             addSNFRentry(vbcol, col,
                          complementvlb ? 1 - lpSolution.col_value[vbcol]
                                        : lpSolution.col_value[vbcol],
                          substsolval, 1, vbcoef, -aggrconstant,
-                         inclbincolvlb ? vectorsum.getValue(vbcol) : 0, vals[i],
+                         inclbincolvlb ? (complementvlb ? -vectorsum.getValue(vbcol) : vectorsum.getValue(vbcol)) : 0, vals[i],
                          complementvlb);
           }
           if (inclbincolvlb) vectorsum.values[vbcol] = 0;
@@ -965,25 +966,25 @@ bool HighsTransformedLp::transformSNFRelaxation(
               HighsCDouble(vals[i]) * (complementvub
                                            ? -bestVub[col].second.coef
                                            : bestVub[col].second.coef) +
-              (inclbincolvub ? vectorsum.getValue(vbcol) : 0));
+              (inclbincolvub ? (complementvub ? -vectorsum.getValue(vbcol) : vectorsum.getValue(vbcol)) : 0));
           aggrconstant = static_cast<double>(
               HighsCDouble(vals[i]) *
               (complementvub
                    ? bestVub[col].second.constant + bestVub[col].second.coef
-                   : bestVub[col].second.constant));
+                   : bestVub[col].second.constant)) + (complementvub && inclbincolvub ? vectorsum.getValue(vbcol) : 0);
           if (vals[i] >= 0) {
             addSNFRentry(vbcol, col,
                          complementvub ? 1 - lpSolution.col_value[vbcol]
                                        : lpSolution.col_value[vbcol],
                          substsolval, 1, vbcoef, -aggrconstant,
-                         inclbincolvub ? vectorsum.getValue(vbcol) : 0, vals[i],
+                         inclbincolvub ? (complementvub ? -vectorsum.getValue(vbcol) : vectorsum.getValue(vbcol)) : 0, vals[i],
                          complementvub);
           } else {
             addSNFRentry(vbcol, col,
                          complementvub ? 1 - lpSolution.col_value[vbcol]
                                        : lpSolution.col_value[vbcol],
                          -substsolval, -1, -vbcoef, aggrconstant,
-                         inclbincolvub ? -vectorsum.getValue(vbcol) : 0,
+                         inclbincolvub ? (complementvub ? vectorsum.getValue(vbcol) : -vectorsum.getValue(vbcol)) : 0,
                          -vals[i], complementvub);
           }
           if (inclbincolvub) vectorsum.values[vbcol] = 0;

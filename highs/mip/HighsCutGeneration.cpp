@@ -682,7 +682,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
           vals[rowlen] = -liftedbincoef;
           inds[rowlen] = snfr.origBinCols[i];
           if (snfr.complementation[i]) {
-            tmpRhs -= vals[rowlen];
+            tmpRhs -= -liftedbincoef;
             vals[rowlen] = -vals[rowlen];
           }
           rowlen++;
@@ -707,7 +707,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
             vals[rowlen] = static_cast<double>(binvarcoef);
             inds[rowlen] = snfr.origBinCols[i];
             if (snfr.complementation[i]) {
-              tmpRhs -= vals[rowlen];
+              tmpRhs -= binvarcoef;
               vals[rowlen] = -vals[rowlen];
             }
             rowlen++;
@@ -731,7 +731,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
         vals[rowlen] = static_cast<double>(bincoef);
         inds[rowlen] = snfr.origBinCols[i];
         if (snfr.complementation[i]) {
-          tmpRhs -= vals[rowlen];
+          tmpRhs -= bincoef;
           vals[rowlen] = -vals[rowlen];
         }
         rowlen++;
