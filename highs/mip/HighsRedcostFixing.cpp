@@ -213,7 +213,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
     }
   }
   HighsInt maxNumStepsExp = 10;
-  HighsInt expshift = 0;
+  int expshift = 0;
   std::frexp(numRedcostLargeDomainCols / 10, &expshift);
   if (expshift > 5) {
     expshift = std::min(expshift, maxNumStepsExp);
