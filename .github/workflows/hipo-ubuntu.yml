@@ -36,6 +36,7 @@ jobs:
       - name: Install GKLIB
         run: |
           cd GKlib
+          make clean
           make config ccopts=-fPIC prefix=${{runner.workspace}}/installs
           make
           make install
@@ -43,7 +44,8 @@ jobs:
       - name: Install METIS
         run: |
           cd METIS
-          make config prefix=${{runner.workspace}}/installs
+          make clean
+          make config prefix=${{runner.workspace}}/installs gklib_path=../GKlib
           make
           make install
 
@@ -121,6 +123,7 @@ jobs:
       - name: Install GKLIB
         run: |
           cd GKlib
+          make clean
           make config ccopts=-fPIC prefix=${{runner.workspace}}/installs
           make
           make install
@@ -128,7 +131,8 @@ jobs:
       - name: Install METIS
         run: |
           cd METIS
-          make config prefix=${{runner.workspace}}/installs 
+          make clean
+          make config prefix=${{runner.workspace}}/installs gklib_path=../GKlib
           make
           make install
 

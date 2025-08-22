@@ -603,7 +603,10 @@ bool useHipo(const HighsOptions& options,
                                                      : options.mip_ipm_solver;
   // In the MIP solver there are situations where IPM must be used
   const bool force_ipm = specific_solver_option == kMipIpmSolverString;
-  bool use_hipo;
+
+  // Initialize to value for valgrind.
+  bool use_hipo = false;
+
   if (specific_solver_option_value == kIpxString) {
     use_hipo = false;
   } else if (specific_solver_option_value == kIpmString ||
