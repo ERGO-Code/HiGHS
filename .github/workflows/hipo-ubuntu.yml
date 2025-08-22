@@ -37,7 +37,7 @@ jobs:
         run: |
           cd GKlib
           make clean
-          make config ccopts=-fPIC prefix=${{runner.workspace}}/installs
+          make config shared=1 prefix=${{runner.workspace}}/installs
           make
           make install
 
@@ -45,7 +45,7 @@ jobs:
         run: |
           cd METIS
           make clean
-          make config prefix=${{runner.workspace}}/installs gklib_path=../GKlib
+          make config shared=1 prefix=${{runner.workspace}}/installs gklib_path=../GKlib
           make
           make install
 
@@ -132,7 +132,7 @@ jobs:
         run: |
           cd METIS
           make clean
-          make config prefix=${{runner.workspace}}/installs gklib_path=../GKlib
+          make config ccopts=-fPIC prefix=${{runner.workspace}}/installs gklib_path=../GKlib
           make
           make install
 
