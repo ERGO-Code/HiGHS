@@ -89,6 +89,11 @@ void HighsMipSolver::run() {
   analysis_.mipTimerStart(kMipClockInit);
   mipdata_->init();
   analysis_.mipTimerStop(kMipClockInit);
+#ifdef HIGHS_DEBUGSOL
+  mipdata_->debugSolution.activate();
+  bool debugSolActive = false;
+  std::swap(mipdata_->debugSolution.debugSolActive, debugSolActive);
+#endif
   analysis_.mipTimerStart(kMipClockRunPresolve);
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
@@ -121,6 +126,9 @@ void HighsMipSolver::run() {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - starting  setup\n", timer_.read());
   analysis_.mipTimerStart(kMipClockRunSetup);
+#ifdef HIGHS_DEBUGSOL
+  mipdata_->debugSolution.debugSolActive = debugSolActive;
+#endif
   mipdata_->runSetup();
   analysis_.mipTimerStop(kMipClockRunSetup);
   if (analysis_.analyse_mip_time && !submip)

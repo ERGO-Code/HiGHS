@@ -861,6 +861,7 @@ void HighsCliqueTable::extractCliques(
     for (HighsInt i = 0; i != nbin; ++i) {
       HighsInt bincol = inds[perm[i]];
       HighsCDouble impliedub = HighsCDouble(rhs) - vals[perm[i]];
+      if (implics.tooManyVarBounds()) break;
       for (HighsInt j = nbin; j != ntotal; ++j) {
         HighsInt col = inds[perm[j]];
         if (globaldom.isFixed(col)) continue;

@@ -1246,8 +1246,15 @@ HighsStatus Highs::optimizeModel() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
+
   const bool ipm_no_crossover =
       useIpm(options_.solver) && options_.run_crossover == kHighsOffString;
+
+  const bool lp_no_solution_basis =
+      (options_.solver == kIpmString &&
+       options_.run_crossover == kHighsOffString) ||
+      options_.solver == kPdlpString;
+
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
@@ -1379,7 +1386,12 @@ HighsStatus Highs::optimizeModel() {
     // rules for which postsolve does not generate a basis.
     const bool lp_presolve_requires_basis_postsolve =
         options_.lp_presolve_requires_basis_postsolve;
+
     if (ipm_no_crossover) options_.lp_presolve_requires_basis_postsolve = false;
+
+    else if (lp_no_solution_basis)
+      options_.lp_presolve_requires_basis_postsolve = false;
+
     // Possibly presolve - according to option_.presolve
     //
     // If solving the relaxation of a MIP, make sure that LP presolve
@@ -1516,6 +1528,9 @@ HighsStatus Highs::optimizeModel() {
         solution_.value_valid = true;
         solution_.dual_valid = true;
         have_optimal_solution = true;
+        // Optimality will not be spotted if there's no basis
+        // postsolve
+        model_status_ = HighsModelStatus::kOptimal;
         break;
       }
       case HighsPresolveStatus::kInfeasible: {
@@ -1591,6 +1606,10 @@ HighsStatus Highs::optimizeModel() {
 
     // Postsolve. Does nothing if there were no reductions during presolve.
 
+    // If presolve has been run assuming that there's no basis
+    // postsolve - allowing sparsify to be used in presolve - so
+    // invalidate any basis
+    if (lp_no_solution_basis) this->invalidateBasis();
     const bool have_optimal_reduced_solution =
         model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
         (model_presolve_status_ == HighsPresolveStatus::kReduced &&
@@ -1647,7 +1666,7 @@ HighsStatus Highs::optimizeModel() {
           // was because either run_crossover was "off" or "choose"
           // and IPX determined optimality
           solution_.dual_valid = true;
-          basis_.invalidate();
+          this->invalidateBasis();
           this->lpKktCheck("After postsolve");
         } else {
           //
@@ -1841,11 +1860,12 @@ HighsStatus Highs::optimizeModel() {
     highsLogDev(log_options, HighsLogType::kInfo, "\n");
     double rlv_time_difference =
         fabs(sum_time - this_solve_time) / this_solve_time;
-    if (rlv_time_difference > 0.1)
+    if (rlv_time_difference > 0.1) {
       highsLogDev(options_.log_options, HighsLogType::kInfo,
                   "Strange: Solve time = %g; Sum times = %g: relative "
                   "difference = %g\n",
                   this_solve_time, sum_time, rlv_time_difference);
+    }
   }
   // Assess success according to the model status, regardless of
   // whether anything worse has happened earlier
@@ -2501,7 +2521,7 @@ HighsStatus Highs::setBasis() {
   //
   // Don't set to logical basis since that causes presolve to be
   // skipped
-  basis_.invalidate();
+  this->invalidateBasis();
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -4131,8 +4151,10 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 
   // Must at least have a primal column solution of the right size
   if (HighsInt(solution.col_value.size()) != presolved_lp.num_col_) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Primal solution provided to postsolve is incorrect size\n");
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Primal solution provided to postsolve is of size %d rather than %d\n",
+        int(solution.col_value.size()), int(presolved_lp.num_col_));
     return HighsStatus::kError;
   }
   // Check any basis that is supplied
@@ -4194,7 +4216,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
           "Postsolve performed for MIP, but model status cannot be known\n");
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Postsolve return status is %d\n", (int)postsolve_status);
+                   "Postsolve return status is %d\n", int(postsolve_status));
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPostsolveError);
     }
@@ -4209,10 +4231,20 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         presolve_.data_.recovered_solution_.row_dual.size() > 0 ||
         presolve_.data_.recovered_solution_.dual_valid;
     if (dual_supplied) {
-      if (!isDualSolutionRightSize(presolved_lp,
-                                   presolve_.data_.recovered_solution_)) {
+      if (!isRowDualSolutionRightSize(presolved_lp,
+                                      presolve_.data_.recovered_solution_)) {
         highsLogUser(options_.log_options, HighsLogType::kError,
-                     "Dual solution provided to postsolve is incorrect size\n");
+                     "Row dual solution provided to postsolve is of size %d "
+                     "rather than %d\n",
+                     int(solution.row_dual.size()), int(presolved_lp.num_row_));
+        return HighsStatus::kError;
+      }
+      if (!isColDualSolutionRightSize(presolved_lp,
+                                      presolve_.data_.recovered_solution_)) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Column dual solution provided to postsolve is of size %d "
+                     "rather than %d\n",
+                     int(solution.col_dual.size()), int(presolved_lp.num_col_));
         return HighsStatus::kError;
       }
       presolve_.data_.recovered_solution_.dual_valid = true;
@@ -4304,6 +4336,9 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         getKktFailures(this->options_, is_qp, this->model_.lp_,
                        this->model_.lp_.col_cost_, this->solution_, this->info_,
                        get_residuals);
+        highsLogUser(options_.log_options, HighsLogType::kInfo, "\n");
+        reportLpKktFailures(this->model_.lp_, this->options_, this->info_,
+                            "After postsolve");
         if (info_.num_primal_infeasibilities == 0 &&
             info_.num_dual_infeasibilities == 0) {
           model_status_ = HighsModelStatus::kOptimal;
@@ -4312,7 +4347,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         }
         highsLogUser(
             options_.log_options, HighsLogType::kInfo,
-            "Pure postsolve yields primal %ssolution, but no basis: model "
+            "\nPure postsolve yields primal %ssolution, but no basis: model "
             "status is %s\n",
             solution_.dual_valid ? "and dual " : "",
             modelStatusToString(model_status_).c_str());
