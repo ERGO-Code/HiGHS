@@ -44,16 +44,6 @@ jobs:
           -Dmetis_DIR=C:/vcpkg/packages/metis_x64-windows/share/metis \
           -DGKlib_DIR=C:/vcpkg/packages/gklib_x64-windows/share/gklib
 
-      # - name: Build
-      #   working-directory: ${{runner.workspace}}/build
-      #   shell: bash
-      #   run: cmake --build . --target metis-test --config Release --parallel
-
-      # - name: Run
-      #   working-directory: ${{runner.workspace}}/build
-      #   shell: bash
-      #   run: ./Release/bin/metis-test.exe
-
       #     repository: KarypisLab/GKlib
       #     ref: master
       #     path: GKlib
