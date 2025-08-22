@@ -41,6 +41,13 @@ jobs:
           make
           make install
 
+      - name: Check installs 
+        working-directory: ${{runner.workspace}}
+        run: |
+          cd installs
+          ls 
+          ls lib
+
       - name: Install METIS
         shell: bash
         run: |
