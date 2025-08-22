@@ -51,7 +51,6 @@ jobs:
           make
           make install
 
-
       # - name: Check METIS and GKlib
       #   working-directory: ${{runner.workspace}}
       #   run: |
@@ -125,19 +124,20 @@ jobs:
         run: |
           cd GKlib
           make clean
-          make config ccopts=-fPIC prefix=${{runner.workspace}}/installs
+          make config shared=1 prefix=${{runner.workspace}}/installs
           make
           make install
 
       - name: Install METIS
+        shell: bash
         run: |
           cd METIS
           make clean
-          make config ccopts=-fPIC prefix=${{runner.workspace}}/installs gklib_path=../GKlib
+          export LD_LIBRARY_PATH=/home/runner/work/HiGHS/installs/lib:$LD_LIBRARY_PATH
+          make config shared=1 prefix=${{runner.workspace}}/installs gklib_path=../GKlib
           make
           make install
 
-         # export LD_LIBRARY_PATH=/home/runner/work/HiGHS/installs/lib:$LD_LIBRARY_PATH
 
       - name: Check METIS and GKlib
         working-directory: ${{runner.workspace}}
