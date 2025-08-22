@@ -189,7 +189,11 @@ else()
     if(APPLE)
         target_link_libraries(highs "-framework Accelerate")
         target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-    else(APPLE)
+    elseif(WIN32)
+        target_link_libraries(highs OpenBLAS::OpenBLAS)
+        target_link_libraries(highs metis)
+    else() 
+        # LINUX
         if(BLAS_LIB)
             target_link_libraries(highs "${BLAS_LIB}")
         elseif(OPENBLAS_LIB)
@@ -200,13 +204,17 @@ else()
         endif(BLAS_LIB)
     endif(APPLE)
 
-    # Metis
-    target_include_directories(highs PRIVATE "${METIS_PATH}")
-    target_link_libraries(highs "${METIS_LIB}")
+    if (NOT WIN32)
+      # Find_package works if deps are installed with vcpkg.
 
-    # GKlib
-    target_include_directories(highs PRIVATE "${GKLIB_PATH}")
-    target_link_libraries(highs "${GKLIB_LIB}")
+      # Metis
+      target_include_directories(highs PRIVATE "${METIS_PATH}")
+      target_link_libraries(highs "${METIS_LIB}")
+
+      # GKlib
+      target_include_directories(highs PRIVATE "${GKLIB_PATH}")
+      target_link_libraries(highs "${GKLIB_LIB}")
+    endif()
 
   endif()
 

@@ -34,9 +34,7 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
-          -Dmetis_DIR=C:/vcpkg/packages/metis_x64-windows/share/metis \
-          -DGKlib_DIR=C:/vcpkg/packages/gklib_x64-windows/share/gklib \
-          -DOpenBLAS_DIR=C:/vcpkg/packages/openblas_x64-windows/share/openblas
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
       - name: Build 
         working-directory: ${{runner.workspace}}/build

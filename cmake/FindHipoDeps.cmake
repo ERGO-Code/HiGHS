@@ -2,7 +2,13 @@
 option(BLAS_ROOT "Root directory of BLAS or OpenBLAS" "")
 message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
 
-if(NOT APPLE)
+if (WIN32)
+
+    find_package(OpenBLAS CONFIG REQUIRED)
+    find_package(metis CONFIG REQUIRED)
+
+elseif(NOT APPLE)
+    # LINUX
     find_library(OPENBLAS_LIB 
         NAMES openblas 
         HINTS "${BLAS_ROOT}/lib")
@@ -21,38 +27,42 @@ if(NOT APPLE)
         message("Found BLAS library at ${BLAS_LIB}")
     endif(OPENBLAS_LIB)
 
-endif(NOT APPLE)
+endif()
 
-# METIS
-option(METIS_ROOT "Root directory of METIS" "")
-message(STATUS "METIS_ROOT is " ${METIS_ROOT})
+if (NOT WIN32)
+    # Find_package works if deps are installed with vcpkg.
 
-find_path(METIS_PATH 
-    NAMES "metis.h" 
-    REQUIRED
-    HINTS "${METIS_ROOT}/include")
+    # METIS
+    option(METIS_ROOT "Root directory of METIS" "")
+    message(STATUS "METIS_ROOT is " ${METIS_ROOT})
 
-message("Found Metis header at ${METIS_PATH}")
+    find_path(METIS_PATH 
+        NAMES "metis.h" 
+        REQUIRED
+        HINTS "${METIS_ROOT}/include")
 
-find_library(METIS_LIB 
-    NAMES metis 
-    REQUIRED
-    HINTS "${METIS_ROOT}/lib")
-message("Found Metis library at ${METIS_LIB}")
+    message("Found Metis header at ${METIS_PATH}")
 
-# GKlib
-option(GKLIB_ROOT "Root directory of GKlib" "")
-message(STATUS "GKLIB_ROOT is " ${GKLIB_ROOT})
+    find_library(METIS_LIB 
+        NAMES metis 
+        REQUIRED
+        HINTS "${METIS_ROOT}/lib")
+    message("Found Metis library at ${METIS_LIB}")
 
-find_path(GKLIB_PATH 
-    NAMES "GKlib.h" REQUIRED
-    HINTS "${GKLIB_ROOT}/include")
+    # GKlib
+    option(GKLIB_ROOT "Root directory of GKlib" "")
+    message(STATUS "GKLIB_ROOT is " ${GKLIB_ROOT})
 
-message("Found GKlib header at ${GKLIB_PATH}")
+    find_path(GKLIB_PATH 
+        NAMES "GKlib.h" REQUIRED
+        HINTS "${GKLIB_ROOT}/include")
 
-find_library(GKLIB_LIB 
-    NAMES GKlib
-    REQUIRED
-    HINTS "${GKLIB_ROOT}/lib")
+    message("Found GKlib header at ${GKLIB_PATH}")
 
-message("Found GKlib library at ${GKLIB_LIB}")
+    find_library(GKLIB_LIB 
+        NAMES GKlib
+        REQUIRED
+        HINTS "${GKLIB_ROOT}/lib")
+
+    message("Found GKlib library at ${GKLIB_LIB}")
+endif()
