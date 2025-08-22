@@ -38,7 +38,6 @@ jobs:
           cd GKlib
           make config shared=1 prefix=${{runner.workspace}}/installs
           make
-          make install
 
       - name: Install METIS
         run: |
