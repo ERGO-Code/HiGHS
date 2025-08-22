@@ -1,0 +1,90 @@
+name: proto-win
+
+on: [push, pull_request]
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install METIS
+        run: vcpkg install metis
+
+      - name: Create build dir
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: LS 
+        shell: bash
+        run: ls C:/vcpkg/packages/metis_x64-windows/
+
+      - name: LS lib
+        shell: bash
+        run: ls C:/vcpkg/packages/metis_x64-windows/lib
+
+      - name: LS share
+        shell: bash
+        run: ls C:/vcpkg/packages/metis_x64-windows/share
+
+      - name: LS share gk
+        shell: bash
+        run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
+
+      - name: Configure cmake
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE \
+          -DPROTO_IPM=ON \
+          -Dmetis_DIR=C:/vcpkg/packages/metis_x64-windows/share/metis \
+          -DGKlib_DIR=C:/vcpkg/packages/gklib_x64-windows/share/gklib
+
+      #     repository: KarypisLab/GKlib
+      #     ref: master
+      #     path: GKlib
+
+      # - name: Checkout METIS
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: KarypisLab/METIS
+      #     ref: master
+      #     path: METIS
+
+      # - name: Create installs dir
+      #   working-directory: ${{runner.workspace}}
+      #   run: | 
+      #     mkdir installs
+      #     ls
+
+      # - name: Install GKLIB
+      #   run: |
+      #     cd GKlib
+      #     make config prefix=${{runner.workspace}}/installs
+      #     make
+      #     make install
+
+      # - name: Install METIS
+      #   run: |
+      #     cd METIS
+      #     make config prefix=${{runner.workspace}}/installs
+      #     make
+      #     make install
+
+
+      # - name: Check METIS and GKlib
+      #   working-directory: ${{runner.workspace}}
+      #   run: |
+      #     cd installs
+      #     ls 
+      #     ls lib
+
+      # - name: Install OpenBLAS
+      #   shell: bash
+      #   run: |
+      #     sudo apt update
+      #     sudo apt install libopenblas-dev 
