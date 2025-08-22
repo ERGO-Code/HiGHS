@@ -43,7 +43,9 @@ jobs:
       - name: Install METIS
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs
+          make config shared=1 \
+          prefix=${{runner.workspace}}/installs \
+          gklib_path=${{runner.workspace}}/installs
           make
           make install
 
@@ -126,7 +128,9 @@ jobs:
       - name: Install METIS
         run: |
           cd METIS
-          make config prefix=${{runner.workspace}}/installs
+          make config \
+          prefix=${{runner.workspace}}/installs \
+          gklib_path=${{runner.workspace}}/installs
           make
           make install
 
