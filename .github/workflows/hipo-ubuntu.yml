@@ -48,6 +48,14 @@ jobs:
           ls 
           ls lib
 
+      - name: Copy GKlib shared (bug)
+        working-directory: ${{runner.workspace}}
+        run: |
+          cd installs
+          cd lib
+          ln libGKlib.so.0 libGKlib.so
+          ls 
+
       - name: Install METIS
         shell: bash
         run: |
