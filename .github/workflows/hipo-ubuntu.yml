@@ -36,17 +36,16 @@ jobs:
       - name: Install GKLIB
         run: |
           cd GKlib
-          make clean
           make config shared=1 prefix=${{runner.workspace}}/installs
           make
           make install
 
-      - name: Check installs 
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls 
-          ls lib
+      # - name: Check installs 
+      #   working-directory: ${{runner.workspace}}
+      #   run: |
+      #     cd installs
+      #     ls 
+      #     ls lib
 
       - name: Copy GKlib shared (bug)
         working-directory: ${{runner.workspace}}
@@ -57,24 +56,21 @@ jobs:
           ls 
 
       - name: Install METIS
-        shell: bash
         run: |
           cd METIS
-          make clean
-          export LD_LIBRARY_PATH=${{runner.workspace}}/installs/lib:$LD_LIBRARY_PATH
           make config shared=1 prefix=${{runner.workspace}}/installs 
           make
           make install
 
-
-      # - name: Check METIS and GKlib
-      #   working-directory: ${{runner.workspace}}
-      #   run: |
-      #     cd installs
-      #     ls 
-      #     ls lib
-
       # no default blas available on runner
+
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-apt-libopenblas
 
       - name: Install OpenBLAS
         shell: bash
@@ -139,7 +135,6 @@ jobs:
       - name: Install GKLIB
         run: |
           cd GKlib
-          make clean
           make config shared=1 prefix=${{runner.workspace}}/installs
           make
           make install
@@ -156,21 +151,17 @@ jobs:
         shell: bash
         run: |
           cd METIS
-          make clean
           make config shared=1 prefix=${{runner.workspace}}/installs 
           make
           make install
 
-        # export LD_LIBRARY_PATH=/home/runner/work/HiGHS/installs/lib:$LD_LIBRARY_PATH
-
-      - name: Check METIS and GKlib
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls 
-          ls lib
-
-      # no default blas available on runner
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-apt-libopenblas
 
       - name: Install OpenBLAS
         shell: bash
