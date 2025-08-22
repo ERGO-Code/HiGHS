@@ -13,6 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 2. Set up caching for vcpkg
+      - name: Cache vcpkg
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./vcpkg/installed
+            ./vcpkg/downloads
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Install GKlib
+        run: vcpkg install metis
+
       - name: Install METIS
         run: vcpkg install metis
 
