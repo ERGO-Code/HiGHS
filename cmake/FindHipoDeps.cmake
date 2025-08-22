@@ -4,8 +4,11 @@ message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
 
 if (WIN32)
 
-    find_package(OpenBLAS CONFIG REQUIRED)
+    find_package(OpenBLAS CONFIG REQUIRED) 
+    message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
+
     find_package(metis CONFIG REQUIRED)
+    message(STATUS "metis CMake config path: ${metis_DIR}")
 
 elseif(NOT APPLE)
     # LINUX
