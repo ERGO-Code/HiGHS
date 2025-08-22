@@ -1,4 +1,4 @@
-name: hipo-linux
+name: hipo-ubuntu
 
 on: [push, pull_request]
 
@@ -47,12 +47,12 @@ jobs:
           make
           make install
 
-      - name: Check METIS and GKlib
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls 
-          ls lib
+      # - name: Check METIS and GKlib
+      #   working-directory: ${{runner.workspace}}
+      #   run: |
+      #     cd installs
+      #     ls 
+      #     ls lib
 
       # no default blas available on runner
 
@@ -65,17 +65,25 @@ jobs:
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
 
-      - name: Configure CMake, build and ctest
+      - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
           -DGKLIB_ROOT=${{runner.workspace}}/installs
 
-      - name: Build and ctest
+      - name: Build 
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
+
+      - name: Test executable 
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
           ctest --parallel --timeout 300 --output-on-failure
 
   debug:
@@ -148,8 +156,16 @@ jobs:
           -DGKLIB_ROOT=${{runner.workspace}}/installs \
           -DCMAKE_BUILD_TYPE=Debug
 
-      - name: Build and ctest
+      - name: Build 
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
+
+      - name: Test executable 
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
           ctest --parallel --timeout 300 --output-on-failure

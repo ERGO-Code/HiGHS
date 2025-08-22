@@ -64,10 +64,18 @@ jobs:
           -DMETIS_ROOT=${{runner.workspace}}/installs \
           -DGKLIB_ROOT=${{runner.workspace}}/installs 
 
-      - name: Build and ctest
+      - name: Build 
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
+
+      - name: Test executable 
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
           ctest --parallel --timeout 300 --output-on-failure
 
   debug:
@@ -132,8 +140,16 @@ jobs:
           -DGKLIB_ROOT=${{runner.workspace}}/installs \
           -DCMAKE_BUILD_TYPE=Debug
 
-      - name: Build and ctest
+      - name: Build 
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
+
+      - name: Test executable 
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
           ctest --parallel --timeout 300 --output-on-failure
