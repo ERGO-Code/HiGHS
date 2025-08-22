@@ -36,15 +36,14 @@ jobs:
       - name: Install GKLIB
         run: |
           cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
+          make config shared=1 
           make
-          make install
 
       - name: Install METIS
         run: |
           cd METIS
           export LD_LIBRARY_PATH=/home/runner/work/HiGHS/installs/lib:$LD_LIBRARY_PATH
-          make config shared=1 prefix=${{runner.workspace}}/installs gklib_path=${{runner.workspace}}/installs
+          make config shared=1 prefix=${{runner.workspace}}/installs gklib_path=../GKlib
           make
           make install
 
