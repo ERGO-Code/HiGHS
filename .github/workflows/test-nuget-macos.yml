@@ -1,7 +1,6 @@
 name: test-nuget-macos
 
-# on: [push, pull_request]
-on: []
+on: [push, pull_request]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

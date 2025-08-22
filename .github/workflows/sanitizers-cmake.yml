@@ -1,6 +1,5 @@
 name: sanitizers-cmake
-# on: [push, pull_request]
-on: []
+on: [push, pull_request]
 
 jobs:
   gcc_relwithdebinfo:

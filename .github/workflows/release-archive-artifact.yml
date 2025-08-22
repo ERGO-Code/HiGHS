@@ -1,11 +1,9 @@
 name: release-archive-artifact.yml
 
-# on:
-#   push:
-#     # tags:
-#     #   - "v*.*.*"
-
-on: []
+on:
+  push:
+    # tags:
+    #   - "v*.*.*"
 
 jobs:
   build:

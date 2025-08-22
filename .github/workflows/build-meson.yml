@@ -1,7 +1,6 @@
 name: build-meson
 
 on: [push, pull_request]
-on: []
 
 jobs:
   buildmeson:

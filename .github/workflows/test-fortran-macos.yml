@@ -1,7 +1,6 @@
 name: test-fortran-macos
 
-# on: [push, pull_request]
-on: []
+on: [push, pull_request]
 
 jobs:
   fast_build_release:

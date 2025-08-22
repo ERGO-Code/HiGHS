@@ -1,7 +1,6 @@
 name: build-linux
 
 on: [push, pull_request]
-on: []
 
 jobs:
   debug:

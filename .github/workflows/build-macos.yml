@@ -1,7 +1,6 @@
 name: build-macos
 
 on: [push, pull_request]
-on: []
 
 jobs:
   debug:
