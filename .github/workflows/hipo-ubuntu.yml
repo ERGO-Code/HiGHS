@@ -106,91 +106,99 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
-  # debug:
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ubuntu-latest]
+  debug:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
 
-  #   steps:
-  #     - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-  #     - name: Checkout GKlib
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: KarypisLab/GKlib
-  #         ref: master
-  #         path: GKlib
+      - name: Checkout GKlib
+        uses: actions/checkout@v4
+        with:
+          repository: KarypisLab/GKlib
+          ref: master
+          path: GKlib
 
-  #     - name: Checkout METIS
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: KarypisLab/METIS
-  #         ref: master
-  #         path: METIS
+      - name: Checkout METIS
+        uses: actions/checkout@v4
+        with:
+          repository: KarypisLab/METIS
+          ref: master
+          path: METIS
 
-  #     - name: Create installs dir
-  #       working-directory: ${{runner.workspace}}
-  #       run: | 
-  #         mkdir installs
-  #         ls
+      - name: Create installs dir
+        working-directory: ${{runner.workspace}}
+        run: | 
+          mkdir installs
+          ls
 
-  #     - name: Install GKLIB
-  #       run: |
-  #         cd GKlib
-  #         make clean
-  #         make config shared=1 prefix=${{runner.workspace}}/installs
-  #         make
-  #         make install
+      - name: Install GKLIB
+        run: |
+          cd GKlib
+          make clean
+          make config shared=1 prefix=${{runner.workspace}}/installs
+          make
+          make install
 
-  #     - name: Install METIS
-  #       shell: bash
-  #       run: |
-  #         cd METIS
-  #         make clean
-  #         export LD_LIBRARY_PATH=/home/runner/work/HiGHS/installs/lib:$LD_LIBRARY_PATH
-  #         make config shared=1 prefix=${{runner.workspace}}/installs gklib_path=../GKlib
-  #         make
-  #         make install
+      - name: Copy GKlib shared (bug)
+        working-directory: ${{runner.workspace}}
+        run: |
+          cd installs
+          cd lib
+          ln libGKlib.so.0 libGKlib.so
+          ls 
 
+      - name: Install METIS
+        shell: bash
+        run: |
+          cd METIS
+          make clean
+          make config shared=1 prefix=${{runner.workspace}}/installs 
+          make
+          make install
 
-  #     - name: Check METIS and GKlib
-  #       working-directory: ${{runner.workspace}}
-  #       run: |
-  #         cd installs
-  #         ls 
-  #         ls lib
+        # export LD_LIBRARY_PATH=/home/runner/work/HiGHS/installs/lib:$LD_LIBRARY_PATH
 
-  #     # no default blas available on runner
+      - name: Check METIS and GKlib
+        working-directory: ${{runner.workspace}}
+        run: |
+          cd installs
+          ls 
+          ls lib
 
-  #     - name: Install OpenBLAS
-  #       shell: bash
-  #       run: |
-  #         sudo apt update
-  #         sudo apt install libopenblas-dev 
+      # no default blas available on runner
 
-  #     - name: Create Build Environment
-  #       run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Install OpenBLAS
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install libopenblas-dev 
 
-  #     - name: Configure CMake
-  #       working-directory: ${{runner.workspace}}/build
-  #       run: |
-  #         cmake $GITHUB_WORKSPACE -DHIPO=ON \
-  #         -DMETIS_ROOT=${{runner.workspace}}/installs \
-  #         -DGKLIB_ROOT=${{runner.workspace}}/installs \
-  #         -DCMAKE_BUILD_TYPE=Debug
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
 
-  #     - name: Build 
-  #       working-directory: ${{runner.workspace}}/build
-  #       run: |
-  #         cmake --build . --parallel
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DMETIS_ROOT=${{runner.workspace}}/installs \
+          -DGKLIB_ROOT=${{runner.workspace}}/installs \
+          -DCMAKE_BUILD_TYPE=Debug
 
-  #     - name: Test executable 
-  #       working-directory: ${{runner.workspace}}/build
-  #       run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+      - name: Build 
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel
 
-  #     - name: Ctest
-  #       working-directory: ${{runner.workspace}}/build
-  #       run: |
-  #         ctest --parallel --timeout 300 --output-on-failure
+      - name: Test executable 
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
