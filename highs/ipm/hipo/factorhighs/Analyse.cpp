@@ -8,7 +8,7 @@
 
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
-// #include "GKlib.h"
+#include "GKlib.h"
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
