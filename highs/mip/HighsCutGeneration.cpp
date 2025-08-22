@@ -648,6 +648,10 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
           // col is in L-
           vals[rowlen] = -snfr.lambda;
           inds[rowlen] = snfr.origBinCols[i];
+          if (snfr.complementation[i]) {
+            tmpRhs -= vals[rowlen];
+            vals[rowlen] = -vals[rowlen];
+          }
           rowlen++;
         } else {
           tmpRhs += snfr.lambda;
@@ -662,6 +666,10 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
         if (snfr.origBinCols[i] != -1 && snfr.aggrBinCoef[i] != 0) {
           vals[rowlen] = -snfr.aggrBinCoef[i];
           inds[rowlen] = snfr.origBinCols[i];
+          if (snfr.complementation[i]) {
+            tmpRhs -= vals[rowlen];
+            vals[rowlen] = -vals[rowlen];
+          }
           rowlen++;
         }
         tmpRhs += snfr.aggrConstant[i];
@@ -673,6 +681,10 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
         if (liftedbincoef != 0) {
           vals[rowlen] = -liftedbincoef;
           inds[rowlen] = snfr.origBinCols[i];
+          if (snfr.complementation[i]) {
+            tmpRhs -= vals[rowlen];
+            vals[rowlen] = -vals[rowlen];
+          }
           rowlen++;
           tmpRhs -= liftedbincoef;
         }
@@ -694,6 +706,10 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
           if (binvarcoef != 0) {
             vals[rowlen] = static_cast<double>(binvarcoef);
             inds[rowlen] = snfr.origBinCols[i];
+            if (snfr.complementation[i]) {
+              tmpRhs -= vals[rowlen];
+              vals[rowlen] = -vals[rowlen];
+            }
             rowlen++;
           }
         } else {
@@ -714,6 +730,10 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
       if (snfr.origBinCols[i] != -1 && bincoef != 0) {
         vals[rowlen] = static_cast<double>(bincoef);
         inds[rowlen] = snfr.origBinCols[i];
+        if (snfr.complementation[i]) {
+          tmpRhs -= vals[rowlen];
+          vals[rowlen] = -vals[rowlen];
+        }
         rowlen++;
       }
       if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
@@ -1574,6 +1594,7 @@ void HighsCutGeneration::initSNFRelaxation() {
     snfr.aggrConstant.resize(rowlen);
     snfr.aggrBinCoef.resize(rowlen);
     snfr.aggrContCoef.resize(rowlen);
+    snfr.complementation.resize(rowlen);
   }
   snfr.rhs = 0;
   snfr.lambda = 0;

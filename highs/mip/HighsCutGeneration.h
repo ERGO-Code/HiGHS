@@ -127,7 +127,8 @@ class HighsCutGeneration {
     std::vector<HighsInt> origContCols;  // orig y_i used to make y'_j in SNFR
     std::vector<double> aggrBinCoef;     // c_i row coef of x_i in orig aggrrow
     std::vector<double> aggrContCoef;    // a_i row coef of y_i in orig aggrrow
-    std::vector<double> aggrConstant;  // constant shift used in SNFR transform
+    std::vector<double> aggrConstant;   // constant shift used in SNFR transform
+    std::vector<bool> complementation;  // was the original bincol complemented
 
     std::vector<HighsInt>
         flowCoverStatus;  // (+1) in f-cover (-1) notin f-cover
