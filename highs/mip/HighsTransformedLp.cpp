@@ -927,7 +927,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           aggrvbcoef = static_cast<double>(
               HighsCDouble(vals[i]) * vbcoef + bincoef);
           aggrconstant = static_cast<double>(
-              HighsCDouble(vals[i]) * vbconstant + (complementvlb && inclbincolvlb ? vectorsum.getValue(vbcol) : 0));
+              HighsCDouble(vals[i]) * vbconstant);
           if (vals[i] >= 0) {
             addSNFRentry(vbcol, col,
                          binsolval,
@@ -941,8 +941,8 @@ bool HighsTransformedLp::transformSNFRelaxation(
                          bincoef, vals[i],
                          complementvlb);
           }
+          tmpSnfrRhs -= aggrconstant + (complementvlb && inclbincolvlb ? vectorsum.getValue(vbcol) : 0);
           if (inclbincolvlb) vectorsum.values[vbcol] = 0;
-          tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kVariableUb:
           // vub: y_j <= u'_j x_j + d_j. c_j is the coefficient of x_j in row
@@ -966,7 +966,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           aggrvbcoef = static_cast<double>(
               HighsCDouble(vals[i]) * vbcoef + bincoef);
           aggrconstant = static_cast<double>(
-              HighsCDouble(vals[i]) * vbconstant + (complementvub && inclbincolvub ? vectorsum.getValue(vbcol) : 0));
+              HighsCDouble(vals[i]) * vbconstant);
           if (vals[i] >= 0) {
             addSNFRentry(vbcol, col,
                          binsolval,
@@ -980,9 +980,8 @@ bool HighsTransformedLp::transformSNFRelaxation(
                          -bincoef,
                          -vals[i], complementvub);
           }
+          tmpSnfrRhs -= aggrconstant + (complementvub && inclbincolvub ? vectorsum.getValue(vbcol) : 0);
           if (inclbincolvub) vectorsum.values[vbcol] = 0;
-        // TODO: CHECK IF THE RHS CHANGE SHOULD MATCH THE AGGRCONSTANT
-          tmpSnfrRhs -= aggrconstant;
           break;
       }
     }
