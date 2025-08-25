@@ -428,7 +428,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                  "Replaced %d blank %6s name%s by name%s with prefix \"%s\", "
                  "beginning with suffix %d\n",
                  int(num_blank), column ? "column" : "row",
-                 num_blank > 1 ? "s" : "", num_blank > 1 ? "s" : "",
+                 num_blank == 1 ? "" : "s", num_blank == 1 ? "" : "s",
                  name_prefix.c_str(), int(from_name_suffix));
     return HighsStatus::kWarning;
   }

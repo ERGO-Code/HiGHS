@@ -705,8 +705,10 @@ void HighsMipSolverData::runMipPresolve(
   }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
-  reportPresolveReductions(mipsolver.options_mip_->log_options, presolve_status,
-                           *mipsolver.orig_model_, *mipsolver.model_);
+  if (numRestarts == 0)
+    reportPresolveReductions(mipsolver.options_mip_->log_options,
+                             presolve_status, *mipsolver.orig_model_,
+                             *mipsolver.model_);
 }
 
 void HighsMipSolverData::runSetup() {
@@ -980,34 +982,38 @@ void HighsMipSolverData::runSetup() {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  // clang-format off
 		 "\nSolving MIP model with:\n"
-		 "   %" HIGHSINT_FORMAT " rows\n"
-		 "   %" HIGHSINT_FORMAT " cols ("
+		 "   %" HIGHSINT_FORMAT " row%s\n"
+		 "   %" HIGHSINT_FORMAT " col%s ("
 		 "%" HIGHSINT_FORMAT" binary, "
 		 "%" HIGHSINT_FORMAT " integer, "
 		 "%" HIGHSINT_FORMAT" implied int., "
 		 "%" HIGHSINT_FORMAT " continuous, "
 		 "%" HIGHSINT_FORMAT " domain fixed)\n"
-		 "   %" HIGHSINT_FORMAT " nonzeros\n",
+		 "   %" HIGHSINT_FORMAT " nonzero%s\n",
                  // clang-format on
-                 mipsolver.numRow(), num_col, num_binary, num_general_integer,
-                 num_implied_integer, num_continuous, num_domain_fixed,
-                 mipsolver.numNonzero());
+                 mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s",
+                 num_col, num_col == 1 ? "" : "s", num_binary,
+                 num_general_integer, num_implied_integer, num_continuous,
+                 num_domain_fixed, mipsolver.numNonzero(),
+                 mipsolver.numNonzero() == 1 ? "" : "s");
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has "
                  // clang-format off
-		 "%" HIGHSINT_FORMAT " rows, "
-		 "%" HIGHSINT_FORMAT " cols ("
+		 "%" HIGHSINT_FORMAT " row%s, "
+		 "%" HIGHSINT_FORMAT " col%s ("
 		 "%" HIGHSINT_FORMAT " bin., "
 		 "%" HIGHSINT_FORMAT " int., "
 		 "%" HIGHSINT_FORMAT " impl., "
 		 "%" HIGHSINT_FORMAT " cont., "
 		 "%" HIGHSINT_FORMAT " dom.fix.), and "
-		 "%" HIGHSINT_FORMAT " nonzeros\n",
+		 "%" HIGHSINT_FORMAT " nonzero%s\n",
                  // clang-format on
-                 mipsolver.numRow(), num_col, num_binary, num_general_integer,
-                 num_implied_integer, num_continuous, num_domain_fixed,
-                 mipsolver.numNonzero());
+                 mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s",
+                 num_col, num_col == 1 ? "" : "s", num_binary,
+                 num_general_integer, num_implied_integer, num_continuous,
+                 num_domain_fixed, mipsolver.numNonzero(),
+                 mipsolver.numNonzero() == 1 ? "" : "s");
   }
 
   heuristics.setupIntCols();

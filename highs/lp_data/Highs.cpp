@@ -1627,7 +1627,7 @@ HighsStatus Highs::optimizeModel() {
       presolve_.data_.recovered_basis_ = basis_;
 
       if (model_presolve_status_ == HighsPresolveStatus::kReduced)
-      	this->lpKktCheck(presolve_.getReducedProblem(), "Before postsolve");
+        this->lpKktCheck(presolve_.getReducedProblem(), "Before postsolve");
 
       this_postsolve_time = -timer_.read(timer_.postsolve_clock);
       timer_.start(timer_.postsolve_clock);
@@ -1637,11 +1637,11 @@ HighsStatus Highs::optimizeModel() {
       presolve_.info_.postsolve_time = this_postsolve_time;
 
       if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
-	// Indicate that nontrivial postsolve has been performed
+        // Indicate that nontrivial postsolve has been performed
         if (model_presolve_status_ == HighsPresolveStatus::kReduced ||
-	    model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty)
-	  highsLogUser(log_options, HighsLogType::kInfo,
-		       "Performed postsolve\n");
+            model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty)
+          highsLogUser(log_options, HighsLogType::kInfo,
+                       "Performed postsolve\n");
         // Set solution and its status
         solution_.clear();
         solution_ = presolve_.data_.recovered_solution_;
@@ -2314,7 +2314,7 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "setSolution: User set of indices has %d duplicate%s: last "
                  "value used\n",
-                 int(num_duplicates), num_duplicates > 1 ? "s" : "");
+                 int(num_duplicates), num_duplicates == 1 ? "" : "s");
     return_status = HighsStatus::kWarning;
   }
 

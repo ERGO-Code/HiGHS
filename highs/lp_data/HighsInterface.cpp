@@ -66,11 +66,11 @@ void Highs::reportModelStats() const {
     highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
                 problem_type.c_str(), lp.model_name_.c_str());
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Row%s      : %" HIGHSINT_FORMAT "\n",
-		lp.num_row_, lp.num_row_ > 1 ? "s" : "");
+                "Row%s      : %" HIGHSINT_FORMAT "\n", lp.num_row_,
+                lp.num_row_ == 1 ? "" : "s");
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Col%s      : %" HIGHSINT_FORMAT "\n",
-		lp.num_col_, lp.num_col_ > 1 ? "s" : "");
+                "Col%s      : %" HIGHSINT_FORMAT "\n", lp.num_col_,
+                lp.num_col_ == 1 ? "" : "s");
     if (q_num_nz) {
       highsLogDev(log_options, HighsLogType::kInfo,
                   "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
@@ -78,8 +78,8 @@ void Highs::reportModelStats() const {
                   "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
     } else {
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Nonzero%s  : %" HIGHSINT_FORMAT "\n",
-		  a_num_nz, a_num_nz > 1 ? "s" : "");
+                  "Nonzero%s  : %" HIGHSINT_FORMAT "\n", a_num_nz,
+                  a_num_nz == 1 ? "" : "s");
     }
     if (num_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
@@ -96,19 +96,22 @@ void Highs::reportModelStats() const {
     std::stringstream stats_line;
     stats_line << problem_type;
     if (lp.model_name_.length()) stats_line << " " << lp.model_name_;
-    stats_line << " has "
-	       << lp.num_row_ << " row" << (lp.num_row_ > 1 ? "s" : "") << "; "
-	       << lp.num_col_ << " col" << (lp.num_col_ > 1 ? "s" : "");
+    stats_line << " has " << lp.num_row_ << " row"
+               << (lp.num_row_ == 1 ? "" : "s") << "; " << lp.num_col_ << " col"
+               << (lp.num_col_ == 1 ? "" : "s");
     if (q_num_nz) {
-      stats_line << "; " << a_num_nz << " matrix nonzero" << (a_num_nz > 1 ? "s" : "");
-      stats_line << "; " << q_num_nz << " Hessian nonzero" << (q_num_nz > 1 ? "s" : "");
+      stats_line << "; " << a_num_nz << " matrix nonzero"
+                 << (a_num_nz == 1 ? "" : "s");
+      stats_line << "; " << q_num_nz << " Hessian nonzero"
+                 << (q_num_nz == 1 ? "" : "s");
     } else {
-      stats_line << "; " << a_num_nz << " nonzero" << (a_num_nz > 1 ? "s" : "");
+      stats_line << "; " << a_num_nz << " nonzero"
+                 << (a_num_nz == 1 ? "" : "s");
     }
     if (num_integer)
-      stats_line << "; "
-		 << num_integer << " integer variable" << (a_num_nz > 1 ? "s" : "") << " ("
-		 << num_binary << " binary)";
+      stats_line << "; " << num_integer << " integer variable"
+                 << (a_num_nz == 1 ? "" : "s") << " (" << num_binary
+                 << " binary)";
     if (num_semi_continuous)
       stats_line << "; " << num_semi_continuous << " semi-continuous variables";
     if (num_semi_integer)
@@ -2662,12 +2665,11 @@ HighsStatus Highs::lpKktCheck(const HighsLp& lp, const std::string& message) {
     dual_residual_tolerance = options.kkt_tolerance;
     optimality_tolerance = options.kkt_tolerance;
   }
-  info.objective_function_value =
-      lp.objectiveValue(solution_.col_value);
+  info.objective_function_value = lp.objectiveValue(solution_.col_value);
   HighsPrimalDualErrors primal_dual_errors;
   const bool get_residuals = !basis_.valid;
-  getLpKktFailures(options, lp, solution, basis_, info,
-                   primal_dual_errors, get_residuals);
+  getLpKktFailures(options, lp, solution, basis_, info, primal_dual_errors,
+                   get_residuals);
   if (this->model_status_ == HighsModelStatus::kOptimal)
     reportLpKktFailures(lp, options, info, message);
   // get_residuals is false when there is a valid basis, since
