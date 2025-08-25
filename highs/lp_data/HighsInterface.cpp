@@ -51,13 +51,13 @@ void Highs::reportModelStats() const {
     if (non_continuous) {
       problem_type = "MIQP";
     } else {
-      problem_type = "QP  ";
+      problem_type = "QP";
     }
   } else {
     if (non_continuous) {
-      problem_type = "MIP ";
+      problem_type = "MIP";
     } else {
-      problem_type = "LP  ";
+      problem_type = "LP";
     }
   }
   const HighsInt a_num_nz = lp.a_matrix_.numNz();
@@ -66,9 +66,11 @@ void Highs::reportModelStats() const {
     highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
                 problem_type.c_str(), lp.model_name_.c_str());
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
+                "Row%s      : %" HIGHSINT_FORMAT "\n",
+		lp.num_row_, lp.num_row_ > 1 ? "s" : "");
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
+                "Col%s      : %" HIGHSINT_FORMAT "\n",
+		lp.num_col_, lp.num_col_ > 1 ? "s" : "");
     if (q_num_nz) {
       highsLogDev(log_options, HighsLogType::kInfo,
                   "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
@@ -76,7 +78,8 @@ void Highs::reportModelStats() const {
                   "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
     } else {
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
+                  "Nonzero%s  : %" HIGHSINT_FORMAT "\n",
+		  a_num_nz, a_num_nz > 1 ? "s" : "");
     }
     if (num_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
@@ -93,16 +96,19 @@ void Highs::reportModelStats() const {
     std::stringstream stats_line;
     stats_line << problem_type;
     if (lp.model_name_.length()) stats_line << " " << lp.model_name_;
-    stats_line << " has " << lp.num_row_ << " rows; " << lp.num_col_ << " cols";
+    stats_line << " has "
+	       << lp.num_row_ << " row" << (lp.num_row_ > 1 ? "s" : "") << "; "
+	       << lp.num_col_ << " col" << (lp.num_col_ > 1 ? "s" : "");
     if (q_num_nz) {
-      stats_line << "; " << a_num_nz << " matrix nonzeros";
-      stats_line << "; " << q_num_nz << " Hessian nonzeros";
+      stats_line << "; " << a_num_nz << " matrix nonzero" << (a_num_nz > 1 ? "s" : "");
+      stats_line << "; " << q_num_nz << " Hessian nonzero" << (q_num_nz > 1 ? "s" : "");
     } else {
-      stats_line << "; " << a_num_nz << " nonzeros";
+      stats_line << "; " << a_num_nz << " nonzero" << (a_num_nz > 1 ? "s" : "");
     }
     if (num_integer)
-      stats_line << "; " << num_integer << " integer variables (" << num_binary
-                 << " binary)";
+      stats_line << "; "
+		 << num_integer << " integer variable" << (a_num_nz > 1 ? "s" : "") << " ("
+		 << num_binary << " binary)";
     if (num_semi_continuous)
       stats_line << "; " << num_semi_continuous << " semi-continuous variables";
     if (num_semi_integer)
@@ -2636,7 +2642,7 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::lpKktCheck(const std::string& message) {
+HighsStatus Highs::lpKktCheck(const HighsLp& lp, const std::string& message) {
   if (!this->solution_.value_valid) return HighsStatus::kOk;
   // Must have dual values for an LP if there are primal values
   assert(this->solution_.dual_valid);
@@ -2657,15 +2663,13 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     optimality_tolerance = options.kkt_tolerance;
   }
   info.objective_function_value =
-      model_.lp_.objectiveValue(solution_.col_value);
+      lp.objectiveValue(solution_.col_value);
   HighsPrimalDualErrors primal_dual_errors;
   const bool get_residuals = !basis_.valid;
-  getLpKktFailures(options, model_.lp_, solution, basis_, info,
+  getLpKktFailures(options, lp, solution, basis_, info,
                    primal_dual_errors, get_residuals);
-  //  highsLogUser(options.log_options, HighsLogType::kInfo,
-  //               "Highs::lpKktCheck: %s\n", message.c_str());
   if (this->model_status_ == HighsModelStatus::kOptimal)
-    reportLpKktFailures(model_.lp_, options, info);
+    reportLpKktFailures(lp, options, info, message);
   // get_residuals is false when there is a valid basis, since
   // residual errors are assumed to be small, so
   // info.num_primal_residual_errors = -1, since they aren't
@@ -2727,7 +2731,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     if (info.primal_dual_objective_error > optimality_tolerance) {
       // Ignore primal-dual objective errors if both objectives are small
       const bool ok_dual_objective = computeDualObjectiveValue(
-          nullptr, this->model_.lp_, this->solution_, local_dual_objective);
+          nullptr, lp, this->solution_, local_dual_objective);
       assert(ok_dual_objective);
       if (info.objective_function_value * info.objective_function_value >
               optimality_tolerance &&
@@ -2921,6 +2925,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Model status changed from \"Unknown\" to \"Optimal\"\n");
   }
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
   return HighsStatus::kOk;
 }
 

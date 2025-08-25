@@ -1808,17 +1808,20 @@ void reportLpDimensions(const HighsLogOptions& log_options, const HighsLp& lp) {
   else
     lp_num_nz = lp.a_matrix_.start_[lp.num_col_];
   highsLogUser(log_options, HighsLogType::kInfo,
-               "LP has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT " columns",
-               lp.num_row_, lp.num_col_);
+               "LP has %" HIGHSINT_FORMAT " row%s, %" HIGHSINT_FORMAT " column%s",
+               lp.num_row_, lp.num_row_ > 1 ? "s" : "",
+	       lp.num_col_, lp.num_col_ > 1 ? "s" : "");
   HighsInt num_int = getNumInt(lp);
   if (num_int) {
     highsLogUser(log_options, HighsLogType::kInfo,
                  ", %" HIGHSINT_FORMAT " nonzeros and %" HIGHSINT_FORMAT
-                 " integer columns\n",
-                 lp_num_nz, num_int);
+                 " integer column%s\n",
+                 lp_num_nz, lp_num_nz > 1 ? "s" : "",
+		 num_int, num_int > 1 ? "s" : "");
   } else {
     highsLogUser(log_options, HighsLogType::kInfo,
-                 " and %" HIGHSINT_FORMAT " nonzeros\n", lp_num_nz, num_int);
+                 " and %" HIGHSINT_FORMAT " nonzero%s\n",
+		 lp_num_nz, lp_num_nz > 1 ? "s" : "");
   }
 }
 

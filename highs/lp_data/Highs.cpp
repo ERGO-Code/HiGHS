@@ -1626,6 +1626,9 @@ HighsStatus Highs::optimizeModel() {
       presolve_.data_.recovered_solution_ = solution_;
       presolve_.data_.recovered_basis_ = basis_;
 
+      if (model_presolve_status_ == HighsPresolveStatus::kReduced)
+      	this->lpKktCheck(presolve_.getReducedProblem(), "Before postsolve");
+
       this_postsolve_time = -timer_.read(timer_.postsolve_clock);
       timer_.start(timer_.postsolve_clock);
       HighsPostsolveStatus postsolve_status = runPostsolve();
@@ -1634,8 +1637,11 @@ HighsStatus Highs::optimizeModel() {
       presolve_.info_.postsolve_time = this_postsolve_time;
 
       if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
-        highsLogDev(log_options, HighsLogType::kVerbose,
-                    "Postsolve finished\n");
+	// Indicate that nontrivial postsolve has been performed
+        if (model_presolve_status_ == HighsPresolveStatus::kReduced ||
+	    model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty)
+	  highsLogUser(log_options, HighsLogType::kInfo,
+		       "Performed postsolve\n");
         // Set solution and its status
         solution_.clear();
         solution_ = presolve_.data_.recovered_solution_;
@@ -1647,7 +1653,6 @@ HighsStatus Highs::optimizeModel() {
           // and IPX determined optimality
           solution_.dual_valid = true;
           this->invalidateBasis();
-          this->lpKktCheck("After postsolve");
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP
@@ -1780,7 +1785,7 @@ HighsStatus Highs::optimizeModel() {
   // Unless the model status was determined using the strictly reduced LP, the
   // HiGHS info is valid
   if (!no_incumbent_lp_solution_or_basis) {
-    this->lpKktCheck("On exit from optimizeModel()");
+    this->lpKktCheck(this->model_.lp_);
     info_.valid = true;
   }
 
@@ -4301,9 +4306,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         getKktFailures(this->options_, is_qp, this->model_.lp_,
                        this->model_.lp_.col_cost_, this->solution_, this->info_,
                        get_residuals);
-        highsLogUser(options_.log_options, HighsLogType::kInfo, "\n");
-        reportLpKktFailures(this->model_.lp_, this->options_, this->info_,
-                            "After postsolve");
         if (info_.num_primal_infeasibilities == 0 &&
             info_.num_dual_infeasibilities == 0) {
           model_status_ = HighsModelStatus::kOptimal;
