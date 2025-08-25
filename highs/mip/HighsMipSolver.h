@@ -97,7 +97,7 @@ class HighsMipSolver {
   mutable HighsTimer timer_;
   void cleanupSolve();
 
-  void runPresolve(const HighsInt presolve_reduction_limit);
+  void runMipPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;
   HighsPresolveStatus getPresolveStatus() const;
   presolve::HighsPostsolveStack getPostsolveStack() const;

@@ -841,8 +841,9 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
 }
 
 HighsStatus Highs::presolve() {
+  const HighsLogOptions& log_options = options_.log_options;
   if (model_.needsMods(options_.infinite_cost)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
+    highsLogUser(log_options, HighsLogType::kError,
                  "Model contains infinite costs or semi-variables, so cannot "
                  "be presolved independently\n");
     return HighsStatus::kError;
@@ -861,7 +862,7 @@ HighsStatus Highs::presolve() {
     max_threads = highs::parallel::num_threads();
     if (options_.threads != 0 && max_threads != options_.threads) {
       highsLogUser(
-          options_.log_options, HighsLogType::kError,
+          log_options, HighsLogType::kError,
           "Option 'threads' is set to %d but global scheduler has already been "
           "initialized to use %d threads. The previous scheduler instance can "
           "be destroyed by calling Highs::resetGlobalScheduler().\n",
@@ -873,6 +874,7 @@ HighsStatus Highs::presolve() {
   }
 
   bool using_reduced_lp = false;
+  HighsLp& incumbent_lp = model_.lp_;
   switch (model_presolve_status_) {
     case HighsPresolveStatus::kNotPresolved: {
       // Shouldn't happen
@@ -881,9 +883,12 @@ HighsStatus Highs::presolve() {
       break;
     }
     case HighsPresolveStatus::kNotReduced:
+      reportPresolveReductions(log_options, incumbent_lp, false);
     case HighsPresolveStatus::kInfeasible:
     case HighsPresolveStatus::kReduced:
+        reportPresolveReductions(log_options, incumbent_lp, presolve_.getReducedProblem());
     case HighsPresolveStatus::kReducedToEmpty:
+      reportPresolveReductions(log_options, incumbent_lp, true);
     case HighsPresolveStatus::kUnboundedOrInfeasible: {
       // All OK
       if (model_presolve_status_ == HighsPresolveStatus::kInfeasible) {
@@ -915,7 +920,7 @@ HighsStatus Highs::presolve() {
     default: {
       // case HighsPresolveStatus::kOutOfMemory
       assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory);
-      highsLogUser(options_.log_options, HighsLogType::kError,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Presolve fails due to memory allocation error\n");
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPresolveError);
@@ -927,7 +932,7 @@ HighsStatus Highs::presolve() {
     presolved_model_.lp_.setMatrixDimensions();
   }
 
-  highsLogUser(options_.log_options, HighsLogType::kInfo,
+  highsLogUser(log_options, HighsLogType::kInfo,
                "Presolve status: %s\n",
                presolveStatusToString(model_presolve_status_).c_str());
   return returnFromHighs(return_status);
@@ -1400,6 +1405,7 @@ HighsStatus Highs::optimizeModel() {
     // presolved problem, since the iteration count is reset to zero
     // if PDLP is used to clean up after postsolve
     HighsInt presolved_lp_pdlp_iteration_count = 0;
+    //    reportPresolveReductions(log_options, model_presolve_status_, incumbent_lp, presolve_.getReducedProblem());
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
@@ -3522,8 +3528,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Start the MIP solver's timer so that timeout in presolve can be
     // identified
     solver.timer_.start();
-    // Only place that HighsMipSolver::runPresolve is called
-    solver.runPresolve(options_.presolve_reduction_limit);
+    // Only place that HighsMipSolver::runMipPresolve is called
+    solver.runMipPresolve(options_.presolve_reduction_limit);
     presolve_return_status = solver.getPresolveStatus();
     // Assign values to data members of presolve_
     presolve_.data_.reduced_lp_ = solver.getPresolvedModel();

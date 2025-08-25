@@ -1808,8 +1808,8 @@ void reportLpDimensions(const HighsLogOptions& log_options, const HighsLp& lp) {
   else
     lp_num_nz = lp.a_matrix_.start_[lp.num_col_];
   highsLogUser(log_options, HighsLogType::kInfo,
-               "LP has %" HIGHSINT_FORMAT " columns, %" HIGHSINT_FORMAT " rows",
-               lp.num_col_, lp.num_row_);
+               "LP has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT " columns",
+               lp.num_row_, lp.num_col_);
   HighsInt num_int = getNumInt(lp);
   if (num_int) {
     highsLogUser(log_options, HighsLogType::kInfo,
@@ -2962,60 +2962,60 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
                               const HighsLp& lp, const HighsLp& presolve_lp) {
   HighsInt num_col_from = lp.num_col_;
   HighsInt num_row_from = lp.num_row_;
-  HighsInt num_els_from = lp.a_matrix_.start_[num_col_from];
+  HighsInt num_nz_from = lp.a_matrix_.start_[num_col_from];
   HighsInt num_col_to = presolve_lp.num_col_;
   HighsInt num_row_to = presolve_lp.num_row_;
-  HighsInt num_els_to;
+  HighsInt num_nz_to;
   if (num_col_to) {
-    num_els_to = presolve_lp.a_matrix_.start_[num_col_to];
+    num_nz_to = presolve_lp.a_matrix_.start_[num_col_to];
   } else {
-    num_els_to = 0;
+    num_nz_to = 0;
   }
-  char elemsignchar = '-';
-  HighsInt elemdelta = num_els_from - num_els_to;
-  if (num_els_from < num_els_to) {
-    elemdelta = -elemdelta;
-    elemsignchar = '+';
+  char nz_sign_char = '-';
+  HighsInt delta_nz = num_nz_from - num_nz_to;
+  if (num_nz_from < num_nz_to) {
+    delta_nz = -delta_nz;
+    nz_sign_char = '+';
   }
   highsLogUser(
       log_options, HighsLogType::kInfo,
-      "Presolve : Reductions: rows %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
+      "Presolve reductions: rows %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
       "); columns %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
       "); "
-      "elements %" HIGHSINT_FORMAT "(%c%" HIGHSINT_FORMAT ")\n",
+      "nonzeros %" HIGHSINT_FORMAT "(%c%" HIGHSINT_FORMAT ")\n",
       num_row_to, (num_row_from - num_row_to), num_col_to,
-      (num_col_from - num_col_to), num_els_to, elemsignchar, elemdelta);
+      (num_col_from - num_col_to), num_nz_to, nz_sign_char, delta_nz);
 }
 
 void reportPresolveReductions(const HighsLogOptions& log_options,
                               const HighsLp& lp, const bool presolve_to_empty) {
   HighsInt num_col_from = lp.num_col_;
   HighsInt num_row_from = lp.num_row_;
-  HighsInt num_els_from = lp.a_matrix_.start_[num_col_from];
+  HighsInt num_nz_from = lp.a_matrix_.start_[num_col_from];
   HighsInt num_col_to;
   HighsInt num_row_to;
-  HighsInt num_els_to;
+  HighsInt num_nz_to;
   std::string message;
   if (presolve_to_empty) {
     num_col_to = 0;
     num_row_to = 0;
-    num_els_to = 0;
+    num_nz_to = 0;
     message = "- Reduced to empty";
   } else {
     num_col_to = num_col_from;
     num_row_to = num_row_from;
-    num_els_to = num_els_from;
+    num_nz_to = num_nz_from;
     message = "- Not reduced";
   }
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Presolve : Reductions: rows %" HIGHSINT_FORMAT
+               "Presolve reductions: rows %" HIGHSINT_FORMAT
                "(-%" HIGHSINT_FORMAT "); columns %" HIGHSINT_FORMAT
                "(-%" HIGHSINT_FORMAT
                "); "
-               "elements %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT ") %s\n",
+               "nonzeros %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT ") %s\n",
                num_row_to, (num_row_from - num_row_to), num_col_to,
-               (num_col_from - num_col_to), num_els_to,
-               (num_els_from - num_els_to), message.c_str());
+               (num_col_from - num_col_to), num_nz_to,
+               (num_nz_from - num_nz_to), message.c_str());
 }
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,

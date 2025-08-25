@@ -93,9 +93,10 @@ void HighsMipSolver::run() {
   std::swap(mipdata_->debugSolution.debugSolActive, debugSolActive);
 #endif
   analysis_.mipTimerStart(kMipClockRunPresolve);
-  mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
+  mipdata_->runMipPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
   analysis_.mipTimerStop(kMipClockPresolve);
+  
   if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
@@ -865,10 +866,10 @@ void HighsMipSolver::cleanupSolve() {
 }
 
 // Only called in Highs::runPresolve
-void HighsMipSolver::runPresolve(const HighsInt presolve_reduction_limit) {
+void HighsMipSolver::runMipPresolve(const HighsInt presolve_reduction_limit) {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
-  mipdata_->runPresolve(presolve_reduction_limit);
+  mipdata_->runMipPresolve(presolve_reduction_limit);
 }
 
 const HighsLp& HighsMipSolver::getPresolvedModel() const {

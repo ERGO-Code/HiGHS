@@ -9,7 +9,6 @@
 
 #include <random>
 
-// #include "lp_data/HighsLpUtils.h"
 #include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
@@ -693,7 +692,7 @@ void HighsMipSolverData::init() {
     dispfreq = 100;
 }
 
-void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
+void HighsMipSolverData::runMipPresolve(const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
   if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
@@ -704,6 +703,30 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
     presolve_status = presolve.getPresolveStatus();
   }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
+  const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
+  const HighsLp& incumbent_lp = *mipsolver.model_;
+  switch (presolve_status) {
+    case HighsPresolveStatus::kNotPresolved: {
+      // Shouldn't happen
+      assert(presolve_status != HighsPresolveStatus::kNotPresolved);
+      break;
+    }
+    case HighsPresolveStatus::kNotReduced:
+      reportPresolveReductions(log_options, incumbent_lp, false);
+    case HighsPresolveStatus::kInfeasible:
+    case HighsPresolveStatus::kReduced:
+      reportPresolveReductions(log_options, incumbent_lp, *mipsolver.model_);
+    case HighsPresolveStatus::kReducedToEmpty:
+      reportPresolveReductions(log_options, incumbent_lp, true);
+    case HighsPresolveStatus::kUnboundedOrInfeasible: 
+    case HighsPresolveStatus::kTimeout: {
+      break;
+    }
+    default: {
+      // case HighsPresolveStatus::kOutOfMemory
+      assert(presolve_status == HighsPresolveStatus::kOutOfMemory);
+    }
+  } 
 }
 
 void HighsMipSolverData::runSetup() {
@@ -1282,7 +1305,7 @@ void HighsMipSolverData::performRestart() {
       restart_presolve_reduction_limit >= 0
           ? num_reductions + restart_presolve_reduction_limit
           : -1;
-  runPresolve(further_presolve_reduction_limit);
+  runMipPresolve(further_presolve_reduction_limit);
 
   if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
     // transform the objective limit to the current model
