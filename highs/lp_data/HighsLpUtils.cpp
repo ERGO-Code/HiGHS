@@ -2959,9 +2959,8 @@ bool isMatrixDataNull(const HighsLogOptions& log_options,
 }
 
 void reportPresolveReductions(const HighsLogOptions& log_options,
-			      HighsPresolveStatus presolve_status,
-                              const HighsLp& lp,
-			      const HighsLp& presolved_lp) {
+                              HighsPresolveStatus presolve_status,
+                              const HighsLp& lp, const HighsLp& presolved_lp) {
   const HighsInt num_col_from = lp.num_col_;
   const HighsInt num_row_from = lp.num_row_;
   const HighsInt num_nz_from = lp.a_matrix_.numNz();
@@ -2969,11 +2968,12 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
   HighsInt num_row_to = 0;
   HighsInt num_nz_to = 0;
   std::string message = "";
-  
+
   switch (presolve_status) {
-    case HighsPresolveStatus::kNotPresolved: 
+    case HighsPresolveStatus::kNotPresolved:
     case HighsPresolveStatus::kInfeasible:
-    case HighsPresolveStatus::kUnboundedOrInfeasible: return;
+    case HighsPresolveStatus::kUnboundedOrInfeasible:
+      return;
     case HighsPresolveStatus::kNotReduced: {
       num_col_to = num_col_from;
       num_row_to = num_row_from;
@@ -2986,7 +2986,8 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
       num_col_to = presolved_lp.num_col_;
       num_row_to = presolved_lp.num_row_;
       num_nz_to = presolved_lp.a_matrix_.numNz();
-      message = presolve_status == HighsPresolveStatus::kTimeout ? "- Timeout" : "";
+      message =
+          presolve_status == HighsPresolveStatus::kTimeout ? "- Timeout" : "";
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -3008,14 +3009,15 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
     delta_nz = -delta_nz;
     nz_sign_char = '+';
   }
-  highsLogUser(
-      log_options, HighsLogType::kInfo,
-      "Presolve reductions: rows %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
-      "); columns %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
-      "); "
-      "nonzeros %" HIGHSINT_FORMAT "(%c%" HIGHSINT_FORMAT ") %s\n",
-      num_row_to, (num_row_from - num_row_to), num_col_to,
-      (num_col_from - num_col_to), num_nz_to, nz_sign_char, delta_nz, message.c_str());
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Presolve reductions: rows %" HIGHSINT_FORMAT
+               "(-%" HIGHSINT_FORMAT "); columns %" HIGHSINT_FORMAT
+               "(-%" HIGHSINT_FORMAT
+               "); "
+               "nonzeros %" HIGHSINT_FORMAT "(%c%" HIGHSINT_FORMAT ") %s\n",
+               num_row_to, (num_row_from - num_row_to), num_col_to,
+               (num_col_from - num_col_to), num_nz_to, nz_sign_char, delta_nz,
+               message.c_str());
 }
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,

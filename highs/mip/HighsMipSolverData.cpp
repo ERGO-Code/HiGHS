@@ -692,7 +692,8 @@ void HighsMipSolverData::init() {
     dispfreq = 100;
 }
 
-void HighsMipSolverData::runMipPresolve(const HighsInt presolve_reduction_limit) {
+void HighsMipSolverData::runMipPresolve(
+    const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
   if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
@@ -704,10 +705,8 @@ void HighsMipSolverData::runMipPresolve(const HighsInt presolve_reduction_limit)
   }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
-  reportPresolveReductions(mipsolver.options_mip_->log_options,
-			   presolve_status,
-			   *mipsolver.orig_model_,
-			   *mipsolver.model_);
+  reportPresolveReductions(mipsolver.options_mip_->log_options, presolve_status,
+                           *mipsolver.orig_model_, *mipsolver.model_);
 }
 
 void HighsMipSolverData::runSetup() {

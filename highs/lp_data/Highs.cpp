@@ -874,7 +874,8 @@ HighsStatus Highs::presolve() {
   }
 
   bool using_reduced_lp = false;
-  reportPresolveReductions(log_options, model_presolve_status_, model_.lp_, presolve_.getReducedProblem());
+  reportPresolveReductions(log_options, model_presolve_status_, model_.lp_,
+                           presolve_.getReducedProblem());
   switch (model_presolve_status_) {
     case HighsPresolveStatus::kNotPresolved: {
       // Shouldn't happen
@@ -929,8 +930,7 @@ HighsStatus Highs::presolve() {
     presolved_model_.lp_.setMatrixDimensions();
   }
 
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "Presolve status: %s\n",
+  highsLogUser(log_options, HighsLogType::kInfo, "Presolve status: %s\n",
                presolveStatusToString(model_presolve_status_).c_str());
   return returnFromHighs(return_status);
 }
@@ -1403,8 +1403,8 @@ HighsStatus Highs::optimizeModel() {
     // if PDLP is used to clean up after postsolve
     HighsInt presolved_lp_pdlp_iteration_count = 0;
     // Log the presolve reductions
-    reportPresolveReductions(log_options, model_presolve_status_,
-			     incumbent_lp, presolve_.getReducedProblem());
+    reportPresolveReductions(log_options, model_presolve_status_, incumbent_lp,
+                             presolve_.getReducedProblem());
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";

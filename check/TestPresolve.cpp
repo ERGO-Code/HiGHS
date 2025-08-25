@@ -838,4 +838,3 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
 
   h.resetGlobalScheduler(true);
 }
-

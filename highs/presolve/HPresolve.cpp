@@ -4881,7 +4881,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       // An LP with no columns must have no rows, unless the reduction
       // limit has been reached. As exposed when studying 2326
       const bool num_row_ok = model->num_row_ == 0 ||
-	postsolve_stack.numReductions() >= reductionLimit;
+                              postsolve_stack.numReductions() >= reductionLimit;
       assert(num_row_ok);
       if (!num_row_ok) {
         presolve_status_ = HighsPresolveStatus::kNotPresolved;
@@ -4891,7 +4891,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     presolve_status_ = HighsPresolveStatus::kReducedToEmpty;
     // Make sure that zero row activity from the columnless model is
     // consistent with the bounds
-    return zeroRowActivityFeasible() ? HighsModelStatus::kOptimal : HighsModelStatus::kInfeasible;
+    return zeroRowActivityFeasible() ? HighsModelStatus::kOptimal
+                                     : HighsModelStatus::kInfeasible;
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
