@@ -1249,7 +1249,7 @@ HighsStatus Highs::optimizeModel() {
   const bool ipm_no_crossover =
       useIpm(options_.solver) && options_.run_crossover == kHighsOffString;
   const bool lp_no_solution_basis =
-    ipm_no_crossover || options_.solver == kPdlpString;
+      ipm_no_crossover || options_.solver == kPdlpString;
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);

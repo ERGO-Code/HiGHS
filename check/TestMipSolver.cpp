@@ -1013,9 +1013,11 @@ TEST_CASE("mip-lp-solver-string", "[highs_test_mip_solver]") {
   REQUIRE(h.setOptionValue(kMipLpSolverString, kIpmString) == HighsStatus::kOk);
 
 #ifdef HIPO
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) ==
+          HighsStatus::kOk);
 #else
-  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) == HighsStatus::kError);
+  REQUIRE(h.setOptionValue(kMipLpSolverString, kHipoString) ==
+          HighsStatus::kError);
 #endif
 
   REQUIRE(h.setOptionValue(kMipLpSolverString, kIpxString) == HighsStatus::kOk);
@@ -1031,9 +1033,11 @@ TEST_CASE("mip-lp-solver-string", "[highs_test_mip_solver]") {
           HighsStatus::kOk);
 
 #ifdef HIPO
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) ==
+          HighsStatus::kOk);
 #else
-  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) == HighsStatus::kError);
+  REQUIRE(h.setOptionValue(kMipIpmSolverString, kHipoString) ==
+          HighsStatus::kError);
 #endif
 
   REQUIRE(h.setOptionValue(kMipIpmSolverString, kIpxString) ==
