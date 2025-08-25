@@ -1246,15 +1246,10 @@ HighsStatus Highs::optimizeModel() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-
   const bool ipm_no_crossover =
       useIpm(options_.solver) && options_.run_crossover == kHighsOffString;
-
   const bool lp_no_solution_basis =
-      (options_.solver == kIpmString &&
-       options_.run_crossover == kHighsOffString) ||
-      options_.solver == kPdlpString;
-
+    ipm_no_crossover || options_.solver == kPdlpString;
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
@@ -1386,13 +1381,8 @@ HighsStatus Highs::optimizeModel() {
     // rules for which postsolve does not generate a basis.
     const bool lp_presolve_requires_basis_postsolve =
         options_.lp_presolve_requires_basis_postsolve;
-
-    if (ipm_no_crossover)
+    if (lp_no_solution_basis)
       options_.lp_presolve_requires_basis_postsolve = false;
-
-    else if (lp_no_solution_basis)
-      options_.lp_presolve_requires_basis_postsolve = false;
-
     // Possibly presolve - according to option_.presolve
     //
     // If solving the relaxation of a MIP, make sure that LP presolve

@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-#include "lp_data/HighsSolve.h"  // For useHipo()
+#include "lp_data/HighsSolve.h"  // For useIpm()
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
