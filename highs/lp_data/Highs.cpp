@@ -874,7 +874,7 @@ HighsStatus Highs::presolve() {
   }
 
   bool using_reduced_lp = false;
-  HighsLp& incumbent_lp = model_.lp_;
+  reportPresolveReductions(log_options, model_presolve_status_, model_.lp_, presolve_.getReducedProblem());
   switch (model_presolve_status_) {
     case HighsPresolveStatus::kNotPresolved: {
       // Shouldn't happen
@@ -883,12 +883,9 @@ HighsStatus Highs::presolve() {
       break;
     }
     case HighsPresolveStatus::kNotReduced:
-      reportPresolveReductions(log_options, incumbent_lp, false);
     case HighsPresolveStatus::kInfeasible:
     case HighsPresolveStatus::kReduced:
-        reportPresolveReductions(log_options, incumbent_lp, presolve_.getReducedProblem());
     case HighsPresolveStatus::kReducedToEmpty:
-      reportPresolveReductions(log_options, incumbent_lp, true);
     case HighsPresolveStatus::kUnboundedOrInfeasible: {
       // All OK
       if (model_presolve_status_ == HighsPresolveStatus::kInfeasible) {
@@ -1405,7 +1402,9 @@ HighsStatus Highs::optimizeModel() {
     // presolved problem, since the iteration count is reset to zero
     // if PDLP is used to clean up after postsolve
     HighsInt presolved_lp_pdlp_iteration_count = 0;
-    //    reportPresolveReductions(log_options, model_presolve_status_, incumbent_lp, presolve_.getReducedProblem());
+    // Log the presolve reductions
+    reportPresolveReductions(log_options, model_presolve_status_,
+			     incumbent_lp, presolve_.getReducedProblem());
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
@@ -1420,7 +1419,6 @@ HighsStatus Highs::optimizeModel() {
       case HighsPresolveStatus::kNotReduced: {
         ekk_instance_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        reportPresolveReductions(log_options, incumbent_lp, false);
         solveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
                 this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
@@ -1460,8 +1458,6 @@ HighsStatus Highs::optimizeModel() {
                                 return_status,
                                 "cleanBounds") == HighsStatus::kError)
           return HighsStatus::kError;
-        // Log the presolve reductions
-        reportPresolveReductions(log_options, incumbent_lp, reduced_lp);
         // Solving the presolved LP with strictly reduced dimensions
         // so ensure that the Ekk instance is cleared
         ekk_instance_.clear();
@@ -1501,7 +1497,6 @@ HighsStatus Highs::optimizeModel() {
         break;
       }
       case HighsPresolveStatus::kReducedToEmpty: {
-        reportPresolveReductions(log_options, incumbent_lp, true);
         // Create a trivial optimal solution for postsolve to use
         solution_.clear();
         basis_.clear();

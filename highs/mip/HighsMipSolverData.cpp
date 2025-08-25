@@ -703,30 +703,11 @@ void HighsMipSolverData::runMipPresolve(const HighsInt presolve_reduction_limit)
     presolve_status = presolve.getPresolveStatus();
   }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
-  const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
-  const HighsLp& incumbent_lp = *mipsolver.model_;
-  switch (presolve_status) {
-    case HighsPresolveStatus::kNotPresolved: {
-      // Shouldn't happen
-      assert(presolve_status != HighsPresolveStatus::kNotPresolved);
-      break;
-    }
-    case HighsPresolveStatus::kNotReduced:
-      reportPresolveReductions(log_options, incumbent_lp, false);
-    case HighsPresolveStatus::kInfeasible:
-    case HighsPresolveStatus::kReduced:
-      reportPresolveReductions(log_options, incumbent_lp, *mipsolver.model_);
-    case HighsPresolveStatus::kReducedToEmpty:
-      reportPresolveReductions(log_options, incumbent_lp, true);
-    case HighsPresolveStatus::kUnboundedOrInfeasible: 
-    case HighsPresolveStatus::kTimeout: {
-      break;
-    }
-    default: {
-      // case HighsPresolveStatus::kOutOfMemory
-      assert(presolve_status == HighsPresolveStatus::kOutOfMemory);
-    }
-  } 
+
+  reportPresolveReductions(mipsolver.options_mip_->log_options,
+			   presolve_status,
+			   *mipsolver.orig_model_,
+			   *mipsolver.model_);
 }
 
 void HighsMipSolverData::runSetup() {

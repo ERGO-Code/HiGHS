@@ -260,10 +260,9 @@ bool isMatrixDataNull(const HighsLogOptions& log_options,
                       const double* usr_matrix_value);
 
 void reportPresolveReductions(const HighsLogOptions& log_options,
-                              const HighsLp& lp, const HighsLp& presolve_lp);
-
-void reportPresolveReductions(const HighsLogOptions& log_options,
-                              const HighsLp& lp, const bool presolve_to_empty);
+			      HighsPresolveStatus presolve_status,
+                              const HighsLp& lp,
+			      const HighsLp& presolved_lp);
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
