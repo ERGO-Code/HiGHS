@@ -719,25 +719,24 @@ bool HighsTransformedLp::transformSNFRelaxation(
     return true;
   };
 
-  auto addSNFRentry =
-      [&](HighsInt origbincol, HighsInt origcontcol, double binsolval,
-          double contsolval, HighsInt coef, double vubcoef, double aggrconstant,
-          double aggrbincoef, double aggrcontcoef, bool complement) {
-        assert(binsolval >= -lprelaxation.getMipSolver().mipdata_->feastol &&
-               binsolval <= 1 + lprelaxation.getMipSolver().mipdata_->feastol);
-        assert(vubcoef >= -1e-10);
-        snfr.origBinCols[snfr.numNnzs] = origbincol;
-        snfr.origContCols[snfr.numNnzs] = origcontcol;
-        snfr.binSolval[snfr.numNnzs] = binsolval;
-        snfr.contSolval[snfr.numNnzs] = contsolval;
-        snfr.coef[snfr.numNnzs] = coef;
-        snfr.vubCoef[snfr.numNnzs] = std::max(vubcoef, 0.0);
-        snfr.aggrConstant[snfr.numNnzs] = aggrconstant;
-        snfr.aggrBinCoef[snfr.numNnzs] = aggrbincoef;
-        snfr.aggrContCoef[snfr.numNnzs] = aggrcontcoef;
-        snfr.complementation[snfr.numNnzs] = complement;
-        snfr.numNnzs++;
-      };
+  auto addSNFRentry = [&](HighsInt origbincol, HighsInt origcontcol,
+                          double binsolval, HighsInt coef, double vubcoef,
+                          double aggrconstant, double aggrbincoef,
+                          double aggrcontcoef, bool complement) {
+    assert(binsolval >= -lprelaxation.getMipSolver().mipdata_->feastol &&
+           binsolval <= 1 + lprelaxation.getMipSolver().mipdata_->feastol);
+    assert(vubcoef >= -1e-10);
+    snfr.origBinCols[snfr.numNnzs] = origbincol;
+    snfr.origContCols[snfr.numNnzs] = origcontcol;
+    snfr.binSolval[snfr.numNnzs] = binsolval;
+    snfr.coef[snfr.numNnzs] = coef;
+    snfr.vubCoef[snfr.numNnzs] = std::max(vubcoef, 0.0);
+    snfr.aggrConstant[snfr.numNnzs] = aggrconstant;
+    snfr.aggrBinCoef[snfr.numNnzs] = aggrbincoef;
+    snfr.aggrContCoef[snfr.numNnzs] = aggrcontcoef;
+    snfr.complementation[snfr.numNnzs] = complement;
+    snfr.numNnzs++;
+  };
 
   // Place the non-binary columns to the front (all general ints relaxed)
   // Use vectorsum to track original row coefficients of binary columns.
@@ -815,11 +814,11 @@ bool HighsTransformedLp::transformSNFRelaxation(
     if (colIsBinary(col, lb, ub)) {
       // Binary columns can be added directly to the SNFR
       if (vals[i] >= 0) {
-        addSNFRentry(col, -1, getLpSolution(col), getLpSolution(col) * vals[i],
-                     1, vals[i], 0, vectorsum.getValue(col), 0, false);
+        addSNFRentry(col, -1, getLpSolution(col), 1, vals[i], 0,
+                     vectorsum.getValue(col), 0, false);
       } else {
-        addSNFRentry(col, -1, getLpSolution(col), -getLpSolution(col) * vals[i],
-                     -1, -vals[i], 0, -vectorsum.getValue(col), 0, false);
+        addSNFRentry(col, -1, getLpSolution(col), -1, -vals[i], 0,
+                     -vectorsum.getValue(col), 0, false);
       }
     } else {
       // Decide whether to use {simple, variable} {lower, upper} bound
@@ -861,7 +860,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
       double vbconstant;
       double vbcoef;
-      double substsolval;
       double aggrvbcoef;
       double aggrconstant;
       double binsolval;
@@ -873,16 +871,14 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // (1) y'_j = -a_j(y_j - u_j), 0 <= y'_j <= a_j(u_j - l_j)x_j, x_j = 1
           // (2) y'_j = a_j(y_j - u_j), 0 <= y'_j <= -a_j(u_j - l_j)x_j, x_j = 1
           // rhs -= a_j * u_j
-          substsolval = static_cast<double>(
-              vals[i] * (HighsCDouble(getLpSolution(col)) - ub));
           aggrvbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * ub);
           if (vals[i] >= 0) {
-            addSNFRentry(-1, col, 1.0, -substsolval, -1, aggrvbcoef, aggrconstant,
-                         0, -vals[i], false);
+            addSNFRentry(-1, col, 1.0, -1, aggrvbcoef, aggrconstant, 0,
+                         -vals[i], false);
           } else {
-            addSNFRentry(-1, col, 1, substsolval, 1, -aggrvbcoef, -aggrconstant, 0,
-                         vals[i], false);
+            addSNFRentry(-1, col, 1, 1, -aggrvbcoef, -aggrconstant, 0, vals[i],
+                         false);
           }
           tmpSnfrRhs -= aggrconstant;
           break;
@@ -892,16 +888,14 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // (2) y'_j = -a_j(y_j - l_j), 0 <= y'_j <= -a_j(u_j - l_j)x_j,
           // x_j = 1
           // rhs -= a_j * l_j
-          substsolval = static_cast<double>(
-              vals[i] * (HighsCDouble(getLpSolution(col)) - lb));
           aggrvbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * lb);
           if (vals[i] >= 0) {
-            addSNFRentry(-1, col, 1, substsolval, 1, aggrvbcoef, -aggrconstant, 0,
-                         vals[i], false);
+            addSNFRentry(-1, col, 1, 1, aggrvbcoef, -aggrconstant, 0, vals[i],
+                         false);
           } else {
-            addSNFRentry(-1, col, 1, -substsolval, -1, -aggrvbcoef, aggrconstant, 0,
-                         -vals[i], false);
+            addSNFRentry(-1, col, 1, -1, -aggrvbcoef, aggrconstant, 0, -vals[i],
+                         false);
           }
           tmpSnfrRhs -= aggrconstant;
           break;
@@ -914,34 +908,29 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // 0 <= y'_j <= (a_j l'_j + c_j)x_j
           // rhs -= a_j * d_j
           vbcol = bestVlb[col].first;
-          vbconstant = bestVlb[col].second.constant + (complementvlb ? bestVlb[col].second.coef : 0);
-          vbcoef = complementvlb ? -bestVlb[col].second.coef : bestVlb[col].second.coef;
-          bincoef = inclbincolvlb ? complementvlb ? -vectorsum.getValue(vbcol) : vectorsum.getValue(vbcol) : 0;
+          vbconstant = bestVlb[col].second.constant +
+                       (complementvlb ? bestVlb[col].second.coef : 0);
+          vbcoef = complementvlb ? -bestVlb[col].second.coef
+                                 : bestVlb[col].second.coef;
+          bincoef = inclbincolvlb ? complementvlb ? -vectorsum.getValue(vbcol)
+                                                  : vectorsum.getValue(vbcol)
+                                  : 0;
           binsolval = lpSolution.col_value[vbcol];
           if (complementvlb) binsolval = 1 - binsolval;
-          substsolval =
-              static_cast<double>(vals[i] * (HighsCDouble(getLpSolution(col)) -
-                                             vbconstant) +
-                                  (HighsCDouble(binsolval) *
-                                   bincoef));
-          aggrvbcoef = static_cast<double>(
-              HighsCDouble(vals[i]) * vbcoef + bincoef);
-          aggrconstant = static_cast<double>(
-              HighsCDouble(vals[i]) * vbconstant);
+          aggrvbcoef =
+              static_cast<double>(HighsCDouble(vals[i]) * vbcoef + bincoef);
+          aggrconstant =
+              static_cast<double>(HighsCDouble(vals[i]) * vbconstant);
           if (vals[i] >= 0) {
-            addSNFRentry(vbcol, col,
-                         binsolval,
-                         -substsolval, -1, -aggrvbcoef, aggrconstant,
-                         -bincoef,
-                         -vals[i], complementvlb);
+            addSNFRentry(vbcol, col, binsolval, -1, -aggrvbcoef, aggrconstant,
+                         -bincoef, -vals[i], complementvlb);
           } else {
-            addSNFRentry(vbcol, col,
-                         binsolval,
-                         substsolval, 1, aggrvbcoef, -aggrconstant,
-                         bincoef, vals[i],
-                         complementvlb);
+            addSNFRentry(vbcol, col, binsolval, 1, aggrvbcoef, -aggrconstant,
+                         bincoef, vals[i], complementvlb);
           }
-          tmpSnfrRhs -= aggrconstant + (complementvlb && inclbincolvlb ? vectorsum.getValue(vbcol) : 0);
+          tmpSnfrRhs -=
+              aggrconstant +
+              (complementvlb && inclbincolvlb ? vectorsum.getValue(vbcol) : 0);
           if (inclbincolvlb) vectorsum.values[vbcol] = 0;
           break;
         case BoundType::kVariableUb:
@@ -953,34 +942,29 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // 0 <= y'_j <= -(a_j u'_j + c_j)x_j
           // rhs -= a_j * d_j
           vbcol = bestVub[col].first;
-          vbconstant = bestVub[col].second.constant + (complementvub ? bestVub[col].second.coef : 0);
-          vbcoef = complementvub ? -bestVub[col].second.coef : bestVub[col].second.coef;
-          bincoef = inclbincolvub ? complementvub ? -vectorsum.getValue(vbcol) : vectorsum.getValue(vbcol) : 0;
+          vbconstant = bestVub[col].second.constant +
+                       (complementvub ? bestVub[col].second.coef : 0);
+          vbcoef = complementvub ? -bestVub[col].second.coef
+                                 : bestVub[col].second.coef;
+          bincoef = inclbincolvub ? complementvub ? -vectorsum.getValue(vbcol)
+                                                  : vectorsum.getValue(vbcol)
+                                  : 0;
           binsolval = lpSolution.col_value[vbcol];
           if (complementvub) binsolval = 1 - binsolval;
-          substsolval =
-              static_cast<double>(vals[i] * (HighsCDouble(getLpSolution(col)) -
-                                             vbconstant) +
-                                  (HighsCDouble(binsolval) *
-                                   bincoef));
-          aggrvbcoef = static_cast<double>(
-              HighsCDouble(vals[i]) * vbcoef + bincoef);
-          aggrconstant = static_cast<double>(
-              HighsCDouble(vals[i]) * vbconstant);
+          aggrvbcoef =
+              static_cast<double>(HighsCDouble(vals[i]) * vbcoef + bincoef);
+          aggrconstant =
+              static_cast<double>(HighsCDouble(vals[i]) * vbconstant);
           if (vals[i] >= 0) {
-            addSNFRentry(vbcol, col,
-                         binsolval,
-                         substsolval, 1, aggrvbcoef, -aggrconstant,
-                         bincoef, vals[i],
-                         complementvub);
+            addSNFRentry(vbcol, col, binsolval, 1, aggrvbcoef, -aggrconstant,
+                         bincoef, vals[i], complementvub);
           } else {
-            addSNFRentry(vbcol, col,
-                         binsolval,
-                         -substsolval, -1, -aggrvbcoef, aggrconstant,
-                         -bincoef,
-                         -vals[i], complementvub);
+            addSNFRentry(vbcol, col, binsolval, -1, -aggrvbcoef, aggrconstant,
+                         -bincoef, -vals[i], complementvub);
           }
-          tmpSnfrRhs -= aggrconstant + (complementvub && inclbincolvub ? vectorsum.getValue(vbcol) : 0);
+          tmpSnfrRhs -=
+              aggrconstant +
+              (complementvub && inclbincolvub ? vectorsum.getValue(vbcol) : 0);
           if (inclbincolvub) vectorsum.values[vbcol] = 0;
           break;
       }

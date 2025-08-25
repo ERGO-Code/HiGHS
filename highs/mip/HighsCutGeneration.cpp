@@ -1588,7 +1588,6 @@ void HighsCutGeneration::initSNFRelaxation() {
     snfr.origBinCols.resize(rowlen);
     snfr.origContCols.resize(rowlen);
     snfr.binSolval.resize(rowlen);
-    snfr.contSolval.resize(rowlen);
     snfr.coef.resize(rowlen);
     snfr.vubCoef.resize(rowlen);
     snfr.aggrConstant.resize(rowlen);
