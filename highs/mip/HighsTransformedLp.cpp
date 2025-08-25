@@ -681,7 +681,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
         inclbincoef = false;
       }
       if (inclbincoef) {
-        val = sign * (coef * (lb - vbconstant) + (sign >= 0 ? std::min(0.0, origbincoef) : std::max(0.0, origbincoef)));
+        val = sign * (coef * (lb - vbconstant) + complorigbincoef);
         if (val < 0) {
           val = sign * (coef * (lb - vbconstant));
           if (val < 0) return false;
@@ -702,7 +702,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
         inclbincoef = false;
       }
       if (inclbincoef) {
-        val = sign * (coef * (ub - vbconstant) + (sign >= 0 ? std::max(0.0, origbincoef) : std::min(0.0, origbincoef)));
+        val = sign * (coef * (ub - vbconstant) + complorigbincoef);
         if (val > 0) {
           val = sign * (coef * (ub - vbconstant));
           if (val > 0) return false;
