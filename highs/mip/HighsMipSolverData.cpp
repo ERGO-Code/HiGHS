@@ -8,8 +8,8 @@
 #include "mip/HighsMipSolverData.h"
 
 #include <random>
+#include <sstream>
 
-// #include "lp_data/HighsLpUtils.h"
 #include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
@@ -24,6 +24,9 @@ std::string HighsMipSolverData::solutionSourceToString(
   if (solution_source == kSolutionSourceNone) {
     if (code) return " ";
     return "None";
+    //  } else if (solution_source == kSolutionSourceInitial) {
+    //    if (code) return "0";
+    //    return "Initial";
   } else if (solution_source == kSolutionSourceBranching) {
     if (code) return "B";
     return "Branching";
@@ -33,15 +36,15 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceFeasibilityPump) {
     if (code) return "F";
     return "Feasibility pump";
-  } else if (solution_source == kSolutionSourceFeasibilityJump) {
-    if (code) return "J";
-    return "Feasibility jump";
   } else if (solution_source == kSolutionSourceHeuristic) {
     if (code) return "H";
     return "Heuristic";
-    //  } else if (solution_source == kSolutionSourceInitial) {
-    //    if (code) return "I";
-    //    return "Initial";
+  } else if (solution_source == kSolutionSourceShifting) {
+    if (code) return "I";
+    return "Shifting";
+  } else if (solution_source == kSolutionSourceFeasibilityJump) {
+    if (code) return "J";
+    return "Feasibility jump";
   } else if (solution_source == kSolutionSourceSubMip) {
     if (code) return "L";
     return "Sub-MIP";
@@ -51,12 +54,6 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceRandomizedRounding) {
     if (code) return "R";
     return "Randomized rounding";
-  } else if (solution_source == kSolutionSourceZiRound) {
-    if (code) return "Z";
-    return "ZI Round";
-  } else if (solution_source == kSolutionSourceShifting) {
-    if (code) return "I";
-    return "Shifting";
   } else if (solution_source == kSolutionSourceSolveLp) {
     if (code) return "S";
     return "Solve LP";
@@ -66,6 +63,15 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceUnbounded) {
     if (code) return "U";
     return "Unbounded";
+  } else if (solution_source == kSolutionSourceUserSolution) {
+    if (code) return "X";
+    return "User solution";
+  } else if (solution_source == kSolutionSourceHighsSolution) {
+    if (code) return "Y";
+    return "HiGHS solution";
+  } else if (solution_source == kSolutionSourceZiRound) {
+    if (code) return "Z";
+    return "ZI Round";
   } else if (solution_source == kSolutionSourceTrivialZ) {
     if (code) return "z";
     return "Trivial zero";
@@ -78,9 +84,6 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceTrivialP) {
     if (code) return "p";
     return "Trivial point";
-  } else if (solution_source == kSolutionSourceUserSolution) {
-    if (code) return "X";
-    return "User solution";
   } else if (solution_source == kSolutionSourceCleanup) {
     if (code) return " ";
     return "";
@@ -693,7 +696,8 @@ void HighsMipSolverData::init() {
     dispfreq = 100;
 }
 
-void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
+void HighsMipSolverData::runMipPresolve(
+    const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
   if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
@@ -704,6 +708,11 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
     presolve_status = presolve.getPresolveStatus();
   }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
+
+  if (numRestarts == 0)
+    reportPresolveReductions(mipsolver.options_mip_->log_options,
+                             presolve_status, *mipsolver.orig_model_,
+                             *mipsolver.model_);
 }
 
 void HighsMipSolverData::runSetup() {
@@ -724,6 +733,7 @@ void HighsMipSolverData::runSetup() {
   upper_bound -= mipsolver.model_->offset_;
 
   if (mipsolver.solution_objective_ != kHighsInf) {
+    // Assigning new incumbent
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
     // return the objective value in the transformed space
     double solobj =
@@ -752,6 +762,7 @@ void HighsMipSolverData::runSetup() {
                                  upper_bound);
 
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
+
       saveReportMipSolution(new_upper_limit);
       if (new_upper_limit < upper_limit) {
         upper_limit = new_upper_limit;
@@ -977,34 +988,38 @@ void HighsMipSolverData::runSetup() {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  // clang-format off
 		 "\nSolving MIP model with:\n"
-		 "   %" HIGHSINT_FORMAT " rows\n"
-		 "   %" HIGHSINT_FORMAT " cols ("
+		 "   %" HIGHSINT_FORMAT " row%s\n"
+		 "   %" HIGHSINT_FORMAT " col%s ("
 		 "%" HIGHSINT_FORMAT" binary, "
 		 "%" HIGHSINT_FORMAT " integer, "
 		 "%" HIGHSINT_FORMAT" implied int., "
 		 "%" HIGHSINT_FORMAT " continuous, "
 		 "%" HIGHSINT_FORMAT " domain fixed)\n"
-		 "   %" HIGHSINT_FORMAT " nonzeros\n",
+		 "   %" HIGHSINT_FORMAT " nonzero%s\n",
                  // clang-format on
-                 mipsolver.numRow(), num_col, num_binary, num_general_integer,
-                 num_implied_integer, num_continuous, num_domain_fixed,
-                 mipsolver.numNonzero());
+                 mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s",
+                 num_col, num_col == 1 ? "" : "s", num_binary,
+                 num_general_integer, num_implied_integer, num_continuous,
+                 num_domain_fixed, mipsolver.numNonzero(),
+                 mipsolver.numNonzero() == 1 ? "" : "s");
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has "
                  // clang-format off
-		 "%" HIGHSINT_FORMAT " rows, "
-		 "%" HIGHSINT_FORMAT " cols ("
+		 "%" HIGHSINT_FORMAT " row%s, "
+		 "%" HIGHSINT_FORMAT " col%s ("
 		 "%" HIGHSINT_FORMAT " bin., "
 		 "%" HIGHSINT_FORMAT " int., "
 		 "%" HIGHSINT_FORMAT " impl., "
 		 "%" HIGHSINT_FORMAT " cont., "
 		 "%" HIGHSINT_FORMAT " dom.fix.), and "
-		 "%" HIGHSINT_FORMAT " nonzeros\n",
+		 "%" HIGHSINT_FORMAT " nonzero%s\n",
                  // clang-format on
-                 mipsolver.numRow(), num_col, num_binary, num_general_integer,
-                 num_implied_integer, num_continuous, num_domain_fixed,
-                 mipsolver.numNonzero());
+                 mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s",
+                 num_col, num_col == 1 ? "" : "s", num_binary,
+                 num_general_integer, num_implied_integer, num_continuous,
+                 num_domain_fixed, mipsolver.numNonzero(),
+                 mipsolver.numNonzero() == 1 ? "" : "s");
   }
 
   heuristics.setupIntCols();
@@ -1282,7 +1297,7 @@ void HighsMipSolverData::performRestart() {
       restart_presolve_reduction_limit >= 0
           ? num_reductions + restart_presolve_reduction_limit
           : -1;
-  runPresolve(further_presolve_reduction_limit);
+  runMipPresolve(further_presolve_reduction_limit);
 
   if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
     // transform the objective limit to the current model
@@ -1325,6 +1340,7 @@ void HighsMipSolverData::performRestart() {
   debugSolution.debugSolActive = debugSolActive;
 #endif
   runSetup();
+  if (mipsolver.terminate()) return;
 
   postSolveStack.removeCutsFromModel(numCuts);
 
@@ -1388,7 +1404,26 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       get_transformed_solution ? transformNewIntegerFeasibleSolution(
                                      sol, possibly_store_as_new_incumbent)
                                : 0;
-
+  const bool highs_solution_report = false;
+  if (solution_source == kSolutionSourceHighsSolution && highs_solution_report
+      //&& possibly_store_as_new_incumbent
+  ) {
+    std::stringstream ss;
+    ss.str(std::string());
+    ss << highsFormatToString(
+        "HighsMipSolverData::addIncumbent HiGHS solution Obj "
+        "= %15.8g; UB = %15.8g; Obj-UB = %11.4g; PossAdd = %s",
+        solobj, upper_bound, solobj - upper_bound,
+        possibly_store_as_new_incumbent ? "T" : "F");
+    if (possibly_store_as_new_incumbent)
+      ss << highsFormatToString(
+          "; TransObj = %15.8g; TransObj-UB = %11.4g; TransSolobj < UB %s",
+          transformed_solobj, transformed_solobj - upper_bound,
+          transformed_solobj < upper_bound ? "T" : "F");
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "%s\n", ss.str().c_str());
+    fflush(stdout);
+  }
   if (possibly_store_as_new_incumbent) {
     solobj = transformed_solobj;
     if (solobj >= upper_bound) return false;
@@ -1402,6 +1437,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       updatePrimalDualIntegral(lower_bound, lower_bound, prev_upper_bound,
                                upper_bound);
 
+    // Assigning new incumbent
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
@@ -1441,6 +1477,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       printDisplayLine(solution_source);
     }
   } else if (incumbent.empty())
+    // Assigning new incumbent
     incumbent = sol;
 
   return true;
@@ -1895,12 +1932,11 @@ restart:
 
   printDisplayLine();
 
-  // Possibly look for primal solution from the user
-  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-      mipsolver.callback_->active[kCallbackMipUserSolution])
-    mipsolver.mipdata_->callbackUserSolution(
+  // Possibly query existence of an external solution
+  if (!mipsolver.submip)
+    mipsolver.mipdata_->queryExternalSolution(
         mipsolver.solution_objective_,
-        kUserMipSolutionCallbackOriginEvaluateRootNode0);
+        kExternalMipSolutionQueryOriginEvaluateRootNode0);
 
   // check if only root presolve is allowed
   if (firstrootbasis.valid)
@@ -2148,12 +2184,11 @@ restart:
     lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
     if (ncuts == 0) break;
 
-    // Possibly look for primal solution from the user
-    if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-        mipsolver.callback_->active[kCallbackMipUserSolution])
-      mipsolver.mipdata_->callbackUserSolution(
+    // Possibly query existence of an external solution
+    if (!mipsolver.submip)
+      mipsolver.mipdata_->queryExternalSolution(
           mipsolver.solution_objective_,
-          kUserMipSolutionCallbackOriginEvaluateRootNode1);
+          kExternalMipSolutionQueryOriginEvaluateRootNode1);
   }
   analysis.mipTimerStop(kMipClockRootSeparation);
   if (analysis.analyse_mip_time) {
@@ -2218,12 +2253,11 @@ restart:
   }
 
   printDisplayLine();
-  // Possibly look for primal solution from the user
-  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-      mipsolver.callback_->active[kCallbackMipUserSolution])
-    mipsolver.mipdata_->callbackUserSolution(
+  // Possibly query existence of an external solution
+  if (!mipsolver.submip)
+    mipsolver.mipdata_->queryExternalSolution(
         mipsolver.solution_objective_,
-        kUserMipSolutionCallbackOriginEvaluateRootNode2);
+        kExternalMipSolutionQueryOriginEvaluateRootNode2);
 
   // Possible cut extraction callback
   if (!mipsolver.submip && mipsolver.callback_->user_callback &&
@@ -2294,12 +2328,11 @@ restart:
       ++nseparounds;
 
       printDisplayLine();
-      // Possibly look for primal solution from the user
-      if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-          mipsolver.callback_->active[kCallbackMipUserSolution])
-        mipsolver.mipdata_->callbackUserSolution(
+      // Possibly query existence of an external solution
+      if (!mipsolver.submip)
+        mipsolver.mipdata_->queryExternalSolution(
             mipsolver.solution_objective_,
-            kUserMipSolutionCallbackOriginEvaluateRootNode3);
+            kExternalMipSolutionQueryOriginEvaluateRootNode3);
     }
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
@@ -2347,12 +2380,11 @@ restart:
     printDisplayLine();
   }
 
-  // Possibly look for primal solution from the user
-  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-      mipsolver.callback_->active[kCallbackMipUserSolution])
-    mipsolver.mipdata_->callbackUserSolution(
+  // Possibly query existence of an external solution
+  if (!mipsolver.submip)
+    mipsolver.mipdata_->queryExternalSolution(
         mipsolver.solution_objective_,
-        kUserMipSolutionCallbackOriginEvaluateRootNode4);
+        kExternalMipSolutionQueryOriginEvaluateRootNode4);
 
   removeFixedIndices();
   if (lp.getLpSolver().getBasis().valid) lp.removeObsoleteRows();
@@ -2380,6 +2412,7 @@ restart:
         analysis.mipTimerStart(kMipClockPerformRestart);
         performRestart();
         analysis.mipTimerStop(kMipClockPerformRestart);
+        if (mipsolver.terminate()) return;
         ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
           clockOff(analysis);
@@ -2409,6 +2442,10 @@ restart:
 
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
+
+  // This MIP instance may have been terminated
+  if (terminatorActive())
+    if (this->terminatorTerminated()) return true;
 
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
@@ -2610,47 +2647,94 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-void HighsMipSolverData::callbackUserSolution(
+void HighsMipSolverData::queryExternalSolution(
     const double mipsolver_objective_value,
-    const userMipSolutionCallbackOrigin user_solution_callback_origin) {
-  setCallbackDataOut(mipsolver_objective_value);
-  mipsolver.callback_->data_out.user_solution_callback_origin =
-      user_solution_callback_origin;
-  mipsolver.callback_->clearHighsCallbackInput();
+    const ExternalMipSolutionQueryOrigin external_solution_query_origin) {
+  assert(!mipsolver.submip);
+  HighsCallback* callback = mipsolver.callback_;
+  const bool use_callback =
+      callback->user_callback && callback->active[kCallbackMipUserSolution];
+  if (use_callback) {
+    setCallbackDataOut(mipsolver_objective_value);
+    callback->data_out.external_solution_query_origin =
+        external_solution_query_origin;
+    callback->clearHighsCallbackInput();
 
-  const bool interrupt = mipsolver.callback_->callbackAction(
-      kCallbackMipUserSolution, "MIP User solution");
-  assert(!interrupt);
-  if (mipsolver.callback_->data_in.user_has_solution) {
-    const auto& user_solution = mipsolver.callback_->data_in.user_solution;
-    double bound_violation_ = 0;
-    double row_violation_ = 0;
-    double integrality_violation_ = 0;
-    HighsCDouble user_solution_quad_objective_value = 0;
-    const bool feasible = mipsolver.solutionFeasible(
-        mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
-        row_violation_, integrality_violation_,
-        user_solution_quad_objective_value);
-    double user_solution_objective_value =
-        double(user_solution_quad_objective_value);
-    if (!feasible) {
-      highsLogUser(
-          mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-          "User-supplied solution has with objective %g has violations: "
-          "bound = %.4g; integrality = %.4g; row = %.4g\n",
-          user_solution_objective_value, bound_violation_,
-          integrality_violation_, row_violation_);
-      return;
+    const bool interrupt =
+        callback->callbackAction(kCallbackMipUserSolution, "MIP User solution");
+    assert(!interrupt);
+    if (callback->data_in.user_has_solution) {
+      // Objective is assumed to be original_offset +
+      // (original_c)^T(original_x), but MIP solver bounds are based on the
+      // reduced objective (reduced_c)^T(reduced_x)
+      //
+      // Now, original_sense*[reduced_offset + (reduced_c)^T(reduced_x)] is an
+      // objective in the original space, so
+      //
+      // f0 + c0^Tx0 = s*(f1 + c1^Tx1)
+      //
+      // where 0 => original; 1 => reduced
+      //
+      // This allows the reduced objective value to be deduced as
+      //
+      // c1^Tx1 = s*(f0 + c0^Tx0) - f1
+      //
+      // (reduced_c)^T(reduced_x) = original_sense*[original_offset +
+      // (original_c)^T(original_x) - reduced_offset]
+      const auto& user_solution = callback->data_in.user_solution;
+      double bound_violation_ = 0;
+      double row_violation_ = 0;
+      double integrality_violation_ = 0;
+      HighsCDouble user_solution_quad_objective_value = 0;
+      const bool feasible = mipsolver.solutionFeasible(
+          mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
+          row_violation_, integrality_violation_,
+          user_solution_quad_objective_value);
+      double user_solution_objective_value =
+          double(user_solution_quad_objective_value);
+      if (!feasible) {
+        highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+            "User-supplied solution has with objective %g has violations: "
+            "bound = %.4g; integrality = %.4g; row = %.4g\n",
+            user_solution_objective_value, bound_violation_,
+            integrality_violation_, row_violation_);
+        return;
+      }
+      std::vector<double> reduced_user_solution;
+      reduced_user_solution =
+          postSolveStack.getReducedPrimalSolution(user_solution);
+      const bool print_display_line = true;
+      const bool is_user_solution = true;
+      addIncumbent(reduced_user_solution, user_solution_objective_value,
+                   kSolutionSourceUserSolution, print_display_line,
+                   is_user_solution);
     }
-    std::vector<double> reduced_user_solution;
-    reduced_user_solution =
-        postSolveStack.getReducedPrimalSolution(user_solution);
-    const bool print_display_line = true;
-    const bool is_user_solution = true;
-    addIncumbent(reduced_user_solution, user_solution_objective_value,
-                 kSolutionSourceUserSolution, print_display_line,
-                 is_user_solution);
   }
+}
+
+HighsInt HighsMipSolverData::terminatorConcurrency() const {
+  return mipsolver.terminator_.num_instance;
+}
+
+HighsInt HighsMipSolverData::terminatorMyInstance() const {
+  return mipsolver.terminator_.my_instance;
+}
+
+void HighsMipSolverData::terminatorTerminate() {
+  assert(terminatorActive());
+  mipsolver.terminator_.terminate();
+}
+
+bool HighsMipSolverData::terminatorTerminated() const {
+  if (this->terminatorActive())
+    mipsolver.termination_status_ = mipsolver.terminator_.terminationStatus();
+  return mipsolver.termination_status_ != HighsModelStatus::kNotset;
+}
+
+void HighsMipSolverData::terminatorReport() const {
+  if (this->terminatorActive())
+    mipsolver.terminator_.report(mipsolver.options_mip_->log_options);
 }
 
 static double possInfRelDiff(const double v0, const double v1,
@@ -2788,3 +2872,42 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
 }
 
 void HighsPrimaDualIntegral::initialise() { this->value = -kHighsInf; }
+
+void HighsTerminator::clear() {
+  this->num_instance = 0;
+  this->my_instance = kNoThreadInstance;
+  this->record = nullptr;
+}
+
+void HighsTerminator::initialise(HighsInt num_instance_, HighsInt my_instance_,
+                                 HighsModelStatus* record_) {
+  this->clear();
+  this->num_instance = num_instance_;
+  this->my_instance = my_instance_;
+  this->record = record_;
+}
+
+HighsInt HighsTerminator::concurrency() const { return this->num_instance; }
+
+void HighsTerminator::terminate() {
+  assert(this->record);
+  assert(this->my_instance < this->num_instance);
+  this->record[this->my_instance] = HighsModelStatus::kHighsInterrupt;
+}
+
+HighsModelStatus HighsTerminator::terminationStatus() const {
+  assert(this->record);
+  for (HighsInt instance = 0; instance < this->num_instance; instance++) {
+    if (this->record[instance] != HighsModelStatus::kNotset)
+      return this->record[instance];
+  }
+  return HighsModelStatus::kNotset;
+}
+
+void HighsTerminator::report(const HighsLogOptions log_options) const {
+  highsLogUser(log_options, HighsLogType::kInfo, "\nTerminator:        ");
+  for (HighsInt instance = 0; instance < this->num_instance; instance++)
+    highsLogUser(log_options, HighsLogType::kInfo, " %20d",
+                 int(this->record[instance]));
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
+}

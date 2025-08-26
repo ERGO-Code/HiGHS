@@ -142,6 +142,9 @@ bool HighsPrimalHeuristics::solveSubMip(
     mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true, mipsolver.submip_level + 1);
+  // Initialise termination_status_ and propagate any terminator to
+  // the sub-MIP
+  submipsolver.initialiseTerminator(mipsolver);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;
@@ -152,6 +155,21 @@ bool HighsPrimalHeuristics::solveSubMip(
   mipsolver.max_submip_level =
       std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
   if (!mipsolver.submip) mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
+  // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
+  // pointer after calling HighsMipSolver::run(), and assert isn't
+  // triggered for anything in ctest, but use direct test of
+  // submipsolver.termination_status_, rather than
+  // submipsolver.mipdata_.terminatorTerminated()
+  if (!submipsolver.mipdata_) {
+    printf(
+        "HighsPrimalHeuristics::solveSubMip: submipsolver.mipdata_ is "
+        "nullptr\n");
+    assert(submipsolver.mipdata_);
+  }
+  if (submipsolver.termination_status_ != HighsModelStatus::kNotset) {
+    mipsolver.termination_status_ = submipsolver.termination_status_;
+    return false;
+  }
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
@@ -554,6 +572,7 @@ retry:
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  if (mipsolver.mipdata_->terminatorTerminated()) return;
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
@@ -837,6 +856,7 @@ retry:
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  if (mipsolver.mipdata_->terminatorTerminated()) return;
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
