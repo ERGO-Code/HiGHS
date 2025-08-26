@@ -1037,6 +1037,28 @@ HPresolve::Result HPresolve::dominatedColumns(
     signatures[col].second |= rowUpperFinite << rowHashedPos;
   };
 
+  auto checkDominationNonZero = [&](HighsInt row, double aj, double ak) {
+    if (model->row_lower_[row] != -kHighsInf &&
+        model->row_upper_[row] != kHighsInf) {
+      // the row is an equality or ranged row, therefore the coefficients must
+      // be parallel, otherwise one of the inequalities given by the row rules
+      // out domination
+      if (std::abs(aj - ak) > options->small_matrix_value) return false;
+      return true;
+    }
+
+    // normalize row to a <= constraint
+    if (model->row_upper_[row] == kHighsInf) {
+      aj = -aj;
+      ak = -ak;
+    }
+
+    // the coefficient of the dominating column needs to be smaller than or
+    // equal to the coefficient of the dominated column
+    if (aj > ak + options->small_matrix_value) return false;
+    return true;
+  };
+
   auto checkDomination = [&](HighsInt scalj, HighsInt j, HighsInt scalk,
                              HighsInt k) {
     // rule out domination from integers to continuous variables
@@ -1061,70 +1083,28 @@ HPresolve::Result HPresolve::dominatedColumns(
     // dominated columns set of rows with a positive coefficient
     if ((sjPlus & ~skPlus) != 0) return false;
 
-    // next check if the columns cost allows for domination
-    double cj = scalj * model->col_cost_[j];
-    double ck = scalk * model->col_cost_[k];
-
     // the dominating columns cost must be smaller or equal to the dominated
     // columns cost
-    if (cj > ck + options->small_matrix_value) return false;
+    if (scalj * model->col_cost_[j] >
+        scalk * model->col_cost_[k] + options->small_matrix_value)
+      return false;
 
     // finally check the column vectors
     for (const HighsSliceNonzero& nonz : getColumnVector(j)) {
       HighsInt row = nonz.index();
-      double aj = scalj * nonz.value();
-
       HighsInt akPos = findNonzero(row, k);
-      double ak = scalk * (akPos == -1 ? 0.0 : Avalue[akPos]);
-
-      if (model->row_lower_[row] != -kHighsInf &&
-          model->row_upper_[row] != kHighsInf) {
-        // the row is an equality or ranged row, therefore the coefficients must
-        // be parallel, otherwise one of the inequalities given by the row rules
-        // out domination
-        if (std::abs(aj - ak) > options->small_matrix_value) return false;
-        continue;
-      }
-
-      // normalize row to a <= constraint
-      if (model->row_upper_[row] == kHighsInf) {
-        aj = -aj;
-        ak = -ak;
-      }
-
-      // the coefficient of the dominating column needs to be smaller than or
-      // equal to the coefficient of the dominated column
-      if (aj > ak + options->small_matrix_value) return false;
+      if (!checkDominationNonZero(row, scalj * nonz.value(),
+                                  scalk * (akPos == -1 ? 0.0 : Avalue[akPos])))
+        return false;
     }
 
     // check row only occurring in the column vector of k
     for (const HighsSliceNonzero& nonz : getColumnVector(k)) {
       HighsInt row = nonz.index();
-      double ak = scalk * nonz.value();
-
       HighsInt ajPos = findNonzero(row, j);
       // only rows in which aj does not occur are left to check
       if (ajPos != -1) continue;
-      double aj = 0.0;
-
-      if (model->row_lower_[row] != -kHighsInf &&
-          model->row_upper_[row] != kHighsInf) {
-        // the row is an equality or ranged row, therefore the coefficients must
-        // be parallel, otherwise one of the inequalities given by the row rules
-        // out domination
-        if (std::abs(aj - ak) > options->small_matrix_value) return false;
-        continue;
-      }
-
-      // normalize row to a <= constraint
-      if (model->row_upper_[row] == kHighsInf) {
-        aj = -aj;
-        ak = -ak;
-      }
-
-      // the coefficient of the dominating column needs to be smaller than or
-      // equal to the coefficient of the dominated column
-      if (aj > ak + options->small_matrix_value) return false;
+      if (!checkDominationNonZero(row, 0.0, scalk * nonz.value())) return false;
     }
 
     return true;
