@@ -96,9 +96,10 @@ void HighsMipSolver::run() {
   std::swap(mipdata_->debugSolution.debugSolActive, debugSolActive);
 #endif
   analysis_.mipTimerStart(kMipClockRunPresolve);
-  mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
+  mipdata_->runMipPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
   analysis_.mipTimerStop(kMipClockPresolve);
+
   if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
@@ -822,27 +823,37 @@ void HighsMipSolver::cleanupSolve() {
                  "                    %.12g (row viol.)\n",
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
-  if (!timeless_log)
+  if (!timeless_log) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "  Timing            %.2f (total)\n"
-                 "                    %.2f (presolve)\n"
-                 "                    %.2f (solve)\n"
-                 "                    %.2f (postsolve)\n",
-                 timer_.read(), analysis_.mipTimerRead(kMipClockPresolve),
-                 analysis_.mipTimerRead(kMipClockSolve),
-                 analysis_.mipTimerRead(kMipClockPostsolve));
+                 "  Timing            %.2f\n", timer_.read());
+    if (analysis_.analyse_mip_time)
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                   "                    %.2f (presolve)\n"
+                   "                    %.2f (solve)\n"
+                   "                    %.2f (postsolve)\n",
+                   analysis_.mipTimerRead(kMipClockPresolve),
+                   analysis_.mipTimerRead(kMipClockSolve),
+                   analysis_.mipTimerRead(kMipClockPostsolve));
+  }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Max sub-MIP depth %d\n"
-               "  Nodes             %llu\n"
-               "  Repair LPs        %llu (%llu feasible; %llu iterations)\n"
-               "  LP iterations     %llu (total)\n"
+               "  Nodes             %llu\n",
+               int(max_submip_level), (long long unsigned)mipdata_->num_nodes);
+  if (mipdata_->total_repair_lp) {
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "  Repair LPs        %llu (%llu feasible; %llu iterations)\n",
+                 (long long unsigned)mipdata_->total_repair_lp,
+                 (long long unsigned)mipdata_->total_repair_lp_feasible,
+                 (long long unsigned)mipdata_->total_repair_lp_iterations);
+  } else {
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "  Repair LPs        0\n");
+  }
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+               "  LP iterations     %llu\n"
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
                "                    %llu (heuristics)\n",
-               int(max_submip_level), (long long unsigned)mipdata_->num_nodes,
-               (long long unsigned)mipdata_->total_repair_lp,
-               (long long unsigned)mipdata_->total_repair_lp_feasible,
-               (long long unsigned)mipdata_->total_repair_lp_iterations,
                (long long unsigned)mipdata_->total_lp_iterations,
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,
@@ -856,10 +867,10 @@ void HighsMipSolver::cleanupSolve() {
 }
 
 // Only called in Highs::runPresolve
-void HighsMipSolver::runPresolve(const HighsInt presolve_reduction_limit) {
+void HighsMipSolver::runMipPresolve(const HighsInt presolve_reduction_limit) {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
-  mipdata_->runPresolve(presolve_reduction_limit);
+  mipdata_->runMipPresolve(presolve_reduction_limit);
 }
 
 const HighsLp& HighsMipSolver::getPresolvedModel() const {
