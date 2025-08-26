@@ -8,8 +8,6 @@
 #ifndef MIP_HIGHS_MIP_SOLVER_H_
 #define MIP_HIGHS_MIP_SOLVER_H_
 
-#include <atomic>
-
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"

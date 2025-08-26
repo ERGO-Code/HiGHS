@@ -933,8 +933,6 @@ HighsStatus Highs::presolve() {
   return returnFromHighs(return_status);
 }
 
-HighsMipSolverInfo getMipSolverInfo(const HighsMipSolver& solver);
-
 HighsStatus Highs::run() {
   const bool options_had_highs_files = this->optionsHasHighsFiles();
   if (options_had_highs_files) {
@@ -4025,24 +4023,22 @@ HighsStatus Highs::callSolveMip() {
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
-  HighsMipSolverInfo mip_solver_info;
   solver.run();
-  mip_solver_info = getMipSolverInfo(solver);
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
   HighsStatus return_status =
-      highsStatusFromHighsModelStatus(mip_solver_info.modelstatus);
-  model_status_ = mip_solver_info.modelstatus;
+      highsStatusFromHighsModelStatus(solver.modelstatus_);
+  model_status_ = solver.modelstatus_;
   // Extract the solution
-  if (mip_solver_info.solution_objective != kHighsInf) {
+  if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
     //
     // If the original model has semi-variables, its solution is
     // (still) given by the first model_.lp_.num_col_ entries of the
     // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
-    solution_.col_value = mip_solver_info.solution;
+    solution_.col_value = solver.solution_;
     this->saved_objective_and_solution_ = solver.saved_objective_and_solution_;
     model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
@@ -4062,7 +4058,7 @@ HighsStatus Highs::callSolveMip() {
   // There is no basis: should be so by default
   assert(!basis_.valid);
   // Get the objective and any KKT failures
-  info_.objective_function_value = mip_solver_info.solution_objective;
+  info_.objective_function_value = solver.solution_objective_;
   // Remember to judge primal feasibility according to
   // mip_feasibility_tolerance, so take a copy of the original
   // value...
@@ -4071,13 +4067,13 @@ HighsStatus Highs::callSolveMip() {
   // NB getKktFailures sets the primal and dual solution status
   getKktFailures(options_, model_, solution_, basis_, info_);
   // Set the MIP-specific values of info_
-  info_.mip_node_count = mip_solver_info.node_count;
-  info_.mip_dual_bound = mip_solver_info.dual_bound;
-  info_.mip_gap = mip_solver_info.gap;
-  info_.primal_dual_integral = mip_solver_info.primal_dual_integral;
+  info_.mip_node_count = solver.node_count_;
+  info_.mip_dual_bound = solver.dual_bound_;
+  info_.mip_gap = solver.gap_;
+  info_.primal_dual_integral = solver.primal_dual_integral_;
   // Get the number of LP iterations, avoiding overflow if the int64_t
   // value is too large
-  int64_t mip_total_lp_iterations = mip_solver_info.total_lp_iterations;
+  int64_t mip_total_lp_iterations = solver.total_lp_iterations_;
   info_.simplex_iteration_count = mip_total_lp_iterations > kHighsIInf
                                       ? -1
                                       : HighsInt(mip_total_lp_iterations);
@@ -4085,9 +4081,9 @@ HighsStatus Highs::callSolveMip() {
   if (model_status_ == HighsModelStatus::kOptimal)
     return_status = checkOptimality("MIP");
   // Overwrite max infeasibility to include integrality if there is a solution
-  if (mip_solver_info.solution_objective != kHighsInf) {
-    const double mip_max_bound_violation = std::max(
-        mip_solver_info.row_violation, mip_solver_info.bound_violation);
+  if (solver.solution_objective_ != kHighsInf) {
+    const double mip_max_bound_violation =
+        std::max(solver.row_violation_, solver.bound_violation_);
     const double delta_max_bound_violation =
         std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
     // Possibly report a mis-match between the max bound violation
@@ -4099,7 +4095,7 @@ HighsStatus Highs::callSolveMip() {
                   "(%10.4g); Difference of %10.4g\n",
                   mip_max_bound_violation, info_.max_primal_infeasibility,
                   delta_max_bound_violation);
-    info_.max_integrality_violation = mip_solver_info.integrality_violation;
+    info_.max_integrality_violation = solver.integrality_violation_;
     if (info_.max_integrality_violation > options_.mip_feasibility_tolerance) {
       info_.primal_solution_status = kSolutionStatusInfeasible;
       assert(model_status_ == HighsModelStatus::kInfeasible);
@@ -4808,23 +4804,4 @@ void Highs::getHighsFiles() {
   this->options_.solution_file = this->files_.write_solution_file;
   this->options_.write_basis_file = this->files_.write_basis_file;
   this->files_.clear();
-}
-
-HighsMipSolverInfo getMipSolverInfo(const HighsMipSolver& mip_solver) {
-  HighsMipSolverInfo mip_solver_info;
-  mip_solver_info.clear();
-  mip_solver_info.modelstatus = mip_solver.modelstatus_;
-  mip_solver_info.solution = mip_solver.solution_;
-  mip_solver_info.solution_objective = mip_solver.solution_objective_;
-  mip_solver_info.bound_violation = mip_solver.bound_violation_;
-  mip_solver_info.integrality_violation = mip_solver.integrality_violation_;
-  mip_solver_info.row_violation = mip_solver.row_violation_;
-  mip_solver_info.dual_bound = mip_solver.dual_bound_;
-  mip_solver_info.primal_bound = mip_solver.primal_bound_;
-  mip_solver_info.gap = mip_solver.gap_;
-  mip_solver_info.max_submip_level = mip_solver.max_submip_level;
-  mip_solver_info.node_count = mip_solver.node_count_;
-  mip_solver_info.total_lp_iterations = mip_solver.total_lp_iterations_;
-  mip_solver_info.primal_dual_integral = mip_solver.primal_dual_integral_;
-  return mip_solver_info;
 }

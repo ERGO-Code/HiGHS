@@ -301,12 +301,6 @@ struct HighsMipSolverData {
       const double mipsolver_objective_value,
       const ExternalMipSolutionQueryOrigin external_solution_query_origin);
 
-  HighsInt mipRaceConcurrency() const;
-  void mipRaceUpdate();
-  HighsInt mipRaceNewSolution(const HighsInt instance, double& objective_value,
-                              std::vector<double>& solution);
-  void mipRaceReport() const;
-
   HighsInt terminatorConcurrency() const;
   bool terminatorActive() const { return terminatorConcurrency() > 0; }
   HighsInt terminatorMyInstance() const;

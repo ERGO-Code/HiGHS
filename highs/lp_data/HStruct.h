@@ -183,22 +183,4 @@ struct HighsSimplexStats {
   void initialise(const HighsInt iteration_count_ = 0);
 };
 
-struct HighsMipSolverInfo {
-  // Data pulled from the MIP solver that are required after instance
-  // is deleted
-  HighsModelStatus modelstatus;
-  std::vector<double> solution;
-  double solution_objective;
-  double bound_violation;
-  double integrality_violation;
-  double row_violation;
-  double dual_bound;
-  double primal_bound;
-  double gap;
-  HighsInt max_submip_level;
-  int64_t node_count;
-  int64_t total_lp_iterations;
-  double primal_dual_integral;
-  void clear();
-};
 #endif /* LP_DATA_HSTRUCT_H_ */

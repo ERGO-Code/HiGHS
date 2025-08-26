@@ -4300,19 +4300,3 @@ void HighsLinearObjective::clear() {
   this->rel_tolerance = 0.0;
   this->priority = 0;
 }
-
-void HighsMipSolverInfo::clear() {
-  this->modelstatus = HighsModelStatus::kNotset;
-  this->solution.clear();
-  this->solution_objective = -kHighsInf;
-  this->bound_violation = -kHighsInf;
-  this->integrality_violation = -kHighsInf;
-  this->row_violation = -kHighsInf;
-  this->dual_bound = -kHighsInf;
-  this->primal_bound = -kHighsInf;
-  this->gap = -kHighsInf;
-  this->max_submip_level = -1;
-  this->node_count = -kHighsSize_tInf;
-  this->total_lp_iterations = -kHighsSize_tInf;
-  this->primal_dual_integral = -kHighsInf;
-}

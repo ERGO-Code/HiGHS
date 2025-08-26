@@ -794,21 +794,14 @@ void HighsMipSolver::cleanupSolve() {
   std::array<char, 128> gapString =
       getGapString(gap_, primal_bound_, options_mip_);
 
-  // Don't log to console if this is in a MIP race
-  HighsOptions temp_options = *options_mip_;
-  if (mipdata_->terminatorActive()) {
-    temp_options.log_to_console = false;
-    temp_options.setLogOptions();
-  }
-
-  bool timeless_log = temp_options.timeless_log;
-  highsLogUser(temp_options.log_options, HighsLogType::kInfo,
+  bool timeless_log = options_mip_->timeless_log;
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving report\n");
   if (this->orig_model_->model_name_.length())
-    highsLogUser(temp_options.log_options, HighsLogType::kInfo,
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "  Model             %s\n",
                  this->orig_model_->model_name_.c_str());
-  highsLogUser(temp_options.log_options, HighsLogType::kInfo,
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
@@ -816,13 +809,13 @@ void HighsMipSolver::cleanupSolve() {
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
                dual_bound_, gapString.data());
   if (!timeless_log)
-    highsLogUser(temp_options.log_options, HighsLogType::kInfo,
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "  P-D integral      %.12g\n",
                  mipdata_->primal_dual_integral.value);
-  highsLogUser(temp_options.log_options, HighsLogType::kInfo,
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Solution status   %s\n", solutionstatus.c_str());
   if (solutionstatus != "-")
-    highsLogUser(temp_options.log_options, HighsLogType::kInfo,
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"
                  "                    %.12g (bound viol.)\n"
                  "                    %.12g (int. viol.)\n"
@@ -830,7 +823,7 @@ void HighsMipSolver::cleanupSolve() {
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
   if (!timeless_log)
-    highsLogUser(temp_options.log_options, HighsLogType::kInfo,
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "  Timing            %.2f (total)\n"
                  "                    %.2f (presolve)\n"
                  "                    %.2f (solve)\n"
@@ -838,7 +831,7 @@ void HighsMipSolver::cleanupSolve() {
                  timer_.read(), analysis_.mipTimerRead(kMipClockPresolve),
                  analysis_.mipTimerRead(kMipClockSolve),
                  analysis_.mipTimerRead(kMipClockPostsolve));
-  highsLogUser(temp_options.log_options, HighsLogType::kInfo,
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Max sub-MIP depth %d\n"
                "  Nodes             %llu\n"
                "  Repair LPs        %llu (%llu feasible; %llu iterations)\n"
