@@ -772,7 +772,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     }
 
     // We are using vectorsum to keep track of the binary coefficients
-    if (colIsBinary(col, lb, ub) && vectorsum.getValue(col) == 0) {
+    if (i >= numNz - numBinCols && vectorsum.getValue(col) == 0) {
       ++i;
       continue;
     }
@@ -813,7 +813,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     }
 
     // Transform entry into the SNFR
-    if (colIsBinary(col, lb, ub)) {
+    if (i >= numNz - numBinCols) {
       // Binary columns can be added directly to the SNFR
       if (vals[i] >= 0) {
         addSNFRentry(col, -1, getLpSolution(col), 1, vals[i], 0,

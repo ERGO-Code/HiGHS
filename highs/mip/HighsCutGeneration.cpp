@@ -507,12 +507,12 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 bool HighsCutGeneration::separateLiftedFlowCover() {
   // Compute the lifting data (ld) first
   struct LiftingData {
-    std::vector<HighsCDouble> m;
+    std::vector<double> m;
     std::vector<HighsCDouble> M;
     HighsInt r = 0;
     HighsInt t = 0;
     double mp = kHighsInf;
-    HighsCDouble ml = 0;
+    double ml = 0;
     HighsCDouble d1 = 0;
   };
   LiftingData ld;
@@ -559,7 +559,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
 
   pdqsort_branchless(
       ld.m.begin(), ld.m.begin() + ld.r,
-      [&](const HighsCDouble a, const HighsCDouble b) { return a > b; });
+      [&](const double a, const double b) { return a > b; });
 
   for (HighsInt i = 0; i != ld.r + 1; ++i) {
     if (i == 0) {
@@ -626,7 +626,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
           snfr.lambda + vubcoef <=
               ld.M[i] + ld.ml + feastol +
                   std::max(0.0, static_cast<double>(
-                                    ld.m[i] - (ld.mp - snfr.lambda) - ld.ml)));
+                                    ld.m[i] - (HighsCDouble(ld.mp) - snfr.lambda) - ld.ml)));
       return static_cast<double>(i * HighsCDouble(snfr.lambda) + vubcoef -
                                  ld.M[i]);
     }
@@ -1613,7 +1613,7 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
   // 5. Don't consider any inequality with too few continuous cols
 
   HighsInt numZeros = 0;
-  HighsInt numCont = 0;
+  HighsInt numContCols = 0;
   double maxact = -feastol;
   double maxAbsVal = 0;
   HighsInt slackOffset = lpRelaxation.getMipSolver().numCol();
@@ -1637,10 +1637,10 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
     if (lb == -kHighsInf || ub == kHighsInf) {
       return false;
     }
-    if (!lpRelaxation.isColIntegral(col)) numCont++;
+    if (col < slackOffset && !lpRelaxation.isColIntegral(col)) numContCols++;
   }
 
-  if (numCont <= 1) return false;
+  if (numContCols == 0) return false;
   scale(maxAbsVal);
 
   for (HighsInt i = 0; i != rowlen; ++i) {
