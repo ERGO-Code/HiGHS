@@ -647,6 +647,8 @@ bool HighsTransformedLp::transformSNFRelaxation(
     //        (2) a_j (l_j - d_j) + c_j <= 0
     //        (3) a_j u'_j + c_j <= 0
     // Note: c_j may change during transform if two columns use same bin col
+    // complement: Should x_j be replaced by x'_j = (1 - x_j)
+    // inclbincoef: Should c_j be used and included in the aggregation
     if (bincol == -1) return false;
     if (abs(vb.coef) >= 1e+6) return false;
     complement = false;

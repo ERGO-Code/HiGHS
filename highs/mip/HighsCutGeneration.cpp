@@ -558,7 +558,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
   ld.d1 = sumC2 + snfr.rhs;
 
   pdqsort_branchless(
-      ld.m.begin(), ld.m.end(),
+      ld.m.begin(), ld.m.begin() + ld.r,
       [&](const HighsCDouble a, const HighsCDouble b) { return a > b; });
 
   for (HighsInt i = 0; i != ld.r + 1; ++i) {
@@ -1366,7 +1366,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   std::vector<HighsInt> flowCoverInds;
   double flowCoverRhs = rhs_;
   double flowCoverEfficacy = 0;
-  if (genFlowCover) {
+  if (genFlowCover && !lpRelaxation.getMipSolver().submip) {
     flowCoverVals = vals_;
     flowCoverInds = inds_;
     flowCoverSuccess = tryGenerateFlowCoverCut(
@@ -1610,8 +1610,10 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
   // reject base inequalities where that is not possible due to unbounded
   // variables
   // 4. Don't consider any inequality with too many non-zeros
+  // 5. Don't consider any inequality with too few continuous cols
 
   HighsInt numZeros = 0;
+  HighsInt numCont = 0;
   double maxact = -feastol;
   double maxAbsVal = 0;
   HighsInt slackOffset = lpRelaxation.getMipSolver().numCol();
@@ -1628,40 +1630,47 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
   };
 
   for (HighsInt i = 0; i < rowlen; ++i) {
+    HighsInt col = inds[i];
+    double lb = getLb(col);
+    double ub = getUb(col);
     maxAbsVal = std::max(std::abs(vals[i]), maxAbsVal);
-    if (getLb(inds[i]) == -kHighsInf || getUb(inds[i]) == kHighsInf) {
+    if (lb == -kHighsInf || ub == kHighsInf) {
       return false;
     }
+    if (!lpRelaxation.isColIntegral(col)) numCont++;
   }
 
+  if (numCont <= 1) return false;
   scale(maxAbsVal);
 
   for (HighsInt i = 0; i != rowlen; ++i) {
     HighsInt col = inds[i];
+    double lb = getLb(col);
+    double ub = getUb(col);
 
     // relax variables with small contributions if possible
-    if (std::abs(vals[i]) * (getUb(col) - getLb(col)) <= 10 * feastol) {
+    if (std::abs(vals[i]) * (ub - lb) <= 10 * feastol) {
       if (vals[i] < 0) {
-        if (getUb(col) == kHighsInf) return false;
-        rhs -= vals[i] * getUb(col);
+        if (ub == kHighsInf) return false;
+        rhs -= vals[i] * ub;
         ++numZeros;
         vals[i] = 0.0;
       } else if (vals[i] > 0) {
-        if (getLb(col) == -kHighsInf) return false;
-        rhs -= vals[i] * getLb(col);
+        if (lb == -kHighsInf) return false;
+        rhs -= vals[i] * lb;
         ++numZeros;
         vals[i] = 0.0;
       }
     }
 
     if (vals[i] > 0) {
-      maxact += vals[i] * getUb(col);
+      maxact += vals[i] * ub;
     } else if (vals[i] < 0) {
-      maxact += vals[i] * getLb(col);
+      maxact += vals[i] * lb;
     }
   }
 
-  HighsInt maxLen = 100 + 0.15 * (lpRelaxation.numCols());
+  HighsInt maxLen = 0.15 * (lpRelaxation.numCols());
   if (rowlen - numZeros > maxLen) return false;
 
   if (numZeros != 0) {
@@ -1737,22 +1746,27 @@ bool HighsCutGeneration::computeFlowCover() {
   if (capacity < feastol) return false;
 
   // Solve a knapsack greedily to assign items to C+, C-, N+\C+, N-\C-
+  // z_j is a binary variable deciding whether the item goes into the knapsack
+  // max sum_{j in N+} ( x_j - 1 ) z_j + sum_{j in N-} x_j
+  //     sum_{j in N+}  u'_j z_j + sum_{j in N-} u'_j z_j < -b + sum_{j in N+} u'_j
+  //     z_j in {0,1} for all j in N+ & N-
+
   double knapsackWeight = 0;
   std::vector<double> weights(nitems);
-  std::vector<double> profits(nitems);
+  std::vector<double> profitweightratios(nitems);
   std::vector<HighsInt> perm(nitems);
   std::iota(perm.begin(), perm.end(), 0);
   for (HighsInt i = 0; i < nitems; ++i) {
     weights[i] = snfr.vubCoef[items[i]];
     if (snfr.coef[items[i]] == 1) {
-      profits[i] = 1 - snfr.binSolval[items[i]];
+      profitweightratios[i] = (1 - snfr.binSolval[items[i]]) / weights[i];
     } else {
-      profits[i] = snfr.binSolval[items[i]];
+      profitweightratios[i] = snfr.binSolval[items[i]] / weights[i];
     }
   }
   pdqsort_branchless(perm.begin(), perm.end(),
                      [&](const HighsInt a, const HighsInt b) {
-                       return profits[a] / weights[a] > profits[b] / weights[b];
+                       return profitweightratios[a] > profitweightratios[b];
                      });
   // Greedily add items to knapsack
   for (HighsInt i = 0; i < nitems; ++i) {
@@ -1761,19 +1775,23 @@ bool HighsCutGeneration::computeFlowCover() {
     if (knapsackWeight + weights[j] < capacity) {
       knapsackWeight += weights[j];
       if (snfr.coef[k] == 1) {
+        // j in N+ with z_j = 1 => j in N+ \ C+
         snfr.flowCoverStatus[k] = -1;
         nNonFlowCover++;
       } else {
+        // j in N- with z_j = 1 => j in C-
         snfr.flowCoverStatus[k] = 1;
         nFlowCover++;
         flowCoverWeight -= snfr.vubCoef[k];
       }
     } else {
       if (snfr.coef[k] == 1) {
+        // j in N+ with z_j = 0 => j in C+
         snfr.flowCoverStatus[k] = 1;
         nFlowCover++;
         flowCoverWeight += snfr.vubCoef[k];
       } else {
+        // j in N- with z_j = 0 => j in N- \ C-
         snfr.flowCoverStatus[k] = -1;
         nNonFlowCover++;
       }
