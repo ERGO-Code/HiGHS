@@ -27,6 +27,9 @@ jobs:
       - name: Install GKlib
         run: vcpkg install gklib
 
+      - name: ls
+        run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
+
       - name: Install METIS
         run: vcpkg install metis
 
