@@ -25,7 +25,7 @@ jobs:
             vcpkg-${{ runner.os }}-
 
       - name: Install GKlib
-        run: vcpkg install metis
+        run: vcpkg install gklib
 
       - name: Install METIS
         run: vcpkg install metis
@@ -44,7 +44,6 @@ jobs:
       - name: Configure cmake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        # Here is _DIR because with vcpkg CMake find_package works.
         run: |
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
@@ -67,54 +66,54 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure -C Release
 
-  debug:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
+  # debug:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [windows-latest]
 
-    steps:
-      - uses: actions/checkout@v4
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Install METIS
-        run: vcpkg install metis
+  #     - name: Install METIS
+  #       run: vcpkg install metis
 
-        # run: ls C:/vcpkg/packages/metis_x64-windows/
-        # run: ls C:/vcpkg/packages/metis_x64-windows/lib
-        # run: ls C:/vcpkg/packages/metis_x64-windows/share
-        # run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
+  #       # run: ls C:/vcpkg/packages/metis_x64-windows/
+  #       # run: ls C:/vcpkg/packages/metis_x64-windows/lib
+  #       # run: ls C:/vcpkg/packages/metis_x64-windows/share
+  #       # run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
 
-      - name: Install OpenBLAS
-        run: vcpkg install openblas
+  #     - name: Install OpenBLAS
+  #       run: vcpkg install openblas
 
-      - name: Create build dir
-        run: cmake -E make_directory ${{runner.workspace}}/build
+  #     - name: Create build dir
+  #       run: cmake -E make_directory ${{runner.workspace}}/build
 
-      - name: Configure cmake
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Here is _DIR because with vcpkg CMake find_package works.
-        run: |
-          cmake $GITHUB_WORKSPACE \
-          -DHIPO=ON \
-          -Dmetis_DIR=C:/vcpkg/packages/metis_x64-windows/share/metis \
-          -DGKlib_DIR=C:/vcpkg/packages/gklib_x64-windows/share/gklib \
-          -DOpenBLAS_DIR=C:/vcpkg/packages/openblas_x64-windows/share/openblas
+  #     - name: Configure cmake
+  #       shell: bash
+  #       working-directory: ${{runner.workspace}}/build
+  #       # Here is _DIR because with vcpkg CMake find_package works.
+  #       run: |
+  #         cmake $GITHUB_WORKSPACE \
+  #         -DHIPO=ON \
+  #         -Dmetis_DIR=C:/vcpkg/packages/metis_x64-windows/share/metis \
+  #         -DGKlib_DIR=C:/vcpkg/packages/gklib_x64-windows/share/gklib \
+  #         -DOpenBLAS_DIR=C:/vcpkg/packages/openblas_x64-windows/share/openblas
 
-      - name: Build 
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake --build . --parallel --config Debug
+  #     - name: Build 
+  #       shell: bash
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         cmake --build . --parallel --config Debug
 
-      - name: Test executable 
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: ./Debug/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+  #     - name: Test executable 
+  #       shell: bash
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: ./Debug/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-      - name: Ctest
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          ctest --parallel --timeout 300 --output-on-failure -C Debug
+  #     - name: Ctest
+  #       shell: bash
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         ctest --parallel --timeout 300 --output-on-failure -C Debug
