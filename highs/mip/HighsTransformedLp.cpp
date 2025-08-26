@@ -757,7 +757,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
     ++i;
   }
 
-  HighsInt numVbUsed = 0;
   i = 0;
   while (i < numNz) {
     HighsInt col = inds[i];
@@ -910,7 +909,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // (2) y'_j = a_j(y_j - d_j) + c_j * x_j,
           // 0 <= y'_j <= (a_j l'_j + c_j)x_j
           // rhs -= a_j * d_j
-          numVbUsed++;
           vbcol = bestVlb[col].first;
           vbconstant = bestVlb[col].second.constant +
                        (complementvlb ? bestVlb[col].second.coef : 0);
@@ -945,7 +943,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // (2) y'_j = -(a_j(y_j - d_j) + c_j * x_j),
           // 0 <= y'_j <= -(a_j u'_j + c_j)x_j
           // rhs -= a_j * d_j
-          numVbUsed++;
           vbcol = bestVub[col].first;
           vbconstant = bestVub[col].second.constant +
                        (complementvub ? bestVub[col].second.coef : 0);
@@ -980,7 +977,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
   vectorsum.clear();
   snfr.rhs = static_cast<double>(tmpSnfrRhs);
-  if (numNz == 0 || numVbUsed == 0) return false;
+  if (numNz == 0) return false;
   return true;
 }
 

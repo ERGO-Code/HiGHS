@@ -229,12 +229,12 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         baseRowInds.size());
 
     double rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, false);
+    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, cutpool.getNumCuts() - numCuts >= 20);
     if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
     rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, false);
+    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, cutpool.getNumCuts() - numCuts >= 20);
     if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.clear();
