@@ -38,6 +38,7 @@ class HighsSparseMatrix {
   std::vector<double> value_;
 
   bool operator==(const HighsSparseMatrix& matrix) const;
+  bool equivalent(const HighsSparseMatrix& matrix) const;
   void clear();
   void exactResize();
   bool formatOk() const { return (this->isColwise() || this->isRowwise()); };
