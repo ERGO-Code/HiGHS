@@ -4033,14 +4033,13 @@ HighsStatus Highs::callSolveMip() {
   // Extract the solution
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
-    HighsInt solver_solution_size = solver.solution_.size();
-    assert(solver_solution_size >= lp.num_col_);
+    //
     // If the original model has semi-variables, its solution is
     // (still) given by the first model_.lp_.num_col_ entries of the
     // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
-    saved_objective_and_solution_ = solver.saved_objective_and_solution_;
+    this->saved_objective_and_solution_ = solver.saved_objective_and_solution_;
     model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
   } else {
@@ -4509,6 +4508,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
     case HighsModelStatus::kInterrupt:
+    case HighsModelStatus::kHighsInterrupt:
     case HighsModelStatus::kUnknown:
       assert(return_status == HighsStatus::kWarning);
       break;
@@ -4549,6 +4549,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
     case HighsModelStatus::kInterrupt:
+    case HighsModelStatus::kHighsInterrupt:
     case HighsModelStatus::kUnknown:
       // Have info and primal solution (unless infeasible). No primal solution
       // in some other case, too!
