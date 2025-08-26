@@ -4030,127 +4030,11 @@ HighsStatus Highs::callSolveMip() {
     use_lp = withoutSemiVariables(model_.lp_, solution_,
                                   options_.primal_feasibility_tolerance);
   }
-  // Start timing any MIP race before its presolve and parallel MIP
-  // solver calls. This timer is stopped in Highs::mipRaceResults
-  // after any postsolve is performed
-  double mip_race_time = -this->timer_.read();
-  HighsLp presolved_lp;
-  const HighsInt mip_race_concurrency = this->options_.mip_race_concurrency;
-  const bool run_mip_race = mip_race_concurrency > 1;
-  // Determine whether to do a single presolve before any MIP race
-  //
-  // Doesn't work when there are semi-variables since they have to be
-  // converted into the use_lp instance, and this->presolve(); works
-  // on the incumbent model
-  const bool use_mip_race_single_presolve =
-      run_mip_race && options_.mip_race_single_presolve &&
-      options_.presolve != kHighsOffString && !has_semi_variables;
-  // Take a copy of the presolve option in case it's switched off for
-  // a single presolve MIP race
-  const std::string presolve = this->options_.presolve;
-  if (use_mip_race_single_presolve) {
-    // Perform presolve before the MIP race
-    //
-    // NB Highs::presolve() is normally called externally, so calls
-    // returnFromHighs(). This will stop the run clock, and check that
-    // called_return_from_optimize_model is true - when it isn't. So,
-    // add a hack to set called_return_from_optimize_model true before
-    // the call to presolve...
-    assert(!this->called_return_from_optimize_model);
-    this->called_return_from_optimize_model = true;
-    HighsStatus call_status = this->presolve();
-    // ... then set it back to false and restart the run clock
-    this->called_return_from_optimize_model = false;
-    this->timer_.start();
-    if (call_status != HighsStatus::kOk) return call_status;
-    presolved_lp = this->getPresolvedLp();
-    this->options_.presolve = kHighsOffString;
-  }
-  // Create the master MIP solver instance that will exist beyond any
-  // MIP race
-  HighsLp& lp =
-      has_semi_variables
-          ? use_lp
-          : (use_mip_race_single_presolve ? presolved_lp : model_.lp_);
+  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
   HighsMipSolverInfo mip_solver_info;
-  if (run_mip_race) {
-    // Set up the shared memory for the MIP solver race
-    MipRaceRecord mip_race_record;
-    mip_race_record.initialise(mip_race_concurrency, lp.num_col_);
-    // Set up the shared memory for the concurrent MIP terminator
-    auto terminator_record =
-        solver.initialiseTerminatorRecord(mip_race_concurrency);
-    // Don't allow callbacks for workers
-    HighsCallback worker_callback = callback_;
-    worker_callback.clear();
-    // Race the MIP solver!
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "\nStarting MIP race with %d instances: behaviour is "
-                 "non-deterministic!\n\n",
-                 int(mip_race_concurrency));
-    // Define the HighsMipSolverInfo record for each worker
-    std::vector<HighsMipSolverInfo> worker_info(mip_race_concurrency);
-    // Set up the vector of options settings for workers
-    std::vector<HighsOptions> worker_options;
-    //    std::vector<HighsMipSolver*> worker;
-    std::vector<double> mip_time(mip_race_concurrency);
-    for (HighsInt instance = 0; instance < mip_race_concurrency; instance++) {
-      HighsOptions instance_options = options_;
-      // No workers log to console
-      instance_options.log_to_console = false;
-      instance_options.setLogOptions();
-      // Use the instance ID as an offset to the random seed
-      instance_options.random_seed = options_.random_seed + instance;
-      std::string worker_log_file =
-          "mip_worker" + std::to_string(instance) + ".log";
-      if (options_.output_flag)
-        highsOpenLogFile(instance_options, worker_log_file);
-      worker_options.push_back(instance_options);
-    }
-    highs::parallel::for_each(
-        0, mip_race_concurrency, [&](HighsInt start, HighsInt end) {
-          for (HighsInt instance = start; instance < end; instance++) {
-            if (instance == 0) {
-              solver.initialiseTerminator(mip_race_concurrency, instance,
-                                          terminator_record.data());
-              solver.initialiseMipRace(mip_race_concurrency, instance,
-                                       &mip_race_record);
-              mip_time[instance] = -timer_.read();
-              solver.run();
-              mip_time[instance] += timer_.read();
-              mip_solver_info = getMipSolverInfo(solver);
-            } else {
-              HighsMipSolver worker(worker_callback, worker_options[instance],
-                                    lp, solution_);
-              worker.initialiseTerminator(mip_race_concurrency, instance,
-                                          terminator_record.data());
-              worker.initialiseMipRace(mip_race_concurrency, instance,
-                                       &mip_race_record);
-              mip_time[instance] = -timer_.read();
-              worker.run();
-              mip_time[instance] += timer_.read();
-              worker_info[instance] = getMipSolverInfo(worker);
-            }
-          }
-        });
-    // Determine the winner and report on the solution
-    HighsStatus call_status =
-        this->mipRaceResults(use_mip_race_single_presolve, mip_solver_info,
-                             worker_info, mip_time, mip_race_time);
-    // Restore the presolve option - that will have been set to
-    // kHighsOffString for a single presolve MIP race
-    this->options_.presolve = presolve;
-
-    if (call_status == HighsStatus::kError) {
-      const bool undo_mods = true;
-      return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-    }
-  } else {
-    // Run a single MIP solver
-    solver.run();
-    mip_solver_info = getMipSolverInfo(solver);
-  }
+  solver.run();
+  mip_solver_info = getMipSolverInfo(solver);
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
@@ -4160,14 +4044,7 @@ HighsStatus Highs::callSolveMip() {
   // Extract the solution
   if (mip_solver_info.solution_objective != kHighsInf) {
     // There is a primal solution
-    HighsInt solver_solution_size = mip_solver_info.solution.size();
-    const bool solver_solution_size_ok = solver_solution_size >= lp.num_col_;
-    if (!solver_solution_size)
-      highsLogUser(
-          options_.log_options, HighsLogType::kError,
-          "After MIP race, size of solution is %d < %d = lp.num_col_\n",
-          int(solver_solution_size), int(lp.num_col_));
-    assert(solver_solution_size >= lp.num_col_);
+    //
     // If the original model has semi-variables, its solution is
     // (still) given by the first model_.lp_.num_col_ entries of the
     // solution from the MIP solver
@@ -4240,10 +4117,9 @@ HighsStatus Highs::callSolveMip() {
   return return_status;
 }
 
-// Only called from Highs::postsolve and Highs::mipRaceResults
-HighsStatus Highs::callRunPostsolve(
-    const HighsSolution& solution, const HighsBasis& basis,
-    const bool suppress_mip_model_status_warning) {
+// Only called from Highs::postsolve
+HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
+                                    const HighsBasis& basis) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
@@ -4308,12 +4184,9 @@ HighsStatus Highs::callRunPostsolve(
                        max_integrality_violation);
         }
       }
-      // When calling postsolve after MIP race on presolved model,
-      // model status can be trusted so suppress the warning message
-      if (!suppress_mip_model_status_warning)
-        highsLogUser(
-            options_.log_options, HighsLogType::kWarning,
-            "Postsolve performed for MIP, but model status cannot be known\n");
+      highsLogUser(
+          options_.log_options, HighsLogType::kWarning,
+          "Postsolve performed for MIP, but model status cannot be known\n");
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "Postsolve return status is %d\n", (int)postsolve_status);

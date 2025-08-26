@@ -21,76 +21,6 @@ struct HighsPseudocostInitialization;
 class HighsCliqueTable;
 class HighsImplications;
 
-const HighsInt kMipRaceNoSolution = -1;
-
-/*
-struct MipRaceIncumbent {
-  HighsInt start_write_incumbent = kMipRaceNoSolution;
-  HighsInt finish_write_incumbent = kMipRaceNoSolution;
-  double objective = -kHighsInf;
-  std::vector<double> solution;
-  void clear();
-  void initialise(const HighsInt num_col);
-  void update(const double objective, const std::vector<double>& solution);
-  HighsInt read(const HighsInt last_incumbent_read, double& objective_,
-                std::vector<double>& solution_) const;
-};
-*/
-
-struct MipRaceIncumbent {
-  std::atomic<HighsInt> start_write_incumbent{kMipRaceNoSolution};
-  std::atomic<HighsInt> finish_write_incumbent{kMipRaceNoSolution};
-  double objective = -kHighsInf;
-  std::vector<double> solution;
-  void clear();
-  void initialise(const HighsInt num_col);
-  void update(const double objective, const std::vector<double>& solution);
-  HighsInt read(const HighsInt last_incumbent_read, double& objective_,
-                std::vector<double>& solution_) const;
-
-  MipRaceIncumbent() = default;
-
-  MipRaceIncumbent(const MipRaceIncumbent& copy) {
-    start_write_incumbent = copy.start_write_incumbent.load();
-    finish_write_incumbent = copy.finish_write_incumbent.load();
-    objective = copy.objective;
-    solution = copy.solution;
-  }
-
-  MipRaceIncumbent(MipRaceIncumbent&& moving) {
-    start_write_incumbent = moving.start_write_incumbent.load();
-    finish_write_incumbent = moving.finish_write_incumbent.load();
-    objective = moving.objective;
-    solution = std::move(moving.solution);
-  }
-};
-
-struct MipRaceRecord {
-  std::vector<MipRaceIncumbent> incumbent;
-  void clear();
-  void initialise(const HighsInt mip_race_concurrency, const HighsInt num_col);
-  HighsInt concurrency() const;
-  void update(const HighsInt instance, const double objective,
-              const std::vector<double>& solution);
-  void report(const HighsLogOptions log_options) const;
-};
-
-struct MipRace {
-  HighsInt my_instance;
-  MipRaceRecord* record = nullptr;
-  HighsLogOptions log_options;
-  std::vector<HighsInt> last_incumbent_read;
-  void clear();
-  void initialise(const HighsInt mip_race_concurrency,
-                  const HighsInt my_instance_, MipRaceRecord* record_,
-                  const HighsLogOptions log_options_);
-  HighsInt concurrency() const;
-  void update(const double objective, const std::vector<double>& solution);
-  bool newSolution(const HighsInt instance, double& objective,
-                   std::vector<double>& solution);
-  void report() const;
-};
-
 struct HighsTerminator {
   HighsInt num_instance;
   HighsInt my_instance;
@@ -140,8 +70,6 @@ class HighsMipSolver {
   std::unique_ptr<HighsMipSolverData> mipdata_;
 
   HighsMipAnalysis analysis_;
-
-  MipRace mip_race_;
 
   HighsModelStatus termination_status_;
   HighsTerminator terminator_;
@@ -198,10 +126,6 @@ class HighsMipSolver {
                         const std::vector<double>* pass_row_value,
                         double& bound_violation, double& row_violation,
                         double& integrality_violation, HighsCDouble& obj) const;
-
-  void initialiseMipRace(const HighsInt mip_race_concurrency = 0,
-                         const HighsInt my_instance_ = kNoThreadInstance,
-                         MipRaceRecord* record_ = nullptr);
 
   std::vector<HighsModelStatus> initialiseTerminatorRecord(
       HighsInt num_instance) const;

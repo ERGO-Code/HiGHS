@@ -770,9 +770,6 @@ void HighsMipSolverData::runSetup() {
 
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
-      // Possibly write the improving solution to the shared memory space
-      if (!mipsolver.submip) this->mipRaceUpdate();
-
       saveReportMipSolution(new_upper_limit);
       if (new_upper_limit < upper_limit) {
         upper_limit = new_upper_limit;
@@ -2567,9 +2564,6 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   if (mipsolver.submip) return;
   if (non_improving) return;
 
-  // Possibly write the improving solution to the shared memory space
-  this->mipRaceUpdate();
-
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackOutput();
@@ -2658,6 +2652,23 @@ void HighsMipSolverData::queryExternalSolution(
         callback->callbackAction(kCallbackMipUserSolution, "MIP User solution");
     assert(!interrupt);
     if (callback->data_in.user_has_solution) {
+      // Objective is assumed to be original_offset +
+      // (original_c)^T(original_x), but MIP solver bounds are based on the
+      // reduced objective (reduced_c)^T(reduced_x)
+      //
+      // Now, original_sense*[reduced_offset + (reduced_c)^T(reduced_x)] is an
+      // objective in the original space, so
+      //
+      // f0 + c0^Tx0 = s*(f1 + c1^Tx1)
+      //
+      // where 0 => original; 1 => reduced
+      //
+      // This allows the reduced objective value to be deduced as
+      //
+      // c1^Tx1 = s*(f0 + c0^Tx0) - f1
+      //
+      // (reduced_c)^T(reduced_x) = original_sense*[original_offset +
+      // (original_c)^T(original_x) - reduced_offset]
       const auto& user_solution = callback->data_in.user_solution;
       double bound_violation_ = 0;
       double row_violation_ = 0;
@@ -2688,90 +2699,6 @@ void HighsMipSolverData::queryExternalSolution(
                    is_user_solution);
     }
   }
-  if (!mipsolver.options_mip_->mip_race_read_solutions) return;
-  MipRace& mip_race = mipsolver.mip_race_;
-  if (!mip_race.record) return;
-  double instance_objective_value = kHighsInf;
-  std::vector<double> instance_solution;
-  for (HighsInt instance = 0; instance < mipRaceConcurrency(); instance++) {
-    if (instance == mip_race.my_instance) continue;
-    if (!mip_race.newSolution(instance, instance_objective_value,
-                              instance_solution))
-      continue;
-    // Have read a new incumbent
-    //
-    // Objective is assumed to be original_offset + (original_c)^T(original_x),
-    // but MIP solver bounds are based on the reduced objective
-    // (reduced_c)^T(reduced_x)
-    //
-    // Now, original_sense*[reduced_offset + (reduced_c)^T(reduced_x)] is an
-    // objective in the original space, so
-    //
-    // f0 + c0^Tx0 = s*(f1 + c1^Tx1)
-    //
-    // where 0 => original; 1 => reduced
-    //
-    // This allows the reduced objective value to be deduced as
-    //
-    // c1^Tx1 = s*(f0 + c0^Tx0) - f1
-    //
-    // (reduced_c)^T(reduced_x) = original_sense*[original_offset +
-    // (original_c)^T(original_x) - reduced_offset]
-    //
-    // However, this isn't right when one solver has performed
-    // restart, and another hasn't. So, ignore the objective value
-    // that's passed, and compute it anew
-
-    // Get the solution in the reduced space
-    std::vector<double> reduced_instance_solution =
-        postSolveStack.getReducedPrimalSolution(instance_solution);
-
-    // Reduced solution can be infeasible if restart has been
-    // performed
-    if (!checkSolution(reduced_instance_solution)) {
-      const bool feasibility_warning = true;
-      if (feasibility_warning) {
-        highsLogUser(
-            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-            "Solution from instance %2d is not feasible for instance %2d\n",
-            int(instance), int(mip_race.my_instance));
-      }
-      continue;
-    }
-    HighsCDouble reduced_instance_quad_objective_value = 0;
-    for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
-      reduced_instance_quad_objective_value +=
-          mipsolver.colCost(iCol) * reduced_instance_solution[iCol];
-    double reduced_instance_objective_value =
-        double(reduced_instance_quad_objective_value);
-    addIncumbent(reduced_instance_solution, reduced_instance_objective_value,
-                 kSolutionSourceHighsSolution);
-  }
-}
-
-HighsInt HighsMipSolverData::mipRaceConcurrency() const {
-  assert(!mipsolver.submip);
-  if (!mipsolver.mip_race_.record) return 0;
-  return mipsolver.mip_race_.concurrency();
-}
-
-void HighsMipSolverData::mipRaceUpdate() {
-  if (!mipsolver.mip_race_.record) return;
-  assert(!mipsolver.submip);
-  mipsolver.mip_race_.update(mipsolver.solution_objective_,
-                             mipsolver.solution_);
-}
-
-HighsInt HighsMipSolverData::mipRaceNewSolution(const HighsInt instance,
-                                                double& objective_value,
-                                                std::vector<double>& solution) {
-  assert(!mipsolver.submip);
-  if (!mipsolver.mip_race_.record) return kMipRaceNoSolution;
-  return mipsolver.mip_race_.newSolution(instance, objective_value, solution);
-}
-
-void HighsMipSolverData::mipRaceReport() const {
-  if (mipsolver.mip_race_.record) mipsolver.mip_race_.report();
 }
 
 HighsInt HighsMipSolverData::terminatorConcurrency() const {
@@ -2933,152 +2860,6 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
 }
 
 void HighsPrimaDualIntegral::initialise() { this->value = -kHighsInf; }
-
-void MipRaceIncumbent::clear() {
-  this->start_write_incumbent = kMipRaceNoSolution;
-  this->finish_write_incumbent = kMipRaceNoSolution;
-  this->objective = -kHighsInf;
-  this->solution.clear();
-}
-
-void MipRaceIncumbent::initialise(const HighsInt num_col) {
-  this->clear();
-  this->solution.resize(num_col);
-}
-
-void MipRaceIncumbent::update(const double objective_,
-                              const std::vector<double>& solution_) {
-  assert(this->solution.size() == solution_.size());
-  this->start_write_incumbent++;
-  this->objective = objective_;
-  this->solution = solution_;
-  this->finish_write_incumbent++;
-  assert(this->start_write_incumbent == this->finish_write_incumbent);
-}
-
-HighsInt MipRaceIncumbent::read(const HighsInt last_incumbent_read,
-                                double& objective_,
-                                std::vector<double>& solution_) const {
-  const HighsInt start_write_incumbent = this->start_write_incumbent;
-  assert(this->finish_write_incumbent <= start_write_incumbent);
-  if (start_write_incumbent < last_incumbent_read) return kMipRaceNoSolution;
-  // If a write call has not completed, return failure
-  if (this->finish_write_incumbent < start_write_incumbent)
-    return kMipRaceNoSolution;
-  // finish_write_incumbent = start_write_incumbent so start reading
-  objective_ = this->objective;
-  solution_ = this->solution;
-  // Read is OK if no new write has started
-  return this->start_write_incumbent == start_write_incumbent
-             ? start_write_incumbent
-             : kMipRaceNoSolution;
-}
-
-void MipRaceRecord::clear() { this->incumbent.clear(); }
-
-void MipRaceRecord::initialise(const HighsInt mip_race_concurrency,
-                               const HighsInt num_col) {
-  this->clear();
-  this->incumbent.resize(mip_race_concurrency);
-
-  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    this->incumbent[instance].initialise(num_col);
-
-  /*
-  MipRaceIncumbent incumbent_;
-  incumbent_.initialise(num_col);
-  // Loop from 1...
-  for (HighsInt instance = 1; instance < mip_race_concurrency; instance++)
-    this->incumbent.push_back(incumbent_);
-  // ... and move incumbent_ to complete the vector of incumbents
-  this->incumbent.push_back(std::move(incumbent_));
-  */
-}
-
-HighsInt MipRaceRecord::concurrency() const {
-  return static_cast<HighsInt>(this->incumbent.size());
-}
-
-void MipRaceRecord::update(const HighsInt instance, const double objective,
-                           const std::vector<double>& solution) {
-  this->incumbent[instance].update(objective, solution);
-}
-
-void MipRaceRecord::report(const HighsLogOptions log_options) const {
-  HighsInt mip_race_concurrency = this->concurrency();
-  highsLogUser(log_options, HighsLogType::kInfo, "\nMipRaceRecord:     ");
-  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %20d", int(instance));
-  highsLogUser(log_options, HighsLogType::kInfo, "\nStartWrite:        ");
-  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %20d",
-                 int(this->incumbent[instance].start_write_incumbent));
-  highsLogUser(log_options, HighsLogType::kInfo, "\nObjective:         ");
-  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %20.12g",
-                 this->incumbent[instance].objective);
-  highsLogUser(log_options, HighsLogType::kInfo, "\nFinishWrite:       ");
-  for (HighsInt instance = 0; instance < mip_race_concurrency; instance++)
-    highsLogUser(log_options, HighsLogType::kInfo, " %20d",
-                 int(this->incumbent[instance].finish_write_incumbent));
-  highsLogUser(log_options, HighsLogType::kInfo, "\n");
-}
-
-void MipRace::clear() {
-  this->my_instance = -1;
-  this->record = nullptr;
-  this->last_incumbent_read.clear();
-}
-
-void MipRace::initialise(const HighsInt mip_race_concurrency,
-                         const HighsInt my_instance_, MipRaceRecord* record_,
-                         const HighsLogOptions log_options_) {
-  this->clear();
-  this->my_instance = my_instance_;
-  this->record = record_;
-  this->log_options = log_options_;
-  if (mip_race_concurrency > 0)
-    this->last_incumbent_read.assign(mip_race_concurrency, kMipRaceNoSolution);
-}
-
-HighsInt MipRace::concurrency() const {
-  assert(this->record);
-  return this->record->concurrency();
-}
-
-void MipRace::update(const double objective,
-                     const std::vector<double>& solution) {
-  assert(this->record);
-  this->record->update(this->my_instance, objective, solution);
-  //  this->report();
-}
-
-bool MipRace::newSolution(const HighsInt instance, double& objective,
-                          std::vector<double>& solution) {
-  assert(this->record);
-  HighsInt new_incumbent_read = this->record->incumbent[instance].read(
-      this->last_incumbent_read[instance], objective, solution);
-  if (new_incumbent_read != kMipRaceNoSolution) {
-    this->last_incumbent_read[instance] = new_incumbent_read;
-    return true;
-  }
-  return false;
-}
-
-void MipRace::report() const {
-  assert(this->record);
-  this->record->report(this->log_options);
-  highsLogUser(this->log_options, HighsLogType::kInfo, "LastIncumbentRead: ");
-  for (HighsInt instance = 0; instance < this->concurrency(); instance++) {
-    if (instance == this->my_instance) {
-      highsLogUser(this->log_options, HighsLogType::kInfo, " %20s", "");
-    } else {
-      highsLogUser(this->log_options, HighsLogType::kInfo, " %20d",
-                   this->last_incumbent_read[instance]);
-    }
-  }
-  highsLogUser(this->log_options, HighsLogType::kInfo, "\n\n");
-}
 
 void HighsTerminator::clear() {
   this->num_instance = 0;

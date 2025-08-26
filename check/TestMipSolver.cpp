@@ -1035,33 +1035,3 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
         "found\n");
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
-
-TEST_CASE("mip-race", "[highs_test_mip_solver]") {
-  const bool ci_test = true;
-  const std::string test_build_model = "fiball";  //"neos-3381206-awhea";  //
-  const std::string model = ci_test ? "flugpl" : test_build_model;
-  // "neos-3381206-awhea";
-  const std::string model_file =
-      ci_test ? std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps"
-              : "/srv/miplib2017/" + model + ".mps.gz";
-  Highs h;
-  if (ci_test) h.setOptionValue("output_flag", dev_run);
-  const HighsInt mip_race_concurrency = ci_test ? 2 : 4;
-  h.setOptionValue("mip_race_concurrency", mip_race_concurrency);
-  h.setOptionValue("mip_race_read_solutions", true);
-  for (HighsInt k = 0; k < 2; k++) {
-    bool mip_race_single_presolve = k == 0 ? false : true;
-    h.setOptionValue("mip_race_single_presolve", mip_race_single_presolve);
-    REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
-    REQUIRE(h.run() == HighsStatus::kOk);
-    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  }
-
-  if (ci_test) {
-    h.clearSolver();
-    h.setOptionValue("mip_race_read_solutions", false);
-    REQUIRE(h.run() == HighsStatus::kOk);
-    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  }
-  h.resetGlobalScheduler(true);
-}

@@ -44,11 +44,8 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       implicinit(nullptr) {
   assert(!submip || submip_level > 0);
   max_submip_level = 0;
-  // Initialise empty terminator, since this sets termination_status_
-  // to HighsModelStatus::kNotset...
+  // Initialise empty terminator
   initialiseTerminator();
-  // ... and empty MIP race
-  initialiseMipRace();
   assert(termination_status_ == HighsModelStatus::kNotset);
   if (solution.value_valid) {
 #ifndef NDEBUG
@@ -1030,12 +1027,4 @@ void HighsMipSolver::initialiseTerminator(const HighsMipSolver& mip_solver) {
   this->initialiseTerminator(mip_solver.mipdata_->terminatorConcurrency(),
                              mip_solver.mipdata_->terminatorMyInstance(),
                              mip_solver.terminator_.record);
-}
-
-void HighsMipSolver::initialiseMipRace(const HighsInt mip_race_concurrency,
-                                       const HighsInt my_instance,
-                                       MipRaceRecord* record) {
-  this->mip_race_.clear();
-  this->mip_race_.initialise(mip_race_concurrency, my_instance, record,
-                             this->options_mip_->log_options);
 }
