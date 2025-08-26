@@ -15,6 +15,7 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
@@ -240,6 +241,7 @@ set(highs_sources
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
     pdlp/CupdlpWrapper.cpp
+    pdlp/hipdlp/linalg.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp

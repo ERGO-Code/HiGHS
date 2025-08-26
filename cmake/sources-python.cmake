@@ -15,6 +15,7 @@ set(include_dirs_python
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
@@ -235,6 +236,7 @@ set(highs_sources_python
     highs/model/HighsModel.cpp
     highs/parallel/HighsTaskExecutor.cpp
     highs/pdlp/CupdlpWrapper.cpp
+    highs/pdlp/hipdlp/linalg.cc
     highs/presolve/HighsPostsolveStack.cpp
     highs/presolve/HighsSymmetry.cpp
     highs/presolve/HPresolve.cpp
