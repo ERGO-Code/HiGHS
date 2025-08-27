@@ -260,6 +260,8 @@ void reportOption(FILE* file, const HighsLogOptions& report_log_options,
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";
 const string kPdlpString = "pdlp";
+const string kCuPdlpString = "cupdlp";
+const string kHiPdlpString = "hipdlp";
 
 const HighsInt kKeepNRowsDeleteRows = -1;
 const HighsInt kKeepNRowsDeleteEntries = 0;
@@ -679,7 +681,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_string = new OptionRecordString(
         kSolverString,
         "Solver option: \"simplex\", \"choose\", \"ipm\" or \"pdlp\". If "
-        "\"simplex\"/\"ipm\"/\"pdlp\" is chosen then, for a MIP (QP) the "
+        "\"simplex\"/\"ipm\"/\"pdlp\"/\"cupdlp\"/\"hipdlp\" is chosen then, for a MIP (QP) the "
         "integrality "
         "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);

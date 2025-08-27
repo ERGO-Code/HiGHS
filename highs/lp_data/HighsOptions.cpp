@@ -80,14 +80,16 @@ bool commandLineOffOnOk(const HighsLogOptions& report_log_options,
 bool commandLineSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
   if (value == kSimplexString || value == kHighsChooseString ||
-      value == kIpmString || value == kPdlpString)
+      value == kIpmString || value == kPdlpString || value == kCuPdlpString || value == kHiPdlpString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", "
+               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", \"%s\", \"%s\", "
                "\"%s\" or \"%s\"\n",
                value.c_str(), kSimplexString.c_str(),
                kHighsChooseString.c_str(), kIpmString.c_str(),
-               kPdlpString.c_str());
+               kPdlpString.c_str(),
+               kCuPdlpString.c_str(),
+               kHiPdlpString.c_str());
   return false;
 }
 
