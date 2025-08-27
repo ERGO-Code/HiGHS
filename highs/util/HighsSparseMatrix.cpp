@@ -253,13 +253,13 @@ void HighsSparseMatrix::addVec(const HighsInt num_nz, const HighsInt* index,
 void HighsSparseMatrix::scaleCols(const double* scale) {
   if (this->isColwise()) {
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-      for (HighsInt iEl = this->start_[iCol]; iCol < this->start_[iCol + 1];
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
            iEl++)
         this->value_[iEl] *= scale[iCol];
     }
   } else {
     for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-      for (HighsInt iEl = this->start_[iRow]; iRow < this->start_[iRow + 1];
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
            iEl++)
         this->value_[iEl] *= scale[this->index_[iEl]];
     }
@@ -269,15 +269,16 @@ void HighsSparseMatrix::scaleCols(const double* scale) {
 void HighsSparseMatrix::scaleRows(const double* scale) {
   if (this->isColwise()) {
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-      for (HighsInt iEl = this->start_[iCol]; iCol < this->start_[iCol + 1];
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
            iEl++)
         this->value_[iEl] *= scale[this->index_[iEl]];
     }
   } else {
     for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-      for (HighsInt iEl = this->start_[iRow]; iRow < this->start_[iRow + 1];
-           iEl++)
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++) {
         this->value_[iEl] *= scale[iRow];
+      }
     }
   }
 }

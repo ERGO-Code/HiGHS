@@ -1284,7 +1284,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("pdlp_scaling_mode",
                                      "Scaling mode for PDLP solver (default = "
                                      "5): 1 => Ruiz; 2 => L2; 4 => PC",
-                                     advanced, &pdlp_scaling_mode, kPdlpScalingMin, kPdlpScalingRuiz+kPdlpScalingPC, kPdlpStepSizeStrategyMax);
+                                     advanced, &pdlp_scaling_mode,
+				     kPdlpScalingMin, kPdlpScalingRuiz+kPdlpScalingPC, kPdlpScalingMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("pdlp_ruiz_iterations",

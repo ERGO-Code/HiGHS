@@ -32,8 +32,16 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
   std::string log_filename = "";
-  LogLevel log_level = LogLevel::kInfo;
-
+  LogLevel log_level;
+  if (options.log_dev_level == kHighsLogDevLevelInfo) {
+    log_level = LogLevel::kInfo;
+  } else if (options.log_dev_level == kHighsLogDevLevelDetailed) {
+    log_level = LogLevel::kVerbose;
+  } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
+    log_level = LogLevel::kDebug;
+  } else {
+    log_level = LogLevel::kNone;
+  }
   // --- Initialize Logger ---
   Logger logger(log_level);
   if (!log_filename.empty()) logger.set_log_file(log_filename);
@@ -77,8 +85,10 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
     break;
   }
   case TerminationStatus::TIMEOUT: {
-    assert(111 == 444);
-    model_status = HighsModelStatus::kTimeLimit;
+    // ToDo IterationLimit termination needs to be handled separately
+    model_status = highs_info.pdlp_iteration_count >= options.pdlp_iteration_limit
+                         ? HighsModelStatus::kIterationLimit
+                         : HighsModelStatus::kTimeLimit;
     break;
   }
   case TerminationStatus::WARNING:
@@ -108,10 +118,7 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer, PrimalDualParams& params) {
   params.initialise();
   //  params.eta = 0; Not set in parse_options_file
-  //  params.omega = 0; Not set in parse_opions_file
-  //
-  // Is params.tolerance for primal and dual feasibility, and
-  // optimality?
+  //  params.omega = 0; Not set in parse_options_file
   params.tolerance = options.pdlp_optimality_tolerance;
   if (options.kkt_tolerance != kDefaultKktTolerance) {
     params.tolerance = options.kkt_tolerance;
@@ -139,8 +146,8 @@ void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
     params.use_l2_scaling = options.pdlp_scaling_mode & kPdlpScalingL2;
   }
   params.ruiz_iterations = options.pdlp_ruiz_iterations;
-  //  params.ruiz_norm = INFINITY; Not set in parse_opions_file
-  //  params.pc_alpha = 1.0; Not set in parse_opions_file
+  //  params.ruiz_norm = INFINITY; Not set in parse_options_file
+  //  params.pc_alpha = 1.0; Not set in parse_options_file
 
   // Restart strategy maps 0/1/2 to RestartStrategy
   params.restart_strategy = RestartStrategy::NO_RESTART;
@@ -152,8 +159,8 @@ void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
       params.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
     }
   }
-  //  params.fixed_restart_interval = 0; Not set in parse_opions_file
-  //  params.use_halpern_restart = false; Not set in parse_opions_file
+  //  params.fixed_restart_interval = 0; Not set in parse_options_file
+  //  params.use_halpern_restart = false; Not set in parse_options_file
   
   params.step_size_strategy = StepSizeStrategy::FIXED;
   if ((options.pdlp_features_off & kPdlpAdaptiveStepSizeOff) == 0) {
@@ -164,8 +171,8 @@ void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
       params.step_size_strategy = StepSizeStrategy::MALITSKY_POCK;
     }
   }
-  //  params.malitsky_pock_params.initialise(); Not set in parse_opions_file
-  //  params.adaptive_linesearch_params.initialise(); Not set in parse_opions_file
+  //  params.malitsky_pock_params.initialise(); Not set in parse_options_file
+  //  params.adaptive_linesearch_params.initialise(); Not set in parse_options_file
 
 }
 
