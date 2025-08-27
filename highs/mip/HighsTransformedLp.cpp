@@ -902,7 +902,8 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -= aggrconstant;
           break;
         case BoundType::kVariableLb:
-          // vlb: l'_j x_j + d_j <= y_j. c_j is the coefficient of x_j in row
+          // vlb: l'_j x_j + d_j <= y_j. c_j coef of x_j in row
+          // if compl: -l'_j x_j + (l'_j + d_j) <= y_j. -c_j coef of x_j in row
           // Case (1) -> a_j > 0, y'_j -> N- Case (2) -> a_j < 0, y'_j ->N+
           // (1) y'_j = -(a_j(y_j - d_j) + c_j * x_j),
           // 0 <= y'_j <= -(a_j l'_j + c_j)x_j
@@ -932,11 +933,12 @@ bool HighsTransformedLp::transformSNFRelaxation(
           }
           tmpSnfrRhs -=
               aggrconstant +
-              (complementvlb && inclbincolvlb ? vectorsum.getValue(vbcol) : 0);
+              (complementvlb && inclbincolvlb ? -bincoef : 0);
           if (inclbincolvlb) vectorsum.values[vbcol] = 0;
           break;
         case BoundType::kVariableUb:
-          // vub: y_j <= u'_j x_j + d_j. c_j is the coefficient of x_j in row
+          // vub: y_j <= u'_j x_j + d_j. c_j coef of x_j in row
+          // if compl: y_j <= -u'_j x_j + (u'_j + d_j). -c_j coef of x_j in row
           // Case (1) -> a_j > 0, y'_j -> N+ Case (2) -> a_j < 0, y'_j ->N-
           // (1) y'_j = a_j(y_j - d_j) + c_j * x_j),
           // 0 <= y'_j <= (a_j u'_j + c_j)x_j
@@ -966,7 +968,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           }
           tmpSnfrRhs -=
               aggrconstant +
-              (complementvub && inclbincolvub ? vectorsum.getValue(vbcol) : 0);
+              (complementvub && inclbincolvub ? -bincoef : 0);
           if (inclbincolvub) vectorsum.values[vbcol] = 0;
           break;
       }
