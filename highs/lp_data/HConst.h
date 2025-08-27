@@ -364,4 +364,39 @@ const int8_t kPivotUnit = 1;
 const int8_t kPivotRowSingleton = 2;
 const int8_t kPivotColSingleton = 3;
 const int8_t kPivotMarkowitz = 4;
+
+// Mask for switching off PDLP features
+enum PdlpFeaturesOff {
+  kPdlpAllFeaturesOn = 0,
+  kPdlpScalingOff = 1,
+  kPdlpRestartOff = 2,
+  kPdlpAdaptiveStepSizeOff = 4,
+  kPdlpAllFeaturesOff =
+      kPdlpScalingOff + kPdlpRestartOff + kPdlpAdaptiveStepSizeOff
+};
+
+enum PdlpScalingBit {
+  kPdlpScalingMin = 0,
+  kPdlpScalingRuiz = 1,
+  kPdlpScalingL2 = 2,
+  kPdlpScalingPC = 4,
+  kPdlpScalingMax = kPdlpScalingRuiz + kPdlpScalingL2 + kPdlpScalingPC
+};
+
+enum PdlpStepSizeStrategy {
+  kPdlpStepSizeStrategyFixed = 0,
+  kPdlpStepSizeStrategyMin = kPdlpStepSizeStrategyFixed,
+  kPdlpStepSizeStrategyAdaptive,
+  kPdlpStepSizeStrategyMalitskyPock,
+  kPdlpStepSizeStrategyMax = kPdlpStepSizeStrategyMalitskyPock
+};
+
+enum PdlpRestartStrategy {
+  kPdlpRestartStrategyOff = 0,
+  kPdlpRestartStrategyMin = kPdlpRestartStrategyOff,
+  kPdlpRestartStrategyFixed,
+  kPdlpRestartStrategyAdaptive,
+  kPdlpRestartStrategyMax = kPdlpRestartStrategyAdaptive
+};
+
 #endif /* LP_DATA_HCONST_H_ */
