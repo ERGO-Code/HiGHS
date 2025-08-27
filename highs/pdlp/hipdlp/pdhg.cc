@@ -317,7 +317,8 @@ void PDLPSolver::Solve(HighsLp & original_lp, const PrimalDualParams& params, st
     working_params.omega = omega;
     working_params.eta = fixed_eta;
     std::cout << "Using power method step sizes: eta = " << fixed_eta << ", omega = " << omega << std::endl;
-
+    printf("Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
+	   op_norm_sq, fixed_eta/omega, fixed_eta*omega);
     // --- 1. Initialization ---
     Initialize(lp, x, y); // Sets initial x, y and results_
     restart_scheme_.Initialize(params, results_);
@@ -805,7 +806,7 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp &lp, double& op_norm_sq) {
     const HighsInt kATAPowerMethod = 1;
     const HighsInt kCuPdlpAATPowerMethod = 2;
     
-    const HighsInt power_method = kCuPdlpAATPowerMethod;
+    const HighsInt power_method = kYanyuPowerMethod;//kCuPdlpAATPowerMethod;//
     // Allocate memory for matrix-vector products
     std::vector<double> y_vec;
     std::vector<double> z_vec;
@@ -820,7 +821,7 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp &lp, double& op_norm_sq) {
     double op_norm_sq_old = 0.0;
     LogLevel log_level = logger_.getLogLevel();
     int log_iters = log_level == LogLevel::kVerbose || log_level == LogLevel::kDebug;
-    log_iters = 1;
+    //    log_iters = 1;
 
     if (log_iters) printf("It       lambda   dl_lambda\n");
 

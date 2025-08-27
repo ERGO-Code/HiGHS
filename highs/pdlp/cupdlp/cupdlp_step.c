@@ -95,8 +95,8 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
   //
   // y is stored in aty->data
   //
-  int log_iters = work->settings->nLogLevel > 0;
-  log_iters = 1;
+  int log_iters = work->settings->nLogLevel > 1;
+  //  log_iters = 1;
 
   if (log_iters)
     cupdlp_printf("It       lambda   dl_lambda    residual\n");
@@ -318,6 +318,7 @@ cupdlp_retcode PDHG_Init_Step_Sizes(CUPDLPwork *pdhg) {
 
   if (stepsize->eLineSearchMethod == PDHG_FIXED_LINESEARCH) {
     CUPDLP_CALL(PDHG_Power_Method(pdhg, &stepsize->dPrimalStep));
+    cupdlp_float power_method_lambda = stepsize->dPrimalStep;
     // PDLP Intial primal weight = norm(cost) / norm(rhs) = sqrt(beta)
     // cupdlp_float a = twoNormSquared(problem->cost, problem->nCols);
     // cupdlp_float b = twoNormSquared(problem->rhs, problem->nRows);
@@ -336,6 +337,8 @@ cupdlp_retcode PDHG_Init_Step_Sizes(CUPDLPwork *pdhg) {
     stepsize->dDualStep = stepsize->dPrimalStep;
     stepsize->dPrimalStep /= sqrt(stepsize->dBeta);
     stepsize->dDualStep *= sqrt(stepsize->dBeta);
+    cupdlp_printf("Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
+		  power_method_lambda, stepsize->dPrimalStep, stepsize->dDualStep);	  
   } else {
     stepsize->dTheta = 1.0;
 
