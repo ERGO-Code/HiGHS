@@ -67,11 +67,11 @@ void Highs::reportModelStats() const {
     highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
                 problem_type.c_str(), lp.model_name_.c_str());
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Row%s      : %" HIGHSINT_FORMAT "\n", lp.num_row_,
-                lp.num_row_ == 1 ? "" : "s");
+                "Row%s      : %" HIGHSINT_FORMAT "\n",
+                lp.num_row_ == 1 ? "" : "s", lp.num_row_);
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Col%s      : %" HIGHSINT_FORMAT "\n", lp.num_col_,
-                lp.num_col_ == 1 ? "" : "s");
+                "Col%s      : %" HIGHSINT_FORMAT "\n",
+                lp.num_col_ == 1 ? "" : "s", lp.num_col_);
     if (q_num_nz) {
       highsLogDev(log_options, HighsLogType::kInfo,
                   "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
@@ -79,8 +79,8 @@ void Highs::reportModelStats() const {
                   "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
     } else {
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Nonzero%s  : %" HIGHSINT_FORMAT "\n", a_num_nz,
-                  a_num_nz == 1 ? "" : "s");
+                  "Nonzero%s  : %" HIGHSINT_FORMAT "\n",
+                  a_num_nz == 1 ? "" : "s", a_num_nz);
     }
     if (num_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
@@ -2877,10 +2877,11 @@ HighsStatus Highs::lpKktCheck(const HighsLp& lp, const std::string& message) {
           info.primal_dual_objective_error / optimality_tolerance;
       foundOptimalityError();
       if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "                 %8.3g relative P-D objective error    "
-                     "(tolerance = %4.0e)\n",
-                     info.primal_dual_objective_error, optimality_tolerance);
+        highsLogUser(
+            log_options, HighsLogType::kWarning,
+            "                    %8.3g relative P-D objective error    "
+            "(tolerance = %4.0e)\n",
+            info.primal_dual_objective_error, optimality_tolerance);
     }
     // Set the primal and dual solution status according to tolerance failure
     if (max_primal_tolerance_relative_violation >
