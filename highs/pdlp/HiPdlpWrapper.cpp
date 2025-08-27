@@ -51,7 +51,58 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
     
   // --- Print Summary ---
   logger.print_summary(pdlp.GetResults(), pdlp.GetIterationCount(), total_timer.read());
-  return HighsStatus::kError;
+
+  highs_info.pdlp_iteration_count = pdlp.GetIterationCount();
+
+  model_status = HighsModelStatus::kUnknown;
+  highs_solution.clear();
+  highs_basis.valid = false;
+
+  const TerminationStatus termination_status = pdlp.GetResults().term_code;
+  switch (termination_status) {
+  case TerminationStatus::OPTIMAL: {
+    model_status = HighsModelStatus::kOptimal;
+    break;
+  }
+  case TerminationStatus::INFEASIBLE: {
+    assert(111 == 222);
+    model_status = HighsModelStatus::kInfeasible;
+    return HighsStatus::kOk;
+    break;
+  }
+  case TerminationStatus::UNBOUNDED: {
+    assert(111 == 333);
+    model_status = HighsModelStatus::kUnbounded;
+    return HighsStatus::kOk;
+    break;
+  }
+  case TerminationStatus::TIMEOUT: {
+    assert(111 == 444);
+    model_status = HighsModelStatus::kTimeLimit;
+    break;
+  }
+  case TerminationStatus::WARNING:
+  case TerminationStatus::FEASIBLE: {
+    assert(111 == 555);
+    model_status = HighsModelStatus::kUnknown;
+    return HighsStatus::kError;
+  }
+  default:
+    assert(termination_status == TerminationStatus::ERROR); 
+    return HighsStatus::kError;
+  }
+  assert(termination_status == TerminationStatus::OPTIMAL ||
+	 termination_status == TerminationStatus::TIMEOUT);
+  highs_solution.col_value = x;
+  highs_solution.col_value.resize(lp.num_col_);
+  highs_solution.row_dual = y;
+  lp.a_matrix_.product(highs_solution.row_value, highs_solution.col_value);
+  lp.a_matrix_.productTranspose(highs_solution.col_dual, highs_solution.row_dual);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    highs_solution.col_dual[iCol] = lp.col_cost_[iCol] - highs_solution.col_dual[iCol];
+  highs_solution.value_valid = true;
+  highs_solution.dual_valid = true;
+  return HighsStatus::kOk;
 }
 
 void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer, PrimalDualParams& params) {

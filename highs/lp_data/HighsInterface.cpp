@@ -2879,7 +2879,7 @@ HighsStatus Highs::lpKktCheck(const HighsLp& lp, const std::string& message) {
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
-                     "                 %8.3g relative P-D objective error    "
+                     "                    %8.3g relative P-D objective error    "
                      "(tolerance = %4.0e)\n",
                      info.primal_dual_objective_error, optimality_tolerance);
     }
