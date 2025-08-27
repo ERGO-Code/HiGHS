@@ -869,9 +869,9 @@ bool HighsTransformedLp::transformSNFRelaxation(
       HighsInt vbcol;
       switch (boundType) {
         case BoundType::kSimpleLb:
-          // Case (1) -> a_j > 0, y'_j -> N- Case (2) -> a_j < 0, y'_j ->N+
-          // (1) y'_j = -a_j(y_j - u_j), 0 <= y'_j <= a_j(u_j - l_j)x_j, x_j = 1
-          // (2) y'_j = a_j(y_j - u_j), 0 <= y'_j <= -a_j(u_j - l_j)x_j, x_j = 1
+          // Case (1) -> a_j > 0, y'_j -> N- Case (2) -> a_j < 0, y'_j -> N+
+          // (1) y'_j = -a_j(y_j - u_j), 0 <= y'_j <= a_j(u_j - l_j)x_j, x_j=1
+          // (2) y'_j = a_j(y_j - u_j), 0 <= y'_j <= -a_j(u_j - l_j)x_j, x_j=1
           // rhs -= a_j * u_j
           aggrvbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * ub);
@@ -932,8 +932,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
                          bincoef, vals[i], complementvlb);
           }
           tmpSnfrRhs -=
-              aggrconstant +
-              (complementvlb && inclbincolvlb ? -bincoef : 0);
+              aggrconstant + (complementvlb && inclbincolvlb ? -bincoef : 0);
           if (inclbincolvlb) vectorsum.values[vbcol] = 0;
           break;
         case BoundType::kVariableUb:
@@ -967,8 +966,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
                          -bincoef, -vals[i], complementvub);
           }
           tmpSnfrRhs -=
-              aggrconstant +
-              (complementvub && inclbincolvub ? -bincoef : 0);
+              aggrconstant + (complementvub && inclbincolvub ? -bincoef : 0);
           if (inclbincolvub) vectorsum.values[vbcol] = 0;
           break;
       }

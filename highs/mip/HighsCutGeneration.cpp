@@ -557,9 +557,8 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
   ld.ml = std::min(snfr.lambda, static_cast<double>(sumC1LE + sumN2mC2LE));
   ld.d1 = sumC2 + snfr.rhs;
 
-  pdqsort_branchless(
-      ld.m.begin(), ld.m.begin() + ld.r,
-      [&](const double a, const double b) { return a > b; });
+  pdqsort_branchless(ld.m.begin(), ld.m.begin() + ld.r,
+                     [&](const double a, const double b) { return a > b; });
 
   for (HighsInt i = 0; i != ld.r + 1; ++i) {
     if (i == 0) {
@@ -621,12 +620,13 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
       if (tmp < vubcoef + snfr.lambda - 1e-8) {
         return static_cast<double>(i * HighsCDouble(snfr.lambda));
       }
-      assert(
-          ld.M[i] <= vubcoef + snfr.lambda + feastol &&
-          snfr.lambda + vubcoef <=
-              ld.M[i] + ld.ml + feastol +
-                  std::max(0.0, static_cast<double>(
-                                    ld.m[i] - (HighsCDouble(ld.mp) - snfr.lambda) - ld.ml)));
+      assert(ld.M[i] <= vubcoef + snfr.lambda + feastol &&
+             snfr.lambda + vubcoef <=
+                 ld.M[i] + ld.ml + feastol +
+                     std::max(0.0, static_cast<double>(
+                                       ld.m[i] -
+                                       (HighsCDouble(ld.mp) - snfr.lambda) -
+                                       ld.ml)));
       return static_cast<double>(i * HighsCDouble(snfr.lambda) + vubcoef -
                                  ld.M[i]);
     }
@@ -1594,6 +1594,7 @@ void HighsCutGeneration::initSNFRelaxation() {
     snfr.aggrBinCoef.resize(rowlen);
     snfr.aggrContCoef.resize(rowlen);
     snfr.complementation.resize(rowlen);
+    snfr.flowCoverStatus.resize(rowlen);
   }
   snfr.rhs = 0;
   snfr.lambda = 0;
@@ -1691,14 +1692,11 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
 bool HighsCutGeneration::computeFlowCover() {
   // Compute the flow cover, i.e., get sets C+ subset N+ and C- subset N-
   // with sum_{j in C+} u_j - sum_{j in C-} u_j = b + lambda, lambda > 0
-  if (static_cast<HighsInt>(snfr.flowCoverStatus.size()) < snfr.numNnzs) {
-    snfr.flowCoverStatus.resize(snfr.numNnzs);
-  }
   std::vector<HighsInt> items(snfr.numNnzs, -1);
   HighsInt nNonFlowCover = 0;
   HighsInt nFlowCover = 0;
   HighsInt nitems = 0;
-  double n1itemsWeight = 0;
+  HighsCDouble n1itemsWeight = 0;
   HighsCDouble flowCoverWeight = 0;
   for (HighsInt i = 0; i < snfr.numNnzs; ++i) {
     assert(snfr.coef[i] == 1 || snfr.coef[i] == -1);
@@ -1748,8 +1746,8 @@ bool HighsCutGeneration::computeFlowCover() {
   // Solve a knapsack greedily to assign items to C+, C-, N+\C+, N-\C-
   // z_j is a binary variable deciding whether the item goes into the knapsack
   // max sum_{j in N+} ( x_j - 1 ) z_j + sum_{j in N-} x_j
-  //     sum_{j in N+}  u'_j z_j + sum_{j in N-} u'_j z_j < -b + sum_{j in N+} u'_j
-  //     z_j in {0,1} for all j in N+ & N-
+  // sum_{j in N+}  u'_j z_j + sum_{j in N-} u'_j z_j < -b + sum_{j in N+} u'_j
+  // z_j in {0,1} for all j in N+ & N-
 
   double knapsackWeight = 0;
   std::vector<double> weights(nitems);
