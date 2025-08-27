@@ -1,0 +1,14 @@
+CU_PDLP_CPP_ROOT="/home/jajhall/HiPDLP"
+meld linalg.hpp $CU_PDLP_CPP_ROOT/include/linalg.hpp
+meld linalg.cc $CU_PDLP_CPP_ROOT/src/linalg.cc
+meld logger.hpp $CU_PDLP_CPP_ROOT/include/logger.hpp
+meld logger.cc $CU_PDLP_CPP_ROOT/src/logger.cc
+meld pdhg.hpp $CU_PDLP_CPP_ROOT/include/pdhg.hpp
+meld pdhg.cc $CU_PDLP_CPP_ROOT/src/pdhg.cc
+meld restart.hpp $CU_PDLP_CPP_ROOT/include/restart.hpp
+meld restart.cc $CU_PDLP_CPP_ROOT/src/restart.cc
+meld scaling.hpp $CU_PDLP_CPP_ROOT/include/scaling.hpp
+meld scaling.cc $CU_PDLP_CPP_ROOT/src/scaling.cc
+meld solver_results.hpp $CU_PDLP_CPP_ROOT/include/solver_results.hpp
+meld step.hpp $CU_PDLP_CPP_ROOT/include/step.hpp
+meld step.cc $CU_PDLP_CPP_ROOT/src/step.cc
