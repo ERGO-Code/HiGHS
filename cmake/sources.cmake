@@ -320,6 +320,7 @@ set(highs_sources
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
     pdlp/CupdlpWrapper.cpp
+    pdlp/HiPdlpWrapper.cpp
     pdlp/hipdlp/linalg.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
@@ -454,6 +455,7 @@ set(highs_headers
     parallel/HighsTask.h
     parallel/HighsTaskExecutor.h
     pdlp/CupdlpWrapper.h
+    pdlp/HiPdlpWrapper.h
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h

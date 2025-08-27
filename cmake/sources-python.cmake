@@ -236,6 +236,7 @@ set(highs_sources_python
     highs/model/HighsModel.cpp
     highs/parallel/HighsTaskExecutor.cpp
     highs/pdlp/CupdlpWrapper.cpp
+    highs/pdlp/HiPdlpWrapper.cpp
     highs/pdlp/hipdlp/linalg.cc
     highs/presolve/HighsPostsolveStack.cpp
     highs/presolve/HighsSymmetry.cpp
@@ -367,6 +368,7 @@ set(highs_headers_python
     highs/parallel/HighsTask.h
     highs/parallel/HighsTaskExecutor.h
     highs/pdlp/CupdlpWrapper.h
+    highs/pdlp/HiPdlpWrapper.h
     highs/presolve/HighsPostsolveStack.h
     highs/presolve/HighsSymmetry.h
     highs/presolve/HPresolve.h

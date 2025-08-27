@@ -329,3 +329,17 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   run_status = h.run();
   if (dev_run) h.writeSolution("", 1);
 }
+
+TEST_CASE("hi-pdlp", "[pdlp]") {
+  std::string model = "avgas";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.setOptionValue("solver", kHiPdlpString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
+  HighsStatus run_status = h.run();
+  REQUIRE(run_status == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+}

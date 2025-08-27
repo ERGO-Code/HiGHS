@@ -21,6 +21,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 void assessExcessiveBoundCost(const HighsLogOptions log_options,
                               const HighsModel& model);
 bool useIpm(const std::string& solver);
+bool usePdlp(const std::string& solver);
 bool useHipo(const HighsOptions& options,
              const std::string& specific_solver_option, const HighsLp& lp,
              const bool logging = false);

@@ -253,6 +253,7 @@ _srcs = [
     'model/HighsModel.cpp',
     'parallel/HighsTaskExecutor.cpp',
     'pdlp/CupdlpWrapper.cpp',
+    'pdlp/HiPdlpWrapper.cpp',
     'presolve/HPresolve.cpp',
     'presolve/HPresolveAnalysis.cpp',
     'presolve/HighsPostsolveStack.cpp',
