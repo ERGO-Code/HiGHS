@@ -1642,7 +1642,7 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
   }
 
   if (numContCols == 0) return false;
-  if (maxAbsVal > 1 + feastol || maxAbsVal < 0.5 - feastol) scale(maxAbsVal);
+  scale(maxAbsVal);
 
   for (HighsInt i = 0; i != rowlen; ++i) {
     HighsInt col = inds[i];
