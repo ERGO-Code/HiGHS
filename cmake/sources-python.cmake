@@ -238,6 +238,11 @@ set(highs_sources_python
     highs/pdlp/CupdlpWrapper.cpp
     highs/pdlp/HiPdlpWrapper.cpp
     highs/pdlp/hipdlp/linalg.cc
+    highs/pdlp/hipdlp/logger.cc
+    highs/pdlp/hipdlp/pdhg.cc
+    highs/pdlp/hipdlp/restart.cc
+    highs/pdlp/hipdlp/scaling.cc
+    highs/pdlp/hipdlp/step.cc
     highs/presolve/HighsPostsolveStack.cpp
     highs/presolve/HighsSymmetry.cpp
     highs/presolve/HPresolve.cpp
@@ -369,6 +374,13 @@ set(highs_headers_python
     highs/parallel/HighsTaskExecutor.h
     highs/pdlp/CupdlpWrapper.h
     highs/pdlp/HiPdlpWrapper.h
+    highs/pdlp/hipdlp/linalg.hpp
+    highs/pdlp/hipdlp/logger.hpp
+    highs/pdlp/hipdlp/pdhg.hpp
+    highs/pdlp/hipdlp/restart.hpp
+    highs/pdlp/hipdlp/scaling.hpp
+    highs/pdlp/hipdlp/solver_results.hpp
+    highs/pdlp/hipdlp/step.hpp
     highs/presolve/HighsPostsolveStack.h
     highs/presolve/HighsSymmetry.h
     highs/presolve/HPresolve.h

@@ -322,6 +322,11 @@ set(highs_sources
     pdlp/CupdlpWrapper.cpp
     pdlp/HiPdlpWrapper.cpp
     pdlp/hipdlp/linalg.cc
+    pdlp/hipdlp/logger.cc
+    pdlp/hipdlp/pdhg.cc
+    pdlp/hipdlp/restart.cc
+    pdlp/hipdlp/scaling.cc
+    pdlp/hipdlp/step.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
@@ -456,6 +461,13 @@ set(highs_headers
     parallel/HighsTaskExecutor.h
     pdlp/CupdlpWrapper.h
     pdlp/HiPdlpWrapper.h
+    pdlp/hipdlp/linalg.hpp
+    pdlp/hipdlp/logger.hpp
+    pdlp/hipdlp/pdhg.hpp
+    pdlp/hipdlp/restart.hpp
+    pdlp/hipdlp/scaling.hpp
+    pdlp/hipdlp/solver_results.hpp
+    pdlp/hipdlp/step.hpp
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
