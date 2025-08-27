@@ -10,6 +10,8 @@ if (WIN32)
     find_package(metis CONFIG REQUIRED)
     message(STATUS "metis CMake config path: ${metis_DIR}")
 
+    find_package(gklib CONFIG REQUIRED)
+    message(STATUS "gklib CMake config path: ${gklib_DIR}")
 elseif(NOT APPLE)
     # LINUX
     find_library(OPENBLAS_LIB 

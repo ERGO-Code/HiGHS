@@ -215,7 +215,7 @@ void issue425(Highs& highs) {
       false;
 #endif
   if (use_hipo) {
-    solve(highs, "off", "ipm", require_model_status, 0, 15);
+    solve(highs, "off", "ipm", require_model_status, 0, -15);
   } else {
     solve(highs, "off", "ipx", require_model_status, 0, 4);
   }

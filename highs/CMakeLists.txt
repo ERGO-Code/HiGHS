@@ -192,6 +192,7 @@ else()
     elseif(WIN32)
         target_link_libraries(highs OpenBLAS::OpenBLAS)
         target_link_libraries(highs metis)
+        target_link_libraries(highs gklib)
     else() 
         # LINUX
         if(BLAS_LIB)
