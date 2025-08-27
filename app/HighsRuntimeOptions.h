@@ -103,7 +103,12 @@ void setupCommandLineOptions(CLI::App& app,
                  "Set solver option to:\n"
                  "\"choose\" * default\n"
                  "\"simplex\"\n"
-                 "\"ipm\"");
+                 "\"ipm\"\n"
+#ifdef HIPO
+                 "\"hipo\"\n"
+#endif		 
+                 "\"ipx\"\n"
+                 "\"pdlp\"");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
                  "Set parallel option to:\n"

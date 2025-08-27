@@ -5,6 +5,7 @@
 #cmakedefine ZLIB_FOUND
 #cmakedefine CUPDLP_CPU
 #cmakedefine CUPDLP_GPU
+#cmakedefine HIPO
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine HIGHSINT64
 #cmakedefine HIGHS_NO_DEFAULT_THREADS

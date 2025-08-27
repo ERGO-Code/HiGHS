@@ -275,7 +275,7 @@ enum PresolveRuleType : int {
   kPresolveRuleProbing,
   kPresolveRuleMax = kPresolveRuleProbing,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
-  kPresolveRuleCount,
+  kPresolveRuleCount
 };
 
 enum IisStrategy : int {
@@ -294,6 +294,20 @@ enum IisStatus {
   kIisStatusNotInConflict,               // 1
   kIisStatusMaybeInConflict,             // 2
   kIisStatusMax = kIisStatusMaybeInConflict
+};
+
+enum SubSolverIndex : int {
+  kSubSolverMip = 0,
+  kSubSolverSimplexBasis,
+  kSubSolverSimplexNoBasis,
+  kSubSolverHipo,
+  kSubSolverIpx,
+  kSubSolverHipoAc,
+  kSubSolverIpxAc,
+  kSubSolverPdlp,
+  kSubSolverQpAsm,
+  kSubSolverSubMip,
+  kSubSolverCount
 };
 
 // Default KKT tolerance

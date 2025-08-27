@@ -1205,6 +1205,26 @@ class Highs {
   HighsStatus setBasis();
 
   /**
+   * @brief Return a const reference to the internal sub-solver call and time
+   * instance
+   */
+  const HighsSubSolverCallTime& getSubSolverCallTime() const {
+    return sub_solver_call_time_;
+  }
+
+  /**
+   * @brief Report internal sub-solver call and time instance
+   */
+  void reportSubSolverCallTime() const;
+
+  /**
+   * @brief Initialise the internal sub-solver call and time instance
+   */
+  void initialiseSubSolverCallTime() {
+    this->sub_solver_call_time_.initialise();
+  }
+
+  /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
    * if successful, set the internal HighsBasis and HighsSolution
    * instance
@@ -1492,6 +1512,8 @@ class Highs {
   HEkk ekk_instance_;
 
   HighsPresolveLog presolve_log_;
+
+  HighsSubSolverCallTime sub_solver_call_time_;
 
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether

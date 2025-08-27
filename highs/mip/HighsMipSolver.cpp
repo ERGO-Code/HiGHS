@@ -42,6 +42,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       pscostinit(nullptr),
       clqtableinit(nullptr),
       implicinit(nullptr) {
+  timer_.setPrintfFlag(options_mip_->output_flag, options_mip_->log_to_console);
   assert(!submip || submip_level > 0);
   max_submip_level = 0;
   // Initialise empty terminator
@@ -76,6 +77,7 @@ void HighsMipSolver::run() {
     analysis_.analyse_mip_time = false;
   } else {
     analysis_.timer_ = &this->timer_;
+    analysis_.sub_solver_call_time_ = &this->sub_solver_call_time_;
     analysis_.setup(*orig_model_, *options_mip_);
   }
   timer_.start();
@@ -188,8 +190,8 @@ restart:
     // Sometimes the analytic centre calculation is not completed when
     // evaluateRootNode returns, so stop its clock if it's running
     if (analysis_.analyse_mip_time &&
-        analysis_.mipTimerRunning(kMipClockIpmSolveLp))
-      analysis_.mipTimerStop(kMipClockIpmSolveLp);
+        analysis_.mipTimerRunning(kMipClockIpxSolveLp))
+      analysis_.mipTimerStop(kMipClockIpxSolveLp);
     if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - completed evaluate root node\n",
@@ -860,6 +862,8 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->heuristic_lp_iterations);
 
   if (!timeless_log) analysis_.reportMipTimer();
+
+  analysis_.checkSubSolverCallTime(sub_solver_call_time_);
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 

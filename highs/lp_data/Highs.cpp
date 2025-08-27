@@ -869,7 +869,12 @@ HighsStatus Highs::presolve() {
           (int)options_.threads, max_threads);
       return HighsStatus::kError;
     }
-    const bool force_lp_presolve = false;
+    // If problem is a MIP and solve_relaxation is true, it's natural
+    // to force LP presolve. It means that someone wanting the
+    // presolved relaxation of a MIP just has to set solve_relaxation
+    // to true, rather than clearing the integrality of the model (cf
+    // #2234)
+    const bool force_lp_presolve = options_.solve_relaxation;
     model_presolve_status_ = runPresolve(force_lp_presolve, force_presolve);
   }
 
@@ -936,6 +941,7 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::run() {
+  this->sub_solver_call_time_.initialise();
   const bool options_had_highs_files = this->optionsHasHighsFiles();
   if (options_had_highs_files) {
     HighsStatus status = HighsStatus::kOk;
@@ -975,6 +981,7 @@ HighsStatus Highs::run() {
       if (this->options_.write_basis_file != "")
         status = this->writeBasis(this->options_.write_basis_file);
     }
+    this->reportSubSolverCallTime();
     return status;
   }
   return this->multiobjectiveSolve();
@@ -1180,56 +1187,53 @@ HighsStatus Highs::optimizeModel() {
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
     }
   }
-  const bool use_simplex_or_ipm =
-      (options_.solver.compare(kHighsChooseString) != 0);
-  if (!use_simplex_or_ipm) {
-    // Leaving HiGHS to choose method according to model class
-    if (model_.isQp()) {
-      if (model_.isMip()) {
-        if (options_.solve_relaxation) {
-          // Relax any semi-variables
-          bool made_semi_variable_mods = false;
-          relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-          undo_mods = undo_mods || made_semi_variable_mods;
-        } else {
-          highsLogUser(options_.log_options, HighsLogType::kError,
-                       "Cannot solve MIQP problems with HiGHS\n");
-          return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-        }
-      }
-      // Ensure that its diagonal entries are OK in the context of the
-      // objective sense. It's OK to be semi-definite
-      if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+  // Choose method according to model class
+  if (model_.isQp()) {
+    if (model_.isMip()) {
+      if (options_.solve_relaxation) {
+        // Relax any semi-variables
+        bool made_semi_variable_mods = false;
+        relaxSemiVariables(model_.lp_, made_semi_variable_mods);
+        undo_mods = undo_mods || made_semi_variable_mods;
+      } else {
         highsLogUser(options_.log_options, HighsLogType::kError,
-                     "Cannot solve non-convex QP problems with HiGHS\n");
+                     "Cannot solve MIQP problems with HiGHS\n");
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
-      call_status = callSolveQp();
-      return_status = interpretCallStatus(options_.log_options, call_status,
-                                          return_status, "callSolveQp");
-      return returnFromOptimizeModel(return_status, undo_mods);
-    } else if (model_.isMip() && !options_.solve_relaxation) {
-      // Model is a MIP and not solving just the relaxation
+    }
+    // Ensure that its diagonal entries are OK in the context of the
+    // objective sense. It's OK to be semi-definite
+    if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot solve non-convex QP problems with HiGHS\n");
+      return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+    }
+    sub_solver_call_time_.num_call[kSubSolverQpAsm]++;
+    sub_solver_call_time_.run_time[kSubSolverQpAsm] = -timer_.read();
+    call_status = callSolveQp();
+    sub_solver_call_time_.run_time[kSubSolverQpAsm] += timer_.read();
+    return_status = interpretCallStatus(options_.log_options, call_status,
+                                        return_status, "callSolveQp");
+    return returnFromOptimizeModel(return_status, undo_mods);
+  } else if (model_.isMip()) {
+    // Model is MIP
+    if (options_.solve_relaxation) {
+      // Solving just the relaxation, so relax any semi-variables
+      bool made_semi_variable_mods = false;
+      relaxSemiVariables(model_.lp_, made_semi_variable_mods);
+      undo_mods = undo_mods || made_semi_variable_mods;
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Solving LP relaxation since solve_relaxation is true\n");
+    } else {
+      // Solve model as a MIP
+      sub_solver_call_time_.num_call[kSubSolverMip]++;
+      sub_solver_call_time_.run_time[kSubSolverMip] = -timer_.read();
       call_status = callSolveMip();
+      sub_solver_call_time_.run_time[kSubSolverMip] += timer_.read();
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
       return returnFromOptimizeModel(return_status, undo_mods);
     }
-  }
-  // If model is MIP, must be solving the relaxation or not leaving
-  // HiGHS to choose method according to model class
-  if (model_.isMip()) {
-    assert(options_.solve_relaxation || use_simplex_or_ipm);
-    // Relax any semi-variables
-    bool made_semi_variable_mods = false;
-    relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-    undo_mods = undo_mods || made_semi_variable_mods;
-    highsLogUser(
-        options_.log_options, HighsLogType::kInfo,
-        "Solving LP relaxation since%s%s%s\n",
-        options_.solve_relaxation ? " solve_relaxation is true" : "",
-        options_.solve_relaxation && use_simplex_or_ipm ? " and" : "",
-        use_simplex_or_ipm ? (" solver = " + options_.solver).c_str() : "");
   }
   // Solve the model as an LP
   HighsLp& incumbent_lp = model_.lp_;
@@ -1244,10 +1248,10 @@ HighsStatus Highs::optimizeModel() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
+  const bool ipm_no_crossover =
+      useIpm(options_.solver) && options_.run_crossover == kHighsOffString;
   const bool lp_no_solution_basis =
-      (options_.solver == kIpmString &&
-       options_.run_crossover == kHighsOffString) ||
-      options_.solver == kPdlpString;
+      ipm_no_crossover || options_.solver == kPdlpString;
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
@@ -1302,15 +1306,29 @@ HighsStatus Highs::optimizeModel() {
     // return HighsStatus::kOk;
   }
 
-  if (!basis_.valid && solution_.value_valid) {
-    // There is no valid basis, but there is a valid solution, so use
-    // it to construct a basis
-    return_status =
-        interpretCallStatus(options_.log_options, basisForSolution(),
-                            return_status, "basisForSolution");
-    if (return_status == HighsStatus::kError)
-      return returnFromOptimizeModel(return_status, undo_mods);
-    assert(basis_.valid);
+  // Even if options_.solver == kHighsChooseString in isolation will,
+  // ultimately lead to a choice between simplex and IPM, if a basis
+  // is available, simplex should surely be chosen.
+  const bool solver_will_use_basis = options_.solver == kSimplexString ||
+                                     options_.solver == kHighsChooseString;
+
+  if (solver_will_use_basis) {
+    if (!basis_.valid && solution_.value_valid) {
+      // There is no valid basis, but there is a valid solution, so use
+      // it to construct a basis
+      return_status =
+          interpretCallStatus(options_.log_options, basisForSolution(),
+                              return_status, "basisForSolution");
+      if (return_status == HighsStatus::kError)
+        return returnFromOptimizeModel(return_status, undo_mods);
+      assert(basis_.valid);
+    }
+  } else {
+    // The basis won't be used, so clear it to ensure that, after any
+    // presolve the solver choice won't be over-ruled by choosing
+    // simplex due to the existence of a basis - which mustn't be used
+    // after a strict reduction due to presolve!
+    basis_.clear();
   }
 
   // lambda for Lp solving
@@ -1333,11 +1351,6 @@ HighsStatus Highs::optimizeModel() {
 
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
-  // Even if options_.solver == kHighsChooseString in isolation will,
-  // ultimately lead to a choice between simplex and IPM, if a basis
-  // is available, simplex should surely be chosen.
-  const bool solver_will_use_basis = options_.solver == kSimplexString ||
-                                     options_.solver == kHighsChooseString;
   const bool has_basis = basis_.useful;
   if (has_basis) {
     assert(basis_.col_status.size() ==
@@ -1347,10 +1360,9 @@ HighsStatus Highs::optimizeModel() {
   }
   if (basis_.valid) assert(basis_.useful);
 
-  if ((has_basis || options_.presolve == kHighsOffString || unconstrained_lp) &&
-      solver_will_use_basis) {
-    // There is a valid basis for the problem, presolve is off, or LP
-    // has no constraint matrix, and the solver will use the basis
+  if (((options_.presolve == kHighsOffString || has_basis) &&
+       solver_will_use_basis) ||
+      unconstrained_lp) {
     ekk_instance_.lp_name_ =
         "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that
@@ -1366,7 +1378,7 @@ HighsStatus Highs::optimizeModel() {
   } else {
     // Otherwise, consider presolve
     //
-    // If using IPX to solve the reduced LP, but not crossover, set
+    // If using IPM to solve the reduced LP, but not crossover, set
     // lp_presolve_requires_basis_postsolve so that presolve can use
     // rules for which postsolve does not generate a basis.
     const bool lp_presolve_requires_basis_postsolve =
@@ -1750,7 +1762,7 @@ HighsStatus Highs::optimizeModel() {
         // incumbent solution
         const std::string solver = options_.solver;
         const HighsInt pdlp_iteration_limit = options_.pdlp_iteration_limit;
-        assert(solver == kIpmString || solver == kPdlpString);
+        assert(useIpm(solver) || solver == kPdlpString);
         highsLogUser(
             log_options, HighsLogType::kInfo,
             "Unknown model status and no basis after initial solve "
@@ -2463,9 +2475,9 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       }
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
-      HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                        info_, ekk_instance_, callback_,
-                                        options_, timer_);
+      HighsLpSolverObject solver_object(
+          model_.lp_, modifiable_basis, solution_, info_, ekk_instance_,
+          callback_, options_, timer_, sub_solver_call_time_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -3813,7 +3825,19 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     options_.mip_max_nodes = options_.mip_max_start_nodes;
     // Solve the model
     basis_.clear();
+    HighsSubSolverCallTime sub_solver_call_time = this->sub_solver_call_time_;
+    double mip_solve_time = -sub_solver_call_time_.run_time[kSubSolverMip];
     return_status = this->optimizeModel();
+    if (model_.lp_.isMip()) {
+      // If a MIP was solved, it counts as a sub-MIP, but the MIP and
+      // LP call-time data will be recorded as if it were a MIP so,
+      // extract the MIP solve time, revert
+      // this->sub_solver_call_time_ and update the sub-MIP record
+      mip_solve_time += sub_solver_call_time_.run_time[kSubSolverMip];
+      this->sub_solver_call_time_ = sub_solver_call_time;
+      this->sub_solver_call_time_.num_call[kSubSolverSubMip]++;
+      this->sub_solver_call_time_.run_time[kSubSolverSubMip] += mip_solve_time;
+    }
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
   }
@@ -3836,7 +3860,8 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
-                                    callback_, options_, timer_);
+                                    callback_, options_, timer_,
+                                    sub_solver_call_time_);
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
@@ -4036,6 +4061,7 @@ HighsStatus Highs::callSolveMip() {
   HighsStatus return_status =
       highsStatusFromHighsModelStatus(solver.modelstatus_);
   model_status_ = solver.modelstatus_;
+  this->sub_solver_call_time_.add(solver.sub_solver_call_time_);
   // Extract the solution
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
@@ -4272,6 +4298,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         ekk_instance_.lp_name_ = "Postsolve LP";
         // Set up the timing record so that adding the corresponding
         // values after callSolveLp gives difference
+        this->sub_solver_call_time_.initialise();
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(
             incumbent_lp,
@@ -4490,7 +4517,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
 
     case HighsModelStatus::kUnboundedOrInfeasible:
       if (options_.allow_unbounded_or_infeasible ||
-          (options_.solver == kIpmString &&
+          (useIpm(options_.solver) &&
            options_.run_crossover == kHighsOnString) ||
           (options_.solver == kPdlpString) || model_.isMip()) {
         assert(return_status == HighsStatus::kOk);

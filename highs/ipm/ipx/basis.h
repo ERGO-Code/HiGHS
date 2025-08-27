@@ -1,6 +1,7 @@
 #ifndef IPX_BASIS_H_
 #define IPX_BASIS_H_
 
+#include <cassert>
 #include <memory>
 #include <vector>
 #include "ipm/ipx/control.h"
@@ -311,8 +312,6 @@ private:
     double sum_ftran_density_{0.0};
     double sum_btran_density_{0.0};
 };
-
-#include <cassert>
 
 inline Int Basis::operator[](Int p) const {
     return basis_[p];

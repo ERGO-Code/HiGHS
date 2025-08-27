@@ -137,9 +137,13 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsSolution solution;
   solution.value_valid = false;
   solution.dual_valid = false;
-  // Create HighsMipSolver instance for sub-MIP
-  if (!mipsolver.submip)
+  if (!mipsolver.submip) {
     mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
+    // Remember to accumulate time for sub-MIP solves!
+    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] -=
+        mipsolver.timer_.read();
+  }
+  // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true, mipsolver.submip_level + 1);
   // Initialise termination_status_ and propagate any terminator to
@@ -154,16 +158,20 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.run();
   mipsolver.max_submip_level =
       std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
-  if (!mipsolver.submip) mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
+  if (!mipsolver.submip) {
+    mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
+    mipsolver.sub_solver_call_time_.num_call[kSubSolverSubMip]++;
+    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] +=
+      mipsolver.timer_.read();
+  }
   // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
   // pointer after calling HighsMipSolver::run(), and assert isn't
   // triggered for anything in ctest, but use direct test of
   // submipsolver.termination_status_, rather than
   // submipsolver.mipdata_.terminatorTerminated()
   if (!submipsolver.mipdata_) {
-    printf(
-        "HighsPrimalHeuristics::solveSubMip: submipsolver.mipdata_ is "
-        "nullptr\n");
+    printf("HighsPrimalHeuristics::solveSubMip: submipsolver.mipdata_ is "
+	   "nullptr\n");
     assert(submipsolver.mipdata_);
   }
   if (submipsolver.termination_status_ != HighsModelStatus::kNotset) {
@@ -1062,13 +1070,17 @@ void HighsPrimalHeuristics::randomizedRounding(
     // check if only root presolve is allowed
     if (mipsolver.options_mip_->mip_root_presolve_only)
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+
     if (!mipsolver.options_mip_->mip_root_presolve_only &&
-        (5 * intcols.size()) / mipsolver.numCol() >= 1)
+        (5 * intcols.size()) / mipsolver.numCol() >= 1) {
+      // LP to solve is very much smaller, so use presolve rather than
+      // the root basis
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
-    else
+    } else {
       lprelax.getLpSolver().setBasis(
           mipsolver.mipdata_->firstrootbasis,
           "HighsPrimalHeuristics::randomizedRounding");
+    }
 
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 

@@ -348,27 +348,79 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
     Highs ipm;
-    ipm.setOptionValue("solver", "ipm");
-    ipm.setOptionValue("run_crossover", kHighsOffString);
-    //    ipm.setOptionValue("allow_pdlp_cleanup", false);
-    ipm.setOptionValue("presolve", kHighsOffString);
     ipm.setOptionValue("output_flag", false);
-    // ipm.setOptionValue("output_flag", !mipsolver.submip);
+    const std::vector<double>& sol = ipm.getSolution().col_value;
+    // Don't use presolve - because this can lead to postsolve putting
+    // integer variables onto bounds. This is not just a "less good"
+    // AC. It can have implications leading to erroneous fixing of
+    // variables and a suboptimal solution declared as optimal.
+    ipm.setOptionValue("presolve", kHighsOffString);
+    // Determine the solver
+    const std::string mip_ipm_solver = mipsolver.options_mip_->mip_ipm_solver;
+    // Currently use HiPO by default and take action on failure
+    // here. Later pass mip_ipm_solver and take action on failure in
+    // solveLp
+    bool use_hipo =
+#ifdef HIPO
+        mip_ipm_solver == kHighsChooseString ||
+#endif
+        mip_ipm_solver == kHipoString;
+#ifndef HIPO
+    // Shouldn't be possible to choose HiPO if it's not in the build
+    assert(!use_hipo);
+    use_hipo = false;
+#endif
+    const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
+    ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("ipm_iteration_limit", 200);
+    ipm.setOptionValue("run_crossover", kHighsOffString);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
+    lpmodel.integrality_.clear();
     ipm.passModel(std::move(lpmodel));
-
-    //    if (!mipsolver.submip) {
-    //      const std::string file_name = mipsolver.model_->model_name_ +
-    //      "_ipm.mps"; printf("Calling ipm.writeModel(%s)\n",
-    //      file_name.c_str()); fflush(stdout); ipm.writeModel(file_name);
-    //    }
-
-    mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
+    const bool dump_ipm_lp = false;
+    if (dump_ipm_lp && !mipsolver.submip) {
+      const std::string file_name = mipsolver.model_->model_name_ + "_ac.mps";
+      printf(
+          "HighsMipSolverData::startAnalyticCenterComputation: Calling "
+          "ipm.writeModel(%s)\n",
+          file_name.c_str());
+      ipm.writeModel(file_name);
+      fflush(stdout);
+      exit(1);
+    }
+    const bool ipm_logging = false;
+    if (ipm_logging) {
+      bool output_flag;
+      ipm.getOptionValue("output_flag", output_flag);
+      assert(output_flag == false);
+      (void)output_flag;
+      ipm.setOptionValue("output_flag", !mipsolver.submip);
+    }
     ipm.run();
-    mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
-    const std::vector<double>& sol = ipm.getSolution().col_value;
+    if (ipm_logging) ipm.setOptionValue("output_flag", false);
+    if (use_hipo && mip_ipm_solver == kHighsChooseString &&
+        HighsInt(sol.size()) != mipsolver.numCol()) {
+      printf(
+          "In HighsMipSolverData::startAnalyticCenterComputation HiPO has "
+          "failed to get a solution: status = %s Try IPX\n",
+          ipm.modelStatusToString(ipm.getModelStatus()).c_str());
+      // HiPO has failed to get a solution, so try IPX
+      ipm.setOptionValue("solver", kIpxString);
+      ipm.run();
+    }
+    if (!mipsolver.submip) {
+      const HighsSubSolverCallTime& sub_solver_call_time =
+          ipm.getSubSolverCallTime();
+      const bool analytic_centre = true;
+      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
+                                               analytic_centre);
+      // Go through sub_solver_call_time to update any MIP clocks
+      const bool valid_basis = false;
+      const bool use_presolve = false;
+      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
+                                         use_presolve, analytic_centre);
+    }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
     analyticCenter = sol;
@@ -717,6 +769,9 @@ void HighsMipSolverData::runMipPresolve(
 
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
+
+  // Indicate that the first LP has not been solved
+  this->lp.setSolvedFirstLp(false);
 
   last_disptime = -kHighsInf;
   disptime = 0;
@@ -1114,13 +1169,29 @@ try_again:
     tmpSolver.setOptionValue("primal_feasibility_tolerance",
                              mip_primal_feasibility_tolerance);
     // check if only root presolve is allowed
-    if (mipsolver.options_mip_->mip_root_presolve_only)
-      tmpSolver.setOptionValue("presolve", kHighsOffString);
+    const bool use_presolve = !mipsolver.options_mip_->mip_root_presolve_only;
+    const std::string presolve =
+        use_presolve ? kHighsChooseString : kHighsOffString;
+    tmpSolver.setOptionValue("presolve", presolve);
     tmpSolver.passModel(std::move(fixedModel));
-    mipsolver.analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
+    // Until a good decision can be made on whether to use simplex,
+    // HiPO or IPX to solve an LP without a basis, use simplex
+    printf(
+        "HighsMipSolverData::transformNewIntegerFeasibleSolution "
+        "tmpSolver.run();\n");
+    tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.run();
-    mipsolver.analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
-
+    if (!mipsolver.submip) {
+      const HighsSubSolverCallTime& sub_solver_call_time =
+          tmpSolver.getSubSolverCallTime();
+      const bool analytic_centre = false;
+      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
+                                               analytic_centre);
+      // Go through sub_solver_call_time to update any MIP clocks
+      const bool valid_basis = false;
+      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
+                                         use_presolve, analytic_centre);
+    }
     this->total_repair_lp_iterations =
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
