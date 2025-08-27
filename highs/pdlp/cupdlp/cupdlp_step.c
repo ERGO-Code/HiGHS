@@ -77,6 +77,8 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
   if (work->settings->nLogLevel>0) 
     cupdlp_printf("Power Method:\n");
 
+  // work->buffer is a CUPDLPvec*, but a pointer to its values is
+  // needed for some linalg calls
   cupdlp_float *q = work->buffer->data;
 
   cupdlp_initvec(q, 1.0, lp->nRows);
@@ -86,9 +88,24 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
   CUPDLPvec *aty = iterates->aty[iter % 2];
 
   double res = 0.0;
+  double previous_lambda = 0.0;
+  // q is stored in work->buffer->data
+  //
+  // z is stored in ax->data
+  //
+  // y is stored in aty->data
+  //
+  int log_iters = work->settings->nLogLevel > 0;
+  log_iters = 1;
+
+  if (log_iters)
+    cupdlp_printf("It       lambda   dl_lambda    residual\n");
   for (cupdlp_int iter = 0; iter < 20; ++iter) {
     // z = A*A'*q
+    //
+    // as y = A'q...
     ATy(work, aty, work->buffer);
+    // ... then z = Ay
     Ax(work, ax, aty);
 
     // q = z / norm(z)
@@ -97,17 +114,30 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
     cupdlp_twoNorm(work, lp->nRows, q, &qNorm);
     cupdlp_scaleVector(work, 1.0 / qNorm, q, lp->nRows);
 
+    // Now compute the Rayleigh quotient of q which, since q'q=1 is
+    //
+    // lambda = q'AA'q = w^Tw = ||w||_2
+    //
+    // where w = A'q
+    //
+    // aty is no longer needed, so w is stored in aty->data
     ATy(work, aty, work->buffer);
-
     cupdlp_twoNormSquared(work, lp->nCols, aty->data, lambda);
 
     cupdlp_float alpha = -(*lambda);
+    // Now compute the residual between z = A*A'*q (old q) and
+    // lambda.q (new q) to just to log progress
+    //
+    // z := z - lambda.q
     cupdlp_axpy(work, lp->nRows, &alpha, q, ax->data);
 
     cupdlp_twoNormSquared(work, lp->nCols, ax->data, &res);
 
-     if (work->settings->nLogLevel>0) 
-      cupdlp_printf("% d  %e  %.3f\n", iter, *lambda, res);
+    double dl_lambda = fabs(*lambda - previous_lambda);
+    previous_lambda = *lambda;
+
+    if (log_iters)
+      cupdlp_printf("%2d %12.6g %11.4g %11.4g\n", iter, *lambda, dl_lambda, res);
   }
 
 exit_cleanup:

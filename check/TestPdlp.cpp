@@ -331,7 +331,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
-  std::string model = "adlittle";//"avgas";
+  std::string model = "avgas";//"adlittle";//"afiro";//
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
@@ -339,9 +339,18 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kHiPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
-  h.setOptionValue("pdlp_iteration_limit", 10000);
-  h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+  h.setOptionValue("pdlp_scaling_mode", 0);
+  h.setOptionValue("pdlp_restart_strategy", 0);
+  h.setOptionValue("pdlp_step_size_strategy", 0);
+  //  h.setOptionValue("pdlp_iteration_limit", 10000);
+  //  h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
   HighsStatus run_status = h.run();
   //  REQUIRE(run_status == HighsStatus::kOk);
   //  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const bool cupdlp_test = false;
+  if (cupdlp_test) {
+    h.setOptionValue("solver", kCuPdlpString);
+    h.setOptionValue("pdlp_features_off", kPdlpAllFeaturesOff);
+    run_status = h.run();
+  }
 }

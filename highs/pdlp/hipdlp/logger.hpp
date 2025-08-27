@@ -39,7 +39,7 @@ class Logger {
 public:
     Logger(LogLevel level = LogLevel::kInfo);
     void set_log_file(const std::string& filename);
-
+    LogLevel getLogLevel() const { return console_level_; }
     // Logging methods for different levels
     void info(const std::string& message);
     void verbose(const std::string& message);
