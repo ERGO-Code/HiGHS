@@ -82,29 +82,50 @@ void PDLPSolver::PreprocessLp(const HighsLp& original_lp, HighsLp& processed_lp)
     }
 
     // 5. Formulate the new constraints matrix (A') and RHS (b')
-    // We build it in COO format first for easier construction, then convert to CSC.
-    std::vector<std::tuple<int, int, double>> coo_entries;
-
-    // Copy original matrix entries, transforming rows as needed
-    for (int iCol = 0; iCol < nCols_orig; ++iCol) {
-        for (int iEl = original_lp.a_matrix_.start_[iCol]; iEl < original_lp.a_matrix_.start_[iCol + 1]; ++iEl) {
-            int iRow = original_lp.a_matrix_.index_[iEl];
-            double value = original_lp.a_matrix_.value_[iEl];
-
-            if (constraint_types_[iRow] == LEQ) {
-                coo_entries.emplace_back(iRow, iCol, -value);
-            } else {
-                coo_entries.emplace_back(iRow, iCol, value);
-            }
-        }
+    //
+    // Take a copy of the original LP's constraint matrix since we
+    // need it rowwise and it's const
+    HighsSparseMatrix original_matrix = original_lp.a_matrix_;
+    original_matrix.ensureRowwise();
+    // Set up the processed constraint matrix as an empty row-wise
+    // matrix that can have nCols_orig columns
+    HighsSparseMatrix& processed_matrix = processed_lp.a_matrix_;
+    processed_matrix.clear();
+    processed_matrix.num_col_ = nCols_orig;
+    processed_matrix.format_ = MatrixFormat::kRowwise;
+    HighsSparseMatrix row;
+    const double negative_one = -1.0;
+    const double* negative_one_p = &negative_one;
+    for (int i = 0; i < nRows_orig; ++i) {
+      // Get the row from the original constraint matrix
+      original_matrix.getRow(i, row);
+      // Scale the row by -1 if it's a LEQ
+      if (constraint_types_[i] == LEQ)
+	row.scaleRows(negative_one_p);
+      // Add the row to the processed constraint matrix
+      processed_matrix.addRows(row);
     }
+    // Convert the processed constraint matrix to column-wise orientation
+    processed_matrix.ensureColwise();
 
     // Add slack variable entries (-1) for BOUND and FREE constraints
     current_slack_col = nCols_orig;
+    // Set up a negated identity column as a column-wise matrix with
+    // nRows_orig rows and a single column containing -1 in row 0 (for
+    // now)
+    HighsSparseMatrix col;
+    assert(col.isColwise());
+    col.num_col_ = 1;
+    col.num_row_ = nRows_orig;
+    col.start_.push_back(1);
+    col.index_.push_back(0);
+    col.value_.push_back(-1);
     for (int iRow = 0; iRow < nRows_orig; ++iRow) {
         if (constraint_types_[iRow] == BOUND || constraint_types_[iRow] == FREE) {
-            coo_entries.emplace_back(iRow, current_slack_col, -1.0);
-            current_slack_col++;
+	  // Put the -1 in row iRow, and add the column to the matrix
+	  col.index_[0] = iRow;
+	  processed_matrix.addCols(col);
+	  current_slack_col++;
         }
     }
 
@@ -133,37 +154,9 @@ void PDLPSolver::PreprocessLp(const HighsLp& original_lp, HighsLp& processed_lp)
         }
     }
 
-    /*
     // 7. Convert COO matrix to CSC for the processed_lp
-    std::sort(coo_entries.begin(), coo_entries.end(), 
-        [](const auto& a, const auto& b) {
-            if (std::get<1>(a) != std::get<1>(b)) return std::get<1>(a) < std::get<1>(b);
-            return std::get<0>(a) < std::get<0>(b);
-        });
-
-    processed_lp.a_matrix_.start_.assign(processed_lp.num_col_ + 1, 0);
-    processed_lp.a_matrix_.index_.resize(coo_entries.size());
-    processed_lp.a_matrix_.value_.resize(coo_entries.size());
-
-    int current_col_idx = 0;
-    processed_lp.a_matrix_.start_[0] = 0;
-    for (size_t i = 0; i < coo_entries.size(); ++i) {
-        int row = std::get<0>(coo_entries[i]);
-        int col = std::get<1>(coo_entries[i]);
-        double val = std::get<2>(coo_entries[i]);
-        
-        processed_lp.a_matrix_.index_[i] = row;
-        processed_lp.a_matrix_.value_[i] = val;
-        
-        while (current_col_idx < col) {
-            current_col_idx++;
-            processed_lp.a_matrix_.start_[current_col_idx] = i;
-        }
-    }
-    for (int col = current_col_idx; col < processed_lp.num_col_; ++col) {
-        processed_lp.a_matrix_.start_[col + 1] = coo_entries.size();
-    }
-    */
+    //
+    // Already achieved by construction
     logger_.info("Preprocessing complete. New dimensions: " + std::to_string(processed_lp.num_row_) + " rows, " + std::to_string(processed_lp.num_col_) + " cols.");
 }
 

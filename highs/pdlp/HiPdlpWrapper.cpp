@@ -10,9 +10,11 @@
  * @author Julian Hall
  */
 #include "pdlp/HiPdlpWrapper.h"
+#include "pdlp/hipdlp/logger.hpp"
+#include "pdlp/hipdlp/pdhg.hpp"
 #include "pdlp/hipdlp/restart.hpp"
 
-void getHiPpdlpParamsFromOptions(const HighsOptions& options);
+void getHiPpdlpParamsFromOptions(const HighsOptions& options, PrimalDualParams& params);
 			      
 HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object) {
   return solveLpHiPdlp(solver_object.options_, solver_object.timer_,
@@ -29,8 +31,26 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  
+  std::string log_filename = "";
+  LogLevel log_level = LogLevel::kInfo;
 
+  // --- Initialize Logger ---
+  Logger logger(log_level);
+  if (!log_filename.empty()) logger.set_log_file(log_filename);
+  logger.print_header();
+    
+  // --- Initialize Parameters with Defaults ---
+  PrimalDualParams params{};
+
+  getHiPpdlpParamsFromOptions(options, params);
+  std::vector<double> x, y;
+  PDLPSolver pdlp(logger);
+    
+  Timer total_timer;
+  pdlp.Solve((HighsLp&)lp, params, x, y);
+    
+  // --- Print Summary ---
+  logger.print_summary(pdlp.GetResults(), pdlp.GetIterationCount(), total_timer.read());
   return HighsStatus::kError;
 }
 

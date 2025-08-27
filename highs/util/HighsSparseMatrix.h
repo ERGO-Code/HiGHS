@@ -52,13 +52,17 @@ class HighsSparseMatrix {
 
   void addVec(const HighsInt num_nz, const HighsInt* index, const double* value,
               const double multiple = 1);
+  void scaleCols(const double* scale);
+  void scaleRows(const double* scale);
   void addCols(const HighsSparseMatrix new_cols,
                const int8_t* in_partition = NULL);
   void addRows(const HighsSparseMatrix new_rows,
                const int8_t* in_partition = NULL);
-  void getRow(const HighsInt iRow, HighsInt& num_nz, HighsInt* index,
-              double* value) const;
+  void getCol(const HighsInt iCol, HighsSparseMatrix& col) const;
+  void getRow(const HighsInt iRow, HighsSparseMatrix& row) const;
   void getCol(const HighsInt iCol, HighsInt& num_nz, HighsInt* index,
+              double* value) const;
+  void getRow(const HighsInt iRow, HighsInt& num_nz, HighsInt* index,
               double* value) const;
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
