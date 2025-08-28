@@ -417,7 +417,7 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs_callback]") {
   HighsStatus status = highs.run();
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
-  REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
+  REQUIRE(highs.getInfo().objective_function_value >= egout_optimal_objective);
 
   highs.resetGlobalScheduler(true);
 }

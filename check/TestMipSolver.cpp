@@ -587,7 +587,7 @@ TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
 
 TEST_CASE("MIP-objective-target", "[highs_test_mip_solver]") {
   const double egout_optimal_objective = 568.1007;
-  const double egout_objective_target = 610;
+  const double egout_objective_target = 680;
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);

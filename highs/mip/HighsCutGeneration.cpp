@@ -1366,7 +1366,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   std::vector<HighsInt> flowCoverInds;
   double flowCoverRhs = rhs_;
   double flowCoverEfficacy = 0;
-  if (genFlowCover && !lpRelaxation.getMipSolver().submip) {
+  if (genFlowCover && !lpRelaxation.getMipSolver().submip &&
+      !lpRelaxation.getMipSolver().mipdata_->continuous_cols.empty()) {
     flowCoverVals = vals_;
     flowCoverInds = inds_;
     flowCoverSuccess = tryGenerateFlowCoverCut(
@@ -1642,7 +1643,7 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
   }
 
   if (numContCols == 0) return false;
-  scale(maxAbsVal);
+  if (maxAbsVal > 1 + feastol || maxAbsVal < 0.5 - feastol) scale(maxAbsVal);
 
   for (HighsInt i = 0; i != rowlen; ++i) {
     HighsInt col = inds[i];
@@ -1737,8 +1738,8 @@ bool HighsCutGeneration::computeFlowCover() {
   }
   assert(nNonFlowCover + nFlowCover + nitems == snfr.numNnzs);
 
-  double capacity =
-      static_cast<double>(-snfr.rhs + flowCoverWeight + n1itemsWeight);
+  double capacity = static_cast<double>(-snfr.rhs + flowCoverWeight +
+                                        n1itemsWeight - feastol);
 
   // There is no flow cover if capacity is less than zero after fixing
   if (capacity < feastol) return false;
