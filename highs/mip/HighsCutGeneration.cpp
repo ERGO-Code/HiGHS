@@ -576,6 +576,16 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
   }
   ld.t++;
 
+  const HighsSolution& lpSolution = lpRelaxation.getLpSolver().getSolution();
+  auto getLpSolution = [&](const HighsInt col) {
+    HighsInt numCols = lpRelaxation.numCols();
+    if (col < numCols) {
+      return lpSolution.col_value[col];
+    } else {
+      return lpSolution.row_value[col - numCols];
+    }
+  };
+
   auto getAlphaBeta = [&](double vubcoef) {
     HighsInt alpha;
     HighsCDouble beta{};
@@ -696,6 +706,14 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
       assert(alphabeta.first == 0 || alphabeta.first == 1);
       if (alphabeta.first == 1) {
         assert(alphabeta.second > 0);
+        // Do not lift the column if doing so decreases the violation
+        double viol = snfr.aggrConstant[i];
+        if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
+          viol += snfr.aggrContCoef[i] * getLpSolution(snfr.origContCols[i]);
+        }
+        viol += (snfr.aggrBinCoef[i] - static_cast<double>(alphabeta.second)) *
+                (snfr.binSolval[i]);
+        if (viol <= 0) continue;
         if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
           vals[rowlen] = snfr.aggrContCoef[i];
           inds[rowlen] = snfr.origContCols[i];
