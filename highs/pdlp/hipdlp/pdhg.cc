@@ -803,10 +803,22 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp &lp, double& op_norm_sq) {
     linalg::normalize(x_vec); // Assumes a normalize function in linalg
 
     const HighsInt kYanyuPowerMethod = 0;
-    const HighsInt kATAPowerMethod = 1;
+    const HighsInt kYanyuPowerMethodDev = 1;
     const HighsInt kCuPdlpAATPowerMethod = 2;
     
-    const HighsInt power_method = kYanyuPowerMethod;//kCuPdlpAATPowerMethod;//
+    const HighsInt power_method =
+       kYanyuPowerMethod;
+      // kYanyuPowerMethodDev;
+      // kCuPdlpAATPowerMethod;
+    printf("Power method: %s\n", power_method == kYanyuPowerMethod ? "Yanyu" : power_method == kYanyuPowerMethodDev ? "Yanyu dev" : "CuPdlp-C");
+    // Dev version of Yanyu power method (based on A'A) has
+    //
+    // * First iterate as vector of ones
+    //
+    // * No "convergence" check
+
+    // cuPDLP-C version of power method is based on AA'
+    //
     // Allocate memory for matrix-vector products
     std::vector<double> y_vec;
     std::vector<double> z_vec;
@@ -821,11 +833,12 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp &lp, double& op_norm_sq) {
     double op_norm_sq_old = 0.0;
     LogLevel log_level = logger_.getLogLevel();
     int log_iters = log_level == LogLevel::kVerbose || log_level == LogLevel::kDebug;
-    //    log_iters = 1;
+     log_iters = 1;
 
     if (log_iters) printf("It       lambda   dl_lambda\n");
 
-    if (power_method == kATAPowerMethod) {
+    if (power_method == kYanyuPowerMethodDev) {
+      // Start from a vector 
       x_vec.assign(lp.num_col_, 1);
     } else if (power_method == kCuPdlpAATPowerMethod) {
       x_vec.assign(lp.num_row_, 1);
@@ -837,11 +850,11 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp &lp, double& op_norm_sq) {
       if (power_method == kYanyuPowerMethod) {
 	// Original Yanyu power method
 	//
-        // Compute ATAx = A^T * (A * x)
+        // Compute A'Ax = A'(Ax)
         linalg::Ax(lp, x_vec, y_vec);
-        linalg::ATy(lp, y_vec, z_vec); // Note: ATy computes A^T * vector
+        linalg::ATy(lp, y_vec, z_vec); // Note: ATy computes A' * vector
 
-        // Estimate the squared operator norm (largest eigenvalue of A^T*A)
+        // Estimate the squared operator norm (largest eigenvalue of A'A)
         op_norm_sq = linalg::dot(x_vec, z_vec); // Assumes a dot product function in linalg
         
         // Check for convergence
@@ -856,38 +869,32 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp &lp, double& op_norm_sq) {
         x_vec = z_vec;
 	if (log_iters) printf("%2d %12.6g %11.4g\n", iter, op_norm_sq, dl_op_norm_sq);
       } else {
-	if (power_method == kATAPowerMethod) {
-	  // Yanyu power method corrected - with Rayleigh quotient
+	if (power_method == kYanyuPowerMethodDev) {
+	  // Yanyu power method without "convergence" check
 	  //
-	  // Compute z = ATAx = A^T * (A * x)
+	  // Compute z = A'Ax = A'(Ax)
 	  matrix.product(y_vec, x_vec);
 	  matrix.productTranspose(z_vec, y_vec);
-	  // q = z / norm(z)
+	  // Compute the Rayleigh quotient of x which, since x'x=1, is
+	  //
+	  // lambda = x'A'Ax = x'(A'Ax) = x'z
+	  lambda = linalg::dot(x_vec, z_vec);
+	  // x = z / norm(z)
 	  double z_norm = std::sqrt(linalg::dot(z_vec, z_vec));
-	  double denom = 1.0 / z_norm;
 	  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-	    z_vec[iCol] *= denom;
-	  // Now compute the Rayleigh quotient of q which, since q'q=1 is
-	  //
-	  // lambda = q'A'Aq = w^Tw = ||w||_2
-	  //
-	  // where w = Aq
-	  //
-	  // y_vec is no longer needed, so w is stored in it
-	  matrix.product(y_vec, z_vec);
-	  lambda = linalg::dot(y_vec, y_vec);
+	    x_vec[iCol] = z_vec[iCol] / z_norm;
+
 	} else {
 	  // cuPDLP-C power method
 	  //
-	  // Compute z = AA^Tx = A * (A^T * x)
+	  // Compute z = AA'x = A(A'x)
 	  matrix.productTranspose(y_vec, x_vec);
 	  matrix.product(z_vec, y_vec);
 	  // q = z / norm(z)
 	  double z_norm = std::sqrt(linalg::dot(z_vec, z_vec));
-	  double denom = 1.0 / z_norm;
 	  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-	    z_vec[iRow] *= denom;
-	  // Now compute the Rayleigh quotient of q which, since q'q=1 is
+	    z_vec[iRow] /= z_norm;
+	  // Compute the Rayleigh quotient of q which, since q'q=1, is
 	  //
 	  // lambda = q'AA'q = w^Tw = ||w||_2
 	  //
@@ -896,11 +903,10 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp &lp, double& op_norm_sq) {
 	  // y_vec is no longer needed, so w is stored in it
 	  matrix.productTranspose(y_vec, z_vec);
 	  lambda = linalg::dot(y_vec, y_vec);
+	  x_vec = z_vec;
 	}
 	double dl_lambda = std::fabs(lambda - previous_lambda);
         previous_lambda = lambda;
-
-	x_vec = z_vec;
 	if (log_iters) printf("%2d %12.6g %11.4g\n", iter, lambda, dl_lambda);
       }
     }

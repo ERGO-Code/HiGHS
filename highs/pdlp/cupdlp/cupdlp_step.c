@@ -96,7 +96,7 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
   // y is stored in aty->data
   //
   int log_iters = work->settings->nLogLevel > 1;
-  //  log_iters = 1;
+  log_iters = 1;
 
   if (log_iters)
     cupdlp_printf("It       lambda   dl_lambda    residual\n");

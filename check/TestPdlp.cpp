@@ -344,7 +344,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   h.setOptionValue("pdlp_restart_strategy", 0);
   h.setOptionValue("pdlp_step_size_strategy", 0);
 
-  h.setOptionValue("pdlp_iteration_limit", 100000);
+  h.setOptionValue("pdlp_iteration_limit", 1000000);
   //  h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
   HighsStatus run_status = h.run();
   //  REQUIRE(run_status == HighsStatus::kOk);
