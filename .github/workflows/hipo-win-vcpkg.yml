@@ -1,4 +1,4 @@
-name: hipo-win
+name: hipo-win-vcpkg
 
 on: [push, pull_request]
 
@@ -13,53 +13,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
+      # 2. Set up caching for vcpkg
+      - name: Cache vcpkg
+        uses: actions/cache@v3
         with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
+          path: |
+            ./vcpkg/installed
+            ./vcpkg/downloads
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
 
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/METIS
-          ref: master
-          path: METIS
+      - name: Install GKlib
+        run: vcpkg install gklib
 
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: | 
-          mkdir installs
-          ls
-
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          cmake -S. -B build -DCMAKE_INSTALL_PREFIX==${{runner.workspace}}/installs
-          cmake --build build --config Release
-          cmake --install  build
-
-      - name: Check GKlib
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls 
-          ls lib
+      - name: ls
+        run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
 
       - name: Install METIS
-        run: |
-          cd METIS
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      - name: Check METIS
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls 
-          ls lib
+        run: vcpkg install metis
 
         # run: ls C:/vcpkg/packages/metis_x64-windows/
         # run: ls C:/vcpkg/packages/metis_x64-windows/lib
