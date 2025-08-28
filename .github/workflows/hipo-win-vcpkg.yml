@@ -1,6 +1,7 @@
 name: hipo-win-vcpkg
 
-on: [push, pull_request]
+# on: [push, pull_request]
+on: []
 
 jobs:
   release:

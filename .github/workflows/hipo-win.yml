@@ -29,27 +29,33 @@ jobs:
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
+        shell: bash
         run: | 
           mkdir installs
           ls
 
       - name: Install GKLIB
+        working-directory: ${{runner.workspace}}
+        shell: bash
         run: |
           cd GKlib
           cmake -S. -B build -DCMAKE_INSTALL_PREFIX==${{runner.workspace}}/installs
           cmake --build build --config Release
-          cmake --install  build
+          cmake --install build
 
       - name: Check GKlib
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
           ls 
-          ls lib
+          ls Release/lib
 
       - name: Install METIS
         run: |
           cd METIS
+          cmake -S. -B build -DCMAKE_INSTALL_PREFIX==${{runner.workspace}}/installs
+          cmake --build build --config Release
+          cmake --install build
           make config prefix=${{runner.workspace}}/installs
           make
           make install
