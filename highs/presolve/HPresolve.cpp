@@ -1270,7 +1270,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
           HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
         }
-        return Result::kOk;‚
+        return Result::kOk;
       };
 
       // try to fix binary variables; see Gamrath, G., Koch, T., Martin, A. et
