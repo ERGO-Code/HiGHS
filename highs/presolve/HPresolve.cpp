@@ -1171,14 +1171,22 @@ HPresolve::Result HPresolve::dominatedColumns(
         // lambda for updating worst-case bound on binary variables
         auto updateWorstCaseBounds = [&](HighsInt row, HighsInt col, double val,
                                          HighsInt direction, double rhs) {
+          // direction =  1 (<= row): use upper bound on row's activity to
+          // compute worst-case implied column bounds.
+          // direction = -1 (>= row): use lower bound on row's activity to
+          // compute worst-case implied column bounds.
           if (direction * rhs == kHighsInf) return;
           if (model->col_cost_[col] >= 0.0 && direction * val < 0.0) {
-            // compute worst-case lower bound
+            // worst-case lower bound is non-negative:
+            // direction =  1 (<= row): rhs - getResidual(...) <= 0 and val < 0.
+            // direction = -1 (>= row): rhs - getResidual(...) >= 0 and val > 0.
             worstCaseLb =
                 std::max((rhs - getResidual(row, col, val, direction)) / val,
                          worstCaseLb);
           } else if (model->col_cost_[col] <= 0.0 && direction * val > 0.0) {
-            // compute worst-case upper bound
+            // worst-case upper bound is non-positive:
+            // direction =  1 (<= row): rhs - getResidual(...) <= 0 and val > 0.
+            // direction = -1 (>= row): rhs - getResidual(...) >= 0 and val < 0.
             worstCaseUb =
                 std::min((rhs - getResidual(row, col, val, direction)) / val,
                          worstCaseUb);
@@ -1277,6 +1285,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       // al. Progress in presolving for mixed integer programming. Math. Prog.
       // Comp. 7, 367–398 (2015).
       if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
+        // try to fix binary variable to zero
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
           HPRESOLVE_CHECKED_CALL(checkFixBinary(bestRowMinus, j, HighsInt{-1},
@@ -1287,6 +1296,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
 
       if (model->col_cost_[j] <= 0.0 && worstCaseUb >= -primal_feastol) {
+        // try to fix variable to one
         lowerImplied = true;
         if (!upperImplied && bestRowPlus != -1) {
           HPRESOLVE_CHECKED_CALL(checkFixBinary(
