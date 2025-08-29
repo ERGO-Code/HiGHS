@@ -1173,10 +1173,12 @@ HPresolve::Result HPresolve::dominatedColumns(
                                          HighsInt direction, double rhs) {
           if (direction * rhs == kHighsInf) return;
           if (model->col_cost_[col] >= 0.0 && direction * val < 0.0) {
+            // compute worst-case lower bound
             worstCaseLb =
                 std::max((rhs - getResidual(row, col, val, direction)) / val,
                          worstCaseLb);
           } else if (model->col_cost_[col] <= 0.0 && direction * val > 0.0) {
+            // compute worst-case upper bound
             worstCaseUb =
                 std::min((rhs - getResidual(row, col, val, direction)) / val,
                          worstCaseUb);
@@ -1268,9 +1270,12 @@ HPresolve::Result HPresolve::dominatedColumns(
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
           HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
         }
-        return Result::kOk;
+        return Result::kOk;‚
       };
 
+      // try to fix binary variables; see Gamrath, G., Koch, T., Martin, A. et
+      // al. Progress in presolving for mixed integer programming. Math. Prog.
+      // Comp. 7, 367–398 (2015).
       if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
