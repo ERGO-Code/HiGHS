@@ -338,7 +338,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kHiPdlpString);
-  h.setOptionValue("kkt_tolerance", kkt_tolerance);
+  h.setOptionValue("kkt_tolerance", 1e-6);//kkt_tolerance);
 
   h.setOptionValue("pdlp_scaling_mode", 0);
   h.setOptionValue("pdlp_restart_strategy", 0);

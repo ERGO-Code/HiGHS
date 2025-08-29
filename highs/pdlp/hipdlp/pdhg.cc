@@ -807,9 +807,9 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp &lp, double& op_norm_sq) {
     const HighsInt kCuPdlpAATPowerMethod = 2;
     
     const HighsInt power_method =
-       kYanyuPowerMethod;
+      // kYanyuPowerMethod;
       // kYanyuPowerMethodDev;
-      // kCuPdlpAATPowerMethod;
+       kCuPdlpAATPowerMethod;
     printf("Power method: %s\n", power_method == kYanyuPowerMethod ? "Yanyu" : power_method == kYanyuPowerMethodDev ? "Yanyu dev" : "CuPdlp-C");
     // Dev version of Yanyu power method (based on A'A) has
     //
