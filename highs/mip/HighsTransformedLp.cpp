@@ -782,36 +782,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
       return false;
     }
 
-    // the code below uses the difference between the column upper and lower
-    // bounds as the upper bound for the slack from the variable upper bound
-    // constraint (upper[j] = ub - lb) and thus assumes that the variable upper
-    // bound constraints are tight. this assumption may not be satisfied when
-    // new bound changes were derived during cut generation and, therefore, we
-    // tighten the best variable upper bound.
-    if (bestVub[col].first != -1 &&
-        bestVub[col].second.maxValue() > ub + mip.mipdata_->feastol) {
-      bool redundant = false;
-      bool infeasible = false;
-      mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
-                                            bestVub[col].second, ub, redundant,
-                                            infeasible, false);
-    }
-
-    // the code below uses the difference between the column upper and lower
-    // bounds as the upper bound for the slack from the variable lower bound
-    // constraint (upper[j] = ub - lb) and thus assumes that the variable lower
-    // bound constraints are tight. this assumption may not be satisfied when
-    // new bound changes were derived during cut generation and, therefore, we
-    // tighten the best variable lower bound.
-    if (bestVlb[col].first != -1 &&
-        bestVlb[col].second.minValue() < lb - mip.mipdata_->feastol) {
-      bool redundant = false;
-      bool infeasible = false;
-      mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
-                                            bestVlb[col].second, lb, redundant,
-                                            infeasible, false);
-    }
-
     // Transform entry into the SNFR
     if (i >= numNz - numBinCols) {
       // Binary columns can be added directly to the SNFR
@@ -826,16 +796,24 @@ bool HighsTransformedLp::transformSNFRelaxation(
       // Decide whether to use {simple, variable} {lower, upper} bound
       bool complementvlb = false;
       bool inclbincolvlb = true;
-      bool vlbValid = checkValidityVB(
-          bestVlb[col].first, bestVlb[col].second, vals[i],
-          bestVlb[col].first == -1 ? 0 : vectorsum.getValue(bestVlb[col].first),
-          lb, ub, false, complementvlb, inclbincolvlb);
+      std::pair<HighsInt, HighsImplications::VarBound> vlb =
+        std::make_pair(-1, HighsImplications::VarBound{0.0, -kHighsInf});
+      if (col < slackOffset) {
+        vlb = HighsImplications::getBestVlb(col, lb, ub,
+          vals[i], lpSolution, vectorsum,
+          complementvlb, inclbincolvlb);
+      }
+      bool vlbValid = (vlb.first != -1);
       bool complementvub = false;
       bool inclbincolvub = true;
-      bool vubValid = checkValidityVB(
-          bestVub[col].first, bestVub[col].second, vals[i],
-          bestVub[col].first == -1 ? 0 : vectorsum.getValue(bestVub[col].first),
-          lb, ub, true, complementvub, inclbincolvub);
+      std::pair<HighsInt, HighsImplications::VarBound> vub =
+        std::make_pair(-1, HighsImplications::VarBound{0.0, -kHighsInf});
+      if (col < slackOffset) {
+        vlb = HighsImplications::getBestVub(col, lb, ub,
+          vals[i], lpSolution, vectorsum,
+          complementvub, inclbincolvub);
+      }
+      bool vubValid = (vub.first != -1);
       auto boundType = BoundType::kSimpleLb;
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol && vlbValid) {
         boundType = BoundType::kVariableLb;

@@ -155,6 +155,14 @@ class HighsImplications {
                                            const HighsSolution& lpSolution,
                                            double& bestLb) const;
 
+  std::pair<HighsInt, VarBound> getBestVub(HighsInt col, double lb, double ub, double coef,
+    const HighsSolution& lpSolution, const HighsSparseVectorSum& bincoef,
+    bool& complementvub, bool& inclbincolvub) const;
+
+  std::pair<HighsInt, VarBound> getBestVlb(HighsInt col, double lb, double ub, double coef,
+    const HighsSolution& lpSolution, const HighsSparseVectorSum& bincoef,
+    bool& complementvlb, bool& inclbincolvlb) const;
+
   bool runProbing(HighsInt col, HighsInt& numReductions);
 
   void rebuild(HighsInt ncols, const std::vector<HighsInt>& cIndex,

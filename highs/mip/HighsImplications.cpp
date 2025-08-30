@@ -295,6 +295,195 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
   return bestVlb;
 }
 
+std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
+    HighsInt col, const double lb, const double ub, const double coef,
+    const HighsSolution& lpSolution, const HighsSparseVectorSum& bincoef,
+    bool& complementvub, bool& inclbincolvub) const {
+  std::pair<HighsInt, VarBound> bestVub =
+      std::make_pair(-1, VarBound{0.0, kHighsInf});
+  double minbestUb = ub;
+  double bestUbDist = kHighsInf;
+  int64_t bestvubnodes = 0;
+
+  auto isVubBetter = [&](double ubDist, int64_t vubNodes, double minVubVal) {
+    if (ubDist < bestUbDist - mipsolver.mipdata_->feastol) return true;
+    if (vubNodes > bestvubnodes) return true;
+    if (vubNodes < bestvubnodes) return false;
+    if (minVubVal < minbestUb - mipsolver.mipdata_->feastol) return true;
+
+    return false;
+  };
+
+  double scale = mipsolver.mipdata_->domain.col_upper_[col] -
+                 mipsolver.mipdata_->domain.col_lower_[col];
+  if (scale == kHighsInf)
+    scale = 1.0;
+  else
+    scale = 1.0 / scale;
+
+  vubs[col].for_each([&](HighsInt vubCol, const VarBound& vub) {
+    if (vub.coef == kHighsInf) return;
+    if (mipsolver.mipdata_->domain.isFixed(vubCol)) return;
+    assert(mipsolver.mipdata_->domain.isBinary(vubCol));
+    double vubval = lpSolution.col_value[vubCol] * vub.coef + vub.constant;
+    double ubDist = std::max(0.0, vubval - lpSolution.col_value[col]);
+
+    double yDist = mipsolver.mipdata_->feastol +
+                   (vub.coef > 0 ? 1 - lpSolution.col_value[vubCol]
+                                 : lpSolution.col_value[vubCol]);
+    double norm2 = 1.0 + vub.coef * vub.coef;
+    if (ubDist * ubDist > yDist * yDist * norm2) return;
+
+    assert(vubCol >= 0 && vubCol < mipsolver.numCol());
+    ubDist *= scale;
+    if (ubDist <= bestUbDist + mipsolver.mipdata_->feastol) {
+      bool complement = false;
+      bool inclbincol = true;
+      if (lb < vub.constant) {
+        if (lb >= vub.constant + vub.coef) {
+          complement = true;
+        } else {
+          return;
+        }
+      }
+      const double sign = coef >= 0 ? 1 : -1;
+      double complorigbincoef = complement ? -bincoef.getValue(vubCol) : bincoef.getValue(vubCol);
+      double vbconstant = complement ? vub.constant + vub.coef : vub.constant;
+      double vbcoef = complement ? -vub.coef : vub.coef;
+      double val;
+      val = sign * (coef * vbcoef + complorigbincoef);
+      if (val > kHighsInf) return;
+      if (val < 0) {
+        val = sign * (coef * vbcoef);
+        if (val < 0) return;
+        inclbincol = false;
+      }
+      if (inclbincol) {
+        val = sign * (coef * (lb - vbconstant) + complorigbincoef);
+        if (val < 0) {
+          val = sign * (coef * (lb - vbconstant));
+          if (val < 0) return;
+          inclbincol = false;
+          val = sign * (coef * vbcoef);
+          if (val < 0) return;
+        }
+      } else {
+        val = sign * (coef * (lb - vbconstant));
+        if (val < 0) return;
+      }
+      double minvubval = vub.minValue();
+      int64_t vubnodes =
+          vub.coef > 0 ? mipsolver.mipdata_->nodequeue.numNodesDown(vubCol)
+                       : mipsolver.mipdata_->nodequeue.numNodesUp(vubCol);
+
+      if (isVubBetter(ubDist, vubnodes, minvubval)) {
+        minbestUb = minvubval;
+        bestVub = std::make_pair(vubCol, vub);
+        bestvubnodes = vubnodes;
+        bestUbDist = ubDist;
+        complementvub = complement;
+        inclbincolvub = inclbincol;
+      }
+    }
+  });
+
+  return bestVub;
+}
+
+std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
+    HighsInt col, const double lb, const double ub, const double coef,
+    const HighsSolution& lpSolution, const HighsSparseVectorSum& bincoef,
+    bool& complementvlb, bool& inclbincolvlb) const {
+  std::pair<HighsInt, VarBound> bestVlb =
+      std::make_pair(-1, VarBound{0.0, -kHighsInf});
+  double maxbestlb = lb;
+  double bestLbDist = kHighsInf;
+  int64_t bestvlbnodes = 0;
+
+  auto isVlbBetter = [&](double lbDist, int64_t vlbNodes, double maxVlbVal) {
+    if (lbDist < bestLbDist - mipsolver.mipdata_->feastol) return true;
+    if (vlbNodes > bestvlbnodes) return true;
+    if (vlbNodes < bestvlbnodes) return false;
+    if (maxVlbVal > maxbestlb + mipsolver.mipdata_->feastol) return true;
+    return false;
+  };
+
+  double scale = mipsolver.mipdata_->domain.col_upper_[col] -
+                 mipsolver.mipdata_->domain.col_lower_[col];
+  if (scale == kHighsInf)
+    scale = 1.0;
+  else
+    scale = 1.0 / scale;
+
+  vlbs[col].for_each([&](HighsInt vlbCol, const VarBound& vlb) {
+    if (vlb.coef == -kHighsInf) return;
+    if (mipsolver.mipdata_->domain.isFixed(vlbCol)) return;
+    assert(mipsolver.mipdata_->domain.isBinary(vlbCol));
+    assert(vlbCol >= 0 && vlbCol < mipsolver.numCol());
+    double vlbval = lpSolution.col_value[vlbCol] * vlb.coef + vlb.constant;
+    double lbDist = std::max(0.0, lpSolution.col_value[col] - vlbval);
+
+    double yDist = mipsolver.mipdata_->feastol +
+                   (vlb.coef > 0 ? lpSolution.col_value[vlbCol]
+                                 : 1 - lpSolution.col_value[vlbCol]);
+
+    double norm2 = 1.0 + vlb.coef * vlb.coef;
+    if (lbDist * lbDist > yDist * yDist * norm2) return;
+    lbDist *= scale;
+    if (lbDist <= bestLbDist + mipsolver.mipdata_->feastol) {
+      bool complement = false;
+      bool inclbincol = true;
+      if (ub > vlb.constant) {
+        if (ub <= vlb.constant + vlb.coef) {
+          complement = true;
+        } else {
+          return;
+        }
+      }
+      const double sign = coef >= 0 ? 1 : -1;
+      double complorigbincoef = complement ? -bincoef.getValue(vlbCol) : bincoef.getValue(vlbCol);
+      double vbconstant = complement ? vlb.constant + vlb.coef : vlb.constant;
+      double vbcoef = complement ? -vlb.coef : vlb.coef;
+      double val;
+      val = sign * (coef * vbcoef + complorigbincoef);
+      if (-val > kHighsInf) return;
+      if (val > 0) {
+        val = sign * (coef * vbcoef);
+        if (val > 0) return;
+        inclbincol = false;
+      }
+      if (inclbincol) {
+        val = sign * (coef * (ub - vbconstant) + complorigbincoef);
+        if (val > 0) {
+          val = sign * (coef * (ub - vbconstant));
+          if (val > 0) return;
+          inclbincol = false;
+          val = sign * (coef * vbcoef);
+          if (val > 0) return;
+        }
+      } else {
+        val = sign * (coef * (ub - vbconstant));
+        if (val > 0) return;
+      }
+      double maxvlbval = vlb.maxValue();
+      int64_t vlbnodes =
+          vlb.coef > 0 ? mipsolver.mipdata_->nodequeue.numNodesUp(vlbCol)
+                       : mipsolver.mipdata_->nodequeue.numNodesDown(vlbCol);
+
+      if (isVlbBetter(lbDist, vlbnodes, maxvlbval)) {
+        maxbestlb = maxvlbval;
+        bestVlb = std::make_pair(vlbCol, vlb);
+        bestvlbnodes = vlbnodes;
+        bestLbDist = lbDist;
+        inclbincolvlb = inclbincol;
+        complementvlb = complement;
+      }
+    }
+  });
+
+  return bestVlb;
+}
+
 bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
