@@ -854,10 +854,10 @@ bool HighsTransformedLp::transformSNFRelaxation(
           aggrvbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * ub);
           if (vals[i] >= 0) {
-            addSNFRentry(-1, col, (ub - getLpSolution(col)) / (ub - lb), -1, aggrvbcoef, aggrconstant, 0,
+            addSNFRentry(-1, col, std::max(0.0, std::min(1.0, (ub - getLpSolution(col)) / (ub - lb))), -1, aggrvbcoef, aggrconstant, 0,
                          -vals[i], false);
           } else {
-            addSNFRentry(-1, col, (ub - getLpSolution(col)) / (ub - lb), 1, -aggrvbcoef, -aggrconstant, 0, vals[i],
+            addSNFRentry(-1, col, std::max(0.0, std::min(1.0, (ub - getLpSolution(col)) / (ub - lb))), 1, -aggrvbcoef, -aggrconstant, 0, vals[i],
                          false);
           }
           tmpSnfrRhs -= aggrconstant;
@@ -871,10 +871,10 @@ bool HighsTransformedLp::transformSNFRelaxation(
           aggrvbcoef = static_cast<double>(vals[i] * (HighsCDouble(ub) - lb));
           aggrconstant = static_cast<double>(HighsCDouble(vals[i]) * lb);
           if (vals[i] >= 0) {
-            addSNFRentry(-1, col, (getLpSolution(col) - lb) / (ub - lb), 1, aggrvbcoef, -aggrconstant, 0, vals[i],
+            addSNFRentry(-1, col, std::max(0.0, std::min(1.0, (getLpSolution(col) - lb) / (ub - lb))), 1, aggrvbcoef, -aggrconstant, 0, vals[i],
                          false);
           } else {
-            addSNFRentry(-1, col, (getLpSolution(col) - lb) / (ub - lb), -1, -aggrvbcoef, aggrconstant, 0, -vals[i],
+            addSNFRentry(-1, col, std::max(0.0, std::min(1.0, (getLpSolution(col) - lb) / (ub - lb))), -1, -aggrvbcoef, aggrconstant, 0, -vals[i],
                          false);
           }
           tmpSnfrRhs -= aggrconstant;
