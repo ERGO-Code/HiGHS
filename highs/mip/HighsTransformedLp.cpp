@@ -799,7 +799,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
       std::pair<HighsInt, HighsImplications::VarBound> vlb =
         std::make_pair(-1, HighsImplications::VarBound{0.0, -kHighsInf});
       if (col < slackOffset) {
-        vlb = HighsImplications::getBestVlb(col, lb, ub,
+        vlb = lprelaxation.getMipSolver().mipdata_->implications.getBestVlb(col, lb, ub,
           vals[i], lpSolution, vectorsum,
           complementvlb, inclbincolvlb);
       }
@@ -809,7 +809,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
       std::pair<HighsInt, HighsImplications::VarBound> vub =
         std::make_pair(-1, HighsImplications::VarBound{0.0, -kHighsInf});
       if (col < slackOffset) {
-        vlb = HighsImplications::getBestVub(col, lb, ub,
+        vub = lprelaxation.getMipSolver().mipdata_->implications.getBestVub(col, lb, ub,
           vals[i], lpSolution, vectorsum,
           complementvub, inclbincolvub);
       }
@@ -888,11 +888,11 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // (2) y'_j = a_j(y_j - d_j) + c_j * x_j,
           // 0 <= y'_j <= (a_j l'_j + c_j)x_j
           // rhs -= a_j * d_j
-          vbcol = bestVlb[col].first;
-          vbconstant = bestVlb[col].second.constant +
-                       (complementvlb ? bestVlb[col].second.coef : 0);
-          vbcoef = complementvlb ? -bestVlb[col].second.coef
-                                 : bestVlb[col].second.coef;
+          vbcol = vlb.first;
+          vbconstant = vlb.second.constant +
+                       (complementvlb ? vlb.second.coef : 0);
+          vbcoef = complementvlb ? -vlb.second.coef
+                                 : vlb.second.coef;
           bincoef = inclbincolvlb ? complementvlb ? -vectorsum.getValue(vbcol)
                                                   : vectorsum.getValue(vbcol)
                                   : 0;
@@ -922,11 +922,11 @@ bool HighsTransformedLp::transformSNFRelaxation(
           // (2) y'_j = -(a_j(y_j - d_j) + c_j * x_j),
           // 0 <= y'_j <= -(a_j u'_j + c_j)x_j
           // rhs -= a_j * d_j
-          vbcol = bestVub[col].first;
-          vbconstant = bestVub[col].second.constant +
-                       (complementvub ? bestVub[col].second.coef : 0);
-          vbcoef = complementvub ? -bestVub[col].second.coef
-                                 : bestVub[col].second.coef;
+          vbcol = vub.first;
+          vbconstant = vub.second.constant +
+                       (complementvub ? vub.second.coef : 0);
+          vbcoef = complementvub ? -vub.second.coef
+                                 : vub.second.coef;
           bincoef = inclbincolvub ? complementvub ? -vectorsum.getValue(vbcol)
                                                   : vectorsum.getValue(vbcol)
                                   : 0;

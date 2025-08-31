@@ -1672,7 +1672,7 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
     }
   }
 
-  HighsInt maxLen = 0.15 * (lpRelaxation.numCols());
+  HighsInt maxLen = 100 + 0.15 * (lpRelaxation.numCols());
   if (rowlen - numZeros > maxLen) return false;
 
   if (numZeros != 0) {
