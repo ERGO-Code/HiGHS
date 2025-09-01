@@ -1284,8 +1284,9 @@ HPresolve::Result HPresolve::dominatedColumns(
       // see Gamrath, G., Koch, T., Martin, A. et al. Progress in presolving for
       // mixed integer programming. Math. Prog. Comp. 7, 367–398 (2015).
       if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
-        // cost is positive and 1 + primal_feastol >= worstCaseLb >= 0: try to
-        // fix binary variable to zero
+        // cost is positive and 1 + primal_feastol >= worstCaseLb >= 0, i.e.
+        // worstCaseLb agrees with the bounds: try to find dominated variable
+        // that allows for fixing binary variable to zero
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
           HPRESOLVE_CHECKED_CALL(checkFixBinary(bestRowMinus, j, HighsInt{-1},
@@ -1296,8 +1297,9 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
 
       if (model->col_cost_[j] <= 0.0 && worstCaseUb >= -primal_feastol) {
-        // cost is negative and 0 >= worstCaseUb >= -primal_feastol: try to fix
-        // variable to one
+        // cost is negative and 0 >= worstCaseUb >= -primal_feastol, i.e.
+        // worstCaseUb agrees with the bounds: try to find dominated variable
+        // that allows for fixing binary variable to one
         lowerImplied = true;
         if (!upperImplied && bestRowPlus != -1) {
           HPRESOLVE_CHECKED_CALL(checkFixBinary(
