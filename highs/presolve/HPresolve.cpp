@@ -3902,6 +3902,31 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               }
             }
           }
+        } else if (model->row_lower_[row] == -kHighsInf ||
+                   model->row_upper_[row] == kHighsInf) {
+          // try Chvatal-Gomory strengthening
+          std::vector<HighsInt> complementedOrShifted;
+          complementedOrShifted.resize(rowCoefs.size());
+          HighsInt direction =
+              model->row_upper_[row] != kHighsInf ? HighsInt{1} : HighsInt{-1};
+          double rhs =
+              direction > 0 ? model->row_upper_[row] : -model->row_lower_[row];
+          for (size_t i = 0; i < rowCoefs.size(); ++i) {
+            HighsInt col = rowIndex[i];
+            double val = rowCoefs[i];
+            if (direction * val < 0.0 && model->col_upper_[col] != kHighsInf) {
+              rhs -= direction * val * model->col_upper_[col];
+              rowCoefs[i] = -rowCoefs[i];
+              complementedOrShifted[i] = -1;
+            } else if (direction * val > 0.0 &&
+                       model->col_lower_[col] != -kHighsInf) {
+              rhs -= direction * val * model->col_lower_[col];
+              complementedOrShifted[i] = 1;
+            } else {
+              // no bounds
+              break;
+            }
+          }
         }
       }
 
