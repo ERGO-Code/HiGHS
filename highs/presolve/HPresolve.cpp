@@ -3902,12 +3902,15 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         } else if (model->row_lower_[row] == -kHighsInf ||
                    model->row_upper_[row] == kHighsInf) {
           // Chvatal-Gomory strengthening
+          // See section 3.4 "Chvatal-Gomory strengthening of inequalities",
+          // Achterberg et al., Presolve Reductions in Mixed Integer
+          // Programming, INFORMS Journal on Computing 32(2):473-506.
           std::vector<double> roundedRowCoefs;
           roundedRowCoefs.resize(rowsize[row]);
           std::set<double> scalars;
 
-          // lambda for reformulating row to only contain variables with a lower
-          // bound of zero (if possible)
+          // lambda for reformulating row to only contain variables with lower
+          // bounds of zero (if possible)
           auto complementOrShift = [&](HighsInt direction, HighsCDouble& rhs,
                                        double& minAbsCoef, double& maxAbsCoef) {
             minAbsCoef = kHighsInf;
@@ -3942,7 +3945,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               HighsInt col = rowIndex[i];
               double val = direction * rowCoefs[i];
               if (val < 0.0 && model->col_upper_[col] != kHighsInf) {
-                // un-complement
+                // uncomplement
                 roundedRowCoefs[i] = -roundedRowCoefs[i];
                 roundedRhs += roundedRowCoefs[i] *
                               static_cast<HighsCDouble>(model->col_upper_[col]);
