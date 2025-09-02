@@ -3998,7 +3998,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             }
           };
 
-          // try different scalars and return an improving one
+          // try different scalars and return if an improving one was found
           auto rowCanBeTightened = [&](const HighsCDouble& rhs,
                                        HighsCDouble& roundedRhs) {
             for (double s : scalars) {
