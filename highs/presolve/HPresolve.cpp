@@ -3996,12 +3996,12 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           };
 
           // try different scalars and return an improving one
-          auto scalarToTightenRow = [&](const HighsCDouble& rhs,
-                                        HighsCDouble& roundedRhs) {
+          auto rowCanBeTightened = [&](const HighsCDouble& rhs,
+                                       HighsCDouble& roundedRhs) {
             for (double s : scalars) {
-              if (roundRow(s, rhs, roundedRhs)) return s;
+              if (roundRow(s, rhs, roundedRhs)) return true;
             }
-            return 0.0;
+            return false;
           };
 
           // replace the model row by the rounded one
@@ -4036,8 +4036,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             // identify scalars for row
             setScalars(minAbsCoef, maxAbsCoef);
             // find a scalar that produces improved coefficients
-            double s = scalarToTightenRow(rhs, roundedRhs);
-            if (s != 0.0) {
+            if (rowCanBeTightened(rhs, roundedRhs)) {
               // undo complementation and shifting
               undoComplementOrShift(direction, roundedRhs);
               // replace row by rounded one
