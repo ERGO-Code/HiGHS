@@ -200,6 +200,10 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   mipsolver.mipdata_->lp.computeBasicDegenerateDuals(
       mipsolver.mipdata_->feastol);
 
+  // Compute maximum number of steps per column with large domain
+  // max_steps = 2 ** k, k = max(5, min(10 ,round(log(|D| / 10)))),
+  // D = {col : integral_cols | (ub - lb) >= 512}
+  // This is to avoid doing 2**10 steps when there's many unbounded columns
   HighsInt numRedcostLargeDomainCols = 0;
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     if (mipsolver.mipdata_->domain.col_upper_[col] -
