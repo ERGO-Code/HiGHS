@@ -3727,21 +3727,18 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         rowCoefs.reserve(rowsize[row]);
         rowIndex.reserve(rowsize[row]);
 
-        double deltaDown = model->row_lower_[row] == -kHighsInf
-                               ? primal_feastol
-                               : options->small_matrix_value;
-        double deltaUp = model->row_upper_[row] == kHighsInf
-                             ? primal_feastol
-                             : options->small_matrix_value;
-
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
           assert(nonz.value() != 0.0);
           rowCoefs.push_back(nonz.value());
           rowIndex.push_back(nonz.index());
         }
 
-        double intScale =
-            HighsIntegers::integralScale(rowCoefs, deltaDown, deltaUp);
+        double intScale = HighsIntegers::integralScale(
+            rowCoefs,
+            model->row_lower_[row] == -kHighsInf ? primal_feastol
+                                                 : options->small_matrix_value,
+            model->row_upper_[row] == kHighsInf ? primal_feastol
+                                                : options->small_matrix_value);
 
         auto roundRhs = [&](HighsCDouble rhs, HighsCDouble& roundedRhs,
                             HighsCDouble& fractionRhs, double minRhsTightening,
@@ -3904,26 +3901,32 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           }
         } else if (model->row_lower_[row] == -kHighsInf ||
                    model->row_upper_[row] == kHighsInf) {
-          // try Chvatal-Gomory strengthening
-          std::vector<HighsInt> complementedOrShifted;
-          complementedOrShifted.resize(rowCoefs.size());
+          // Chvatal-Gomory strengthening
+          std::vector<double> roundedRowCoefs;
+          roundedRowCoefs.resize(rowsize[row]);
+          std::set<double> scalars;
 
-          HighsInt direction =
-              model->row_upper_[row] != kHighsInf ? HighsInt{1} : HighsInt{-1};
-          HighsCDouble rhs =
-              direction > 0 ? model->row_upper_[row] : -model->row_lower_[row];
-
-          auto complementOrShift = [&]() {
+          // lambda for reformulating row to only contain variables with a lower
+          // bound of zero (if possible)
+          auto complementOrShift = [&](HighsInt direction, HighsCDouble& rhs,
+                                       double& minAbsCoef, double& maxAbsCoef) {
+            minAbsCoef = kHighsInf;
+            maxAbsCoef = 0.0;
             for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              // get column index and (absolute) coefficient
               HighsInt col = rowIndex[i];
               double val = direction * rowCoefs[i];
+              double absval = std::abs(val);
+              // compute minimum and maximum absolute coefficients along the way
+              minAbsCoef = std::min(minAbsCoef, absval);
+              maxAbsCoef = std::max(maxAbsCoef, absval);
               if (val < 0.0 && model->col_upper_[col] != kHighsInf) {
+                // complement
                 rhs -= val * static_cast<HighsCDouble>(model->col_upper_[col]);
                 rowCoefs[i] = -rowCoefs[i];
-                complementedOrShifted[i] = -1;
               } else if (val > 0.0 && model->col_lower_[col] != -kHighsInf) {
+                // shift
                 rhs -= val * static_cast<HighsCDouble>(model->col_lower_[col]);
-                complementedOrShifted[i] = 1;
               } else {
                 // unbounded variable; cannot shift or complement!
                 return false;
@@ -3932,10 +3935,121 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             return true;
           };
 
-          if (complementOrShift()) {
+          // undo shifting and complementation
+          auto undoComplementOrShift = [&](HighsInt direction,
+                                           HighsCDouble& roundedRhs) {
+            for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              HighsInt col = rowIndex[i];
+              double val = direction * rowCoefs[i];
+              if (val < 0.0 && model->col_upper_[col] != kHighsInf) {
+                // un-complement
+                roundedRowCoefs[i] = -roundedRowCoefs[i];
+                roundedRhs += roundedRowCoefs[i] *
+                              static_cast<HighsCDouble>(model->col_upper_[col]);
+              } else if (val > 0.0 && model->col_lower_[col] != -kHighsInf) {
+                // unshift
+                roundedRhs += roundedRowCoefs[i] *
+                              static_cast<HighsCDouble>(model->col_lower_[col]);
+              }
+              // flip coefficient sign for >= inequality
+              roundedRowCoefs[i] *= direction;
+            }
+            // flip rhs sign for >= inequality
+            roundedRhs *= direction;
+          };
+
+          // round row using given scalar
+          auto roundRow = [&](double s, const HighsCDouble& rhs,
+                              HighsCDouble& roundedRhs) {
+            bool accept = false;
+            // round rhs (using feasibility tolerance)
+            roundedRhs = floor(rhs * s + primal_feastol);
+            for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              // round coefficient
+              roundedRowCoefs[i] = std::floor(rowCoefs[i] * s + kHighsTiny);
+              // compute "normalised" coefficients, i.e. coefficient divided by
+              // rhs
+              double normalisedCoef =
+                  static_cast<double>(rowCoefs[i] * roundedRhs);
+              double normalisedRoundedCoef =
+                  static_cast<double>(roundedRowCoefs[i] * rhs);
+              // return if coefficient is weaker
+              if (normalisedRoundedCoef <
+                  normalisedCoef - options->small_matrix_value)
+                return false;
+              // accept rounding if at least one coefficient is improved
+              accept = accept || (normalisedRoundedCoef >
+                                  normalisedCoef + options->small_matrix_value);
+            }
+            return accept;
+          };
+
+          // set up scalars suggested by Achterberg et al.
+          auto setScalars = [&](double minAbsCoef, double maxAbsCoef) {
+            scalars.clear();
+            scalars.emplace(1.0);
+            for (HighsInt t = 1; t <= 5; t++) {
+              scalars.emplace(t / maxAbsCoef);
+              scalars.emplace(t / minAbsCoef);
+              scalars.emplace((2 * t - 1) / (2 * minAbsCoef));
+            }
+          };
+
+          // try different scalars and return an improving one
+          auto scalarToTightenRow = [&](const HighsCDouble& rhs,
+                                        HighsCDouble& roundedRhs) {
+            for (double s : scalars) {
+              if (roundRow(s, rhs, roundedRhs)) return s;
+            }
+            return 0.0;
+          };
+
+          // replace the model row by the rounded one
+          auto updateRow = [&](HighsInt row, HighsInt direction,
+                               HighsCDouble roundedRhs) {
+            if (direction > 0)
+              model->row_upper_[row] = static_cast<double>(roundedRhs);
+            else
+              model->row_lower_[row] = static_cast<double>(roundedRhs);
+            for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              double delta = static_cast<double>(
+                  static_cast<HighsCDouble>(roundedRowCoefs[i]) - rowCoefs[i]);
+              if (std::fabs(delta) > options->small_matrix_value)
+                addToMatrix(row, rowIndex[i], delta);
+            }
+          };
+
+          // direction = 1: <= constraint, direction = -1: >= constraint
+          HighsInt direction =
+              model->row_upper_[row] != kHighsInf ? HighsInt{1} : HighsInt{-1};
+          // get rhs
+          HighsCDouble rhs =
+              direction > 0 ? model->row_upper_[row] : -model->row_lower_[row];
+
+          // initialise
+          HighsCDouble roundedRhs = 0.0;
+          double minAbsCoef = 0.0;
+          double maxAbsCoef = 0.0;
+
+          // complement or shift variables to have lower bounds of zero
+          if (complementOrShift(direction, rhs, minAbsCoef, maxAbsCoef)) {
+            // identify scalars for row
+            setScalars(minAbsCoef, maxAbsCoef);
+            // find a scalar that produces improved coefficients
+            double s = scalarToTightenRow(rhs, roundedRhs);
+            if (s != 0.0) {
+              // undo complementation and shifting
+              undoComplementOrShift(direction, roundedRhs);
+              // replace row by rounded one
+              updateRow(row, direction, roundedRhs);
+            }
           }
         }
       }
+
+      // check for redundancy again
+      HPRESOLVE_CHECKED_CALL(checkRowRedundant(row));
+      if (rowDeleted[row]) return Result::kOk;
 
       auto strengthenCoefs = [&](HighsCDouble& rhs, HighsInt direction,
                                  HighsCDouble maxAbsCoefValue) {
