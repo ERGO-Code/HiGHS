@@ -3957,10 +3957,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 roundedRhs += roundedRowCoefs[i] *
                               static_cast<HighsCDouble>(model->col_lower_[col]);
               }
-              // flip coefficient sign for >= inequality
+              // flip coefficient sign for <= inequality
               roundedRowCoefs[i] *= direction;
             }
-            // flip rhs sign for >= inequality
+            // flip rhs sign for <= inequality
             roundedRhs *= direction;
           };
 
@@ -3969,15 +3969,18 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                               HighsCDouble& roundedRhs) {
             bool accept = false;
             // round rhs (using feasibility tolerance)
-            roundedRhs = ceil(rhs * s - primal_feastol);
-            assert(roundedRhs != 0.0);
+            HighsCDouble scalar = static_cast<HighsCDouble>(s);
+            roundedRhs = ceil(rhs * scalar - primal_feastol);
+            assert(roundedRhs > 0.0);
             HighsCDouble rhsRatio = rhs / roundedRhs;
+
             for (size_t i = 0; i < rowCoefs.size(); ++i) {
               // coefficient sign has not been flipped for complemented
               // variables; take absolute value of coefficient.
               double absCoef = std::abs(rowCoefs[i]);
               // round coefficient
-              roundedRowCoefs[i] = std::ceil(absCoef * s - kHighsTiny);
+              roundedRowCoefs[i] =
+                  static_cast<double>(ceil(absCoef * scalar - kHighsTiny));
               // compare "normalised" coefficients, i.e. coefficients divided by
               // corresponding rhs.
               double threshold =
