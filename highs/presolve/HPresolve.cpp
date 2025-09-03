@@ -3926,7 +3926,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               if (val < 0.0 && model->col_upper_[col] != kHighsInf) {
                 // complement
                 rhs -= val * static_cast<HighsCDouble>(model->col_upper_[col]);
-                rowCoefs[i] = -rowCoefs[i];
               } else if (val > 0.0 && model->col_lower_[col] != -kHighsInf) {
                 // shift
                 rhs -= val * static_cast<HighsCDouble>(model->col_lower_[col]);
@@ -3966,23 +3965,25 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                               HighsCDouble& roundedRhs) {
             bool accept = false;
             // round rhs (using feasibility tolerance)
-            roundedRhs = floor(rhs * s + primal_feastol);
+            roundedRhs = ceil(rhs * s - primal_feastol);
+            assert(roundedRhs != 0.0);
+            HighsCDouble rhsRatio = rhs / roundedRhs;
             for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              // coefficient sign has not been flipped for complemented
+              // variables; take absolute value of coefficient.
+              double absCoef = std::abs(rowCoefs[i]);
               // round coefficient
-              roundedRowCoefs[i] = std::floor(rowCoefs[i] * s + kHighsTiny);
-              // compute "normalised" coefficients, i.e. coefficient divided by
-              // rhs
-              double normalisedCoef =
-                  static_cast<double>(rowCoefs[i] * roundedRhs);
-              double normalisedRoundedCoef =
-                  static_cast<double>(roundedRowCoefs[i] * rhs);
+              roundedRowCoefs[i] = std::ceil(absCoef * s - kHighsTiny);
+              // compare "normalised" coefficients, i.e. coefficients divided by
+              // corresponding rhs.
+              double threshold =
+                  static_cast<double>(roundedRowCoefs[i] * rhsRatio);
               // return if coefficient is weaker
-              if (normalisedRoundedCoef <
-                  normalisedCoef - options->small_matrix_value)
+              if (absCoef < threshold - options->small_matrix_value)
                 return false;
               // accept rounding if at least one coefficient is improved
-              accept = accept || (normalisedRoundedCoef >
-                                  normalisedCoef + options->small_matrix_value);
+              accept =
+                  accept || (absCoef > threshold + options->small_matrix_value);
             }
             return accept;
           };
@@ -4010,7 +4011,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           // replace the model row by the rounded one
           auto updateRow = [&](HighsInt row, HighsInt direction,
                                HighsCDouble roundedRhs) {
-            if (direction > 0)
+            if (direction < 0)
               model->row_upper_[row] = static_cast<double>(roundedRhs);
             else
               model->row_lower_[row] = static_cast<double>(roundedRhs);
@@ -4024,10 +4025,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
           // direction = 1: <= constraint, direction = -1: >= constraint
           HighsInt direction =
-              model->row_upper_[row] != kHighsInf ? HighsInt{1} : HighsInt{-1};
+              model->row_upper_[row] != kHighsInf ? HighsInt{-1} : HighsInt{1};
           // get rhs
           HighsCDouble rhs =
-              direction > 0 ? model->row_upper_[row] : -model->row_lower_[row];
+              direction < 0 ? -model->row_upper_[row] : model->row_lower_[row];
 
           // initialise
           HighsCDouble roundedRhs = 0.0;
