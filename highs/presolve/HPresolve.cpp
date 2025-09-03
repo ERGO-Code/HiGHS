@@ -238,6 +238,11 @@ bool HPresolve::isEquation(HighsInt row) const {
   return (model->row_lower_[row] == model->row_upper_[row]);
 }
 
+bool HPresolve::isRanged(HighsInt row) const {
+  return (model->row_lower_[row] != -kHighsInf &&
+          model->row_upper_[row] != kHighsInf);
+}
+
 bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
   // if the implied lower bound on a row dual is strictly positive then the row
   // is an implied equation (using its lower bound) due to complementary
@@ -3899,8 +3904,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               }
             }
           }
-        } else if (model->row_lower_[row] == -kHighsInf ||
-                   model->row_upper_[row] == kHighsInf) {
+        } else if (!isRanged(row)) {
           // Chvatal-Gomory strengthening
           // See section 3.4 "Chvatal-Gomory strengthening of inequalities",
           // Achterberg et al., Presolve Reductions in Mixed Integer
@@ -4321,9 +4325,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                                          HighsInt direction,
                                          bool isBoundImplied, HighsInt numInf) {
       if (isBoundImplied && row != -1 && numInf == 1 &&
-          direction * model->col_cost_[col] >= 0 &&
-          (model->row_lower_[row] == -kHighsInf ||
-           model->row_upper_[row] == kHighsInf)) {
+          direction * model->col_cost_[col] >= 0 && !isRanged(row)) {
         HighsInt nzPos = findNonzero(row, col);
 
         if (model->integrality_[col] != HighsVarType::kInteger ||
@@ -5700,9 +5702,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
   for (HighsInt row = 0; row != model->num_row_; ++row) {
     if (rowsize[row] <= 1) continue;
-    if (model->row_lower_[row] != -kHighsInf &&
-        model->row_upper_[row] != kHighsInf)
-      continue;
+    if (isRanged(row)) continue;
 
     // do not run on very dense rows as this could get expensive
     HighsInt rowsize_limit =
