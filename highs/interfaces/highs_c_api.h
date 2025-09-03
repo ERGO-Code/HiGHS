@@ -387,7 +387,7 @@ HighsInt Highs_presolve(void* highs);
 HighsInt Highs_run(void* highs);
 
 /**
- * Postsolve a model using a primal (and possibly dual) solution.
+ * Postsolve a model using a primal (and possibly dual) solution. Postsolved solution can be retrieved later by calling `Highs_getSolution`.
  *
  * @param highs       A pointer to the Highs instance.
  * @param col_value   An array of length [num_col] with the column solution
