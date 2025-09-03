@@ -4030,7 +4030,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             }
           };
 
-          // direction = 1: <= constraint, direction = -1: >= constraint
+          // convert to >= inequality
+          // direction = -1: <= constraint, direction = 1: >= constraint
           HighsInt direction =
               model->row_upper_[row] != kHighsInf ? HighsInt{-1} : HighsInt{1};
           // get rhs
