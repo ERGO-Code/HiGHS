@@ -142,6 +142,7 @@ void HighsMipSolver::run() {
   HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
 restart:
+  search_started = false;
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
     if (mipdata_->checkLimits()) {
@@ -308,10 +309,12 @@ restart:
   // Initialize worker relaxations and mipworkers
   // todo lps and workers are still empty right now
 
+  search_started = true;
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt num_worker = mip_search_concurrency - 1;
+
   for (int i = 0; i < num_worker; i++) {
-    mipdata_->lps.push_back(HighsLpRelaxation(*this));
+    mipdata_->lps.emplace_back(*this);
     mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
   }
 
