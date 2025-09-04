@@ -678,7 +678,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         if (orbitalFixing)
           nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
         else
-          getSymmetries();
+          getSymmetries().propagateOrbitopes(localdom);
       }
 
       inferences += localdom.getDomainChangeStack().size();

@@ -237,6 +237,11 @@ try_again:
     }
   }
 
+  const double transformed_solobj =
+    static_cast<double>(static_cast<HighsInt>(mipsolver_.orig_model_->sense_) *
+                            mipsolver_quad_objective_value -
+                        mipsolver_.model_->offset_);
+
   // todo:
   // Possible MIP solution callback
   // if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
@@ -248,6 +253,12 @@ try_again:
   //       solution");
   //   assert(!interrupt);
   // }
+
+  // Catch the case where the repaired solution now has worse objective
+  // than the current stored solution
+  if (transformed_solobj >= upper_bound && !sol.empty()) {
+    return transformed_solobj;
+  }
 
   if (possibly_store_as_new_incumbent) {
     // Store the solution as incumbent in the original space if there
@@ -294,8 +305,5 @@ try_again:
     }
   }
   // return the objective value in the transformed space
-  if (mipsolver_.orig_model_->sense_ == ObjSense::kMaximize)
-    return -double(mipsolver_quad_objective_value + mipsolver_.model_->offset_);
-
-  return double(mipsolver_quad_objective_value - mipsolver_.model_->offset_);
+  return transformed_solobj;
 }
