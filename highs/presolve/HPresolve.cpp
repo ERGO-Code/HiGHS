@@ -1043,8 +1043,7 @@ HPresolve::Result HPresolve::dominatedColumns(
   };
 
   auto checkDominationNonZero = [&](HighsInt row, double aj, double ak) {
-    if (model->row_lower_[row] != -kHighsInf &&
-        model->row_upper_[row] != kHighsInf) {
+    if (isRanged(row)) {
       // the row is an equality or ranged row, therefore the coefficients must
       // be parallel, otherwise one of the inequalities given by the row rules
       // out domination
@@ -1257,8 +1256,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       auto checkFixBinary = [&](HighsInt row, HighsInt col, HighsInt direction,
                                 double scale, double bestVal) {
         storeRow(row);
-        bool isEqOrRangedRow = model->row_lower_[row] != -kHighsInf &&
-                               model->row_upper_[row] != kHighsInf;
+        bool isEqOrRangedRow = isRanged(row);
 
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
           HighsInt k = nonz.index();
@@ -1346,8 +1344,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
                            double scale, double bestVal, bool boundImplied) {
       storeRow(row);
-      bool isEqOrRangedRow = model->row_lower_[row] != -kHighsInf &&
-                             model->row_upper_[row] != kHighsInf;
+      bool isEqOrRangedRow = isRanged(row);
 
       for (const HighsSliceNonzero& nonz : getStoredRow()) {
         HighsInt k = nonz.index();
