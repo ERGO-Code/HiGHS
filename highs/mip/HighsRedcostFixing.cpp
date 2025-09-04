@@ -206,14 +206,10 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   // This is to avoid doing 2**10 steps when there's many unbounded columns
   HighsInt numRedcostLargeDomainCols = 0;
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
-    if (mipsolver.mipdata_->domain.col_upper_[col] -
-            mipsolver.mipdata_->domain.col_lower_[col] >=
-        512) {
-      if (lpredcost[col] > mipsolver.mipdata_->feastol) {
-        numRedcostLargeDomainCols++;
-      } else if (lpredcost[col] < -mipsolver.mipdata_->feastol) {
-        numRedcostLargeDomainCols++;
-      }
+    if ((mipsolver.mipdata_->domain.col_upper_[col] -
+         mipsolver.mipdata_->domain.col_lower_[col]) >= 512 &&
+        std::abs(lpredcost[col]) > mipsolver.mipdata_->feastol) {
+      numRedcostLargeDomainCols++;
     }
   }
   HighsInt maxNumStepsExp = 10;
@@ -223,7 +219,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
     expshift = std::min(expshift, static_cast<int>(maxNumStepsExp));
     maxNumStepsExp = maxNumStepsExp - expshift + 5;
   }
-  auto maxNumSteps = static_cast<HighsInt>(1ULL << maxNumStepsExp);
+  HighsInt maxNumSteps = static_cast<HighsInt>(1ULL << maxNumStepsExp);
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     if (lpredcost[col] > mipsolver.mipdata_->feastol) {
