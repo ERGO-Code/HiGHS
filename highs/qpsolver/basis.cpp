@@ -100,8 +100,8 @@ void Basis::rebuild() {
 
 void Basis::report() {
   //
-  // Basis of dimension qp_num_var, analogous to primal simplex
-  // nonbasic variables, partitioned into
+  // Basis of dimension qp_num_var, analogous to simplex nonbasic
+  // variables, partitioned into
   //
   // * Indices of active variables/constraints, so index values in {0,
   // * ..., qp_num_con-1}. These are listed in active_constraint_index

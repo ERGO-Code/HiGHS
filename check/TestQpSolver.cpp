@@ -1138,3 +1138,89 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("test-qp-atwood", "[qpsolver]") {
+  Highs h;
+  //  highs.setOptionValue("output_flag", dev_run);
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/atwood0.mps";
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  const double primal_feasibility_tolerance = h.getOptions().primal_feasibility_tolerance;
+
+  const double required_objective0 = 4.16347077e-02;
+  const double required_objective1 = 2.91530651e-02;
+  HighsStatus status;
+
+  const HighsModel& model = h.getModel();
+  const HighsBasis& basis_ = h.getBasis();
+  REQUIRE(model.lp_.row_lower_[1] == 0.26);
+
+  const bool hot_start = false;
+  for (HighsInt k= 0; k < 2; k++) {
+    REQUIRE(h.run() == HighsStatus::kOk);
+    if (k == 0) {
+      const double objective0 = h.getInfo().objective_function_value;
+      REQUIRE(std::fabs(objective0 - required_objective0) < 1e-4);
+    } else {
+      const double objective1 = h.getInfo().objective_function_value;
+      REQUIRE(std::fabs(objective1 - required_objective1) < 1e-4);
+    }      
+  
+    HighsSolution solution = h.getSolution();
+    HighsBasis basis = basis_;
+
+    HighsInt num_basic = 0;
+    HighsInt num_non_basic = 0;
+    const HighsLp& lp = model.lp_;
+    printf("\nColumns\n");
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      double lower = lp.col_lower_[iCol];
+      double upper = lp.col_upper_[iCol];
+      double value = solution.col_value[iCol];
+      double rsdu = std::min(value-lower, upper-value);
+      HighsBasisStatus status = basis_.col_status[iCol];
+      if (status == HighsBasisStatus::kBasic) {
+	num_basic++;
+      } else if (status == HighsBasisStatus::kNonbasic) {
+	num_non_basic++;
+      } else {
+	REQUIRE(rsdu <= primal_feasibility_tolerance);
+      }
+      printf("%2d [%11.4g, %11.4g, %11.4g] %11.4g %s\n",
+	     int(iCol), lower, value, upper, rsdu, h.basisStatusToString(status).c_str());
+    }
+  
+    printf("Rows\n");
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      double lower = lp.row_lower_[iRow];
+      double upper = lp.row_upper_[iRow];
+      double value = solution.row_value[iRow];
+      double rsdu = std::min(value-lower, upper-value);
+      HighsBasisStatus status = basis_.row_status[iRow];
+      if (status == HighsBasisStatus::kBasic) {
+	num_basic++;
+      } else if (status == HighsBasisStatus::kNonbasic) {
+	num_non_basic++;
+      } else {
+	REQUIRE(rsdu <= primal_feasibility_tolerance);
+      }
+      printf("%2d [%11.4g, %11.4g, %11.4g] %11.4g %s\n",
+	   int(iRow), lower, value, upper, rsdu, h.basisStatusToString(status).c_str());
+    }
+    printf("QP has %d basic and %d nonbasic variables\n", int(num_basic), int(num_non_basic));
+    double lower = 0.25;
+    double upper = kHighsInf;
+    h.changeRowBounds(1, lower, upper);
+
+    if (hot_start) {
+      status = h.setSolution(solution);
+      assert(status == HighsStatus::kOk);
+      status = h.setBasis(basis);
+      assert(status == HighsStatus::kOk);
+      assert(basis_.valid);
+    }
+  }
+ 
+  h.resetGlobalScheduler(true);
+}
