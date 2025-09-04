@@ -400,7 +400,9 @@ HighsInt Highs_presolve(void* highs);
 HighsInt Highs_run(void* highs);
 
 /**
- * Postsolve a model using a primal (and possibly dual) solution.
+ * Postsolve a model using a primal (and possibly dual) solution. The
+ * postsolved solution can be retrieved later by calling
+ * `Highs_getSolution`.
  *
  * @param highs       A pointer to the Highs instance.
  * @param col_value   An array of length [num_col] with the column solution
@@ -413,7 +415,8 @@ HighsInt Highs_run(void* highs);
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_postsolve(void* highs, const double* col_value,
-                         const double* col_dual, const double* row_dual);
+                         const double* col_dual,
+			 const double* row_dual);
 
 /**
  * Write the solution information (including dual and basis status, if
