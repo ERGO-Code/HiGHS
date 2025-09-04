@@ -4017,7 +4017,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
           // replace the model row by the rounded one
           auto updateRow = [&](HighsInt row, HighsInt direction,
-                               HighsCDouble roundedRhs) {
+                               const HighsCDouble& roundedRhs) {
             if (direction < 0)
               model->row_upper_[row] = static_cast<double>(roundedRhs);
             else
