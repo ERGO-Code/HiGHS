@@ -415,8 +415,7 @@ HighsInt Highs_run(void* highs);
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_postsolve(void* highs, const double* col_value,
-                         const double* col_dual,
-			 const double* row_dual);
+                         const double* col_dual, const double* row_dual);
 
 /**
  * Write the solution information (including dual and basis status, if
