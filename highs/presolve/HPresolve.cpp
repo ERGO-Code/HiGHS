@@ -238,6 +238,11 @@ bool HPresolve::isEquation(HighsInt row) const {
   return (model->row_lower_[row] == model->row_upper_[row]);
 }
 
+bool HPresolve::isRanged(HighsInt row) const {
+  return (model->row_lower_[row] != -kHighsInf &&
+          model->row_upper_[row] != kHighsInf);
+}
+
 bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
   // if the implied lower bound on a row dual is strictly positive then the row
   // is an implied equation (using its lower bound) due to complementary
@@ -3686,21 +3691,18 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         rowCoefs.reserve(rowsize[row]);
         rowIndex.reserve(rowsize[row]);
 
-        double deltaDown = model->row_lower_[row] == -kHighsInf
-                               ? primal_feastol
-                               : options->small_matrix_value;
-        double deltaUp = model->row_upper_[row] == kHighsInf
-                             ? primal_feastol
-                             : options->small_matrix_value;
-
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
           assert(nonz.value() != 0.0);
           rowCoefs.push_back(nonz.value());
           rowIndex.push_back(nonz.index());
         }
 
-        double intScale =
-            HighsIntegers::integralScale(rowCoefs, deltaDown, deltaUp);
+        double intScale = HighsIntegers::integralScale(
+            rowCoefs,
+            model->row_lower_[row] == -kHighsInf ? primal_feastol
+                                                 : options->small_matrix_value,
+            model->row_upper_[row] == kHighsInf ? primal_feastol
+                                                : options->small_matrix_value);
 
         auto roundRhs = [&](HighsCDouble rhs, HighsCDouble& roundedRhs,
                             HighsCDouble& fractionRhs, double minRhsTightening,
@@ -3861,8 +3863,163 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               }
             }
           }
+        } else if (!isRanged(row)) {
+          // Chvatal-Gomory strengthening
+          // See section 3.4 "Chvatal-Gomory strengthening of inequalities",
+          // Achterberg et al., Presolve Reductions in Mixed Integer
+          // Programming, INFORMS Journal on Computing 32(2):473-506.
+          std::vector<double> roundedRowCoefs;
+          roundedRowCoefs.resize(rowsize[row]);
+          std::set<double> scalars;
+
+          // lambda for reformulating row to only contain variables with lower
+          // bounds of zero (if possible)
+          auto complementOrShift = [&](HighsInt direction, HighsCDouble& rhs,
+                                       double& minAbsCoef, double& maxAbsCoef) {
+            minAbsCoef = kHighsInf;
+            maxAbsCoef = 0.0;
+            for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              // get column index and (absolute) coefficient
+              HighsInt col = rowIndex[i];
+              double val = direction * rowCoefs[i];
+              double absval = std::abs(val);
+              // compute minimum and maximum absolute coefficients along the way
+              minAbsCoef = std::min(minAbsCoef, absval);
+              maxAbsCoef = std::max(maxAbsCoef, absval);
+              if (val < 0.0 && model->col_upper_[col] != kHighsInf) {
+                // complement
+                rhs -= val * static_cast<HighsCDouble>(model->col_upper_[col]);
+              } else if (val > 0.0 && model->col_lower_[col] != -kHighsInf) {
+                // shift
+                rhs -= val * static_cast<HighsCDouble>(model->col_lower_[col]);
+              } else {
+                // unbounded variable; cannot shift or complement!
+                return false;
+              }
+            }
+            return true;
+          };
+
+          // undo shifting and complementation
+          auto undoComplementOrShift = [&](HighsInt direction,
+                                           HighsCDouble& roundedRhs) {
+            for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              HighsInt col = rowIndex[i];
+              double val = direction * rowCoefs[i];
+              if (val < 0.0 && model->col_upper_[col] != kHighsInf) {
+                // uncomplement
+                roundedRowCoefs[i] = -roundedRowCoefs[i];
+                roundedRhs += roundedRowCoefs[i] *
+                              static_cast<HighsCDouble>(model->col_upper_[col]);
+              } else if (val > 0.0 && model->col_lower_[col] != -kHighsInf) {
+                // unshift
+                roundedRhs += roundedRowCoefs[i] *
+                              static_cast<HighsCDouble>(model->col_lower_[col]);
+              }
+              // flip coefficient sign for <= inequality
+              roundedRowCoefs[i] *= direction;
+            }
+            // flip rhs sign for <= inequality
+            roundedRhs *= direction;
+          };
+
+          // round row using given scalar
+          auto roundRow = [&](double s, const HighsCDouble& rhs,
+                              HighsCDouble& roundedRhs) {
+            bool accept = false;
+            // round rhs (using feasibility tolerance)
+            HighsCDouble scalar = static_cast<HighsCDouble>(s);
+            roundedRhs = ceil(rhs * scalar - primal_feastol);
+            assert(roundedRhs > 0.0);
+            HighsCDouble rhsRatio = rhs / roundedRhs;
+
+            for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              // coefficient sign has not been flipped for complemented
+              // variables; take absolute value of coefficient.
+              double absCoef = std::abs(rowCoefs[i]);
+              // round coefficient
+              roundedRowCoefs[i] =
+                  static_cast<double>(ceil(absCoef * scalar - kHighsTiny));
+              // compare "normalised" coefficients, i.e. coefficients divided by
+              // corresponding rhs.
+              double threshold =
+                  static_cast<double>(roundedRowCoefs[i] * rhsRatio);
+              // return if coefficient is weaker
+              if (absCoef < threshold - options->small_matrix_value)
+                return false;
+              // accept rounding if at least one coefficient is improved
+              accept =
+                  accept || (absCoef > threshold + options->small_matrix_value);
+            }
+            return accept;
+          };
+
+          // set up scalars suggested by Achterberg et al.
+          auto setScalars = [&](double minAbsCoef, double maxAbsCoef) {
+            scalars.clear();
+            scalars.emplace(1.0);
+            for (HighsInt t = 1; t <= 5; t++) {
+              scalars.emplace(t / maxAbsCoef);
+              scalars.emplace(t / minAbsCoef);
+              scalars.emplace((2 * t - 1) / (2 * minAbsCoef));
+            }
+          };
+
+          // try different scalars and return if an improving one was found
+          auto rowCanBeTightened = [&](const HighsCDouble& rhs,
+                                       HighsCDouble& roundedRhs) {
+            for (double s : scalars) {
+              if (roundRow(s, rhs, roundedRhs)) return true;
+            }
+            return false;
+          };
+
+          // replace the model row by the rounded one
+          auto updateRow = [&](HighsInt row, HighsInt direction,
+                               const HighsCDouble& roundedRhs) {
+            if (direction < 0)
+              model->row_upper_[row] = static_cast<double>(roundedRhs);
+            else
+              model->row_lower_[row] = static_cast<double>(roundedRhs);
+            for (size_t i = 0; i < rowCoefs.size(); ++i) {
+              double delta = static_cast<double>(
+                  static_cast<HighsCDouble>(roundedRowCoefs[i]) - rowCoefs[i]);
+              if (std::fabs(delta) > options->small_matrix_value)
+                addToMatrix(row, rowIndex[i], delta);
+            }
+          };
+
+          // convert to >= inequality
+          // direction = -1: <= constraint, direction = 1: >= constraint
+          HighsInt direction =
+              model->row_upper_[row] != kHighsInf ? HighsInt{-1} : HighsInt{1};
+          // get rhs
+          HighsCDouble rhs =
+              direction < 0 ? -model->row_upper_[row] : model->row_lower_[row];
+
+          // initialise
+          HighsCDouble roundedRhs = 0.0;
+          double minAbsCoef = 0.0;
+          double maxAbsCoef = 0.0;
+
+          // complement or shift variables to have lower bounds of zero
+          if (complementOrShift(direction, rhs, minAbsCoef, maxAbsCoef)) {
+            // identify scalars for row
+            setScalars(minAbsCoef, maxAbsCoef);
+            // find a scalar that produces improved coefficients
+            if (rowCanBeTightened(rhs, roundedRhs)) {
+              // undo complementation and shifting
+              undoComplementOrShift(direction, roundedRhs);
+              // replace row by rounded one
+              updateRow(row, direction, roundedRhs);
+            }
+          }
         }
       }
+
+      // check for redundancy again
+      HPRESOLVE_CHECKED_CALL(checkRowRedundant(row));
+      if (rowDeleted[row]) return Result::kOk;
 
       auto strengthenCoefs = [&](HighsCDouble& rhs, HighsInt direction,
                                  HighsCDouble maxAbsCoefValue) {
@@ -4131,9 +4288,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                                          HighsInt direction,
                                          bool isBoundImplied, HighsInt numInf) {
       if (isBoundImplied && row != -1 && numInf == 1 &&
-          direction * model->col_cost_[col] >= 0 &&
-          (model->row_lower_[row] == -kHighsInf ||
-           model->row_upper_[row] == kHighsInf)) {
+          direction * model->col_cost_[col] >= 0 && !isRanged(row)) {
         HighsInt nzPos = findNonzero(row, col);
 
         if (model->integrality_[col] != HighsVarType::kInteger ||
@@ -5511,9 +5666,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
   for (HighsInt row = 0; row != model->num_row_; ++row) {
     if (rowsize[row] <= 1) continue;
-    if (model->row_lower_[row] != -kHighsInf &&
-        model->row_upper_[row] != kHighsInf)
-      continue;
+    if (isRanged(row)) continue;
 
     // do not run on very dense rows as this could get expensive
     HighsInt rowsize_limit =
