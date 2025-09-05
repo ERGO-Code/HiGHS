@@ -1173,14 +1173,6 @@ class Highs {
                           const double* value);
 
   /**
-   * @brief Set up a solution for QPs, which requires both a
-   * HighsSolution and HighsBasis instance
-   */
-  HighsStatus setQpSolution(const HighsSolution& solution,
-			    const HighsBasis& basis,
-			    const std::string& origin = "");
-
-  /**
    * @brief Set the callback method to use for HiGHS
    */
   HighsStatus setCallback(HighsCallbackFunctionType user_callback,

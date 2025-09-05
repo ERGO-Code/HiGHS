@@ -2333,20 +2333,6 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
                              return_status, "setSolution");
 }
 
-HighsStatus Highs::setQpSolution(const HighsSolution& solution,
-				 const HighsBasis& basis,
-				 const std::string& origin) {
-  if (this->setSolution(solution) != HighsStatus::kOk) return HighsStatus::kError;
-  if (this->setBasis(basis, origin) != HighsStatus::kOk) return HighsStatus::kError;
-  
-  // Check that the basis is consistent with the solution
-  model_.lp_.a_matrix_.product(solution_.row_value, solution_.col_value);
-  
-
-  HighsStatus return_status = HighsStatus::kError;
-  return return_status;
-}
-
 HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
                                void* user_callback_data) {
   this->callback_.clear();
