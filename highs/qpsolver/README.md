@@ -114,8 +114,8 @@ Hence $y$ parameterises $x$ in the null space.
 
 Active set methods form and operate with $Y$ and $Z$ by identifying a
 matrix $V\in\R^{(n-r)\times n}$ such that
-$B_{\cal{A}}\displaystyle\left[\begin{matrix}A_{\cal{A}}\\V\end{matrix}\right]$
-is well conditioned, so
+$\displaystyle B_{\cal{A}}=\left[\begin{matrix}A_{\cal{A}}\\V\end{matrix}\right]$
+is well conditioned, so that
 $\left[\begin{matrix}Y&Z\end{matrix}\right]=B_{\cal{A}}^{-1}$. Note
 that $Y$ and $Z$ are not formed explicitly since, for example,
 $Yb_{\cal{A}}$ can be formed by factorizing $B$ and solving
@@ -133,6 +133,53 @@ Z^TQZy = -Z^T(c+QYb_{\cal{A}})\qquad(3)
 $$
 The matrix $Z^TQZ$ is known as the **reduced Hessian**.
 
+### Outline ASM algorithm
 
+The following algorithmic definition is from Fletcher's _Practical
+Methods of Optimization_, Chapter 10, which also illustrates it
+qualitatively. Key to the definition is the **equality problem**, 
+$$
+\min~ \frac{1}{2}\delta^TQ\delta + \delta^Tg^{(k)}\quad \textrm{s.t.}~ a_i^T\delta=0, i\in\cal{A},
+$$
+where $g^{(k)}=Qx^{(k)}+c$. This problem minimizes the QP objective in the null space of the active constraints at a point $x^{(k)}$. Also, the set of inequalities in the QP is denoted $\cal{I}$.
 
-and its properties are critical to the performance of 
+1. Given feasible $x^{(1)}$ and $\cal{A}$, set $k=1$
+2. If $\delta=0$ does not solve the equality proble, go to 4.
+3. Compute Lagrange multipliers $\lambda^{(k)}$ for the equality
+problem and use the following to determine $q$. If
+$\textrm{sgn}(q)\lambda^{(k)}_q\ge0$, then terminate with
+$x^*=x^{(k)}$, otherwise remove $q$ from $\cal{A}$.
+$$
+q=\argmin_{\cal{A}\cap\cal{I}} \textrm{sgn}(i)\lambda^{(k)}_i\quad\textrm{where}~\textrm{sgn}(i) = \begin{cases}\phantom{-}1,~~a_i^Tx=L_i\\ -1,~~a_i^Tx=U_i\end{cases}
+$$
+4. Solve the equality problem for $s^{(k)}$
+5. Find $\alpha^{(k)}$ to solve the following **linesearch problem** and set $x^{(k+1)} = x^{(k)} + \alpha^{(k)}s^{(k)}$.
+$$
+\alpha^{(k)} = \min\left(1, 
+\min_{i: i\not\in\cal{A}, a_i^Ts^{(k)}<0} \frac{L_i-a_i^Tx^{(k)}}{a_i^Ts^{(k)}},
+\min_{i: i\not\in\cal{A}, a_i^Ts^{(k)}>0} \frac{U_i-a_i^Tx^{(k)}}{a_i^Ts^{(k)}}
+\right)
+$$
+6. If $\alpha^{(k)}<1$ then add $p$ to $\cal{A}$, where $p\not\in\cal{A}$ yields $\alpha^{(k)}$
+7. Set $k=k+1$ and go to 2.
+
+In essence, the algorithm solves the equality problem repeatedly,
+allowing constraints to become inactive if they will improve the
+objective (deducing optimality if none will do so) and forcing
+constraints to be active if they would be violated at the minimizer of
+the equality problem. It can be seen to be a generalisation of the
+primal simplex method, where nonbasic variables are allowed to move
+from bounds at vertices to improve the objective, to be replaced by
+basic variables which reach bounds. Since the primal simplex method is
+always at a vertex, the null space is trivial, and since there is no
+local minimizer along an edge of the polytope, a limiting basic
+variables is always found (for an LP that is not unbounded).
+
+### Practicalities
+
+The algorithm assumes that $x^{(1)}$ is feasible. This can be found by
+using the simplex algorithm to solve the LP feasibility problem. This
+yields a vertex solution, so the initial null space is empty. The
+simplex nonbasic variables yield $\cal{A}$, for which the matrix
+$B_{\cal{A}}$ is nonsingular since it has the same kernel as the
+simplex basis matrix.
