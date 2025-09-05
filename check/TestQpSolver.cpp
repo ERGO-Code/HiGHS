@@ -954,6 +954,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
       const std::string filename =
           std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
       REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+      highs.getBasis().print("test-qp-hot-start");
       required_objective_function_value = -0.035012965733477348;
     } else if (k == 2) {
       // Not currently tested
@@ -1001,7 +1002,9 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
           "================\n");
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
-    REQUIRE(info.qp_iteration_count == 0);
+    // Since #2521, cannot expect zero iteration count
+    //
+    // REQUIRE(info.qp_iteration_count == 0);
 
     if (dev_run)
       printf(
@@ -1011,7 +1014,9 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     highs.setBasis(basis);
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
-    REQUIRE(info.qp_iteration_count == 0);
+    // Since #2521, cannot expect zero iteration count
+    //
+    // REQUIRE(info.qp_iteration_count == 0);
 
     // QP Hot start needs a saved solution as well as a basis after
     // clearSolver()
@@ -1025,7 +1030,9 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     highs.setBasis(basis);
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
-    REQUIRE(info.qp_iteration_count == 0);
+    // Since #2521, cannot expect zero iteration count
+    //
+    // REQUIRE(info.qp_iteration_count == 0);
     /*
         if (dev_run)
     printf("=================================================\n"
@@ -1049,7 +1056,9 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     basis.alien = true;
     highs.setBasis(basis);
     REQUIRE(highs.run() == HighsStatus::kOk);
-    REQUIRE(info.qp_iteration_count == 0);
+    // Since #2521, cannot expect zero iteration count
+    //
+    // REQUIRE(info.qp_iteration_count == 0);
     if (k == 0) {
       // Modify the constraint so that the solution and basis are not
       // feasible and one iteration is needed

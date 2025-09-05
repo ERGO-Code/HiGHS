@@ -314,6 +314,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   HighsStatus return_status = HighsStatus::kOk;
   // Clear the incumbent model and any associated data
   clearModel();
+  basis_.print("Highs::passModel(HighsModel model) after clearModel()");
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
   // Move the model's LP and Hessian to the internal LP and Hessian
@@ -377,12 +378,15 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
+  basis_.print("Highs::passModel(HighsModel model) before clearSolver()");
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
+  basis_.print("Highs::passModel(HighsModel model) after clearSolver()");
   // Apply any user scaling in call to optionChangeAction
   return_status =
       interpretCallStatus(options_.log_options, optionChangeAction(),
                           return_status, "optionChangeAction");
+  basis_.print("Highs::passModel(HighsModel model) exit");
   return returnFromHighs(return_status);
 }
 

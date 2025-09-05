@@ -5,151 +5,128 @@
 #include "qpsolver/a_asm.hpp"
 #include "qpsolver/crashsolution.hpp"
 
-static void computeStartingPointHighs(
+static void computeStartingPointByLp(
     Instance& instance, Settings& settings, Statistics& stats,
     QpModelStatus& modelstatus, QpHotstartInformation& result,
-    HighsModelStatus& highs_model_status, HighsBasis& highs_basis,
-    HighsSolution& highs_solution, HighsTimer& timer) {
-  bool have_starting_point = false;
-  const bool debug_report = false;
-  if (highs_solution.value_valid) {
-    // #1350 add primal_feasibility_tolerance to settings
-    const double primal_feasibility_tolerance = settings.lambda_zero_threshold;
+    //    HighsModelStatus& highs_model_status,
+    const HighsBasis& highs_basis,
+    const HighsSolution& highs_solution,
+    HighsTimer& timer) {
+  // Compute initial feasible point by solving an LP
+  Highs highs;
+  // set HiGHS to be silent
+  highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("presolve", kHighsOnString);
+  // Set the residual time limit
+  const double use_time_limit =
+    std::max(settings.time_limit - timer.read(), 0.001);
+  highs.setOptionValue("time_limit", use_time_limit);
 
-    HighsInt num_var_infeasibilities = 0;
-    double max_var_infeasibility = 0;
-    double sum_var_infeasibilities = 0;
-    HighsInt num_con_infeasibilities = 0;
-    double max_con_infeasibility = 0;
-    double sum_con_infeasibilities = 0;
-    double max_con_residual = 0;
-    double sum_con_residuals = 0;
+  HighsLp lp;
+  lp.a_matrix_.index_ = instance.A.mat.index;
+  lp.a_matrix_.start_ = instance.A.mat.start;
+  lp.a_matrix_.value_ = instance.A.mat.value;
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.col_cost_.assign(instance.num_var, 0.0);
+  // lp.col_cost_ = runtime.instance.c.value;
+  lp.col_lower_ = instance.var_lo;
+  lp.col_upper_ = instance.var_up;
+  lp.row_lower_ = instance.con_lo;
+  lp.row_upper_ = instance.con_up;
+  lp.num_col_ = instance.num_var;
+  lp.num_row_ = instance.num_con;
 
-    assessQpPrimalFeasibility(
-        instance, primal_feasibility_tolerance, highs_solution.col_value,
-        highs_solution.row_value, num_var_infeasibilities,
-        max_var_infeasibility, sum_var_infeasibilities, num_con_infeasibilities,
-        max_con_infeasibility, sum_con_infeasibilities, max_con_residual,
-        sum_con_residuals);
-
-    if (debug_report)
-      printf(
-          "computeStartingPointHighs highs_solution has (num / max / sum) "
-          "var (%d / %g / %g) and "
-          "con (%d / %g / %g) infeasibilities "
-          "with (max = %g; sum = %g) residuals\n",
-          int(num_var_infeasibilities), max_var_infeasibility,
-          sum_var_infeasibilities, int(num_con_infeasibilities),
-          max_con_infeasibility, sum_con_infeasibilities, max_con_residual,
-          sum_con_residuals);
-    have_starting_point = num_var_infeasibilities == 0 &&
-                          num_con_infeasibilities == 0 && highs_basis.valid;
+  // create artificial bounds for free variables: false by default
+  assert(!settings.phase1boundfreevars);
+  if (settings.phase1boundfreevars) {
+    for (HighsInt i = 0; i < instance.num_var; i++) {
+      if (isfreevar(instance, i)) {
+	lp.col_lower_[i] = -1E5;
+	lp.col_upper_[i] = 1E5;
+      }
+    }
   }
-  // compute initial feasible point
-  HighsBasis use_basis;
-  HighsSolution use_solution;
-  if (have_starting_point) {
-    use_basis = highs_basis;
-    use_solution = highs_solution;
-    // Have to assume that the supplied basis is feasible
+  highs.passModel(lp);
+  // Use any solution or basis from HiGHS that is of the right size
+  HighsSolution solution = highs_solution;
+  HighsBasis basis = highs_basis;
+  bool have_starting_basis = true;
+  bool have_starting_solution = true;
+  if (basis.col_status.size() != static_cast<size_t>(lp.num_col_) ||
+      basis.row_status.size() != static_cast<size_t>(lp.num_row_)) {
+    have_starting_basis = false;
+    basis.clear();
+  }
+  if (solution.col_value.size() != static_cast<size_t>(lp.num_col_)) {
+    have_starting_solution = false;
+    solution.clear();
+  }
+  bool have_starting_point = have_starting_basis || have_starting_solution;
+
+  assert(basis.col_status.size() == 0 || basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+  assert(basis.row_status.size() == 0 || basis.row_status.size() == static_cast<size_t>(lp.num_row_));
+  assert(solution.col_value.size() == 0 || solution.col_value.size() == static_cast<size_t>(lp.num_col_));
+      
+  // Make free variables basic: false by default
+  assert(!settings.phase1movefreevarsbasic);
+  if (settings.phase1movefreevarsbasic) {
+    if (basis.col_status.size() == 0) basis.col_status.assign(lp.num_col_, HighsBasisStatus::kNonbasic);
+    if (basis.row_status.size() == 0) basis.row_status.assign(lp.num_row_, HighsBasisStatus::kNonbasic);
+    HighsInt num_change_status = 0;
+    for (HighsInt i = 0; i < instance.num_var; i++) {
+      // make free variables basic
+      if (instance.var_lo[i] == -kHighsInf &&
+	  instance.var_up[i] == kHighsInf &&
+	  basis.col_status[i] != HighsBasisStatus::kBasic) {
+	basis.col_status[i] = HighsBasisStatus::kBasic;
+	num_change_status++;
+      }
+    }
+    if (num_change_status) {
+      basis.valid = false;
+      basis.alien = true;
+    }
+    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
+  }
+  // Pass the solution and basis (in that order since setSolution
+  // invalidates Highs::basis_)
+  highs.setSolution(solution);
+  highs.setBasis(basis);
+
+  HighsStatus status = highs.run();
+  if (status == HighsStatus::kError) {
+    modelstatus = QpModelStatus::kError;
+    return;
+  }
+
+  HighsModelStatus phase1stat = highs.getModelStatus();
+  switch (phase1stat) {
+  case HighsModelStatus::kOptimal:
     modelstatus = QpModelStatus::kNotset;
-  } else {
-    Highs highs;
-
-    // set HiGHS to be silent
-    highs.setOptionValue("output_flag", false);
-    highs.setOptionValue("presolve", kHighsOnString);
-    // Set the residual time limit
-    const double use_time_limit =
-        std::max(settings.time_limit - timer.read(), 0.001);
-    highs.setOptionValue("time_limit", use_time_limit);
-
-    HighsLp lp;
-    lp.a_matrix_.index_ = instance.A.mat.index;
-    lp.a_matrix_.start_ = instance.A.mat.start;
-    lp.a_matrix_.value_ = instance.A.mat.value;
-    lp.a_matrix_.format_ = MatrixFormat::kColwise;
-    lp.col_cost_.assign(instance.num_var, 0.0);
-    // lp.col_cost_ = runtime.instance.c.value;
-    lp.col_lower_ = instance.var_lo;
-    lp.col_upper_ = instance.var_up;
-    lp.row_lower_ = instance.con_lo;
-    lp.row_upper_ = instance.con_up;
-    lp.num_col_ = instance.num_var;
-    lp.num_row_ = instance.num_con;
-
-    // create artificial bounds for free variables: false by default
-    assert(!settings.phase1boundfreevars);
-    if (settings.phase1boundfreevars) {
-      for (HighsInt i = 0; i < instance.num_var; i++) {
-        if (isfreevar(instance, i)) {
-          lp.col_lower_[i] = -1E5;
-          lp.col_upper_[i] = 1E5;
-        }
-      }
-    }
-
-    highs.passModel(lp);
-    // Make free variables basic: false by default
-    assert(!settings.phase1movefreevarsbasic);
-    if (settings.phase1movefreevarsbasic) {
-      HighsBasis basis;
-      basis.alien = true;  // Set true when basis is instantiated
-      for (HighsInt i = 0; i < instance.num_con; i++) {
-        basis.row_status.push_back(HighsBasisStatus::kNonbasic);
-      }
-
-      for (HighsInt i = 0; i < instance.num_var; i++) {
-        // make free variables basic
-        if (instance.var_lo[i] == -kHighsInf &&
-            instance.var_up[i] == kHighsInf) {
-          // free variable
-          basis.col_status.push_back(HighsBasisStatus::kBasic);
-        } else {
-          basis.col_status.push_back(HighsBasisStatus::kNonbasic);
-        }
-      }
-
-      highs.setBasis(basis);
-
-      highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
-    }
-
-    HighsStatus status = highs.run();
-    if (status == HighsStatus::kError) {
-      modelstatus = QpModelStatus::kError;
-      return;
-    }
-
-    HighsModelStatus phase1stat = highs.getModelStatus();
-    switch (phase1stat) {
-      case HighsModelStatus::kOptimal:
-        modelstatus = QpModelStatus::kNotset;
-        break;
-      case HighsModelStatus::kInfeasible:
-        modelstatus = QpModelStatus::kInfeasible;
-        break;
-      case HighsModelStatus::kTimeLimit:
-        modelstatus = QpModelStatus::kTimeLimit;
-        break;
-      case HighsModelStatus::kInterrupt:
-        modelstatus = QpModelStatus::kInterrupt;
-        break;
-      default:
-        modelstatus = QpModelStatus::kError;
-    }
-
-    stats.phase1_iterations = highs.getInfo().simplex_iteration_count;
-
-    if (modelstatus != QpModelStatus::kNotset) return;
-
-    // Should only get here if feasibility problem is solved to
-    // optimality - hence there is a feasible basis
-    assert(phase1stat == HighsModelStatus::kOptimal);
-
-    use_basis = highs.getBasis();
-    use_solution = highs.getSolution();
+    break;
+  case HighsModelStatus::kInfeasible:
+    modelstatus = QpModelStatus::kInfeasible;
+    break;
+  case HighsModelStatus::kTimeLimit:
+    modelstatus = QpModelStatus::kTimeLimit;
+    break;
+  case HighsModelStatus::kInterrupt:
+    modelstatus = QpModelStatus::kInterrupt;
+    break;
+  default:
+    modelstatus = QpModelStatus::kError;
   }
+
+  stats.phase1_iterations = highs.getInfo().simplex_iteration_count;
+
+  if (modelstatus != QpModelStatus::kNotset) return;
+
+  // Should only get here if feasibility problem is solved to
+  // optimality - hence there is a feasible basis
+  assert(phase1stat == HighsModelStatus::kOptimal);
+
+  const HighsBasis& use_basis = highs.getBasis();
+  const HighsSolution& use_solution = highs.getSolution();
 
   HighsInt num_small_x0 = 0;
   HighsInt num_small_ra = 0;
@@ -173,6 +150,7 @@ static void computeStartingPointHighs(
       num_small_ra++;
     }
   }
+  const bool debug_report = false;
   if (debug_report && num_small_x0 + num_small_ra)
     printf(
         "feasibility_highs has %d small col values and %d small row values\n",
