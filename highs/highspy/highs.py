@@ -179,6 +179,27 @@ class Highs(_Highs):
         """
         return self.solve()
 
+
+    def getObjective(self):
+        """
+        Retrieves the current objective function (as a linear expression) and sense.
+        """
+        lp = super().getLp()
+
+        objective = highs_linear_expression()
+        objective.idxs = list(range(self.numVariables))
+        objective.vals = lp.col_cost_
+        objective.constant = lp.offset_
+
+        # remove non-zero elements
+        # TODO: performance can be improved since we know idxs are unique
+        idx, val = objective.reduced_elements()
+        objective.idxs = idx.tolist()
+        objective.vals = val.tolist()
+
+        return objective, super().getObjectiveSense()[1]
+
+
     # reset the objective
     def setObjective(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None, sense: Optional[ObjSense] = None):
         """
