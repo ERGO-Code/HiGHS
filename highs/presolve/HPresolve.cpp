@@ -1613,12 +1613,20 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (cliquetable.getSubstitution(i) != nullptr || !domain.isBinary(i))
         continue;
 
+      bool tightenLimits = (numProbed - oldNumProbed) >= 2500;
+
       // when a large percentage of columns have been deleted, stop this round
       // of probing
       // if (numDel > std::max(model->num_col_ * 0.2, 1000.)) break;
-      probingEarlyAbort =
-          numDel >
-          std::max(HighsInt{1000}, (model->num_row_ + model->num_col_) / 20);
+      if (!tightenLimits) {
+        probingEarlyAbort =
+            numDel >
+            std::max(HighsInt{1000}, (model->num_row_ + model->num_col_) / 20);
+      } else {
+        probingEarlyAbort =
+            numDel >
+            std::min(HighsInt{1000}, (model->num_row_ + model->num_col_) / 20);
+      }
       if (probingEarlyAbort) break;
 
       // break in case of too many new implications to not spent ages in
@@ -1665,7 +1673,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         numDel = newNumDel;
         numFail = 0;
       } else if (mipsolver->submip || numNewCliques == 0) {
-        splayContingent -= 100 * numFail;
+        splayContingent -= (tightenLimits ? 250 : 100) * numFail;
         ++numFail;
       } else {
         splayContingent += 1000 * numNewCliques;
