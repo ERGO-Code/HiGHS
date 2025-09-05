@@ -4376,68 +4376,31 @@ void Highs::forceHighsSolutionBasisSize() {
   // HighsBasis and HighsInfo
   const HighsInt num_col = this->model_.lp_.num_col_;
   const HighsInt num_row = this->model_.lp_.num_row_;
-  HighsInt previous_size;
-  // Col values
-  previous_size = static_cast<HighsInt>(solution_.col_value.size());
-  solution_.col_value.resize(num_col);
-  if (previous_size < num_col) {
-    for (HighsInt iCol = previous_size; iCol < num_col; iCol++)
-      solution_.col_value[iCol] = 0;
+  // Values
+  if (solution_.col_value.size() < static_cast<size_t>(num_col) ||
+      solution_.row_value.size() < static_cast<size_t>(num_row)) {
     solution_.value_valid = false;
     info_.primal_solution_status = kSolutionStatusNone;
   }
-  // Row values
-  previous_size = static_cast<HighsInt>(solution_.row_value.size());
-  solution_.row_value.resize(num_row);
-  if (previous_size < num_row) {
-    for (HighsInt iRow = previous_size; iRow < num_row; iRow++)
-      solution_.row_value[iRow] = 0;
-    solution_.value_valid = false;
-    info_.primal_solution_status = kSolutionStatusNone;
-  }
-  // Col duals
-  previous_size = static_cast<HighsInt>(solution_.col_dual.size());
-  solution_.col_dual.resize(num_col);
-  if (previous_size < num_col) {
-    for (HighsInt iCol = previous_size; iCol < num_col; iCol++)
-      solution_.col_dual[iCol] = 0;
+  solution_.col_value.resize(num_col, 0);
+  solution_.row_value.resize(num_row, 0);
+  // Duals
+  if (solution_.col_dual.size() < static_cast<size_t>(num_col) ||
+      solution_.row_dual.size() < static_cast<size_t>(num_row)) {
     solution_.dual_valid = false;
     info_.dual_solution_status = kSolutionStatusNone;
   }
-  // Row duals
-  previous_size = static_cast<HighsInt>(solution_.row_dual.size());
-  solution_.row_dual.resize(num_row);
-  if (previous_size < num_row) {
-    for (HighsInt iRow = previous_size; iRow < num_row; iRow++)
-      solution_.row_dual[iRow] = 0;
-    solution_.dual_valid = false;
-    info_.dual_solution_status = kSolutionStatusNone;
-  }
-
-  // Ensure that the HiGHS basis vectors are the right size,
-  // invalidating the basis if they aren't
-  previous_size = static_cast<HighsInt>(basis_.col_status.size());
-  if (previous_size != num_col) {
-    basis_.col_status.resize(num_col);
-    if (previous_size < num_col) {
-      for (HighsInt iCol = previous_size; iCol < num_col; iCol++)
-        basis_.col_status[iCol] = HighsBasisStatus::kNonbasic;
-    }
+  solution_.col_dual.resize(num_col, 0);
+  solution_.row_dual.resize(num_row, 0);
+  // Basis
+  if (basis_.col_status.size() != static_cast<size_t>(num_col) ||
+      basis_.row_status.size() != static_cast<size_t>(num_row)) {
     basis_.valid = false;
     basis_.useful = false;
     info_.basis_validity = kBasisValidityInvalid;
   }
-  previous_size = static_cast<HighsInt>(basis_.row_status.size());
-  if (previous_size != num_row) {
-    basis_.row_status.resize(num_row);
-    if (previous_size < num_row) {
-      for (HighsInt iRow = previous_size; iRow < num_row; iRow++)
-        basis_.row_status[iRow] = HighsBasisStatus::kBasic;
-    }
-    basis_.valid = false;
-    basis_.useful = false;
-    info_.basis_validity = kBasisValidityInvalid;
-  }
+  basis_.col_status.resize(num_col, HighsBasisStatus::kNonbasic);
+  basis_.row_status.resize(num_row, HighsBasisStatus::kBasic);
 }
 
 void Highs::setHighsModelStatusAndClearSolutionAndBasis(
