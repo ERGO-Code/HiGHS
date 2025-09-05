@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = false;
+const bool dev_run = true;//false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
@@ -1156,17 +1156,9 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
   const HighsBasis& basis_ = h.getBasis();
   REQUIRE(model.lp_.row_lower_[1] == 0.26);
 
-  const bool hot_start = false;
+  const bool hot_start = true;
   for (HighsInt k= 0; k < 2; k++) {
     REQUIRE(h.run() == HighsStatus::kOk);
-    if (k == 0) {
-      const double objective0 = h.getInfo().objective_function_value;
-      REQUIRE(std::fabs(objective0 - required_objective0) < 1e-4);
-    } else {
-      const double objective1 = h.getInfo().objective_function_value;
-      REQUIRE(std::fabs(objective1 - required_objective1) < 1e-4);
-    }      
-  
     HighsSolution solution = h.getSolution();
     HighsBasis basis = basis_;
 
@@ -1180,6 +1172,8 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
       double value = solution.col_value[iCol];
       double rsdu = std::min(value-lower, upper-value);
       HighsBasisStatus status = basis_.col_status[iCol];
+      printf("%2d [%11.4g, %11.4g, %11.4g] %11.4g %s\n",
+	     int(iCol), lower, value, upper, rsdu, h.basisStatusToString(status).c_str());
       if (status == HighsBasisStatus::kBasic) {
 	num_basic++;
       } else if (status == HighsBasisStatus::kNonbasic) {
@@ -1187,8 +1181,6 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
       } else {
 	REQUIRE(rsdu <= primal_feasibility_tolerance);
       }
-      printf("%2d [%11.4g, %11.4g, %11.4g] %11.4g %s\n",
-	     int(iCol), lower, value, upper, rsdu, h.basisStatusToString(status).c_str());
     }
   
     printf("Rows\n");
@@ -1198,6 +1190,8 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
       double value = solution.row_value[iRow];
       double rsdu = std::min(value-lower, upper-value);
       HighsBasisStatus status = basis_.row_status[iRow];
+      printf("%2d [%11.4g, %11.4g, %11.4g] %11.4g %s\n",
+	   int(iRow), lower, value, upper, rsdu, h.basisStatusToString(status).c_str());
       if (status == HighsBasisStatus::kBasic) {
 	num_basic++;
       } else if (status == HighsBasisStatus::kNonbasic) {
@@ -1205,10 +1199,17 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
       } else {
 	REQUIRE(rsdu <= primal_feasibility_tolerance);
       }
-      printf("%2d [%11.4g, %11.4g, %11.4g] %11.4g %s\n",
-	   int(iRow), lower, value, upper, rsdu, h.basisStatusToString(status).c_str());
     }
     printf("QP has %d basic and %d nonbasic variables\n", int(num_basic), int(num_non_basic));
+
+    if (k == 0) {
+      const double objective0 = h.getInfo().objective_function_value;
+      REQUIRE(std::fabs(objective0 - required_objective0) < 1e-4);
+    } else {
+      const double objective1 = h.getInfo().objective_function_value;
+      REQUIRE(std::fabs(objective1 - required_objective1) < 1e-4);
+    }      
+  
     double lower = 0.25;
     double upper = kHighsInf;
     h.changeRowBounds(1, lower, upper);
