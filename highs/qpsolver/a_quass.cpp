@@ -128,13 +128,15 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
 
   QpSolution qp_solution(instance);
 
-  // presolve
+  // To be done!
+  //
+  // * Presolve
+  //
+  // * Scaling
+  //
+  // * Perturbation
 
-  // scale instance, store scaling factors
-
-  // perturb instance, store perturbance information
-
-  // regularize
+  // Regularize
   for (HighsInt i = 0; i < instance.num_var; i++) {
     for (HighsInt index = instance.Q.mat.start[i];
          index < instance.Q.mat.start[i + 1]; index++) {
@@ -144,7 +146,18 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
     }
   }
 
-  // compute initial feasible point
+  // Determine an initial feasible point
+  //
+  // Cold start uses simplex to solve the LP feasibility problem to
+  // obtain a feasible vertex
+  //
+  // Hot start is currently limited to using the basis (and solution,
+  // if there is no basis) to hot start simplex when solving the LP
+  // feasibility problem
+  //
+  // It should be possible to hot start by using the QP basis to
+  // construct x = Yb, where Y and b correspond to the active
+  // constraints, and form the null space data structures
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
   if (instance.num_con == 0 && instance.num_var <= 15000) {
     computeStartingPointBounded(instance, settings, stats, qp_model_status,
@@ -162,10 +175,9 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
     }
   } else {
     computeStartingPointByLp(instance, settings, stats, qp_model_status,
-			     startinfo,
-			     //			     highs_model_status,
-			     highs_basis,
-			     highs_solution, qp_timer);
+                             startinfo,
+                             //			     highs_model_status,
+                             highs_basis, highs_solution, qp_timer);
     if (qp_model_status != QpModelStatus::kNotset) {
       return quass2highs(instance, settings, stats, qp_model_status,
                          qp_solution, highs_model_status, highs_basis,
@@ -177,11 +189,13 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
   solveqp_actual(instance, settings, startinfo, stats, qp_model_status,
                  qp_solution, qp_timer);
 
-  // undo perturbation and resolve
-
-  // undo scaling and resolve
-
-  // postsolve
+  // To be done!
+  //
+  // * Undo perturbation and resolve
+  //
+  // * Undo scaling and resolve
+  //
+  // * Postsolve
 
   // Transform QP status and qp_solution to HiGHS highs_basis and highs_solution
   return quass2highs(instance, settings, stats, qp_model_status, qp_solution,

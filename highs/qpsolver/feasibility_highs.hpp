@@ -5,13 +5,14 @@
 #include "qpsolver/a_asm.hpp"
 #include "qpsolver/crashsolution.hpp"
 
-static void computeStartingPointByLp(
-    Instance& instance, Settings& settings, Statistics& stats,
-    QpModelStatus& modelstatus, QpHotstartInformation& result,
-    //    HighsModelStatus& highs_model_status,
-    const HighsBasis& highs_basis,
-    const HighsSolution& highs_solution,
-    HighsTimer& timer) {
+static void computeStartingPointByLp(Instance& instance, Settings& settings,
+                                     Statistics& stats,
+                                     QpModelStatus& modelstatus,
+                                     QpHotstartInformation& result,
+                                     //    HighsModelStatus& highs_model_status,
+                                     const HighsBasis& highs_basis,
+                                     const HighsSolution& highs_solution,
+                                     HighsTimer& timer) {
   // Compute initial feasible point by solving an LP
   Highs highs;
   // set HiGHS to be silent
@@ -19,7 +20,7 @@ static void computeStartingPointByLp(
   highs.setOptionValue("presolve", kHighsOnString);
   // Set the residual time limit
   const double use_time_limit =
-    std::max(settings.time_limit - timer.read(), 0.001);
+      std::max(settings.time_limit - timer.read(), 0.001);
   highs.setOptionValue("time_limit", use_time_limit);
 
   HighsLp lp;
@@ -41,45 +42,40 @@ static void computeStartingPointByLp(
   if (settings.phase1boundfreevars) {
     for (HighsInt i = 0; i < instance.num_var; i++) {
       if (isfreevar(instance, i)) {
-	lp.col_lower_[i] = -1E5;
-	lp.col_upper_[i] = 1E5;
+        lp.col_lower_[i] = -1E5;
+        lp.col_upper_[i] = 1E5;
       }
     }
   }
   highs.passModel(lp);
-  // Use any solution or basis from HiGHS that is of the right size
-  HighsSolution solution = highs_solution;
-  HighsBasis basis = highs_basis;
-  bool have_starting_basis = true;
-  bool have_starting_solution = true;
-  if (basis.col_status.size() != static_cast<size_t>(lp.num_col_) ||
-      basis.row_status.size() != static_cast<size_t>(lp.num_row_)) {
-    have_starting_basis = false;
-    basis.clear();
-  }
-  if (solution.col_value.size() != static_cast<size_t>(lp.num_col_)) {
-    have_starting_solution = false;
-    solution.clear();
-  }
+  // Use any solution or basis from HiGHS that is useful
+  HighsSolution solution;
+  HighsBasis basis;
+  bool have_starting_basis = basis.useful;
+  bool have_starting_solution = solution.value_valid != kSolutionStatusNone;
+  if (highs_basis.col_status.size() != static_cast<size_t>(lp.num_col_) ||
+      highs_basis.row_status.size() != static_cast<size_t>(lp.num_row_))
+    assert(!have_starting_basis);
+  if (solution.col_value.size() != static_cast<size_t>(lp.num_col_))
+    assert(!have_starting_solution);
   bool have_starting_point = have_starting_basis || have_starting_solution;
+  if (have_starting_basis) basis = highs_basis;
+  if (have_starting_solution) solution = highs_solution;
 
-  assert(basis.col_status.size() == 0 || basis.col_status.size() == static_cast<size_t>(lp.num_col_));
-  assert(basis.row_status.size() == 0 || basis.row_status.size() == static_cast<size_t>(lp.num_row_));
-  assert(solution.col_value.size() == 0 || solution.col_value.size() == static_cast<size_t>(lp.num_col_));
-      
-  // Make free variables basic: false by default
+  // Possibly make free variables basic (false by default)
   assert(!settings.phase1movefreevarsbasic);
   if (settings.phase1movefreevarsbasic) {
-    if (basis.col_status.size() == 0) basis.col_status.assign(lp.num_col_, HighsBasisStatus::kNonbasic);
-    if (basis.row_status.size() == 0) basis.row_status.assign(lp.num_row_, HighsBasisStatus::kNonbasic);
+    if (basis.col_status.size() == 0)
+      basis.col_status.assign(lp.num_col_, HighsBasisStatus::kNonbasic);
+    if (basis.row_status.size() == 0)
+      basis.row_status.assign(lp.num_row_, HighsBasisStatus::kNonbasic);
     HighsInt num_change_status = 0;
     for (HighsInt i = 0; i < instance.num_var; i++) {
       // make free variables basic
-      if (instance.var_lo[i] == -kHighsInf &&
-	  instance.var_up[i] == kHighsInf &&
-	  basis.col_status[i] != HighsBasisStatus::kBasic) {
-	basis.col_status[i] = HighsBasisStatus::kBasic;
-	num_change_status++;
+      if (instance.var_lo[i] == -kHighsInf && instance.var_up[i] == kHighsInf &&
+          basis.col_status[i] != HighsBasisStatus::kBasic) {
+        basis.col_status[i] = HighsBasisStatus::kBasic;
+        num_change_status++;
       }
     }
     if (num_change_status) {
@@ -88,33 +84,32 @@ static void computeStartingPointByLp(
     }
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
   }
-  // Pass the solution and basis (in that order since setSolution
-  // invalidates Highs::basis_)
-  highs.setSolution(solution);
-  highs.setBasis(basis);
-
+  if (have_starting_basis) {
+    highs.setBasis(basis);
+  } else if (have_starting_solution) {
+    highs.setSolution(solution);
+  }
   HighsStatus status = highs.run();
   if (status == HighsStatus::kError) {
     modelstatus = QpModelStatus::kError;
     return;
   }
-
   HighsModelStatus phase1stat = highs.getModelStatus();
   switch (phase1stat) {
-  case HighsModelStatus::kOptimal:
-    modelstatus = QpModelStatus::kNotset;
-    break;
-  case HighsModelStatus::kInfeasible:
-    modelstatus = QpModelStatus::kInfeasible;
-    break;
-  case HighsModelStatus::kTimeLimit:
-    modelstatus = QpModelStatus::kTimeLimit;
-    break;
-  case HighsModelStatus::kInterrupt:
-    modelstatus = QpModelStatus::kInterrupt;
-    break;
-  default:
-    modelstatus = QpModelStatus::kError;
+    case HighsModelStatus::kOptimal:
+      modelstatus = QpModelStatus::kNotset;
+      break;
+    case HighsModelStatus::kInfeasible:
+      modelstatus = QpModelStatus::kInfeasible;
+      break;
+    case HighsModelStatus::kTimeLimit:
+      modelstatus = QpModelStatus::kTimeLimit;
+      break;
+    case HighsModelStatus::kInterrupt:
+      modelstatus = QpModelStatus::kInterrupt;
+      break;
+    default:
+      modelstatus = QpModelStatus::kError;
   }
 
   stats.phase1_iterations = highs.getInfo().simplex_iteration_count;
@@ -173,9 +168,9 @@ static void computeStartingPointByLp(
       initial_active.push_back(i);
       initial_status.push_back(BasisStatus::kActiveAtUpper);
     } else if (status == HighsBasisStatus::kZero) {
-      // Shouldn't happen, since free rows are basic in a logical
-      // basis and remain basic, or are removed by presolve and
-      // restored as basic in postsolve
+      // This case shouldn't happen, since free rows are basic in a
+      // logical basis and remain basic, or are removed by presolve
+      // and restored as basic in postsolve
       assert(111 == 222);
       // That said, a free row that is nonbasic in the Highs basis
       // must be counted as inactive in the QP basis for accounting
@@ -183,15 +178,13 @@ static void computeStartingPointByLp(
       initial_inactive.push_back(i);
     } else if (status != HighsBasisStatus::kBasic) {
       assert(status == HighsBasisStatus::kNonbasic);
-      // Surely an error, but not a problem before, since simplex
-      // solver cannot return a HighsBasisStatus::kNonbasic
-      // variable. Does matter now, since a saved QP basis will
-      // generally have such variables.
-      //
-      //      initial_inactive.push_back(instance.num_con + i);
-      //
-      // A HighsBasisStatus::kNonbasic variable corresponds one-to-one
-      // with being inactive in the QP basis
+      // Once QP can be hot started from a saved QP basis, this case
+      // may occur, since a HighsBasisStatus::kNonbasic variable
+      // corresponds one-to-one with being inactive in the QP
+      // basis. However, since simplex is used to get the initial
+      // feasible point, and can't yield a HighsBasisStatus::kNonbasic
+      // variable, this case shouldn't happen.
+      assert(111 == 333);
       initial_inactive.push_back(i);
     } else {
       assert(status == HighsBasisStatus::kBasic);
