@@ -15,6 +15,18 @@
 
 namespace step {
 
+struct StepSizeConfig{
+    double primal_step;
+    double dual_step;
+    double beta;
+    double power_method_lambda;
+    bool converged;
+};
+
+StepSizeConfig InitializeStepSizesPowerMethod(const HighsLp& lp, 
+                                            double op_norm_sq,
+                                            bool power_method_converged = true);
+
 bool CheckNumericalStability(const std::vector<double>& delta_x, 
                                  const std::vector<double>& delta_y,
                                  double omega);

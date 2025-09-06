@@ -310,15 +310,19 @@ void PDLPSolver::Solve(HighsLp & original_lp, const PrimalDualParams& params, st
 
     // Set step sizes based on the operator norm to ensure convergence
     // A safe choice satisfying eta * omega * ||A||^2 < 1
+    step::StepSizeConfig step_size = step::InitializeStepSizesPowerMethod(lp, op_norm_sq, status == HighsStatus::kOk);
     const double fixed_eta = 0.99 / sqrt(op_norm_sq);
-    current_eta_ = 1.0; // Initial step size for adaptive strategy
-    const double omega = 0.99 / sqrt(op_norm_sq);
     PrimalDualParams working_params = params;
-    working_params.omega = omega;
-    working_params.eta = fixed_eta;
-    std::cout << "Using power method step sizes: eta = " << fixed_eta << ", omega = " << omega << std::endl;
+
+    working_params.omega = step_size.dual_step;
+    working_params.eta = step_size.primal_step;
+    current_eta_ = step_size.primal_step; // Initial step size for adaptive strategy
+    std::cout << "Using power method step sizes: eta = " << step_size.primal_step
+              << ", omega = " << step_size.dual_step << std::endl;
+
     printf("Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
-	   op_norm_sq, fixed_eta/omega, fixed_eta*omega);
+           step_size.power_method_lambda, step_size.primal_step, step_size.dual_step);
+    
     // --- 1. Initialization ---
     Initialize(lp, x, y); // Sets initial x, y and results_
     restart_scheme_.Initialize(params, results_);
@@ -728,44 +732,21 @@ std::tuple<double, double, double, double, double> PDLPSolver::ComputeDualityGap
     // For the termination criteria, you need the components of the dual objective
     return std::make_tuple(duality_gap, qTy, lT_lambda_plus, uT_lambda_minus, cTx);
 }
-
-static double ComputeWeightedNorm(const std::vector<double>& x1, const std::vector<double>& y1,
-                            const std::vector<double>& x2, const std::vector<double>& y2, double omega) {
-    double norm = 0.0;
-    for (size_t i = 0; i < x1.size(); ++i) {
-        double diff_x = x1[i] - x2[i];
-        norm += (1.0 / omega) * diff_x * diff_x;
-    }
-    for (size_t i = 0; i < y1.size(); ++i) {
-        double diff_y = y1[i] - y2[i];
-        norm += omega * diff_y * diff_y;
-    }
-    return std::sqrt(norm);
-}
-
-double ComputeNormalizedDualityGap(const HighsLp& lp, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& x_ref, const std::vector<double>& y_ref, double omega, const std::vector<double>& ax, const std::vector<double>& aty){
-    // 1. Calculate radius r = ||z - z_ref||_omega
-    double r = ComputeWeightedNorm(x, y, x_ref, y_ref, omega);
-    if (r < 1e-9) return 0.0;
-
-    // 2. Calculate Lagrangian gradient components
-    // g_x = c - A^T * y
-    std::vector<double> g_x(lp.num_col_, 0.0);
-
-    //to do 
-    return 0.0; 
-}
  
 bool PDLPSolver::CheckConvergence(const HighsLp& lp, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& ax_vector, const std::vector<double>& aty_vector, double epsilon, SolverResults& results) {
     ComputeDualSlacks(lp, aty_vector);
     std::vector<double> lambda = ComputeLambda(lp, y, aty_vector);
 
-    auto [primal_feasibility, q_norm] = ComputePrimalFeasibility(lp, x, ax_vector);
+    double primal_feasibility, q_norm;
+    std::tie(primal_feasibility, q_norm) = ComputePrimalFeasibility(lp, x, ax_vector);
     results.primal_feasibility = primal_feasibility;
 
-    auto [dual_feasibility, c_norm] = ComputeDualFeasibility(lp, aty_vector);
+    double dual_feasibility, c_norm;
+    std::tie(dual_feasibility, c_norm) = ComputeDualFeasibility(lp, aty_vector);
     results.dual_feasibility = dual_feasibility;
-    auto [duality_gap, qTy, lTlambda_plus, uTlambda_minus, cTx] = ComputeDualityGap(lp, x, y, lambda);
+    
+    double duality_gap, qTy, lTlambda_plus, uTlambda_minus, cTx;
+    std::tie(duality_gap, qTy, lTlambda_plus, uTlambda_minus, cTx) = ComputeDualityGap(lp, x, y, lambda);
     results.duality_gap = duality_gap;
 
     bool primal_feasible = primal_feasibility <= epsilon * (1 + q_norm);

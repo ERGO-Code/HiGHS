@@ -8,6 +8,29 @@ namespace step {
 
 static constexpr double kDivergentMovement = 1e10;
 
+StepSizeConfig InitializeStepSizesPowerMethod(const HighsLp& lp, 
+                                            double op_norm_sq,
+                                            bool power_method_converged) {
+    StepSizeConfig config;
+    config.power_method_lambda = op_norm_sq;
+    config.converged = power_method_converged;
+
+    // Compute primal weight beta = ||c||^2 / ||b||^2
+    double cost_norm = linalg::compute_cost_norm(lp, 2.0);
+    double rhs_norm = linalg::compute_rhs_norm(lp, 2.0);
+    std::cout << "Cost norm: " << cost_norm << ", RHS norm: " << rhs_norm << std::endl;
+    config.beta = cost_norm * cost_norm / (rhs_norm * rhs_norm + 1e-10); 
+
+    // cuPDLP-C style weight initialization
+    const double safety_factor = 0.8;
+    double base_step = safety_factor / std::sqrt(op_norm_sq);
+
+    config.primal_step = base_step / std::sqrt(config.beta);
+    config.dual_step = base_step * std::sqrt(config.beta);
+    return config;
+}
+
+
 bool CheckNumericalStability(const std::vector<double>& delta_x, 
                              const std::vector<double>& delta_y,
                              double omega) {

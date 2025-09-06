@@ -110,7 +110,6 @@ class PDLPSolver {
         std::pair<double, double> ComputeDualFeasibility(const HighsLp& lp, const std::vector<double>& ATy_vector);
         std::tuple<double, double, double, double, double> ComputeDualityGap(const HighsLp& lp, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& lambda);
         double ComputeKKTError(const HighsLp& lp, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& lambda, double omega);
-        double ComputeNormalizedDualityGap(const HighsLp& lp, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& x_ref, const std::vector<double>& y_ref, double omega, const std::vector<double>& ax, const std::vector<double>& aty);
         bool CheckConvergence(const HighsLp& lp, const std::vector<double>& x, const std::vector<double>& y,const std::vector<double>& ax_vector, const std::vector<double>& aty_vector, double epsilon, SolverResults& results);
 
         // GPU specific functions
