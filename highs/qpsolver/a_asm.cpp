@@ -11,6 +11,7 @@ QpAsmStatus solveqp_actual(Instance& instance, Settings& settings,
   rt.settings = settings;
   Quass quass(rt);
 
+  // Create the Basis instance, which includes factorizing B_{cal{A}}
   Basis basis(rt, startinfo.active, startinfo.status, startinfo.inactive);
 
   quass.solve(startinfo.primal, startinfo.rowact, basis, qp_timer);

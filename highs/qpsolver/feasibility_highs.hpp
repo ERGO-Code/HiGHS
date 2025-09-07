@@ -14,9 +14,9 @@ static void computeStartingPointByLp(Instance& instance, Settings& settings,
                                      const HighsSolution& highs_solution,
                                      HighsTimer& timer) {
   // Compute initial feasible point by solving an LP
+  const bool debug_report = true;
   Highs highs;
-  // set HiGHS to be silent
-  highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", debug_report);
   highs.setOptionValue("presolve", kHighsOnString);
   // Set the residual time limit
   const double use_time_limit =
@@ -89,7 +89,11 @@ static void computeStartingPointByLp(Instance& instance, Settings& settings,
   } else if (have_starting_solution) {
     highs.setSolution(solution);
   }
+  // Solve the feasibility LP
   HighsStatus status = highs.run();
+  
+  if (debug_report) highs.writeSolution("", kSolutionStylePretty);
+
   if (status == HighsStatus::kError) {
     modelstatus = QpModelStatus::kError;
     return;
@@ -145,7 +149,6 @@ static void computeStartingPointByLp(Instance& instance, Settings& settings,
       num_small_ra++;
     }
   }
-  const bool debug_report = false;
   if (debug_report && num_small_x0 + num_small_ra)
     printf(
         "feasibility_highs has %d small col values and %d small row values\n",
@@ -154,13 +157,30 @@ static void computeStartingPointByLp(Instance& instance, Settings& settings,
   std::vector<HighsInt> initial_inactive;
   std::vector<BasisStatus> initial_status;
 
+  // The simplex solution corresponds to a vertex - and hence an empty
+  // null space - unless there are nonbasic free variables or
+  // constraints. These are recorded as inactive, so the null space
+  // has positive dimension. However, internally...
+  //
+  // The set of nonbasic variables is partitioned into initial_active
+  // and initial_inactive
+  //
+  // initial_inactive: All free variables and constraints, even if
+  // free variables have been given artificial bounds of [-1e5, 1e5]
+  //
+  // initial_active: All variables at lower or upper bounds
+  //
+  // For the initial_active, initial_status records whether they are
+  // BasisStatus::kActiveAtLower or BasisStatus::kActiveAtUpper
   const HighsInt num_highs_basis_status =
       HighsInt(HighsBasisStatus::kNonbasic) + 1;
   std::vector<HighsInt> debug_row_status_count;
-  debug_row_status_count.assign(num_highs_basis_status, 0);
+  if (debug_report) debug_row_status_count.assign(num_highs_basis_status, 0);
   for (HighsInt i = 0; i < HighsInt(use_basis.row_status.size()); i++) {
     HighsBasisStatus status = use_basis.row_status[i];
-    debug_row_status_count[HighsInt(status)]++;
+    if (debug_report) debug_row_status_count[HighsInt(status)]++;
+    // Only interested in nonbasic variables
+    if (status == HighsBasisStatus::kBasic) continue;
     if (status == HighsBasisStatus::kLower) {
       initial_active.push_back(i);
       initial_status.push_back(BasisStatus::kActiveAtLower);
@@ -176,7 +196,7 @@ static void computeStartingPointByLp(Instance& instance, Settings& settings,
       // must be counted as inactive in the QP basis for accounting
       // purposes
       initial_inactive.push_back(i);
-    } else if (status != HighsBasisStatus::kBasic) {
+    } else {
       assert(status == HighsBasisStatus::kNonbasic);
       // Once QP can be hot started from a saved QP basis, this case
       // may occur, since a HighsBasisStatus::kNonbasic variable
@@ -186,16 +206,16 @@ static void computeStartingPointByLp(Instance& instance, Settings& settings,
       // variable, this case shouldn't happen.
       assert(111 == 333);
       initial_inactive.push_back(i);
-    } else {
-      assert(status == HighsBasisStatus::kBasic);
     }
   }
 
   std::vector<HighsInt> debug_col_status_count;
-  debug_col_status_count.assign(num_highs_basis_status, 0);
+  if (debug_report) debug_col_status_count.assign(num_highs_basis_status, 0);
   for (HighsInt i = 0; i < HighsInt(use_basis.col_status.size()); i++) {
     HighsBasisStatus status = use_basis.col_status[i];
-    debug_col_status_count[HighsInt(status)]++;
+    if (debug_report) debug_col_status_count[HighsInt(status)]++;
+    // Only interested in nonbasic variables
+    if (status == HighsBasisStatus::kBasic) continue;
     if (status == HighsBasisStatus::kLower) {
       if (isfreevar(instance, i)) {
         initial_inactive.push_back(instance.num_con + i);
@@ -214,11 +234,16 @@ static void computeStartingPointByLp(Instance& instance, Settings& settings,
 
     } else if (status == HighsBasisStatus::kZero) {
       initial_inactive.push_back(instance.num_con + i);
-    } else if (status != HighsBasisStatus::kBasic) {
-      assert(status == HighsBasisStatus::kNonbasic);
-      initial_inactive.push_back(instance.num_con + i);
     } else {
-      assert(status == HighsBasisStatus::kBasic);
+      assert(status == HighsBasisStatus::kNonbasic);
+      // Once QP can be hot started from a saved QP basis, this case
+      // may occur, since a HighsBasisStatus::kNonbasic variable
+      // corresponds one-to-one with being inactive in the QP
+      // basis. However, since simplex is used to get the initial
+      // feasible point, and can't yield a HighsBasisStatus::kNonbasic
+      // variable, this case shouldn't happen.
+      assert(111 == 555);
+      initial_inactive.push_back(instance.num_con + i);
     }
   }
 

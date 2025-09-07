@@ -331,8 +331,10 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
   double last_logging_time = 0;
   double logging_time_interval = 10;
 
-  const HighsInt current_num_active = basis.getnumactive();
-  bool atfsep = current_num_active == runtime.instance.num_var;
+  // The value of atfsep determines whether the equality problem has
+  // been solved, which is true initially if there is a full set of
+  // basic active constraints => null space is empty
+  bool atfsep = basis.getnumactive() == runtime.instance.num_var;
   while (true) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iteration_limit) {

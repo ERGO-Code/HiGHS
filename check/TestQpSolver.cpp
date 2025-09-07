@@ -953,6 +953,13 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     if (k == 1) {
       const std::string filename =
           std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+      // Problem primal1.mps has 325 variables and 85 constraints:
+      // column 0 is [0, inf) and the rest are free; rows are all
+      // (-inf, u)
+      //
+      // Hence the solution of the feasibility LP has many nonbasic
+      // free columns that are made inactive for the QP solver,
+      // yielding a large null space -
       REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
       //      highs.getBasis().print("test-qp-hot-start");
       required_objective_function_value = -0.035012965733477348;
