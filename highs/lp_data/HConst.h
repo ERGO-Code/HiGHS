@@ -365,6 +365,11 @@ const int8_t kPivotRowSingleton = 2;
 const int8_t kPivotColSingleton = 3;
 const int8_t kPivotMarkowitz = 4;
 
+// For converting general LPs to form for PDLP
+//
+// Requires non-conforming names for cuPDLP-C
+enum ConstraintType { EQ = 0, LEQ, GEQ, BOUND, FREE };
+
 // Mask for switching off PDLP features
 enum PdlpFeaturesOff {
   kPdlpAllFeaturesOn = 0,

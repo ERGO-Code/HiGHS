@@ -25,7 +25,6 @@ void PDLPSolver::PreprocessLp(const HighsLp& original_lp,
   int nRows_orig = original_lp.num_row_;
   int nCols_orig = original_lp.num_col_;
 
-  // std::vector<ConstraintType> constraint_types(nRows_orig);
   int num_new_cols = 0;
   int nEqs = 0;
   constraint_types_.resize(nRows_orig);
