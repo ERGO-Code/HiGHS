@@ -331,14 +331,14 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
-  std::string model = "avgas";//"adlittle";//"afiro";//
+  std::string model = "avgas";  //"adlittle";//"afiro";//
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kHiPdlpString);
-  h.setOptionValue("kkt_tolerance", 1e-6);//kkt_tolerance);
+  h.setOptionValue("kkt_tolerance", 1e-6);  // kkt_tolerance);
 
   h.setOptionValue("pdlp_scaling_mode", 0);
   h.setOptionValue("pdlp_restart_strategy", 0);

@@ -15,9 +15,9 @@
 #include <cassert>
 
 #include "lp_data/HighsSolution.h"
-//#include "pdlp/cupdlp/cupdlp.h"
+// #include "pdlp/cupdlp/cupdlp.h"
 
-//typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
+// typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 
 HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object);
 

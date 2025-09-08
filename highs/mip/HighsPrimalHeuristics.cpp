@@ -162,7 +162,7 @@ bool HighsPrimalHeuristics::solveSubMip(
     mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
     mipsolver.sub_solver_call_time_.num_call[kSubSolverSubMip]++;
     mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] +=
-      mipsolver.timer_.read();
+        mipsolver.timer_.read();
   }
   // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
   // pointer after calling HighsMipSolver::run(), and assert isn't
@@ -170,8 +170,9 @@ bool HighsPrimalHeuristics::solveSubMip(
   // submipsolver.termination_status_, rather than
   // submipsolver.mipdata_.terminatorTerminated()
   if (!submipsolver.mipdata_) {
-    printf("HighsPrimalHeuristics::solveSubMip: submipsolver.mipdata_ is "
-	   "nullptr\n");
+    printf(
+        "HighsPrimalHeuristics::solveSubMip: submipsolver.mipdata_ is "
+        "nullptr\n");
     assert(submipsolver.mipdata_);
   }
   if (submipsolver.termination_status_ != HighsModelStatus::kNotset) {

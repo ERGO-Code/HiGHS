@@ -80,29 +80,26 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
   if (value == kSimplexString || value == kHighsChooseString ||
-            value == kIpmString ||
+      value == kIpmString ||
 #ifdef HIPO
       value == kHipoString ||
 #endif
-      value == kIpxString ||
-      value == kPdlpString || value == kCuPdlpString || value == kHiPdlpString)
+      value == kIpxString || value == kPdlpString || value == kCuPdlpString ||
+      value == kHiPdlpString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", "
+               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", "
+               "\"%s\", \"%s\", \"%s\", "
 #ifdef HIPO
                "\"%s\", "
 #endif
                "\"%s\" or \"%s\"\n",
-               value.c_str(),
-	       kSimplexString.c_str(),
-               kHighsChooseString.c_str(),
-	       kIpmString.c_str(),
+               value.c_str(), kSimplexString.c_str(),
+               kHighsChooseString.c_str(), kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
 #endif
-               kIpxString.c_str(), 
-               kPdlpString.c_str(),
-               kCuPdlpString.c_str(),
+               kIpxString.c_str(), kPdlpString.c_str(), kCuPdlpString.c_str(),
                kHiPdlpString.c_str());
   return false;
 }

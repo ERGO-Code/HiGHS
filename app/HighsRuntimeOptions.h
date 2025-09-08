@@ -106,7 +106,7 @@ void setupCommandLineOptions(CLI::App& app,
                  "\"ipm\"\n"
 #ifdef HIPO
                  "\"hipo\"\n"
-#endif		 
+#endif
                  "\"ipx\"\n"
                  "\"pdlp\"");
 

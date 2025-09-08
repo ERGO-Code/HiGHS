@@ -540,7 +540,7 @@ struct HighsOptionsStruct {
         ipm_optimality_tolerance(0.0),
         ipm_iteration_limit(0),
         hipo_system(""),
-	pdlp_features_off(0),
+        pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
         pdlp_ruiz_iterations(0),
@@ -711,8 +711,9 @@ class HighsOptions : public HighsOptionsStruct {
 #ifdef HIPO
         ", \"hipo\""
 #endif
-	" or \"pdlp\"/\"cupdlp\"/\"hipdlp\". If "
-        "\"simplex\"/\"ipm\"/\"pdlp\"/\"cupdlp\"/\"hipdlp\" is chosen then, for a MIP (QP) the "
+        " or \"pdlp\"/\"cupdlp\"/\"hipdlp\". If "
+        "\"simplex\"/\"ipm\"/\"pdlp\"/\"cupdlp\"/\"hipdlp\" is chosen then, "
+        "for a MIP (QP) the "
         "integrality "
         "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);
@@ -1281,36 +1282,41 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("pdlp_scaling_mode",
-                                     "Scaling mode for PDLP solver (default = "
-                                     "5): 1 => Ruiz; 2 => L2; 4 => PC",
-                                     advanced, &pdlp_scaling_mode,
-				     kPdlpScalingMin, kPdlpScalingRuiz+kPdlpScalingPC, kPdlpScalingMax);
+    record_int =
+        new OptionRecordInt("pdlp_scaling_mode",
+                            "Scaling mode for PDLP solver (default = "
+                            "5): 1 => Ruiz; 2 => L2; 4 => PC",
+                            advanced, &pdlp_scaling_mode, kPdlpScalingMin,
+                            kPdlpScalingRuiz + kPdlpScalingPC, kPdlpScalingMax);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("pdlp_ruiz_iterations",
-                                     "Number of Ruiz scaling iteraitons for PDLP solver",
-                                     advanced, &pdlp_ruiz_iterations, 0, 10, kHighsIInf);
+    record_int =
+        new OptionRecordInt("pdlp_ruiz_iterations",
+                            "Number of Ruiz scaling iteraitons for PDLP solver",
+                            advanced, &pdlp_ruiz_iterations, 0, 10, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("pdlp_restart_strategy",
-                                     "Restart strategy for PDLP solver: 0 => off; "
-                                     "1 => fixed; 2 => adaptive",
-                                     advanced, &pdlp_restart_strategy,
-				     kPdlpRestartStrategyMin, kPdlpRestartStrategyOff, kPdlpRestartStrategyMax);
+    record_int = new OptionRecordInt(
+        "pdlp_restart_strategy",
+        "Restart strategy for PDLP solver: 0 => off; "
+        "1 => fixed; 2 => adaptive",
+        advanced, &pdlp_restart_strategy, kPdlpRestartStrategyMin,
+        kPdlpRestartStrategyOff, kPdlpRestartStrategyMax);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("pdlp_cupdlpc_restart_method",
-                                     "Restart mode for cuPDLP-C solver: 0 => none; "
-                                     "1 => GPU (default); 2 => CPU ",
-                                     advanced, &pdlp_cupdlpc_restart_method, 0, 1, 2);
+    record_int =
+        new OptionRecordInt("pdlp_cupdlpc_restart_method",
+                            "Restart mode for cuPDLP-C solver: 0 => none; "
+                            "1 => GPU (default); 2 => CPU ",
+                            advanced, &pdlp_cupdlpc_restart_method, 0, 1, 2);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("pdlp_step_size_strategy",
-                                     "Step size strategy for PDLP solver: 0 => fixed; "
-                                     "1 => adaptive; 2 => Malitsky-Pock",
-                                     advanced, &pdlp_step_size_strategy,
-				     kPdlpStepSizeStrategyMin, kPdlpStepSizeStrategyFixed, kPdlpRestartStrategyMax);
+    record_int = new OptionRecordInt(
+        "pdlp_step_size_strategy",
+        "Step size strategy for PDLP solver: 0 => fixed; "
+        "1 => adaptive; 2 => Malitsky-Pock",
+        advanced, &pdlp_step_size_strategy, kPdlpStepSizeStrategyMin,
+        kPdlpStepSizeStrategyFixed, kPdlpRestartStrategyMax);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(

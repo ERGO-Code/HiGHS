@@ -117,21 +117,21 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       sub_solver_call_time.run_time[kSubSolverPdlp] =
           -solver_object.timer_.read();
       if (options.solver == kPdlpString || options.solver == kCuPdlpString) {
-	try {
-	  call_status = solveLpCupdlp(solver_object);
-	} catch (const std::exception& exception) {
-	  highsLogDev(options.log_options, HighsLogType::kError,
-		      "Exception %s in solveLpCupdlp\n", exception.what());
-	  call_status = HighsStatus::kError;
-	}
+        try {
+          call_status = solveLpCupdlp(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpCupdlp\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
       } else {
-	try {
-	  call_status = solveLpHiPdlp(solver_object);
-	} catch (const std::exception& exception) {
-	  highsLogDev(options.log_options, HighsLogType::kError,
-		      "Exception %s in solveHiPdlp\n", exception.what());
-	  call_status = HighsStatus::kError;
-	}
+        try {
+          call_status = solveLpHiPdlp(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveHiPdlp\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
       }
       sub_solver_call_time.run_time[kSubSolverPdlp] +=
           solver_object.timer_.read();
@@ -600,7 +600,8 @@ bool useIpm(const std::string& solver) {
 }
 
 bool usePdlp(const std::string& solver) {
-  return solver == kPdlpString || solver == kHiPdlpString || solver == kCuPdlpString;
+  return solver == kPdlpString || solver == kHiPdlpString ||
+         solver == kCuPdlpString;
 }
 
 // Decide whether to use the HiPO IPM solver

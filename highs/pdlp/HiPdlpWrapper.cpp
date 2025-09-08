@@ -10,12 +10,14 @@
  * @author Julian Hall
  */
 #include "pdlp/HiPdlpWrapper.h"
+
 #include "pdlp/hipdlp/logger.hpp"
 #include "pdlp/hipdlp/pdhg.hpp"
 #include "pdlp/hipdlp/restart.hpp"
 
-void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer, PrimalDualParams& params);
-			      
+void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
+                                 PrimalDualParams& params);
+
 HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object) {
   return solveLpHiPdlp(solver_object.options_, solver_object.timer_,
                        solver_object.lp_, solver_object.basis_,
@@ -46,19 +48,20 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   Logger logger(log_level);
   if (!log_filename.empty()) logger.set_log_file(log_filename);
   logger.print_header();
-    
+
   // --- Initialize Parameters with Defaults ---
   PrimalDualParams params{};
 
   getHiPpdlpParamsFromOptions(options, timer, params);
   std::vector<double> x, y;
   PDLPSolver pdlp(logger);
-    
+
   Timer total_timer;
   pdlp.Solve((HighsLp&)lp, params, x, y);
-    
+
   // --- Print Summary ---
-  logger.print_summary(pdlp.GetResults(), pdlp.GetIterationCount(), total_timer.read());
+  logger.print_summary(pdlp.GetResults(), pdlp.GetIterationCount(),
+                       total_timer.read());
 
   highs_info.pdlp_iteration_count = pdlp.GetIterationCount();
 
@@ -68,54 +71,58 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 
   const TerminationStatus termination_status = pdlp.GetResults().term_code;
   switch (termination_status) {
-  case TerminationStatus::OPTIMAL: {
-    model_status = HighsModelStatus::kOptimal;
-    break;
-  }
-  case TerminationStatus::INFEASIBLE: {
-    assert(111 == 222);
-    model_status = HighsModelStatus::kInfeasible;
-    return HighsStatus::kOk;
-    break;
-  }
-  case TerminationStatus::UNBOUNDED: {
-    assert(111 == 333);
-    model_status = HighsModelStatus::kUnbounded;
-    return HighsStatus::kOk;
-    break;
-  }
-  case TerminationStatus::TIMEOUT: {
-    // ToDo IterationLimit termination needs to be handled separately
-    model_status = highs_info.pdlp_iteration_count >= options.pdlp_iteration_limit
-                         ? HighsModelStatus::kIterationLimit
-                         : HighsModelStatus::kTimeLimit;
-    break;
-  }
-  case TerminationStatus::WARNING:
-  case TerminationStatus::FEASIBLE: {
-    assert(111 == 555);
-    model_status = HighsModelStatus::kUnknown;
-    return HighsStatus::kError;
-  }
-  default:
-    assert(termination_status == TerminationStatus::ERROR); 
-    return HighsStatus::kError;
+    case TerminationStatus::OPTIMAL: {
+      model_status = HighsModelStatus::kOptimal;
+      break;
+    }
+    case TerminationStatus::INFEASIBLE: {
+      assert(111 == 222);
+      model_status = HighsModelStatus::kInfeasible;
+      return HighsStatus::kOk;
+      break;
+    }
+    case TerminationStatus::UNBOUNDED: {
+      assert(111 == 333);
+      model_status = HighsModelStatus::kUnbounded;
+      return HighsStatus::kOk;
+      break;
+    }
+    case TerminationStatus::TIMEOUT: {
+      // ToDo IterationLimit termination needs to be handled separately
+      model_status =
+          highs_info.pdlp_iteration_count >= options.pdlp_iteration_limit
+              ? HighsModelStatus::kIterationLimit
+              : HighsModelStatus::kTimeLimit;
+      break;
+    }
+    case TerminationStatus::WARNING:
+    case TerminationStatus::FEASIBLE: {
+      assert(111 == 555);
+      model_status = HighsModelStatus::kUnknown;
+      return HighsStatus::kError;
+    }
+    default:
+      assert(termination_status == TerminationStatus::ERROR);
+      return HighsStatus::kError;
   }
   assert(termination_status == TerminationStatus::OPTIMAL ||
-	 termination_status == TerminationStatus::TIMEOUT);
+         termination_status == TerminationStatus::TIMEOUT);
   highs_solution.col_value = x;
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_dual = y;
   lp.a_matrix_.product(highs_solution.row_value, highs_solution.col_value);
-  lp.a_matrix_.productTranspose(highs_solution.col_dual, highs_solution.row_dual);
+  lp.a_matrix_.productTranspose(highs_solution.col_dual,
+                                highs_solution.row_dual);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    highs_solution.col_dual[iCol] = lp.col_cost_[iCol] - highs_solution.col_dual[iCol];
+    highs_solution.col_dual[iCol] =
+        lp.col_cost_[iCol] - highs_solution.col_dual[iCol];
   highs_solution.value_valid = true;
   highs_solution.dual_valid = true;
   return HighsStatus::kOk;
 }
 
-void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer, PrimalDualParams& params) {
+void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
+                                 PrimalDualParams& params) {
   params.initialise();
   //  params.eta = 0; Not set in parse_options_file
   //  params.omega = 0; Not set in parse_options_file
@@ -161,19 +168,20 @@ void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
   }
   //  params.fixed_restart_interval = 0; Not set in parse_options_file
   //  params.use_halpern_restart = false; Not set in parse_options_file
-  
+
   params.step_size_strategy = StepSizeStrategy::FIXED;
   if ((options.pdlp_features_off & kPdlpAdaptiveStepSizeOff) == 0) {
     // Use adaptive step size: now see which
     if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyAdaptive) {
       params.step_size_strategy = StepSizeStrategy::ADAPTIVE;
-    } else if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyMalitskyPock) {
+    } else if (options.pdlp_step_size_strategy ==
+               kPdlpStepSizeStrategyMalitskyPock) {
       params.step_size_strategy = StepSizeStrategy::MALITSKY_POCK;
     }
   }
   //  params.malitsky_pock_params.initialise(); Not set in parse_options_file
-  //  params.adaptive_linesearch_params.initialise(); Not set in parse_options_file
-
+  //  params.adaptive_linesearch_params.initialise(); Not set in
+  //  parse_options_file
 }
 
 void PrimalDualParams::initialise() {
@@ -204,10 +212,7 @@ void MalitskyPockParams::initialise() {
   this->linesearch_contraction_factor = 0.99;
 }
 
- 
 void AdaptiveLinesearchParams::initialise() {
   this->step_size_reduction_exponent = 0.3;
   this->step_size_growth_exponent = 0.6;
 }
-
-  
