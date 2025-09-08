@@ -32,8 +32,6 @@
 #define USE_GPU 1
 // Debug mode
 #define DEBUG_MODE 1
-enum ConstraintType { EQ, GEQ, LEQ, BOUND, FREE };
-
 // --- Classes ---
 class PDLPSolver {
  public:
