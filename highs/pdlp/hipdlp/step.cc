@@ -138,9 +138,9 @@ void UpdateIteratesFixed(const HighsLp& lp, const PrimalDualParams& params,
                          const std::vector<double>& x_current,
                          const std::vector<double>& y_current,
                          const std::vector<double>& ax_current) {
-  UpdateX(x_new, x_current, lp, y_current, fixed_eta, params.omega);
+  UpdateX(x_new, x_current, lp, y_current, params.eta, params.omega);
   linalg::Ax(lp, x_new, ax_new);
-  UpdateY(y_new, y_current, lp, ax_new, ax_current, fixed_eta, params.omega);
+  UpdateY(y_new, y_current, lp, ax_new, ax_current, params.eta, params.omega);
 }
 
 void UpdateIteratesAdaptive(const HighsLp& lp, const PrimalDualParams& params,

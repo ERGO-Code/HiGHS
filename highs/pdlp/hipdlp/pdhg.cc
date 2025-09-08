@@ -322,12 +322,12 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
   const double fixed_eta = 0.99 / sqrt(op_norm_sq);
   PrimalDualParams working_params = params;
 
-  working_params.omega = step_size.dual_step;
-  working_params.eta = step_size.primal_step;
+  working_params.omega = std::sqrt(step_size.dual_step / step_size.primal_step);
+  working_params.eta = std::sqrt(step_size.primal_step * step_size.dual_step);
   current_eta_ =
-      step_size.primal_step;  // Initial step size for adaptive strategy
-  std::cout << "Using power method step sizes: eta = " << step_size.primal_step
-            << ", omega = " << step_size.dual_step << std::endl;
+      working_params.eta;  // Initial step size for adaptive strategy
+  std::cout << "Using power method step sizes: eta = " << working_params.eta
+            << ", omega = " << working_params.omega << std::endl;
 
   printf(
       "Initial step sizes from power method lambda = %g: primal = %g; dual = "
@@ -714,6 +714,7 @@ std::pair<double, double> PDLPSolver::ComputeDualFeasibility(
     // constraints.
     dual_residual[i] =
         lp.col_cost_[i] - ATy_vector[i] - (dSlackPos_[i] - dSlackNeg_[i]);
+
     dual_feasibility_squared += dual_residual[i] * dual_residual[i];
   }
 
@@ -791,6 +792,11 @@ bool PDLPSolver::CheckConvergence(const HighsLp& lp,
   std::tie(duality_gap, qTy, lTlambda_plus, uTlambda_minus, cTx) =
       ComputeDualityGap(lp, x, y, lambda);
   results.duality_gap = duality_gap;
+
+  results.relative_obj_gap = std::abs(duality_gap) / (1.0 + std::abs(cTx) +
+                                                       std::abs(qTy) +
+                                                       std::abs(lTlambda_plus) +
+                                                       std::abs(uTlambda_minus));
 
   bool primal_feasible = primal_feasibility <= epsilon * (1 + q_norm);
   bool dual_feasible = dual_feasibility <= epsilon * (1 + c_norm);
