@@ -129,7 +129,9 @@ Int Basis::Factorize() {
 
     std::stringstream h_logging_stream;
     h_logging_stream.str(std::string());
-    h_logging_stream << " Start  factorization " << num_factorizations_+1 << ": nonzeros in basis = " << basis_num_nz << "\n";
+    h_logging_stream <<
+      " Start  factorization " << num_factorizations_+1 <<
+      ": nonzeros in basis = " << basis_num_nz << "\n";
     control_.hIntervalLog(h_logging_stream);
 
     Int err = 0;                // return code
@@ -159,7 +161,9 @@ Int Basis::Factorize() {
     time_factorize_ += timer.Elapsed();
     factorization_is_fresh_ = true;
     h_logging_stream.str(std::string());
-    h_logging_stream << " Finish factorization: " << num_factorizations_ << ": fill factor = " << lu_->fill_factor() << "\n";
+    h_logging_stream <<
+      " Finish factorization " << num_factorizations_ <<
+      ": fill factor = " << lu_->fill_factor() << "\n";
     control_.hIntervalLog(h_logging_stream);
     return err;
 }
