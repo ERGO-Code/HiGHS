@@ -4537,6 +4537,9 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
                                     HighsInt col) {
   assert(!colDeleted[col]);
 
+  // return if variable is already fixed
+  if (model->col_lower_[col] == model->col_upper_[col]) return;
+
   auto tightenBounds = [&](HighsInt col, HighsInt direction,
                            double currentBound, double& newBound) {
     // return if objective coefficient has wrong sign
