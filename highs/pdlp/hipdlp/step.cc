@@ -89,7 +89,9 @@ void UpdateX(std::vector<double>& x_new, const std::vector<double>& x_current,
              double eta, double omega) {
   std::vector<double> ATy_cache(lp.num_col_);
   linalg::ATy(lp, y_current, ATy_cache);
-
+  //print the norm of ATy_cache
+  double aty_norm = linalg::vector_norm(ATy_cache);
+  std::cout << "Norm of A'y: " << aty_norm << std::endl;
   for (HighsInt i = 0; i < lp.num_col_; i++) {
     double gradient = lp.col_cost_[i] - ATy_cache[i];
     x_new[i] = linalg::project_box(x_current[i] - (eta / omega) * gradient,

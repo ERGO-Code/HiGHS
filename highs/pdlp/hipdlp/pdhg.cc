@@ -350,8 +350,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
   // We need Ax for the y-update and for computing residuals
   std::vector<double> Ax_current(lp.num_row_, 0.0);
   std::vector<double> ATy_current(lp.num_col_, 0.0);
-  linalg::Ax(lp, x_current_, Ax_current);
-  linalg::ATy(lp, y_current_, ATy_current);
+
   std::vector<double> Ax_new(lp.num_row_, 0.0);
   std::vector<double> ATy_new(lp.num_col_, 0.0);
 
@@ -364,6 +363,12 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
   // A single loop handles max iterations, convergence, and restarts.
   for (int iter = 0; iter < params.max_iterations; ++iter) {
     pdlpLog(pdlp_log_file, iter);
+    linalg::Ax(lp, x_current_, Ax_current);
+    //print norm of Ax
+    double ax_norm = linalg::vector_norm(Ax_current);
+    std::cout << "Norm of Ax: " << ax_norm << std::endl;
+
+    linalg::ATy(lp, y_current_, ATy_current);
     if (solver_timer.read() > params.time_limit) {
       logger_.info("Time limit reached.");
       final_iter_count_ = iter;
