@@ -424,6 +424,7 @@ struct CUPDLP_WORK {
   // cusparseDnVecDescr_t vecbuffer;
   cublasHandle_t cublashandle;
 #endif
+  FILE* pdlp_log_file;
 };
 
 #ifdef __cplusplus

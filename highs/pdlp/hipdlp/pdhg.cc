@@ -362,11 +362,11 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
   // --- 2. Main PDHG Loop ---
   // A single loop handles max iterations, convergence, and restarts.
   for (int iter = 0; iter < params.max_iterations; ++iter) {
-    pdlpLog(pdlp_log_file, iter);
+    pdlpIterLog(pdlp_log_file, iter);
     linalg::Ax(lp, x_current_, Ax_current);
     //print norm of Ax
     double ax_norm = linalg::vector_norm(Ax_current);
-    std::cout << "Norm of Ax: " << ax_norm << std::endl;
+    pdlpAxNormLog(pdlp_log_file, ax_norm);
 
     linalg::ATy(lp, y_current_, ATy_current);
     if (solver_timer.read() > params.time_limit) {
@@ -398,20 +398,23 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
     switch (params.step_size_strategy) {
       case StepSizeStrategy::FIXED:
         step::UpdateIteratesFixed(lp, working_params, fixed_eta, x, y, Ax_new,
-                                  x_current_, y_current_, Ax_current);
+                                  x_current_, y_current_, Ax_current,
+				  pdlp_log_file);
         break;
 
       case StepSizeStrategy::ADAPTIVE:
         step::UpdateIteratesAdaptive(lp, working_params, x, y, Ax_new,
                                      x_current_, y_current_, Ax_current,
-                                     ATy_current, current_eta_, iter);
+                                     ATy_current, current_eta_, iter,
+				  pdlp_log_file);
         break;
 
       case StepSizeStrategy::MALITSKY_POCK:
         step_success = step::UpdateIteratesMalitskyPock(
             lp, working_params, x, y, Ax_new, x_current_, y_current_,
             Ax_current, ATy_current, current_eta_, ratio_last_two_step_sizes_,
-            num_rejected_steps_, first_malitsky_iteration);
+            num_rejected_steps_, first_malitsky_iteration,
+				  pdlp_log_file);
 
         if (!step_success) {
           std::cerr << "Malitsky-Pock step failed at iteration " << iter

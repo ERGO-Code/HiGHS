@@ -193,7 +193,9 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
               cupdlp_float *col_value, cupdlp_float *col_dual,
               cupdlp_float *row_value, cupdlp_float *row_dual);
 
-void pdlpLog(FILE* file, const int iter_num);
+  void pdlpIterLog(FILE* file, const int iter_num);
+  void pdlpAxNormLog(FILE* file, const double ax_norm);
+  void pdlpAtyNormLog(FILE* file, const double aty_norm);
 
 #ifdef __cplusplus
 }

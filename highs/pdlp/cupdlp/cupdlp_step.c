@@ -21,7 +21,7 @@ void PDHG_primalGradientStep(CUPDLPwork *work, CUPDLPvec *xUpdate,
 // print norm of A'y
 double aty_norm = 0.0;
 cupdlp_twoNorm(work, problem->nCols, ATy->data, &aty_norm);
-cupdlp_printf("Norm of A'y: %g\n", aty_norm);
+  pdlpAtyNormLog(work->pdlp_log_file, aty_norm);
 
 #if !defined(CUPDLP_CPU) && USE_KERNELS
   cupdlp_pgrad_cuda(xUpdate->data, x->data, problem->cost,
@@ -201,7 +201,7 @@ void PDHG_Update_Iterate_Constant_Step_Size(CUPDLPwork *pdhg) {
   double ax_norm = 0.0;
   cupdlp_twoNorm(pdhg, problem->nRows, ax->data,
                   &ax_norm);
-  cupdlp_printf("Norm of Ax: %g\n", ax_norm);
+  pdlpAxNormLog(pdhg->pdlp_log_file, ax_norm);
   ATy(pdhg, aty, y);
 
   // x^{k+1} = proj_{X}(x^k - dPrimalStep * (c - A'y^k))

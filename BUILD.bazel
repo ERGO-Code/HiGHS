@@ -28,6 +28,7 @@ cc_library(
         "highs/parallel/*.cpp",
         "highs/pdlp/*.cpp",
         "highs/pdlp/cupdlp/*.c",
+        "highs/pdlp/hipdlp/*.cc",
         "highs/presolve/*.cpp",
         "highs/qpsolver/*.cpp",
         "highs/simplex/*.cpp",
