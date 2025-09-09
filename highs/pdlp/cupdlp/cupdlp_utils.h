@@ -193,6 +193,8 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
               cupdlp_float *col_value, cupdlp_float *col_dual,
               cupdlp_float *row_value, cupdlp_float *row_dual);
 
+void pdlpLog(FILE* file, const int iter_num);
+
 #ifdef __cplusplus
 }
 #endif

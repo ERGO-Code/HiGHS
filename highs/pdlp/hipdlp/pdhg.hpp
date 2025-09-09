@@ -25,7 +25,6 @@
 #include "scaling.hpp"
 #include "solver_results.hpp"
 #include "step.hpp"
-// #include "highs_interface.hpp"
 
 // --- Define Macros ---
 // Enable or disable GPU usage
@@ -85,6 +84,8 @@ class PDLPSolver {
   ScalingParams scaling_params_;
   Scaling scaling_;
 
+  FILE* pdlp_log_file = nullptr;
+
   // HighsStatus TransformGxLeqToGeq(HighsLp& lp);
   void PreprocessLp(const HighsLp& original_lp, HighsLp& processed_lp);
   void Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
@@ -93,6 +94,7 @@ class PDLPSolver {
                  HighsSolution& solution);
 
   // Helper functions
+  void solveReturn();
   void Initialize(const HighsLp& lp, std::vector<double>& x,
                   std::vector<double>& y);
   bool RunPresolve(const HighsLp& original_lp, Highs& highs,

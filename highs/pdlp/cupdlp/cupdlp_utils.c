@@ -1781,3 +1781,7 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
   // Close the file
   fclose(fptr);
 }
+
+void pdlpLog(FILE* file, const int iter_num) {
+  fprintf(file, "%6d\n", iter_num);
+}

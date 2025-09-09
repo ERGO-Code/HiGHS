@@ -1,14 +1,14 @@
 #include "pdhg.hpp"
 
-#include "linalg.hpp"
-#include "restart.hpp"
-#include "step.hpp"
-// #include "Highs.h"
-// #include "highs_interface.hpp"
 #include <cmath>
 #include <iostream>
 #include <random>
 #include <tuple>
+
+#include "linalg.hpp"
+#include "pdlp/cupdlp/cupdlp.h"  // For pdlpLogging
+#include "restart.hpp"
+#include "step.hpp"
 
 #define PDHG_CHECK_INTERVAL 40
 
@@ -266,7 +266,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
   Timer solver_timer;
   if (original_lp.num_row_ == 0 || original_lp.a_matrix_.start_.size() < 2) {
     std::cout << "Empty LP problem." << std::endl;
-    return;
+    return solveReturn();
   }
 
   HighsSolution solution;
@@ -323,8 +323,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
 
   working_params.omega = std::sqrt(step_size.dual_step / step_size.primal_step);
   working_params.eta = std::sqrt(step_size.primal_step * step_size.dual_step);
-  current_eta_ =
-      working_params.eta;  // Initial step size for adaptive strategy
+  current_eta_ = working_params.eta;  // Initial step size for adaptive strategy
   std::cout << "Using power method step sizes: eta = " << working_params.eta
             << ", omega = " << working_params.omega << std::endl;
 
@@ -358,9 +357,13 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
 
   logger_.print_iteration_header();
 
+  pdlp_log_file = fopen("HiPDLP.log", "w");
+  assert(pdlp_log_file);
+
   // --- 2. Main PDHG Loop ---
   // A single loop handles max iterations, convergence, and restarts.
   for (int iter = 0; iter < params.max_iterations; ++iter) {
+    pdlpLog(pdlp_log_file, iter);
     if (solver_timer.read() > params.time_limit) {
       logger_.info("Time limit reached.");
       final_iter_count_ = iter;
@@ -381,7 +384,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
       }
       results_.primal_obj = primal_objective;
 
-      return;  // Exit the function
+      return solveReturn();  // Exit the function
     }
 
     // --- 3. Core PDHG Update Step ---
@@ -412,7 +415,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
           x = x_avg_;
           y = y_avg_;
           // scaling_.UnscaleSolution(x, y);
-          return;
+          return solveReturn();
         }
     }
 
@@ -463,7 +466,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
         results_ = average_results;
         results_.term_code = TerminationStatus::OPTIMAL;
         Postsolve(original_lp, lp, x, y, solution);
-        return;
+        return solveReturn();
       }
 
       bool current_converged = CheckConvergence(
@@ -491,7 +494,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
         results_ = current_results;
         results_.term_code = TerminationStatus::OPTIMAL;
         Postsolve(original_lp, lp, x, y, solution);
-        return;
+        return solveReturn();
       }
 
       // --- 6. Restart Check ---
@@ -551,7 +554,11 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
   results_.primal_obj = primal_objective;
   results_.term_code = TerminationStatus::TIMEOUT;
   Postsolve(original_lp, lp, x_avg_, y_avg_, solution);
-  return;
+  return solveReturn();
+}
+
+void PDLPSolver::solveReturn() {
+  if (pdlp_log_file) fclose(pdlp_log_file);
 }
 
 void PDLPSolver::Initialize(const HighsLp& lp, std::vector<double>& x,
@@ -792,10 +799,10 @@ bool PDLPSolver::CheckConvergence(const HighsLp& lp,
       ComputeDualityGap(lp, x, y, lambda);
   results.duality_gap = duality_gap;
 
-  results.relative_obj_gap = std::abs(duality_gap) / (1.0 + std::abs(cTx) +
-                                                       std::abs(qTy) +
-                                                       std::abs(lTlambda_plus) +
-                                                       std::abs(uTlambda_minus));
+  results.relative_obj_gap =
+      std::abs(duality_gap) /
+      (1.0 + std::abs(cTx) + std::abs(qTy) + std::abs(lTlambda_plus) +
+       std::abs(uTlambda_minus));
 
   bool primal_feasible = primal_feasibility <= epsilon * (1 + q_norm);
   bool dual_feasible = dual_feasibility <= epsilon * (1 + c_norm);
