@@ -4602,7 +4602,7 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
   } else if (tightenBounds(col, HighsInt{-1}, model->col_lower_[col],
                            newBound)) {
     // update lower bound
-    changeColUpper(col, std::min(newBound, model->col_upper_[col]));
+    changeColLower(col, std::min(newBound, model->col_upper_[col]));
   }
 }
 
