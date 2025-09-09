@@ -4557,9 +4557,6 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
       // skip rows that are already redundant
       if (isRedundant(row)) continue;
 
-      // cannot compute a bound if ranged rows are present
-      if (isRanged(row)) return false;
-
       double candidateBound = 0.0;
       if (direction * val < 0.0) {
         // skip rows with infinite rhs
