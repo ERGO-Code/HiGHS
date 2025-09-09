@@ -39,9 +39,7 @@ cc_library(
         "highs/mip/feasibilityjump.hh",
     ] + glob([
         "**/*.h",
-        "highs/qpsolver/*.hpp",
-        "extern/filereaderlp/*.hpp",
-        "extern/zstr/*.hpp",
+        "**/*.hpp",
     ]),
     copts = select({
         "@rules_cc//cc/compiler:msvc-cl": [],
