@@ -4561,24 +4561,29 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
       if (isRedundant(row)) continue;
 
       double candidateBound = 0.0;
+      double residual = 0.0;
+      double rhs = 0.0;
       if (direction * val < 0.0) {
         // skip rows with infinite rhs
-        if (model->row_upper_[row] == kHighsInf) continue;
+        rhs = model->row_upper_[row];
+        if (rhs == kHighsInf) continue;
 
-        candidateBound = static_cast<double>(
-            (static_cast<HighsCDouble>(model->row_upper_[row]) -
-             impliedRowBounds.getResidualSumUpperOrig(row, col, val)) /
-            val);
-
+        // compute residual
+        residual = impliedRowBounds.getResidualSumUpperOrig(row, col, val);
+        if (residual == kHighsInf) return false;
       } else {
         // skip rows with infinite lhs
-        if (model->row_lower_[row] == -kHighsInf) continue;
+        rhs = model->row_lower_[row];
+        if (rhs == -kHighsInf) continue;
 
-        candidateBound = static_cast<double>(
-            (static_cast<HighsCDouble>(model->row_lower_[row]) -
-             impliedRowBounds.getResidualSumLowerOrig(row, col, val)) /
-            val);
+        // compute residual
+        residual = impliedRowBounds.getResidualSumLowerOrig(row, col, val);
+        if (residual == -kHighsInf) return false;
       }
+
+      // compute bound
+      candidateBound = static_cast<double>(
+          (static_cast<HighsCDouble>(rhs) - residual) / val);
 
       // round up to make sure that all rows are redundant
       if (model->integrality_[col] != HighsVarType::kContinuous)
