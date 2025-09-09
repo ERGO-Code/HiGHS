@@ -84,7 +84,7 @@ class PDLPSolver {
   ScalingParams scaling_params_;
   Scaling scaling_;
 
-  FILE* pdlp_log_file = nullptr;
+  FILE* pdlp_log_file_ = nullptr;
 
   // HighsStatus TransformGxLeqToGeq(HighsLp& lp);
   void PreprocessLp(const HighsLp& original_lp, HighsLp& processed_lp);

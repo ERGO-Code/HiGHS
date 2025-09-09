@@ -356,17 +356,18 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
 
   logger_.print_iteration_header();
 
-  pdlp_log_file = fopen("HiPDLP.log", "w");
-  assert(pdlp_log_file);
+  pdlp_log_file_ = fopen("HiPDLP.log", "w");
+  assert(pdlp_log_file_);
 
   // --- 2. Main PDHG Loop ---
   // A single loop handles max iterations, convergence, and restarts.
   for (int iter = 0; iter < params.max_iterations; ++iter) {
-    pdlpIterLog(pdlp_log_file, iter);
+    const double dummy_beta = 0.0;
+    pdlpIterLog(pdlp_log_file_, iter, dummy_beta);
     linalg::Ax(lp, x_current_, Ax_current);
     //print norm of Ax
     double ax_norm = linalg::vector_norm(Ax_current);
-    pdlpAxNormLog(pdlp_log_file, ax_norm);
+    pdlpAxNormLog(pdlp_log_file_, ax_norm);
 
     linalg::ATy(lp, y_current_, ATy_current);
     if (solver_timer.read() > params.time_limit) {
@@ -399,14 +400,14 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
       case StepSizeStrategy::FIXED:
         step::UpdateIteratesFixed(lp, working_params, fixed_eta, x, y, Ax_new,
                                   x_current_, y_current_, Ax_current,
-				  pdlp_log_file);
+				  pdlp_log_file_);
         break;
 
       case StepSizeStrategy::ADAPTIVE:
         step::UpdateIteratesAdaptive(lp, working_params, x, y, Ax_new,
                                      x_current_, y_current_, Ax_current,
                                      ATy_current, current_eta_, iter,
-				  pdlp_log_file);
+				  pdlp_log_file_);
         break;
 
       case StepSizeStrategy::MALITSKY_POCK:
@@ -414,7 +415,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
             lp, working_params, x, y, Ax_new, x_current_, y_current_,
             Ax_current, ATy_current, current_eta_, ratio_last_two_step_sizes_,
             num_rejected_steps_, first_malitsky_iteration,
-				  pdlp_log_file);
+				  pdlp_log_file_);
 
         if (!step_success) {
           std::cerr << "Malitsky-Pock step failed at iteration " << iter
@@ -566,7 +567,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
 }
 
 void PDLPSolver::solveReturn() {
-  if (pdlp_log_file) fclose(pdlp_log_file);
+  if (pdlp_log_file_) fclose(pdlp_log_file_);
 }
 
 void PDLPSolver::Initialize(const HighsLp& lp, std::vector<double>& x,

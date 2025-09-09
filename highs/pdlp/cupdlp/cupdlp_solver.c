@@ -918,7 +918,7 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
   const int iter_log_between_header = 50;
   int iter_log_since_header = iter_log_between_header;
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
-    pdlpIterLog(pdhg->pdlp_log_file, timers->nIter);
+    pdlpIterLog(pdhg->pdlp_log_file, timers->nIter, pdhg->stepsize->dBeta);
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS && CUPDLP_DEBUG
     PDHG_Dump_Stats(pdhg);

@@ -1782,8 +1782,8 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
   fclose(fptr);
 }
 
-void pdlpIterLog(FILE* file, const int iter_num) {
-  fprintf(file, "Iter %6d\n", iter_num);
+void pdlpIterLog(FILE* file, const int iter_num, const double beta) {
+  fprintf(file, "Iter %6d; beta = %g\n", iter_num, beta);
 }
 
 void pdlpAxNormLog(FILE* file, const double ax_norm) {

@@ -88,12 +88,12 @@ double ComputeNonlinearity(const std::vector<double>& delta_primal,
 void UpdateX(std::vector<double>& x_new, const std::vector<double>& x_current,
              const HighsLp& lp, const std::vector<double>& y_current,
              double eta, double omega,
-	     FILE* pdlp_log_file) {
+	     FILE* pdlp_log_file_) {
   std::vector<double> ATy_cache(lp.num_col_);
   linalg::ATy(lp, y_current, ATy_cache);
   //print the norm of ATy_cache
   double aty_norm = linalg::vector_norm(ATy_cache);
-  pdlpAtyNormLog(pdlp_log_file, aty_norm);
+  pdlpAtyNormLog(pdlp_log_file_, aty_norm);
   for (HighsInt i = 0; i < lp.num_col_; i++) {
     double gradient = lp.col_cost_[i] - ATy_cache[i];
     x_new[i] = linalg::project_box(x_current[i] - (eta / omega) * gradient,
@@ -142,8 +142,8 @@ void UpdateIteratesFixed(const HighsLp& lp, const PrimalDualParams& params,
                          const std::vector<double>& x_current,
                          const std::vector<double>& y_current,
                          const std::vector<double>& ax_current,
-			 FILE* pdlp_log_file) {
-  UpdateX(x_new, x_current, lp, y_current, params.eta, params.omega, pdlp_log_file);
+			 FILE* pdlp_log_file_) {
+  UpdateX(x_new, x_current, lp, y_current, params.eta, params.omega, pdlp_log_file_);
   linalg::Ax(lp, x_new, ax_new);
   UpdateY(y_new, y_current, lp, ax_new, ax_current, params.eta, params.omega);
 }
@@ -157,7 +157,7 @@ void UpdateIteratesAdaptive(const HighsLp& lp, const PrimalDualParams& params,
                             const std::vector<double>& ax_current,
                             const std::vector<double>& aty_current,
                             double& current_eta, int& step_size_iter_count,
-			    FILE* pdlp_log_file) {
+			    FILE* pdlp_log_file_) {
   const double MIN_ETA = 1e-6;
   const double MAX_ETA = 1.0;
 
@@ -182,7 +182,7 @@ void UpdateIteratesAdaptive(const HighsLp& lp, const PrimalDualParams& params,
     std::vector<double> aty_candidate(lp.num_col_);
 
     // Primal update
-    UpdateX(x_candidate, x_current, lp, y_current, current_eta, params.omega, pdlp_log_file);
+    UpdateX(x_candidate, x_current, lp, y_current, current_eta, params.omega, pdlp_log_file_);
     linalg::Ax(lp, x_candidate, ax_candidate);
 
     // Dual update
@@ -268,14 +268,14 @@ bool UpdateIteratesMalitskyPock(
     const std::vector<double>& aty_current, double& current_eta,
     double& ratio_last_two_step_sizes, int& num_rejected_steps,
     bool first_iteration,
-    FILE* pdlp_log_file)  // Add this parameter to track first iteration
+    FILE* pdlp_log_file_)  // Add this parameter to track first iteration
 {
   // Step 1: Compute primal update first (without extrapolation)
   const double primal_step_size = current_eta / params.omega;
 
   std::vector<double> x_candidate(lp.num_col_);
   UpdateX(x_candidate, x_current, lp, y_current, primal_step_size,
-          params.omega, pdlp_log_file);
+          params.omega, pdlp_log_file_);
 
   // Compute Ax for the primal candidate
   std::vector<double> ax_candidate(lp.num_row_);
