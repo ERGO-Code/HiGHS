@@ -4579,7 +4579,7 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
 
       // round up to make sure that all rows are redundant
       if (model->integrality_[col] != HighsVarType::kContinuous)
-        candidateBound = ceil(direction * candidateBound - primal_feastol);
+        candidateBound = std::ceil(direction * candidateBound - primal_feastol);
 
       // take largest bound
       newBound = std::max(newBound, candidateBound);
