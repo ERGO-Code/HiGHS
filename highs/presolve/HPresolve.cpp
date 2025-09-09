@@ -243,6 +243,13 @@ bool HPresolve::isRanged(HighsInt row) const {
           model->row_upper_[row] != kHighsInf);
 }
 
+bool HPresolve::isRedundant(HighsInt row) const {
+  return (impliedRowBounds.getSumLower(row) >=
+              model->row_lower_[row] - primal_feastol &&
+          impliedRowBounds.getSumUpper(row) <=
+              model->row_upper_[row] + primal_feastol);
+}
+
 bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
   // if the implied lower bound on a row dual is strictly positive then the row
   // is an implied equation (using its lower bound) due to complementary
@@ -3225,6 +3232,9 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (colDeleted[col]) return Result::kOk;
 
+  // try tightening bounds (special case from dual fixing)
+  dualBoundTightening(postsolve_stack, col);
+
   if (mipsolver != nullptr)
     HPRESOLVE_CHECKED_CALL(
         static_cast<Result>(convertImpliedInteger(col, row)));
@@ -3300,10 +3310,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   };
 
   auto checkRowRedundant = [&](HighsInt row) {
-    if (impliedRowBounds.getSumLower(row) >=
-            model->row_lower_[row] - primal_feastol &&
-        impliedRowBounds.getSumUpper(row) <=
-            model->row_upper_[row] + primal_feastol) {
+    if (isRedundant(row)) {
       // row is redundant
       int presolveRule =
           rowsize[row] != 0 ? kPresolveRuleRedundantRow : kPresolveRuleEmptyRow;
@@ -4328,6 +4335,9 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col));
   if (colDeleted[col]) return Result::kOk;
 
+  // try tightening bounds (special case from dual fixing)
+  dualBoundTightening(postsolve_stack, col);
+
   // column is not (weakly) dominated
 
   // integer columns cannot be used to tighten bounds on dual multipliers
@@ -4521,6 +4531,82 @@ HPresolve::Result HPresolve::detectDominatedCol(
       weaklyDominatedCol(col, colDualUpper, model->col_upper_[col],
                          model->col_lower_[col], HighsInt{-1}));
   return Result::kOk;
+}
+
+void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
+                                    HighsInt col) {
+  assert(!colDeleted[col]);
+
+  auto tightenBounds = [&](HighsInt col, HighsInt direction,
+                           double currentBound, double& newBound) {
+    // return if objective coefficient has wrong sign
+    if (direction * model->col_cost_[col] < 0) return false;
+
+    // do not accept huge bounds
+    double hugeBound = primal_feastol / kHighsTiny;
+
+    // initialise
+    newBound = -direction * kHighsInf;
+    currentBound *= direction;
+
+    for (const auto& nz : getColumnVector(col)) {
+      // get row index and coefficient
+      HighsInt row = nz.index();
+      double val = nz.value();
+
+      // skip rows that are already redundant
+      if (isRedundant(row)) continue;
+
+      // cannot compute a bound if ranged rows are present
+      if (isRanged(row)) return false;
+
+      double candidateBound = 0.0;
+      if (direction * val < 0.0) {
+        // skip rows with infinite rhs
+        if (model->row_upper_[row] == kHighsInf) continue;
+
+        candidateBound = static_cast<double>(
+            (static_cast<HighsCDouble>(model->row_upper_[row]) -
+             impliedRowBounds.getResidualSumUpperOrig(row, col, val)) /
+            val);
+
+      } else {
+        // skip rows with infinite lhs
+        if (model->row_lower_[row] == -kHighsInf) continue;
+
+        candidateBound = static_cast<double>(
+            (static_cast<HighsCDouble>(model->row_lower_[row]) -
+             impliedRowBounds.getResidualSumLowerOrig(row, col, val)) /
+            val);
+      }
+
+      // round up to make sure that all rows are redundant
+      if (model->integrality_[col] != HighsVarType::kContinuous)
+        candidateBound = ceil(direction * candidateBound - primal_feastol);
+
+      // take largest bound
+      newBound = std::max(newBound, candidateBound);
+
+      // stop looking if bound is too large
+      if (newBound >= currentBound - primal_feastol || newBound > hugeBound)
+        return false;
+    }
+
+    // flip sign again
+    newBound *= direction;
+
+    return newBound != -kHighsInf;
+  };
+
+  double newBound = 0.0;
+  if (tightenBounds(col, HighsInt{1}, model->col_upper_[col], newBound)) {
+    // update upper bound
+    changeColUpper(col, std::max(newBound, model->col_lower_[col]));
+  } else if (tightenBounds(col, HighsInt{-1}, model->col_lower_[col],
+                           newBound)) {
+    // update lower bound
+    changeColUpper(col, std::min(newBound, model->col_upper_[col]));
+  }
 }
 
 HPresolve::Result HPresolve::initialRowAndColPresolve(
