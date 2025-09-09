@@ -4560,9 +4560,9 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
       // skip rows that are already redundant
       if (isRedundant(row)) continue;
 
-      double candidateBound = 0.0;
-      double residual = 0.0;
       double rhs = 0.0;
+      double residual = 0.0;
+
       if (direction * val < 0.0) {
         // skip rows with infinite rhs
         rhs = model->row_upper_[row];
@@ -4582,7 +4582,7 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
       }
 
       // compute bound
-      candidateBound = static_cast<double>(
+      double candidateBound = static_cast<double>(
           (static_cast<HighsCDouble>(rhs) - residual) / val);
 
       // round up to make sure that all rows are redundant
