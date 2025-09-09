@@ -63,6 +63,8 @@ class HighsMipWorker {
 
   const bool checkLimits(int64_t nodeOffset = 0) const;
 
+  void resetSearchDomain();
+
   bool addIncumbent(const std::vector<double>& sol, double solobj,
                     const int solution_source,
                     const bool print_display_line = true);

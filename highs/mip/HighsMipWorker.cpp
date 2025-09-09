@@ -69,6 +69,18 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
 
 const HighsMipSolver& HighsMipWorker::getMipSolver() { return mipsolver_; }
 
+void HighsMipWorker::resetSearchDomain() {
+  search_ptr_.reset();
+  search_ptr_ =
+      std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
+  // search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
+  // search_ptr_->getLocalDomain().addConflictPool(
+  //     mipsolver_.mipdata_->conflictPool);
+  search_ptr_->getLocalDomain().addCutpool(cutpool_);
+  search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
+  search_ptr_->setLpRelaxation(&lprelaxation_);
+}
+
 bool HighsMipWorker::addIncumbent(const std::vector<double>& sol, double solobj,
                                   const int solution_source,
                                   const bool print_display_line) {

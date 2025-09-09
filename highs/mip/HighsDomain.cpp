@@ -1634,13 +1634,15 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
     }
   }
 
-  if (!infeasible_) {
-    for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
-      cutpoolprop.updateActivityLbChange(col, oldbound, newbound);
-  } else {
+  if (infeasible_) {
     assert(infeasible_reason.type == Reason::kModelRowLower ||
-           infeasible_reason.type == Reason::kModelRowUpper);
+             infeasible_reason.type == Reason::kModelRowUpper);
     assert(infeasible_reason.index == mip->a_matrix_.index_[end - 1]);
+  } else {
+    for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
+      if (!infeasible_) {
+        cutpoolprop.updateActivityLbChange(col, oldbound, newbound);
+      }
   }
 
   if (infeasible_) {
@@ -1795,13 +1797,15 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
     }
   }
 
-  if (!infeasible_) {
-    for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
-      cutpoolprop.updateActivityUbChange(col, oldbound, newbound);
-  } else {
+  if (infeasible_) {
     assert(infeasible_reason.type == Reason::kModelRowLower ||
-           infeasible_reason.type == Reason::kModelRowUpper);
+             infeasible_reason.type == Reason::kModelRowUpper);
     assert(infeasible_reason.index == mip->a_matrix_.index_[end - 1]);
+  } else {
+    for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
+      if (!infeasible_) {
+        cutpoolprop.updateActivityUbChange(col, oldbound, newbound);
+      }
   }
 
   if (infeasible_) {

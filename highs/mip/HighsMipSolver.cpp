@@ -256,8 +256,11 @@ restart:
 
   // This version works during refactor with the master pseudocost.
   // valgrind OK.
-  HighsSearch search{master_worker, mipdata_->pseudocost};
-  search.setLpRelaxation(&mipdata_->lp);
+  // HighsSearch search{master_worker, mipdata_->pseudocost};
+  // search.setLpRelaxation(&mipdata_->lp);
+  // MT: I think search should be ties to the master worker
+  master_worker.resetSearchDomain();
+  HighsSearch& search = *master_worker.search_ptr_;
 
   // This search is from the worker and will use the worker pseudocost.
   // does not work yet, fails at domain propagation somewhere.
@@ -312,18 +315,23 @@ restart:
   search_started = true;
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt num_worker = mip_search_concurrency - 1;
+  highs::parallel::TaskGroup tg;
 
-  for (int i = 0; i < num_worker; i++) {
-    mipdata_->lps.emplace_back(*this);
-    mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
+  for (int i = 1; i < mip_search_concurrency; i++) {
+    if (mipdata_->numRestarts <= mipdata_->numRestartsRoot) {
+      mipdata_->lps.emplace_back(*this);
+      mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
+    } else {
+      mipdata_->workers[i].resetSearchDomain();
+    }
   }
 
   // Lambda for combining limit_reached across searches
   auto limitReached = [&]() -> bool {
     bool limit_reached = false;
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++)
-      limit_reached =
-	limit_reached || mipdata_->workers[iSearch].search_ptr_->limit_reached_;
+      limit_reached = limit_reached ||
+                      mipdata_->workers[iSearch].search_ptr_->limit_reached_;
     return limit_reached;
   };
 
@@ -332,13 +340,13 @@ restart:
     bool break_search = false;
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++)
       break_search =
-	break_search || mipdata_->workers[iSearch].search_ptr_->break_search_;
+          break_search || mipdata_->workers[iSearch].search_ptr_->break_search_;
     return break_search;
   };
 
   // Lambda checking whether loop pass is to be skipped
   auto performedDive = [&](const HighsSearch& search,
-			   const HighsInt iSearch) -> bool {
+                           const HighsInt iSearch) -> bool {
     if (iSearch == 0) {
       assert(search.performed_dive_);
     } else {
@@ -359,6 +367,9 @@ restart:
 
     analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();
+    for (int i = 0; i < mip_search_concurrency; i++) {
+      mipdata_->workers[i].conflictpool_.performAging();
+    }
     analysis_.mipTimerStop(kMipClockPerformAging1);
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
@@ -369,6 +380,9 @@ restart:
                           HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
 
     mipdata_->lp.setIterationLimit(iterlimit);
+    for (int i = 0; i < mip_search_concurrency; i++) {
+      mipdata_->lps[i].setIterationLimit(iterlimit);
+    }
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
@@ -430,21 +444,80 @@ restart:
 
       if (mipdata_->domain.infeasible()) break;
 
-      if (!search.currentNodePruned()) {
-        double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
-        analysis_.mipTimerStart(kMipClockTheDive);
-        const HighsSearch::NodeResult search_dive_result = search.dive();
-        analysis_.mipTimerStop(kMipClockTheDive);
-        if (analysis_.analyse_mip_time) {
-          this_dive_time += analysis_.mipTimerRead(kMipClockNodeSearch);
-          analysis_.dive_time.push_back(this_dive_time);
-        }
-        if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
-
-        ++mipdata_->num_leaves;
-
-        search.flushStatistics();
+      // MT: My attempt at a parallel dive
+      std::vector<double> dive_times(mip_search_concurrency,
+                                     -analysis_.mipTimerRead(kMipClockTheDive));
+      std::vector<HighsSearch::NodeResult> dive_results(
+          mip_search_concurrency, HighsSearch::NodeResult::kBranched);
+      for (int i = 0; i < mip_search_concurrency; i++) {
+        printf("%d is the value used!!\n", i);
+        tg.spawn([&, i]() {
+          printf("%d is the value used in start of the spawn!!\n", i);
+          if (!mipdata_->workers[i].search_ptr_->hasNode() ||
+              mipdata_->workers[i].search_ptr_->currentNodePruned()) {
+            dive_times[i] = -1;
+          } else {
+            dive_results[i] = mipdata_->workers[i].search_ptr_->dive();
+            dive_times[i] += analysis_.mipTimerRead(kMipClockNodeSearch);
+          }
+          printf("%d = !hasNode\n", !mipdata_->workers[i].search_ptr_->hasNode());
+          printf("%d is the value used in the spawn!!\n", i);
+        });
       }
+      // auto task = [&](const int idx) {
+      //   if (!mipdata_->workers[idx].search_ptr_->hasNode() ||
+      //       mipdata_->workers[idx].search_ptr_->currentNodePruned()) {
+      //     dive_times[idx] = -1;
+      //   } else {
+      //     dive_results[idx] = mipdata_->workers[idx].search_ptr_->dive();
+      //     dive_times[idx] += analysis_.mipTimerRead(kMipClockNodeSearch);
+      //   }
+      // };
+      // for (int i = 0; i < mip_search_concurrency; i++) {
+      //   tg.spawn([&]() {
+      //     task(i);
+      //   });
+      // }
+      // tg.spawn([&]() {
+      //   if (!mipdata_->workers[0].search_ptr_->hasNode() ||
+      //       mipdata_->workers[0].search_ptr_->currentNodePruned()) {
+      //     dive_times[0] = -1;
+      //   } else {
+      //     dive_results[0] = mipdata_->workers[0].search_ptr_->dive();
+      //     dive_times[0] += analysis_.mipTimerRead(kMipClockNodeSearch);
+      //   }
+      // });
+      tg.sync();
+      bool suboptimal = false;
+      for (int i = 0; i < 1; i++) {
+        if (dive_times[i] != -1) {
+          analysis_.dive_time.push_back(dive_times[i]);
+          if (dive_results[i] == HighsSearch::NodeResult::kSubOptimal) {
+            suboptimal = true;
+          } else {
+            ++mipdata_->num_leaves;
+            mipdata_->workers[i].search_ptr_->flushStatistics();
+          }
+        }
+      }
+      if (suboptimal) break;
+
+      // if (!search.currentNodePruned()) {
+      //   double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
+      //   analysis_.mipTimerStart(kMipClockTheDive);
+      //   const HighsSearch::NodeResult search_dive_result = search.dive();
+      //   analysis_.mipTimerStop(kMipClockTheDive);
+      //   if (analysis_.analyse_mip_time) {
+      //     this_dive_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+      //     analysis_.dive_time.push_back(this_dive_time);
+      //   }
+      //   if (search_dive_result == HighsSearch::NodeResult::kSubOptimal)
+      //   break;
+      //
+      //   ++mipdata_->num_leaves;
+      //
+      //   search.flushStatistics();
+      // }
 
       if (mipdata_->checkLimits()) {
         limit_reached = true;
