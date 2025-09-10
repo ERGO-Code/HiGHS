@@ -3232,7 +3232,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (colDeleted[col]) return Result::kOk;
 
-  // try tightening bounds (special case from dual fixing)
+  // try tightening bounds
   dualBoundTightening(postsolve_stack, col);
 
   if (mipsolver != nullptr)
@@ -4335,7 +4335,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col));
   if (colDeleted[col]) return Result::kOk;
 
-  // try tightening bounds (special case from dual fixing)
+  // try tightening bounds
   dualBoundTightening(postsolve_stack, col);
 
   // column is not (weakly) dominated
@@ -4535,13 +4535,18 @@ HPresolve::Result HPresolve::detectDominatedCol(
 
 void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
                                     HighsInt col) {
+  // tighten bounds using dual arguments
+  // see section 4.4 "Dual fixing, substitution and bound strengthening",
+  // Achterberg et al., Presolve Reductions in Mixed Integer Programming,
+  // INFORMS Journal on Computing 32(2):473-506.
   assert(!colDeleted[col]);
 
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return;
 
-  auto tightenBounds = [&](HighsInt col, HighsInt direction,
-                           double currentBound, double& newBound) {
+  // lambda for computing tighter bounds
+  auto hasTighterBound = [&](HighsInt col, HighsInt direction,
+                             double currentBound, double& newBound) {
     // return if objective coefficient has wrong sign
     if (direction * model->col_cost_[col] < 0) return false;
 
@@ -4560,6 +4565,7 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
       // skip rows that are already redundant
       if (isRedundant(row)) continue;
 
+      // initialise
       double rhs = 0.0;
       double residual = 0.0;
 
@@ -4597,18 +4603,18 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
         return false;
     }
 
-    // flip sign again
+    // flip sign
     newBound *= direction;
 
     return newBound != -kHighsInf;
   };
 
   double newBound = 0.0;
-  if (tightenBounds(col, HighsInt{1}, model->col_upper_[col], newBound)) {
+  if (hasTighterBound(col, HighsInt{1}, model->col_upper_[col], newBound)) {
     // update upper bound
     changeColUpper(col, std::max(newBound, model->col_lower_[col]));
-  } else if (tightenBounds(col, HighsInt{-1}, model->col_lower_[col],
-                           newBound)) {
+  } else if (hasTighterBound(col, HighsInt{-1}, model->col_lower_[col],
+                             newBound)) {
     // update lower bound
     changeColLower(col, std::min(newBound, model->col_upper_[col]));
   }
