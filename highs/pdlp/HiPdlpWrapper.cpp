@@ -70,15 +70,14 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 
   // 4. Solve with HiPdlp
   std::vector<double> x, y;
-  //pdlp.Solve(preprocessed_lp, params, x, y);
+  pdlp.Solve(x,y);
 
   // 5. Unscale with HiPdlp
   pdlp.scaling_.UnscaleSolution(x, y);
 
   // 6. Postprocess with HiPDLP
   HighsSolution pdlp_solution;
-  //pdlp.Postsolve(presolved_lp, preprocessed_lp, x, y, pdlp_solution);
-
+  //pdlp.Postsolve(presolved_lp, preprocessed_lp, x, y, pdlp_solution); // return x, y
 
   // --- Print Summary ---
   logger.print_summary(pdlp.GetResults(), pdlp.GetIterationCount(),

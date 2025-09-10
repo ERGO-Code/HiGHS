@@ -14,17 +14,16 @@
 #include <cmath>
 
 // Initializes the restart scheme with parameters and initial results
-void RestartScheme::Initialize(const PrimalDualParams& params,
-                               const SolverResults& results) {
-  strategy_ = params.restart_strategy;
-  fixed_restart_interval_ = params.fixed_restart_interval;
+void RestartScheme::Initialize(const SolverResults& results) {
+  strategy_ = params_->restart_strategy;
+  fixed_restart_interval_ = params_->fixed_restart_interval;
   last_restart_iter_ = 0;
 
   // Stepsize ratio,
   //  β = dBeta = dDualStep / dPrimalStep,
   //    in the paper, primal weight is the ω:
   //    ω = √β
-  beta_ = std::sqrt(params.omega);
+  beta_ = std::sqrt(params_->omega);
 
   last_restart_iter_ = 0;
   last_restart_score_ = std::numeric_limits<double>::infinity();

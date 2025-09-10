@@ -163,14 +163,11 @@ void PDLPSolver::PreprocessLp() {
                std::to_string(processed_lp.num_col_) + " cols.");
 }
 
-void PDLPSolver::Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
-                           const std::vector<double>& x_processed,
-                           const std::vector<double>& y_processed,
-                           HighsSolution& solution) {
+void PDLPSolver::Postsolve(HighsSolution& solution) {
   logger_.info("Post-solving the solution...");
 
-  std::vector<double> x_unscaled = x_processed;
-  std::vector<double> y_unscaled = y_processed;
+  std::vector<double> x_unscaled = x_current_;
+  std::vector<double> y_unscaled = y_current_;
 
   std::vector<double> dSlackPos_unscaled = dSlackPos_;
   std::vector<double> dSlackNeg_unscaled = dSlackNeg_;
@@ -217,7 +214,7 @@ void PDLPSolver::Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
   // 5. Recover Primal Row Values (Ax)
   // This requires re-calculating Ax with the unscaled solution and using the
   // slack values.
-  HighsLp unscaled_processed_lp = processed_lp;
+  HighsLp unscaled_processed_lp = lp_;
 
   if (scaling_.IsScaled()) {
     // Unscale matrix, costs, and rhs
@@ -262,37 +259,13 @@ void PDLPSolver::Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
 
 PDLPSolver::PDLPSolver(Logger& logger) : logger_(logger) {}
 
-void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
-                       std::vector<double>& x, std::vector<double>& y) {
+void PDLPSolver::Solve(std::vector<double>& x, std::vector<double>& y) {
   Timer solver_timer;
-  if (original_lp.num_row_ == 0 || original_lp.a_matrix_.start_.size() < 2) {
-    std::cout << "Empty LP problem." << std::endl;
-    return solveReturn();
-  }
 
-  HighsSolution solution;
-
-  // 2. Pass the PREPROCESSED LP to HiGHS and run presolve
-  /*
-  logger_.info("Running HiGHS presolve on the preprocessed problem...");
-  HighsLp lp;
-  if (!highs_interface_.passModelAndPresolve(preprocessed_lp, lp)) {
-      logger_.info("Failed during HiGHS passModel or presolve on preprocessed
-  LP."); results_.term_code = TerminationStatus::ERROR; return;
-  }
-
-  HighsModelStatus status1 = highs_interface_.getModelStatus();
-  if (status1 == HighsModelStatus::kOptimal) {
-      // If solved, postsolve to get the solution for the preprocessed problem
-      logger_.info("Problem solved to optimality by HiGHS presolve.");
-
-      return;
-  }
-*/
-  HighsLp lp = original_lp;
+  const HighsLp& lp = lp_;
   // --- 0.Using PowerMethod to estimate the largest eigenvalue ---
   double op_norm_sq = 1.0;  // Default value
-  HighsStatus status = PowerMethod(lp, op_norm_sq);
+  HighsStatus status = PowerMethod(op_norm_sq);
   if (status == HighsStatus::kWarning) {
     std::cout << "Warning: Power method for step size did not converge. Using "
                  "default."
@@ -304,7 +277,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
   step::StepSizeConfig step_size = step::InitializeStepSizesPowerMethod(
       lp, op_norm_sq, status == HighsStatus::kOk);
   const double fixed_eta = 0.99 / sqrt(op_norm_sq);
-  PrimalDualParams working_params = params;
+  PrimalDualParams working_params = params_;
 
   working_params.omega = std::sqrt(step_size.dual_step / step_size.primal_step);
   working_params.eta = std::sqrt(step_size.primal_step * step_size.dual_step);
@@ -320,7 +293,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
 
   // --- 1. Initialization ---
   Initialize(lp, x, y);  // Sets initial x, y and results_
-  restart_scheme_.Initialize(params, results_);
+  restart_scheme_.Initialize(results_);
 
   // Use member variables for iterates for cleaner state management
   x_current_ = x;
@@ -329,7 +302,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
   bool first_malitsky_iteration = true;
   ratio_last_two_step_sizes_ = 1.0;
   bool using_malitsky_averaging =
-      (params.step_size_strategy == StepSizeStrategy::MALITSKY_POCK);
+      (params_.step_size_strategy == StepSizeStrategy::MALITSKY_POCK);
   bool primal_average_initialized = false;
 
   // We need Ax for the y-update and for computing residuals
@@ -346,7 +319,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
 
   // --- 2. Main PDHG Loop ---
   // A single loop handles max iterations, convergence, and restarts.
-  for (int iter = 0; iter < params.max_iterations; ++iter) {
+  for (int iter = 0; iter < params_.max_iterations; ++iter) {
     const double dummy_beta = 0.0;
     pdlpIterLog(pdlp_log_file_, iter, dummy_beta);
     linalg::Ax(lp, x_current_, Ax_current);
@@ -355,25 +328,12 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
     pdlpAxNormLog(pdlp_log_file_, ax_norm);
 
     linalg::ATy(lp, y_current_, ATy_current);
-    if (solver_timer.read() > params.time_limit) {
+    if (solver_timer.read() > params_.time_limit) {
       logger_.info("Time limit reached.");
       final_iter_count_ = iter;
 
       // Set termination status
       results_.term_code = TerminationStatus::TIMEOUT;
-
-      // Ensure the final summary is accurate by using the last computed results
-      // (The `results_` member should already hold the last iteration's data)
-
-      // Unscale solution before returning
-      scaling_.UnscaleSolution(x, y);
-
-      // Update objective with final unscaled solution
-      double primal_objective = 0.0;
-      for (HighsInt i = 0; i < original_lp.num_col_; ++i) {
-        primal_objective += original_lp.col_cost_[i] * x[i];
-      }
-      results_.primal_obj = primal_objective;
 
       return solveReturn();  // Exit the function
     }
@@ -381,7 +341,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
     // --- 3. Core PDHG Update Step ---
     bool step_success = true;
 
-    switch (params.step_size_strategy) {
+    switch (params_.step_size_strategy) {
       case StepSizeStrategy::FIXED:
         step::UpdateIteratesFixed(lp, working_params, fixed_eta, x, y, Ax_new,
                                   x_current_, y_current_, Ax_current,
@@ -421,7 +381,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
     UpdateAverageIterates(x, y, working_params, inner_iter);
 
     // --- 5. Convergence Check ---
-    bool bool_checking = (iter < 10) || (iter == (params.max_iterations - 1)) ||
+    bool bool_checking = (iter < 10) || (iter == (params_.max_iterations - 1)) ||
                          (iter > 0 && (iter % PDHG_CHECK_INTERVAL == 0));
     if (bool_checking) {
       // To check convergence on the average, you need A*x_avg and A^T*y_avg
@@ -432,8 +392,8 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
       linalg::ATy(lp, y_avg_, ATy_avg);
 
       bool average_converged =
-          CheckConvergence(lp, x_avg_, y_avg_, Ax_avg, ATy_avg,
-                           params.tolerance, average_results);
+          CheckConvergence(x_avg_, y_avg_, Ax_avg, ATy_avg,
+                           params_.tolerance, average_results);
 
       logger_.print_iteration_stats(iter, average_results, current_eta_);
 
@@ -447,24 +407,14 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
         x = x_avg_;
         y = y_avg_;
 
-        // Unscale solution
-        // scaling_.UnscaleSolution(x, y);
-
-        // Calculate primal objective on original problem
-        double primal_objective = 0.0;
-        for (HighsInt i = 0; i < original_lp.num_col_; ++i) {
-          primal_objective += original_lp.col_cost_[i] * x[i];
-        }
-
         // Update results with the converged metrics
         results_ = average_results;
         results_.term_code = TerminationStatus::OPTIMAL;
-        Postsolve(original_lp, lp, x, y, solution);
         return solveReturn();
       }
 
       bool current_converged = CheckConvergence(
-          lp, x, y, Ax_new, ATy_new, params.tolerance, current_results);
+          x, y, Ax_new, ATy_new, params_.tolerance, current_results);
 
       // Log iteration stats (using current results for display)
       logger_.print_iteration_stats(iter, current_results, current_eta_);
@@ -475,19 +425,10 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
         final_iter_count_ = iter;
         results_ = current_results;
 
-        // Unscale solution
-        // scaling_.UnscaleSolution(x, y);
-
-        // Calculate primal objective on original problem
-        double primal_objective = 0.0;
-        for (HighsInt i = 0; i < original_lp.num_col_; ++i) {
-          primal_objective += original_lp.col_cost_[i] * x[i];
-        }
-
         // Update results with the converged metrics
         results_ = current_results;
         results_.term_code = TerminationStatus::OPTIMAL;
-        Postsolve(original_lp, lp, x, y, solution);
+
         return solveReturn();
       }
 
@@ -535,19 +476,9 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
 
   // --- 7. Handle Max Iterations Reached ---
   logger_.info("Max iterations reached without convergence.");
-  final_iter_count_ = params.max_iterations;
-  // scaling_.UnscaleSolution(x, y);
+  final_iter_count_ = params_.max_iterations;
 
-  // Calculate primal objective on original problem
-  double primal_objective = 0.0;
-  for (HighsInt i = 0; i < original_lp.num_col_; ++i) {
-    primal_objective += original_lp.col_cost_[i] * x[i];
-  }
-
-  // Update the final pieces of the results
-  results_.primal_obj = primal_objective;
   results_.term_code = TerminationStatus::TIMEOUT;
-  Postsolve(original_lp, lp, x_avg_, y_avg_, solution);
   return solveReturn();
 }
 
@@ -632,19 +563,19 @@ void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
 
 // lambda = c - proj_{\Lambda}(c - K^T y)
 std::vector<double> PDLPSolver::ComputeLambda(
-    const HighsLp& lp, const std::vector<double>& y,
+    const std::vector<double>& y,
     const std::vector<double>& ATy_vector) {
-  std::vector<double> lambda(lp.num_col_, 0.0);
-  for (HighsInt i = 0; i < lp.num_col_; ++i) {
-    double residual = lp.col_cost_[i] - ATy_vector[i];
+  std::vector<double> lambda(lp_.num_col_, 0.0);
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
+    double residual = lp_.col_cost_[i] - ATy_vector[i];
 
-    if (lp.col_lower_[i] <= -kHighsInf && lp.col_upper_[i] >= kHighsInf) {
+    if (lp_.col_lower_[i] <= -kHighsInf && lp_.col_upper_[i] >= kHighsInf) {
       // Case 1: Unbounded variable (l_i = -inf, u_i = +inf) -> lambda_i = 0
       lambda[i] = 0;
-    } else if (lp.col_lower_[i] <= -kHighsInf) {
+    } else if (lp_.col_lower_[i] <= -kHighsInf) {
       // Case 2: Only upper bound (l_i = -inf, u_i is finite) -> lambda_i in R^-
       lambda[i] = std::min(0.0, residual);
-    } else if (lp.col_upper_[i] >= kHighsInf) {
+    } else if (lp_.col_upper_[i] >= kHighsInf) {
       // Case 3: Only lower bound (l_i is finite, u_i = +inf) -> lambda_i in R^+
       lambda[i] = std::max(0.0, residual);
     } else {
@@ -656,17 +587,17 @@ std::vector<double> PDLPSolver::ComputeLambda(
 }
 
 std::pair<double, double> PDLPSolver::ComputePrimalFeasibility(
-    const HighsLp& lp, const std::vector<double>& x,
+    const std::vector<double>& x,
     const std::vector<double>& Ax_vector) {
   double primal_feasibility_squared = 0.0;
-  std::vector<double> Ax_minus_b(lp.num_row_, 0.0);
-  for (HighsInt i = 0; i < lp.num_row_; ++i) {
+  std::vector<double> Ax_minus_b(lp_.num_row_, 0.0);
+  for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     double Ax = Ax_vector[i];
-    if (lp.row_lower_[i] == lp.row_upper_[i]) {
+    if (lp_.row_lower_[i] == lp_.row_upper_[i]) {
       // Equality constraint
-      Ax_minus_b[i] = Ax - lp.row_lower_[i];
+      Ax_minus_b[i] = Ax - lp_.row_lower_[i];
     } else {  // Inequality constraint
-      Ax_minus_b[i] = std::max(0.0, Ax - lp.row_upper_[i]);
+      Ax_minus_b[i] = std::max(0.0, Ax - lp_.row_upper_[i]);
     }
     primal_feasibility_squared += Ax_minus_b[i] * Ax_minus_b[i];
   }
@@ -675,92 +606,91 @@ std::pair<double, double> PDLPSolver::ComputePrimalFeasibility(
 
   // Compute norm of q
   double q_norm = 0.0;
-  for (HighsInt i = 0; i < lp.num_row_; ++i) {
-    q_norm += lp.row_lower_[i] * lp.row_lower_[i];
+  for (HighsInt i = 0; i < lp_.num_row_; ++i) {
+    q_norm += lp_.row_lower_[i] * lp_.row_lower_[i];
   }
   q_norm = sqrt(q_norm);
 
   return std::make_pair(primal_feasibility, q_norm);
 }
 
-void PDLPSolver::ComputeDualSlacks(const HighsLp& lp,
-                                   const std::vector<double>& ATy_vector) {
+void PDLPSolver::ComputeDualSlacks(const std::vector<double>& ATy_vector) {
   // Ensure vectors are correctly sized
-  if (dSlackPos_.size() != lp.num_col_) dSlackPos_.resize(lp.num_col_);
-  if (dSlackNeg_.size() != lp.num_col_) dSlackNeg_.resize(lp.num_col_);
+  if (dSlackPos_.size() != lp_.num_col_) dSlackPos_.resize(lp_.num_col_);
+  if (dSlackNeg_.size() != lp_.num_col_) dSlackNeg_.resize(lp_.num_col_);
 
-  for (HighsInt i = 0; i < lp.num_col_; ++i) {
-    double reduced_cost = lp.col_cost_[i] - ATy_vector[i];
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
+    double reduced_cost = lp_.col_cost_[i] - ATy_vector[i];
 
     // Slack for lower bound l_i <= x_i (dual variable is non-negative)
     dSlackPos_[i] =
-        (lp.col_lower_[i] > -kHighsInf) ? std::max(0.0, reduced_cost) : 0.0;
+        (lp_.col_lower_[i] > -kHighsInf) ? std::max(0.0, reduced_cost) : 0.0;
 
     // Slack for upper bound x_i <= u_i (dual variable is non-positive, so slack
     // is non-negative)
     dSlackNeg_[i] =
-        (lp.col_upper_[i] < kHighsInf) ? std::max(0.0, -reduced_cost) : 0.0;
+        (lp_.col_upper_[i] < kHighsInf) ? std::max(0.0, -reduced_cost) : 0.0;
   }
 }
 
 std::pair<double, double> PDLPSolver::ComputeDualFeasibility(
-    const HighsLp& lp, const std::vector<double>& ATy_vector) {
+    const std::vector<double>& ATy_vector) {
   double dual_feasibility_squared = 0.0;
-  std::vector<double> dual_residual(lp.num_col_);
+  std::vector<double> dual_residual(lp_.num_col_);
 
-  for (HighsInt i = 0; i < lp.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     // The dual feasibility residual is c - A'y - (dSlackPos - dSlackNeg)
     // where (dSlackPos - dSlackNeg) is the dual variable for the box
     // constraints.
     dual_residual[i] =
-        lp.col_cost_[i] - ATy_vector[i] - (dSlackPos_[i] - dSlackNeg_[i]);
+        lp_.col_cost_[i] - ATy_vector[i] - (dSlackPos_[i] - dSlackNeg_[i]);
 
     dual_feasibility_squared += dual_residual[i] * dual_residual[i];
   }
 
   double dual_feasibility = sqrt(dual_feasibility_squared);
-  double c_norm = linalg::vector_norm(lp.col_cost_);
+  double c_norm = linalg::vector_norm(lp_.col_cost_);
   return std::make_pair(dual_feasibility, c_norm);
 }
 
 std::tuple<double, double, double, double, double>
-PDLPSolver::ComputeDualityGap(const HighsLp& lp, const std::vector<double>& x,
+PDLPSolver::ComputeDualityGap(const std::vector<double>& x,
                               const std::vector<double>& y,
                               const std::vector<double>& lambda) {
   double qTy = 0.0;
-  for (int i = 0; i < lp.num_row_; ++i) {
+  for (int i = 0; i < lp_.num_row_; ++i) {
     // Assumes Gx >= h and Ax = b are combined into a single matrix constraint
     // where the lower bounds represent h and b. This needs to be consistent
     // with how the problem is transformed.
-    if (lp.row_lower_[i] > -kHighsInf) {
-      qTy += lp.row_lower_[i] * y[i];
+    if (lp_.row_lower_[i] > -kHighsInf) {
+      qTy += lp_.row_lower_[i] * y[i];
     } else {
       // For equality constraints Ax=b, often represented as Ax>=b and -Ax>=-b.
       // If b is in row_lower_, this is fine. If it's split, logic may need
       // adjustment.
-      qTy += lp.row_upper_[i] * y[i];
+      qTy += lp_.row_upper_[i] * y[i];
     }
   }
 
   double lT_lambda_plus = 0.0;
   double uT_lambda_minus = 0.0;
 
-  for (int i = 0; i < lp.num_col_; ++i) {
-    if (lp.col_lower_[i] > -kHighsInf) {
+  for (int i = 0; i < lp_.num_col_; ++i) {
+    if (lp_.col_lower_[i] > -kHighsInf) {
       lT_lambda_plus +=
-          lp.col_lower_[i] * std::max(0.0, lambda[i]);  // l^T * lambda^+
+          lp_.col_lower_[i] * std::max(0.0, lambda[i]);  // l^T * lambda^+
     }
-    if (lp.col_upper_[i] < kHighsInf) {
+    if (lp_.col_upper_[i] < kHighsInf) {
       uT_lambda_minus +=
-          lp.col_upper_[i] * std::max(0.0, -lambda[i]);  // u^T * lambda^-
+          lp_.col_upper_[i] * std::max(0.0, -lambda[i]);  // u^T * lambda^-
     }
   }
 
   double dual_objective = qTy + lT_lambda_plus - uT_lambda_minus;
 
   double cTx = 0.0;
-  for (int i = 0; i < lp.num_col_; ++i) {
-    cTx += lp.col_cost_[i] * x[i];
+  for (int i = 0; i < lp_.num_col_; ++i) {
+    cTx += lp_.col_cost_[i] * x[i];
   }
 
   double duality_gap = abs(dual_objective - cTx);
@@ -770,27 +700,26 @@ PDLPSolver::ComputeDualityGap(const HighsLp& lp, const std::vector<double>& x,
                          cTx);
 }
 
-bool PDLPSolver::CheckConvergence(const HighsLp& lp,
-                                  const std::vector<double>& x,
+bool PDLPSolver::CheckConvergence(const std::vector<double>& x,
                                   const std::vector<double>& y,
                                   const std::vector<double>& ax_vector,
                                   const std::vector<double>& aty_vector,
                                   double epsilon, SolverResults& results) {
-  ComputeDualSlacks(lp, aty_vector);
-  std::vector<double> lambda = ComputeLambda(lp, y, aty_vector);
+  ComputeDualSlacks(aty_vector);
+  std::vector<double> lambda = ComputeLambda(y, aty_vector);
 
   double primal_feasibility, q_norm;
   std::tie(primal_feasibility, q_norm) =
-      ComputePrimalFeasibility(lp, x, ax_vector);
+      ComputePrimalFeasibility(x, ax_vector);
   results.primal_feasibility = primal_feasibility;
 
   double dual_feasibility, c_norm;
-  std::tie(dual_feasibility, c_norm) = ComputeDualFeasibility(lp, aty_vector);
+  std::tie(dual_feasibility, c_norm) = ComputeDualFeasibility(aty_vector);
   results.dual_feasibility = dual_feasibility;
 
   double duality_gap, qTy, lTlambda_plus, uTlambda_minus, cTx;
   std::tie(duality_gap, qTy, lTlambda_plus, uTlambda_minus, cTx) =
-      ComputeDualityGap(lp, x, y, lambda);
+      ComputeDualityGap(x, y, lambda);
   results.duality_gap = duality_gap;
 
   results.relative_obj_gap =
@@ -811,7 +740,8 @@ bool PDLPSolver::CheckConvergence(const HighsLp& lp,
   return primal_feasible && dual_feasible && duality_gap_small;
 }
 
-HighsStatus PDLPSolver::PowerMethod(HighsLp& lp, double& op_norm_sq) {
+HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
+  const HighsLp& lp = lp_;
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     op_norm_sq = 1.0;
     return HighsStatus::kOk;

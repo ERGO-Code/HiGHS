@@ -30,15 +30,16 @@ class RestartScheme {
  public:
   RestartScheme() = default;
 
-  void Initialize(const PrimalDualParams& params, const SolverResults& results);
+  void Initialize(const SolverResults& results);
 
   // Checks if a restart should be performed based on the chosen strategy
   RestartInfo Check(int current_iter, const SolverResults& current_results,
                     const SolverResults& average_results);
 
   int GetLastRestartIter() const { return last_restart_iter_; }
-
+  void passParams(const PrimalDualParams* params) {params_ = params ; };
  private:
+  const PrimalDualParams* params_;
   // Computes a merit score for a given set of residuals
   double ComputeRestartScore(const SolverResults& results);
 

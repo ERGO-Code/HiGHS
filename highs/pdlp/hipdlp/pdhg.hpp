@@ -39,12 +39,10 @@ class PDLPSolver {
   void setParams(const HighsOptions& options, HighsTimer& timer);
   void PreprocessLp();
   void ScaleProblem(HighsLp& lp, const PrimalDualParams& params);
-  void Solve(HighsLp& original_lp, const PrimalDualParams& params,
-             std::vector<double>& x, std::vector<double>& y);
-  void Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
-                 const std::vector<double>& x_processed,
-                 const std::vector<double>& y_processed,
-                 HighsSolution& solution);
+  void Solve(std::vector<double>& x, std::vector<double>& y);
+  void Postsolve(HighsSolution& solution);
+  void setSolution(const std::vector<double>& col_value, const std::vector<double>& row_dual);
+  void getSolution(std::vector<double>& col_value, std::vector<double>& row_dual);
 
   const SolverResults& GetResults() const { return results_; }
   void passLp(const HighsLp* lp) { original_lp_ = lp; }
@@ -111,23 +109,21 @@ class PDLPSolver {
                              const std::vector<double>& y1,
                              const std::vector<double>& x2,
                              const std::vector<double>& y2, double omega);
-  std::vector<double> ComputeLambda(const HighsLp& lp,
-                                    const std::vector<double>& y,
+  std::vector<double> ComputeLambda(const std::vector<double>& y,
                                     const std::vector<double>& ATy_vector);
   std::pair<double, double> ComputePrimalFeasibility(
-      const HighsLp& lp, const std::vector<double>& x,
+      const std::vector<double>& x,
       const std::vector<double>& Ax_vector);
-  void ComputeDualSlacks(const HighsLp& lp,
-                         const std::vector<double>& ATy_vector);
+  void ComputeDualSlacks(const std::vector<double>& ATy_vector);
   std::pair<double, double> ComputeDualFeasibility(
-      const HighsLp& lp, const std::vector<double>& ATy_vector);
+      const std::vector<double>& ATy_vector);
   std::tuple<double, double, double, double, double> ComputeDualityGap(
-      const HighsLp& lp, const std::vector<double>& x,
+      const std::vector<double>& x,
       const std::vector<double>& y, const std::vector<double>& lambda);
-  double ComputeKKTError(const HighsLp& lp, const std::vector<double>& x,
+  double ComputeKKTError(const std::vector<double>& x,
                          const std::vector<double>& y,
                          const std::vector<double>& lambda, double omega);
-  bool CheckConvergence(const HighsLp& lp, const std::vector<double>& x,
+  bool CheckConvergence(const std::vector<double>& x,
                         const std::vector<double>& y,
                         const std::vector<double>& ax_vector,
                         const std::vector<double>& aty_vector, double epsilon,
@@ -139,7 +135,8 @@ class PDLPSolver {
   double current_eta_;
   // void UpdateIteratesAdaptive(HighsLp& lp, const PrimalDualParams& params,
   // std::vector<double>& x, std::vector<double>& y);
-  HighsStatus PowerMethod(HighsLp& lp, double& lambda);
+  HighsStatus PowerMethod(double& lambda);
+
   double ratio_last_two_step_sizes_ =
       1.0;                      // state for Malitsky-Pock adaptive step size
   int num_rejected_steps_ = 0;  // state for adaptive linesearch
@@ -157,7 +154,7 @@ class PDLPSolver {
       const std::vector<double>& y_n_minus_1_0);
 
   // restart
-  bool CheckRestartCondition(const HighsLp& lp, const PrimalDualParams& params,
+  bool CheckRestartCondition( const PrimalDualParams& params,
                              int inner_iter, std::vector<double>& x_cand,
                              std::vector<double>& y_cand);
   void PerformRestart(const std::vector<double>& x_restart,
