@@ -4596,8 +4596,10 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
       }
 
       // compute bound
-      double candidateBound = static_cast<double>(
-          (static_cast<HighsCDouble>(rhs) - residual) / val);
+      double candidateBound =
+          static_cast<double>((static_cast<HighsCDouble>(rhs) -
+                               static_cast<HighsCDouble>(residual)) /
+                              val);
 
       // round up to make sure that all rows are redundant
       candidateBound = std::ceil(direction * candidateBound - primal_feastol);
