@@ -3232,15 +3232,19 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (colDeleted[col]) return Result::kOk;
 
-  // try tightening bounds
-  dualBoundTightening(postsolve_stack, col);
-
-  if (mipsolver != nullptr)
+  // check if variable is implied integer
+  if (mipsolver != nullptr) {
     HPRESOLVE_CHECKED_CALL(
         static_cast<Result>(convertImpliedInteger(col, row)));
 
+    // try tightening bounds
+    dualBoundTightening(postsolve_stack, col);
+  }
+
+  // update column implied bounds
   updateColImpliedBounds(row, col, colCoef);
 
+  // update row dual implied bounds
   if (model->integrality_[col] != HighsVarType::kInteger)
     updateRowDualImpliedBounds(row, col, colCoef);
 
@@ -4335,9 +4339,6 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col));
   if (colDeleted[col]) return Result::kOk;
 
-  // try tightening bounds
-  dualBoundTightening(postsolve_stack, col);
-
   // column is not (weakly) dominated
 
   // integer columns cannot be used to tighten bounds on dual multipliers
@@ -4375,7 +4376,11 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                               isUpperImplied(col),
                               impliedDualRowBounds.getNumInfSumLowerOrig(col));
 
+    // check if variable is implied integer
     HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
+
+    // try tightening bounds
+    dualBoundTightening(postsolve_stack, col);
 
     // shift integral variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
@@ -4541,6 +4546,9 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
   // INFORMS Journal on Computing 32(2):473-506.
   assert(!colDeleted[col]);
 
+  // only tighten bounds for integer-constrained variables
+  if (model->integrality_[col] == HighsVarType::kContinuous) return;
+
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return;
 
@@ -4592,8 +4600,7 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
           (static_cast<HighsCDouble>(rhs) - residual) / val);
 
       // round up to make sure that all rows are redundant
-      if (model->integrality_[col] != HighsVarType::kContinuous)
-        candidateBound = std::ceil(direction * candidateBound - primal_feastol);
+      candidateBound = std::ceil(direction * candidateBound - primal_feastol);
 
       // take largest bound
       newBound = std::max(newBound, candidateBound);
