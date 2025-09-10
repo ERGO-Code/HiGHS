@@ -16,14 +16,15 @@ using namespace std;
 
 int PDLPSolver::GetIterationCount() const { return final_iter_count_; }
 
-void PDLPSolver::PreprocessLp(const HighsLp& original_lp,
-                              HighsLp& processed_lp) {
+void PDLPSolver::PreprocessLp() {
   logger_.info(
       "Preprocessing LP using cupdlp formulation (slack variables for "
       "bounds)...");
 
-  int nRows_orig = original_lp.num_row_;
-  int nCols_orig = original_lp.num_col_;
+  HighsLp& processed_lp = lp_;
+  
+  int nRows_orig = original_lp_->num_row_;
+  int nCols_orig = original_lp_->num_col_;
 
   int num_new_cols = 0;
   int nEqs = 0;
@@ -32,11 +33,11 @@ void PDLPSolver::PreprocessLp(const HighsLp& original_lp,
 
   // 1. First pass: Classify constraints and count slack variables needed
   for (int i = 0; i < nRows_orig; ++i) {
-    bool has_lower = original_lp.row_lower_[i] > -kHighsInf;
-    bool has_upper = original_lp.row_upper_[i] < kHighsInf;
+    bool has_lower = original_lp_->row_lower_[i] > -kHighsInf;
+    bool has_upper = original_lp_->row_upper_[i] < kHighsInf;
 
     if (has_lower && has_upper) {
-      if (original_lp.row_lower_[i] == original_lp.row_upper_[i]) {
+      if (original_lp_->row_lower_[i] == original_lp_->row_upper_[i]) {
         constraint_types_[i] = EQ;
       } else {
         constraint_types_[i] = BOUND;
@@ -67,17 +68,17 @@ void PDLPSolver::PreprocessLp(const HighsLp& original_lp,
 
   // 4. Populate costs and bounds for original and new slack variables
   for (int i = 0; i < nCols_orig; ++i) {
-    processed_lp.col_cost_[i] = original_lp.col_cost_[i];
-    processed_lp.col_lower_[i] = original_lp.col_lower_[i];
-    processed_lp.col_upper_[i] = original_lp.col_upper_[i];
+    processed_lp.col_cost_[i] = original_lp_->col_cost_[i];
+    processed_lp.col_lower_[i] = original_lp_->col_lower_[i];
+    processed_lp.col_upper_[i] = original_lp_->col_upper_[i];
   }
 
   int current_slack_col = nCols_orig;
   for (int i = 0; i < nRows_orig; ++i) {
     if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
       processed_lp.col_cost_[current_slack_col] = 0.0;
-      processed_lp.col_lower_[current_slack_col] = original_lp.row_lower_[i];
-      processed_lp.col_upper_[current_slack_col] = original_lp.row_upper_[i];
+      processed_lp.col_lower_[current_slack_col] = original_lp_->row_lower_[i];
+      processed_lp.col_upper_[current_slack_col] = original_lp_->row_upper_[i];
       current_slack_col++;
     }
   }
@@ -86,7 +87,7 @@ void PDLPSolver::PreprocessLp(const HighsLp& original_lp,
   //
   // Take a copy of the original LP's constraint matrix since we
   // need it rowwise and it's const
-  HighsSparseMatrix original_matrix = original_lp.a_matrix_;
+  HighsSparseMatrix original_matrix = original_lp_->a_matrix_;
   original_matrix.ensureRowwise();
   // Set up the processed constraint matrix as an empty row-wise
   // matrix that can have nCols_orig columns
@@ -133,16 +134,16 @@ void PDLPSolver::PreprocessLp(const HighsLp& original_lp,
   for (int i = 0; i < nRows_orig; ++i) {
     switch (constraint_types_[i]) {
       case EQ:
-        processed_lp.row_lower_[i] = original_lp.row_lower_[i];
-        processed_lp.row_upper_[i] = original_lp.row_upper_[i];
+        processed_lp.row_lower_[i] = original_lp_->row_lower_[i];
+        processed_lp.row_upper_[i] = original_lp_->row_upper_[i];
         break;
       case GEQ:
-        processed_lp.row_lower_[i] = original_lp.row_lower_[i];
+        processed_lp.row_lower_[i] = original_lp_->row_lower_[i];
         processed_lp.row_upper_[i] = kHighsInf;
         break;
       case LEQ:
         // Becomes -Ax >= -b
-        processed_lp.row_lower_[i] = -original_lp.row_upper_[i];
+        processed_lp.row_lower_[i] = -original_lp_->row_upper_[i];
         processed_lp.row_upper_[i] = kHighsInf;
         break;
       case BOUND:
@@ -187,9 +188,9 @@ void PDLPSolver::Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
 
   // 2. Resize solution object to original dimensions
   solution.col_value.resize(original_num_col_);
-  solution.row_value.resize(original_lp.num_row_);
+  solution.row_value.resize(original_lp_->num_row_);
   solution.col_dual.resize(original_num_col_);
-  solution.row_dual.resize(original_lp.num_row_);
+  solution.row_dual.resize(original_lp_->num_row_);
 
   // 3. Recover Primal Column Values (x)
   // This is the easy part: just take the first 'original_num_col_' elements.
@@ -197,15 +198,15 @@ void PDLPSolver::Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
     solution.col_value[i] = x_unscaled[i];
   }
 
-  double final_primal_objective = original_lp.offset_;
+  double final_primal_objective = original_lp_->offset_;
   for (int i = 0; i < original_num_col_; ++i) {
-    final_primal_objective += original_lp.col_cost_[i] * solution.col_value[i];
+    final_primal_objective += original_lp_->col_cost_[i] * solution.col_value[i];
   }
   results_.primal_obj = final_primal_objective;
 
   // 4. Recover Dual Row Values (y)
   // This requires reversing the sign flip for LEQ constraints.
-  for (int i = 0; i < original_lp.num_row_; ++i) {
+  for (int i = 0; i < original_lp_->num_row_; ++i) {
     if (constraint_types_[i] == LEQ) {
       solution.row_dual[i] = -y_unscaled[i];
     } else {
@@ -235,7 +236,7 @@ void PDLPSolver::Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
   linalg::Ax(unscaled_processed_lp, x_unscaled, ax_unscaled);
 
   int slack_variable_idx = original_num_col_;
-  for (int i = 0; i < original_lp.num_row_; ++i) {
+  for (int i = 0; i < original_lp_->num_row_; ++i) {
     if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
       solution.row_value[i] = x_unscaled[slack_variable_idx++];
     } else if (constraint_types_[i] == LEQ) {
@@ -947,4 +948,66 @@ HighsStatus PDLPSolver::PowerMethod(HighsLp& lp, double& op_norm_sq) {
   if (power_method != kYanyuPowerMethod) op_norm_sq = lambda;
   // If the method did not converge within max_iter
   return HighsStatus::kWarning;
+}
+
+void PDLPSolver::setParams(const HighsOptions& options, HighsTimer& timer) {
+  params_.initialise();
+  //  params.eta = 0; Not set in parse_options_file
+  //  params.omega = 0; Not set in parse_options_file
+  params_.tolerance = options.pdlp_optimality_tolerance;
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    params_.tolerance = options.kkt_tolerance;
+  }
+  params_.max_iterations = options.pdlp_iteration_limit;
+  params_.device_type = Device::CPU;
+  // HiPDLP has its own timer, so set its time limit according to
+  // the time remaining with respect to the HiGHS time limit (if
+  // finite)
+  double time_limit = options.time_limit;
+  if (time_limit < kHighsInf) {
+    time_limit -= timer.read();
+    time_limit = std::max(0.0, time_limit);
+  }
+  params_.time_limit = time_limit;
+
+  params_.scaling_method = ScalingMethod::NONE;
+  params_.use_ruiz_scaling = false;
+  params_.use_pc_scaling = false;
+  params_.use_l2_scaling = false;
+  if ((options.pdlp_features_off & kPdlpScalingOff) == 0) {
+    // Use scaling: now see which
+    params_.use_ruiz_scaling = options.pdlp_scaling_mode & kPdlpScalingRuiz;
+    params_.use_pc_scaling = options.pdlp_scaling_mode & kPdlpScalingPC;
+    params_.use_l2_scaling = options.pdlp_scaling_mode & kPdlpScalingL2;
+  }
+  params_.ruiz_iterations = options.pdlp_ruiz_iterations;
+  //  params_.ruiz_norm = INFINITY; Not set in parse_options_file
+  //  params_.pc_alpha = 1.0; Not set in parse_options_file
+
+  // Restart strategy maps 0/1/2 to RestartStrategy
+  params_.restart_strategy = RestartStrategy::NO_RESTART;
+  if ((options.pdlp_features_off & kPdlpRestartOff) == 0) {
+    // Use restart: now see which
+    if (options.pdlp_restart_strategy == kPdlpRestartStrategyFixed) {
+      params_.restart_strategy = RestartStrategy::FIXED_RESTART;
+    } else if (options.pdlp_restart_strategy == kPdlpRestartStrategyAdaptive) {
+      params_.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
+    }
+  }
+  //  params_.fixed_restart_interval = 0; Not set in parse_options_file
+  //  params_.use_halpern_restart = false; Not set in parse_options_file
+
+  params_.step_size_strategy = StepSizeStrategy::FIXED;
+  if ((options.pdlp_features_off & kPdlpAdaptiveStepSizeOff) == 0) {
+    // Use adaptive step size: now see which
+    if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyAdaptive) {
+      params_.step_size_strategy = StepSizeStrategy::ADAPTIVE;
+    } else if (options.pdlp_step_size_strategy ==
+               kPdlpStepSizeStrategyMalitskyPock) {
+      params_.step_size_strategy = StepSizeStrategy::MALITSKY_POCK;
+    }
+  }
+  //  params_.malitsky_pock_params.initialise(); Not set in parse_options_file
+  //  params_.adaptive_linesearch_params.initialise(); Not set in
+  //  parse_options_file
 }

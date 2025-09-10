@@ -34,9 +34,10 @@
 // --- Classes ---
 class PDLPSolver {
  public:
-  HighsLp lp_;
+  
   PDLPSolver(Logger& logger);
-  void PreprocessLp(const HighsLp& original_lp, HighsLp& processed_lp);
+  void setParams(const HighsOptions& options, HighsTimer& timer);
+  void PreprocessLp();
   void ScaleProblem(HighsLp& lp, const PrimalDualParams& params);
   void Solve(HighsLp& original_lp, const PrimalDualParams& params,
              std::vector<double>& x, std::vector<double>& y);
@@ -46,24 +47,31 @@ class PDLPSolver {
                  HighsSolution& solution);
 
   const SolverResults& GetResults() const { return results_; }
-
+  void passLp(const HighsLp* lp) { original_lp_ = lp; }
   // Scaling
   //ScalingParams scaling_params_;
   Scaling scaling_;
-  void SetScalingParams(const PrimalDualParams& scaling_params);
 
   int GetIterationCount() const;
-
+  
  private:
   // Problem data
+  HighsLp lp_; // The problem to solve
+  const HighsLp* original_lp_; // The original problem (for postsolve)
   PrimalDualParams params_;
-  //        HighsInterface highs_interface_;
   Logger& logger_;
+
   int final_iter_count_ = 0;
   int original_num_col_;
   std::vector<int> constraint_new_idx_;  // stores permutation for rows
   std::vector<ConstraintType>
       constraint_types_;  // stores type of each original row
+
+  // Solver state using PdlpIterate
+  PdlpIterate current_;     // z^k
+  PdlpIterate next_;        // z^{k+1}  
+  PdlpIterate average_;     // Running average
+  PdlpIterate restart_point_; // Point to restart from
 
   // Iterates and state
   std::vector<double>* x_ = nullptr;
@@ -92,10 +100,7 @@ class PDLPSolver {
   void Initialize(const HighsLp& lp, std::vector<double>& x,
                   std::vector<double>& y);
   SolverResults results_;
-  TerminationStatus SolvePresolvedProblem(HighsLp& presolved_lp,
-                                          const PrimalDualParams& params,
-                                          std::vector<double>& x,
-                                          std::vector<double>& y);
+  
   void PostsolveAndFinalize(const std::vector<double>& presolved_x,
                             const std::vector<double>& presolved_y,
                             std::vector<double>& final_x,

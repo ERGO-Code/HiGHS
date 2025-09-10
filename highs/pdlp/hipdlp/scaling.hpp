@@ -22,8 +22,10 @@ class Scaling {
   Scaling() = default;
 
   void Initialize(const HighsLp& lp);
-  void ScaleProblem(HighsLp& lp, const PrimalDualParams& params);
+  void ScaleProblem();
   void UnscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
+  void passLp(HighsLp* lp) {lp_ = lp; };
+  void passParams(const PrimalDualParams* params) {params_ = params ;};
 
   // Get scaling vectors (for unscaling solution later)
   bool IsScaled() const { return is_scaled_; }
@@ -34,6 +36,8 @@ class Scaling {
   double GetNormRhs() const { return norm_rhs_; }
 
  private:
+  HighsLp* lp_;
+  const PrimalDualParams* params_;
   std::vector<double> col_scale_;
   std::vector<double> row_scale_;
   bool is_scaled_ = false;
@@ -42,12 +46,12 @@ class Scaling {
   double norm_rhs_;
 
   // Individual scaling methods
-  void ApplyRuizScaling(HighsLp& lp, const PrimalDualParams& params);
-  void ApplyPockChambolleScaling(HighsLp& lp, const PrimalDualParams& params);
-  void ApplyL2Scaling(HighsLp& lp);
+  void ApplyRuizScaling();
+  void ApplyPockChambolleScaling();
+  void ApplyL2Scaling();
 
   // Helper function to apply scaling factors to the problem
-  void ApplyScaling(HighsLp& lp, const std::vector<double>& col_scaling,
+  void ApplyScaling(const std::vector<double>& col_scaling,
                     const std::vector<double>& row_scaling);
 
   // Compute norm of a vector based on norm type

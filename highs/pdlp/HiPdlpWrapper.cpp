@@ -49,79 +49,36 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   if (!log_filename.empty()) logger.set_log_file(log_filename);
   logger.print_header();
 
-  // --- Initialize Parameters with Defaults ---
-  PrimalDualParams params{};
-
-  getHiPpdlpParamsFromOptions(options, timer, params);
-
   Timer total_timer;
   /*** Order of operations 
-   * Presolve with HiGHS
    * Preprocess with HiPdlp
    * Scale with HiPdlp
    * Solve with HiPdlp
    * Unscale with HiPdlp
    * Postprocess with HiPDLP
-   * Postsolve with HiGHS
    * ***/
-  // 1. Presolve with HiGHS
-  Highs highs;
-  highs.passModel(lp);
-  HighsLp presolved_lp;
-  HighsSolution presolve_solution;
-  bool do_presolve = (options.presolve != "off");
-
-  if (do_presolve) {
-    HighsStatus presolve_status = highs.presolve();
-    if (presolve_status != HighsStatus::kOk) {
-      return HighsStatus::kError; // Handle presolve errors
-    }
-
-    // If the problem is solved during presolve, get the solution and return.
-    if (highs.getModelStatus() == HighsModelStatus::kOptimal ||
-        highs.getModelStatus() == HighsModelStatus::kInfeasible ||
-        highs.getModelStatus() == HighsModelStatus::kUnbounded) {
-      presolve_solution = highs.getSolution();
-      highs_info.pdlp_iteration_count = 0;
-      highs_solution = presolve_solution;
-      model_status = highs.getModelStatus();
-      return HighsStatus::kOk;
-    }
-
-    // Get the presolved LP for the next steps.
-    presolved_lp = highs.getLp();
-  } else {
-    // If presolve is off, the problem to solve is the original LP.
-    presolved_lp = lp;
-  }
-
   // 2. Preprocess with HiPdlp
   PDLPSolver pdlp(logger);
+  pdlp.setParams(options, timer);
   HighsLp preprocessed_lp;
+  pdlp.passLp(&lp);
   //logger_.info("Preprocessing LP to handle ranged constraints...");
-  pdlp.PreprocessLp(presolved_lp, preprocessed_lp);
+  pdlp.PreprocessLp();
 
   // 3. Scale with HiPdlp
-  pdlp.scaling_.ScaleProblem(preprocessed_lp, params);
+  pdlp.scaling_.ScaleProblem();
 
   // 4. Solve with HiPdlp
   std::vector<double> x, y;
-  pdlp.Solve(preprocessed_lp, params, x, y);
+  //pdlp.Solve(preprocessed_lp, params, x, y);
 
   // 5. Unscale with HiPdlp
   pdlp.scaling_.UnscaleSolution(x, y);
 
   // 6. Postprocess with HiPDLP
   HighsSolution pdlp_solution;
-  pdlp.Postsolve(presolved_lp, preprocessed_lp, x, y, pdlp_solution);
+  //pdlp.Postsolve(presolved_lp, preprocessed_lp, x, y, pdlp_solution);
 
-  // 7. Postsolve with HiGHS
-  if (do_presolve) {
-    logger.info("Postsolving with HiGHS...");
-    highs.postsolve(pdlp_solution);
-  } else {
-    pdlp_solution = pdlp_solution; // No presolve, so nothing to do
-  }
 
   // --- Print Summary ---
   logger.print_summary(pdlp.GetResults(), pdlp.GetIterationCount(),
@@ -185,68 +142,7 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   return HighsStatus::kOk;
 }
 
-void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
-                                 PrimalDualParams& params) {
-  params.initialise();
-  //  params.eta = 0; Not set in parse_options_file
-  //  params.omega = 0; Not set in parse_options_file
-  params.tolerance = options.pdlp_optimality_tolerance;
-  if (options.kkt_tolerance != kDefaultKktTolerance) {
-    params.tolerance = options.kkt_tolerance;
-  }
-  params.max_iterations = options.pdlp_iteration_limit;
-  params.device_type = Device::CPU;
-  // HiPDLP has its own timer, so set its time limit according to
-  // the time remaining with respect to the HiGHS time limit (if
-  // finite)
-  double time_limit = options.time_limit;
-  if (time_limit < kHighsInf) {
-    time_limit -= timer.read();
-    time_limit = std::max(0.0, time_limit);
-  }
-  params.time_limit = time_limit;
 
-  params.scaling_method = ScalingMethod::NONE;
-  params.use_ruiz_scaling = false;
-  params.use_pc_scaling = false;
-  params.use_l2_scaling = false;
-  if ((options.pdlp_features_off & kPdlpScalingOff) == 0) {
-    // Use scaling: now see which
-    params.use_ruiz_scaling = options.pdlp_scaling_mode & kPdlpScalingRuiz;
-    params.use_pc_scaling = options.pdlp_scaling_mode & kPdlpScalingPC;
-    params.use_l2_scaling = options.pdlp_scaling_mode & kPdlpScalingL2;
-  }
-  params.ruiz_iterations = options.pdlp_ruiz_iterations;
-  //  params.ruiz_norm = INFINITY; Not set in parse_options_file
-  //  params.pc_alpha = 1.0; Not set in parse_options_file
-
-  // Restart strategy maps 0/1/2 to RestartStrategy
-  params.restart_strategy = RestartStrategy::NO_RESTART;
-  if ((options.pdlp_features_off & kPdlpRestartOff) == 0) {
-    // Use restart: now see which
-    if (options.pdlp_restart_strategy == kPdlpRestartStrategyFixed) {
-      params.restart_strategy = RestartStrategy::FIXED_RESTART;
-    } else if (options.pdlp_restart_strategy == kPdlpRestartStrategyAdaptive) {
-      params.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
-    }
-  }
-  //  params.fixed_restart_interval = 0; Not set in parse_options_file
-  //  params.use_halpern_restart = false; Not set in parse_options_file
-
-  params.step_size_strategy = StepSizeStrategy::FIXED;
-  if ((options.pdlp_features_off & kPdlpAdaptiveStepSizeOff) == 0) {
-    // Use adaptive step size: now see which
-    if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyAdaptive) {
-      params.step_size_strategy = StepSizeStrategy::ADAPTIVE;
-    } else if (options.pdlp_step_size_strategy ==
-               kPdlpStepSizeStrategyMalitskyPock) {
-      params.step_size_strategy = StepSizeStrategy::MALITSKY_POCK;
-    }
-  }
-  //  params.malitsky_pock_params.initialise(); Not set in parse_options_file
-  //  params.adaptive_linesearch_params.initialise(); Not set in
-  //  parse_options_file
-}
 
 void PrimalDualParams::initialise() {
   this->eta = 0;

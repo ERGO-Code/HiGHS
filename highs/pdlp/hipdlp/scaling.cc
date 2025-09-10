@@ -64,50 +64,51 @@ void LogMatrixNorms(const HighsLp& lp, const std::string& stage) {
   std::cout << "-------------------------\n" << std::endl;
 }
 
-void Scaling::ScaleProblem(HighsLp& lp, const PrimalDualParams& params) {
-  if (params.scaling_method == ScalingMethod::NONE) {
+void Scaling::ScaleProblem() {
+
+  if (params_->scaling_method == ScalingMethod::NONE) {
     std::cout << "No scaling applied." << std::endl;
     return;
   }
 
-  std::cout << "Applying scaling method: " << static_cast<int>(params.scaling_method)
+  std::cout << "Applying scaling method: " << static_cast<int>(params_->scaling_method)
             << std::endl;
-  if (params.use_pc_scaling) {
+  if (params_->use_pc_scaling) {
     std::cout << "Applying Pock-Chambolle scaling..." << std::endl;
-    ApplyPockChambolleScaling(lp, params);
+    ApplyPockChambolleScaling();
   }
-  if (params.use_ruiz_scaling) {
+  if (params_->use_ruiz_scaling) {
     std::cout << "Applying Ruiz scaling..." << std::endl;
-    ApplyRuizScaling(lp, params);
+    ApplyRuizScaling();
   }
-  if (params.use_l2_scaling || params.scaling_method == ScalingMethod::L2_NORM) {
+  if (params_->use_l2_scaling || params_->scaling_method == ScalingMethod::L2_NORM) {
     std::cout << "Applying L2 norm scaling..." << std::endl;
-    ApplyL2Scaling(lp);
+    ApplyL2Scaling();
   }
 
   is_scaled_ = true;
 }
 
-void Scaling::ApplyRuizScaling(HighsLp& lp, const PrimalDualParams& params) {
-  std::vector<double> current_col_scaling(lp.num_col_);
-  std::vector<double> current_row_scaling(lp.num_row_);
+void Scaling::ApplyRuizScaling() {
+  std::vector<double> current_col_scaling(lp_->num_col_);
+  std::vector<double> current_row_scaling(lp_->num_row_);
 
-  for (int iter = 0; iter < params.ruiz_iterations; ++iter) {
+  for (int iter = 0; iter < params_->ruiz_iterations; ++iter) {
     // Reset current scaling factors
     std::fill(current_col_scaling.begin(), current_col_scaling.end(), 0.0);
     std::fill(current_row_scaling.begin(), current_row_scaling.end(), 0.0);
 
     // Compute column norms (norm of each column)
-    for (HighsInt col = 0; col < lp.num_col_; ++col) {
+    for (HighsInt col = 0; col < lp_->num_col_; ++col) {
       std::vector<double> col_values;
-      for (HighsInt el = lp.a_matrix_.start_[col];
-           el < lp.a_matrix_.start_[col + 1]; ++el) {
-        col_values.push_back(lp.a_matrix_.value_[el]);
+      for (HighsInt el = lp_->a_matrix_.start_[col];
+           el < lp_->a_matrix_.start_[col + 1]; ++el) {
+        col_values.push_back(lp_->a_matrix_.value_[el]);
       }
 
       if (!col_values.empty()) {
         current_col_scaling[col] = std::sqrt(ComputeNorm(
-            col_values.data(), col_values.size(), params.ruiz_norm));
+            col_values.data(), col_values.size(), params_->ruiz_norm));
       }
 
       if (current_col_scaling[col] == 0.0) {
@@ -116,19 +117,19 @@ void Scaling::ApplyRuizScaling(HighsLp& lp, const PrimalDualParams& params) {
     }
 
     // Compute row norms (infinity norm for rows)
-    if (params.ruiz_norm == INFINITY) {
+    if (params_->ruiz_norm == INFINITY) {
       // For infinity norm, find max absolute value in each row
-      for (HighsInt col = 0; col < lp.num_col_; ++col) {
-        for (HighsInt el = lp.a_matrix_.start_[col];
-             el < lp.a_matrix_.start_[col + 1]; ++el) {
-          HighsInt row = lp.a_matrix_.index_[el];
-          double abs_val = std::abs(lp.a_matrix_.value_[el]);
+      for (HighsInt col = 0; col < lp_->num_col_; ++col) {
+        for (HighsInt el = lp_->a_matrix_.start_[col];
+             el < lp_->a_matrix_.start_[col + 1]; ++el) {
+          HighsInt row = lp_->a_matrix_.index_[el];
+          double abs_val = std::abs(lp_->a_matrix_.value_[el]);
           current_row_scaling[row] =
               std::max(current_row_scaling[row], abs_val);
         }
       }
 
-      for (HighsInt row = 0; row < lp.num_row_; ++row) {
+      for (HighsInt row = 0; row < lp_->num_row_; ++row) {
         if (current_row_scaling[row] == 0.0) {
           current_row_scaling[row] = 1.0;
         } else {
@@ -142,85 +143,84 @@ void Scaling::ApplyRuizScaling(HighsLp& lp, const PrimalDualParams& params) {
     }
 
     // Apply the scaling
-    ApplyScaling(lp, current_col_scaling, current_row_scaling);
+    ApplyScaling(current_col_scaling, current_row_scaling);
 
     // Update cumulative scaling factors
-    for (HighsInt i = 0; i < lp.num_col_; ++i) {
+    for (HighsInt i = 0; i < lp_->num_col_; ++i) {
       col_scale_[i] *= current_col_scaling[i];
     }
-    for (HighsInt i = 0; i < lp.num_row_; ++i) {
+    for (HighsInt i = 0; i < lp_->num_row_; ++i) {
       row_scale_[i] *= current_row_scaling[i];
     }
   }
 }
 
-void Scaling::ApplyPockChambolleScaling(HighsLp& lp,
-                                        const PrimalDualParams& params) {
-  if (params.pc_alpha < 0.0 || params.pc_alpha > 2.0) {
+void Scaling::ApplyPockChambolleScaling() {
+  if (params_->pc_alpha < 0.0 || params_->pc_alpha > 2.0) {
     std::cerr << "PC alpha should be in [0, 2]" << std::endl;
     exit(1);
   }
 
-  std::vector<double> current_col_scaling(lp.num_col_, 0.0);
-  std::vector<double> current_row_scaling(lp.num_row_, 0.0);
+  std::vector<double> current_col_scaling(lp_->num_col_, 0.0);
+  std::vector<double> current_row_scaling(lp_->num_row_, 0.0);
 
   // Compute column scaling: (sum |A_ij|^alpha)^(1/alpha)
-  for (HighsInt col = 0; col < lp.num_col_; ++col) {
-    for (HighsInt el = lp.a_matrix_.start_[col];
-         el < lp.a_matrix_.start_[col + 1]; ++el) {
+  for (HighsInt col = 0; col < lp_->num_col_; ++col) {
+    for (HighsInt el = lp_->a_matrix_.start_[col];
+         el < lp_->a_matrix_.start_[col + 1]; ++el) {
       current_col_scaling[col] +=
-          std::pow(std::abs(lp.a_matrix_.value_[el]), params.pc_alpha);
+          std::pow(std::abs(lp_->a_matrix_.value_[el]), params_->pc_alpha);
     }
 
     if (current_col_scaling[col] > 0.0) {
       current_col_scaling[col] =
-          std::sqrt(std::pow(current_col_scaling[col], 1.0 / params.pc_alpha));
+          std::sqrt(std::pow(current_col_scaling[col], 1.0 / params_->pc_alpha));
     } else {
       current_col_scaling[col] = 1.0;
     }
   }
 
   // Compute row scaling: (sum |A_ij|^(2-alpha))^(1/(2-alpha))
-  for (HighsInt col = 0; col < lp.num_col_; ++col) {
-    for (HighsInt el = lp.a_matrix_.start_[col];
-         el < lp.a_matrix_.start_[col + 1]; ++el) {
-      HighsInt row = lp.a_matrix_.index_[el];
+  for (HighsInt col = 0; col < lp_->num_col_; ++col) {
+    for (HighsInt el = lp_->a_matrix_.start_[col];
+         el < lp_->a_matrix_.start_[col + 1]; ++el) {
+      HighsInt row = lp_->a_matrix_.index_[el];
       current_row_scaling[row] +=
-          std::pow(std::abs(lp.a_matrix_.value_[el]), 2.0 - params.pc_alpha);
+          std::pow(std::abs(lp_->a_matrix_.value_[el]), 2.0 - params_->pc_alpha);
     }
   }
 
-  for (HighsInt row = 0; row < lp.num_row_; ++row) {
+  for (HighsInt row = 0; row < lp_->num_row_; ++row) {
     if (current_row_scaling[row] > 0.0) {
       current_row_scaling[row] = std::sqrt(
-          std::pow(current_row_scaling[row], 1.0 / (2.0 - params.pc_alpha)));
+          std::pow(current_row_scaling[row], 1.0 / (2.0 - params_->pc_alpha)));
     } else {
       current_row_scaling[row] = 1.0;
     }
   }
 
   // Apply the scaling
-  ApplyScaling(lp, current_col_scaling, current_row_scaling);
+  ApplyScaling(current_col_scaling, current_row_scaling);
 
   // Update cumulative scaling factors
-  for (HighsInt i = 0; i < lp.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_->num_col_; ++i) {
     col_scale_[i] *= current_col_scaling[i];
   }
-  for (HighsInt i = 0; i < lp.num_row_; ++i) {
+  for (HighsInt i = 0; i < lp_->num_row_; ++i) {
     row_scale_[i] *= current_row_scaling[i];
   }
 }
 
-void Scaling::ApplyL2Scaling(HighsLp& lp) {
-  std::vector<double> current_col_scaling(lp.num_col_, 1.0);
-  std::vector<double> current_row_scaling(lp.num_row_, 0.0);
+void Scaling::ApplyL2Scaling() {
+  std::vector<double> current_col_scaling(lp_->num_col_, 1.0);
+  std::vector<double> current_row_scaling(lp_->num_row_, 0.0);
 
   // Compute L2 norm of each column
-  for (HighsInt col = 0; col < lp.num_col_; ++col) {
+  for (HighsInt col = 0; col < lp_->num_col_; ++col) {
     double sum_sq = 0.0;
-    for (HighsInt el = lp.a_matrix_.start_[col];
-         el < lp.a_matrix_.start_[col + 1]; ++el) {
-      sum_sq += lp.a_matrix_.value_[el] * lp.a_matrix_.value_[el];
+    for (HighsInt el = lp_->a_matrix_.start_[col];
+         el < lp_->a_matrix_.start_[col + 1]; ++el) {
+      sum_sq += lp_->a_matrix_.value_[el] * lp_->a_matrix_.value_[el];
     }
 
     if (sum_sq > 0.0) {
@@ -231,16 +231,16 @@ void Scaling::ApplyL2Scaling(HighsLp& lp) {
   }
 
   // Compute L2 norm of each row
-  for (HighsInt col = 0; col < lp.num_col_; ++col) {
-    for (HighsInt el = lp.a_matrix_.start_[col];
-         el < lp.a_matrix_.start_[col + 1]; ++el) {
-      HighsInt row = lp.a_matrix_.index_[el];
+  for (HighsInt col = 0; col < lp_->num_col_; ++col) {
+    for (HighsInt el = lp_->a_matrix_.start_[col];
+         el < lp_->a_matrix_.start_[col + 1]; ++el) {
+      HighsInt row = lp_->a_matrix_.index_[el];
       current_row_scaling[row] +=
-          lp.a_matrix_.value_[el] * lp.a_matrix_.value_[el];
+          lp_->a_matrix_.value_[el] * lp_->a_matrix_.value_[el];
     }
   }
 
-  for (HighsInt row = 0; row < lp.num_row_; ++row) {
+  for (HighsInt row = 0; row < lp_->num_row_; ++row) {
     if (current_row_scaling[row] > 0.0) {
       current_row_scaling[row] = std::sqrt(std::sqrt(current_row_scaling[row]));
     } else {
@@ -249,50 +249,50 @@ void Scaling::ApplyL2Scaling(HighsLp& lp) {
   }
 
   // Apply the scaling
-  ApplyScaling(lp, current_col_scaling, current_row_scaling);
+  ApplyScaling(current_col_scaling, current_row_scaling);
 
   // Update cumulative scaling factors
-  for (HighsInt i = 0; i < lp.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_->num_col_; ++i) {
     col_scale_[i] *= current_col_scaling[i];
   }
-  for (HighsInt i = 0; i < lp.num_row_; ++i) {
+  for (HighsInt i = 0; i < lp_->num_row_; ++i) {
     row_scale_[i] *= current_row_scaling[i];
   }
 }
 
-void Scaling::ApplyScaling(HighsLp& lp, const std::vector<double>& col_scaling,
+void Scaling::ApplyScaling(const std::vector<double>& col_scaling,
                            const std::vector<double>& row_scaling) {
   // Scale cost vector: c_scaled = c / col_scaling
-  for (HighsInt i = 0; i < lp.num_col_; ++i) {
-    lp.col_cost_[i] /= col_scaling[i];
+  for (HighsInt i = 0; i < lp_->num_col_; ++i) {
+    lp_->col_cost_[i] /= col_scaling[i];
   }
 
   // Scale column bounds: l_scaled = l * col_scaling, u_scaled = u * col_scaling
-  for (HighsInt i = 0; i < lp.num_col_; ++i) {
-    if (lp.col_lower_[i] > -kHighsInf) {
-      lp.col_lower_[i] *= col_scaling[i];
+  for (HighsInt i = 0; i < lp_->num_col_; ++i) {
+    if (lp_->col_lower_[i] > -kHighsInf) {
+      lp_->col_lower_[i] *= col_scaling[i];
     }
-    if (lp.col_upper_[i] < kHighsInf) {
-      lp.col_upper_[i] *= col_scaling[i];
+    if (lp_->col_upper_[i] < kHighsInf) {
+      lp_->col_upper_[i] *= col_scaling[i];
     }
   }
 
   // Scale row bounds: b_scaled = b / row_scaling
-  for (HighsInt i = 0; i < lp.num_row_; ++i) {
-    if (lp.row_lower_[i] > -kHighsInf) {
-      lp.row_lower_[i] /= row_scaling[i];
+  for (HighsInt i = 0; i < lp_->num_row_; ++i) {
+    if (lp_->row_lower_[i] > -kHighsInf) {
+      lp_->row_lower_[i] /= row_scaling[i];
     }
-    if (lp.row_upper_[i] < kHighsInf) {
-      lp.row_upper_[i] /= row_scaling[i];
+    if (lp_->row_upper_[i] < kHighsInf) {
+      lp_->row_upper_[i] /= row_scaling[i];
     }
   }
 
   // Scale matrix: A_scaled = diag(1/row_scaling) * A * diag(1/col_scaling)
-  for (HighsInt col = 0; col < lp.num_col_; ++col) {
-    for (HighsInt el = lp.a_matrix_.start_[col];
-         el < lp.a_matrix_.start_[col + 1]; ++el) {
-      HighsInt row = lp.a_matrix_.index_[el];
-      lp.a_matrix_.value_[el] /= (row_scaling[row] * col_scaling[col]);
+  for (HighsInt col = 0; col < lp_->num_col_; ++col) {
+    for (HighsInt el = lp_->a_matrix_.start_[col];
+         el < lp_->a_matrix_.start_[col + 1]; ++el) {
+      HighsInt row = lp_->a_matrix_.index_[el];
+      lp_->a_matrix_.value_[el] /= (row_scaling[row] * col_scaling[col]);
     }
   }
 }
