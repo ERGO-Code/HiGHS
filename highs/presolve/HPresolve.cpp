@@ -4562,7 +4562,7 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
     double hugeBound = primal_feastol / kHighsTiny;
 
     // initialise
-    newBound = -direction * kHighsInf;
+    newBound = -kHighsInf;
     currentBound *= direction;
 
     for (const auto& nz : getColumnVector(col)) {
@@ -4597,12 +4597,13 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
 
       // compute bound
       double candidateBound =
+          direction *
           static_cast<double>((static_cast<HighsCDouble>(rhs) -
                                static_cast<HighsCDouble>(residual)) /
                               val);
 
       // round up to make sure that all rows are redundant
-      candidateBound = std::ceil(direction * candidateBound - primal_feastol);
+      candidateBound = std::ceil(candidateBound - primal_feastol);
 
       // take largest bound
       newBound = std::max(newBound, candidateBound);
@@ -4612,10 +4613,12 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
         return false;
     }
 
+    // return if no bound was found
+    if (newBound == -kHighsInf) return false;
+
     // flip sign
     newBound *= direction;
-
-    return newBound != -kHighsInf;
+    return true;
   };
 
   double newBound = 0.0;
