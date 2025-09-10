@@ -64,35 +64,31 @@ void LogMatrixNorms(const HighsLp& lp, const std::string& stage) {
   std::cout << "-------------------------\n" << std::endl;
 }
 
-void Scaling::ScaleProblem(HighsLp& lp, const ScalingParams& params) {
-  if (params.method == ScalingMethod::NONE) {
+void Scaling::ScaleProblem(HighsLp& lp, const PrimalDualParams& params) {
+  if (params.scaling_method == ScalingMethod::NONE) {
     std::cout << "No scaling applied." << std::endl;
     return;
   }
-  // LogMatrixNorms(lp, "Before Scaling");
 
-  std::cout << "Applying scaling method: " << static_cast<int>(params.method)
+  std::cout << "Applying scaling method: " << static_cast<int>(params.scaling_method)
             << std::endl;
-  if (params.use_pc) {
+  if (params.use_pc_scaling) {
     std::cout << "Applying Pock-Chambolle scaling..." << std::endl;
     ApplyPockChambolleScaling(lp, params);
   }
-  if (params.use_ruiz) {
+  if (params.use_ruiz_scaling) {
     std::cout << "Applying Ruiz scaling..." << std::endl;
     ApplyRuizScaling(lp, params);
   }
-
-  if (params.use_l2 || params.method == ScalingMethod::L2_NORM) {
+  if (params.use_l2_scaling || params.scaling_method == ScalingMethod::L2_NORM) {
     std::cout << "Applying L2 norm scaling..." << std::endl;
     ApplyL2Scaling(lp);
   }
 
-  // LogMatrixNorms(lp, "After Scaling");
-
   is_scaled_ = true;
 }
 
-void Scaling::ApplyRuizScaling(HighsLp& lp, const ScalingParams& params) {
+void Scaling::ApplyRuizScaling(HighsLp& lp, const PrimalDualParams& params) {
   std::vector<double> current_col_scaling(lp.num_col_);
   std::vector<double> current_row_scaling(lp.num_row_);
 
@@ -159,7 +155,7 @@ void Scaling::ApplyRuizScaling(HighsLp& lp, const ScalingParams& params) {
 }
 
 void Scaling::ApplyPockChambolleScaling(HighsLp& lp,
-                                        const ScalingParams& params) {
+                                        const PrimalDualParams& params) {
   if (params.pc_alpha < 0.0 || params.pc_alpha > 2.0) {
     std::cerr << "PC alpha should be in [0, 2]" << std::endl;
     exit(1);

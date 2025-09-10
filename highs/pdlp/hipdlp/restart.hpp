@@ -17,60 +17,7 @@
 
 #include "scaling.hpp"
 #include "solver_results.hpp"
-
-enum class Device { CPU, GPU };
-
-enum class RestartStrategy { NO_RESTART, FIXED_RESTART, ADAPTIVE_RESTART };
-
-enum class StepSizeStrategy { FIXED, ADAPTIVE, MALITSKY_POCK };
-
-struct MalitskyPockParams {
-  double step_size_interpolation = 0.5;  // Between 0 and 1
-  double step_size_downscaling_factor = 0.7;
-  double linesearch_contraction_factor = 0.99;
-  void initialise();
-};
-
-struct AdaptiveLinesearchParams {
-  double step_size_reduction_exponent = 0.3;
-  double step_size_growth_exponent = 0.6;
-  void initialise();
-};
-
-struct PrimalDualParams {
-  double eta;
-  double omega;
-  double tolerance;
-  size_t max_iterations;
-  Device device_type;
-  double time_limit = 3600.0;
-
-  // Restart parameters
-  RestartStrategy restart_strategy;
-  int fixed_restart_interval;
-
-  bool use_halpern_restart = false;
-
-  // Scaling parameters
-  ScalingMethod scaling_method = ScalingMethod::NONE;
-  bool use_ruiz_scaling = false;
-  bool use_pc_scaling = false;
-  bool use_l2_scaling = false;
-
-  // Ruiz scaling parameters
-  int ruiz_iterations = 10;
-  double ruiz_norm = INFINITY;
-
-  // Pock-Chambolle scaling parameters
-  double pc_alpha = 1.0;
-
-  // Step sizes strategy
-  StepSizeStrategy step_size_strategy = StepSizeStrategy::FIXED;
-
-  MalitskyPockParams malitsky_pock_params;
-  AdaptiveLinesearchParams adaptive_linesearch_params;
-  void initialise();
-};
+#include "defs.hpp"
 
 // Struct to communicate restart decisions
 struct RestartInfo {

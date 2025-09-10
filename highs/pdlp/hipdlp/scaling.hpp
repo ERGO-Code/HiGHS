@@ -15,31 +15,14 @@
 #include <vector>
 
 #include "Highs.h"
-
-enum class ScalingMethod { NONE, RUIZ, POCK_CHAMBOLLE, L2_NORM, COMBINED };
-
-struct ScalingParams {
-  ScalingMethod method = ScalingMethod::NONE;
-
-  // Ruiz scaling parameters
-  int ruiz_iterations = 10;
-  double ruiz_norm = INFINITY;  // Currently only infinity norm is supported
-
-  // Pock-Chambolle scaling parameters
-  double pc_alpha = 1.0;  // Should be in [0, 2]
-
-  // Whether to apply multiple scaling methods in sequence
-  bool use_ruiz = false;
-  bool use_pc = false;
-  bool use_l2 = false;
-};
+#include "defs.hpp"
 
 class Scaling {
  public:
   Scaling() = default;
 
   void Initialize(const HighsLp& lp);
-  void ScaleProblem(HighsLp& lp, const ScalingParams& params);
+  void ScaleProblem(HighsLp& lp, const PrimalDualParams& params);
   void UnscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
 
   // Get scaling vectors (for unscaling solution later)
@@ -59,8 +42,8 @@ class Scaling {
   double norm_rhs_;
 
   // Individual scaling methods
-  void ApplyRuizScaling(HighsLp& lp, const ScalingParams& params);
-  void ApplyPockChambolleScaling(HighsLp& lp, const ScalingParams& params);
+  void ApplyRuizScaling(HighsLp& lp, const PrimalDualParams& params);
+  void ApplyPockChambolleScaling(HighsLp& lp, const PrimalDualParams& params);
   void ApplyL2Scaling(HighsLp& lp);
 
   // Helper function to apply scaling factors to the problem

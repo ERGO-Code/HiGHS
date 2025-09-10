@@ -34,23 +34,28 @@
 // --- Classes ---
 class PDLPSolver {
  public:
+  HighsLp lp_;
   PDLPSolver(Logger& logger);
-
-  // Main solve method
-  void Solve(HighsLp& lp, const PrimalDualParams& params,
+  void PreprocessLp(const HighsLp& original_lp, HighsLp& processed_lp);
+  void ScaleProblem(HighsLp& lp, const PrimalDualParams& params);
+  void Solve(HighsLp& original_lp, const PrimalDualParams& params,
              std::vector<double>& x, std::vector<double>& y);
+  void Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
+                 const std::vector<double>& x_processed,
+                 const std::vector<double>& y_processed,
+                 HighsSolution& solution);
 
   const SolverResults& GetResults() const { return results_; }
 
-  void SetScalingParams(const ScalingParams& scaling_params) {
-    scaling_params_ = scaling_params;
-  }
+  // Scaling
+  //ScalingParams scaling_params_;
+  Scaling scaling_;
+  void SetScalingParams(const PrimalDualParams& scaling_params);
 
   int GetIterationCount() const;
 
  private:
   // Problem data
-  HighsLp lp_;
   PrimalDualParams params_;
   //        HighsInterface highs_interface_;
   Logger& logger_;
@@ -80,25 +85,12 @@ class PDLPSolver {
   std::vector<double> dSlackPos_;
   std::vector<double> dSlackNeg_;
 
-  // Scaling
-  ScalingParams scaling_params_;
-  Scaling scaling_;
-
   FILE* pdlp_log_file_ = nullptr;
-
-  // HighsStatus TransformGxLeqToGeq(HighsLp& lp);
-  void PreprocessLp(const HighsLp& original_lp, HighsLp& processed_lp);
-  void Postsolve(const HighsLp& original_lp, HighsLp& processed_lp,
-                 const std::vector<double>& x_processed,
-                 const std::vector<double>& y_processed,
-                 HighsSolution& solution);
 
   // Helper functions
   void solveReturn();
   void Initialize(const HighsLp& lp, std::vector<double>& x,
                   std::vector<double>& y);
-  bool RunPresolve(const HighsLp& original_lp, Highs& highs,
-                   HighsLp& presolved_lp);
   SolverResults results_;
   TerminationStatus SolvePresolvedProblem(HighsLp& presolved_lp,
                                           const PrimalDualParams& params,

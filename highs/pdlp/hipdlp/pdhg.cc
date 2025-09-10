@@ -271,11 +271,6 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
 
   HighsSolution solution;
 
-  // 1. Preprocess original LP to handle ranged constraints
-  logger_.info("Preprocessing LP to handle ranged constraints...");
-  HighsLp lp;
-  PreprocessLp(original_lp, lp);
-
   // 2. Pass the PREPROCESSED LP to HiGHS and run presolve
   /*
   logger_.info("Running HiGHS presolve on the preprocessed problem...");
@@ -293,18 +288,7 @@ void PDLPSolver::Solve(HighsLp& original_lp, const PrimalDualParams& params,
       return;
   }
 */
-  // --- SCALING ---
-  ScalingParams scaling_params;
-  scaling_params.method = params.scaling_method;
-  scaling_params.use_ruiz = params.use_ruiz_scaling;
-  scaling_params.use_pc = params.use_pc_scaling;
-  scaling_params.use_l2 = params.use_l2_scaling;
-  scaling_params.ruiz_iterations = params.ruiz_iterations;
-  scaling_params.ruiz_norm = params.ruiz_norm;
-  scaling_params.pc_alpha = params.pc_alpha;
-  scaling_.Initialize(lp);
-  scaling_.ScaleProblem(lp, scaling_params);
-
+  HighsLp lp = original_lp;
   // --- 0.Using PowerMethod to estimate the largest eigenvalue ---
   double op_norm_sq = 1.0;  // Default value
   HighsStatus status = PowerMethod(lp, op_norm_sq);

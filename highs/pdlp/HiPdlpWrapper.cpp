@@ -53,11 +53,75 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   PrimalDualParams params{};
 
   getHiPpdlpParamsFromOptions(options, timer, params);
-  std::vector<double> x, y;
-  PDLPSolver pdlp(logger);
 
   Timer total_timer;
-  pdlp.Solve((HighsLp&)lp, params, x, y);
+  /*** Order of operations 
+   * Presolve with HiGHS
+   * Preprocess with HiPdlp
+   * Scale with HiPdlp
+   * Solve with HiPdlp
+   * Unscale with HiPdlp
+   * Postprocess with HiPDLP
+   * Postsolve with HiGHS
+   * ***/
+  // 1. Presolve with HiGHS
+  Highs highs;
+  highs.passModel(lp);
+  HighsLp presolved_lp;
+  HighsSolution presolve_solution;
+  bool do_presolve = (options.presolve != "off");
+
+  if (do_presolve) {
+    HighsStatus presolve_status = highs.presolve();
+    if (presolve_status != HighsStatus::kOk) {
+      return HighsStatus::kError; // Handle presolve errors
+    }
+
+    // If the problem is solved during presolve, get the solution and return.
+    if (highs.getModelStatus() == HighsModelStatus::kOptimal ||
+        highs.getModelStatus() == HighsModelStatus::kInfeasible ||
+        highs.getModelStatus() == HighsModelStatus::kUnbounded) {
+      presolve_solution = highs.getSolution();
+      highs_info.pdlp_iteration_count = 0;
+      highs_solution = presolve_solution;
+      model_status = highs.getModelStatus();
+      return HighsStatus::kOk;
+    }
+
+    // Get the presolved LP for the next steps.
+    presolved_lp = highs.getLp();
+  } else {
+    // If presolve is off, the problem to solve is the original LP.
+    presolved_lp = lp;
+  }
+
+  // 2. Preprocess with HiPdlp
+  PDLPSolver pdlp(logger);
+  HighsLp preprocessed_lp;
+  //logger_.info("Preprocessing LP to handle ranged constraints...");
+  pdlp.PreprocessLp(presolved_lp, preprocessed_lp);
+
+  // 3. Scale with HiPdlp
+  pdlp.scaling_.ScaleProblem(preprocessed_lp, params);
+
+  // 4. Solve with HiPdlp
+  std::vector<double> x, y;
+  pdlp.Solve(preprocessed_lp, params, x, y);
+
+  // 5. Unscale with HiPdlp
+  pdlp.scaling_.UnscaleSolution(x, y);
+
+  // 6. Postprocess with HiPDLP
+  HighsSolution pdlp_solution;
+  pdlp.Postsolve(presolved_lp, preprocessed_lp, x, y, pdlp_solution);
+
+  // 7. Postsolve with HiGHS
+  if (do_presolve) {
+    logger.info("Postsolving with HiGHS...");
+    highs.postsolve(pdlp_solution);
+  } else {
+    pdlp_solution = pdlp_solution; // No presolve, so nothing to do
+  }
 
   // --- Print Summary ---
   logger.print_summary(pdlp.GetResults(), pdlp.GetIterationCount(),
