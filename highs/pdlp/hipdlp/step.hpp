@@ -8,8 +8,8 @@
 /**@file pdlp/hipdlp/step.hpp
  * @brief
  */
-#ifndef STEP_H
-#define STEP_H
+#ifndef PDLP_HIPDLP_STEP_HPP
+#define PDLP_HIPDLP_STEP_HPP
 
 #include <vector>
 
@@ -86,4 +86,4 @@ bool UpdateIteratesMalitskyPock(
 
 }  // namespace step
 
-#endif  // STEP_HPP
+#endif  // PDLP_HIPDLP_STEP_HPP

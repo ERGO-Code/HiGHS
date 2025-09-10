@@ -9,8 +9,8 @@
  * @brief
  */
 // restart.hpp
-#ifndef RESTART_HPP
-#define RESTART_HPP
+#ifndef PDLP_HIPDLP_RESTART_HPP
+#define PDLP_HIPDLP_RESTART_HPP
 
 #include <cmath>
 #include <iostream>
@@ -55,4 +55,4 @@ class RestartScheme {
   double necessary_decay_factor_ = 0.8;
 };
 
-#endif  // RESTART_HPP
+#endif  // PDLP_HIPDLP_RESTART_HPP

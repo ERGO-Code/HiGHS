@@ -8,8 +8,8 @@
 /**@file pdlp/hipdlp/pdhg.hpp
  * @brief
  */
-#ifndef PDHG_HPP
-#define PDHG_HPP
+#ifndef PDLP_HIPDLP_PDHG_HPP
+#define PDLP_HIPDLP_PDHG_HPP
 
 #include <algorithm>
 #include <cmath>

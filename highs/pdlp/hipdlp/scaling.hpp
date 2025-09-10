@@ -8,8 +8,8 @@
 /**@file pdlp/hipdlp/scaling.hpp
  * @brief
  */
-#ifndef SCALING_HPP
-#define SCALING_HPP
+#ifndef PDLP_HIPDLP_SCALING_HPP
+#define PDLP_HIPDLP_SCALING_HPP
 
 #include <algorithm>
 #include <cmath>
@@ -55,4 +55,4 @@ class Scaling {
   double ComputeNorm(const double* values, int size, double norm_type) const;
 };
 
-#endif  // SCALING_HPP
+#endif  // PDLP_HIPDLP_SCALING_HPP

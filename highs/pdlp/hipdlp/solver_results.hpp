@@ -8,8 +8,8 @@
 /**@file pdlp/hipdlp/solver_results.hpp
  * @brief
  */
-#ifndef SOLVER_RESULTS_HPP
-#define SOLVER_RESULTS_HPP
+#ifndef PDLP_HIPDLP_SOLVER_RESULTS_HPP
+#define PDLP_HIPDLP_SOLVER_RESULTS_HPP
 
 #include <vector>
 
@@ -64,4 +64,4 @@ struct SolverResults {
   double duality_gap_last_restart = 0.0;
 };
 
-#endif  // SOLVER_RESULTS_HPP
+#endif  // PDLP_HIPDLP_SOLVER_RESULTS_HPP

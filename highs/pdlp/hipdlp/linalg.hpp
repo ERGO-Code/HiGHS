@@ -8,8 +8,8 @@
 /**@file pdlp/hipdlp/linalg.hpp
  * @brief
  */
-#ifndef LINALG_HPP
-#define LINALG_HPP
+#ifndef PDLP_HIPDLP_LINALG_HPP
+#define PDLP_HIPDLP_LINALG_HPP
 
 #include <vector>
 
@@ -52,4 +52,4 @@ std::vector<double> compute_row_norms(
     const HighsLp& lp, double p = std::numeric_limits<double>::infinity());
 }  // namespace linalg
 
-#endif  // LINALG_HPP
+#endif  // PDLP_HIPDLP_LINALG_HPP

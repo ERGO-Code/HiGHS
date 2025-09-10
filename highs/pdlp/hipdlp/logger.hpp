@@ -8,8 +8,8 @@
 /**@file pdlp/hipdlp/logger.hpp
  * @brief
  */
-#ifndef LOGGER_HPP
-#define LOGGER_HPP
+#ifndef PDLP_HIPDLP_LOGGER_HPP
+#define PDLP_HIPDLP_LOGGER_HPP
 
 #include <chrono>
 #include <fstream>
@@ -64,4 +64,4 @@ class Logger {
   std::ofstream log_file_;
 };
 
-#endif  // LOGGER_HPP
+#endif  // PDLP_HIPDLP_LOGGER_HPP
