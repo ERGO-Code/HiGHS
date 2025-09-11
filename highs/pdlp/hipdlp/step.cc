@@ -233,7 +233,7 @@ void PdlpStep::UpdateIteratesAdaptive(
     /*
     highsLogUser(*log_options_, HighsLogType::kInfo,
                  "Iteration %d: eta = %g, movement = %g nonlinearity = %g, limit
-    = %g\n", inner_iterations, current_eta, movement, nonlinearity.
+    = %g\n", int(inner_iterations), current_eta, movement, nonlinearity.
     step_size_limit);
     */
     if (current_eta <= step_size_limit) {
@@ -406,7 +406,7 @@ bool PdlpStep::UpdateIteratesMalitskyPock(
         highsLogUser(
             *log_options_, HighsLogType::kInfo,
             "Malitsky-Pock line search: iteration %d, reducing step to %g\n",
-            inner_iterations, new_primal_step_size);
+            int(inner_iterations), new_primal_step_size);
     }
   }
 

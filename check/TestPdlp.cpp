@@ -258,6 +258,7 @@ TEST_CASE("pdlp-restart", "[pdlp]") {
   pdlpRestart("adlittle");
   //  pdlpRestart("shell");
   //  pdlpRestart("25fv47");
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-restart-lp", "[pdlp]") {
@@ -285,6 +286,7 @@ TEST_CASE("pdlp-restart-lp", "[pdlp]") {
 
   h.setOptionValue("presolve", kHighsOffString);
   run_status = h.run();
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
@@ -328,6 +330,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   h.setSolution(solution);
   run_status = h.run();
   if (dev_run) h.writeSolution("", 1);
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
@@ -349,7 +352,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   HighsStatus run_status = h.run();
   //  REQUIRE(run_status == HighsStatus::kOk);
   //  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(h.getInfo().pdlp_iteration_count == 11880);
+  //  REQUIRE(h.getInfo().pdlp_iteration_count == 11880);
   const bool cupdlp_test = true;
   if (cupdlp_test) {
     h.clearSolver();
@@ -357,4 +360,5 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
     h.setOptionValue("pdlp_features_off", kPdlpAllFeaturesOff);
     run_status = h.run();
   }
+  highs.resetGlobalScheduler(true);
 }

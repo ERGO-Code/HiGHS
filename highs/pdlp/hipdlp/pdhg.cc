@@ -834,7 +834,8 @@ double PDLPSolver::PowerMethod() {
       x_vec = z_vec;
       if (log_iters)
         highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                     "%2d %12.6g %11.4g\n", iter, op_norm_sq, dl_op_norm_sq);
+                     "%2d %12.6g %11.4g\n", int(iter), op_norm_sq,
+                     dl_op_norm_sq);
     } else {
       if (power_method == kYanyuPowerMethodDev) {
         // Yanyu power method without "convergence" check
@@ -876,7 +877,7 @@ double PDLPSolver::PowerMethod() {
       previous_lambda = lambda;
       if (log_iters)
         highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                     "%2d %12.6g %11.4g\n", iter, lambda, dl_lambda);
+                     "%2d %12.6g %11.4g\n", int(iter), lambda, dl_lambda);
     }
   }
   if (power_method != kYanyuPowerMethod) op_norm_sq = lambda;

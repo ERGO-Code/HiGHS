@@ -31,7 +31,7 @@ void Scaling::Initialize(const HighsLp& lp) {
 void Scaling::LogMatrixNorms(const std::string& stage) {
   const HighsLp& lp = *lp_;
   highsLogUser(params_->log_options_, HighsLogType::kInfo,
-               "\n--- Matrix Norms %d ---\n", stage.c_str());
+               "\n--- Matrix Norms %s ---\n", stage.c_str());
 
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     highsLogUser(params_->log_options_, HighsLogType::kInfo,
@@ -49,7 +49,7 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
       max_abs_val = std::max(max_abs_val, std::abs(lp.a_matrix_.value_[iEl]));
     }
     highsLogUser(params_->log_options_, HighsLogType::kInfo, "  Col %d: %g\n",
-                 iCol, max_abs_val);
+                 int(iCol), max_abs_val);
   }
 
   // --- Calculate and Log Row Norms (Infinity Norm) ---
@@ -67,7 +67,7 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
 
   for (HighsInt iRow = 0; iRow < lp.num_row_; ++iRow) {
     highsLogUser(params_->log_options_, HighsLogType::kInfo, "  Row %d: %g\n",
-                 iRow, row_max_abs_vals[iRow]);
+                 int(iRow), row_max_abs_vals[iRow]);
   }
   highsLogUser(params_->log_options_, HighsLogType::kInfo,
                "-------------------------\n");
