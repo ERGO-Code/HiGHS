@@ -114,6 +114,7 @@ class PDLPSolver {
                              const std::vector<double>& y2, double omega);
   std::vector<double> ComputeLambda(const std::vector<double>& y,
                                     const std::vector<double>& ATy_vector);
+  double ComputeDualObjective(const std::vector<double>& y);
   std::pair<double, double> ComputePrimalFeasibility(
       const std::vector<double>& x, const std::vector<double>& Ax_vector);
   void ComputeDualSlacks(const std::vector<double>& ATy_vector);
