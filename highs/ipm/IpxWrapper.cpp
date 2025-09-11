@@ -504,11 +504,22 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   // hipo_options.refine_with_ipx = true;
   // hipo_options.display_ipx = true;
 
-  // Option parallel for now is just "on", "off", "choose".
-  // hipo can accept also partially on, to select only tree or node parallelism.
-  // It is worth considering whether this choice should be exposed to the user.
-  if (options.parallel == kHighsOnString)
-    hipo_options.parallel = hipo::kOptionParallelOn;
+  // if option parallel is on, it can be refined by option hipo_parallel_type
+  if (options.parallel == kHighsOnString) {
+    if (options.hipo_parallel_type == kHipoTreeString)
+      hipo_options.parallel = hipo::kOptionParallelTreeOnly;
+    else if (options.hipo_parallel_type == kHipoNodeString)
+      hipo_options.parallel = hipo::kOptionParallelNodeOnly;
+    else if (options.hipo_parallel_type == kHipoBothString)
+      hipo_options.parallel = hipo::kOptionParallelOn;
+    else {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Unknown value of option %s\n", kHipoParallelString.c_str());
+      model_status = HighsModelStatus::kSolveError;
+      return HighsStatus::kError;
+    }
+  }
+  // otherwise, option hipo_parallel_type is ignored
   else if (options.parallel == kHighsOffString)
     hipo_options.parallel = hipo::kOptionParallelOff;
   else {
@@ -525,14 +536,13 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
     hipo_options.nla = hipo::kOptionNlaChoose;
   } else {
     highsLogUser(options.log_options, HighsLogType::kError,
-                 "Unknown value of option hipo_system\n");
+                 "Unknown value of option %s\n", kHipoSystemString.c_str());
     model_status = HighsModelStatus::kSolveError;
     return HighsStatus::kError;
   }
 
   // ===========================================================================
   // TO DO
-  // - consider adding options for parallel tree/node
   // - block size for dense factorisation can have large impact on performance
   //   and depends on the specific architecture. It may be worth exposing it to
   //   the user as an advanced option.

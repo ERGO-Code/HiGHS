@@ -292,6 +292,12 @@ const string kHipoSystemString = "hipo_system";
 const string kHipoAugmentedString = "augmented";
 const string kHipoNormalEqString = "normaleq";
 
+// Strings for HiPO parallel method
+const string kHipoParallelString = "hipo_parallel_type";
+const string kHipoTreeString = "tree";
+const string kHipoNodeString = "node";
+const string kHipoBothString = "both";
+
 struct HighsOptionsStruct {
   // Run-time options read from the command line
   std::string presolve;
@@ -353,6 +359,7 @@ struct HighsOptionsStruct {
   // Options for IPM solvers
   HighsInt ipm_iteration_limit;
   std::string hipo_system;
+  std::string hipo_parallel_type;
 
   // Options for PDLP solver
   bool pdlp_scaling;
@@ -518,6 +525,7 @@ struct HighsOptionsStruct {
         timeless_log(false),
         ipm_iteration_limit(0),
         hipo_system(""),
+        hipo_parallel_type(""),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
@@ -678,8 +686,8 @@ class HighsOptions : public HighsOptionsStruct {
         "Solver option: \"simplex\", \"choose\", \"hipo\", \"ipm\" or "
         "\"pdlp\". "
         "If "
-        "\"simplex\"/\"ipm\"/\"hipo\"/\"pdlp\" is chosen then, for a MIP (QP) the "
-        "integrality "
+        "\"simplex\"/\"ipm\"/\"hipo\"/\"pdlp\" is chosen then, for a MIP (QP) "
+        "the integrality "
         "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
@@ -1206,6 +1214,13 @@ class HighsOptions : public HighsOptionsStruct {
         kHipoSystemString,
         "HiPO Newton system option: \"augmented\", \"normaleq\" or \"choose\".",
         advanced, &hipo_system, kHighsChooseString);
+    records.push_back(record_string);
+
+    record_string =
+        new OptionRecordString(kHipoParallelString,
+                               "HiPO parallel option: \"tree\", "
+                               "\"node\" or \"both\".",
+                               advanced, &hipo_parallel_type, kHipoBothString);
     records.push_back(record_string);
 
     record_bool = new OptionRecordBool(
