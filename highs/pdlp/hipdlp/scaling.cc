@@ -17,6 +17,8 @@
 
 #include "linalg.hpp"
 
+#include "io/HighsIO.h"  // For pdlpLogging
+
 void Scaling::Initialize(const HighsLp& lp) {
   col_scale_.assign(lp.num_col_, 1.0);
   row_scale_.assign(lp.num_row_, 1.0);
@@ -27,11 +29,12 @@ void Scaling::Initialize(const HighsLp& lp) {
   norm_rhs_ = linalg::compute_rhs_norm(lp, 2.0);
 }
 
-void LogMatrixNorms(const HighsLp& lp, const std::string& stage) {
-  std::cout << "\n--- Matrix Norms " << stage << " ---" << std::endl;
+void Scaling::LogMatrixNorms(const std::string& stage) {
+  const HighsLp& lp = *lp_;
+  highsLogUser(params_->log_options_, HighsLogType::kInfo, "\n--- Matrix Norms %d ---\n", stage.c_str());
 
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
-    std::cout << "Matrix is empty." << std::endl;
+    highsLogUser(params_->log_options_, HighsLogType::kInfo, "Matrix is empty\n");
     return;
   }
 
@@ -43,7 +46,7 @@ void LogMatrixNorms(const HighsLp& lp, const std::string& stage) {
          iEl < lp.a_matrix_.start_[iCol + 1]; ++iEl) {
       max_abs_val = std::max(max_abs_val, std::abs(lp.a_matrix_.value_[iEl]));
     }
-    std::cout << "  Col " << iCol << ": " << max_abs_val << std::endl;
+    highsLogUser(params_->log_options_, HighsLogType::kInfo, "  Col %d: %g\n", iCol, max_abs_val);
   }
 
   // --- Calculate and Log Row Norms (Infinity Norm) ---
@@ -59,10 +62,9 @@ void LogMatrixNorms(const HighsLp& lp, const std::string& stage) {
   }
 
   for (HighsInt iRow = 0; iRow < lp.num_row_; ++iRow) {
-    std::cout << "  Row " << iRow << ": " << row_max_abs_vals[iRow]
-              << std::endl;
+    highsLogUser(params_->log_options_, HighsLogType::kInfo, "  Row %d: %g\n", iRow, row_max_abs_vals[iRow]);
   }
-  std::cout << "-------------------------\n" << std::endl;
+  highsLogUser(params_->log_options_, HighsLogType::kInfo, "-------------------------\n");
 }
 
 void Scaling::scaleProblem() {
