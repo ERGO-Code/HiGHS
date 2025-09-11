@@ -20,8 +20,10 @@ FHsolver::FHsolver(const Log* log) : log_{log} {
 }
 
 FHsolver::~FHsolver() {
-  data_.printTimes(*log_);
-  data_.printIter(*log_);
+  if (log_) {
+    data_.printTimes(*log_);
+    data_.printIter(*log_);
+  }
 }
 
 void FHsolver::newIter() { data_.append(); }

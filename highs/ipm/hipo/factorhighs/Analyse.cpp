@@ -1357,18 +1357,9 @@ Int Analyse::run(Symbolic& S) {
   computeBlockStart();
   computeCriticalPath();
 
-  // Too many nonzeros for the integer type selected
-  if (nz_factor_ >= std::numeric_limits<Int>::max()) {
-    if (log_) log_->printDevInfo("Integer overflow in analyse phase\n");
-    return kRetIntOverflow;
-  }
-
   // move relevant stuff into S
   S.n_ = n_;
   S.sn_ = sn_count_;
-
-  S.sn_ = sn_count_;
-  S.n_ = n_;
   S.nz_ = nz_factor_;
   S.fillin_ = (double)nz_factor_ / nz_;
   S.artificial_nz_ = artificial_nz_;
@@ -1391,14 +1382,18 @@ Int Analyse::run(Symbolic& S) {
     if (i <= 100) S.sn_size_100_++;
   }
 
+  // Too many nonzeros for the integer type selected.
+  // Check after statistics have been moved into S, so that info is accessible
+  // for debug logging.
+  if (nz_factor_ >= std::numeric_limits<Int>::max()) {
+    if (log_) log_->printDevInfo("Integer overflow in analyse phase\n");
+    return kRetIntOverflow;
+  }
+
   // permute signs of pivots
   S.pivot_sign_ = std::move(signs_);
   permuteVector(S.pivot_sign_, perm_);
 
-  S.nz_ = nz_factor_;
-  S.flops_ = dense_ops_;
-  S.spops_ = sparse_ops_;
-  S.critops_ = critical_ops_;
   S.iperm_ = std::move(iperm_);
   S.rows_ = std::move(rows_sn_);
   S.ptr_ = std::move(ptr_sn_);

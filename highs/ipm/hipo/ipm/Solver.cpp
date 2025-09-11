@@ -1429,7 +1429,7 @@ void Solver::printSummary() const {
                << fix(control_.elapsed() - start_time_, 0, 2) << "\n";
 
   log_stream << textline("Status:") << statusString(info_.status) << "\n";
-  log_stream << textline("iterations:") << integer(iter_) << "\n";
+  log_stream << textline("HiPO iterations:") << integer(iter_) << "\n";
   if (info_.ipx_used)
     log_stream << textline("IPX iterations:") << integer(info_.ipx_info.iter)
                << "\n";

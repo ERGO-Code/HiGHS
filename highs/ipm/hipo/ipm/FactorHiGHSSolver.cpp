@@ -501,6 +501,17 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
 
   log_.print(log_stream);
 
+  if (log_.debug(1)) {
+    if (failure_AS) {
+      log_.print("Failed augmented system:");
+      symb_AS.print(log_, true);
+    }
+    if (failure_NE) {
+      log_.print("Failed normal equations:");
+      symb_NE.print(log_, true);
+    }
+  }
+
   if (status != kStatusErrorAnalyse) {
     if (options.nla == kOptionNlaAugmented) {
       S_ = std::move(symb_AS);
