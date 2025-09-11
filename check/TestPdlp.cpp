@@ -16,31 +16,31 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   double optimal_objective;
   special_lps.distillationLp(lp, require_model_status, optimal_objective);
 
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  const HighsInfo& info = highs.getInfo();
-  const HighsOptions& options = highs.getOptions();
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  highs.setOptionValue("solver", kPdlpString);
-  highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  const HighsOptions& options = h.getOptions();
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = HighsStatus::kOk;
   bool optimal = true;
 
   const HighsInt pdlp_iteration_count_optimal = 160;
-  run_status = highs.run();
-  if (dev_run) highs.writeSolution("", 1);
+  run_status = h.run();
+  if (dev_run) h.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
   if (optimal) {
     REQUIRE(run_status == HighsStatus::kOk);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   } else {
     REQUIRE(run_status == HighsStatus::kWarning);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
   }
 
-  HighsInt pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
+  HighsInt pdlp_iteration_count = h.getInfo().pdlp_iteration_count;
   REQUIRE(pdlp_iteration_count > 0);
   REQUIRE(pdlp_iteration_count == pdlp_iteration_count_optimal);
 
@@ -49,19 +49,18 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   //
   // Now that PDLP hot starts, have to clear the solution
   //
-  highs.clearSolver();
+  h.clearSolver();
 
-  highs.setOptionValue("pdlp_iteration_limit",
-                       pdlp_iteration_count_optimal / 2);
-  run_status = highs.run();
+  h.setOptionValue("pdlp_iteration_limit", pdlp_iteration_count_optimal / 2);
+  run_status = h.run();
 
   REQUIRE(run_status == HighsStatus::kWarning);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
-  pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kIterationLimit);
+  pdlp_iteration_count = h.getInfo().pdlp_iteration_count;
   REQUIRE(pdlp_iteration_count > 0);
   REQUIRE(pdlp_iteration_count == (pdlp_iteration_count_optimal / 2) - 1);
 
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
 #else
 // CUPDLP_GPU
@@ -73,47 +72,47 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   double optimal_objective;
   special_lps.distillationLp(lp, require_model_status, optimal_objective);
 
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  const HighsInfo& info = highs.getInfo();
-  const HighsOptions& options = highs.getOptions();
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  highs.setOptionValue("solver", kPdlpString);
-  highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  const HighsOptions& options = h.getOptions();
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
   HighsStatus run_status = HighsStatus::kOk;
   bool optimal = true;
 
-  run_status = highs.run();
-  if (dev_run) highs.writeSolution("", 1);
+  run_status = h.run();
+  if (dev_run) h.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
   if (optimal) {
     REQUIRE(run_status == HighsStatus::kOk);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   } else {
     REQUIRE(run_status == HighsStatus::kWarning);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
   }
 
   // IG todo add iteration count
-  // HighsInt pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
+  // HighsInt pdlp_iteration_count = h.getInfo().pdlp_iteration_count;
   // REQUIRE(pdlp_iteration_count > 0);
   // REQUIRE(pdlp_iteration_count == 160);
 
   // Now run with half the iteration count as the limit to test
   // iteration limit termination
 
-  // highs.setOptionValue("pdlp_iteration_limit", pdlp_iteration_count / 2);
-  // run_status = highs.run();
+  // h.setOptionValue("pdlp_iteration_limit", pdlp_iteration_count / 2);
+  // run_status = h.run();
 
   // REQUIRE(run_status == HighsStatus::kWarning);
-  // REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
-  // pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
+  // REQUIRE(h.getModelStatus() == HighsModelStatus::kIterationLimit);
+  // pdlp_iteration_count = h.getInfo().pdlp_iteration_count;
   // REQUIRE(pdlp_iteration_count > 0);
   // REQUIRE(pdlp_iteration_count == 79);
 
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
 #endif
 
@@ -125,28 +124,28 @@ TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   double optimal_objective;
   special_lps.ThreeDLp(lp, require_model_status, optimal_objective);
 
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  const HighsInfo& info = highs.getInfo();
-  const HighsOptions& options = highs.getOptions();
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  highs.setOptionValue("solver", kPdlpString);
-  highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
-  HighsStatus run_status = highs.run();
-  if (dev_run) highs.writeSolution("", 1);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  const HighsOptions& options = h.getOptions();
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
+  HighsStatus run_status = h.run();
+  if (dev_run) h.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
   const bool optimal = true;
   if (optimal) {
     REQUIRE(run_status == HighsStatus::kOk);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   } else {
     REQUIRE(run_status == HighsStatus::kWarning);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
   }
 
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-boxed-row-lp", "[pdlp]") {
@@ -162,27 +161,27 @@ TEST_CASE("pdlp-boxed-row-lp", "[pdlp]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 1, -1};
   double optimal_objective = -16;
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  const HighsInfo& info = highs.getInfo();
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  highs.setOptionValue("solver", kPdlpString);
-  highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
-  HighsStatus run_status = highs.run();
-  if (dev_run) highs.writeSolution("", 1);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
+  HighsStatus run_status = h.run();
+  if (dev_run) h.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
   const bool optimal = true;
   if (optimal) {
     REQUIRE(run_status == HighsStatus::kOk);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   } else {
     REQUIRE(run_status == HighsStatus::kWarning);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
   }
 
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-infeasible-lp", "[pdlp]") {
@@ -197,17 +196,17 @@ TEST_CASE("pdlp-infeasible-lp", "[pdlp]") {
   lp.a_matrix_.start_ = {0, 1, 2};
   lp.a_matrix_.index_ = {0, 0};
   lp.a_matrix_.value_ = {1, 1};
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  highs.setOptionValue("solver", kPdlpString);
-  highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  if (dev_run) highs.writeSolution("", 1);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  if (dev_run) h.writeSolution("", 1);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
@@ -222,22 +221,22 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
   lp.a_matrix_.start_ = {0, 1, 2};
   lp.a_matrix_.index_ = {0, 0};
   lp.a_matrix_.value_ = {1, 1};
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  highs.setOptionValue("solver", kPdlpString);
-  highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("kkt_tolerance", kkt_tolerance);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  if (dev_run) highs.writeSolution("", 1);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  if (dev_run) h.writeSolution("", 1);
   const bool not_unbounded = false;
   if (not_unbounded) {
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
   } else {
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
   }
 
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
 
 void pdlpRestart(const std::string& model) {
@@ -252,13 +251,13 @@ void pdlpRestart(const std::string& model) {
   const bool was_optimal = h.getModelStatus() == HighsModelStatus::kOptimal;
   h.setOptionValue("presolve", kHighsOffString);
   run_status = h.run();
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-restart", "[pdlp]") {
   pdlpRestart("adlittle");
   //  pdlpRestart("shell");
   //  pdlpRestart("25fv47");
-  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-restart-lp", "[pdlp]") {
@@ -286,7 +285,7 @@ TEST_CASE("pdlp-restart-lp", "[pdlp]") {
 
   h.setOptionValue("presolve", kHighsOffString);
   run_status = h.run();
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
@@ -330,7 +329,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   h.setSolution(solution);
   run_status = h.run();
   if (dev_run) h.writeSolution("", 1);
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
@@ -360,5 +359,5 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
     h.setOptionValue("pdlp_features_off", kPdlpAllFeaturesOff);
     run_status = h.run();
   }
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 }
