@@ -155,6 +155,8 @@ void PDLPSolver::PreprocessLp() {
     }
   }
 
+  scaling_.passLp(&processed_lp);
+
   // 7. Convert COO matrix to CSC for the processed_lp
   //
   // Already achieved by construction
@@ -940,4 +942,6 @@ void PDLPSolver::setParams(const HighsOptions& options, HighsTimer& timer) {
   //  params_.malitsky_pock_params.initialise(); Not set in parse_options_file
   //  params_.adaptive_linesearch_params.initialise(); Not set in
   //  parse_options_file
+  scaling_.passParams(&params_);
+  restart_scheme_.passParams(&params_);
 }
