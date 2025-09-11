@@ -3232,8 +3232,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (colDeleted[col]) return Result::kOk;
 
-  // check if variable is implied integer
   if (mipsolver != nullptr) {
+    // check if variable is implied integer
     HPRESOLVE_CHECKED_CALL(
         static_cast<Result>(convertImpliedInteger(col, row)));
 
