@@ -457,9 +457,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         }
 
         // Perform the primal weight update using z^{n,0} and z^{n-1,0}
-        // PDHG_Compute_Step_Size_Ratio(working_params,
-        //                         restart_x, restart_y,
-        //                         x_at_last_restart_, y_at_last_restart_);
+        PDHG_Compute_Step_Size_Ratio(working_params,
+                               restart_x, restart_y,
+                                x_at_last_restart_, y_at_last_restart_);
 
         x_at_last_restart_ = restart_x;  // Current becomes the new last
         y_at_last_restart_ = restart_y;
