@@ -225,12 +225,11 @@ void PdlpStep::UpdateIteratesAdaptive(
                                  :  // in cupdlp-c, the factor is 1
                                  std::numeric_limits<double>::infinity();
 
-    // std::cout << "Iteration " << inner_iterations << ": eta = " <<
-    // current_eta
-    //           << ", movement = " << movement << ", nonlinearity = " <<
-    //           nonlinearity
-    //           << ", limit = " << step_size_limit << std::endl;
-
+    /*
+    highsLogUser(*log_options_, HighsLogType::kInfo,
+		 "Iteration %d: eta = %g, movement = %g nonlinearity = %g, limit = %g\n",
+		 inner_iterations, current_eta, movement, nonlinearity. step_size_limit);
+    */
     if (current_eta <= step_size_limit) {
       // Accept the step
       x_new = x_candidate;

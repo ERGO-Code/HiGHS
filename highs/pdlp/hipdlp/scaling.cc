@@ -39,7 +39,7 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
   }
 
   // --- Calculate and Log Column Norms (Infinity Norm) ---
-  std::cout << "Column Infinity Norms:" << std::endl;
+  highsLogUser(params_->log_options_, HighsLogType::kInfo, "Column Infinity Norms:\n");
   for (HighsInt iCol = 0; iCol < lp.num_col_; ++iCol) {
     double max_abs_val = 0.0;
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
@@ -50,7 +50,7 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
   }
 
   // --- Calculate and Log Row Norms (Infinity Norm) ---
-  std::cout << "Row Infinity Norms:" << std::endl;
+  highsLogUser(params_->log_options_, HighsLogType::kInfo, "Row Infinity Norms:\n");
   std::vector<double> row_max_abs_vals(lp.num_row_, 0.0);
   for (HighsInt iCol = 0; iCol < lp.num_col_; ++iCol) {
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
@@ -69,23 +69,23 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
 
 void Scaling::scaleProblem() {
   if (params_->scaling_method == ScalingMethod::NONE) {
-    std::cout << "No scaling applied." << std::endl;
+    highsLogUser(params_->log_options_, HighsLogType::kInfo, "No scaling applied\n");
     return;
   }
 
-  std::cout << "Applying scaling method: "
-            << static_cast<int>(params_->scaling_method) << std::endl;
+  highsLogUser(params_->log_options_, HighsLogType::kInfo, "Applying scaling method: %d\n",
+	       static_cast<int>(params_->scaling_method));
   if (params_->use_pc_scaling) {
-    std::cout << "Applying Pock-Chambolle scaling..." << std::endl;
+    highsLogUser(params_->log_options_, HighsLogType::kInfo, "Applying Pock-Chambolle scaling...\n");
     ApplyPockChambolleScaling();
   }
   if (params_->use_ruiz_scaling) {
-    std::cout << "Applying Ruiz scaling..." << std::endl;
+    highsLogUser(params_->log_options_, HighsLogType::kInfo, "Applying Ruiz scaling...\n");
     ApplyRuizScaling();
   }
   if (params_->use_l2_scaling ||
       params_->scaling_method == ScalingMethod::L2_NORM) {
-    std::cout << "Applying L2 norm scaling..." << std::endl;
+    highsLogUser(params_->log_options_, HighsLogType::kInfo, "Applying L2 norm scaling...\n");
     ApplyL2Scaling();
   }
 
@@ -140,8 +140,7 @@ void Scaling::ApplyRuizScaling() {
         }
       }
     } else {
-      std::cerr << "Currently only support infinity norm for Ruiz scaling"
-                << std::endl;
+      highsLogUser(params_->log_options_, HighsLogType::kError, "Currently only support infinity norm for Ruiz scaling\n");
       exit(1);
     }
 
@@ -160,7 +159,7 @@ void Scaling::ApplyRuizScaling() {
 
 void Scaling::ApplyPockChambolleScaling() {
   if (params_->pc_alpha < 0.0 || params_->pc_alpha > 2.0) {
-    std::cerr << "PC alpha should be in [0, 2]" << std::endl;
+    highsLogUser(params_->log_options_, HighsLogType::kError, "PC alpha should be in [0, 2]\n");
     exit(1);
   }
 
