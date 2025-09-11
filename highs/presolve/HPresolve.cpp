@@ -4663,12 +4663,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
   // check if variable can be fixed
   if (numDownLocks == 0 || numUpLocks == 0) {
-    bool unbounded = false;
-    if (numDownLocks == 0)
-      unbounded = fixColToLowerOrUnbounded(postsolve_stack, col);
-    else
-      unbounded = fixColToUpperOrUnbounded(postsolve_stack, col);
-    if (unbounded) {
+    if (numDownLocks == 0 ? fixColToLowerOrUnbounded(postsolve_stack, col)
+                          : fixColToUpperOrUnbounded(postsolve_stack, col)) {
       // handle unboundedness
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return Result::kDualInfeasible;
