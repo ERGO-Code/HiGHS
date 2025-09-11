@@ -47,9 +47,10 @@ class PDLPSolver {
   void getSolution(std::vector<double>& col_value,
                    std::vector<double>& row_dual);
 
-  const SolverResults& getResults() const { return results_; }
   void passLp(const HighsLp* lp) { original_lp_ = lp; }
-  int getIterationCount() const;
+  TerminationStatus getTerminationCode() const { return results_.term_code; }
+  int getIterationCount() const { return final_iter_count_; }
+  void logSummary();
 
  private:
   // Problem data
@@ -93,6 +94,7 @@ class PDLPSolver {
   std::vector<double> dSlackNeg_;
 
   FILE* pdlp_log_file_ = nullptr;
+  Timer total_timer;
 
   // Helper functions
   void solveReturn();

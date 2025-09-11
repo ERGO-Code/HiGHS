@@ -15,9 +15,6 @@
 #include "pdlp/hipdlp/pdhg.hpp"
 #include "pdlp/hipdlp/restart.hpp"
 
-void getHiPpdlpParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
-                                 PrimalDualParams& params);
-
 HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object) {
   return solveLpHiPdlp(solver_object.options_, solver_object.timer_,
                        solver_object.lp_, solver_object.basis_,
@@ -33,23 +30,11 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  std::string log_filename = "";
-  LogLevel log_level;
-  if (options.log_dev_level == kHighsLogDevLevelInfo) {
-    log_level = LogLevel::kInfo;
-  } else if (options.log_dev_level == kHighsLogDevLevelDetailed) {
-    log_level = LogLevel::kVerbose;
-  } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
-    log_level = LogLevel::kDebug;
-  } else {
-    log_level = LogLevel::kNone;
-  }
-  // --- Initialize Logger ---
-  Logger logger(log_level);
-  if (!log_filename.empty()) logger.set_log_file(log_filename);
+  Logger logger;
+  logger.setLevel(options.log_dev_level);
+  logger.passHighsLogOptions(options.log_options);
   logger.print_header();
 
-  Timer total_timer;
   /*** Order of operations
    * Preprocess with HiPdlp
    * Scale with HiPdlp
@@ -62,7 +47,6 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   pdlp.setParams(options, timer);
   HighsLp preprocessed_lp;
   pdlp.passLp(&lp);
-  // logger_.info("Preprocessing LP to handle ranged constraints...");
   pdlp.preprocessLp();
 
   // 3. Scale with HiPdlp
@@ -81,8 +65,7 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   // return x, y
 
   // --- Print Summary ---
-  logger.print_summary(pdlp.getResults(), pdlp.getIterationCount(),
-                       total_timer.read());
+  pdlp.logSummary();
 
   highs_info.pdlp_iteration_count = pdlp.getIterationCount();
 
@@ -90,7 +73,7 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   highs_solution.clear();
   highs_basis.valid = false;
 
-  const TerminationStatus termination_status = pdlp.getResults().term_code;
+  const TerminationStatus termination_status = pdlp.getTerminationCode();
   switch (termination_status) {
     case TerminationStatus::OPTIMAL: {
       model_status = HighsModelStatus::kOptimal;
@@ -142,35 +125,3 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   return HighsStatus::kOk;
 }
 
-void PrimalDualParams::initialise() {
-  this->eta = 0;
-  this->omega = 0;
-  this->tolerance = 0;
-  this->max_iterations = 0;
-  this->device_type = Device::CPU;
-  this->time_limit = 3600.0;
-  this->restart_strategy = RestartStrategy::NO_RESTART;
-  this->fixed_restart_interval = 0;
-  this->use_halpern_restart = false;
-  this->scaling_method = ScalingMethod::NONE;
-  this->use_ruiz_scaling = false;
-  this->use_pc_scaling = false;
-  this->use_l2_scaling = false;
-  this->ruiz_iterations = 10;
-  this->ruiz_norm = INFINITY;
-  this->pc_alpha = 1.0;
-  this->step_size_strategy = StepSizeStrategy::FIXED;
-  this->malitsky_pock_params.initialise();
-  this->adaptive_linesearch_params.initialise();
-}
-
-void MalitskyPockParams::initialise() {
-  this->step_size_interpolation = 0.5;  // Between 0 and 1
-  this->step_size_downscaling_factor = 0.7;
-  this->linesearch_contraction_factor = 0.99;
-}
-
-void AdaptiveLinesearchParams::initialise() {
-  this->step_size_reduction_exponent = 0.3;
-  this->step_size_growth_exponent = 0.6;
-}

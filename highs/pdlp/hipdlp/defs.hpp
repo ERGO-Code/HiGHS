@@ -69,6 +69,7 @@ struct PrimalDualParams {
 
   MalitskyPockParams malitsky_pock_params;
   AdaptiveLinesearchParams adaptive_linesearch_params;
+  HighsLogOptions log_options_;
   void initialise();
 };
 

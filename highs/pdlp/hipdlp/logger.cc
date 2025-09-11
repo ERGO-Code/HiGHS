@@ -31,22 +31,21 @@ double Timer::read() {
 }
 
 // Logger implementation
-Logger::Logger(LogLevel level) : console_level_(level) {}
-
-void Logger::set_log_file(const std::string& filename) {
-  log_file_.open(filename, std::ios::out | std::ios::trunc);
-  if (!log_file_.is_open()) {
-    std::cerr << "Error: Could not open log file: " << filename << std::endl;
+void Logger::setLevel(const HighsInt log_dev_level) {
+  if (log_dev_level == kHighsLogDevLevelVerbose) {
+    console_level_ = LogLevel::kDebug;
+  } else if (log_dev_level == kHighsLogDevLevelDetailed) {
+    console_level_ = LogLevel::kVerbose;
+  } else if (log_dev_level == kHighsLogDevLevelInfo) {
+    console_level_ = LogLevel::kInfo;
+  } else {
+    console_level_ = LogLevel::kInfo;//None;
   }
 }
 
 void Logger::log(LogLevel level, const std::string& message) {
-  if (level <= console_level_) {
-    std::cout << message << std::endl;
-  }
-  if (log_file_.is_open()) {
-    log_file_ << message << std::endl;
-  }
+  if (level <= console_level_) 
+    highsLogUser(log_options_, HighsLogType::kInfo, "%s\n", message.c_str());
 }
 
 void Logger::info(const std::string& message) { log(LogLevel::kInfo, message); }

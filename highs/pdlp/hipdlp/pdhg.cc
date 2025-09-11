@@ -24,8 +24,6 @@
 
 using namespace std;
 
-int PDLPSolver::getIterationCount() const { return final_iter_count_; }
-
 void PDLPSolver::preprocessLp() {
   logger_.info(
       "Preprocessing LP using cupdlp formulation (slack variables for "
@@ -950,6 +948,8 @@ void PDLPSolver::setParams(const HighsOptions& options, HighsTimer& timer) {
   //  parse_options_file
   scaling_.passParams(&params_);
   restart_scheme_.passParams(&params_);
+  // Copy what's needed to use HiGHS logging
+  params_.log_options_ = options.log_options;
 }
 
 void PDLPSolver::scaleProblem() {
@@ -961,4 +961,41 @@ void PDLPSolver::scaleProblem() {
 void PDLPSolver::unscaleSolution(std::vector<double>& x,
                                  std::vector<double>& y) const {
   scaling_.unscaleSolution(x, y);
+}
+void PDLPSolver::logSummary() {
+  logger_.print_summary(results_, final_iter_count_, total_timer.read());
+}
+
+void PrimalDualParams::initialise() {
+  this->eta = 0;
+  this->omega = 0;
+  this->tolerance = 0;
+  this->max_iterations = 0;
+  this->device_type = Device::CPU;
+  this->time_limit = 3600.0;
+  this->restart_strategy = RestartStrategy::NO_RESTART;
+  this->fixed_restart_interval = 0;
+  this->use_halpern_restart = false;
+  this->scaling_method = ScalingMethod::NONE;
+  this->use_ruiz_scaling = false;
+  this->use_pc_scaling = false;
+  this->use_l2_scaling = false;
+  this->ruiz_iterations = 10;
+  this->ruiz_norm = INFINITY;
+  this->pc_alpha = 1.0;
+  this->step_size_strategy = StepSizeStrategy::FIXED;
+  this->malitsky_pock_params.initialise();
+  this->adaptive_linesearch_params.initialise();
+  this->log_options_.clear();
+}
+
+void MalitskyPockParams::initialise() {
+  this->step_size_interpolation = 0.5;  // Between 0 and 1
+  this->step_size_downscaling_factor = 0.7;
+  this->linesearch_contraction_factor = 0.99;
+}
+
+void AdaptiveLinesearchParams::initialise() {
+  this->step_size_reduction_exponent = 0.3;
+  this->step_size_growth_exponent = 0.6;
 }
