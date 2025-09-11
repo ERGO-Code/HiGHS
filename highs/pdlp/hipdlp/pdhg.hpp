@@ -93,7 +93,7 @@ class PDLPSolver {
   std::vector<double> dSlackPos_;
   std::vector<double> dSlackNeg_;
 
-  FILE* pdlp_log_file_ = nullptr;
+  FILE* debug_pdlp_log_file_ = nullptr;
   Timer total_timer;
 
   // Helper functions

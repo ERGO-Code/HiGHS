@@ -77,8 +77,8 @@ class PdlpStep {
   void passLogOptions(const HighsLogOptions* log_options) {
     log_options_ = log_options;
   };
-  void passDebugLogFile(FILE* pdlp_log_file) {
-    pdlp_log_file_ = pdlp_log_file;
+  void passDebugLogFile(FILE* debug_pdlp_log_file) {
+    debug_pdlp_log_file_ = debug_pdlp_log_file;
   };
 
  private:
@@ -86,9 +86,9 @@ class PdlpStep {
   // JAJH has only passed log_options_ into PdlpStep, leaving YZ to
   // handle "params" as she sees fit.
   const HighsLogOptions* log_options_;
-  // JAJH has passed pdlp_log_file_ into PdlpStep separately, as it's
+  // JAJH has passed debug_pdlp_log_file_ into PdlpStep separately, as it's
   // only temporary.
-  FILE* pdlp_log_file_;
+  FILE* debug_pdlp_log_file_;
 };
 
 #endif  // PDLP_HIPDLP_STEP_HPP

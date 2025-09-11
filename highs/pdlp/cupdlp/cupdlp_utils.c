@@ -1782,14 +1782,14 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
   fclose(fptr);
 }
 
-void pdlpIterLog(FILE* file, const int iter_num, const double beta) {
+void debugPdlpIterLog(FILE* file, const int iter_num, const double beta) {
   fprintf(file, "Iter %6d; beta = %g\n", iter_num, beta);
 }
 
-void pdlpAxNormLog(FILE* file, const double ax_norm) {
+void debugPdlpAxNormLog(FILE* file, const double ax_norm) {
   fprintf(file, "||Ax|| = %g\n", ax_norm);
 }
 
-void pdlpAtyNormLog(FILE* file, const double aty_norm) {
+void debugPdlpAtyNormLog(FILE* file, const double aty_norm) {
   fprintf(file, "||A^Ty|| = %g\n", aty_norm);
 }
