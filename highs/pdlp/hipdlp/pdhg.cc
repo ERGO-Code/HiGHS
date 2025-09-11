@@ -593,28 +593,40 @@ std::vector<double> PDLPSolver::ComputeLambda(
 std::pair<double, double> PDLPSolver::ComputePrimalFeasibility(
     const std::vector<double>& x, const std::vector<double>& Ax_vector) {
   double primal_feasibility_squared = 0.0;
-  std::vector<double> Ax_minus_b(lp_.num_row_, 0.0);
+  std::vector<double> primal_residual(lp_.num_row_, 0.0);
+  
+  // Compute Ax - rhs (where rhs is row_lower_ for our formulation)
   for (HighsInt i = 0; i < lp_.num_row_; ++i) {
-    double Ax = Ax_vector[i];
-    if (lp_.row_lower_[i] == lp_.row_upper_[i]) {
-      // Equality constraint
-      Ax_minus_b[i] = Ax - lp_.row_lower_[i];
-    } else {  // Inequality constraint
-      Ax_minus_b[i] = std::max(0.0, Ax - lp_.row_upper_[i]);
+    primal_residual[i] = Ax_vector[i] - lp_.row_lower_[i];
+    
+    // For inequality constraints (Ax >= b), project to negative part
+    if (lp_.row_lower_[i] != lp_.row_upper_[i]) {
+      // This is an inequality constraint
+      primal_residual[i] = std::min(0.0, primal_residual[i]);
     }
-    primal_feasibility_squared += Ax_minus_b[i] * Ax_minus_b[i];
+    // For equality constraints, keep the full residual
+    
+    primal_feasibility_squared += primal_residual[i] * primal_residual[i];
   }
-
+  
+  // Apply scaling if needed
+  if (scaling_.IsScaled()) {
+    const auto& row_scale = scaling_.GetRowScaling();
+    for (HighsInt i = 0; i < lp_.num_row_; ++i) {
+      primal_residual[i] *= row_scale[i];
+    }
+  }
+  
   double primal_feasibility = sqrt(primal_feasibility_squared);
-
-  // Compute norm of q
-  double q_norm = 0.0;
+  
+  // Compute norm of rhs for relative tolerance
+  double rhs_norm = 0.0;
   for (HighsInt i = 0; i < lp_.num_row_; ++i) {
-    q_norm += lp_.row_lower_[i] * lp_.row_lower_[i];
+    rhs_norm += lp_.row_lower_[i] * lp_.row_lower_[i];
   }
-  q_norm = sqrt(q_norm);
-
-  return std::make_pair(primal_feasibility, q_norm);
+  rhs_norm = sqrt(rhs_norm);
+  
+  return std::make_pair(primal_feasibility, rhs_norm);
 }
 
 void PDLPSolver::ComputeDualSlacks(const std::vector<double>& ATy_vector) {
@@ -638,21 +650,33 @@ void PDLPSolver::ComputeDualSlacks(const std::vector<double>& ATy_vector) {
 
 std::pair<double, double> PDLPSolver::ComputeDualFeasibility(
     const std::vector<double>& ATy_vector) {
+  ComputeDualSlacks(ATy_vector);  // This updates dSlackPos_ and dSlackNeg_
+  
   double dual_feasibility_squared = 0.0;
   std::vector<double> dual_residual(lp_.num_col_);
-
+  
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
-    // The dual feasibility residual is c - A'y - (dSlackPos - dSlackNeg)
-    // where (dSlackPos - dSlackNeg) is the dual variable for the box
-    // constraints.
-    dual_residual[i] =
-        lp_.col_cost_[i] - ATy_vector[i] - (dSlackPos_[i] - dSlackNeg_[i]);
-
-    dual_feasibility_squared += dual_residual[i] * dual_residual[i];
+    // Compute c - A'y - (slackPos - slackNeg)
+    double residual = lp_.col_cost_[i] - ATy_vector[i];
+    
+    // Subtract the projection onto the bound constraints
+    residual = residual - dSlackPos_[i] + dSlackNeg_[i];
+    
+    dual_residual[i] = residual;
+    dual_feasibility_squared += residual * residual;
   }
-
+  
+  // Apply scaling if needed
+  if (scaling_.IsScaled()) {
+    const auto& col_scale = scaling_.GetColScaling();
+    for (HighsInt i = 0; i < lp_.num_col_; ++i) {
+      dual_residual[i] *= col_scale[i];
+    }
+  }
+  
   double dual_feasibility = sqrt(dual_feasibility_squared);
   double c_norm = linalg::vector_norm(lp_.col_cost_);
+  
   return std::make_pair(dual_feasibility, c_norm);
 }
 
@@ -703,43 +727,73 @@ PDLPSolver::ComputeDualityGap(const std::vector<double>& x,
                          cTx);
 }
 
+double PDLPSolver::ComputeDualObjective(const std::vector<double>& y) {
+  double dual_obj = 0.0;
+  
+  // Compute b'y (or rhs'y in cuPDLP notation)
+  for (int i = 0; i < lp_.num_row_; ++i) {
+    dual_obj += lp_.row_lower_[i] * y[i];
+  }
+  
+  // Add contribution from lower bounds: l'*slackPos
+  for (int i = 0; i < lp_.num_col_; ++i) {
+    if (lp_.col_lower_[i] > -kHighsInf) {
+      dual_obj += lp_.col_lower_[i] * dSlackPos_[i];
+    }
+  }
+  
+  // Subtract contribution from upper bounds: u'*slackNeg
+  for (int i = 0; i < lp_.num_col_; ++i) {
+    if (lp_.col_upper_[i] < kHighsInf) {
+      dual_obj -= lp_.col_upper_[i] * dSlackNeg_[i];
+    }
+  }
+  
+  return dual_obj;
+}
+
 bool PDLPSolver::CheckConvergence(const std::vector<double>& x,
                                   const std::vector<double>& y,
                                   const std::vector<double>& ax_vector,
                                   const std::vector<double>& aty_vector,
                                   double epsilon, SolverResults& results) {
+  // Compute dual slacks first
   ComputeDualSlacks(aty_vector);
-  std::vector<double> lambda = ComputeLambda(y, aty_vector);
-
-  double primal_feasibility, q_norm;
-  std::tie(primal_feasibility, q_norm) = ComputePrimalFeasibility(x, ax_vector);
+  
+  // Compute primal feasibility
+  double primal_feasibility, rhs_norm;
+  std::tie(primal_feasibility, rhs_norm) = ComputePrimalFeasibility(x, ax_vector);
   results.primal_feasibility = primal_feasibility;
-
+  
+  // Compute dual feasibility
   double dual_feasibility, c_norm;
   std::tie(dual_feasibility, c_norm) = ComputeDualFeasibility(aty_vector);
   results.dual_feasibility = dual_feasibility;
-
-  double duality_gap, qTy, lTlambda_plus, uTlambda_minus, cTx;
-  std::tie(duality_gap, qTy, lTlambda_plus, uTlambda_minus, cTx) =
-      ComputeDualityGap(x, y, lambda);
-  results.duality_gap = duality_gap;
-
-  results.relative_obj_gap =
-      std::abs(duality_gap) /
-      (1.0 + std::abs(cTx) + std::abs(qTy) + std::abs(lTlambda_plus) +
-       std::abs(uTlambda_minus));
-
-  bool primal_feasible = primal_feasibility <= epsilon * (1 + q_norm);
-  bool dual_feasible = dual_feasibility <= epsilon * (1 + c_norm);
-
-  double dual_objective_value = qTy + lTlambda_plus - uTlambda_minus;
-  double denominator = 1 + abs(dual_objective_value);
-  if (denominator == 0) {
-    logger_.info("Denominator is zero, cannot check duality gap.");
+  
+  // Compute objectives
+  double primal_obj = 0.0;
+  for (int i = 0; i < lp_.num_col_; ++i) {
+    primal_obj += lp_.col_cost_[i] * x[i];
   }
-  bool duality_gap_small = duality_gap <= epsilon * denominator;
-
-  return primal_feasible && dual_feasible && duality_gap_small;
+  results.primal_obj = primal_obj;
+  
+  double dual_obj = ComputeDualObjective(y);
+  results.dual_obj = dual_obj;
+  
+  // Compute duality gap
+  double duality_gap = primal_obj - dual_obj;
+  results.duality_gap = std::abs(duality_gap);
+  
+  // Compute relative gap (matching cuPDLP formula)
+  results.relative_obj_gap = std::abs(duality_gap) / 
+      (1.0 + std::abs(primal_obj) + std::abs(dual_obj));
+  
+  // Check convergence criteria (matching cuPDLP)
+  bool primal_feasible = primal_feasibility < epsilon * (1.0 + rhs_norm);
+  bool dual_feasible = dual_feasibility < epsilon * (1.0 + c_norm);
+  bool gap_small = results.relative_obj_gap < epsilon;
+  
+  return primal_feasible && dual_feasible && gap_small;
 }
 
 double PDLPSolver::PowerMethod() {
