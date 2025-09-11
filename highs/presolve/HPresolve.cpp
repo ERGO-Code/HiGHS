@@ -3237,8 +3237,9 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     HPRESOLVE_CHECKED_CALL(
         static_cast<Result>(convertImpliedInteger(col, row)));
 
-    // try tightening bounds
-    dualBoundTightening(postsolve_stack, col);
+    // dual fixing
+    HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+    if (colDeleted[col]) return Result::kOk;
   }
 
   // update column implied bounds
@@ -4379,8 +4380,9 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     // check if variable is implied integer
     HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
 
-    // try tightening bounds
-    dualBoundTightening(postsolve_stack, col);
+    // dual fixing
+    HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+    if (colDeleted[col]) return Result::kOk;
 
     // shift integral variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
@@ -4538,19 +4540,52 @@ HPresolve::Result HPresolve::detectDominatedCol(
   return Result::kOk;
 }
 
-void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
-                                    HighsInt col) {
-  // tighten bounds using dual arguments
+HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
+                                        HighsInt col) {
+  // fix variables or tighten bounds using dual arguments
   // see section 4.4 "Dual fixing, substitution and bound strengthening",
   // Achterberg et al., Presolve Reductions in Mixed Integer Programming,
   // INFORMS Journal on Computing 32(2):473-506.
   assert(!colDeleted[col]);
 
   // only tighten bounds for integer-constrained variables
-  if (model->integrality_[col] == HighsVarType::kContinuous) return;
+  if (model->integrality_[col] == HighsVarType::kContinuous) return Result::kOk;
 
   // return if variable is already fixed
-  if (model->col_lower_[col] == model->col_upper_[col]) return;
+  if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
+
+  // lambda for computing locks
+  auto computeLocks = [&](HighsInt col, HighsInt& numDownLocks,
+                          HighsInt& numUpLocks) {
+    // initialise
+    numDownLocks = 0;
+    numUpLocks = 0;
+    // consider objective coefficient
+    if (model->col_cost_[col] < 0)
+      numDownLocks++;
+    else if (model->col_cost_[col] > 0)
+      numUpLocks++;
+    // check coefficients
+    for (const auto& nz : getColumnVector(col)) {
+      // get row index and coefficient
+      HighsInt row = nz.index();
+      double val = nz.value();
+      // check lhs and rhs for finiteness
+      bool lhsFinite = model->row_lower_[row] != -kHighsInf;
+      bool rhsFinite = model->row_upper_[row] != kHighsInf;
+      // update number of locks
+      if (val > 0) {
+        if (lhsFinite) numDownLocks++;
+        if (rhsFinite) numUpLocks++;
+      } else {
+        if (lhsFinite) numUpLocks++;
+        if (rhsFinite) numDownLocks++;
+      }
+      // stop early if there are locks in both directions, since the variable
+      // cannot be fixed in this case.
+      if (numDownLocks > 0 && numUpLocks > 0) break;
+    }
+  };
 
   // lambda for computing tighter bounds
   auto hasTighterBound = [&](HighsInt col, HighsInt direction,
@@ -4621,15 +4656,35 @@ void HPresolve::dualBoundTightening(HighsPostsolveStack& postsolve_stack,
     return true;
   };
 
-  double newBound = 0.0;
-  if (hasTighterBound(col, HighsInt{1}, model->col_upper_[col], newBound)) {
-    // update upper bound
-    changeColUpper(col, std::max(newBound, model->col_lower_[col]));
-  } else if (hasTighterBound(col, HighsInt{-1}, model->col_lower_[col],
-                             newBound)) {
-    // update lower bound
-    changeColLower(col, std::min(newBound, model->col_upper_[col]));
+  // compute locks
+  HighsInt numDownLocks = 0;
+  HighsInt numUpLocks = 0;
+  computeLocks(col, numDownLocks, numUpLocks);
+  // check if variable can be fixed
+  if (numDownLocks == 0 || numUpLocks == 0) {
+    bool unbounded = false;
+    if (numDownLocks == 0)
+      unbounded = fixColToLowerOrUnbounded(postsolve_stack, col);
+    else
+      unbounded = fixColToUpperOrUnbounded(postsolve_stack, col);
+    if (unbounded) {
+      // Handle unboundedness
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      return Result::kDualInfeasible;
+    }
+    return Result::kOk;
+  } else {
+    double newBound = 0.0;
+    if (hasTighterBound(col, HighsInt{1}, model->col_upper_[col], newBound)) {
+      // update upper bound
+      changeColUpper(col, std::max(newBound, model->col_lower_[col]));
+    } else if (hasTighterBound(col, HighsInt{-1}, model->col_lower_[col],
+                               newBound)) {
+      // update lower bound
+      changeColLower(col, std::min(newBound, model->col_upper_[col]));
+    }
   }
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::initialRowAndColPresolve(
