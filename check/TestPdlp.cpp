@@ -344,11 +344,12 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   h.setOptionValue("pdlp_restart_strategy", 0);
   h.setOptionValue("pdlp_step_size_strategy", 0);
 
-  h.setOptionValue("pdlp_iteration_limit", 15);
+  //  h.setOptionValue("pdlp_iteration_limit", 15);
   //  h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
   HighsStatus run_status = h.run();
   //  REQUIRE(run_status == HighsStatus::kOk);
   //  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().pdlp_iteration_count == 11880);
   const bool cupdlp_test = true;
   if (cupdlp_test) {
     h.clearSolver();

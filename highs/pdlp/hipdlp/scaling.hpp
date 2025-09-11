@@ -23,8 +23,8 @@ class Scaling {
   Scaling() = default;
 
   void Initialize(const HighsLp& lp);
-  void ScaleProblem();
-  void UnscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
+  void scaleProblem();
+  void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
   void passLp(HighsLp* lp) { lp_ = lp; };
   void passParams(const PrimalDualParams* params) { params_ = params; };
 

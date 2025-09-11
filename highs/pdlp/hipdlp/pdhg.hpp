@@ -37,22 +37,19 @@ class PDLPSolver {
  public:
   PDLPSolver(Logger& logger);
   void setParams(const HighsOptions& options, HighsTimer& timer);
-  void PreprocessLp();
-  void ScaleProblem(HighsLp& lp, const PrimalDualParams& params);
-  void Solve(std::vector<double>& x, std::vector<double>& y);
-  void Postsolve(HighsSolution& solution);
+  void preprocessLp();
+  void scaleProblem();
+  void solve(std::vector<double>& x, std::vector<double>& y);
+  void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
+  void postprocess(HighsSolution& solution);
   void setSolution(const std::vector<double>& col_value,
                    const std::vector<double>& row_dual);
   void getSolution(std::vector<double>& col_value,
                    std::vector<double>& row_dual);
 
-  const SolverResults& GetResults() const { return results_; }
+  const SolverResults& getResults() const { return results_; }
   void passLp(const HighsLp* lp) { original_lp_ = lp; }
-  // Scaling
-  // ScalingParams scaling_params_;
-  Scaling scaling_;
-
-  int GetIterationCount() const;
+  int getIterationCount() const;
 
  private:
   // Problem data
@@ -78,6 +75,8 @@ class PDLPSolver {
   std::vector<double>* y_ = nullptr;
   std::vector<double> x_current_;
   std::vector<double> y_current_;
+  // Scaling
+  Scaling scaling_;
   // Restart State
   std::vector<double> x_avg_, y_avg_;
   std::vector<double> x_sum_, y_sum_;

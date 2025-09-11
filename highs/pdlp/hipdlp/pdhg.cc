@@ -24,9 +24,9 @@
 
 using namespace std;
 
-int PDLPSolver::GetIterationCount() const { return final_iter_count_; }
+int PDLPSolver::getIterationCount() const { return final_iter_count_; }
 
-void PDLPSolver::PreprocessLp() {
+void PDLPSolver::preprocessLp() {
   logger_.info(
       "Preprocessing LP using cupdlp formulation (slack variables for "
       "bounds)...");
@@ -175,7 +175,7 @@ void PDLPSolver::PreprocessLp() {
                std::to_string(processed_lp.num_col_) + " cols.");
 }
 
-void PDLPSolver::Postsolve(HighsSolution& solution) {
+void PDLPSolver::postprocess(HighsSolution& solution) {
   logger_.info("Post-solving the solution...");
 
   std::vector<double> x_unscaled = x_current_;
@@ -185,7 +185,7 @@ void PDLPSolver::Postsolve(HighsSolution& solution) {
   std::vector<double> dSlackNeg_unscaled = dSlackNeg_;
 
   // 1. Unscale the solution vectors first
-  scaling_.UnscaleSolution(x_unscaled, y_unscaled);
+  unscaleSolution(x_unscaled, y_unscaled);
   const auto& row_scale = scaling_.GetRowScaling();  // Assumes getter exists
   const auto& col_scale = scaling_.GetColScaling();  // Assumes getter exists
   if (col_scale.size() == dSlackPos_unscaled.size()) {
@@ -272,7 +272,7 @@ void PDLPSolver::Postsolve(HighsSolution& solution) {
 
 PDLPSolver::PDLPSolver(Logger& logger) : logger_(logger) {}
 
-void PDLPSolver::Solve(std::vector<double>& x, std::vector<double>& y) {
+void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   Timer solver_timer;
 
   const HighsLp& lp = lp_;
@@ -379,7 +379,7 @@ void PDLPSolver::Solve(std::vector<double>& x, std::vector<double>& y) {
           // Reset to average and terminate
           x = x_avg_;
           y = y_avg_;
-          // scaling_.UnscaleSolution(x, y);
+          // unscalesolution(x, y);
           return solveReturn();
         }
     }
@@ -950,4 +950,15 @@ void PDLPSolver::setParams(const HighsOptions& options, HighsTimer& timer) {
   //  parse_options_file
   scaling_.passParams(&params_);
   restart_scheme_.passParams(&params_);
+}
+
+void PDLPSolver::scaleProblem() {
+  scaling_.passLp(&lp_);
+  scaling_.passParams(&params_);
+  scaling_.scaleProblem();
+}
+
+void PDLPSolver::unscaleSolution(std::vector<double>& x,
+                                 std::vector<double>& y) const {
+  scaling_.unscaleSolution(x, y);
 }

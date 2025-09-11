@@ -63,34 +63,34 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   HighsLp preprocessed_lp;
   pdlp.passLp(&lp);
   // logger_.info("Preprocessing LP to handle ranged constraints...");
-  pdlp.PreprocessLp();
+  pdlp.preprocessLp();
 
   // 3. Scale with HiPdlp
-  pdlp.scaling_.ScaleProblem();
+  pdlp.scaleProblem();
 
   // 4. Solve with HiPdlp
   std::vector<double> x, y;
-  pdlp.Solve(x, y);
+  pdlp.solve(x, y);
 
   // 5. Unscale with HiPdlp
-  pdlp.scaling_.UnscaleSolution(x, y);
+  pdlp.unscaleSolution(x, y);
 
   // 6. Postprocess with HiPDLP
   HighsSolution pdlp_solution;
-  // pdlp.Postsolve(presolved_lp, preprocessed_lp, x, y, pdlp_solution); //
+  // pdlp.postprocess(presolved_lp, preprocessed_lp, x, y, pdlp_solution); //
   // return x, y
 
   // --- Print Summary ---
-  logger.print_summary(pdlp.GetResults(), pdlp.GetIterationCount(),
+  logger.print_summary(pdlp.getResults(), pdlp.getIterationCount(),
                        total_timer.read());
 
-  highs_info.pdlp_iteration_count = pdlp.GetIterationCount();
+  highs_info.pdlp_iteration_count = pdlp.getIterationCount();
 
   model_status = HighsModelStatus::kUnknown;
   highs_solution.clear();
   highs_basis.valid = false;
 
-  const TerminationStatus termination_status = pdlp.GetResults().term_code;
+  const TerminationStatus termination_status = pdlp.getResults().term_code;
   switch (termination_status) {
     case TerminationStatus::OPTIMAL: {
       model_status = HighsModelStatus::kOptimal;

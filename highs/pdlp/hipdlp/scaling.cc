@@ -65,7 +65,7 @@ void LogMatrixNorms(const HighsLp& lp, const std::string& stage) {
   std::cout << "-------------------------\n" << std::endl;
 }
 
-void Scaling::ScaleProblem() {
+void Scaling::scaleProblem() {
   if (params_->scaling_method == ScalingMethod::NONE) {
     std::cout << "No scaling applied." << std::endl;
     return;
@@ -298,7 +298,7 @@ void Scaling::ApplyScaling(const std::vector<double>& col_scaling,
   }
 }
 
-void Scaling::UnscaleSolution(std::vector<double>& x,
+void Scaling::unscaleSolution(std::vector<double>& x,
                               std::vector<double>& y) const {
   if (!is_scaled_) return;
 
