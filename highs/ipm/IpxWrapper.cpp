@@ -541,12 +541,8 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
     return HighsStatus::kError;
   }
 
-  // ===========================================================================
-  // TO DO
-  // - block size for dense factorisation can have large impact on performance
-  //   and depends on the specific architecture. It may be worth exposing it to
-  //   the user as an advanced option.
-  // ===========================================================================
+  // block size option
+  hipo_options.block_size = options.hipo_block_size;
 
   hipo.set(hipo_options, options.log_options, callback, timer);
 

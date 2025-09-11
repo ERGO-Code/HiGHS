@@ -52,6 +52,10 @@ To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
 regularisation. If regularisation is already added to the matrix, ignore.
 
+The default block size is 128. To set a different block size, use setBlockSize.
+Make sure that the block size used for the analyse and factorise phases are the
+same.
+
 */
 
 namespace hipo {
@@ -60,6 +64,8 @@ class FHsolver {
   const Log* log_;
   DataCollector data_;
   Regul regul_;
+
+  Int nb_ = 128;  // block size
 
  public:
   // Create object and initialise DataCollector
@@ -89,6 +95,9 @@ class FHsolver {
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p, double reg_d);
+
+  // Set the block size for dense linear algebra.
+  void setBlockSize(Int nb);
 };
 
 }  // namespace hipo

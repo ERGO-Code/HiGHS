@@ -33,10 +33,12 @@ void FHsolver::setRegularisation(double reg_p, double reg_d) {
   regul_.dual = reg_d;
 }
 
+void FHsolver::setBlockSize(Int nb) { nb_ = nb; }
+
 Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
                       const std::vector<Int>& ptr,
                       const std::vector<Int>& signs) {
-  Analyse an_obj(rows, ptr, signs, log_, data_);
+  Analyse an_obj(rows, ptr, signs, nb_, log_, data_);
   return an_obj.run(S);
 }
 

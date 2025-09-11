@@ -17,7 +17,7 @@
 namespace hipo {
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                 const std::vector<Int>& signs, const Log* log,
+                 const std::vector<Int>& signs, Int nb, const Log* log,
                  DataCollector& data)
     : log_{log}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
@@ -29,7 +29,7 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   n_ = ptr.size() - 1;
   nz_ = rows.size();
   signs_ = signs;
-  nb_ = kBlockSize;
+  nb_ = nb;
 
   // Create upper triangular part
   rows_upper_.resize(nz_);
@@ -1369,6 +1369,7 @@ Int Analyse::run(Symbolic& S) {
   S.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
   S.serial_storage_ = serial_storage_;
   S.flops_ = dense_ops_;
+  S.block_size_ = nb_;
 
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());

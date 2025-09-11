@@ -19,7 +19,9 @@ FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
       data_{record},
       log_{log},
       model_{model},
-      options_{options} {}
+      options_{options} {
+  if (options_.block_size > 0) FH_.setBlockSize(options_.block_size);
+}
 
 void FactorHiGHSSolver::clear() {
   valid_ = false;

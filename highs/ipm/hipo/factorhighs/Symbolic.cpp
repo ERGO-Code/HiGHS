@@ -7,7 +7,7 @@
 
 namespace hipo {
 
-Symbolic::Symbolic() : block_size_{kBlockSize} {}
+Symbolic::Symbolic() {}
 
 void Symbolic::setParallel(bool par_tree, bool par_node) {
   parallel_tree_ = par_tree;

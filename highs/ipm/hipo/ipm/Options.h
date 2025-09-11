@@ -48,6 +48,7 @@ struct Options {
   double crossover_tol = kIpmTolDefault;
   bool refine_with_ipx = true;
   double time_limit = -1.0;
+  Int block_size = 0;
 
   // Logging
   bool display = true;
