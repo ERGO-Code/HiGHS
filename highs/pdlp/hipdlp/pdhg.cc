@@ -884,7 +884,7 @@ HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
   return HighsStatus::kWarning;
 }
 
-void PDLPSolver::setParams(const HighsOptions& options, HighsTimer& timer) {
+void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.setLevel(options.log_dev_level);
   logger_.passHighsLogOptions(options.log_options);
   logger_.print_header();

@@ -35,7 +35,7 @@
 // --- Classes ---
 class PDLPSolver {
  public:
-  void setParams(const HighsOptions& options, HighsTimer& timer);
+  void setup(const HighsOptions& options, HighsTimer& timer);
   void preprocessLp();
   void scaleProblem();
   void solve(std::vector<double>& x, std::vector<double>& y);

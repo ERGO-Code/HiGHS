@@ -42,7 +42,9 @@ class Timer {
 class Logger {
  public:
   void setLevel(const HighsInt log_dev_level);
-  void passHighsLogOptions(const HighsLogOptions log_options) { log_options_ = log_options;}
+  void passHighsLogOptions(const HighsLogOptions log_options) {
+    log_options_ = log_options;
+  }
   void set_log_file(const std::string& filename);
   LogLevel getLogLevel() const { return console_level_; }
   // Logging methods for different levels
@@ -63,7 +65,6 @@ class Logger {
   void log(LogLevel level, const std::string& message);
   LogLevel console_level_;
   HighsLogOptions log_options_;
-  
 };
 
 #endif  // PDLP_HIPDLP_LOGGER_HPP

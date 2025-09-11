@@ -37,11 +37,15 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
    * Unscale with HiPdlp
    * Postprocess with HiPDLP
    * ***/
-  // 2. Preprocess with HiPdlp
   PDLPSolver pdlp;
-  pdlp.setParams(options, timer);
-  HighsLp preprocessed_lp;
+
+  // 0. Set up logger and params
+  pdlp.setup(options, timer);
+
+  // 1. Pass the LP to be solved
   pdlp.passLp(&lp);
+
+  // 2. Preprocess with HiPdlp
   pdlp.preprocessLp();
 
   // 3. Scale with HiPdlp
@@ -119,4 +123,3 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   highs_solution.dual_valid = true;
   return HighsStatus::kOk;
 }
-

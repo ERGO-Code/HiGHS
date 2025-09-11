@@ -39,12 +39,13 @@ void Logger::setLevel(const HighsInt log_dev_level) {
   } else if (log_dev_level == kHighsLogDevLevelInfo) {
     console_level_ = LogLevel::kInfo;
   } else {
-    console_level_ = LogLevel::kInfo;//None;
+    console_level_ = LogLevel::kInfo;  // None;
   }
 }
 
 void Logger::log(LogLevel level, const std::string& message) {
-  if (level <= console_level_) 
+  // Now using HiGHS IO
+  if (level <= console_level_)
     highsLogUser(log_options_, HighsLogType::kInfo, "%s\n", message.c_str());
 }
 
