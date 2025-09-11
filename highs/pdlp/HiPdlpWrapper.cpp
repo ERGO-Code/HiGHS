@@ -30,11 +30,6 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  Logger logger;
-  logger.setLevel(options.log_dev_level);
-  logger.passHighsLogOptions(options.log_options);
-  logger.print_header();
-
   /*** Order of operations
    * Preprocess with HiPdlp
    * Scale with HiPdlp
@@ -43,7 +38,7 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
    * Postprocess with HiPDLP
    * ***/
   // 2. Preprocess with HiPdlp
-  PDLPSolver pdlp(logger);
+  PDLPSolver pdlp;
   pdlp.setParams(options, timer);
   HighsLp preprocessed_lp;
   pdlp.passLp(&lp);

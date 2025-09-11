@@ -268,8 +268,6 @@ void PDLPSolver::postprocess(HighsSolution& solution) {
   logger_.info("Post-solve complete.");
 }
 
-PDLPSolver::PDLPSolver(Logger& logger) : logger_(logger) {}
-
 void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   Timer solver_timer;
 
@@ -887,6 +885,10 @@ HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
 }
 
 void PDLPSolver::setParams(const HighsOptions& options, HighsTimer& timer) {
+  logger_.setLevel(options.log_dev_level);
+  logger_.passHighsLogOptions(options.log_options);
+  logger_.print_header();
+
   params_.initialise();
   //  params.eta = 0; Not set in parse_options_file
   //  params.omega = 0; Not set in parse_options_file

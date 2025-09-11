@@ -35,7 +35,6 @@
 // --- Classes ---
 class PDLPSolver {
  public:
-  PDLPSolver(Logger& logger);
   void setParams(const HighsOptions& options, HighsTimer& timer);
   void preprocessLp();
   void scaleProblem();
@@ -57,7 +56,7 @@ class PDLPSolver {
   HighsLp lp_;                  // The problem to solve
   const HighsLp* original_lp_;  // The original problem (for postsolve)
   PrimalDualParams params_;
-  Logger& logger_;
+  Logger logger_;
 
   int final_iter_count_ = 0;
   int original_num_col_;
