@@ -4660,6 +4660,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   HighsInt numDownLocks = 0;
   HighsInt numUpLocks = 0;
   computeLocks(col, numDownLocks, numUpLocks);
+
   // check if variable can be fixed
   if (numDownLocks == 0 || numUpLocks == 0) {
     bool unbounded = false;
@@ -4668,12 +4669,13 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     else
       unbounded = fixColToUpperOrUnbounded(postsolve_stack, col);
     if (unbounded) {
-      // Handle unboundedness
+      // handle unboundedness
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return Result::kDualInfeasible;
     }
     return Result::kOk;
   } else {
+    // try to strengthen bounds
     double newBound = 0.0;
     if (hasTighterBound(col, HighsInt{1}, model->col_upper_[col], newBound)) {
       // update upper bound
