@@ -4548,9 +4548,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // INFORMS Journal on Computing 32(2):473-506.
   assert(!colDeleted[col]);
 
-  // only tighten bounds for integer-constrained variables
-  if (model->integrality_[col] == HighsVarType::kContinuous) return Result::kOk;
-
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
 
@@ -4669,17 +4666,26 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return Result::kDualInfeasible;
     }
-    return Result::kOk;
   } else {
     // try to strengthen bounds
     double newBound = 0.0;
     if (hasTighterBound(col, HighsInt{1}, model->col_upper_[col], newBound)) {
+      // do not make bounds inconsistent
+      newBound = std::max(newBound, model->col_lower_[col]);
       // update upper bound
-      changeColUpper(col, std::max(newBound, model->col_lower_[col]));
+      // only modify bounds on continuous variables if it leads to fixing
+      if (model->integrality_[col] != HighsVarType::kContinuous ||
+          newBound == model->col_lower_[col])
+        changeColUpper(col, newBound);
     } else if (hasTighterBound(col, HighsInt{-1}, model->col_lower_[col],
                                newBound)) {
+      // do not make bounds inconsistent
+      newBound = std::min(newBound, model->col_upper_[col]);
       // update lower bound
-      changeColLower(col, std::min(newBound, model->col_upper_[col]));
+      // only modify bounds on continuous variables if it leads to fixing
+      if (model->integrality_[col] != HighsVarType::kContinuous ||
+          newBound == model->col_upper_[col])
+        changeColLower(col, newBound);
     }
   }
   return Result::kOk;
