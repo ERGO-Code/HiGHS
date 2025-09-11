@@ -4630,7 +4630,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       }
       if (residual > rhs + primal_feastol) continue;
 
-      // store triplet (row, nonzero, nonzero) in a vector to speed up search
+      // store triplets (row, nonzero, nonzero) in a vector to speed up search
       if (colsize[col] < colsize[k]) {
         for (const auto& nz : getColumnVector(col)) {
           HighsInt nzPos = findNonzero(nz.index(), k);
