@@ -3232,15 +3232,14 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (colDeleted[col]) return Result::kOk;
 
-  if (mipsolver != nullptr) {
-    // check if variable is implied integer
+  // check if variable is implied integer
+  if (mipsolver != nullptr)
     HPRESOLVE_CHECKED_CALL(
         static_cast<Result>(convertImpliedInteger(col, row)));
 
-    // dual fixing
-    HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-    if (colDeleted[col]) return Result::kOk;
-  }
+  // dual fixing
+  HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+  if (colDeleted[col]) return Result::kOk;
 
   // update column implied bounds
   updateColImpliedBounds(row, col, colCoef);
@@ -4380,10 +4379,6 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     // check if variable is implied integer
     HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
 
-    // dual fixing
-    HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-    if (colDeleted[col]) return Result::kOk;
-
     // shift integral variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
         model->col_lower_[col] != 0.0 &&
@@ -4400,12 +4395,15 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
           transformColumn(postsolve_stack, col, -1.0, model->col_upper_[col]);
       }
     }
-
-    if (model->integrality_[col] == HighsVarType::kInteger) return Result::kOk;
   }
 
+  // dual fixing
+  HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+  if (colDeleted[col]) return Result::kOk;
+
   // update dual implied bounds of all rows in given column
-  updateRowDualImpliedBounds(col);
+  if (model->integrality_[col] != HighsVarType::kInteger)
+    updateRowDualImpliedBounds(col);
 
   return Result::kOk;
 }
