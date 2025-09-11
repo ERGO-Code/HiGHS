@@ -39,9 +39,11 @@ class RestartScheme {
 
   int GetLastRestartIter() const { return last_restart_iter_; }
   void passParams(const PrimalDualParams* params) { params_ = params; };
+  void passLogOptions(const HighsLogOptions* log_options) { log_options_ = log_options; };
 
  private:
   const PrimalDualParams* params_;
+  const HighsLogOptions* log_options_;
   // Computes a merit score for a given set of residuals
   double ComputeRestartScore(const SolverResults& results);
 

@@ -27,7 +27,7 @@ class Scaling {
   void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
   void passLp(HighsLp* lp) { lp_ = lp; };
   void passParams(const PrimalDualParams* params) { params_ = params; };
-
+  void LogMatrixNorms(const std::string& stage) ;
   // Get scaling vectors (for unscaling solution later)
   bool IsScaled() const { return is_scaled_; }
   const std::vector<double>& GetColScaling() const { return col_scale_; }
