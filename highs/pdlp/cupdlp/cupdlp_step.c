@@ -346,8 +346,9 @@ cupdlp_retcode PDHG_Init_Step_Sizes(CUPDLPwork *pdhg) {
     stepsize->dDualStep = stepsize->dPrimalStep;
     stepsize->dPrimalStep /= sqrt(stepsize->dBeta);
     stepsize->dDualStep *= sqrt(stepsize->dBeta);
-    cupdlp_printf("Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
-		  power_method_lambda, stepsize->dPrimalStep, stepsize->dDualStep);	  
+    if (pdhg->settings->nLogLevel > 1)
+      cupdlp_printf("Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
+		    power_method_lambda, stepsize->dPrimalStep, stepsize->dDualStep);	  
   } else {
     stepsize->dTheta = 1.0;
 

@@ -1,4 +1,4 @@
-user/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
@@ -272,6 +272,10 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   Timer solver_timer;
 
   const HighsLp& lp = lp_;
+
+  pdlp_log_file_ = fopen("HiPDLP.log", "w");
+  assert(pdlp_log_file_);
+
   // --- 0.Using PowerMethod to estimate the largest eigenvalue ---
   const double op_norm_sq = PowerMethod();
   // Set step sizes based on the operator norm to ensure convergence
@@ -279,17 +283,20 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   step_.passLp(&lp_);
   step_.passLogOptions(&params_.log_options_);
   step_.passDebugLogFile(pdlp_log_file_);
-  StepSizeConfig step_size = step_.InitializeStepSizesPowerMethod(lp, op_norm_sq);
+  StepSizeConfig step_size =
+      step_.InitializeStepSizesPowerMethod(lp, op_norm_sq);
   const double fixed_eta = 0.99 / sqrt(op_norm_sq);
   PrimalDualParams working_params = params_;
 
   working_params.omega = std::sqrt(step_size.dual_step / step_size.primal_step);
   working_params.eta = std::sqrt(step_size.primal_step * step_size.dual_step);
   current_eta_ = working_params.eta;  // Initial step size for adaptive strategy
-  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Using power method step sizes: eta = %g, omega = %g\n",
-	       working_params.eta, working_params.omega);
+  highsLogUser(params_.log_options_, HighsLogType::kInfo,
+               "Using power method step sizes: eta = %g, omega = %g\n",
+               working_params.eta, working_params.omega);
 
-  highsLogUser(params_.log_options_, HighsLogType::kInfo, 
+  highsLogUser(
+      params_.log_options_, HighsLogType::kInfo,
       "Initial step sizes from power method lambda = %g: primal = %g; dual = "
       "%g\n",
       step_size.power_method_lambda, step_size.primal_step,
@@ -318,9 +325,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   logger_.print_iteration_header();
 
-  pdlp_log_file_ = fopen("HiPDLP.log", "w");
-  assert(pdlp_log_file_);
-
   // --- 2. Main PDHG Loop ---
   // A single loop handles max iterations, convergence, and restarts.
   for (int iter = 0; iter < params_.max_iterations; ++iter) {
@@ -348,21 +352,20 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     switch (params_.step_size_strategy) {
       case StepSizeStrategy::FIXED:
         step_.UpdateIteratesFixed(lp, working_params, fixed_eta, x, y, Ax_new,
-                                  x_current_, y_current_, Ax_current,
-                                  pdlp_log_file_);
+                                  x_current_, y_current_, Ax_current);
         break;
 
       case StepSizeStrategy::ADAPTIVE:
-        step_.UpdateIteratesAdaptive(
-            lp, working_params, x, y, Ax_new, x_current_, y_current_,
-            Ax_current, ATy_current, current_eta_, iter, pdlp_log_file_);
+        step_.UpdateIteratesAdaptive(lp, working_params, x, y, Ax_new,
+                                     x_current_, y_current_, Ax_current,
+                                     ATy_current, current_eta_, iter);
         break;
 
       case StepSizeStrategy::MALITSKY_POCK:
         step_success = step_.UpdateIteratesMalitskyPock(
             lp, working_params, x, y, Ax_new, x_current_, y_current_,
             Ax_current, ATy_current, current_eta_, ratio_last_two_step_sizes_,
-            num_rejected_steps_, first_malitsky_iteration, pdlp_log_file_);
+            num_rejected_steps_, first_malitsky_iteration);
 
         if (!step_success) {
           std::cerr << "Malitsky-Pock step failed at iteration " << iter
@@ -452,9 +455,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         }
 
         // Perform the primal weight update using z^{n,0} and z^{n-1,0}
-        PDHG_Compute_Step_Size_Ratio(working_params,
-                               restart_x, restart_y,
-                                x_at_last_restart_, y_at_last_restart_);
+        PDHG_Compute_Step_Size_Ratio(working_params, restart_x, restart_y,
+                                     x_at_last_restart_, y_at_last_restart_);
 
         x_at_last_restart_ = restart_x;  // Current becomes the new last
         y_at_last_restart_ = restart_y;
@@ -766,10 +768,10 @@ double PDLPSolver::PowerMethod() {
       // kYanyuPowerMethod;
       // kYanyuPowerMethodDev;
       kCuPdlpAATPowerMethod;
-  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n", power_method == kYanyuPowerMethod ? "Yanyu"
-                               : power_method == kYanyuPowerMethodDev
-                                   ? "Yanyu dev"
-                                   : "CuPdlp-C");
+  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n",
+               power_method == kYanyuPowerMethod      ? "Yanyu"
+               : power_method == kYanyuPowerMethodDev ? "Yanyu dev"
+                                                      : "CuPdlp-C");
   // Dev version of Yanyu power method (based on A'A) has
   //
   // * First iterate as vector of ones
@@ -794,7 +796,9 @@ double PDLPSolver::PowerMethod() {
   int log_iters =
       log_level == LogLevel::kVerbose || log_level == LogLevel::kDebug;
 
-  if (log_iters) highsLogUser(params_.log_options_, HighsLogType::kInfo, "It       lambda   dl_lambda\n");
+  if (log_iters)
+    highsLogUser(params_.log_options_, HighsLogType::kInfo,
+                 "It       lambda   dl_lambda\n");
 
   if (power_method == kYanyuPowerMethodDev) {
     // Start from a vector
@@ -828,7 +832,8 @@ double PDLPSolver::PowerMethod() {
       linalg::normalize(z_vec);  // Normalize the result
       x_vec = z_vec;
       if (log_iters)
-        highsLogUser(params_.log_options_, HighsLogType::kInfo, "%2d %12.6g %11.4g\n", iter, op_norm_sq, dl_op_norm_sq);
+        highsLogUser(params_.log_options_, HighsLogType::kInfo,
+                     "%2d %12.6g %11.4g\n", iter, op_norm_sq, dl_op_norm_sq);
     } else {
       if (power_method == kYanyuPowerMethodDev) {
         // Yanyu power method without "convergence" check
@@ -868,7 +873,9 @@ double PDLPSolver::PowerMethod() {
       }
       double dl_lambda = std::fabs(lambda - previous_lambda);
       previous_lambda = lambda;
-      if (log_iters) highsLogUser(params_.log_options_, HighsLogType::kInfo, "%2d %12.6g %11.4g\n", iter, lambda, dl_lambda);
+      if (log_iters)
+        highsLogUser(params_.log_options_, HighsLogType::kInfo,
+                     "%2d %12.6g %11.4g\n", iter, lambda, dl_lambda);
     }
   }
   if (power_method != kYanyuPowerMethod) op_norm_sq = lambda;

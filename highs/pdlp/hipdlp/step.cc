@@ -14,21 +14,22 @@
 #include <iostream>
 #include <limits>
 
-#include "linalg.hpp"
 #include "io/HighsIO.h"  // For pdlpLogging
+#include "linalg.hpp"
 #include "pdlp/cupdlp/cupdlp.h"  // For pdlpLogging
 
 static constexpr double kDivergentMovement = 1e10;
 
 StepSizeConfig PdlpStep::InitializeStepSizesPowerMethod(const HighsLp& lp,
-							double op_norm_sq) {
+                                                        double op_norm_sq) {
   StepSizeConfig config;
   config.power_method_lambda = op_norm_sq;
 
   // Compute primal weight beta = ||c||^2 / ||b||^2
   double cost_norm = linalg::compute_cost_norm(lp, 2.0);
   double rhs_norm = linalg::compute_rhs_norm(lp, 2.0);
-  highsLogUser(*log_options_, HighsLogType::kInfo, "Cost norm: %g, RHS norm: %g\n", cost_norm, rhs_norm);
+  highsLogUser(*log_options_, HighsLogType::kInfo,
+               "Cost norm: %g, RHS norm: %g\n", cost_norm, rhs_norm);
   config.beta = cost_norm * cost_norm / (rhs_norm * rhs_norm + 1e-10);
 
   // cuPDLP-C style weight initialization
@@ -41,17 +42,20 @@ StepSizeConfig PdlpStep::InitializeStepSizesPowerMethod(const HighsLp& lp,
 }
 
 bool PdlpStep::CheckNumericalStability(const std::vector<double>& delta_x,
-				       const std::vector<double>& delta_y, double omega) {
+                                       const std::vector<double>& delta_y,
+                                       double omega) {
   // Using omega as primal_weight for consistency
   double movement = ComputeMovement(delta_x, delta_y, omega);
 
   if (movement == 0.0) {
-    highsLogUser(*log_options_, HighsLogType::kInfo, "Warning: Zero movement detected - numerical termination\n");
+    highsLogUser(*log_options_, HighsLogType::kInfo,
+                 "Warning: Zero movement detected - numerical termination\n");
     return false;
   }
 
   if (movement > kDivergentMovement) {
-    highsLogUser(*log_options_, HighsLogType::kInfo, "Warning: Divergent movement detected: %g\n", movement);
+    highsLogUser(*log_options_, HighsLogType::kInfo,
+                 "Warning: Divergent movement detected: %g\n", movement);
     return false;
   }
 
@@ -59,8 +63,8 @@ bool PdlpStep::CheckNumericalStability(const std::vector<double>& delta_x,
 }
 
 double PdlpStep::ComputeMovement(const std::vector<double>& delta_primal,
-                       const std::vector<double>& delta_dual,
-                       double primal_weight) {
+                                 const std::vector<double>& delta_dual,
+                                 double primal_weight) {
   double primal_squared_norm = 0.0;
   for (const auto& val : delta_primal) {
     primal_squared_norm += val * val;
@@ -76,9 +80,9 @@ double PdlpStep::ComputeMovement(const std::vector<double>& delta_primal,
 }
 
 double PdlpStep::ComputeNonlinearity(const std::vector<double>& delta_primal,
-                           const std::vector<double>& delta_aty,
-                           const std::vector<double>& aty_current,
-                           const std::vector<double>& aty_new) {
+                                     const std::vector<double>& delta_aty,
+                                     const std::vector<double>& aty_current,
+                                     const std::vector<double>& aty_new) {
   // Nonlinearity = |Δx' * Δ(A'y)|
   double nonlinearity = 0.0;
   for (size_t i = 0; i < delta_primal.size(); ++i) {
@@ -89,9 +93,10 @@ double PdlpStep::ComputeNonlinearity(const std::vector<double>& delta_primal,
 
 // --- Implementation of functions from step.hpp ---
 
-void PdlpStep::UpdateX(std::vector<double>& x_new, const std::vector<double>& x_current,
-             const HighsLp& lp, const std::vector<double>& y_current,
-             double eta, double omega, FILE* pdlp_log_file_) {
+void PdlpStep::UpdateX(std::vector<double>& x_new,
+                       const std::vector<double>& x_current, const HighsLp& lp,
+                       const std::vector<double>& y_current, double eta,
+                       double omega) {
   std::vector<double> ATy_cache(lp.num_col_);
   linalg::ATy(lp, y_current, ATy_cache);
   // print the norm of ATy_cache
@@ -104,9 +109,11 @@ void PdlpStep::UpdateX(std::vector<double>& x_new, const std::vector<double>& x_
   }
 }
 
-void PdlpStep::UpdateY(std::vector<double>& y_new, const std::vector<double>& y_current,
-             const HighsLp& lp, const std::vector<double>& ax_new,
-             const std::vector<double>& ax_current, double eta, double omega) {
+void PdlpStep::UpdateY(std::vector<double>& y_new,
+                       const std::vector<double>& y_current, const HighsLp& lp,
+                       const std::vector<double>& ax_new,
+                       const std::vector<double>& ax_current, double eta,
+                       double omega) {
   for (HighsInt j = 0; j < lp.num_row_; j++) {
     double extr_ax = 2 * ax_new[j] - ax_current[j];
 
@@ -138,16 +145,15 @@ void PdlpStep::UpdateY(std::vector<double>& y_new, const std::vector<double>& y_
   }
 }
 
-void PdlpStep::UpdateIteratesFixed(const HighsLp& lp, const PrimalDualParams& params,
-                         double fixed_eta, std::vector<double>& x_new,
-                         std::vector<double>& y_new,
-                         std::vector<double>& ax_new,
-                         const std::vector<double>& x_current,
-                         const std::vector<double>& y_current,
-                         const std::vector<double>& ax_current,
-                         FILE* pdlp_log_file_) {
-  UpdateX(x_new, x_current, lp, y_current, params.eta, params.omega,
-          pdlp_log_file_);
+void PdlpStep::UpdateIteratesFixed(const HighsLp& lp,
+                                   const PrimalDualParams& params,
+                                   double fixed_eta, std::vector<double>& x_new,
+                                   std::vector<double>& y_new,
+                                   std::vector<double>& ax_new,
+                                   const std::vector<double>& x_current,
+                                   const std::vector<double>& y_current,
+                                   const std::vector<double>& ax_current) {
+  UpdateX(x_new, x_current, lp, y_current, params.eta, params.omega);
   linalg::Ax(lp, x_new, ax_new);
   UpdateY(y_new, y_current, lp, ax_new, ax_current, params.eta, params.omega);
 }
@@ -158,7 +164,7 @@ void PdlpStep::UpdateIteratesAdaptive(
     std::vector<double>& ax_new, const std::vector<double>& x_current,
     const std::vector<double>& y_current, const std::vector<double>& ax_current,
     const std::vector<double>& aty_current, double& current_eta,
-    int& step_size_iter_count, FILE* pdlp_log_file_) {
+    int& step_size_iter_count) {
   const double MIN_ETA = 1e-6;
   const double MAX_ETA = 1.0;
 
@@ -183,8 +189,7 @@ void PdlpStep::UpdateIteratesAdaptive(
     std::vector<double> aty_candidate(lp.num_col_);
 
     // Primal update
-    UpdateX(x_candidate, x_current, lp, y_current, current_eta, params.omega,
-            pdlp_log_file_);
+    UpdateX(x_candidate, x_current, lp, y_current, current_eta, params.omega);
     linalg::Ax(lp, x_candidate, ax_candidate);
 
     // Dual update
@@ -227,8 +232,9 @@ void PdlpStep::UpdateIteratesAdaptive(
 
     /*
     highsLogUser(*log_options_, HighsLogType::kInfo,
-		 "Iteration %d: eta = %g, movement = %g nonlinearity = %g, limit = %g\n",
-		 inner_iterations, current_eta, movement, nonlinearity. step_size_limit);
+                 "Iteration %d: eta = %g, movement = %g nonlinearity = %g, limit
+    = %g\n", inner_iterations, current_eta, movement, nonlinearity.
+    step_size_limit);
     */
     if (current_eta <= step_size_limit) {
       // Accept the step
@@ -268,15 +274,14 @@ bool PdlpStep::UpdateIteratesMalitskyPock(
     const std::vector<double>& y_current, const std::vector<double>& ax_current,
     const std::vector<double>& aty_current, double& current_eta,
     double& ratio_last_two_step_sizes, int& num_rejected_steps,
-    bool first_iteration,
-    FILE* pdlp_log_file_)  // Add this parameter to track first iteration
+    bool first_iteration)  // Add this parameter to track first iteration
 {
   // Step 1: Compute primal update first (without extrapolation)
   const double primal_step_size = current_eta / params.omega;
 
   std::vector<double> x_candidate(lp.num_col_);
-  UpdateX(x_candidate, x_current, lp, y_current, primal_step_size, params.omega,
-          pdlp_log_file_);
+  UpdateX(x_candidate, x_current, lp, y_current, primal_step_size,
+          params.omega);
 
   // Compute Ax for the primal candidate
   std::vector<double> ax_candidate(lp.num_row_);
@@ -380,32 +385,35 @@ bool PdlpStep::UpdateIteratesMalitskyPock(
 
       if (!CheckNumericalStability(delta_x, delta_y, params.omega)) {
         highsLogUser(*log_options_, HighsLogType::kWarning,
-		     "Numerical instability in Malitsky-Pock step\n");
+                     "Numerical instability in Malitsky-Pock step\n");
         return false;
       }
 
       accepted_step = true;
 
-      if (inner_iterations > 1) 
-        highsLogUser(*log_options_, HighsLogType::kInfo,
-		     "Malitsky-Pock: accepted after %d line search iterations\n",
-		     inner_iterations);
+      if (inner_iterations > 1)
+        highsLogUser(
+            *log_options_, HighsLogType::kInfo,
+            "Malitsky-Pock: accepted after %d line search iterations\n",
+            inner_iterations);
 
     } else {
       // Reduce step size and try again
       new_primal_step_size *=
           params.malitsky_pock_params.step_size_downscaling_factor;
 
-      if (inner_iterations % 10 == 0) 
-        highsLogUser(*log_options_, HighsLogType::kInfo,
-		     "Malitsky-Pock line search: iteration %d, reducing step to %g\n",
-		     inner_iterations, new_primal_step_size);
+      if (inner_iterations % 10 == 0)
+        highsLogUser(
+            *log_options_, HighsLogType::kInfo,
+            "Malitsky-Pock line search: iteration %d, reducing step to %g\n",
+            inner_iterations, new_primal_step_size);
     }
   }
 
   if (!accepted_step) {
-    highsLogUser(*log_options_, HighsLogType::kWarning,
-		 "Malitsky-Pock: Failed to find acceptable step after 60 iterations\n");
+    highsLogUser(
+        *log_options_, HighsLogType::kWarning,
+        "Malitsky-Pock: Failed to find acceptable step after 60 iterations\n");
     return false;
   }
 
@@ -413,4 +421,3 @@ bool PdlpStep::UpdateIteratesMalitskyPock(
 
   return true;
 }
-

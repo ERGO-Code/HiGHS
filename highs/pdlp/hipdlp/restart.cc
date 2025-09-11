@@ -11,10 +11,10 @@
 // restart.cc
 #include "restart.hpp"
 
-#include "io/HighsIO.h"  // For pdlpLogging
-
 #include <algorithm>
 #include <cmath>
+
+#include "io/HighsIO.h"  // For pdlpLogging
 
 // Initializes the restart scheme with parameters and initial results
 void RestartScheme::Initialize(const SolverResults& results) {
@@ -92,13 +92,19 @@ RestartInfo RestartScheme::Check(int current_iter,
           (candidate_score > last_candidate_score_);
 
       if (artificial_restart) {
-        highsLogUser(*log_options_, HighsLogType::kInfo, "Artificial restart triggered at iteration %d\n", current_iter);
+        highsLogUser(*log_options_, HighsLogType::kInfo,
+                     "Artificial restart triggered at iteration %d\n",
+                     current_iter);
         info.should_restart = true;
       } else if (sufficient_decay) {
-        highsLogUser(*log_options_, HighsLogType::kInfo, "Sufficient decay triggered at iteration %d\n", current_iter);
+        highsLogUser(*log_options_, HighsLogType::kInfo,
+                     "Sufficient decay triggered at iteration %d\n",
+                     current_iter);
         info.should_restart = true;
       } else if (necessary_decay) {
-        highsLogUser(*log_options_, HighsLogType::kInfo, "Necessary decay triggered at iteration %d\n", current_iter);
+        highsLogUser(*log_options_, HighsLogType::kInfo,
+                     "Necessary decay triggered at iteration %d\n",
+                     current_iter);
         info.should_restart = true;
       } else {
         info.should_restart = false;
