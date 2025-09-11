@@ -1,14 +1,15 @@
-/*
- * @Author: Yanyu000 earthazyy@hotmail.com
- * @Date: 2025-05-12 12:43:12
- * @LastEditors: Zhou Yanyu（周妍妤） 47125824+Yanyu000@users.noreply.github.com
- * @LastEditTime: 2025-08-21 16:27:35
- * @FilePath: /cupdlp-CPP/include/pdhg.h
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置
- * 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file pdlp/hipdlp/pdhg.hpp
+ * @brief
  */
-#ifndef PDHG_HPP
-#define PDHG_HPP
+#ifndef PDLP_HIPDLP_PDHG_HPP
+#define PDLP_HIPDLP_PDHG_HPP
 
 #include <algorithm>
 #include <cmath>
@@ -34,28 +35,29 @@
 // --- Classes ---
 class PDLPSolver {
  public:
-  
   PDLPSolver(Logger& logger);
   void setParams(const HighsOptions& options, HighsTimer& timer);
   void PreprocessLp();
   void ScaleProblem(HighsLp& lp, const PrimalDualParams& params);
   void Solve(std::vector<double>& x, std::vector<double>& y);
   void Postsolve(HighsSolution& solution);
-  void setSolution(const std::vector<double>& col_value, const std::vector<double>& row_dual);
-  void getSolution(std::vector<double>& col_value, std::vector<double>& row_dual);
+  void setSolution(const std::vector<double>& col_value,
+                   const std::vector<double>& row_dual);
+  void getSolution(std::vector<double>& col_value,
+                   std::vector<double>& row_dual);
 
   const SolverResults& GetResults() const { return results_; }
   void passLp(const HighsLp* lp) { original_lp_ = lp; }
   // Scaling
-  //ScalingParams scaling_params_;
+  // ScalingParams scaling_params_;
   Scaling scaling_;
 
   int GetIterationCount() const;
-  
+
  private:
   // Problem data
-  HighsLp lp_; // The problem to solve
-  const HighsLp* original_lp_; // The original problem (for postsolve)
+  HighsLp lp_;                  // The problem to solve
+  const HighsLp* original_lp_;  // The original problem (for postsolve)
   PrimalDualParams params_;
   Logger& logger_;
 
@@ -66,10 +68,10 @@ class PDLPSolver {
       constraint_types_;  // stores type of each original row
 
   // Solver state using PdlpIterate
-  PdlpIterate current_;     // z^k
-  PdlpIterate next_;        // z^{k+1}  
-  PdlpIterate average_;     // Running average
-  PdlpIterate restart_point_; // Point to restart from
+  PdlpIterate current_;        // z^k
+  PdlpIterate next_;           // z^{k+1}
+  PdlpIterate average_;        // Running average
+  PdlpIterate restart_point_;  // Point to restart from
 
   // Iterates and state
   std::vector<double>* x_ = nullptr;
@@ -98,7 +100,7 @@ class PDLPSolver {
   void Initialize(const HighsLp& lp, std::vector<double>& x,
                   std::vector<double>& y);
   SolverResults results_;
-  
+
   void PostsolveAndFinalize(const std::vector<double>& presolved_x,
                             const std::vector<double>& presolved_y,
                             std::vector<double>& final_x,
@@ -112,14 +114,13 @@ class PDLPSolver {
   std::vector<double> ComputeLambda(const std::vector<double>& y,
                                     const std::vector<double>& ATy_vector);
   std::pair<double, double> ComputePrimalFeasibility(
-      const std::vector<double>& x,
-      const std::vector<double>& Ax_vector);
+      const std::vector<double>& x, const std::vector<double>& Ax_vector);
   void ComputeDualSlacks(const std::vector<double>& ATy_vector);
   std::pair<double, double> ComputeDualFeasibility(
       const std::vector<double>& ATy_vector);
   std::tuple<double, double, double, double, double> ComputeDualityGap(
-      const std::vector<double>& x,
-      const std::vector<double>& y, const std::vector<double>& lambda);
+      const std::vector<double>& x, const std::vector<double>& y,
+      const std::vector<double>& lambda);
   double ComputeKKTError(const std::vector<double>& x,
                          const std::vector<double>& y,
                          const std::vector<double>& lambda, double omega);
@@ -154,8 +155,8 @@ class PDLPSolver {
       const std::vector<double>& y_n_minus_1_0);
 
   // restart
-  bool CheckRestartCondition( const PrimalDualParams& params,
-                             int inner_iter, std::vector<double>& x_cand,
+  bool CheckRestartCondition(const PrimalDualParams& params, int inner_iter,
+                             std::vector<double>& x_cand,
                              std::vector<double>& y_cand);
   void PerformRestart(const std::vector<double>& x_restart,
                       const std::vector<double>& y_restart, int inner_iter,

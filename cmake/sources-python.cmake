@@ -374,6 +374,7 @@ set(highs_headers_python
     highs/parallel/HighsTaskExecutor.h
     highs/pdlp/CupdlpWrapper.h
     highs/pdlp/HiPdlpWrapper.h
+    highs/pdlp/hipdlp/defs.hpp
     highs/pdlp/hipdlp/linalg.hpp
     highs/pdlp/hipdlp/logger.hpp
     highs/pdlp/hipdlp/pdhg.hpp

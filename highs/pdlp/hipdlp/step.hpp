@@ -1,14 +1,15 @@
-/*
- * @Author: Yanyu000 earthazyy@hotmail.com
- * @Date: 2025-05-16 15:48:20
- * @LastEditors: Zhou Yanyu（周妍妤） 47125824+Yanyu000@users.noreply.github.com
- * @LastEditTime: 2025-08-07 16:43:19
- * @FilePath: /cupdlp-CPP/include/step.h
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置
- * 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file pdlp/hipdlp/step.hpp
+ * @brief
  */
-#ifndef STEP_H
-#define STEP_H
+#ifndef PDLP_HIPDLP_STEP_HPP
+#define PDLP_HIPDLP_STEP_HPP
 
 #include <vector>
 
@@ -43,8 +44,7 @@ double ComputeNonlinearity(const std::vector<double>& delta_primal,
 // The standard primal update step
 void UpdateX(std::vector<double>& x_new, const std::vector<double>& x_current,
              const HighsLp& lp, const std::vector<double>& y_current,
-             double primal_step, double omega,
-	     FILE* pdlp_log_file);
+             double primal_step, double omega, FILE* pdlp_log_file);
 
 // The standard dual update step
 void UpdateY(std::vector<double>& y_new, const std::vector<double>& y_current,
@@ -60,18 +60,15 @@ void UpdateIteratesFixed(const HighsLp& lp, const PrimalDualParams& params,
                          const std::vector<double>& x_current,
                          const std::vector<double>& y_current,
                          const std::vector<double>& ax_current,
-			 FILE* pdlp_log_file);
+                         FILE* pdlp_log_file);
 
-void UpdateIteratesAdaptive(const HighsLp& lp, const PrimalDualParams& params,
-                            std::vector<double>& x_new,
-                            std::vector<double>& y_new,
-                            std::vector<double>& ax_new,
-                            const std::vector<double>& x_current,
-                            const std::vector<double>& y_current,
-                            const std::vector<double>& ax_current,
-                            const std::vector<double>& aty_current,
-                            double& current_eta, int& step_size_iter_count,
-			    FILE* pdlp_log_file);
+void UpdateIteratesAdaptive(
+    const HighsLp& lp, const PrimalDualParams& params,
+    std::vector<double>& x_new, std::vector<double>& y_new,
+    std::vector<double>& ax_new, const std::vector<double>& x_current,
+    const std::vector<double>& y_current, const std::vector<double>& ax_current,
+    const std::vector<double>& aty_current, double& current_eta,
+    int& step_size_iter_count, FILE* pdlp_log_file);
 
 bool UpdateIteratesMalitskyPock(
     const HighsLp& lp, const PrimalDualParams& params,
@@ -80,9 +77,8 @@ bool UpdateIteratesMalitskyPock(
     const std::vector<double>& y_current, const std::vector<double>& ax_current,
     const std::vector<double>& aty_current, double& current_eta,
     double& ratio_last_two_step_sizes, int& num_rejected_steps,
-    bool first_iteration,
-    FILE* pdlp_log_file);
+    bool first_iteration, FILE* pdlp_log_file);
 
 }  // namespace step
 
-#endif  // STEP_HPP
+#endif  // PDLP_HIPDLP_STEP_HPP

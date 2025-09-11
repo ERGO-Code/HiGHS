@@ -1,14 +1,15 @@
-/*
- * @Author: Zhou Yanyu（周妍妤） 47125824+Yanyu000@users.noreply.github.com
- * @Date: 2025-07-11 22:24:59
- * @LastEditors: Zhou Yanyu（周妍妤） 47125824+Yanyu000@users.noreply.github.com
- * @LastEditTime: 2025-07-14 12:04:26
- * @FilePath: /cupdlp-CPP/include/solver_results.hpp
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置
- * 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file pdlp/hipdlp/solver_results.hpp
+ * @brief
  */
-#ifndef SOLVER_RESULTS_HPP
-#define SOLVER_RESULTS_HPP
+#ifndef PDLP_HIPDLP_SOLVER_RESULTS_HPP
+#define PDLP_HIPDLP_SOLVER_RESULTS_HPP
 
 #include <vector>
 
@@ -63,4 +64,4 @@ struct SolverResults {
   double duality_gap_last_restart = 0.0;
 };
 
-#endif  // SOLVER_RESULTS_HPP
+#endif  // PDLP_HIPDLP_SOLVER_RESULTS_HPP

@@ -1,11 +1,12 @@
-/*
- * @Author: Zhou Yanyu（周妍妤） 47125824+Yanyu000@users.noreply.github.com
- * @Date: 2025-08-05 13:27:09
- * @LastEditors: Zhou Yanyu（周妍妤） 47125824+Yanyu000@users.noreply.github.com
- * @LastEditTime: 2025-08-11 14:23:55
- * @FilePath: /cupdlp-CPP/src/scaling.cc
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置
- * 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file pdlp/hipdlp/scaling.cc
+ * @brief
  */
 #include "scaling.hpp"
 
@@ -65,14 +66,13 @@ void LogMatrixNorms(const HighsLp& lp, const std::string& stage) {
 }
 
 void Scaling::ScaleProblem() {
-
   if (params_->scaling_method == ScalingMethod::NONE) {
     std::cout << "No scaling applied." << std::endl;
     return;
   }
 
-  std::cout << "Applying scaling method: " << static_cast<int>(params_->scaling_method)
-            << std::endl;
+  std::cout << "Applying scaling method: "
+            << static_cast<int>(params_->scaling_method) << std::endl;
   if (params_->use_pc_scaling) {
     std::cout << "Applying Pock-Chambolle scaling..." << std::endl;
     ApplyPockChambolleScaling();
@@ -81,7 +81,8 @@ void Scaling::ScaleProblem() {
     std::cout << "Applying Ruiz scaling..." << std::endl;
     ApplyRuizScaling();
   }
-  if (params_->use_l2_scaling || params_->scaling_method == ScalingMethod::L2_NORM) {
+  if (params_->use_l2_scaling ||
+      params_->scaling_method == ScalingMethod::L2_NORM) {
     std::cout << "Applying L2 norm scaling..." << std::endl;
     ApplyL2Scaling();
   }
@@ -173,8 +174,8 @@ void Scaling::ApplyPockChambolleScaling() {
     }
 
     if (current_col_scaling[col] > 0.0) {
-      current_col_scaling[col] =
-          std::sqrt(std::pow(current_col_scaling[col], 1.0 / params_->pc_alpha));
+      current_col_scaling[col] = std::sqrt(
+          std::pow(current_col_scaling[col], 1.0 / params_->pc_alpha));
     } else {
       current_col_scaling[col] = 1.0;
     }
@@ -185,8 +186,8 @@ void Scaling::ApplyPockChambolleScaling() {
     for (HighsInt el = lp_->a_matrix_.start_[col];
          el < lp_->a_matrix_.start_[col + 1]; ++el) {
       HighsInt row = lp_->a_matrix_.index_[el];
-      current_row_scaling[row] +=
-          std::pow(std::abs(lp_->a_matrix_.value_[el]), 2.0 - params_->pc_alpha);
+      current_row_scaling[row] += std::pow(std::abs(lp_->a_matrix_.value_[el]),
+                                           2.0 - params_->pc_alpha);
     }
   }
 

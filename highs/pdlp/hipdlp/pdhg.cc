@@ -1,3 +1,13 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file pdlp/hipdlp/pdhg.cc
+ * @brief
+ */
 #include "pdhg.hpp"
 
 #include <cmath>
@@ -22,7 +32,7 @@ void PDLPSolver::PreprocessLp() {
       "bounds)...");
 
   HighsLp& processed_lp = lp_;
-  
+
   int nRows_orig = original_lp_->num_row_;
   int nCols_orig = original_lp_->num_col_;
 
@@ -199,7 +209,8 @@ void PDLPSolver::Postsolve(HighsSolution& solution) {
 
   double final_primal_objective = original_lp_->offset_;
   for (int i = 0; i < original_num_col_; ++i) {
-    final_primal_objective += original_lp_->col_cost_[i] * solution.col_value[i];
+    final_primal_objective +=
+        original_lp_->col_cost_[i] * solution.col_value[i];
   }
   results_.primal_obj = final_primal_objective;
 
@@ -325,7 +336,7 @@ void PDLPSolver::Solve(std::vector<double>& x, std::vector<double>& y) {
     const double dummy_beta = 0.0;
     pdlpIterLog(pdlp_log_file_, iter, dummy_beta);
     linalg::Ax(lp, x_current_, Ax_current);
-    //print norm of Ax
+    // print norm of Ax
     double ax_norm = linalg::vector_norm(Ax_current);
     pdlpAxNormLog(pdlp_log_file_, ax_norm);
 
@@ -347,22 +358,20 @@ void PDLPSolver::Solve(std::vector<double>& x, std::vector<double>& y) {
       case StepSizeStrategy::FIXED:
         step::UpdateIteratesFixed(lp, working_params, fixed_eta, x, y, Ax_new,
                                   x_current_, y_current_, Ax_current,
-				  pdlp_log_file_);
+                                  pdlp_log_file_);
         break;
 
       case StepSizeStrategy::ADAPTIVE:
-        step::UpdateIteratesAdaptive(lp, working_params, x, y, Ax_new,
-                                     x_current_, y_current_, Ax_current,
-                                     ATy_current, current_eta_, iter,
-				  pdlp_log_file_);
+        step::UpdateIteratesAdaptive(
+            lp, working_params, x, y, Ax_new, x_current_, y_current_,
+            Ax_current, ATy_current, current_eta_, iter, pdlp_log_file_);
         break;
 
       case StepSizeStrategy::MALITSKY_POCK:
         step_success = step::UpdateIteratesMalitskyPock(
             lp, working_params, x, y, Ax_new, x_current_, y_current_,
             Ax_current, ATy_current, current_eta_, ratio_last_two_step_sizes_,
-            num_rejected_steps_, first_malitsky_iteration,
-				  pdlp_log_file_);
+            num_rejected_steps_, first_malitsky_iteration, pdlp_log_file_);
 
         if (!step_success) {
           std::cerr << "Malitsky-Pock step failed at iteration " << iter
@@ -383,7 +392,8 @@ void PDLPSolver::Solve(std::vector<double>& x, std::vector<double>& y) {
     UpdateAverageIterates(x, y, working_params, inner_iter);
 
     // --- 5. Convergence Check ---
-    bool bool_checking = (iter < 10) || (iter == (params_.max_iterations - 1)) ||
+    bool bool_checking = (iter < 10) ||
+                         (iter == (params_.max_iterations - 1)) ||
                          (iter > 0 && (iter % PDHG_CHECK_INTERVAL == 0));
     if (bool_checking) {
       // To check convergence on the average, you need A*x_avg and A^T*y_avg
@@ -393,9 +403,8 @@ void PDLPSolver::Solve(std::vector<double>& x, std::vector<double>& y) {
       linalg::Ax(lp, x_avg_, Ax_avg);
       linalg::ATy(lp, y_avg_, ATy_avg);
 
-      bool average_converged =
-          CheckConvergence(x_avg_, y_avg_, Ax_avg, ATy_avg,
-                           params_.tolerance, average_results);
+      bool average_converged = CheckConvergence(
+          x_avg_, y_avg_, Ax_avg, ATy_avg, params_.tolerance, average_results);
 
       logger_.print_iteration_stats(iter, average_results, current_eta_);
 
@@ -565,8 +574,7 @@ void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
 
 // lambda = c - proj_{\Lambda}(c - K^T y)
 std::vector<double> PDLPSolver::ComputeLambda(
-    const std::vector<double>& y,
-    const std::vector<double>& ATy_vector) {
+    const std::vector<double>& y, const std::vector<double>& ATy_vector) {
   std::vector<double> lambda(lp_.num_col_, 0.0);
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     double residual = lp_.col_cost_[i] - ATy_vector[i];
@@ -589,8 +597,7 @@ std::vector<double> PDLPSolver::ComputeLambda(
 }
 
 std::pair<double, double> PDLPSolver::ComputePrimalFeasibility(
-    const std::vector<double>& x,
-    const std::vector<double>& Ax_vector) {
+    const std::vector<double>& x, const std::vector<double>& Ax_vector) {
   double primal_feasibility_squared = 0.0;
   std::vector<double> Ax_minus_b(lp_.num_row_, 0.0);
   for (HighsInt i = 0; i < lp_.num_row_; ++i) {
@@ -711,8 +718,7 @@ bool PDLPSolver::CheckConvergence(const std::vector<double>& x,
   std::vector<double> lambda = ComputeLambda(y, aty_vector);
 
   double primal_feasibility, q_norm;
-  std::tie(primal_feasibility, q_norm) =
-      ComputePrimalFeasibility(x, ax_vector);
+  std::tie(primal_feasibility, q_norm) = ComputePrimalFeasibility(x, ax_vector);
   results.primal_feasibility = primal_feasibility;
 
   double dual_feasibility, c_norm;

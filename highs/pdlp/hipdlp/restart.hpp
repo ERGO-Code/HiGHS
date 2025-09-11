@@ -1,23 +1,24 @@
-/*
- * @Author: Zhou Yanyu（周妍妤） 47125824+Yanyu000@users.noreply.github.com
- * @Date: 2025-07-09 14:54:26
- * @LastEditors: Zhou Yanyu（周妍妤） 47125824+Yanyu000@users.noreply.github.com
- * @LastEditTime: 2025-08-11 15:19:54
- * @FilePath: /cupdlp-CPP/include/restart.h
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置
- * 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file pdlp/hipdlp/restart.hpp
+ * @brief
  */
 // restart.hpp
-#ifndef RESTART_HPP
-#define RESTART_HPP
+#ifndef PDLP_HIPDLP_RESTART_HPP
+#define PDLP_HIPDLP_RESTART_HPP
 
 #include <cmath>
 #include <iostream>
 #include <vector>
 
+#include "defs.hpp"
 #include "scaling.hpp"
 #include "solver_results.hpp"
-#include "defs.hpp"
 
 // Struct to communicate restart decisions
 struct RestartInfo {
@@ -37,7 +38,8 @@ class RestartScheme {
                     const SolverResults& average_results);
 
   int GetLastRestartIter() const { return last_restart_iter_; }
-  void passParams(const PrimalDualParams* params) {params_ = params ; };
+  void passParams(const PrimalDualParams* params) { params_ = params; };
+
  private:
   const PrimalDualParams* params_;
   // Computes a merit score for a given set of residuals
@@ -55,4 +57,4 @@ class RestartScheme {
   double necessary_decay_factor_ = 0.8;
 };
 
-#endif  // RESTART_HPP
+#endif  // PDLP_HIPDLP_RESTART_HPP

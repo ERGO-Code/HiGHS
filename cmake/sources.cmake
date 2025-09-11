@@ -461,6 +461,7 @@ set(highs_headers
     parallel/HighsTaskExecutor.h
     pdlp/CupdlpWrapper.h
     pdlp/HiPdlpWrapper.h
+    pdlp/hipdlp/defs.hpp
     pdlp/hipdlp/linalg.hpp
     pdlp/hipdlp/logger.hpp
     pdlp/hipdlp/pdhg.hpp
