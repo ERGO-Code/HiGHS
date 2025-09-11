@@ -4687,6 +4687,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       }
       nzs.clear();
     }
+    return Result::kOk;
   };
 
   // lambda for computing tighter bounds
@@ -4774,12 +4775,15 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return Result::kDualInfeasible;
     }
-  } else if (mipsolver != nullptr && (numDownLocks == 1 || numUpLocks == 1) &&
-             numDownLocks + numUpLocks == colsize[col]) {
-    if (downLockRow != -1) {
-      substituteCol(col, downLockRow, HighsInt{1});
-    }
   } else {
+    if (mipsolver != nullptr && (numDownLocks == 1 || numUpLocks == 1) &&
+        numDownLocks + numUpLocks == colsize[col] &&
+        model->col_lower_[col] != -kHighsInf &&
+        model->col_upper_[col] != kHighsInf) {
+      if (downLockRow != -1)
+        HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1}));
+      if (colDeleted[col]) return Result::kOk;
+    }
     // try to strengthen bounds
     double newBound = 0.0;
     if (hasTighterBound(col, HighsInt{1}, model->col_upper_[col], newBound)) {
