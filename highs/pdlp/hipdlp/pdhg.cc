@@ -276,7 +276,10 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   const double op_norm_sq = PowerMethod();
   // Set step sizes based on the operator norm to ensure convergence
   // A safe choice satisfying eta * omega * ||A||^2 < 1
-  step::StepSizeConfig step_size = step::InitializeStepSizesPowerMethod(lp, op_norm_sq);
+  step_.passLp(&lp_);
+  step_.passLogOptions(&params_.log_options_);
+  step_.passDebugLogFile(pdlp_log_file_);
+  StepSizeConfig step_size = step_.InitializeStepSizesPowerMethod(lp, op_norm_sq);
   const double fixed_eta = 0.99 / sqrt(op_norm_sq);
   PrimalDualParams working_params = params_;
 
@@ -344,19 +347,19 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     switch (params_.step_size_strategy) {
       case StepSizeStrategy::FIXED:
-        step::UpdateIteratesFixed(lp, working_params, fixed_eta, x, y, Ax_new,
+        step_.UpdateIteratesFixed(lp, working_params, fixed_eta, x, y, Ax_new,
                                   x_current_, y_current_, Ax_current,
                                   pdlp_log_file_);
         break;
 
       case StepSizeStrategy::ADAPTIVE:
-        step::UpdateIteratesAdaptive(
+        step_.UpdateIteratesAdaptive(
             lp, working_params, x, y, Ax_new, x_current_, y_current_,
             Ax_current, ATy_current, current_eta_, iter, pdlp_log_file_);
         break;
 
       case StepSizeStrategy::MALITSKY_POCK:
-        step_success = step::UpdateIteratesMalitskyPock(
+        step_success = step_.UpdateIteratesMalitskyPock(
             lp, working_params, x, y, Ax_new, x_current_, y_current_,
             Ax_current, ATy_current, current_eta_, ratio_last_two_step_sizes_,
             num_rejected_steps_, first_malitsky_iteration, pdlp_log_file_);
