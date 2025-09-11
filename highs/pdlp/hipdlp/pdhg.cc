@@ -472,10 +472,11 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         x_current_ = x;
         y_current_ = y;
       }
-
-      Ax_current = Ax_new;
-      ATy_current = ATy_new;
     }
+    x_current_ = x;
+    y_current_ = y;
+    Ax_current = Ax_new;
+    ATy_current = ATy_new;
   }
 
   // --- 7. Handle Max Iterations Reached ---
