@@ -3163,64 +3163,21 @@ HighsStatus Highs::optionChangeAction() {
     dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
     dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
   }
-  if (!is_mip) {
-    // Now consider impact on dual feasibility of user cost scaling
-    // and/or dual_feasibility_tolerance change
-    double new_max_dual_infeasibility =
-        info.max_dual_infeasibility * dl_user_cost_scale_value;
-    if (new_max_dual_infeasibility > options.dual_feasibility_tolerance) {
-      // Not dual feasible: only act if the model is currently dual
-      // feasible or dl_user_bound_scale_value > 1
-      if (info.num_dual_infeasibilities == 0 && dl_user_cost_scale_value > 1) {
-        this->model_status_ = HighsModelStatus::kNotset;
-        if (info.dual_solution_status == kSolutionStatusFeasible) {
-          highsLogUser(options_.log_options, HighsLogType::kInfo,
-                       "Option change leads to loss of dual feasibility\n");
-          info.dual_solution_status = kSolutionStatusInfeasible;
-        }
-        info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-      }
-    } else if (info.dual_solution_status == kSolutionStatusInfeasible) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Option change leads to gain of dual feasibility\n");
-      info.dual_solution_status = kSolutionStatusFeasible;
-      info.num_dual_infeasibilities = 0;
-    }
-  }
   if (dl_user_cost_scale) {
-    if (is_mip) {
-      // MIP with non-trivial cost scaling loses optimality
-      this->model_status_ = HighsModelStatus::kNotset;
-    }
-    // Now update data and solution with respect to non-trivial user
-    // cost scaling
-    //
-    // max and sum of infeasibilities scales: num is handled earlier
+    // Now update models status, data and solution with respect to
+    // non-trivial user cost scaling
+    this->model_status_ = HighsModelStatus::kNotset;
     info.objective_function_value *= dl_user_cost_scale_value;
+    info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
     info.max_dual_infeasibility *= dl_user_cost_scale_value;
     info.sum_dual_infeasibilities *= dl_user_cost_scale_value;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       this->solution_.col_dual[iCol] *= dl_user_cost_scale_value;
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
       this->solution_.row_dual[iRow] *= dl_user_cost_scale_value;
+    info.dual_solution_status = kSolutionStatusNone;
     model.userCostScale(options.user_cost_scale);
   }
-  // Too hard to identify optimality from primal/dual solution status,
-  // since (for example) after IPX without crossover on an infeasible
-  // LP, primal/dual solution status may be feasible, but there are
-  // primal/dual residual errors. There could also be complementarity
-  // errors, even at a feasible point
-  //
-  /*
-  if (this->model_status_ != HighsModelStatus::kOptimal) {
-    if (info.primal_solution_status == kSolutionStatusFeasible &&
-        info.dual_solution_status == kSolutionStatusFeasible) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Option change leads to gain of optimality\n");
-      this->model_status_ = HighsModelStatus::kOptimal;
-    }
-  }
-  */
   if (!user_bound_scale_ok || !user_cost_scale_ok) return HighsStatus::kError;
   if (this->iis_.valid_ && options_.iis_strategy != this->iis_.strategy_)
     this->iis_.invalidate();

@@ -52,7 +52,7 @@ TEST_CASE("user-cost-scale-after-run", "[highs_user_scale]") {
                        scaled_solution);
 
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kNotset);
-  REQUIRE(info.dual_solution_status == kSolutionStatusInfeasible);
+  REQUIRE(info.dual_solution_status == kSolutionStatusNone);
   REQUIRE(info.objective_function_value == user_cost_scale_value *
                                                user_bound_scale_value *
                                                objective_function_value);
