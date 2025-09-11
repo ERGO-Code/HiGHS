@@ -87,7 +87,8 @@ void Symbolic::print(const Log& log, bool verbose) const {
     log_stream << textline("Sn size <= 10:") << integer(sn_size_10_, 0) << '\n';
     log_stream << textline("Sn size <= 100:") << integer(sn_size_100_, 0)
                << '\n';
-    log_stream << textline("Sn avg size:") << sci(n_, 0, 1) << '\n';
+    log_stream << textline("Sn avg size:") << sci((double)n_ / sn_, 0, 1)
+               << '\n';
   }
 
   log_stream << '\n';
