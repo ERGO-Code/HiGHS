@@ -136,7 +136,7 @@ class PDLPSolver {
   double current_eta_;
   // void UpdateIteratesAdaptive(HighsLp& lp, const PrimalDualParams& params,
   // std::vector<double>& x, std::vector<double>& y);
-  HighsStatus PowerMethod(double& lambda);
+  double PowerMethod();
 
   double ratio_last_two_step_sizes_ =
       1.0;                      // state for Malitsky-Pock adaptive step size

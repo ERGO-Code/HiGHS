@@ -22,17 +22,14 @@ namespace step {
 static constexpr double kDivergentMovement = 1e10;
 
 StepSizeConfig InitializeStepSizesPowerMethod(const HighsLp& lp,
-                                              double op_norm_sq,
-                                              bool power_method_converged) {
+                                              double op_norm_sq) {
   StepSizeConfig config;
   config.power_method_lambda = op_norm_sq;
-  config.converged = power_method_converged;
 
   // Compute primal weight beta = ||c||^2 / ||b||^2
   double cost_norm = linalg::compute_cost_norm(lp, 2.0);
   double rhs_norm = linalg::compute_rhs_norm(lp, 2.0);
-  std::cout << "Cost norm: " << cost_norm << ", RHS norm: " << rhs_norm
-            << std::endl;
+  //  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Cost norm: %g, RHS norm: %g\n", cost_norm, rhs_norm);
   config.beta = cost_norm * cost_norm / (rhs_norm * rhs_norm + 1e-10);
 
   // cuPDLP-C style weight initialization

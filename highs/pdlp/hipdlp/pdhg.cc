@@ -273,28 +273,20 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   const HighsLp& lp = lp_;
   // --- 0.Using PowerMethod to estimate the largest eigenvalue ---
-  double op_norm_sq = 1.0;  // Default value
-  HighsStatus status = PowerMethod(op_norm_sq);
-  if (status == HighsStatus::kWarning) {
-    std::cout << "Warning: Power method for step size did not converge. Using "
-                 "default."
-              << std::endl;
-  }
-
+  const double op_norm_sq = PowerMethod();
   // Set step sizes based on the operator norm to ensure convergence
   // A safe choice satisfying eta * omega * ||A||^2 < 1
-  step::StepSizeConfig step_size = step::InitializeStepSizesPowerMethod(
-      lp, op_norm_sq, status == HighsStatus::kOk);
+  step::StepSizeConfig step_size = step::InitializeStepSizesPowerMethod(lp, op_norm_sq);
   const double fixed_eta = 0.99 / sqrt(op_norm_sq);
   PrimalDualParams working_params = params_;
 
   working_params.omega = std::sqrt(step_size.dual_step / step_size.primal_step);
   working_params.eta = std::sqrt(step_size.primal_step * step_size.dual_step);
   current_eta_ = working_params.eta;  // Initial step size for adaptive strategy
-  std::cout << "Using power method step sizes: eta = " << working_params.eta
-            << ", omega = " << working_params.omega << std::endl;
+  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Using power method step sizes: eta = %g, omega = %g\n",
+	       working_params.eta, working_params.omega);
 
-  printf(
+  highsLogUser(params_.log_options_, HighsLogType::kInfo, 
       "Initial step sizes from power method lambda = %g: primal = %g; dual = "
       "%g\n",
       step_size.power_method_lambda, step_size.primal_step,
@@ -744,12 +736,10 @@ bool PDLPSolver::CheckConvergence(const std::vector<double>& x,
   return primal_feasible && dual_feasible && duality_gap_small;
 }
 
-HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
+double PDLPSolver::PowerMethod() {
   const HighsLp& lp = lp_;
-  if (lp.num_col_ == 0 || lp.num_row_ == 0) {
-    op_norm_sq = 1.0;
-    return HighsStatus::kOk;
-  }
+  double op_norm_sq = 1.0;
+  if (lp.num_col_ == 0 || lp.num_row_ == 0) return op_norm_sq;
 
   // Parameters for the power method
   const int max_iter = 20;
@@ -773,7 +763,7 @@ HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
       // kYanyuPowerMethod;
       // kYanyuPowerMethodDev;
       kCuPdlpAATPowerMethod;
-  printf("Power method: %s\n", power_method == kYanyuPowerMethod ? "Yanyu"
+  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n", power_method == kYanyuPowerMethod ? "Yanyu"
                                : power_method == kYanyuPowerMethodDev
                                    ? "Yanyu dev"
                                    : "CuPdlp-C");
@@ -800,9 +790,8 @@ HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
   LogLevel log_level = logger_.getLogLevel();
   int log_iters =
       log_level == LogLevel::kVerbose || log_level == LogLevel::kDebug;
-  log_iters = 1;
 
-  if (log_iters) printf("It       lambda   dl_lambda\n");
+  if (log_iters) highsLogUser(params_.log_options_, HighsLogType::kInfo, "It       lambda   dl_lambda\n");
 
   if (power_method == kYanyuPowerMethodDev) {
     // Start from a vector
@@ -827,7 +816,7 @@ HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
 
       // Check for convergence
       if (std::abs(op_norm_sq - op_norm_sq_old) < tol * op_norm_sq) {
-        return HighsStatus::kOk;
+        return op_norm_sq;
       }
       double dl_op_norm_sq = std::fabs(op_norm_sq - op_norm_sq_old);
       op_norm_sq_old = op_norm_sq;
@@ -836,7 +825,7 @@ HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
       linalg::normalize(z_vec);  // Normalize the result
       x_vec = z_vec;
       if (log_iters)
-        printf("%2d %12.6g %11.4g\n", iter, op_norm_sq, dl_op_norm_sq);
+        highsLogUser(params_.log_options_, HighsLogType::kInfo, "%2d %12.6g %11.4g\n", iter, op_norm_sq, dl_op_norm_sq);
     } else {
       if (power_method == kYanyuPowerMethodDev) {
         // Yanyu power method without "convergence" check
@@ -876,12 +865,12 @@ HighsStatus PDLPSolver::PowerMethod(double& op_norm_sq) {
       }
       double dl_lambda = std::fabs(lambda - previous_lambda);
       previous_lambda = lambda;
-      if (log_iters) printf("%2d %12.6g %11.4g\n", iter, lambda, dl_lambda);
+      if (log_iters) highsLogUser(params_.log_options_, HighsLogType::kInfo, "%2d %12.6g %11.4g\n", iter, lambda, dl_lambda);
     }
   }
   if (power_method != kYanyuPowerMethod) op_norm_sq = lambda;
   // If the method did not converge within max_iter
-  return HighsStatus::kWarning;
+  return op_norm_sq;
 }
 
 void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
