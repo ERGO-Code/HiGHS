@@ -42,6 +42,7 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       analyticCenterComputed(false),
       analyticCenterStatus(HighsModelStatus::kNotset),
       detectSymmetries(false),
+      parallel_lock(false),
       numRestarts(0),
       numRestartsRoot(0),
       numCliqueEntriesAfterPresolve(0),

@@ -77,6 +77,7 @@ struct HighsMipSolverData {
 
   std::deque<HighsLpRelaxation> lps;
   std::deque<HighsMipWorker> workers;
+  bool parallel_lock;
   // std::deque<HighsPrimalHeuristics> heuristics_deque;
 
   HighsLpRelaxation& lp;
@@ -253,6 +254,10 @@ struct HighsMipSolverData {
                                      const std::string message = "") const;
   void callbackUserSolution(const double mipsolver_objective_value,
                             const HighsInt user_solution_callback_origin);
+
+  bool parallelLockActive() const {
+    return (parallel_lock && workers.size() <= 1);
+  }
 };
 
 #endif

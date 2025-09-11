@@ -1403,8 +1403,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
             objsum += roundsol[i] * mipsolver.colCost(i);
 
-          mipsolver.mipdata_->addIncumbent(roundsol, double(objsum),
-                                           kSolutionSourceSolveLp);
+          if (!mipsolver.mipdata_->parallelLockActive()) {
+            mipsolver.mipdata_->addIncumbent(roundsol, double(objsum),
+                                             kSolutionSourceSolveLp);
+          }
           objsum = 0;
         }
 
