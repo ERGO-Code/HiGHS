@@ -4549,36 +4549,143 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
 
+  // struct for storing non-zeros while searching for substitutions
+  struct nonZeros {
+    HighsInt row;
+    double jval;
+    double kval;
+  };
+  std::vector<nonZeros> nzs;
+  nzs.reserve(colsize[col]);
+
   // lambda for computing locks
   auto computeLocks = [&](HighsInt col, HighsInt& numDownLocks,
-                          HighsInt& numUpLocks) {
+                          HighsInt& numUpLocks, HighsInt& downLockRow,
+                          HighsInt& upLockRow) {
     // initialise
     numDownLocks = 0;
     numUpLocks = 0;
-    // consider objective coefficient
-    if (model->col_cost_[col] < 0)
-      numDownLocks++;
-    else if (model->col_cost_[col] > 0)
-      numUpLocks++;
+    downLockRow = -1;
+    upLockRow = -1;
+
     // check coefficients
     for (const auto& nz : getColumnVector(col)) {
       // get row index and coefficient
       HighsInt row = nz.index();
       double val = nz.value();
+
       // check lhs and rhs for finiteness
       bool lhsFinite = model->row_lower_[row] != -kHighsInf;
       bool rhsFinite = model->row_upper_[row] != kHighsInf;
+
       // update number of locks
       if (val > 0) {
-        if (lhsFinite) numDownLocks++;
-        if (rhsFinite) numUpLocks++;
+        if (lhsFinite) {
+          numDownLocks++;
+          downLockRow = row;
+        }
+        if (rhsFinite) {
+          numUpLocks++;
+          upLockRow = row;
+        }
       } else {
-        if (lhsFinite) numUpLocks++;
-        if (rhsFinite) numDownLocks++;
+        if (lhsFinite) {
+          numUpLocks++;
+          upLockRow = row;
+        }
+        if (rhsFinite) {
+          numDownLocks++;
+          downLockRow = row;
+        }
       }
+
       // stop early if there are locks in both directions, since the variable
       // cannot be fixed in this case.
-      if (numDownLocks > 0 && numUpLocks > 0) break;
+      if (numDownLocks > 1 && numUpLocks > 1) break;
+    }
+  };
+
+  auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction) {
+    for (const auto& nz : getRowVector(row)) {
+      // get column index
+      HighsInt k = nz.index();
+      // skip column index that was passed to this lambda
+      if (k == col) continue;
+
+      // only consider non-fixed binary variables
+      if (model->integrality_[k] != HighsVarType::kInteger ||
+          model->col_lower_[k] != 0.0 || model->col_upper_[k] != 1.0)
+        continue;
+
+      // check if setting binary to bound makes row redundant
+      double rhs = 0.0;
+      double residual = 0.0;
+      if (model->row_upper_[row] != kHighsInf) {
+        rhs = model->row_upper_[row];
+        residual = impliedRowBounds.getResidualSumUpperOrig(row, k, nz.value());
+      } else {
+        rhs = -model->row_lower_[row];
+        residual =
+            -impliedRowBounds.getResidualSumLowerOrig(row, k, nz.value());
+      }
+      if (residual > rhs + primal_feastol) continue;
+
+      // store triplet (row, nonzero, nonzero) in a vector to speed up search
+      if (colsize[col] < colsize[k]) {
+        for (const auto& nz : getColumnVector(col)) {
+          HighsInt nzPos = findNonzero(nz.index(), k);
+          if (nzPos == -1) continue;
+          nzs.push_back({nz.index(), nz.value(), Avalue[nzPos]});
+        }
+      } else {
+        for (const auto& nz : getColumnVector(k)) {
+          HighsInt nzPos = findNonzero(nz.index(), col);
+          if (nzPos == -1) continue;
+          nzs.push_back({nz.index(), Avalue[nzPos], nz.value()});
+        }
+      }
+
+      // identify best implied bound
+      double bestBound = -kHighsInf;
+      for (const auto& nz : nzs) {
+        // skip rows that do not yield an implied lower bound
+        if ((nz.jval > 0 || model->row_upper_[nz.row] == kHighsInf) &&
+            (nz.jval < 0 || model->row_lower_[nz.row] == -kHighsInf))
+          continue;
+
+        double candidateBound = -kHighsInf;
+        if (nz.jval < 0) {
+          candidateBound =
+              (model->row_upper_[nz.row] -
+               impliedRowBounds.getResidualSumLowerOrig(nz.row, col, nz.jval) -
+               std::max(nz.kval, 0.0)) /
+              nz.jval;
+
+        } else {
+          candidateBound =
+              (model->row_lower_[nz.row] -
+               impliedRowBounds.getResidualSumUpperOrig(nz.row, col, nz.jval) -
+               std::min(nz.kval, 0.0)) /
+              nz.jval;
+        }
+        bestBound = std::max(bestBound, candidateBound);
+      }
+
+      // check if bound is implied
+      if (bestBound >= model->col_upper_[col] - primal_feastol) {
+        // substitute variable
+        double offset = model->col_lower_[col];
+        double scale = model->col_upper_[col] - model->col_lower_[col];
+        postsolve_stack.doubletonEquation(
+            -1, col, k, 1.0, -scale, offset, model->col_lower_[col],
+            model->col_upper_[col], 0.0, false, false,
+            HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
+        markColDeleted(col);
+        substitute(col, k, offset, scale);
+        HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+        break;
+      }
+      nzs.clear();
     }
   };
 
@@ -4654,15 +4761,23 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // compute locks
   HighsInt numDownLocks = 0;
   HighsInt numUpLocks = 0;
-  computeLocks(col, numDownLocks, numUpLocks);
+  HighsInt downLockRow = -1;
+  HighsInt upLockRow = -1;
+  computeLocks(col, numDownLocks, numUpLocks, downLockRow, upLockRow);
 
   // check if variable can be fixed
-  if (numDownLocks == 0 || numUpLocks == 0) {
+  if (numDownLocks + (model->col_cost_[col] < 0 ? 1 : 0) == 0 ||
+      numUpLocks + (model->col_cost_[col] > 0 ? 1 : 0) == 0) {
     if (numDownLocks == 0 ? fixColToLowerOrUnbounded(postsolve_stack, col)
                           : fixColToUpperOrUnbounded(postsolve_stack, col)) {
       // handle unboundedness
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return Result::kDualInfeasible;
+    }
+  } else if (mipsolver != nullptr && (numDownLocks == 1 || numUpLocks == 1) &&
+             numDownLocks + numUpLocks == colsize[col]) {
+    if (downLockRow != -1) {
+      substituteCol(col, downLockRow, HighsInt{1});
     }
   } else {
     // try to strengthen bounds
