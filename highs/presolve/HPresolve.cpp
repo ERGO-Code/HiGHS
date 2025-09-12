@@ -4605,10 +4605,23 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     }
   };
 
+  // lambda for checking whether a row provides an implied bound
+  auto hasImpliedBound = [&](HighsInt row, double val) {
+    return ((val < 0 && model->row_upper_[row] != kHighsInf) ||
+            (val > 0 && model->row_lower_[row] != -kHighsInf));
+  };
+
   // lambda for variable substitution
   auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
                            double colBound, double otherColBound) {
-    for (const auto& rowNz : getRowVector(row)) {
+    // some bookkeeping
+    HighsInt colNonZerosChecked = 0;
+    HighsInt binVarsTried = 0;
+    // use storeRow and getStoredRow since getRowVector's rowroot[row] would be
+    // overwritten by subsequent findNonZero calls, which would produce
+    // undefined behavior
+    storeRow(row);
+    for (const auto& rowNz : getStoredRow()) {
       // skip column index that was passed to this lambda
       if (rowNz.index() == col) continue;
 
@@ -4618,25 +4631,27 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           model->col_upper_[rowNz.index()] != 1.0)
         continue;
 
-      // check if setting the binary variable to its lower bound bound makes the
-      // row redundant
-      double rhs = 0.0;
-      double residual = 0.0;
-      if (model->row_upper_[row] != kHighsInf) {
-        rhs = model->row_upper_[row];
-        residual = impliedRowBounds.getResidualSumUpperOrig(row, rowNz.index(),
-                                                            rowNz.value());
-      } else {
-        rhs = -model->row_lower_[row];
-        residual = -impliedRowBounds.getResidualSumLowerOrig(row, rowNz.index(),
-                                                             rowNz.value());
-      }
-      // skip binary variable if the row has not become redundant
-      if (residual > rhs + primal_feastol) continue;
+      // skip binary variable if setting it to its lower bound bound does not
+      // make the row redundant
+      if (model->row_upper_[row] != kHighsInf &&
+          impliedRowBounds.getResidualSumUpperOrig(row, rowNz.index(),
+                                                   rowNz.value()) >
+              model->row_upper_[row] + primal_feastol)
+        continue;
+      if (model->row_lower_[row] != -kHighsInf &&
+          impliedRowBounds.getResidualSumLowerOrig(row, rowNz.index(),
+                                                   rowNz.value()) <
+              model->row_lower_[row] - primal_feastol)
+        continue;
 
       // store triplets (row, nonzero, nonzero) in a vector to speed up search
+      binVarsTried++;
+      nzs.clear();
       if (colsize[col] < colsize[rowNz.index()]) {
         for (const auto& colNz : getColumnVector(col)) {
+          // skip non-zeros that do not yield an implied bound
+          if (!hasImpliedBound(colNz.index(), direction * colNz.value()))
+            continue;
           HighsInt nzPos = findNonzero(colNz.index(), rowNz.index());
           if (nzPos == -1) continue;
           nzs.push_back({colNz.index(), colNz.value(), Avalue[nzPos]});
@@ -4645,22 +4660,19 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         for (const auto& colNz : getColumnVector(rowNz.index())) {
           HighsInt nzPos = findNonzero(colNz.index(), col);
           if (nzPos == -1) continue;
+          // skip non-zeros that do not yield an implied bound
+          if (!hasImpliedBound(colNz.index(), direction * Avalue[nzPos]))
+            continue;
           nzs.push_back({colNz.index(), Avalue[nzPos], colNz.value()});
         }
       }
 
-      // identify best implied bound
+      // store best bound
       double bestBound = -kHighsInf;
       for (const auto& triplet : nzs) {
-        // skip rows directly that do not yield an implied bound
-        if ((direction * triplet.jval > 0 ||
-             model->row_upper_[triplet.row] == kHighsInf) &&
-            (direction * triplet.jval < 0 ||
-             model->row_lower_[triplet.row] == -kHighsInf))
-          continue;
-
         // compute implied bound from row given that the binary variable is at
         // its upper bound
+        colNonZerosChecked++;
         double rhs = 0.0;
         double residual = 0.0;
         if (direction * triplet.jval < 0) {
@@ -4692,7 +4704,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
         break;
       }
-      nzs.clear();
     }
     return Result::kOk;
   };
