@@ -795,6 +795,80 @@ bool costScaleOk(const vector<double>& cost, const HighsInt cost_scale,
   return true;
 }
 
+void userScaleColBounds(const vector<HighsVarType>& integrality,
+			vector<double>& lower,
+			vector<double>& upper,
+			const HighsInt user_bound_scale) {
+  // With LP user bound scaling, all row bounds are scaled using
+  // bound_scale. Hence the contribution from each column must also be
+  // scaled using bound_scale.
+  //
+  // For continuous variables, their bounds are scaled using
+  // bound_scale, so their matrix entries aren't changed.
+  //
+  // For non-continuous variables, their bounds can't be scaled (since
+  // this would increase or decrease the number of possible integer
+  // values that they can take) so their matrix entries need to be
+  // scaled.
+  if (!user_bound_scale) return;
+  double bound_scale_value = std::pow(2, user_bound_scale);
+  const bool has_integrality = integrality.size() > 0;
+  const HighsInt num_col = lower.size();
+  assert(num_col > 0);
+  // Scale the bounds on continuous variables
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (!has_integrality || integrality[iCol] == HighsVarType::kContinuous) 
+    // A continuous variable can have its bounds scaled
+    lower[iCol] *= bound_scale_value;
+    upper[iCol] *= bound_scale_value;
+  }
+}
+
+bool userScaleNonContinuousMatrix(const vector<HighsVarType>& integrality,
+				  HighsSparseMatrix& matrix,
+				  const HighsInt user_bound_scale,
+				  const double small_matrix_value,
+				  const double large_matrix_value,
+				  HighsInt& num_small_values,
+				  HighsInt& num_large_values,
+				  const bool apply) {
+  const HighsInt integrality_size = HighsInt(integrality.size());
+  const HighsInt num_col = matrix.num_col_;
+  assert(num_col > 0);
+  assert(integrality_size > num_col);
+  if (num_col <= 0) return;
+  if (integrality_size < num_col) return;
+  // Scale the matrix entries for non-continuous variables
+  if (matrix.isColwise()) {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      if (integrality[iCol] == HighsVarType::kContinuous) continue;
+      for (HighsInt iEl = matrix_.start_[iCol]; iEl < matrix_.start_[iCol+1]; iEl++) {
+	double value = matrix_.value_[iEl]*bound_scale_value;
+	double abs_value =  std::fabs(value);
+	if (abs_value <= small_matrix_value)
+	  num_small_values++;
+	else if (abs_value >= large_matrix_value)
+	  num_large_values++;
+	if (apply) matrix_.value_[iEl] = value;
+      }
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      for (HighsInt iEl = matrix_.start_[iRow]; iEl < matrix_.start_[iRow+1]; iEl++) {
+	HighsInt iCol = matrix_.index_[iEl];
+	if (integrality[iCol] == HighsVarType::kContinuous) continue;
+	double value = matrix_.value_[iEl]*bound_scale_value;
+	double abs_value =  std::fabs(value);
+	if (abs_value <= small_matrix_value)
+	  num_small_values++;
+	else if (abs_value >= large_matrix_value)
+	  num_large_values++;
+	if (apply) matrix_.value_[iEl] = value;
+      }
+    }
+  }
+}
+
 bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   // Indicate whether new scaling has been determined in the return value.
   bool new_scaling = false;
