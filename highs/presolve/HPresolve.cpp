@@ -4605,6 +4605,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     }
   };
 
+  // lambda for variable substitution
   auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
                            double colBound, double otherColBound) {
     for (const auto& rowNz : getRowVector(row)) {
@@ -4775,6 +4776,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // check if variable can be fixed
   if (numDownLocks + (model->col_cost_[col] < 0 ? 1 : 0) == 0 ||
       numUpLocks + (model->col_cost_[col] > 0 ? 1 : 0) == 0) {
+    // fix variable
     if (numDownLocks == 0 ? fixColToLowerOrUnbounded(postsolve_stack, col)
                           : fixColToUpperOrUnbounded(postsolve_stack, col)) {
       // handle unboundedness
@@ -4785,6 +4787,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     if (mipsolver != nullptr && (numDownLocks == 1 || numUpLocks == 1) &&
         model->col_lower_[col] != -kHighsInf &&
         model->col_upper_[col] != kHighsInf) {
+      // try substitution
       if (numDownLocks == 1) {
         HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
                                              model->col_upper_[col],
