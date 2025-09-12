@@ -36,17 +36,9 @@ class HighsMipWorker {
   HighsCutPool cutpool_;
   HighsConflictPool conflictpool_;
 
-  struct Solution {
-    double row_violation_;
-    double bound_violation_;
-    double integrality_violation_;
-    std::vector<double> solution_;
-    double solution_objective_;
-  };
-
   double upper_bound;
 
-  Solution solution_;
+  std::vector<std::tuple<std::vector<double>, double, int>> solutions_;
 
   HighsPrimalHeuristics::Statistics heur_stats;
 
@@ -65,13 +57,14 @@ class HighsMipWorker {
 
   void resetSearchDomain();
 
-  bool addIncumbent(const std::vector<double>& sol, double solobj,
-                    const int solution_source,
-                    const bool print_display_line = true);
+  // bool addIncumbent(const std::vector<double>& sol, double solobj,
+  //                   const int solution_source,
+  //                   const bool print_display_line = true);
 
-  double transformNewIntegerFeasibleSolution(
-      const std::vector<double>& sol,
-      const bool possibly_store_as_new_incumbent = true);
+  bool addIncumbent(const std::vector<double>& sol, double solobj, int solution_source);
+
+  std::pair<bool, double> transformNewIntegerFeasibleSolution(
+      const std::vector<double>& sol);
 
   // todo:
   // timer_
