@@ -795,6 +795,29 @@ bool costScaleOk(const vector<double>& cost, const HighsInt cost_scale,
   return true;
 }
 
+void scaleContinuousColBounds(const vector<HighsVarType>& integrality,
+			      vector<double>& lower,
+			      vector<double>& upper,
+			      HighsSparseMatrix& matrix,
+			      const HighsInt bound_scale) {
+  // With LP bound scaling, all row bounds are scaled. All bounds on
+  // continuous variables are scaled, so their matrix entries aren't
+  // changed. However, bounds on non-continuous variables aren't
+  // changed, so their matrix entries need to be scaled.
+  if (!bound_scale) return;
+  double bound_scale_value = std::pow(2, bound_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(lower.size()); iCol++) {
+    if (integrality[iCol] == HighsVarType::kContinuous) {
+      // A continuous variable can have its bounds scaled, so that's all we do
+      lower[iCol] *= bound_scale_value;
+      upper[iCol] *= bound_scale_value;
+    } else {
+      // A non-continuous variable must have its matrix entries scaled.
+      matrix.scaleCol(iCol, bound_scale_value);
+    }
+  }
+}
+			      
 bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   // Indicate whether new scaling has been determined in the return value.
   bool new_scaling = false;
