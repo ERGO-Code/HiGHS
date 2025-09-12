@@ -13,59 +13,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
+      # 2. Set up caching for vcpkg
+      - name: Cache vcpkg
+        uses: actions/cache@v3
         with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
+          path: |
+            ./vcpkg/installed
+            ./vcpkg/downloads
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
 
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/METIS
-          ref: master
-          path: METIS
+      # - name: Install GKlib
+      #   run: vcpkg install gklib
 
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        shell: bash
-        run: | 
-          mkdir installs
-          ls
-
-      - name: Install GKLIB
-        working-directory: ${{runner.workspace}}
-        shell: bash
-        run: |
-          cd GKlib
-          cmake -S. -B build -DCMAKE_INSTALL_PREFIX==${{runner.workspace}}/installs
-          cmake --build build --config Release
-          cmake --install build
-
-      - name: Check GKlib
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls 
-          ls Release/lib
+      # - name: ls
+      #   run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
 
       - name: Install METIS
-        run: |
-          cd METIS
-          cmake -S. -B build -DCMAKE_INSTALL_PREFIX==${{runner.workspace}}/installs
-          cmake --build build --config Release
-          cmake --install build
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      - name: Check METIS
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls 
-          ls lib
+        run: vcpkg install metis
 
         # run: ls C:/vcpkg/packages/metis_x64-windows/
         # run: ls C:/vcpkg/packages/metis_x64-windows/lib
@@ -84,7 +50,9 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
+
+         # -DCMAKE_CXX_FLAGS="-I C:/vcpkg/packages/gklib_x64-windows/include/GKlib"
 
       - name: Build 
         shell: bash
