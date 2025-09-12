@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- Solver option: "simplex", "choose", "ipm" or "pdlp". If "simplex"/"ipm"/"pdlp" is chosen then, for a MIP (QP) the integrality constraint (quadratic term) will be ignored
+- Solver option: "simplex", "choose", "ipm", "hipo" or "pdlp". If "simplex"/"ipm"/"hipo"/"pdlp" is chosen then, for a MIP (QP) the integrality constraint (quadratic term) will be ignored
 - Type: string
 - Default: "choose"
 
@@ -413,6 +413,22 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
+
+## [hipo\_system](@id option-hipo-system)
+- Type of Newton system for HiPO: "augmented", "normaleq" or "choose"
+- Type: string
+- Default: "choose"
+
+## [hipo\_parallel\_type](@id option-hipo-parallel)
+- Type of parallelism for HiPO: "tree", "node", "both"
+- Type: string
+- Default: "both"
+
+## hipo\_block\_size
+- Block size for dense linear algebra within HiPO
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 128
 
 ## pdlp\_native\_termination
 - Use native termination for PDLP solver: Default = false
