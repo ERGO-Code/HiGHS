@@ -8,6 +8,7 @@
 #ifndef HIGHS_CUTPOOL_H_
 #define HIGHS_CUTPOOL_H_
 
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -53,6 +54,9 @@ class HighsCutPool {
   HighsDynamicRowMatrix matrix_;
   std::vector<double> rhs_;
   std::vector<int16_t> ages_;
+  std::deque<std::atomic<int16_t>>
+      numLps_;  // -1 : never used, 0 : used but no longer in LP, 1+ : currently
+                // in an LP
   std::vector<double> rownormalization_;
   std::vector<double> maxabscoef_;
   std::vector<uint8_t> rowintegral;
@@ -72,9 +76,6 @@ class HighsCutPool {
   std::vector<HighsInt> ageDistribution;
   std::vector<std::pair<HighsInt, double>> sortBuffer;
 
-  bool isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
-                   const double* Rvalue, HighsInt Rlen, double rhs);
-
  public:
   HighsCutPool(HighsInt ncols, HighsInt agelim, HighsInt softlimit)
       : matrix_(ncols),
@@ -92,6 +93,9 @@ class HighsCutPool {
 
   const std::vector<double>& getRhs() const { return rhs_; }
 
+  bool isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
+                   const double* Rvalue, HighsInt Rlen, double rhs);
+
   void resetAge(HighsInt cut) {
     if (ages_[cut] > 0) {
       if (matrix_.columnsLinked(cut)) {
@@ -106,7 +110,7 @@ class HighsCutPool {
 
   double getParallelism(HighsInt row1, HighsInt row2) const;
 
-  void performAging();
+  void performAging(bool parallel_sepa = false);
 
   void lpCutRemoved(HighsInt cut);
 
@@ -129,7 +133,7 @@ class HighsCutPool {
   }
 
   void separate(const std::vector<double>& sol, HighsDomain& domprop,
-                HighsCutSet& cutset, double feastol);
+                HighsCutSet& cutset, double feastol, bool thread_safe = false);
 
   void separateLpCutsAfterRestart(HighsCutSet& cutset);
 
@@ -150,7 +154,8 @@ class HighsCutPool {
   HighsInt addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                   double* Rvalue, HighsInt Rlen, double rhs,
                   bool integral = false, bool propagate = true,
-                  bool extractCliques = true, bool isConflict = false);
+                  bool extractCliques = true, bool isConflict = false,
+                  HighsCutPool* globalpool = nullptr);
 
   HighsInt getRowLength(HighsInt row) const {
     return matrix_.getRowEnd(row) - matrix_.getRowStart(row);
@@ -163,6 +168,8 @@ class HighsCutPool {
     cutinds = matrix_.getARindex() + start;
     cutvals = matrix_.getARvalue() + start;
   }
+
+  void syncCutPool(const HighsMipSolver& mipsolver, HighsCutPool& syncpool);
 };
 
 #endif
