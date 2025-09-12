@@ -68,12 +68,6 @@ bool boundScaleOk(const std::vector<double>& lower,
 bool costScaleOk(const std::vector<double>& cost, const HighsInt cost_scale,
                  const double infinite_cost);
 
-void scaleContinuousColBounds(const vector<HighsVarType>& integrality,
-			      vector<double>& lower,
-			      vector<double>& upper,
-			      HighsSparseMatrix& matrix,
-			      const HighsInt bound_scale);
-
 HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
                                 bool& made_semi_variable_mods);
 void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods);
