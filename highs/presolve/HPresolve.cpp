@@ -4678,7 +4678,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         bestBound = std::max(bestBound, candidateBound);
       }
 
-      // check if lower / upper bound is implied by this row
+      // check if lower / upper bound is implied
       if (direction * bestBound >= direction * colBound - primal_feastol) {
         // substitute variable
         double offset = otherColBound;
