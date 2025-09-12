@@ -4605,16 +4605,16 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     }
   };
 
-  auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction) {
-    for (const auto& nz : getRowVector(row)) {
-      // get column index
-      HighsInt k = nz.index();
+  auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
+                           double colBound, double otherColBound) {
+    for (const auto& rowNz : getRowVector(row)) {
       // skip column index that was passed to this lambda
-      if (k == col) continue;
+      if (rowNz.index() == col) continue;
 
       // only consider non-fixed binary variables
-      if (model->integrality_[k] != HighsVarType::kInteger ||
-          model->col_lower_[k] != 0.0 || model->col_upper_[k] != 1.0)
+      if (model->integrality_[rowNz.index()] != HighsVarType::kInteger ||
+          model->col_lower_[rowNz.index()] != 0.0 ||
+          model->col_upper_[rowNz.index()] != 1.0)
         continue;
 
       // check if setting binary to bound makes row redundant
@@ -4622,66 +4622,71 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       double residual = 0.0;
       if (model->row_upper_[row] != kHighsInf) {
         rhs = model->row_upper_[row];
-        residual = impliedRowBounds.getResidualSumUpperOrig(row, k, nz.value());
+        residual = impliedRowBounds.getResidualSumUpperOrig(row, rowNz.index(),
+                                                            rowNz.value());
       } else {
         rhs = -model->row_lower_[row];
-        residual =
-            -impliedRowBounds.getResidualSumLowerOrig(row, k, nz.value());
+        residual = -impliedRowBounds.getResidualSumLowerOrig(row, rowNz.index(),
+                                                             rowNz.value());
       }
+      // skip binary variable if row has not become redundant
       if (residual > rhs + primal_feastol) continue;
 
       // store triplets (row, nonzero, nonzero) in a vector to speed up search
-      if (colsize[col] < colsize[k]) {
-        for (const auto& nz : getColumnVector(col)) {
-          HighsInt nzPos = findNonzero(nz.index(), k);
+      if (colsize[col] < colsize[rowNz.index()]) {
+        for (const auto& colNz : getColumnVector(col)) {
+          HighsInt nzPos = findNonzero(colNz.index(), rowNz.index());
           if (nzPos == -1) continue;
-          nzs.push_back({nz.index(), nz.value(), Avalue[nzPos]});
+          nzs.push_back({colNz.index(), colNz.value(), Avalue[nzPos]});
         }
       } else {
-        for (const auto& nz : getColumnVector(k)) {
-          HighsInt nzPos = findNonzero(nz.index(), col);
+        for (const auto& colNz : getColumnVector(rowNz.index())) {
+          HighsInt nzPos = findNonzero(colNz.index(), col);
           if (nzPos == -1) continue;
-          nzs.push_back({nz.index(), Avalue[nzPos], nz.value()});
+          nzs.push_back({colNz.index(), Avalue[nzPos], colNz.value()});
         }
       }
 
       // identify best implied bound
       double bestBound = -kHighsInf;
-      for (const auto& nz : nzs) {
-        // skip rows that do not yield an implied lower bound
-        if ((nz.jval > 0 || model->row_upper_[nz.row] == kHighsInf) &&
-            (nz.jval < 0 || model->row_lower_[nz.row] == -kHighsInf))
+      for (const auto& triplet : nzs) {
+        // skip rows directly that do not yield an implied bound
+        if ((direction * triplet.jval > 0 ||
+             model->row_upper_[triplet.row] == kHighsInf) &&
+            (direction * triplet.jval < 0 ||
+             model->row_lower_[triplet.row] == -kHighsInf))
           continue;
 
-        double candidateBound = -kHighsInf;
-        if (nz.jval < 0) {
-          candidateBound =
-              (model->row_upper_[nz.row] -
-               impliedRowBounds.getResidualSumLowerOrig(nz.row, col, nz.jval) -
-               std::max(nz.kval, 0.0)) /
-              nz.jval;
-
+        // compute implied bound given that the binary variable is at its upper
+        // bound
+        double rhs = 0.0;
+        double residual = 0.0;
+        if (direction * triplet.jval < 0) {
+          rhs = model->row_upper_[triplet.row];
+          residual = impliedRowBounds.getResidualSumLowerOrig(triplet.row, col,
+                                                              triplet.jval) +
+                     std::max(triplet.kval, 0.0);
         } else {
-          candidateBound =
-              (model->row_lower_[nz.row] -
-               impliedRowBounds.getResidualSumUpperOrig(nz.row, col, nz.jval) -
-               std::min(nz.kval, 0.0)) /
-              nz.jval;
+          rhs = model->row_lower_[triplet.row];
+          residual = impliedRowBounds.getResidualSumUpperOrig(triplet.row, col,
+                                                              triplet.jval) +
+                     std::min(triplet.kval, 0.0);
         }
+        double candidateBound = direction * (rhs - residual) / triplet.jval;
         bestBound = std::max(bestBound, candidateBound);
       }
 
       // check if bound is implied
-      if (bestBound >= model->col_upper_[col] - primal_feastol) {
+      if (direction * bestBound >= direction * colBound - primal_feastol) {
         // substitute variable
-        double offset = model->col_lower_[col];
-        double scale = model->col_upper_[col] - model->col_lower_[col];
+        double offset = otherColBound;
+        double scale = colBound - otherColBound;
         postsolve_stack.doubletonEquation(
-            -1, col, k, 1.0, -scale, offset, model->col_lower_[col],
+            -1, col, rowNz.index(), 1.0, -scale, offset, model->col_lower_[col],
             model->col_upper_[col], 0.0, false, false,
             HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
         markColDeleted(col);
-        substitute(col, k, offset, scale);
+        substitute(col, rowNz.index(), offset, scale);
         HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
         break;
       }
@@ -4777,12 +4782,20 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     }
   } else {
     if (mipsolver != nullptr && (numDownLocks == 1 || numUpLocks == 1) &&
-        numDownLocks + numUpLocks == colsize[col] &&
         model->col_lower_[col] != -kHighsInf &&
         model->col_upper_[col] != kHighsInf) {
-      if (downLockRow != -1)
-        HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1}));
-      if (colDeleted[col]) return Result::kOk;
+      if (numDownLocks == 1) {
+        HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
+                                             model->col_upper_[col],
+                                             model->col_lower_[col]));
+        if (colDeleted[col]) return Result::kOk;
+      }
+      if (numUpLocks == 1) {
+        HPRESOLVE_CHECKED_CALL(substituteCol(col, upLockRow, HighsInt{-1},
+                                             model->col_lower_[col],
+                                             model->col_upper_[col]));
+        if (colDeleted[col]) return Result::kOk;
+      }
     }
     // try to strengthen bounds
     double newBound = 0.0;
