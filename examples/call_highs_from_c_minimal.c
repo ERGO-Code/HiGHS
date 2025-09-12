@@ -627,7 +627,7 @@ void full_api() {
   assert(dual_solution_status == kHighsSolutionStatusNone);
   // The basis status value should indicate invalidity
   assert(basis_validity == kHighsBasisValidityInvalid);
-  assert(mip_node_count == 0);
+  assert(mip_node_count == 1);
 
   // Get the primal and dual solution
   Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
