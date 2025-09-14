@@ -9,6 +9,7 @@
  * @brief
  */
 #include "pdhg.hpp"
+#include "HConst.h"
 
 #include <cmath>
 #include <iostream>
@@ -29,15 +30,16 @@ void PDLPSolver::preprocessLp() {
       "Preprocessing LP using cupdlp formulation (slack variables for "
       "bounds)...");
 
-  HighsLp& processed_lp = lp_;
-
   int nRows_orig = original_lp_->num_row_;
   int nCols_orig = original_lp_->num_col_;
 
+  if (original_lp_->a_matrix_.isRowwise()){
+    logger_.info("Original LP matrix must be in column-wise format,");
+  }
+
   int num_new_cols = 0;
-  int nEqs = 0;
+  int nEqs = 0; // Count of equality-like constraints (EQ, BOUND, FREE)
   constraint_types_.resize(nRows_orig);
-  constraint_new_idx_.resize(nRows_orig);
 
   // 1. First pass: Classify constraints and count slack variables needed
   for (int i = 0; i < nRows_orig; ++i) {
@@ -47,9 +49,11 @@ void PDLPSolver::preprocessLp() {
     if (has_lower && has_upper) {
       if (original_lp_->row_lower_[i] == original_lp_->row_upper_[i]) {
         constraint_types_[i] = EQ;
+        nEqs++;
       } else {
         constraint_types_[i] = BOUND;
         num_new_cols++;  // Need one slack variable for each ranged constraint
+        nEqs++;
       }
     } else if (has_lower) {
       constraint_types_[i] = GEQ;
@@ -59,20 +63,33 @@ void PDLPSolver::preprocessLp() {
       constraint_types_[i] =
           FREE;  // Free rows become bounded equalities Ax=0, z=[-inf,inf]
       num_new_cols++;
+      nEqs++;
     }
   }
 
   // 2. Set new dimensions
+  HighsLp& processed_lp = lp_;
   processed_lp.num_col_ = nCols_orig + num_new_cols;
   processed_lp.num_row_ = nRows_orig;
   original_num_col_ = nCols_orig;  // store for postsolve
+  constraint_new_idx_.resize(nRows_orig);
 
-  // 3. Resize all vectors in the processed_lp
   processed_lp.col_cost_.resize(processed_lp.num_col_);
   processed_lp.col_lower_.resize(processed_lp.num_col_);
   processed_lp.col_upper_.resize(processed_lp.num_col_);
   processed_lp.row_lower_.resize(processed_lp.num_row_);
   processed_lp.row_upper_.resize(processed_lp.num_row_);
+
+  // 3. Determine row permutation: EQ/BOUND/FREE first, then LEQ/GEQ 
+  int eq_idx = 0;
+  int ineq_idx = nEqs;
+  for (int i = 0; i < nRows_orig; ++i){
+    if (constraint_types_[i] == EQ || constraint_types_[i] == BOUND || constraint_types_[i] == FREE){
+      constraint_new_idx_[i] = eq_idx++;
+    } else {
+      constraint_new_idx_[i] = ineq_idx++;
+    }
+  }
 
   // 4. Populate costs and bounds for original and new slack variables
   for (int i = 0; i < nCols_orig; ++i) {
@@ -140,6 +157,7 @@ void PDLPSolver::preprocessLp() {
 
   // 6. Set the new RHS (row bounds)
   for (int i = 0; i < nRows_orig; ++i) {
+    const int new_idx = constraint_new_idx_[i];
     switch (constraint_types_[i]) {
       case EQ:
         processed_lp.row_lower_[i] = original_lp_->row_lower_[i];
