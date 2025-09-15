@@ -7,7 +7,7 @@
 
 namespace hipo {
 
-Symbolic::Symbolic() : block_size_{kBlockSize} {}
+Symbolic::Symbolic() {}
 
 void Symbolic::setParallel(bool par_tree, bool par_node) {
   parallel_tree_ = par_tree;
@@ -71,7 +71,7 @@ void Symbolic::print(const Log& log, bool verbose) const {
   log_stream << textline("Flops:") << sci(flops_, 0, 1) << '\n';
   if (verbose) {
     log_stream << textline("Sparse ops:") << sci(spops_, 0, 1) << '\n';
-    log_stream << textline("critical ops:") << sci(critops_, 0, 1) << '\n';
+    log_stream << textline("Critical ops:") << sci(critops_, 0, 1) << '\n';
     log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)
                << '\n';
     log_stream << textline("Artificial nz:") << sci(artificial_nz_, 0, 1)
@@ -87,7 +87,8 @@ void Symbolic::print(const Log& log, bool verbose) const {
     log_stream << textline("Sn size <= 10:") << integer(sn_size_10_, 0) << '\n';
     log_stream << textline("Sn size <= 100:") << integer(sn_size_100_, 0)
                << '\n';
-    log_stream << textline("Sn avg size:") << sci(n_, 0, 1) << '\n';
+    log_stream << textline("Sn avg size:") << sci((double)n_ / sn_, 0, 1)
+               << '\n';
   }
 
   log_stream << '\n';

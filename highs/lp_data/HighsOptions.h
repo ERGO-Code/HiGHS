@@ -301,6 +301,11 @@ const string kHipoNormalEqString = "normaleq";
 // Strings for MIP LP/IPM options
 const string kMipLpSolverString = "mip_lp_solver";
 const string kMipIpmSolverString = "mip_ipm_solver";
+// Strings for HiPO parallel method
+const string kHipoParallelString = "hipo_parallel_type";
+const string kHipoTreeString = "tree";
+const string kHipoNodeString = "node";
+const string kHipoBothString = "both";
 
 struct HighsOptionsStruct {
   // Run-time options read from the command line
@@ -365,6 +370,8 @@ struct HighsOptionsStruct {
   double ipm_optimality_tolerance;
   HighsInt ipm_iteration_limit;
   std::string hipo_system;
+  std::string hipo_parallel_type;
+  HighsInt hipo_block_size;
 
   // Options for PDLP solver
   bool pdlp_scaling;
@@ -534,6 +541,8 @@ struct HighsOptionsStruct {
         ipm_optimality_tolerance(0.0),
         ipm_iteration_limit(0),
         hipo_system(""),
+        hipo_parallel_type(""),
+        hipo_block_size(0),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
@@ -1255,6 +1264,18 @@ class HighsOptions : public HighsOptionsStruct {
         "HiPO Newton system option: \"augmented\", \"normaleq\" or \"choose\".",
         advanced, &hipo_system, kHighsChooseString);
     records.push_back(record_string);
+
+    record_string =
+        new OptionRecordString(kHipoParallelString,
+                               "HiPO parallel option: \"tree\", "
+                               "\"node\" or \"both\".",
+                               advanced, &hipo_parallel_type, kHipoBothString);
+    records.push_back(record_string);
+
+    record_int = new OptionRecordInt(
+        "hipo_block_size", "Block size for dense linear algebra within HiPO",
+        advanced, &hipo_block_size, 0, 128, kHighsIInf);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
         "pdlp_scaling", "Scaling option for PDLP solver: Default = true",

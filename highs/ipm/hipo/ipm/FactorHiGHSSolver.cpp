@@ -8,7 +8,7 @@
 
 namespace hipo {
 
-FactorHiGHSSolver::FactorHiGHSSolver(const Options& options,
+FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
                                      const Regularisation& regul, Info* info,
                                      IpmData* record, const LogHighs& log)
     : S_{},
@@ -17,7 +17,11 @@ FactorHiGHSSolver::FactorHiGHSSolver(const Options& options,
       regul_{regul},
       info_{info},
       data_{record},
-      log_{log} {}
+      log_{log},
+      model_{model},
+      options_{options} {
+  if (options_.block_size > 0) FH_.setBlockSize(options_.block_size);
+}
 
 void FactorHiGHSSolver::clear() {
   valid_ = false;
@@ -61,16 +65,16 @@ Int getASstructure(const HighsSparseMatrix& A, std::vector<Int>& ptr,
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::setup(const Model& model, Options& options) {
-  if (Int status = setNla(model, options)) return status;
-  setParallel(options);
+Int FactorHiGHSSolver::setup() {
+  if (Int status = setNla()) return status;
+  setParallel();
 
   S_.print(log_, log_.debug(1));
   return kStatusOk;
 }
 
 Int FactorHiGHSSolver::buildNEstructureDense(const HighsSparseMatrix& A,
-                                             int64_t max_num_nz) {
+                                             int64_t nz_limit) {
   // Build lower triangular structure of AAt.
   // This approach should be advantageous if AAt is expected to be relatively
   // dense.
@@ -119,7 +123,7 @@ Int FactorHiGHSSolver::buildNEstructureDense(const HighsSparseMatrix& A,
     Int col_nz = 0;
     for (Int i = row; i < work.size(); ++i) {
       if (work[i]) {
-        if (AAt_nz + 1 >= max_num_nz) return kStatusOoM;
+        if (AAt_nz + 1 >= nz_limit) return kStatusOoM;
 
         rowsNE_.push_back(i);
         work[i] = 0;
@@ -136,7 +140,7 @@ Int FactorHiGHSSolver::buildNEstructureDense(const HighsSparseMatrix& A,
 }
 
 Int FactorHiGHSSolver::buildNEstructureSparse(const HighsSparseMatrix& A,
-                                              int64_t max_num_nz) {
+                                              int64_t nz_limit) {
   // Build lower triangular structure of AAt.
   // This approach should be advantageous if AAt is expected to be very sparse.
 
@@ -183,7 +187,7 @@ Int FactorHiGHSSolver::buildNEstructureSparse(const HighsSparseMatrix& A,
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error
-    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= max_num_nz)
+    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= nz_limit)
       return kStatusOoM;
 
     // update pointers
@@ -400,10 +404,62 @@ double FactorHiGHSSolver::flops() const { return S_.flops(); }
 double FactorHiGHSSolver::spops() const { return S_.spops(); }
 double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
 
-Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
+Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
+  // Perform analyse phase of augmented system and return symbolic factorisation
+  // in object S and the status.
+
+  std::vector<Int> ptrLower, rowsLower;
+  getASstructure(model_.A(), ptrLower, rowsLower);
+
+  // create vector of signs of pivots
+  std::vector<Int> pivot_signs(model_.A().num_col_ + model_.A().num_row_, -1);
+  for (Int i = 0; i < model_.A().num_row_; ++i)
+    pivot_signs[model_.A().num_col_ + i] = 1;
+
+  log_.printDevInfo("Performing AS analyse phase\n");
+
+  Clock clock;
+  Int status = FH_.analyse(S, rowsLower, ptrLower, pivot_signs);
+  if (info_) info_->analyse_AS_time = clock.stop();
+
+  if (status && log_.debug(1)) {
+    log_.print("Failed augmented system:");
+    S.print(log_, true);
+  }
+
+  return status ? kStatusErrorAnalyse : kStatusOk;
+}
+
+Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
+  // Perform analyse phase of augmented system and return symbolic factorisation
+  // in object S and the status. If building the matrix failed, the status is
+  // set to OoM.
+
+  log_.printDevInfo("Building NE structure\n");
+
+  if (buildNEstructureDense(model_.A(), nz_limit)) return kStatusOoM;
+
+  // create vector of signs of pivots
+  std::vector<Int> pivot_signs(model_.A().num_row_, 1);
+
+  log_.printDevInfo("Performing NE analyse phase\n");
+
+  Clock clock;
+  Int status = FH_.analyse(S, rowsNE_, ptrNE_, pivot_signs);
+  if (info_) info_->analyse_NE_time = clock.stop();
+
+  if (status && log_.debug(1)) {
+    log_.print("Failed normal equations:");
+    S.print(log_, true);
+  }
+
+  return status ? kStatusErrorAnalyse : kStatusOk;
+}
+
+Int FactorHiGHSSolver::chooseNla() {
   // Choose whether to use augmented system or normal equations.
 
-  assert(options.nla == kOptionNlaChoose);
+  assert(options_.nla == kOptionNlaChoose);
 
   Symbolic symb_NE{};
   Symbolic symb_AS{};
@@ -413,49 +469,23 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
   Clock clock;
 
   // Perform analyse phase of augmented system
-  {
-    std::vector<Int> ptrLower, rowsLower;
-    getASstructure(model.A(), ptrLower, rowsLower);
-
-    // create vector of signs of pivots
-    std::vector<Int> pivot_signs(model.A().num_col_ + model.A().num_row_, -1);
-    for (Int i = 0; i < model.A().num_row_; ++i)
-      pivot_signs[model.A().num_col_ + i] = 1;
-
-    clock.start();
-    Int AS_status = FH_.analyse(symb_AS, rowsLower, ptrLower, pivot_signs);
-    if (AS_status) failure_AS = true;
-    if (info_) info_->analyse_AS_time = clock.stop();
-  }
+  if (analyseAS(symb_AS)) failure_AS = true;
 
   // Perform analyse phase of normal equations
-  {
-    if (model.m() > kMinRowsForDensity &&
-        model.maxColDensity() > kDenseColThresh) {
-      // Normal equations would be too expensive because there are dense
-      // columns, so skip it.
-      failure_NE = true;
-    } else {
-      // If NE has more nonzeros than the factor of AS, then it's likely that AS
-      // will be preferred, so stop computation of NE.
-      const int64_t NE_nz_limit = symb_AS.nz() * kSymbNzMult;
+  if (model_.m() > kMinRowsForDensity &&
+      model_.maxColDensity() > kDenseColThresh) {
+    // Normal equations would be too expensive because there are dense
+    // columns, so skip it.
+    failure_NE = true;
+  } else {
+    // If NE has more nonzeros than the factor of AS, then it's likely that AS
+    // will be preferred, so stop computation of NE.
+    int64_t NE_nz_limit = symb_AS.nz() * kSymbNzMult;
+    if (failure_AS || NE_nz_limit > std::numeric_limits<Int>::max())
+      NE_nz_limit = std::numeric_limits<Int>::max();
 
-      Int NE_status = buildNEstructureDense(model.A(), NE_nz_limit);
-      if (NE_status)
-        failure_NE = true;
-      else {
-        // create vector of signs of pivots
-        std::vector<Int> pivot_signs(model.A().num_row_, 1);
-
-        clock.start();
-        NE_status = FH_.analyse(symb_NE, rowsNE_, ptrNE_, pivot_signs);
-        if (NE_status) failure_NE = true;
-        if (info_) info_->analyse_NE_time = clock.stop();
-      }
-    }
-
-    info_->num_dense_cols = model.numDenseCols();
-    info_->max_col_density = model.maxColDensity();
+    Int NE_status = analyseNE(symb_NE, NE_nz_limit);
+    if (NE_status) failure_NE = true;
   }
 
   Int status = kStatusOk;
@@ -464,10 +494,10 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
 
   // Decision may be forced by failures
   if (failure_NE && !failure_AS) {
-    options.nla = kOptionNlaAugmented;
+    options_.nla = kOptionNlaAugmented;
     log_stream << textline("Newton system:") << "AS preferred (NE failed)\n";
   } else if (failure_AS && !failure_NE) {
-    options.nla = kOptionNlaNormEq;
+    options_.nla = kOptionNlaNormEq;
     log_stream << textline("Newton system:") << "NE preferred (AS failed)\n";
   } else if (failure_AS && failure_NE) {
     status = kStatusErrorAnalyse;
@@ -491,10 +521,10 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
 
     if (NE_much_more_expensive ||
         (sn_AS_larger_than_NE && AS_not_too_expensive)) {
-      options.nla = kOptionNlaAugmented;
+      options_.nla = kOptionNlaAugmented;
       log_stream << textline("Newton system:") << "AS preferred\n";
     } else {
-      options.nla = kOptionNlaNormEq;
+      options_.nla = kOptionNlaNormEq;
       log_stream << textline("Newton system:") << "NE preferred\n";
     }
   }
@@ -502,7 +532,7 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
   log_.print(log_stream);
 
   if (status != kStatusErrorAnalyse) {
-    if (options.nla == kOptionNlaAugmented) {
+    if (options_.nla == kOptionNlaAugmented) {
       S_ = std::move(symb_AS);
     } else {
       S_ = std::move(symb_NE);
@@ -512,55 +542,34 @@ Int FactorHiGHSSolver::chooseNla(const Model& model, Options& options) {
   return status;
 }
 
-Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
-  Clock clock;
-
+Int FactorHiGHSSolver::setNla() {
   std::stringstream log_stream;
 
-  // Build the matrix
-  switch (options.nla) {
+  switch (options_.nla) {
     case kOptionNlaAugmented: {
-      std::vector<Int> ptrLower, rowsLower;
-      getASstructure(model.A(), ptrLower, rowsLower);
-
-      // create vector of signs of pivots
-      std::vector<Int> pivot_signs(model.A().num_col_ + model.A().num_row_, -1);
-      for (Int i = 0; i < model.A().num_row_; ++i)
-        pivot_signs[model.A().num_col_ + i] = 1;
-
-      clock.start();
-      if (FH_.analyse(S_, rowsLower, ptrLower, pivot_signs)) {
+      if (analyseAS(S_)) {
         log_.printe("AS requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }
-
-      if (info_) info_->analyse_AS_time = clock.stop();
       log_stream << textline("Newton system:") << "AS requested\n";
       break;
     }
 
     case kOptionNlaNormEq: {
-      Int NE_status = buildNEstructureDense(model.A());
-      if (NE_status) {
+      Int status = analyseNE(S_);
+      if (status == kStatusOoM) {
         log_.printe("NE requested, matrix is too large\n");
         return kStatusOoM;
-      }
-
-      // create vector of signs of pivots
-      std::vector<Int> pivot_signs(model.A().num_row_, 1);
-
-      clock.start();
-      if (FH_.analyse(S_, rowsNE_, ptrNE_, pivot_signs)) {
+      } else if (status) {
         log_.printe("NE requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }
-      if (info_) info_->analyse_NE_time = clock.stop();
       log_stream << textline("Newton system:") << "NE requested\n";
       break;
     }
 
     case kOptionNlaChoose: {
-      if (Int status = chooseNla(model, options)) return status;
+      if (Int status = chooseNla()) return status;
       break;
     }
   }
@@ -570,7 +579,7 @@ Int FactorHiGHSSolver::setNla(const Model& model, Options& options) {
   return kStatusOk;
 }
 
-void FactorHiGHSSolver::setParallel(Options& options) {
+void FactorHiGHSSolver::setParallel() {
   // Set parallel options
   bool parallel_tree = false;
   bool parallel_node = false;
@@ -578,7 +587,7 @@ void FactorHiGHSSolver::setParallel(Options& options) {
   std::stringstream log_stream;
   log_stream << textline("Parallelism:");
 
-  switch (options.parallel) {
+  switch (options_.parallel) {
     case kOptionParallelOff:
       log_stream << "None requested\n";
       break;
@@ -619,16 +628,16 @@ void FactorHiGHSSolver::setParallel(Options& options) {
 #endif
 
       if (parallel_tree && parallel_node) {
-        options.parallel = kOptionParallelOn;
+        options_.parallel = kOptionParallelOn;
         log_stream << "Full preferred\n";
       } else if (parallel_tree && !parallel_node) {
-        options.parallel = kOptionParallelTreeOnly;
+        options_.parallel = kOptionParallelTreeOnly;
         log_stream << "Tree preferred\n";
       } else if (!parallel_tree && parallel_node) {
-        options.parallel = kOptionParallelNodeOnly;
+        options_.parallel = kOptionParallelNodeOnly;
         log_stream << "Node preferred\n";
       } else {
-        options.parallel = kOptionParallelOff;
+        options_.parallel = kOptionParallelOff;
         log_stream << "None preferred\n";
       }
 

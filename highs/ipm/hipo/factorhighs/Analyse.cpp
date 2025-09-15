@@ -17,7 +17,7 @@
 namespace hipo {
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                 const std::vector<Int>& signs, const Log* log,
+                 const std::vector<Int>& signs, Int nb, const Log* log,
                  DataCollector& data)
     : log_{log}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
@@ -29,7 +29,7 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   n_ = ptr.size() - 1;
   nz_ = rows.size();
   signs_ = signs;
-  nb_ = kBlockSize;
+  nb_ = nb;
 
   // Create upper triangular part
   rows_upper_.resize(nz_);
@@ -111,12 +111,12 @@ Int Analyse::getPermutation() {
   // fix seed of rng inside Metis, to make it deterministic (?)
   options[METIS_OPTION_SEED] = 42;
 
-  if (log_) log_->printDevInfo("Metis...");
+  if (log_) log_->printDevInfo("Metis...\n");
 
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                             options, perm_.data(), iperm_.data());
 
-  if (log_) log_->printDevInfo("done\n");
+  if (log_) log_->printDevInfo("...done\n");
   if (status != METIS_OK) {
     if (log_) log_->printDevInfo("Error with Metis\n");
     return kRetMetisError;
@@ -1357,18 +1357,9 @@ Int Analyse::run(Symbolic& S) {
   computeBlockStart();
   computeCriticalPath();
 
-  // Too many nonzeros for the integer type selected
-  if (nz_factor_ >= std::numeric_limits<Int>::max()) {
-    if (log_) log_->printDevInfo("Integer overflow in analyse phase\n");
-    return kRetIntOverflow;
-  }
-
   // move relevant stuff into S
   S.n_ = n_;
   S.sn_ = sn_count_;
-
-  S.sn_ = sn_count_;
-  S.n_ = n_;
   S.nz_ = nz_factor_;
   S.fillin_ = (double)nz_factor_ / nz_;
   S.artificial_nz_ = artificial_nz_;
@@ -1378,6 +1369,7 @@ Int Analyse::run(Symbolic& S) {
   S.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
   S.serial_storage_ = serial_storage_;
   S.flops_ = dense_ops_;
+  S.block_size_ = nb_;
 
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());
@@ -1391,14 +1383,18 @@ Int Analyse::run(Symbolic& S) {
     if (i <= 100) S.sn_size_100_++;
   }
 
+  // Too many nonzeros for the integer type selected.
+  // Check after statistics have been moved into S, so that info is accessible
+  // for debug logging.
+  if (nz_factor_ >= std::numeric_limits<Int>::max()) {
+    if (log_) log_->printDevInfo("Integer overflow in analyse phase\n");
+    return kRetIntOverflow;
+  }
+
   // permute signs of pivots
   S.pivot_sign_ = std::move(signs_);
   permuteVector(S.pivot_sign_, perm_);
 
-  S.nz_ = nz_factor_;
-  S.flops_ = dense_ops_;
-  S.spops_ = sparse_ops_;
-  S.critops_ = critical_ops_;
   S.iperm_ = std::move(iperm_);
   S.rows_ = std::move(rows_sn_);
   S.ptr_ = std::move(ptr_sn_);

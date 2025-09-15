@@ -77,8 +77,9 @@ bool Solver::initialise() {
   it_.reset(new Iterate(model_, regul_));
 
   // initialise linear solver
-  LS_.reset(new FactorHiGHSSolver(options_, regul_, &info_, &it_->data, logH_));
-  if (Int status = LS_->setup(model_, options_)) {
+  LS_.reset(new FactorHiGHSSolver(options_, model_, regul_, &info_, &it_->data,
+                                  logH_));
+  if (Int status = LS_->setup()) {
     info_.status = (Status)status;
     return true;
   }
@@ -110,6 +111,8 @@ void Solver::terminate() {
 
   info_.option_nla = options_.nla;
   info_.option_par = options_.parallel;
+  info_.num_dense_cols = model_.numDenseCols();
+  info_.max_col_density = model_.maxColDensity();
 }
 
 bool Solver::prepareIter() {
@@ -1429,7 +1432,7 @@ void Solver::printSummary() const {
                << fix(control_.elapsed() - start_time_, 0, 2) << "\n";
 
   log_stream << textline("Status:") << statusString(info_.status) << "\n";
-  log_stream << textline("iterations:") << integer(iter_) << "\n";
+  log_stream << textline("HiPO iterations:") << integer(iter_) << "\n";
   if (info_.ipx_used)
     log_stream << textline("IPX iterations:") << integer(info_.ipx_info.iter)
                << "\n";
