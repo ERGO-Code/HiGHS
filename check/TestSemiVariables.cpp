@@ -17,7 +17,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   const HighsInfo& info = highs.getInfo();
   HighsStatus return_status;
   double optimal_objective_function_value;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsModel model;
   HighsLp& lp = model.lp_;
   semiModel0(lp);
