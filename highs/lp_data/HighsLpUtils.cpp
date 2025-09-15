@@ -795,10 +795,13 @@ bool costScaleOk(const vector<double>& cost, const HighsInt cost_scale,
   return true;
 }
 
-void userScaleColBounds(const vector<HighsVarType>& integrality,
-			vector<double>& lower,
-			vector<double>& upper,
-			const HighsInt user_bound_scale) {
+bool userScaleContinuousColBounds(const vector<HighsVarType>& integrality,
+				  vector<double>& lower,
+				  vector<double>& upper,
+				  const HighsInt user_bound_scale,
+				  const double infinite_bound,
+				  HighsInt& num_infinite_bounds,
+				  const bool apply) {
   // With LP user bound scaling, all row bounds are scaled using
   // bound_scale. Hence the contribution from each column must also be
   // scaled using bound_scale.
@@ -810,15 +813,44 @@ void userScaleColBounds(const vector<HighsVarType>& integrality,
   // this would increase or decrease the number of possible integer
   // values that they can take) so their matrix entries need to be
   // scaled.
-  if (!user_bound_scale) return;
-  double bound_scale_value = std::pow(2, user_bound_scale);
+  if (!user_bound_scale) return true;
   const bool has_integrality = integrality.size() > 0;
+  double bound_scale_value = std::pow(2, user_bound_scale);
   const HighsInt num_col = lower.size();
   assert(num_col > 0);
   // Scale the bounds on continuous variables
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    if (!has_integrality || integrality[iCol] == HighsVarType::kContinuous) 
-    // A continuous variable can have its bounds scaled
+    if (!has_integrality || integrality[iCol] == HighsVarType::kContinuous) {
+      if (lower[iCol] > -kHighsInf) {
+	double value = lower[iCol] * bound_scale_value;
+	if (std::abs(value) > infinite_bound) num_infinite_bounds++;
+	if (apply) lower[iCol] = value;
+      }
+      if (upper[iCol] < kHighsInf) {
+	double value = upper[iCol] * bound_scale_value;
+	if (std::abs(value) > infinite_bound) num_infinite_bounds++;
+	if (apply) upper[iCol] = value;
+      }
+    }
+  }
+  return num_infinite_bounds > 0;
+}
+
+bool userScaleRowBounds(vector<double>& lower,
+			vector<double>& upper,
+			const HighsInt user_bound_scale,
+			const double infinite_bound,
+			HighsInt& num_infinite_bounds,
+			const bool apply) {
+  if (!user_bound_scale) return;
+  const bool has_integrality = integrality.size() > 0;
+  if (!has_integrality) return;
+  double bound_scale_value = std::pow(2, user_bound_scale);
+  const HighsInt num_col = lower.size();
+  assert(num_col > 0);
+  // Scale the bounds on non-continuous variables
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (integrality[iCol] != HighsVarType::kContinuous) 
     lower[iCol] *= bound_scale_value;
     upper[iCol] *= bound_scale_value;
   }
@@ -832,41 +864,45 @@ bool userScaleNonContinuousMatrix(const vector<HighsVarType>& integrality,
 				  HighsInt& num_small_values,
 				  HighsInt& num_large_values,
 				  const bool apply) {
+  num_small_values = 0;
+  num_large_values = 0;
   const HighsInt integrality_size = HighsInt(integrality.size());
   const HighsInt num_col = matrix.num_col_;
   assert(num_col > 0);
-  assert(integrality_size > num_col);
-  if (num_col <= 0) return;
-  if (integrality_size < num_col) return;
+  if (num_col <= 0) return true;
+  if (integrality_size < num_col) return true;
+  const HighsInt num_row = matrix.num_row_;
+  double bound_scale_value = std::pow(2, user_bound_scale);
   // Scale the matrix entries for non-continuous variables
   if (matrix.isColwise()) {
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       if (integrality[iCol] == HighsVarType::kContinuous) continue;
-      for (HighsInt iEl = matrix_.start_[iCol]; iEl < matrix_.start_[iCol+1]; iEl++) {
-	double value = matrix_.value_[iEl]*bound_scale_value;
+      for (HighsInt iEl = matrix.start_[iCol]; iEl < matrix.start_[iCol+1]; iEl++) {
+	double value = matrix.value_[iEl]*bound_scale_value;
 	double abs_value =  std::fabs(value);
 	if (abs_value <= small_matrix_value)
 	  num_small_values++;
 	else if (abs_value >= large_matrix_value)
 	  num_large_values++;
-	if (apply) matrix_.value_[iEl] = value;
+	if (apply) matrix.value_[iEl] = value;
       }
     }
   } else {
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      for (HighsInt iEl = matrix_.start_[iRow]; iEl < matrix_.start_[iRow+1]; iEl++) {
-	HighsInt iCol = matrix_.index_[iEl];
+      for (HighsInt iEl = matrix.start_[iRow]; iEl < matrix.start_[iRow+1]; iEl++) {
+	HighsInt iCol = matrix.index_[iEl];
 	if (integrality[iCol] == HighsVarType::kContinuous) continue;
-	double value = matrix_.value_[iEl]*bound_scale_value;
+	double value = matrix.value_[iEl]*bound_scale_value;
 	double abs_value =  std::fabs(value);
 	if (abs_value <= small_matrix_value)
 	  num_small_values++;
 	else if (abs_value >= large_matrix_value)
 	  num_large_values++;
-	if (apply) matrix_.value_[iEl] = value;
+	if (apply) matrix.value_[iEl] = value;
       }
     }
   }
+  return num_small_values + num_large_values == 0;
 }
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp) {
@@ -1658,14 +1694,16 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
   lp.a_matrix_.value_[change_el] = new_value;
 }
 
-void changeLpIntegrality(HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
-                         const vector<HighsVarType>& new_integrality) {
+HighsStatus changeLpIntegrality(HighsLp& lp,
+				const HighsIndexCollection& index_collection,
+				const vector<HighsVarType>& new_integrality,
+				const HighsOptions options) {
+  HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
   limits(index_collection, from_k, to_k);
-  if (from_k > to_k) return;
+  if (from_k > to_k) return return_status;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
@@ -1676,11 +1714,28 @@ void changeLpIntegrality(HighsLp& lp,
   // technique
   HighsInt lp_col;
   HighsInt usr_col = -1;
-  // If changing integrality for a problem without an integrality
-  // vector (ie an LP), have to create it for the incumbent columns -
-  // which are naturally continuous
-  if (lp.integrality_.size() == 0)
+  if (lp.integrality_.size() == 0) {
+    // Changing integrality for a problem without an integrality
+    // vector (ie an LP), have to create it for the incumbent columns
+    // - which are naturally continuous
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
+  } else if (lp.user_bound_scale_) {
+    // Revert the user bound scaling to correspond to an LP...
+    //
+    // Scale the non-continuous column bounds
+    userScaleNonContinuousColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, lp.user_bound_scale_);
+    // Unscale the non-continuous columns (by scaling with
+    // -lp.user_bound_scale_)
+    HighsInt num_small_values;
+    HighsInt num_large_values;
+    userScaleNonContinuousMatrix(lp.integrality_,
+				 lp.a_matrix_,
+				 -lp.user_bound_scale_,
+				 options.small_matrix_value,
+				 options.large_matrix_value,
+				 num_small_values,
+				 num_large_values);
+  }
   assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
   for (HighsInt k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
@@ -1699,7 +1754,31 @@ void changeLpIntegrality(HighsLp& lp,
   }
   // If integrality_ contains only HighsVarType::kContinuous then
   // clear it
-  if (!lp.isMip()) lp.integrality_.clear();
+  if (!lp.isMip()) {
+    lp.integrality_.clear();
+  } else if (lp.user_bound_scale_) {
+    // ... and then reapply corresponding to the new integrality
+    //
+    // Scale the continuous column bounds
+    userScaleContinuousColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, lp.user_bound_scale_);
+    // Scale the non-continuous columns
+    HighsInt num_small_values;
+    HighsInt num_large_values;
+    if (!userScaleNonContinuousMatrix(lp.integrality_,
+				      lp.a_matrix_,
+				      lp.user_bound_scale_,
+				      options.small_matrix_value,
+				      options.large_matrix_value,
+				      num_small_values,
+				      num_large_values)) {
+      return_status = HighsStatus::kWarning;
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "User bound scaling yields %d small matrix entries and %d large matrix entries\n",
+		   int(num_small_values), int(num_large_values));
+      
+    }
+  }
+  return return_status;
 }
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,

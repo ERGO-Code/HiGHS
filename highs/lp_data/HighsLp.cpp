@@ -305,10 +305,16 @@ void HighsLp::moveBackLpAndUnapplyScaling(HighsLp& lp) {
 }
 
 bool HighsLp::userBoundScaleOk(const HighsInt user_bound_scale,
-                               const double infinite_bound) const {
+			       const double infinite_cost,
+                               const double infinite_bound,
+			       HighsInt& num_infinite_cost,
+			       HighsInt& num_infinite_bound) const {
   const HighsInt dl_user_bound_scale =
       user_bound_scale - this->user_bound_scale_;
   if (!dl_user_bound_scale) return true;
+  num_infinite_cost = 0;
+  num_infinite_bound = 0;
+  
   if (!boundScaleOk(this->col_lower_, this->col_upper_, dl_user_bound_scale,
                     infinite_bound))
     return false;

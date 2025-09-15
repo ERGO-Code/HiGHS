@@ -68,13 +68,15 @@ bool boundScaleOk(const std::vector<double>& lower,
 bool costScaleOk(const std::vector<double>& cost, const HighsInt cost_scale,
                  const double infinite_cost);
 
-void userScaleColBounds(const vector<HighsVarType>& integrality,
-			vector<double>& lower,
-			vector<double>& upper,
-			HighsSparseMatrix& matrix,
-			const HighsInt user_bound_scale,
-			const double small_matrix_value,
-			const double large_matrix_value);
+void userScaleContinuousColBounds(const vector<HighsVarType>& integrality,
+				  vector<double>& lower,
+				  vector<double>& upper,
+				  const HighsInt user_bound_scale);
+
+void userScaleNonContinuousColBounds(const vector<HighsVarType>& integrality,
+				     vector<double>& lower,
+				     vector<double>& upper,
+				     const HighsInt user_bound_scale);
 
 bool userScaleNonContinuousMatrix(const vector<HighsVarType>& integrality,
 				  HighsSparseMatrix& matrix,
@@ -124,9 +126,10 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
                                const HighsInt col, const double new_value,
                                const bool zero_new_value);
 
-void changeLpIntegrality(HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
-                         const vector<HighsVarType>& new_integrality);
+HighsStatus changeLpIntegrality(HighsLp& lp,
+				const HighsIndexCollection& index_collection,
+				const vector<HighsVarType>& new_integrality,
+				const HighsOptions options);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
                    const vector<double>& new_col_cost,
