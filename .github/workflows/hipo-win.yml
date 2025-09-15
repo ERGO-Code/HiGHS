@@ -174,7 +174,7 @@ jobs:
       - name: Test executable 
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: ./Debug/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ./Release/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Ctest
         shell: bash
