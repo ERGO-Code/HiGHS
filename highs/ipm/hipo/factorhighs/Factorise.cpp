@@ -66,7 +66,7 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
 
   // compute largest diagonal entry in absolute value
   max_diag_ = 0.0;
-  min_diag_ = std::numeric_limits<double>::max();
+  min_diag_ = kHighsInf;
   for (Int col = 0; col < n_; ++col) {
     double val = std::abs(valA_[ptrA_[col]]);
     max_diag_ = std::max(max_diag_, val);

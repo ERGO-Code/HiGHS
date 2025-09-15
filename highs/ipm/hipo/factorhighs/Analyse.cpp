@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <climits>
 #include <random>
 #include <stack>
 
@@ -429,7 +428,7 @@ void Analyse::relaxSupernodes() {
         Int child = first_child[sn];
 
         // info for first criterion
-        Int nz_fakenz = INT_MAX;
+        Int nz_fakenz = kHighsIInf;
         Int size_fakenz = 0;
         Int child_fakenz = -1;
 
@@ -566,7 +565,7 @@ void Analyse::relaxSupernodesSize() {
       Int child = first_child[sn];
 
       // info for first criterion
-      Int size_smallest = INT_MAX;
+      Int size_smallest = kHighsIInf;
       Int child_smallest = -1;
       Int nz_smallest = 0;
 
@@ -1386,7 +1385,7 @@ Int Analyse::run(Symbolic& S) {
   // Too many nonzeros for the integer type selected.
   // Check after statistics have been moved into S, so that info is accessible
   // for debug logging.
-  if (nz_factor_ >= std::numeric_limits<Int>::max()) {
+  if (nz_factor_ >= kHighsIInf) {
     if (log_) log_->printDevInfo("Integer overflow in analyse phase\n");
     return kRetIntOverflow;
   }

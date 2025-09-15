@@ -84,7 +84,7 @@ void Iterate::computeScaling() {
   }
 
   // compute extremes of theta
-  data.back().min_theta = std::numeric_limits<double>::infinity();
+  data.back().min_theta = kHighsInf;
   data.back().max_theta = 0.0;
   for (double d : scaling) {
     if (d != 0.0) {
@@ -99,7 +99,7 @@ void Iterate::products() {
   Int& num_small = data.back().num_small_prod;
   Int& num_large = data.back().num_large_prod;
 
-  min_prod = std::numeric_limits<double>::max();
+  min_prod = kHighsInf;
   max_prod = 0.0;
   num_small = 0;
   num_large = 0;

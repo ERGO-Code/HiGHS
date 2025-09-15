@@ -479,8 +479,7 @@ Int FactorHiGHSSolver::chooseNla() {
     // If NE has more nonzeros than the factor of AS, then it's likely that AS
     // will be preferred, so stop computation of NE.
     int64_t NE_nz_limit = symb_AS.nz() * kSymbNzMult;
-    if (failure_AS || NE_nz_limit > std::numeric_limits<Int>::max())
-      NE_nz_limit = std::numeric_limits<Int>::max();
+    if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
 
     Int NE_status = analyseNE(symb_NE, NE_nz_limit);
     if (NE_status) failure_NE = true;

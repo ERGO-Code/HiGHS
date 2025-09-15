@@ -16,9 +16,9 @@ namespace hipo {
 struct IterData {
 // data of one factorisation
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  double minD = std::numeric_limits<double>::max();
+  double minD = kHighsInf;
   double maxD = 0.0;
-  double minL = std::numeric_limits<double>::max();
+  double minL = kHighsInf;
   double maxL = 0.0;
   double max_reg = 0.0;
   Int n_reg_piv = 0;

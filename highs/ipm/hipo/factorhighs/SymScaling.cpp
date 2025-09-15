@@ -171,7 +171,7 @@ void JacekScalingSym(const std::vector<Int>& ptr, const std::vector<Int>& rows,
   for (Int iter = 0; iter < 10; ++iter) {
     // inf norm of columns
     std::vector<double> col_norms(n);
-    std::vector<double> col_min(n, std::numeric_limits<double>::max());
+    std::vector<double> col_min(n, kHighsInf);
     for (Int col = 0; col < n; ++col) {
       for (Int el = ptr[col]; el < ptr[col + 1]; ++el) {
         Int row = rows[el];

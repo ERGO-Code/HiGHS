@@ -1222,7 +1222,7 @@ void Solver::backwardError(const NewtonDir& delta) const {
       }
 
       if (denom == 0.0) {
-        if (num != 0.0) cw_back_err = std::numeric_limits<double>::max();
+        if (num != 0.0) cw_back_err = kHighsInf;
       } else {
         const double temp = num / denom;
         cw_back_err = std::max(cw_back_err, temp);
@@ -1244,7 +1244,7 @@ void Solver::backwardError(const NewtonDir& delta) const {
         }
 
         if (denom == 0.0) {
-          if (num != 0.0) cw_back_err = std::numeric_limits<double>::max();
+          if (num != 0.0) cw_back_err = kHighsInf;
         } else {
           const double temp = num / denom;
           cw_back_err = std::max(cw_back_err, temp);
@@ -1264,7 +1264,7 @@ void Solver::backwardError(const NewtonDir& delta) const {
         }
 
         if (denom == 0.0) {
-          if (num != 0.0) cw_back_err = std::numeric_limits<double>::max();
+          if (num != 0.0) cw_back_err = kHighsInf;
         } else {
           const double temp = num / denom;
           cw_back_err = std::max(cw_back_err, temp);
@@ -1290,7 +1290,7 @@ void Solver::backwardError(const NewtonDir& delta) const {
       }
 
       if (denom == 0.0) {
-        if (num != 0.0) cw_back_err = std::numeric_limits<double>::max();
+        if (num != 0.0) cw_back_err = kHighsInf;
       } else {
         const double temp = num / denom;
         cw_back_err = std::max(cw_back_err, temp);
@@ -1314,7 +1314,7 @@ void Solver::backwardError(const NewtonDir& delta) const {
         }
 
         if (denom == 0.0) {
-          if (num != 0.0) cw_back_err = std::numeric_limits<double>::max();
+          if (num != 0.0) cw_back_err = kHighsInf;
         } else {
           const double temp = num / denom;
           cw_back_err = std::max(cw_back_err, temp);
@@ -1336,7 +1336,7 @@ void Solver::backwardError(const NewtonDir& delta) const {
         }
 
         if (denom == 0.0) {
-          if (num != 0.0) cw_back_err = std::numeric_limits<double>::max();
+          if (num != 0.0) cw_back_err = kHighsInf;
         } else {
           const double temp = num / denom;
           cw_back_err = std::max(cw_back_err, temp);
