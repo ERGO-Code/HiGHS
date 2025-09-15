@@ -12,7 +12,8 @@ Direct solver for IPM matrices.
 It requires Metis and BLAS.
 
 Consider a sparse symmetric matrix M in CSC format.
-Only its lower triangular part is used.
+Only its lower triangular part is used; entries in the upper triangle are
+ignored.
 The matrix has n rows/cols and nz nonzero entries in the lower triangle.
 It is stored using three arrays:
 - ptr, column pointers, of length n+1;
@@ -45,16 +46,15 @@ object of type Log for normal printing:
     Log log;
     FHsolver FH(&log);
     ...
-Pass an object of type LogHighs for Highs logging:
+Pass an object of type LogHighs for Highs logging.
 Pass nothing to suppress all logging.
 
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
 regularisation. If regularisation is already added to the matrix, ignore.
 
-The default block size is 128. To set a different block size, use setBlockSize.
-Make sure that the block size used for the analyse and factorise phases are the
-same.
+The default block size is 128. To set a different block size, pass it as second
+input to the constructor.
 
 */
 
@@ -65,11 +65,12 @@ class FHsolver {
   DataCollector data_;
   Regul regul_;
 
-  Int nb_ = 128;  // block size
+  const Int nb_;  // block size
+  static const Int default_nb_ = 128;
 
  public:
   // Create object and initialise DataCollector
-  FHsolver(const Log* log = nullptr);
+  FHsolver(const Log* log = nullptr, Int block_size = default_nb_);
 
   // Print collected data (if any) and terminate DataCollector
   ~FHsolver();
@@ -95,9 +96,6 @@ class FHsolver {
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p, double reg_d);
-
-  // Set the block size for dense linear algebra.
-  void setBlockSize(Int nb);
 };
 
 }  // namespace hipo

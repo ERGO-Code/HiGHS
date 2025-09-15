@@ -13,15 +13,13 @@ FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
                                      IpmData* record, const LogHighs& log)
     : S_{},
       N_(S_),
-      FH_(&log),
+      FH_(&log, options.block_size),
       regul_{regul},
       info_{info},
       data_{record},
       log_{log},
       model_{model},
-      options_{options} {
-  if (options_.block_size > 0) FH_.setBlockSize(options_.block_size);
-}
+      options_{options} {}
 
 void FactorHiGHSSolver::clear() {
   valid_ = false;
@@ -486,6 +484,7 @@ Int FactorHiGHSSolver::chooseNla() {
 
     Int NE_status = analyseNE(symb_NE, NE_nz_limit);
     if (NE_status) failure_NE = true;
+    if (NE_status == kStatusOoM) log_.printDevInfo("NE matrix is too large\n");
   }
 
   Int status = kStatusOk;

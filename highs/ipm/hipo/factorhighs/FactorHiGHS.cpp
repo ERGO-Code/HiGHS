@@ -7,7 +7,8 @@
 
 namespace hipo {
 
-FHsolver::FHsolver(const Log* log) : log_{log} {
+FHsolver::FHsolver(const Log* log, Int block_size)
+    : log_{log}, nb_{block_size > 0 ? block_size : default_nb_} {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
   if (log_)
     log_->printw(
@@ -32,8 +33,6 @@ void FHsolver::setRegularisation(double reg_p, double reg_d) {
   regul_.primal = reg_p;
   regul_.dual = reg_d;
 }
-
-void FHsolver::setBlockSize(Int nb) { nb_ = nb; }
 
 Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
                       const std::vector<Int>& ptr,
