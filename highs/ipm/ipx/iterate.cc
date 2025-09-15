@@ -55,6 +55,9 @@ Iterate::Iterate(const Model& model) : model_(model) {
         }
     }
     assert_consistency();
+    this->bounds_measure_ = 1.0 + model_.norm_bounds();
+    this->costs_measure_ = 1.0 + model_.norm_c();
+    
 }
 
 void Iterate::Initialize(const Vector& x, const Vector& xl, const Vector& xu,
@@ -219,20 +222,18 @@ double Iterate::mu_max() const { Evaluate(); return mu_max_; }
 
 bool Iterate::feasible() const {
     Evaluate();
-    const double bounds_measure = 1.0 + model_.norm_bounds();
-    const double costs_measure = 1.0 + model_.norm_c();
-    const double rel_presidual = presidual_ / bounds_measure;
-    const double rel_dresidual = dresidual_ / costs_measure;
-    const bool primal_feasible = presidual_ <= feasibility_tol_ * (bounds_measure);
-    const bool dual_feasible = dresidual_ <= feasibility_tol_ * (costs_measure);
+    const double rel_presidual = presidual_ / bounds_measure_;
+    const double rel_dresidual = dresidual_ / costs_measure_;
+    const bool primal_feasible = presidual_ <= feasibility_tol_ * (bounds_measure_);
+    const bool dual_feasible = dresidual_ <= feasibility_tol_ * (costs_measure_);
     const bool is_feasible = primal_feasible && dual_feasible;
     if (kTerminationLogging) {
       printf("\nIterate::feasible presidual_ = %11.4g; bounds_measure = %11.4g; "
 	     "rel_presidual = %11.4g; feasibility_tol = %11.4g: primal_feasible = %d\n",
-	     presidual_, bounds_measure, rel_presidual, feasibility_tol_, primal_feasible);
+	     presidual_, bounds_measure_, rel_presidual, feasibility_tol_, primal_feasible);
       printf("Iterate::feasible dresidual_ = %11.4g;  costs_measure = %11.4g; "
 	     "rel_dresidual = %11.4g; feasibility_tol = %11.4g:   dual_feasible = %d\n",
-	     dresidual_, costs_measure, rel_dresidual, feasibility_tol_, dual_feasible);
+	     dresidual_, costs_measure_, rel_dresidual, feasibility_tol_, dual_feasible);
     }
     return is_feasible;
 }
