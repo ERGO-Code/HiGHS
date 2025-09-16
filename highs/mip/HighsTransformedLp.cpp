@@ -13,8 +13,9 @@
 #include "util/HighsIntegers.h"
 
 HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
-                                       HighsImplications& implications)
-    : lprelaxation(lprelaxation) {
+                                       HighsImplications& implications,
+                                       HighsDomain& globaldom)
+    : lprelaxation(lprelaxation), globaldom_(globaldom) {
   assert(lprelaxation.scaledOptimal(lprelaxation.getStatus()));
   const HighsMipSolver& mipsolver = implications.mipsolver;
   const HighsSolution& lpSolution = lprelaxation.getLpSolver().getSolution();
@@ -37,17 +38,17 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     if (mipsolver.mipdata_->workers.size() <= 1)
       mipsolver.mipdata_->implications.cleanupVarbounds(col);
 
-    if (mipsolver.mipdata_->domain.infeasible()) return;
+    if (globaldom_.infeasible()) return;
 
-    if (mipsolver.mipdata_->domain.isFixed(col)) continue;
+    if (globaldom_.isFixed(col)) continue;
 
-    double bestub = mipsolver.mipdata_->domain.col_upper_[col];
+    double bestub = globaldom_.col_upper_[col];
     simpleUbDist[col] = bestub - lpSolution.col_value[col];
     if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
       simpleUbDist[col] = 0.0;
     bestVub[col] = implications.getBestVub(col, lpSolution, bestub);
 
-    double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
+    double bestlb = globaldom_.col_lower_[col];
     simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
     if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
       simpleLbDist[col] = 0.0;
@@ -62,13 +63,13 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   }
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
-    double bestub = mipsolver.mipdata_->domain.col_upper_[col];
-    double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
+    double bestub = globaldom_.col_upper_[col];
+    double bestlb = globaldom_.col_lower_[col];
 
     if (mipsolver.mipdata_->workers.size() <= 1)
       mipsolver.mipdata_->implications.cleanupVarbounds(col);
 
-    if (mipsolver.mipdata_->domain.infeasible()) return;
+    if (globaldom_.infeasible()) return;
     simpleUbDist[col] = bestub - lpSolution.col_value[col];
     if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
       simpleUbDist[col] = 0.0;
@@ -144,12 +145,12 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   HighsInt numNz = inds.size();
 
   auto getLb = [&](HighsInt col) {
-    return (col < slackOffset ? mip.mipdata_->domain.col_lower_[col]
+    return (col < slackOffset ? globaldom_.col_lower_[col]
                               : lprelaxation.slackLower(col - slackOffset));
   };
 
   auto getUb = [&](HighsInt col) {
-    return (col < slackOffset ? mip.mipdata_->domain.col_upper_[col]
+    return (col < slackOffset ? globaldom_.col_upper_[col]
                               : lprelaxation.slackUpper(col - slackOffset));
   };
 
@@ -474,7 +475,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
       }
       case BoundType::kSimpleLb: {
         if (col < slackOffset) {
-          tmpRhs += vals[i] * mip.mipdata_->domain.col_lower_[col];
+          tmpRhs += vals[i] * globaldom_.col_lower_[col];
           vectorsum.add(col, vals[i]);
         } else {
           HighsInt row = col - slackOffset;
@@ -492,7 +493,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
       }
       case BoundType::kSimpleUb: {
         if (col < slackOffset) {
-          tmpRhs -= vals[i] * mip.mipdata_->domain.col_upper_[col];
+          tmpRhs -= vals[i] * globaldom_.col_upper_[col];
           vectorsum.add(col, -vals[i]);
         } else {
           HighsInt row = col - slackOffset;
@@ -532,15 +533,15 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 
       if (absval <= mip.mipdata_->feastol) {
         if (val > 0) {
-          if (mip.mipdata_->domain.col_lower_[col] == -kHighsInf)
+          if (globaldom_.col_lower_[col] == -kHighsInf)
             abort = true;
           else
-            tmpRhs -= val * mip.mipdata_->domain.col_lower_[col];
+            tmpRhs -= val * globaldom_.col_lower_[col];
         } else {
-          if (mip.mipdata_->domain.col_upper_[col] == kHighsInf)
+          if (globaldom_.col_upper_[col] == kHighsInf)
             abort = true;
           else
-            tmpRhs -= val * mip.mipdata_->domain.col_upper_[col];
+            tmpRhs -= val * globaldom_.col_upper_[col];
         }
         return true;
       }

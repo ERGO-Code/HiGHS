@@ -29,6 +29,7 @@ class HighsLpRelaxation;
 class HighsTransformedLp {
  private:
   const HighsLpRelaxation& lprelaxation;
+  HighsDomain& globaldom_;
 
   std::vector<std::pair<HighsInt, HighsImplications::VarBound>> bestVub;
   std::vector<std::pair<HighsInt, HighsImplications::VarBound>> bestVlb;
@@ -48,7 +49,8 @@ class HighsTransformedLp {
 
  public:
   HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
-                     HighsImplications& implications);
+                     HighsImplications& implications,
+                     HighsDomain& globaldom);
 
   double boundDistance(HighsInt col) const { return boundDist[col]; }
 
@@ -58,6 +60,8 @@ class HighsTransformedLp {
 
   bool untransform(std::vector<double>& vals, std::vector<HighsInt>& inds,
                    double& rhs, bool integral = false);
+
+  HighsDomain& getGlobaldom() const { return globaldom_; }
 };
 
 #endif

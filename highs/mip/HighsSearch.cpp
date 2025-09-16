@@ -24,7 +24,7 @@ HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
     : mipworker(mipworker),
       mipsolver(mipworker.mipsolver_),
       lp(nullptr),
-      localdom(mipworker.mipdata_.domain),
+      localdom(mipworker.globaldom_),
       pseudocost(pseudocost) {
   nnodes = 0;
   treeweight = 0.0;

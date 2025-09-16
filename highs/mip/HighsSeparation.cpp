@@ -39,7 +39,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   HighsMipSolverData& mipdata = *lp->getMipSolver().mipdata_;
 
   auto propagateAndResolve = [&]() {
-    if (propdomain.infeasible() || mipdata.domain.infeasible()) {
+    if (propdomain.infeasible() || mipworker_.globaldom_.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return -1;
@@ -58,7 +58,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
     // TODO: Currently adding a check for both. Should only need to check
     // mipworker
-    if (mipdata.domain.infeasible()) {
+    if (mipworker_.globaldom_.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return -1;
@@ -116,8 +116,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   if (&propdomain != &mipdata.domain)
     lp->computeBasicDegenerateDuals(mipdata.feastol, &propdomain);
 
-  HighsTransformedLp transLp(*lp, mipdata.implications);
-  if (mipdata.domain.infeasible()) {
+  HighsTransformedLp transLp(*lp, mipdata.implications, mipworker_.globaldom_);
+  if (mipworker_.globaldom_.infeasible()) {
     status = HighsLpRelaxation::Status::kInfeasible;
     return 0;
   }
@@ -125,7 +125,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
   for (const std::unique_ptr<HighsSeparator>& separator : separators) {
     separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
-    if (mipdata.domain.infeasible()) {
+    if (mipworker_.globaldom_.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       return 0;
     }
