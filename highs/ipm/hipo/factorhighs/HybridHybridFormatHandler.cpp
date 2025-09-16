@@ -7,10 +7,10 @@
 
 namespace hipo {
 
-HybridHybridFormatHandler::HybridHybridFormatHandler(const Symbolic& S, Int sn,
-                                                     const Regul& regul,
-                                                     DataCollector& data)
-    : FormatHandler(S, sn, regul), data_{data} {
+HybridHybridFormatHandler::HybridHybridFormatHandler(
+    const Symbolic& S, Int sn, const Regul& regul, DataCollector& data,
+    std::vector<double>& frontal)
+    : FormatHandler(S, sn, regul, frontal), data_{data} {
   // initialise frontal and clique
   initFrontal();
   initClique();
@@ -20,7 +20,7 @@ void HybridHybridFormatHandler::initFrontal() {
   const Int n_blocks = (sn_size_ - 1) / nb_ + 1;
   diag_start_.resize(n_blocks);
   Int frontal_size = getDiagStart(ldf_, sn_size_, nb_, n_blocks, diag_start_);
-  frontal_.resize(frontal_size + extra_space);
+  frontal_.assign(frontal_size + extra_space, 0.0);
   // NB: the plus 10 is not needed, but it avoids weird problems later on.
 }
 

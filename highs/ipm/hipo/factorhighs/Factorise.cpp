@@ -201,7 +201,7 @@ void Factorise::processSupernode(Int sn) {
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
   std::unique_ptr<FormatHandler> FH(
-      new HybridHybridFormatHandler(S_, sn, regul_, data_));
+      new HybridHybridFormatHandler(S_, sn, regul_, data_, sn_columns_[sn]));
 
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactorisePrepare, clock.stop());
@@ -344,8 +344,8 @@ void Factorise::processSupernode(Int sn) {
   FH->extremeEntries();
 
   // terminate the format handler
-  FH->terminate(sn_columns_[sn], schur_contribution_[sn], total_reg_,
-                swaps_[sn], pivot_2x2_[sn]);
+  FH->terminate(schur_contribution_[sn], total_reg_, swaps_[sn],
+                pivot_2x2_[sn]);
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactoriseTerminate, clock.stop());
 #endif
@@ -360,7 +360,7 @@ bool Factorise::run(Numeric& num) {
 
   // allocate space for list of generated elements and columns of L
   schur_contribution_.resize(S_.sn());
-  sn_columns_.resize(S_.sn());
+  // sn_columns_.resize(S_.sn());
   swaps_.resize(S_.sn());
   pivot_2x2_.resize(S_.sn());
 
@@ -388,7 +388,6 @@ bool Factorise::run(Numeric& num) {
   if (flag_stop_) return true;
 
   // move factorisation to numerical object
-  num.sn_columns_ = std::move(sn_columns_);
   num.total_reg_ = std::move(total_reg_);
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);

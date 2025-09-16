@@ -99,6 +99,8 @@ class FHsolver {
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p, double reg_d);
+
+  std::vector<std::vector<double>>& columns();
 };
 
 /* To do

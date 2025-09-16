@@ -12,7 +12,9 @@
 
 namespace hipo {
 
-Numeric::Numeric(const Symbolic& S) : S_{S} {
+Numeric::Numeric(const Symbolic& S,
+                 std::vector<std::vector<double>>& sn_columns)
+    : S_{S}, sn_columns_{sn_columns} {
   // initialise solve handler
   SH_.reset(new HybridSolveHandler(S_, sn_columns_, swaps_, pivot_2x2_));
 }

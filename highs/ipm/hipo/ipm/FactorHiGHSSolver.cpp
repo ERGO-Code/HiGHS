@@ -11,9 +11,9 @@ namespace hipo {
 FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
                                      const Regularisation& regul, Info* info,
                                      IpmData* record, const LogHighs& log)
-    : S_{},
-      N_(S_),
-      FH_(&log, options.block_size),
+    : FH_(&log, options.block_size),
+      S_{},
+      N_(S_, FH_.columns()),
       regul_{regul},
       info_{info},
       data_{record},

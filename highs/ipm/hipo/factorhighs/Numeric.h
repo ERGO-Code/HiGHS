@@ -13,7 +13,7 @@ namespace hipo {
 
 class Numeric {
   // columns of factorisation, stored by supernode
-  std::vector<std::vector<double>> sn_columns_{};
+  const std::vector<std::vector<double>>& sn_columns_;
 
   // swaps of columns for each supernode, ordered locally within a block
   std::vector<std::vector<Int>> swaps_{};
@@ -43,7 +43,7 @@ class Numeric {
   // dynamic regularisation applied to the matrix
   std::vector<double> total_reg_{};
 
-  Numeric(const Symbolic& S);
+  Numeric(const Symbolic& S, std::vector<std::vector<double>>& sn_columns);
 
   // Full solve with refinement
   // Return pair (number of solves, final residual)
