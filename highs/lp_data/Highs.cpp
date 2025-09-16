@@ -4392,23 +4392,39 @@ void Highs::newHighsBasis() {
 // model, and that the HiGHS basis is kept up-to-date with any solved
 // basis
 void Highs::forceHighsSolutionBasisSize() {
-  // Ensure that the HiGHS solution vectors are the right size
-  solution_.col_value.resize(model_.lp_.num_col_);
-  solution_.row_value.resize(model_.lp_.num_row_);
-  solution_.col_dual.resize(model_.lp_.num_col_);
-  solution_.row_dual.resize(model_.lp_.num_row_);
-  // Ensure that the HiGHS basis vectors are the right size,
-  // invalidating the basis if they aren't
-  if (basis_.col_status.size() != static_cast<size_t>(model_.lp_.num_col_)) {
-    basis_.col_status.resize(model_.lp_.num_col_);
+  // Ensure that the HiGHS solution and basis vectors are the right size
+  //
+  // If the column or row, values or duals, are increased in size,
+  // ensure that values are assigned to the new entries, and that
+  // validity and status values are over-written in HighsSolution,
+  // HighsBasis and HighsInfo
+  const HighsInt num_col = this->model_.lp_.num_col_;
+  const HighsInt num_row = this->model_.lp_.num_row_;
+  // Values
+  if (solution_.col_value.size() < static_cast<size_t>(num_col) ||
+      solution_.row_value.size() < static_cast<size_t>(num_row)) {
+    solution_.value_valid = false;
+    info_.primal_solution_status = kSolutionStatusNone;
+  }
+  solution_.col_value.resize(num_col, 0);
+  solution_.row_value.resize(num_row, 0);
+  // Duals
+  if (solution_.col_dual.size() < static_cast<size_t>(num_col) ||
+      solution_.row_dual.size() < static_cast<size_t>(num_row)) {
+    solution_.dual_valid = false;
+    info_.dual_solution_status = kSolutionStatusNone;
+  }
+  solution_.col_dual.resize(num_col, 0);
+  solution_.row_dual.resize(num_row, 0);
+  // Basis
+  if (basis_.col_status.size() != static_cast<size_t>(num_col) ||
+      basis_.row_status.size() != static_cast<size_t>(num_row)) {
     basis_.valid = false;
     basis_.useful = false;
+    info_.basis_validity = kBasisValidityInvalid;
   }
-  if (basis_.row_status.size() != static_cast<size_t>(model_.lp_.num_row_)) {
-    basis_.row_status.resize(model_.lp_.num_row_);
-    basis_.valid = false;
-    basis_.useful = false;
-  }
+  basis_.col_status.resize(num_col, HighsBasisStatus::kNonbasic);
+  basis_.row_status.resize(num_row, HighsBasisStatus::kBasic);
 }
 
 void Highs::setHighsModelStatusAndClearSolutionAndBasis(
