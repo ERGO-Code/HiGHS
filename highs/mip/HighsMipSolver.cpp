@@ -150,19 +150,6 @@ restart:
       mipdata_->queryExternalSolution(
           solution_objective_, kExternalMipSolutionQueryOriginAfterSetup);
 
-    if (options_mip_->mip_heuristic_run_feasibility_jump) {
-      // Apply the feasibility jump before evaluating the root node
-      analysis_.mipTimerStart(kMipClockFeasibilityJump);
-      HighsModelStatus returned_model_status = mipdata_->feasibilityJump();
-      analysis_.mipTimerStop(kMipClockFeasibilityJump);
-      if (modelstatus_ == HighsModelStatus::kNotset &&
-          returned_model_status == HighsModelStatus::kInfeasible) {
-        // feasibilityJump can spot trivial infeasibility, so act on it
-        modelstatus_ = returned_model_status;
-        cleanupSolve();
-        return;
-      }
-    }
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
     HighsModelStatus returned_model_status = mipdata_->trivialHeuristics();
@@ -174,6 +161,20 @@ restart:
       cleanupSolve();
       return;
     }
+    // Apply the feasibility jump heuristic (if enabled)
+    if (options_mip_->mip_heuristic_run_feasibility_jump) {
+      analysis_.mipTimerStart(kMipClockFeasibilityJump);
+      HighsModelStatus returned_model_status = mipdata_->feasibilityJump();
+      analysis_.mipTimerStop(kMipClockFeasibilityJump);
+      if (modelstatus_ == HighsModelStatus::kNotset &&
+          returned_model_status == HighsModelStatus::kInfeasible) {
+        // feasibilityJump can spot trivial infeasibility, so act on it
+        modelstatus_ = returned_model_status;
+        cleanupSolve();
+        return;
+      }
+    }
+    // End of pre-root-node heuristics
     if (analysis_.analyse_mip_time && !submip)
       if (analysis_.analyse_mip_time & !submip)
         highsLogUser(options_mip_->log_options, HighsLogType::kInfo,

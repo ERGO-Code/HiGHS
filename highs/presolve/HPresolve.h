@@ -209,6 +209,8 @@ class HPresolve {
 
   bool isEquation(HighsInt row) const;
 
+  bool isRanged(HighsInt row) const;
+
   bool isImpliedEquationAtLower(HighsInt row) const;
 
   bool isImpliedEquationAtUpper(HighsInt row) const;
