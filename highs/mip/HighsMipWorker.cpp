@@ -11,11 +11,13 @@
 #include "mip/MipTimer.h"
 
 HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
-                               HighsLpRelaxation& lprelax_)
+                               HighsLpRelaxation& lprelax_,
+                               HighsDomain& domain)
     : mipsolver_(mipsolver__),
       mipdata_(*mipsolver_.mipdata_.get()),
       lprelaxation_(lprelax_),
       pseudocost_(mipsolver__),
+      globaldom_(domain),
       cutpool_(mipsolver_.numCol(), mipsolver_.options_mip_->mip_pool_age_limit,
                mipsolver_.options_mip_->mip_pool_soft_limit),
       conflictpool_(5 * mipsolver_.options_mip_->mip_pool_age_limit,
@@ -69,7 +71,8 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
 
 const HighsMipSolver& HighsMipWorker::getMipSolver() { return mipsolver_; }
 
-void HighsMipWorker::resetSearchDomain() {
+void HighsMipWorker::resetSearch() {
+  // globaldom_.setDomainChangeStack(std::vector<HighsDomainChange>());
   search_ptr_.reset();
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));

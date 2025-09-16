@@ -23,7 +23,8 @@
 #include "mip/HighsTransformedLp.h"
 
 // HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
-HighsSeparation::HighsSeparation(const HighsMipWorker& mipworker) {
+HighsSeparation::HighsSeparation(HighsMipWorker& mipworker)
+    : mipworker_(mipworker) {
   implBoundClock = mipworker.mipsolver_.timer_.clock_def("Implbound sepa");
   cliqueClock = mipworker.mipsolver_.timer_.clock_def("Clique sepa");
   separators.emplace_back(new HighsTableauSeparator(mipworker.mipsolver_));
@@ -55,6 +56,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     if (&propdomain == &mipdata.domain)
       mipdata.cliquetable.cleanupFixed(mipdata.domain);
 
+    // TODO: Currently adding a check for both. Should only need to check
+    // mipworker
     if (mipdata.domain.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
@@ -79,6 +82,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     return numBoundChgs;
   };
 
+  // TODO: Only enable this after adding delta implications. Or simply disable
+  // additional probing in parallel case
   if (&propdomain == &mipdata.domain) {
     lp->getMipSolver().timer_.start(implBoundClock);
     mipdata.implications.separateImpliedBounds(
@@ -93,6 +98,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
+  // TODO: This can be enabled if randgen and cliquesubsumption are disabled for
+  // parallel case
   if (&propdomain == &mipdata.domain) {
     lp->getMipSolver().timer_.start(cliqueClock);
     mipdata.cliquetable.separateCliques(lp->getMipSolver(), sol.col_value,
@@ -116,13 +123,11 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   }
   HighsLpAggregator lpAggregator(*lp);
 
-  if (&propdomain == &mipdata.domain) {
-    for (const std::unique_ptr<HighsSeparator>& separator : separators) {
-      separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
-      if (mipdata.domain.infeasible()) {
-        status = HighsLpRelaxation::Status::kInfeasible;
-        return 0;
-      }
+  for (const std::unique_ptr<HighsSeparator>& separator : separators) {
+    separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
+    if (mipdata.domain.infeasible()) {
+      status = HighsLpRelaxation::Status::kInfeasible;
+      return 0;
     }
   }
 
@@ -132,10 +137,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
-  if (&propdomain == &mipdata.domain) {
-    mipdata.cutpool.separate(sol.col_value, propdomain, cutset,
-                             mipdata.feastol);
-  }
+  mipdata.cutpool.separate(sol.col_value, propdomain, cutset,
+                           mipdata.feastol);
 
   if (cutset.numCuts() > 0) {
     ncuts += cutset.numCuts();

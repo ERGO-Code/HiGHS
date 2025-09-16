@@ -31,9 +31,10 @@ class HighsSeparation {
   void setLpRelaxation(HighsLpRelaxation* lp) { this->lp = lp; }
 
   // HighsSeparation(const HighsMipSolver& mipsolver);
-  HighsSeparation(const HighsMipWorker& mipworker);
+  HighsSeparation(HighsMipWorker& mipworker);
 
  private:
+  HighsMipWorker& mipworker_;
   HighsInt implBoundClock;
   HighsInt cliqueClock;
   std::vector<std::unique_ptr<HighsSeparator>> separators;

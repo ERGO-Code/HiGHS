@@ -137,7 +137,7 @@ void HighsMipSolver::run() {
   // Initialize master worker.
   // Now the worker lives in mipdata.
   // The master worker is used in evaluateRootNode.
-  mipdata_->workers.emplace_back(*this, mipdata_->lp);
+  mipdata_->workers.emplace_back(*this, mipdata_->lp, mipdata_->domain);
 
   HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
@@ -259,7 +259,7 @@ restart:
   // HighsSearch search{master_worker, mipdata_->pseudocost};
   // search.setLpRelaxation(&mipdata_->lp);
   // MT: I think search should be ties to the master worker
-  master_worker.resetSearchDomain();
+  master_worker.resetSearch();
   HighsSearch& search = *master_worker.search_ptr_;
 
   // This search is from the worker and will use the worker pseudocost.
@@ -319,10 +319,11 @@ restart:
 
   for (int i = 1; i < mip_search_concurrency; i++) {
     if (mipdata_->numRestarts <= mipdata_->numRestartsRoot) {
-      mipdata_->lps.emplace_back(*this);
-      mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
+      mipdata_->domains.emplace_back(mipdata_->domain);
+      mipdata_->lps.emplace_back(mipdata_->lp);
+      mipdata_->workers.emplace_back(*this, mipdata_->lps.back(), mipdata_->domains.back());
     } else {
-      mipdata_->workers[i].resetSearchDomain();
+      mipdata_->workers[i].resetSearch();
     }
   }
 

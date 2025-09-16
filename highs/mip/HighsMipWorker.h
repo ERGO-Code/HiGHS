@@ -26,6 +26,7 @@ class HighsMipWorker {
   const HighsMipSolverData& mipdata_;
 
   HighsPseudocost pseudocost_;
+  HighsDomain& globaldom_;
 
   std::unique_ptr<HighsSearch> search_ptr_;
 
@@ -46,7 +47,8 @@ class HighsMipWorker {
 
   // HighsMipWorker(const HighsMipSolver& mipsolver__);
   HighsMipWorker(const HighsMipSolver& mipsolver__,
-                 HighsLpRelaxation& lprelax_);
+                 HighsLpRelaxation& lprelax_,
+                 HighsDomain& domain);
 
   ~HighsMipWorker() {
     // search_ptr_.release();
@@ -55,7 +57,7 @@ class HighsMipWorker {
 
   const bool checkLimits(int64_t nodeOffset = 0) const;
 
-  void resetSearchDomain();
+  void resetSearch();
 
   // bool addIncumbent(const std::vector<double>& sol, double solobj,
   //                   const int solution_source,
