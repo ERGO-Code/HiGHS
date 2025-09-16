@@ -56,9 +56,6 @@ class HighsMipSolver {
 
   HighsMipAnalysis analysis_;
 
-  // concurrency related information
-  bool search_started;
-
   void run();
 
   HighsInt numCol() const { return model_->num_col_; }

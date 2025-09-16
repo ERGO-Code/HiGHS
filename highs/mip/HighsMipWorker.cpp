@@ -27,9 +27,9 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
 
   // Register cutpool and conflict pool in local search domain.
   // Add global cutpool.
-  search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
-  search_ptr_->getLocalDomain().addConflictPool(
-      mipsolver_.mipdata_->conflictPool);
+  // search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
+  // search_ptr_->getLocalDomain().addConflictPool(
+  //     mipsolver_.mipdata_->conflictPool);
 
   // cutpool_.matrix_.AheadNeg_.assign(mipsolver__.numCol(), -1);
   // cutpool_.matrix_.AheadPos_.assign(mipsolver__.numCol(), -1);
@@ -82,6 +82,8 @@ void HighsMipWorker::resetSearchDomain() {
   conflictpool_ =
       HighsConflictPool(5 * mipsolver_.options_mip_->mip_pool_age_limit,
                         mipsolver_.options_mip_->mip_pool_soft_limit);
+  // search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
+  // search_ptr_->getLocalDomain().addConflictPool(mipsolver_.mipdata_->conflictPool);
   search_ptr_->getLocalDomain().addCutpool(cutpool_);
   search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
   search_ptr_->setLpRelaxation(&lprelaxation_);

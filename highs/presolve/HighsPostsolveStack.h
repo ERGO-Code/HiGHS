@@ -622,7 +622,8 @@ class HighsPostsolveStack {
       colValuesCopy = colValues;
       rowValuesCopy = rowValues;
     }
-    HighsDataStack& reductionValues_ = thread_safe ? reductionValuesCopy : reductionValues;
+    HighsDataStack& reductionValues_ =
+        thread_safe ? reductionValuesCopy : reductionValues;
     std::vector<Nonzero>& colValues_ = thread_safe ? colValuesCopy : colValues;
     std::vector<Nonzero>& rowValues_ = thread_safe ? rowValuesCopy : rowValues;
 

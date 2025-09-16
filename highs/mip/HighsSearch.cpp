@@ -1989,11 +1989,13 @@ HighsDomain& HighsSearch::getDomain() const {
 }
 
 HighsConflictPool& HighsSearch::getConflictPool() const {
-  return mipsolver.mipdata_->conflictPool;
+  return mipworker.conflictpool_;
+  // return mipsolver.mipdata_->conflictPool;
 }
 
 HighsCutPool& HighsSearch::getCutPool() const {
-  return mipsolver.mipdata_->cutpool;
+  return mipworker.cutpool_;
+  // return mipsolver.mipdata_->cutpool;
 }
 
 const HighsDebugSol& HighsSearch::getDebugSolution() const {
@@ -2016,9 +2018,12 @@ bool HighsSearch::addIncumbent(const std::vector<double>& sol, double solobj,
                                const int solution_source,
                                const bool print_display_line) {
   // if (mipsolver.mipdata_->workers.size() <= 1)
-  return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
-                                          print_display_line);
-
+  if (mipsolver.mipdata_->parallelLockActive()) {
+    return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
+                                            print_display_line);
+  } else {
+    return mipworker.addIncumbent(sol, solobj, solution_source);
+  }
   // dive part.
   // return mipworker.addIncumbent(sol, solobj, solution_source,
   //                                         print_display_line);

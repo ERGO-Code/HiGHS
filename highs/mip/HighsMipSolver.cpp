@@ -142,7 +142,7 @@ void HighsMipSolver::run() {
   HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
 restart:
-  search_started = false;
+  mipdata_->parallel_lock = false;
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
     if (mipdata_->checkLimits()) {
@@ -312,7 +312,7 @@ restart:
   // Initialize worker relaxations and mipworkers
   // todo lps and workers are still empty right now
 
-  search_started = true;
+  mipdata_->parallel_lock = true;
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt num_worker = mip_search_concurrency - 1;
   highs::parallel::TaskGroup tg;
@@ -450,9 +450,7 @@ restart:
       std::vector<HighsSearch::NodeResult> dive_results(
           mip_search_concurrency, HighsSearch::NodeResult::kBranched);
       for (int i = 0; i < mip_search_concurrency; i++) {
-        printf("%d is the value used!!\n", i);
         tg.spawn([&, i]() {
-          printf("%d is the value used in start of the spawn!!\n", i);
           if (!mipdata_->workers[i].search_ptr_->hasNode() ||
               mipdata_->workers[i].search_ptr_->currentNodePruned()) {
             dive_times[i] = -1;
@@ -460,34 +458,9 @@ restart:
             dive_results[i] = mipdata_->workers[i].search_ptr_->dive();
             dive_times[i] += analysis_.mipTimerRead(kMipClockNodeSearch);
           }
-          printf("%d = !hasNode\n", !mipdata_->workers[i].search_ptr_->hasNode());
-          printf("%d is the value used in the spawn!!\n", i);
         });
       }
-      // auto task = [&](const int idx) {
-      //   if (!mipdata_->workers[idx].search_ptr_->hasNode() ||
-      //       mipdata_->workers[idx].search_ptr_->currentNodePruned()) {
-      //     dive_times[idx] = -1;
-      //   } else {
-      //     dive_results[idx] = mipdata_->workers[idx].search_ptr_->dive();
-      //     dive_times[idx] += analysis_.mipTimerRead(kMipClockNodeSearch);
-      //   }
-      // };
-      // for (int i = 0; i < mip_search_concurrency; i++) {
-      //   tg.spawn([&]() {
-      //     task(i);
-      //   });
-      // }
-      // tg.spawn([&]() {
-      //   if (!mipdata_->workers[0].search_ptr_->hasNode() ||
-      //       mipdata_->workers[0].search_ptr_->currentNodePruned()) {
-      //     dive_times[0] = -1;
-      //   } else {
-      //     dive_results[0] = mipdata_->workers[0].search_ptr_->dive();
-      //     dive_times[0] += analysis_.mipTimerRead(kMipClockNodeSearch);
-      //   }
-      // });
-      tg.sync();
+      tg.taskWait();
       bool suboptimal = false;
       for (int i = 0; i < 1; i++) {
         if (dive_times[i] != -1) {
@@ -524,13 +497,16 @@ restart:
         break;
       }
 
-      HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
-      if (numPlungeNodes >= 100) break;
+      if (mipdata_->workers.size() <= 1) {
+        HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
+        if (numPlungeNodes >= 100) break;
 
-      analysis_.mipTimerStart(kMipClockBacktrackPlunge);
-      const bool backtrack_plunge = search.backtrackPlunge(mipdata_->nodequeue);
-      analysis_.mipTimerStop(kMipClockBacktrackPlunge);
-      if (!backtrack_plunge) break;
+        analysis_.mipTimerStart(kMipClockBacktrackPlunge);
+        const bool backtrack_plunge =
+            search.backtrackPlunge(mipdata_->nodequeue);
+        analysis_.mipTimerStop(kMipClockBacktrackPlunge);
+        if (!backtrack_plunge) break;
+      }
 
       assert(search.hasNode());
 
@@ -540,18 +516,43 @@ restart:
         mipdata_->conflictPool.performAging();
         analysis_.mipTimerStop(kMipClockPerformAging2);
       }
+      // for (int i = 0; i < mip_search_concurrency; i++) {
+      //   if (mipdata_->workers[i].conflictpool_.getNumConflicts() >
+      //       options_mip_->mip_pool_soft_limit) {
+      //     analysis_.mipTimerStart(kMipClockPerformAging2);
+      //     mipdata_->workers[i].conflictpool_.performAging();
+      //     analysis_.mipTimerStop(kMipClockPerformAging2);
+      //   }
+      // }
 
-      search.flushStatistics();
+      for (int i = 0; i < mip_search_concurrency; i++) {
+        mipdata_->workers[i].search_ptr_->flushStatistics();
+      }
       mipdata_->printDisplayLine();
+      if (mipdata_->workers.size() >= 2) break;
       // printf("continue plunging due to good estimate\n");
     }  // while (true)
     analysis_.mipTimerStop(kMipClockDive);
 
     analysis_.mipTimerStart(kMipClockOpenNodesToQueue0);
     search.openNodesToQueue(mipdata_->nodequeue);
+    // for (int i = 0; i < mip_search_concurrency; i++) {
+    //   mipdata_->workers[i].search_ptr_->openNodesToQueue(mipdata_->nodequeue);
+    // }
     analysis_.mipTimerStop(kMipClockOpenNodesToQueue0);
 
-    search.flushStatistics();
+    for (int i = 0; i < mip_search_concurrency; i++) {
+      mipdata_->workers[i].search_ptr_->flushStatistics();
+    }
+
+    // MT: Should a primal solution sync be done here?
+    for (int i = 0; i < mip_search_concurrency; i++) {
+      for (auto& sol : mipdata_->workers[i].solutions_) {
+        mipdata_->addIncumbent(std::get<0>(sol), std::get<1>(sol),
+                               std::get<2>(sol));
+      }
+      mipdata_->workers[i].solutions_.clear();
+    }
 
     if (limit_reached) {
       double prev_lower_bound = mipdata_->lower_bound;
@@ -572,6 +573,7 @@ restart:
     assert(!search.hasNode());
 
     // propagate the global domain
+    // todo MT: When does the global domain ever update in parallel dive?
     analysis_.mipTimerStart(kMipClockDomainPropgate);
     mipdata_->domain.propagate();
     analysis_.mipTimerStop(kMipClockDomainPropgate);
