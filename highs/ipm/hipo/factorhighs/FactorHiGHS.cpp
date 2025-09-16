@@ -45,15 +45,8 @@ Int FHsolver::factorise(Numeric& N, const Symbolic& S,
                         const std::vector<Int>& rows,
                         const std::vector<Int>& ptr,
                         const std::vector<double>& vals) {
-  if (sn_columns_.empty()) {
-    sn_columns_.resize(S.sn());
-    printf("Resizing\n");
-  }
-
   Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_, sn_columns_);
   return fact_obj.run(N);
 }
-
-std::vector<std::vector<double>>& FHsolver::columns() { return sn_columns_; }
 
 }  // namespace hipo

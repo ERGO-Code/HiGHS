@@ -360,7 +360,7 @@ bool Factorise::run(Numeric& num) {
 
   // allocate space for list of generated elements and columns of L
   schur_contribution_.resize(S_.sn());
-  // sn_columns_.resize(S_.sn());
+  sn_columns_.resize(S_.sn());
   swaps_.resize(S_.sn());
   pivot_2x2_.resize(S_.sn());
 
@@ -388,6 +388,7 @@ bool Factorise::run(Numeric& num) {
   if (flag_stop_) return true;
 
   // move factorisation to numerical object
+  num.sn_columns_ = &sn_columns_;
   num.total_reg_ = std::move(total_reg_);
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);

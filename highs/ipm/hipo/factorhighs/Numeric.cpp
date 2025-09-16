@@ -12,15 +12,15 @@
 
 namespace hipo {
 
-Numeric::Numeric(const Symbolic& S,
-                 std::vector<std::vector<double>>& sn_columns)
-    : S_{S}, sn_columns_{sn_columns} {
-  // initialise solve handler
-  SH_.reset(new HybridSolveHandler(S_, sn_columns_, swaps_, pivot_2x2_));
-}
+Numeric::Numeric(const Symbolic& S) : S_{S} {}
 
 std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
   // Return the number of solves performed
+
+  assert(sn_columns_);
+
+  // initialise solve handler
+  SH_.reset(new HybridSolveHandler(S_, *sn_columns_, swaps_, pivot_2x2_));
 
   SH_->setData(data_);
 

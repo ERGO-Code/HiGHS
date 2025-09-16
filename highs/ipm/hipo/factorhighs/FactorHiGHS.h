@@ -99,8 +99,6 @@ class FHsolver {
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p, double reg_d);
-
-  std::vector<std::vector<double>>& columns();
 };
 
 /* To do
@@ -123,6 +121,12 @@ class FHsolver {
   probably considerably increase the memory usage though and the stack approach
   is to be preferred. However, the latter requires a different parallelisation.
 
+
+- at the moment, I managed to keep the same interface to Numeric, but it's a bit
+  ugly. Maybe Numeric should be an object that is crested by Factorise, which
+  only contains pointers to data. Then I can just copy into the general numeric
+  object within FactorHiGHSSolver and include the pointers to the most up to
+  date data.
 */
 
 }  // namespace hipo

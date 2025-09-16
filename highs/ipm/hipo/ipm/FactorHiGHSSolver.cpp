@@ -13,7 +13,7 @@ FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
                                      IpmData* record, const LogHighs& log)
     : FH_(&log, options.block_size),
       S_{},
-      N_(S_, FH_.columns()),
+      N_(S_),
       regul_{regul},
       info_{info},
       data_{record},
