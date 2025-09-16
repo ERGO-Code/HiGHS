@@ -4,8 +4,6 @@
 #include <vector>
 #include "ipm/ipx/ipx_internal.h"
 
-const bool kTerminationLogging = false;
-
 namespace ipx {
 
 bool AllFinite(const Vector& x);
