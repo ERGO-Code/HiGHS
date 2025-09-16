@@ -68,6 +68,9 @@ class FHsolver {
   const Int nb_;  // block size
   static const Int default_nb_ = 128;
 
+  // columns of factorisation, stored by supernode
+  std::vector<std::vector<double>> sn_columns_;
+
  public:
   // Create object and initialise DataCollector
   FHsolver(const Log* log = nullptr, Int block_size = default_nb_);
@@ -97,6 +100,28 @@ class FHsolver {
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p, double reg_d);
 };
+
+/* To do
+
+- At the moment, the format handler allocates new space for frontal each time,
+  and then moves the values into sn_columns_, with the previous space being
+  deallocated. This is very inefficient, because it causes many memory
+  allocation/deallocation. It may also cause fragmentation.
+- Have sn_columns_ outside of factorise, into FHsolver. Then, pass it into
+  Factorise and assemble the contributions directly in place. Numeric then
+  receives a pointer to the data, so that it can access the data in the same way
+  as now. Format handler needs to assign zeros during initialization each time.
+- In this way, the space for the columns of the factor is persistent throughout
+  the ipm iterations, no extra allocation/deallocation is needed, no copies are
+  needed. Potentially, there may be more contention of the cache lines, but this
+  is to be seen.
+
+- For the moment, the same can be done with cliques. No need to
+  allocate/deallocate them. They can stay allocated and be reused. This would
+  probably considerably increase the memory usage though and the stack approach
+  is to be preferred. However, the latter requires a different parallelisation.
+
+*/
 
 }  // namespace hipo
 

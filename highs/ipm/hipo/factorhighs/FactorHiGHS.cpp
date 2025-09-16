@@ -45,7 +45,7 @@ Int FHsolver::factorise(Numeric& N, const Symbolic& S,
                         const std::vector<Int>& rows,
                         const std::vector<Int>& ptr,
                         const std::vector<double>& vals) {
-  Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_);
+  Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_, sn_columns_);
   return fact_obj.run(N);
 }
 
