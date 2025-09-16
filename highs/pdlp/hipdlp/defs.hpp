@@ -24,6 +24,15 @@ enum class RestartStrategy { NO_RESTART, FIXED_RESTART, ADAPTIVE_RESTART };
 
 enum class StepSizeStrategy { FIXED, ADAPTIVE, MALITSKY_POCK };
 
+enum class PostSolveRetcode {
+  OK = 0,
+  INVALID_SOLUTION = 1,
+  SCALING_ERROR = 2,
+  DIMENSION_MISMATCH = 3,
+  NUMERICAL_ERROR = 4,
+  CONSTRAINT_VIOLATION = 5
+};
+
 struct MalitskyPockParams {
   double step_size_interpolation = 0.5;  // Between 0 and 1
   double step_size_downscaling_factor = 0.7;

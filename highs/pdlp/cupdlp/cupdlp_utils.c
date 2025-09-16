@@ -1795,3 +1795,13 @@ void debugPdlpAxNormLog(FILE* file, const double ax_norm) {
 void debugPdlpAtyNormLog(FILE* file, const double aty_norm) {
   fprintf(file, "||A^Ty|| = %g\n", aty_norm);
 }
+
+void debugPdlpRestartLog(FILE* file, const int iter_num, const double current_score, const double average_score) {
+  fprintf(file, "Restart at iter %6d: Current Score = %.6g, Average Score = %.6g\n", iter_num, current_score, average_score);
+}
+
+void debugPdlpRestarScoretLog(FILE* file, const double weight_squared, const double primal_feas, 
+const double dual_feas, const double obj_gap) {
+  fprintf(file, "Restart Score: Weight^2 = %.6g, Primal Feas = %.6g, Dual Feas = %.6g, Obj Gap = %.6g\n", 
+  weight_squared, primal_feas, dual_feas, obj_gap);
+}

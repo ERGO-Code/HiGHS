@@ -40,7 +40,7 @@ class PDLPSolver {
   void scaleProblem();
   void solve(std::vector<double>& x, std::vector<double>& y);
   void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
-  void postprocess(HighsSolution& solution);
+  PostSolveRetcode postprocess(HighsSolution& solution);
   void setSolution(const std::vector<double>& col_value,
                    const std::vector<double>& row_dual);
   void getSolution(std::vector<double>& col_value,
@@ -61,6 +61,9 @@ class PDLPSolver {
 
   int final_iter_count_ = 0;
   int original_num_col_;
+  int original_num_row_;
+  int num_eq_rows_;  // Number of equality-like rows (EQ, BOUND, FREE)
+  std::vector<int> constraint_orig_idx_;
   std::vector<int> constraint_new_idx_;  // stores permutation for rows
   std::vector<ConstraintType>
       constraint_types_;  // stores type of each original row

@@ -191,8 +191,26 @@ void PDLPSolver::preprocessLp() {
                std::to_string(processed_lp.num_col_) + " cols.");
 }
 
-void PDLPSolver::postprocess(HighsSolution& solution) {
+PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   logger_.info("Post-solving the solution...");
+
+  if (original_lp_ == nullptr) {
+    return PostSolveRetcode::DIMENSION_MISMATCH;
+  }
+
+  if (x_current_.empty() || y_current_.empty()) {
+    return PostSolveRetcode::INVALID_SOLUTION;
+  }
+
+  if (x_current_.size() != lp_.num_col_ ||
+      y_current_.size() != lp_.num_row_) {
+      logger_.info("Solution dimension mismatch: x_current size=" + 
+                std::to_string(x_current_.size()) + " vs expected=" + 
+                std::to_string(lp_.num_col_) + ", y_current size=" +
+                std::to_string(y_current_.size()) + " vs expected=" + 
+                std::to_string(lp_.num_row_));
+    return PostSolveRetcode::DIMENSION_MISMATCH;
+  }
 
   std::vector<double> x_unscaled = x_current_;
   std::vector<double> y_unscaled = y_current_;
@@ -218,9 +236,18 @@ void PDLPSolver::postprocess(HighsSolution& solution) {
   solution.row_dual.resize(original_lp_->num_row_);
 
   // 3. Recover Primal Column Values (x)
-  // This is the easy part: just take the first 'original_num_col_' elements.
-  for (int i = 0; i < original_num_col_; ++i) {
+  for (int i = 0; i < original_lp_->num_col_; ++i) {
+    if (i >= (int)x_unscaled.size()) {
+      logger_.info("Index " + std::to_string(i) + " out of bounds for x_unscaled of size " + std::to_string(x_unscaled.size()));
+      return PostSolveRetcode::DIMENSION_MISMATCH;
+    }
+
     solution.col_value[i] = x_unscaled[i];
+
+    if (!std::isfinite(solution.col_value[i])) {
+      logger_.info("Non-finite primal variable value at index " + std::to_string(i) + ": " + std::to_string(solution.col_value[i]));
+      return PostSolveRetcode::NUMERICAL_ERROR;
+    }
   }
 
   double final_primal_objective = original_lp_->offset_;
@@ -231,7 +258,6 @@ void PDLPSolver::postprocess(HighsSolution& solution) {
   results_.primal_obj = final_primal_objective;
 
   // 4. Recover Dual Row Values (y)
-  // This requires reversing the sign flip for LEQ constraints.
   for (int i = 0; i < original_lp_->num_row_; ++i) {
     if (constraint_types_[i] == LEQ) {
       solution.row_dual[i] = -y_unscaled[i];
@@ -241,8 +267,6 @@ void PDLPSolver::postprocess(HighsSolution& solution) {
   }
 
   // 5. Recover Primal Row Values (Ax)
-  // This requires re-calculating Ax with the unscaled solution and using the
-  // slack values.
   HighsLp unscaled_processed_lp = lp_;
 
   if (scaling_.IsScaled()) {
@@ -278,12 +302,18 @@ void PDLPSolver::postprocess(HighsSolution& solution) {
   // The duals on the variable bounds l <= x <= u are the reduced costs.
   // In the PDLP framework, these are given by dSlackPos - dSlackNeg.
   for (int i = 0; i < original_num_col_; ++i) {
+    if (i >= (int)dSlackPos_unscaled.size() || i >= (int)dSlackNeg_unscaled.size()) {
+      logger_.info("Index " + std::to_string(i) + " out of bounds for dSlackPos/Neg_unscaled of size " + std::to_string(dSlackPos_unscaled.size()));
+      return PostSolveRetcode::DIMENSION_MISMATCH;
+    }
     solution.col_dual[i] = dSlackPos_unscaled[i] - dSlackNeg_unscaled[i];
   }
 
-  solution.value_valid = true;
-  solution.dual_valid = true;  // We can now set this to true
+  solution.value_valid = true; // to do
+  solution.dual_valid = true; 
   logger_.info("Post-solve complete.");
+
+  return PostSolveRetcode::OK;
 }
 
 void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
@@ -321,6 +351,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       step_size.dual_step);
 
   // --- 1. Initialization ---
+  restart_scheme_.passLogOptions(&working_params.log_options_);
+  restart_scheme_.passDebugLogFile(debug_pdlp_log_file_);
   Initialize(lp, x, y);  // Sets initial x, y and results_
   restart_scheme_.Initialize(results_);
 

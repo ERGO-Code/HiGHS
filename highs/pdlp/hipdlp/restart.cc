@@ -15,6 +15,7 @@
 #include <cmath>
 
 #include "io/HighsIO.h"  // For pdlpLogging
+#include "pdlp/cupdlp/cupdlp.h"  // For pdlpLogging
 
 // Initializes the restart scheme with parameters and initial results
 void RestartScheme::Initialize(const SolverResults& results) {
@@ -40,6 +41,8 @@ double RestartScheme::ComputeRestartScore(const SolverResults& results) {
       results.primal_feasibility * results.primal_feasibility;
   double dual_feas_sq = results.dual_feasibility * results.dual_feasibility;
   double gap_sq = results.duality_gap * results.duality_gap;
+
+  debugPdlpRestarScoretLog(debug_log_file_, weight_squared, results.primal_feasibility, results.dual_feasibility, results.duality_gap);
 
   return std::sqrt(weight_squared * primal_feas_sq +
                    dual_feas_sq / weight_squared + gap_sq);
@@ -72,6 +75,8 @@ RestartInfo RestartScheme::Check(int current_iter,
     case RestartStrategy::ADAPTIVE_RESTART: {
       double current_score = ComputeRestartScore(current_results);
       double average_score = ComputeRestartScore(average_results);
+      debugPdlpRestartLog(debug_log_file_, current_iter, current_score,
+                         average_score);
 
       // Choose the best candidate (current vs. average) based on the score
       double candidate_score = std::min(current_score, average_score);

@@ -60,8 +60,11 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 
   // 6. Postprocess with HiPDLP
   HighsSolution pdlp_solution;
-  // pdlp.postprocess(presolved_lp, preprocessed_lp, x, y, pdlp_solution); //
-  // return x, y
+  PostSolveRetcode retcode = pdlp.postprocess(pdlp_solution);
+  if (retcode != PostSolveRetcode::OK) {
+    assert(111 == 444);
+    return HighsStatus::kError;
+  }
 
   // --- Print Summary ---
   pdlp.logSummary();

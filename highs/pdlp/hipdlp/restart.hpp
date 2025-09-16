@@ -42,10 +42,13 @@ class RestartScheme {
   void passLogOptions(const HighsLogOptions* log_options) {
     log_options_ = log_options;
   };
+  void passDebugLogFile(FILE* debug_log_file) { debug_log_file_ = debug_log_file; };
 
  private:
   const PrimalDualParams* params_;
   const HighsLogOptions* log_options_;
+  FILE* debug_log_file_ = nullptr;
+
   // Computes a merit score for a given set of residuals
   double ComputeRestartScore(const SolverResults& results);
 
