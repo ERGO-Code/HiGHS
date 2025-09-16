@@ -821,8 +821,7 @@ void IPM::PrintHeader() {
   std::stringstream h_logging_stream;
   h_logging_stream.str(std::string());
   h_logging_stream
-    << (kTerminationLogging ? "\n" : "")
-    << " "  << Format("Iter", 4)
+    << " " << Format("Iter", 4)
     << "  " << Format("primal obj", 15)
     << "  " << Format("dual obj", 15)
     << "  " << Format("pinf", 9)
@@ -844,7 +843,6 @@ void IPM::PrintHeader() {
 void IPM::PrintOutput() {
     const bool ipm_optimal = iterate_->feasible() && iterate_->optimal();
 
-    if (kTerminationLogging) PrintHeader();
     double logging_pobj = iterate_->pobjective_after_postproc();
     double logging_dobj = iterate_->dobjective_after_postproc();
     double logging_presidual = iterate_->presidual();
@@ -852,8 +850,8 @@ void IPM::PrintOutput() {
 
     // Now logging relative primal and dual infeasibility, and also
     // the relative primal dual objective gap
-    logging_presidual /= (1.0 + iterate_->bounds_measure_);
-    logging_dresidual /= (1.0 + iterate_->costs_measure_);
+    logging_presidual /= iterate_->bounds_measure_;
+    logging_dresidual /= iterate_->costs_measure_;
     double logging_gap = std::abs(logging_pobj - logging_dobj) /
       (1.0+0.5 *std::fabs(logging_pobj + logging_dobj));
 
