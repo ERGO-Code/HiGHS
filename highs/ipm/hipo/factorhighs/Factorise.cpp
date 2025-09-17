@@ -358,11 +358,14 @@ bool Factorise::run(Numeric& num) {
 
   total_reg_.assign(n_, 0.0);
 
-  // allocate space for list of generated elements and columns of L
+  // allocate space
   schur_contribution_.resize(S_.sn());
-  sn_columns_.resize(S_.sn());
   swaps_.resize(S_.sn());
   pivot_2x2_.resize(S_.sn());
+
+  // This should actually allocate only the first time, then sn_columns_ reuses
+  // the memory of previous factorisations.
+  sn_columns_.resize(S_.sn());
 
   if (S_.parTree()) {
     Int spawned_roots{};

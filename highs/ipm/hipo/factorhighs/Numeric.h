@@ -9,6 +9,10 @@
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
+// Numeric allows to perform solve, though a pointer to the numerical factor,
+// that is stored in FHsolver. It also holds auxiliary data about swaps,
+// pivots...
+
 namespace hipo {
 
 class Numeric {
@@ -58,8 +62,6 @@ class Numeric {
   double computeOmega(const std::vector<double>& b,
                       const std::vector<double>& x,
                       const std::vector<double>& res) const;
-
-  void conditionNumber() const;
 };
 
 }  // namespace hipo

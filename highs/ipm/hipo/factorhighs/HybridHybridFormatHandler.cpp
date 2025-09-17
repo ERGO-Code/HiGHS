@@ -22,6 +22,9 @@ void HybridHybridFormatHandler::initFrontal() {
   Int frontal_size = getDiagStart(ldf_, sn_size_, nb_, n_blocks, diag_start_);
   frontal_.assign(frontal_size + extra_space, 0.0);
   // NB: the plus 10 is not needed, but it avoids weird problems later on.
+
+  // frontal_ is actually allocated just the first time, then the memory is
+  // reused from the previous factorisations and just initialised.
 }
 
 void HybridHybridFormatHandler::initClique() {
