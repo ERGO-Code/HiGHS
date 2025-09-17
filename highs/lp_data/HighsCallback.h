@@ -20,14 +20,14 @@ class Highs;
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsCallbackStruct.h"
 
-enum userMipSolutionCallbackOrigin {
-  kUserMipSolutionCallbackOriginAfterSetup = 0,
-  kUserMipSolutionCallbackOriginBeforeDive,
-  kUserMipSolutionCallbackOriginEvaluateRootNode0,
-  kUserMipSolutionCallbackOriginEvaluateRootNode1,
-  kUserMipSolutionCallbackOriginEvaluateRootNode2,
-  kUserMipSolutionCallbackOriginEvaluateRootNode3,
-  kUserMipSolutionCallbackOriginEvaluateRootNode4
+enum ExternalMipSolutionQueryOrigin {
+  kExternalMipSolutionQueryOriginAfterSetup = 0,
+  kExternalMipSolutionQueryOriginBeforeDive,
+  kExternalMipSolutionQueryOriginEvaluateRootNode0,
+  kExternalMipSolutionQueryOriginEvaluateRootNode1,
+  kExternalMipSolutionQueryOriginEvaluateRootNode2,
+  kExternalMipSolutionQueryOriginEvaluateRootNode3,
+  kExternalMipSolutionQueryOriginEvaluateRootNode4
 };
 
 /**
@@ -54,7 +54,7 @@ struct HighsCallbackOutput {
   std::vector<double> cutpool_value;
   std::vector<double> cutpool_lower;
   std::vector<double> cutpool_upper;
-  userMipSolutionCallbackOrigin user_solution_callback_origin;
+  ExternalMipSolutionQueryOrigin external_solution_query_origin;
 
   operator HighsCallbackDataOut() const;
 };

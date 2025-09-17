@@ -522,8 +522,8 @@ void LpSolver::BuildStartingBasis() {
         info_.status_ipm = IPX_STATUS_debug;
         return;
     }
-    basis_.reset(new Basis(control_, model_));
     control_.hLog(" Constructing starting basis...\n");
+    basis_.reset(new Basis(control_, model_));
     StartingBasis(iterate_.get(), basis_.get(), &info_);
     if (info_.errflag == IPX_ERROR_user_interrupt) {
         info_.errflag = 0;

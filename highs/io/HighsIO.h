@@ -15,7 +15,6 @@
 #include <iostream>
 
 #include "lp_data/HighsCallback.h"
-// #include "util/HighsInt.h"
 
 class HighsOptions;
 

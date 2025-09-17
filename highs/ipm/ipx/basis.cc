@@ -119,11 +119,20 @@ Int Basis::Factorize() {
 
     // Build column pointers for passing to LU factorization.
     std::vector<Int> begin(m), end(m);
+    Int basis_num_nz = 0;
     for (Int i = 0; i < m; i++) {
         assert(basis_[i] >= 0);
         begin[i] = AI.begin(basis_[i]);
         end[i] = AI.end(basis_[i]);
+	basis_num_nz += (end[i]-begin[i]);
     }
+
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream <<
+      " Start  factorization " << num_factorizations_+1 <<
+      ": nonzeros in basis = " << basis_num_nz << "\n";
+    control_.hIntervalLog(h_logging_stream);
 
     Int err = 0;                // return code
     while (true) {
@@ -151,6 +160,11 @@ Int Basis::Factorize() {
     }
     time_factorize_ += timer.Elapsed();
     factorization_is_fresh_ = true;
+    h_logging_stream.str(std::string());
+    h_logging_stream <<
+      " Finish factorization " << num_factorizations_ <<
+      ": fill factor = " << lu_->fill_factor() << "\n";
+    control_.hIntervalLog(h_logging_stream);
     return err;
 }
 

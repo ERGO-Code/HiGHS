@@ -36,7 +36,7 @@ struct MipData {
 struct UserMipSolution {
   double optimal_objective_value;
   std::vector<double> optimal_solution;
-  HighsInt require_user_solution_callback_origin;
+  HighsInt require_external_solution_query_origin;
 };
 
 // Callback that saves message for comparison
@@ -193,8 +193,8 @@ HighsCallbackFunctionType userkMipUserSolution =
        void* user_callback_data) {
       UserMipSolution callback_data =
           *(static_cast<UserMipSolution*>(user_callback_data));
-      if (data_out->user_solution_callback_origin ==
-          callback_data.require_user_solution_callback_origin) {
+      if (data_out->external_solution_query_origin ==
+          callback_data.require_external_solution_query_origin) {
         if (data_out->mip_primal_bound >
             callback_data.optimal_objective_value) {
           // If current objective value is not optimal, pass the
@@ -203,7 +203,7 @@ HighsCallbackFunctionType userkMipUserSolution =
             printf(
                 "userkMipUserSolution: origin = %d; %g = mip_primal_bound > "
                 "optimal_objective_value = %g\n",
-                int(data_out->user_solution_callback_origin),
+                int(data_out->external_solution_query_origin),
                 data_out->mip_primal_bound,
                 callback_data.optimal_objective_value);
           data_in->user_has_solution = true;
@@ -218,13 +218,13 @@ HighsCallbackFunctionType userkMipUserSetSolution =
        void* user_callback_data) {
       const auto& callback_data =
           *(static_cast<UserMipSolution*>(user_callback_data));
-      if (data_out->user_solution_callback_origin ==
-          callback_data.require_user_solution_callback_origin) {
+      if (data_out->external_solution_query_origin ==
+          callback_data.require_external_solution_query_origin) {
         if (dev_run)
           printf(
               "userkMipUserSetSolution: origin = %d; %g = mip_primal_bound > "
               "optimal_objective_value = %g\n",
-              int(data_out->user_solution_callback_origin),
+              int(data_out->external_solution_query_origin),
               data_out->mip_primal_bound,
               callback_data.optimal_objective_value);
 
@@ -239,14 +239,14 @@ HighsCallbackFunctionType userkMipUserSetPartialSolution =
        void* user_callback_data) {
       const auto& callback_data =
           *(static_cast<UserMipSolution*>(user_callback_data));
-      if (data_out->user_solution_callback_origin ==
-          callback_data.require_user_solution_callback_origin) {
+      if (data_out->external_solution_query_origin ==
+          callback_data.require_external_solution_query_origin) {
         if (dev_run)
           printf(
               "userkMipUserSetPartialSolution: origin = %d; %g = "
               "mip_primal_bound > "
               "optimal_objective_value = %g\n",
-              int(data_out->user_solution_callback_origin),
+              int(data_out->external_solution_query_origin),
               data_out->mip_primal_bound,
               callback_data.optimal_objective_value);
 
@@ -511,7 +511,7 @@ static void runMipUserSolutionTest(
     UserMipSolution user_callback_data;
     user_callback_data.optimal_objective_value = objective_function_value0;
     user_callback_data.optimal_solution = optimal_solution;
-    user_callback_data.require_user_solution_callback_origin =
+    user_callback_data.require_external_solution_query_origin =
         require_origin[iModel];
     void* p_user_callback_data = (void*)(&user_callback_data);
 

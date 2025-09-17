@@ -1004,7 +1004,7 @@ class TestHighsPy(unittest.TestCase):
     def test_read_basis(self):
         if platform == "linux" or platform == "darwin":
             # Read basis from one run model into an unrun model
-            expected_status_before = highspy.HighsBasisStatus.kLower
+            expected_status_before = highspy.HighsBasisStatus.kNonbasic
             expected_status_after = highspy.HighsBasisStatus.kBasic
 
             h1 = self.get_basic_model()

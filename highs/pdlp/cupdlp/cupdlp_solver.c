@@ -843,15 +843,14 @@ void PDHG_Print_Iter(CUPDLPwork *pdhg) {
   else
     cupdlp_snprintf(timeString, 8, "%6ds", (cupdlp_int)timers->dSolvingTime);
 
-  // cupdlp_printf("%9d  %+15.8e  %+15.8e  %+8.2e  %8.2e  %10.2e  %8.2e %7s
-  // [L]\n",
-  //               timers->nIter, resobj->dPrimalObj, resobj->dDualObj,
-  //               resobj->dDualityGap, resobj->dComplementarity,
-  //               resobj->dPrimalFeas, resobj->dDualFeas, timeString);
-
+  CUPDLPscaling *scaling = pdhg->scaling;
+  const double gap_log_value = resobj->dRelObjGap;
+  const double primal_feas_log_value = resobj->dPrimalFeas / (1.0 + scaling->dNormRhs);
+  const double dual_feas_log_value = resobj->dDualFeas / (1.0 + scaling->dNormCost);
   cupdlp_printf("%9d  %+15.8e  %+15.8e  %+8.2e  %10.2e  %8.2e %7s [L]\n",
                 timers->nIter, resobj->dPrimalObj, resobj->dDualObj,
-                resobj->dDualityGap, resobj->dPrimalFeas, resobj->dDualFeas,
+		//                resobj->dDualityGap, resobj->dPrimalFeas, resobj->dDualFeas,
+		gap_log_value, primal_feas_log_value, dual_feas_log_value,
                 timeString);
 }
 
@@ -865,16 +864,15 @@ void PDHG_Print_Iter_Average(CUPDLPwork *pdhg) {
   else
     cupdlp_snprintf(timeString, 8, "%6ds", (cupdlp_int)timers->dSolvingTime);
 
-  // cupdlp_printf("%9d  %+15.8e  %+15.8e  %+8.2e  %8.2e  %10.2e  %8.2e %7s
-  // [A]\n",
-  //               timers->nIter, resobj->dPrimalObjAverage,
-  //               resobj->dDualObjAverage, resobj->dDualityGapAverage,
-  //               resobj->dComplementarityAverage, resobj->dPrimalFeasAverage,
-  //               resobj->dDualFeasAverage, timeString);
+  CUPDLPscaling *scaling = pdhg->scaling;
+  const double gap_log_value = resobj->dRelObjGapAverage;
+  const double primal_feas_log_value = resobj->dPrimalFeasAverage / (1.0 + scaling->dNormRhs);
+  const double dual_feas_log_value = resobj->dDualFeasAverage / (1.0 + scaling->dNormCost);
   cupdlp_printf("%9d  %+15.8e  %+15.8e  %+8.2e  %10.2e  %8.2e %7s [A]\n",
                 timers->nIter, resobj->dPrimalObjAverage,
-                resobj->dDualObjAverage, resobj->dDualityGapAverage,
-                resobj->dPrimalFeasAverage, resobj->dDualFeasAverage,
+                resobj->dDualObjAverage,
+		//		resobj->dDualityGapAverage, resobj->dPrimalFeasAverage, resobj->dDualFeasAverage,
+		gap_log_value, primal_feas_log_value, dual_feas_log_value,
                 timeString);
 }
 
