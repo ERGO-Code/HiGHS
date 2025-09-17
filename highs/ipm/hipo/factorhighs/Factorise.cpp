@@ -388,6 +388,7 @@ bool Factorise::run(Numeric& num) {
   if (flag_stop_) return true;
 
   // move factorisation to numerical object
+  num.S_ = &S_;
   num.sn_columns_ = &sn_columns_;
   num.total_reg_ = std::move(total_reg_);
   num.swaps_ = std::move(swaps_);

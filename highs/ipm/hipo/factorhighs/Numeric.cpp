@@ -3,6 +3,7 @@
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "HybridSolveHandler.h"
+#include "ReturnValues.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
@@ -12,15 +13,14 @@
 
 namespace hipo {
 
-Numeric::Numeric(const Symbolic& S) : S_{S} {}
-
-std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
+Int Numeric::solve(std::vector<double>& x, Int* solve_count,
+                   double* omega) const {
   // Return the number of solves performed
 
   assert(sn_columns_);
 
   // initialise solve handler
-  SH_.reset(new HybridSolveHandler(S_, *sn_columns_, swaps_, pivot_2x2_));
+  SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, pivot_2x2_));
 
   SH_->setData(data_);
 
@@ -33,7 +33,7 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
 #endif
 
   // permute rhs
-  permuteVectorInverse(x, S_.iperm());
+  permuteVectorInverse(x, S_->iperm());
 
   // make a copy of permuted rhs, for refinement
   const std::vector<double> rhs(x);
@@ -60,7 +60,7 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
 #endif
 
   // unpermute solution
-  permuteVector(x, S_.iperm());
+  permuteVector(x, S_->iperm());
 
 #if HIPO_TIMING_LEVEL >= 2
   if (data_) data_->sumTime(kTimeSolvePrepare, clock_fine.stop());
@@ -70,7 +70,10 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
   if (data_) data_->sumTime(kTimeSolve, clock.stop());
 #endif
 
-  return {refine_data.first + 1, refine_data.second};
+  if (solve_count) *solve_count = refine_data.first + 1;
+  if (omega) *omega = refine_data.second;
+
+  return kRetOk;
 }
 
 std::vector<double> Numeric::residual(const std::vector<double>& rhs,
@@ -234,7 +237,7 @@ double Numeric::computeOmega(const std::vector<double>& b,
 void Numeric::conditionNumber() const {
   HighsRandom random;
 
-  const Int n = S_.size();
+  const Int n = S_->size();
 
   // estimate largest eigenvalue with power iteration:
   // x <- x / ||x||

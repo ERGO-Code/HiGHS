@@ -22,7 +22,6 @@ It is stored using three arrays:
 
 The direct solver uses the following objects:
 - Symbolic, to store the symbolic factorization;
-- Numeric, to store the numeric factorization;
 - FHsolver, to perform analyse and factorise phases.
 
 Define a vector signs that contains the expected sign of each pivot (1 or -1).
@@ -32,13 +31,10 @@ M^{-1} * rhs.
 Then, the factorization is performed as follows.
 
     Symbolic S;
-    Numeric N(S);
-
     FHsolver FH;
     FH.analyse(S, rows, ptr, signs);
-    FH.factorise(N, S, rows, ptr, val);
-
-    N.solve(rhs);
+    FH.factorise(S, rows, ptr, val);
+    FH.solve(x);
 
 Printing to screen is achieved using the interface in auxiliary/Log.h. Pass an
 object of type Log for normal printing:
@@ -64,6 +60,7 @@ class FHsolver {
   const Log* log_;
   DataCollector data_;
   Regul regul_;
+  Numeric N_;
 
   const Int nb_;  // block size
   static const Int default_nb_ = 128;
@@ -88,8 +85,17 @@ class FHsolver {
   // numerical factorisation in object N. Matrix is moved into the object, so
   // rows, ptr, vals are invalid afterwards.
   // See ReturnValues.h for errors.
-  Int factorise(Numeric& N, const Symbolic& S, const std::vector<Int>& rows,
+  Int factorise(const Symbolic& S, const std::vector<Int>& rows,
                 const std::vector<Int>& ptr, const std::vector<double>& vals);
+
+  // Perform solve phase with rhs given by x, which is overwritten with the
+  // solution. solve_count returns the number of solves performed during the
+  // phase (including refinement). omega returns the final residual after
+  // refinement.
+  // For now refinement is performed automatically as part of solve,
+  // this will change in the future.
+  Int solve(std::vector<double>& x, Int* solve_count = nullptr,
+            double* omega = nullptr);
 
   // If multiple factorisation are performed, call newIter() before each
   // factorisation. This is used only to collect data for debugging, if

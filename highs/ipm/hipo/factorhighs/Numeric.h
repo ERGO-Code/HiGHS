@@ -22,7 +22,7 @@ class Numeric {
   std::vector<std::vector<double>> pivot_2x2_{};
 
   // symbolic object
-  const Symbolic& S_;
+  const Symbolic* S_;
 
   // object to handle solve phase in different formats
   mutable std::unique_ptr<SolveHandler> SH_;
@@ -43,11 +43,10 @@ class Numeric {
   // dynamic regularisation applied to the matrix
   std::vector<double> total_reg_{};
 
-  Numeric(const Symbolic& S);
-
   // Full solve with refinement
-  // Return pair (number of solves, final residual)
-  std::pair<Int, double> solve(std::vector<double>& x) const;
+  // Return also number of solves and final residual
+  Int solve(std::vector<double>& x, Int* solve_count = nullptr,
+            double* omega = nullptr) const;
 
   // Iterative refinement
   std::pair<Int, double> refine(const std::vector<double>& rhs,

@@ -41,12 +41,15 @@ Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
   return an_obj.run(S);
 }
 
-Int FHsolver::factorise(Numeric& N, const Symbolic& S,
-                        const std::vector<Int>& rows,
+Int FHsolver::factorise(const Symbolic& S, const std::vector<Int>& rows,
                         const std::vector<Int>& ptr,
                         const std::vector<double>& vals) {
   Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_, sn_columns_);
-  return fact_obj.run(N);
+  return fact_obj.run(N_);
+}
+
+Int FHsolver::solve(std::vector<double>& x, Int* solve_count, double* omega) {
+  return N_.solve(x, solve_count, omega);
 }
 
 }  // namespace hipo

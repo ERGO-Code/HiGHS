@@ -13,7 +13,6 @@ FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
                                      IpmData* record, const LogHighs& log)
     : FH_(&log, options.block_size),
       S_{},
-      N_(S_),
       regul_{regul},
       info_{info},
       data_{record},
@@ -298,7 +297,7 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
 
   // factorise matrix
   clock.start();
-  if (FH_.factorise(N_, S_, rowsLower, ptrLower, valLower))
+  if (FH_.factorise(S_, rowsLower, ptrLower, valLower))
     return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
@@ -333,8 +332,7 @@ Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
   // modify them.
   std::vector<Int> ptrNE(ptrNE_);
   std::vector<Int> rowsNE(rowsNE_);
-  if (FH_.factorise(N_, S_, rowsNE, ptrNE, valNE_))
-    return kStatusErrorFactorise;
+  if (FH_.factorise(S_, rowsNE, ptrNE, valNE_)) return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
     info_->factor_number++;
@@ -353,14 +351,16 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
   lhs = rhs;
 
   Clock clock;
-  auto solve_data = N_.solve(lhs);
+  Int solve_count;
+  double final_res;
+  Int solve_status = FH_.solve(lhs, &solve_count, &final_res);
   if (info_) {
     info_->solve_time += clock.stop();
-    info_->solve_number += solve_data.first;
+    info_->solve_number += solve_count;
   }
   if (data_) {
-    data_->back().num_solves += solve_data.first;
-    data_->back().omega = std::max(data_->back().omega, solve_data.second);
+    data_->back().num_solves += solve_count;
+    data_->back().omega = std::max(data_->back().omega, final_res);
   }
 
   return kStatusOk;
@@ -381,14 +381,16 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
 
   Clock clock;
-  auto solve_data = N_.solve(rhs);
+  Int solve_count;
+  double final_res;
+  Int solve_status = FH_.solve(rhs, &solve_count, &final_res);
   if (info_) {
     info_->solve_time += clock.stop();
-    info_->solve_number += solve_data.first;
+    info_->solve_number += solve_count;
   }
   if (data_) {
-    data_->back().num_solves += solve_data.first;
-    data_->back().omega = std::max(data_->back().omega, solve_data.second);
+    data_->back().num_solves += solve_count;
+    data_->back().omega = std::max(data_->back().omega, final_res);
   }
 
   // split lhs

@@ -19,9 +19,6 @@ class FactorHiGHSSolver : public LinearSolver {
   // symbolic factorisation
   Symbolic S_;
 
-  // numeric factorisation
-  Numeric N_;
-
   // normal equations data
   std::vector<Int> ptrNE_, rowsNE_;
   std::vector<double> valNE_;
