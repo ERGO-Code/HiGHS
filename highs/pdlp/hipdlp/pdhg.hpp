@@ -39,7 +39,7 @@ class PDLPSolver {
   void preprocessLp();
   void scaleProblem();
   void solve(std::vector<double>& x, std::vector<double>& y);
-  void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
+  void unscaleSolution(std::vector<double>& x, std::vector<double>& y);
   PostSolveRetcode postprocess(HighsSolution& solution);
   void setSolution(const std::vector<double>& col_value,
                    const std::vector<double>& row_dual);

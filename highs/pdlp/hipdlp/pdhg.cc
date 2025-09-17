@@ -212,23 +212,6 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
     return PostSolveRetcode::DIMENSION_MISMATCH;
   }
 
-  std::vector<double> x_unscaled = x_current_;
-  std::vector<double> y_unscaled = y_current_;
-
-  std::vector<double> dSlackPos_unscaled = dSlackPos_;
-  std::vector<double> dSlackNeg_unscaled = dSlackNeg_;
-
-  // 1. Unscale the solution vectors first
-  unscaleSolution(x_unscaled, y_unscaled);
-  const auto& row_scale = scaling_.GetRowScaling();  // Assumes getter exists
-  const auto& col_scale = scaling_.GetColScaling();  // Assumes getter exists
-  if (col_scale.size() == dSlackPos_unscaled.size()) {
-    for (size_t i = 0; i < col_scale.size(); ++i) {
-      dSlackPos_unscaled[i] /= col_scale[i];
-      dSlackNeg_unscaled[i] /= col_scale[i];
-    }
-  }
-
   // 2. Resize solution object to original dimensions
   solution.col_value.resize(original_num_col_);
   solution.row_value.resize(original_lp_->num_row_);
@@ -237,12 +220,12 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
   // 3. Recover Primal Column Values (x)
   for (int i = 0; i < original_lp_->num_col_; ++i) {
-    if (i >= (int)x_unscaled.size()) {
-      logger_.info("Index " + std::to_string(i) + " out of bounds for x_unscaled of size " + std::to_string(x_unscaled.size()));
+    if (i >= (int)x_current_.size()) {
+      logger_.info("Index " + std::to_string(i) + " out of bounds for x_current_ of size " + std::to_string(x_current_.size()));
       return PostSolveRetcode::DIMENSION_MISMATCH;
     }
 
-    solution.col_value[i] = x_unscaled[i];
+    solution.col_value[i] = x_current_[i];
 
     if (!std::isfinite(solution.col_value[i])) {
       logger_.info("Non-finite primal variable value at index " + std::to_string(i) + ": " + std::to_string(solution.col_value[i]));
@@ -260,15 +243,17 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   // 4. Recover Dual Row Values (y)
   for (int i = 0; i < original_lp_->num_row_; ++i) {
     if (constraint_types_[i] == LEQ) {
-      solution.row_dual[i] = -y_unscaled[i];
+      solution.row_dual[i] = -y_current_[i];
     } else {
-      solution.row_dual[i] = y_unscaled[i];
+      solution.row_dual[i] = y_current_[i];
     }
   }
 
   // 5. Recover Primal Row Values (Ax)
   HighsLp unscaled_processed_lp = lp_;
 
+  const std::vector<double>& row_scale = scaling_.GetRowScaling();
+  const std::vector<double>& col_scale = scaling_.GetColScaling();
   if (scaling_.IsScaled()) {
     // Unscale matrix, costs, and rhs
     for (int iCol = 0; iCol < unscaled_processed_lp.num_col_; ++iCol) {
@@ -282,19 +267,19 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
     }
   }
 
-  std::vector<double> ax_unscaled(unscaled_processed_lp.num_row_);
-  linalg::Ax(unscaled_processed_lp, x_unscaled, ax_unscaled);
+  std::vector<double> ax_current_(unscaled_processed_lp.num_row_);
+  linalg::Ax(unscaled_processed_lp, x_current_, ax_current_);
 
   int slack_variable_idx = original_num_col_;
   for (int i = 0; i < original_lp_->num_row_; ++i) {
     if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
-      solution.row_value[i] = x_unscaled[slack_variable_idx++];
+      solution.row_value[i] = x_current_[slack_variable_idx++];
     } else if (constraint_types_[i] == LEQ) {
       // We transformed Ax <= b to -Ax >= -b. The original row value is Ax.
-      // The calculated ax_unscaled is for -Ax, so we flip the sign back.
-      solution.row_value[i] = -ax_unscaled[i];
+      // The calculated ax_current_ is for -Ax, so we flip the sign back.
+      solution.row_value[i] = -ax_current_[i];
     } else {  // EQ, GEQ
-      solution.row_value[i] = ax_unscaled[i];
+      solution.row_value[i] = ax_current_[i];
     }
   }
 
@@ -302,11 +287,11 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   // The duals on the variable bounds l <= x <= u are the reduced costs.
   // In the PDLP framework, these are given by dSlackPos - dSlackNeg.
   for (int i = 0; i < original_num_col_; ++i) {
-    if (i >= (int)dSlackPos_unscaled.size() || i >= (int)dSlackNeg_unscaled.size()) {
-      logger_.info("Index " + std::to_string(i) + " out of bounds for dSlackPos/Neg_unscaled of size " + std::to_string(dSlackPos_unscaled.size()));
+    if (i >= (int)dSlackPos_.size() || i >= (int)dSlackNeg_.size()) {
+      logger_.info("Index " + std::to_string(i) + " out of bounds for dSlackPos/Neg of size " + std::to_string(dSlackPos_.size()));
       return PostSolveRetcode::DIMENSION_MISMATCH;
     }
-    solution.col_dual[i] = dSlackPos_unscaled[i] - dSlackNeg_unscaled[i];
+    solution.col_dual[i] = dSlackPos_[i] - dSlackNeg_[i];
   }
 
   solution.value_valid = true; // to do
@@ -1067,9 +1052,21 @@ void PDLPSolver::scaleProblem() {
 }
 
 void PDLPSolver::unscaleSolution(std::vector<double>& x,
-                                 std::vector<double>& y) const {
+                                 std::vector<double>& y) {
   scaling_.unscaleSolution(x, y);
+
+  x_current_ = x;
+  y_current_ = y;
+  
+  const std::vector<double>& col_scale = scaling_.GetColScaling();
+  if(!dSlackPos_.empty() && col_scale.size() == dSlackPos_.size()) {
+    for(size_t i = 0; i < dSlackPos_.size(); ++i) {
+      dSlackPos_[i] /= col_scale[i];
+      dSlackNeg_[i] /= col_scale[i];
+    }
+  }
 }
+
 void PDLPSolver::logSummary() {
   logger_.print_summary(results_, final_iter_count_, total_timer.read());
 }

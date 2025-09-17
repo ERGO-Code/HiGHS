@@ -1788,33 +1788,6 @@ void debugPdlpIterLog(FILE* file, const int iter_num, const double beta) {
 	  //, beta
 }
 
-void debugPdlpScalingLog(FILE* file,
-                         const double* current_col_scaling, int nCols,
-                         const double* current_row_scaling, int nRows) {
-
-  // Print column scaling statistics
-  double min_col = current_col_scaling[0], max_col = current_col_scaling[0], sum_col = 0.0;
-  for (int i = 0; i < nCols; ++i) {
-    double val = current_col_scaling[i];
-    if (val < min_col) min_col = val;
-    if (val > max_col) max_col = val;
-    sum_col += val;
-  }
-  double avg_col = sum_col / nCols;
-  fprintf(file, "Col scaling: min = %g, max = %g, avg = %g\n", min_col, max_col, avg_col);
-
-  // Print row scaling statistics
-  double min_row = current_row_scaling[0], max_row = current_row_scaling[0], sum_row = 0.0;
-  for (int i = 0; i < nRows; ++i) {
-    double val = current_row_scaling[i];
-    if (val < min_row) min_row = val;
-    if (val > max_row) max_row = val;
-    sum_row += val;
-  }
-  double avg_row = sum_row / nRows;
-  fprintf(file, "Row scaling: min = %g, max = %g, avg = %g\n", min_row, max_row, avg_row);
-}
-
 void debugPdlpAxNormLog(FILE* file, const double ax_norm) {
   fprintf(file, "||Ax|| = %g\n", ax_norm);
 }
