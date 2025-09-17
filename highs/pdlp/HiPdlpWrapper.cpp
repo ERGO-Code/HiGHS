@@ -66,6 +66,12 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
     return HighsStatus::kError;
   }
 
+  // print col_value and row_dual
+  for (HighsInt i = 0; i < pdlp_solution.col_value.size(); i++)
+    printf("x[%d]=%g\n", (int)i, pdlp_solution.col_value[i]);
+  for (HighsInt i = 0; i < pdlp_solution.row_dual.size(); i++)
+    printf("y[%d]=%g\n", (int)i, pdlp_solution.row_dual[i]);  
+
   // --- Print Summary ---
   pdlp.logSummary();
 
@@ -73,6 +79,7 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 
   model_status = HighsModelStatus::kUnknown;
   highs_solution.clear();
+  highs_solution = pdlp_solution;
   highs_basis.valid = false;
 
   const TerminationStatus termination_status = pdlp.getTerminationCode();
@@ -113,9 +120,9 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   }
   assert(termination_status == TerminationStatus::OPTIMAL ||
          termination_status == TerminationStatus::TIMEOUT);
-  highs_solution.col_value = x;
+  //highs_solution.col_value = x;
   highs_solution.col_value.resize(lp.num_col_);
-  highs_solution.row_dual = y;
+  //highs_solution.row_dual = y;
   lp.a_matrix_.product(highs_solution.row_value, highs_solution.col_value);
   lp.a_matrix_.productTranspose(highs_solution.col_dual,
                                 highs_solution.row_dual);

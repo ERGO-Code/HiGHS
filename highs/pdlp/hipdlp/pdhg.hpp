@@ -55,6 +55,7 @@ class PDLPSolver {
   // Problem data
   HighsLp lp_;                  // The problem to solve
   const HighsLp* original_lp_;  // The original problem (for postsolve)
+  HighsLp unscaled_processed_lp_; 
   PrimalDualParams params_;
   Logger logger_;
   PdlpStep step_;

@@ -333,7 +333,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
-  std::string model = "afiro";  //"adlittle";//"afiro";// blend
+  std::string model = "adlittle";  //"adlittle";//"afiro";// 
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
@@ -367,7 +367,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   if (cupdlp_test) {
     h.clearSolver();
     h.setOptionValue("solver", kCuPdlpString);
-
+    h.setOptionValue("pdlp_log_level", 2);
     run_status = h.run();
   }
   h.resetGlobalScheduler(true);

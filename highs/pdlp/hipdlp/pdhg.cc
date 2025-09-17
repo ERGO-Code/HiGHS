@@ -182,6 +182,7 @@ void PDLPSolver::preprocessLp() {
   }
 
   scaling_.passLp(&processed_lp);
+  unscaled_processed_lp_ = processed_lp; // store for postsolve
 
   // 7. Convert COO matrix to CSC for the processed_lp
   //
@@ -250,25 +251,23 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   }
 
   // 5. Recover Primal Row Values (Ax)
-  HighsLp unscaled_processed_lp = lp_;
-
   const std::vector<double>& row_scale = scaling_.GetRowScaling();
   const std::vector<double>& col_scale = scaling_.GetColScaling();
   if (scaling_.IsScaled()) {
     // Unscale matrix, costs, and rhs
-    for (int iCol = 0; iCol < unscaled_processed_lp.num_col_; ++iCol) {
-      unscaled_processed_lp.col_cost_[iCol] /= col_scale[iCol];
-      for (int iEl = unscaled_processed_lp.a_matrix_.start_[iCol];
-           iEl < unscaled_processed_lp.a_matrix_.start_[iCol + 1]; ++iEl) {
-        int iRow = unscaled_processed_lp.a_matrix_.index_[iEl];
-        unscaled_processed_lp.a_matrix_.value_[iEl] /=
+    for (int iCol = 0; iCol < unscaled_processed_lp_.num_col_; ++iCol) {
+      unscaled_processed_lp_.col_cost_[iCol] /= col_scale[iCol];
+      for (int iEl = unscaled_processed_lp_.a_matrix_.start_[iCol];
+           iEl < unscaled_processed_lp_.a_matrix_.start_[iCol + 1]; ++iEl) {
+        int iRow = unscaled_processed_lp_.a_matrix_.index_[iEl];
+        unscaled_processed_lp_.a_matrix_.value_[iEl] /=
             (row_scale[iRow] * col_scale[iCol]);
       }
     }
   }
 
-  std::vector<double> ax_current_(unscaled_processed_lp.num_row_);
-  linalg::Ax(unscaled_processed_lp, x_current_, ax_current_);
+  std::vector<double> ax_current_(unscaled_processed_lp_.num_row_);
+  linalg::Ax(unscaled_processed_lp_, x_current_, ax_current_);
 
   int slack_variable_idx = original_num_col_;
   for (int i = 0; i < original_lp_->num_row_; ++i) {
