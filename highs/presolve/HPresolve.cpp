@@ -4558,6 +4558,13 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   std::vector<nonZeros> nzs;
   nzs.reserve(colsize[col]);
 
+  // lambda for checking whether a row provides an implied lower bound
+  // (direction = 1) or implied upper bound (direction = -1)
+  auto hasImpliedBound = [&](HighsInt row, HighsInt direction, double val) {
+    return ((direction * val < 0 && model->row_upper_[row] != kHighsInf) ||
+            (direction * val > 0 && model->row_lower_[row] != -kHighsInf));
+  };
+
   // lambda for computing locks
   auto computeLocks = [&](HighsInt col, HighsInt& numDownLocks,
                           HighsInt& numUpLocks, HighsInt& downLockRow,
@@ -4576,48 +4583,22 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
     // check coefficients
     for (const auto& nz : getColumnVector(col)) {
-      // get row index and coefficient
-      HighsInt row = nz.index();
-      double val = nz.value();
-
-      // skip redundant rows
-      if (isRedundant(row)) continue;
-
-      // check lhs and rhs for finiteness
-      bool lhsFinite = model->row_lower_[row] != -kHighsInf;
-      bool rhsFinite = model->row_upper_[row] != kHighsInf;
-
       // update number of locks
-      if (val > 0) {
-        if (lhsFinite) {
-          numDownLocks++;
-          downLockRow = row;
-        }
-        if (rhsFinite) {
-          numUpLocks++;
-          upLockRow = row;
-        }
-      } else {
-        if (lhsFinite) {
-          numUpLocks++;
-          upLockRow = row;
-        }
-        if (rhsFinite) {
-          numDownLocks++;
-          downLockRow = row;
-        }
+      if (hasImpliedBound(nz.index(), HighsInt{1}, nz.value())) {
+        // implied lower bound -> downlock
+        numDownLocks++;
+        downLockRow = nz.index();
+      }
+      if (hasImpliedBound(nz.index(), HighsInt{-1}, nz.value())) {
+        // implied upper bound -> uplock
+        numUpLocks++;
+        upLockRow = nz.index();
       }
 
       // stop early if there are locks in both directions, since the variable
       // cannot be fixed in this case.
       if (numDownLocks > 1 && numUpLocks > 1) break;
     }
-  };
-
-  // lambda for checking whether a row provides an implied bound
-  auto hasImpliedBound = [&](HighsInt row, double val) {
-    return ((val < 0 && model->row_upper_[row] != kHighsInf) ||
-            (val > 0 && model->row_lower_[row] != -kHighsInf));
   };
 
   // lambda for variable substitution
@@ -4659,7 +4640,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       if (colsize[col] < colsize[rowNz.index()]) {
         for (const auto& colNz : getColumnVector(col)) {
           // skip non-zeros that do not yield an implied bound
-          if (!hasImpliedBound(colNz.index(), direction * colNz.value()))
+          if (!hasImpliedBound(colNz.index(), direction, colNz.value()))
             continue;
           HighsInt nzPos = findNonzero(colNz.index(), rowNz.index());
           if (nzPos == -1) continue;
@@ -4670,7 +4651,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           HighsInt nzPos = findNonzero(colNz.index(), col);
           if (nzPos == -1) continue;
           // skip non-zeros that do not yield an implied bound
-          if (!hasImpliedBound(colNz.index(), direction * Avalue[nzPos]))
+          if (!hasImpliedBound(colNz.index(), direction, Avalue[nzPos]))
             continue;
           nzs.push_back({colNz.index(), Avalue[nzPos], colNz.value()});
         }
