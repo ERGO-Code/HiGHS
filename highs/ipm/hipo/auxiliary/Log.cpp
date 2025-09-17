@@ -4,9 +4,7 @@ namespace hipo {
 
 Log::Log(Int level) : dev_level_{level} {}
 
-void Log::print(std::stringstream& ss) const {
-  printf("%s", ss.str().c_str());
-}
+void Log::print(std::stringstream& ss) const { printf("%s", ss.str().c_str()); }
 void Log::printw(std::stringstream& ss) const {
   printf("WARNING: %s", ss.str().c_str());
 }
@@ -33,6 +31,13 @@ void Log::printDevDetailed(const char* c) const {
 }
 void Log::printDevVerbose(const char* c) const {
   if (dev_level_ >= 3) printf("%s", c);
+}
+bool Log::debug(Int level) const {
+  // Return true if level agrees with dev_level
+  if (dev_level_ == 1) return level == 1;
+  if (dev_level_ == 2) return level == 1 || level == 2;
+  if (dev_level_ == 3) return level == 1 || level == 2 || level == 3;
+  return false;
 }
 
 std::string format(double d, Int width, Int prec,

@@ -34,6 +34,8 @@ class Log {
   virtual void printDevInfo(const char* c) const;
   virtual void printDevDetailed(const char* c) const;
   virtual void printDevVerbose(const char* c) const;
+
+  virtual bool debug(Int level) const;
 };
 
 // Functions to print using streams, taken from IPX.
