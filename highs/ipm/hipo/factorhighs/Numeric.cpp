@@ -17,7 +17,7 @@ Int Numeric::solve(std::vector<double>& x, Int* solve_count,
                    double* omega) const {
   // Return the number of solves performed
 
-  assert(sn_columns_);
+  if (!sn_columns_ || !S_) return kRetInvalidPointer;
 
   // initialise solve handler
   SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, pivot_2x2_));

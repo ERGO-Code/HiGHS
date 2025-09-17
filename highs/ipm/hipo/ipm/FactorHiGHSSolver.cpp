@@ -353,7 +353,7 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
   Clock clock;
   Int solve_count;
   double final_res;
-  Int solve_status = FH_.solve(lhs, &solve_count, &final_res);
+  if (FH_.solve(lhs, &solve_count, &final_res)) return kStatusErrorSolve;
   if (info_) {
     info_->solve_time += clock.stop();
     info_->solve_number += solve_count;
@@ -383,7 +383,7 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   Clock clock;
   Int solve_count;
   double final_res;
-  Int solve_status = FH_.solve(rhs, &solve_count, &final_res);
+  if (FH_.solve(rhs, &solve_count, &final_res)) return kStatusErrorSolve;
   if (info_) {
     info_->solve_time += clock.stop();
     info_->solve_number += solve_count;
