@@ -333,17 +333,28 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
-  std::string model = "afiro";  //"adlittle";//"afiro";//
+  std::string model = "afiro";  //"adlittle";//"afiro";// blend
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  // h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kHiPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
 
-  h.setOptionValue("pdlp_scaling_mode", 0);
-  h.setOptionValue("pdlp_restart_strategy", 2);
+  HighsInt pdlp_features_off = 
+  kPdlpScalingOff + 
+  kPdlpRestartOff + 
+  kPdlpAdaptiveStepSizeOff;
+  h.setOptionValue("pdlp_features_off", pdlp_features_off);
+
+  HighsInt pdlp_scaling = 0;
+  // kPdlpScalingRuiz 
+  //+ kPdlpScalingL2 
+  //+ kPdlpScalingPC
+  //;
+  h.setOptionValue("pdlp_scaling_mode", pdlp_scaling);
+  h.setOptionValue("pdlp_restart_strategy", 0);
   h.setOptionValue("pdlp_step_size_strategy", 0);
 
   //  h.setOptionValue("pdlp_iteration_limit", 15);
@@ -356,7 +367,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   if (cupdlp_test) {
     h.clearSolver();
     h.setOptionValue("solver", kCuPdlpString);
-    h.setOptionValue("pdlp_features_off", kPdlpAdaptiveStepSizeOff);
+
     run_status = h.run();
   }
   h.resetGlobalScheduler(true);

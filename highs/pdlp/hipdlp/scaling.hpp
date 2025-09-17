@@ -26,7 +26,10 @@ class Scaling {
   void scaleProblem();
   void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
   void passLp(HighsLp* lp) { lp_ = lp; };
-  void passParams(const PrimalDualParams* params) { params_ = params; };
+  void passParams(const PrimalDualParams* params) { params_ = params; }; 
+  void passDebugLogFile(FILE* debug_pdlp_log_file) {
+    debug_pdlp_log_file_ = debug_pdlp_log_file;
+  };
   void LogMatrixNorms(const std::string& stage);
   // Get scaling vectors (for unscaling solution later)
   bool IsScaled() const { return is_scaled_; }
@@ -57,6 +60,7 @@ class Scaling {
 
   // Compute norm of a vector based on norm type
   double ComputeNorm(const double* values, int size, double norm_type) const;
+  FILE* debug_pdlp_log_file_;
 };
 
 #endif  // PDLP_HIPDLP_SCALING_HPP

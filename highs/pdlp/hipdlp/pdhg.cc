@@ -1006,7 +1006,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   params_.device_type = Device::CPU;
   // HiPDLP has its own timer, so set its time limit according to
   // the time remaining with respect to the HiGHS time limit (if
-  // finite)
+  // finite)s
   double time_limit = options.time_limit;
   if (time_limit < kHighsInf) {
     time_limit -= timer.read();
@@ -1014,7 +1014,6 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   }
   params_.time_limit = time_limit;
 
-  params_.scaling_method = ScalingMethod::NONE;
   params_.use_ruiz_scaling = false;
   params_.use_pc_scaling = false;
   params_.use_l2_scaling = false;
@@ -1063,6 +1062,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
 void PDLPSolver::scaleProblem() {
   scaling_.passLp(&lp_);
   scaling_.passParams(&params_);
+  scaling_.Initialize(lp_);
   scaling_.scaleProblem();
 }
 
@@ -1084,7 +1084,6 @@ void PrimalDualParams::initialise() {
   this->restart_strategy = RestartStrategy::NO_RESTART;
   this->fixed_restart_interval = 0;
   this->use_halpern_restart = false;
-  this->scaling_method = ScalingMethod::NONE;
   this->use_ruiz_scaling = false;
   this->use_pc_scaling = false;
   this->use_l2_scaling = false;

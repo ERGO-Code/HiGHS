@@ -61,7 +61,6 @@ struct PrimalDualParams {
   bool use_halpern_restart = false;
 
   // Scaling parameters
-  ScalingMethod scaling_method = ScalingMethod::NONE;
   bool use_ruiz_scaling = false;
   bool use_pc_scaling = false;
   bool use_l2_scaling = false;

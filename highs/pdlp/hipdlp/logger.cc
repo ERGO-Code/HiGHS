@@ -63,6 +63,7 @@ void Logger::print_header() {
   info("------------------------------------------------------------");
 }
 
+/*
 void Logger::print_params(const PrimalDualParams& params) {
   info("\nSolver Parameters:");
   std::stringstream ss;
@@ -75,7 +76,8 @@ void Logger::print_params(const PrimalDualParams& params) {
       {ScalingMethod::NONE, "None"},
       {ScalingMethod::RUIZ, "Ruiz"},
       {ScalingMethod::POCK_CHAMBOLLE, "Pock-Chambolle"},
-      {ScalingMethod::L2_NORM, "L2-Norm"}};
+      {ScalingMethod::L2_NORM, "L2-Norm"},
+      {ScalingMethod::COMBINED, "Combined"}};
   std::map<StepSizeStrategy, std::string> step_size_map = {
       {StepSizeStrategy::FIXED, "Fixed"},
       {StepSizeStrategy::ADAPTIVE, "Adaptive"},
@@ -100,7 +102,7 @@ void Logger::print_params(const PrimalDualParams& params) {
   info(ss.str());
   info("------------------------------------------------------------");
 }
-
+*/
 void Logger::print_iteration_header() {
   verbose(
       "\n----------------------------------------------------------------------"

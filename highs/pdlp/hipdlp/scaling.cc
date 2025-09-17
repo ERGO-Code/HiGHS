@@ -74,33 +74,28 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
 }
 
 void Scaling::scaleProblem() {
-  if (params_->scaling_method == ScalingMethod::NONE) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
-                 "No scaling applied\n");
-    return;
+  is_scaled_ = false;
+
+  if (params_->use_ruiz_scaling) {
+  highsLogUser(params_->log_options_, HighsLogType::kInfo,
+                "Applying Ruiz scaling...\n");
+  ApplyRuizScaling();
+  is_scaled_ = true;
   }
 
-  highsLogUser(params_->log_options_, HighsLogType::kInfo,
-               "Applying scaling method: %d\n",
-               static_cast<int>(params_->scaling_method));
   if (params_->use_pc_scaling) {
     highsLogUser(params_->log_options_, HighsLogType::kInfo,
                  "Applying Pock-Chambolle scaling...\n");
     ApplyPockChambolleScaling();
+    is_scaled_ = true;
   }
-  if (params_->use_ruiz_scaling) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
-                 "Applying Ruiz scaling...\n");
-    ApplyRuizScaling();
-  }
-  if (params_->use_l2_scaling ||
-      params_->scaling_method == ScalingMethod::L2_NORM) {
+
+  if (params_->use_l2_scaling) {
     highsLogUser(params_->log_options_, HighsLogType::kInfo,
                  "Applying L2 norm scaling...\n");
     ApplyL2Scaling();
+    is_scaled_ = true;
   }
-
-  is_scaled_ = true;
 }
 
 void Scaling::ApplyRuizScaling() {
