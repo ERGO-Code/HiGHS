@@ -18,8 +18,9 @@ namespace hipo {
 Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
                      const std::vector<Int>& ptrA,
                      const std::vector<double>& valA, const Regul& regul,
-                     const Log* log, DataCollector& data)
-    : S_{S}, regul_{regul}, log_{log}, data_{data} {
+                     const Log* log, DataCollector& data,
+                     std::vector<std::vector<double>>& sn_columns)
+    : S_{S}, regul_{regul}, log_{log}, data_{data}, sn_columns_{sn_columns} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -200,7 +201,7 @@ void Factorise::processSupernode(Int sn) {
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
   std::unique_ptr<FormatHandler> FH(
-      new HybridHybridFormatHandler(S_, sn, regul_, data_));
+      new HybridHybridFormatHandler(S_, sn, regul_, data_, sn_columns_[sn]));
 
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactorisePrepare, clock.stop());
@@ -343,8 +344,8 @@ void Factorise::processSupernode(Int sn) {
   FH->extremeEntries();
 
   // terminate the format handler
-  FH->terminate(sn_columns_[sn], schur_contribution_[sn], total_reg_,
-                swaps_[sn], pivot_2x2_[sn]);
+  FH->terminate(schur_contribution_[sn], total_reg_, swaps_[sn],
+                pivot_2x2_[sn]);
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactoriseTerminate, clock.stop());
 #endif
@@ -357,11 +358,14 @@ bool Factorise::run(Numeric& num) {
 
   total_reg_.assign(n_, 0.0);
 
-  // allocate space for list of generated elements and columns of L
+  // allocate space
   schur_contribution_.resize(S_.sn());
-  sn_columns_.resize(S_.sn());
   swaps_.resize(S_.sn());
   pivot_2x2_.resize(S_.sn());
+
+  // This should actually allocate only the first time, then sn_columns_ reuses
+  // the memory of previous factorisations.
+  sn_columns_.resize(S_.sn());
 
   if (S_.parTree()) {
     Int spawned_roots{};
@@ -387,7 +391,8 @@ bool Factorise::run(Numeric& num) {
   if (flag_stop_) return true;
 
   // move factorisation to numerical object
-  num.sn_columns_ = std::move(sn_columns_);
+  num.S_ = &S_;
+  num.sn_columns_ = &sn_columns_;
   num.total_reg_ = std::move(total_reg_);
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);

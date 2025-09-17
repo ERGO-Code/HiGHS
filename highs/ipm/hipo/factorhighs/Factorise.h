@@ -34,7 +34,9 @@ class Factorise {
   std::vector<std::vector<double>> schur_contribution_{};
 
   // columns of L, stored as dense supernodes
-  std::vector<std::vector<double>> sn_columns_{};
+  // This memory is managed outside of Factorise, so that it can be reused for
+  // all ipm iterations.
+  std::vector<std::vector<double>>& sn_columns_;
 
   // swaps of columns for each supernode, ordered locally within a block
   std::vector<std::vector<Int>> swaps_{};
@@ -71,7 +73,8 @@ class Factorise {
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
             const std::vector<Int>& ptrA, const std::vector<double>& valA,
-            const Regul& regul, const Log* log, DataCollector& data);
+            const Regul& regul, const Log* log, DataCollector& data,
+            std::vector<std::vector<double>>& sn_columns);
 
   bool run(Numeric& num);
 };

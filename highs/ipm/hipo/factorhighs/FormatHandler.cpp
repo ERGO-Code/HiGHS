@@ -6,21 +6,22 @@
 
 namespace hipo {
 
-FormatHandler::FormatHandler(const Symbolic& S, Int sn, const Regul& regul)
+FormatHandler::FormatHandler(const Symbolic& S, Int sn, const Regul& regul,
+                             std::vector<double>& frontal)
     : S_{&S},
       regul_{regul},
       sn_{sn},
       nb_{S_->blockSize()},
       sn_size_{S_->snStart(sn_ + 1) - S_->snStart(sn_)},
       ldf_{S_->ptr(sn_ + 1) - S_->ptr(sn_)},
-      ldc_{ldf_ - sn_size_} {
+      ldc_{ldf_ - sn_size_},
+      frontal_{frontal} {
   local_reg_.resize(sn_size_);
   swaps_.resize(sn_size_);
   pivot_2x2_.resize(sn_size_);
 }
 
-void FormatHandler::terminate(std::vector<double>& frontal,
-                              std::vector<double>& clique,
+void FormatHandler::terminate(std::vector<double>& clique,
                               std::vector<double>& total_reg,
                               std::vector<Int>& swaps,
                               std::vector<double>& pivot_2x2) {
@@ -29,7 +30,6 @@ void FormatHandler::terminate(std::vector<double>& frontal,
   // accessed only here, while a local copy is used for the assembly and dense
   // factorisation. This should avoid the problem of false sharing.
 
-  frontal = std::move(frontal_);
   clique = std::move(clique_);
   swaps = std::move(swaps_);
   pivot_2x2 = std::move(pivot_2x2_);

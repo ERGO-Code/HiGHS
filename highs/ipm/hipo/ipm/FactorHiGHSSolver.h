@@ -13,14 +13,11 @@
 namespace hipo {
 
 class FactorHiGHSSolver : public LinearSolver {
-  // symbolic factorisation
-  Symbolic S_;
-
-  // numeric factorisation
-  Numeric N_;
-
   // object to perform factorisation
   FHsolver FH_;
+
+  // symbolic factorisation
+  Symbolic S_;
 
   // normal equations data
   std::vector<Int> ptrNE_, rowsNE_;

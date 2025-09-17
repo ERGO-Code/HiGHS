@@ -3,6 +3,7 @@
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "HybridSolveHandler.h"
+#include "ReturnValues.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
@@ -12,13 +13,14 @@
 
 namespace hipo {
 
-Numeric::Numeric(const Symbolic& S) : S_{S} {
-  // initialise solve handler
-  SH_.reset(new HybridSolveHandler(S_, sn_columns_, swaps_, pivot_2x2_));
-}
-
-std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
+Int Numeric::solve(std::vector<double>& x, Int* solve_count,
+                   double* omega) const {
   // Return the number of solves performed
+
+  if (!sn_columns_ || !S_) return kRetInvalidPointer;
+
+  // initialise solve handler
+  SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, pivot_2x2_));
 
   SH_->setData(data_);
 
@@ -31,7 +33,7 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
 #endif
 
   // permute rhs
-  permuteVectorInverse(x, S_.iperm());
+  permuteVectorInverse(x, S_->iperm());
 
   // make a copy of permuted rhs, for refinement
   const std::vector<double> rhs(x);
@@ -58,7 +60,7 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
 #endif
 
   // unpermute solution
-  permuteVector(x, S_.iperm());
+  permuteVector(x, S_->iperm());
 
 #if HIPO_TIMING_LEVEL >= 2
   if (data_) data_->sumTime(kTimeSolvePrepare, clock_fine.stop());
@@ -68,7 +70,10 @@ std::pair<Int, double> Numeric::solve(std::vector<double>& x) const {
   if (data_) data_->sumTime(kTimeSolve, clock.stop());
 #endif
 
-  return {refine_data.first + 1, refine_data.second};
+  if (solve_count) *solve_count = refine_data.first + 1;
+  if (omega) *omega = refine_data.second;
+
+  return kRetOk;
 }
 
 std::vector<double> Numeric::residual(const std::vector<double>& rhs,
@@ -227,75 +232,6 @@ double Numeric::computeOmega(const std::vector<double>& b,
   }
 
   return omega_1 + omega_2;
-}
-
-void Numeric::conditionNumber() const {
-  HighsRandom random;
-
-  const Int n = S_.size();
-
-  // estimate largest eigenvalue with power iteration:
-  // x <- x / ||x||
-  // y <- M * x
-  // lambda = ||y||
-
-  double lambda_large{};
-  std::vector<double> x(n);
-  for (Int i = 0; i < n; ++i) x[i] = random.fraction();
-
-  for (Int iter = 0; iter < 10; ++iter) {
-    // normalize x
-    double x_norm = norm2(x);
-    vectorScale(x, 1.0 / x_norm);
-
-    // multiply by matrix
-    std::vector<double> y(n);
-    symProduct(ptrA_, rowsA_, valA_, x, y);
-
-    double norm_y = norm2(y);
-
-    if (std::abs(lambda_large - norm_y) / std::max(1.0, lambda_large) < 1e-2) {
-      // converged
-      break;
-    }
-
-    lambda_large = norm_y;
-    x = std::move(y);
-  }
-
-  // estimate inverse of smallest eigenvalue with inverse power iteration:
-  // x <- x / ||x||
-  // y <- M^-1 * x
-  // lambda_inv = ||y||
-
-  double lambda_small_inv{};
-  for (Int i = 0; i < n; ++i) x[i] = random.fraction();
-
-  for (Int iter = 0; iter < 10; ++iter) {
-    // normalize x
-    double x_norm = norm2(x);
-    vectorScale(x, 1.0 / x_norm);
-
-    // solve with matrix
-    std::vector<double> y(x);
-    SH_->forwardSolve(y);
-    SH_->diagSolve(y);
-    SH_->backwardSolve(y);
-
-    double norm_y = norm2(y);
-
-    if (std::abs(lambda_small_inv - norm_y) / std::max(1.0, lambda_small_inv) <
-        1e-2) {
-      // converged
-      break;
-    }
-
-    lambda_small_inv = norm_y;
-    x = std::move(y);
-  }
-
-  // condition number: lambda_large / lambda_small
-  double cond = lambda_large * lambda_small_inv;
 }
 
 }  // namespace hipo
