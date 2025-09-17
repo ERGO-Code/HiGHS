@@ -39,8 +39,8 @@ const Int kMinRowsForDensity = 2000;
 
 // static regularisation
 struct Regularisation {
-  double primal = 1e-9;
-  double dual = 1e-9;
+  double primal = 1e-12;
+  double dual = 1e-10;
 };
 
 }  // namespace hipo
