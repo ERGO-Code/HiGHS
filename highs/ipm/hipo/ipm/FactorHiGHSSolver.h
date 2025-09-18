@@ -23,6 +23,7 @@ class FactorHiGHSSolver : public LinearSolver {
   std::vector<Int> ptrNE_, rowsNE_;
   std::vector<double> valNE_;
   HighsSparseMatrix AT_;
+  std::vector<Int> colNE_, nextNE_, headNE_;
 
   const Regularisation& regul_;
 
@@ -42,6 +43,9 @@ class FactorHiGHSSolver : public LinearSolver {
                              int64_t nz_limit = kHighsIInf);
   Int buildNEvalues(const HighsSparseMatrix& A,
                     const std::vector<double>& scaling);
+
+  Int buildNEstructureJacek(const HighsSparseMatrix& A,
+                            int64_t nz_limit = kHighsIInf);
 
   Int analyseAS(Symbolic& S);
   Int analyseNE(Symbolic& S, int64_t nz_limit = kHighsIInf);

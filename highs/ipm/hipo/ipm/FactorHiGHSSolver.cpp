@@ -77,7 +77,6 @@ Int FactorHiGHSSolver::buildNEstructureDense(const HighsSparseMatrix& A,
   // Build lower triangular structure of AAt.
   // This approach should be advantageous if AAt is expected to be relatively
   // dense.
-  // It actually seems to work well in general, so I use this for now.
 
   // create row-wise copy of the matrix
   AT_ = A;
@@ -182,7 +181,7 @@ Int FactorHiGHSSolver::buildNEstructureSparse(const HighsSparseMatrix& A,
           ++nz_in_col;
         }
 
-        // the same if loop could be executed without branching:
+        // the same if statement could be executed without branching:
         // (there does not seem to be a performance advantage)
         /*
           Int old_v = is_nz[row2];
@@ -258,6 +257,43 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
   }
 
   return kStatusOk;
+}
+
+Int FactorHiGHSSolver::buildNEstructureJacek(const HighsSparseMatrix& A,
+                                             int64_t nz_limit) {
+  // Build lower triangular structure of AAt.
+  // This approach uses a column-wise copy of A and a collection of linked lists
+  // to access the rows
+
+  // NB: A must have sorted columns for this to work
+
+  // colNE stores the index of the column of each entry.
+  // It's useless when accessing the matrix by columns, but useful when doing it
+  // by rows.
+  colNE_.resize(A.numNz());
+
+  // head and next are a collection of linked lists to access the matrix by
+  // rows.
+  nextNE_.resize(A.numNz(), -1);
+  headNE_.resize(A.num_row_, -1);
+
+  // temp stores the address of the latest entry in each row
+  std::vector<Int> temp(A.num_row_, -1);
+
+  // build linked lists for row access
+  for (Int col = 0; col < A.num_col_; ++col) {
+    for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
+      Int row = A.index_[el];
+      colNE_[el] = col;
+
+      if (temp[row] == -1)
+        headNE_[row] = el;
+      else
+        nextNE_[temp[row]] = el;
+
+      temp[row] = el;
+    }
+  }
 }
 
 Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
@@ -454,6 +490,8 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
   // set to OoM.
 
   log_.printDevInfo("Building NE structure\n");
+
+  buildNEstructureJacek(model_.A(), nz_limit);
 
   Clock clock;
   if (Int status = buildNEstructureSparse(model_.A(), nz_limit)) return status;
