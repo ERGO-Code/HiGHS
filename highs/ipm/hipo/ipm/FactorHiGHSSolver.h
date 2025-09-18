@@ -22,7 +22,6 @@ class FactorHiGHSSolver : public LinearSolver {
   // normal equations data
   std::vector<Int> ptrNE_, rowsNE_;
   std::vector<double> valNE_;
-  HighsSparseMatrix AT_;
   std::vector<Int> colNE_, nextNE_, headNE_;
 
   const Regularisation& regul_;

@@ -85,25 +85,30 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
   for (Int row = 0; row < A.num_row_; ++row) {
     // go along the entries of the row, and then down each column.
     // this builds the lower triangular part of the row-th column of AAt.
-    for (Int rowEl = AT_.start_[row]; rowEl < AT_.start_[row + 1]; ++rowEl) {
-      Int col = AT_.index_[rowEl];
+
+    Int current = headNE_[row];
+    while (current != -1) {
+      Int col = colNE_[current];
 
       const double theta =
           scaling.empty() ? 1.0 : 1.0 / (scaling[col] + regul_.primal);
 
-      const double row_value = theta * AT_.value_[rowEl];
+      const double row_value = theta * A.value_[current];
 
-      // for each nonzero in the row, go down corresponding column
-      for (Int colEl = A.start_[col]; colEl < A.start_[col + 1]; ++colEl) {
+      // for each nonzero in the row, go down corresponding column, starting
+      // from current position
+      for (Int colEl = current; colEl < A.start_[col + 1]; ++colEl) {
         Int row2 = A.index_[colEl];
 
-        // skip when row2 is above row
-        if (row2 < row) continue;
+        // row2 is guaranteed to be larger or equal than row
+        // (provided that the columns of A are sorted)
 
         // compute and accumulate value
         double value = row_value * A.value_[colEl];
         work[row2] += value;
       }
+
+      current = nextNE_[current];
     }
     // intersection of row with rows below finished.
 
@@ -123,10 +128,6 @@ Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
   // Build lower triangular structure of AAt.
   // This approach uses a column-wise copy of A and a collection of linked lists
   // to access the rows
-
-  // create row-wise copy of the matrix (to be removed later!!!!!!!!)
-  AT_ = A;
-  AT_.ensureRowwise();
 
   // NB: A must have sorted columns for this to work
 
