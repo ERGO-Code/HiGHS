@@ -480,12 +480,9 @@ HighsStatus Highs::addColsInterface(
   if (lp.user_cost_scale_ || lp.user_bound_scale_) {
     HighsUserScaleData user_scale_data;
     initialiseUserScaleData(lp, options_, user_scale_data);
-    return_status = userScaleNewCols(local_colCost,
-		     local_colLower,
-		     local_colUpper,
-		     local_a_matrix,
-		     user_scale_data,
-		     options.log_options);
+    return_status =
+        userScaleNewCols(local_colCost, local_colLower, local_colUpper,
+                         local_a_matrix, user_scale_data, options.log_options);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
   // Append the columns to the LP vectors and matrix
@@ -584,10 +581,11 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   std::vector<double> local_rowUpper{ext_row_upper,
                                      ext_row_upper + ext_num_new_row};
 
-  return_status = interpretCallStatus(options_.log_options,
-				      assessBounds(options, "Row", lp.num_row_, index_collection,
-						   local_rowLower, local_rowUpper, options.infinite_bound),
-				      return_status, "assessBounds");
+  return_status = interpretCallStatus(
+      options_.log_options,
+      assessBounds(options, "Row", lp.num_row_, index_collection,
+                   local_rowLower, local_rowUpper, options.infinite_bound),
+      return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   // Form a row-wise HighsSparseMatrix of the new matrix rows so that
   // is easy to handle and, if there are nonzeros, it can be
@@ -604,11 +602,11 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     local_ar_matrix.value_ = {ext_ar_value, ext_ar_value + ext_num_new_nz};
     // Assess the matrix columns
     return_status =
-      interpretCallStatus(options_.log_options,
-			  local_ar_matrix.assess(options.log_options, "LP",
-						 options.small_matrix_value,
-						 options.large_matrix_value),
-			  return_status, "assessMatrix");
+        interpretCallStatus(options_.log_options,
+                            local_ar_matrix.assess(options.log_options, "LP",
+                                                   options.small_matrix_value,
+                                                   options.large_matrix_value),
+                            return_status, "assessMatrix");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is row-wise or
@@ -621,19 +619,12 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     HighsUserScaleData user_scale_data;
     initialiseUserScaleData(lp, options_, user_scale_data);
     const bool apply = false;
-    userScaleNewRows(lp.integrality_,
-		     local_rowLower,
-		     local_rowUpper,
-		     local_ar_matrix,
-		     user_scale_data,
-		     apply);
+    userScaleNewRows(lp.integrality_, local_rowLower, local_rowUpper,
+                     local_ar_matrix, user_scale_data, apply);
     return_status = userScaleStatus(options.log_options, user_scale_data);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
-    userScaleNewRows(lp.integrality_,
-		     local_rowLower,
-		     local_rowUpper,
-		     local_ar_matrix,
-		     user_scale_data);
+    userScaleNewRows(lp.integrality_, local_rowLower, local_rowUpper,
+                     local_ar_matrix, user_scale_data);
   }
   // Append the rows to the LP vectors
   appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
@@ -921,7 +912,8 @@ HighsStatus Highs::changeIntegralityInterface(
   if (index_collection.is_set_)
     assert(increasingSetOk(index_collection.set_, 0,
                            index_collection.dimension_, true));
-  HighsStatus return_status = changeLpIntegrality(model_.lp_, index_collection, local_integrality, options_);
+  HighsStatus return_status = changeLpIntegrality(model_.lp_, index_collection,
+                                                  local_integrality, options_);
   assert(return_status != HighsStatus::kError);
   // Deduce the consequences of new integrality
   invalidateModelStatus();
@@ -950,7 +942,8 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   if (lp.user_cost_scale_) {
     HighsUserScaleData user_scale_data;
     initialiseUserScaleData(lp, options_, user_scale_data);
-    userScaleCosts(lp.integrality_, local_colCost, user_scale_data, options_.log_options);
+    userScaleCosts(lp.integrality_, local_colCost, user_scale_data,
+                   options_.log_options);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
   changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
@@ -1000,7 +993,9 @@ HighsStatus Highs::changeColBoundsInterface(
   if (lp.user_bound_scale_) {
     HighsUserScaleData user_scale_data;
     initialiseUserScaleData(lp, options_, user_scale_data);
-    return_status = userScaleColBounds(lp.integrality_, local_colLower, local_colUpper, user_scale_data, options_.log_options);
+    return_status =
+        userScaleColBounds(lp.integrality_, local_colLower, local_colUpper,
+                           user_scale_data, options_.log_options);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
   changeLpColBounds(lp, index_collection, local_colLower, local_colUpper);
@@ -1049,7 +1044,8 @@ HighsStatus Highs::changeRowBoundsInterface(
   if (lp.user_bound_scale_) {
     HighsUserScaleData user_scale_data;
     initialiseUserScaleData(lp, options_, user_scale_data);
-    return_status = userScaleRowBounds(local_rowLower, local_rowUpper, user_scale_data, options_.log_options);
+    return_status = userScaleRowBounds(local_rowLower, local_rowUpper,
+                                       user_scale_data, options_.log_options);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
   changeLpRowBounds(lp, index_collection, local_rowLower, local_rowUpper);
@@ -3038,32 +3034,32 @@ HighsStatus Highs::optionChangeAction() {
   HighsOptions& options = this->options_;
   HighsStatus return_status = HighsStatus::kOk;
   HighsInt dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
-  HighsInt dl_user_bound_scale = options.user_bound_scale - lp.user_bound_scale_;
+  HighsInt dl_user_bound_scale =
+      options.user_bound_scale - lp.user_bound_scale_;
+  
   if (dl_user_cost_scale || dl_user_bound_scale) {
     HighsUserScaleData user_scale_data;
     initialiseUserScaleData(lp, options_, user_scale_data);
     user_scale_data.user_cost_scale = dl_user_cost_scale;
     user_scale_data.user_bound_scale = dl_user_bound_scale;
-    return_status = userScaleLp(lp.integrality_,
-				lp.col_cost_,
-				lp.col_lower_,
-				lp.col_upper_,
-				lp.row_lower_,
-				lp.row_upper_,
-				lp.a_matrix_,
-				user_scale_data,
-				options.log_options);
+    return_status =
+        userScaleLp(lp.integrality_, lp.col_cost_, lp.col_lower_, lp.col_upper_,
+                    lp.row_lower_, lp.row_upper_, lp.a_matrix_, user_scale_data,
+                    options.log_options);
     if (return_status == HighsStatus::kError) {
       options.user_cost_scale = lp.user_cost_scale_;
       options.user_bound_scale = lp.user_bound_scale_;
-      highsLogUser(options_.log_options, HighsLogType::kError,
-		   "New user cost/bound scaling yields excessive costs/bounds: "
-		   "reverting user cost scaling to %d, and user bound scaling to %d\n",
-		   int(lp.user_cost_scale_), int(lp.user_bound_scale_));
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "New user cost/bound scaling yields excessive costs/bounds: "
+          "reverting user cost scaling to %d, and user bound scaling to %d\n",
+          int(lp.user_cost_scale_), int(lp.user_bound_scale_));
       return HighsStatus::kError;
     }
     this->invalidateModelStatusSolutionAndInfo();
     this->invalidateSolverData();
+    lp.user_cost_scale_ = options.user_cost_scale;
+    lp.user_bound_scale_ = options.user_bound_scale;
   }
   return HighsStatus::kOk;
 }
@@ -4149,4 +4145,3 @@ void HighsLinearObjective::clear() {
   this->rel_tolerance = 0.0;
   this->priority = 0;
 }
-

@@ -196,11 +196,10 @@ struct HighsUserScaleData {
   HighsInt num_small_matrix_values;
   HighsInt num_large_matrix_values;
   void initialise(const HighsInt& user_cost_scale_,
-		  const HighsInt& user_bound_scale_,
-		  const double& infinite_cost_,
-		  const double& infinite_bound_,
-		  const double& small_matrix_value_,
-		  const double& large_matrix_value_);
+                  const HighsInt& user_bound_scale_,
+                  const double& infinite_cost_, const double& infinite_bound_,
+                  const double& small_matrix_value_,
+                  const double& large_matrix_value_);
   bool scaleError() const;
   bool scaleError(std::string& message) const;
   bool scaleWarning(std::string& message) const;

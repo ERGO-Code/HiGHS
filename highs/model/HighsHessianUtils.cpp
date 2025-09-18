@@ -520,10 +520,8 @@ void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
                "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
 }
 
-
-bool userScaleHessian(HighsHessian hessian,
-		      HighsUserScaleData& data,
-		      const bool apply) {
+bool userScaleHessian(HighsHessian hessian, HighsUserScaleData& data,
+                      const bool apply) {
   data.num_infinite_costs = 0;
   const HighsInt user_cost_scale = data.user_cost_scale;
   if (!user_cost_scale) return true;
@@ -536,4 +534,3 @@ bool userScaleHessian(HighsHessian hessian,
   }
   return data.num_infinite_costs == 0;
 }
-

@@ -61,98 +61,73 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-HighsStatus userScaleStatus(const HighsLogOptions& log_options,
-			    const HighsUserScaleData& data);
+HighsStatus userScaleLp(const vector<HighsVarType>& integrality,
+                        vector<double>& cost, vector<double>& col_lower,
+                        vector<double>& col_upper, vector<double>& row_lower,
+                        vector<double>& row_upper, HighsSparseMatrix& matrix,
+                        HighsUserScaleData& data,
+                        const HighsLogOptions& log_options);
 
-HighsStatus userScaleCosts(const vector<HighsVarType>& integrality,
-		    vector<double>& cost,
-			   HighsUserScaleData& data,
-			   const HighsLogOptions& log_options);
+void userScaleLp(const vector<HighsVarType>& integrality, vector<double>& cost,
+                 vector<double>& col_lower, vector<double>& col_upper,
+                 vector<double>& row_lower, vector<double>& row_upper,
+                 HighsSparseMatrix& matrix, HighsUserScaleData& data,
+                 const bool apply = true);
 
-void userScaleCosts(const vector<HighsVarType>& integrality,
-		    vector<double>& cost,
-		    HighsUserScaleData& data,
-		    const bool apply = true);
+HighsStatus userScaleNewCols(vector<double>& cost, vector<double>& lower,
+                             vector<double>& upper, HighsSparseMatrix& matrix,
+                             HighsUserScaleData& data,
+                             const HighsLogOptions& log_options);
 
-HighsStatus userScaleColBounds(const vector<HighsVarType>& integrality,
-			vector<double>& lower,
-			vector<double>& upper,
-			HighsUserScaleData& data,
-			   const HighsLogOptions& log_options);
-
-void userScaleColBounds(const vector<HighsVarType>& integrality,
-			vector<double>& lower,
-			vector<double>& upper,
-			HighsUserScaleData& data,
-			const bool apply = true);
-
-HighsStatus userScaleRowBounds(vector<double>& lower,
-			vector<double>& upper,
-			HighsUserScaleData& data,
-			   const HighsLogOptions& log_options);
-
-void userScaleRowBounds(vector<double>& lower,
-			vector<double>& upper,
-			HighsUserScaleData& data,
-			const bool apply = true);
-
-HighsStatus userScaleMatrix(const vector<HighsVarType>& integrality,
-		     HighsSparseMatrix& matrix,
-		     HighsUserScaleData& data,
-			   const HighsLogOptions& log_options);
-
-void userScaleMatrix(const vector<HighsVarType>& integrality,
-		     HighsSparseMatrix& matrix,
-		     HighsUserScaleData& data,
-		     const bool apply = true);
-
-HighsStatus userScaleNewCols(vector<double>& cost,
-		      vector<double>& lower,
-		      vector<double>& upper,
-		      HighsSparseMatrix& matrix,
-		      HighsUserScaleData& data,
-			   const HighsLogOptions& log_options);
-
-void userScaleNewCols(vector<double>& cost,
-		      vector<double>& lower,
-		      vector<double>& upper,
-		      HighsSparseMatrix& matrix,
-		      HighsUserScaleData& data,
-		      const bool apply = true);
+void userScaleNewCols(vector<double>& cost, vector<double>& lower,
+                      vector<double>& upper, HighsSparseMatrix& matrix,
+                      HighsUserScaleData& data, const bool apply = true);
 
 HighsStatus userScaleNewRows(const vector<HighsVarType>& integrality,
-		      vector<double>& lower,
-		      vector<double>& upper,
-		      HighsSparseMatrix& matrix,
-		      HighsUserScaleData& data,
-			   const HighsLogOptions& log_options);
+                             vector<double>& lower, vector<double>& upper,
+                             HighsSparseMatrix& matrix,
+                             HighsUserScaleData& data,
+                             const HighsLogOptions& log_options);
 
 void userScaleNewRows(const vector<HighsVarType>& integrality,
-		      vector<double>& lower,
-		      vector<double>& upper,
-		      HighsSparseMatrix& matrix,
-		      HighsUserScaleData& data,
-		      const bool apply = true);
+                      vector<double>& lower, vector<double>& upper,
+                      HighsSparseMatrix& matrix, HighsUserScaleData& data,
+                      const bool apply = true);
 
-HighsStatus userScaleLp(const vector<HighsVarType>& integrality,
-			vector<double>& cost,
-			vector<double>& col_lower,
-			vector<double>& col_upper,
-			vector<double>& row_lower,
-			vector<double>& row_upper,
-			HighsSparseMatrix& matrix,
-			HighsUserScaleData& data,
-			const HighsLogOptions& log_options);
+HighsStatus userScaleCosts(const vector<HighsVarType>& integrality,
+                           vector<double>& cost, HighsUserScaleData& data,
+                           const HighsLogOptions& log_options);
 
-void userScaleLp(const vector<HighsVarType>& integrality,
-		 vector<double>& cost,
-		 vector<double>& col_lower,
-		 vector<double>& col_upper,
-		 vector<double>& row_lower,
-		 vector<double>& row_upper,
-		 HighsSparseMatrix& matrix,
-		 HighsUserScaleData& data,
-		 const bool apply = true);
+void userScaleCosts(const vector<HighsVarType>& integrality,
+                    vector<double>& cost, HighsUserScaleData& data,
+                    const bool apply = true);
+
+HighsStatus userScaleColBounds(const vector<HighsVarType>& integrality,
+                               vector<double>& lower, vector<double>& upper,
+                               HighsUserScaleData& data,
+                               const HighsLogOptions& log_options);
+
+void userScaleColBounds(const vector<HighsVarType>& integrality,
+                        vector<double>& lower, vector<double>& upper,
+                        HighsUserScaleData& data, const bool apply = true);
+
+HighsStatus userScaleRowBounds(vector<double>& lower, vector<double>& upper,
+                               HighsUserScaleData& data,
+                               const HighsLogOptions& log_options);
+
+void userScaleRowBounds(vector<double>& lower, vector<double>& upper,
+                        HighsUserScaleData& data, const bool apply = true);
+
+HighsStatus userScaleMatrix(const vector<HighsVarType>& integrality,
+                            HighsSparseMatrix& matrix, HighsUserScaleData& data,
+                            const HighsLogOptions& log_options);
+
+void userScaleMatrix(const vector<HighsVarType>& integrality,
+                     HighsSparseMatrix& matrix, HighsUserScaleData& data,
+                     const bool apply = true);
+
+HighsStatus userScaleStatus(const HighsLogOptions& log_options,
+                            const HighsUserScaleData& data);
 
 HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
                                 bool& made_semi_variable_mods);
@@ -194,9 +169,9 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
                                const bool zero_new_value);
 
 HighsStatus changeLpIntegrality(HighsLp& lp,
-				const HighsIndexCollection& index_collection,
-				const vector<HighsVarType>& new_integrality,
-				const HighsOptions options);
+                                const HighsIndexCollection& index_collection,
+                                const vector<HighsVarType>& new_integrality,
+                                const HighsOptions options);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
                    const vector<double>& new_col_cost,
@@ -390,7 +365,6 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
                             HighsInt* sub_matrix_index,
                             double* sub_matrix_value);
 
-void initialiseUserScaleData(const HighsLp& lp,
-			     const HighsOptions& options,
-			     HighsUserScaleData& user_scale_data);
+void initialiseUserScaleData(const HighsLp& lp, const HighsOptions& options,
+                             HighsUserScaleData& user_scale_data);
 #endif  // LP_DATA_HIGHSLPUTILS_H_
