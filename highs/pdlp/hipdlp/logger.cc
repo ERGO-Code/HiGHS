@@ -63,7 +63,7 @@ void Logger::print_header() {
   info("------------------------------------------------------------");
 }
 
-/*
+
 void Logger::print_params(const PrimalDualParams& params) {
   info("\nSolver Parameters:");
   std::stringstream ss;
@@ -94,7 +94,7 @@ void Logger::print_params(const PrimalDualParams& params) {
   info(ss.str());
   ss.str("");
   ss << "  - Scaling Method: "
-     << enum_to_string(params.scaling_method, scaling_map);
+     << "to fix";
   info(ss.str());
   ss.str("");
   ss << "  - Step Size Strategy: "
@@ -102,7 +102,7 @@ void Logger::print_params(const PrimalDualParams& params) {
   info(ss.str());
   info("------------------------------------------------------------");
 }
-*/
+
 void Logger::print_iteration_header() {
   verbose(
       "\n----------------------------------------------------------------------"

@@ -344,7 +344,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
 
   HighsInt pdlp_features_off = 
   kPdlpScalingOff + 
-  kPdlpRestartOff + 
+  //kPdlpRestartOff + 
   kPdlpAdaptiveStepSizeOff;
   h.setOptionValue("pdlp_features_off", pdlp_features_off);
 
@@ -354,9 +354,8 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   //+ kPdlpScalingPC
   //;
   h.setOptionValue("pdlp_scaling_mode", pdlp_scaling);
-  h.setOptionValue("pdlp_restart_strategy", 0);
   h.setOptionValue("pdlp_step_size_strategy", 0);
-
+  h.setOptionValue("pdlp_restart_strategy", 2);
   //  h.setOptionValue("pdlp_iteration_limit", 15);
   //  h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
   HighsStatus run_status = h.run();

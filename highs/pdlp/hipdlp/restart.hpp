@@ -30,7 +30,7 @@ struct RestartInfo {
 class RestartScheme {
  public:
   RestartScheme() = default;
-
+ 
   void Initialize(const SolverResults& results);
 
   // Checks if a restart should be performed based on the chosen strategy
@@ -38,14 +38,16 @@ class RestartScheme {
                     const SolverResults& average_results);
 
   int GetLastRestartIter() const { return last_restart_iter_; }
-  void passParams(const PrimalDualParams* params) { params_ = params; };
+  void passParams(PrimalDualParams* params) { params_ = params; };
   void passLogOptions(const HighsLogOptions* log_options) {
     log_options_ = log_options;
   };
   void passDebugLogFile(FILE* debug_log_file) { debug_log_file_ = debug_log_file; };
-
+  double getBeta() const { return beta_; };
+  void UpdateBeta(double beta) { beta_ = beta; params_->omega = std::sqrt(beta); };
+  void SetLastRestartIter(int iter) { last_restart_iter_ = iter; };
  private:
-  const PrimalDualParams* params_;
+  PrimalDualParams* params_;
   const HighsLogOptions* log_options_;
   FILE* debug_log_file_ = nullptr;
 

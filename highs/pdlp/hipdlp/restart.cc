@@ -27,7 +27,7 @@ void RestartScheme::Initialize(const SolverResults& results) {
   //  β = dBeta = dDualStep / dPrimalStep,
   //    in the paper, primal weight is the ω:
   //    ω = √β
-  beta_ = std::sqrt(params_->omega);
+  beta_ = params_->omega * params_->omega;
 
   last_restart_iter_ = 0;
   last_restart_score_ = std::numeric_limits<double>::infinity();
@@ -42,7 +42,7 @@ double RestartScheme::ComputeRestartScore(const SolverResults& results) {
   double dual_feas_sq = results.dual_feasibility * results.dual_feasibility;
   double gap_sq = results.duality_gap * results.duality_gap;
 
-  debugPdlpRestarScoretLog(debug_log_file_, weight_squared, results.primal_feasibility, results.dual_feasibility, results.duality_gap);
+  //debugPdlpRestarScoretLog(debug_log_file_, weight_squared, results.primal_feasibility, results.dual_feasibility, results.duality_gap);
 
   return std::sqrt(weight_squared * primal_feas_sq +
                    dual_feas_sq / weight_squared + gap_sq);
@@ -53,6 +53,7 @@ RestartInfo RestartScheme::Check(int current_iter,
                                  const SolverResults& current_results,
                                  const SolverResults& average_results) {
   RestartInfo info;
+
   if (current_iter == last_restart_iter_) {
     double current_score = ComputeRestartScore(current_results);
     last_restart_score_ = current_score;

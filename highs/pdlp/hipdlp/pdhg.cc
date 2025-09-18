@@ -308,10 +308,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   debug_pdlp_log_file_ = fopen("HiPDLP.log", "w");
   assert(debug_pdlp_log_file_);
 
-  // --- 0.Using PowerMethod to estimate the largest eigenvalue ---
+  // --- 0. Using PowerMethod to estimate the largest eigenvalue ---
   const double op_norm_sq = PowerMethod();
-  // Set step sizes based on the operator norm to ensure convergence
-  // A safe choice satisfying eta * omega * ||A||^2 < 1
   step_.passLp(&lp_);
   step_.passLogOptions(&params_.log_options_);
   step_.passDebugLogFile(debug_pdlp_log_file_);
@@ -322,15 +320,15 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   working_params.omega = std::sqrt(step_size.dual_step / step_size.primal_step);
   working_params.eta = std::sqrt(step_size.primal_step * step_size.dual_step);
-  current_eta_ = working_params.eta;  // Initial step size for adaptive strategy
+  current_eta_ = working_params.eta;
+  
   highsLogUser(params_.log_options_, HighsLogType::kInfo,
                "Using power method step sizes: eta = %g, omega = %g\n",
                working_params.eta, working_params.omega);
 
   highsLogUser(
       params_.log_options_, HighsLogType::kInfo,
-      "Initial step sizes from power method lambda = %g: primal = %g; dual = "
-      "%g\n",
+      "Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
       step_size.power_method_lambda, step_size.primal_step,
       step_size.dual_step);
 
@@ -338,6 +336,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   restart_scheme_.passLogOptions(&working_params.log_options_);
   restart_scheme_.passDebugLogFile(debug_pdlp_log_file_);
   Initialize(lp, x, y);  // Sets initial x, y and results_
+  restart_scheme_.passParams(&working_params);
   restart_scheme_.Initialize(results_);
 
   // Use member variables for iterates for cleaner state management
@@ -350,148 +349,109 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       (params_.step_size_strategy == StepSizeStrategy::MALITSKY_POCK);
   bool primal_average_initialized = false;
 
-  // We need Ax for the y-update and for computing residuals
+  // Initialize vectors for matrix-vector products
   std::vector<double> Ax_current(lp.num_row_, 0.0);
   std::vector<double> ATy_current(lp.num_col_, 0.0);
-
   std::vector<double> Ax_new(lp.num_row_, 0.0);
   std::vector<double> ATy_new(lp.num_col_, 0.0);
+
+  // Store iterates at last restart for primal weight update
+  x_at_last_restart_ = x_current_;
+  y_at_last_restart_ = y_current_;
 
   logger_.print_iteration_header();
 
   // --- 2. Main PDHG Loop ---
-  // A single loop handles max iterations, convergence, and restarts.
   for (int iter = 0; iter < params_.max_iterations; ++iter) {
-    const double dummy_beta = 0.0;
-    debugPdlpIterLog(debug_pdlp_log_file_, iter, dummy_beta);
-    linalg::Ax(lp, x_current_, Ax_current);
-    // print norm of Ax
-    double ax_norm = linalg::vector_norm(Ax_current);
-    debugPdlpAxNormLog(debug_pdlp_log_file_, ax_norm);
+    debugPdlpIterLog(debug_pdlp_log_file_, iter, restart_scheme_.getBeta());
 
-    linalg::ATy(lp, y_current_, ATy_current);
+    // Check time limit
     if (solver_timer.read() > params_.time_limit) {
       logger_.info("Time limit reached.");
       final_iter_count_ = iter;
-
-      // Set termination status
       results_.term_code = TerminationStatus::TIMEOUT;
-
-      return solveReturn();  // Exit the function
+      return;
     }
 
-    // --- 3. Core PDHG Update Step ---
-    bool step_success = true;
-
-    switch (params_.step_size_strategy) {
-      case StepSizeStrategy::FIXED:
-        step_.UpdateIteratesFixed(lp, working_params, fixed_eta, x, y, Ax_new,
-                                  x_current_, y_current_, Ax_current);
-        break;
-
-      case StepSizeStrategy::ADAPTIVE:
-        step_.UpdateIteratesAdaptive(lp, working_params, x, y, Ax_new,
-                                     x_current_, y_current_, Ax_current,
-                                     ATy_current, current_eta_, iter);
-        break;
-
-      case StepSizeStrategy::MALITSKY_POCK:
-        step_success = step_.UpdateIteratesMalitskyPock(
-            lp, working_params, x, y, Ax_new, x_current_, y_current_,
-            Ax_current, ATy_current, current_eta_, ratio_last_two_step_sizes_,
-            num_rejected_steps_, first_malitsky_iteration);
-
-        if (!step_success) {
-          std::cerr << "Malitsky-Pock step failed at iteration " << iter
-                    << std::endl;
-          // Reset to average and terminate
-          x = x_avg_;
-          y = y_avg_;
-          // unscalesolution(x, y);
-          return solveReturn();
-        }
-    }
-
-    linalg::ATy(lp, y, ATy_new);
-
-    // --- 4. Update Average Iterates ---
-    // The number of iterations since the last restart
-    int inner_iter = iter - restart_scheme_.GetLastRestartIter();
-    UpdateAverageIterates(x, y, working_params, inner_iter);
-
-    // --- 5. Convergence Check ---
+    // --- 3. Convergence and Restart Check (BEFORE iterate update) ---
     bool bool_checking = (iter < 10) ||
                          (iter == (params_.max_iterations - 1)) ||
                          (iter > 0 && (iter % PDHG_CHECK_INTERVAL == 0));
+    
     if (bool_checking) {
-      // To check convergence on the average, you need A*x_avg and A^T*y_avg
-      SolverResults current_results;
-      SolverResults average_results;
-      std::vector<double> Ax_avg(lp.num_row_, 0.0), ATy_avg(lp.num_col_, 0.0);
+      // Compute matrix-vector products for current and average iterates
+      linalg::Ax(lp, x_current_, Ax_current);
+      linalg::ATy(lp, y_current_, ATy_current);
+      
+      // For checking convergence on the average
+      std::vector<double> Ax_avg(lp.num_row_, 0.0);
+      std::vector<double> ATy_avg(lp.num_col_, 0.0);
       linalg::Ax(lp, x_avg_, Ax_avg);
       linalg::ATy(lp, y_avg_, ATy_avg);
 
+      // Compute residuals and convergence metrics
+      SolverResults current_results;
+      SolverResults average_results;
+      
+      // Compute residuals for current iterate
+      bool current_converged = CheckConvergence(
+          x_current_, y_current_, Ax_current, ATy_current, 
+          params_.tolerance, current_results);
+      
+      // Compute residuals for average iterate
       bool average_converged = CheckConvergence(
-          x_avg_, y_avg_, Ax_avg, ATy_avg, params_.tolerance, average_results);
+          x_avg_, y_avg_, Ax_avg, ATy_avg, 
+          params_.tolerance, average_results);
 
+      // Print iteration statistics
       logger_.print_iteration_stats(iter, average_results, current_eta_);
+
+      // Check for convergence
+      if (current_converged) {
+        logger_.info("Current solution converged in " + std::to_string(iter) +
+                     " iterations.");
+        final_iter_count_ = iter;
+        x = x_current_;
+        y = y_current_;
+        results_ = current_results;
+        results_.term_code = TerminationStatus::OPTIMAL;
+        return;
+      }
 
       if (average_converged) {
         logger_.info("Average solution converged in " + std::to_string(iter) +
                      " iterations.");
         final_iter_count_ = iter;
-        results_ = average_results;
-
-        // Use the average solution
         x = x_avg_;
         y = y_avg_;
-
-        // Update results with the converged metrics
         results_ = average_results;
         results_.term_code = TerminationStatus::OPTIMAL;
-        return solveReturn();
+        return;
       }
 
-      bool current_converged = CheckConvergence(
-          x, y, Ax_new, ATy_new, params_.tolerance, current_results);
-
-      // Log iteration stats (using current results for display)
-      logger_.print_iteration_stats(iter, current_results, current_eta_);
-
-      if (current_converged) {
-        logger_.info("Current solution converged in " + std::to_string(iter) +
-                     " iterations.");
-        final_iter_count_ = iter;
-        results_ = current_results;
-
-        // Update results with the converged metrics
-        results_ = current_results;
-        results_.term_code = TerminationStatus::OPTIMAL;
-
-        //return solveReturn();
-        return ;
-      }
-
-      // --- 6. Restart Check ---
+      // --- 4. Restart Check (using computed results) ---
       RestartInfo restart_info =
           restart_scheme_.Check(iter, current_results, average_results);
 
       if (restart_info.should_restart) {
         logger_.info("Restarting at iteration " + std::to_string(iter));
+        
         std::vector<double> restart_x, restart_y;
         if (restart_info.restart_to_average) {
           // Restart from the average iterate
           restart_x = x_avg_;
           restart_y = y_avg_;
         } else {
-          // Restart from the current iterate (for adaptive scheme)
-          restart_x = x;
-          restart_y = y;
+          // Restart from the current iterate
+          restart_x = x_current_;
+          restart_y = y_current_;
         }
 
         // Perform the primal weight update using z^{n,0} and z^{n-1,0}
         PDHG_Compute_Step_Size_Ratio(working_params, restart_x, restart_y,
                                      x_at_last_restart_, y_at_last_restart_);
+        restart_scheme_.passParams(&working_params);
+        restart_scheme_.UpdateBeta(working_params.omega * working_params.omega);
 
         x_at_last_restart_ = restart_x;  // Current becomes the new last
         y_at_last_restart_ = restart_y;
@@ -500,26 +460,86 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         x_current_ = restart_x;
         y_current_ = restart_y;
 
-        // Reset the average iterate accumulation by passing -1 as a signal
+        // Reset the average iterate accumulation
         UpdateAverageIterates(x_current_, y_current_, working_params, -1);
-      } else {
-        // Standard update: next iterate's starting point is the current iterate
-        x_current_ = x;
-        y_current_ = y;
+        
+        // Recompute Ax and ATy for the restarted iterates
+        linalg::Ax(lp, x_current_, Ax_current);
+        linalg::ATy(lp, y_current_, ATy_current);
+        restart_scheme_.SetLastRestartIter(iter);
       }
+    } else {
+      // If not checking, still need Ax and ATy for the update
+      linalg::Ax(lp, x_current_, Ax_current);
+      linalg::ATy(lp, y_current_, ATy_current);
     }
-    x_current_ = x;
-    y_current_ = y;
-    Ax_current = Ax_new;
-    ATy_current = ATy_new;
+
+    // Print Ax norm for debugging
+    double ax_norm = linalg::vector_norm(Ax_current);
+    debugPdlpAxNormLog(debug_pdlp_log_file_, ax_norm);
+
+    // --- 5. Core PDHG Update Step ---
+    bool step_success = true;
+    
+    // Store current iterates before update (for next iteration's x_current_, y_current_)
+    std::vector<double> x_next = x_current_;
+    std::vector<double> y_next = y_current_;
+
+    switch (params_.step_size_strategy) {
+      case StepSizeStrategy::FIXED:
+        step_.UpdateIteratesFixed(lp, working_params, fixed_eta, 
+                                  x_next, y_next, Ax_new,
+                                  x_current_, y_current_, Ax_current);
+        break;
+
+      case StepSizeStrategy::ADAPTIVE:
+        step_.UpdateIteratesAdaptive(lp, working_params, 
+                                     x_next, y_next, Ax_new,
+                                     x_current_, y_current_, Ax_current,
+                                     ATy_current, current_eta_, iter);
+        break;
+
+      case StepSizeStrategy::MALITSKY_POCK:
+        step_success = step_.UpdateIteratesMalitskyPock(
+            lp, working_params, x_next, y_next, Ax_new,
+            x_current_, y_current_, Ax_current, ATy_current,
+            current_eta_, ratio_last_two_step_sizes_,
+            num_rejected_steps_, first_malitsky_iteration);
+
+        if (!step_success) {
+          std::cerr << "Malitsky-Pock step failed at iteration " << iter
+                    << std::endl;
+          // Reset to average and terminate
+          x = x_avg_;
+          y = y_avg_;
+          return;
+        }
+    }
+
+    // Compute ATy for the new iterate
+    linalg::ATy(lp, y_next, ATy_new);
+
+    // --- 6. Update Average Iterates ---
+    // The number of iterations since the last restart
+    int inner_iter = iter - restart_scheme_.GetLastRestartIter();
+    UpdateAverageIterates(x_next, y_next, working_params, inner_iter);
+
+    // --- 7. Prepare for next iteration ---
+    x_current_ = x_next;
+    y_current_ = y_next;
+    // Note: Ax_current and ATy_current will be recomputed at the start of next iteration
   }
 
-  // --- 7. Handle Max Iterations Reached ---
+  // --- 8. Handle Max Iterations Reached ---
   logger_.info("Max iterations reached without convergence.");
   final_iter_count_ = params_.max_iterations;
-
+  
+  // Return the average solution
+  x = x_avg_;
+  y = y_avg_;
+  
   results_.term_code = TerminationStatus::TIMEOUT;
-  return solveReturn();
+  return;
 }
 
 void PDLPSolver::solveReturn() {
@@ -569,6 +589,7 @@ void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
     double new_beta = std::exp(2.0 * dLogBetaUpdate);
 
     working_params.omega = std::sqrt(new_beta);
+    std::cout <<"new beta: " << new_beta << ", omega: " << working_params.omega << std::endl;
   }
 }
 
@@ -1042,6 +1063,9 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   restart_scheme_.passParams(&params_);
   // Copy what's needed to use HiGHS logging
   params_.log_options_ = options.log_options;
+
+  //log the options
+  logger_.print_params(params_);
 }
 
 void PDLPSolver::scaleProblem() {

@@ -100,7 +100,6 @@ class PDLPSolver {
   std::vector<double> dSlackPos_;
   std::vector<double> dSlackNeg_;
 
-
   Timer total_timer;
 
   // Helper functions
