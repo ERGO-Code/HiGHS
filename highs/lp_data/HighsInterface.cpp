@@ -449,35 +449,6 @@ HighsStatus Highs::addColsInterface(
                    local_colLower, local_colUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
-  if (lp.user_bound_scale_) {
-    // Assess and apply any user bound scaling
-    if (!boundScaleOk(local_colLower, local_colUpper, lp.user_bound_scale_,
-                      options.infinite_bound)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "User bound scaling yields infinite bound\n");
-      return HighsStatus::kError;
-    }
-    double bound_scale_value = std::pow(2, lp.user_bound_scale_);
-    for (HighsInt iCol = 0; iCol < ext_num_new_col; iCol++) {
-      local_colLower[iCol] *= bound_scale_value;
-      local_colUpper[iCol] *= bound_scale_value;
-    }
-  }
-  if (lp.user_cost_scale_) {
-    // Assess and apply any user cost scaling
-    if (!costScaleOk(local_colCost, lp.user_cost_scale_,
-                     options.infinite_cost)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "User cost scaling yields infinite cost\n");
-      return HighsStatus::kError;
-    }
-    double cost_scale_value = std::pow(2, lp.user_cost_scale_);
-    for (HighsInt iCol = 0; iCol < ext_num_new_col; iCol++)
-      local_colCost[iCol] *= cost_scale_value;
-  }
-  // Append the columns to the LP vectors and matrix
-  appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
-                        local_colUpper);
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
   // that is easy to handle and, if there are nonzeros, it can be
   // normalised
@@ -506,6 +477,20 @@ HighsStatus Highs::addColsInterface(
     // matrix columns
     local_a_matrix.start_.assign(ext_num_new_col + 1, 0);
   }
+  if (lp.user_cost_scale_ || lp.user_bound_scale_) {
+    HighsUserScaleData user_scale_data;
+    initialiseUserScaleData(lp, options_, user_scale_data);
+    return_status = userScaleNewCols(local_colCost,
+		     local_colLower,
+		     local_colUpper,
+		     local_a_matrix,
+		     user_scale_data,
+		     options.log_options);
+    if (return_status == HighsStatus::kError) return HighsStatus::kError;
+  }
+  // Append the columns to the LP vectors and matrix
+  appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
+                        local_colUpper);
   // Append the columns to LP matrix
   lp.a_matrix_.addCols(local_a_matrix);
   if (lp_has_scaling) {
@@ -599,30 +584,11 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   std::vector<double> local_rowUpper{ext_row_upper,
                                      ext_row_upper + ext_num_new_row};
 
-  return_status = interpretCallStatus(
-				      options_.log_options,
+  return_status = interpretCallStatus(options_.log_options,
 				      assessBounds(options, "Row", lp.num_row_, index_collection,
 						   local_rowLower, local_rowUpper, options.infinite_bound),
 				      return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
-  if (lp.user_bound_scale_) {
-    // Assess and apply any user bound scaling
-    if (!boundScaleOk(local_rowLower, local_rowUpper, lp.user_bound_scale_,
-                      options_.infinite_bound)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "User bound scaling yields infinite bound\n");
-      return HighsStatus::kError;
-    }
-    double bound_scale_value = std::pow(2, lp.user_bound_scale_);
-    for (HighsInt iRow = 0; iRow < ext_num_new_row; iRow++) {
-      local_rowLower[iRow] *= bound_scale_value;
-      local_rowUpper[iRow] *= bound_scale_value;
-    }
-  }
-
-  // Append the rows to the LP vectors
-  appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
-
   // Form a row-wise HighsSparseMatrix of the new matrix rows so that
   // is easy to handle and, if there are nonzeros, it can be
   // normalised
@@ -652,24 +618,25 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     local_ar_matrix.start_.assign(ext_num_new_row + 1, 0);
   }
   if (lp.user_bound_scale_) {
-    // Scale the columns corresponding to non-continuous variables,
-    // warning the user if small or large matrix entries are created
-    // as a result
-    HighsInt num_small_values;
-    HighsInt num_large_values;
-    if (!userScaleNonContinuousMatrix(lp.integrality_,
-				      local_ar_matrix,
-				      lp.user_bound_scale_,
-				      options.small_matrix_value,
-				      options.large_matrix_value,
-				      num_small_values,
-				      num_large_values)) {
-      return_status = HighsStatus::kWarning;
-      highsLogUser(options_.log_options, HighsLogType::kWarning,
-                   "User bound scaling yields %d small matrix entries and %d small matrix entries\n",
-		   int(num_small_values), int(num_large_values));
-    }
+    HighsUserScaleData user_scale_data;
+    initialiseUserScaleData(lp, options_, user_scale_data);
+    const bool apply = false;
+    userScaleNewRows(lp.integrality_,
+		     local_rowLower,
+		     local_rowUpper,
+		     local_ar_matrix,
+		     user_scale_data,
+		     apply);
+    return_status = userScaleStatus(options.log_options, user_scale_data);
+    if (return_status == HighsStatus::kError) return HighsStatus::kError;
+    userScaleNewRows(lp.integrality_,
+		     local_rowLower,
+		     local_rowUpper,
+		     local_ar_matrix,
+		     user_scale_data);
   }
+  // Append the rows to the LP vectors
+  appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
   // Append the rows to LP matrix
   lp.a_matrix_.addRows(local_ar_matrix);
   if (lp_has_scaling) {
@@ -981,19 +948,12 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (lp.user_cost_scale_) {
-    // Assess and apply any user cost scaling
-    if (!costScaleOk(local_colCost, lp.user_cost_scale_,
-                     options_.infinite_cost)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "User cost scaling yields infinite cost\n");
-      return HighsStatus::kError;
-    }
-    double cost_scale_value = std::pow(2, lp.user_cost_scale_);
-    for (HighsInt iCol = 0; iCol < num_cost; iCol++)
-      local_colCost[iCol] *= cost_scale_value;
+    HighsUserScaleData user_scale_data;
+    initialiseUserScaleData(lp, options_, user_scale_data);
+    userScaleCosts(lp.integrality_, local_colCost, user_scale_data, options_.log_options);
+    if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
   changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
-
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
   assert(lp.has_infinite_cost_ == lp.hasInfiniteCost(options_.infinite_cost));
@@ -1038,16 +998,11 @@ HighsStatus Highs::changeColBoundsInterface(
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (lp.user_bound_scale_) {
-    // Assess and apply any user bound scaling
-    if (!boundScaleOk(local_colLower, local_colUpper, lp.user_bound_scale_,
-                      options_.infinite_bound)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "User bound scaling yields infinite bound\n");
-      return HighsStatus::kError;
-    }
-    userScaleContinuousColBounds(lp.integrality_, local_colLower, local_colUpper, lp.user_bound_scale_);
+    HighsUserScaleData user_scale_data;
+    initialiseUserScaleData(lp, options_, user_scale_data);
+    return_status = userScaleColBounds(lp.integrality_, local_colLower, local_colUpper, user_scale_data, options_.log_options);
+    if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
-
   changeLpColBounds(lp, index_collection, local_colLower, local_colUpper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
@@ -1092,20 +1047,11 @@ HighsStatus Highs::changeRowBoundsInterface(
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (lp.user_bound_scale_) {
-    // Assess and apply any user bound scaling
-    if (!boundScaleOk(local_rowLower, local_rowUpper, lp.user_bound_scale_,
-                      options_.infinite_bound)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "User bound scaling yields infinite bound\n");
-      return HighsStatus::kError;
-    }
-    double bound_scale_value = std::pow(2, lp.user_bound_scale_);
-    for (HighsInt iRow = 0; iRow < num_row_bounds; iRow++) {
-      local_rowLower[iRow] *= bound_scale_value;
-      local_rowUpper[iRow] *= bound_scale_value;
-    }
+    HighsUserScaleData user_scale_data;
+    initialiseUserScaleData(lp, options_, user_scale_data);
+    return_status = userScaleRowBounds(local_rowLower, local_rowUpper, user_scale_data, options_.log_options);
+    if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
-
   changeLpRowBounds(lp, index_collection, local_rowLower, local_rowUpper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
@@ -3090,88 +3036,35 @@ HighsStatus Highs::optionChangeAction() {
   HighsLp& lp = model.lp_;
   HighsInfo& info = this->info_;
   HighsOptions& options = this->options_;
-  const bool is_mip = lp.isMip();
-  HighsInt dl_user_bound_scale = 0;
   HighsStatus return_status = HighsStatus::kOk;
-  const bool has_integrality = lp.integrality_.size() > 0;
-  // Ensure that user bound scaling does not yield infinite bounds or costs
-  if (options.user_bound_scale != lp.user_bound_scale_) {
-    if (!lp.userBoundScaleOk(options.user_bound_scale, options.infinite_bound)) {
+  HighsInt dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
+  HighsInt dl_user_bound_scale = options.user_bound_scale - lp.user_bound_scale_;
+  if (dl_user_cost_scale || dl_user_bound_scale) {
+    HighsUserScaleData user_scale_data;
+    initialiseUserScaleData(lp, options_, user_scale_data);
+    user_scale_data.user_cost_scale = dl_user_cost_scale;
+    user_scale_data.user_bound_scale = dl_user_bound_scale;
+    return_status = userScaleLp(lp.integrality_,
+				lp.col_cost_,
+				lp.col_lower_,
+				lp.col_upper_,
+				lp.row_lower_,
+				lp.row_upper_,
+				lp.a_matrix_,
+				user_scale_data,
+				options.log_options);
+    if (return_status == HighsStatus::kError) {
+      options.user_cost_scale = lp.user_cost_scale_;
       options.user_bound_scale = lp.user_bound_scale_;
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "New user bound scaling yields infinite bound: reverting user "
-		   "bound scaling to %d\n",
-		   int(lp.user_bound_scale_));
-      return_status = HighsStatus::kError;
-    } else {
-      dl_user_bound_scale = options.user_bound_scale - lp.user_bound_scale_;
+		   "New user cost/bound scaling yields excessive costs/bounds: "
+		   "reverting user cost scaling to %d, and user bound scaling to %d\n",
+		   int(lp.user_cost_scale_), int(lp.user_bound_scale_));
+      return HighsStatus::kError;
     }
+    this->invalidateModelStatusSolutionAndInfo();
+    this->invalidateSolverData();
   }
-  if (dl_user_bound_scale) {
-    double dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
-    // Now update model status, data and solution with respect to
-    // non-trivial user cost scaling
-    this->model_status_ = HighsModelStatus::kNotset;
-    if (has_integrality) {
-      double objective_function_value = info.objective_function_value * dl_user_bound_scale_value;
-      info.clear();
-      info.objective_function_value = objective_function_value;
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-	if (lp.integrality_[iCol] == HighsVarType::kContinuous) {
-	  this->solution_.col_value[iCol] *= dl_user_bound_scale_value;
-	} else {
-	  lp.col_cost_[iCol] *= dl_user_bound_scale_value;
-	}
-      }
-    } else {
-      info.objective_function_value *= dl_user_bound_scale_value;
-      info.num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
-      info.max_primal_infeasibility *= dl_user_bound_scale_value;
-      info.sum_primal_infeasibilities *= dl_user_bound_scale_value;
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-	this->solution_.col_value[iCol] *= dl_user_bound_scale_value;
-    }
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-      this->solution_.row_value[iRow] *= dl_user_bound_scale_value;
-    info.primal_solution_status = kSolutionStatusNone;
-    // Update LP with respect to non-trivial user bound scaling
-    lp.userBoundScale(options_.user_bound_scale);
-  }
-  // Now consider whether options.user_cost_scale has changed
-  HighsInt dl_user_cost_scale = 0;
-  if (options.user_cost_scale != lp.user_cost_scale_) {
-    if (!model.userCostScaleOk(options.user_cost_scale, options.small_matrix_value,
-			       options.large_matrix_value, options.infinite_cost)) {
-      options.user_cost_scale = lp.user_cost_scale_;
-      highsLogUser(options_.log_options, HighsLogType::kError,
-		   "New user cost scaling yields excessive cost coefficient: "
-		   "reverting user cost scaling to %d\n",
-		   int(lp.user_cost_scale_));
-      return_status = HighsStatus::kError;
-    } else {
-      dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
-    }
-  }
-  if (dl_user_cost_scale) {
-    double dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
-    // Now update model status, data and solution with respect to
-    // non-trivial user cost scaling
-    this->model_status_ = HighsModelStatus::kNotset;
-    info.objective_function_value *= dl_user_cost_scale_value;
-    info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-    info.max_dual_infeasibility *= dl_user_cost_scale_value;
-    info.sum_dual_infeasibilities *= dl_user_cost_scale_value;
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      this->solution_.col_dual[iCol] *= dl_user_cost_scale_value;
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-      this->solution_.row_dual[iRow] *= dl_user_cost_scale_value;
-    info.dual_solution_status = kSolutionStatusNone;
-    // Update LP with respect to non-trivial user cost scaling
-    model.userCostScale(options.user_cost_scale);
-  }
-  if (!user_bound_scale_ok || !user_cost_scale_ok) return HighsStatus::kError;
-  if (this->iis_.valid_ && options_.iis_strategy != this->iis_.strategy_)
-    this->iis_.invalidate();
   return HighsStatus::kOk;
 }
 
@@ -4256,3 +4149,4 @@ void HighsLinearObjective::clear() {
   this->rel_tolerance = 0.0;
   this->priority = 0;
 }
+

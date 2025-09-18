@@ -183,4 +183,27 @@ struct HighsSimplexStats {
   void initialise(const HighsInt iteration_count_ = 0);
 };
 
+struct HighsUserScaleData {
+  HighsInt user_cost_scale;
+  HighsInt user_bound_scale;
+  double infinite_cost;
+  double infinite_bound;
+  double small_matrix_value;
+  double large_matrix_value;
+  HighsInt num_infinite_costs;
+  HighsInt num_infinite_col_bounds;
+  HighsInt num_infinite_row_bounds;
+  HighsInt num_small_matrix_values;
+  HighsInt num_large_matrix_values;
+  void initialise(const HighsInt& user_cost_scale_,
+		  const HighsInt& user_bound_scale_,
+		  const double& infinite_cost_,
+		  const double& infinite_bound_,
+		  const double& small_matrix_value_,
+		  const double& large_matrix_value_);
+  bool scaleError() const;
+  bool scaleError(std::string& message) const;
+  bool scaleWarning(std::string& message) const;
+};
+
 #endif /* LP_DATA_HSTRUCT_H_ */

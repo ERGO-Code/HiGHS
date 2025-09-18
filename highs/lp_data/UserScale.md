@@ -20,9 +20,9 @@ In summary, the incumbent data affected by user bound and cost scaling
 are as follows
 
 - User bound scaling affects
-  - Costs of non-continuous variables &#8212; using `userScaleNonContinuousCosts`
-  - Matrix coefficients of non-continuous variables &#8212; using `userScaleNonContinuousMatrix`
-  - Bounds of continuous variables &#8212; using `userScaleContinuousBounds`
+  - Costs of non-continuous variables &#8212; using `userScaleCosts`
+  - Matrix coefficients of non-continuous variables &#8212; using `userScaleMatrix`
+  - Bounds of continuous variables &#8212; using `userScaleColBounds`
   - All row bounds &#8212; using `userScaleRowBounds`
 - User cost scaling affects
   - All column costs &#8212; using `userScaleCosts`
@@ -44,13 +44,19 @@ Although scaling is more likely to be done to reduce the magnitude of
 bounds and costs, extreme scaling up can make increase the magnitude
 of bounds and costs beyond the value at which HiGHS considers them to
 be infinite. This (arguably) changes the model fundamentally. Hence,
-in the typical cases of user scaling, an initial pass is made to
-determine whether it generates infinite bounds and costs, returning an
-error if this occurs.
+whenever user scaling is applied, an initial pass is made to determine
+whether it generates infinite bounds or costs or large matrix values,
+returning an error if this occurs. If they only create small matrix
+values, then a warning is issued.
 
 ### `Highs::passModel`
 
-
+When a model is passed to HiGHS, if `user_bound_scale` or
+`user_cost_scale` are nonzero then their use is considered. If they
+create no infinte bounds or costs, or large matrix values, then the
+user scaling is applied, otherwise an error is returned. If they only
+create small matrix values, then the user scaling is applied, and a
+warning is issued.
 
 ### `Highs::addColsInterface`
 
@@ -78,24 +84,32 @@ non-continuous variables.
 
 ### `Highs::changeCostsInterface`
 
-When costs change, `user_bound_scale` must be applied to the changed costs of non-continuous variables, and `user_cost_scale` must be applied uniformly.
+When costs change, `user_bound_scale` must be applied to the changed
+costs of non-continuous variables, and `user_cost_scale` must be
+applied uniformly.
 
 ### `Highs::changeColBoundsInterface`
 
-When column bounds change, `user_bound_scale` must be applied to the changed bounds of continuous variables
+When column bounds change, `user_bound_scale` must be applied to the
+changed bounds of continuous variables
 
 ### `Highs::changeRowBoundsInterface`
 
-When row bounds change, `user_bound_scale` must be applied uniformly to the changed bounds
+When row bounds change, `user_bound_scale` must be applied uniformly
+to the changed bounds
 
 ### `Highs::changeCoefficientInterface
 
-The coefficient is scaled using `user_bound_scale` if is corresponds to a non-continuous variable
+The coefficient is scaled using `user_bound_scale` if is corresponds
+to a non-continuous variable
 
 ### `Highs::optionChangeAction`
 
-When `user_bound_scale` or `user_cost_scale` change, the difference in
-value must be applied as for a whole model.
+When `user_bound_scale` or `user_cost_scale` change (the difference
+in) this value must be applied as for a whole model. Since this is
+typically the first application of user scaling, there is a check for
+infinte bounds or costs, and whichever of `user_bound_scale` and
+`user_cost_scale` causes then is rejected with an error return.
 
 ### `Highs::passModel`
 
