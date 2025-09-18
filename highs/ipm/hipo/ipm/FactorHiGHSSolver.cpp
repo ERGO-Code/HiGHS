@@ -181,6 +181,17 @@ Int FactorHiGHSSolver::buildNEstructureSparse(const HighsSparseMatrix& A,
           temp_index[nz_in_col] = row2;
           ++nz_in_col;
         }
+
+        // the same if loop could be executed without branching:
+        // (there does not seem to be a performance advantage)
+        /*
+          Int old_v = is_nz[row2];
+          Int new_v = 1;
+          Int diff_v = new_v - old_v;
+          is_nz[row2] = true;
+          temp_index[nz_in_col] = temp_index[nz_in_col] * old_v + diff_v * row2;
+          nz_in_col += diff_v;
+        */
       }
     }
     // intersection of row with rows below finished.
@@ -410,6 +421,8 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
+  log_.printDevInfo("Building AS structure\n");
+
   Clock clock;
   std::vector<Int> ptrLower, rowsLower;
   if (Int status = getASstructure(model_.A(), ptrLower, rowsLower))
@@ -443,7 +456,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
   log_.printDevInfo("Building NE structure\n");
 
   Clock clock;
-  if (Int status = buildNEstructureDense(model_.A(), nz_limit)) return status;
+  if (Int status = buildNEstructureSparse(model_.A(), nz_limit)) return status;
   if (info_) info_->matrix_structure_time = clock.stop();
 
   // create vector of signs of pivots
