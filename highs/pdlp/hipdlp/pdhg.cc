@@ -468,7 +468,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         results_ = current_results;
         results_.term_code = TerminationStatus::OPTIMAL;
 
-        return solveReturn();
+        //return solveReturn();
+        return ;
       }
 
       // --- 6. Restart Check ---

@@ -333,7 +333,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
-  std::string model = "adlittle";  //"adlittle";//"afiro";// 
+  std::string model = "afiro";  //"adlittle";//"afiro";// 
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;

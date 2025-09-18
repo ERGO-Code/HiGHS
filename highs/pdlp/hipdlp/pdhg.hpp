@@ -51,6 +51,9 @@ class PDLPSolver {
   int getIterationCount() const { return final_iter_count_; }
   void logSummary();
 
+ void solveReturn();
+ FILE* debug_pdlp_log_file_ = nullptr;
+
  private:
   // Problem data
   HighsLp lp_;                  // The problem to solve
@@ -97,11 +100,10 @@ class PDLPSolver {
   std::vector<double> dSlackPos_;
   std::vector<double> dSlackNeg_;
 
-  FILE* debug_pdlp_log_file_ = nullptr;
+
   Timer total_timer;
 
   // Helper functions
-  void solveReturn();
   void Initialize(const HighsLp& lp, std::vector<double>& x,
                   std::vector<double>& y);
   SolverResults results_;

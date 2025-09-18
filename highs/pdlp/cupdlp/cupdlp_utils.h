@@ -198,6 +198,7 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
   void debugPdlpAtyNormLog(FILE* file, const double aty_norm);
   void debugPdlpRestartLog(FILE* file, const int iter_num, const double current_score, const double average_score);
   void debugPdlpRestarScoretLog(FILE* file, const double weight_squared, const double primal_feas, const double dual_feas, const double obj_gap);
+  void debugPdlpFinalSolutionLog(FILE* file, const double* x, int nCols, const double* y, int nRows);
 
 
 #ifdef __cplusplus

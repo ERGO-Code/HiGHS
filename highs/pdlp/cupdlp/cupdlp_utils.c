@@ -1805,3 +1805,14 @@ const double dual_feas, const double obj_gap) {
   fprintf(file, "Restart Score: Weight^2 = %.6g, Primal Feas = %.6g, Dual Feas = %.6g, Obj Gap = %.6g\n", 
   weight_squared, primal_feas, dual_feas, obj_gap);
 }
+
+void debugPdlpFinalSolutionLog(FILE* file, const double* x, int nCols, const double* y, int nRows) {    
+  fprintf(file,"Primal solution (x):\n");
+  for (int i = 0; i < nCols; ++i) {
+      fprintf(file, "x[%d]=%g\n", i, x[i]);
+  }
+  fprintf(file, "Dual solution (y):\n");
+  for (int i = 0; i < nRows; ++i) {
+      fprintf(file, "y[%d]=%g\n", i, y[i]);
+  }
+}

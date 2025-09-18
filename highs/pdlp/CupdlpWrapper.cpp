@@ -205,6 +205,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
       &pdlp_num_iter);
   highs_info.pdlp_iteration_count = pdlp_num_iter;
 
+  // Print final solution using debugPdlpFinalSolutionLog
+  debugPdlpFinalSolutionLog(w->debug_pdlp_log_file, highs_solution.col_value.data(), lp.num_col_, highs_solution.row_dual.data(), lp.num_row_);
+  fclose(w->debug_pdlp_log_file);
   model_status = HighsModelStatus::kUnknown;
   highs_solution.value_valid = value_valid;
   highs_solution.dual_valid = dual_valid;

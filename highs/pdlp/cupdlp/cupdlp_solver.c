@@ -1152,7 +1152,7 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
 #endif
 
 exit_cleanup:
-  fclose(pdhg->debug_pdlp_log_file);
+  //fclose(pdhg->debug_pdlp_log_file);
   return retcode;
 }
 
