@@ -33,6 +33,8 @@ Int getASstructure(const HighsSparseMatrix& A, std::vector<Int>& ptr,
   Int mA = A.num_row_;
   Int nzA = A.numNz();
 
+  if (nA + nzA + mA > kHighsIInf) return kStatusOoM;
+
   ptr.resize(nA + mA + 1);
   rows.resize(nA + nzA + mA);
 
@@ -408,8 +410,11 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
+  Clock clock;
   std::vector<Int> ptrLower, rowsLower;
-  getASstructure(model_.A(), ptrLower, rowsLower);
+  if (Int status = getASstructure(model_.A(), ptrLower, rowsLower))
+    return status;
+  if (info_) info_->matrix_structure_time = clock.stop();
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(model_.A().num_col_ + model_.A().num_row_, -1);
@@ -418,7 +423,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
 
   log_.printDevInfo("Performing AS analyse phase\n");
 
-  Clock clock;
+  clock.start();
   Int status = FH_.analyse(S, rowsLower, ptrLower, pivot_signs);
   if (info_) info_->analyse_AS_time = clock.stop();
 
@@ -437,14 +442,16 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
 
   log_.printDevInfo("Building NE structure\n");
 
-  if (buildNEstructureDense(model_.A(), nz_limit)) return kStatusOoM;
+  Clock clock;
+  if (Int status = buildNEstructureDense(model_.A(), nz_limit)) return status;
+  if (info_) info_->matrix_structure_time = clock.stop();
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(model_.A().num_row_, 1);
 
   log_.printDevInfo("Performing NE analyse phase\n");
 
-  Clock clock;
+  clock.start();
   Int status = FH_.analyse(S, rowsNE_, ptrNE_, pivot_signs);
   if (info_) info_->analyse_NE_time = clock.stop();
 

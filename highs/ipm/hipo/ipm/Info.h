@@ -43,6 +43,7 @@ struct Info {
   double analyse_NE_time{};
   double analyse_AS_time{};
   double matrix_time{};
+  double matrix_structure_time{};
   double factor_time{};
   double solve_time{};
 

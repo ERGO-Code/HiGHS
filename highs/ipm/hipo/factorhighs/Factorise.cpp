@@ -20,7 +20,7 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
                      const std::vector<double>& valA, const Regul& regul,
                      const Log* log, DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns)
-    : S_{S}, regul_{regul}, log_{log}, data_{data}, sn_columns_{sn_columns} {
+    : S_{S}, sn_columns_{sn_columns}, regul_{regul}, log_{log}, data_{data} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
