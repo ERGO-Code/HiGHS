@@ -37,15 +37,11 @@ class FactorHiGHSSolver : public LinearSolver {
   Int chooseNla();
   Int setNla();
   void setParallel();
-  Int buildNEstructureDense(const HighsSparseMatrix& A,
-                            int64_t nz_limit = kHighsIInf);
-  Int buildNEstructureSparse(const HighsSparseMatrix& A,
-                             int64_t nz_limit = kHighsIInf);
+
+  Int buildNEstructure(const HighsSparseMatrix& A,
+                       int64_t nz_limit = kHighsIInf);
   Int buildNEvalues(const HighsSparseMatrix& A,
                     const std::vector<double>& scaling);
-
-  Int buildNEstructureJacek(const HighsSparseMatrix& A,
-                            int64_t nz_limit = kHighsIInf);
 
   Int analyseAS(Symbolic& S);
   Int analyseNE(Symbolic& S, int64_t nz_limit = kHighsIInf);

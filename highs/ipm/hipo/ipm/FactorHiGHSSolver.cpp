@@ -72,147 +72,6 @@ Int FactorHiGHSSolver::setup() {
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::buildNEstructureDense(const HighsSparseMatrix& A,
-                                             int64_t nz_limit) {
-  // Build lower triangular structure of AAt.
-  // This approach should be advantageous if AAt is expected to be relatively
-  // dense.
-
-  // create row-wise copy of the matrix
-  AT_ = A;
-  AT_.ensureRowwise();
-
-  ptrNE_.clear();
-  rowsNE_.clear();
-
-  // ptr is allocated its exact size
-  ptrNE_.resize(A.num_row_ + 1, 0);
-
-  // temporary dense vector
-  std::vector<Int> work(A.num_row_);
-
-  int64_t AAt_nz = 0;
-
-  for (Int row = 0; row < A.num_row_; ++row) {
-    // work contains information about column "row".
-    // if there is a 1 in position pos, then AAt has nonzero in entry (pos,row).
-    // only entries below entry "row" (the diagonal) are used.
-
-    // go along the entries of the row, and then down each column.
-    // this builds the lower triangular part of the row-th column of AAt.
-    for (Int rowEl = AT_.start_[row]; rowEl < AT_.start_[row + 1]; ++rowEl) {
-      Int col = AT_.index_[rowEl];
-
-      // for each nonzero in the row, go down corresponding column
-      for (Int colEl = A.start_[col]; colEl < A.start_[col + 1]; ++colEl) {
-        Int row2 = A.index_[colEl];
-
-        // skip when row2 is above row
-        if (row2 < row) continue;
-
-        // save information that there is nonzero in position (row2,row).
-        work[row2] = 1;
-      }
-    }
-    // intersection of row with rows below finished.
-    // now work contains the sparsity pattern of AAt(row:end,row).
-
-    // now assign indices
-    Int col_nz = 0;
-    for (Int i = row; i < work.size(); ++i) {
-      if (work[i]) {
-        if (AAt_nz + 1 >= nz_limit) return kStatusOoM;
-
-        rowsNE_.push_back(i);
-        work[i] = 0;
-        ++AAt_nz;
-        ++col_nz;
-      }
-    }
-
-    // update pointers
-    ptrNE_[row + 1] = ptrNE_[row] + col_nz;
-  }
-
-  return kStatusOk;
-}
-
-Int FactorHiGHSSolver::buildNEstructureSparse(const HighsSparseMatrix& A,
-                                              int64_t nz_limit) {
-  // Build lower triangular structure of AAt.
-  // This approach should be advantageous if AAt is expected to be very sparse.
-
-  // create row-wise copy of the matrix
-  AT_ = A;
-  AT_.ensureRowwise();
-
-  ptrNE_.clear();
-  rowsNE_.clear();
-
-  // ptr is allocated its exact size
-  ptrNE_.resize(A.num_row_ + 1, 0);
-
-  // keep track if given entry is nonzero, in column considered
-  std::vector<bool> is_nz(A.num_row_, false);
-
-  // temporary storage of indices
-  std::vector<Int> temp_index(A.num_row_);
-
-  for (Int row = 0; row < A.num_row_; ++row) {
-    // go along the entries of the row, and then down each column.
-    // this builds the lower triangular part of the row-th column of AAt.
-
-    Int nz_in_col = 0;
-
-    for (Int rowEl = AT_.start_[row]; rowEl < AT_.start_[row + 1]; ++rowEl) {
-      Int col = AT_.index_[rowEl];
-
-      // for each nonzero in the row, go down corresponding column
-      for (Int colEl = A.start_[col]; colEl < A.start_[col + 1]; ++colEl) {
-        Int row2 = A.index_[colEl];
-
-        // skip when row2 is above row
-        if (row2 < row) continue;
-
-        // save information that there is nonzero in position (row2,row).
-        if (!is_nz[row2]) {
-          is_nz[row2] = true;
-          temp_index[nz_in_col] = row2;
-          ++nz_in_col;
-        }
-
-        // the same if statement could be executed without branching:
-        // (there does not seem to be a performance advantage)
-        /*
-          Int old_v = is_nz[row2];
-          Int new_v = 1;
-          Int diff_v = new_v - old_v;
-          is_nz[row2] = true;
-          temp_index[nz_in_col] = temp_index[nz_in_col] * old_v + diff_v * row2;
-          nz_in_col += diff_v;
-        */
-      }
-    }
-    // intersection of row with rows below finished.
-
-    // if the total number of nonzeros exceeds the maximum, return error
-    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= nz_limit)
-      return kStatusOoM;
-
-    // update pointers
-    ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
-
-    // now assign indices
-    for (Int i = 0; i < nz_in_col; ++i) {
-      Int index = temp_index[i];
-      rowsNE_.push_back(index);
-      is_nz[index] = false;
-    }
-  }
-
-  return kStatusOk;
-}
-
 Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
                                      const std::vector<double>& scaling) {
   // given the NE structure already computed, fill in the NE values
@@ -259,11 +118,15 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::buildNEstructureJacek(const HighsSparseMatrix& A,
-                                             int64_t nz_limit) {
+Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
+                                        int64_t nz_limit) {
   // Build lower triangular structure of AAt.
   // This approach uses a column-wise copy of A and a collection of linked lists
   // to access the rows
+
+  // create row-wise copy of the matrix (to be removed later!!!!!!!!)
+  AT_ = A;
+  AT_.ensureRowwise();
 
   // NB: A must have sorted columns for this to work
 
@@ -294,6 +157,65 @@ Int FactorHiGHSSolver::buildNEstructureJacek(const HighsSparseMatrix& A,
       temp[row] = el;
     }
   }
+
+  ptrNE_.clear();
+  rowsNE_.clear();
+
+  // ptr is allocated its exact size
+  ptrNE_.resize(A.num_row_ + 1, 0);
+
+  // keep track if given entry is nonzero, in column considered
+  std::vector<bool> is_nz(A.num_row_, false);
+
+  // temporary storage of indices
+  std::vector<Int> temp_index(A.num_row_);
+
+  for (Int row = 0; row < A.num_row_; ++row) {
+    // go along the entries of the row, and then down each column.
+    // this builds the lower triangular part of the row-th column of AAt.
+
+    Int nz_in_col = 0;
+
+    Int current = headNE_[row];
+    while (current != -1) {
+      Int col = colNE_[current];
+
+      // for each nonzero in the row, go down corresponding column, starting
+      // from current position
+      for (Int colEl = current; colEl < A.start_[col + 1]; ++colEl) {
+        Int row2 = A.index_[colEl];
+
+        // row2 is guaranteed to be larger or equal than row
+        // (provided that the columns of A are sorted)
+
+        // save information that there is nonzero in position (row2,row).
+        if (!is_nz[row2]) {
+          is_nz[row2] = true;
+          temp_index[nz_in_col] = row2;
+          ++nz_in_col;
+        }
+      }
+
+      current = nextNE_[current];
+    }
+    // intersection of row with rows below finished.
+
+    // if the total number of nonzeros exceeds the maximum, return error
+    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= nz_limit)
+      return kStatusOoM;
+
+    // update pointers
+    ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
+
+    // now assign indices
+    for (Int i = 0; i < nz_in_col; ++i) {
+      Int index = temp_index[i];
+      rowsNE_.push_back(index);
+      is_nz[index] = false;
+    }
+  }
+
+  return kStatusOk;
 }
 
 Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
@@ -491,10 +413,8 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
 
   log_.printDevInfo("Building NE structure\n");
 
-  buildNEstructureJacek(model_.A(), nz_limit);
-
   Clock clock;
-  if (Int status = buildNEstructureSparse(model_.A(), nz_limit)) return status;
+  if (Int status = buildNEstructure(model_.A(), nz_limit)) return status;
   if (info_) info_->matrix_structure_time = clock.stop();
 
   // create vector of signs of pivots
