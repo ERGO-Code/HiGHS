@@ -50,6 +50,10 @@ Int Model::init(const Int num_var, const Int num_con, const double* obj,
   denseColumns();
   computeNorms();
 
+  // double transpose to sort indices of each column
+  A_.ensureRowwise();
+  A_.ensureColwise();
+
   ready_ = true;
 
   return 0;
