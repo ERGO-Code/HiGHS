@@ -948,8 +948,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   impliedRowBounds.shrink(newRowIndex, model->num_row_);
   impliedDualRowBounds.shrink(newColIndex, model->num_col_);
 
-  HighsInt numNnz = Avalue.size();
-  for (HighsInt i = 0; i != numNnz; ++i) {
+  for (size_t i = 0; i != Avalue.size(); ++i) {
     if (Avalue[i] == 0) continue;
     assert(newColIndex[Acol[i]] != -1);
     assert(newRowIndex[Arow[i]] != -1);
@@ -1032,6 +1031,9 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
 
 HPresolve::Result HPresolve::dominatedColumns(
     HighsPostsolveStack& postsolve_stack) {
+  // See section 6.4 "Dominated columns", Achterberg et al., Presolve Reductions
+  // in Mixed Integer Programming, INFORMS Journal on Computing 32(2):473-506.
+
   std::vector<std::pair<uint32_t, uint32_t>> signatures(model->num_col_);
 
   auto isBinary = [&](HighsInt i) {
@@ -1045,6 +1047,27 @@ HPresolve::Result HPresolve::dominatedColumns(
     assert(rowHashedPos < 32);
     signatures[col].first |= rowLowerFinite << rowHashedPos;
     signatures[col].second |= rowUpperFinite << rowHashedPos;
+  };
+
+  auto checkDominationNonZero = [&](HighsInt row, double aj, double ak) {
+    if (isRanged(row)) {
+      // the row is an equality or ranged row, therefore the coefficients must
+      // be parallel, otherwise one of the inequalities given by the row rules
+      // out domination
+      if (std::abs(aj - ak) > options->small_matrix_value) return false;
+      return true;
+    }
+
+    // normalize row to a <= constraint
+    if (model->row_upper_[row] == kHighsInf) {
+      aj = -aj;
+      ak = -ak;
+    }
+
+    // the coefficient of the dominating column needs to be smaller than or
+    // equal to the coefficient of the dominated column
+    if (aj > ak + options->small_matrix_value) return false;
+    return true;
   };
 
   auto checkDomination = [&](HighsInt scalj, HighsInt j, HighsInt scalk,
@@ -1071,77 +1094,34 @@ HPresolve::Result HPresolve::dominatedColumns(
     // dominated columns set of rows with a positive coefficient
     if ((sjPlus & ~skPlus) != 0) return false;
 
-    // next check if the columns cost allows for domination
-    double cj = scalj * model->col_cost_[j];
-    double ck = scalk * model->col_cost_[k];
-
     // the dominating columns cost must be smaller or equal to the dominated
     // columns cost
-    if (cj > ck + options->small_matrix_value) return false;
+    if (scalj * model->col_cost_[j] >
+        scalk * model->col_cost_[k] + options->small_matrix_value)
+      return false;
 
     // finally check the column vectors
     for (const HighsSliceNonzero& nonz : getColumnVector(j)) {
       HighsInt row = nonz.index();
-      double aj = scalj * nonz.value();
-
       HighsInt akPos = findNonzero(row, k);
-      double ak = scalk * (akPos == -1 ? 0.0 : Avalue[akPos]);
-
-      if (model->row_lower_[row] != -kHighsInf &&
-          model->row_upper_[row] != kHighsInf) {
-        // the row is an equality or ranged row, therefore the coefficients must
-        // be parallel, otherwise one of the inequalities given by the row rules
-        // out domination
-        if (std::abs(aj - ak) > options->small_matrix_value) return false;
-        continue;
-      }
-
-      // normalize row to a <= constraint
-      if (model->row_upper_[row] == kHighsInf) {
-        aj = -aj;
-        ak = -ak;
-      }
-
-      // the coefficient of the dominating column needs to be smaller than or
-      // equal to the coefficient of the dominated column
-      if (aj > ak + options->small_matrix_value) return false;
+      if (!checkDominationNonZero(row, scalj * nonz.value(),
+                                  scalk * (akPos == -1 ? 0.0 : Avalue[akPos])))
+        return false;
     }
 
     // check row only occurring in the column vector of k
     for (const HighsSliceNonzero& nonz : getColumnVector(k)) {
       HighsInt row = nonz.index();
-      double ak = scalk * nonz.value();
-
       HighsInt ajPos = findNonzero(row, j);
       // only rows in which aj does not occur are left to check
       if (ajPos != -1) continue;
-      double aj = 0.0;
-
-      if (model->row_lower_[row] != -kHighsInf &&
-          model->row_upper_[row] != kHighsInf) {
-        // the row is an equality or ranged row, therefore the coefficients must
-        // be parallel, otherwise one of the inequalities given by the row rules
-        // out domination
-        if (std::abs(aj - ak) > options->small_matrix_value) return false;
-        continue;
-      }
-
-      // normalize row to a <= constraint
-      if (model->row_upper_[row] == kHighsInf) {
-        aj = -aj;
-        ak = -ak;
-      }
-
-      // the coefficient of the dominating column needs to be smaller than or
-      // equal to the coefficient of the dominated column
-      if (aj > ak + options->small_matrix_value) return false;
+      if (!checkDominationNonZero(row, 0.0, scalk * nonz.value())) return false;
     }
 
     return true;
   };
 
-  HighsInt numNz = Avalue.size();
-  for (HighsInt i = 0; i < numNz; ++i) {
+  for (size_t i = 0; i != Avalue.size(); ++i) {
     if (Avalue[i] == 0) continue;
 
     HighsInt row = Arow[i];
@@ -1160,14 +1140,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     if (colDeleted[j]) continue;
     bool upperImplied = isUpperImplied(j);
     bool lowerImplied = isLowerImplied(j);
-    bool hasPosCliques = false;
-    bool hasNegCliques = false;
     bool colIsBinary = isBinary(j);
-    if (colIsBinary) {
-      hasPosCliques = mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0;
-      hasNegCliques = mipsolver->mipdata_->cliquetable.numCliques(j, 0) > 0;
-    } else if (!upperImplied && !lowerImplied)
-      continue;
+    bool hasPosCliques =
+        colIsBinary && mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0;
+    bool hasNegCliques =
+        colIsBinary && mipsolver->mipdata_->cliquetable.numCliques(j, 0) > 0;
+
+    if (!colIsBinary && !upperImplied && !lowerImplied) continue;
 
     HighsInt oldNumFixed = numFixedCols;
 
@@ -1185,42 +1164,51 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     bool checkPosRow = upperImplied || colIsBinary;
     bool checkNegRow = lowerImplied || colIsBinary;
+
     for (const HighsSliceNonzero& nonz : getColumnVector(j)) {
       HighsInt row = nonz.index();
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
       if (colIsBinary) {
-        if (model->row_upper_[row] != kHighsInf) {
-          if (model->col_cost_[j] >= 0.0 && nonz.value() < 0.0) {
-            double maxresact =
-                impliedRowBounds.getResidualSumUpper(row, j, nonz.value());
-            double wcBound =
-                (model->row_upper_[row] - maxresact) / nonz.value();
-            worstCaseLb = std::max(wcBound, worstCaseLb);
-          } else if (model->col_cost_[j] <= 0.0 && nonz.value() > 0.0) {
-            double maxresact =
-                impliedRowBounds.getResidualSumUpper(row, j, nonz.value());
-            double wcBound =
-                (model->row_upper_[row] - maxresact) / nonz.value();
-            worstCaseUb = std::min(wcBound, worstCaseUb);
-          }
-        }
+        // lambda for calculating residual minimum / maximum row activity
+        auto getResidual = [&](HighsInt row, HighsInt col, double val,
+                               HighsInt direction) {
+          if (direction > 0)
+            return impliedRowBounds.getResidualSumUpper(row, col, val);
+          else
+            return impliedRowBounds.getResidualSumLower(row, col, val);
+        };
 
-        if (model->row_lower_[row] != -kHighsInf) {
-          if (model->col_cost_[j] >= 0.0 && nonz.value() > 0.0) {
-            double minresact =
-                impliedRowBounds.getResidualSumLower(row, j, nonz.value());
-            double wcBound =
-                (model->row_lower_[row] - minresact) / nonz.value();
-            worstCaseLb = std::max(wcBound, worstCaseLb);
-          } else if (model->col_cost_[j] <= 0.0 && nonz.value() < 0.0) {
-            double minresact =
-                impliedRowBounds.getResidualSumLower(row, j, nonz.value());
-            double wcBound =
-                (model->row_lower_[row] - minresact) / nonz.value();
-            worstCaseUb = std::min(wcBound, worstCaseUb);
+        // lambda for updating worst-case bound on binary variables
+        auto updateWorstCaseBounds = [&](HighsInt row, HighsInt col, double val,
+                                         HighsInt direction, double rhs) {
+          // direction =  1 (<= row): use upper bound on row's activity to
+          // compute worst-case implied column bounds.
+          // direction = -1 (>= row): use lower bound on row's activity to
+          // compute worst-case implied column bounds.
+          if (direction * rhs == kHighsInf) return;
+          if (model->col_cost_[col] >= 0.0 && direction * val < 0.0) {
+            // worst-case lower bound is non-negative:
+            // direction =  1 (<= row): rhs - getResidual(...) <= 0 and val < 0.
+            // direction = -1 (>= row): rhs - getResidual(...) >= 0 and val > 0.
+            worstCaseLb =
+                std::max((rhs - getResidual(row, col, val, direction)) / val,
+                         worstCaseLb);
+          } else if (model->col_cost_[col] <= 0.0 && direction * val > 0.0) {
+            // worst-case upper bound is non-positive:
+            // direction =  1 (<= row): rhs - getResidual(...) <= 0 and val > 0.
+            // direction = -1 (>= row): rhs - getResidual(...) >= 0 and val < 0.
+            worstCaseUb =
+                std::min((rhs - getResidual(row, col, val, direction)) / val,
+                         worstCaseUb);
           }
-        }
+        };
+
+        // compute worst-case bounds for binary variables
+        updateWorstCaseBounds(row, j, nonz.value(), HighsInt{1},
+                              model->row_upper_[row]);
+        updateWorstCaseBounds(row, j, nonz.value(), HighsInt{-1},
+                              model->row_lower_[row]);
       }
 
       double val = scale * nonz.value();
@@ -1239,209 +1227,174 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
     }
 
+    // lambda for fixing variables
+    auto fixCol = [&](HighsInt col, HighsInt direction) {
+      if (direction > 0) {
+        if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
+          // Handle unboundedness
+          presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+          return Result::kDualInfeasible;
+        }
+      } else {
+        if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
+          // Handle unboundedness
+          presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+          return Result::kDualInfeasible;
+        }
+      }
+      return Result::kOk;
+    };
+
     if (colIsBinary) {
+      // lambda for checking whether a binary variable can be fixed
+      auto binaryCanBeFixed = [&](HighsInt col, HighsInt k, double bestVal,
+                                  double val, HighsInt direction,
+                                  HighsInt multiplier, bool isEqOrRangedRow) {
+        HighsInt mydirection = multiplier * direction;
+        return direction * bestVal <=
+                   mydirection * val + options->small_matrix_value &&
+               (!isEqOrRangedRow ||
+                direction * bestVal >=
+                    mydirection * val - options->small_matrix_value) &&
+               checkDomination(direction, col, mydirection, k);
+      };
+
+      // lambda for fixing binary variables
+      auto checkFixBinary = [&](HighsInt row, HighsInt col, HighsInt direction,
+                                double scale, double bestVal) {
+        storeRow(row);
+        bool isEqOrRangedRow = isRanged(row);
+
+        for (const HighsSliceNonzero& nonz : getStoredRow()) {
+          HighsInt k = nonz.index();
+          if (k == col || colDeleted[k]) continue;
+
+          double ak = nonz.value() * scale;
+
+          if (binaryCanBeFixed(col, k, bestVal, ak, direction, HighsInt{1},
+                               isEqOrRangedRow) ||
+              binaryCanBeFixed(col, k, bestVal, ak, direction, HighsInt{-1},
+                               isEqOrRangedRow)) {
+            // direction =  1: fix binary variable to one
+            // direction = -1: fix binary variable to zero
+            ++numFixedCols;
+            HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
+            break;
+          }
+        }
+
+        // remove row singletons and doubleton equations if binary was fixed
+        if (colDeleted[col]) {
+          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+          HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
+        }
+        return Result::kOk;
+      };
+
+      // see Gamrath, G., Koch, T., Martin, A. et al. Progress in presolving for
+      // mixed integer programming. Math. Prog. Comp. 7, 367–398 (2015).
       if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
+        // cost is positive and 1 + primal_feastol >= worstCaseLb >= 0, i.e.
+        // worstCaseLb agrees with the bounds: try to find dominated variable
+        // that allows for fixing binary variable to zero
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
-          storeRow(bestRowMinus);
-
-          bool isEqOrRangedRow =
-              model->row_lower_[bestRowMinus] != -kHighsInf &&
-              model->row_upper_[bestRowMinus] != kHighsInf;
-
-          for (const HighsSliceNonzero& nonz : getStoredRow()) {
-            HighsInt k = nonz.index();
-            if (k == j || colDeleted[k]) continue;
-
-            double ak = nonz.value() * bestRowMinusScale;
-
-            if (-ajBestRowMinus <= -ak + options->small_matrix_value &&
-                (!isEqOrRangedRow ||
-                 -ajBestRowMinus >= -ak - options->small_matrix_value) &&
-                checkDomination(-1, j, -1, k)) {
-              // case (iii)  lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
-              ++numFixedCols;
-              if (fixColToLowerOrUnbounded(postsolve_stack, j)) {
-                // Handle unboundedness
-                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-                return Result::kDualInfeasible;
-              }
-              HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-              break;
-            } else if (-ajBestRowMinus <= ak + options->small_matrix_value &&
-                       (!isEqOrRangedRow ||
-                        -ajBestRowMinus >= ak - options->small_matrix_value) &&
-                       checkDomination(-1, j, 1, k)) {
-              // case (iv)  lb(x_j) = -inf, -x_j > x_k: set x_k = lb(x_k)
-              ++numFixedCols;
-              if (fixColToLowerOrUnbounded(postsolve_stack, j)) {
-                // Handle unboundedness
-                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-                return Result::kDualInfeasible;
-              }
-              HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-              break;
-            }
-          }
-
-          if (colDeleted[j]) {
-            HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
-            continue;
-          }
+          HPRESOLVE_CHECKED_CALL(checkFixBinary(bestRowMinus, j, HighsInt{-1},
+                                                bestRowMinusScale,
+                                                ajBestRowMinus));
+          if (colDeleted[j]) continue;
         }
       }
 
       if (model->col_cost_[j] <= 0.0 && worstCaseUb >= -primal_feastol) {
+        // cost is negative and 0 >= worstCaseUb >= -primal_feastol, i.e.
+        // worstCaseUb agrees with the bounds: try to find dominated variable
+        // that allows for fixing binary variable to one
         lowerImplied = true;
         if (!upperImplied && bestRowPlus != -1) {
-          storeRow(bestRowPlus);
-          bool isEqOrRangedRow = model->row_lower_[bestRowPlus] != -kHighsInf &&
-                                 model->row_upper_[bestRowPlus] != kHighsInf;
-          for (const HighsSliceNonzero& nonz : getStoredRow()) {
-            HighsInt k = nonz.index();
-            if (k == j || colDeleted[k]) continue;
-
-            double ak = nonz.value() * bestRowPlusScale;
-
-            if (ajBestRowPlus <= ak + options->small_matrix_value &&
-                (!isEqOrRangedRow ||
-                 ajBestRowPlus >= ak - options->small_matrix_value) &&
-                checkDomination(1, j, 1, k)) {
-              // case (i)  ub(x_j) = inf, x_j > x_k: set x_k = lb(x_k)
-              ++numFixedCols;
-              if (fixColToUpperOrUnbounded(postsolve_stack, j)) {
-                // Handle unboundedness
-                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-                return Result::kDualInfeasible;
-              }
-              HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-              break;
-            } else if (ajBestRowPlus <= -ak + options->small_matrix_value &&
-                       (!isEqOrRangedRow ||
-                        ajBestRowPlus >= -ak - options->small_matrix_value) &&
-                       checkDomination(1, j, -1, k)) {
-              // case (ii)  ub(x_j) = inf, x_j > -x_k: set x_k = ub(x_k)
-              ++numFixedCols;
-              if (fixColToUpperOrUnbounded(postsolve_stack, j)) {
-                // Handle unboundedness
-                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-                return Result::kDualInfeasible;
-              }
-              HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-              break;
-            }
-          }
-
-          if (colDeleted[j]) {
-            HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
-            continue;
-          }
-        }
-      }
-
-      if (!upperImplied && !hasPosCliques) bestRowPlus = -1;
-
-      if (!lowerImplied && !hasNegCliques) bestRowMinus = -1;
-    }
-
-    if (bestRowPlus != -1) {
-      assert(upperImplied || hasPosCliques);
-      storeRow(bestRowPlus);
-      bool isEqOrRangedRow = model->row_lower_[bestRowPlus] != -kHighsInf &&
-                             model->row_upper_[bestRowPlus] != kHighsInf;
-      for (const HighsSliceNonzero& nonz : getStoredRow()) {
-        HighsInt k = nonz.index();
-        if (k == j || colDeleted[k]) continue;
-
-        double ak = nonz.value() * bestRowPlusScale;
-
-        if (model->col_lower_[k] != -kHighsInf &&
-            ajBestRowPlus <= ak + options->small_matrix_value &&
-            (!isEqOrRangedRow ||
-             ajBestRowPlus >= ak - options->small_matrix_value) &&
-            (upperImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
-                                 HighsCliqueTable::CliqueVar(j, 1),
-                                 HighsCliqueTable::CliqueVar(k, 1))) &&
-            checkDomination(1, j, 1, k)) {
-          // case (i)  ub(x_j) = inf, x_j > x_k: set x_k = lb(x_k)
-          ++numFixedCols;
-          if (fixColToLowerOrUnbounded(postsolve_stack, k)) {
-            // Handle unboundedness
-            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-            return Result::kDualInfeasible;
-          }
-          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-        } else if (model->col_upper_[k] != kHighsInf &&
-                   ajBestRowPlus <= -ak + options->small_matrix_value &&
-                   (!isEqOrRangedRow ||
-                    ajBestRowPlus >= -ak - options->small_matrix_value) &&
-                   (upperImplied ||
-                    mipsolver->mipdata_->cliquetable.haveCommonClique(
-                        HighsCliqueTable::CliqueVar(j, 1),
-                        HighsCliqueTable::CliqueVar(k, 0))) &&
-                   checkDomination(1, j, -1, k)) {
-          // case (ii)  ub(x_j) = inf, x_j > -x_k: set x_k = ub(x_k)
-          ++numFixedCols;
-          if (fixColToUpperOrUnbounded(postsolve_stack, k)) {
-            // Handle unboundedness
-            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-            return Result::kDualInfeasible;
-          }
-          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+          HPRESOLVE_CHECKED_CALL(checkFixBinary(
+              bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
+          if (colDeleted[j]) continue;
         }
       }
     }
 
-    if (bestRowMinus != -1) {
-      assert(lowerImplied || hasNegCliques);
-      storeRow(bestRowMinus);
+    // lambda for determining whether column bound is finite (in given
+    // direction)
+    auto isBoundFinite = [&](HighsInt col, HighsInt direction) {
+      if (direction < 0)
+        return model->col_upper_[col] != kHighsInf;
+      else
+        return model->col_lower_[col] != -kHighsInf;
+    };
 
-      bool isEqOrRangedRow = model->row_lower_[bestRowMinus] != -kHighsInf &&
-                             model->row_upper_[bestRowMinus] != kHighsInf;
+    // lambda for checking whether a variable can be fixed
+    auto colCanBeFixed = [&](HighsInt col, HighsInt k, double bestVal,
+                             double val, HighsInt direction,
+                             HighsInt multiplier, bool boundImplied,
+                             bool isEqOrRangedRow) {
+      HighsInt mydirection = multiplier * direction;
+      return isBoundFinite(k, mydirection) &&
+             direction * bestVal <=
+                 mydirection * val + options->small_matrix_value &&
+             (!isEqOrRangedRow ||
+              direction * bestVal >=
+                  mydirection * val - options->small_matrix_value) &&
+             (boundImplied ||
+              mipsolver->mipdata_->cliquetable.haveCommonClique(
+                  HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
+                  HighsCliqueTable::CliqueVar(k, mydirection > 0 ? 1 : 0))) &&
+             checkDomination(direction, col, mydirection, k);
+    };
+
+    // lambda for fixing variables
+    auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
+                           double scale, double bestVal, bool boundImplied) {
+      storeRow(row);
+      bool isEqOrRangedRow = isRanged(row);
 
       for (const HighsSliceNonzero& nonz : getStoredRow()) {
         HighsInt k = nonz.index();
-        if (k == j || colDeleted[k]) continue;
+        if (k == col || colDeleted[k]) continue;
 
-        double ak = nonz.value() * bestRowMinusScale;
+        double ak = nonz.value() * scale;
 
-        if (model->col_upper_[k] != kHighsInf &&
-            -ajBestRowMinus <= -ak + options->small_matrix_value &&
-            (!isEqOrRangedRow ||
-             -ajBestRowMinus >= -ak - options->small_matrix_value) &&
-            (lowerImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
-                                 HighsCliqueTable::CliqueVar(j, 0),
-                                 HighsCliqueTable::CliqueVar(k, 0))) &&
-            checkDomination(-1, j, -1, k)) {
-          // case (iii)  lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
+        if (colCanBeFixed(col, k, bestVal, ak, direction, HighsInt{1},
+                          boundImplied, isEqOrRangedRow)) {
+          // direction =  1:
+          // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
+          // direction = -1:
+          // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
           ++numFixedCols;
-          if (fixColToUpperOrUnbounded(postsolve_stack, k)) {
-            // Handle unboundedness
-            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-            return Result::kDualInfeasible;
-          }
-          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-        } else if (model->col_lower_[k] != -kHighsInf &&
-                   -ajBestRowMinus <= ak + options->small_matrix_value &&
-                   (!isEqOrRangedRow ||
-                    -ajBestRowMinus >= ak - options->small_matrix_value) &&
-                   (lowerImplied ||
-                    mipsolver->mipdata_->cliquetable.haveCommonClique(
-                        HighsCliqueTable::CliqueVar(j, 0),
-                        HighsCliqueTable::CliqueVar(k, 1))) &&
-                   checkDomination(-1, j, 1, k)) {
-          // case (iv)  lb(x_j) = -inf, -x_j > x_k: set x_k = lb(x_k)
+          HPRESOLVE_CHECKED_CALL(fixCol(k, -direction));
+        } else if (colCanBeFixed(col, k, bestVal, ak, direction, HighsInt{-1},
+                                 boundImplied, isEqOrRangedRow)) {
+          // direction =  1:
+          // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
+          // direction = -1:
+          // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
           ++numFixedCols;
-          if (fixColToLowerOrUnbounded(postsolve_stack, k)) {
-            // Handle unboundedness
-            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-            return Result::kDualInfeasible;
-          }
-          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+          HPRESOLVE_CHECKED_CALL(fixCol(k, direction));
         }
+        if (colDeleted[k])
+          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       }
-    }
+      return Result::kOk;
+    };
 
+    // try to fix variables using row 'bestRowMinus'
+    if (bestRowMinus != -1 && (lowerImplied || hasNegCliques))
+      HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowMinus, j, HighsInt{-1},
+                                         bestRowMinusScale, ajBestRowMinus,
+                                         lowerImplied));
+
+    // try to fix variables using row 'bestRowPlus'
+    if (bestRowPlus != -1 && (upperImplied || hasPosCliques))
+      HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowPlus, j, HighsInt{1},
+                                         bestRowPlusScale, ajBestRowPlus,
+                                         upperImplied));
+
+    // remove doubleton equations
     if (numFixedCols != oldNumFixed)
       HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
   }
@@ -1571,9 +1524,14 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     HighsInt numImplicsStart = implications.getNumImplications();
     HighsInt numDelStart = probingNumDelCol;
 
-    HighsInt numDel = probingNumDelCol - numDelStart +
-                      implications.substitutions.size() +
-                      cliquetable.getSubstitutions().size();
+    auto calcNumDel = [&]() {
+      return probingNumDelCol - numDelStart +
+             static_cast<HighsInt>(implications.substitutions.size() +
+                                   cliquetable.getSubstitutions().size());
+    };
+
+    HighsInt numDel = calcNumDel();
+
     int64_t splayContingent =
         cliquetable.numNeighbourhoodQueries +
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
@@ -1667,9 +1625,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
           ++probingNumDelCol;
       }
-      HighsInt newNumDel = probingNumDelCol - numDelStart +
-                           implications.substitutions.size() +
-                           cliquetable.getSubstitutions().size();
+      HighsInt newNumDel = calcNumDel();
 
       if (newNumDel > numDel) {
         probingContingent += numDel;
@@ -1718,7 +1674,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // add nonzeros from clique lifting before removing fixed variables, since
     // this might lead to stronger constraint sides
     auto& extensionvars = cliquetable.getCliqueExtensions();
-    HighsInt addednnz = extensionvars.size();
+    HighsInt addednnz = static_cast<HighsInt>(extensionvars.size());
     for (const auto& cliqueextension : extensionvars) {
       if (rowDeleted[cliqueextension.first]) {
         --addednnz;
@@ -1979,7 +1935,7 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 
   if (pos == -1) {
     if (freeslots.empty()) {
-      pos = Avalue.size();
+      pos = static_cast<HighsInt>(Avalue.size());
       Avalue.push_back(val);
       Arow.push_back(row);
       Acol.push_back(col);
@@ -2451,9 +2407,9 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
       rowDualUpperSource.data());
   impliedDualRowBounds.setNumSums(model->num_col_);
 
-  HighsInt ncol = Astart.size() - 1;
-  assert(ncol == int(colhead.size()));
-  HighsInt nnz = Aval.size();
+  HighsInt ncol = static_cast<HighsInt>(Astart.size()) - 1;
+  assert(static_cast<size_t>(ncol) == colhead.size());
+  HighsInt nnz = static_cast<HighsInt>(Aval.size());
 
   Avalue = Aval;
   if (!okReserve(Acol, nnz)) return false;
@@ -2514,9 +2470,9 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
       rowDualUpperSource.data());
   impliedDualRowBounds.setNumSums(model->num_col_);
 
-  HighsInt nrow = ARstart.size() - 1;
-  assert(nrow == int(rowroot.size()));
-  HighsInt nnz = ARval.size();
+  HighsInt nrow = static_cast<HighsInt>(ARstart.size()) - 1;
+  assert(static_cast<size_t>(nrow) == rowroot.size());
+  HighsInt nnz = static_cast<HighsInt>(ARval.size());
 
   Avalue = ARval;
   if (!okReserve(Acol, nnz)) return false;
@@ -2845,10 +2801,10 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
 void HPresolve::toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
                       std::vector<HighsInt>& Astart) {
   // set up the column starts using the column size array
-  HighsInt numcol = colsize.size();
+  size_t numcol = colsize.size();
   Astart.resize(numcol + 1);
   HighsInt nnz = 0;
-  for (HighsInt i = 0; i != numcol; ++i) {
+  for (size_t i = 0; i != numcol; ++i) {
     Astart[i] = nnz;
     nnz += colsize[i];
   }
@@ -2859,9 +2815,9 @@ void HPresolve::toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
   // for determining the position of each nonzero
   Aval.resize(nnz);
   Aindex.resize(nnz);
-  HighsInt numslots = Avalue.size();
-  assert(numslots - int(freeslots.size()) == nnz);
-  for (HighsInt i = 0; i != numslots; ++i) {
+  size_t numslots = Avalue.size();
+  assert(numslots - freeslots.size() == static_cast<size_t>(nnz));
+  for (size_t i = 0; i != numslots; ++i) {
     if (Avalue[i] == 0.0) continue;
     assert(Acol[i] >= 0 && Acol[i] < model->num_col_);
     HighsInt pos = Astart[Acol[i] + 1] - colsize[Acol[i]];
@@ -2876,10 +2832,10 @@ void HPresolve::toCSR(std::vector<double>& ARval,
                       std::vector<HighsInt>& ARindex,
                       std::vector<HighsInt>& ARstart) {
   // set up the row starts using the row size array
-  HighsInt numrow = rowsize.size();
+  size_t numrow = rowsize.size();
   ARstart.resize(numrow + 1);
   HighsInt nnz = 0;
-  for (HighsInt i = 0; i != numrow; ++i) {
+  for (size_t i = 0; i != numrow; ++i) {
     ARstart[i] = nnz;
     nnz += rowsize[i];
   }
@@ -3630,11 +3586,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
             rhs = std::round(rhs);
 
-            HighsInt rowlen = rowpositions.size();
             HighsInt x1Cand = -1;
             int64_t d = 0;
 
-            for (HighsInt i = 0; i < rowlen; ++i) {
+            for (HighsInt i = 0; i < static_cast<HighsInt>(rowpositions.size());
+                 ++i) {
               int64_t newgcd =
                   d == 0 ? int64_t(std::abs(
                                std::round(intScale * Avalue[rowpositions[i]])))
@@ -4926,7 +4882,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       if (!mipsolver || mipsolver->mipdata_->numRestarts == 0) {
         HighsInt numCol = model->num_col_ - numDeletedCols;
         HighsInt numRow = model->num_row_ - numDeletedRows;
-        HighsInt numNonz = Avalue.size() - freeslots.size();
+        HighsInt numNonz =
+            static_cast<HighsInt>(Avalue.size() - freeslots.size());
         // Only read the run time if it's to be printed
         const double run_time = options->output_flag ? this->timer->read() : 0;
 #ifndef NDEBUG
