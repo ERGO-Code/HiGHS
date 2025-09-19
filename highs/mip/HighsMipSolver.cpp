@@ -851,14 +851,16 @@ void HighsMipSolver::cleanupSolve() {
                  "  Repair LPs        0\n");
   }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  LP iterations     %llu\n"
-               "                    %llu (strong br.)\n"
-               "                    %llu (separation)\n"
-               "                    %llu (heuristics)\n",
-               (long long unsigned)mipdata_->total_lp_iterations,
-               (long long unsigned)mipdata_->sb_lp_iterations,
-               (long long unsigned)mipdata_->sepa_lp_iterations,
-               (long long unsigned)mipdata_->heuristic_lp_iterations);
+               "  LP iterations     %llu\n",
+               (long long unsigned)mipdata_->total_lp_iterations);
+  if (mipdata_->total_lp_iterations)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "                    %llu (strong br.)\n"
+                 "                    %llu (separation)\n"
+                 "                    %llu (heuristics)\n",
+                 (long long unsigned)mipdata_->sb_lp_iterations,
+                 (long long unsigned)mipdata_->sepa_lp_iterations,
+                 (long long unsigned)mipdata_->heuristic_lp_iterations);
 
   if (!timeless_log) analysis_.reportMipTimer();
 
