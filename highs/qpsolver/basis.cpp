@@ -1,3 +1,10 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "basis.hpp"
 
 #include <cassert>
