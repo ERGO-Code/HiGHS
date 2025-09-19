@@ -211,6 +211,8 @@ class HPresolve {
 
   bool isRanged(HighsInt row) const;
 
+  bool isRedundant(HighsInt row) const;
+
   bool isImpliedEquationAtLower(HighsInt row) const;
 
   bool isImpliedEquationAtUpper(HighsInt row) const;
@@ -376,6 +378,8 @@ class HPresolve {
 
   Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                             bool handleSingletonRows = true);
+
+  Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
