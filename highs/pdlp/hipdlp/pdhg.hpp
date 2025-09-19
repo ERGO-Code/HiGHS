@@ -59,7 +59,7 @@ class PDLPSolver {
   // Problem data
   HighsLp lp_;                  // The problem to solve
   const HighsLp* original_lp_;  // The original problem (for postsolve)
-  HighsLp unscaled_processed_lp_; 
+  HighsLp unscaled_processed_lp_;
   PrimalDualParams params_;
   Logger logger_;
   PdlpStep step_;
@@ -132,11 +132,11 @@ class PDLPSolver {
   double ComputeKKTError(const std::vector<double>& x,
                          const std::vector<double>& y,
                          const std::vector<double>& lambda, double omega);
-  bool CheckConvergence(const std::vector<double>& x,
+  bool CheckConvergence(const int iter, const std::vector<double>& x,
                         const std::vector<double>& y,
                         const std::vector<double>& ax_vector,
                         const std::vector<double>& aty_vector, double epsilon,
-                        SolverResults& results);
+                        SolverResults& results, const char* type);
 
   // GPU specific functions
 

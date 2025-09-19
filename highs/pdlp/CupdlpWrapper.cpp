@@ -207,10 +207,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 
   // Print final solution using debugPdlpFinalSolutionLog
   debugPdlpFinalSolutionLog(w->debug_pdlp_log_file_,
-			    highs_solution.col_value.data(),
-			    lp.num_col_,
-			    highs_solution.row_dual.data(),
-			    lp.num_row_);
+                            highs_solution.col_value.data(), lp.num_col_,
+                            highs_solution.row_dual.data(), lp.num_row_);
   fclose(w->debug_pdlp_log_file_);
   model_status = HighsModelStatus::kUnknown;
   highs_solution.value_valid = value_valid;

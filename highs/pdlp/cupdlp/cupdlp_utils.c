@@ -1803,7 +1803,19 @@ void debugPdlpIterLog(FILE* file, const int iter_num, const struct DebugPdlpData
 	  beta);
 }
 
-void debugPdlpFeasOptLog(FILE* file) {
+void debugPdlpFeasOptLog(FILE* file, 
+			 const int iter_num,
+			 const double primal_obj, const double dual_obj,
+			 const double gap, const double primal_feas, const double dual_feas,
+			 const char* type) {
+  fprintf(file,
+	  "%6d Feasibility-optimality %s\n"
+	  "  primal_obj  = %11.4g\n"
+	  "  dual_obj    = %11.4g\n"
+	  "  gap         = %11.4g\n"
+	  "  primal_feas = %11.4g\n"
+	  "  dual_feas   = %11.4g\n",
+	  iter_num, type, primal_obj, dual_obj, gap, primal_feas, dual_feas);
 }
 
 void debugPdlpRestartLog(FILE* file, const int iter_num, const double current_score, const double average_score) {

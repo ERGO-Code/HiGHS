@@ -11,10 +11,10 @@
  */
 #include "pdlp/HiPdlpWrapper.h"
 
+#include "pdlp/cupdlp/cupdlp_utils.h"
 #include "pdlp/hipdlp/logger.hpp"
 #include "pdlp/hipdlp/pdhg.hpp"
 #include "pdlp/hipdlp/restart.hpp"
-#include "pdlp/cupdlp/cupdlp_utils.h"
 
 HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object) {
   return solveLpHiPdlp(solver_object.options_, solver_object.timer_,
@@ -68,7 +68,9 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   }
 
   // print col_value and row_dual
-  debugPdlpFinalSolutionLog(pdlp.debug_pdlp_log_file_, pdlp_solution.col_value.data(), lp.num_col_, pdlp_solution.row_dual.data(), lp.num_row_);
+  debugPdlpFinalSolutionLog(pdlp.debug_pdlp_log_file_,
+                            pdlp_solution.col_value.data(), lp.num_col_,
+                            pdlp_solution.row_dual.data(), lp.num_row_);
   pdlp.solveReturn();
   // --- Print Summary ---
   pdlp.logSummary();
@@ -118,15 +120,15 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   }
   assert(termination_status == TerminationStatus::OPTIMAL ||
          termination_status == TerminationStatus::TIMEOUT);
-  //highs_solution.col_value = x;
-  //highs_solution.col_value.resize(lp.num_col_);
-  //highs_solution.row_dual = y;
-  //lp.a_matrix_.product(highs_solution.row_value, highs_solution.col_value);
-  //lp.a_matrix_.productTranspose(highs_solution.col_dual,
-  //                              highs_solution.row_dual);
-  //for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-  //  highs_solution.col_dual[iCol] =
-  //      lp.col_cost_[iCol] - highs_solution.col_dual[iCol];
+  // highs_solution.col_value = x;
+  // highs_solution.col_value.resize(lp.num_col_);
+  // highs_solution.row_dual = y;
+  // lp.a_matrix_.product(highs_solution.row_value, highs_solution.col_value);
+  // lp.a_matrix_.productTranspose(highs_solution.col_dual,
+  //                               highs_solution.row_dual);
+  // for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+  //   highs_solution.col_dual[iCol] =
+  //       lp.col_cost_[iCol] - highs_solution.col_dual[iCol];
   highs_solution.value_valid = true;
   highs_solution.dual_valid = true;
   return HighsStatus::kOk;

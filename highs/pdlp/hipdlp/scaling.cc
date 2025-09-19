@@ -77,10 +77,10 @@ void Scaling::scaleProblem() {
   is_scaled_ = false;
 
   if (params_->use_ruiz_scaling) {
-  highsLogUser(params_->log_options_, HighsLogType::kInfo,
-                "Applying Ruiz scaling...\n");
-  ApplyRuizScaling();
-  is_scaled_ = true;
+    highsLogUser(params_->log_options_, HighsLogType::kInfo,
+                 "Applying Ruiz scaling...\n");
+    ApplyRuizScaling();
+    is_scaled_ = true;
   }
 
   if (params_->use_pc_scaling) {

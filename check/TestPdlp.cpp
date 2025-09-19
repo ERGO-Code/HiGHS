@@ -333,7 +333,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
-  std::string model = "afiro";  //"adlittle";//"afiro";// 
+  std::string model = "afiro";  //"adlittle";//"afiro";//
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
@@ -342,17 +342,15 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   h.setOptionValue("solver", kHiPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
 
-  HighsInt pdlp_features_off = 
-  // kPdlpScalingOff + 
-  kPdlpRestartOff + 
-  kPdlpAdaptiveStepSizeOff;
+  HighsInt pdlp_features_off =
+      // kPdlpScalingOff +
+      kPdlpRestartOff + kPdlpAdaptiveStepSizeOff;
   h.setOptionValue("pdlp_features_off", pdlp_features_off);
 
-  HighsInt pdlp_scaling = //0;
-   kPdlpScalingRuiz 
-  //+ kPdlpScalingL2 
-  + kPdlpScalingPC
-  ;
+  HighsInt pdlp_scaling =  // 0;
+      kPdlpScalingRuiz
+      //+ kPdlpScalingL2
+      + kPdlpScalingPC;
   h.setOptionValue("pdlp_scaling_mode", pdlp_scaling);
   h.setOptionValue("pdlp_step_size_strategy", 0);
   h.setOptionValue("pdlp_restart_strategy", 2);

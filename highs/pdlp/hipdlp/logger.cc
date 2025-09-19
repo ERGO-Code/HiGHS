@@ -63,7 +63,6 @@ void Logger::print_header() {
   info("------------------------------------------------------------");
 }
 
-
 void Logger::print_params(const PrimalDualParams& params) {
   info("\nSolver Parameters:");
   std::stringstream ss;

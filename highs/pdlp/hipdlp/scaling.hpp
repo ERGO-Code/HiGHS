@@ -17,7 +17,6 @@
 
 #include "Highs.h"
 #include "defs.hpp"
-
 #include "pdlp/cupdlp/cupdlp_utils.h"
 
 class Scaling {
@@ -28,7 +27,7 @@ class Scaling {
   void scaleProblem();
   void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
   void passLp(HighsLp* lp) { lp_ = lp; };
-  void passParams(const PrimalDualParams* params) { params_ = params; }; 
+  void passParams(const PrimalDualParams* params) { params_ = params; };
   void passDebugPdlpLogFile(FILE* debug_pdlp_log_file) {
     debug_pdlp_log_file_ = debug_pdlp_log_file;
   };

@@ -847,6 +847,7 @@ void PDHG_Print_Iter(CUPDLPwork *pdhg) {
   const double gap_log_value = resobj->dRelObjGap;
   const double primal_feas_log_value = resobj->dPrimalFeas / (1.0 + scaling->dNormRhs);
   const double dual_feas_log_value = resobj->dDualFeas / (1.0 + scaling->dNormCost);
+
   cupdlp_printf("%9d  %+15.8e  %+15.8e  %+8.2e  %10.2e  %8.2e %7s [L]\n",
                 timers->nIter, resobj->dPrimalObj, resobj->dDualObj,
 		//                resobj->dDualityGap, resobj->dPrimalFeas, resobj->dDualFeas,
@@ -863,7 +864,6 @@ void PDHG_Print_Iter_Average(CUPDLPwork *pdhg) {
     cupdlp_snprintf(timeString, 8, "%6.2fs", timers->dSolvingTime);
   else
     cupdlp_snprintf(timeString, 8, "%6ds", (cupdlp_int)timers->dSolvingTime);
-
   CUPDLPscaling *scaling = pdhg->scaling;
   const double gap_log_value = resobj->dRelObjGapAverage;
   const double primal_feas_log_value = resobj->dPrimalFeasAverage / (1.0 + scaling->dNormRhs);
@@ -966,6 +966,22 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
 	iter_log_since_header++;
       }
 
+      debugPdlpFeasOptLog(pdhg->debug_pdlp_log_file_,
+			  pdhg->timers->nIter, 
+			  pdhg->resobj->dPrimalObj,
+			  pdhg->resobj->dDualObj,
+			  pdhg->resobj->dRelObjGap,
+			  pdhg->resobj->dPrimalFeas / (1.0 + pdhg->scaling->dNormRhs),
+			  pdhg->resobj->dDualFeas / (1.0 + pdhg->scaling->dNormCost), "[L]");
+      debugPdlpFeasOptLog(pdhg->debug_pdlp_log_file_,
+			  pdhg->timers->nIter, 
+			  pdhg->resobj->dPrimalObjAverage,
+			  pdhg->resobj->dDualObjAverage,
+			  pdhg->resobj->dRelObjGapAverage,
+			  pdhg->resobj->dPrimalFeasAverage / (1.0 + pdhg->scaling->dNormRhs),
+			  pdhg->resobj->dDualFeasAverage / (1.0 + pdhg->scaling->dNormCost), "[A]");
+      debugPdlpIterHeaderLog(pdhg->debug_pdlp_log_file_);
+      
       // Termination check printing is only done when printing is full
       int termination_print = bool_print && full_print;
       if (PDHG_Check_Termination(pdhg, termination_print)) {
