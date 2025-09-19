@@ -174,9 +174,20 @@ class HPresolve {
 
   double getMaxAbsRowVal(HighsInt row) const;
 
+  bool checkUpdateColImpliedBounds(HighsInt row, double* rowLower = nullptr,
+                                   double* rowUpper = nullptr) const;
+
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
+  void updateColImpliedBounds(HighsInt row);
+
+  bool checkUpdateRowDualImpliedBounds(HighsInt col,
+                                       double* dualRowLower = nullptr,
+                                       double* dualRowUpper = nullptr) const;
+
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
+
+  void updateRowDualImpliedBounds(HighsInt col);
 
   void resetColImpliedBounds(HighsInt col, HighsInt row = -1);
 
@@ -198,6 +209,10 @@ class HPresolve {
 
   bool isEquation(HighsInt row) const;
 
+  bool isRanged(HighsInt row) const;
+
+  bool isRedundant(HighsInt row) const;
+
   bool isImpliedEquationAtLower(HighsInt row) const;
 
   bool isImpliedEquationAtUpper(HighsInt row) const;
@@ -211,7 +226,11 @@ class HPresolve {
 
   bool isLowerImplied(HighsInt col) const;
 
+  bool isLowerStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
+
   bool isUpperImplied(HighsInt col) const;
+
+  bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
   HighsInt countFillin(HighsInt row);
 
@@ -359,6 +378,8 @@ class HPresolve {
 
   Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                             bool handleSingletonRows = true);
+
+  Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 

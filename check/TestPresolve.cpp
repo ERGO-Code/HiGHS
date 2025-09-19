@@ -735,6 +735,32 @@ TEST_CASE("presolve-issue-2446", "[highs_test_presolve]") {
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
 }
 
+TEST_CASE("presolve-solve-postsolve-no-col-dual", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  highs.readModel(model_file);
+  highs.presolve();
+  HighsLp presolved_lp = highs.getPresolvedLp();
+  Highs highs1;
+  highs1.setOptionValue("output_flag", dev_run);
+  highs1.setOptionValue("presolve", kHighsOffString);
+  highs1.passModel(presolved_lp);
+  highs1.run();
+  HighsSolution solution = highs1.getSolution();
+
+  // Perform postsolve using the optimal solution and basis for the
+  // presolved model
+  REQUIRE(highs.postsolve(solution) == HighsStatus::kOk);
+
+  // If row duals are supplied, then column duals must also be suppplied
+  solution.col_dual.clear();
+  REQUIRE(highs.postsolve(solution) == HighsStatus::kError);
+
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   // Tests the case where, for this model when run_crossover is off,
   // sparsify is used to reduce the LP to empty. However, when
@@ -811,4 +837,28 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
           lp_presolve_requires_basis_postsolve);
 
   h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("dual-bound-tightening", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+
+  // complement variables to get code coverage
+  HighsLp lp = highs.getLp();
+  std::transform(lp.a_matrix_.value_.begin(), lp.a_matrix_.value_.end(),
+                 lp.a_matrix_.value_.begin(), [](double v) { return -v; });
+  std::transform(lp.col_cost_.begin(), lp.col_cost_.end(), lp.col_cost_.begin(),
+                 [](double v) { return -v; });
+  std::transform(lp.col_upper_.begin(), lp.col_upper_.end(),
+                 lp.col_upper_.begin(), [](double v) { return -v; });
+  std::transform(lp.col_lower_.begin(), lp.col_lower_.end(),
+                 lp.col_lower_.begin(), [](double v) { return -v; });
+  std::swap(lp.col_lower_, lp.col_upper_);
+
+  highs.passModel(lp);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
 }

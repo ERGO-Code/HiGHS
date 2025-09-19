@@ -13,3 +13,6 @@ The irreducible infeasibility system (IIS) facility now detects infeasibility du
 Prompted by [#2463](https://github.com/ERGO-Code/HiGHS/issues/2463), the HiGHS solution and basis files now match data to any column and row names in the model, only assuming that the data are aligned with column and row indices if there are no names in the model. This requires a new version (v2) of the HiGHS basis file. Basis files from v1 are still read, but deprecated. Now, when writing out a model, basis or solution, column and row names are added to the model - previously they were created temporarily and inconsistentyly on the fly. If the model has existing names, then distinctive names are created to replace any blank names, but names with spaces or duplicate names yield an error status return.
 
 Refactored strong branching to minimize duplicated code
+
+As per [#2487](https://github.com/ERGO-Code/HiGHS/issues/2487), trivial heuristics now run before feasibility jump (FJ), and FJ will use any existing incumbent. FJ will clip any finite variable values in the incumbent to lower and upper bounds, and falls back to the existing logic (lower bound if finite, else upper bound if finite, else 0) for any infinite values in the incumbent.
+

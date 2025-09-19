@@ -40,12 +40,16 @@ TEST_CASE("MIP-rowless-1", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   rowlessMIP1(highs);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-rowless-2", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   rowlessMIP2(highs);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-solution-limit", "[highs_test_mip_solver]") {
@@ -79,6 +83,8 @@ TEST_CASE("MIP-solution-limit", "[highs_test_mip_solver]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolutionLimit);
   highs.setOptionValue("mip_max_improving_sols", kHighsIInf);
   highs.clearSolver();
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
@@ -173,6 +179,8 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   REQUIRE(info.mip_node_count == 1);
   REQUIRE(fabs(info.mip_dual_bound + 6) < double_equal_tolerance);
   REQUIRE(std::fabs(info.mip_gap) < 1e-12);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-clear-integrality", "[highs_test_mip_solver]") {
@@ -215,6 +223,8 @@ TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
   REQUIRE(info.num_primal_infeasibilities == 0);
   REQUIRE(info.max_primal_infeasibility == 0);
   REQUIRE(info.sum_primal_infeasibilities == 0);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
@@ -295,6 +305,8 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
   REQUIRE(std::abs(info.objective_function_value - info.mip_dual_bound) <=
           options.mip_abs_gap);
   REQUIRE(std::abs(info.mip_gap) <= options.mip_rel_gap);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
@@ -403,6 +415,8 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
@@ -470,6 +484,8 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
           double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0_value) <
           double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
@@ -513,6 +529,8 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
           HighsStatus::kOk);
   highs.run();
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
@@ -556,6 +574,8 @@ TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
            obj1);
   REQUIRE(obj0 == obj1);
   std::remove(test_mps.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
@@ -583,6 +603,8 @@ TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
     REQUIRE(saved_objective_and_solution[last_saved_solution].col_value[iCol] ==
             highs.getSolution().col_value[iCol]);
   std::remove(solution_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-objective-target", "[highs_test_mip_solver]") {
@@ -597,6 +619,8 @@ TEST_CASE("MIP-objective-target", "[highs_test_mip_solver]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kObjectiveTarget);
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-max-offset-test", "[highs_test_mip_solver]") {
@@ -625,6 +649,8 @@ TEST_CASE("MIP-max-offset-test", "[highs_test_mip_solver]") {
       highs.getInfo().objective_function_value;
   REQUIRE(objectiveOk(max_offset_optimal_objective, -offset_optimal_objective,
                       dev_run));
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
@@ -663,6 +689,8 @@ TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
     REQUIRE(saved_objective_and_solution[last_saved_solution].col_value[iCol] ==
             highs.getSolution().col_value[iCol]);
   std::remove(solution_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
@@ -720,6 +748,8 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
     }
     highs.setOptionValue("presolve", kHighsOnString);
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
@@ -755,6 +785,8 @@ TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
 
   // Infeasible
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
 
 bool objectiveOk(const double optimal_objective,
@@ -787,6 +819,8 @@ void solve(Highs& highs, std::string presolve,
                         require_optimal_objective, dev_run));
   }
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
 
 void distillationMIP(Highs& highs) {

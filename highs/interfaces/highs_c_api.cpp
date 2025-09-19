@@ -1320,32 +1320,34 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
   *iis_num_col = iis.col_index_.size();
   *iis_num_row = iis.row_index_.size();
   if (col_index != nullptr) {
-    for (size_t i = 0; i < *iis_num_col; i++) {
+    for (size_t i = 0; i < static_cast<size_t>(*iis_num_col); i++) {
       col_index[i] = iis.col_index_[i];
     }
   }
   if (row_index != nullptr) {
-    for (size_t i = 0; i < *iis_num_row; i++) {
+    for (size_t i = 0; i < static_cast<size_t>(*iis_num_row); i++) {
       row_index[i] = iis.row_index_[i];
     }
   }
   if (col_bound != nullptr) {
-    for (size_t i = 0; i < *iis_num_col; i++) {
+    for (size_t i = 0; i < static_cast<size_t>(*iis_num_col); i++) {
       col_bound[i] = iis.col_bound_[i];
     }
   }
   if (row_bound != nullptr) {
-    for (size_t i = 0; i < *iis_num_row; i++) {
+    for (size_t i = 0; i < static_cast<size_t>(*iis_num_row); i++) {
       row_bound[i] = iis.row_bound_[i];
     }
   }
   if (col_status != nullptr) {
-    for (size_t i = 0; i < ((Highs*)highs)->getLp().num_col_; i++) {
+    for (size_t i = 0;
+         i < static_cast<size_t>(((Highs*)highs)->getLp().num_col_); i++) {
       col_status[i] = iis.col_status_[i];
     }
   }
   if (row_status != nullptr) {
-    for (size_t i = 0; i < ((Highs*)highs)->getLp().num_row_; i++) {
+    for (size_t i = 0;
+         i < static_cast<size_t>(((Highs*)highs)->getLp().num_row_); i++) {
       row_status[i] = iis.row_status_[i];
     }
   }

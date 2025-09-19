@@ -19,6 +19,20 @@ struct HighsPseudocostInitialization;
 class HighsCliqueTable;
 class HighsImplications;
 
+struct HighsTerminator {
+  HighsInt num_instance;
+  HighsInt my_instance;
+  HighsModelStatus* record;
+  void clear();
+  void initialise(HighsInt num_instance_, HighsInt my_instance_,
+                  HighsModelStatus* record_);
+  HighsInt concurrency() const;
+  void terminate();
+  bool terminated() const;
+  HighsModelStatus terminationStatus() const;
+  void report(const HighsLogOptions log_options) const;
+};
+
 class HighsMipSolver {
  public:
   HighsCallback* callback_;
@@ -54,6 +68,9 @@ class HighsMipSolver {
   std::unique_ptr<HighsMipSolverData> mipdata_;
 
   HighsMipAnalysis analysis_;
+
+  HighsModelStatus termination_status_;
+  HighsTerminator terminator_;
 
   void run();
 
@@ -97,7 +114,7 @@ class HighsMipSolver {
   mutable HighsTimer timer_;
   void cleanupSolve();
 
-  void runPresolve(const HighsInt presolve_reduction_limit);
+  void runMipPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;
   HighsPresolveStatus getPresolveStatus() const;
   presolve::HighsPostsolveStack getPostsolveStack() const;
@@ -107,6 +124,22 @@ class HighsMipSolver {
                         const std::vector<double>* pass_row_value,
                         double& bound_violation, double& row_violation,
                         double& integrality_violation, HighsCDouble& obj) const;
+
+  std::vector<HighsModelStatus> initialiseTerminatorRecord(
+      HighsInt num_instance) const;
+  void initialiseTerminator(HighsInt num_instance_ = 0,
+                            HighsInt my_instance_ = kNoThreadInstance,
+                            HighsModelStatus* record_ = nullptr);
+  void initialiseTerminator(const HighsMipSolver& mip_solver);
+  bool terminate() const {
+    return this->termination_status_ != HighsModelStatus::kNotset;
+  }
+  HighsModelStatus terminationStatus() const {
+    return this->termination_status_;
+  }
 };
 
+std::array<char, 128> getGapString(const double gap_,
+                                   const double primal_bound_,
+                                   const HighsOptions* options_mip_);
 #endif
