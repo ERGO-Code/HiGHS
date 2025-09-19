@@ -16,24 +16,61 @@ void checkLpScaling(const HighsInt user_bound_scale,
                     const HighsInt user_cost_scale, const HighsLp& unscaled_lp,
                     const HighsLp& scaled_lp);
 
+bool doubleEqual0(const double v0, const double v1) {
+  return std::fabs(v0 - v1)/std::max(1.0, std::fabs(v0)) < 1e-12; 
+}
+
 TEST_CASE("user-cost-scale-after-run", "[highs_user_scale]") {
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  std::string model = "avgas";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   highs.setOptionValue("output_flag", dev_run);
   for (HighsInt k = 0; k < 2; k++) {
+    std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
     highs.readModel(filename);
-    highs.run();
-    HighsInfo unscaled_info = info;
-    HighsSolution unscaled_solution = highs.getSolution();
+    highs.writeModel("");
+    double col_cost_1 = highs.getLp().col_cost_[1]; // kInteger for flugpl
+    double col_cost_2 = highs.getLp().col_cost_[2]; // kContinuous for flugpl
+    double col_upper_1 = highs.getLp().col_upper_[1];
+    double col_upper_2 = highs.getLp().col_upper_[2];
+    double row_upper_0 = highs.getLp().row_upper_[0];
+    double matrix_value_1 = highs.getLp().a_matrix_.value_[highs.getLp().a_matrix_.start_[1]];
+    double matrix_value_2 = highs.getLp().a_matrix_.value_[highs.getLp().a_matrix_.start_[2]];
     HighsLp unscaled_lp = highs.getLp();
 
-    HighsInt user_bound_scale = 10;
-    REQUIRE(highs.setOptionValue("user_bound_scale", user_bound_scale) == HighsStatus::kOk);
+    highs.run();
+    double unscaled_objective = highs.getInfo().objective_function_value;
 
-    HighsInt user_cost_scale = 30;
+    HighsInt user_bound_scale = 1;//8;
+    double user_bound_scale_value = std::pow(2, user_bound_scale);
+    REQUIRE(highs.setOptionValue("user_bound_scale", user_bound_scale) == HighsStatus::kOk);
+    if (k == 0) { 
+      REQUIRE(highs.getLp().col_cost_[1] == col_cost_1);
+      REQUIRE(highs.getLp().col_upper_[1] == user_bound_scale_value*col_upper_1);
+    } else {
+      REQUIRE(highs.getLp().col_cost_[1] == user_bound_scale_value*col_cost_1);
+      REQUIRE(highs.getLp().col_upper_[1] == col_upper_1);
+    }
+    REQUIRE(highs.getLp().col_upper_[2] == user_bound_scale_value*col_upper_2);
+    REQUIRE(highs.getLp().row_upper_[0] == row_upper_0);
+
+    HighsInt user_cost_scale = 4;
+    double user_cost_scale_value = std::pow(2, user_cost_scale);
     REQUIRE(highs.setOptionValue("user_cost_scale", user_cost_scale) == HighsStatus::kOk);
+    if (k == 0) {
+      REQUIRE(highs.getLp().col_cost_[1] == user_cost_scale_value*col_cost_1);
+    } else {
+      REQUIRE(highs.getLp().col_cost_[1] == user_cost_scale_value*user_bound_scale_value*col_cost_1);
+    }
+    REQUIRE(highs.getLp().col_cost_[2] == user_cost_scale_value*col_cost_2);
+    if (k == 0) {
+      REQUIRE(highs.getLp().col_upper_[1] == user_bound_scale_value*col_upper_1);
+    } else {
+      REQUIRE(highs.getLp().col_upper_[1] == col_upper_1);
+    }
+    REQUIRE(highs.getLp().col_upper_[2] == user_bound_scale_value*col_upper_2);
+    REQUIRE(highs.getLp().row_upper_[0] == user_bound_scale_value*row_upper_0);
 
     HighsLp scaled_lp = highs.getLp();
     checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
@@ -48,8 +85,12 @@ TEST_CASE("user-cost-scale-after-run", "[highs_user_scale]") {
     REQUIRE(info.max_dual_infeasibility == kHighsIllegalInfeasibilityMeasure);
     REQUIRE(info.sum_dual_infeasibilities == kHighsIllegalInfeasibilityMeasure);
 
-    filename =
-      std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+    highs.run();
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(doubleEqual0(highs.getInfo().objective_function_value,
+			user_bound_scale_value*user_cost_scale_value*unscaled_objective));
+
+    model = "flugpl";
     REQUIRE(highs.setOptionValue("user_bound_scale", 0) == HighsStatus::kOk);
     REQUIRE(highs.setOptionValue("user_cost_scale", 0) == HighsStatus::kOk);
   }
@@ -69,11 +110,9 @@ TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
     HighsLp unscaled_lp = highs.getLp();
 
     HighsInt user_bound_scale = 10;
-    double user_bound_scale_value = std::pow(2, user_bound_scale);
     REQUIRE(highs.setOptionValue("user_bound_scale", user_bound_scale) == HighsStatus::kOk);
 
     HighsInt user_cost_scale = 30;
-    double user_cost_scale_value = std::pow(2, user_cost_scale);
     REQUIRE(highs.setOptionValue("user_cost_scale", user_cost_scale) == HighsStatus::kOk);
 
     REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
@@ -85,6 +124,7 @@ TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
       std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
     REQUIRE(highs.setOptionValue("user_bound_scale", 0) == HighsStatus::kOk);
     REQUIRE(highs.setOptionValue("user_cost_scale", 0) == HighsStatus::kOk);
+    
   }
 
   highs.resetGlobalScheduler(true);

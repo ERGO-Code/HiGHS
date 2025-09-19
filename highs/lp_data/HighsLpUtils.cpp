@@ -2083,7 +2083,7 @@ void reportLpDimensions(const HighsLogOptions& log_options, const HighsLp& lp) {
   HighsInt num_int = getNumInt(lp);
   if (num_int) {
     highsLogUser(log_options, HighsLogType::kInfo,
-                 ", %" HIGHSINT_FORMAT " nonzeros and %" HIGHSINT_FORMAT
+                 ", %" HIGHSINT_FORMAT " nonzero%s and %" HIGHSINT_FORMAT
                  " integer column%s\n",
                  lp_num_nz, lp_num_nz == 1 ? "" : "s", num_int,
                  num_int == 1 ? "" : "s");
