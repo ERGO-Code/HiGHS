@@ -85,10 +85,10 @@ RestartInfo RestartScheme::Check(int current_iter,
 
       // 1. Artificial Restart Check
       bool artificial_restart = false;
-      if (current_iter > 64) {
+//      if (current_iter > 64) {
         artificial_restart =
             (current_iter - last_restart_iter_) >= (0.36 * current_iter);
-      }
+//      }
 
       // Adaptive restart conditions
       bool sufficient_decay =

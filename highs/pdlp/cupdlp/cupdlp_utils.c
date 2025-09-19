@@ -1794,6 +1794,10 @@ void debugPdlpAtyNormLog(FILE* file, const double aty_norm) {
   fprintf(file, "||A^Ty|| = %g\n", aty_norm);
 }
 
+void debugPdlpAxavgNormLog(FILE* file, const double ax_avg_norm) {
+  fprintf(file, "||Ax_avg|| = %g\n", ax_avg_norm);
+}
+
 void debugPdlpRestartLog(FILE* file, const int iter_num, const double current_score, const double average_score) {
   fprintf(file, "Restart at iter %6d: Current Score = %.6g, Average Score = %.6g\n", iter_num, current_score, average_score);
 }

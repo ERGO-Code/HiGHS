@@ -409,6 +409,10 @@ void PDHG_Compute_Average_Iterate(CUPDLPwork *work) {
   // ATyCPU(work, iterates->atyAverage, iterates->yAverage);
   Ax(work, iterates->axAverage, iterates->xAverage);
   ATy(work, iterates->atyAverage, iterates->yAverage);
+
+  cupdlp_float ax_norm = 0.0;
+  cupdlp_twoNormSquared(work, lp->nCols, iterates->axAverage->data, &ax_norm);
+  debugPdlpAxavgNormLog(work->debug_pdlp_log_file, ax_norm);
 }
 
 void PDHG_Update_Average(CUPDLPwork *work) {

@@ -354,6 +354,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   std::vector<double> ATy_current(lp.num_col_, 0.0);
   std::vector<double> Ax_new(lp.num_row_, 0.0);
   std::vector<double> ATy_new(lp.num_col_, 0.0);
+  std::vector<double> Ax_avg(lp.num_row_, 0.0);
+  std::vector<double> ATy_avg(lp.num_col_, 0.0);
 
   // Store iterates at last restart for primal weight update
   x_at_last_restart_ = x_current_;
@@ -384,8 +386,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       linalg::ATy(lp, y_current_, ATy_current);
       
       // For checking convergence on the average
-      std::vector<double> Ax_avg(lp.num_row_, 0.0);
-      std::vector<double> ATy_avg(lp.num_col_, 0.0);
+      
       linalg::Ax(lp, x_avg_, Ax_avg);
       linalg::ATy(lp, y_avg_, ATy_avg);
 
@@ -476,7 +477,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     // Print Ax norm for debugging
     double ax_norm = linalg::vector_norm(Ax_current);
+    double axavg_norm = linalg::vector_norm(Ax_avg);
     debugPdlpAxNormLog(debug_pdlp_log_file_, ax_norm);
+    debugPdlpAxavgNormLog(debug_pdlp_log_file_, axavg_norm);
 
     // --- 5. Core PDHG Update Step ---
     bool step_success = true;
