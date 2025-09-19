@@ -343,16 +343,16 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
 
   HighsInt pdlp_features_off = 
-  kPdlpScalingOff + 
-  //kPdlpRestartOff + 
+  // kPdlpScalingOff + 
+  kPdlpRestartOff + 
   kPdlpAdaptiveStepSizeOff;
   h.setOptionValue("pdlp_features_off", pdlp_features_off);
 
-  HighsInt pdlp_scaling = 0;
-  // kPdlpScalingRuiz 
+  HighsInt pdlp_scaling = //0;
+   kPdlpScalingRuiz 
   //+ kPdlpScalingL2 
-  //+ kPdlpScalingPC
-  //;
+  + kPdlpScalingPC
+  ;
   h.setOptionValue("pdlp_scaling_mode", pdlp_scaling);
   h.setOptionValue("pdlp_step_size_strategy", 0);
   h.setOptionValue("pdlp_restart_strategy", 2);
