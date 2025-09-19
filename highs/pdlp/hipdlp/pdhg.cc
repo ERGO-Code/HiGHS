@@ -312,7 +312,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   const double op_norm_sq = PowerMethod();
   step_.passLp(&lp_);
   step_.passLogOptions(&params_.log_options_);
-  step_.passDebugLogFile(debug_pdlp_log_file_);
+  step_.passDebugPdlpLogFile(debug_pdlp_log_file_);
+  step_.passDebugPdlpData(&debug_pdlp_data_);
   StepSizeConfig step_size =
       step_.InitializeStepSizesPowerMethod(lp, op_norm_sq);
   const double fixed_eta = 0.99 / sqrt(op_norm_sq);
@@ -334,7 +335,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   // --- 1. Initialization ---
   restart_scheme_.passLogOptions(&working_params.log_options_);
-  restart_scheme_.passDebugLogFile(debug_pdlp_log_file_);
+  restart_scheme_.passDebugPdlpLogFile(debug_pdlp_log_file_);
+  restart_scheme_.passDebugPdlpData(&debug_pdlp_data_);
   Initialize(lp, x, y);  // Sets initial x, y and results_
   restart_scheme_.passParams(&working_params);
   restart_scheme_.Initialize(results_);
@@ -364,8 +366,11 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   logger_.print_iteration_header();
 
   // --- 2. Main PDHG Loop ---
+  debugPdlpIterHeaderLog(debug_pdlp_log_file_);
+  debugPdlpDataInitialise(&debug_pdlp_data_);
+
   for (int iter = 0; iter < params_.max_iterations; ++iter) {
-    debugPdlpIterLog(debug_pdlp_log_file_, iter, restart_scheme_.getBeta());
+    debugPdlpIterLog(debug_pdlp_log_file_, iter, &debug_pdlp_data_, restart_scheme_.getBeta());
 
     // Check time limit
     if (solver_timer.read() > params_.time_limit) {
@@ -475,11 +480,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       linalg::ATy(lp, y_current_, ATy_current);
     }
 
-    // Print Ax norm for debugging
-    double ax_norm = linalg::vector_norm(Ax_current);
-    double axavg_norm = linalg::vector_norm(Ax_avg);
-    debugPdlpAxNormLog(debug_pdlp_log_file_, ax_norm);
-    debugPdlpAxavgNormLog(debug_pdlp_log_file_, axavg_norm);
+    // Record Ax norm for debugging
+    debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_current);
+    debug_pdlp_data_.ax_average_norm = linalg::vector_norm(Ax_avg);
 
     // --- 5. Core PDHG Update Step ---
     bool step_success = true;

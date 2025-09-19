@@ -1782,20 +1782,28 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
   fclose(fptr);
 }
 
-void debugPdlpIterLog(FILE* file, const int iter_num, const double beta) {
-  fprintf(file, "Iter %6d, beta = %g\n", iter_num, beta);
+void debugPdlpIterHeaderLog(FILE* file) {
+  fprintf(file, "  Iter      ||Ax||     ||Aty||  ||Ax_Avg|| ||Aty_Avg||    beta\n");
 }
 
-void debugPdlpAxNormLog(FILE* file, const double ax_norm) {
-  fprintf(file, "||Ax|| = %g\n", ax_norm);
+void debugPdlpDataInitialise(struct DebugPdlpData* debug_pdlp) {
+  debug_pdlp->ax_norm = 0;
+  debug_pdlp->aty_norm = 0;
+  debug_pdlp->ax_average_norm = 0;
+  debug_pdlp->aty_average_norm = 0;
 }
 
-void debugPdlpAtyNormLog(FILE* file, const double aty_norm) {
-  fprintf(file, "||A^Ty|| = %g\n", aty_norm);
+void debugPdlpIterLog(FILE* file, const int iter_num, const struct DebugPdlpData* debug_pdlp, const double beta) {
+  fprintf(file, "%6d %11.4g %11.4g %11.4g %11.4g %11.4g\n",
+	  iter_num,
+	  debug_pdlp->ax_norm,
+	  debug_pdlp->aty_norm,
+	  debug_pdlp->ax_average_norm,
+	  debug_pdlp->aty_average_norm,
+	  beta);
 }
 
-void debugPdlpAxavgNormLog(FILE* file, const double ax_avg_norm) {
-  fprintf(file, "||Ax_avg|| = %g\n", ax_avg_norm);
+void debugPdlpFeasOptLog(FILE* file) {
 }
 
 void debugPdlpRestartLog(FILE* file, const int iter_num, const double current_score, const double average_score) {

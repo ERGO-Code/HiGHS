@@ -895,8 +895,8 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
   timers->nIter = 0;
   timers->dSolvingBeg = getTimeStamp();
 
-  pdhg->debug_pdlp_log_file = fopen("cuPDLP.log", "w");
-  assert(pdhg->debug_pdlp_log_file);
+  pdhg->debug_pdlp_log_file_ = fopen("cuPDLP.log", "w");
+  assert(pdhg->debug_pdlp_log_file_);
 
   // PDHG_Init_Data does nothing!
   PDHG_Init_Data(pdhg);
@@ -915,8 +915,10 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
   // iter_log_since_header so that an initial header is printed
   const int iter_log_between_header = 50;
   int iter_log_since_header = iter_log_between_header;
+  debugPdlpIterHeaderLog(pdhg->debug_pdlp_log_file_);
+  debugPdlpDataInitialise(&pdhg->debug_pdlp_data_);
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
-    debugPdlpIterLog(pdhg->debug_pdlp_log_file, timers->nIter, pdhg->stepsize->dBeta);
+    debugPdlpIterLog(pdhg->debug_pdlp_log_file_, timers->nIter, &pdhg->debug_pdlp_data_, pdhg->stepsize->dBeta);
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS && CUPDLP_DEBUG
     PDHG_Dump_Stats(pdhg);
@@ -1152,7 +1154,7 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
 #endif
 
 exit_cleanup:
-  //fclose(pdhg->debug_pdlp_log_file);
+  //fclose(pdhg->debug_pdlp_log_file_);
   return retcode;
 }
 

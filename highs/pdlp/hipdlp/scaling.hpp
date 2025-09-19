@@ -18,6 +18,8 @@
 #include "Highs.h"
 #include "defs.hpp"
 
+#include "pdlp/cupdlp/cupdlp_utils.h"
+
 class Scaling {
  public:
   Scaling() = default;
@@ -27,8 +29,11 @@ class Scaling {
   void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
   void passLp(HighsLp* lp) { lp_ = lp; };
   void passParams(const PrimalDualParams* params) { params_ = params; }; 
-  void passDebugLogFile(FILE* debug_pdlp_log_file) {
+  void passDebugPdlpLogFile(FILE* debug_pdlp_log_file) {
     debug_pdlp_log_file_ = debug_pdlp_log_file;
+  };
+  void passDebugPdlpData(DebugPdlpData* debug_pdlp_data) {
+    debug_pdlp_data_ = debug_pdlp_data;
   };
   void LogMatrixNorms(const std::string& stage);
   // Get scaling vectors (for unscaling solution later)
@@ -61,6 +66,7 @@ class Scaling {
   // Compute norm of a vector based on norm type
   double ComputeNorm(const double* values, int size, double norm_type) const;
   FILE* debug_pdlp_log_file_;
+  DebugPdlpData* debug_pdlp_data_;
 };
 
 #endif  // PDLP_HIPDLP_SCALING_HPP

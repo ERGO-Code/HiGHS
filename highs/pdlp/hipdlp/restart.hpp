@@ -42,14 +42,20 @@ class RestartScheme {
   void passLogOptions(const HighsLogOptions* log_options) {
     log_options_ = log_options;
   };
-  void passDebugLogFile(FILE* debug_log_file) { debug_log_file_ = debug_log_file; };
+  void passDebugPdlpLogFile(FILE* debug_pdlp_log_file) {
+    debug_pdlp_log_file_ = debug_pdlp_log_file;
+  };
+  void passDebugPdlpData(DebugPdlpData* debug_pdlp_data) {
+    debug_pdlp_data_ = debug_pdlp_data;
+  };
   double getBeta() const { return beta_; };
   void UpdateBeta(double beta) { beta_ = beta; params_->omega = std::sqrt(beta); };
   void SetLastRestartIter(int iter) { last_restart_iter_ = iter; };
  private:
   PrimalDualParams* params_;
   const HighsLogOptions* log_options_;
-  FILE* debug_log_file_ = nullptr;
+  FILE* debug_pdlp_log_file_ = nullptr;
+  DebugPdlpData* debug_pdlp_data_;  
 
   // Computes a merit score for a given set of residuals
   double ComputeRestartScore(const SolverResults& results);

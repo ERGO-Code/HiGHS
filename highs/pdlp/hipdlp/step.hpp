@@ -77,8 +77,11 @@ class PdlpStep {
   void passLogOptions(const HighsLogOptions* log_options) {
     log_options_ = log_options;
   };
-  void passDebugLogFile(FILE* debug_pdlp_log_file) {
+  void passDebugPdlpLogFile(FILE* debug_pdlp_log_file) {
     debug_pdlp_log_file_ = debug_pdlp_log_file;
+  };
+  void passDebugPdlpData(DebugPdlpData* debug_pdlp_data) {
+    debug_pdlp_data_ = debug_pdlp_data;
   };
 
  private:
@@ -88,7 +91,8 @@ class PdlpStep {
   const HighsLogOptions* log_options_;
   // JAJH has passed debug_pdlp_log_file_ into PdlpStep separately, as it's
   // only temporary.
-  FILE* debug_pdlp_log_file_;
+  FILE* debug_pdlp_log_file_ = nullptr;
+  DebugPdlpData* debug_pdlp_data_;
 };
 
 #endif  // PDLP_HIPDLP_STEP_HPP

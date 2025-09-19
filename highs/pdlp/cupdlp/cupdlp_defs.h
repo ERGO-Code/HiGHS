@@ -400,6 +400,13 @@ struct CUPDLP_TIMERS {
 #endif
 };
 
+struct DebugPdlpData {
+  double ax_norm;
+  double aty_norm;
+  double ax_average_norm;
+  double aty_average_norm;
+};
+    
 struct CUPDLP_WORK {
   CUPDLPproblem *problem;
   CUPDLPsettings *settings;
@@ -424,7 +431,8 @@ struct CUPDLP_WORK {
   // cusparseDnVecDescr_t vecbuffer;
   cublasHandle_t cublashandle;
 #endif
-  FILE* debug_pdlp_log_file;
+  FILE* debug_pdlp_log_file_;
+  struct DebugPdlpData debug_pdlp_data_;
 };
 
 #ifdef __cplusplus

@@ -51,8 +51,9 @@ class PDLPSolver {
   int getIterationCount() const { return final_iter_count_; }
   void logSummary();
 
- void solveReturn();
- FILE* debug_pdlp_log_file_ = nullptr;
+  void solveReturn();
+  FILE* debug_pdlp_log_file_ = nullptr;
+  DebugPdlpData debug_pdlp_data_;
 
  private:
   // Problem data

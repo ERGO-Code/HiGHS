@@ -100,8 +100,8 @@ void PdlpStep::UpdateX(std::vector<double>& x_new,
   std::vector<double> ATy_cache(lp.num_col_);
   linalg::ATy(lp, y_current, ATy_cache);
   // print the norm of ATy_cache
-  double aty_norm = linalg::vector_norm(ATy_cache);
-  debugPdlpAtyNormLog(debug_pdlp_log_file_, aty_norm);
+  // Record Aty norm for debugging
+  debug_pdlp_data_->aty_norm = linalg::vector_norm(ATy_cache);
   for (HighsInt i = 0; i < lp.num_col_; i++) {
     double gradient = lp.col_cost_[i] - ATy_cache[i];
     x_new[i] = linalg::project_box(x_current[i] - (eta / omega) * gradient,
