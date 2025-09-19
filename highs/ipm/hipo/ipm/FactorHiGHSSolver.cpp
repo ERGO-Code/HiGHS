@@ -86,18 +86,18 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
     // go along the entries of the row, and then down each column.
     // this builds the lower triangular part of the row-th column of AAt.
 
-    Int current = headNE_[row];
-    while (current != -1) {
-      Int col = colNE_[current];
+    for (Int el = ptrNE_rw_[row]; el < ptrNE_rw_[row + 1]; ++el) {
+      Int col = idxNE_rw_[el];
+      Int corr = corr_NE_[el];
 
       const double theta =
           scaling.empty() ? 1.0 : 1.0 / (scaling[col] + regul_.primal);
 
-      const double row_value = theta * A.value_[current];
+      const double row_value = theta * A.value_[corr];
 
       // for each nonzero in the row, go down corresponding column, starting
       // from current position
-      for (Int colEl = current; colEl < A.start_[col + 1]; ++colEl) {
+      for (Int colEl = corr; colEl < A.start_[col + 1]; ++colEl) {
         Int row2 = A.index_[colEl];
 
         // row2 is guaranteed to be larger or equal than row
@@ -107,8 +107,6 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
         double value = row_value * A.value_[colEl];
         work[row2] += value;
       }
-
-      current = nextNE_[current];
     }
     // intersection of row with rows below finished.
 
@@ -125,106 +123,6 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
 
 Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
                                         int64_t nz_limit) {
-  // Build lower triangular structure of AAt.
-  // This approach uses a column-wise copy of A and a collection of linked lists
-  // to access the rows
-
-  // NB: A must have sorted columns for this to work
-
-  // colNE stores the index of the column of each entry.
-  // It's useless when accessing the matrix by columns, but useful when doing it
-  // by rows.
-  colNE_.resize(A.numNz());
-
-  // head and next are a collection of linked lists to access the matrix by
-  // rows.
-  nextNE_.resize(A.numNz(), -1);
-  headNE_.resize(A.num_row_, -1);
-
-  // temp stores the address of the latest entry in each row
-  std::vector<Int> temp(A.num_row_, -1);
-
-  // build linked lists for row access
-  for (Int col = 0; col < A.num_col_; ++col) {
-    for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
-      Int row = A.index_[el];
-      colNE_[el] = col;
-
-      if (temp[row] == -1)
-        headNE_[row] = el;
-      else
-        nextNE_[temp[row]] = el;
-
-      temp[row] = el;
-    }
-  }
-
-  ptrNE_.clear();
-  rowsNE_.clear();
-
-  // ptr is allocated its exact size
-  ptrNE_.resize(A.num_row_ + 1, 0);
-
-  // keep track if given entry is nonzero, in column considered
-  std::vector<bool> is_nz(A.num_row_, false);
-
-  // temporary storage of indices
-  std::vector<Int> temp_index(A.num_row_);
-
-  Clock clock;
-
-  for (Int row = 0; row < A.num_row_; ++row) {
-    // go along the entries of the row, and then down each column.
-    // this builds the lower triangular part of the row-th column of AAt.
-
-    Int nz_in_col = 0;
-
-    Int current = headNE_[row];
-    while (current != -1) {
-      Int col = colNE_[current];
-
-      // for each nonzero in the row, go down corresponding column, starting
-      // from current position
-      for (Int colEl = current; colEl < A.start_[col + 1]; ++colEl) {
-        Int row2 = A.index_[colEl];
-
-        // row2 is guaranteed to be larger or equal than row
-        // (provided that the columns of A are sorted)
-
-        // save information that there is nonzero in position (row2,row).
-        if (!is_nz[row2]) {
-          is_nz[row2] = true;
-          temp_index[nz_in_col] = row2;
-          ++nz_in_col;
-        }
-      }
-
-      current = nextNE_[current];
-    }
-    // intersection of row with rows below finished.
-
-    // if the total number of nonzeros exceeds the maximum, return error
-    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= nz_limit)
-      return kStatusOoM;
-
-    // update pointers
-    ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
-
-    // now assign indices
-    for (Int i = 0; i < nz_in_col; ++i) {
-      Int index = temp_index[i];
-      rowsNE_.push_back(index);
-      is_nz[index] = false;
-    }
-  }
-
-  printf("time 1: %f\n", clock.stop());
-
-  return kStatusOk;
-}
-
-Int FactorHiGHSSolver::buildNEstructure_2(const HighsSparseMatrix& A,
-                                          int64_t nz_limit) {
   // Build lower triangular structure of AAt.
   // This approach uses a column-wise copy of A, a partial row-wise copy and a
   // vector of corresponding indices.
@@ -255,16 +153,17 @@ Int FactorHiGHSSolver::buildNEstructure_2(const HighsSparseMatrix& A,
     }
   }
 
-  std::vector<Int> ptrNE(A.num_row_ + 1);
-  std::vector<Int> rowsNE;
+  ptrNE_.clear();
+  rowsNE_.clear();
+
+  // ptr is allocated its exact size
+  ptrNE_.resize(A.num_row_ + 1, 0);
 
   // keep track if given entry is nonzero, in column considered
   std::vector<bool> is_nz(A.num_row_, false);
 
   // temporary storage of indices
   std::vector<Int> temp_index(A.num_row_);
-
-  Clock clock;
 
   for (Int row = 0; row < A.num_row_; ++row) {
     // go along the entries of the row, and then down each column.
@@ -295,20 +194,19 @@ Int FactorHiGHSSolver::buildNEstructure_2(const HighsSparseMatrix& A,
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error
-    if ((int64_t)ptrNE[row] + (int64_t)nz_in_col >= nz_limit) return kStatusOoM;
+    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= nz_limit)
+      return kStatusOoM;
 
     // update pointers
-    ptrNE[row + 1] = ptrNE[row] + nz_in_col;
+    ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
 
     // now assign indices
     for (Int i = 0; i < nz_in_col; ++i) {
       Int index = temp_index[i];
-      rowsNE.push_back(index);
+      rowsNE_.push_back(index);
       is_nz[index] = false;
     }
   }
-
-  printf("time 2: %f\n", clock.stop());
 
   return kStatusOk;
 }
@@ -511,8 +409,6 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
   Clock clock;
   if (Int status = buildNEstructure(model_.A(), nz_limit)) return status;
   if (info_) info_->matrix_structure_time = clock.stop();
-
-  buildNEstructure_2(model_.A(), nz_limit);
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(model_.A().num_row_, 1);
