@@ -181,7 +181,7 @@ void PDLPSolver::preprocessLp() {
         break;
     }
   }
-
+  num_eq_rows_ = nEqs;
   scaling_.passLp(&processed_lp);
   unscaled_processed_lp_ = processed_lp;  // store for postsolve
 
@@ -663,21 +663,16 @@ std::vector<double> PDLPSolver::ComputeLambda(
 
 std::pair<double, double> PDLPSolver::ComputePrimalFeasibility(
     const std::vector<double>& x, const std::vector<double>& Ax_vector) {
-  double primal_feasibility_squared = 0.0;
   std::vector<double> primal_residual(lp_.num_row_, 0.0);
 
-  // Compute Ax - rhs (where rhs is row_lower_ for our formulation)
+  // Compute Ax - rhs 
   for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     primal_residual[i] = Ax_vector[i] - lp_.row_lower_[i];
 
     // For inequality constraints (Ax >= b), project to negative part
-    if (lp_.row_lower_[i] != lp_.row_upper_[i]) {
-      // This is an inequality constraint
+    if (i >= num_eq_rows_) {
       primal_residual[i] = std::min(0.0, primal_residual[i]);
     }
-    // For equality constraints, keep the full residual
-
-    primal_feasibility_squared += primal_residual[i] * primal_residual[i];
   }
 
   // Apply scaling if needed
@@ -688,15 +683,9 @@ std::pair<double, double> PDLPSolver::ComputePrimalFeasibility(
     }
   }
 
-  double primal_feasibility = sqrt(primal_feasibility_squared);
-
-  // Compute norm of rhs for relative tolerance
-  double rhs_norm = 0.0;
-  for (HighsInt i = 0; i < lp_.num_row_; ++i) {
-    rhs_norm += lp_.row_lower_[i] * lp_.row_lower_[i];
-  }
-  rhs_norm = sqrt(rhs_norm);
-
+  double primal_feasibility = linalg::vector_norm(primal_residual);
+  double rhs_norm = linalg::vector_norm(lp_.row_lower_); // why don't need to rescale?
+  
   return std::make_pair(primal_feasibility, rhs_norm);
 }
 
