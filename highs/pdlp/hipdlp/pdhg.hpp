@@ -86,6 +86,8 @@ class PDLPSolver {
   std::vector<double> y_current_;
   // Scaling
   Scaling scaling_;
+  double unscaled_rhs_norm_ = 0.0;
+  double unscaled_c_norm_ = 0.0;
   // Restart State
   std::vector<double> x_avg_, y_avg_;
   std::vector<double> x_sum_, y_sum_;

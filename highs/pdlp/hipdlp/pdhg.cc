@@ -185,12 +185,16 @@ void PDLPSolver::preprocessLp() {
   scaling_.passLp(&processed_lp);
   unscaled_processed_lp_ = processed_lp;  // store for postsolve
 
-  // 7. Convert COO matrix to CSC for the processed_lp
-  //
+  // 7. Compute and store norms of unscaled cost and rhs
+  unscaled_c_norm_ = linalg::vector_norm(processed_lp.col_cost_);
+  unscaled_rhs_norm_ = linalg::vector_norm(processed_lp.row_lower_);
+
   // Already achieved by construction
   logger_.info("Preprocessing complete. New dimensions: " +
                std::to_string(processed_lp.num_row_) + " rows, " +
                std::to_string(processed_lp.num_col_) + " cols.");
+  logger_.info("Unscaled norms: ||c|| = " + std::to_string(unscaled_c_norm_) +
+               ", ||b|| = " + std::to_string(unscaled_rhs_norm_));
 }
 
 PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
@@ -684,9 +688,8 @@ std::pair<double, double> PDLPSolver::ComputePrimalFeasibility(
   }
 
   double primal_feasibility = linalg::vector_norm(primal_residual);
-  double rhs_norm = linalg::vector_norm(lp_.row_lower_); // why don't need to rescale?
-  
-  return std::make_pair(primal_feasibility, rhs_norm);
+
+  return std::make_pair(primal_feasibility, unscaled_rhs_norm_);
 }
 
 void PDLPSolver::ComputeDualSlacks(const std::vector<double>& ATy_vector) {
@@ -712,18 +715,12 @@ std::pair<double, double> PDLPSolver::ComputeDualFeasibility(
     const std::vector<double>& ATy_vector) {
   ComputeDualSlacks(ATy_vector);  // This updates dSlackPos_ and dSlackNeg_
 
-  double dual_feasibility_squared = 0.0;
   std::vector<double> dual_residual(lp_.num_col_);
 
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
-    // Compute c - A'y - (slackPos - slackNeg)
-    double residual = lp_.col_cost_[i] - ATy_vector[i];
-
-    // Subtract the projection onto the bound constraints
-    residual = residual - dSlackPos_[i] + dSlackNeg_[i];
-
-    dual_residual[i] = residual;
-    dual_feasibility_squared += residual * residual;
+    // Matching CUPDLP: c - A'y - dSlackPos + dSlackNeg
+    dual_residual[i] = lp_.col_cost_[i] - ATy_vector[i] 
+                      - dSlackPos_[i] + dSlackNeg_[i];
   }
 
   // Apply scaling if needed
@@ -734,10 +731,9 @@ std::pair<double, double> PDLPSolver::ComputeDualFeasibility(
     }
   }
 
-  double dual_feasibility = sqrt(dual_feasibility_squared);
-  double c_norm = linalg::vector_norm(lp_.col_cost_);
+  double dual_feasibility = linalg::vector_norm(dual_residual);
 
-  return std::make_pair(dual_feasibility, c_norm);
+  return std::make_pair(dual_feasibility, unscaled_c_norm_ );
 }
 
 std::tuple<double, double, double, double, double>
