@@ -769,86 +769,22 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
-HighsStatus userScaleLp(const vector<HighsVarType>& integrality,
-                        vector<double>& cost, vector<double>& col_lower,
-                        vector<double>& col_upper, vector<double>& row_lower,
-                        vector<double>& row_upper, HighsSparseMatrix& matrix,
+HighsStatus userScaleLp(HighsLp& lp,
                         HighsUserScaleData& data,
                         const HighsLogOptions& log_options) {
-  userScaleLp(integrality, cost, col_lower, col_upper, row_lower, row_upper,
-              matrix, data, false);
+  userScaleLp(lp, data, false);
   HighsStatus return_status = userScaleStatus(log_options, data);
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  userScaleLp(integrality, cost, col_lower, col_upper, row_lower, row_upper,
-              matrix, data);
+  userScaleLp(lp, data);
   return return_status;
 }
 
-void userScaleLp(const vector<HighsVarType>& integrality, vector<double>& cost,
-                 vector<double>& col_lower, vector<double>& col_upper,
-                 vector<double>& row_lower, vector<double>& row_upper,
-                 HighsSparseMatrix& matrix, HighsUserScaleData& data,
+void userScaleLp(HighsLp& lp, HighsUserScaleData& data,
                  const bool apply) {
-  userScaleCosts(integrality, cost, data, apply);
-  userScaleColBounds(integrality, col_lower, col_upper, data, apply);
-  userScaleMatrix(integrality, matrix, data, apply);
-  userScaleRowBounds(row_lower, row_upper, data, apply);
-}
-
-// To check/apply user scaling to data for columns - used in
-// Highs::addColsInterface
-HighsStatus userScaleNewCols(vector<double>& cost, vector<double>& lower,
-                             vector<double>& upper, HighsSparseMatrix& matrix,
-                             HighsUserScaleData& data,
-                             const HighsLogOptions& log_options) {
-  userScaleNewCols(cost, lower, upper, matrix, data, false);
-  HighsStatus return_status = userScaleStatus(log_options, data);
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  userScaleNewCols(cost, lower, upper, matrix, data);
-  return return_status;
-}
-
-void userScaleNewCols(vector<double>& cost, vector<double>& lower,
-                      vector<double>& upper, HighsSparseMatrix& matrix,
-                      HighsUserScaleData& data, const bool apply) {
-  // Set up a dummy integrality vector since there's not yet any
-  // integrality for these columns
-  vector<HighsVarType> integrality;
-  userScaleCosts(integrality, cost, data, apply);
-  userScaleColBounds(integrality, lower, upper, data, apply);
-  userScaleMatrix(integrality, matrix, data, apply);
-}
-
-// To check/apply user scaling to data for rows - used in
-// Highs::addRowsInterface
-HighsStatus userScaleNewRows(const vector<HighsVarType>& integrality,
-                             vector<double>& lower, vector<double>& upper,
-                             HighsSparseMatrix& matrix,
-                             HighsUserScaleData& data,
-                             const HighsLogOptions& log_options) {
-  userScaleNewRows(integrality, lower, upper, matrix, data, false);
-  HighsStatus return_status = userScaleStatus(log_options, data);
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  userScaleNewRows(integrality, lower, upper, matrix, data);
-  return return_status;
-}
-
-void userScaleNewRows(const vector<HighsVarType>& integrality,
-                      vector<double>& lower, vector<double>& upper,
-                      HighsSparseMatrix& matrix, HighsUserScaleData& data,
-                      const bool apply) {
-  userScaleRowBounds(lower, upper, data, apply);
-  userScaleMatrix(integrality, matrix, data, apply);
-}
-
-HighsStatus userScaleCosts(const vector<HighsVarType>& integrality,
-                           vector<double>& cost, HighsUserScaleData& data,
-                           const HighsLogOptions& log_options) {
-  userScaleCosts(integrality, cost, data, false);
-  HighsStatus return_status = userScaleStatus(log_options, data);
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  userScaleCosts(integrality, cost, data);
-  return return_status;
+  userScaleCosts(lp.integrality_, lp.col_cost_, data, apply);
+  userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, data, apply);
+  userScaleMatrix(lp.integrality_, lp.a_matrix_, data, apply);
+  userScaleRowBounds(lp.row_lower_, lp.row_upper_, data, apply);
 }
 
 void userScaleCosts(const vector<HighsVarType>& integrality,
@@ -873,17 +809,6 @@ void userScaleCosts(const vector<HighsVarType>& integrality,
     if (std::abs(value) > data.infinite_cost) data.num_infinite_costs++;
     if (apply) cost[iCol] = value;
   }
-}
-
-HighsStatus userScaleColBounds(const vector<HighsVarType>& integrality,
-                               vector<double>& lower, vector<double>& upper,
-                               HighsUserScaleData& data,
-                               const HighsLogOptions& log_options) {
-  userScaleColBounds(integrality, lower, upper, data, false);
-  HighsStatus return_status = userScaleStatus(log_options, data);
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  userScaleColBounds(integrality, lower, upper, data);
-  return return_status;
 }
 
 void userScaleColBounds(const vector<HighsVarType>& integrality,
@@ -916,16 +841,6 @@ void userScaleColBounds(const vector<HighsVarType>& integrality,
   }
 }
 
-HighsStatus userScaleRowBounds(vector<double>& lower, vector<double>& upper,
-                               HighsUserScaleData& data,
-                               const HighsLogOptions& log_options) {
-  userScaleRowBounds(lower, upper, data, false);
-  HighsStatus return_status = userScaleStatus(log_options, data);
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  userScaleRowBounds(lower, upper, data);
-  return return_status;
-}
-
 void userScaleRowBounds(vector<double>& lower, vector<double>& upper,
                         HighsUserScaleData& data, const bool apply) {
   data.num_infinite_row_bounds = 0;
@@ -946,16 +861,6 @@ void userScaleRowBounds(vector<double>& lower, vector<double>& upper,
       if (apply) upper[iRow] = value;
     }
   }
-}
-
-HighsStatus userScaleMatrix(const vector<HighsVarType>& integrality,
-                            HighsSparseMatrix& matrix, HighsUserScaleData& data,
-                            const HighsLogOptions& log_options) {
-  userScaleMatrix(integrality, matrix, data, false);
-  HighsStatus return_status = userScaleStatus(log_options, data);
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  userScaleMatrix(integrality, matrix, data);
-  return return_status;
 }
 
 void userScaleMatrix(const vector<HighsVarType>& integrality,
@@ -1837,23 +1742,22 @@ HighsStatus changeLpIntegrality(HighsLp& lp,
     // - which are naturally continuous
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
   } else if (lp.user_bound_scale_) {
+    // Save a copy of lp.integrality_ in case it needs to be reverted
+    // due to ultimate illegal scaling
+    save_integrality = lp.integrality_;
     // Revert the user bound scaling to correspond to an LP...
     //
-    // Unscale the costs and matrix columns, and the
-    // continuous bounds, by scaling with -lp.user_bound_scale_
+    // Use -lp.user_bound_scale_U to unscale the costs and matrix
+    // columns, and the continuous bounds
     //
     // Set up HighsUserScaleData, noting that any user cost scaling is
     // unaffected
     initialiseUserScaleData(lp, options, user_scale_data);
     user_scale_data.user_cost_scale = 0;
     user_scale_data.user_bound_scale = -lp.user_bound_scale_;
-    userScaleCosts(lp.integrality_, lp.col_cost_, user_scale_data);
-    userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_,
-                       user_scale_data);
-    userScaleMatrix(lp.integrality_, lp.a_matrix_, user_scale_data);
-    // Save a copy of lp.integrality_ in case it needs to be reverted
-    // due to ultimate illegal scaling
-    save_integrality = lp.integrality_;
+    // Scale, forcing changes of value
+    const bool apply = true;
+    userScaleLp(lp, user_scale_data, apply);
   }
 
   assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
@@ -1879,16 +1783,14 @@ HighsStatus changeLpIntegrality(HighsLp& lp,
   } else if (lp.user_bound_scale_) {
     // ... and then reapply corresponding to the new integrality
     //
-    // Scale the costs and matrix columns, and the continuous bounds,
-    // by scaling with lp.user_bound_scale_
+    // Use lp.user_bound_scale_ to scale the costs and matrix columns,
+    // and the continuous bounds
     user_scale_data.user_bound_scale = lp.user_bound_scale_;
-    userScaleCosts(lp.integrality_, lp.col_cost_, user_scale_data,
-                   options.log_options);
-    userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_,
-                       user_scale_data, options.log_options);
-    userScaleMatrix(lp.integrality_, lp.a_matrix_, user_scale_data,
-                    options.log_options);
-    if (user_scale_data.scaleError()) {
+    
+    // Scale, first checking and reporting illegal values, then
+    // forcing changes of value if no illegal values
+    return_status = userScaleLp(lp, user_scale_data, options.log_options);
+    if (return_status == HighsStatus::kError) {
       lp.integrality_ = save_integrality;
       return HighsStatus::kError;
     }

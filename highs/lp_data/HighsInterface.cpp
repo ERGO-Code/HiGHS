@@ -477,14 +477,6 @@ HighsStatus Highs::addColsInterface(
     // matrix columns
     local_a_matrix.start_.assign(ext_num_new_col + 1, 0);
   }
-  if (lp.user_cost_scale_ || lp.user_bound_scale_) {
-    HighsUserScaleData user_scale_data;
-    initialiseUserScaleData(lp, options_, user_scale_data);
-    return_status =
-        userScaleNewCols(local_colCost, local_colLower, local_colUpper,
-                         local_a_matrix, user_scale_data, options.log_options);
-    if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  }
   // Append the columns to the LP vectors and matrix
   appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
                         local_colUpper);
@@ -614,17 +606,6 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     // setup of an empty row-wise HighsSparseMatrix of the new matrix
     // rows
     local_ar_matrix.start_.assign(ext_num_new_row + 1, 0);
-  }
-  if (lp.user_bound_scale_) {
-    HighsUserScaleData user_scale_data;
-    initialiseUserScaleData(lp, options_, user_scale_data);
-    const bool apply = false;
-    userScaleNewRows(lp.integrality_, local_rowLower, local_rowUpper,
-                     local_ar_matrix, user_scale_data, apply);
-    return_status = userScaleStatus(options.log_options, user_scale_data);
-    if (return_status == HighsStatus::kError) return HighsStatus::kError;
-    userScaleNewRows(lp.integrality_, local_rowLower, local_rowUpper,
-                     local_ar_matrix, user_scale_data);
   }
   // Append the rows to the LP vectors
   appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
@@ -939,13 +920,6 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
       return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
-  if (lp.user_cost_scale_) {
-    HighsUserScaleData user_scale_data;
-    initialiseUserScaleData(lp, options_, user_scale_data);
-    userScaleCosts(lp.integrality_, local_colCost, user_scale_data,
-                   options_.log_options);
-    if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  }
   changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
@@ -990,14 +964,6 @@ HighsStatus Highs::changeColBoundsInterface(
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
-  if (lp.user_bound_scale_) {
-    HighsUserScaleData user_scale_data;
-    initialiseUserScaleData(lp, options_, user_scale_data);
-    return_status =
-        userScaleColBounds(lp.integrality_, local_colLower, local_colUpper,
-                           user_scale_data, options_.log_options);
-    if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  }
   changeLpColBounds(lp, index_collection, local_colLower, local_colUpper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
@@ -1041,13 +1007,6 @@ HighsStatus Highs::changeRowBoundsInterface(
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
-  if (lp.user_bound_scale_) {
-    HighsUserScaleData user_scale_data;
-    initialiseUserScaleData(lp, options_, user_scale_data);
-    return_status = userScaleRowBounds(local_rowLower, local_rowUpper,
-                                       user_scale_data, options_.log_options);
-    if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  }
   changeLpRowBounds(lp, index_collection, local_rowLower, local_rowUpper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
@@ -3032,7 +2991,6 @@ HighsStatus Highs::optionChangeAction() {
   HighsLp& lp = model.lp_;
   HighsInfo& info = this->info_;
   HighsOptions& options = this->options_;
-  HighsStatus return_status = HighsStatus::kOk;
   HighsInt dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
   HighsInt dl_user_bound_scale =
       options.user_bound_scale - lp.user_bound_scale_;
@@ -3042,10 +3000,7 @@ HighsStatus Highs::optionChangeAction() {
     initialiseUserScaleData(lp, options_, user_scale_data);
     user_scale_data.user_cost_scale = dl_user_cost_scale;
     user_scale_data.user_bound_scale = dl_user_bound_scale;
-    return_status =
-        userScaleLp(lp.integrality_, lp.col_cost_, lp.col_lower_, lp.col_upper_,
-                    lp.row_lower_, lp.row_upper_, lp.a_matrix_, user_scale_data,
-                    options.log_options);
+    HighsStatus return_status = userScaleModel(model, user_scale_data, options.log_options);
     if (return_status == HighsStatus::kError) {
       options.user_cost_scale = lp.user_cost_scale_;
       options.user_bound_scale = lp.user_bound_scale_;

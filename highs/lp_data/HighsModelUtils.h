@@ -114,4 +114,7 @@ std::string findModelObjectiveName(const HighsLp* lp,
 
 // bool repeatedNames(const std::vector<std::string> name);
 
+HighsStatus userScaleModel(HighsModel& model,
+			   HighsUserScaleData& data,
+			   const HighsLogOptions& log_options);
 #endif
