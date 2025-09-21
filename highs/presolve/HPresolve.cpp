@@ -4539,12 +4539,16 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
     // check coefficients
     for (const auto& nz : getColumnVector(col)) {
+      // skip redundant rows
+      if (isRedundant(nz.index())) continue;
+
       // update number of locks
       if (hasImpliedBound(nz.index(), HighsInt{1}, nz.value())) {
         // implied lower bound -> downlock
         numDownLocks++;
         downLockRow = nz.index();
       }
+
       if (hasImpliedBound(nz.index(), HighsInt{-1}, nz.value())) {
         // implied upper bound -> uplock
         numUpLocks++;
