@@ -153,6 +153,10 @@ class HighsLinearSumBounds {
   double getImplVarLower(HighsInt sum, HighsInt var) const;
 
  private:
+  void computeResidual(double coefficient, double lowerBound, double upperBound,
+                       HighsCDouble& activity, HighsInt& numInf,
+                       HighsInt direction) const;
+
   double getImplVarUpper(HighsInt sum, double myVarUpper, double myImplVarUpper,
                          HighsInt myImplVarUpperSource) const;
 
