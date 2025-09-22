@@ -253,7 +253,8 @@ class HeuristicNeighbourhood {
 
 void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
   std::vector<std::pair<double, HighsDomainChange>> lurkingBounds =
-      mipsolver.mipdata_->redcostfixing.getLurkingBounds(mipsolver);
+      mipsolver.mipdata_->redcostfixing.getLurkingBounds(mipsolver,
+                                                         worker.globaldom_);
   if (10 * lurkingBounds.size() < mipsolver.mipdata_->integral_cols.size())
     return;
   pdqsort(lurkingBounds.begin(), lurkingBounds.end(),

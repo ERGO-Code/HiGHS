@@ -1169,8 +1169,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   if (violation <= 10 * feastol) return false;
 
-  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-      inds, vals, rowlen, rhs_);
+  transLp.getGlobaldom().tightenCoefficients(inds, vals, rowlen, rhs_);
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
@@ -1207,10 +1206,10 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
     upper[i] = globaldom.col_upper_[col] - globaldom.col_lower_[col];
 
-    solval[i] = vals[i] < 0 ? std::min(globaldom.col_upper_[col],
-                                       localdomain.col_upper_[col])
-                            : std::max(globaldom.col_lower_[col],
-                                       localdomain.col_lower_[col]);
+    solval[i] =
+        vals[i] < 0
+            ? std::min(globaldom.col_upper_[col], localdomain.col_upper_[col])
+            : std::max(globaldom.col_lower_[col], localdomain.col_lower_[col]);
     if (vals[i] < 0 && globaldom.col_upper_[col] != kHighsInf) {
       rhs -= globaldom.col_upper_[col] * vals[i];
       vals[i] = -vals[i];
@@ -1265,8 +1264,8 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
   bool cutintegral = integralSupport && integralCoefficients;
 
-  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-      proofinds.data(), proofvals.data(), rowlen, proofrhs);
+  globaldom.tightenCoefficients(proofinds.data(), proofvals.data(), rowlen,
+                                proofrhs);
 
   HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(),
                                      proofinds.data(), proofvals.data(), rowlen,
@@ -1322,8 +1321,7 @@ bool HighsCutGeneration::finalizeAndAddCut(HighsDomain& globaldom,
 
   if (violation <= 10 * feastol) return false;
 
-  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-      inds, vals, rowlen, rhs_);
+  globaldom.tightenCoefficients(inds, vals, rowlen, rhs_);
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool

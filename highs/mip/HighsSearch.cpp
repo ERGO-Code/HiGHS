@@ -1083,7 +1083,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
                   gap + std::max(10 * getFeasTol(), getEpsilon() * gap),
                   &localdom);
             }
-            HighsRedcostFixing::propagateRedCost(mipsolver, localdom, *lp);
+            HighsRedcostFixing::propagateRedCost(mipsolver, localdom, mipworker.globaldom_, *lp);
             localdom.propagate();
             if (localdom.infeasible()) {
               result = NodeResult::kDomainInfeasible;

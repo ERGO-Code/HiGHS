@@ -27,12 +27,13 @@ class HighsRedcostFixing {
 
  public:
   std::vector<std::pair<double, HighsDomainChange>> getLurkingBounds(
-      const HighsMipSolver& mipsolver) const;
+      const HighsMipSolver& mipsolver, const HighsDomain& globaldom) const;
 
   void propagateRootRedcost(const HighsMipSolver& mipsolver);
 
   static void propagateRedCost(const HighsMipSolver& mipsolver,
                                HighsDomain& localdomain,
+                               HighsDomain& globaldom,
                                const HighsLpRelaxation& lp);
 
   void addRootRedcost(const HighsMipSolver& mipsolver,

@@ -10,14 +10,15 @@
 #include "mip/HighsMipSolverData.h"
 
 std::vector<std::pair<double, HighsDomainChange>>
-HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) const {
+HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver,
+                                     const HighsDomain& globaldom) const {
   std::vector<std::pair<double, HighsDomainChange>> domchgs;
   if (lurkingColLower.empty()) return domchgs;
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     for (auto it = lurkingColLower[col].begin();
          it != lurkingColLower[col].end(); ++it) {
-      if (it->second > mipsolver.mipdata_->domain.col_lower_[col])
+      if (it->second > globaldom.col_lower_[col])
         domchgs.emplace_back(
             it->first,
             HighsDomainChange{(double)it->second, col, HighsBoundType::kLower});
@@ -25,7 +26,7 @@ HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) const {
 
     for (auto it = lurkingColUpper[col].begin();
          it != lurkingColUpper[col].end(); ++it) {
-      if (it->second < mipsolver.mipdata_->domain.col_upper_[col])
+      if (it->second < globaldom.col_upper_[col])
         domchgs.emplace_back(
             it->first,
             HighsDomainChange{(double)it->second, col, HighsBoundType::kUpper});
@@ -74,6 +75,7 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
 
 void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                           HighsDomain& localdomain,
+                                          HighsDomain& globaldom,
                                           const HighsLpRelaxation& lp) {
   const std::vector<double>& lpredcost = lp.getSolution().col_dual;
   double lpobjective = lp.getObjective();
@@ -110,7 +112,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       if (newub >= localdomain.col_upper_[col]) continue;
       assert(newub < localdomain.col_upper_[col]);
 
-      if (mipsolver.mipdata_->domain.isBinary(col)) {
+      if (globaldom.isBinary(col)) {
         boundChanges.emplace_back(
             HighsDomainChange{newub, col, HighsBoundType::kUpper});
       } else {
@@ -128,7 +130,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       if (newlb <= localdomain.col_lower_[col]) continue;
       assert(newlb > localdomain.col_lower_[col]);
 
-      if (mipsolver.mipdata_->domain.isBinary(col)) {
+      if (globaldom.isBinary(col)) {
         boundChanges.emplace_back(
             HighsDomainChange{newlb, col, HighsBoundType::kLower});
       } else {
@@ -145,9 +147,8 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
     double rhs;
 
     if (boundChanges.size() <= 100 &&
-        lp.computeDualProof(mipsolver.mipdata_->domain,
-                            mipsolver.mipdata_->upper_limit, inds, vals, rhs,
-                            false)) {
+        lp.computeDualProof(globaldom, mipsolver.mipdata_->upper_limit, inds,
+                            vals, rhs, false)) {
       bool addedConstraints = false;
 
       if (mipsolver.mipdata_->workers.size() <= 1) {
