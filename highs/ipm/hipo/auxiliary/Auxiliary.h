@@ -37,6 +37,7 @@ void processEdge(Int j, Int i, const std::vector<Int>& first,
                  std::vector<Int>& prevleaf, std::vector<Int>& ancestor);
 double getDiagStart(Int n, Int k, Int nb, Int n_blocks, std::vector<Int>& start,
                     bool triang = false);
+void firstDescendant(const std::vector<Int>& parent, std::vector<Int>& first);
 
 template <typename T>
 void permuteVector(std::vector<T>& v, const std::vector<Int>& perm) {
