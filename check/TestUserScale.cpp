@@ -167,8 +167,6 @@ void checkLpScaling(const HighsInt user_bound_scale,
   const double user_cost_scale_value = std::pow(2, user_cost_scale);
   REQUIRE(unscaled_lp.num_col_ == scaled_lp.num_col_);
   REQUIRE(unscaled_lp.num_row_ == scaled_lp.num_row_);
-  REQUIRE(scaled_lp.user_cost_scale_ == user_cost_scale);
-  REQUIRE(scaled_lp.user_bound_scale_ == user_bound_scale);
   const bool has_integrality = scaled_lp.integrality_.size() > 0;
   const HighsSparseMatrix& unscaled_matrix = unscaled_lp.a_matrix_;
   REQUIRE(unscaled_matrix.isColwise());

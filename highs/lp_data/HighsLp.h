@@ -50,8 +50,6 @@ class HighsLp {
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
 
-  HighsInt user_bound_scale_;
-  HighsInt user_cost_scale_;
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;

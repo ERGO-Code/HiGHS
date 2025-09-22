@@ -220,9 +220,6 @@ void HighsLp::clear() {
   this->col_hash_.clear();
   this->row_hash_.clear();
 
-  this->user_cost_scale_ = 0;
-  this->user_bound_scale_ = 0;
-
   this->clearScale();
   this->is_scaled_ = false;
   this->is_moved_ = false;

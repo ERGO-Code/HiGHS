@@ -379,10 +379,6 @@ HighsStatus Highs::passModel(HighsModel model) {
   // model object for this LP
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
-  // Apply any user scaling in call to optionChangeAction
-  return_status =
-      interpretCallStatus(options_.log_options, optionChangeAction(),
-                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -536,20 +532,6 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   // number of columns in the model is completed
   if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
 
-  if (this->model_.lp_.user_cost_scale_) {
-    // Assess and apply any user cost scaling
-    if (!hessian.scaleOk(this->model_.lp_.user_cost_scale_,
-                         this->options_.small_matrix_value,
-                         this->options_.large_matrix_value)) {
-      highsLogUser(
-          options_.log_options, HighsLogType::kError,
-          "User cost scaling yields zeroed or excessive Hessian values\n");
-      return HighsStatus::kError;
-    }
-    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
-    for (HighsInt iEl = 0; iEl < hessian.numNz(); iEl++)
-      hessian.value_[iEl] *= cost_scale_value;
-  }
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
   return returnFromHighs(return_status);
@@ -1055,11 +1037,8 @@ HighsStatus Highs::optimizeModel() {
     return HighsStatus::kError;
   }
 
-  // Check whether model is consistent with any user bound/cost scaling
-  assert(this->model_.lp_.user_bound_scale_ == this->options_.user_bound_scale);
-  assert(this->model_.lp_.user_cost_scale_ == this->options_.user_cost_scale);
   // Assess whether to warn the user about excessive bounds and costs
-  assessExcessiveBoundCost(options_.log_options, this->model_);
+  assessExcessiveBoundCost(this->options_, this->model_);
 
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //

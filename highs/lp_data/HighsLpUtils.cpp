@@ -1734,31 +1734,11 @@ HighsStatus changeLpIntegrality(HighsLp& lp,
   HighsInt lp_col;
   HighsInt usr_col = -1;
 
-  HighsUserScaleData user_scale_data;
-  std::vector<HighsVarType> save_integrality;
-  if (lp.integrality_.size() == 0) {
-    // Changing integrality for a problem without an integrality
-    // vector (ie an LP), have to create it for the incumbent columns
-    // - which are naturally continuous
+ // If changing integrality for a problem without an integrality
+ // vector (ie an LP), have to create it for the incumbent columns -
+ // which are naturally continuous
+  if (lp.integrality_.size() == 0) 
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
-  } else if (lp.user_bound_scale_) {
-    // Save a copy of lp.integrality_ in case it needs to be reverted
-    // due to ultimate illegal scaling
-    save_integrality = lp.integrality_;
-    // Revert the user bound scaling to correspond to an LP...
-    //
-    // Use -lp.user_bound_scale_U to unscale the costs and matrix
-    // columns, and the continuous bounds
-    //
-    // Set up HighsUserScaleData, noting that any user cost scaling is
-    // unaffected
-    initialiseUserScaleData(lp, options, user_scale_data);
-    user_scale_data.user_cost_scale = 0;
-    user_scale_data.user_bound_scale = -lp.user_bound_scale_;
-    // Scale, forcing changes of value
-    const bool apply = true;
-    userScaleLp(lp, user_scale_data, apply);
-  }
 
   assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
   for (HighsInt k = from_k; k < to_k + 1; k++) {
@@ -1778,23 +1758,7 @@ HighsStatus changeLpIntegrality(HighsLp& lp,
   }
   // If integrality_ contains only HighsVarType::kContinuous then
   // clear it
-  if (!lp.isMip()) {
-    lp.integrality_.clear();
-  } else if (lp.user_bound_scale_) {
-    // ... and then reapply corresponding to the new integrality
-    //
-    // Use lp.user_bound_scale_ to scale the costs and matrix columns,
-    // and the continuous bounds
-    user_scale_data.user_bound_scale = lp.user_bound_scale_;
-    
-    // Scale, first checking and reporting illegal values, then
-    // forcing changes of value if no illegal values
-    return_status = userScaleLp(lp, user_scale_data, options.log_options);
-    if (return_status == HighsStatus::kError) {
-      lp.integrality_ = save_integrality;
-      return HighsStatus::kError;
-    }
-  }
+  if (!lp.isMip()) lp.integrality_.clear();
   return return_status;
 }
 
@@ -3695,9 +3659,9 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
   }
 }
 
-void initialiseUserScaleData(const HighsLp& lp, const HighsOptions& options,
+void initialiseUserScaleData(const HighsOptions& options,
                              HighsUserScaleData& user_scale_data) {
-  user_scale_data.initialise(lp.user_cost_scale_, lp.user_bound_scale_,
+  user_scale_data.initialise(options.user_cost_scale, options.user_bound_scale,
                              options.infinite_cost, options.infinite_bound,
                              options.small_matrix_value,
                              options.large_matrix_value);

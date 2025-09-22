@@ -2987,6 +2987,7 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
 // Update model status, data and solution with respect to non-trivial
 // user bound/cost scaling
 HighsStatus Highs::optionChangeAction() {
+  /*
   HighsModel& model = this->model_;
   HighsLp& lp = model.lp_;
   HighsInfo& info = this->info_;
@@ -3016,6 +3017,7 @@ HighsStatus Highs::optionChangeAction() {
     lp.user_cost_scale_ = options.user_cost_scale;
     lp.user_bound_scale_ = options.user_bound_scale;
   }
+  */
   return HighsStatus::kOk;
 }
 
