@@ -4626,14 +4626,14 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         double residual = 0.0;
         if (direction * triplet.jval < 0) {
           rhs = model->row_upper_[triplet.row];
-          residual = impliedRowBounds.getResidualSumLowerOrig(triplet.row, col,
-                                                              triplet.jval) +
-                     std::max(triplet.kval, 0.0);
+          residual = impliedRowBounds.getResidualSumLowerOrig(
+              triplet.row, col, triplet.jval, rowNz.index(), triplet.kval,
+              true);
         } else {
           rhs = model->row_lower_[triplet.row];
-          residual = impliedRowBounds.getResidualSumUpperOrig(triplet.row, col,
-                                                              triplet.jval) +
-                     std::min(triplet.kval, 0.0);
+          residual = impliedRowBounds.getResidualSumUpperOrig(
+              triplet.row, col, triplet.jval, rowNz.index(), triplet.kval,
+              true);
         }
         // direction =  1: compute implied lower bound
         // direction = -1: compute implied upper bound
