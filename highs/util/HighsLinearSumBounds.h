@@ -163,7 +163,7 @@ class HighsLinearSumBounds {
  private:
   void computeResidual(HighsInt& numInfs, HighsCDouble& activity,
                        double lowerBound, double upperBound, double coefficient,
-                       bool useLowerBound) const;
+                       HighsInt direction) const;
 
   void computeResidual(HighsInt& numInfs, HighsCDouble& activity, HighsInt var,
                        double coefficient, HighsInt direction,
