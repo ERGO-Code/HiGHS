@@ -529,7 +529,8 @@ void userScaleHessian(HighsHessian hessian, HighsUserScaleData& data,
   double cost_scale_value = std::pow(2, user_cost_scale);
   for (HighsInt iEl = 0; iEl < hessian.start_[hessian.dim_]; iEl++) {
     double value = hessian.value_[iEl] *= cost_scale_value;
-    if (std::abs(value) > data.infinite_cost) data.num_infinite_hessian_values++;
+    if (std::abs(value) > data.infinite_cost)
+      data.num_infinite_hessian_values++;
     if (apply) hessian.value_[iEl] = value;
   }
 }

@@ -946,10 +946,10 @@ HighsStatus Highs::run() {
   HighsUserScaleData user_scale_data;
   initialiseUserScaleData(this->options_, user_scale_data);
   const bool user_scaling =
-    user_scale_data.user_cost_scale ||
-    user_scale_data.user_bound_scale;
+      user_scale_data.user_cost_scale || user_scale_data.user_bound_scale;
   if (user_scaling) {
-    if (this->userScaleModel(user_scale_data) == HighsStatus::kError) return HighsStatus::kError;
+    if (this->userScaleModel(user_scale_data) == HighsStatus::kError)
+      return HighsStatus::kError;
     this->userScaleSolution(user_scale_data);
     // Zero the user scale values to prevent further scaling
     this->options_.user_cost_scale = 0;
@@ -977,13 +977,14 @@ HighsStatus Highs::run() {
   if (user_scaling) {
     // Unscale the incumbent model and solution
     //
-    // Flip the scaling sign 
+    // Flip the scaling sign
     user_scale_data.user_cost_scale *= -1;
     user_scale_data.user_bound_scale *= -1;
     HighsStatus unscale_status = this->userScaleModel(user_scale_data);
     if (unscale_status == HighsStatus::kError) {
-      highsLogUser(this->options_.log_options, HighsLogType::kError,
-		   "Unexpected error removing user scaling from the incumbent model\n");
+      highsLogUser(
+          this->options_.log_options, HighsLogType::kError,
+          "Unexpected error removing user scaling from the incumbent model\n");
       assert(unscale_status != HighsStatus::kError);
     }
     const bool update_kkt = true;
@@ -992,6 +993,10 @@ HighsStatus Highs::run() {
     // negated to undo user scaling
     this->options_.user_cost_scale = -user_scale_data.user_cost_scale;
     this->options_.user_bound_scale = -user_scale_data.user_bound_scale;
+    highsLogUser(this->options_.log_options, HighsLogType::kInfo,
+                 "After solving the user-scaled model the unscaled solution "
+                 "has objective value %.12g\n",
+                 this->info_.objective_function_value);
   }
   return status;
 }

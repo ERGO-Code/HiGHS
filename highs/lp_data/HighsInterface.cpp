@@ -2994,7 +2994,8 @@ HighsStatus Highs::userScaleModel(HighsUserScaleData& data) {
   return return_status;
 }
 
-HighsStatus Highs::userScaleSolution(HighsUserScaleData& data, bool update_kkt) {
+HighsStatus Highs::userScaleSolution(HighsUserScaleData& data,
+                                     bool update_kkt) {
   HighsStatus return_status = HighsStatus::kOk;
   if (!data.user_cost_scale && !data.user_bound_scale) return HighsStatus::kOk;
   double cost_scale_value = std::pow(2, data.user_cost_scale);
@@ -3004,23 +3005,25 @@ HighsStatus Highs::userScaleSolution(HighsUserScaleData& data, bool update_kkt) 
   if (info_.primal_solution_status != kSolutionStatusNone) {
     if (data.user_bound_scale) {
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-	if (has_integrality && lp.integrality_[iCol] != HighsVarType::kContinuous) continue;
-	this->solution_.col_value[iCol] *= bound_scale_value;
+        if (has_integrality &&
+            lp.integrality_[iCol] != HighsVarType::kContinuous)
+          continue;
+        this->solution_.col_value[iCol] *= bound_scale_value;
       }
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
-	this->solution_.row_value[iRow] *= bound_scale_value;
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+        this->solution_.row_value[iRow] *= bound_scale_value;
     }
   }
   if (info_.dual_solution_status != kSolutionStatusNone) {
     if (data.user_cost_scale) {
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
-	this->solution_.col_dual[iCol] *= cost_scale_value;
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
-	this->solution_.row_dual[iRow] *= cost_scale_value;
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        this->solution_.col_dual[iCol] *= cost_scale_value;
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+        this->solution_.row_dual[iRow] *= cost_scale_value;
     }
   }
   if (!update_kkt) return return_status;
-  info_.objective_function_value *= (bound_scale_value*cost_scale_value);
+  info_.objective_function_value *= (bound_scale_value * cost_scale_value);
   getKktFailures(options_, model_, solution_, basis_, info_);
   return return_status;
 }

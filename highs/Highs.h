@@ -1709,7 +1709,8 @@ class Highs {
   HighsStatus optionChangeAction() const { return HighsStatus::kOk; };
 
   HighsStatus userScaleModel(HighsUserScaleData& data);
-  HighsStatus userScaleSolution(HighsUserScaleData& data, bool update_kkt = false);
+  HighsStatus userScaleSolution(HighsUserScaleData& data,
+                                bool update_kkt = false);
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
                                      const bool constraint,
                                      const HighsInt method,

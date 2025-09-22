@@ -17,8 +17,8 @@
 #include <sstream>
 #include <vector>
 
-#include "lp_data/HighsSolution.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsSolution.h"
 #include "model/HighsHessianUtils.h"
 #include "util/stringutil.h"
 
@@ -1590,4 +1590,3 @@ bool repeatedNames(const std::vector<std::string> name) {
   return false;
 }
 */
-

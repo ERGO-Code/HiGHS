@@ -769,8 +769,7 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
-HighsStatus userScaleLp(HighsLp& lp,
-                        HighsUserScaleData& data,
+HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
                         const HighsLogOptions& log_options) {
   userScaleLp(lp, data, false);
   HighsStatus return_status = userScaleStatus(log_options, data);
@@ -779,10 +778,10 @@ HighsStatus userScaleLp(HighsLp& lp,
   return return_status;
 }
 
-void userScaleLp(HighsLp& lp, HighsUserScaleData& data,
-                 const bool apply) {
+void userScaleLp(HighsLp& lp, HighsUserScaleData& data, const bool apply) {
   userScaleCosts(lp.integrality_, lp.col_cost_, data, apply);
-  userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, data, apply);
+  userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, data,
+                     apply);
   userScaleMatrix(lp.integrality_, lp.a_matrix_, data, apply);
   userScaleRowBounds(lp.row_lower_, lp.row_upper_, data, apply);
 }
@@ -1734,10 +1733,10 @@ HighsStatus changeLpIntegrality(HighsLp& lp,
   HighsInt lp_col;
   HighsInt usr_col = -1;
 
- // If changing integrality for a problem without an integrality
- // vector (ie an LP), have to create it for the incumbent columns -
- // which are naturally continuous
-  if (lp.integrality_.size() == 0) 
+  // If changing integrality for a problem without an integrality
+  // vector (ie an LP), have to create it for the incumbent columns -
+  // which are naturally continuous
+  if (lp.integrality_.size() == 0)
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
 
   assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
@@ -3688,8 +3687,9 @@ void HighsUserScaleData::initialise(const HighsInt& user_cost_scale_,
 }
 
 bool HighsUserScaleData::scaleError(std::string& message) const {
-  if (this->num_infinite_costs + this->num_infinite_hessian_values + this->num_infinite_col_bounds +
-          this->num_infinite_row_bounds + this->num_large_matrix_values ==
+  if (this->num_infinite_costs + this->num_infinite_hessian_values +
+          this->num_infinite_col_bounds + this->num_infinite_row_bounds +
+          this->num_large_matrix_values ==
       0)
     return false;
   assert(this->user_cost_scale != 0 || this->user_bound_scale != 0);
@@ -3710,19 +3710,18 @@ bool HighsUserScaleData::scaleError(std::string& message) const {
   }
   if (this->num_infinite_hessian_values) {
     if (this->num_infinite_costs) {
-      if (this->num_infinite_col_bounds ||
-	  this->num_infinite_row_bounds) {
+      if (this->num_infinite_col_bounds || this->num_infinite_row_bounds) {
         ss << ",";
       } else {
         ss << " and";
       }
     }
-    ss << " " << this->num_infinite_hessian_values << " infinite Hessian values";
+    ss << " " << this->num_infinite_hessian_values
+       << " infinite Hessian values";
     if (this->num_infinite_hessian_values > 1) ss << "s";
   }
   if (this->num_infinite_col_bounds) {
-    if (this->num_infinite_costs ||
-	this->num_infinite_hessian_values) {
+    if (this->num_infinite_costs || this->num_infinite_hessian_values) {
       if (this->num_infinite_row_bounds) {
         ss << ",";
       } else {
@@ -3733,17 +3732,15 @@ bool HighsUserScaleData::scaleError(std::string& message) const {
     if (this->num_infinite_col_bounds > 1) ss << "s";
   }
   if (this->num_infinite_row_bounds) {
-    if (this->num_infinite_costs ||
-	this->num_infinite_hessian_values ||
-	this->num_infinite_col_bounds) ss << " and";
+    if (this->num_infinite_costs || this->num_infinite_hessian_values ||
+        this->num_infinite_col_bounds)
+      ss << " and";
     ss << " " << this->num_infinite_row_bounds << " infinite row bound";
     if (this->num_infinite_row_bounds > 1) ss << "s";
   }
   if (this->num_large_matrix_values) {
-    if (this->num_infinite_costs +
-	this->num_infinite_hessian_values +
-	this->num_infinite_col_bounds +
-	this->num_infinite_row_bounds >
+    if (this->num_infinite_costs + this->num_infinite_hessian_values +
+            this->num_infinite_col_bounds + this->num_infinite_row_bounds >
         0)
       ss << ", and";
     ss << " " << this->num_large_matrix_values << " large matrix value";

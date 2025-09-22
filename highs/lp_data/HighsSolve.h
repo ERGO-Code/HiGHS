@@ -18,5 +18,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
                                  HighsInfo& highs_info, HighsSolution& solution,
                                  HighsBasis& basis);
-void assessExcessiveBoundCost(const HighsOptions options, const HighsModel& model);
+void assessExcessiveBoundCost(const HighsOptions options,
+                              const HighsModel& model);
 #endif  // LP_DATA_HIGHSSOLVE_H_

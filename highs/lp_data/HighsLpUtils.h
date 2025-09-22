@@ -61,12 +61,10 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-HighsStatus userScaleLp(HighsLp& lp,
-                        HighsUserScaleData& data,
+HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
                         const HighsLogOptions& log_options);
 
-void userScaleLp(HighsLp& lp,
-		 HighsUserScaleData& data,
+void userScaleLp(HighsLp& lp, HighsUserScaleData& data,
                  const bool apply = true);
 
 void userScaleCosts(const vector<HighsVarType>& integrality,
