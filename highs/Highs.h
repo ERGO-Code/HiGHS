@@ -1705,7 +1705,11 @@ class Highs {
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
-  HighsStatus optionChangeAction();
+  // Retain trivial optionChangeAction() in case it's useful later
+  HighsStatus optionChangeAction() const { return HighsStatus::kOk; };
+
+  HighsStatus userScaleModel(HighsUserScaleData& data);
+  HighsStatus userScaleSolution(HighsUserScaleData& data, bool update_kkt = false);
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
                                      const bool constraint,
                                      const HighsInt method,

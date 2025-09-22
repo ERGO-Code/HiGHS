@@ -1591,15 +1591,3 @@ bool repeatedNames(const std::vector<std::string> name) {
 }
 */
 
-HighsStatus userScaleModel(HighsModel& model,
-			   HighsUserScaleData& data,
-			   const HighsLogOptions& log_options) {
-  userScaleLp(model.lp_, data, false);
-  userScaleHessian(model.hessian_, data, false);
-  HighsStatus return_status = userScaleStatus(log_options, data);
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  userScaleLp(model.lp_, data);
-  userScaleHessian(model.hessian_, data);
-  return return_status;
-}
-

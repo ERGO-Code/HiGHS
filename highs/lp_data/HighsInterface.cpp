@@ -2984,41 +2984,45 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
   }
 }
 
-// Update model status, data and solution with respect to non-trivial
-// user bound/cost scaling
-HighsStatus Highs::optionChangeAction() {
-  /*
-  HighsModel& model = this->model_;
-  HighsLp& lp = model.lp_;
-  HighsInfo& info = this->info_;
-  HighsOptions& options = this->options_;
-  HighsInt dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
-  HighsInt dl_user_bound_scale =
-      options.user_bound_scale - lp.user_bound_scale_;
-  
-  if (dl_user_cost_scale || dl_user_bound_scale) {
-    HighsUserScaleData user_scale_data;
-    initialiseUserScaleData(lp, options_, user_scale_data);
-    user_scale_data.user_cost_scale = dl_user_cost_scale;
-    user_scale_data.user_bound_scale = dl_user_bound_scale;
-    HighsStatus return_status = userScaleModel(model, user_scale_data, options.log_options);
-    if (return_status == HighsStatus::kError) {
-      options.user_cost_scale = lp.user_cost_scale_;
-      options.user_bound_scale = lp.user_bound_scale_;
-      highsLogUser(
-          options_.log_options, HighsLogType::kError,
-          "New user cost/bound scaling yields excessive costs/bounds: "
-          "reverting user cost scaling to %d, and user bound scaling to %d\n",
-          int(lp.user_cost_scale_), int(lp.user_bound_scale_));
-      return HighsStatus::kError;
+HighsStatus Highs::userScaleModel(HighsUserScaleData& data) {
+  userScaleLp(this->model_.lp_, data, false);
+  userScaleHessian(this->model_.hessian_, data, false);
+  HighsStatus return_status = userScaleStatus(this->options_.log_options, data);
+  if (return_status == HighsStatus::kError) return HighsStatus::kError;
+  userScaleLp(this->model_.lp_, data);
+  userScaleHessian(this->model_.hessian_, data);
+  return return_status;
+}
+
+HighsStatus Highs::userScaleSolution(HighsUserScaleData& data, bool update_kkt) {
+  HighsStatus return_status = HighsStatus::kOk;
+  if (!data.user_cost_scale && !data.user_bound_scale) return HighsStatus::kOk;
+  double cost_scale_value = std::pow(2, data.user_cost_scale);
+  double bound_scale_value = std::pow(2, data.user_bound_scale);
+  const HighsLp& lp = this->model_.lp_;
+  const bool has_integrality = lp.integrality_.size();
+  if (info_.primal_solution_status != kSolutionStatusNone) {
+    if (data.user_bound_scale) {
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+	if (has_integrality && lp.integrality_[iCol] != HighsVarType::kContinuous) continue;
+	this->solution_.col_value[iCol] *= bound_scale_value;
+      }
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
+	this->solution_.row_value[iRow] *= bound_scale_value;
     }
-    this->invalidateModelStatusSolutionAndInfo();
-    this->invalidateSolverData();
-    lp.user_cost_scale_ = options.user_cost_scale;
-    lp.user_bound_scale_ = options.user_bound_scale;
   }
-  */
-  return HighsStatus::kOk;
+  if (info_.dual_solution_status != kSolutionStatusNone) {
+    if (data.user_cost_scale) {
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+	this->solution_.col_dual[iCol] *= cost_scale_value;
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
+	this->solution_.row_dual[iRow] *= cost_scale_value;
+    }
+  }
+  if (!update_kkt) return return_status;
+  info_.objective_function_value *= (bound_scale_value*cost_scale_value);
+  getKktFailures(options_, model_, solution_, basis_, info_);
+  return return_status;
 }
 
 void HighsIllConditioning::clear() { this->record.clear(); }

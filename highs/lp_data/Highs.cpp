@@ -941,9 +941,23 @@ HighsStatus Highs::run() {
 
   if (!options_.use_warm_start) this->clearSolver();
   this->reportModelStats();
-  HighsInt num_linear_objective = this->multi_linear_objective_.size();
-  if (num_linear_objective == 0) {
-    HighsStatus status = this->optimizeModel();
+
+  // Possibly apply user-defined scaling to the incumbent model and solution
+  HighsUserScaleData user_scale_data;
+  initialiseUserScaleData(this->options_, user_scale_data);
+  const bool user_scaling =
+    user_scale_data.user_cost_scale ||
+    user_scale_data.user_bound_scale;
+  if (user_scaling) {
+    if (this->userScaleModel(user_scale_data) == HighsStatus::kError) return HighsStatus::kError;
+    this->userScaleSolution(user_scale_data);
+    // Zero the user scale values to prevent further scaling
+    this->options_.user_cost_scale = 0;
+    this->options_.user_bound_scale = 0;
+  }
+  HighsStatus status;
+  if (!this->multi_linear_objective_.size()) {
+    status = this->optimizeModel();
     if (options_had_highs_files) {
       // This call to Highs::run() had HiGHS files in options, so
       // recover HiGHS files to options_
@@ -957,9 +971,29 @@ HighsStatus Highs::run() {
       if (this->options_.write_basis_file != "")
         status = this->writeBasis(this->options_.write_basis_file);
     }
-    return status;
+  } else {
+    status = this->multiobjectiveSolve();
   }
-  return this->multiobjectiveSolve();
+  if (user_scaling) {
+    // Unscale the incumbent model and solution
+    //
+    // Flip the scaling sign 
+    user_scale_data.user_cost_scale *= -1;
+    user_scale_data.user_bound_scale *= -1;
+    HighsStatus unscale_status = this->userScaleModel(user_scale_data);
+    if (unscale_status == HighsStatus::kError) {
+      highsLogUser(this->options_.log_options, HighsLogType::kError,
+		   "Unexpected error removing user scaling from the incumbent model\n");
+      assert(unscale_status != HighsStatus::kError);
+    }
+    const bool update_kkt = true;
+    this->userScaleSolution(user_scale_data, update_kkt);
+    // Restore the user scale values, remembering that they've been
+    // negated to undo user scaling
+    this->options_.user_cost_scale = -user_scale_data.user_cost_scale;
+    this->options_.user_bound_scale = -user_scale_data.user_bound_scale;
+  }
+  return status;
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
