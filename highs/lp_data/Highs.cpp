@@ -988,15 +988,25 @@ HighsStatus Highs::run() {
       assert(unscale_status != HighsStatus::kError);
     }
     const bool update_kkt = true;
-    this->userScaleSolution(user_scale_data, update_kkt);
+    unscale_status = this->userScaleSolution(user_scale_data, update_kkt);
     // Restore the user scale values, remembering that they've been
     // negated to undo user scaling
     this->options_.user_cost_scale = -user_scale_data.user_cost_scale;
     this->options_.user_bound_scale = -user_scale_data.user_bound_scale;
     highsLogUser(this->options_.log_options, HighsLogType::kInfo,
-                 "After solving the user-scaled model the unscaled solution "
+                 "After solving the user-scaled model, the unscaled solution "
                  "has objective value %.12g\n",
                  this->info_.objective_function_value);
+    if (model_status_ == HighsModelStatus::kOptimal &&
+        unscale_status != HighsStatus::kOk) {
+      // KKT errors in the unscaled optimal solution, so log a warning and
+      // return
+      highsLogUser(
+          this->options_.log_options, HighsLogType::kWarning,
+          "User scaled problem solved to optimality, but unscaled solution "
+          "does not satisfy feasibilty and optimality tolerances\n");
+      status = HighsStatus::kWarning;
+    }
   }
   return status;
 }

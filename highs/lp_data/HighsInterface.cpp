@@ -2589,7 +2589,7 @@ HighsStatus Highs::lpKktCheck(const HighsLp& lp, const std::string& message) {
   getLpKktFailures(options, lp, solution, basis_, info, primal_dual_errors,
                    get_residuals);
   if (this->model_status_ == HighsModelStatus::kOptimal)
-    reportLpKktFailures(lp, options, info, message);
+    reportKktFailures(lp, options, info, message);
   // get_residuals is false when there is a valid basis, since
   // residual errors are assumed to be small, so
   // info.num_primal_residual_errors = -1, since they aren't
@@ -3025,7 +3025,10 @@ HighsStatus Highs::userScaleSolution(HighsUserScaleData& data,
   if (!update_kkt) return return_status;
   info_.objective_function_value *= (bound_scale_value * cost_scale_value);
   getKktFailures(options_, model_, solution_, basis_, info_);
-  return return_status;
+  return reportKktFailures(model_.lp_, options_, info_,
+                           "After removing user scaling")
+             ? HighsStatus::kWarning
+             : return_status;
 }
 
 void HighsIllConditioning::clear() { this->record.clear(); }

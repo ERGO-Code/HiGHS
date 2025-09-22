@@ -97,5 +97,14 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
 
+  std::string model = "flugpl";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  highs.readModel(filename);
+
+  REQUIRE(highs.setOptionValue("user_cost_scale", -30) == HighsStatus::kOk);
+
+  highs.run();
+
   highs.resetGlobalScheduler(true);
 }
