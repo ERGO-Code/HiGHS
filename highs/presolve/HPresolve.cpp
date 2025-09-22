@@ -931,13 +931,23 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
                                              newColIndex, newRowIndex);
     mipsolver->mipdata_->implications.rebuild(model->num_col_, newColIndex,
                                               newRowIndex);
-    mipsolver->mipdata_->cutpool =
+    // TODO: Find a sensible way to do this
+    HighsCutPool* p = &mipsolver->mipdata_->cutpools.at(0);
+    p->~HighsCutPool();
+    ::new (static_cast<void*>(p))
         HighsCutPool(mipsolver->model_->num_col_,
                      mipsolver->options_mip_->mip_pool_age_limit,
                      mipsolver->options_mip_->mip_pool_soft_limit, 0);
-    mipsolver->mipdata_->conflictPool =
+    // mipsolver->mipdata_->cutpools[0] =
+    //     HighsCutPool(mipsolver->model_->num_col_,
+    //                  mipsolver->options_mip_->mip_pool_age_limit,
+    //                  mipsolver->options_mip_->mip_pool_soft_limit, 0);
+    // mipsolver->mipdata_->cutpool = mipsolver->mipdata_->cutpools.at(0);
+    mipsolver->mipdata_->conflictpools[0] =
         HighsConflictPool(5 * mipsolver->options_mip_->mip_pool_age_limit,
                           mipsolver->options_mip_->mip_pool_soft_limit);
+    mipsolver->mipdata_->conflictPool =
+        mipsolver->mipdata_->conflictpools.at(0);
 
     for (HighsInt i = 0; i != oldNumCol; ++i)
       if (newColIndex[i] != -1) numProbes[newColIndex[i]] = numProbes[i];
