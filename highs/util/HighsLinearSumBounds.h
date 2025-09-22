@@ -167,7 +167,7 @@ class HighsLinearSumBounds {
   double getImplVarLower(HighsInt sum, double myVarLower, double myImplVarLower,
                          HighsInt myImplVarLowerSource) const;
 
-  void update(HighsInt& numInf, HighsCDouble& sum, HighsInt direction,
+  void update(HighsInt& numInf, HighsCDouble& activity, HighsInt direction,
               double bound, double coefficient) const;
 
   void update(HighsInt& numInfs, HighsCDouble& activity, double oldBound,
