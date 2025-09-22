@@ -196,7 +196,7 @@ void HighsSearch::addBoundExceedingConflict() {
 
       HighsCutGeneration cutGen(*lp, getCutPool());
       getDebugSolution().checkCut(inds.data(), vals.data(), inds.size(), rhs);
-      cutGen.generateConflict(localdom, inds, vals, rhs);
+      cutGen.generateConflict(localdom, mipworker.globaldom_, inds, vals, rhs);
     }
   }
 }
@@ -225,7 +225,7 @@ void HighsSearch::addInfeasibleConflict() {
 
     HighsCutGeneration cutGen(*lp, getCutPool());
     getDebugSolution().checkCut(inds.data(), vals.data(), inds.size(), rhs);
-    cutGen.generateConflict(localdom, inds, vals, rhs);
+    cutGen.generateConflict(localdom, mipworker.globaldom_, inds, vals, rhs);
 
     // if (cutpool.getNumCuts() > oldnumcuts) {
     //  printf(

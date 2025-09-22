@@ -936,7 +936,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
       if (lprelax.computeDualInfProof(mipsolver.mipdata_->domain, inds, vals,
                                       rhs)) {
         HighsCutGeneration cutGen(lprelax, mipsolver.mipdata_->cutpool);
-        cutGen.generateConflict(localdom, inds, vals, rhs);
+        cutGen.generateConflict(localdom, worker.globaldom_, inds, vals, rhs);
       }
       return false;
     } else if (lprelax.unscaledPrimalFeasible(st)) {
@@ -1073,7 +1073,7 @@ void HighsPrimalHeuristics::randomizedRounding(
       if (lprelax.computeDualInfProof(mipsolver.mipdata_->domain, inds, vals,
                                       rhs)) {
         HighsCutGeneration cutGen(lprelax, mipsolver.mipdata_->cutpool);
-        cutGen.generateConflict(localdom, inds, vals, rhs);
+        cutGen.generateConflict(localdom, worker.globaldom_, inds, vals, rhs);
       }
 
     } else if (lprelax.unscaledPrimalFeasible(st))
