@@ -263,7 +263,7 @@ void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
             return a.first > b.first;
           });
 
-  auto localdom = mipsolver.mipdata_->domain;
+  auto localdom = worker.globaldom_;
 
   HeuristicNeighbourhood neighbourhood(mipsolver, localdom);
 
@@ -324,7 +324,7 @@ void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
 void HighsPrimalHeuristics::RENS(HighsMipWorker& worker,
                                  const std::vector<double>& tmp) {
   // return if domain is infeasible
-  if (mipsolver.mipdata_->domain.infeasible()) return;
+  if (worker.globaldom_.infeasible()) return;
 
   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
 
@@ -336,11 +336,10 @@ void HighsPrimalHeuristics::RENS(HighsMipWorker& worker,
   HighsDomain& localdom = heur.getLocalDomain();
   heur.setHeuristic(true);
 
-  intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
-                               [&](HighsInt i) {
-                                 return mipsolver.mipdata_->domain.isFixed(i);
-                               }),
-                intcols.end());
+  intcols.erase(
+      std::remove_if(intcols.begin(), intcols.end(),
+                     [&](HighsInt i) { return worker.globaldom_.isFixed(i); }),
+      intcols.end());
 
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
@@ -386,7 +385,7 @@ retry:
     // printf("done evaluating node\n");
     if (heur.currentNodePruned()) {
       ++nbacktracks;
-      if (mipsolver.mipdata_->domain.infeasible()) {
+      if (worker.globaldom_.infeasible()) {
         worker.heur_stats.lp_iterations += heur.getLocalLpIterations();
         return;
       }
@@ -580,15 +579,14 @@ retry:
 void HighsPrimalHeuristics::RINS(HighsMipWorker& worker,
                                  const std::vector<double>& relaxationsol) {
   // return if domain is infeasible
-  if (mipsolver.mipdata_->domain.infeasible()) return;
+  if (worker.globaldom_.infeasible()) return;
 
   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
-  intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
-                               [&](HighsInt i) {
-                                 return mipsolver.mipdata_->domain.isFixed(i);
-                               }),
-                intcols.end());
+  intcols.erase(
+      std::remove_if(intcols.begin(), intcols.end(),
+                     [&](HighsInt i) { return worker.globaldom_.isFixed(i); }),
+      intcols.end());
 
   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
 
@@ -641,7 +639,7 @@ retry:
     if (heur.currentNodePruned()) {
       ++nbacktracks;
       // printf("backtrack1\n");
-      if (mipsolver.mipdata_->domain.infeasible()) {
+      if (worker.globaldom_.infeasible()) {
         worker.heur_stats.lp_iterations += heur.getLocalLpIterations();
         return;
       }
@@ -878,7 +876,7 @@ retry:
 bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
                                             const std::vector<double>& point,
                                             const int solution_source) {
-  auto localdom = mipsolver.mipdata_->domain;
+  auto localdom = worker.globaldom_;
   bool integerFeasible = true;
 
   HighsInt numintcols = intcols.size();
@@ -934,8 +932,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
       std::vector<HighsInt> inds;
       std::vector<double> vals;
       double rhs;
-      if (lprelax.computeDualInfProof(mipsolver.mipdata_->domain, inds, vals,
-                                      rhs)) {
+      if (lprelax.computeDualInfProof(worker.globaldom_, inds, vals, rhs)) {
         HighsCutGeneration cutGen(lprelax, mipsolver.mipdata_->cutpool);
         cutGen.generateConflict(localdom, worker.globaldom_, inds, vals, rhs);
       }
@@ -1018,7 +1015,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     HighsMipWorker& worker, const std::vector<double>& relaxationsol) {
   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
-  auto localdom = mipsolver.mipdata_->domain;
+  auto localdom = worker.globaldom_;
 
   for (HighsInt i : intcols) {
     double intval;
@@ -1071,8 +1068,7 @@ void HighsPrimalHeuristics::randomizedRounding(
       std::vector<HighsInt> inds;
       std::vector<double> vals;
       double rhs;
-      if (lprelax.computeDualInfProof(mipsolver.mipdata_->domain, inds, vals,
-                                      rhs)) {
+      if (lprelax.computeDualInfProof(worker.globaldom_, inds, vals, rhs)) {
         HighsCutGeneration cutGen(lprelax, mipsolver.mipdata_->cutpool);
         cutGen.generateConflict(localdom, worker.globaldom_, inds, vals, rhs);
       }
@@ -1516,10 +1512,10 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
           roundedsol[col] = (HighsInt)std::floor(lpsol[col]);
         else if (roundedsol[col] < lpsol[col])
           roundedsol[col] = (HighsInt)std::ceil(lpsol[col]);
-        else if (roundedsol[col] < mipsolver.mipdata_->domain.col_upper_[col])
-          roundedsol[col] = mipsolver.mipdata_->domain.col_upper_[col];
+        else if (roundedsol[col] < worker.globaldom_.col_upper_[col])
+          roundedsol[col] = worker.globaldom_.col_upper_[col];
         else
-          roundedsol[col] = mipsolver.mipdata_->domain.col_lower_[col];
+          roundedsol[col] = worker.globaldom_.col_lower_[col];
 
         referencepoint[flippos] = (HighsInt)roundedsol[col];
       }
