@@ -460,6 +460,8 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   if (!options.output_flag | !options.log_to_console)
     hipo_options.display = false;
 
+  hipo_options.log_options = &options.log_options;
+
   // Debug option is already considered through log_options.log_dev_level in
   // hipo::LogHighs::debug
 
@@ -539,7 +541,9 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   // block size option
   hipo_options.block_size = options.hipo_block_size;
 
-  hipo.set(hipo_options, options.log_options, callback, timer);
+  hipo.setOptions(hipo_options);
+  hipo.setTimer(timer);
+  hipo.setCallback(callback);
 
   // Transform problem to correct formulation
   hipo::Int num_col, num_row;

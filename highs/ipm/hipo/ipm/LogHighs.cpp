@@ -2,8 +2,8 @@
 
 namespace hipo {
 
-void LogHighs::setOptions(const HighsLogOptions& log_options) {
-  log_options_ = &log_options;
+void LogHighs::setOptions(const HighsLogOptions* log_options) {
+  log_options_ = log_options;
 }
 
 bool LogHighs::debug(Int level) const {

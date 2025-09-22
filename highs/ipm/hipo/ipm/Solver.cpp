@@ -29,14 +29,14 @@ Int Solver::load(const Int num_var, const Int num_con, const double* obj,
   return 0;
 }
 
-void Solver::set(const Options& options, const HighsLogOptions& log_options,
-                 HighsCallback& callback, const HighsTimer& timer) {
+void Solver::setOptions(const Options& options) {
   options_ = options;
-  if (options_.display) logH_.setOptions(log_options);
-  control_.setCallback(callback);
-  control_.setTimer(timer);
-  control_.setOptions(options);
+  if (options_.display) logH_.setOptions(options_.log_options);
 }
+void Solver::setCallback(HighsCallback& callback) {
+  control_.setCallback(callback);
+}
+void Solver::setTimer(const HighsTimer& timer) { control_.setTimer(timer); }
 
 void Solver::solve() {
   if (!model_.ready()) {

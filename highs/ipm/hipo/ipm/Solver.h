@@ -93,8 +93,9 @@ class Solver {
   // ===================================================================================
   // Specify options, callback and timer.
   // ===================================================================================
-  void set(const Options& options, const HighsLogOptions& log_options,
-           HighsCallback& callback, const HighsTimer& timer);
+  void setOptions(const Options& options);
+  void setCallback(HighsCallback& callback);
+  void setTimer(const HighsTimer& timer);
 
   // ===================================================================================
   // Solve the LP

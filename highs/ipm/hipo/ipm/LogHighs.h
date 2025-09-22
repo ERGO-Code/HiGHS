@@ -12,7 +12,7 @@ class LogHighs : public Log {
   const HighsLogOptions* log_options_;
 
  public:
-  void setOptions(const HighsLogOptions& log_options);
+  void setOptions(const HighsLogOptions* log_options);
   bool debug(Int level) const override;
 
   void print(std::stringstream& ss) const override;
