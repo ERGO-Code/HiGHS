@@ -21,6 +21,7 @@ class HighsLpRelaxation;
 
 struct HighsCutSet {
   std::vector<HighsInt> cutindices;
+  std::vector<HighsInt> cutpools;
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
   std::vector<double> ARvalue_;
@@ -40,6 +41,7 @@ struct HighsCutSet {
 
   void clear() {
     cutindices.clear();
+    cutpools.clear();
     upper_.clear();
     ARstart_.clear();
     ARindex_.clear();
@@ -77,13 +79,17 @@ class HighsCutPool {
   std::vector<std::pair<HighsInt, double>> sortBuffer;
 
  public:
-  HighsCutPool(HighsInt ncols, HighsInt agelim, HighsInt softlimit)
+  HighsInt index_;
+
+  HighsCutPool(HighsInt ncols, HighsInt agelim, HighsInt softlimit,
+               HighsInt index)
       : matrix_(ncols),
         agelim_(agelim),
         softlimit_(softlimit),
         numLpCuts(0),
         numPropNzs(0),
-        numPropRows(0) {
+        numPropRows(0),
+        index_(index) {
     ageDistribution.resize(agelim_ + 1);
     minScoreFactor = 0.9;
     bestObservedScore = 0.0;
@@ -110,6 +116,9 @@ class HighsCutPool {
 
   double getParallelism(HighsInt row1, HighsInt row2) const;
 
+  double getParallelism(HighsInt row1, HighsInt row2,
+                        const HighsCutPool& pool2) const;
+
   void performAging(bool parallel_sepa = false);
 
   void lpCutRemoved(HighsInt cut);
@@ -133,7 +142,9 @@ class HighsCutPool {
   }
 
   void separate(const std::vector<double>& sol, HighsDomain& domprop,
-                HighsCutSet& cutset, double feastol, bool thread_safe = false);
+                HighsCutSet& cutset, double feastol,
+                const std::deque<HighsCutPool>& cutpools,
+                bool thread_safe = false);
 
   void separateLpCutsAfterRestart(HighsCutSet& cutset);
 

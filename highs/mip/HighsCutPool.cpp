@@ -115,6 +115,38 @@ double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2) const {
   return dotprod * rownormalization_[row1] * rownormalization_[row2];
 }
 
+double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2,
+                                    const HighsCutPool& pool2) const {
+  HighsInt i1 = matrix_.getRowStart(row1);
+  const HighsInt end1 = matrix_.getRowEnd(row1);
+
+  HighsInt i2 = pool2.matrix_.getRowStart(row2);
+  const HighsInt end2 = pool2.matrix_.getRowEnd(row2);
+
+  const HighsInt* ARindex1 = matrix_.getARindex();
+  const double* ARvalue1 = matrix_.getARvalue();
+  const HighsInt* ARindex2 = pool2.matrix_.getARindex();
+  const double* ARvalue2 = pool2.matrix_.getARvalue();
+
+  double dotprod = 0.0;
+  while (i1 != end1 && i2 != end2) {
+    HighsInt col1 = ARindex1[i1];
+    HighsInt col2 = ARindex2[i2];
+
+    if (col1 < col2)
+      ++i1;
+    else if (col2 < col1)
+      ++i2;
+    else {
+      dotprod += ARvalue1[i1] * ARvalue2[i2];
+      ++i1;
+      ++i2;
+    }
+  }
+
+  return dotprod * rownormalization_[row1] * pool2.rownormalization_[row2];
+}
+
 void HighsCutPool::lpCutRemoved(HighsInt cut) {
   numLps_[cut].fetch_add(-1, std::memory_order_relaxed);
   if (matrix_.columnsLinked(cut)) {
@@ -181,18 +213,17 @@ void HighsCutPool::performAging(const bool parallel_sepa) {
 
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                             HighsCutSet& cutset, double feastol,
+                            const std::deque<HighsCutPool>& cutpools,
                             bool thread_safe) {
   HighsInt nrows = matrix_.getNumRows();
   const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
 
-  assert(cutset.empty());
-
   std::vector<std::pair<double, HighsInt>> efficacious_cuts;
 
-  HighsInt agelim = agelim_;
+  HighsInt agelim = thread_safe ? -1 : agelim_;
 
-  HighsInt numCuts = getNumCuts() - (!thread_safe ? numLpCuts : 0);
+  HighsInt numCuts = getNumCuts() - numLpCuts;
   while (agelim > 1 && numCuts > softlimit_) {
     numCuts -= ageDistribution[agelim];
     --agelim;
@@ -337,17 +368,23 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   efficacious_cuts.resize(numefficacious);
 
-  HighsInt selectednnz = 0;
-
-  assert(cutset.empty());
+  HighsInt selectednnz = cutset.ARindex_.size();
 
   for (const std::pair<double, HighsInt>& p : efficacious_cuts) {
     bool discard = false;
     double maxpar = 0.1;
-    for (HighsInt k : cutset.cutindices) {
-      if (getParallelism(k, p.second) > maxpar) {
-        discard = true;
-        break;
+    for (HighsInt i = 0; i != cutset.cutindices.size(); ++i) {
+      if (cutset.cutpools[i] == index_) {
+        if (getParallelism(cutset.cutindices[i], p.second) > maxpar) {
+          discard = true;
+          break;
+        }
+      } else {
+        if (getParallelism(p.second, cutset.cutindices[i],
+                           cutpools[cutset.cutpools[i]]) > maxpar) {
+          discard = true;
+          break;
+        }
       }
     }
 
@@ -368,6 +405,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
       ages_[p.second] = -1;
     }
     cutset.cutindices.push_back(p.second);
+    cutset.cutpools.push_back(index_);
     selectednnz += matrix_.getRowEnd(p.second) - matrix_.getRowStart(p.second);
   }
 
@@ -402,6 +440,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   HighsInt numcuts = matrix_.getNumRows();
 
   cutset.cutindices.resize(numcuts);
+  cutset.cutpools.resize(numcuts, index_);
   std::iota(cutset.cutindices.begin(), cutset.cutindices.end(), 0);
   cutset.resize(matrix_.nonzeroCapacity());
 

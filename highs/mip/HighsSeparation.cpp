@@ -138,7 +138,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     ncuts += numboundchgs;
 
   mipdata.cutpool.separate(sol.col_value, propdomain, cutset,
-                           mipdata.feastol);
+                           mipdata.feastol, mipdata.cutpools);
 
   if (cutset.numCuts() > 0) {
     ncuts += cutset.numCuts();

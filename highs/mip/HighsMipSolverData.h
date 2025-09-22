@@ -71,17 +71,18 @@ enum MipSolutionSource : int {
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
 
-  HighsCutPool cutpool;
-  HighsConflictPool conflictPool;
-
   std::deque<HighsLpRelaxation> lps;
   std::deque<HighsMipWorker> workers;
   std::deque<HighsDomain> domains;
+  std::deque<HighsCutPool> cutpools;
+  std::deque<HighsConflictPool> conflictpools;
   bool parallel_lock;
   // std::deque<HighsPrimalHeuristics> heuristics_deque;
 
   HighsLpRelaxation& lp;
   HighsDomain& domain;
+  HighsCutPool& cutpool;
+  HighsConflictPool& conflictPool;
 
   // std::unique_ptr<HighsPrimalHeuristics> heuristics_ptr;
   // HighsPrimalHeuristics heuristics;

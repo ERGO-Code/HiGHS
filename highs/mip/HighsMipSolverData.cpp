@@ -21,14 +21,18 @@
 
 HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
-      cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
-              mipsolver.options_mip_->mip_pool_soft_limit),
-      conflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
-                   mipsolver.options_mip_->mip_pool_soft_limit),
       domains(1, HighsDomain(mipsolver)),
       domain(domains.at(0)),
       lps(1, HighsLpRelaxation(mipsolver)),
       lp(lps.at(0)),
+      cutpools(),
+      cutpool(*cutpools.emplace(cutpools.end(), mipsolver.numCol(),
+                               mipsolver.options_mip_->mip_pool_age_limit,
+                               mipsolver.options_mip_->mip_pool_soft_limit, 0)),
+      conflictpools(
+          1, HighsConflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
+                               mipsolver.options_mip_->mip_pool_soft_limit)),
+      conflictPool(conflictpools.at(0)),
       // workers({HighsMipWorker(mipsolver, lp)}),
       pseudocost(),
       cliquetable(mipsolver.numCol()),

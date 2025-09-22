@@ -11,17 +11,16 @@
 #include "mip/MipTimer.h"
 
 HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
-                               HighsLpRelaxation& lprelax_,
-                               HighsDomain& domain)
+                               HighsLpRelaxation& lprelax_, HighsDomain& domain,
+                               HighsCutPool& cutpool,
+                               HighsConflictPool& conflictpool)
     : mipsolver_(mipsolver__),
       mipdata_(*mipsolver_.mipdata_.get()),
       lprelaxation_(lprelax_),
       pseudocost_(mipsolver__),
       globaldom_(domain),
-      cutpool_(mipsolver_.numCol(), mipsolver_.options_mip_->mip_pool_age_limit,
-               mipsolver_.options_mip_->mip_pool_soft_limit),
-      conflictpool_(5 * mipsolver_.options_mip_->mip_pool_age_limit,
-                    mipsolver_.options_mip_->mip_pool_soft_limit),
+      cutpool_(cutpool),
+      conflictpool_(conflictpool),
       upper_bound(kHighsInf) {
   // std::cout << mipdata_.domain.changedcolsflags_.size() << std::endl;
   search_ptr_ =
@@ -79,16 +78,16 @@ void HighsMipWorker::resetSearch() {
   // search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
   // search_ptr_->getLocalDomain().addConflictPool(
   //     mipsolver_.mipdata_->conflictPool);
-  cutpool_ = HighsCutPool(mipsolver_.numCol(),
-                          mipsolver_.options_mip_->mip_pool_age_limit,
-                          mipsolver_.options_mip_->mip_pool_soft_limit);
-  conflictpool_ =
-      HighsConflictPool(5 * mipsolver_.options_mip_->mip_pool_age_limit,
-                        mipsolver_.options_mip_->mip_pool_soft_limit);
+  // cutpool_ = HighsCutPool(mipsolver_.numCol(),
+  //                         mipsolver_.options_mip_->mip_pool_age_limit,
+  //                         mipsolver_.options_mip_->mip_pool_soft_limit);
+  // conflictpool_ =
+  //     HighsConflictPool(5 * mipsolver_.options_mip_->mip_pool_age_limit,
+  //                       mipsolver_.options_mip_->mip_pool_soft_limit);
   // search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
   // search_ptr_->getLocalDomain().addConflictPool(mipsolver_.mipdata_->conflictPool);
-  search_ptr_->getLocalDomain().addCutpool(cutpool_);
-  search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
+  // search_ptr_->getLocalDomain().addCutpool(cutpool_);
+  // search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
   search_ptr_->setLpRelaxation(&lprelaxation_);
 }
 

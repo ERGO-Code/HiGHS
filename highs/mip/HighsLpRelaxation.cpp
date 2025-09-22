@@ -86,7 +86,8 @@ void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver,
                                    const double*& vals) const {
   switch (origin) {
     case kCutPool:
-      mipsolver.mipdata_->cutpool.getCut(index, len, inds, vals);
+      assert(cutpool <= mipsolver.mipdata_->cutpools.size());
+      mipsolver.mipdata_->cutpools[cutpool].getCut(index, len, inds, vals);
       break;
     case kModel:
       mipsolver.mipdata_->getRow(index, len, inds, vals);
@@ -97,7 +98,8 @@ HighsInt HighsLpRelaxation::LpRow::getRowLen(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      return mipsolver.mipdata_->cutpool.getRowLength(index);
+      assert(cutpool <= mipsolver.mipdata_->cutpools.size());
+      return mipsolver.mipdata_->cutpools[cutpool].getRowLength(index);
     case kModel:
       return mipsolver.mipdata_->ARstart_[index + 1] -
              mipsolver.mipdata_->ARstart_[index];
@@ -111,7 +113,8 @@ bool HighsLpRelaxation::LpRow::isIntegral(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      return mipsolver.mipdata_->cutpool.cutIsIntegral(index);
+      assert(cutpool <= mipsolver.mipdata_->cutpools.size());
+      return mipsolver.mipdata_->cutpools[cutpool].cutIsIntegral(index);
     case kModel:
       return (mipsolver.mipdata_->rowintegral[index] != 0);
   };
@@ -124,7 +127,8 @@ double HighsLpRelaxation::LpRow::getMaxAbsVal(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      return mipsolver.mipdata_->cutpool.getMaxAbsCutCoef(index);
+      assert(cutpool <= mipsolver.mipdata_->cutpools.size());
+      return mipsolver.mipdata_->cutpools[cutpool].getMaxAbsCutCoef(index);
     case kModel:
       return mipsolver.mipdata_->maxAbsRowCoef[index];
   };
@@ -136,8 +140,9 @@ double HighsLpRelaxation::LpRow::getMaxAbsVal(
 double HighsLpRelaxation::slackLower(HighsInt row) const {
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
+      assert(lprows[row].cutpool <= mipsolver.mipdata_->cutpools.size());
       return mipsolver.mipdata_->domain.getMinCutActivity(
-          mipsolver.mipdata_->cutpool, lprows[row].index);
+          mipsolver.mipdata_->cutpools[lprows[row].cutpool], lprows[row].index);
     case LpRow::kModel:
       double rowlower = rowLower(row);
       if (rowlower != -kHighsInf) return rowlower;
@@ -487,7 +492,7 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
 
     lprows.reserve(lprows.size() + numcuts);
     for (HighsInt i = 0; i != numcuts; ++i)
-      lprows.push_back(LpRow::cut(cutset.cutindices[i]));
+      lprows.push_back(LpRow::cut(cutset.cutindices[i], cutset.cutpools[i]));
 
     bool success =
         lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
@@ -514,7 +519,11 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
       if (ndelcuts == 0) deletemask.resize(nlprows);
       ++ndelcuts;
       deletemask[i] = 1;
-      if (notifyPool) mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
+      if (notifyPool) {
+        assert(lprows[i].cutpool <= mipsolver.mipdata_->cutpools.size());
+        mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
+            lprows[i].index);
+      }
     }
   }
 
@@ -559,8 +568,11 @@ void HighsLpRelaxation::removeCuts() {
 
   lpsolver.deleteRows(modelrows, nlprows - 1);
   for (HighsInt i = modelrows; i != nlprows; ++i) {
-    if (lprows[i].origin == LpRow::Origin::kCutPool)
-      mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
+    if (lprows[i].origin == LpRow::Origin::kCutPool) {
+      assert(lprows[i].cutpool <= mipsolver.mipdata_->cutpools.size());
+      mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
+          lprows[i].index);
+    }
   }
   lprows.resize(modelrows);
   assert(lpsolver.getLp().num_row_ ==
@@ -605,7 +617,9 @@ void HighsLpRelaxation::performAging(bool deleteRows) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
         deletemask[i] = 1;
-        mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
+        assert(lprows[i].cutpool <= mipsolver.mipdata_->cutpools.size());
+        mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
+            lprows[i].index);
       }
     } else if (std::abs(lpsolver.getSolution().row_dual[i]) >
                lpsolver.getOptions().dual_feasibility_tolerance) {
