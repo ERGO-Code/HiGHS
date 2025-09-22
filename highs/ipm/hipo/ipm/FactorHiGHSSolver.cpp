@@ -129,25 +129,26 @@ Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
 
   // NB: A must have sorted columns for this to work
 
-  // create partial row-wise representation
-  // for now, using the full row-wise matrix
+  // create partial row-wise representation without values, and array or
+  // corresponding indices between cw and rw representation
   {
-    HighsSparseMatrix At = A;
-    At.ensureRowwise();
-    ptrNE_rw_ = std::move(At.start_);
-    idxNE_rw_ = std::move(At.index_);
-  }
+    ptrNE_rw_.assign(A.num_row_ + 1, 0);
+    idxNE_rw_.assign(A.numNz(), 0);
 
-  {
+    // pointers of row-start
+    for (Int el = 0; el < A.numNz(); ++el) ptrNE_rw_[A.index_[el] + 1]++;
+    for (Int i = 0; i < A.num_row_; ++i) ptrNE_rw_[i + 1] += ptrNE_rw_[i];
+
     std::vector<Int> temp = ptrNE_rw_;
     corr_NE_.assign(A.numNz(), 0);
 
-    // build array or corresponding indices
+    // rw-indices and corresponding indices created together
     for (Int col = 0; col < A.num_col_; ++col) {
       for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
         Int row = A.index_[el];
 
         corr_NE_[temp[row]] = el;
+        idxNE_rw_[temp[row]] = col;
         temp[row]++;
       }
     }
@@ -203,6 +204,7 @@ Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
     // now assign indices
     for (Int i = 0; i < nz_in_col; ++i) {
       Int index = temp_index[i];
+      // push_back is better then reserve, because the final length is not known
       rowsNE_.push_back(index);
       is_nz[index] = false;
     }
