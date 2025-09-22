@@ -1705,8 +1705,7 @@ class Highs {
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
-  // Retain trivial optionChangeAction() in case it's useful later
-  HighsStatus optionChangeAction() const { return HighsStatus::kOk; };
+  HighsStatus optionChangeAction();
 
   HighsStatus userScaleModel(HighsUserScaleData& data);
   HighsStatus userScaleSolution(HighsUserScaleData& data,

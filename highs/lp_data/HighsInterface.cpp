@@ -2944,6 +2944,12 @@ HighsStatus Highs::handleInfCost() {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::optionChangeAction() {
+  if (this->iis_.valid_ && options_.iis_strategy != this->iis_.strategy_)
+    this->iis_.invalidate();
+  return HighsStatus::kOk;
+}
+
 void Highs::restoreInfCost(HighsStatus& return_status) {
   HighsLp& lp = this->model_.lp_;
   HighsBasis& basis = this->basis_;

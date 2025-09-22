@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;  // false;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 bool doubleEqual0(const double v0, const double v1) {
