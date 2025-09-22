@@ -187,9 +187,9 @@ class HighsLpRelaxation {
 
   const HighsSolution& getSolution() const { return lpsolver.getSolution(); }
 
-  double slackUpper(HighsInt row) const;
+  double slackUpper(HighsInt row, const HighsDomain& globaldom) const;
 
-  double slackLower(HighsInt row) const;
+  double slackLower(HighsInt row, const HighsDomain& globaldom) const;
 
   double rowLower(HighsInt row) const {
     return lpsolver.getLp().row_lower_[row];
@@ -199,16 +199,16 @@ class HighsLpRelaxation {
     return lpsolver.getLp().row_upper_[row];
   }
 
-  double colLower(HighsInt col) const {
+  double colLower(HighsInt col, const HighsDomain& globaldom) const {
     return col < lpsolver.getLp().num_col_
                ? lpsolver.getLp().col_lower_[col]
-               : slackLower(col - lpsolver.getLp().num_col_);
+               : slackLower(col - lpsolver.getLp().num_col_, globaldom);
   }
 
-  double colUpper(HighsInt col) const {
+  double colUpper(HighsInt col, const HighsDomain& globaldom) const {
     return col < lpsolver.getLp().num_col_
                ? lpsolver.getLp().col_upper_[col]
-               : slackUpper(col - lpsolver.getLp().num_col_);
+               : slackUpper(col - lpsolver.getLp().num_col_, globaldom);
   }
 
   bool isColIntegral(HighsInt col) const {

@@ -110,8 +110,8 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   HighsInt indexOffset = mipsolver.numCol();
   for (HighsInt row = 0; row != numLpRow; ++row) {
     HighsInt slackIndex = indexOffset + row;
-    double bestub = lprelaxation.slackUpper(row);
-    double bestlb = lprelaxation.slackLower(row);
+    double bestub = lprelaxation.slackUpper(row, globaldom_);
+    double bestlb = lprelaxation.slackLower(row, globaldom_);
 
     if (bestlb == bestub) continue;
 
@@ -145,13 +145,15 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   HighsInt numNz = inds.size();
 
   auto getLb = [&](HighsInt col) {
-    return (col < slackOffset ? globaldom_.col_lower_[col]
-                              : lprelaxation.slackLower(col - slackOffset));
+    return (col < slackOffset
+                ? globaldom_.col_lower_[col]
+                : lprelaxation.slackLower(col - slackOffset, globaldom_));
   };
 
   auto getUb = [&](HighsInt col) {
-    return (col < slackOffset ? globaldom_.col_upper_[col]
-                              : lprelaxation.slackUpper(col - slackOffset));
+    return (col < slackOffset
+                ? globaldom_.col_upper_[col]
+                : lprelaxation.slackUpper(col - slackOffset, globaldom_));
   };
 
   auto remove = [&](HighsInt position) {
@@ -479,7 +481,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
           vectorsum.add(col, vals[i]);
         } else {
           HighsInt row = col - slackOffset;
-          tmpRhs += vals[i] * lprelaxation.slackLower(row);
+          tmpRhs += vals[i] * lprelaxation.slackLower(row, globaldom_);
 
           HighsInt rowlen;
           const HighsInt* rowinds;
@@ -497,7 +499,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
           vectorsum.add(col, -vals[i]);
         } else {
           HighsInt row = col - slackOffset;
-          tmpRhs -= vals[i] * lprelaxation.slackUpper(row);
+          tmpRhs -= vals[i] * lprelaxation.slackUpper(row, globaldom_);
           vals[i] = -vals[i];
 
           HighsInt rowlen;

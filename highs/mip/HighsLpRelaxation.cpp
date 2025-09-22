@@ -137,30 +137,32 @@ double HighsLpRelaxation::LpRow::getMaxAbsVal(
   return 0.0;
 }
 
-double HighsLpRelaxation::slackLower(HighsInt row) const {
+double HighsLpRelaxation::slackLower(HighsInt row,
+                                     const HighsDomain& globaldom) const {
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
       assert(lprows[row].cutpool <= mipsolver.mipdata_->cutpools.size());
-      return mipsolver.mipdata_->domain.getMinCutActivity(
+      return globaldom.getMinCutActivity(
           mipsolver.mipdata_->cutpools[lprows[row].cutpool], lprows[row].index);
     case LpRow::kModel:
       double rowlower = rowLower(row);
       if (rowlower != -kHighsInf) return rowlower;
-      return mipsolver.mipdata_->domain.getMinActivity(lprows[row].index);
+      return globaldom.getMinActivity(lprows[row].index);
   };
 
   assert(false);
   return -kHighsInf;
 }
 
-double HighsLpRelaxation::slackUpper(HighsInt row) const {
+double HighsLpRelaxation::slackUpper(HighsInt row,
+                                     const HighsDomain& globaldom) const {
   double rowupper = rowUpper(row);
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
       return rowupper;
     case LpRow::kModel:
       if (rowupper != kHighsInf) return rowupper;
-      return mipsolver.mipdata_->domain.getMaxActivity(lprows[row].index);
+      return globaldom.getMaxActivity(lprows[row].index);
   };
 
   assert(false);
