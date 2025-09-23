@@ -4593,59 +4593,30 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     double hugeBound = primal_feastol / kHighsTiny;
 
     // initialise
-    newBound = -kHighsInf;
     currentBound *= direction;
 
-    for (const auto& nz : getColumnVector(col)) {
-      // get row index and coefficient
-      HighsInt row = nz.index();
-      double val = nz.value();
-
-      // skip rows that are already redundant
-      if (isRedundant(row)) continue;
-
-      // initialise
-      double rhs = 0.0;
-      double residual = 0.0;
-
-      if (direction * val < 0.0) {
-        // skip rows with infinite rhs
-        rhs = model->row_upper_[row];
-        if (rhs == kHighsInf) continue;
-
-        // compute residual
-        residual = impliedRowBounds.getResidualSumUpperOrig(row, col, val);
-        if (residual == kHighsInf) return false;
-      } else {
-        // skip rows with infinite lhs
-        rhs = model->row_lower_[row];
-        if (rhs == -kHighsInf) continue;
-
-        // compute residual
-        residual = impliedRowBounds.getResidualSumLowerOrig(row, col, val);
-        if (residual == -kHighsInf) return false;
-      }
-
-      // compute bound
-      double candidateBound =
-          direction *
-          static_cast<double>((static_cast<HighsCDouble>(rhs) -
-                               static_cast<HighsCDouble>(residual)) /
-                              val);
-
-      // round up to make sure that all rows are redundant
-      candidateBound = std::ceil(candidateBound - primal_feastol);
-
-      // take largest bound
-      newBound = std::max(newBound, candidateBound);
-
-      // stop looking if bound is too large
-      if (newBound >= currentBound - primal_feastol || newBound > hugeBound)
-        return false;
+    // compute worst-case bounds
+    if (direction > 0) {
+      // lower bound
+      computeColBounds(col, -1, kHighsInf, nullptr, nullptr, &newBound);
+    } else {
+      // upper bound
+      computeColBounds(col, -1, kHighsInf, nullptr, nullptr, nullptr,
+                       &newBound);
     }
+    newBound *= direction;
 
     // return if no bound was found
     if (newBound == -kHighsInf) return false;
+
+    // stop if bound is too large
+    if (newBound >= currentBound - primal_feastol ||
+        std::abs(newBound) > hugeBound)
+      return false;
+
+    // round up to make sure that all rows are redundant
+    if (model->integrality_[col] != HighsVarType::kContinuous)
+      newBound = std::ceil(newBound - primal_feastol);
 
     // flip sign
     newBound *= direction;
