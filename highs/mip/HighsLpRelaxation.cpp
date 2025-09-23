@@ -169,7 +169,8 @@ double HighsLpRelaxation::slackUpper(HighsInt row,
   return kHighsInf;
 }
 
-HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
+HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver,
+                                     HighsInt index)
     : mipsolver(mipsolver) {
   lpsolver.setOptionValue("output_flag", false);
   lpsolver.setOptionValue("random_seed", mipsolver.options_mip_->random_seed);
@@ -189,9 +190,11 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   currentbasisstored = false;
   adjustSymBranchingCol = true;
   row_ep.size = 0;
+  index_ = index;
 }
 
-HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
+HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other,
+                                     HighsInt index)
     : mipsolver(other.mipsolver),
       lprows(other.lprows),
       fractionalints(other.fractionalints),
@@ -214,6 +217,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   lastAgeCall = 0;
   objective = -kHighsInf;
   row_ep.size = 0;
+  index_ = index;
 }
 
 void HighsLpRelaxation::loadModel() {
@@ -927,7 +931,8 @@ void HighsLpRelaxation::storeDualInfProof() {
     for (HighsInt j = 0; j < len; ++j) row_ap.add(inds[j], weight * vals[j]);
   }
 
-  const HighsDomain& globaldomain = mipsolver.mipdata_->domain;
+  assert(index_ <= mipsolver.mipdata_->domains.size() - 1);
+  const HighsDomain& globaldomain = mipsolver.mipdata_->domains[index_];
 
   for (HighsInt i : row_ap.getNonzeros()) {
     double val = row_ap.getValue(i);
@@ -972,7 +977,7 @@ void HighsLpRelaxation::storeDualInfProof() {
   }
 
   dualproofrhs = double(upper);
-  mipsolver.mipdata_->domain.tightenCoefficients(
+  mipsolver.mipdata_->domains[index_].tightenCoefficients(
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
       dualproofrhs);
 
@@ -993,12 +998,14 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
 
-  if (lpsolver.getSolution().dual_valid)
-    hasdualproof = computeDualProof(mipsolver.mipdata_->domain,
+  if (lpsolver.getSolution().dual_valid) {
+    assert(index_ <= mipsolver.mipdata_->domains.size() - 1);
+    hasdualproof = computeDualProof(mipsolver.mipdata_->domains[index_],
                                     mipsolver.mipdata_->upper_limit,
                                     dualproofinds, dualproofvals, dualproofrhs);
-  else
+  } else {
     hasdualproof = false;
+  }
 
   if (!hasdualproof) dualproofrhs = kHighsInf;
 }
@@ -1330,8 +1337,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             if (lpsolver.getBasis().col_status[i] == HighsBasisStatus::kBasic)
               continue;
 
-            const double glb = mipsolver.mipdata_->domain.col_lower_[i];
-            const double gub = mipsolver.mipdata_->domain.col_upper_[i];
+            assert(index_ <= mipsolver.mipdata_->domains.size() - 1);
+            const double glb =
+                mipsolver.mipdata_->domains[index_].col_lower_[i];
+            const double gub =
+                mipsolver.mipdata_->domains[index_].col_upper_[i];
 
             if (std::min(gub - sol.col_value[i], sol.col_value[i] - glb) <=
                 mipsolver.mipdata_->feastol)

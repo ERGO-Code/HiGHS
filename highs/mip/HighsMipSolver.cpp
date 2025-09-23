@@ -321,13 +321,13 @@ restart:
   for (int i = 1; i < mip_search_concurrency; i++) {
     if (mipdata_->numRestarts <= mipdata_->numRestartsRoot) {
       mipdata_->domains.emplace_back(mipdata_->domain);
-      mipdata_->lps.emplace_back(mipdata_->lp);
+      mipdata_->lps.emplace_back(mipdata_->lp, i);
       mipdata_->cutpools.emplace_back(
-          HighsCutPool(numCol(), options_mip_->mip_pool_age_limit,
-                       options_mip_->mip_pool_soft_limit, i));
+          numCol(), options_mip_->mip_pool_age_limit,
+                       options_mip_->mip_pool_soft_limit, i);
       mipdata_->conflictpools.emplace_back(
-          HighsConflictPool(5 * options_mip_->mip_pool_age_limit,
-                            options_mip_->mip_pool_soft_limit));
+          5 * options_mip_->mip_pool_age_limit,
+                            options_mip_->mip_pool_soft_limit);
       mipdata_->workers.emplace_back(
           *this, mipdata_->lps.back(), mipdata_->domains.back(),
           mipdata_->cutpools.back(), mipdata_->conflictpools.back());

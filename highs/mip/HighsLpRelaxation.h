@@ -84,6 +84,7 @@ class HighsLpRelaxation {
   HighsInt maxNumFractional;
   Status status;
   bool adjustSymBranchingCol;
+  HighsInt index_;
 
   void storeDualInfProof();
 
@@ -92,9 +93,9 @@ class HighsLpRelaxation {
   bool checkDualProof() const;
 
  public:
-  HighsLpRelaxation(const HighsMipSolver& mip);
+  HighsLpRelaxation(const HighsMipSolver& mip, HighsInt index = 0);
 
-  HighsLpRelaxation(const HighsLpRelaxation& other);
+  HighsLpRelaxation(const HighsLpRelaxation& other, HighsInt index = 0);
 
   void getCutPool(HighsInt& num_col, HighsInt& num_cut,
                   std::vector<double>& cut_lower,
