@@ -96,19 +96,15 @@ class HighsLinearSumBounds {
   double getResidualSumUpper(HighsInt sum, HighsInt var,
                              double coefficient) const;
 
-  double getResidualSumLowerOrig(HighsInt sum, HighsInt var,
-                                 double coefficient) const;
-
   double getResidualSumLowerOrig(HighsInt sum, HighsInt var, double coefficient,
-                                 HighsInt boundVar, double boundVarCoefficient,
-                                 bool setToUpper) const;
-
-  double getResidualSumUpperOrig(HighsInt sum, HighsInt var,
-                                 double coefficient) const;
+                                 HighsInt boundVar = -1,
+                                 double boundVarCoefficient = -kHighsInf,
+                                 bool setToUpper = false) const;
 
   double getResidualSumUpperOrig(HighsInt sum, HighsInt var, double coefficient,
-                                 HighsInt boundVar, double boundVarCoefficient,
-                                 bool setToUpper) const;
+                                 HighsInt boundVar = -1,
+                                 double boundVarCoefficient = -kHighsInf,
+                                 bool setToUpper = false) const;
 
   template <typename T = double>
   double getSumLowerOrig(HighsInt sum, T offset = T()) const {
