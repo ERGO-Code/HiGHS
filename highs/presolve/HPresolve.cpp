@@ -1248,38 +1248,30 @@ HPresolve::Result HPresolve::dominatedColumns(
 
       // see Gamrath, G., Koch, T., Martin, A. et al. Progress in presolving for
       // mixed integer programming. Math. Prog. Comp. 7, 367–398 (2015).
-      if (model->col_cost_[j] >= 0.0) {
-        double worstCaseLowerBound;
-        computeColBounds(j, -1, kHighsInf, nullptr, nullptr,
-                         &worstCaseLowerBound);
-        if (worstCaseLowerBound <= 1 + primal_feastol) {
-          // cost is positive and 1 + primal_feastol >= worstCaseLb >= 0, i.e.
-          // worstCaseLb agrees with the bounds: try to find dominated variable
-          // that allows for fixing binary variable to zero
-          upperImplied = true;
-          if (!lowerImplied && bestRowMinus != -1) {
-            HPRESOLVE_CHECKED_CALL(checkFixBinary(bestRowMinus, j, HighsInt{-1},
-                                                  bestRowMinusScale,
-                                                  ajBestRowMinus));
-            if (colDeleted[j]) continue;
-          }
+      if (model->col_cost_[j] >= 0.0 &&
+          computeWorstCaseLowerBound(j) <= 1 + primal_feastol) {
+        // cost is positive and 1 + primal_feastol >= worstCaseLb >= 0, i.e.
+        // worstCaseLb agrees with the bounds: try to find dominated variable
+        // that allows for fixing binary variable to zero
+        upperImplied = true;
+        if (!lowerImplied && bestRowMinus != -1) {
+          HPRESOLVE_CHECKED_CALL(checkFixBinary(bestRowMinus, j, HighsInt{-1},
+                                                bestRowMinusScale,
+                                                ajBestRowMinus));
+          if (colDeleted[j]) continue;
         }
       }
 
-      if (model->col_cost_[j] <= 0.0) {
-        double worstCaseUpperBound;
-        computeColBounds(j, -1, kHighsInf, nullptr, nullptr, nullptr,
-                         &worstCaseUpperBound);
-        if (worstCaseUpperBound >= -primal_feastol) {
-          // cost is negative and 0 >= worstCaseUb >= -primal_feastol, i.e.
-          // worstCaseUb agrees with the bounds: try to find dominated variable
-          // that allows for fixing binary variable to one
-          lowerImplied = true;
-          if (!upperImplied && bestRowPlus != -1) {
-            HPRESOLVE_CHECKED_CALL(checkFixBinary(
-                bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
-            if (colDeleted[j]) continue;
-          }
+      if (model->col_cost_[j] <= 0.0 &&
+          computeWorstCaseUpperBound(j) >= -primal_feastol) {
+        // cost is negative and 0 >= worstCaseUb >= -primal_feastol, i.e.
+        // worstCaseUb agrees with the bounds: try to find dominated variable
+        // that allows for fixing binary variable to one
+        lowerImplied = true;
+        if (!upperImplied && bestRowPlus != -1) {
+          HPRESOLVE_CHECKED_CALL(checkFixBinary(
+              bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
+          if (colDeleted[j]) continue;
         }
       }
     }
@@ -4551,15 +4543,12 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       // now compute the implied lower bound (direction = 1) or implied upper
       // bound (direction = -1) provided that the binary variable is set to its
       // upper bound.
-      double bestBound;
-      if (direction > 0) {
-        computeColBounds(col, rowNz.index(), model->col_upper_[rowNz.index()],
-                         &bestBound);
-      } else {
-        computeColBounds(col, rowNz.index(), model->col_upper_[rowNz.index()],
-                         nullptr, &bestBound);
-        bestBound *= (-1);
-      }
+      double bestBound =
+          direction > 0
+              ? computeImpliedLowerBound(col, rowNz.index(),
+                                         model->col_upper_[rowNz.index()])
+              : -computeImpliedUpperBound(col, rowNz.index(),
+                                          model->col_upper_[rowNz.index()]);
 
       // round bound
       if (model->integrality_[col] != HighsVarType::kContinuous)
@@ -4595,16 +4584,10 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     // initialise
     currentBound *= direction;
 
-    // compute worst-case bounds
-    if (direction > 0) {
-      // lower bound
-      computeColBounds(col, -1, kHighsInf, nullptr, nullptr, &newBound);
-    } else {
-      // upper bound
-      computeColBounds(col, -1, kHighsInf, nullptr, nullptr, nullptr,
-                       &newBound);
-    }
-    newBound *= direction;
+    // compute worst-case bounds (direction = 1: lower bound,
+    // direction = -1: upper bound)
+    newBound = direction > 0 ? computeWorstCaseLowerBound(col)
+                             : -computeWorstCaseUpperBound(col);
 
     // return if no bound was found
     if (newBound == -kHighsInf) return false;
@@ -4678,129 +4661,33 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   return Result::kOk;
 }
 
-void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
-                                 double boundColValue, double* lowerBound,
-                                 double* upperBound,
-                                 double* worstCaseLowerBound,
-                                 double* worstCaseUpperBound) {
-  assert(!colDeleted[col]);
-  assert(boundCol == -1 || !colDeleted[boundCol]);
+double HPresolve::computeImpliedLowerBound(HighsInt col, HighsInt boundCol,
+                                           double boundColValue) {
+  double lowerBound;
+  computeColBounds(col, boundCol, boundColValue, &lowerBound);
+  return lowerBound;
+}
 
-  // return if nothing to do
-  if (lowerBound == nullptr && upperBound == nullptr &&
-      worstCaseLowerBound == nullptr && worstCaseUpperBound == nullptr)
-    return;
+double HPresolve::computeImpliedUpperBound(HighsInt col, HighsInt boundCol,
+                                           double boundColValue) {
+  double upperBound;
+  computeColBounds(col, boundCol, boundColValue, nullptr, &upperBound);
+  return upperBound;
+}
 
-  // lambda for checking whether a row provides an lower bound
-  // (direction = 1) or upper bound (direction = -1)
-  auto hasImpliedBound = [&](HighsInt row, HighsInt direction, double val) {
-    return ((direction * val < 0 && model->row_upper_[row] != kHighsInf) ||
-            (direction * val > 0 && model->row_lower_[row] != -kHighsInf));
-  };
+double HPresolve::computeWorstCaseLowerBound(HighsInt col, HighsInt boundCol,
+                                             double boundColValue) {
+  double lowerBound;
+  computeColBounds(col, boundCol, boundColValue, nullptr, nullptr, &lowerBound);
+  return lowerBound;
+}
 
-  // lambda for skipping non-zeros
-  auto skipNonZero = [&](HighsInt row, double val) {
-    return ((lowerBound == nullptr && worstCaseLowerBound == nullptr &&
-             !hasImpliedBound(row, HighsInt{-1}, val)) ||
-            (upperBound == nullptr && worstCaseUpperBound == nullptr &&
-             !hasImpliedBound(row, HighsInt{1}, val)));
-  };
-
-  // struct for storing non-zeros
-  struct nonZeros {
-    HighsInt row;
-    double jval;
-    double kval;
-  };
-
-  std::vector<nonZeros> nzs;
-  nzs.reserve(colsize[col]);
-
-  // store triplets (row, nonzero, nonzero) in a vector to speed up bound
-  // computation
-  if (boundCol != -1) {
-    if (colsize[col] < colsize[boundCol]) {
-      for (const auto& colNz : getColumnVector(col)) {
-        // skip non-zero if it does not yield requested bounds
-        if (skipNonZero(colNz.index(), colNz.value())) continue;
-        HighsInt nzPos = findNonzero(colNz.index(), boundCol);
-        if (nzPos == -1) continue;
-        nzs.push_back({colNz.index(), colNz.value(), Avalue[nzPos]});
-      }
-    } else {
-      for (const auto& colNz : getColumnVector(boundCol)) {
-        HighsInt nzPos = findNonzero(colNz.index(), col);
-        if (nzPos == -1) continue;
-        // skip non-zero if it does not yield requested bounds
-        if (skipNonZero(colNz.index(), Avalue[nzPos])) continue;
-        nzs.push_back({colNz.index(), Avalue[nzPos], colNz.value()});
-      }
-    }
-  } else {
-    for (const auto& colNz : getColumnVector(col)) {
-      // skip non-zero if it does not yield requested bounds
-      if (skipNonZero(colNz.index(), colNz.value())) continue;
-      nzs.push_back({colNz.index(), colNz.value(), -kHighsInf});
-    }
-  }
-
-  // initialise bounds
-  if (lowerBound != nullptr) *lowerBound = -kHighsInf;
-  if (upperBound != nullptr) *upperBound = kHighsInf;
-  if (worstCaseLowerBound != nullptr) *worstCaseLowerBound = -kHighsInf;
-  if (worstCaseUpperBound != nullptr) *worstCaseUpperBound = kHighsInf;
-
-  // compute bounds
-  for (const auto& triplet : nzs) {
-    // lambda for actual bound computation
-    auto computeBound = [&](double rhs, double val, HighsInt direction,
-                            bool isWorstCaseBound) {
-      HighsCDouble residual;
-      if ((direction > 0 && !isWorstCaseBound) ||
-          (direction < 0 && isWorstCaseBound)) {
-        residual = impliedRowBounds.getResidualSumLower(
-            triplet.row, col, triplet.jval, boundCol, triplet.kval,
-            boundColValue);
-        if (residual == -kHighsInf) return std::copysign(kHighsInf, val);
-      } else {
-        residual = impliedRowBounds.getResidualSumUpper(
-            triplet.row, col, triplet.jval, boundCol, triplet.kval,
-            boundColValue);
-        if (residual == kHighsInf) return -std::copysign(kHighsInf, val);
-      }
-      return static_cast<double>((static_cast<HighsCDouble>(rhs) - residual) /
-                                 val);
-    };
-
-    // lambda for updating tightest bounds
-    auto updateBounds = [&](double rhs, HighsInt direction) {
-      if (direction * rhs == kHighsInf) return;
-      if (direction * triplet.jval < 0) {
-        // lower bounds
-        if (lowerBound != nullptr)
-          *lowerBound = std::max(
-              *lowerBound, computeBound(rhs, triplet.jval, direction, false));
-        if (worstCaseLowerBound != nullptr)
-          *worstCaseLowerBound =
-              std::max(*worstCaseLowerBound,
-                       computeBound(rhs, triplet.jval, direction, true));
-      } else {
-        // upper bounds
-        if (upperBound != nullptr)
-          *upperBound = std::min(
-              *upperBound, computeBound(rhs, triplet.jval, direction, false));
-        if (worstCaseUpperBound != nullptr)
-          *worstCaseUpperBound =
-              std::min(*worstCaseUpperBound,
-                       computeBound(rhs, triplet.jval, direction, true));
-      }
-    };
-
-    // compute bounds using right-hand side (direction = 1) and left-hand side
-    // (direction = -1)
-    updateBounds(model->row_upper_[triplet.row], HighsInt{1});
-    updateBounds(model->row_lower_[triplet.row], HighsInt{-1});
-  }
+double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
+                                             double boundColValue) {
+  double upperBound;
+  computeColBounds(col, boundCol, boundColValue, nullptr, nullptr, nullptr,
+                   &upperBound);
+  return upperBound;
 }
 
 HPresolve::Result HPresolve::initialRowAndColPresolve(
@@ -5224,6 +5111,131 @@ double HPresolve::problemSizeReduction() const {
       oldNumRow;
 
   return std::max(rowReduction, colReduction);
+}
+
+void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
+                                 double boundColValue, double* lowerBound,
+                                 double* upperBound,
+                                 double* worstCaseLowerBound,
+                                 double* worstCaseUpperBound) {
+  assert(!colDeleted[col]);
+  assert(boundCol == -1 || !colDeleted[boundCol]);
+
+  // return if nothing to do
+  if (lowerBound == nullptr && upperBound == nullptr &&
+      worstCaseLowerBound == nullptr && worstCaseUpperBound == nullptr)
+    return;
+
+  // lambda for checking whether a row provides an lower bound
+  // (direction = 1) or upper bound (direction = -1)
+  auto hasImpliedBound = [&](HighsInt row, HighsInt direction, double val) {
+    return ((direction * val < 0 && model->row_upper_[row] != kHighsInf) ||
+            (direction * val > 0 && model->row_lower_[row] != -kHighsInf));
+  };
+
+  // lambda for skipping non-zeros
+  auto skipNonZero = [&](HighsInt row, double val) {
+    return ((lowerBound == nullptr && worstCaseLowerBound == nullptr &&
+             !hasImpliedBound(row, HighsInt{-1}, val)) ||
+            (upperBound == nullptr && worstCaseUpperBound == nullptr &&
+             !hasImpliedBound(row, HighsInt{1}, val)));
+  };
+
+  // struct for storing non-zeros
+  struct nonZeros {
+    HighsInt row;
+    double jval;
+    double kval;
+  };
+
+  std::vector<nonZeros> nzs;
+  nzs.reserve(colsize[col]);
+
+  // store triplets (row, nonzero, nonzero) in a vector to speed up bound
+  // computation
+  if (boundCol != -1) {
+    if (colsize[col] < colsize[boundCol]) {
+      for (const auto& colNz : getColumnVector(col)) {
+        // skip non-zero if it does not yield requested bounds
+        if (skipNonZero(colNz.index(), colNz.value())) continue;
+        HighsInt nzPos = findNonzero(colNz.index(), boundCol);
+        if (nzPos == -1) continue;
+        nzs.push_back({colNz.index(), colNz.value(), Avalue[nzPos]});
+      }
+    } else {
+      for (const auto& colNz : getColumnVector(boundCol)) {
+        HighsInt nzPos = findNonzero(colNz.index(), col);
+        if (nzPos == -1) continue;
+        // skip non-zero if it does not yield requested bounds
+        if (skipNonZero(colNz.index(), Avalue[nzPos])) continue;
+        nzs.push_back({colNz.index(), Avalue[nzPos], colNz.value()});
+      }
+    }
+  } else {
+    for (const auto& colNz : getColumnVector(col)) {
+      // skip non-zero if it does not yield requested bounds
+      if (skipNonZero(colNz.index(), colNz.value())) continue;
+      nzs.push_back({colNz.index(), colNz.value(), -kHighsInf});
+    }
+  }
+
+  // initialise bounds
+  if (lowerBound != nullptr) *lowerBound = -kHighsInf;
+  if (upperBound != nullptr) *upperBound = kHighsInf;
+  if (worstCaseLowerBound != nullptr) *worstCaseLowerBound = -kHighsInf;
+  if (worstCaseUpperBound != nullptr) *worstCaseUpperBound = kHighsInf;
+
+  // compute bounds
+  for (const auto& triplet : nzs) {
+    // lambda for actual bound computation
+    auto computeBound = [&](double rhs, double val, HighsInt direction,
+                            bool isWorstCaseBound) {
+      HighsCDouble residual;
+      if ((direction > 0 && !isWorstCaseBound) ||
+          (direction < 0 && isWorstCaseBound)) {
+        residual = impliedRowBounds.getResidualSumLower(
+            triplet.row, col, triplet.jval, boundCol, triplet.kval,
+            boundColValue);
+        if (residual == -kHighsInf) return std::copysign(kHighsInf, val);
+      } else {
+        residual = impliedRowBounds.getResidualSumUpper(
+            triplet.row, col, triplet.jval, boundCol, triplet.kval,
+            boundColValue);
+        if (residual == kHighsInf) return -std::copysign(kHighsInf, val);
+      }
+      return static_cast<double>((static_cast<HighsCDouble>(rhs) - residual) /
+                                 val);
+    };
+
+    // lambda for updating tightest bounds
+    auto updateBounds = [&](double rhs, HighsInt direction) {
+      if (direction * rhs == kHighsInf) return;
+      if (direction * triplet.jval < 0) {
+        // lower bounds
+        if (lowerBound != nullptr)
+          *lowerBound = std::max(
+              *lowerBound, computeBound(rhs, triplet.jval, direction, false));
+        if (worstCaseLowerBound != nullptr)
+          *worstCaseLowerBound =
+              std::max(*worstCaseLowerBound,
+                       computeBound(rhs, triplet.jval, direction, true));
+      } else {
+        // upper bounds
+        if (upperBound != nullptr)
+          *upperBound = std::min(
+              *upperBound, computeBound(rhs, triplet.jval, direction, false));
+        if (worstCaseUpperBound != nullptr)
+          *worstCaseUpperBound =
+              std::min(*worstCaseUpperBound,
+                       computeBound(rhs, triplet.jval, direction, true));
+      }
+    };
+
+    // compute bounds using right-hand side (direction = 1) and left-hand side
+    // (direction = -1)
+    updateBounds(model->row_upper_[triplet.row], HighsInt{1});
+    updateBounds(model->row_lower_[triplet.row], HighsInt{-1});
+  }
 }
 
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {

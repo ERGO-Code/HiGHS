@@ -334,6 +334,13 @@ class HPresolve {
 
   double problemSizeReduction() const;
 
+  void computeColBounds(HighsInt col, HighsInt boundCol = -1,
+                        double boundColValue = -kHighsInf,
+                        double* lowerBound = nullptr,
+                        double* upperBound = nullptr,
+                        double* worstCaseLowerBound = nullptr,
+                        double* worstCaseUpperBound = nullptr);
+
  public:
   // for LP presolve
   bool okSetInput(HighsLp& model_, const HighsOptions& options_,
@@ -381,12 +388,17 @@ class HPresolve {
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  void computeColBounds(HighsInt col, HighsInt boundCol = -1,
-                        double boundColValue = -kHighsInf,
-                        double* lowerBound = nullptr,
-                        double* upperBound = nullptr,
-                        double* worstCaseLowerBound = nullptr,
-                        double* worstCaseUpperBound = nullptr);
+  double computeImpliedLowerBound(HighsInt col, HighsInt boundCol = -1,
+                                  double boundColValue = kHighsInf);
+
+  double computeImpliedUpperBound(HighsInt col, HighsInt boundCol = -1,
+                                  double boundColValue = kHighsInf);
+
+  double computeWorstCaseLowerBound(HighsInt col, HighsInt boundCol = -1,
+                                    double boundColValue = kHighsInf);
+
+  double computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol = -1,
+                                    double boundColValue = kHighsInf);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
