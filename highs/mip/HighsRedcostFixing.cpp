@@ -76,7 +76,8 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
 void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                           HighsDomain& localdomain,
                                           HighsDomain& globaldom,
-                                          const HighsLpRelaxation& lp) {
+                                          const HighsLpRelaxation& lp,
+                                          HighsConflictPool& conflictpool) {
   const std::vector<double>& lpredcost = lp.getSolution().col_dual;
   double lpobjective = lp.getObjective();
   HighsCDouble gap =
@@ -151,29 +152,25 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                             vals, rhs, false)) {
       bool addedConstraints = false;
 
-      if (mipsolver.mipdata_->workers.size() <= 1) {
-        HighsInt oldNumConflicts =
-            mipsolver.mipdata_->conflictPool.getNumConflicts();
-        for (const HighsDomainChange& domchg : boundChanges) {
-          if (localdomain.isActive(domchg)) continue;
-          localdomain.conflictAnalyzeReconvergence(
-              domchg, inds.data(), vals.data(), inds.size(), rhs,
-              mipsolver.mipdata_->conflictPool, globaldom);
-        }
-        addedConstraints = mipsolver.mipdata_->conflictPool.getNumConflicts() !=
-                           oldNumConflicts;
+      HighsInt oldNumConflicts = conflictpool.getNumConflicts();
+      for (const HighsDomainChange& domchg : boundChanges) {
+        if (localdomain.isActive(domchg)) continue;
+        localdomain.conflictAnalyzeReconvergence(domchg, inds.data(),
+                                                 vals.data(), inds.size(), rhs,
+                                                 conflictpool, globaldom);
+      }
+      addedConstraints = conflictpool.getNumConflicts() != oldNumConflicts;
 
-        if (addedConstraints) {
-          localdomain.propagate();
-          if (localdomain.infeasible()) return;
+      if (addedConstraints) {
+        localdomain.propagate();
+        if (localdomain.infeasible()) return;
 
-          boundChanges.erase(
-              std::remove_if(boundChanges.begin(), boundChanges.end(),
-                             [&](const HighsDomainChange& domchg) {
-                               return localdomain.isActive(domchg);
-                             }),
-              boundChanges.end());
-        }
+        boundChanges.erase(
+            std::remove_if(boundChanges.begin(), boundChanges.end(),
+                           [&](const HighsDomainChange& domchg) {
+                             return localdomain.isActive(domchg);
+                           }),
+            boundChanges.end());
       }
 
       if (!boundChanges.empty()) {

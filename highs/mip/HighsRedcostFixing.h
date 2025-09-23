@@ -15,6 +15,7 @@
 #include <map>
 #include <vector>
 
+#include "HighsConflictPool.h"
 #include "mip/HighsDomainChange.h"
 
 class HighsDomain;
@@ -34,7 +35,8 @@ class HighsRedcostFixing {
   static void propagateRedCost(const HighsMipSolver& mipsolver,
                                HighsDomain& localdomain,
                                HighsDomain& globaldom,
-                               const HighsLpRelaxation& lp);
+                               const HighsLpRelaxation& lp,
+                               HighsConflictPool& conflictpool);
 
   void addRootRedcost(const HighsMipSolver& mipsolver,
                       const std::vector<double>& lpredcost, double lpobjective);

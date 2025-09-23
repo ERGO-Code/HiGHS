@@ -1090,7 +1090,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
                   &localdom);
             }
             HighsRedcostFixing::propagateRedCost(mipsolver, localdom,
-                                                 mipworker.globaldom_, *lp);
+                                                 mipworker.globaldom_, *lp,
+                                                 mipworker.conflictpool_);
             localdom.propagate();
             if (localdom.infeasible()) {
               result = NodeResult::kDomainInfeasible;
