@@ -4470,15 +4470,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
 
-  // struct for storing non-zeros while searching for substitutions
-  struct nonZeros {
-    HighsInt row;
-    double jval;
-    double kval;
-  };
-  std::vector<nonZeros> nzs;
-  nzs.reserve(colsize[col]);
-
   // lambda for checking whether a row provides an implied lower bound
   // (direction = 1) or implied upper bound (direction = -1)
   auto hasImpliedBound = [&](HighsInt row, HighsInt direction, double val) {
