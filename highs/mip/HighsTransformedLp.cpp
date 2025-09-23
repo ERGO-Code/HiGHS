@@ -46,13 +46,13 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     simpleUbDist[col] = bestub - lpSolution.col_value[col];
     if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
       simpleUbDist[col] = 0.0;
-    bestVub[col] = implications.getBestVub(col, lpSolution, bestub);
+    bestVub[col] = implications.getBestVub(col, lpSolution, bestub, globaldom_);
 
     double bestlb = globaldom_.col_lower_[col];
     simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
     if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
       simpleLbDist[col] = 0.0;
-    bestVlb[col] = implications.getBestVlb(col, lpSolution, bestlb);
+    bestVlb[col] = implications.getBestVlb(col, lpSolution, bestlb, globaldom_);
 
     lbDist[col] = lpSolution.col_value[col] - bestlb;
     if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
@@ -81,10 +81,10 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     if (simpleBndDist > 0 &&
         std::fabs(HighsIntegers::nearestInteger(lpSolution.col_value[col]) -
                   lpSolution.col_value[col]) < mipsolver.mipdata_->feastol) {
-      bestVub[col] =
-          mipsolver.mipdata_->implications.getBestVub(col, lpSolution, bestub);
-      bestVlb[col] =
-          mipsolver.mipdata_->implications.getBestVlb(col, lpSolution, bestlb);
+      bestVub[col] = mipsolver.mipdata_->implications.getBestVub(
+          col, lpSolution, bestub, globaldom_);
+      bestVlb[col] = mipsolver.mipdata_->implications.getBestVlb(
+          col, lpSolution, bestlb, globaldom_);
 
       lbDist[col] = lpSolution.col_value[col] - bestlb;
       if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
@@ -192,10 +192,9 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         bestVub[col].second.maxValue() > ub + mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
-      if (mip.mipdata_->workers.size() <= 1)
-        mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
-                                              bestVub[col].second, ub,
-                                              redundant, infeasible, false);
+      mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
+                                            bestVub[col].second, ub, redundant,
+                                            infeasible, false);
     }
 
     // the code below uses the difference between the column upper and lower
@@ -208,11 +207,9 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         bestVlb[col].second.minValue() < lb - mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
-
-      if (mip.mipdata_->workers.size() <= 1)
-        mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
-                                              bestVlb[col].second, lb,
-                                              redundant, infeasible, false);
+      mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
+                                            bestVlb[col].second, lb, redundant,
+                                            infeasible, false);
     }
 
     // store the old bound type so that we can restore it if the continuous

@@ -139,11 +139,13 @@ class HighsImplications {
 
   std::pair<HighsInt, VarBound> getBestVub(HighsInt col,
                                            const HighsSolution& lpSolution,
-                                           double& bestUb) const;
+                                           double& bestUb,
+                                           const HighsDomain& globaldom) const;
 
   std::pair<HighsInt, VarBound> getBestVlb(HighsInt col,
                                            const HighsSolution& lpSolution,
-                                           double& bestLb) const;
+                                           double& bestLb,
+                                           const HighsDomain& globaldom) const;
 
   bool runProbing(HighsInt col, HighsInt& numReductions);
 

@@ -155,7 +155,8 @@ static constexpr bool kSkipBadVbds = true;
 static constexpr bool kUseDualsForBreakingTies = true;
 
 std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
-    HighsInt col, const HighsSolution& lpSolution, double& bestUb) const {
+    HighsInt col, const HighsSolution& lpSolution, double& bestUb,
+    const HighsDomain& globaldom) const {
   std::pair<HighsInt, VarBound> bestVub =
       std::make_pair(-1, VarBound{0.0, kHighsInf});
   double minbestUb = bestUb;
@@ -179,8 +180,7 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
     return false;
   };
 
-  double scale = mipsolver.mipdata_->domain.col_upper_[col] -
-                 mipsolver.mipdata_->domain.col_lower_[col];
+  double scale = globaldom.col_upper_[col] - globaldom.col_lower_[col];
   if (scale == kHighsInf)
     scale = 1.0;
   else
@@ -188,8 +188,8 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
 
   vubs[col].for_each([&](HighsInt vubCol, const VarBound& vub) {
     if (vub.coef == kHighsInf) return;
-    if (mipsolver.mipdata_->domain.isFixed(vubCol)) return;
-    assert(mipsolver.mipdata_->domain.isBinary(vubCol));
+    if (globaldom.isFixed(vubCol)) return;
+    assert(globaldom.isBinary(vubCol));
     double vubval = lpSolution.col_value[vubCol] * vub.coef + vub.constant;
     double ubDist = std::max(0.0, vubval - lpSolution.col_value[col]);
 
@@ -228,7 +228,8 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
 }
 
 std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
-    HighsInt col, const HighsSolution& lpSolution, double& bestLb) const {
+    HighsInt col, const HighsSolution& lpSolution, double& bestLb,
+    const HighsDomain& globaldom) const {
   std::pair<HighsInt, VarBound> bestVlb =
       std::make_pair(-1, VarBound{0.0, -kHighsInf});
   double maxbestlb = bestLb;
@@ -252,8 +253,7 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
     return false;
   };
 
-  double scale = mipsolver.mipdata_->domain.col_upper_[col] -
-                 mipsolver.mipdata_->domain.col_lower_[col];
+  double scale = globaldom.col_upper_[col] - globaldom.col_lower_[col];
   if (scale == kHighsInf)
     scale = 1.0;
   else
@@ -261,8 +261,8 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
 
   vlbs[col].for_each([&](HighsInt vlbCol, const VarBound& vlb) {
     if (vlb.coef == -kHighsInf) return;
-    if (mipsolver.mipdata_->domain.isFixed(vlbCol)) return;
-    assert(mipsolver.mipdata_->domain.isBinary(vlbCol));
+    if (globaldom.isFixed(vlbCol)) return;
+    assert(globaldom.isBinary(vlbCol));
     assert(vlbCol >= 0 && vlbCol < mipsolver.numCol());
     double vlbval = lpSolution.col_value[vlbCol] * vlb.coef + vlb.constant;
     double lbDist = std::max(0.0, lpSolution.col_value[col] - vlbval);
