@@ -381,6 +381,13 @@ class HPresolve {
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
+  void computeColBounds(HighsInt col, HighsInt boundCol = -1,
+                        double boundColValue = -kHighsInf,
+                        double* lowerBound = nullptr,
+                        double* upperBound = nullptr,
+                        double* worstCaseLowerBound = nullptr,
+                        double* worstCaseUpperBound = nullptr);
+
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
