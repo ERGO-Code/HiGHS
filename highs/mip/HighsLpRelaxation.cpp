@@ -530,7 +530,7 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
       if (notifyPool) {
         assert(lprows[i].cutpool <= mipsolver.mipdata_->cutpools.size());
         mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
-            lprows[i].index);
+            lprows[i].index, mipsolver.mipdata_->parallelLockActive());
       }
     }
   }
@@ -579,7 +579,7 @@ void HighsLpRelaxation::removeCuts() {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
       assert(lprows[i].cutpool <= mipsolver.mipdata_->cutpools.size());
       mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
-          lprows[i].index);
+          lprows[i].index, mipsolver.mipdata_->parallelLockActive());
     }
   }
   lprows.resize(modelrows);
@@ -627,7 +627,7 @@ void HighsLpRelaxation::performAging(bool deleteRows) {
         deletemask[i] = 1;
         assert(lprows[i].cutpool <= mipsolver.mipdata_->cutpools.size());
         mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
-            lprows[i].index);
+            lprows[i].index, mipsolver.mipdata_->parallelLockActive());
       }
     } else if (std::abs(lpsolver.getSolution().row_dual[i]) >
                lpsolver.getOptions().dual_feasibility_tolerance) {

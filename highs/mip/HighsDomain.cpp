@@ -2493,7 +2493,8 @@ bool HighsDomain::propagate() {
           for (HighsInt k = 0; k != numproprows; ++k) {
             HighsInt i = propagateinds[k];
             if (propRowNumChangedBounds_[k].first != 0) {
-              cutpoolprop.cutpool->resetAge(i);
+              cutpoolprop.cutpool->resetAge(
+                  i, mipsolver->mipdata_->parallelLockActive());
               HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(i);
               HighsInt end = start + propRowNumChangedBounds_[k].first;
               for (HighsInt j = start; j != end && !infeasible_; ++j)

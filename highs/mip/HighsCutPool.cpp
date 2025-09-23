@@ -147,8 +147,9 @@ double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2,
   return dotprod * rownormalization_[row1] * pool2.rownormalization_[row2];
 }
 
-void HighsCutPool::lpCutRemoved(HighsInt cut) {
+void HighsCutPool::lpCutRemoved(HighsInt cut, bool thread_safe) {
   numLps_[cut].fetch_add(-1, std::memory_order_relaxed);
+  if (thread_safe) return;
   if (matrix_.columnsLinked(cut)) {
     propRows.erase(std::make_pair(-1, cut));
     propRows.emplace(1, cut);

@@ -102,8 +102,13 @@ class HighsCutPool {
   bool isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
                    const double* Rvalue, HighsInt Rlen, double rhs);
 
-  void resetAge(HighsInt cut) {
+  void resetAge(HighsInt cut, bool thread_safe = false) {
     if (ages_[cut] > 0) {
+      if (thread_safe) {
+        int16_t numLp = numLps_[cut].fetch_add(1, std::memory_order_relaxed);
+        if (numLp >= 0) numLps_[cut].fetch_add(-1, std::memory_order_relaxed);
+        return;
+      }
       if (matrix_.columnsLinked(cut)) {
         propRows.erase(std::make_pair(ages_[cut], cut));
         propRows.emplace(0, cut);
@@ -121,7 +126,7 @@ class HighsCutPool {
 
   void performAging(bool parallel_sepa = false);
 
-  void lpCutRemoved(HighsInt cut);
+  void lpCutRemoved(HighsInt cut, bool thread_safe = false);
 
   void addPropagationDomain(HighsDomain::CutpoolPropagation* domain) {
     propagationDomains.push_back(domain);
