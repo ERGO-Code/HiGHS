@@ -1480,7 +1480,7 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
     std::vector<HighsInt> referencepoint;
     referencepoint.reserve(mipsolver.mipdata_->integer_cols.size());
 
-    auto localdom = mipsolver.mipdata_->domain;
+    auto localdom = worker.globaldom_;
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
       assert(mipsolver.variableType(i) == HighsVarType::kInteger);
       double intval = std::floor(roundedsol[i] + worker.randgen.real(0.4, 0.6));
