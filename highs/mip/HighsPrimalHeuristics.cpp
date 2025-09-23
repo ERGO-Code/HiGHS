@@ -283,7 +283,8 @@ void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
     while (true) {
       localdom.propagate();
       if (localdom.infeasible()) {
-        localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+        localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                  worker.globaldom_);
 
         double prev_lower_bound = mipsolver.mipdata_->lower_bound;
 
@@ -419,7 +420,8 @@ retry:
         heur.branchUpwards(i, downval, downval - 0.5);
         localdom.propagate();
         if (localdom.infeasible()) {
-          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                    worker.globaldom_);
           break;
         }
       }
@@ -428,7 +430,8 @@ retry:
         heur.branchDownwards(i, upval, upval + 0.5);
         localdom.propagate();
         if (localdom.infeasible()) {
-          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                    worker.globaldom_);
           break;
         }
       }
@@ -489,7 +492,8 @@ retry:
           heur.branchUpwards(fracint.first, fixval, fracint.second);
           localdom.propagate();
           if (localdom.infeasible()) {
-            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                      worker.globaldom_);
             break;
           }
 
@@ -501,7 +505,8 @@ retry:
           heur.branchDownwards(fracint.first, fixval, fracint.second);
           localdom.propagate();
           if (localdom.infeasible()) {
-            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                      worker.globaldom_);
             break;
           }
 
@@ -719,7 +724,8 @@ retry:
             heur.branchUpwards(i, fixval, fixval - 0.5);
             localdom.propagate();
             if (localdom.infeasible()) {
-              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                        worker.globaldom_);
               break;
             }
 
@@ -730,7 +736,8 @@ retry:
             heur.branchDownwards(i, fixval, fixval + 0.5);
             localdom.propagate();
             if (localdom.infeasible()) {
-              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                        worker.globaldom_);
               break;
             }
 
@@ -786,7 +793,8 @@ retry:
         ++numBranched;
         heur.branchUpwards(fracint->first, fixval, fracint->second);
         if (localdom.infeasible()) {
-          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                    worker.globaldom_);
           break;
         }
 
@@ -797,7 +805,8 @@ retry:
         ++numBranched;
         heur.branchDownwards(fracint->first, fixval, fracint->second);
         if (localdom.infeasible()) {
-          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                    worker.globaldom_);
           break;
         }
 
@@ -897,12 +906,14 @@ bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
 
     localdom.fixCol(col, intval, HighsDomain::Reason::branching());
     if (localdom.infeasible()) {
-      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                worker.globaldom_);
       return false;
     }
     localdom.propagate();
     if (localdom.infeasible()) {
-      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                worker.globaldom_);
       return false;
     }
   }
@@ -1031,12 +1042,14 @@ void HighsPrimalHeuristics::randomizedRounding(
 
     localdom.fixCol(i, intval, HighsDomain::Reason::branching());
     if (localdom.infeasible()) {
-      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                worker.globaldom_);
       return;
     }
     localdom.propagate();
     if (localdom.infeasible()) {
-      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                worker.globaldom_);
       return;
     }
   }
@@ -1491,12 +1504,14 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
       if (!localdom.infeasible()) {
         localdom.fixCol(i, intval, HighsDomain::Reason::branching());
         if (localdom.infeasible()) {
-          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                    worker.globaldom_);
           continue;
         }
         localdom.propagate();
         if (localdom.infeasible()) {
-          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool,
+                                    worker.globaldom_);
           continue;
         }
       }

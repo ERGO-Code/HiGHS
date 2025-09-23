@@ -393,10 +393,12 @@ void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,
         domchg.boundval = lp.col_upper_[var];
       }
 
+      assert(index_ <= mipsolver.mipdata_->domains.size() - 1);
       localdom->conflictAnalyzeReconvergence(
           domchg, row_ap.nonzeroinds.data(), dualproofvals.data(),
           row_ap.nonzeroinds.size(), double(rhs),
-          mipsolver.mipdata_->conflictPool);
+          mipsolver.mipdata_->conflictPool,
+          mipsolver.mipdata_->domains.at(index_));
 
       continue;
     }

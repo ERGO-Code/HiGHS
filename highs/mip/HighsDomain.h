@@ -71,7 +71,7 @@ class HighsDomain {
       bool operator<(const LocalDomChg& other) const { return pos < other.pos; }
     };
 
-    ConflictSet(HighsDomain& localdom);
+    ConflictSet(HighsDomain& localdom, const HighsDomain& globaldom);
 
     void conflictAnalysis(HighsConflictPool& conflictPool);
     void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
@@ -588,17 +588,20 @@ class HighsDomain {
 
   double getColUpperPos(HighsInt col, HighsInt stackpos, HighsInt& pos) const;
 
-  void conflictAnalysis(HighsConflictPool& conflictPool);
+  void conflictAnalysis(HighsConflictPool& conflictPool,
+                        HighsDomain& globaldom);
 
   void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
                         HighsInt prooflen, double proofrhs,
-                        HighsConflictPool& conflictPool);
+                        HighsConflictPool& conflictPool,
+                        HighsDomain& globaldom);
 
   void conflictAnalyzeReconvergence(const HighsDomainChange& domchg,
                                     const HighsInt* proofinds,
                                     const double* proofvals, HighsInt prooflen,
                                     double proofrhs,
-                                    HighsConflictPool& conflictPool);
+                                    HighsConflictPool& conflictPool,
+                                    HighsDomain& globaldom);
 
   void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
                            double& rhs) const;

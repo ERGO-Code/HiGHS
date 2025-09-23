@@ -158,7 +158,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
           if (localdomain.isActive(domchg)) continue;
           localdomain.conflictAnalyzeReconvergence(
               domchg, inds.data(), vals.data(), inds.size(), rhs,
-              mipsolver.mipdata_->conflictPool);
+              mipsolver.mipdata_->conflictPool, globaldom);
         }
         addedConstraints = mipsolver.mipdata_->conflictPool.getNumConflicts() !=
                            oldNumConflicts;

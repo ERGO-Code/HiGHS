@@ -1636,7 +1636,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
   if (infeasible_) {
     assert(infeasible_reason.type == Reason::kModelRowLower ||
-             infeasible_reason.type == Reason::kModelRowUpper);
+           infeasible_reason.type == Reason::kModelRowUpper);
     assert(infeasible_reason.index == mip->a_matrix_.index_[end - 1]);
   } else {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
@@ -1799,7 +1799,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
   if (infeasible_) {
     assert(infeasible_reason.type == Reason::kModelRowLower ||
-             infeasible_reason.type == Reason::kModelRowUpper);
+           infeasible_reason.type == Reason::kModelRowUpper);
     assert(infeasible_reason.index == mip->a_matrix_.index_[end - 1]);
   } else {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
@@ -2534,15 +2534,16 @@ double HighsDomain::getColUpperPos(HighsInt col, HighsInt stackpos,
   return ub;
 }
 
-void HighsDomain::conflictAnalysis(HighsConflictPool& conflictPool) {
-  if (&mipsolver->mipdata_->domain == this) return;
-  if (mipsolver->mipdata_->domain.infeasible() || !infeasible_) return;
+void HighsDomain::conflictAnalysis(HighsConflictPool& conflictPool,
+                                   HighsDomain& globaldom) {
+  if (&globaldom == this) return;
+  if (globaldom.infeasible() || !infeasible_) return;
 
   // Not sure how this should be modified for the workers.
-  mipsolver->mipdata_->domain.propagate();
-  if (mipsolver->mipdata_->domain.infeasible()) return;
+  globaldom.propagate();
+  if (globaldom.infeasible()) return;
 
-  ConflictSet conflictSet(*this);
+  ConflictSet conflictSet(*this, globaldom);
 
   conflictSet.conflictAnalysis(conflictPool);
 }
@@ -2550,15 +2551,16 @@ void HighsDomain::conflictAnalysis(HighsConflictPool& conflictPool) {
 void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
                                    const double* proofvals, HighsInt prooflen,
                                    double proofrhs,
-                                   HighsConflictPool& conflictPool) {
-  if (&mipsolver->mipdata_->domain == this) return;
+                                   HighsConflictPool& conflictPool,
+                                   HighsDomain& globaldom) {
+  if (&globaldom == this) return;
 
-  if (mipsolver->mipdata_->domain.infeasible()) return;
+  if (globaldom.infeasible()) return;
 
-  mipsolver->mipdata_->domain.propagate();
-  if (mipsolver->mipdata_->domain.infeasible()) return;
+  globaldom.propagate();
+  if (globaldom.infeasible()) return;
 
-  ConflictSet conflictSet(*this);
+  ConflictSet conflictSet(*this, globaldom);
   conflictSet.conflictAnalysis(proofinds, proofvals, prooflen, proofrhs,
                                conflictPool);
 }
@@ -2566,20 +2568,20 @@ void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
 void HighsDomain::conflictAnalyzeReconvergence(
     const HighsDomainChange& domchg, const HighsInt* proofinds,
     const double* proofvals, HighsInt prooflen, double proofrhs,
-    HighsConflictPool& conflictPool) {
-  if (&mipsolver->mipdata_->domain == this) return;
+    HighsConflictPool& conflictPool, HighsDomain& globaldom) {
+  if (&globaldom == this) return;
 
-  if (mipsolver->mipdata_->domain.infeasible()) return;
+  if (globaldom.infeasible()) return;
 
-  mipsolver->mipdata_->domain.propagate();
-  if (mipsolver->mipdata_->domain.infeasible()) return;
+  globaldom.propagate();
+  if (globaldom.infeasible()) return;
 
-  ConflictSet conflictSet(*this);
+  ConflictSet conflictSet(*this, globaldom);
 
   HighsInt ninfmin;
   HighsCDouble activitymin;
-  mipsolver->mipdata_->domain.computeMinActivity(
-      0, prooflen, proofinds, proofvals, ninfmin, activitymin);
+  globaldom.computeMinActivity(0, prooflen, proofinds, proofvals, ninfmin,
+                               activitymin);
   if (ninfmin != 0) return;
 
   if (!conflictSet.explainBoundChangeLeq(
@@ -2699,9 +2701,10 @@ HighsDomainChange HighsDomain::flip(const HighsDomainChange& domchg) const {
 
 double HighsDomain::feastol() const { return mipsolver->mipdata_->feastol; }
 
-HighsDomain::ConflictSet::ConflictSet(HighsDomain& localdom_)
+HighsDomain::ConflictSet::ConflictSet(HighsDomain& localdom_,
+                                      const HighsDomain& globaldom_)
     : localdom(localdom_),
-      globaldom(localdom.mipsolver->mipdata_->domain),
+      globaldom(globaldom_),
       reasonSideFrontier(),
       reconvergenceFrontier(),
       resolveQueue(),
