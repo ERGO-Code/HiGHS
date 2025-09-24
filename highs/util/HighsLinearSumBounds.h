@@ -173,6 +173,12 @@ class HighsLinearSumBounds {
   void update(HighsInt& numInfs, HighsCDouble& activity, double oldBound,
               double newBound, double coefficient) const;
 
+  void residual(HighsInt& numInfs, HighsCDouble& activity, double oldVarBound,
+                double coefficient, HighsInt boundVar = -1,
+                double boundVarCoefficient = kHighsInf,
+                double oldBoundVarBound = kHighsInf,
+                double newBoundVarBound = kHighsInf) const;
+
   void handleVarUpper(HighsInt sum, double coefficient, double myVarUpper,
                       HighsInt direction);
 
