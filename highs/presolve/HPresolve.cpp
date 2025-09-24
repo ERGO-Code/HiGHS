@@ -250,6 +250,19 @@ bool HPresolve::isRedundant(HighsInt row) const {
               model->row_upper_[row] + primal_feastol);
 }
 
+bool HPresolve::yieldsImpliedLowerBound(HighsInt row, double val) const {
+  return ((val < 0 && model->row_upper_[row] != kHighsInf &&
+           impliedRowBounds.getSumUpper(row) >
+               model->row_upper_[row] + primal_feastol) ||
+          (val > 0 && model->row_lower_[row] != -kHighsInf &&
+           impliedRowBounds.getSumLower(row) <
+               model->row_lower_[row] - primal_feastol));
+}
+
+bool HPresolve::yieldsImpliedUpperBound(HighsInt row, double val) const {
+  return yieldsImpliedLowerBound(row, -val);
+}
+
 bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
   // if the implied lower bound on a row dual is strictly positive then the row
   // is an implied equation (using its lower bound) due to complementary
@@ -4462,13 +4475,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
 
-  // lambda for checking whether a row provides an implied lower bound
-  // (direction = 1) or implied upper bound (direction = -1)
-  auto hasImpliedBound = [&](HighsInt row, HighsInt direction, double val) {
-    return ((direction * val < 0 && model->row_upper_[row] != kHighsInf) ||
-            (direction * val > 0 && model->row_lower_[row] != -kHighsInf));
-  };
-
   // lambda for computing locks
   auto computeLocks = [&](HighsInt col, HighsInt& numDownLocks,
                           HighsInt& numUpLocks, HighsInt& downLockRow,
@@ -4487,17 +4493,14 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
     // check coefficients
     for (const auto& nz : getColumnVector(col)) {
-      // skip redundant rows
-      if (isRedundant(nz.index())) continue;
-
       // update number of locks
-      if (hasImpliedBound(nz.index(), HighsInt{1}, nz.value())) {
+      if (yieldsImpliedLowerBound(nz.index(), nz.value())) {
         // implied lower bound -> downlock
         numDownLocks++;
         downLockRow = nz.index();
       }
 
-      if (hasImpliedBound(nz.index(), HighsInt{-1}, nz.value())) {
+      if (yieldsImpliedUpperBound(nz.index(), nz.value())) {
         // implied upper bound -> uplock
         numUpLocks++;
         upLockRow = nz.index();
@@ -5120,25 +5123,24 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
                                  double* worstCaseUpperBound) {
   assert(!colDeleted[col]);
   assert(boundCol == -1 || !colDeleted[boundCol]);
+  assert(col != boundCol);
 
   // return if nothing to do
   if (lowerBound == nullptr && upperBound == nullptr &&
       worstCaseLowerBound == nullptr && worstCaseUpperBound == nullptr)
     return;
 
-  // lambda for checking whether a row provides an lower bound
-  // (direction = 1) or upper bound (direction = -1)
-  auto hasImpliedBound = [&](HighsInt row, HighsInt direction, double val) {
-    return ((direction * val < 0 && model->row_upper_[row] != kHighsInf) ||
-            (direction * val > 0 && model->row_lower_[row] != -kHighsInf));
-  };
-
   // lambda for skipping non-zeros
   auto skipNonZero = [&](HighsInt row, double val) {
-    return ((lowerBound == nullptr && worstCaseLowerBound == nullptr &&
-             !hasImpliedBound(row, HighsInt{-1}, val)) ||
-            (upperBound == nullptr && worstCaseUpperBound == nullptr &&
-             !hasImpliedBound(row, HighsInt{1}, val)));
+    bool lowerRequested =
+        lowerBound != nullptr || worstCaseLowerBound != nullptr;
+    bool upperRequested =
+        upperBound != nullptr || worstCaseUpperBound != nullptr;
+    bool hasLower = yieldsImpliedLowerBound(row, val);
+    bool hasUpper = yieldsImpliedUpperBound(row, val);
+    return ((!upperRequested && lowerRequested && !hasLower) ||
+            (!lowerRequested && upperRequested && !hasUpper) ||
+            (upperRequested && lowerRequested && !hasLower && !hasUpper));
   };
 
   // struct for storing non-zeros
