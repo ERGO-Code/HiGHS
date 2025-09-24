@@ -1259,15 +1259,15 @@ HPresolve::Result HPresolve::dominatedColumns(
         return Result::kOk;
       };
 
-      // see Gamrath, G., Koch, T., Martin, A. et al. Progress in presolving for
-      // mixed integer programming. Math. Prog. Comp. 7, 367–398 (2015).
+      // the worst-case lower bound provides an upper bound on the binary (see
+      // dual fixing method)
       if (model->col_cost_[j] >= 0.0 &&
           computeWorstCaseLowerBound(j) <= 1 + primal_feastol) {
-        // cost is positive and 1 + primal_feastol >= worstCaseLb >= 0, i.e.
-        // worstCaseLb agrees with the bounds: try to find dominated variable
-        // that allows for fixing binary variable to zero
+        // upper bound on binary is implied (due to worst-case lower bound)
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
+          // since the binary's objective coefficient is non-negative, try to
+          // fix it to zero
           HPRESOLVE_CHECKED_CALL(checkFixBinary(bestRowMinus, j, HighsInt{-1},
                                                 bestRowMinusScale,
                                                 ajBestRowMinus));
@@ -1275,13 +1275,15 @@ HPresolve::Result HPresolve::dominatedColumns(
         }
       }
 
+      // the worst-case upper bound provides a lower bound on the binary (see
+      // dual fixing method)
       if (model->col_cost_[j] <= 0.0 &&
           computeWorstCaseUpperBound(j) >= -primal_feastol) {
-        // cost is negative and 0 >= worstCaseUb >= -primal_feastol, i.e.
-        // worstCaseUb agrees with the bounds: try to find dominated variable
-        // that allows for fixing binary variable to one
+        // lower bound on binary is implied (due to worst-case upper bound)
         lowerImplied = true;
         if (!upperImplied && bestRowPlus != -1) {
+          // since the binary's objective coefficient is non-positive, try to
+          // fix it to one
           HPRESOLVE_CHECKED_CALL(checkFixBinary(
               bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
           if (colDeleted[j]) continue;
