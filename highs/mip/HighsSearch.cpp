@@ -2006,7 +2006,7 @@ HighsConflictPool& HighsSearch::getConflictPool() const {
 }
 
 HighsCutPool& HighsSearch::getCutPool() const {
-  return mipworker.cutpool_;
+  return *mipworker.cutpool_;
   // return mipsolver.mipdata_->cutpool;
 }
 

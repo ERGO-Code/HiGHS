@@ -28,7 +28,7 @@ class HighsMipWorker {
   HighsPseudocost pseudocost_;
   HighsLpRelaxation& lprelaxation_;
   HighsDomain& globaldom_;
-  HighsCutPool& cutpool_;
+  HighsCutPool* cutpool_;
   HighsConflictPool& conflictpool_;
 
   std::unique_ptr<HighsSearch> search_ptr_;
@@ -47,7 +47,7 @@ class HighsMipWorker {
   HighsMipWorker(const HighsMipSolver& mipsolver__,
                  HighsLpRelaxation& lprelax_,
                  HighsDomain& domain,
-                 HighsCutPool& cutpool,
+                 HighsCutPool* cutpool,
                  HighsConflictPool& conflictpool);
 
   ~HighsMipWorker() {

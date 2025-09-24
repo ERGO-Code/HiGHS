@@ -12,7 +12,7 @@
 
 HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
                                HighsLpRelaxation& lprelax_, HighsDomain& domain,
-                               HighsCutPool& cutpool,
+                               HighsCutPool* cutpool,
                                HighsConflictPool& conflictpool)
     : mipsolver_(mipsolver__),
       mipdata_(*mipsolver_.mipdata_.get()),
@@ -39,7 +39,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
   // std::vector<HighsInt> AheadNeg_;
 
   // add local cutpool
-  search_ptr_->getLocalDomain().addCutpool(cutpool_);
+  search_ptr_->getLocalDomain().addCutpool(*cutpool_);
   search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
 
   // printf(

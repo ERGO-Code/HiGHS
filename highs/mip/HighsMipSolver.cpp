@@ -138,7 +138,7 @@ void HighsMipSolver::run() {
   // Now the worker lives in mipdata.
   // The master worker is used in evaluateRootNode.
   mipdata_->workers.emplace_back(*this, mipdata_->lp, mipdata_->domain,
-                                 mipdata_->cutpool, mipdata_->conflictPool);
+                                 &mipdata_->cutpool, mipdata_->conflictPool);
 
   HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
@@ -330,7 +330,7 @@ restart:
                             options_mip_->mip_pool_soft_limit);
       mipdata_->workers.emplace_back(
           *this, mipdata_->lps.back(), mipdata_->domains.back(),
-          mipdata_->cutpools.back(), mipdata_->conflictpools.back());
+          &mipdata_->cutpools.back(), mipdata_->conflictpools.back());
     } else {
       mipdata_->workers[i].resetSearch();
     }

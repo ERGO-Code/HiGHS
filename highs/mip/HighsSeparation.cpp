@@ -206,6 +206,6 @@ void HighsSeparation::separate(HighsMipWorker& worker,
 
     // mipsolver.mipdata_->cutpool.performAging();
     // ig: using worker cutpool
-    worker.cutpool_.performAging();
+    worker.cutpool_->performAging();
   }
 }
