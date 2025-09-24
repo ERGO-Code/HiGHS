@@ -33,6 +33,13 @@ enum class PostSolveRetcode {
   CONSTRAINT_VIOLATION = 5
 };
 
+struct StepSizeConfig {
+  double primal_step;
+  double dual_step;
+  double beta;
+  double power_method_lambda;
+};
+
 struct MalitskyPockParams {
   double step_size_interpolation = 0.5;  // Between 0 and 1
   double step_size_downscaling_factor = 0.7;

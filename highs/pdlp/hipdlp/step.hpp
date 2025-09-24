@@ -15,14 +15,6 @@
 
 #include "Highs.h"
 #include "restart.hpp"
-
-struct StepSizeConfig {
-  double primal_step;
-  double dual_step;
-  double beta;
-  double power_method_lambda;
-};
-
 class PdlpStep {
  public:
   StepSizeConfig InitializeStepSizesPowerMethod(const HighsLp& lp,

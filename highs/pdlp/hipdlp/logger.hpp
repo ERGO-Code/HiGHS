@@ -59,8 +59,11 @@ class Logger {
   void print_iteration_stats(int iter, const SolverResults& current_results,
                              double current_eta);
   void print_summary(const SolverResults& results, int total_iter,
-                     double total_time);
-
+                     double total_time);                   
+  void passLogOptions(HighsLogOptions log_options) {
+    log_options_ = log_options;
+  }
+                    
  private:
   void log(LogLevel level, const std::string& message);
   LogLevel console_level_;

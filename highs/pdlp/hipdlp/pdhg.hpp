@@ -8,8 +8,8 @@
 /**@file pdlp/hipdlp/pdhg.hpp
  * @brief
  */
-#ifndef PDLP_HIPDLP_PDHG_HPP
-#define PDLP_HIPDLP_PDHG_HPP
+#ifndef PDHG_HPP
+#define PDHG_HPP
 
 #include <algorithm>
 #include <cmath>
@@ -25,167 +25,120 @@
 #include "restart.hpp"
 #include "scaling.hpp"
 #include "solver_results.hpp"
-#include "step.hpp"
 
-// --- Define Macros ---
-// Enable or disable GPU usage
-#define USE_GPU 1
-// Debug mode
-#define DEBUG_MODE 1
-// --- Classes ---
+// Forward declaration for a struct defined in the .cc file
+struct StepSizeConfig;
+
 class PDLPSolver {
  public:
+  // --- Public API ---
   void setup(const HighsOptions& options, HighsTimer& timer);
+  void passLp(const HighsLp* lp) { original_lp_ = lp; }
   void preprocessLp();
   void scaleProblem();
   void solve(std::vector<double>& x, std::vector<double>& y);
   void unscaleSolution(std::vector<double>& x, std::vector<double>& y);
   PostSolveRetcode postprocess(HighsSolution& solution);
-  void setSolution(const std::vector<double>& col_value,
-                   const std::vector<double>& row_dual);
-  void getSolution(std::vector<double>& col_value,
-                   std::vector<double>& row_dual);
+  void logSummary();
+  void solveReturn();
 
-  void passLp(const HighsLp* lp) { original_lp_ = lp; }
+  // --- Getters ---
   TerminationStatus getTerminationCode() const { return results_.term_code; }
   int getIterationCount() const { return final_iter_count_; }
-  void logSummary();
 
-  void solveReturn();
+  // --- Debugging ---
   FILE* debug_pdlp_log_file_ = nullptr;
   DebugPdlpData debug_pdlp_data_;
 
  private:
-  // Problem data
-  HighsLp lp_;                  // The problem to solve
-  const HighsLp* original_lp_;  // The original problem (for postsolve)
-  HighsLp unscaled_processed_lp_;
-  PrimalDualParams params_;
-  Logger logger_;
-  PdlpStep step_;
-
-  int final_iter_count_ = 0;
-  int original_num_col_;
-  int original_num_row_;
-  int num_eq_rows_;  // Number of equality-like rows (EQ, BOUND, FREE)
-  std::vector<int> constraint_orig_idx_;
-  std::vector<int> constraint_new_idx_;  // stores permutation for rows
-  std::vector<ConstraintType>
-      constraint_types_;  // stores type of each original row
-
-  // Solver state using PdlpIterate
-  PdlpIterate current_;        // z^k
-  PdlpIterate next_;           // z^{k+1}
-  PdlpIterate average_;        // Running average
-  PdlpIterate restart_point_;  // Point to restart from
-
-  // Iterates and state
-  std::vector<double>* x_ = nullptr;
-  std::vector<double>* y_ = nullptr;
-  std::vector<double> x_current_;
-  std::vector<double> y_current_;
-  // Scaling
-  Scaling scaling_;
-  double unscaled_rhs_norm_ = 0.0;
-  double unscaled_c_norm_ = 0.0;
-  // Restart State
-  std::vector<double> x_avg_, y_avg_;
-  std::vector<double> x_sum_, y_sum_;
-  double sum_weights_ = 0.0;
-  std::vector<double> x_outer_start_, y_outer_start_;
-  std::vector<double> x_prev_outer_start_, y_prev_outer_start_;
-  RestartScheme restart_scheme_;
-
-  //  Halpern restart
-  std::vector<double> x_initial_;
-  std::vector<double> y_initial_;
-
-  std::vector<double> dSlackPos_;
-  std::vector<double> dSlackNeg_;
-
-  Timer total_timer;
-
-  // Helper functions
-  void Initialize(const HighsLp& lp, std::vector<double>& x,
-                  std::vector<double>& y);
-  SolverResults results_;
-
-  void PostsolveAndFinalize(const std::vector<double>& presolved_x,
-                            const std::vector<double>& presolved_y,
-                            std::vector<double>& final_x,
-                            std::vector<double>& final_y);
-
-  // Check convergence
-  double ComputeWeightedNorm(const std::vector<double>& x1,
-                             const std::vector<double>& y1,
-                             const std::vector<double>& x2,
-                             const std::vector<double>& y2, double omega);
-  std::vector<double> ComputeLambda(const std::vector<double>& y,
-                                    const std::vector<double>& ATy_vector);
-  double ComputeDualObjective(const std::vector<double>& y);
-  std::pair<double, double> ComputePrimalFeasibility(
-      const std::vector<double>& x, const std::vector<double>& Ax_vector);
-  void ComputeDualSlacks(const std::vector<double>& ATy_vector);
-  std::pair<double, double> ComputeDualFeasibility(
-      const std::vector<double>& ATy_vector);
-  std::tuple<double, double, double, double, double> ComputeDualityGap(
-      const std::vector<double>& x, const std::vector<double>& y,
-      const std::vector<double>& lambda);
-  double ComputeKKTError(const std::vector<double>& x,
-                         const std::vector<double>& y,
-                         const std::vector<double>& lambda, double omega);
+  // --- Core Algorithm Logic ---
+  void Initialize();
   bool CheckConvergence(const int iter, const std::vector<double>& x,
                         const std::vector<double>& y,
                         const std::vector<double>& ax_vector,
                         const std::vector<double>& aty_vector, double epsilon,
                         SolverResults& results, const char* type);
-
-  // GPU specific functions
-
-  // step size
-  double current_eta_;
-  // void UpdateIteratesAdaptive(HighsLp& lp, const PrimalDualParams& params,
-  // std::vector<double>& x, std::vector<double>& y);
-  double PowerMethod();
-
-  double ratio_last_two_step_sizes_ =
-      1.0;                      // state for Malitsky-Pock adaptive step size
-  int num_rejected_steps_ = 0;  // state for adaptive linesearch
-  static constexpr double kDivergentMovement = 1e10;
-
-  // Primal weight update
-  std::vector<double> x_at_last_restart_;
-  std::vector<double> y_at_last_restart_;
-
-  void PDHG_Compute_Step_Size_Ratio(
-      PrimalDualParams& working_params,
-      const std::vector<double>& x_n_0,  // Corresponds to z^{n,0}
-      const std::vector<double>& y_n_0,
-      const std::vector<double>& x_n_minus_1_0,  // Corresponds to z^{n-1,0}
-      const std::vector<double>& y_n_minus_1_0);
-
-  // restart
-  bool CheckRestartCondition(const PrimalDualParams& params, int inner_iter,
-                             std::vector<double>& x_cand,
-                             std::vector<double>& y_cand);
-  void PerformRestart(const std::vector<double>& x_restart,
-                      const std::vector<double>& y_restart, int inner_iter,
-                      const PrimalDualParams& params, const HighsLp& lp);
   void UpdateAverageIterates(const std::vector<double>& x,
                              const std::vector<double>& y,
                              const PrimalDualParams& params, int inner_iter);
+  double PowerMethod();
 
-  // Cache Matrix-Vector products
+  // --- Step Update Methods (previously in Step) ---
+  StepSizeConfig InitializeStepSizesPowerMethod(double op_norm_sq);
+  std::vector<double> UpdateX();
+  std::vector<double> UpdateY();
+  void UpdateIteratesFixed();
+  void UpdateIteratesAdaptive(int& step_size_iter_count);
+  bool UpdateIteratesMalitskyPock(bool first_malitsky_iteration);
+
+  // --- Step Size Helper Methods (previously in PdlpStep) ---
+  bool CheckNumericalStability(const std::vector<double>& delta_x,
+                               const std::vector<double>& delta_y);
+  double ComputeMovement(const std::vector<double>& delta_primal,
+                         const std::vector<double>& delta_dual);
+  double ComputeNonlinearity(const std::vector<double>& delta_primal,
+                             const std::vector<double>& delta_aty);
+
+  // --- Feasibility, Duality, and KKT Checks ---
+  std::vector<double> ComputeLambda(const std::vector<double>& y,
+                                    const std::vector<double>& ATy_vector);
+  double ComputeDualObjective(const std::vector<double>& y);
+  double ComputePrimalFeasibility(
+      const std::vector<double>& Ax_vector);
+  void ComputeDualSlacks(const std::vector<double>& ATy_vector);
+  double ComputeDualFeasibility(
+      const std::vector<double>& ATy_vector);
+  std::tuple<double, double, double, double, double> ComputeDualityGap(
+      const std::vector<double>& x, const std::vector<double>& y,
+      const std::vector<double>& lambda);
+  void PDHG_Compute_Step_Size_Ratio(
+      PrimalDualParams& working_params, const std::vector<double>& x_n_0,
+      const std::vector<double>& y_n_0, const std::vector<double>& x_n_minus_1_0,
+      const std::vector<double>& y_n_minus_1_0);
+
+  // --- Problem Data and Parameters ---
+  HighsLp lp_;
+  const HighsLp* original_lp_;
+  HighsLp unscaled_processed_lp_;
+  PrimalDualParams params_;
+  StepSizeConfig stepsize_;
+  Logger logger_;
+  HighsLogOptions log_options_;
+  SolverResults results_;
+  int original_num_col_;
+  int num_eq_rows_;
+  std::vector<int> constraint_new_idx_;
+  std::vector<ConstraintType> constraint_types_;
+
+  // --- Solver State ---
+  int final_iter_count_ = 0;
+  std::vector<double> x_current_, y_current_;
+  std::vector<double> x_next_, y_next_;
+  std::vector<double> x_avg_, y_avg_;
+  std::vector<double> x_sum_, y_sum_;
+  double sum_weights_ = 0.0;
+  double current_eta_ = 0.0;
+  double ratio_last_two_step_sizes_ = 1.0;
+  int num_rejected_steps_ = 0;
+  std::vector<double> dSlackPos_;
+  std::vector<double> dSlackNeg_;
+  Timer total_timer;
+
+  // --- Scaling ---
+  Scaling scaling_;
+  double unscaled_rhs_norm_ = 0.0;
+  double unscaled_c_norm_ = 0.0;
+
+  // --- Restarting ---
+  RestartScheme restart_scheme_;
+  std::vector<double> x_at_last_restart_;
+  std::vector<double> y_at_last_restart_;
+
+  // --- Caching for Matrix-Vector Products ---
   std::vector<double> Ax_cache_;
   std::vector<double> ATy_cache_;
+  std::vector<double> Ax_next_, ATy_next_;
   std::vector<double> K_times_x_diff_;
-
-  double mu_candidate_ = 0.0;
-  double mu_prev_candidate_ = 0.0;
-  double mu_outer_start_ = 0.0;
-
-  int outer_iter_ = 0;
-  int last_outer_loop_iter_count_ = 0;
 };
 
 #endif
