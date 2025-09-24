@@ -79,11 +79,14 @@ class Analyse {
   Int nb_{};
 
   // Parallel info
-  std::map<Int, Int> layerIndex;
-  std::vector<int64_t> stack_size_serial_;
-  std::vector<int64_t> stack_size_parallel_;
+  std::map<Int, Int> layerIndex_;
+  std::vector<SubtreeInfo> layerSubtrees_;
+  std::set<Int> aboveLayer_, smallSubtrees_;
+  std::vector<int64_t> stack_subtree_serial_;
+  std::vector<int64_t> stack_subtree_parallel_;
   int64_t serial_stack_size_, parallel_stack_size_;
   int64_t factors_total_entries_;
+  int64_t root_stack_entries_;
 
   // Interfaces to logging and data collection
   const Log* log_;

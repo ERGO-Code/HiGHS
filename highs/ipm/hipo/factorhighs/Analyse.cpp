@@ -1218,8 +1218,8 @@ void Analyse::computeStackSize() {
 
   std::vector<int64_t> clique_entries(sn_count_);
   std::vector<int64_t> frontal_entries(sn_count_);
-  stack_size_serial_.assign(sn_count_, 0);
-  stack_size_parallel_.assign(sn_count_, 0);
+  stack_subtree_serial_.assign(sn_count_, 0);
+  stack_subtree_parallel_.assign(sn_count_, 0);
   factors_total_entries_ = 0;
 
   // initialise data of supernodes
@@ -1244,8 +1244,8 @@ void Analyse::computeStackSize() {
   for (Int sn = 0; sn < sn_count_; ++sn) {
     // leaf node
     if (head[sn] == -1) {
-      stack_size_serial_[sn] = clique_entries[sn];
-      stack_size_parallel_[sn] = clique_entries[sn];
+      stack_subtree_serial_[sn] = clique_entries[sn];
+      stack_subtree_parallel_[sn] = clique_entries[sn];
       continue;
     }
 
@@ -1264,7 +1264,8 @@ void Analyse::computeStackSize() {
 
     Int child = head[sn];
     while (child != -1) {
-      int64_t current = stack_size_serial_[child] + clique_partial_entries_ser;
+      int64_t current =
+          stack_subtree_serial_[child] + clique_partial_entries_ser;
 
       clique_total_entries_ser += clique_entries[child];
       clique_partial_entries_ser += clique_entries[child];
@@ -1274,8 +1275,8 @@ void Analyse::computeStackSize() {
       // the same way. If the child is in the layer, it is ignored for this
       // computation, since it gets its own space and doesn't need space in the
       // parent's stack.
-      if (layerIndex.find(child) == layerIndex.end()) {
-        current = stack_size_parallel_[child] + clique_partial_entries_par;
+      if (layerIndex_.find(child) == layerIndex_.end()) {
+        current = stack_subtree_parallel_[child] + clique_partial_entries_par;
 
         clique_total_entries_par += clique_entries[child];
         clique_partial_entries_par += clique_entries[child];
@@ -1288,8 +1289,8 @@ void Analyse::computeStackSize() {
     int64_t storage_2_ser = clique_total_entries_ser + clique_entries[sn];
     int64_t storage_2_par = clique_total_entries_par + clique_entries[sn];
 
-    stack_size_serial_[sn] = std::max(storage_1_ser, storage_2_ser);
-    stack_size_parallel_[sn] = std::max(storage_1_par, storage_2_par);
+    stack_subtree_serial_[sn] = std::max(storage_1_ser, storage_2_ser);
+    stack_subtree_parallel_[sn] = std::max(storage_1_par, storage_2_par);
   }
 }
 
@@ -1342,8 +1343,8 @@ void Analyse::generateParallelLayer(Int threads) {
     // - subtrees not added because too small
 
     std::vector<Int> layer;
-    std::set<Int> above_layer;
-    std::set<Int> small_subtrees;
+    aboveLayer_.clear();
+    smallSubtrees_.clear();
 
     // insert roots in layer
     for (Int sn = 0; sn < sn_count_; ++sn) {
@@ -1365,7 +1366,7 @@ void Analyse::generateParallelLayer(Int threads) {
                           subtree_ops[*std::next(layer.rbegin(), 1)];
 
       // printf("iter %d,layer %d, above %d, small %d, ratio %f\n", iter,
-      //        layer.size(), above_layer.size(), small_subtrees.size(),
+      //        layer.size(), aboveLayer_.size(), smallSubtrees_.size(),
       //        ratio_first_two);
 
       // if there are enough subtrees and they are somewhat balanced, stop
@@ -1390,7 +1391,7 @@ void Analyse::generateParallelLayer(Int threads) {
       auto it = layer.begin();
       std::advance(it, index_to_remove);
       layer.erase(it);
-      above_layer.insert(node_to_remove);
+      aboveLayer_.insert(node_to_remove);
 
       // find child with most operations
       Int child_most_ops = -1;
@@ -1422,7 +1423,7 @@ void Analyse::generateParallelLayer(Int threads) {
             child == child_most_ops) {
           layer.push_back(child);
         } else {
-          small_subtrees.insert(child);
+          smallSubtrees_.insert(child);
         }
         child = next[child];
       }
@@ -1435,7 +1436,7 @@ void Analyse::generateParallelLayer(Int threads) {
     // in the layer.
     Int index = 0;
     for (auto it = layer.begin(); it != layer.end(); ++it) {
-      layerIndex.insert({*it, index});
+      layerIndex_.insert({*it, index});
       ++index;
     }
   }
@@ -1454,7 +1455,8 @@ void Analyse::generateParallelLayer(Int threads) {
   serial_stack_size_ = 0;
   for (Int sn = 0; sn < sn_count_; ++sn) {
     if (sn_parent_[sn] == -1)
-      serial_stack_size_ = std::max(serial_stack_size_, stack_size_serial_[sn]);
+      serial_stack_size_ =
+          std::max(serial_stack_size_, stack_subtree_serial_[sn]);
   }
 
   // number of entries for stacks in parallel: max stack_size of any root, plus
@@ -1463,10 +1465,23 @@ void Analyse::generateParallelLayer(Int threads) {
   for (Int sn = 0; sn < sn_count_; ++sn) {
     if (sn_parent_[sn] == -1)
       parallel_stack_size_ =
-          std::max(parallel_stack_size_, stack_size_parallel_[sn]);
+          std::max(parallel_stack_size_, stack_subtree_parallel_[sn]);
   }
-  for (auto a : layerIndex)
-    parallel_stack_size_ += stack_size_parallel_[a.first];
+  root_stack_entries_ = parallel_stack_size_;
+  for (auto& subtree : layerIndex_)
+    parallel_stack_size_ += stack_subtree_parallel_[subtree.first];
+
+  // generate info about subtrees in the layer
+  std::vector<Int> first_desc;
+  firstDescendant(sn_parent_, first_desc);
+  layerSubtrees_.resize(layerIndex_.size());
+  for (auto& subtree : layerIndex_) {
+    Int node = subtree.first;
+    Int index = subtree.second;
+    layerSubtrees_[index].start = first_desc[node];
+    layerSubtrees_[index].end = node + 1;
+    layerSubtrees_[index].stack = stack_subtree_parallel_[node];
+  }
 }
 
 Int Analyse::run(Symbolic& S) {
@@ -1566,6 +1581,7 @@ Int Analyse::run(Symbolic& S) {
   S.serial_stack_size_ = serial_stack_size_;
   S.parallel_stack_size_ = parallel_stack_size_;
   S.factors_total_entries_ = factors_total_entries_;
+  S.root_stack_entries_ = root_stack_entries_;
 
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());
@@ -1600,6 +1616,10 @@ Int Analyse::run(Symbolic& S) {
   S.relind_clique_ = std::move(relind_clique_);
   S.consecutive_sums_ = std::move(consecutive_sums_);
   S.clique_block_start_ = std::move(clique_block_start_);
+  S.layerIndex_ = std::move(layerIndex_);
+  S.layerSubtrees_ = std::move(layerSubtrees_);
+  S.aboveLayer_ = std::move(aboveLayer_);
+  S.smallSubtrees_ = std::move(smallSubtrees_);
 
 #if HIPO_TIMING_LEVEL >= 1
   data_.sumTime(kTimeAnalyse, clock_total.stop());

@@ -1,13 +1,21 @@
 #ifndef FACTORHIGHS_SYMBOLIC_H
 #define FACTORHIGHS_SYMBOLIC_H
 
-#include <vector>
 #include <map>
+#include <vector>
+#include <set>
 
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Log.h"
 
 namespace hipo {
+
+// info about subtrees in the parallel layer
+struct SubtreeInfo {
+  Int start;      // first node in subtree
+  Int end;        // first node not in subtree
+  int64_t stack;  // minimum stack size
+};
 
 // Symbolic factorisation object
 class Symbolic {
@@ -94,10 +102,29 @@ class Symbolic {
   // Starting position of diagonal blocks for hybrid formats
   std::vector<std::vector<Int>> clique_block_start_{};
 
-  // Info about parallelism
-  std::map<Int, Int> layerIndex;
-  int64_t serial_stack_size_, parallel_stack_size_;
-  int64_t factors_total_entries_;
+  // Indices of nodes in parallel layer
+  // - layerIndex_[i] = j means that node i is the j-th subtree in the layer
+  std::map<Int, Int> layerIndex_;
+
+  // Information about subtrees in the layer
+  // - layerSubtrees_[j] contains the following information about the j-th
+  //   subtree
+  //   in the layer (according to the numbering in layerIndex_):
+  //   . start: first node in the subtree
+  //   . end: first later node not in the subtree
+  //   . stack: minimum amount of stack space required to process the subtree
+  std::vector<SubtreeInfo> layerSubtrees_;
+
+  // Set containing the nodes that appear above the parallel layer
+  std::set<Int> aboveLayer_;
+
+  // Set containing the subtrees that were too small to be added to the parallel
+  // layer
+  std::set<Int> smallSubtrees_;
+
+  // Information about number of entries
+  int64_t serial_stack_size_, parallel_stack_size_, factors_total_entries_;
+  int64_t root_stack_entries_;
 
   friend class Analyse;
 
