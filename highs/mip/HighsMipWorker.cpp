@@ -11,7 +11,7 @@
 #include "mip/MipTimer.h"
 
 HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
-                               HighsLpRelaxation& lprelax_, HighsDomain& domain,
+                               HighsLpRelaxation* lprelax_, HighsDomain& domain,
                                HighsCutPool* cutpool,
                                HighsConflictPool& conflictpool)
     : mipsolver_(mipsolver__),
@@ -58,7 +58,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
 
   // HighsSearch has its own relaxation initialized no nullptr.
 
-  search_ptr_->setLpRelaxation(&lprelaxation_);
+  search_ptr_->setLpRelaxation(lprelaxation_);
 
   // printf(
   //     "Search has lp member in constructor of mipworker with address %p, %d "
@@ -88,7 +88,7 @@ void HighsMipWorker::resetSearch() {
   // search_ptr_->getLocalDomain().addConflictPool(mipsolver_.mipdata_->conflictPool);
   // search_ptr_->getLocalDomain().addCutpool(cutpool_);
   // search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
-  search_ptr_->setLpRelaxation(&lprelaxation_);
+  search_ptr_->setLpRelaxation(lprelaxation_);
 }
 
 bool HighsMipWorker::addIncumbent(const std::vector<double>& sol, double solobj,

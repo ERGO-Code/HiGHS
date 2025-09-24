@@ -26,7 +26,7 @@ class HighsMipWorker {
   const HighsMipSolverData& mipdata_;
 
   HighsPseudocost pseudocost_;
-  HighsLpRelaxation& lprelaxation_;
+  HighsLpRelaxation* lprelaxation_;
   HighsDomain& globaldom_;
   HighsCutPool* cutpool_;
   HighsConflictPool& conflictpool_;
@@ -45,7 +45,7 @@ class HighsMipWorker {
 
   // HighsMipWorker(const HighsMipSolver& mipsolver__);
   HighsMipWorker(const HighsMipSolver& mipsolver__,
-                 HighsLpRelaxation& lprelax_,
+                 HighsLpRelaxation* lprelax_,
                  HighsDomain& domain,
                  HighsCutPool* cutpool,
                  HighsConflictPool& conflictpool);

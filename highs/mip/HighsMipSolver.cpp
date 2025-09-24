@@ -137,7 +137,7 @@ void HighsMipSolver::run() {
   // Initialize master worker.
   // Now the worker lives in mipdata.
   // The master worker is used in evaluateRootNode.
-  mipdata_->workers.emplace_back(*this, mipdata_->lp, mipdata_->domain,
+  mipdata_->workers.emplace_back(*this, &mipdata_->lp, mipdata_->domain,
                                  &mipdata_->cutpool, mipdata_->conflictPool);
 
   HighsMipWorker& master_worker = mipdata_->workers.at(0);
@@ -243,7 +243,7 @@ restart:
       "master_worker lprelaxation_ member  with address %p, %d "
       "columns, and %d rows\n",
       (void*)&master_worker.lprelaxation_,
-      int(master_worker.lprelaxation_.getLpSolver().getNumCol()),
+      int(master_worker.lprelaxation_->getLpSolver().getNumCol()),
       int(mipdata_->lps.at(0).getLpSolver().getNumRow()));
 
   std::shared_ptr<const HighsBasis> basis;
@@ -318,20 +318,57 @@ restart:
   const HighsInt num_worker = mip_search_concurrency - 1;
   highs::parallel::TaskGroup tg;
 
+  auto recreatePools = [&](HighsInt index, HighsMipWorker& worker) -> void {
+    HighsCutPool* p = &mipdata_->cutpools.at(index);
+    p->~HighsCutPool();
+    ::new (static_cast<void*>(p))
+        HighsCutPool(numCol(), options_mip_->mip_pool_age_limit,
+                     options_mip_->mip_pool_soft_limit, index);
+    mipdata_->conflictpools[index] =
+        HighsConflictPool(5 * options_mip_->mip_pool_age_limit,
+                          options_mip_->mip_pool_soft_limit);
+    worker.conflictpool_ = mipdata_->conflictpools[index];
+  };
+
+  auto recreateLpAndDomains = [&](HighsInt index, HighsMipWorker& worker) {
+    HighsLpRelaxation* p = &mipdata_->lps.at(index);
+    p->~HighsLpRelaxation();
+    ::new (p) HighsLpRelaxation(mipdata_->lp, index);
+    mipdata_->domains[index] = HighsDomain(mipdata_->domain);
+    worker.globaldom_ = mipdata_->domains.at(index);
+  };
+
+  // (Re-)Initialise local cut and conflict pool for master worker
+  if (mip_search_concurrency > 1) {
+    if (mipdata_->numRestarts <= mipdata_->numRestartsRoot) {
+      mipdata_->cutpools.emplace_back(numCol(),
+                                      options_mip_->mip_pool_age_limit,
+                                      options_mip_->mip_pool_soft_limit, 1);
+      master_worker.cutpool_ = &mipdata_->cutpools.back();
+      mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
+                                           options_mip_->mip_pool_soft_limit);
+      master_worker.conflictpool_ = mipdata_->conflictpools.back();
+    } else {
+      recreatePools(1, master_worker);
+    }
+  }
+
+  // Create / re-initialise workers
   for (int i = 1; i < mip_search_concurrency; i++) {
     if (mipdata_->numRestarts <= mipdata_->numRestartsRoot) {
       mipdata_->domains.emplace_back(mipdata_->domain);
       mipdata_->lps.emplace_back(mipdata_->lp, i);
-      mipdata_->cutpools.emplace_back(
-          numCol(), options_mip_->mip_pool_age_limit,
-                       options_mip_->mip_pool_soft_limit, i);
-      mipdata_->conflictpools.emplace_back(
-          5 * options_mip_->mip_pool_age_limit,
-                            options_mip_->mip_pool_soft_limit);
+      mipdata_->cutpools.emplace_back(numCol(),
+                                      options_mip_->mip_pool_age_limit,
+                                      options_mip_->mip_pool_soft_limit, i);
+      mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
+                                           options_mip_->mip_pool_soft_limit);
       mipdata_->workers.emplace_back(
-          *this, mipdata_->lps.back(), mipdata_->domains.back(),
+          *this, &mipdata_->lps.back(), mipdata_->domains.back(),
           &mipdata_->cutpools.back(), mipdata_->conflictpools.back());
     } else {
+      recreatePools(i + 1, mipdata_->workers.at(i));
+      recreateLpAndDomains(i, mipdata_->workers.at(i));
       mipdata_->workers[i].resetSearch();
     }
   }
