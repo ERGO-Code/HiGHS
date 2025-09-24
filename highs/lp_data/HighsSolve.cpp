@@ -357,8 +357,6 @@ void assessExcessiveBoundCost(const HighsOptions options,
   double max_finite_col_cost = -kHighsInf;
   double min_finite_col_bound = kHighsInf;
   double max_finite_col_bound = -kHighsInf;
-  double min_finite_row_bound = kHighsInf;
-  double max_finite_row_bound = -kHighsInf;
   double min_matrix_value = kHighsInf;
   double max_matrix_value = -kHighsInf;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -369,10 +367,25 @@ void assessExcessiveBoundCost(const HighsOptions options,
     assessFiniteNonzero(lp.col_upper_[iCol], min_finite_col_bound,
                         max_finite_col_bound);
   }
+  /*
+  double min_finite_col_cost = kHighsInf;
+  double max_finite_col_cost = -kHighsInf;
+  double min_finite_col_bound = kHighsInf;
+  double max_finite_col_bound = -kHighsInf;
+  double min_matrix_value = kHighsInf;
+  double max_matrix_value = -kHighsInf;
+  */
   if (min_finite_col_cost == kHighsInf) min_finite_col_cost = 0;
   if (max_finite_col_cost == -kHighsInf) max_finite_col_cost = 0;
   if (min_finite_col_bound == kHighsInf) min_finite_col_bound = 0;
   if (max_finite_col_bound == -kHighsInf) max_finite_col_bound = 0;
+  HighsInt num_nz = lp.a_matrix_.numNz();
+  for (HighsInt iEl = 0; iEl < num_nz; iEl++)
+    assessFiniteNonzero(lp.a_matrix_.value_[iEl], min_matrix_value,
+                        max_matrix_value);
+
+  double min_finite_row_bound = kHighsInf;
+  double max_finite_row_bound = -kHighsInf;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     assessFiniteNonzero(lp.row_lower_[iRow], min_finite_row_bound,
                         max_finite_row_bound);
@@ -381,10 +394,6 @@ void assessExcessiveBoundCost(const HighsOptions options,
   }
   if (min_finite_row_bound == kHighsInf) min_finite_row_bound = 0;
   if (max_finite_row_bound == -kHighsInf) max_finite_row_bound = 0;
-  HighsInt num_nz = lp.a_matrix_.numNz();
-  for (HighsInt iEl = 0; iEl < num_nz; iEl++)
-    assessFiniteNonzero(lp.a_matrix_.value_[iEl], min_matrix_value,
-                        max_matrix_value);
 
   highsLogUser(log_options, HighsLogType::kInfo, "Coefficient ranges:\n");
   if (num_nz)
