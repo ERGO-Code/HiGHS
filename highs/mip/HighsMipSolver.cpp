@@ -580,13 +580,13 @@ restart:
 
       considerHeuristics = false;
 
-      if (mipdata_->parallelLockActive()) syncSolutions();
+      syncSolutions();
       if (infeasibleGlobalDomain()) break;
 
       bool suboptimal = diveAllSearches();
       if (suboptimal) break;
 
-      if (mipdata_->parallelLockActive()) syncSolutions();
+      syncSolutions();
       if (mipdata_->checkLimits()) {
         limit_reached = true;
         break;
@@ -635,7 +635,7 @@ restart:
       mipdata_->workers[i].search_ptr_->flushStatistics();
     }
 
-    if (mipdata_->parallelLockActive()) syncSolutions();
+    syncSolutions();
 
     if (limit_reached) {
       double prev_lower_bound = mipdata_->lower_bound;
@@ -708,9 +708,7 @@ restart:
         mipdata_->implications.cleanupVarbounds(col);
 
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
-      // resetDomains();
-      search.resetLocalDomain();
-      mipdata_->domain.clearChangedCols();
+      resetDomains();
 
       mipdata_->removeFixedIndices();
       analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
