@@ -1046,6 +1046,8 @@ HPresolve::Result HPresolve::dominatedColumns(
     HighsPostsolveStack& postsolve_stack) {
   // See section 6.4 "Dominated columns", Achterberg et al., Presolve Reductions
   // in Mixed Integer Programming, INFORMS Journal on Computing 32(2):473-506.
+  // See also Gamrath, G., Koch, T., Martin, A. et al., Progress in presolving
+  // for mixed integer programming, Math. Prog. Comp. 7, 367–398 (2015).
 
   std::vector<std::pair<uint32_t, uint32_t>> signatures(model->num_col_);
 
