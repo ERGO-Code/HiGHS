@@ -955,6 +955,11 @@ HighsStatus Highs::run() {
     this->options_.user_cost_scale = 0;
     this->options_.user_bound_scale = 0;
   }
+
+  // Assess whether to warn the user about excessive bounds and costs
+  assessExcessiveBoundCost(this->options_.log_options, this->model_,
+                           user_scale_data);
+
   HighsStatus status;
   if (!this->multi_linear_objective_.size()) {
     status = this->optimizeModel();
@@ -1085,9 +1090,6 @@ HighsStatus Highs::optimizeModel() {
                 "called_return_from_optimize_model false\n");
     return HighsStatus::kError;
   }
-
-  // Assess whether to warn the user about excessive bounds and costs
-  assessExcessiveBoundCost(this->options_, this->model_);
 
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
