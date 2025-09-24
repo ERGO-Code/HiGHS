@@ -107,6 +107,7 @@ class PDLPSolver {
   SolverResults results_;
   int original_num_col_;
   int num_eq_rows_;
+  std::vector<bool> is_equality_row_; 
   std::vector<int> constraint_new_idx_;
   std::vector<ConstraintType> constraint_types_;
 

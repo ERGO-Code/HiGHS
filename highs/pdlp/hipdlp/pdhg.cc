@@ -39,7 +39,7 @@ void PDLPSolver::preprocessLp() {
   }
 
   int num_new_cols = 0;
-  int nEqs = 0;  // Count of equality-like constraints (EQ, BOUND, FREE)
+  int nEqs = 0;
   constraint_types_.resize(nRows_orig);
 
   // 1. First pass: Classify constraints and count slack variables needed
@@ -53,7 +53,7 @@ void PDLPSolver::preprocessLp() {
         nEqs++;
       } else {
         constraint_types_[i] = BOUND;
-        num_new_cols++;  // Need one slack variable for each ranged constraint
+        num_new_cols++;
         nEqs++;
       }
     } else if (has_lower) {
@@ -61,8 +61,7 @@ void PDLPSolver::preprocessLp() {
     } else if (has_upper) {
       constraint_types_[i] = LEQ;
     } else {
-      constraint_types_[i] =
-          FREE;  // Free rows become bounded equalities Ax=0, z=[-inf,inf]
+      constraint_types_[i] = FREE;
       num_new_cols++;
       nEqs++;
     }
@@ -72,7 +71,7 @@ void PDLPSolver::preprocessLp() {
   HighsLp& processed_lp = lp_;
   processed_lp.num_col_ = nCols_orig + num_new_cols;
   processed_lp.num_row_ = nRows_orig;
-  original_num_col_ = nCols_orig;  // store for postsolve
+  original_num_col_ = nCols_orig;
   constraint_new_idx_.resize(nRows_orig);
 
   processed_lp.col_cost_.resize(processed_lp.num_col_);
@@ -93,7 +92,16 @@ void PDLPSolver::preprocessLp() {
     }
   }
 
-  // 4. Populate costs and bounds for original and new slack variables
+  // 4. Create is_equality_row_ vector based on NEW ordering
+  is_equality_row_.resize(nRows_orig, false);
+  for (int i = 0; i < nRows_orig; ++i) {
+    int new_row_idx = constraint_new_idx_[i];
+    is_equality_row_[new_row_idx] = (constraint_types_[i] == EQ || 
+                                      constraint_types_[i] == BOUND || 
+                                      constraint_types_[i] == FREE);
+  }
+
+  // 5. Populate costs and bounds for original and new slack variables
   for (int i = 0; i < nCols_orig; ++i) {
     processed_lp.col_cost_[i] = original_lp_->col_cost_[i];
     processed_lp.col_lower_[i] = original_lp_->col_lower_[i];
@@ -110,87 +118,100 @@ void PDLPSolver::preprocessLp() {
     }
   }
 
-  // 5. Formulate the new constraints matrix (A') and RHS (b')
-  //
-  // Take a copy of the original LP's constraint matrix since we
-  // need it rowwise and it's const
-  HighsSparseMatrix original_matrix = original_lp_->a_matrix_;
-  original_matrix.ensureRowwise();
-  // Set up the processed constraint matrix as an empty row-wise
-  // matrix that can have nCols_orig columns
-  HighsSparseMatrix& processed_matrix = processed_lp.a_matrix_;
-  processed_matrix.clear();
-  processed_matrix.num_col_ = nCols_orig;
-  processed_matrix.format_ = MatrixFormat::kRowwise;
-  HighsSparseMatrix row;
-  const double negative_one = -1.0;
-  const double* negative_one_p = &negative_one;
+  // 6. Set the new RHS (row bounds) in PERMUTED order
   for (int i = 0; i < nRows_orig; ++i) {
-    // Get the row from the original constraint matrix
-    original_matrix.getRow(i, row);
-    // Scale the row by -1 if it's a LEQ
-    if (constraint_types_[i] == LEQ) row.scaleRows(negative_one_p);
-    // Add the row to the processed constraint matrix
-    processed_matrix.addRows(row);
-  }
-  // Convert the processed constraint matrix to column-wise orientation
-  processed_matrix.ensureColwise();
-
-  // Add slack variable entries (-1) for BOUND and FREE constraints
-  current_slack_col = nCols_orig;
-  // Set up a negated identity column as a column-wise matrix with
-  // nRows_orig rows and a single column containing -1 in row 0 (for
-  // now)
-  HighsSparseMatrix col;
-  assert(col.isColwise());
-  col.num_col_ = 1;
-  col.num_row_ = nRows_orig;
-  col.start_.push_back(1);
-  col.index_.push_back(0);
-  col.value_.push_back(-1);
-  for (int iRow = 0; iRow < nRows_orig; ++iRow) {
-    if (constraint_types_[iRow] == BOUND || constraint_types_[iRow] == FREE) {
-      // Put the -1 in row iRow, and add the column to the matrix
-      col.index_[0] = iRow;
-      processed_matrix.addCols(col);
-      current_slack_col++;
-    }
-  }
-
-  // 6. Set the new RHS (row bounds)
-  for (int i = 0; i < nRows_orig; ++i) {
-    const int new_idx = constraint_new_idx_[i];
+    int new_row_idx = constraint_new_idx_[i];
     switch (constraint_types_[i]) {
       case EQ:
-        processed_lp.row_lower_[i] = original_lp_->row_lower_[i];
-        processed_lp.row_upper_[i] = original_lp_->row_upper_[i];
+        processed_lp.row_lower_[new_row_idx] = original_lp_->row_lower_[i];
+        processed_lp.row_upper_[new_row_idx] = original_lp_->row_upper_[i];
         break;
       case GEQ:
-        processed_lp.row_lower_[i] = original_lp_->row_lower_[i];
-        processed_lp.row_upper_[i] = kHighsInf;
+        processed_lp.row_lower_[new_row_idx] = original_lp_->row_lower_[i];
+        processed_lp.row_upper_[new_row_idx] = kHighsInf;
         break;
       case LEQ:
         // Becomes -Ax >= -b
-        processed_lp.row_lower_[i] = -original_lp_->row_upper_[i];
-        processed_lp.row_upper_[i] = kHighsInf;
+        processed_lp.row_lower_[new_row_idx] = -original_lp_->row_upper_[i];
+        processed_lp.row_upper_[new_row_idx] = kHighsInf;
         break;
       case BOUND:
       case FREE:
         // Becomes Ax - z = 0
-        processed_lp.row_lower_[i] = 0.0;
-        processed_lp.row_upper_[i] = 0.0;
+        processed_lp.row_lower_[new_row_idx] = 0.0;
+        processed_lp.row_upper_[new_row_idx] = 0.0;
         break;
     }
   }
+
+  // 7. Build the constraint matrix with proper row ordering
+  // First, get the original matrix in column-wise format
+  HighsSparseMatrix original_matrix = original_lp_->a_matrix_;
+  original_matrix.ensureColwise();
+  
+  // Create new matrix
+  HighsSparseMatrix& processed_matrix = processed_lp.a_matrix_;
+  processed_matrix.clear();
+  processed_matrix.format_ = MatrixFormat::kColwise;
+  processed_matrix.num_col_ = processed_lp.num_col_;
+  processed_matrix.num_row_ = processed_lp.num_row_;
+  
+  // Reserve space
+  processed_matrix.start_.resize(processed_lp.num_col_ + 1);
+  processed_matrix.index_.reserve(original_matrix.numNz() + num_new_cols);
+  processed_matrix.value_.reserve(original_matrix.numNz() + num_new_cols);
+  
+  // Build column by column
+  processed_matrix.start_[0] = 0;
+  for (int col = 0; col < nCols_orig; ++col) {
+    // For each column, add entries in the new row order
+    std::vector<std::pair<int, double>> col_entries;
+    
+    for (int el = original_matrix.start_[col]; el < original_matrix.start_[col + 1]; ++el) {
+      int old_row = original_matrix.index_[el];
+      int new_row = constraint_new_idx_[old_row];
+      double val = original_matrix.value_[el];
+      
+      // Apply scaling for LEQ constraints
+      if (constraint_types_[old_row] == LEQ) {
+        val = -val;
+      }
+      
+      col_entries.push_back({new_row, val});
+    }
+    
+    // Sort by row index to maintain proper sparse matrix format
+    std::sort(col_entries.begin(), col_entries.end());
+    
+    // Add to matrix
+    for (const auto& entry : col_entries) {
+      processed_matrix.index_.push_back(entry.first);
+      processed_matrix.value_.push_back(entry.second);
+    }
+    
+    processed_matrix.start_[col + 1] = processed_matrix.index_.size();
+  }
+  
+  // Add slack variable columns
+  current_slack_col = nCols_orig;
+  for (int i = 0; i < nRows_orig; ++i) {
+    if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
+      int row_idx = constraint_new_idx_[i];
+      processed_matrix.index_.push_back(row_idx);
+      processed_matrix.value_.push_back(-1.0);
+      processed_matrix.start_[current_slack_col + 1] = processed_matrix.index_.size();
+      current_slack_col++;
+    }
+  }
+
   num_eq_rows_ = nEqs;
   scaling_.passLp(&processed_lp);
-  unscaled_processed_lp_ = processed_lp;  // store for postsolve
+  unscaled_processed_lp_ = processed_lp;
 
-  // 7. Compute and store norms of unscaled cost and rhs
+  // 8. Compute and store norms of unscaled cost and rhs
   unscaled_c_norm_ = linalg::vector_norm(processed_lp.col_cost_);
   unscaled_rhs_norm_ = linalg::vector_norm(processed_lp.row_lower_);
 
-  // Already achieved by construction
   logger_.info("Preprocessing complete. New dimensions: " +
                std::to_string(processed_lp.num_row_) + " rows, " +
                std::to_string(processed_lp.num_col_) + " cols.");
@@ -683,8 +704,8 @@ double PDLPSolver::ComputePrimalFeasibility(
   for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     primal_residual[i] = Ax_vector[i] - lp_.row_lower_[i];
 
-    // For inequality constraints (Ax >= b), project to negative part
-    if (i >= num_eq_rows_) {
+    // For inequality constraints, project to negative part
+    if (!is_equality_row_[i]) {
       primal_residual[i] = std::min(0.0, primal_residual[i]);
     }
   }
@@ -697,9 +718,7 @@ double PDLPSolver::ComputePrimalFeasibility(
     }
   }
 
-  double primal_feasibility = linalg::vector_norm(primal_residual);
-
-  return primal_feasibility;
+  return linalg::vector_norm(primal_residual);
 }
 
 void PDLPSolver::ComputeDualSlacks(const std::vector<double>& ATy_vector) {
