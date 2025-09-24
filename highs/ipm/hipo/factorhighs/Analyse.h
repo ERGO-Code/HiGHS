@@ -2,6 +2,7 @@
 #define FACTORHIGHS_ANALYSE_H
 
 #include <algorithm>
+#include <map>
 #include <vector>
 
 #include "DataCollector.h"
@@ -72,14 +73,19 @@ class Analyse {
   // information about consecutive indices in relindClique
   std::vector<std::vector<Int>> consecutive_sums_{};
 
-  // estimate of maximum storage
-  double serial_storage_{};
-
   std::vector<std::vector<Int>> clique_block_start_{};
 
   // block size
   Int nb_{};
 
+  // Parallel info
+  std::map<Int, Int> layerIndex;
+  std::vector<int64_t> stack_size_serial_;
+  std::vector<int64_t> stack_size_parallel_;
+  int64_t serial_stack_size_, parallel_stack_size_;
+  int64_t factors_total_entries_;
+
+  // Interfaces to logging and data collection
   const Log* log_;
   DataCollector& data_;
 
@@ -97,11 +103,13 @@ class Analyse {
   void relativeIndCols();
   void relativeIndClique();
   void reorderChildren();
-  void computeStorage();
-  void computeStorage(Int fr, Int sz, double& fr_entries,
-                      double& cl_entries) const;
+  void computeStorage(Int fr, Int sz, int64_t& fr_entries,
+                      int64_t& cl_entries) const;
   void computeCriticalPath();
   void computeBlockStart();
+  void computeStackSize();
+
+  void generateParallelLayer(Int threads);
 
  public:
   // Constructor: matrix must be in lower triangular format

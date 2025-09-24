@@ -134,6 +134,12 @@ void DataCollector::printTimes(const Log& log) const {
              << fix(times[kTimeAnalyseRelInd], 8, 4) << " ("
              << fix(times[kTimeAnalyseRelInd] / times[kTimeAnalyse] * 100, 4, 1)
              << "%)\n";
+  log_stream << "\tParallel layer:         "
+             << fix(times[kTimeAnalyseParallelLayer], 8, 4) << " ("
+             << fix(times[kTimeAnalyseParallelLayer] / times[kTimeAnalyse] *
+                        100,
+                    4, 1)
+             << "%)\n";
 #endif
 
   log_stream << "----------------------------------------------------\n";

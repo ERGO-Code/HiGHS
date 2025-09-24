@@ -250,8 +250,8 @@ void processEdge(Int j, Int i, const std::vector<Int>& first,
   prevleaf[i] = j;
 }
 
-double getDiagStart(Int n, Int k, Int nb, Int n_blocks, std::vector<Int>& start,
-                    bool triang) {
+int64_t getDiagStart(Int n, Int k, Int nb, Int n_blocks,
+                     std::vector<Int>& start, bool triang) {
   // start position of diagonal blocks for blocked dense formats
   start.assign(n_blocks, 0);
   for (Int i = 1; i < n_blocks; ++i) {
@@ -260,8 +260,9 @@ double getDiagStart(Int n, Int k, Int nb, Int n_blocks, std::vector<Int>& start,
   }
 
   Int jb = std::min(nb, k - (n_blocks - 1) * nb);
-  double result = (double)start.back() + (double)(n - (n_blocks - 1) * nb) * jb;
-  if (triang) result -= (double)jb * (jb - 1) / 2;
+  int64_t result =
+      (int64_t)start.back() + (int64_t)(n - (n_blocks - 1) * nb) * jb;
+  if (triang) result -= (int64_t)jb * (jb - 1) / 2;
   return result;
 }
 

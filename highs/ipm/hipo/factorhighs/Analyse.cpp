@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <random>
+#include <set>
 #include <stack>
 
 #include "DataCollector.h"
@@ -12,6 +13,7 @@
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
 #include "metis.h"
+#include "parallel/HighsParallel.h"
 
 namespace hipo {
 
@@ -965,8 +967,8 @@ void Analyse::relativeIndClique() {
   }
 }
 
-void Analyse::computeStorage(Int fr, Int sz, double& fr_entries,
-                             double& cl_entries) const {
+void Analyse::computeStorage(Int fr, Int sz, int64_t& fr_entries,
+                             int64_t& cl_entries) const {
   // compute storage required by frontal and clique, based on the format used
 
   const Int cl = fr - sz;
@@ -977,89 +979,12 @@ void Analyse::computeStorage(Int fr, Int sz, double& fr_entries,
 
   // clique is stored as a collection of rectangles
   n_blocks = (cl - 1) / nb_ + 1;
-  double schur_size{};
+  int64_t schur_size{};
   for (Int j = 0; j < n_blocks; ++j) {
     const Int jb = std::min(nb_, cl - j * nb_);
-    schur_size += (double)(cl - j * nb_) * jb;
+    schur_size += (int64_t)(cl - j * nb_) * jb;
   }
   cl_entries = schur_size;
-}
-
-void Analyse::computeStorage() {
-  std::vector<double> clique_entries(sn_count_);
-  std::vector<double> frontal_entries(sn_count_);
-  std::vector<double> storage(sn_count_);
-  std::vector<double> storage_factors(sn_count_);
-
-  // initialise data of supernodes
-  for (Int sn = 0; sn < sn_count_; ++sn) {
-    // supernode size
-    const Int sz = sn_start_[sn + 1] - sn_start_[sn];
-
-    // frontal size
-    const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
-
-    // compute storage based on format used
-    computeStorage(fr, sz, frontal_entries[sn], clique_entries[sn]);
-
-    // compute number of entries in factors within the subtree
-    storage_factors[sn] += frontal_entries[sn];
-    if (sn_parent_[sn] != -1)
-      storage_factors[sn_parent_[sn]] += storage_factors[sn];
-  }
-
-  // linked lists of children
-  std::vector<Int> head, next;
-  childrenLinkedList(sn_parent_, head, next);
-
-  // go through the supernodes
-  for (Int sn = 0; sn < sn_count_; ++sn) {
-    // leaf node
-    if (head[sn] == -1) {
-      storage[sn] = frontal_entries[sn] + clique_entries[sn];
-      continue;
-    }
-
-    double clique_total_entries{};
-    double factors_total_entries{};
-    Int child = head[sn];
-    while (child != -1) {
-      clique_total_entries += clique_entries[child];
-      factors_total_entries += storage_factors[child];
-      child = next[child];
-    }
-
-    // Compute storage
-    // storage is found as max(storage_1,storage_2), where
-    // storage_1 = max_j storage[j] + \sum_{k up to j-1} clique_entries[k] +
-    //                                                   storage_factors[k]
-    // storage_2 = frontal_entries + clique_entries + clique_total_entries +
-    //             factors_total_entries
-    const double storage_2 = frontal_entries[sn] + clique_entries[sn] +
-                             clique_total_entries + factors_total_entries;
-
-    double clique_partial_entries{};
-    double factors_partial_entries{};
-    double storage_1{};
-
-    child = head[sn];
-    while (child != -1) {
-      double current =
-          storage[child] + clique_partial_entries + factors_partial_entries;
-
-      clique_partial_entries += clique_entries[child];
-      factors_partial_entries += storage_factors[child];
-      storage_1 = std::max(storage_1, current);
-
-      child = next[child];
-    }
-    storage[sn] = std::max(storage_1, storage_2);
-  }
-
-  for (Int sn = 0; sn < sn_count_; ++sn) {
-    // save max storage needed, multiply by 8 because double needs 8 bytes
-    serial_storage_ = std::max(serial_storage_, 8 * storage[sn]);
-  }
 }
 
 void Analyse::computeCriticalPath() {
@@ -1107,10 +1032,15 @@ void Analyse::computeCriticalPath() {
 }
 
 void Analyse::reorderChildren() {
-  std::vector<double> clique_entries(sn_count_);
-  std::vector<double> frontal_entries(sn_count_);
-  std::vector<double> storage(sn_count_);
-  std::vector<double> storage_factors(sn_count_);
+  // Reorder children within the elimination tree so that the size of the stack
+  // is minimised. Based on formulas in "Constructing Memory-Minimizing
+  // Schedules for Multifrontal Methods", Guermoche, L'Excellent.
+  // In this case, the memory for the factors is persistent throughout the ipm
+  // iterations, so we only want to minimise the stack size.
+
+  std::vector<int64_t> clique_entries(sn_count_);
+  std::vector<int64_t> frontal_entries(sn_count_);
+  std::vector<int64_t> storage(sn_count_);
 
   // initialise data of supernodes
   for (Int sn = 0; sn < sn_count_; ++sn) {
@@ -1122,11 +1052,6 @@ void Analyse::reorderChildren() {
 
     // compute storage based on format used
     computeStorage(fr, sz, frontal_entries[sn], clique_entries[sn]);
-
-    // compute number of entries in factors within the subtree
-    storage_factors[sn] += frontal_entries[sn];
-    if (sn_parent_[sn] != -1)
-      storage_factors[sn_parent_[sn]] += storage_factors[sn];
   }
 
   // linked lists of children
@@ -1137,23 +1062,22 @@ void Analyse::reorderChildren() {
   for (Int sn = 0; sn < sn_count_; ++sn) {
     // leaf node
     if (head[sn] == -1) {
-      storage[sn] = frontal_entries[sn] + clique_entries[sn];
+      storage[sn] = clique_entries[sn];
       continue;
     }
 
     // save children and values to sort
-    std::vector<std::pair<Int, double>> children{};
+    std::vector<std::pair<Int, int64_t>> children{};
     Int child = head[sn];
     while (child != -1) {
-      double value =
-          storage[child] - clique_entries[child] - storage_factors[child];
+      int64_t value = storage[child] - clique_entries[child];
       children.push_back({child, value});
       child = next[child];
     }
 
     // sort children in decreasing order of the values
     std::sort(children.begin(), children.end(),
-              [&](std::pair<Int, double>& a, std::pair<Int, double>& b) {
+              [&](std::pair<Int, int64_t>& a, std::pair<Int, int64_t>& b) {
                 return a.second > b.second;
               });
 
@@ -1284,6 +1208,267 @@ void Analyse::computeBlockStart() {
   }
 }
 
+void Analyse::computeStackSize() {
+  // Compute the minimum size of the stack to process each subtree.
+  // If the code is serial, only the stack size of the root nodes is relevant.
+  // If the code is parallel, also the stack size of the nodes in the layer is
+  // important.
+
+  // This needs to be run after the parallel layer has been generated
+
+  std::vector<int64_t> clique_entries(sn_count_);
+  std::vector<int64_t> frontal_entries(sn_count_);
+  stack_size_serial_.assign(sn_count_, 0);
+  stack_size_parallel_.assign(sn_count_, 0);
+  factors_total_entries_ = 0;
+
+  // initialise data of supernodes
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    // supernode size
+    const Int sz = sn_start_[sn + 1] - sn_start_[sn];
+
+    // frontal size
+    const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
+
+    // compute storage based on format used
+    computeStorage(fr, sz, frontal_entries[sn], clique_entries[sn]);
+
+    factors_total_entries_ += frontal_entries[sn];
+  }
+
+  // linked lists of children
+  std::vector<Int> head, next;
+  childrenLinkedList(sn_parent_, head, next);
+
+  // go through the supernodes
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    // leaf node
+    if (head[sn] == -1) {
+      stack_size_serial_[sn] = clique_entries[sn];
+      stack_size_parallel_[sn] = clique_entries[sn];
+      continue;
+    }
+
+    // Compute storage
+    // storage is found as max(storage_1,storage_2), where
+    // storage_1 = max_j stack_size[j] + \sum_{k up to j-1} clique_entries[k]
+    // storage_2 = clique_total_entries (including node itself)
+
+    int64_t clique_partial_entries_ser{};
+    int64_t clique_total_entries_ser{};
+    int64_t storage_1_ser{};
+
+    int64_t clique_partial_entries_par{};
+    int64_t clique_total_entries_par{};
+    int64_t storage_1_par{};
+
+    Int child = head[sn];
+    while (child != -1) {
+      int64_t current = stack_size_serial_[child] + clique_partial_entries_ser;
+
+      clique_total_entries_ser += clique_entries[child];
+      clique_partial_entries_ser += clique_entries[child];
+      storage_1_ser = std::max(storage_1_ser, current);
+
+      // If the child is not in the layer, stack_size_parallel is computed in
+      // the same way. If the child is in the layer, it is ignored for this
+      // computation, since it gets its own space and doesn't need space in the
+      // parent's stack.
+      if (layerIndex.find(child) == layerIndex.end()) {
+        current = stack_size_parallel_[child] + clique_partial_entries_par;
+
+        clique_total_entries_par += clique_entries[child];
+        clique_partial_entries_par += clique_entries[child];
+        storage_1_par = std::max(storage_1_par, current);
+      }
+
+      child = next[child];
+    }
+
+    int64_t storage_2_ser = clique_total_entries_ser + clique_entries[sn];
+    int64_t storage_2_par = clique_total_entries_par + clique_entries[sn];
+
+    stack_size_serial_[sn] = std::max(storage_1_ser, storage_2_ser);
+    stack_size_parallel_[sn] = std::max(storage_1_par, storage_2_par);
+  }
+}
+
+void Analyse::generateParallelLayer(Int threads) {
+  if (threads > 1) {
+    // linked lists of children
+    std::vector<Int> head, next;
+    childrenLinkedList(sn_parent_, head, next);
+
+    double total_ops = dense_ops_;
+
+    // compute number of operations for each supernode
+    std::vector<double> sn_ops(sn_count_);
+    for (Int sn = 0; sn < sn_count_; ++sn) {
+      // supernode size
+      const Int sz = sn_start_[sn + 1] - sn_start_[sn];
+
+      // frontal size
+      const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
+
+      // number of operations for this supernode
+      for (Int i = 0; i < sz; ++i) {
+        sn_ops[sn] += (double)(fr - i - 1) * (fr - i - 1);
+      }
+
+      // add assembly operations times spops_weight to the parent
+      const double spops_weight = 30;
+      if (sn_parent_[sn] != -1) {
+        const Int ldc = fr - sz;
+        sn_ops[sn_parent_[sn]] += ldc * (ldc + 1) / 2 * spops_weight;
+        total_ops += ldc * (ldc + 1) / 2 * spops_weight;
+      }
+    }
+
+    // compute number of operations to process each subtree
+    std::vector<double> subtree_ops(sn_count_, 0.0);
+    for (Int sn = 0; sn < sn_count_; ++sn) {
+      subtree_ops[sn] += sn_ops[sn];
+      if (sn_parent_[sn] != -1) {
+        subtree_ops[sn_parent_[sn]] += subtree_ops[sn];
+      }
+    }
+
+    // Generate a layer that cuts the tree in two.
+    // Subtrees in the layer are processed in parallel.
+    // The remaining nodes are processed in serial at the end.
+    // Keep track of:
+    // - subtrees in the layer
+    // - nodes removed from layer that end up above
+    // - subtrees not added because too small
+
+    std::vector<Int> layer;
+    std::set<Int> above_layer;
+    std::set<Int> small_subtrees;
+
+    // insert roots in layer
+    for (Int sn = 0; sn < sn_count_; ++sn) {
+      if (sn_parent_[sn] == -1) layer.push_back(sn);
+    }
+
+    Int iter = 0;
+    while (true) {
+      // sort layer so that nodes with high subtree_ops appear last
+      std::sort(layer.begin(), layer.end(),
+                [&](Int a, Int b) { return subtree_ops[a] < subtree_ops[b]; });
+
+      // Ratio of most expensive subtree in the layer and second most expensive
+      // one. If this ratio is not too large, then the layer gives good
+      // parallelism at least on 2 threads.
+      double ratio_first_two = 10;
+      if (layer.size() > 1)
+        ratio_first_two = subtree_ops[*layer.rbegin()] /
+                          subtree_ops[*std::next(layer.rbegin(), 1)];
+
+      // printf("iter %d,layer %d, above %d, small %d, ratio %f\n", iter,
+      //        layer.size(), above_layer.size(), small_subtrees.size(),
+      //        ratio_first_two);
+
+      // if there are enough subtrees and they are somewhat balanced, stop
+      if (layer.size() >= threads && ratio_first_two < 2) break;
+
+      // don't allow too many iterations
+      if (iter > sn_count_ / 10) break;
+
+      // find most expensive node in layer which have children
+      Int node_to_remove = -1;
+      Int index_to_remove = -1;
+      for (Int i = layer.size() - 1; i >= 0; --i) {
+        if (head[layer[i]] != -1) {
+          index_to_remove = i;
+          node_to_remove = layer[i];
+          break;
+        }
+      }
+      if (node_to_remove == -1) break;
+
+      // remove node from layer
+      auto it = layer.begin();
+      std::advance(it, index_to_remove);
+      layer.erase(it);
+      above_layer.insert(node_to_remove);
+
+      // find child with most operations
+      Int child_most_ops = -1;
+      double ops_child_most_ops = -1;
+      Int child = head[node_to_remove];
+      while (child != -1) {
+        if (subtree_ops[child] > ops_child_most_ops) {
+          ops_child_most_ops = subtree_ops[child];
+          child_most_ops = child;
+        }
+        child = next[child];
+      }
+
+      const double small_subtree_thresh = 0.001;
+
+      // If child with most operations is large enough, ignore.
+      // Otherwise, force at least this child to be added to layer.
+      // This guarantees that the layer does not shrink.
+      if (ops_child_most_ops > total_ops * small_subtree_thresh) {
+        child_most_ops = -1;
+      }
+
+      child = head[node_to_remove];
+      while (child != -1) {
+        // Add child if it is large enough
+        // (don't want to produce parallel tasks for tiny subtrees).
+        // Otherwise, keep track of small subtrees to be processed in serial.
+        if (subtree_ops[child] > total_ops * small_subtree_thresh ||
+            child == child_most_ops) {
+          layer.push_back(child);
+        } else {
+          small_subtrees.insert(child);
+        }
+        child = next[child];
+      }
+
+      ++iter;
+    }
+    // layer has been decided
+
+    // layerIndex stores pairs {i,j} indicating that node i is the j-th subtree
+    // in the layer.
+    Int index = 0;
+    for (auto it = layer.begin(); it != layer.end(); ++it) {
+      layerIndex.insert({*it, index});
+      ++index;
+    }
+  }
+
+  // Compute the size of the stack needed to process the tree in serial. This is
+  // the largest stack of any root of the tree.
+  // For the stack in parallel, the subtrees starting from the layer have their
+  // own stack, so they can operate in parallel. Therefore, the nodes above the
+  // layer do not need to have space to store the cliques coming from such
+  // subtrees. The nodes above only need a single stack (since they operate in
+  // serial) and only need space for the nodes above the layer and the small
+  // nodes.
+  computeStackSize();
+
+  // number of entries for stack in serial: max stack_size of any root
+  serial_stack_size_ = 0;
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    if (sn_parent_[sn] == -1)
+      serial_stack_size_ = std::max(serial_stack_size_, stack_size_serial_[sn]);
+  }
+
+  // number of entries for stacks in parallel: max stack_size of any root, plus
+  // stack size of each node in layer
+  parallel_stack_size_ = 0;
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    if (sn_parent_[sn] == -1)
+      parallel_stack_size_ =
+          std::max(parallel_stack_size_, stack_size_parallel_[sn]);
+  }
+  for (auto a : layerIndex)
+    parallel_stack_size_ += stack_size_parallel_[a.first];
+}
+
 Int Analyse::run(Symbolic& S) {
   // Perform analyse phase and store the result into the symbolic object S.
   // After Run returns, the Analyse object is not valid.
@@ -1355,9 +1540,16 @@ Int Analyse::run(Symbolic& S) {
   data_.sumTime(kTimeAnalyseRelInd, clock_items.stop());
 #endif
 
-  computeStorage();
   computeBlockStart();
   computeCriticalPath();
+
+#if HIPO_TIMING_LEVEL >= 2
+  clock_items.start();
+#endif
+  generateParallelLayer(highs::parallel::num_threads());
+#if HIPO_TIMING_LEVEL >= 2
+  data_.sumTime(kTimeAnalyseParallelLayer, clock_items.stop());
+#endif
 
   // move relevant stuff into S
   S.n_ = n_;
@@ -1369,9 +1561,11 @@ Int Analyse::run(Symbolic& S) {
   S.spops_ = sparse_ops_;
   S.critops_ = critical_ops_;
   S.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
-  S.serial_storage_ = serial_storage_;
   S.flops_ = dense_ops_;
   S.block_size_ = nb_;
+  S.serial_stack_size_ = serial_stack_size_;
+  S.parallel_stack_size_ = parallel_stack_size_;
+  S.factors_total_entries_ = factors_total_entries_;
 
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());

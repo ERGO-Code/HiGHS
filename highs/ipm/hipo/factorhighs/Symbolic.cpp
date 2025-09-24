@@ -66,10 +66,23 @@ void Symbolic::print(const Log& log, bool verbose) const {
   log_stream << textline("Size:") << sci(n_, 0, 2) << '\n';
   log_stream << textline("Nnz:") << sci(nz_, 0, 2) << '\n';
   log_stream << textline("Fill-in:") << fix(fillin_, 0, 2) << '\n';
-  log_stream << textline("Serial memory:") << memoryString(serial_storage_)
-             << '\n';
-  log_stream << textline("Flops:") << sci(flops_, 0, 1) << '\n';
+  log_stream << textline("Flops:") << sci(flops_, 0, 2) << '\n';
   if (verbose) {
+    log_stream << textline("serial stack entries:") << sci(serial_stack_size_, 0, 1)
+               << '\n';
+    log_stream << textline("parallel stacks entries:") << sci(parallel_stack_size_, 0, 1)
+               << '\n';
+    log_stream << textline("factor entries:")
+               << sci(factors_total_entries_, 0, 1) << '\n';
+    log_stream << textline("serial memory:")
+               << memoryString(
+                      (double)(serial_stack_size_ + factors_total_entries_) * 8)
+               << '\n';
+    log_stream << textline("parallel memory:")
+               << memoryString(
+                      (double)(parallel_stack_size_ + factors_total_entries_) *
+                      8)
+               << '\n';
     log_stream << textline("Sparse ops:") << sci(spops_, 0, 1) << '\n';
     log_stream << textline("Critical ops:") << sci(critops_, 0, 1) << '\n';
     log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)

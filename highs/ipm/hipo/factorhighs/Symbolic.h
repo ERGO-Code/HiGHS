@@ -2,6 +2,7 @@
 #define FACTORHIGHS_SYMBOLIC_H
 
 #include <vector>
+#include <map>
 
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Log.h"
@@ -27,7 +28,6 @@ class Symbolic {
   double critops_{};
   int64_t artificial_nz_{};
   double artificial_ops_{};
-  double serial_storage_{};
   Int largest_front_{};
   Int largest_sn_{};
   Int sn_size_1_{};
@@ -93,6 +93,11 @@ class Symbolic {
 
   // Starting position of diagonal blocks for hybrid formats
   std::vector<std::vector<Int>> clique_block_start_{};
+
+  // Info about parallelism
+  std::map<Int, Int> layerIndex;
+  int64_t serial_stack_size_, parallel_stack_size_;
+  int64_t factors_total_entries_;
 
   friend class Analyse;
 
