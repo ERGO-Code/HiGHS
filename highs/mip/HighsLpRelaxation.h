@@ -169,7 +169,7 @@ class HighsLpRelaxation {
     this->adjustSymBranchingCol = adjustSymBranchingCol;
   }
 
-  void resetToGlobalDomain();
+  void resetToGlobalDomain(HighsDomain& globaldom);
 
   void computeBasicDegenerateDuals(double threshold,
                                    HighsDomain* localdom = nullptr);

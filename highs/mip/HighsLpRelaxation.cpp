@@ -237,10 +237,10 @@ void HighsLpRelaxation::loadModel() {
   colUbBuffer.resize(lpmodel.num_col_);
 }
 
-void HighsLpRelaxation::resetToGlobalDomain() {
+void HighsLpRelaxation::resetToGlobalDomain(HighsDomain& globaldom) {
   lpsolver.changeColsBounds(0, mipsolver.numCol() - 1,
-                            mipsolver.mipdata_->domain.col_lower_.data(),
-                            mipsolver.mipdata_->domain.col_upper_.data());
+                            globaldom.col_lower_.data(),
+                            globaldom.col_upper_.data());
 }
 
 void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,

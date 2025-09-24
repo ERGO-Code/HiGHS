@@ -351,6 +351,7 @@ restart:
     } else {
       recreatePools(1, master_worker);
     }
+    master_worker.upper_bound = mipdata_->upper_bound;
   }
 
   // Create / re-initialise workers
@@ -371,6 +372,7 @@ restart:
       recreateLpAndDomains(i, mipdata_->workers.at(i));
       mipdata_->workers[i].resetSearch();
     }
+    mipdata_->workers[i].upper_bound = mipdata_->upper_bound;
   }
 
   // Lambda for combining limit_reached across searches
@@ -405,7 +407,97 @@ restart:
     return search.performed_dive_;
   };
 
-  while (search.hasNode()) {
+  auto syncSolutions = [&]() -> void {
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      for (auto& sol : worker.solutions_) {
+        mipdata_->addIncumbent(std::get<0>(sol), std::get<1>(sol),
+                               std::get<2>(sol));
+      }
+      worker.solutions_.clear();
+    }
+    // Pass the new upper bound information back to the worker
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      assert(mipdata_->upper_bound <= worker.upper_bound);
+      worker.upper_bound = mipdata_->upper_bound;
+    }
+  };
+
+  auto syncGlobalDomain = [&]() -> void {
+    if (mipdata_->workers.size() <= 1) return;
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      const auto& domchgstack = worker.globaldom_.getDomainChangeStack();
+      for (const HighsDomainChange& domchg : domchgstack) {
+        mipdata_->domain.changeBound(domchg,
+                                     HighsDomain::Reason::unspecified());
+      }
+    }
+  };
+
+  auto resetDomains = [&]() -> void {
+    search.resetLocalDomain();
+    mipdata_->domain.clearChangedCols();
+    if (mipdata_->workers.size() <= 1) return;
+    for (HighsInt i = 1; i < mip_search_concurrency; i++) {
+      mipdata_->domains[i] = mipdata_->domain;
+      mipdata_->workers[i].globaldom_ = mipdata_->domains[i];
+      mipdata_->workers[i].search_ptr_->resetLocalDomain();
+    }
+  };
+
+  auto nodesRemaining = [&]() -> bool {
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      if (worker.search_ptr_->hasNode()) return true;
+    }
+    return false;
+  };
+
+  auto infeasibleGlobalDomain = [&]() -> bool {
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      if (worker.globaldom_.infeasible()) return true;
+    }
+    return false;
+  };
+
+  auto diveAllSearches = [&]() -> bool {
+    std::vector<double> dive_times(mip_search_concurrency,
+                                   -analysis_.mipTimerRead(kMipClockTheDive));
+    std::vector<HighsSearch::NodeResult> dive_results(
+        mip_search_concurrency, HighsSearch::NodeResult::kBranched);
+    if (mip_search_concurrency > 1) {
+      for (int i = 0; i < mip_search_concurrency; i++) {
+        tg.spawn([&, i]() {
+          if (!mipdata_->workers[i].search_ptr_->hasNode() ||
+              mipdata_->workers[i].search_ptr_->currentNodePruned()) {
+            dive_times[i] = -1;
+          } else {
+            dive_results[i] = mipdata_->workers[i].search_ptr_->dive();
+            dive_times[i] += analysis_.mipTimerRead(kMipClockNodeSearch);
+          }
+        });
+      }
+      tg.taskWait();
+    } else {
+      if (!search.currentNodePruned()) {
+        dive_results[0] = search.dive();
+        dive_times[0] += analysis_.mipTimerRead(kMipClockNodeSearch);
+      }
+    }
+    bool suboptimal = false;
+    for (int i = 0; i < mip_search_concurrency; i++) {
+      if (dive_times[i] != -1) {
+        analysis_.dive_time.push_back(dive_times[i]);
+        if (dive_results[i] == HighsSearch::NodeResult::kSubOptimal) {
+          suboptimal = true;
+        } else {
+          ++mipdata_->num_leaves;
+          mipdata_->workers[i].search_ptr_->flushStatistics();
+        }
+      }
+    }
+    return suboptimal;
+  };
+
+  while (nodesRemaining()) {
     // Possibly look for primal solution from the user
     if (!submip && callback_->user_callback &&
         callback_->active[kCallbackMipUserSolution])
@@ -413,9 +505,8 @@ restart:
                                      kUserMipSolutionCallbackOriginBeforeDive);
 
     analysis_.mipTimerStart(kMipClockPerformAging1);
-    mipdata_->conflictPool.performAging();
-    for (int i = 0; i < mip_search_concurrency; i++) {
-      mipdata_->workers[i].conflictpool_.performAging();
+    for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
+      conflictpool.performAging();
     }
     analysis_.mipTimerStop(kMipClockPerformAging1);
     // set iteration limit for each lp solve during the dive to 10 times the
@@ -489,62 +580,19 @@ restart:
 
       considerHeuristics = false;
 
-      if (mipdata_->domain.infeasible()) break;
+      if (mipdata_->parallelLockActive()) syncSolutions();
+      if (infeasibleGlobalDomain()) break;
 
-      // MT: My attempt at a parallel dive
-      std::vector<double> dive_times(mip_search_concurrency,
-                                     -analysis_.mipTimerRead(kMipClockTheDive));
-      std::vector<HighsSearch::NodeResult> dive_results(
-          mip_search_concurrency, HighsSearch::NodeResult::kBranched);
-      for (int i = 0; i < mip_search_concurrency; i++) {
-        tg.spawn([&, i]() {
-          if (!mipdata_->workers[i].search_ptr_->hasNode() ||
-              mipdata_->workers[i].search_ptr_->currentNodePruned()) {
-            dive_times[i] = -1;
-          } else {
-            dive_results[i] = mipdata_->workers[i].search_ptr_->dive();
-            dive_times[i] += analysis_.mipTimerRead(kMipClockNodeSearch);
-          }
-        });
-      }
-      tg.taskWait();
-      bool suboptimal = false;
-      for (int i = 0; i < 1; i++) {
-        if (dive_times[i] != -1) {
-          analysis_.dive_time.push_back(dive_times[i]);
-          if (dive_results[i] == HighsSearch::NodeResult::kSubOptimal) {
-            suboptimal = true;
-          } else {
-            ++mipdata_->num_leaves;
-            mipdata_->workers[i].search_ptr_->flushStatistics();
-          }
-        }
-      }
+      bool suboptimal = diveAllSearches();
       if (suboptimal) break;
 
-      // if (!search.currentNodePruned()) {
-      //   double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
-      //   analysis_.mipTimerStart(kMipClockTheDive);
-      //   const HighsSearch::NodeResult search_dive_result = search.dive();
-      //   analysis_.mipTimerStop(kMipClockTheDive);
-      //   if (analysis_.analyse_mip_time) {
-      //     this_dive_time += analysis_.mipTimerRead(kMipClockNodeSearch);
-      //     analysis_.dive_time.push_back(this_dive_time);
-      //   }
-      //   if (search_dive_result == HighsSearch::NodeResult::kSubOptimal)
-      //   break;
-      //
-      //   ++mipdata_->num_leaves;
-      //
-      //   search.flushStatistics();
-      // }
-
+      if (mipdata_->parallelLockActive()) syncSolutions();
       if (mipdata_->checkLimits()) {
         limit_reached = true;
         break;
       }
 
-      if (mipdata_->workers.size() <= 1) {
+      if (!mipdata_->parallelLockActive()) {
         HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
         if (numPlungeNodes >= 100) break;
 
@@ -555,51 +603,39 @@ restart:
         if (!backtrack_plunge) break;
       }
 
-      assert(search.hasNode());
+      if (!mipdata_->parallelLockActive()) assert(search.hasNode());
 
-      if (mipdata_->conflictPool.getNumConflicts() >
-          options_mip_->mip_pool_soft_limit) {
-        analysis_.mipTimerStart(kMipClockPerformAging2);
-        mipdata_->conflictPool.performAging();
-        analysis_.mipTimerStop(kMipClockPerformAging2);
+      analysis_.mipTimerStart(kMipClockPerformAging2);
+      for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
+        if (conflictpool.getNumConflicts() >
+            options_mip_->mip_pool_soft_limit) {
+          conflictpool.performAging();
+        }
       }
-      // for (int i = 0; i < mip_search_concurrency; i++) {
-      //   if (mipdata_->workers[i].conflictpool_.getNumConflicts() >
-      //       options_mip_->mip_pool_soft_limit) {
-      //     analysis_.mipTimerStart(kMipClockPerformAging2);
-      //     mipdata_->workers[i].conflictpool_.performAging();
-      //     analysis_.mipTimerStop(kMipClockPerformAging2);
-      //   }
-      // }
+      analysis_.mipTimerStop(kMipClockPerformAging2);
 
       for (int i = 0; i < mip_search_concurrency; i++) {
         mipdata_->workers[i].search_ptr_->flushStatistics();
       }
       mipdata_->printDisplayLine();
-      if (mipdata_->workers.size() >= 2) break;
+      if (mipdata_->parallelLockActive()) break;
       // printf("continue plunging due to good estimate\n");
     }  // while (true)
     analysis_.mipTimerStop(kMipClockDive);
 
     analysis_.mipTimerStart(kMipClockOpenNodesToQueue0);
-    search.openNodesToQueue(mipdata_->nodequeue);
-    // for (int i = 0; i < mip_search_concurrency; i++) {
-    //   mipdata_->workers[i].search_ptr_->openNodesToQueue(mipdata_->nodequeue);
-    // }
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      if (worker.search_ptr_->hasNode()) {
+        worker.search_ptr_->openNodesToQueue(mipdata_->nodequeue);
+      }
+    }
     analysis_.mipTimerStop(kMipClockOpenNodesToQueue0);
 
     for (int i = 0; i < mip_search_concurrency; i++) {
       mipdata_->workers[i].search_ptr_->flushStatistics();
     }
 
-    // MT: Should a primal solution sync be done here?
-    for (int i = 0; i < mip_search_concurrency; i++) {
-      for (auto& sol : mipdata_->workers[i].solutions_) {
-        mipdata_->addIncumbent(std::get<0>(sol), std::get<1>(sol),
-                               std::get<2>(sol));
-      }
-      mipdata_->workers[i].solutions_.clear();
-    }
+    if (mipdata_->parallelLockActive()) syncSolutions();
 
     if (limit_reached) {
       double prev_lower_bound = mipdata_->lower_bound;
@@ -617,11 +653,12 @@ restart:
     }
 
     // the search datastructure should have no installed node now
-    assert(!search.hasNode());
+    assert(!nodesRemaining());
 
     // propagate the global domain
-    // todo MT: When does the global domain ever update in parallel dive?
     analysis_.mipTimerStart(kMipClockDomainPropgate);
+    // sync global domain changes from parallel dives
+    syncGlobalDomain();
     mipdata_->domain.propagate();
     analysis_.mipTimerStop(kMipClockDomainPropgate);
 
@@ -671,9 +708,10 @@ restart:
         mipdata_->implications.cleanupVarbounds(col);
 
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
+      // resetDomains();
       search.resetLocalDomain();
-
       mipdata_->domain.clearChangedCols();
+
       mipdata_->removeFixedIndices();
       analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
     }

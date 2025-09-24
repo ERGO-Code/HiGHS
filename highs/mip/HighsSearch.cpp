@@ -919,7 +919,7 @@ int64_t HighsSearch::getStrongBranchingLpIterations() const {
 }
 
 void HighsSearch::resetLocalDomain() {
-  this->lp->resetToGlobalDomain();
+  this->lp->resetToGlobalDomain(getDomain());
   localdom = getDomain();
 
 #ifndef NDEBUG
@@ -1997,7 +1997,7 @@ const std::vector<HighsInt>& HighsSearch::getIntegralCols() const {
 }
 
 HighsDomain& HighsSearch::getDomain() const {
-  return mipsolver.mipdata_->domain;
+  return mipworker.globaldom_;
 }
 
 HighsConflictPool& HighsSearch::getConflictPool() const {
