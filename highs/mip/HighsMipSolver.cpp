@@ -629,8 +629,8 @@ restart:
     std::vector<bool> prune(search_indices.size(), false);
     for (HighsInt i = 0; i < search_indices.size(); i++) {
       // TODO MT: Remove this redundant if
-      if (search_indices[i] != 0 ||
-          !mipdata_->workers[search_indices[i]].search_ptr_->currentNodePruned())
+      if (search_indices[i] != 0 || !mipdata_->workers[search_indices[i]]
+                                         .search_ptr_->currentNodePruned())
         continue;
       infeasible.emplace_back(false);
       flush.emplace_back(false);
@@ -658,8 +658,7 @@ restart:
     }
 
     // Remove search indices that need a new node
-    HighsInt num_search_indices =
-        static_cast<HighsInt>(search_indices.size());
+    HighsInt num_search_indices = static_cast<HighsInt>(search_indices.size());
     for (HighsInt i = num_search_indices - 1; i >= 0; i--) {
       if (prune[i]) {
         num_search_indices--;
@@ -693,6 +692,70 @@ restart:
     }
     analysis_.mipTimerStop(kMipClockNodePrunedLoop);
     return std::make_pair(false, false);
+  };
+
+  auto separateAndStoreBasis =
+      [&](std::vector<HighsInt>& search_indices) -> bool {
+    // the node is still not fathomed, so perform separation
+    analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
+    for (HighsInt i : search_indices) {
+      // TODO MT: Get rid of this line
+      if (i != 0) continue;
+      if (mipdata_->parallelLockActive()) {
+        tg.spawn([&, i]() {
+          mipdata_->workers[i].sepa_ptr_->separate(mipdata_->workers[i], mipdata_->workers[i].search_ptr_->getLocalDomain());
+        });
+      } else {
+        mipdata_->workers[i].sepa_ptr_->separate(
+            mipdata_->workers[i],
+            mipdata_->workers[i].search_ptr_->getLocalDomain());
+      }
+    }
+    analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
+    if (mipdata_->parallelLockActive()) tg.taskWait();
+
+    for (HighsInt i : search_indices) {
+      // TODO MT: Get rid of this line
+      if (i != 0) continue;
+      if (mipdata_->workers[i].globaldom_.infeasible()) {
+        mipdata_->workers[i].search_ptr_->cutoffNode();
+        analysis_.mipTimerStart(kMipClockOpenNodesToQueue1);
+        mipdata_->workers[i].search_ptr_->openNodesToQueue(mipdata_->nodequeue);
+        analysis_.mipTimerStop(kMipClockOpenNodesToQueue1);
+        mipdata_->nodequeue.clear();
+        mipdata_->pruned_treeweight = 1.0;
+
+        analysis_.mipTimerStart(kMipClockStoreBasis);
+        double prev_lower_bound = mipdata_->lower_bound;
+
+        mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
+
+        bool bound_change = mipdata_->lower_bound != prev_lower_bound;
+        if (!submip && bound_change)
+          mipdata_->updatePrimalDualIntegral(
+              prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+              mipdata_->upper_bound);
+        return true;
+      }
+      // after separation we store the new basis and proceed with the outer loop
+      // to perform a dive from this node
+      if (mipdata_->workers[i].lprelaxation_->getStatus() !=
+              HighsLpRelaxation::Status::kError &&
+          mipdata_->workers[i].lprelaxation_->getStatus() !=
+              HighsLpRelaxation::Status::kNotSet)
+        mipdata_->workers[i].lprelaxation_->storeBasis();
+
+      basis = mipdata_->workers[i].lprelaxation_->getStoredBasis();
+      if (!basis || !isBasisConsistent(
+                        mipdata_->workers[i].lprelaxation_->getLp(), *basis)) {
+        HighsBasis b = mipdata_->firstrootbasis;
+        b.row_status.resize(mipdata_->workers[i].lprelaxation_->numRows(),
+                            HighsBasisStatus::kBasic);
+        basis = std::make_shared<const HighsBasis>(std::move(b));
+        mipdata_->workers[i].lprelaxation_->setStoredBasis(basis);
+      }
+    }
+    return false;
   };
 
   auto diveAllSearches = [&]() -> bool {
@@ -1040,6 +1103,7 @@ restart:
       // printf("popping node from nodequeue (length = %" HIGHSINT_FORMAT ")\n",
       // (HighsInt)nodequeue.size());
       std::vector<HighsInt> search_indices = getSearchIndicesWithNoNodes();
+      if (search_indices[0] != 0) break;
       // if (search_indices.size() >= mip_search_concurrency) break;
 
       installNodes(search_indices, limit_reached);
@@ -1058,47 +1122,8 @@ restart:
       // TODO MT: Change this line
       if (search_indices.empty() || search_indices[0] != 0) continue;
 
-      // the node is still not fathomed, so perform separation
-      analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
-      sepa.separate(master_worker, search.getLocalDomain());
-      analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
-
-      if (mipdata_->domain.infeasible()) {
-        search.cutoffNode();
-        analysis_.mipTimerStart(kMipClockOpenNodesToQueue1);
-        search.openNodesToQueue(mipdata_->nodequeue);
-        analysis_.mipTimerStop(kMipClockOpenNodesToQueue1);
-        mipdata_->nodequeue.clear();
-        mipdata_->pruned_treeweight = 1.0;
-
-        analysis_.mipTimerStart(kMipClockStoreBasis);
-        double prev_lower_bound = mipdata_->lower_bound;
-
-        mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
-
-        bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-        if (!submip && bound_change)
-          mipdata_->updatePrimalDualIntegral(
-              prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-              mipdata_->upper_bound);
-        break;
-      }
-
-      // after separation we store the new basis and proceed with the outer loop
-      // to perform a dive from this node
-      if (mipdata_->lp.getStatus() != HighsLpRelaxation::Status::kError &&
-          mipdata_->lp.getStatus() != HighsLpRelaxation::Status::kNotSet)
-        mipdata_->lp.storeBasis();
-
-      basis = mipdata_->lp.getStoredBasis();
-      if (!basis || !isBasisConsistent(mipdata_->lp.getLp(), *basis)) {
-        HighsBasis b = mipdata_->firstrootbasis;
-        b.row_status.resize(mipdata_->lp.numRows(), HighsBasisStatus::kBasic);
-        basis = std::make_shared<const HighsBasis>(std::move(b));
-        mipdata_->lp.setStoredBasis(basis);
-      }
-
-      break;
+      bool infeasible = separateAndStoreBasis(search_indices);
+      if (infeasible) break;
     }  // while(!mipdata_->nodequeue.empty())
     analysis_.mipTimerStop(kMipClockNodeSearch);
     if (analysis_.analyse_mip_time) {
