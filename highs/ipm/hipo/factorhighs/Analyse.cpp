@@ -1474,13 +1474,27 @@ void Analyse::generateParallelLayer(Int threads) {
   // generate info about subtrees in the layer
   std::vector<Int> first_desc;
   firstDescendant(sn_parent_, first_desc);
-  layerSubtrees_.resize(layerIndex_.size());
+  layerSubtreesInfo_.resize(layerIndex_.size());
   for (auto& subtree : layerIndex_) {
     Int node = subtree.first;
     Int index = subtree.second;
-    layerSubtrees_[index].start = first_desc[node];
-    layerSubtrees_[index].end = node + 1;
-    layerSubtrees_[index].stack = stack_subtree_parallel_[node];
+    layerSubtreesInfo_[index].start = first_desc[node];
+    layerSubtreesInfo_[index].end = node + 1;
+    layerSubtreesInfo_[index].stack = stack_subtree_parallel_[node];
+  }
+
+  smallSubtreesInfo_.resize(smallSubtrees_.size());
+  Int index = 0;
+  for (auto it = smallSubtrees_.begin(); it != smallSubtrees_.end(); ++it) {
+    Int node = *it;
+
+    smallSubtreesInfo_[index].start = first_desc[node];
+    smallSubtreesInfo_[index].end = node + 1;
+
+    // no stack needed for small subtrees
+    smallSubtreesInfo_[index].stack = -1;
+
+    ++index;
   }
 }
 
@@ -1617,7 +1631,8 @@ Int Analyse::run(Symbolic& S) {
   S.consecutive_sums_ = std::move(consecutive_sums_);
   S.clique_block_start_ = std::move(clique_block_start_);
   S.layerIndex_ = std::move(layerIndex_);
-  S.layerSubtrees_ = std::move(layerSubtrees_);
+  S.layerSubtreesInfo_ = std::move(layerSubtreesInfo_);
+  S.smallSubtreesInfo_ = std::move(smallSubtreesInfo_);
   S.aboveLayer_ = std::move(aboveLayer_);
   S.smallSubtrees_ = std::move(smallSubtrees_);
 

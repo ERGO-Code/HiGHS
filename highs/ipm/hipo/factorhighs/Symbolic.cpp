@@ -44,6 +44,15 @@ const std::vector<Int>& Symbolic::iperm() const { return iperm_; }
 const std::vector<Int>& Symbolic::snParent() const { return sn_parent_; }
 const std::vector<Int>& Symbolic::snStart() const { return sn_start_; }
 const std::vector<Int>& Symbolic::pivotSign() const { return pivot_sign_; }
+const SubtreeInfo& Symbolic::layerSubtreeInfo(Int i) const {
+  return layerSubtreesInfo_[i];
+}
+const SubtreeInfo& Symbolic::smallSubtreeInfo(Int i) const {
+  return smallSubtreesInfo_[i];
+}
+const std::set<Int>& Symbolic::aboveLayer() const { return aboveLayer_; }
+const std::set<Int>& Symbolic::smallSubtrees() const { return smallSubtrees_; }
+const std::map<Int, Int>& Symbolic::layerIndex() const { return layerIndex_; }
 
 std::string memoryString(double mem) {
   std::stringstream ss;
@@ -68,10 +77,10 @@ void Symbolic::print(const Log& log, bool verbose) const {
   log_stream << textline("Fill-in:") << fix(fillin_, 0, 2) << '\n';
   log_stream << textline("Flops:") << sci(flops_, 0, 2) << '\n';
   if (verbose) {
-    log_stream << textline("serial stack entries:") << sci(serial_stack_size_, 0, 1)
-               << '\n';
-    log_stream << textline("parallel stacks entries:") << sci(parallel_stack_size_, 0, 1)
-               << '\n';
+    log_stream << textline("serial stack entries:")
+               << sci(serial_stack_size_, 0, 1) << '\n';
+    log_stream << textline("parallel stacks entries:")
+               << sci(parallel_stack_size_, 0, 1) << '\n';
     log_stream << textline("factor entries:")
                << sci(factors_total_entries_, 0, 1) << '\n';
     log_stream << textline("serial memory:")

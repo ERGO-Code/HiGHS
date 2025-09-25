@@ -26,10 +26,6 @@ class Factorise {
   std::vector<Int> first_child_{};
   std::vector<Int> next_child_{};
 
-  // reverse linked lists of chidlren
-  std::vector<Int> first_child_reverse_{};
-  std::vector<Int> next_child_reverse_{};
-
   // generated elements, aka Schur complements.
   std::vector<std::vector<double>> schur_contribution_{};
 
@@ -69,6 +65,7 @@ class Factorise {
  public:
   void permute(const std::vector<Int>& iperm);
   void processSupernode(Int sn);
+  void processSupernodes(Int start, Int end);
 
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsA,

@@ -2,8 +2,8 @@
 #define FACTORHIGHS_SYMBOLIC_H
 
 #include <map>
-#include <vector>
 #include <set>
+#include <vector>
 
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Log.h"
@@ -107,13 +107,13 @@ class Symbolic {
   std::map<Int, Int> layerIndex_;
 
   // Information about subtrees in the layer
-  // - layerSubtrees_[j] contains the following information about the j-th
-  //   subtree
-  //   in the layer (according to the numbering in layerIndex_):
+  // - layerSubtreesInfo_[j] contains the following information about the j-th
+  //   subtree in the layer (according to the numbering in layerIndex_):
   //   . start: first node in the subtree
   //   . end: first later node not in the subtree
   //   . stack: minimum amount of stack space required to process the subtree
-  std::vector<SubtreeInfo> layerSubtrees_;
+  std::vector<SubtreeInfo> layerSubtreesInfo_;
+  std::vector<SubtreeInfo> smallSubtreesInfo_;
 
   // Set containing the nodes that appear above the parallel layer
   std::set<Int> aboveLayer_;
@@ -156,6 +156,11 @@ class Symbolic {
   const std::vector<Int>& snParent() const;
   const std::vector<Int>& snStart() const;
   const std::vector<Int>& pivotSign() const;
+  const SubtreeInfo& layerSubtreeInfo(Int i) const;
+  const SubtreeInfo& smallSubtreeInfo(Int i) const;
+  const std::set<Int>& aboveLayer() const;
+  const std::set<Int>& smallSubtrees() const;
+  const std::map<Int, Int>& layerIndex() const;
 
   void print(const Log& log, bool verbose = false) const;
 };

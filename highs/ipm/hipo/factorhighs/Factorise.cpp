@@ -58,13 +58,6 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
   // create linked lists of children in supernodal elimination tree
   childrenLinkedList(S_.snParent(), first_child_, next_child_);
 
-  if (S_.parTree()) {
-    // create reverse linked lists of children
-    first_child_reverse_ = first_child_;
-    next_child_reverse_ = next_child_;
-    reverseLinkedList(first_child_reverse_, next_child_reverse_);
-  }
-
   // compute largest diagonal entry in absolute value
   max_diag_ = 0.0;
   min_diag_ = kHighsInf;
@@ -174,19 +167,6 @@ void Factorise::processSupernode(Int sn) {
 
   if (flag_stop_) return;
 
-  if (S_.parTree()) {
-    // spawn children of this supernode in reverse order
-    Int child_to_spawn = first_child_reverse_[sn];
-    while (child_to_spawn != -1) {
-      highs::parallel::spawn([=]() { processSupernode(child_to_spawn); });
-      child_to_spawn = next_child_reverse_[child_to_spawn];
-    }
-
-    // wait for first child to finish, before starting the parent (if there is a
-    // first child)
-    if (first_child_reverse_[sn] != -1) highs::parallel::sync();
-  }
-
 #if HIPO_TIMING_LEVEL >= 2
   Clock clock;
 #endif
@@ -238,17 +218,10 @@ void Factorise::processSupernode(Int sn) {
     // Schur contribution of the current child
     std::vector<double>& child_clique = schur_contribution_[child_sn];
 
-    if (S_.parTree()) {
-      // sync with spawned child, apart from the first one
-      if (child_sn != first_child_[sn]) highs::parallel::sync();
-
-      if (flag_stop_) return;
-
-      if (child_clique.size() == 0) {
-        if (log_) log_->printDevInfo("Missing child supernode contribution\n");
-        flag_stop_ = true;
-        return;
-      }
+    if (child_clique.size() == 0) {
+      if (log_) log_->printDevInfo("Missing child supernode contribution\n");
+      flag_stop_ = true;
+      return;
     }
 
     // determine size of clique of child
@@ -351,6 +324,12 @@ void Factorise::processSupernode(Int sn) {
 #endif
 }
 
+void Factorise::processSupernodes(Int start, Int end) {
+  for (Int sn = start; sn < end; ++sn) {
+    processSupernode(sn);
+  }
+}
+
 bool Factorise::run(Numeric& num) {
 #if HIPO_TIMING_LEVEL >= 1
   Clock clock;
@@ -368,24 +347,33 @@ bool Factorise::run(Numeric& num) {
   sn_columns_.resize(S_.sn());
 
   if (S_.parTree()) {
-    Int spawned_roots{};
-    // spawn tasks for root supernodes
-    for (Int sn = 0; sn < S_.sn(); ++sn) {
-      if (S_.snParent(sn) == -1) {
-        highs::parallel::spawn([=]() { processSupernode(sn); });
-        ++spawned_roots;
-      }
+    // process subtrees in the layer
+    for (Int i = 0; i < S_.layerIndex().size(); ++i) {
+      Int start = S_.layerSubtreeInfo(i).start;
+      Int end = S_.layerSubtreeInfo(i).end;
+      highs::parallel::spawn([=]() { processSupernodes(start, end); });
     }
 
-    // sync tasks for root supernodes
-    for (Int root = 0; root < spawned_roots; ++root) {
+    // process small subtrees
+    for (Int i = 0; i < S_.smallSubtrees().size(); ++i) {
+      Int start = S_.smallSubtreeInfo(i).start;
+      Int end = S_.smallSubtreeInfo(i).end;
+      processSupernodes(start, end);
+    }
+
+    // wait for subtrees in the layer to complete
+    for (Int i = 0; i < S_.layerIndex().size(); ++i) {
       highs::parallel::sync();
     }
+
+    // process nodes above layer
+    for (auto it = S_.aboveLayer().begin(); it != S_.aboveLayer().end(); ++it) {
+      processSupernode(*it);
+    }
+
   } else {
     // go through each supernode serially
-    for (Int sn = 0; sn < S_.sn(); ++sn) {
-      processSupernode(sn);
-    }
+    processSupernodes(0, S_.sn());
   }
 
   if (flag_stop_) return true;

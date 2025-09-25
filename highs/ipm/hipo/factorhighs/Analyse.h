@@ -80,7 +80,7 @@ class Analyse {
 
   // Parallel info
   std::map<Int, Int> layerIndex_;
-  std::vector<SubtreeInfo> layerSubtrees_;
+  std::vector<SubtreeInfo> layerSubtreesInfo_, smallSubtreesInfo_;
   std::set<Int> aboveLayer_, smallSubtrees_;
   std::vector<int64_t> stack_subtree_serial_;
   std::vector<int64_t> stack_subtree_parallel_;
