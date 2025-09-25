@@ -16,7 +16,7 @@
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
-// #include "mip/HighsSeparation.h"
+#include "mip/HighsSeparation.h"
 
 class HighsSearch;
 
@@ -32,6 +32,7 @@ class HighsMipWorker {
   HighsConflictPool& conflictpool_;
 
   std::unique_ptr<HighsSearch> search_ptr_;
+  std::unique_ptr<HighsSeparation> sepa_ptr_;
 
   const HighsMipSolver& getMipSolver();
 
@@ -53,11 +54,14 @@ class HighsMipWorker {
   ~HighsMipWorker() {
     // search_ptr_.release();
     search_ptr_.reset();
+    sepa_ptr_.reset();
   }
 
   const bool checkLimits(int64_t nodeOffset = 0) const;
 
   void resetSearch();
+
+  void resetSepa();
 
   // bool addIncumbent(const std::vector<double>& sol, double solobj,
   //                   const int solution_source,

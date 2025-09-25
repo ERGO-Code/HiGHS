@@ -25,6 +25,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
   // std::cout << mipdata_.domain.changedcolsflags_.size() << std::endl;
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
+  sepa_ptr_ = std::unique_ptr<HighsSeparation>(new HighsSeparation(*this));
 
   // Register cutpool and conflict pool in local search domain.
   // Add global cutpool.
@@ -59,6 +60,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
   // HighsSearch has its own relaxation initialized no nullptr.
 
   search_ptr_->setLpRelaxation(lprelaxation_);
+  sepa_ptr_->setLpRelaxation(lprelaxation_);
 
   // printf(
   //     "Search has lp member in constructor of mipworker with address %p, %d "
@@ -89,6 +91,12 @@ void HighsMipWorker::resetSearch() {
   // search_ptr_->getLocalDomain().addCutpool(cutpool_);
   // search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
   search_ptr_->setLpRelaxation(lprelaxation_);
+}
+
+void HighsMipWorker::resetSepa() {
+  sepa_ptr_.reset();
+  sepa_ptr_ = std::unique_ptr<HighsSeparation>(new HighsSeparation(*this));
+  sepa_ptr_->setLpRelaxation(lprelaxation_);
 }
 
 bool HighsMipWorker::addIncumbent(const std::vector<double>& sol, double solobj,

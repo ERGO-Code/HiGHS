@@ -261,6 +261,7 @@ restart:
   // search.setLpRelaxation(&mipdata_->lp);
   // MT: I think search should be ties to the master worker
   master_worker.resetSearch();
+  master_worker.resetSepa();
   HighsSearch& search = *master_worker.search_ptr_;
 
   // This search is from the worker and will use the worker pseudocost.
@@ -271,8 +272,9 @@ restart:
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
 
   // HighsSeparation sepa(*this);
-  HighsSeparation sepa(master_worker);
-  sepa.setLpRelaxation(&mipdata_->lp);
+  // HighsSeparation sepa(master_worker);
+  // sepa.setLpRelaxation(&mipdata_->lp);
+  HighsSeparation& sepa = *master_worker.sepa_ptr_;
 
   double prev_lower_bound = mipdata_->lower_bound;
 
@@ -371,6 +373,7 @@ restart:
       recreatePools(i + 1, mipdata_->workers.at(i));
       recreateLpAndDomains(i, mipdata_->workers.at(i));
       mipdata_->workers[i].resetSearch();
+      mipdata_->workers[i].resetSepa();
     }
     mipdata_->workers[i].upper_bound = mipdata_->upper_bound;
   }
