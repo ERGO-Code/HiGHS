@@ -86,6 +86,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   parameters.highs_logging = true;
   parameters.timeless_log = options.timeless_log;
+  // Use this to change print_interval from default value (5s) to
+  // other value for debugging
+  //
+  //  parameters.print_interval = 1e-4;
   parameters.log_options = &options.log_options;
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
