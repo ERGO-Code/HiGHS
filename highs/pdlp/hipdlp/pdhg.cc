@@ -417,7 +417,21 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
       // Reset the average iterate accumulation
       int inner_iter = iter - restart_scheme_.GetLastRestartIter();
-      UpdateAverageIterates(x_current_, y_current_, working_params, inner_iter);
+      //UpdateAverageIterates(x_current_, y_current_, working_params, inner_iter);
+
+      // Compute averages WITHOUT updating the accumulator
+      if (sum_weights_ > 0) {
+        for (size_t i = 0; i < x_avg_.size(); ++i) {
+          x_avg_[i] = x_sum_[i] / sum_weights_;
+        }
+        for (size_t i = 0; i < y_avg_.size(); ++i) {
+          y_avg_[i] = y_sum_[i] / sum_weights_;
+        }
+      } else {
+        // First iteration after restart or initial iteration
+        x_avg_ = x_current_;
+        y_avg_ = y_current_;
+      }
 
       linalg::Ax(lp, x_avg_, Ax_avg);
       linalg::ATy(lp, y_avg_, ATy_avg);
@@ -485,6 +499,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         // Perform the primal weight update using z^{n,0} and z^{n-1,0}
         PDHG_Compute_Step_Size_Ratio(working_params, restart_x, restart_y,
                                      x_at_last_restart_, y_at_last_restart_);
+        current_eta_ = working_params.eta;
         restart_scheme_.passParams(&working_params);
         restart_scheme_.UpdateBeta(working_params.omega * working_params.omega);
 
@@ -495,9 +510,15 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         x_current_ = restart_x;
         y_current_ = restart_y;
 
-        UpdateAverageIterates(
-            x_current_, y_current_, working_params,
-            -1);
+        //UpdateAverageIterates(
+        //    x_current_, y_current_, working_params,
+        //    -1);
+        x_sum_.assign(x_current_.size(), 0.0);
+        y_sum_.assign(y_current_.size(), 0.0);
+        sum_weights_ = 0.0;
+
+        x_avg_ = x_current_;
+        y_avg_ = y_current_;
 
         // Recompute Ax and ATy for the restarted iterates
         linalg::Ax(lp, x_current_, Ax_cache_);
@@ -609,22 +630,32 @@ void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
     const std::vector<double>& y_n_minus_1_0) {
   // 1. Calculate the L2 norm of the difference between current and last-restart
   // iterates.
-  double primal_diff_norm = linalg::diffTwoNorm(x_n_0, x_n_minus_1_0);
-  double dual_diff_norm = linalg::diffTwoNorm(y_n_0, y_n_minus_1_0);
+  //double primal_diff_norm = linalg::diffTwoNorm(x_n_0, x_n_minus_1_0);
+  double primal_diff_norm = linalg::diffTwoNorm(x_at_last_restart_, x_current_);
+  double norm_xLastRestart = linalg::vector_norm(x_at_last_restart_);
+  double norm_xCurrent = linalg::vector_norm(x_current_);
+
+  //double dual_diff_norm = linalg::diffTwoNorm(y_n_0, y_n_minus_1_0);
+  double dual_diff_norm = linalg::diffTwoNorm(y_at_last_restart_, y_current_);
+
+  double dMeanStepSize = std::sqrt(stepsize_.primal_step *
+                                       stepsize_.dual_step);
+
 
   // 2. Update the primal weight (beta = omega^2) if movements are significant.
   if (std::min(primal_diff_norm, dual_diff_norm) > 1e-10) {
     double beta_update_ratio = dual_diff_norm / primal_diff_norm;
-    double current_beta = working_params.omega * working_params.omega;
+    double old_beta = working_params.omega * working_params.omega;
 
     double dLogBetaUpdate = 0.5 * std::log(beta_update_ratio) +
-                            0.5 * std::log(std::sqrt(current_beta));
-    double new_beta = std::exp(2.0 * dLogBetaUpdate);
-
-    working_params.omega = std::sqrt(new_beta);
-    std::cout << "new beta: " << new_beta << ", omega: " << working_params.omega
-              << std::endl;
+                            0.5 * std::log(std::sqrt(old_beta));
+    stepsize_.beta = std::exp(2.0 * dLogBetaUpdate);
   }
+
+  stepsize_.primal_step = dMeanStepSize / working_params.omega;
+  stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
+  working_params.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
+  working_params.omega = std::sqrt(stepsize_.beta);
 }
 
 void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
@@ -639,36 +670,15 @@ void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
     // Initialize averages to current point
     x_avg_ = x;
     y_avg_ = y;
-  } else if (inner_iter == 0) {
-    // First iteration after restart - already initialized, just set up sums
-    x_sum_ = x_avg_;  // Start accumulating from current average
-    y_sum_ = y_avg_;
-    for (size_t i = 0; i < x_sum_.size(); ++i) {
-      x_sum_[i] *= params.eta;
-    }
-    for (size_t i = 0; i < y_sum_.size(); ++i) {
-      y_sum_[i] *= params.eta;
-    }
-    sum_weights_ = params.eta;
   } else {
-    // Normal update
+    double weight = params.eta; // this should be the mean step size
     for (size_t i = 0; i < x.size(); ++i) {
-      x_sum_[i] += x[i] * params.eta;
+      x_sum_[i] += x[i] * weight;
     }
     for (size_t i = 0; i < y.size(); ++i) {
-      y_sum_[i] += y[i] * params.eta;
+      y_sum_[i] += y[i] * weight;
     }
-    sum_weights_ += params.eta;
-    
-    // Recompute averages
-    if (sum_weights_ > 0) {
-      for (size_t i = 0; i < x.size(); ++i) {
-        x_avg_[i] = x_sum_[i] / sum_weights_;
-      }
-      for (size_t i = 0; i < y.size(); ++i) {
-        y_avg_[i] = y_sum_[i] / sum_weights_;
-      }
-    }
+    sum_weights_ += weight;
   }
 }
 

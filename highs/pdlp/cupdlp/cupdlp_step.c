@@ -164,6 +164,7 @@ void PDHG_Compute_Step_Size_Ratio(CUPDLPwork *pdhg) {
 
   cupdlp_float dDiffPrimal = 0.0;
   cupdlp_diffTwoNorm(pdhg, x->data, iterates->xLastRestart, problem->nCols, &dDiffPrimal);
+
   cupdlp_float dDiffDual = 0.0;
   cupdlp_diffTwoNorm(pdhg, y->data, iterates->yLastRestart, problem->nRows, &dDiffDual);
 
