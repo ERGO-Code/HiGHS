@@ -458,6 +458,55 @@ restart:
     return false;
   };
 
+  auto getSearchIndicesWithNoNodes = [&]() -> std::vector<HighsInt> {
+    std::vector<HighsInt> search_indices;
+    for (HighsInt i = 0; i < mip_search_concurrency; i++) {
+      if (!mipdata_->workers[i].search_ptr_->hasNode()) {
+        search_indices.emplace_back(i);
+      }
+    }
+    if (search_indices.size() > mipdata_->nodequeue.numActiveNodes()) {
+      search_indices.resize(mipdata_->nodequeue.numActiveNodes());
+    }
+    return search_indices;
+  };
+
+  auto installNodes = [&](std::vector<HighsInt>& search_indices,
+                          bool& limit_reached) -> void {
+    for (HighsInt index : search_indices) {
+      // TODO MT: Remove this dummy if statement
+      if (index != 0) return;
+      if (numQueueLeaves - lastLbLeave >= 10) {
+        mipdata_->workers[index].search_ptr_->installNode(
+            mipdata_->nodequeue.popBestBoundNode());
+        lastLbLeave = numQueueLeaves;
+      } else {
+        HighsInt bestBoundNodeStackSize =
+            mipdata_->nodequeue.getBestBoundDomchgStackSize();
+        double bestBoundNodeLb = mipdata_->nodequeue.getBestLowerBound();
+        HighsNodeQueue::OpenNode nextNode(mipdata_->nodequeue.popBestNode());
+        if (nextNode.lower_bound == bestBoundNodeLb &&
+            (HighsInt)nextNode.domchgstack.size() == bestBoundNodeStackSize)
+          lastLbLeave = numQueueLeaves;
+        mipdata_->workers[index].search_ptr_->installNode(std::move(nextNode));
+      }
+
+      ++numQueueLeaves;
+
+      if (mipdata_->workers[index].search_ptr_->getCurrentEstimate() >=
+          mipdata_->upper_limit) {
+        ++numStallNodes;
+        if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
+            numStallNodes >= options_mip_->mip_max_stall_nodes) {
+          limit_reached = true;
+          modelstatus_ = HighsModelStatus::kSolutionLimit;
+          break;
+        }
+      } else
+        numStallNodes = 0;
+    }
+  };
+
   auto diveAllSearches = [&]() -> bool {
     std::vector<double> dive_times(mip_search_concurrency,
                                    -analysis_.mipTimerRead(kMipClockTheDive));
@@ -802,36 +851,11 @@ restart:
     while (!mipdata_->nodequeue.empty()) {
       // printf("popping node from nodequeue (length = %" HIGHSINT_FORMAT ")\n",
       // (HighsInt)nodequeue.size());
-      assert(!search.hasNode());
+      std::vector<HighsInt> search_indices = getSearchIndicesWithNoNodes();
+      // if (search_indices.size() >= mip_search_concurrency) break;
 
-      if (numQueueLeaves - lastLbLeave >= 10) {
-        search.installNode(mipdata_->nodequeue.popBestBoundNode());
-        lastLbLeave = numQueueLeaves;
-      } else {
-        HighsInt bestBoundNodeStackSize =
-            mipdata_->nodequeue.getBestBoundDomchgStackSize();
-        double bestBoundNodeLb = mipdata_->nodequeue.getBestLowerBound();
-        HighsNodeQueue::OpenNode nextNode(mipdata_->nodequeue.popBestNode());
-        if (nextNode.lower_bound == bestBoundNodeLb &&
-            (HighsInt)nextNode.domchgstack.size() == bestBoundNodeStackSize)
-          lastLbLeave = numQueueLeaves;
-        search.installNode(std::move(nextNode));
-      }
-
-      ++numQueueLeaves;
-
-      if (search.getCurrentEstimate() >= mipdata_->upper_limit) {
-        ++numStallNodes;
-        if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
-            numStallNodes >= options_mip_->mip_max_stall_nodes) {
-          limit_reached = true;
-          modelstatus_ = HighsModelStatus::kSolutionLimit;
-          break;
-        }
-      } else
-        numStallNodes = 0;
-
-      assert(search.hasNode());
+      installNodes(search_indices, limit_reached);
+      if (limit_reached) break;
 
       // we evaluate the node directly here instead of performing a dive
       // because we first want to check if the node is not fathomed due to
