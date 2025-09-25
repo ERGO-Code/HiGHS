@@ -507,6 +507,36 @@ restart:
     }
   };
 
+  auto evaluateNodes = [&](std::vector<HighsInt>& search_indices) -> void {
+    std::vector<HighsSearch::NodeResult> search_results(search_indices.size());
+    analysis_.mipTimerStart(kMipClockEvaluateNode1);
+    for (HighsInt i = 0; i != search_indices.size(); i++) {
+      // TODO MT: Remove this dummy if statement
+      if (i != 0) continue;
+      if (mipdata_->parallelLockActive()) {
+        tg.spawn([&, i]() {
+          search_results[i] =
+              mipdata_->workers[search_indices[i]].search_ptr_->evaluateNode();
+        });
+      } else {
+        search_results[i] =
+            mipdata_->workers[search_indices[i]].search_ptr_->evaluateNode();
+      }
+    }
+    if (mipdata_->parallelLockActive()) tg.taskWait();
+    analysis_.mipTimerStop(kMipClockEvaluateNode1);
+    for (HighsInt i = 0; i != search_indices.size(); i++) {
+      // TODO MT: Remove this dummy if statement
+      if (i != 0) continue;
+      if (search_results[i] == HighsSearch::NodeResult::kSubOptimal) {
+        analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
+        mipdata_->workers[search_indices[i]].search_ptr_->currentNodeToQueue(
+            mipdata_->nodequeue);
+        analysis_.mipTimerStop(kMipClockCurrentNodeToQueue);
+      }
+    }
+  };
+
   auto diveAllSearches = [&]() -> bool {
     std::vector<double> dive_times(mip_search_concurrency,
                                    -analysis_.mipTimerRead(kMipClockTheDive));
@@ -860,15 +890,7 @@ restart:
       // we evaluate the node directly here instead of performing a dive
       // because we first want to check if the node is not fathomed due to
       // new global information before we perform separation rounds for the node
-      analysis_.mipTimerStart(kMipClockEvaluateNode1);
-      const HighsSearch::NodeResult evaluate_node_result =
-          search.evaluateNode();
-      analysis_.mipTimerStop(kMipClockEvaluateNode1);
-      if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
-        analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
-        search.currentNodeToQueue(mipdata_->nodequeue);
-        analysis_.mipTimerStop(kMipClockCurrentNodeToQueue);
-      }
+      evaluateNodes(search_indices);
 
       // if the node was pruned we remove it from the search and install the
       // next node from the queue
