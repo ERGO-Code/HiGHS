@@ -114,8 +114,8 @@ Int Analyse::getPermutation() {
 
   // set logging of Metis depending on debug level
   options[METIS_OPTION_DBGLVL] = 0;
-  if (log_->debug(2))
-    options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
+  if (log_->debug(2)) options[METIS_OPTION_DBGLVL] |= METIS_DBG_INFO;
+  if (log_->debug(3)) options[METIS_OPTION_DBGLVL] |= METIS_DBG_COARSEN;
 
   if (log_) log_->printDevInfo("Running Metis\n");
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
@@ -1295,7 +1295,16 @@ void Analyse::computeStackSize() {
 }
 
 void Analyse::generateParallelLayer(Int threads) {
+  // Look for a layer that splits the tree such that there are at least "pieces"
+  // subtrees in the layer, with the largest being no more than "ratio_thresh"
+  // times more expensive than the second largest.
+  const Int pieces = 2;
+  const double ratio_thresh = 4;
+
   if (threads > 1) {
+    std::stringstream log_stream;
+    log_stream << "Searching parallel layer\n";
+
     // linked lists of children
     std::vector<Int> head, next;
     childrenLinkedList(sn_parent_, head, next);
@@ -1351,6 +1360,8 @@ void Analyse::generateParallelLayer(Int threads) {
       if (sn_parent_[sn] == -1) layer.push_back(sn);
     }
 
+    double ops_above{};
+    double ops_small{};
     Int iter = 0;
     while (true) {
       // sort layer so that nodes with high subtree_ops appear last
@@ -1365,15 +1376,31 @@ void Analyse::generateParallelLayer(Int threads) {
         ratio_first_two = subtree_ops[*layer.rbegin()] /
                           subtree_ops[*std::next(layer.rbegin(), 1)];
 
-      // printf("iter %d,layer %d, above %d, small %d, ratio %f\n", iter,
-      //        layer.size(), aboveLayer_.size(), smallSubtrees_.size(),
-      //        ratio_first_two);
+      // log layer info
+      log_stream << "  iter " << iter << ": "
+                 << "L " << layer.size() << ", A " << aboveLayer_.size() << "("
+                 << fix(ops_above / total_ops * 100, 0, 1) << "%), S "
+                 << smallSubtrees_.size() << "("
+                 << fix(ops_small / total_ops * 100, 0, 1) << "%), ratio "
+                 << (layer.size() > 1 ? fix(ratio_first_two, 0, 1) : "-")
+                 << "\n  ";
+      for (Int i : layer) {
+        log_stream << "  " << fix(sn_ops[i] / total_ops * 100, 0, 1) << "("
+                   << fix(subtree_ops[i] / total_ops * 100, 0, 1) << ")";
+      }
+      log_stream << "\n";
 
       // if there are enough subtrees and they are somewhat balanced, stop
-      if (layer.size() >= threads && ratio_first_two < 2) break;
+      if (layer.size() >= pieces && ratio_first_two < ratio_thresh) {
+        log_stream << "  Accept layer\n";
+        break;
+      }
 
       // don't allow too many iterations
-      if (iter > sn_count_ / 10) break;
+      if (iter > sn_count_ / 10) {
+        log_stream << "  Too many iterations\n";
+        break;
+      }
 
       // find most expensive node in layer which have children
       Int node_to_remove = -1;
@@ -1385,13 +1412,17 @@ void Analyse::generateParallelLayer(Int threads) {
           break;
         }
       }
-      if (node_to_remove == -1) break;
+      if (node_to_remove == -1) {
+        log_stream << "  No candidate left\n";
+        break;
+      }
 
       // remove node from layer
       auto it = layer.begin();
       std::advance(it, index_to_remove);
       layer.erase(it);
       aboveLayer_.insert(node_to_remove);
+      ops_above += sn_ops[node_to_remove];
 
       // find child with most operations
       Int child_most_ops = -1;
@@ -1405,7 +1436,7 @@ void Analyse::generateParallelLayer(Int threads) {
         child = next[child];
       }
 
-      const double small_subtree_thresh = 0.001;
+      const double small_subtree_thresh = 0.01;
 
       // If child with most operations is large enough, ignore.
       // Otherwise, force at least this child to be added to layer.
@@ -1424,6 +1455,7 @@ void Analyse::generateParallelLayer(Int threads) {
           layer.push_back(child);
         } else {
           smallSubtrees_.insert(child);
+          ops_small += subtree_ops[child];
         }
         child = next[child];
       }
@@ -1439,6 +1471,8 @@ void Analyse::generateParallelLayer(Int threads) {
       layerIndex_.insert({*it, index});
       ++index;
     }
+
+    log_->printDevDetailed(log_stream);
   }
 
   // Compute the size of the stack needed to process the tree in serial. This is
