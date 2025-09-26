@@ -166,6 +166,21 @@ class Highs {
                                  const HighsInt iObj = -1);
 
   /**
+   * @brief Get number of linear objectives from the incumbent model
+   */
+  HighsInt getNumLinearObjectives() const {
+    return multi_linear_objective_.size();
+  }
+
+  /**
+   * @brief Get a linear objective from the incumbent model
+   */
+  const HighsLinearObjective& getLinearObjective(const HighsInt idx) const {
+    assert(idx >= 0 && idx < int(multi_linear_objective_.size()));
+    return multi_linear_objective_[idx];
+  }
+
+  /**
    * @brief Clear the multiple linear objective data
    */
   HighsStatus clearLinearObjectives();
