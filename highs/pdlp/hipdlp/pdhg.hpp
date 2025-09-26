@@ -63,6 +63,8 @@ class PDLPSolver {
   void UpdateAverageIterates(const std::vector<double>& x,
                              const std::vector<double>& y,
                              const PrimalDualParams& params, int inner_iter);
+  void ComputeAverageIterate(std::vector<double>& ax_avg,
+                                       std::vector<double>& aty_avg);
   double PowerMethod();
 
   // --- Step Update Methods (previously in Step) ---

@@ -395,7 +395,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   for (int iter = 0; iter < params_.max_iterations; ++iter) {
     debugPdlpIterLog(debug_pdlp_log_file_, iter, &debug_pdlp_data_,
-                     restart_scheme_.getBeta());
+                     restart_scheme_.getBeta(), stepsize_.primal_step,
+                     stepsize_.dual_step);
 
     // Check time limit
     if (solver_timer.read() > params_.time_limit) {
@@ -411,30 +412,14 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
                          (iter > 0 && (iter % PDHG_CHECK_INTERVAL == 0));
 
     if (bool_checking) {
+      std::cout << "sum_weights_ = " << sum_weights_ << "\n";
+      ComputeAverageIterate(Ax_avg, ATy_avg);
       // Compute matrix-vector products for current and average iterates
       linalg::Ax(lp, x_current_, Ax_cache_);
       linalg::ATy(lp, y_current_, ATy_cache_);
 
       // Reset the average iterate accumulation
       int inner_iter = iter - restart_scheme_.GetLastRestartIter();
-      //UpdateAverageIterates(x_current_, y_current_, working_params, inner_iter);
-
-      // Compute averages WITHOUT updating the accumulator
-      if (sum_weights_ > 0) {
-        for (size_t i = 0; i < x_avg_.size(); ++i) {
-          x_avg_[i] = x_sum_[i] / sum_weights_;
-        }
-        for (size_t i = 0; i < y_avg_.size(); ++i) {
-          y_avg_[i] = y_sum_[i] / sum_weights_;
-        }
-      } else {
-        // First iteration after restart or initial iteration
-        x_avg_ = x_current_;
-        y_avg_ = y_current_;
-      }
-
-      linalg::Ax(lp, x_avg_, Ax_avg);
-      linalg::ATy(lp, y_avg_, ATy_avg);
 
       // Compute residuals and convergence metrics
       SolverResults current_results;
@@ -509,16 +494,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         // Set x_current_ and y_current_ for the next iteration's starting point
         x_current_ = restart_x;
         y_current_ = restart_y;
-
-        //UpdateAverageIterates(
-        //    x_current_, y_current_, working_params,
-        //    -1);
-        x_sum_.assign(x_current_.size(), 0.0);
-        y_sum_.assign(y_current_.size(), 0.0);
-        sum_weights_ = 0.0;
-
-        x_avg_ = x_current_;
-        y_avg_ = y_current_;
 
         // Recompute Ax and ATy for the restarted iterates
         linalg::Ax(lp, x_current_, Ax_cache_);
@@ -652,7 +627,7 @@ void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
     stepsize_.beta = std::exp(2.0 * dLogBetaUpdate);
   }
 
-  stepsize_.primal_step = dMeanStepSize / working_params.omega;
+  stepsize_.primal_step = dMeanStepSize / std::sqrt(stepsize_.beta);
   stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
   working_params.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
   working_params.omega = std::sqrt(stepsize_.beta);
@@ -662,24 +637,34 @@ void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
                                        const std::vector<double>& y,
                                        const PrimalDualParams& params,
                                        int inner_iter) {
-  if (inner_iter == -1) {
-    // Reset for restart
-    x_sum_.assign(x.size(), 0.0);
-    y_sum_.assign(y.size(), 0.0);
-    sum_weights_ = 0.0;
-    // Initialize averages to current point
-    x_avg_ = x;
-    y_avg_ = y;
-  } else {
-    double weight = params.eta; // this should be the mean step size
-    for (size_t i = 0; i < x.size(); ++i) {
-      x_sum_[i] += x[i] * weight;
-    }
-    for (size_t i = 0; i < y.size(); ++i) {
-      y_sum_[i] += y[i] * weight;
-    }
-    sum_weights_ += weight;
+
+  double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
+
+  for (size_t i = 0; i < x.size(); ++i) {
+    x_sum_[i] += x[i] * dMeanStepSize;
   }
+  for (size_t i = 0; i < y.size(); ++i) {
+    y_sum_[i] += y[i] * dMeanStepSize;
+  }
+
+  sum_weights_ += dMeanStepSize;
+  
+}
+
+void PDLPSolver::ComputeAverageIterate(std::vector<double>& ax_avg,
+                                       std::vector<double>& aty_avg) {
+  double dPrimalScale = sum_weights_ > 1e-10 ? 1.0 / sum_weights_ : 1.0;
+  double dDualScale = sum_weights_ > 1e-10 ? 1.0 / sum_weights_ : 1.0;
+
+  for (size_t i = 0; i < x_avg_.size(); ++i) {
+    x_avg_[i] = x_sum_[i] * dPrimalScale;
+  }
+  for (size_t i = 0; i < y_avg_.size(); ++i) {
+    y_avg_[i] = y_sum_[i] * dDualScale; 
+  }
+
+  linalg::Ax(lp_, x_avg_, ax_avg);
+  linalg::ATy(lp_, y_avg_, aty_avg);
 }
 
 // lambda = c - proj_{\Lambda}(c - K^T y)
