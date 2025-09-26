@@ -35,7 +35,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   vectorsum.setDimension(numTransformedCol);
 
   for (HighsInt col : mipsolver.mipdata_->continuous_cols) {
-    if (mipsolver.mipdata_->workers.size() <= 1)
+    if (!mipsolver.mipdata_->parallelLockActive())
       mipsolver.mipdata_->implications.cleanupVarbounds(col);
 
     if (globaldom_.infeasible()) return;
@@ -66,7 +66,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     double bestub = globaldom_.col_upper_[col];
     double bestlb = globaldom_.col_lower_[col];
 
-    if (mipsolver.mipdata_->workers.size() <= 1)
+    if (!mipsolver.mipdata_->parallelLockActive())
       mipsolver.mipdata_->implications.cleanupVarbounds(col);
 
     if (globaldom_.infeasible()) return;

@@ -1386,6 +1386,12 @@ void HighsMipSolverData::performRestart() {
   // HighsNodeQueue oldNodeQueue;
   // std::swap(nodequeue, oldNodeQueue);
 
+  // Ensure master worker is pointing to the correct cut and conflict pools
+  if (mipsolver.options_mip_->mip_search_concurrency > 1) {
+    mipsolver.mipdata_->workers[0].cutpool_ = &cutpool;
+    mipsolver.mipdata_->workers[0].conflictpool_ = conflictPool;
+  }
+
   // remove the pointer into the stack-space of this function
   if (mipsolver.rootbasis == &root_basis) mipsolver.rootbasis = nullptr;
   mipsolver.pscostinit = nullptr;

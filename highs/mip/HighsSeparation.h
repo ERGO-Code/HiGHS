@@ -26,7 +26,7 @@ class HighsSeparation {
                            HighsLpRelaxation::Status& status);
 
   // void separate(HighsDomain& propdomain);
-  void separate(HighsMipWorker& worker, HighsDomain& propdomain);
+  void separate(HighsDomain& propdomain);
 
   void setLpRelaxation(HighsLpRelaxation* lp) { this->lp = lp; }
 

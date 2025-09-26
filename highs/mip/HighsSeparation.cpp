@@ -86,8 +86,9 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   // additional probing in parallel case
   if (&propdomain == &mipdata.domain) {
     lp->getMipSolver().timer_.start(implBoundClock);
-    mipdata.implications.separateImpliedBounds(
-        *lp, lp->getSolution().col_value, mipdata.cutpool, mipdata.feastol);
+    mipdata.implications.separateImpliedBounds(*lp, lp->getSolution().col_value,
+                                               *mipworker_.cutpool_,
+                                               mipdata.feastol);
     lp->getMipSolver().timer_.stop(implBoundClock);
   }
 
@@ -103,7 +104,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   if (&propdomain == &mipdata.domain) {
     lp->getMipSolver().timer_.start(cliqueClock);
     mipdata.cliquetable.separateCliques(lp->getMipSolver(), sol.col_value,
-                                        mipdata.cutpool, mipdata.feastol);
+                                        *mipworker_.cutpool_, mipdata.feastol);
     lp->getMipSolver().timer_.stop(cliqueClock);
   }
 
@@ -124,7 +125,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   HighsLpAggregator lpAggregator(*lp);
 
   for (const std::unique_ptr<HighsSeparator>& separator : separators) {
-    separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
+    separator->run(*lp, lpAggregator, transLp, *mipworker_.cutpool_);
     if (mipworker_.globaldom_.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       return 0;
@@ -137,8 +138,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
-  mipdata.cutpool.separate(sol.col_value, propdomain, cutset,
-                           mipdata.feastol, mipdata.cutpools);
+  mipworker_.cutpool_->separate(sol.col_value, propdomain, cutset,
+                                mipdata.feastol, mipdata.cutpools);
 
   if (cutset.numCuts() > 0) {
     ncuts += cutset.numCuts();
@@ -158,8 +159,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   return ncuts;
 }
 
-void HighsSeparation::separate(HighsMipWorker& worker,
-                               HighsDomain& propdomain) {
+void HighsSeparation::separate(HighsDomain& propdomain) {
   HighsLpRelaxation::Status status = lp->getStatus();
   const HighsMipSolver& mipsolver = lp->getMipSolver();
 
@@ -179,7 +179,7 @@ void HighsSeparation::separate(HighsMipWorker& worker,
       // mipsolver.mipdata_->total_lp_iterations += nlpiters;
 
       // todo:ig  more stats for separation iterations?
-      worker.heur_stats.lp_iterations += nlpiters;
+      mipworker_.heur_stats.lp_iterations += nlpiters;
 
       // printf("separated %" HIGHSINT_FORMAT " cuts\n", ncuts);
 
@@ -206,6 +206,6 @@ void HighsSeparation::separate(HighsMipWorker& worker,
 
     // mipsolver.mipdata_->cutpool.performAging();
     // ig: using worker cutpool
-    worker.cutpool_->performAging();
+    mipworker_.cutpool_->performAging();
   }
 }

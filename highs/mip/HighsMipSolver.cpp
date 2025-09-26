@@ -351,6 +351,8 @@ restart:
                                            options_mip_->mip_pool_soft_limit);
       master_worker.conflictpool_ = mipdata_->conflictpools.back();
     } else {
+      master_worker.cutpool_ = &mipdata_->cutpools[1];
+      master_worker.conflictpool_ = mipdata_->conflictpools[1];
       recreatePools(1, master_worker);
     }
     master_worker.upper_bound = mipdata_->upper_bound;
@@ -703,11 +705,11 @@ restart:
       if (i != 0) continue;
       if (mipdata_->parallelLockActive()) {
         tg.spawn([&, i]() {
-          mipdata_->workers[i].sepa_ptr_->separate(mipdata_->workers[i], mipdata_->workers[i].search_ptr_->getLocalDomain());
+          mipdata_->workers[i].sepa_ptr_->separate(
+              mipdata_->workers[i].search_ptr_->getLocalDomain());
         });
       } else {
         mipdata_->workers[i].sepa_ptr_->separate(
-            mipdata_->workers[i],
             mipdata_->workers[i].search_ptr_->getLocalDomain());
       }
     }
