@@ -24,7 +24,7 @@
 struct RestartInfo {
   bool should_restart = false;
   bool restart_to_average =
-      false;  // If true, restart to average; otherwise, to current
+      true;  // If true, restart to average; otherwise, to current
 };
 
 class RestartScheme {
