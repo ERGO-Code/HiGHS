@@ -148,18 +148,21 @@ double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2,
 }
 
 void HighsCutPool::lpCutRemoved(HighsInt cut, bool thread_safe) {
-  numLps_[cut].fetch_add(-1, std::memory_order_relaxed);
+  HighsInt numLps = numLps_[cut].fetch_add(-1, std::memory_order_relaxed);
   if (thread_safe) return;
   if (matrix_.columnsLinked(cut)) {
-    propRows.erase(std::make_pair(-1, cut));
+    propRows.erase(std::make_pair(ages_[cut], cut));
     propRows.emplace(1, cut);
   }
   ages_[cut] = 1;
   --numLpCuts;
   ++ageDistribution[1];
+  if (numLps == 0) {
+    numLps_[cut].fetch_add(-1, std::memory_order_relaxed);
+  }
 }
 
-void HighsCutPool::performAging(const bool parallel_sepa) {
+void HighsCutPool::performAging() {
   HighsInt cutIndexEnd = matrix_.getNumRows();
 
   HighsInt agelim = agelim_;
@@ -170,18 +173,16 @@ void HighsCutPool::performAging(const bool parallel_sepa) {
   }
 
   for (HighsInt i = 0; i != cutIndexEnd; ++i) {
-    if (numLps_[i] == 0 && ages_[i] >= 0 && parallel_sepa) {
-      ageDistribution[ages_[i]] -= 1;
-      lpCutRemoved(i);
-      numLps_[i] = -1;
-    } else if (numLps_[i] > 0 && ages_[i] >= 0 && parallel_sepa) {
-      // Age and propRows were not updated in the multi-thread case
+    if (numLps_[i] > 0 && ages_[i] >= 0) {
+      --ageDistribution[ages_[i]];
       if (matrix_.columnsLinked(i)) {
         propRows.erase(std::make_pair(ages_[i], i));
         propRows.emplace(-1, i);
       }
-      --ageDistribution[ages_[i]];
       ages_[i] = -1;
+    }
+    if (numLps_[i] == 0) {
+      lpCutRemoved(i);
     }
     if (ages_[i] < 0) continue;
 
@@ -369,7 +370,9 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   efficacious_cuts.resize(numefficacious);
 
-  HighsInt selectednnz = cutset.ARindex_.size();
+  HighsInt orignumcuts = cutset.numCuts();
+  HighsInt origselectednnz = cutset.ARindex_.size();
+  HighsInt selectednnz = origselectednnz;
 
   for (const std::pair<double, HighsInt>& p : efficacious_cuts) {
     bool discard = false;
@@ -415,8 +418,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   assert(int(cutset.ARvalue_.size()) == selectednnz);
   assert(int(cutset.ARindex_.size()) == selectednnz);
 
-  HighsInt offset = 0;
-  for (HighsInt i = 0; i != cutset.numCuts(); ++i) {
+  HighsInt offset = origselectednnz;
+  for (HighsInt i = orignumcuts; i != cutset.numCuts(); ++i) {
     cutset.ARstart_[i] = offset;
     HighsInt cut = cutset.cutindices[i];
     HighsInt start = matrix_.getRowStart(cut);

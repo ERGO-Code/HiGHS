@@ -140,6 +140,11 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
   mipworker_.cutpool_->separate(sol.col_value, propdomain, cutset,
                                 mipdata.feastol, mipdata.cutpools);
+  // Also separate the global cut pool
+  if (mipworker_.cutpool_ != &mipdata.cutpool) {
+    mipdata.cutpool.separate(sol.col_value, propdomain, cutset, mipdata.feastol,
+                             mipdata.cutpools, true);
+  }
 
   if (cutset.numCuts() > 0) {
     ncuts += cutset.numCuts();

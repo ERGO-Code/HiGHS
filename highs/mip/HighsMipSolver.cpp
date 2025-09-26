@@ -143,7 +143,6 @@ void HighsMipSolver::run() {
   HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
 restart:
-  mipdata_->parallel_lock = false;
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
     if (mipdata_->checkLimits()) {
@@ -315,7 +314,6 @@ restart:
   // Initialize worker relaxations and mipworkers
   // todo lps and workers are still empty right now
 
-  mipdata_->parallel_lock = true;
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt num_worker = mip_search_concurrency - 1;
   highs::parallel::TaskGroup tg;
@@ -412,6 +410,14 @@ restart:
     return search.performed_dive_;
   };
 
+  auto setParallelLock = [&](bool lock) -> void {
+    if (mipdata_->workers.size() <= 1) return;
+    mipdata_->parallel_lock = lock;
+    for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
+      conflictpool.setAgeLock(lock);
+    }
+  };
+
   auto syncSolutions = [&]() -> void {
     for (HighsMipWorker& worker : mipdata_->workers) {
       for (auto& sol : worker.solutions_) {
@@ -424,6 +430,16 @@ restart:
     for (HighsMipWorker& worker : mipdata_->workers) {
       assert(mipdata_->upper_bound <= worker.upper_bound);
       worker.upper_bound = mipdata_->upper_bound;
+    }
+  };
+
+  auto syncPools = [&]() -> void {
+    if (mipdata_->workers.size() <= 1 || mipdata_->parallelLockActive()) return;
+    for (HighsInt i = 1; i < mipdata_->conflictpools.size(); ++i) {
+      mipdata_->conflictpools[i].syncConflictPool(mipdata_->conflictPool);
+    }
+    for (HighsInt i = 1; i < mipdata_->cutpools.size(); ++i) {
+      mipdata_->cutpools[i].syncCutPool(*this, mipdata_->cutpool);
     }
   };
 
@@ -515,6 +531,7 @@ restart:
   auto evaluateNodes = [&](std::vector<HighsInt>& search_indices) -> void {
     std::vector<HighsSearch::NodeResult> search_results(search_indices.size());
     analysis_.mipTimerStart(kMipClockEvaluateNode1);
+    setParallelLock(true);
     for (HighsInt i = 0; i != search_indices.size(); i++) {
       // TODO MT: Remove this dummy if statement
       if (i != 0) continue;
@@ -529,6 +546,7 @@ restart:
       }
     }
     if (mipdata_->parallelLockActive()) tg.taskWait();
+    setParallelLock(false);
     analysis_.mipTimerStop(kMipClockEvaluateNode1);
     for (HighsInt i = 0; i != search_indices.size(); i++) {
       // TODO MT: Remove this dummy if statement
@@ -629,6 +647,7 @@ restart:
     std::deque<bool> infeasible;
     std::deque<bool> flush;
     std::vector<bool> prune(search_indices.size(), false);
+    setParallelLock(true);
     for (HighsInt i = 0; i < search_indices.size(); i++) {
       // TODO MT: Remove this redundant if
       if (search_indices[i] != 0 || !mipdata_->workers[search_indices[i]]
@@ -658,6 +677,7 @@ restart:
         }
       }
     }
+    setParallelLock(false);
 
     // Remove search indices that need a new node
     HighsInt num_search_indices = static_cast<HighsInt>(search_indices.size());
@@ -700,6 +720,7 @@ restart:
       [&](std::vector<HighsInt>& search_indices) -> bool {
     // the node is still not fathomed, so perform separation
     analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
+    setParallelLock(true);
     for (HighsInt i : search_indices) {
       // TODO MT: Get rid of this line
       if (i != 0) continue;
@@ -715,6 +736,7 @@ restart:
     }
     analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
     if (mipdata_->parallelLockActive()) tg.taskWait();
+    setParallelLock(false);
 
     for (HighsInt i : search_indices) {
       // TODO MT: Get rid of this line
@@ -765,6 +787,7 @@ restart:
                                    -analysis_.mipTimerRead(kMipClockTheDive));
     std::vector<HighsSearch::NodeResult> dive_results(
         mip_search_concurrency, HighsSearch::NodeResult::kBranched);
+    setParallelLock(true);
     if (mip_search_concurrency > 1) {
       for (int i = 0; i < mip_search_concurrency; i++) {
         tg.spawn([&, i]() {
@@ -784,6 +807,7 @@ restart:
         dive_times[0] += analysis_.mipTimerRead(kMipClockNodeSearch);
       }
     }
+    setParallelLock(false);
     bool suboptimal = false;
     for (int i = 0; i < mip_search_concurrency; i++) {
       if (dive_times[i] != -1) {

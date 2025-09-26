@@ -124,7 +124,7 @@ class HighsCutPool {
   double getParallelism(HighsInt row1, HighsInt row2,
                         const HighsCutPool& pool2) const;
 
-  void performAging(bool parallel_sepa = false);
+  void performAging();
 
   void lpCutRemoved(HighsInt cut, bool thread_safe = false);
 
