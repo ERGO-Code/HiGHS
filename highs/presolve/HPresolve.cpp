@@ -4535,11 +4535,11 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
       // skip binary variable if setting it to its lower bound does not make the
       // row redundant
-      if ((rhsFinite && impliedRowBounds.getResidualSumUpper(row, rowNz.index(),
-                                                             rowNz.value()) >
+      if ((rhsFinite && impliedRowBounds.getResidualSumUpperOrig(
+                            row, rowNz.index(), rowNz.value()) >
                             model->row_upper_[row] + primal_feastol) ||
-          (lhsFinite && impliedRowBounds.getResidualSumLower(row, rowNz.index(),
-                                                             rowNz.value()) <
+          (lhsFinite && impliedRowBounds.getResidualSumLowerOrig(
+                            row, rowNz.index(), rowNz.value()) <
                             model->row_lower_[row] - primal_feastol))
         continue;
 
