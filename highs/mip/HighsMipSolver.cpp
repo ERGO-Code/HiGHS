@@ -363,7 +363,7 @@ restart:
       mipdata_->lps.emplace_back(mipdata_->lp, i);
       mipdata_->cutpools.emplace_back(numCol(),
                                       options_mip_->mip_pool_age_limit,
-                                      options_mip_->mip_pool_soft_limit, i);
+                                      options_mip_->mip_pool_soft_limit, i + 1);
       mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
                                            options_mip_->mip_pool_soft_limit);
       mipdata_->workers.emplace_back(
@@ -721,6 +721,7 @@ restart:
     // due to parallelism)
     // TODO MT: Change the if statement
     // if (mipdata_->hasMultipleWorkers() && num_search_indices == 0) {
+    syncSolutions();
     if (mipdata_->hasMultipleWorkers() &&
         (num_search_indices == 0 || search_indices[0] != 0)) {
       double prev_lower_bound = mipdata_->lower_bound;
@@ -1153,6 +1154,7 @@ restart:
       // printf("popping node from nodequeue (length = %" HIGHSINT_FORMAT ")\n",
       // (HighsInt)nodequeue.size());
       std::vector<HighsInt> search_indices = getSearchIndicesWithNoNodes();
+      // TODO MT: Remove this line
       if (search_indices[0] != 0) break;
       // if (search_indices.size() >= mip_search_concurrency) break;
 
@@ -1174,6 +1176,7 @@ restart:
 
       bool infeasible = separateAndStoreBasis(search_indices);
       if (infeasible) break;
+      syncSolutions();
     }  // while(!mipdata_->nodequeue.empty())
     analysis_.mipTimerStop(kMipClockNodeSearch);
     if (analysis_.analyse_mip_time) {
