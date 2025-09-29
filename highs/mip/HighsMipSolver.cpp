@@ -414,7 +414,7 @@ restart:
   };
 
   auto setParallelLock = [&](bool lock) -> void {
-    if (mipdata_->workers.size() <= 1) return;
+    if (!mipdata_->hasMultipleWorkers()) return;
     mipdata_->parallel_lock = lock;
     for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
       conflictpool.setAgeLock(lock);
@@ -437,7 +437,8 @@ restart:
   };
 
   auto syncPools = [&]() -> void {
-    if (mipdata_->workers.size() <= 1 || mipdata_->parallelLockActive()) return;
+    if (!mipdata_->hasMultipleWorkers() || mipdata_->parallelLockActive())
+      return;
     for (HighsInt i = 1; i < mipdata_->conflictpools.size(); ++i) {
       mipdata_->conflictpools[i].syncConflictPool(mipdata_->conflictPool);
     }
@@ -447,17 +448,17 @@ restart:
   };
 
   auto syncGlobalDomain = [&]() -> void {
-    if (mipdata_->workers.size() <= 1) return;
+    if (!mipdata_->hasMultipleWorkers()) return;
     for (HighsMipWorker& worker : mipdata_->workers) {
       const auto& domchgstack = worker.globaldom_.getDomainChangeStack();
       for (const HighsDomainChange& domchg : domchgstack) {
         if ((domchg.boundtype == HighsBoundType::kLower &&
              domchg.boundval > mipdata_->domain.col_lower_[domchg.column]) ||
             (domchg.boundtype == HighsBoundType::kUpper &&
-                domchg.boundval < mipdata_->domain.col_upper_[domchg.column])) {
-            mipdata_->domain.changeBound(domchg,
-                                         HighsDomain::Reason::unspecified());
-          }
+             domchg.boundval < mipdata_->domain.col_upper_[domchg.column])) {
+          mipdata_->domain.changeBound(domchg,
+                                       HighsDomain::Reason::unspecified());
+        }
       }
     }
   };
@@ -465,7 +466,7 @@ restart:
   auto resetDomains = [&]() -> void {
     search.resetLocalDomain();
     mipdata_->domain.clearChangedCols();
-    if (mipdata_->workers.size() <= 1) return;
+    if (!mipdata_->hasMultipleWorkers()) return;
     for (HighsInt i = 1; i < mip_search_concurrency; i++) {
       mipdata_->domains[i] = mipdata_->domain;
       mipdata_->workers[i].globaldom_ = mipdata_->domains[i];
@@ -716,6 +717,21 @@ restart:
       }
     }
 
+    // Handle case where all nodes have been pruned (and lb hasn't been updated
+    // due to parallelism)
+    // TODO MT: Change the if statement
+    // if (mipdata_->hasMultipleWorkers() && num_search_indices == 0) {
+    if (mipdata_->hasMultipleWorkers() &&
+        (num_search_indices == 0 || search_indices[0] != 0)) {
+      double prev_lower_bound = mipdata_->lower_bound;
+      mipdata_->lower_bound = std::min(mipdata_->upper_bound,
+                                       mipdata_->nodequeue.getBestLowerBound());
+      if (!submip && (mipdata_->lower_bound != prev_lower_bound))
+        mipdata_->updatePrimalDualIntegral(
+            prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+            mipdata_->upper_bound);
+    }
+
     if (mipdata_->checkLimits()) {
       analysis_.mipTimerStop(kMipClockNodePrunedLoop);
       return std::make_pair(true, false);
@@ -926,7 +942,7 @@ restart:
         break;
       }
 
-      if (!mipdata_->parallelLockActive()) {
+      if (!mipdata_->hasMultipleWorkers()) {
         HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
         if (numPlungeNodes >= 100) break;
 
@@ -937,7 +953,7 @@ restart:
         if (!backtrack_plunge) break;
       }
 
-      if (!mipdata_->parallelLockActive()) assert(search.hasNode());
+      if (!mipdata_->hasMultipleWorkers()) assert(search.hasNode());
 
       analysis_.mipTimerStart(kMipClockPerformAging2);
       for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
@@ -952,7 +968,7 @@ restart:
         mipdata_->workers[i].search_ptr_->flushStatistics();
       }
       mipdata_->printDisplayLine();
-      if (mipdata_->parallelLockActive()) break;
+      if (mipdata_->hasMultipleWorkers()) break;
       // printf("continue plunging due to good estimate\n");
     }  // while (true)
     analysis_.mipTimerStop(kMipClockDive);

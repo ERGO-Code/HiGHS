@@ -157,7 +157,7 @@ void HighsCutPool::lpCutRemoved(HighsInt cut, bool thread_safe) {
   ages_[cut] = 1;
   --numLpCuts;
   ++ageDistribution[1];
-  if (numLps == 0) {
+  if (numLps == 1) {
     numLps_[cut].fetch_add(-1, std::memory_order_relaxed);
   }
 }
@@ -180,6 +180,7 @@ void HighsCutPool::performAging() {
         propRows.emplace(-1, i);
       }
       ages_[i] = -1;
+      ++numLpCuts;
     }
     if (numLps_[i] == 0) {
       lpCutRemoved(i);
@@ -250,10 +251,13 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     // if the cut is not violated more than feasibility tolerance
     // we skip it and increase its age, otherwise we reset its age
-    if (!thread_safe) ageDistribution[ages_[i]] -= 1;
     bool isPropagated = matrix_.columnsLinked(i);
-    if (isPropagated && !thread_safe)
-      propRows.erase(std::make_pair(ages_[i], i));
+    if (!thread_safe) {
+      ageDistribution[ages_[i]] -= 1;
+      if (isPropagated) {
+        propRows.erase(std::make_pair(ages_[i], i));
+      }
+    }
     if (double(viol) <= feastol) {
       if (thread_safe) continue;
       ++ages_[i];
@@ -384,6 +388,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
           break;
         }
       } else {
+        // TODO MT: Is this safe for the future? If we copy an LP with a cut
+        // from a local pool then this is not thread safe
         if (getParallelism(p.second, cutset.cutindices[i],
                            cutpools[cutset.cutpools[i]]) > maxpar) {
           discard = true;

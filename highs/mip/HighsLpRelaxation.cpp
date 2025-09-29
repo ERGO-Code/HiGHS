@@ -880,7 +880,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
   mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
                                              inds.size(), rhs);
-  if (extractCliques && mipsolver.mipdata_->workers.size() <= 1)
+  if (extractCliques && !mipsolver.mipdata_->parallelLockActive())
     mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
         mipsolver, inds.data(), vals.data(), inds.size(), rhs);
 
@@ -999,7 +999,7 @@ void HighsLpRelaxation::storeDualInfProof() {
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
       dualproofrhs);
 
-  if (mipsolver.mipdata_->workers.size() <= 1) {
+  if (!mipsolver.mipdata_->parallelLockActive()) {
     mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
         mipsolver, dualproofinds.data(), dualproofvals.data(),
         dualproofinds.size(), dualproofrhs);
@@ -1444,8 +1444,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             objsum += roundsol[i] * mipsolver.colCost(i);
 
           if (!mipsolver.mipdata_->parallelLockActive()) {
-            mipsolver.mipdata_->addIncumbent(roundsol, double(objsum),
-                                             kSolutionSourceSolveLp);
+            mipsolver.mipdata_->addIncumbent(
+                roundsol, static_cast<double>(objsum), kSolutionSourceSolveLp);
+          } else {
+            mipsolver.mipdata_->workers[index_].addIncumbent(
+                roundsol, static_cast<double>(objsum), kSolutionSourceSolveLp);
           }
           objsum = 0;
         }

@@ -258,7 +258,11 @@ struct HighsMipSolverData {
                             const HighsInt user_solution_callback_origin);
 
   bool parallelLockActive() const {
-    return (parallel_lock && workers.size() <= 1);
+    return (parallel_lock && hasMultipleWorkers());
+  }
+
+  bool hasMultipleWorkers() const {
+    return workers.size() > 1;
   }
 };
 
