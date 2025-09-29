@@ -251,12 +251,8 @@ bool HPresolve::isRedundant(HighsInt row) const {
 }
 
 bool HPresolve::yieldsImpliedLowerBound(HighsInt row, double val) const {
-  return ((val < 0 && model->row_upper_[row] != kHighsInf &&
-           impliedRowBounds.getSumUpper(row) >
-               model->row_upper_[row] + primal_feastol) ||
-          (val > 0 && model->row_lower_[row] != -kHighsInf &&
-           impliedRowBounds.getSumLower(row) <
-               model->row_lower_[row] - primal_feastol));
+  return ((val < 0 && model->row_upper_[row] != kHighsInf) ||
+          (val > 0 && model->row_lower_[row] != -kHighsInf));
 }
 
 bool HPresolve::yieldsImpliedUpperBound(HighsInt row, double val) const {
@@ -4557,10 +4553,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
               : -computeImpliedUpperBound(col, rowNz.index(),
                                           model->col_upper_[rowNz.index()]);
 
-      // round bound
-      if (model->integrality_[col] != HighsVarType::kContinuous)
-        bestBound = std::ceil(bestBound - primal_feastol);
-
       // check if lower / upper bound is implied
       if (bestBound >= direction * colBound - primal_feastol) {
         // substitute variable
@@ -4637,12 +4629,14 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
                                              model->col_upper_[col],
                                              model->col_lower_[col]));
-      } else if (numUpLocks == 1 && upLockRow != -1) {
+        if (colDeleted[col]) return Result::kOk;
+      }
+      if (numUpLocks == 1 && upLockRow != -1) {
         HPRESOLVE_CHECKED_CALL(substituteCol(col, upLockRow, HighsInt{-1},
                                              model->col_lower_[col],
                                              model->col_upper_[col]));
+        if (colDeleted[col]) return Result::kOk;
       }
-      if (colDeleted[col]) return Result::kOk;
     }
     // try to strengthen bounds
     double newBound = 0.0;
@@ -5199,14 +5193,22 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
       HighsCDouble residual;
       if ((direction > 0 && !isWorstCaseBound) ||
           (direction < 0 && isWorstCaseBound)) {
-        residual = impliedRowBounds.getResidualSumLower(
-            triplet.row, col, triplet.jval, boundCol, triplet.kval,
-            boundColValue);
+        residual = isWorstCaseBound
+                       ? impliedRowBounds.getResidualSumLower(
+                             triplet.row, col, triplet.jval, boundCol,
+                             triplet.kval, boundColValue)
+                       : impliedRowBounds.getResidualSumLowerOrig(
+                             triplet.row, col, triplet.jval, boundCol,
+                             triplet.kval, boundColValue);
         if (residual == -kHighsInf) return std::copysign(kHighsInf, val);
       } else {
-        residual = impliedRowBounds.getResidualSumUpper(
-            triplet.row, col, triplet.jval, boundCol, triplet.kval,
-            boundColValue);
+        residual = isWorstCaseBound
+                       ? impliedRowBounds.getResidualSumUpper(
+                             triplet.row, col, triplet.jval, boundCol,
+                             triplet.kval, boundColValue)
+                       : impliedRowBounds.getResidualSumUpperOrig(
+                             triplet.row, col, triplet.jval, boundCol,
+                             triplet.kval, boundColValue);
         if (residual == kHighsInf) return -std::copysign(kHighsInf, val);
       }
       return static_cast<double>((static_cast<HighsCDouble>(rhs) - residual) /
