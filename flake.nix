@@ -1,7 +1,7 @@
 {
   inputs = {
     nixpkgs = {
-      url = "github:nixos/nixpkgs/nixos-unstable";
+      url = "github:nixos/nixpkgs/nixpkgs-unstable";
     };
     flake-utils = {
       url = "github:numtide/flake-utils";
@@ -37,13 +37,13 @@
       };
 
       # Build the python package
-      highspy = pkgs.python3Packages.buildPythonPackage {
+      highspy = pkgs.python313Packages.buildPythonPackage {
         inherit version;
         pname = "highspy";
         src = pkgs.lib.cleanSource ./.;
         format = "pyproject";
         dontUseCmakeConfigure = true;
-        nativeBuildInputs = with pkgs.python3Packages; [
+        nativeBuildInputs = with pkgs.python313Packages; [
           numpy
           pathspec
           pybind11
@@ -65,7 +65,7 @@
       packages.highspy = highspy;
       devShells.highspy = pkgs.mkShell {
         buildInputs = [
-          (pkgs.python3.withPackages (ps: [ highspy ]) )
+          (pkgs.python313.withPackages (ps: [ highspy ]) )
         ];
       };
     }

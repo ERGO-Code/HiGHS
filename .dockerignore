@@ -1,0 +1,4 @@
+Dockerfile.nix
+.git
+nix-store-closure
+result
