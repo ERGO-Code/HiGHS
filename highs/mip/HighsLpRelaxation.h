@@ -311,6 +311,8 @@ class HighsLpRelaxation {
 
   void resetAges();
 
+  void notifyCutPoolsLpCopied(HighsInt n);
+
   void removeObsoleteRows(bool notifyPool = true);
 
   void removeCuts(HighsInt ndelcuts, std::vector<HighsInt>& deletemask);

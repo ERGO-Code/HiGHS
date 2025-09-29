@@ -377,6 +377,9 @@ restart:
     }
     mipdata_->workers[i].upper_bound = mipdata_->upper_bound;
   }
+  if (mip_search_concurrency > 1) {
+    mipdata_->lp.notifyCutPoolsLpCopied(mip_search_concurrency - 1);
+  }
 
   // Lambda for combining limit_reached across searches
   auto limitReached = [&]() -> bool {
@@ -448,8 +451,13 @@ restart:
     for (HighsMipWorker& worker : mipdata_->workers) {
       const auto& domchgstack = worker.globaldom_.getDomainChangeStack();
       for (const HighsDomainChange& domchg : domchgstack) {
-        mipdata_->domain.changeBound(domchg,
-                                     HighsDomain::Reason::unspecified());
+        if ((domchg.boundtype == HighsBoundType::kLower &&
+             domchg.boundval > mipdata_->domain.col_lower_[domchg.column]) ||
+            (domchg.boundtype == HighsBoundType::kUpper &&
+                domchg.boundval < mipdata_->domain.col_upper_[domchg.column])) {
+            mipdata_->domain.changeBound(domchg,
+                                         HighsDomain::Reason::unspecified());
+          }
       }
     }
   };

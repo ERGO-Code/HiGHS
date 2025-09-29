@@ -659,6 +659,18 @@ void HighsLpRelaxation::resetAges() {
   }
 }
 
+void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n) {
+  HighsInt nlprows = numRows();
+  HighsInt modelrows = mipsolver.numRow();
+  for (HighsInt i = modelrows; i != nlprows; ++i) {
+    if (lprows[i].origin == LpRow::Origin::kCutPool) {
+      assert(lprows[i].cutpool <= mipsolver.mipdata_->cutpools.size());
+      mipsolver.mipdata_->cutpools[lprows[i].cutpool].increaseNumLps(
+          lprows[i].index, n);
+    }
+  }
+}
+
 void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
   if (!domain.getChangedCols().empty()) {
     if (&domain == &mipsolver.mipdata_->domain) continuous = true;
