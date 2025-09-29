@@ -491,6 +491,10 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         x_at_last_restart_ = restart_x;  // Current becomes the new last
         y_at_last_restart_ = restart_y;
 
+        std::fill(x_sum_.begin(), x_sum_.end(), 0.0);
+        std::fill(y_sum_.begin(), y_sum_.end(), 0.0);
+        sum_weights_ = 0.0;
+
         // Set x_current_ and y_current_ for the next iteration's starting point
         x_current_ = restart_x;
         y_current_ = restart_y;
@@ -509,7 +513,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     // Record Ax norm for debugging
     debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_cache_);
-    debug_pdlp_data_.ax_average_norm = linalg::vector_norm(Ax_avg);
 
     // --- 5. Core PDHG Update Step ---
     bool step_success = true;
@@ -640,6 +643,9 @@ void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
 
   double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
+  // Debug: print what we're adding
+    double x_norm_before = linalg::vector_norm(x_sum_);
+
   for (size_t i = 0; i < x.size(); ++i) {
     x_sum_[i] += x[i] * dMeanStepSize;
   }
@@ -648,7 +654,8 @@ void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
   }
 
   sum_weights_ += dMeanStepSize;
-  
+  printf("x_sum norm before %g after %g \n", x_norm_before,
+         linalg::vector_norm(x_sum_));
 }
 
 void PDLPSolver::ComputeAverageIterate(std::vector<double>& ax_avg,
@@ -663,8 +670,10 @@ void PDLPSolver::ComputeAverageIterate(std::vector<double>& ax_avg,
     y_avg_[i] = y_sum_[i] * dDualScale; 
   }
 
+  debug_pdlp_data_.x_average_norm = linalg::vector_norm(x_avg_);
   linalg::Ax(lp_, x_avg_, ax_avg);
   linalg::ATy(lp_, y_avg_, aty_avg);
+  debug_pdlp_data_.ax_average_norm = linalg::vector_norm(ax_avg);
 }
 
 // lambda = c - proj_{\Lambda}(c - K^T y)
