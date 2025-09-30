@@ -340,7 +340,7 @@ restart:
 
   // (Re-)Initialise local cut and conflict pool for master worker
   if (mip_search_concurrency > 1) {
-    if (mipdata_->numRestarts <= mipdata_->numRestartsRoot) {
+    if (mipdata_->cutpools.size() <= 1) {
       mipdata_->cutpools.emplace_back(numCol(),
                                       options_mip_->mip_pool_age_limit,
                                       options_mip_->mip_pool_soft_limit, 1);
@@ -358,7 +358,7 @@ restart:
 
   // Create / re-initialise workers
   for (int i = 1; i < mip_search_concurrency; i++) {
-    if (mipdata_->numRestarts <= mipdata_->numRestartsRoot) {
+    if (mipdata_->workers.size() <= i) {
       mipdata_->domains.emplace_back(mipdata_->domain);
       mipdata_->lps.emplace_back(mipdata_->lp, i);
       mipdata_->cutpools.emplace_back(numCol(),
@@ -1010,6 +1010,7 @@ restart:
     analysis_.mipTimerStart(kMipClockDomainPropgate);
     // sync global domain changes from parallel dives
     syncGlobalDomain();
+    syncPools();
     mipdata_->domain.propagate();
     analysis_.mipTimerStop(kMipClockDomainPropgate);
 

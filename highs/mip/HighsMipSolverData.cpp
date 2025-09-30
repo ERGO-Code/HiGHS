@@ -27,8 +27,9 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       lp(lps.at(0)),
       cutpools(),
       cutpool(*cutpools.emplace(cutpools.end(), mipsolver.numCol(),
-                               mipsolver.options_mip_->mip_pool_age_limit,
-                               mipsolver.options_mip_->mip_pool_soft_limit, 0)),
+                                mipsolver.options_mip_->mip_pool_age_limit,
+                                mipsolver.options_mip_->mip_pool_soft_limit,
+                                0)),
       conflictpools(
           1, HighsConflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
                                mipsolver.options_mip_->mip_pool_soft_limit)),
@@ -1359,6 +1360,7 @@ void HighsMipSolverData::performRestart() {
     // is never applied, since MIP solving is complete, and
     // lower_bound is set to upper_bound, so apply the offset now, so
     // that housekeeping in updatePrimalDualIntegral is correct
+    // MT: If the model is optimal after presolve, then don't check prev data
     double prev_lower_bound = lower_bound - mipsolver.model_->offset_;
 
     lower_bound = upper_bound;
@@ -1370,8 +1372,9 @@ void HighsMipSolverData::performRestart() {
     bool bound_change = lower_bound != prev_lower_bound;
     assert(bound_change);
     if (!mipsolver.submip && bound_change)
-      updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                               upper_bound);
+      updatePrimalDualIntegral(
+          prev_lower_bound, lower_bound, upper_bound, upper_bound, true,
+          mipsolver.modelstatus_ != HighsModelStatus::kOptimal);
     if (mipsolver.solution_objective_ != kHighsInf &&
         mipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
       mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
