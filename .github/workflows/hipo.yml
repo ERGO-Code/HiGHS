@@ -1,0 +1,72 @@
+name: hipo
+on: [push, pull_request]
+jobs:
+  test-nix:
+    name: hipo ${{ matrix.os }} CMAKE_BUILD_TYPE=${{ matrix.build_type }} ALL_TESTS=${{ matrix.all_tests }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'macos-latest']
+        build_type: ['Release', 'Debug']
+        all_tests: ['OFF', 'ON']
+    steps:
+      - uses: actions/checkout@v4
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt update
+          sudo apt install libopenblas-dev
+          echo "TRIPLET=x86_64-linux-gnu" >> $GITHUB_ENV
+      - if : ${{ matrix.os == 'macos-latest' }}
+        run: echo "TRIPLET=aarch64-apple-darwin" >> $GITHUB_ENV
+      - run: |
+          mkdir installs
+          curl -L -o installs/METIS.tar.gz \
+            "https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v5.1.3%2B0/METIS.v5.1.3.${TRIPLET}.tar.gz"
+          tar -xzf installs/METIS.tar.gz -C installs
+          mkdir -p build
+          cd build
+          cmake \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DALL_TESTS=${{ matrix.all_tests }} \
+            -DHIPO=ON \
+            -DMETIS_ROOT=installs \
+            ..
+          cmake --build . --parallel
+          ctest --parallel --timeout 300 --output-on-failure --no-tests=error
+  test-win:
+    name: hipo windows-latest CMAKE_BUILD_TYPE=${{ matrix.build_type }} ALL_TESTS=${{ matrix.all_tests }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: ['Release', 'Debug']
+        all_tests: ['OFF', 'ON']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: galabovaa/METIS
+          ref: 510-w
+          path: METIS
+      - shell: bash
+        run: |
+          mkdir installs
+          INSTALLS_PREFIX=$(cygpath "${{ runner.workspace }}")/installs
+          cd METIS
+          cmake -S. -B build -DGKLIB_PATH=GKlib -DCMAKE_INSTALL_PREFIX=$INSTALLS_PREFIX
+          cmake --build build --parallel --config ${{ matrix.build_type }}
+          cmake --install build --config ${{ matrix.build_type }}
+          cd ..
+          vcpkg install openblas[threads]
+          cmake -E make_directory build
+          cd build
+          cmake \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DALL_TESTS=${{ matrix.all_tests }} \
+            -DHIPO=ON \
+            -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DMETIS_ROOT=$INSTALLS_PREFIX \
+            ..
+          cmake --build . --parallel --config ${{ matrix.build_type }}
+          ctest -C ${{ matrix.build_type }} --timeout 300 --output-on-failure --no-tests=error

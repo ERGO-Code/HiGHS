@@ -178,48 +178,26 @@ else()
 
   # Optional HIPO
   if (HIPO)
-
-    target_include_directories(highs PRIVATE 
+    target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
     )
-
-    if(APPLE)
-        target_link_libraries(highs "-framework Accelerate")
-        target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-    elseif(WIN32)
-        target_link_libraries(highs OpenBLAS::OpenBLAS)
+    target_link_libraries(highs BLAS::BLAS)
+    string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
+    if(blas_lower MATCHES "openblas")
         target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-        target_link_libraries(highs metis)
-        # target_link_libraries(highs gklib)
-    else() 
-        # LINUX
-        if(BLAS_LIB)
-            target_link_libraries(highs "${BLAS_LIB}")
-        elseif(OPENBLAS_LIB)
-            target_link_libraries(highs "${OPENBLAS_LIB}")
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-        else()
-            message(FATAL_ERROR "No BLAS library available")
-        endif(BLAS_LIB)
-    endif(APPLE)
-
-    if (NOT WIN32)
-      # Find_package works if deps are installed with vcpkg.
-
-      # Metis
+    elseif(blas_lower MATCHES "accelerate")
+        target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
+    endif()
+    if(metis_FOUND)
+      target_link_libraries(highs metis)
+    else()
       target_include_directories(highs PRIVATE "${METIS_PATH}")
       target_link_libraries(highs "${METIS_LIB}")
-
-      # GKlib
-      target_include_directories(highs PRIVATE "${GKLIB_PATH}")
-      target_link_libraries(highs "${GKLIB_LIB}")
     endif()
-
   endif()
-
 
   if(MSVC)
     list(APPEND highs_compile_opts
