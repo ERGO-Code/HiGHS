@@ -1,0 +1,5 @@
+solver = pdlp
+presolve = on
+log_dev_level = 3
+pdlp_features_off = 0
+

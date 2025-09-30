@@ -10,5 +10,3 @@ meld restart.cc $CU_PDLP_CPP_ROOT/src/restart.cc
 meld scaling.hpp $CU_PDLP_CPP_ROOT/include/scaling.hpp
 meld scaling.cc $CU_PDLP_CPP_ROOT/src/scaling.cc
 meld solver_results.hpp $CU_PDLP_CPP_ROOT/include/solver_results.hpp
-meld step.hpp $CU_PDLP_CPP_ROOT/include/step.hpp
-meld step.cc $CU_PDLP_CPP_ROOT/src/step.cc

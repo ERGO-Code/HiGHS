@@ -392,6 +392,10 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   // --- 2. Main PDHG Loop ---
   debugPdlpIterHeaderLog(debug_pdlp_log_file_);
   debugPdlpDataInitialise(&debug_pdlp_data_);
+  debug_pdlp_data_.ax_average_norm = 0.0;
+  debug_pdlp_data_.aty_average_norm = 0.0;
+  debug_pdlp_data_.x_average_norm = 0.0;
+  debug_pdlp_data_.ax_norm = 0.0;
 
   for (int iter = 0; iter < params_.max_iterations; ++iter) {
     debugPdlpIterLog(debug_pdlp_log_file_, iter, &debug_pdlp_data_,
@@ -412,7 +416,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
                          (iter > 0 && (iter % PDHG_CHECK_INTERVAL == 0));
 
     if (bool_checking) {
-      std::cout << "sum_weights_ = " << sum_weights_ << "\n";
       ComputeAverageIterate(Ax_avg, ATy_avg);
       // Compute matrix-vector products for current and average iterates
       linalg::Ax(lp, x_current_, Ax_cache_);
@@ -468,8 +471,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
           restart_scheme_.Check(iter, current_results, average_results);
 
       if (restart_info.should_restart) {
-        logger_.info("Restarting at iteration " + std::to_string(iter));
-
         std::vector<double> restart_x, restart_y;
         if (restart_info.restart_to_average) {
           // Restart from the average iterate
@@ -501,18 +502,18 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
         // Recompute Ax and ATy for the restarted iterates
         linalg::Ax(lp, x_current_, Ax_cache_);
+        debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_cache_);
         linalg::ATy(lp, y_current_, ATy_cache_);
-
+        debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
         restart_scheme_.SetLastRestartIter(iter);
       }
     } else {
       // If not checking, still need Ax and ATy for the update
       linalg::Ax(lp, x_current_, Ax_cache_);
+      debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_cache_);
       linalg::ATy(lp, y_current_, ATy_cache_);
+      debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
     }
-
-    // Record Ax norm for debugging
-    debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_cache_);
 
     // --- 5. Core PDHG Update Step ---
     bool step_success = true;
@@ -654,8 +655,6 @@ void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
   }
 
   sum_weights_ += dMeanStepSize;
-  printf("x_sum norm before %g after %g \n", x_norm_before,
-         linalg::vector_norm(x_sum_));
 }
 
 void PDLPSolver::ComputeAverageIterate(std::vector<double>& ax_avg,
@@ -670,10 +669,11 @@ void PDLPSolver::ComputeAverageIterate(std::vector<double>& ax_avg,
     y_avg_[i] = y_sum_[i] * dDualScale; 
   }
 
-  debug_pdlp_data_.x_average_norm = linalg::vector_norm(x_avg_);
+  debug_pdlp_data_.x_average_norm = linalg::vector_norm_squared(x_avg_);
   linalg::Ax(lp_, x_avg_, ax_avg);
   linalg::ATy(lp_, y_avg_, aty_avg);
-  debug_pdlp_data_.ax_average_norm = linalg::vector_norm(ax_avg);
+  debug_pdlp_data_.ax_average_norm = linalg::vector_norm_squared(ax_avg);
+  debug_pdlp_data_.aty_average_norm = linalg::vector_norm_squared(aty_avg);
 }
 
 // lambda = c - proj_{\Lambda}(c - K^T y)

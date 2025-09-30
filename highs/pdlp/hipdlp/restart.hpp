@@ -25,12 +25,16 @@ struct RestartInfo {
   bool should_restart = false;
   bool restart_to_average =
       true;  // If true, restart to average; otherwise, to current
+
+  RestartInfo(bool should_restart_, bool restart_to_average_)
+      : should_restart(should_restart_), restart_to_average(restart_to_average_){};
+
+  RestartInfo() = default;
 };
 
 class RestartScheme {
  public:
   RestartScheme() = default;
-
   void Initialize(const SolverResults& results);
 
   // Checks if a restart should be performed based on the chosen strategy
@@ -61,17 +65,20 @@ class RestartScheme {
   FILE* debug_pdlp_log_file_ = nullptr;
   DebugPdlpData* debug_pdlp_data_;
 
-  // Computes a merit score for a given set of residuals
-  double ComputeRestartScore(const SolverResults& results);
-
   RestartStrategy strategy_ = RestartStrategy::NO_RESTART;
   int fixed_restart_interval_ = 100;
   int last_restart_iter_ = 0;
   double beta_;
 
   // State for adaptive restart
-  double last_restart_score_ = 1;
-  double last_candidate_score_ = 1;
+  double primal_feas_last_restart_ = 0.0;
+  double dual_feas_last_restart_ = 0.0;
+  double duality_gap_last_restart_ = 0.0;
+  
+  double primal_feas_last_candidate_ = 0.0;
+  double dual_feas_last_candidate_ = 0.0;
+  double duality_gap_last_candidate_ = 0.0;
+
   double sufficient_decay_factor_ = 0.2;
   double necessary_decay_factor_ = 0.8;
 };
