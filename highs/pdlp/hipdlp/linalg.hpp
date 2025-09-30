@@ -40,6 +40,7 @@ double diffTwoNorm(const std::vector<double>& v1,
 // General norm functions
 double vector_norm(const std::vector<double>& vec, double p = 2.0);
 double vector_norm(const double* values, size_t size, double p = 2.0);
+double vector_norm_squared(const std::vector<double>& vec);
 
 // LP-specific norm calculations
 double compute_cost_norm(const HighsLp& lp, double p = 2.0);
