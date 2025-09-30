@@ -197,6 +197,7 @@ void HighsConflictPool::performAging(const bool thread_safe) {
 
     ageDistribution_[ages_[i]] -= 1;
     ages_[i] += 1;
+    usedInDive_[i] = false;
 
     if (ages_[i] > agelim) {
       ages_[i] = -1;
@@ -239,6 +240,7 @@ void HighsConflictPool::addConflictFromOtherPool(
     conflictRanges_.emplace_back(start, end);
     ages_.resize(conflictRanges_.size());
     modification_.resize(conflictRanges_.size());
+    usedInDive_.resize(conflictRanges_.size());
   } else {
     conflictIndex = deletedConflicts_.back();
     deletedConflicts_.pop_back();
@@ -246,13 +248,14 @@ void HighsConflictPool::addConflictFromOtherPool(
     conflictRanges_[conflictIndex].second = end;
   }
 
+  usedInDive_[conflictIndex] = false;
   modification_[conflictIndex] += 1;
   ages_[conflictIndex] = 0;
   ageDistribution_[ages_[conflictIndex]] += 1;
 
   for (HighsInt i = 0; i != conflictLen; ++i) {
     assert(start + i < end);
-    conflictEntries_[i] = conflictEntries[i];
+    conflictEntries_[start + i] = conflictEntries[i];
   }
 
   for (HighsDomain::ConflictPoolPropagation* conflictProp : propagationDomains)
@@ -265,6 +268,7 @@ void HighsConflictPool::syncConflictPool(HighsConflictPool& syncpool) {
     if (ages_[i] < 0) continue;
     HighsInt start = conflictRanges_[i].first;
     HighsInt end = conflictRanges_[i].second;
+    assert(start >= 0 && end >= 0);
     syncpool.addConflictFromOtherPool(&conflictEntries_[start], end - start);
     ageDistribution_[ages_[i]] -= 1;
     ages_[i] = -1;
@@ -276,4 +280,5 @@ void HighsConflictPool::syncConflictPool(HighsConflictPool& syncpool) {
   conflictEntries_.clear();
   modification_.clear();
   ages_.clear();
+  usedInDive_.clear();
 }

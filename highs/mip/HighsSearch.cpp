@@ -973,7 +973,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
   if (!inheuristic && !localdom.infeasible()) {
     if (getSymmetries().numPerms > 0 && !currnode.stabilizerOrbits &&
         (parent == nullptr || !parent->stabilizerOrbits ||
-         !parent->stabilizerOrbits->orbitCols.empty())) {
+         !parent->stabilizerOrbits->orbitCols.empty()) &&
+        !mipsolver.mipdata_->parallelLockActive()) {
       currnode.stabilizerOrbits =
           getSymmetries().computeStabilizerOrbits(localdom);
     }
@@ -1996,9 +1997,7 @@ const std::vector<HighsInt>& HighsSearch::getIntegralCols() const {
   return mipsolver.mipdata_->integral_cols;
 }
 
-HighsDomain& HighsSearch::getDomain() const {
-  return mipworker.globaldom_;
-}
+HighsDomain& HighsSearch::getDomain() const { return mipworker.globaldom_; }
 
 HighsConflictPool& HighsSearch::getConflictPool() const {
   return mipworker.conflictpool_;

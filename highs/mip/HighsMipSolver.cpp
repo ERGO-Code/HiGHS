@@ -504,8 +504,6 @@ restart:
   auto installNodes = [&](std::vector<HighsInt>& search_indices,
                           bool& limit_reached) -> void {
     for (HighsInt index : search_indices) {
-      // TODO MT: Remove this dummy if statement
-      if (index != 0) return;
       if (numQueueLeaves - lastLbLeave >= 10) {
         mipdata_->workers[index].search_ptr_->installNode(
             mipdata_->nodequeue.popBestBoundNode());
@@ -542,8 +540,6 @@ restart:
     analysis_.mipTimerStart(kMipClockEvaluateNode1);
     setParallelLock(true);
     for (HighsInt i = 0; i != search_indices.size(); i++) {
-      // TODO MT: Remove this dummy if statement
-      if (i != 0) continue;
       if (mipdata_->parallelLockActive()) {
         tg.spawn([&, i]() {
           search_results[i] =
@@ -558,8 +554,6 @@ restart:
     setParallelLock(false);
     analysis_.mipTimerStop(kMipClockEvaluateNode1);
     for (HighsInt i = 0; i != search_indices.size(); i++) {
-      // TODO MT: Remove this dummy if statement
-      if (i != 0) continue;
       if (search_results[i] == HighsSearch::NodeResult::kSubOptimal) {
         analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
         mipdata_->workers[search_indices[i]].search_ptr_->currentNodeToQueue(
@@ -653,17 +647,14 @@ restart:
     // If limit_reached then return something appropriate
     // In multi-thread case now check limits again after everything has been
     // flushed
-    std::deque<bool> infeasible;
-    std::deque<bool> flush;
+    std::deque<bool> infeasible(search_indices.size(), false);
+    std::deque<bool> flush(search_indices.size(), false);
     std::vector<bool> prune(search_indices.size(), false);
     setParallelLock(true);
     for (HighsInt i = 0; i < search_indices.size(); i++) {
-      // TODO MT: Remove this redundant if
-      if (search_indices[i] != 0 || !mipdata_->workers[search_indices[i]]
-                                         .search_ptr_->currentNodePruned())
+      if (!mipdata_->workers[search_indices[i]]
+               .search_ptr_->currentNodePruned())
         continue;
-      infeasible.emplace_back(false);
-      flush.emplace_back(false);
       if (mipdata_->parallelLockActive()) {
         tg.spawn([&, i]() {
           doHandlePrunedNodes(search_indices[i], mipdata_->parallelLockActive(),
@@ -719,11 +710,8 @@ restart:
 
     // Handle case where all nodes have been pruned (and lb hasn't been updated
     // due to parallelism)
-    // TODO MT: Change the if statement
-    // if (mipdata_->hasMultipleWorkers() && num_search_indices == 0) {
     syncSolutions();
-    if (mipdata_->hasMultipleWorkers() &&
-        (num_search_indices == 0 || search_indices[0] != 0)) {
+    if (mipdata_->hasMultipleWorkers() && num_search_indices == 0) {
       double prev_lower_bound = mipdata_->lower_bound;
       mipdata_->lower_bound = std::min(mipdata_->upper_bound,
                                        mipdata_->nodequeue.getBestLowerBound());
@@ -747,8 +735,6 @@ restart:
     analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
     setParallelLock(true);
     for (HighsInt i : search_indices) {
-      // TODO MT: Get rid of this line
-      if (i != 0) continue;
       if (mipdata_->parallelLockActive()) {
         tg.spawn([&, i]() {
           mipdata_->workers[i].sepa_ptr_->separate(
@@ -764,8 +750,6 @@ restart:
     setParallelLock(false);
 
     for (HighsInt i : search_indices) {
-      // TODO MT: Get rid of this line
-      if (i != 0) continue;
       if (mipdata_->workers[i].globaldom_.infeasible()) {
         mipdata_->workers[i].search_ptr_->cutoffNode();
         analysis_.mipTimerStart(kMipClockOpenNodesToQueue1);
@@ -1155,9 +1139,6 @@ restart:
       // printf("popping node from nodequeue (length = %" HIGHSINT_FORMAT ")\n",
       // (HighsInt)nodequeue.size());
       std::vector<HighsInt> search_indices = getSearchIndicesWithNoNodes();
-      // TODO MT: Remove this line
-      if (search_indices[0] != 0) break;
-      // if (search_indices.size() >= mip_search_concurrency) break;
 
       installNodes(search_indices, limit_reached);
       if (limit_reached) break;
@@ -1172,12 +1153,12 @@ restart:
       std::pair<bool, bool> limit_or_infeas = handlePrunedNodes(search_indices);
       if (limit_or_infeas.first) limit_reached = true;
       if (limit_or_infeas.first || limit_or_infeas.second) break;
-      // TODO MT: Change this line
-      if (search_indices.empty() || search_indices[0] != 0) continue;
+      if (search_indices.empty()) continue;
 
       bool infeasible = separateAndStoreBasis(search_indices);
       if (infeasible) break;
       syncSolutions();
+      break;
     }  // while(!mipdata_->nodequeue.empty())
     analysis_.mipTimerStop(kMipClockNodeSearch);
     if (analysis_.analyse_mip_time) {
