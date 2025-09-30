@@ -501,6 +501,16 @@ restart:
     return search_indices;
   };
 
+  auto getSearchIndicesWithNodes = [&]() -> std::vector<HighsInt> {
+    std::vector<HighsInt> search_indices;
+    for (HighsInt i = 0; i < mip_search_concurrency; i++) {
+      if (mipdata_->workers[i].search_ptr_->hasNode()) {
+        search_indices.emplace_back(i);
+      }
+    }
+    return search_indices;
+  };
+
   auto installNodes = [&](std::vector<HighsInt>& search_indices,
                           bool& limit_reached) -> void {
     for (HighsInt index : search_indices) {
@@ -791,9 +801,81 @@ restart:
     return false;
   };
 
+  auto doRunHeuristics = [&](HighsMipWorker& worker) -> void {
+    bool clocks = !mipdata_->parallelLockActive();
+    if (clocks) analysis_.mipTimerStart(kMipClockDiveEvaluateNode);
+    const HighsSearch::NodeResult evaluate_node_result =
+        worker.search_ptr_->evaluateNode();
+    if (clocks) analysis_.mipTimerStop(kMipClockDiveEvaluateNode);
+
+    if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) return;
+
+    if (worker.search_ptr_->currentNodePruned()) {
+      if (clocks) {
+        ++mipdata_->num_leaves;
+        search.flushStatistics();
+      }
+    } else {
+      if (clocks) analysis_.mipTimerStart(kMipClockDivePrimalHeuristics);
+      // TODO MT: Make trivial heuristics work locally
+      if (mipdata_->incumbent.empty() && clocks) {
+        analysis_.mipTimerStart(kMipClockDiveRandomizedRounding);
+        mipdata_->heuristics.randomizedRounding(
+            worker,
+            worker.lprelaxation_->getLpSolver().getSolution().col_value);
+        analysis_.mipTimerStop(kMipClockDiveRandomizedRounding);
+      }
+
+      if (mipdata_->incumbent.empty()) {
+        if (options_mip_->mip_heuristic_run_rens) {
+          if (clocks) analysis_.mipTimerStart(kMipClockDiveRens);
+          mipdata_->heuristics.RENS(
+              worker,
+              worker.lprelaxation_->getLpSolver().getSolution().col_value);
+          if (clocks) analysis_.mipTimerStop(kMipClockDiveRens);
+        }
+      } else {
+        if (options_mip_->mip_heuristic_run_rins) {
+          if (clocks) analysis_.mipTimerStart(kMipClockDiveRins);
+          mipdata_->heuristics.RINS(
+              worker,
+              worker.lprelaxation_->getLpSolver().getSolution().col_value);
+          if (clocks) analysis_.mipTimerStop(kMipClockDiveRins);
+        }
+      }
+
+      if (clocks) mipdata_->heuristics.flushStatistics(master_worker);
+      if (clocks) analysis_.mipTimerStop(kMipClockDivePrimalHeuristics);
+    }
+  };
+
+  auto runHeuristics = [&]() -> void {
+    setParallelLock(true);
+    std::vector<HighsInt> search_indices = getSearchIndicesWithNodes();
+    for (HighsInt i : search_indices) {
+      if (mipdata_->parallelLockActive()) {
+        tg.spawn([&, i]() { doRunHeuristics(mipdata_->workers[i]); });
+      } else {
+        doRunHeuristics(mipdata_->workers[i]);
+      }
+    }
+    if (mipdata_->parallelLockActive()) {
+      tg.taskWait();
+      for (const HighsInt i : search_indices) {
+        if (mipdata_->workers[i].search_ptr_->currentNodePruned()) {
+          ++mipdata_->num_leaves;
+          search.flushStatistics();
+        } else {
+          mipdata_->heuristics.flushStatistics(mipdata_->workers[i]);
+        }
+      }
+    }
+  };
+
   auto diveAllSearches = [&]() -> bool {
     std::vector<double> dive_times(mip_search_concurrency,
                                    -analysis_.mipTimerRead(kMipClockTheDive));
+    analysis_.mipTimerStart(kMipClockTheDive);
     std::vector<HighsSearch::NodeResult> dive_results(
         mip_search_concurrency, HighsSearch::NodeResult::kBranched);
     setParallelLock(true);
@@ -816,6 +898,7 @@ restart:
         dive_times[0] += analysis_.mipTimerRead(kMipClockNodeSearch);
       }
     }
+    analysis_.mipTimerStop(kMipClockTheDive);
     setParallelLock(false);
     bool suboptimal = false;
     for (int i = 0; i < mip_search_concurrency; i++) {
@@ -869,48 +952,7 @@ restart:
     while (true) {
       // Possibly apply primal heuristics
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-        analysis_.mipTimerStart(kMipClockDiveEvaluateNode);
-        const HighsSearch::NodeResult evaluate_node_result =
-            search.evaluateNode();
-        analysis_.mipTimerStop(kMipClockDiveEvaluateNode);
-
-        if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
-
-        if (search.currentNodePruned()) {
-          // ig: do we update num_leaves here?
-          ++mipdata_->num_leaves;
-          search.flushStatistics();
-        } else {
-          analysis_.mipTimerStart(kMipClockDivePrimalHeuristics);
-          if (mipdata_->incumbent.empty()) {
-            analysis_.mipTimerStart(kMipClockDiveRandomizedRounding);
-            mipdata_->heuristics.randomizedRounding(
-                master_worker,
-                mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockDiveRandomizedRounding);
-          }
-
-          if (mipdata_->incumbent.empty()) {
-            if (options_mip_->mip_heuristic_run_rens) {
-              analysis_.mipTimerStart(kMipClockDiveRens);
-              mipdata_->heuristics.RENS(
-                  master_worker,
-                  mipdata_->lp.getLpSolver().getSolution().col_value);
-              analysis_.mipTimerStop(kMipClockDiveRens);
-            }
-          } else {
-            if (options_mip_->mip_heuristic_run_rins) {
-              analysis_.mipTimerStart(kMipClockDiveRins);
-              mipdata_->heuristics.RINS(
-                  master_worker,
-                  mipdata_->lp.getLpSolver().getSolution().col_value);
-              analysis_.mipTimerStop(kMipClockDiveRins);
-            }
-          }
-
-          mipdata_->heuristics.flushStatistics(master_worker);
-          analysis_.mipTimerStop(kMipClockDivePrimalHeuristics);
-        }
+        runHeuristics();
       }
 
       considerHeuristics = false;
