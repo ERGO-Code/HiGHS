@@ -46,8 +46,18 @@ When both work, on Linux, you should check that `/usr/local/cuda` exists.
 
 #### Build
 
+##### CMake
+
 ```
 cmake -S . -B build -DCUPDLP_GPU=ON -DALL_TESTS=ON ..
 cmake --build build --parallel
 ```
 
+##### Bazel
+
+```bash
+# Will build with CUDA if a CUDA toolchain is detected
+bazel build //:highs 
+# Ensure the target is built without CUDA
+bazel build //:highs --@rules_cuda//cuda:enable=False
+```
