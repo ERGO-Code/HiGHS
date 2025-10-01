@@ -535,8 +535,7 @@ void HighsImplications::buildFrom(const HighsImplications& init) {
 
 void HighsImplications::separateImpliedBounds(
     const HighsLpRelaxation& lpRelaxation, const std::vector<double>& sol,
-    HighsCutPool& cutpool, double feastol) {
-  HighsDomain& globaldomain = mipsolver.mipdata_->domain;
+    HighsCutPool& cutpool, double feastol, HighsDomain& globaldom, bool thread_safe) {
 
   std::array<HighsInt, 2> inds;
   std::array<double, 2> vals;
@@ -545,7 +544,7 @@ void HighsImplications::separateImpliedBounds(
   HighsInt numboundchgs = 0;
 
   // first do probing on all candidates that have not been probed yet
-  if (!mipsolver.mipdata_->cliquetable.isFull()) {
+  if (!mipsolver.mipdata_->cliquetable.isFull() && !thread_safe) {
     auto oldNumQueries =
         mipsolver.mipdata_->cliquetable.numNeighbourhoodQueries;
     HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
@@ -553,8 +552,8 @@ void HighsImplications::separateImpliedBounds(
     for (std::pair<HighsInt, double> fracint :
          lpRelaxation.getFractionalIntegers()) {
       HighsInt col = fracint.first;
-      if (globaldomain.col_lower_[col] != 0.0 ||
-          globaldomain.col_upper_[col] != 1.0 ||
+      if (globaldom.col_lower_[col] != 0.0 ||
+          globaldom.col_upper_[col] != 1.0 ||
           (implicationsCached(col, 0) && implicationsCached(col, 1)))
         continue;
 
@@ -562,7 +561,7 @@ void HighsImplications::separateImpliedBounds(
       const bool probing_result = runProbing(col, numboundchgs);
       mipsolver.analysis_.mipTimerStop(kMipClockProbingImplications);
       if (probing_result) {
-        if (globaldomain.infeasible()) return;
+        if (globaldom.infeasible()) return;
       }
 
       if (mipsolver.mipdata_->cliquetable.isFull()) break;
@@ -580,7 +579,7 @@ void HighsImplications::separateImpliedBounds(
       // HighsInt oldNumEntries =
       // mipsolver.mipdata_->cliquetable.getNumEntries();
       if (!mipsolver.mipdata_->parallelLockActive())
-        mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldomain);
+        mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldom);
 
       // printf("numEntries: %d, beforeMerging: %d\n",
       //        mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
@@ -598,15 +597,15 @@ void HighsImplications::separateImpliedBounds(
        lpRelaxation.getFractionalIntegers()) {
     HighsInt col = fracint.first;
     // skip non binary variables
-    if (globaldomain.col_lower_[col] != 0.0 ||
-        globaldomain.col_upper_[col] != 1.0)
+    if (globaldom.col_lower_[col] != 0.0 ||
+        globaldom.col_upper_[col] != 1.0)
       continue;
 
     bool infeas;
     if (implicationsCached(col, 1)) {
       const std::vector<HighsDomainChange>& implics =
           getImplications(col, 1, infeas);
-      if (globaldomain.infeasible()) return;
+      if (globaldom.infeasible()) return;
 
       if (infeas) {
         vals[0] = 1.0;
@@ -620,27 +619,27 @@ void HighsImplications::separateImpliedBounds(
       for (HighsInt i = 0; i < nimplics; ++i) {
         if (implics[i].boundtype == HighsBoundType::kUpper) {
           if (implics[i].boundval + feastol >=
-              globaldomain.col_upper_[implics[i].column])
+              globaldom.col_upper_[implics[i].column])
             continue;
 
           vals[0] = 1.0;
           inds[0] = implics[i].column;
           vals[1] =
-              globaldomain.col_upper_[implics[i].column] - implics[i].boundval;
+              globaldom.col_upper_[implics[i].column] - implics[i].boundval;
           inds[1] = col;
-          rhs = globaldomain.col_upper_[implics[i].column];
+          rhs = globaldom.col_upper_[implics[i].column];
 
         } else {
           if (implics[i].boundval - feastol <=
-              globaldomain.col_lower_[implics[i].column])
+              globaldom.col_lower_[implics[i].column])
             continue;
 
           vals[0] = -1.0;
           inds[0] = implics[i].column;
           vals[1] =
-              globaldomain.col_lower_[implics[i].column] - implics[i].boundval;
+              globaldom.col_lower_[implics[i].column] - implics[i].boundval;
           inds[1] = col;
-          rhs = -globaldomain.col_lower_[implics[i].column];
+          rhs = -globaldom.col_lower_[implics[i].column];
         }
 
         double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
@@ -658,7 +657,7 @@ void HighsImplications::separateImpliedBounds(
     if (implicationsCached(col, 0)) {
       const std::vector<HighsDomainChange>& implics =
           getImplications(col, 0, infeas);
-      if (globaldomain.infeasible()) return;
+      if (globaldom.infeasible()) return;
 
       if (infeas) {
         vals[0] = -1.0;
@@ -672,24 +671,24 @@ void HighsImplications::separateImpliedBounds(
       for (HighsInt i = 0; i < nimplics; ++i) {
         if (implics[i].boundtype == HighsBoundType::kUpper) {
           if (implics[i].boundval + feastol >=
-              globaldomain.col_upper_[implics[i].column])
+              globaldom.col_upper_[implics[i].column])
             continue;
 
           vals[0] = 1.0;
           inds[0] = implics[i].column;
           vals[1] =
-              implics[i].boundval - globaldomain.col_upper_[implics[i].column];
+              implics[i].boundval - globaldom.col_upper_[implics[i].column];
           inds[1] = col;
           rhs = implics[i].boundval;
         } else {
           if (implics[i].boundval - feastol <=
-              globaldomain.col_lower_[implics[i].column])
+              globaldom.col_lower_[implics[i].column])
             continue;
 
           vals[0] = -1.0;
           inds[0] = implics[i].column;
           vals[1] =
-              globaldomain.col_lower_[implics[i].column] - implics[i].boundval;
+              globaldom.col_lower_[implics[i].column] - implics[i].boundval;
           inds[1] = col;
           rhs = -implics[i].boundval;
         }

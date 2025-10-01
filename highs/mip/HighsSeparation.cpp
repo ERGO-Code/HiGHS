@@ -82,15 +82,13 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     return numBoundChgs;
   };
 
-  // TODO: Only enable this after adding delta implications. Or simply disable
-  // additional probing in parallel case
-  if (&propdomain == &mipdata.domain) {
-    lp->getMipSolver().timer_.start(implBoundClock);
-    mipdata.implications.separateImpliedBounds(*lp, lp->getSolution().col_value,
-                                               *mipworker_.cutpool_,
-                                               mipdata.feastol);
-    lp->getMipSolver().timer_.stop(implBoundClock);
-  }
+  // TODO MT: Look into delta implications (probing for global info locally and
+  // buffer it)
+  lp->getMipSolver().timer_.start(implBoundClock);
+  mipdata.implications.separateImpliedBounds(
+      *lp, lp->getSolution().col_value, *mipworker_.cutpool_, mipdata.feastol,
+      mipworker_.globaldom_, mipdata.parallelLockActive());
+  lp->getMipSolver().timer_.stop(implBoundClock);
 
   HighsInt ncuts = 0;
   HighsInt numboundchgs = propagateAndResolve();

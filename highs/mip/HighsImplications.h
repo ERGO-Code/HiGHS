@@ -156,7 +156,8 @@ class HighsImplications {
 
   void separateImpliedBounds(const HighsLpRelaxation& lpRelaxation,
                              const std::vector<double>& sol,
-                             HighsCutPool& cutpool, double feastol);
+                             HighsCutPool& cutpool, double feastol,
+                             HighsDomain& globaldom, bool thread_safe);
 
   void cleanupVarbounds(HighsInt col);
 
