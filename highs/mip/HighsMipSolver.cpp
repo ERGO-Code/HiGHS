@@ -870,6 +870,7 @@ restart:
         }
       }
     }
+    setParallelLock(false);
   };
 
   auto diveAllSearches = [&]() -> bool {
