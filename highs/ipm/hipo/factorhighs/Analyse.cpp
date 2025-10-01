@@ -1294,12 +1294,34 @@ void Analyse::computeStackSize() {
   }
 }
 
+double assignToBins(std::vector<Int>& layer, std::vector<double>& ops,
+                    Int node_to_ignore, Int n_bins) {
+  // Sort the layer in decreasing order of ops; allocate nodes in bins; return
+  // the ops in the largest bin.
+
+  std::sort(layer.begin(), layer.end(),
+            [&](Int a, Int b) { return ops[a] > ops[b]; });
+
+  std::vector<double> bins(n_bins, 0.0);
+  for (auto it = layer.begin(); it != layer.end(); ++it) {
+    if (*it == node_to_ignore) continue;
+    auto it_least_load = std::min_element(bins.begin(), bins.end());
+    *it_least_load += ops[*it];
+  }
+
+  return *std::max_element(bins.begin(), bins.end());
+}
+
 void Analyse::generateParallelLayer(Int threads) {
-  // Look for a layer that splits the tree such that there are at least "pieces"
-  // subtrees in the layer, with the largest being no more than "ratio_thresh"
-  // times more expensive than the second largest.
-  const Int pieces = 2;
-  const double ratio_thresh = 4;
+  // Find "optimal" splitting of the tree.
+  // This function finds a set of nodes (layer), such that each subtree starting
+  // from a node in the layer will be executed in parallel. Any node left above
+  // the layer is executed in serial. Subtrees that are too small to have their
+  // own parallel task are added to the set of small subtrees, which are also
+  // executed in serial.
+
+  // percentage of total ops below which a subtree is considered small
+  const double small_thresh_coeff = 0.01;
 
   if (threads > 1) {
     std::stringstream log_stream;
@@ -1343,13 +1365,22 @@ void Analyse::generateParallelLayer(Int threads) {
       }
     }
 
-    // Generate a layer that cuts the tree in two.
-    // Subtrees in the layer are processed in parallel.
-    // The remaining nodes are processed in serial at the end.
-    // Keep track of:
-    // - subtrees in the layer
-    // - nodes removed from layer that end up above
-    // - subtrees not added because too small
+    // How the layer is found:
+    // assignToBins returns the largest number of operations in any thread with
+    // a given layer L, called f(L).
+    // The parallelisability ratio of a given layer is measured as
+    // total_ops / (ops_above + f(L))
+    // We want this number to be as large as possible. Equivalently, we want the
+    // score = ops_above + f(L) to be as small as possible.
+    // For each node p in the layer, compute the score when the layer is
+    // L' = L \ {p} U {children of p}.
+    // The improvement to the score brough by this layer compared to the
+    // previous one is measured by
+    // f(L) - f(L') - ops_of_node
+    // If this quantity is positive, there is an improvement when choosing L'
+    // over L. If there are nodes with positive improvement, take the best one,
+    // remove that node from the layer and add its children. If no node brings
+    // an improvement, then stop.
 
     std::vector<Int> layer;
     aboveLayer_.clear();
@@ -1362,107 +1393,112 @@ void Analyse::generateParallelLayer(Int threads) {
 
     double ops_above{};
     double ops_small{};
+
+    const double small_thresh = small_thresh_coeff * total_ops;
+
     Int iter = 0;
     while (true) {
-      // sort layer so that nodes with high subtree_ops appear last
-      std::sort(layer.begin(), layer.end(),
-                [&](Int a, Int b) { return subtree_ops[a] < subtree_ops[b]; });
-
-      // Ratio of most expensive subtree in the layer and second most expensive
-      // one. If this ratio is not too large, then the layer gives good
-      // parallelism at least on 2 threads.
-      double ratio_first_two = 10;
-      if (layer.size() > 1)
-        ratio_first_two = subtree_ops[*layer.rbegin()] /
-                          subtree_ops[*std::next(layer.rbegin(), 1)];
-
-      // log layer info
-      log_stream << "  iter " << iter << ": "
-                 << "L " << layer.size() << ", A " << aboveLayer_.size() << "("
-                 << fix(ops_above / total_ops * 100, 0, 1) << "%), S "
-                 << smallSubtrees_.size() << "("
-                 << fix(ops_small / total_ops * 100, 0, 1) << "%), ratio "
-                 << (layer.size() > 1 ? fix(ratio_first_two, 0, 1) : "-")
-                 << "\n  ";
-      for (Int i : layer) {
-        log_stream << "  " << fix(sn_ops[i] / total_ops * 100, 0, 1) << "("
-                   << fix(subtree_ops[i] / total_ops * 100, 0, 1) << ")";
-      }
+      // choose to remove node which produces the greatest benefit
       log_stream << "\n";
 
-      // if there are enough subtrees and they are somewhat balanced, stop
-      if (layer.size() >= pieces && ratio_first_two < ratio_thresh) {
-        log_stream << "  Accept layer\n";
-        break;
-      }
+      double current_largest_bin =
+          assignToBins(layer, subtree_ops, -1, threads);
 
-      // don't allow too many iterations
-      if (iter > sn_count_ / 10) {
-        log_stream << "  Too many iterations\n";
-        break;
-      }
+      double best_score = -kHighsInf;
+      std::vector<Int>::iterator best_it;
+      double best_largest_bin;
 
-      // find most expensive node in layer which have children
-      Int node_to_remove = -1;
-      Int index_to_remove = -1;
-      for (Int i = layer.size() - 1; i >= 0; --i) {
-        if (head[layer[i]] != -1) {
-          index_to_remove = i;
-          node_to_remove = layer[i];
-          break;
+      bool any_node_with_large_children = false;
+
+      // loop over all nodes in the current layer
+      for (auto it = layer.begin(); it != layer.end(); ++it) {
+        // build layer obtained adding children
+        std::vector<Int> local_layer = layer;
+        Int child = head[*it];
+        while (child != -1) {
+          if (subtree_ops[child] > small_thresh) {
+            local_layer.push_back(child);
+            any_node_with_large_children = true;
+          }
+          child = next[child];
         }
+
+        // compute largest bin with this new layer
+        double largest_bin =
+            assignToBins(local_layer, subtree_ops, *it, threads);
+
+        double score = current_largest_bin - largest_bin - sn_ops[*it];
+
+        if (score > best_score) {
+          best_score = score;
+          best_it = it;
+          best_largest_bin = largest_bin;
+        }
+
+        log_stream << "\t"
+                   << fix(total_ops / (ops_above + sn_ops[*it] + largest_bin),
+                          0, 2)
+                   << " (" << sci(score, 0, 1) << ")\n";
       }
-      if (node_to_remove == -1) {
-        log_stream << "  No candidate left\n";
+
+      log_stream << "Iter " << integer(iter) << ": ";
+
+      // no node brings a benefit
+      if (best_score < 0 || !any_node_with_large_children) {
+        log_stream << "fail\n";
         break;
-      }
+      } else {
+        Int node_to_erase = *best_it;
+        layer.erase(best_it);
+        aboveLayer_.insert(node_to_erase);
+        ops_above += sn_ops[node_to_erase];
 
-      // remove node from layer
-      auto it = layer.begin();
-      std::advance(it, index_to_remove);
-      layer.erase(it);
-      aboveLayer_.insert(node_to_remove);
-      ops_above += sn_ops[node_to_remove];
-
-      // find child with most operations
-      Int child_most_ops = -1;
-      double ops_child_most_ops = -1;
-      Int child = head[node_to_remove];
-      while (child != -1) {
-        if (subtree_ops[child] > ops_child_most_ops) {
-          ops_child_most_ops = subtree_ops[child];
-          child_most_ops = child;
+        // find child with most operations
+        Int child = head[node_to_erase];
+        double largest_ops{};
+        double child_largest = -1;
+        while (child != -1) {
+          if (subtree_ops[child] > largest_ops) {
+            largest_ops = subtree_ops[child];
+            child_largest = child;
+          }
+          child = next[child];
         }
-        child = next[child];
-      }
 
-      const double small_subtree_thresh = 0.01;
+        // If child with most operations is large enough, ignore.
+        // Otherwise, force at least this child to be added to layer.
+        // This guarantees that the layer does not shrink.
+        if (largest_ops > small_thresh) child_largest = -1;
 
-      // If child with most operations is large enough, ignore.
-      // Otherwise, force at least this child to be added to layer.
-      // This guarantees that the layer does not shrink.
-      if (ops_child_most_ops > total_ops * small_subtree_thresh) {
-        child_most_ops = -1;
-      }
-
-      child = head[node_to_remove];
-      while (child != -1) {
-        // Add child if it is large enough
-        // (don't want to produce parallel tasks for tiny subtrees).
-        // Otherwise, keep track of small subtrees to be processed in serial.
-        if (subtree_ops[child] > total_ops * small_subtree_thresh ||
-            child == child_most_ops) {
-          layer.push_back(child);
-        } else {
-          smallSubtrees_.insert(child);
-          ops_small += subtree_ops[child];
+        child = head[node_to_erase];
+        while (child != -1) {
+          if (subtree_ops[child] > small_thresh || child == child_largest)
+            layer.push_back(child);
+          else {
+            smallSubtrees_.insert(child);
+            ops_small += subtree_ops[child];
+          }
+          child = next[child];
         }
-        child = next[child];
+
+        log_stream << "ratio "
+                   << fix(total_ops / (ops_above + best_largest_bin), 0, 2)
+                   << ", layer " << integer(layer.size()) << '\n';
       }
 
       ++iter;
     }
     // layer has been decided
+
+    log_stream << "\nLayer " << integer(layer.size()) << ": ";
+    for (Int i : layer)
+      log_stream << fix(subtree_ops[i] / total_ops * 100, 0, 1) << " ";
+    log_stream << "\nAbove " << fix(ops_above / total_ops * 100, 0, 1) << "% ("
+               << integer(aboveLayer_.size()) << ")\n";
+    log_stream << "Small " << fix(ops_small / total_ops * 100, 0, 1) << "% ("
+               << integer(smallSubtrees_.size()) << ")\n";
+
+    log_->printDevDetailed(log_stream);
 
     // layerIndex stores pairs {i,j} indicating that node i is the j-th subtree
     // in the layer.
@@ -1471,8 +1507,6 @@ void Analyse::generateParallelLayer(Int threads) {
       layerIndex_.insert({*it, index});
       ++index;
     }
-
-    log_->printDevDetailed(log_stream);
   }
 
   // Compute the size of the stack needed to process the tree in serial. This is
@@ -1517,6 +1551,7 @@ void Analyse::generateParallelLayer(Int threads) {
     layerSubtreesInfo_[index].stack = stack_subtree_parallel_[node];
   }
 
+  // generate info about small subtrees
   smallSubtreesInfo_.resize(smallSubtrees_.size());
   Int index = 0;
   for (auto it = smallSubtrees_.begin(); it != smallSubtrees_.end(); ++it) {
