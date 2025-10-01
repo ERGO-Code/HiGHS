@@ -1,5 +1,7 @@
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_cuda//cuda:defs.bzl", "cuda_library", "requires_cuda")
 
 copy_file(
     name = "highs-config",
@@ -8,10 +10,34 @@ copy_file(
     visibility = ["//visibility:public"],
 )
 
+selects.config_setting_group(
+    name = "cuda_enabled",
+    match_all = [
+        "@rules_cuda//cuda:is_valid_toolchain_found",
+        "@rules_cuda//cuda:is_enabled",
+    ],
+)
+
 cc_library(
     name = "config",
     srcs = ["HConfig.h"],
     visibility = ["//visibility:public"],
+)
+
+cuda_library(
+    name = "cupdlp",
+    srcs = glob([
+        "highs/pdlp/cupdlp/cuda/*.cu",
+    ]),
+    hdrs = glob([
+        "highs/pdlp/cupdlp/cuda/*.cuh",
+    ]),
+    defines = ["CUPDLP_GPU"],
+    target_compatible_with = requires_cuda(),
+    deps = [
+        "@local_cuda//:cublas",
+        "@local_cuda//:cusparse",
+    ],
 )
 
 cc_library(
@@ -49,6 +75,10 @@ cc_library(
             "-Wno-unused-but-set-variable",
         ],
     }),
+    defines = select({
+        ":cuda_enabled": ["CUPDLP_GPU"],
+        "//conditions:default": ["CUPDLP_CPU"],
+    }),
     includes = [
         "extern",
         # "extern/filereaderlp",
@@ -76,7 +106,10 @@ cc_library(
     deps = [
         "//:config",
         "@zlib",
-    ],
+    ] + select({
+        ":cuda_enabled": [":cupdlp"],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(
