@@ -445,6 +445,7 @@ restart:
     for (HighsInt i = 1; i < mipdata_->cutpools.size(); ++i) {
       mipdata_->cutpools[i].syncCutPool(*this, mipdata_->cutpool);
     }
+    mipdata_->cutpool.performAging();
   };
 
   auto syncGlobalDomain = [&]() -> void {

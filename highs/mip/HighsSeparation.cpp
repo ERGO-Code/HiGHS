@@ -211,6 +211,9 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
 
     // mipsolver.mipdata_->cutpool.performAging();
     // ig: using worker cutpool
-    mipworker_.cutpool_->performAging();
+    // TODO MT: Is this thread safe? Depends if LP is only copied at the start.
+    if (!mipsolver.mipdata_->parallelLockActive()) {
+      mipworker_.cutpool_->performAging();
+    }
   }
 }
