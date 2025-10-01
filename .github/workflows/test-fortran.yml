@@ -1,0 +1,31 @@
+name: fortran
+on: [push, pull_request]
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+            version: 12
+          - os: ubuntu-latest
+            compiler: gcc
+            version: 13
+          - os: macos-15-intel
+            compiler: gcc
+            version: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
+      - run: |
+          cmake -E make_directory ${{runner.workspace}}/build
+          cd ${{runner.workspace}}
+          cmake $GITHUB_WORKSPACE -DFORTRAN=ON
+          cmake --build . --parallel
+          ./bin/fortrantest
