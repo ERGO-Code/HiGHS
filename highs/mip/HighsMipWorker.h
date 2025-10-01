@@ -29,7 +29,7 @@ class HighsMipWorker {
   HighsLpRelaxation* lprelaxation_;
   HighsDomain& globaldom_;
   HighsCutPool* cutpool_;
-  HighsConflictPool& conflictpool_;
+  HighsConflictPool* conflictpool_;
 
   std::unique_ptr<HighsSearch> search_ptr_;
   std::unique_ptr<HighsSeparation> sepa_ptr_;
@@ -49,7 +49,7 @@ class HighsMipWorker {
                  HighsLpRelaxation* lprelax_,
                  HighsDomain& domain,
                  HighsCutPool* cutpool,
-                 HighsConflictPool& conflictpool);
+                 HighsConflictPool* conflictpool);
 
   ~HighsMipWorker() {
     // search_ptr_.release();

@@ -138,7 +138,7 @@ void HighsMipSolver::run() {
   // Now the worker lives in mipdata.
   // The master worker is used in evaluateRootNode.
   mipdata_->workers.emplace_back(*this, &mipdata_->lp, mipdata_->domain,
-                                 &mipdata_->cutpool, mipdata_->conflictPool);
+                                 &mipdata_->cutpool, &mipdata_->conflictPool);
 
   HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
@@ -312,73 +312,60 @@ restart:
   int k = 0;
 
   // Initialize worker relaxations and mipworkers
-  // todo lps and workers are still empty right now
-
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt num_worker = mip_search_concurrency - 1;
   highs::parallel::TaskGroup tg;
 
-  auto recreatePools = [&](HighsInt index, HighsMipWorker& worker) -> void {
-    HighsCutPool* p = &mipdata_->cutpools.at(index);
-    p->~HighsCutPool();
-    ::new (static_cast<void*>(p))
-        HighsCutPool(numCol(), options_mip_->mip_pool_age_limit,
-                     options_mip_->mip_pool_soft_limit, index);
-    mipdata_->conflictpools[index] =
-        HighsConflictPool(5 * options_mip_->mip_pool_age_limit,
-                          options_mip_->mip_pool_soft_limit);
-    worker.conflictpool_ = mipdata_->conflictpools[index];
+  auto destroyOldWorkers = [&]() {
+    if (mipdata_->workers.size() <= 1) return;
+    while (mipdata_->cutpools.size() > 1) {
+      mipdata_->cutpools.pop_back();
+    }
+    while (mipdata_->conflictpools.size() > 1) {
+      mipdata_->conflictpools.pop_back();
+    }
+    while (mipdata_->domains.size() > 1) {
+      mipdata_->domains.pop_back();
+    }
+    while (mipdata_->lps.size() > 1) {
+      mipdata_->lps.pop_back();
+    }
+    while (mipdata_->workers.size() > 1) {
+      mipdata_->workers.pop_back();
+    }
   };
 
-  auto recreateLpAndDomains = [&](HighsInt index, HighsMipWorker& worker) {
-    HighsLpRelaxation* p = &mipdata_->lps.at(index);
-    p->~HighsLpRelaxation();
-    ::new (p) HighsLpRelaxation(mipdata_->lp, index);
-    mipdata_->domains[index] = HighsDomain(mipdata_->domain);
-    worker.globaldom_ = mipdata_->domains.at(index);
+  auto constructMasterWorkerPools = [&](HighsMipWorker& worker) {
+    assert(mipdata_->cutpools.size() == 1 &&
+           mipdata_->conflictpools.size() == 1);
+    mipdata_->cutpools.emplace_back(numCol(), options_mip_->mip_pool_age_limit,
+                                    options_mip_->mip_pool_soft_limit, 1);
+    worker.cutpool_ = &mipdata_->cutpools.back();
+    mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
+                                         options_mip_->mip_pool_soft_limit);
+    worker.conflictpool_ = &mipdata_->conflictpools.back();
   };
 
-  // (Re-)Initialise local cut and conflict pool for master worker
-  if (mip_search_concurrency > 1) {
-    if (mipdata_->cutpools.size() <= 1) {
-      mipdata_->cutpools.emplace_back(numCol(),
-                                      options_mip_->mip_pool_age_limit,
-                                      options_mip_->mip_pool_soft_limit, 1);
-      master_worker.cutpool_ = &mipdata_->cutpools.back();
-      mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
-                                           options_mip_->mip_pool_soft_limit);
-      master_worker.conflictpool_ = mipdata_->conflictpools.back();
-    } else {
-      master_worker.cutpool_ = &mipdata_->cutpools[1];
-      master_worker.conflictpool_ = mipdata_->conflictpools[1];
-      recreatePools(1, master_worker);
-    }
-    master_worker.upper_bound = mipdata_->upper_bound;
-  }
+  auto createNewWorker = [&](HighsInt i) {
+    mipdata_->domains.emplace_back(mipdata_->domain);
+    mipdata_->lps.emplace_back(mipdata_->lp, i);
+    mipdata_->cutpools.emplace_back(numCol(),
+                                    options_mip_->mip_pool_age_limit,
+                                    options_mip_->mip_pool_soft_limit, i + 1);
+    mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
+                                         options_mip_->mip_pool_soft_limit);
+    mipdata_->workers.emplace_back(
+        *this, &mipdata_->lps.back(), mipdata_->domains.back(),
+        &mipdata_->cutpools.back(), &mipdata_->conflictpools.back());
+    mipdata_->lp.notifyCutPoolsLpCopied(1);
+  };
 
-  // Create / re-initialise workers
-  for (int i = 1; i < mip_search_concurrency; i++) {
-    if (mipdata_->workers.size() <= i) {
-      mipdata_->domains.emplace_back(mipdata_->domain);
-      mipdata_->lps.emplace_back(mipdata_->lp, i);
-      mipdata_->cutpools.emplace_back(numCol(),
-                                      options_mip_->mip_pool_age_limit,
-                                      options_mip_->mip_pool_soft_limit, i + 1);
-      mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
-                                           options_mip_->mip_pool_soft_limit);
-      mipdata_->workers.emplace_back(
-          *this, &mipdata_->lps.back(), mipdata_->domains.back(),
-          &mipdata_->cutpools.back(), mipdata_->conflictpools.back());
-    } else {
-      recreatePools(i + 1, mipdata_->workers.at(i));
-      recreateLpAndDomains(i, mipdata_->workers.at(i));
-      mipdata_->workers[i].resetSearch();
-      mipdata_->workers[i].resetSepa();
-    }
-    mipdata_->workers[i].upper_bound = mipdata_->upper_bound;
-  }
-  if (mip_search_concurrency > 1) {
-    mipdata_->lp.notifyCutPoolsLpCopied(mip_search_concurrency - 1);
+  destroyOldWorkers();
+  constructMasterWorkerPools(master_worker);
+  master_worker.upper_bound = mipdata_->upper_bound;
+  master_worker.solutions_.clear();
+  for (HighsInt i = 1; i != mip_search_concurrency; ++i) {
+    createNewWorker(i);
   }
 
   // Lambda for combining limit_reached across searches

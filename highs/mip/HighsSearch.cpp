@@ -1092,7 +1092,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
             }
             HighsRedcostFixing::propagateRedCost(mipsolver, localdom,
                                                  mipworker.globaldom_, *lp,
-                                                 mipworker.conflictpool_);
+                                                 getConflictPool());
             localdom.propagate();
             if (localdom.infeasible()) {
               result = NodeResult::kDomainInfeasible;
@@ -2000,13 +2000,11 @@ const std::vector<HighsInt>& HighsSearch::getIntegralCols() const {
 HighsDomain& HighsSearch::getDomain() const { return mipworker.globaldom_; }
 
 HighsConflictPool& HighsSearch::getConflictPool() const {
-  return mipworker.conflictpool_;
-  // return mipsolver.mipdata_->conflictPool;
+  return *mipworker.conflictpool_;
 }
 
 HighsCutPool& HighsSearch::getCutPool() const {
   return *mipworker.cutpool_;
-  // return mipsolver.mipdata_->cutpool;
 }
 
 const HighsDebugSol& HighsSearch::getDebugSolution() const {

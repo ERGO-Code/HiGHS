@@ -1392,7 +1392,7 @@ void HighsMipSolverData::performRestart() {
   // Ensure master worker is pointing to the correct cut and conflict pools
   if (mipsolver.options_mip_->mip_search_concurrency > 1) {
     mipsolver.mipdata_->workers[0].cutpool_ = &cutpool;
-    mipsolver.mipdata_->workers[0].conflictpool_ = conflictPool;
+    mipsolver.mipdata_->workers[0].conflictpool_ = &conflictPool;
   }
 
   // remove the pointer into the stack-space of this function

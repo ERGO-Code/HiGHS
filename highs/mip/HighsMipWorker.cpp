@@ -13,16 +13,16 @@
 HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
                                HighsLpRelaxation* lprelax_, HighsDomain& domain,
                                HighsCutPool* cutpool,
-                               HighsConflictPool& conflictpool)
+                               HighsConflictPool* conflictpool)
     : mipsolver_(mipsolver__),
       mipdata_(*mipsolver_.mipdata_.get()),
       lprelaxation_(lprelax_),
       pseudocost_(mipsolver__),
       globaldom_(domain),
       cutpool_(cutpool),
-      conflictpool_(conflictpool),
-      upper_bound(kHighsInf) {
+      conflictpool_(conflictpool) {
   // std::cout << mipdata_.domain.changedcolsflags_.size() << std::endl;
+  upper_bound = mipdata_.upper_bound;
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
   sepa_ptr_ = std::unique_ptr<HighsSeparation>(new HighsSeparation(*this));
@@ -41,7 +41,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
 
   // add local cutpool
   search_ptr_->getLocalDomain().addCutpool(*cutpool_);
-  search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
+  search_ptr_->getLocalDomain().addConflictPool(*conflictpool_);
 
   // printf(
   //     "lprelax_ parameter address in constructor of mipworker %p, %d columns,
