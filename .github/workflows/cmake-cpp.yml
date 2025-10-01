@@ -1,0 +1,34 @@
+name: CMake
+on:
+  push:
+    branches:
+      - latest
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  test:
+    name: ${{ matrix.os }} CMAKE_BUILD_TYPE=${{ matrix.build_type }} ALL_TESTS=${{ matrix.all_tests }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        build_type: ['Release', 'Debug']
+        all_tests: ['OFF', 'ON']
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          cmake -E make_directory ${{runner.workspace}}/build
+          cd ${{runner.workspace}}/build
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cmake $GITHUB_WORKSPACE -DALL_TESTS=${{ matrix.all_tests }}
+            cmake --build . --parallel --config ${{ matrix.build_type }}
+            ctest --timeout 300 --output-on-failure -C ${{ matrix.build_type }}
+          else
+            cmake $GITHUB_WORKSPACE -DALL_TESTS=${{ matrix.all_tests }} \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+            cmake --build . --parallel
+            ctest --timeout 300 --output-on-failure --parallel
+          fi

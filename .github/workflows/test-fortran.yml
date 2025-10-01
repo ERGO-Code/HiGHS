@@ -31,7 +31,7 @@ jobs:
           version: ${{ matrix.version }}
       - run: |
           cmake -E make_directory ${{runner.workspace}}/build
-          cd build
+          cd ${{runner.workspace}}
           cmake $GITHUB_WORKSPACE -DFORTRAN=ON
           cmake --build . --parallel
           ./bin/fortrantest
