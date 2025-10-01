@@ -137,6 +137,10 @@ void HighsMipSolver::run() {
   // Initialize master worker.
   // Now the worker lives in mipdata.
   // The master worker is used in evaluateRootNode.
+  if (mipdata_->domain.infeasible()) {
+    cleanupSolve();
+    return;
+  }
   mipdata_->workers.emplace_back(*this, &mipdata_->lp, mipdata_->domain,
                                  &mipdata_->cutpool, &mipdata_->conflictPool);
 

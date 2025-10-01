@@ -45,10 +45,8 @@ class HighsMipWorker {
   HighsRandom randgen;
 
   // HighsMipWorker(const HighsMipSolver& mipsolver__);
-  HighsMipWorker(const HighsMipSolver& mipsolver__,
-                 HighsLpRelaxation* lprelax_,
-                 HighsDomain& domain,
-                 HighsCutPool* cutpool,
+  HighsMipWorker(const HighsMipSolver& mipsolver__, HighsLpRelaxation* lprelax_,
+                 HighsDomain& domain, HighsCutPool* cutpool,
                  HighsConflictPool* conflictpool);
 
   ~HighsMipWorker() {
@@ -67,10 +65,14 @@ class HighsMipWorker {
   //                   const int solution_source,
   //                   const bool print_display_line = true);
 
-  bool addIncumbent(const std::vector<double>& sol, double solobj, int solution_source);
+  bool addIncumbent(const std::vector<double>& sol, double solobj,
+                    int solution_source);
 
   std::pair<bool, double> transformNewIntegerFeasibleSolution(
       const std::vector<double>& sol);
+
+  bool trySolution(const std::vector<double>& solution,
+                   const int solution_source);
 
   // todo:
   // timer_

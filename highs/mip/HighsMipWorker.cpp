@@ -149,3 +149,38 @@ std::pair<bool, double> HighsMipWorker::transformNewIntegerFeasibleSolution(
 
   return std::make_pair(feasible, transformed_solobj);
 }
+
+bool HighsMipWorker::trySolution(const std::vector<double>& solution,
+                                 const int solution_source) {
+  if (static_cast<int>(solution.size()) != mipsolver_.model_->num_col_)
+    return false;
+
+  HighsCDouble obj = 0;
+
+  for (HighsInt i = 0; i != mipsolver_.model_->num_col_; ++i) {
+    if (solution[i] < mipsolver_.model_->col_lower_[i] - mipdata_.feastol)
+      return false;
+    if (solution[i] > mipsolver_.model_->col_upper_[i] + mipdata_.feastol)
+      return false;
+    if (mipsolver_.variableType(i) == HighsVarType::kInteger &&
+        fractionality(solution[i]) > mipdata_.feastol)
+      return false;
+
+    obj += mipsolver_.colCost(i) * solution[i];
+  }
+
+  for (HighsInt i = 0; i != mipsolver_.model_->num_row_; ++i) {
+    double rowactivity = 0.0;
+
+    HighsInt start = mipdata_.ARstart_[i];
+    HighsInt end = mipdata_.ARstart_[i + 1];
+
+    for (HighsInt j = start; j != end; ++j)
+      rowactivity += solution[mipdata_.ARindex_[j]] * mipdata_.ARvalue_[j];
+
+    if (rowactivity > mipsolver_.rowUpper(i) + mipdata_.feastol) return false;
+    if (rowactivity < mipsolver_.rowLower(i) - mipdata_.feastol) return false;
+  }
+
+  return addIncumbent(solution, static_cast<double>(obj), solution_source);
+}
