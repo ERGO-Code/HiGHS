@@ -410,17 +410,20 @@ void PDHG_Compute_Average_Iterate(CUPDLPwork *work) {
   // ATyCPU(work, iterates->atyAverage, iterates->yAverage);
   Ax(work, iterates->axAverage, iterates->xAverage);
   ATy(work, iterates->atyAverage, iterates->yAverage);
+  // print norm of x_average
+  cupdlp_float debug_pdlp_data_x_average_norm = 0.0;
+  cupdlp_twoNormSquared(work, lp->nCols, iterates->xAverage
+->data, &debug_pdlp_data_x_average_norm);
+  work->debug_pdlp_data_.x_average_norm = debug_pdlp_data_x_average_norm;
 
   cupdlp_float debug_pdlp_data_ax_average_norm = 0.0;
   cupdlp_twoNormSquared(work, lp->nCols, iterates->axAverage->data, &debug_pdlp_data_ax_average_norm);
   work->debug_pdlp_data_.ax_average_norm = debug_pdlp_data_ax_average_norm;
 
-  /*
   // Uncomment this once Yanyu is computing aty_average_norm 
   cupdlp_float debug_pdlp_data_aty_average_norm = 0.0;
   cupdlp_twoNormSquared(work, lp->nCols, iterates->atyAverage->data, &debug_pdlp_data_aty_average_norm);
   work->debug_pdlp_data_.aty_average_norm = debug_pdlp_data_aty_average_norm;
-  */
 }
 
 void PDHG_Update_Average(CUPDLPwork *work) {

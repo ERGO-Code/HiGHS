@@ -417,10 +417,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     if (bool_checking) {
       ComputeAverageIterate(Ax_avg, ATy_avg);
-      // Compute matrix-vector products for current and average iterates
-      linalg::Ax(lp, x_current_, Ax_cache_);
-      linalg::ATy(lp, y_current_, ATy_cache_);
-
       // Reset the average iterate accumulation
       int inner_iter = iter - restart_scheme_.GetLastRestartIter();
 
@@ -476,6 +472,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
           // Restart from the average iterate
           restart_x = x_avg_;
           restart_y = y_avg_;
+
+          Ax_cache_ = Ax_avg;
+          ATy_cache_ = ATy_avg;
         } else {
           // Restart from the current iterate
           restart_x = x_current_;
@@ -483,8 +482,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         }
 
         // Perform the primal weight update using z^{n,0} and z^{n-1,0}
-        PDHG_Compute_Step_Size_Ratio(working_params, restart_x, restart_y,
-                                     x_at_last_restart_, y_at_last_restart_);
+        PDHG_Compute_Step_Size_Ratio(working_params);
         current_eta_ = working_params.eta;
         restart_scheme_.passParams(&working_params);
         restart_scheme_.UpdateBeta(working_params.omega * working_params.omega);
@@ -506,13 +504,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         linalg::ATy(lp, y_current_, ATy_cache_);
         debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
         restart_scheme_.SetLastRestartIter(iter);
+
+        //continue; //same logic as cupdlp
       }
-    } else {
-      // If not checking, still need Ax and ATy for the update
-      linalg::Ax(lp, x_current_, Ax_cache_);
-      debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_cache_);
-      linalg::ATy(lp, y_current_, ATy_cache_);
-      debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
     }
 
     // --- 5. Core PDHG Update Step ---
@@ -522,6 +516,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     // y_current_)
     x_next_ = x_current_;
     y_next_ = y_current_;
+
+    debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_cache_);
+    debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
 
     switch (params_.step_size_strategy) {
       case StepSizeStrategy::FIXED:
@@ -547,6 +544,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     }
 
     // Compute ATy for the new iterate
+    Ax_cache_ = Ax_next_; 
     linalg::ATy(lp, y_next_, ATy_cache_);
 
     // --- 6. Update Average Iterates ---
@@ -604,17 +602,10 @@ void PDLPSolver::Initialize() {
 
 // Update primal weight
 void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
-    PrimalDualParams& working_params, const std::vector<double>& x_n_0,
-    const std::vector<double>& y_n_0, const std::vector<double>& x_n_minus_1_0,
-    const std::vector<double>& y_n_minus_1_0) {
+    PrimalDualParams& working_params) {
   // 1. Calculate the L2 norm of the difference between current and last-restart
   // iterates.
-  //double primal_diff_norm = linalg::diffTwoNorm(x_n_0, x_n_minus_1_0);
   double primal_diff_norm = linalg::diffTwoNorm(x_at_last_restart_, x_current_);
-  double norm_xLastRestart = linalg::vector_norm(x_at_last_restart_);
-  double norm_xCurrent = linalg::vector_norm(x_current_);
-
-  //double dual_diff_norm = linalg::diffTwoNorm(y_n_0, y_n_minus_1_0);
   double dual_diff_norm = linalg::diffTwoNorm(y_at_last_restart_, y_current_);
 
   double dMeanStepSize = std::sqrt(stepsize_.primal_step *
@@ -1190,7 +1181,6 @@ StepSizeConfig PDLPSolver::InitializeStepSizesPowerMethod(double op_norm_sq) {
 
 std::vector<double> PDLPSolver::UpdateX() {
   std::vector<double> x_new(lp_.num_col_);
-  linalg::ATy(lp_, y_current_, ATy_cache_);
   debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     double gradient = lp_.col_cost_[i] - ATy_cache_[i];

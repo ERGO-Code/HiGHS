@@ -95,10 +95,7 @@ class PDLPSolver {
   std::tuple<double, double, double, double, double> ComputeDualityGap(
       const std::vector<double>& x, const std::vector<double>& y,
       const std::vector<double>& lambda);
-  void PDHG_Compute_Step_Size_Ratio(
-      PrimalDualParams& working_params, const std::vector<double>& x_n_0,
-      const std::vector<double>& y_n_0, const std::vector<double>& x_n_minus_1_0,
-      const std::vector<double>& y_n_minus_1_0);
+  void PDHG_Compute_Step_Size_Ratio(PrimalDualParams& working_params);
 
   // --- Problem Data and Parameters ---
   HighsLp lp_;
