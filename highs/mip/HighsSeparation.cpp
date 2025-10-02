@@ -39,7 +39,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   HighsMipSolverData& mipdata = *lp->getMipSolver().mipdata_;
 
   auto propagateAndResolve = [&]() {
-    if (propdomain.infeasible() || mipworker_.globaldom_.infeasible()) {
+    if (propdomain.infeasible() || mipworker_.getGlobalDomain().infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return -1;
@@ -58,7 +58,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
     // TODO: Currently adding a check for both. Should only need to check
     // mipworker
-    if (mipworker_.globaldom_.infeasible()) {
+    if (mipworker_.getGlobalDomain().infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return -1;
@@ -87,7 +87,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   lp->getMipSolver().timer_.start(implBoundClock);
   mipdata.implications.separateImpliedBounds(
       *lp, lp->getSolution().col_value, *mipworker_.cutpool_, mipdata.feastol,
-      mipworker_.globaldom_, mipdata.parallelLockActive());
+      mipworker_.getGlobalDomain(), mipdata.parallelLockActive());
   lp->getMipSolver().timer_.stop(implBoundClock);
 
   HighsInt ncuts = 0;
@@ -115,8 +115,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   if (&propdomain != &mipdata.domain)
     lp->computeBasicDegenerateDuals(mipdata.feastol, &propdomain);
 
-  HighsTransformedLp transLp(*lp, mipdata.implications, mipworker_.globaldom_);
-  if (mipworker_.globaldom_.infeasible()) {
+  HighsTransformedLp transLp(*lp, mipdata.implications, mipworker_.getGlobalDomain());
+  if (mipworker_.getGlobalDomain().infeasible()) {
     status = HighsLpRelaxation::Status::kInfeasible;
     return 0;
   }
@@ -124,7 +124,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
   for (const std::unique_ptr<HighsSeparator>& separator : separators) {
     separator->run(*lp, lpAggregator, transLp, *mipworker_.cutpool_);
-    if (mipworker_.globaldom_.infeasible()) {
+    if (mipworker_.getGlobalDomain().infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       return 0;
     }

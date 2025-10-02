@@ -11,7 +11,7 @@
 #include "mip/MipTimer.h"
 
 HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
-                               HighsLpRelaxation* lprelax_, HighsDomain& domain,
+                               HighsLpRelaxation* lprelax_, HighsDomain* domain,
                                HighsCutPool* cutpool,
                                HighsConflictPool* conflictpool)
     : mipsolver_(mipsolver__),

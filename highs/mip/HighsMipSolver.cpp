@@ -141,7 +141,7 @@ void HighsMipSolver::run() {
     cleanupSolve();
     return;
   }
-  mipdata_->workers.emplace_back(*this, &mipdata_->lp, mipdata_->domain,
+  mipdata_->workers.emplace_back(*this, &mipdata_->lp, &mipdata_->domain,
                                  &mipdata_->cutpool, &mipdata_->conflictPool);
 
   HighsMipWorker& master_worker = mipdata_->workers.at(0);
@@ -362,7 +362,7 @@ restart:
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
                                          options_mip_->mip_pool_soft_limit);
     mipdata_->workers.emplace_back(
-        *this, &mipdata_->lps.back(), mipdata_->domains.back(),
+        *this, &mipdata_->lps.back(), &mipdata_->domains.back(),
         &mipdata_->cutpools.back(), &mipdata_->conflictpools.back());
     mipdata_->lp.notifyCutPoolsLpCopied(1);
   };
@@ -445,7 +445,7 @@ restart:
   auto syncGlobalDomain = [&]() -> void {
     if (!mipdata_->hasMultipleWorkers()) return;
     for (HighsMipWorker& worker : mipdata_->workers) {
-      const auto& domchgstack = worker.globaldom_.getDomainChangeStack();
+      const auto& domchgstack = worker.getGlobalDomain().getDomainChangeStack();
       for (const HighsDomainChange& domchg : domchgstack) {
         if ((domchg.boundtype == HighsBoundType::kLower &&
              domchg.boundval > mipdata_->domain.col_lower_[domchg.column]) ||
@@ -464,15 +464,15 @@ restart:
     // 3. Clear changedCols and domChgStack, and reset local search domain for
     // all workers
     for (HighsInt i = 1; i < mipdata_->workers.size(); ++i) {
-      mipdata_->workers[i].globaldom_.backtrackToGlobal();
+      mipdata_->workers[i].getGlobalDomain().backtrackToGlobal();
       for (const HighsDomainChange& domchg :
            mipdata_->domain.getDomainChangeStack()) {
-        mipdata_->workers[i].globaldom_.changeBound(
+        mipdata_->workers[i].getGlobalDomain().changeBound(
             domchg, HighsDomain::Reason::unspecified());
       }
-      mipdata_->workers[i].globaldom_.setDomainChangeStack(
+      mipdata_->workers[i].getGlobalDomain().setDomainChangeStack(
           std::vector<HighsDomainChange>());
-      mipdata_->workers[i].globaldom_.clearChangedCols();
+      mipdata_->workers[i].getGlobalDomain().clearChangedCols();
       mipdata_->workers[i].search_ptr_->resetLocalDomain();
     }
   };
@@ -505,7 +505,7 @@ restart:
 
   auto infeasibleGlobalDomain = [&]() -> bool {
     for (HighsMipWorker& worker : mipdata_->workers) {
-      if (worker.globaldom_.infeasible()) return true;
+      if (worker.getGlobalDomain().infeasible()) return true;
     }
     return false;
   };
@@ -597,7 +597,7 @@ restart:
 
   auto doHandlePrunedNodes = [&](HighsInt index, bool thread_safe, bool& flush,
                                  bool& infeasible) {
-    HighsDomain& globaldom = mipdata_->workers[index].globaldom_;
+    HighsDomain& globaldom = mipdata_->workers[index].getGlobalDomain();
     mipdata_->workers[index].search_ptr_->backtrack();
     if (!thread_safe) {
       ++mipdata_->num_leaves;
@@ -768,7 +768,7 @@ restart:
     setParallelLock(false);
 
     for (HighsInt i : search_indices) {
-      if (mipdata_->workers[i].globaldom_.infeasible()) {
+      if (mipdata_->workers[i].getGlobalDomain().infeasible()) {
         mipdata_->workers[i].search_ptr_->cutoffNode();
         analysis_.mipTimerStart(kMipClockOpenNodesToQueue1);
         mipdata_->workers[i].search_ptr_->openNodesToQueue(mipdata_->nodequeue);
