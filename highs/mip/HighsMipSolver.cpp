@@ -355,8 +355,9 @@ restart:
   // TODO: Should we be propagating this first?
   if (num_workers > 1) resetGlobalDomain(true);
   destroyOldWorkers();
-  constructAdditionalWorkerData(master_worker);
+  if (num_workers > 1) constructAdditionalWorkerData(master_worker);
   master_worker.upper_bound = mipdata_->upper_bound;
+  assert(master_worker.solutions_.empty());
   master_worker.solutions_.clear();
   for (HighsInt i = 1; i != num_workers; ++i) {
     createNewWorker(i);
