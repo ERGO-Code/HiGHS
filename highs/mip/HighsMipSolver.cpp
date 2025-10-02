@@ -342,19 +342,22 @@ restart:
   auto constructMasterWorkerPools = [&](HighsMipWorker& worker) {
     assert(mipdata_->cutpools.size() == 1 &&
            mipdata_->conflictpools.size() == 1);
+    assert(&worker == &mipdata_->workers.at(0));
     mipdata_->cutpools.emplace_back(numCol(), options_mip_->mip_pool_age_limit,
                                     options_mip_->mip_pool_soft_limit, 1);
     worker.cutpool_ = &mipdata_->cutpools.back();
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
                                          options_mip_->mip_pool_soft_limit);
     worker.conflictpool_ = &mipdata_->conflictpools.back();
+    // TODO MT: Is this needed? (Probably)
+    // worker.search_ptr_->localdom.addCutpool(*worker.cutpool_);
+    // worker.search_ptr_->localdom.addConflictPool(*worker.conflictpool_);
   };
 
   auto createNewWorker = [&](HighsInt i) {
     mipdata_->domains.emplace_back(mipdata_->domain);
     mipdata_->lps.emplace_back(mipdata_->lp, i);
-    mipdata_->cutpools.emplace_back(numCol(),
-                                    options_mip_->mip_pool_age_limit,
+    mipdata_->cutpools.emplace_back(numCol(), options_mip_->mip_pool_age_limit,
                                     options_mip_->mip_pool_soft_limit, i + 1);
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
                                          options_mip_->mip_pool_soft_limit);
@@ -455,14 +458,41 @@ restart:
     }
   };
 
-  auto resetDomains = [&]() -> void {
-    search.resetLocalDomain();
-    mipdata_->domain.clearChangedCols();
-    if (!mipdata_->hasMultipleWorkers()) return;
-    for (HighsInt i = 1; i < mip_search_concurrency; i++) {
-      mipdata_->domains[i] = mipdata_->domain;
-      mipdata_->workers[i].globaldom_ = mipdata_->domains[i];
+  auto resetWorkerDomains = [&]() -> void {
+    // 1. Backtrack to global domain for all local global domains
+    // 2. Push all changes from the true global domain
+    // 3. Clear changedCols and domChgStack, and reset local search domain for
+    // all workers
+    for (HighsInt i = 1; i < mipdata_->workers.size(); ++i) {
+      mipdata_->workers[i].globaldom_.backtrackToGlobal();
+      for (const HighsDomainChange& domchg :
+           mipdata_->domain.getDomainChangeStack()) {
+        mipdata_->workers[i].globaldom_.changeBound(
+            domchg, HighsDomain::Reason::unspecified());
+      }
+      mipdata_->workers[i].globaldom_.setDomainChangeStack(
+          std::vector<HighsDomainChange>());
+      mipdata_->workers[i].globaldom_.clearChangedCols();
       mipdata_->workers[i].search_ptr_->resetLocalDomain();
+    }
+  };
+
+  auto resetMasterWorkerDomain = [&]() -> void {
+    // if global propagation found bound changes, we update the domain
+    if (!mipdata_->domain.getChangedCols().empty()) {
+      analysis_.mipTimerStart(kMipClockUpdateLocalDomain);
+      highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
+                  "added %" HIGHSINT_FORMAT " global bound changes\n",
+                  (HighsInt)mipdata_->domain.getChangedCols().size());
+      mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
+      for (HighsInt col : mipdata_->domain.getChangedCols())
+        mipdata_->implications.cleanupVarbounds(col);
+
+      mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
+      mipdata_->domain.clearChangedCols();
+      search.resetLocalDomain();
+      mipdata_->removeFixedIndices();
+      analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
     }
   };
 
@@ -619,23 +649,9 @@ restart:
           prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
           mipdata_->upper_bound);
 
-    if (!globaldom.getChangedCols().empty()) {
-      if (!thread_safe) {
-        highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
-                    "added %" HIGHSINT_FORMAT " global bound changes\n",
-                    (HighsInt)globaldom.getChangedCols().size());
-        mipdata_->cliquetable.cleanupFixed(globaldom);
-        for (HighsInt col : globaldom.getChangedCols())
-          mipdata_->implications.cleanupVarbounds(col);
-
-        globaldom.setDomainChangeStack(std::vector<HighsDomainChange>());
-        mipdata_->workers[index].search_ptr_->resetLocalDomain();
-
-        globaldom.clearChangedCols();
-        mipdata_->removeFixedIndices();
-      } else {
-        mipdata_->workers[index].search_ptr_->resetLocalDomain();
-      }
+    if (!thread_safe) {
+      assert(index == 0);
+      resetMasterWorkerDomain();
     }
 
     analysis_.mipTimerStop(kMipClockNodePrunedLoop);
@@ -1056,6 +1072,9 @@ restart:
       break;
     }
 
+    // set local global domains of all workers to copy changes of global
+    resetWorkerDomains();
+
     double prev_lower_bound = mipdata_->lower_bound;
 
     mipdata_->lower_bound = std::min(mipdata_->upper_bound,
@@ -1068,22 +1087,8 @@ restart:
     mipdata_->printDisplayLine();
     if (mipdata_->nodequeue.empty()) break;
 
-    // if global propagation found bound changes, we update the local domain
-    if (!mipdata_->domain.getChangedCols().empty()) {
-      analysis_.mipTimerStart(kMipClockUpdateLocalDomain);
-      highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
-                  "added %" HIGHSINT_FORMAT " global bound changes\n",
-                  (HighsInt)mipdata_->domain.getChangedCols().size());
-      mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
-      for (HighsInt col : mipdata_->domain.getChangedCols())
-        mipdata_->implications.cleanupVarbounds(col);
-
-      mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
-      resetDomains();
-
-      mipdata_->removeFixedIndices();
-      analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
-    }
+    // flush all changes made to the global domain
+    resetMasterWorkerDomain();
 
     if (!submip && mipdata_->num_nodes >= nextCheck) {
       auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
@@ -1188,6 +1193,7 @@ restart:
       std::pair<bool, bool> limit_or_infeas = handlePrunedNodes(search_indices);
       if (limit_or_infeas.first) limit_reached = true;
       if (limit_or_infeas.first || limit_or_infeas.second) break;
+      // TODO MT: If everything was pruned then do a global sync!
       if (search_indices.empty()) continue;
 
       bool infeasible = separateAndStoreBasis(search_indices);
