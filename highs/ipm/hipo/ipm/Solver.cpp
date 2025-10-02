@@ -997,18 +997,27 @@ bool Solver::checkBadIter() {
   // check for infeasibility
   bool mu_is_large =
       it_->best_mu > 0.0 ? it_->mu > it_->best_mu * kDivergeTol : false;
-  bool pobj_is_large =
-      it_->pobj < -std::max(std::abs(it_->dobj) * kDivergeTol, 1.0);
-  bool dobj_is_large =
-      it_->dobj > std::max(std::abs(it_->pobj) * kDivergeTol, 1.0);
+  bool pobj_is_very_large =
+      it_->pobj <
+      -std::max(std::abs(it_->dobj) * kDivergeTol * kDivergeTol, 1.0);
+  bool dobj_is_very_large =
+      it_->dobj >
+      std::max(std::abs(it_->pobj) * kDivergeTol * kDivergeTol, 1.0);
+  bool clearly_infeasible =
+      iter_ > 5 && (pobj_is_very_large || dobj_is_very_large);
 
-  if (too_many_bad_iter || mu_is_large) {
-    if (pobj_is_large) {
+  if (too_many_bad_iter || mu_is_large || clearly_infeasible) {
+    bool pobj_is_larger =
+        it_->pobj < -std::max(std::abs(it_->dobj) * kDivergeTol, 1.0);
+    bool dobj_is_larger =
+        it_->dobj > std::max(std::abs(it_->pobj) * kDivergeTol, 1.0);
+
+    if (pobj_is_larger) {
       // problem is likely to be primal unbounded, i.e. dual infeasible
       logH_.print("=== Dual infeasible\n");
       info_.status = kStatusDualInfeasible;
       terminate = true;
-    } else if (dobj_is_large) {
+    } else if (dobj_is_larger) {
       // problem is likely to be dual unbounded, i.e. primal infeasible
       logH_.print("=== Primal infeasible\n");
       info_.status = kStatusPrimalInfeasible;
