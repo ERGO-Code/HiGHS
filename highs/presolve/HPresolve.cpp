@@ -939,11 +939,6 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         HighsCutPool(mipsolver->model_->num_col_,
                      mipsolver->options_mip_->mip_pool_age_limit,
                      mipsolver->options_mip_->mip_pool_soft_limit, 0);
-    // mipsolver->mipdata_->cutpools[0] =
-    //     HighsCutPool(mipsolver->model_->num_col_,
-    //                  mipsolver->options_mip_->mip_pool_age_limit,
-    //                  mipsolver->options_mip_->mip_pool_soft_limit, 0);
-    // mipsolver->mipdata_->cutpool = mipsolver->mipdata_->cutpools.at(0);
     mipsolver->mipdata_->conflictpools[0] =
         HighsConflictPool(5 * mipsolver->options_mip_->mip_pool_age_limit,
                           mipsolver->options_mip_->mip_pool_soft_limit);

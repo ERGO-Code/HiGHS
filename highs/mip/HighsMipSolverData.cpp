@@ -1393,6 +1393,8 @@ void HighsMipSolverData::performRestart() {
   if (mipsolver.options_mip_->mip_search_concurrency > 1) {
     mipsolver.mipdata_->workers[0].cutpool_ = &cutpool;
     mipsolver.mipdata_->workers[0].conflictpool_ = &conflictPool;
+    mipsolver.mipdata_->workers[0].globaldom_ = &domain;
+    // mipsolver.mipdata_->workers[0].lprelaxation_ = &lp;
   }
 
   // remove the pointer into the stack-space of this function
