@@ -45,30 +45,43 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
   // Test that hipo finds the exact same solution if run twice
 
   std::string model = "80bau3b.mps";
-
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue(kSolverString, kHipoString);
-  highs.setOptionValue(kParallelString, kHighsOnString);
-  highs.setOptionValue(kRunCrossoverString, kHighsOffString);
-
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
-  highs.readModel(filename);
 
-  HighsStatus status = highs.run();
-  REQUIRE(status == HighsStatus::kOk);
+  HighsInt iter_1, iter_2;
+  HighsSolution solution_1, solution_2;
 
-  const HighsSolution solution_1 = highs.getSolution();
+  {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue(kSolverString, kHipoString);
+    highs.setOptionValue(kParallelString, kHighsOnString);
+    highs.setOptionValue(kRunCrossoverString, kHighsOffString);
+    highs.readModel(filename);
+    HighsStatus status = highs.run();
+    REQUIRE(status == HighsStatus::kOk);
+    solution_1 = highs.getSolution();
+    iter_1 = highs.getInfo().ipm_iteration_count;
+    highs.resetGlobalScheduler(true);
+  }
+  {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue(kSolverString, kHipoString);
+    highs.setOptionValue(kParallelString, kHighsOnString);
+    highs.setOptionValue(kRunCrossoverString, kHighsOffString);
+    highs.readModel(filename);
+    HighsStatus status = highs.run();
+    REQUIRE(status == HighsStatus::kOk);
+    solution_2 = highs.getSolution();
+    iter_2 = highs.getInfo().ipm_iteration_count;
+    highs.resetGlobalScheduler(true);
+  }
 
-  highs.run();
-  const HighsSolution solution_2 = highs.getSolution();
-
+  REQUIRE(iter_1 == iter_2);
   REQUIRE(solution_1.value_valid == solution_2.value_valid);
   REQUIRE(solution_1.dual_valid == solution_2.dual_valid);
   REQUIRE(solution_1.col_value == solution_2.col_value);
   REQUIRE(solution_1.row_value == solution_2.row_value);
   REQUIRE(solution_1.col_dual == solution_2.col_dual);
   REQUIRE(solution_1.row_dual == solution_2.row_dual);
-
-  highs.resetGlobalScheduler(true);
 }
