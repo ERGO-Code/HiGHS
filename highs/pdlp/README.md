@@ -56,8 +56,8 @@ cmake --build build --parallel
 ##### Bazel
 
 ```bash
-# Will build with CUDA if a CUDA toolchain is detected
+# Will NOT build with CUDA, only CPU support
 bazel build //:highs 
-# Ensure the target is built without CUDA
-bazel build //:highs --@rules_cuda//cuda:enable=False
+# Will build with CUDA if a CUDA toolchain is detected
+bazel build //:highs --//:cupdlp_gpu
 ```

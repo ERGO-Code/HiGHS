@@ -1,5 +1,5 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
-load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@rules_cuda//cuda:defs.bzl", "cuda_library", "requires_cuda")
 
@@ -10,12 +10,18 @@ copy_file(
     visibility = ["//visibility:public"],
 )
 
-selects.config_setting_group(
-    name = "cuda_enabled",
-    match_all = [
-        "@rules_cuda//cuda:is_valid_toolchain_found",
-        "@rules_cuda//cuda:is_enabled",
-    ],
+bool_flag(
+    name = "cupdlp_gpu",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "cupdlp_gpu_enabled",
+    flag_values = {
+        "@rules_cuda//cuda:enable": "True",
+        "@local_cuda//:valid_toolchain_found": "True",
+        ":cupdlp_gpu": "True",
+    },
 )
 
 cc_library(
@@ -76,7 +82,7 @@ cc_library(
         ],
     }),
     defines = select({
-        ":cuda_enabled": ["CUPDLP_GPU"],
+        ":cupdlp_gpu_enabled": ["CUPDLP_GPU"],
         "//conditions:default": ["CUPDLP_CPU"],
     }),
     includes = [
@@ -96,7 +102,6 @@ cc_library(
         # "highs/simplex",
         # "highs/test_kkt",
         # "highs/util",
-        "bazel-bin",
     ],
     linkopts = select({
         "@rules_cc//cc/compiler:msvc-cl": ["-DEFAULTLIB:shell32.lib"],
@@ -107,7 +112,7 @@ cc_library(
         "//:config",
         "@zlib",
     ] + select({
-        ":cuda_enabled": [":cupdlp"],
+        ":cupdlp_gpu_enabled": [":cupdlp"],
         "//conditions:default": [],
     }),
 )
