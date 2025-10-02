@@ -347,7 +347,6 @@ restart:
 
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
       mipdata_->domain.clearChangedCols();
-      mipdata_->workers[0].search_ptr_->resetLocalDomain();
       mipdata_->removeFixedIndices();
       analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
     }
@@ -1153,7 +1152,6 @@ restart:
       // printf("popping node from nodequeue (length = %" HIGHSINT_FORMAT ")\n",
       // (HighsInt)nodequeue.size());
       std::vector<HighsInt> search_indices = getSearchIndicesWithNoNodes();
-      search_indices.resize(1);
 
       installNodes(search_indices, limit_reached);
       if (limit_reached) break;
