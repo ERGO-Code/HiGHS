@@ -1368,15 +1368,18 @@ void Analyse::generateParallelLayer(Int threads) {
     // How the layer is found:
     // assignToBins returns the largest number of operations in any thread with
     // a given layer L, called f(L).
+    // Subtrees that are too small to be included in the layer, according to a
+    // threshold, belong to the set of small subtrees S.
     // The parallelisability ratio of a given layer is measured as
-    // total_ops / (ops_above + f(L))
+    // total_ops / (ops_above + ops_small + f(L))
     // We want this number to be as large as possible. Equivalently, we want the
-    // score = ops_above + f(L) to be as small as possible.
+    // score = ops_above + ops_small + f(L) to be as small as possible.
     // For each node p in the layer, compute the score when the layer is
     // L' = L \ {p} U {children of p}.
     // The improvement to the score brough by this layer compared to the
     // previous one is measured by
-    // f(L) - f(L') - ops_of_node
+    // f(L) - f(L') - S' - ops_of_node
+    // where S' is the new operations added to S due to the new layer.
     // If this quantity is positive, there is an improvement when choosing L'
     // over L. If there are nodes with positive improvement, take the best one,
     // remove that node from the layer and add its children. If no node brings
@@ -1408,18 +1411,21 @@ void Analyse::generateParallelLayer(Int threads) {
       std::vector<Int>::iterator best_it;
       double best_largest_bin;
 
-      bool any_node_with_large_children = false;
+      bool any_node_with_children = false;
 
       // loop over all nodes in the current layer
       for (auto it = layer.begin(); it != layer.end(); ++it) {
         // build layer obtained adding children
         std::vector<Int> local_layer = layer;
+        double local_small{};
         Int child = head[*it];
         while (child != -1) {
           if (subtree_ops[child] > small_thresh) {
             local_layer.push_back(child);
-            any_node_with_large_children = true;
+          } else {
+            local_small += subtree_ops[child];
           }
+          any_node_with_children = true;
           child = next[child];
         }
 
@@ -1427,7 +1433,8 @@ void Analyse::generateParallelLayer(Int threads) {
         double largest_bin =
             assignToBins(local_layer, subtree_ops, *it, threads);
 
-        double score = current_largest_bin - largest_bin - sn_ops[*it];
+        double score =
+            current_largest_bin - largest_bin - sn_ops[*it] - local_small;
 
         if (score > best_score) {
           best_score = score;
@@ -1436,15 +1443,17 @@ void Analyse::generateParallelLayer(Int threads) {
         }
 
         log_stream << "\t"
-                   << fix(total_ops / (ops_above + sn_ops[*it] + largest_bin),
+                   << fix(total_ops / (ops_above + sn_ops[*it] + largest_bin +
+                                       ops_small + local_small),
                           0, 2)
-                   << " (" << sci(score, 0, 1) << ")\n";
+                   << " (" << sci(score, 0, 1) << ") <== " << integer(*it)
+                   << "\n";
       }
 
       log_stream << "Iter " << integer(iter) << ": ";
 
       // no node brings a benefit
-      if (best_score < 0 || !any_node_with_large_children) {
+      if (best_score < 0 || !any_node_with_children) {
         log_stream << "fail\n";
         break;
       } else {
@@ -1482,13 +1491,18 @@ void Analyse::generateParallelLayer(Int threads) {
         }
 
         log_stream << "ratio "
-                   << fix(total_ops / (ops_above + best_largest_bin), 0, 2)
+                   << fix(total_ops /
+                              (ops_above + best_largest_bin + ops_small),
+                          0, 2)
                    << ", layer " << integer(layer.size()) << '\n';
       }
 
       ++iter;
     }
     // layer has been decided
+
+    double ratio = total_ops / (ops_above + ops_small +
+                                assignToBins(layer, subtree_ops, -1, threads));
 
     log_stream << "\nLayer " << integer(layer.size()) << ": ";
     for (Int i : layer)
@@ -1497,6 +1511,7 @@ void Analyse::generateParallelLayer(Int threads) {
                << integer(aboveLayer_.size()) << ")\n";
     log_stream << "Small " << fix(ops_small / total_ops * 100, 0, 1) << "% ("
                << integer(smallSubtrees_.size()) << ")\n";
+    log_stream << "Parallel ratio " << fix(ratio, 0, 2) << "\n";
 
     log_->printDevDetailed(log_stream);
 

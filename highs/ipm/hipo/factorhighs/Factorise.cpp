@@ -354,16 +354,16 @@ bool Factorise::run(Numeric& num) {
       highs::parallel::spawn([=]() { processSupernodes(start, end); });
     }
 
+    // wait for subtrees in the layer to complete
+    for (Int i = 0; i < S_.layerIndex().size(); ++i) {
+      highs::parallel::sync();
+    }
+
     // process small subtrees
     for (Int i = 0; i < S_.smallSubtrees().size(); ++i) {
       Int start = S_.smallSubtreeInfo(i).start;
       Int end = S_.smallSubtreeInfo(i).end;
       processSupernodes(start, end);
-    }
-
-    // wait for subtrees in the layer to complete
-    for (Int i = 0; i < S_.layerIndex().size(); ++i) {
-      highs::parallel::sync();
     }
 
     // process nodes above layer
