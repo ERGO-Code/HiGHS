@@ -13,6 +13,7 @@
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/HighsMipWorker.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/MipTimer.h"
 #include "util/HighsCDouble.h"
@@ -169,9 +170,8 @@ double HighsLpRelaxation::slackUpper(HighsInt row,
   return kHighsInf;
 }
 
-HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver,
-                                     HighsInt index)
-    : mipsolver(mipsolver) {
+HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
+    : mipsolver(mipsolver), worker_(nullptr) {
   lpsolver.setOptionValue("output_flag", false);
   lpsolver.setOptionValue("random_seed", mipsolver.options_mip_->random_seed);
   lpsolver.setOptionValue("primal_feasibility_tolerance",
@@ -190,18 +190,17 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver,
   currentbasisstored = false;
   adjustSymBranchingCol = true;
   row_ep.size = 0;
-  index_ = index;
 }
 
-HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other,
-                                     HighsInt index)
+HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
     : mipsolver(other.mipsolver),
       lprows(other.lprows),
       fractionalints(other.fractionalints),
       objective(other.objective),
       basischeckpoint(other.basischeckpoint),
       currentbasisstored(other.currentbasisstored),
-      adjustSymBranchingCol(other.adjustSymBranchingCol) {
+      adjustSymBranchingCol(other.adjustSymBranchingCol),
+      worker_(nullptr) {
   lpsolver.setOptionValue("output_flag", false);
   lpsolver.passOptions(other.lpsolver.getOptions());
   lpsolver.passModel(other.lpsolver.getLp());
@@ -217,7 +216,6 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other,
   lastAgeCall = 0;
   objective = -kHighsInf;
   row_ep.size = 0;
-  index_ = index;
 }
 
 void HighsLpRelaxation::loadModel() {
@@ -243,8 +241,9 @@ void HighsLpRelaxation::resetToGlobalDomain(HighsDomain& globaldom) {
                             globaldom.col_upper_.data());
 }
 
-void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,
-                                                    HighsDomain* localdom) {
+void HighsLpRelaxation::computeBasicDegenerateDuals(
+    double threshold, HighsDomain* localdom, HighsDomain* globaldom,
+    HighsConflictPool* conflictpool) {
   if (!lpsolver.hasInvert()) return;
 
   HighsInt k = 0;
@@ -393,12 +392,13 @@ void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,
         domchg.boundval = lp.col_upper_[var];
       }
 
-      assert(index_ <= mipsolver.mipdata_->domains.size() - 1);
+      if (globaldom == nullptr) globaldom = &mipsolver.mipdata_->domain;
+      if (conflictpool == nullptr)
+        conflictpool = &mipsolver.mipdata_->conflictPool;
       localdom->conflictAnalyzeReconvergence(
           domchg, row_ap.nonzeroinds.data(), dualproofvals.data(),
-          row_ap.nonzeroinds.size(), double(rhs),
-          mipsolver.mipdata_->conflictPool,
-          mipsolver.mipdata_->domains.at(index_));
+          row_ap.nonzeroinds.size(), static_cast<double>(rhs), *conflictpool,
+          *globaldom);
 
       continue;
     }
@@ -945,8 +945,8 @@ void HighsLpRelaxation::storeDualInfProof() {
     for (HighsInt j = 0; j < len; ++j) row_ap.add(inds[j], weight * vals[j]);
   }
 
-  assert(index_ <= mipsolver.mipdata_->domains.size() - 1);
-  const HighsDomain& globaldomain = mipsolver.mipdata_->domains[index_];
+  HighsDomain& globaldomain =
+      worker_ ? worker_->getGlobalDomain() : mipsolver.mipdata_->domain;
 
   for (HighsInt i : row_ap.getNonzeros()) {
     double val = row_ap.getValue(i);
@@ -991,9 +991,8 @@ void HighsLpRelaxation::storeDualInfProof() {
   }
 
   dualproofrhs = double(upper);
-  mipsolver.mipdata_->domains[index_].tightenCoefficients(
-      dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
-      dualproofrhs);
+  globaldomain.tightenCoefficients(dualproofinds.data(), dualproofvals.data(),
+                                   dualproofinds.size(), dualproofrhs);
 
   mipsolver.mipdata_->debugSolution.checkCut(
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
@@ -1013,10 +1012,10 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofvals.clear();
 
   if (lpsolver.getSolution().dual_valid) {
-    assert(index_ <= mipsolver.mipdata_->domains.size() - 1);
-    hasdualproof = computeDualProof(mipsolver.mipdata_->domains[index_],
-                                    mipsolver.mipdata_->upper_limit,
-                                    dualproofinds, dualproofvals, dualproofrhs);
+    hasdualproof = computeDualProof(
+        worker_ ? worker_->getGlobalDomain() : mipsolver.mipdata_->domain,
+        mipsolver.mipdata_->upper_limit, dualproofinds, dualproofvals,
+        dualproofrhs);
   } else {
     hasdualproof = false;
   }
@@ -1303,6 +1302,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
         HighsCDouble objsum = 0;
         bool roundable = true;
+        const HighsDomain& globaldom =
+            worker_ ? worker_->getGlobalDomain() : mipsolver.mipdata_->domain;
 
         for (HighsInt i : mipsolver.mipdata_->integral_cols) {
           // for the fractionality we assume that LP bounds are not violated
@@ -1351,11 +1352,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             if (lpsolver.getBasis().col_status[i] == HighsBasisStatus::kBasic)
               continue;
 
-            assert(index_ <= mipsolver.mipdata_->domains.size() - 1);
-            const double glb =
-                mipsolver.mipdata_->domains[index_].col_lower_[i];
-            const double gub =
-                mipsolver.mipdata_->domains[index_].col_upper_[i];
+            const double glb = globaldom.col_lower_[i];
+            const double gub = globaldom.col_upper_[i];
 
             if (std::min(gub - sol.col_value[i], sol.col_value[i] - glb) <=
                 mipsolver.mipdata_->feastol)
@@ -1443,12 +1441,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
             objsum += roundsol[i] * mipsolver.colCost(i);
 
-          if (!mipsolver.mipdata_->parallelLockActive()) {
+          if (!mipsolver.mipdata_->parallelLockActive() || !worker_) {
             mipsolver.mipdata_->addIncumbent(
                 roundsol, static_cast<double>(objsum), kSolutionSourceSolveLp);
           } else {
-            mipsolver.mipdata_->workers[index_].addIncumbent(
-                roundsol, static_cast<double>(objsum), kSolutionSourceSolveLp);
+            worker_->addIncumbent(roundsol, static_cast<double>(objsum),
+                                  kSolutionSourceSolveLp);
           }
           objsum = 0;
         }

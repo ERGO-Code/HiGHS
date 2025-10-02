@@ -196,7 +196,8 @@ void HighsSearch::addBoundExceedingConflict() {
 
       HighsCutGeneration cutGen(*lp, getCutPool());
       getDebugSolution().checkCut(inds.data(), vals.data(), inds.size(), rhs);
-      cutGen.generateConflict(localdom, mipworker.getGlobalDomain(), inds, vals, rhs);
+      cutGen.generateConflict(localdom, mipworker.getGlobalDomain(), inds, vals,
+                              rhs);
     }
   }
 }
@@ -225,7 +226,8 @@ void HighsSearch::addInfeasibleConflict() {
 
     HighsCutGeneration cutGen(*lp, getCutPool());
     getDebugSolution().checkCut(inds.data(), vals.data(), inds.size(), rhs);
-    cutGen.generateConflict(localdom, mipworker.getGlobalDomain(), inds, vals, rhs);
+    cutGen.generateConflict(localdom, mipworker.getGlobalDomain(), inds, vals,
+                            rhs);
 
     // if (cutpool.getNumCuts() > oldnumcuts) {
     //  printf(
@@ -556,7 +558,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
-        localdom.conflictAnalysis(getConflictPool(), mipworker.getGlobalDomain());
+        localdom.conflictAnalysis(getConflictPool(),
+                                  mipworker.getGlobalDomain());
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         localdom.clearChangedCols();
@@ -687,7 +690,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
-        localdom.conflictAnalysis(getConflictPool(), mipworker.getGlobalDomain());
+        localdom.conflictAnalysis(getConflictPool(),
+                                  mipworker.getGlobalDomain());
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         localdom.clearChangedCols();
@@ -858,7 +862,8 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       localdom.clearChangedCols(oldchangedcols);
       prune = localdom.infeasible();
       if (prune)
-        localdom.conflictAnalysis(getConflictPool(), mipworker.getGlobalDomain());
+        localdom.conflictAnalysis(getConflictPool(),
+                                  mipworker.getGlobalDomain());
     }
     if (!prune) {
       std::vector<HighsInt> branchPositions;
@@ -1088,11 +1093,11 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
               double gap = getUpperLimit() - lp->getObjective();
               lp->computeBasicDegenerateDuals(
                   gap + std::max(10 * getFeasTol(), getEpsilon() * gap),
-                  &localdom);
+                  &localdom, &getDomain(), &getConflictPool());
             }
             HighsRedcostFixing::propagateRedCost(mipsolver, localdom,
-                                                 mipworker.getGlobalDomain(), *lp,
-                                                 getConflictPool());
+                                                 mipworker.getGlobalDomain(),
+                                                 *lp, getConflictPool());
             localdom.propagate();
             if (localdom.infeasible()) {
               result = NodeResult::kDomainInfeasible;
@@ -1113,7 +1118,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
             }
           } else {
             if (!inheuristic) {
-              lp->computeBasicDegenerateDuals(kHighsInf, &localdom);
+              lp->computeBasicDegenerateDuals(kHighsInf, &localdom,
+                                              &getDomain(), &getConflictPool());
               localdom.propagate();
               if (localdom.infeasible()) {
                 result = NodeResult::kDomainInfeasible;
@@ -1666,7 +1672,8 @@ bool HighsSearch::backtrack(bool recoverBasis) {
       localdom.propagate();
       prune = localdom.infeasible();
       if (prune)
-        localdom.conflictAnalysis(getConflictPool(), mipworker.getGlobalDomain());
+        localdom.conflictAnalysis(getConflictPool(),
+                                  mipworker.getGlobalDomain());
     }
     if (!prune) {
       getSymmetries().propagateOrbitopes(localdom);
@@ -1797,7 +1804,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       localdom.propagate();
       prune = localdom.infeasible();
       if (prune)
-        localdom.conflictAnalysis(getConflictPool(), mipworker.getGlobalDomain());
+        localdom.conflictAnalysis(getConflictPool(),
+                                  mipworker.getGlobalDomain());
     }
     if (!prune) {
       getSymmetries().propagateOrbitopes(localdom);
@@ -1997,15 +2005,15 @@ const std::vector<HighsInt>& HighsSearch::getIntegralCols() const {
   return mipsolver.mipdata_->integral_cols;
 }
 
-HighsDomain& HighsSearch::getDomain() const { return mipworker.getGlobalDomain(); }
+HighsDomain& HighsSearch::getDomain() const {
+  return mipworker.getGlobalDomain();
+}
 
 HighsConflictPool& HighsSearch::getConflictPool() const {
   return *mipworker.conflictpool_;
 }
 
-HighsCutPool& HighsSearch::getCutPool() const {
-  return *mipworker.cutpool_;
-}
+HighsCutPool& HighsSearch::getCutPool() const { return *mipworker.cutpool_; }
 
 const HighsDebugSol& HighsSearch::getDebugSolution() const {
   return mipsolver.mipdata_->debugSolution;

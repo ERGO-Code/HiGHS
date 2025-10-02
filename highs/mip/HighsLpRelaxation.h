@@ -12,11 +12,13 @@
 #include <memory>
 
 #include "Highs.h"
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsMipSolver.h"
 
 class HighsDomain;
 struct HighsCutSet;
 class HighsPseudocost;
+class HighsMipWorker;
 
 class HighsLpRelaxation {
  public:
@@ -84,7 +86,7 @@ class HighsLpRelaxation {
   HighsInt maxNumFractional;
   Status status;
   bool adjustSymBranchingCol;
-  HighsInt index_;
+  HighsMipWorker* worker_;
 
   void storeDualInfProof();
 
@@ -93,9 +95,9 @@ class HighsLpRelaxation {
   bool checkDualProof() const;
 
  public:
-  HighsLpRelaxation(const HighsMipSolver& mip, HighsInt index = 0);
+  HighsLpRelaxation(const HighsMipSolver& mip);
 
-  HighsLpRelaxation(const HighsLpRelaxation& other, HighsInt index = 0);
+  HighsLpRelaxation(const HighsLpRelaxation& other);
 
   void getCutPool(HighsInt& num_col, HighsInt& num_cut,
                   std::vector<double>& cut_lower,
@@ -172,7 +174,9 @@ class HighsLpRelaxation {
   void resetToGlobalDomain(HighsDomain& globaldom);
 
   void computeBasicDegenerateDuals(double threshold,
-                                   HighsDomain* localdom = nullptr);
+                                   HighsDomain* localdom = nullptr,
+                                   HighsDomain* globaldom = nullptr,
+                                   HighsConflictPool* conflictpol = nullptr);
 
   double getAvgSolveIters() { return avgSolveIters; }
 
@@ -238,6 +242,10 @@ class HighsLpRelaxation {
 
     return false;
   }
+
+  void setMipWorker(HighsMipWorker& worker) {
+    worker_ = &worker;
+  };
 
   double computeBestEstimate(const HighsPseudocost& ps) const;
 

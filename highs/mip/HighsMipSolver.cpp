@@ -356,7 +356,7 @@ restart:
 
   auto createNewWorker = [&](HighsInt i) {
     mipdata_->domains.emplace_back(mipdata_->domain);
-    mipdata_->lps.emplace_back(mipdata_->lp, i);
+    mipdata_->lps.emplace_back(mipdata_->lp);
     mipdata_->cutpools.emplace_back(numCol(), options_mip_->mip_pool_age_limit,
                                     options_mip_->mip_pool_soft_limit, i + 1);
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
@@ -364,6 +364,7 @@ restart:
     mipdata_->workers.emplace_back(
         *this, &mipdata_->lps.back(), &mipdata_->domains.back(),
         &mipdata_->cutpools.back(), &mipdata_->conflictpools.back());
+    mipdata_->lps.back().setMipWorker(mipdata_->workers.back());
     mipdata_->lp.notifyCutPoolsLpCopied(1);
   };
 
