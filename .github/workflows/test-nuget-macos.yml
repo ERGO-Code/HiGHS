@@ -7,9 +7,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # macos 13 is Intel
-  build_macos_13:
-    runs-on: macos-13
+  build_macos_intel:
+    runs-on: macos-15-intel
     # strategy:
       # matrix:
       #   python: [3.11]
@@ -55,9 +54,8 @@ jobs:
           dotnet run
 
             
-  # macos 14 is M1
-  build_macos_14:
-    runs-on: macos-14 
+  build_macos_arm:
+    runs-on: macos-14  # macos-14 is arm64
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS
