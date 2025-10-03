@@ -13,6 +13,7 @@ copy_file(
 bool_flag(
     name = "cupdlp_gpu",
     build_setting_default = False,
+    visibility = ["//visibility:public"],
 )
 
 config_setting(
