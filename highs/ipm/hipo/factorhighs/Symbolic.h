@@ -12,9 +12,10 @@ namespace hipo {
 
 // info about subtrees in the parallel layer
 struct SubtreeInfo {
-  Int start;      // first node in subtree
-  Int end;        // first node not in subtree
-  int64_t stack;  // minimum stack size
+  Int start;            // first node in subtree
+  Int end;              // first node not in subtree
+  int64_t stack;        // minimum stack size
+  double ops_fraction;  // fraction of operations in subtree
 };
 
 // Symbolic factorisation object

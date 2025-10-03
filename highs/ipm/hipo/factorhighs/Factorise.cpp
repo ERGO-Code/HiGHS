@@ -330,6 +330,14 @@ void Factorise::processSupernodes(Int start, Int end) {
   }
 }
 
+void Factorise::processSmallSubtrees(Int i, Int j) {
+  for (Int tree = i; tree < j; ++tree) {
+    Int start = S_.smallSubtreeInfo(tree).start;
+    Int end = S_.smallSubtreeInfo(tree).end;
+    processSupernodes(start, end);
+  }
+}
+
 bool Factorise::run(Numeric& num) {
 #if HIPO_TIMING_LEVEL >= 1
   Clock clock;
@@ -354,16 +362,36 @@ bool Factorise::run(Numeric& num) {
       highs::parallel::spawn([=]() { processSupernodes(start, end); });
     }
 
-    // wait for subtrees in the layer to complete
-    for (Int i = 0; i < S_.layerIndex().size(); ++i) {
-      highs::parallel::sync();
+    // process small subtrees
+    // They are grouped together and spawned when a group has more than 5% of
+    // total operations
+    Int small_start{};
+    double small_ops_current{};
+    Int small_spawned{};
+    for (Int i = 0; i < S_.smallSubtrees().size(); ++i) {
+      small_ops_current += S_.smallSubtreeInfo(i).ops_fraction;
+
+      if (small_ops_current > 0.05) {
+        // spawn start to current
+        highs::parallel::spawn(
+            [=]() { processSmallSubtrees(small_start, i + 1); });
+
+        small_start = i + 1;
+        small_ops_current = 0.0;
+        ++small_spawned;
+      }
+    }
+    if (small_ops_current > 0) {
+      // spawn start to end
+      ++small_spawned;
+      highs::parallel::spawn([=]() {
+        processSmallSubtrees(small_start, S_.smallSubtrees().size());
+      });
     }
 
-    // process small subtrees
-    for (Int i = 0; i < S_.smallSubtrees().size(); ++i) {
-      Int start = S_.smallSubtreeInfo(i).start;
-      Int end = S_.smallSubtreeInfo(i).end;
-      processSupernodes(start, end);
+    // wait for subtrees to complete
+    for (Int i = 0; i < S_.layerIndex().size() + small_spawned; ++i) {
+      highs::parallel::sync();
     }
 
     // process nodes above layer

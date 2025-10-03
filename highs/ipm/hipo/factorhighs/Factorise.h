@@ -66,6 +66,7 @@ class Factorise {
   void permute(const std::vector<Int>& iperm);
   void processSupernode(Int sn);
   void processSupernodes(Int start, Int end);
+  void processSmallSubtrees(Int start, Int end);
 
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsA,

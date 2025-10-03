@@ -1323,6 +1323,9 @@ void Analyse::generateParallelLayer(Int threads) {
   // percentage of total ops below which a subtree is considered small
   const double small_thresh_coeff = 0.01;
 
+  std::vector<double> subtree_ops(sn_count_, 0.0);
+  double total_ops = dense_ops_;
+
   if (threads > 1) {
     std::stringstream log_stream;
     log_stream << "Searching parallel layer\n";
@@ -1330,8 +1333,6 @@ void Analyse::generateParallelLayer(Int threads) {
     // linked lists of children
     std::vector<Int> head, next;
     childrenLinkedList(sn_parent_, head, next);
-
-    double total_ops = dense_ops_;
 
     // compute number of operations for each supernode
     std::vector<double> sn_ops(sn_count_);
@@ -1357,7 +1358,6 @@ void Analyse::generateParallelLayer(Int threads) {
     }
 
     // compute number of operations to process each subtree
-    std::vector<double> subtree_ops(sn_count_, 0.0);
     for (Int sn = 0; sn < sn_count_; ++sn) {
       subtree_ops[sn] += sn_ops[sn];
       if (sn_parent_[sn] != -1) {
@@ -1577,6 +1577,8 @@ void Analyse::generateParallelLayer(Int threads) {
 
     // no stack needed for small subtrees
     smallSubtreesInfo_[index].stack = -1;
+
+    smallSubtreesInfo_[index].ops_fraction = subtree_ops[node] / total_ops;
 
     ++index;
   }
