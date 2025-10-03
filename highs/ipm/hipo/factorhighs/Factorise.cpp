@@ -363,30 +363,13 @@ bool Factorise::run(Numeric& num) {
     }
 
     // process small subtrees
-    // They are grouped together and spawned when a group has more than 5% of
-    // total operations
-    Int small_start{};
-    double small_ops_current{};
     Int small_spawned{};
-    for (Int i = 0; i < S_.smallSubtrees().size(); ++i) {
-      small_ops_current += S_.smallSubtreeInfo(i).ops_fraction;
-
-      if (small_ops_current > 0.05) {
-        // spawn start to current
-        highs::parallel::spawn(
-            [=]() { processSmallSubtrees(small_start, i + 1); });
-
-        small_start = i + 1;
-        small_ops_current = 0.0;
-        ++small_spawned;
-      }
-    }
-    if (small_ops_current > 0) {
-      // spawn start to end
-      ++small_spawned;
+    for (Int i = 1; i < S_.smallSubtreesStart().size(); ++i) {
       highs::parallel::spawn([=]() {
-        processSmallSubtrees(small_start, S_.smallSubtrees().size());
+        processSmallSubtrees(S_.smallSubtreesStart()[i - 1],
+                             S_.smallSubtreesStart()[i]);
       });
+      ++small_spawned;
     }
 
     // wait for subtrees to complete

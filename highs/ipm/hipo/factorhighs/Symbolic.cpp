@@ -53,6 +53,9 @@ const SubtreeInfo& Symbolic::smallSubtreeInfo(Int i) const {
 const std::set<Int>& Symbolic::aboveLayer() const { return aboveLayer_; }
 const std::set<Int>& Symbolic::smallSubtrees() const { return smallSubtrees_; }
 const std::map<Int, Int>& Symbolic::layerIndex() const { return layerIndex_; }
+const std::vector<Int>& Symbolic::smallSubtreesStart() const {
+  return smallSubtreesStart_;
+}
 
 std::string memoryString(double mem) {
   std::stringstream ss;

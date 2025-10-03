@@ -1569,6 +1569,8 @@ void Analyse::generateParallelLayer(Int threads) {
   // generate info about small subtrees
   smallSubtreesInfo_.resize(smallSubtrees_.size());
   Int index = 0;
+  double small_ops_current{};
+  smallSubtreesStart_.push_back(0);
   for (auto it = smallSubtrees_.begin(); it != smallSubtrees_.end(); ++it) {
     Int node = *it;
 
@@ -1576,12 +1578,18 @@ void Analyse::generateParallelLayer(Int threads) {
     smallSubtreesInfo_[index].end = node + 1;
 
     // no stack needed for small subtrees
-    smallSubtreesInfo_[index].stack = -1;
+    smallSubtreesInfo_[index].stack = stack_subtree_parallel_[node];
 
-    smallSubtreesInfo_[index].ops_fraction = subtree_ops[node] / total_ops;
+    // divide small subtrees in groups of up to 5% ops, to be spawned together
+    small_ops_current += subtree_ops[node] / total_ops;
+    if (small_ops_current > 0.05) {
+      smallSubtreesStart_.push_back(index + 1);
+      small_ops_current = 0.0;
+    }
 
     ++index;
   }
+  if (small_ops_current > 0) smallSubtreesStart_.push_back(index);
 }
 
 Int Analyse::run(Symbolic& S) {
@@ -1721,6 +1729,7 @@ Int Analyse::run(Symbolic& S) {
   S.smallSubtreesInfo_ = std::move(smallSubtreesInfo_);
   S.aboveLayer_ = std::move(aboveLayer_);
   S.smallSubtrees_ = std::move(smallSubtrees_);
+  S.smallSubtreesStart_ = std::move(smallSubtreesStart_);
 
 #if HIPO_TIMING_LEVEL >= 1
   data_.sumTime(kTimeAnalyse, clock_total.stop());

@@ -12,10 +12,9 @@ namespace hipo {
 
 // info about subtrees in the parallel layer
 struct SubtreeInfo {
-  Int start;            // first node in subtree
-  Int end;              // first node not in subtree
-  int64_t stack;        // minimum stack size
-  double ops_fraction;  // fraction of operations in subtree
+  Int start;      // first node in subtree
+  Int end;        // first node not in subtree
+  int64_t stack;  // minimum stack size
 };
 
 // Symbolic factorisation object
@@ -123,6 +122,12 @@ class Symbolic {
   // layer
   std::set<Int> smallSubtrees_;
 
+  // Information about how to divide small subtrees among threads.
+  // A task is created that processes the subtrees numbered
+  // smallSubtreesStart[i] to smallSubtreesStart[i+1]. These subtrees have a
+  // total number of operations between 5% and 6% of the total operations.
+  std::vector<Int> smallSubtreesStart_;
+
   // Information about number of entries
   int64_t serial_stack_size_, parallel_stack_size_, factors_total_entries_;
   int64_t root_stack_entries_;
@@ -162,6 +167,7 @@ class Symbolic {
   const std::set<Int>& aboveLayer() const;
   const std::set<Int>& smallSubtrees() const;
   const std::map<Int, Int>& layerIndex() const;
+  const std::vector<Int>& smallSubtreesStart() const;
 
   void print(const Log& log, bool verbose = false) const;
 };
