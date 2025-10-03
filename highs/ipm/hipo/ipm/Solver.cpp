@@ -44,6 +44,9 @@ void Solver::solve() {
     return;
   }
 
+  // iterate object needs to be initialised before potentially interrupting
+  it_.reset(new Iterate(model_, regul_));
+
   if (checkInterrupt()) return;
 
   printInfo();
@@ -72,9 +75,6 @@ bool Solver::initialise() {
   // Return true if an error occurred.
 
   start_time_ = control_.elapsed();
-
-  // initialise iterate object
-  it_.reset(new Iterate(model_, regul_));
 
   // initialise linear solver
   LS_.reset(new FactorHiGHSSolver(options_, model_, regul_, &info_, &it_->data,
