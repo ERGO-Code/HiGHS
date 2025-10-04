@@ -1071,5 +1071,26 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
   REQUIRE(h.getInfo().simplex_iteration_count == 0);
 
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  // Perturb one of the integer variables for code coverage of
+  // warning: makes fixed LP of flugpl infeasible
+  std::vector<HighsVarType> integrality = h.getLp().integrality_;
+  for (HighsInt iCol = 0; iCol < fixed_lp.num_col_; iCol++) {
+    if (integrality[iCol] != HighsVarType::kContinuous) {
+      solution.col_value[iCol] -= 0.01;
+      break;
+    }
+  }
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  h.setSolution(solution);
+
+  REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kWarning);
+
+  REQUIRE(h.passModel(fixed_lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
+
   h.resetGlobalScheduler(true);
 }
