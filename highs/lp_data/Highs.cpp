@@ -1893,6 +1893,47 @@ HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getFixedLp(HighsLp& lp) const {
+  if (!this->model_.lp_.isMip()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Incumbent model is not a MIP, so cannot form fixed LP\n");
+    return HighsStatus::kError;
+  }
+  if (!this->solution_.value_valid) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Incumbent model does not have a valid solution, so cannot "
+                 "form fixed LP\n");
+    return HighsStatus::kError;
+  }
+  lp = this->model_.lp_;
+  const std::vector<HighsVarType> integrality = this->model_.lp_.integrality_;
+  lp.integrality_.clear();
+  HighsInt num_non_conts_fractional = 0;
+  double max_fractional = 0;
+  for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++) {
+    if (integrality[iCol] == HighsVarType::kContinuous) continue;
+    double value = this->solution_.col_value[iCol];
+    if (integrality[iCol] == HighsVarType::kInteger ||
+        integrality[iCol] == HighsVarType::kSemiInteger) {
+      double fractional = fractionality(value);
+      if (fractional > this->options_.mip_feasibility_tolerance) {
+        num_non_conts_fractional++;
+        max_fractional = std::max(fractional, max_fractional);
+      }
+    }
+    lp.col_lower_[iCol] = value;
+    lp.col_upper_[iCol] = value;
+  }
+  if (num_non_conts_fractional) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kWarning,
+        "Fixed LP has %d variables fixed at max fractional value of %g\n",
+        int(num_non_conts_fractional), max_fractional);
+    return HighsStatus::kWarning;
+  }
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   has_dual_ray = false;
   return getDualRayInterface(has_dual_ray, dual_ray_value);

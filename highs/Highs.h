@@ -459,12 +459,11 @@ class Highs {
   }
 
   /**
-   * @brief Return a const pointer to the original row indices for the
-   * presolved model
+   * @brief Return an LP associated with a MIP and its solution, with
+   * each integer variable fixed to the value it takes in the MIP
+   * solution. If no solution is available, an error is returned.
    */
-  const HighsInt* getPresolveOrigRowsIndex() const {
-    return presolve_.data_.postSolveStack.getOrigRowsIndex();
-  }
+  HighsStatus getFixedLp(HighsLp& lp) const;
 
   /**
    * @brief Return a const reference to the incumbent LP

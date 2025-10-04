@@ -1035,3 +1035,41 @@ TEST_CASE("issue-2432", "[highs_test_mip_solver]") {
         "found\n");
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
+  std::string model = "avgas";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  HighsLp fixed_lp;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kError);
+
+  model = "flugpl";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kError);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  double mip_optimal_objective = h.getInfo().objective_function_value;
+  HighsSolution solution = h.getSolution();
+
+  REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kOk);
+
+  REQUIRE(h.passModel(fixed_lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+
+  // Now run from saved solution without presolve
+  h.clearSolver();
+  h.setSolution(solution);
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+  REQUIRE(h.getInfo().simplex_iteration_count == 0);
+
+  h.resetGlobalScheduler(true);
+}
