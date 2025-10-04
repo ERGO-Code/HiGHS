@@ -46,11 +46,9 @@ class Highs {
     FILE* log_stream = this->options_.log_options.log_stream;
     if (log_stream != nullptr) {
       assert(log_stream != stdout);
-      // Was this, but only passing a copy of the pointer, so not
-      // closing the true log stream?
-      //
-      // fclose(log_stream);
-      fclose(this->options_.log_options.log_stream);
+      // Flush and close log_stream
+      fflush(log_stream);
+      fclose(log_stream);
     }
   }
 
