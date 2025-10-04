@@ -42,15 +42,7 @@ const char* highsGithash();
 class Highs {
  public:
   Highs();
-  virtual ~Highs() {
-    FILE* log_stream = this->options_.log_options.log_stream;
-    if (log_stream != nullptr) {
-      assert(log_stream != stdout);
-      // Flush and close log_stream
-      fflush(log_stream);
-      fclose(log_stream);
-    }
-  }
+  virtual ~Highs() { this->closeLogFile(); }
 
   /**
    * @brief Return the version as a string
