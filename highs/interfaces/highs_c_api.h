@@ -2262,6 +2262,30 @@ HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,
                         double* a_value, HighsInt* integrality);
 
 /**
+ * Get the LP corresponding to a MIP with non-continuous variables
+ * fixed at a MIP solution
+ *
+ * The input arguments have the same meaning (in a different order) to those
+ * used in `Highs_passModel`.
+ *
+ * Note that all arrays must be pre-allocated to the correct size before calling
+ * `Highs_getModel`. Use the following query methods to check the appropriate
+ * size:
+ *  - `Highs_getNumCol`
+ *  - `Highs_getNumRow`
+ *  - `Highs_getNumNz`
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getFixedLp(const void* highs, const HighsInt a_format,
+                          HighsInt* num_col, HighsInt* num_row,
+                          HighsInt* num_nz, HighsInt* sense, double* offset,
+                          double* col_cost, double* col_lower,
+                          double* col_upper, double* row_lower,
+                          double* row_upper, HighsInt* a_start,
+                          HighsInt* a_index, double* a_value);
+
+/**
  * Set a primal (and possibly dual) solution as a starting point, then run
  * crossover to compute a basic feasible solution.
  *
