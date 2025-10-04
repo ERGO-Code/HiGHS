@@ -43,10 +43,14 @@ class Highs {
  public:
   Highs();
   virtual ~Highs() {
-    FILE* log_stream = options_.log_options.log_stream;
+    FILE* log_stream = this->options_.log_options.log_stream;
     if (log_stream != nullptr) {
       assert(log_stream != stdout);
-      fclose(log_stream);
+      // Was this, but only passing a copy of the pointer, so not
+      // closing the true log stream?
+      //
+      // fclose(log_stream);
+      fclose(this->options_.log_options.log_stream);
     }
   }
 
@@ -1215,6 +1219,11 @@ class Highs {
    * @brief Open a named log file
    */
   HighsStatus openLogFile(const std::string& log_file = "");
+
+  /**
+   * @brief Close any open log file
+   */
+  HighsStatus closeLogFile();
 
   /**
    * @brief Interpret common qualifiers to string values
