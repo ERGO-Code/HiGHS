@@ -1094,3 +1094,33 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("get-fixed-lp-semi", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1, 3, 1, 2};
+  lp.col_lower_ = {0, 0, 1, 1};
+  lp.col_upper_ = {1, 1, 3, 5};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kSemiContinuous, HighsVarType::kSemiInteger};
+  lp.row_lower_ = {4, 10};
+  lp.row_upper_ = {kHighsInf, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4, 6, 8};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, 2, 1, 3, 1, 4, 5, 1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.passModel(lp);
+  h.run();
+  double mip_optimal_objective = h.getInfo().objective_function_value;
+  HighsSolution solution = h.getSolution();
+  HighsLp fixed_lp;
+  REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kOk);
+
+  REQUIRE(h.passModel(fixed_lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+}
