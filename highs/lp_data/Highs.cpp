@@ -1911,18 +1911,22 @@ HighsStatus Highs::getFixedLp(HighsLp& lp) const {
   HighsInt num_non_conts_fractional = 0;
   double max_fractional = 0;
   for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++) {
-    if (integrality[iCol] == HighsVarType::kContinuous) continue;
     double value = this->solution_.col_value[iCol];
+    // Fix integer and semi-integer variables at their
+    // value. Semi-continuous variables are fixed at zero if they are
+    // closer to zero than their lower bound
     if (integrality[iCol] == HighsVarType::kInteger ||
-        integrality[iCol] == HighsVarType::kSemiInteger) {
+        integrality[iCol] == HighsVarType::kSemiInteger ||
+	(integrality[iCol] == HighsVarType::kSemiContinuous &&
+	 value < lp.col_lower_[iCol]-value)) {
       double fractional = fractionality(value);
       if (fractional > this->options_.mip_feasibility_tolerance) {
         num_non_conts_fractional++;
         max_fractional = std::max(fractional, max_fractional);
       }
+      lp.col_lower_[iCol] = value;
+      lp.col_upper_[iCol] = value;
     }
-    lp.col_lower_[iCol] = value;
-    lp.col_upper_[iCol] = value;
   }
   if (num_non_conts_fractional) {
     highsLogUser(
