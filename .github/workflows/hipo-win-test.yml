@@ -48,10 +48,10 @@ jobs:
         run: |
           cmake --build . --parallel --config Release
 
-      - name: Test executable 
+      - name: Run test-hipo-afiro
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: ./Release/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ./Release/bin/unit_tests test-hipo-afiro
 
       - name: Run test-hipo-deterministic
         shell: bash
