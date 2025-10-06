@@ -28,7 +28,7 @@ TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("solver", kHipoString);
   highs.setOptionValue("timeless_log", kHighsOnString);
-  highs.setOptionValue("log_dev_level", 1);
+  highs.setOptionValue("log_dev_level", 2);
 
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
   highs.readModel(filename);

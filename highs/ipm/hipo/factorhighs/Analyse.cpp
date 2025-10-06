@@ -113,7 +113,10 @@ Int Analyse::getPermutation() {
   // set logging of Metis depending on debug level
   options[METIS_OPTION_DBGLVL] = 0;
   if (log_->debug(2))
-    options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
+    options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN |
+                                   METIS_DBG_REFINE | METIS_DBG_IPART |
+                                   METIS_DBG_MOVEINFO | METIS_DBG_SEPINFO |
+                                   METIS_DBG_CONNINFO | METIS_DBG_CONTIGINFO;
 
   if (log_) log_->printDevInfo("Running Metis\n");
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
