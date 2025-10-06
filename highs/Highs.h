@@ -1639,7 +1639,8 @@ class Highs {
 
   bool feasibleWrtBounds(const bool columns,
                          const HighsIndexCollection& index_collection,
-                         const double* lower, const double* upper) const;
+                         const std::vector<double>& lower,
+			 const std::vector<double>& upper) const;
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_col_lower,
                                        const double* usr_col_upper);
