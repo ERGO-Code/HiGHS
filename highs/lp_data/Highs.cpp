@@ -1350,18 +1350,36 @@ HighsStatus Highs::optimizeModel() {
   }
   if (basis_.valid) assert(basis_.useful);
 
-  if ((has_basis || options_.presolve == kHighsOffString || unconstrained_lp) &&
+  const bool without_presolve = options_.presolve == kHighsOffString;
+  if ((unconstrained_lp || has_basis || without_presolve) &&
       solver_will_use_basis) {
     // There is a valid basis for the problem, presolve is off, or LP
     // has no constraint matrix, and the solver will use the basis
-    ekk_instance_.lp_name_ =
-        "LP without presolve, or with basis, or unconstrained";
+    // (otherwise it's better to use presolve, if it's not switched
+    // off)
+    //
+    // Determine a coherent message about how the LP is being solved
+    std::stringstream lp_solve_ss;
+    if (unconstrained_lp) {
+      lp_solve_ss << "Solving unconstrained LP";
+    } else if (has_basis) {
+      if (without_presolve) {
+        lp_solve_ss << "Solving LP with useful basis";
+      } else {
+        lp_solve_ss << "Solving LP with useful basis so presolve not used";
+      }
+    } else {
+      // One of unconstrained_lp, has_basis and without_presolve must
+      // be true, and the first two anren't
+      assert(without_presolve);
+      lp_solve_ss << "Solving LP without presolve or useful basis";
+    }
+    std::string lp_solve = lp_solve_ss.str();
+    ekk_instance_.lp_name_ = lp_solve;
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
-    solveLp(incumbent_lp,
-            "Solving LP without presolve, or with basis, or unconstrained",
-            this_solve_original_lp_time);
+    solveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)

@@ -1055,6 +1055,47 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   double mip_optimal_objective = h.getInfo().objective_function_value;
   HighsSolution solution = h.getSolution();
 
+  // Transform the incumbent MIP into the fixed LP
+  HighsLp mip = h.getLp();
+  std::vector<HighsInt> col_set;
+  std::vector<double> fixed_value;
+  std::vector<HighsVarType> integrality = mip.integrality_;
+  for (HighsInt iCol = 0; iCol < mip.num_col_; iCol++) {
+    if (mip.integrality_[iCol] == HighsVarType::kInteger) {
+      col_set.push_back(iCol);
+      fixed_value.push_back(solution.col_value[iCol]);
+      integrality[iCol] = HighsVarType::kContinuous;
+    }
+  }
+  h.clearIntegrality();
+  HighsInt num_set_entries = col_set.size();
+  h.changeColsBounds(num_set_entries, col_set.data(), fixed_value.data(),
+                     fixed_value.data());
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+  // In calling changeColsBounds, the incumbent solution is cleared,
+  // so there is no information from which to construct an advanced
+  // basis. Hence simplex starts from a logical basis and requires a
+  // positive number of iterations (#2556)
+  REQUIRE(h.getInfo().simplex_iteration_count > 0);
+
+  // Now, passing the MIP solution, there is information from which to
+  // construct an advanced basis. In the case of flugpl, this is
+  // optimal, so no simplex iterations are required
+  h.clearSolver();
+  h.setSolution(solution);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+  REQUIRE(h.getInfo().simplex_iteration_count == 0);
+
+  // Now re-load the MIP, re-solve, and get the fixed LP
+  REQUIRE(h.passModel(mip) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+
   REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kOk);
 
   REQUIRE(h.passModel(fixed_lp) == HighsStatus::kOk);
@@ -1062,10 +1103,9 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
 
   REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
 
-  // Now run from saved solution without presolve
+  // Now run from saved solution (without presolve)
   h.clearSolver();
   h.setSolution(solution);
-  h.setOptionValue("presolve", kHighsOffString);
   REQUIRE(h.run() == HighsStatus::kOk);
 
   REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
@@ -1074,7 +1114,7 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   // Perturb one of the integer variables for code coverage of
   // warning: makes fixed LP of flugpl infeasible
-  std::vector<HighsVarType> integrality = h.getLp().integrality_;
+  integrality = h.getLp().integrality_;
   for (HighsInt iCol = 0; iCol < fixed_lp.num_col_; iCol++) {
     if (integrality[iCol] != HighsVarType::kContinuous) {
       solution.col_value[iCol] -= 0.01;
