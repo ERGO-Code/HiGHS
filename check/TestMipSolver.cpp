@@ -1059,12 +1059,10 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   HighsLp mip = h.getLp();
   std::vector<HighsInt> col_set;
   std::vector<double> fixed_value;
-  std::vector<HighsVarType> integrality = mip.integrality_;
   for (HighsInt iCol = 0; iCol < mip.num_col_; iCol++) {
     if (mip.integrality_[iCol] == HighsVarType::kInteger) {
       col_set.push_back(iCol);
       fixed_value.push_back(solution.col_value[iCol]);
-      integrality[iCol] = HighsVarType::kContinuous;
     }
   }
   h.clearIntegrality();
@@ -1119,7 +1117,7 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   // Perturb one of the integer variables for code coverage of
   // warning: makes fixed LP of flugpl infeasible
-  integrality = h.getLp().integrality_;
+  std::vector<HighsVarType> integrality = h.getLp().integrality_;
   for (HighsInt iCol = 0; iCol < fixed_lp.num_col_; iCol++) {
     if (integrality[iCol] != HighsVarType::kContinuous) {
       solution.col_value[iCol] -= 0.01;
@@ -1168,4 +1166,26 @@ TEST_CASE("get-fixed-lp-semi", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
 
   REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+}
+
+TEST_CASE("row-fixed-lp", "[highs_test_mip_solver]") {
+  std::string model = "flugpl";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  double mip_optimal_objective = h.getInfo().objective_function_value;
+  HighsSolution solution = h.getSolution();
+
+  HighsLp lp = h.getLp();
+  h.clearIntegrality();
+  h.changeRowsBounds(0, lp.num_row_ - 1, solution.row_value.data(),
+                     solution.row_value.data());
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getInfo().objective_function_value <= mip_optimal_objective);
+
+  h.resetGlobalScheduler(true);
 }

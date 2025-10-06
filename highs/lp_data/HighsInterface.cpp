@@ -991,9 +991,8 @@ bool Highs::feasibleWrtBounds(const bool columns) const {
   const HighsLp& lp = model_.lp_;
   const double primal_feasibility_tolerance =
       this->options_.primal_feasibility_tolerance;
-  std::vector<double> value = columns ?
-    this->solution_.col_value :
-    this->solution_.row_value;
+  std::vector<double> value =
+      columns ? this->solution_.col_value : this->solution_.row_value;
   std::vector<double> lower = columns ? lp.col_lower_ : lp.row_lower_;
   std::vector<double> upper = columns ? lp.col_upper_ : lp.row_upper_;
   HighsInt dim = columns ? lp.num_col_ : lp.num_row_;
@@ -1121,7 +1120,14 @@ HighsStatus Highs::changeRowBoundsInterface(
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, false);
   // Deduce the consequences of new row bounds
-  invalidateModelStatusSolutionAndInfo();
+  if (!this->basis_.useful && feasibleWrtBounds(false)) {
+    // Retain the solution if there's no basis, and the solution is
+    // feasible
+    invalidateModelStatusAndInfo();
+  } else {
+    // Invalidate the solution
+    invalidateModelStatusSolutionAndInfo();
+  }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
