@@ -22,6 +22,8 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
       cutpool_(cutpool),
       conflictpool_(conflictpool) {
   upper_bound = mipdata_.upper_bound;
+  upper_limit = mipdata_.upper_limit;
+  optimality_limit = mipdata_.optimality_limit;
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
   sepa_ptr_ = std::unique_ptr<HighsSeparation>(new HighsSeparation(*this));
@@ -57,6 +59,13 @@ bool HighsMipWorker::addIncumbent(const std::vector<double>& sol, double solobj,
         transformNewIntegerFeasibleSolution(sol);
     if (transformed_solobj.first && transformed_solobj.second < upper_bound) {
       upper_bound = transformed_solobj.second;
+      double new_upper_limit = mipdata_.computeNewUpperLimit(solobj, 0.0, 0.0);
+      if (new_upper_limit < upper_limit) {
+        upper_limit = new_upper_limit;
+        optimality_limit = mipdata_.computeNewUpperLimit(
+            solobj, mipsolver_.options_mip_->mip_abs_gap,
+            mipsolver_.options_mip_->mip_rel_gap);
+      }
     }
     // Can't repair solutions locally, so also buffer infeasible ones
     solutions_.emplace_back(sol, solobj, solution_source);

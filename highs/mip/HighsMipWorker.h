@@ -37,6 +37,8 @@ class HighsMipWorker {
   const HighsMipSolver& getMipSolver();
 
   double upper_bound;
+  double upper_limit;
+  double optimality_limit;
 
   std::vector<std::tuple<std::vector<double>, double, int>> solutions_;
 

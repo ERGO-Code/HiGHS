@@ -176,7 +176,12 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsInt oldNumImprovingSols = mipsolver.mipdata_->numImprovingSols;
   if (submipsolver.modelstatus_ != HighsModelStatus::kInfeasible &&
       !submipsolver.solution_.empty()) {
-    worker.trySolution(submipsolver.solution_, kSolutionSourceSubMip);
+    if (mipsolver.mipdata_->parallelLockActive()) {
+      worker.trySolution(submipsolver.solution_, kSolutionSourceSubMip);
+    } else {
+      mipsolver.mipdata_->trySolution(submipsolver.solution_,
+                                      kSolutionSourceSubMip);
+    }
   }
 
   if (mipsolver.mipdata_->numImprovingSols != oldNumImprovingSols) {
@@ -956,7 +961,11 @@ bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
       if (!integerFeasible) {
         // there may be fractional integer variables -> try ziRound heuristic
         ziRound(worker, lpsol);
-        return worker.trySolution(lpsol, solution_source);
+        if (mipsolver.mipdata_->parallelLockActive()) {
+          return worker.trySolution(lpsol, solution_source);
+        } else {
+          mipsolver.mipdata_->trySolution(lpsol, solution_source);
+        }
       } else {
         // all integer variables are fixed -> add incumbent
         if (mipsolver.mipdata_->parallelLockActive()) {
@@ -970,7 +979,10 @@ bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
     }
   }
 
-  return worker.trySolution(localdom.col_lower_, solution_source);
+  if (mipsolver.mipdata_->parallelLockActive()) {
+    return worker.trySolution(localdom.col_lower_, solution_source);
+  }
+  return mipsolver.mipdata_->trySolution(localdom.col_lower_, solution_source);
 }
 
 bool HighsPrimalHeuristics::linesearchRounding(
@@ -1106,7 +1118,13 @@ void HighsPrimalHeuristics::randomizedRounding(
             lprelax.getObjective(), kSolutionSourceRandomizedRounding);
       }
   } else {
-    worker.trySolution(localdom.col_lower_, kSolutionSourceRandomizedRounding);
+    if (mipsolver.mipdata_->parallelLockActive()) {
+      worker.trySolution(localdom.col_lower_,
+                         kSolutionSourceRandomizedRounding);
+    } else {
+      mipsolver.mipdata_->trySolution(localdom.col_lower_,
+                                      kSolutionSourceRandomizedRounding);
+    }
   }
 }
 
@@ -1356,10 +1374,16 @@ void HighsPrimalHeuristics::shifting(HighsMipWorker& worker,
   if (hasInfeasibleConstraints) {
     tryRoundedPoint(worker, current_relax_solution, kSolutionSourceShifting);
   } else {
-    if (current_fractional_integers.size() > 0)
+    if (current_fractional_integers.size() > 0) {
       ziRound(worker, current_relax_solution);
-    else
-      worker.trySolution(current_relax_solution, kSolutionSourceShifting);
+    } else {
+      if (mipsolver.mipdata_->parallelLockActive()) {
+        worker.trySolution(current_relax_solution, kSolutionSourceShifting);
+      } else {
+        mipsolver.mipdata_->trySolution(current_relax_solution,
+                                        kSolutionSourceShifting);
+      }
+    }
   }
 }
 
@@ -1473,7 +1497,12 @@ void HighsPrimalHeuristics::ziRound(HighsMipWorker& worker,
     improvement_in_feasibility = previous_zi_total - zi_total;
   }
   // re-check for feasibility and add incumbent
-  worker.trySolution(current_relax_solution, kSolutionSourceZiRound);
+  if (mipsolver.mipdata_->parallelLockActive()) {
+    worker.trySolution(current_relax_solution, kSolutionSourceZiRound);
+  } else {
+    mipsolver.mipdata_->trySolution(current_relax_solution,
+                                    kSolutionSourceZiRound);
+  }
 }
 
 void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {

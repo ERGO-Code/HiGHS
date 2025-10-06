@@ -357,6 +357,8 @@ restart:
   destroyOldWorkers();
   if (num_workers > 1) constructAdditionalWorkerData(master_worker);
   master_worker.upper_bound = mipdata_->upper_bound;
+  master_worker.upper_limit = mipdata_->upper_limit;
+  master_worker.optimality_limit = mipdata_->optimality_limit;
   assert(master_worker.solutions_.empty());
   master_worker.solutions_.clear();
   for (HighsInt i = 1; i != num_workers; ++i) {
@@ -418,6 +420,8 @@ restart:
     for (HighsMipWorker& worker : mipdata_->workers) {
       assert(mipdata_->upper_bound <= worker.upper_bound);
       worker.upper_bound = mipdata_->upper_bound;
+      worker.upper_limit = mipdata_->upper_limit;
+      worker.optimality_limit = mipdata_->optimality_limit;
     }
   };
 
@@ -466,6 +470,10 @@ restart:
             std::vector<HighsDomainChange>());
         worker.getGlobalDomain().clearChangedCols();
         worker.search_ptr_->resetLocalDomain();
+        for (HighsInt i = 0; i < numCol(); ++i) {
+          assert(mipdata_->domain.col_lower_[i] == worker.globaldom_->col_lower_[i]);
+          assert(mipdata_->domain.col_upper_[i] == worker.globaldom_->col_upper_[i]);
+        }
       }
     }
   };
@@ -1180,7 +1188,9 @@ restart:
       this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
       analysis_.node_search_time.push_back(this_node_search_time);
     }
-    if (limit_reached) break;
+    if (limit_reached) {
+      break;
+    }
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
 
@@ -1188,6 +1198,9 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
+  for (HighsMipWorker& worker : mipdata_->workers) {
+    assert(worker.solutions_.empty());
+  }
   // Force a final logging line
   mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve

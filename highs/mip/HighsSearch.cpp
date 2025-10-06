@@ -1988,13 +1988,21 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
 double HighsSearch::getFeasTol() const { return mipsolver.mipdata_->feastol; }
 
 double HighsSearch::getUpperLimit() const {
-  return mipsolver.mipdata_->upper_limit;
+  if (mipsolver.mipdata_->parallelLockActive()) {
+    return mipsolver.mipdata_->upper_limit;
+  } else {
+    return mipworker.upper_limit;
+  }
 }
 
 double HighsSearch::getEpsilon() const { return mipsolver.mipdata_->epsilon; }
 
 double HighsSearch::getOptimalityLimit() const {
-  return mipsolver.mipdata_->optimality_limit;
+  if (mipsolver.mipdata_->parallelLockActive()) {
+    return mipsolver.mipdata_->optimality_limit;
+  } else {
+    return mipworker.optimality_limit;
+  }
 }
 
 const std::vector<double>& HighsSearch::getRootLpSol() const {
