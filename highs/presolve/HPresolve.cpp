@@ -1176,9 +1176,12 @@ HPresolve::Result HPresolve::dominatedColumns(
         computeWorstCaseUpperBound(j) >= model->col_lower_[j] - primal_feastol;
     lowerImplied = lowerImplied || tryFixingToUpper;
 
-    // skip column if both bounds are not implied
-    if (!hasPosCliques && !hasNegCliques && !upperImplied && !lowerImplied)
-      continue;
+    // determine which rows to check
+    bool checkPosRow = upperImplied || hasPosCliques;
+    bool checkNegRow = lowerImplied || hasNegCliques;
+
+    // skip column if there is nothing to do
+    if (!checkPosRow && !checkNegRow) continue;
 
     // remember number of fixed columns
     HighsInt oldNumFixed = numFixedCols;
@@ -1198,14 +1201,14 @@ HPresolve::Result HPresolve::dominatedColumns(
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
       double val = scale * nonz.value();
-      if (upperImplied && val > 0.0 && rowsize[row] < bestRowPlusLen) {
+      if (checkPosRow && val > 0.0 && rowsize[row] < bestRowPlusLen) {
         bestRowPlus = row;
         bestRowPlusLen = rowsize[row];
         bestRowPlusScale = scale;
         ajBestRowPlus = val;
       }
 
-      if (lowerImplied && val < 0.0 && rowsize[row] < bestRowMinusLen) {
+      if (checkNegRow && val < 0.0 && rowsize[row] < bestRowMinusLen) {
         bestRowMinus = row;
         bestRowMinusLen = rowsize[row];
         bestRowMinusScale = scale;
@@ -1363,13 +1366,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     };
 
     // try to fix variables using row 'bestRowMinus'
-    if (bestRowMinus != -1 && (lowerImplied || hasNegCliques))
+    if (checkNegRow && bestRowMinus != -1)
       HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowMinus, j, HighsInt{-1},
                                          bestRowMinusScale, ajBestRowMinus,
                                          lowerImplied));
 
     // try to fix variables using row 'bestRowPlus'
-    if (bestRowPlus != -1 && (upperImplied || hasPosCliques))
+    if (checkPosRow && bestRowPlus != -1)
       HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowPlus, j, HighsInt{1},
                                          bestRowPlusScale, ajBestRowPlus,
                                          upperImplied));
