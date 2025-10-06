@@ -985,6 +985,47 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   return HighsStatus::kOk;
 }
 
+bool Highs::feasibleWrtBounds(const bool columns,
+                              const HighsIndexCollection& index_collection,
+                              const double* lower, const double* upper) const {
+  if (this->info_.primal_solution_status != kSolutionStatusFeasible)
+    return false;
+  const HighsLp& lp = model_.lp_;
+  const double primal_feasibility_tolerance =
+      this->options_.primal_feasibility_tolerance;
+  assert(ok(index_collection));
+  HighsInt from_k;
+  HighsInt to_k;
+  limits(index_collection, from_k, to_k);
+  HighsInt ix_dim;
+  if (columns) {
+    ix_dim = lp.num_col_;
+  } else {
+    ix_dim = lp.num_row_;
+  }
+  // Surely this is checked elsewhere
+  assert(0 <= from_k && to_k < ix_dim);
+  assert(from_k <= to_k);
+  HighsInt set_from_ix;
+  HighsInt set_to_ix;
+  HighsInt ignore_from_ix;
+  HighsInt ignore_to_ix = -1;
+  HighsInt current_set_entry = 0;
+  for (HighsInt k = from_k; k <= to_k; k++) {
+    updateOutInIndex(index_collection, set_from_ix, set_to_ix, ignore_from_ix,
+                     ignore_to_ix, current_set_entry);
+    assert(set_to_ix < ix_dim);
+    assert(ignore_to_ix < ix_dim);
+    for (HighsInt iX = set_from_ix; iX <= set_to_ix; iX++) {
+      double value = columns ? this->solution_.col_value[iX]
+                             : this->solution_.row_value[iX];
+      if (value < lower[iX] - primal_feasibility_tolerance) return false;
+      if (value > upper[iX] + primal_feasibility_tolerance) return false;
+    }
+  }
+  return true;
+}
+
 HighsStatus Highs::changeColBoundsInterface(
     HighsIndexCollection& index_collection, const double* col_lower,
     const double* col_upper) {
@@ -1037,6 +1078,13 @@ HighsStatus Highs::changeColBoundsInterface(
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, true);
   // Deduce the consequences of new col bounds
+  /*
+  const bool columns = true;
+  const bool feasible = feasibleWrtBounds(columns, index_collection,
+  local_colLower.data(), local_colUpper.data());
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "feasibleWrtBounds is %s\n", feasible ? "True" : "False");
+  */
   invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);

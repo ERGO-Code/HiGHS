@@ -1636,6 +1636,10 @@ class Highs {
                                          const HighsVarType* usr_inegrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
+
+  bool feasibleWrtBounds(const bool columns,
+                         const HighsIndexCollection& index_collection,
+                         const double* lower, const double* upper) const;
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_col_lower,
                                        const double* usr_col_upper);
