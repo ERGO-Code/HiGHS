@@ -1179,8 +1179,10 @@ HPresolve::Result HPresolve::dominatedColumns(
     // skip column if both bounds are not implied
     if (!upperImplied && !lowerImplied) continue;
 
+    // remember number of fixed columns
     HighsInt oldNumFixed = numFixedCols;
 
+    // initialise
     HighsInt bestRowPlus = -1;
     HighsInt bestRowPlusLen = kHighsIInf;
     HighsInt bestRowPlusScale = 0;
