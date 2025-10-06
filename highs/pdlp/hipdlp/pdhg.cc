@@ -26,6 +26,15 @@ static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
 
+void vecPrint(const std::vector<double>& vec, const char* name) {
+  std::cout << name << ": [";
+  for (size_t i = 0; i < vec.size(); ++i) {
+    std::cout << vec[i];
+    if (i < vec.size() - 1) std::cout << ", ";
+  }
+  std::cout << "]" << std::endl;
+}
+
 void PDLPSolver::preprocessLp() {
   logger_.info(
       "Preprocessing LP using cupdlp formulation (slack variables for "
@@ -412,9 +421,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     // --- 3. Convergence and Restart Check (BEFORE iterate update) ---
     bool bool_checking = (iter < 10) ||
-                         (iter == (params_.max_iterations - 1)) ||
-                         (iter > 0 && (iter % PDHG_CHECK_INTERVAL == 0));
-
+                         (iter == (params_.max_iterations - 1));
+    
+    bool_checking = (bool_checking || iter % PDHG_CHECK_INTERVAL == 0);
     if (bool_checking) {
       ComputeAverageIterate(Ax_avg, ATy_avg);
       // Reset the average iterate accumulation
@@ -467,36 +476,35 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
           restart_scheme_.Check(iter, current_results, average_results);
 
       if (restart_info.should_restart) {
-        std::vector<double> restart_x, restart_y;
         if (restart_info.restart_to_average) {
-          // Restart from the average iterate
-          restart_x = x_avg_;
-          restart_y = y_avg_;
+          restart_scheme_.primal_feas_last_restart_ = average_results.primal_feasibility;
+          restart_scheme_.dual_feas_last_restart_ = average_results.dual_feasibility;
+          restart_scheme_.duality_gap_last_restart_ = average_results.duality_gap;
+
+          x_current_ = x_avg_;
+          y_current_ = y_avg_;
 
           Ax_cache_ = Ax_avg;
           ATy_cache_ = ATy_avg;
         } else {
-          // Restart from the current iterate
-          restart_x = x_current_;
-          restart_y = y_current_;
+          restart_scheme_.primal_feas_last_restart_ = current_results.primal_feasibility;
+          restart_scheme_.dual_feas_last_restart_ = current_results.dual_feasibility;
+          restart_scheme_.duality_gap_last_restart_ = current_results.duality_gap;
         }
 
         // Perform the primal weight update using z^{n,0} and z^{n-1,0}
         PDHG_Compute_Step_Size_Ratio(working_params);
         current_eta_ = working_params.eta;
         restart_scheme_.passParams(&working_params);
-        restart_scheme_.UpdateBeta(working_params.omega * working_params.omega);
 
-        x_at_last_restart_ = restart_x;  // Current becomes the new last
-        y_at_last_restart_ = restart_y;
+        x_at_last_restart_ = x_current_;  // Current becomes the new last
+        y_at_last_restart_ = y_current_;
 
         std::fill(x_sum_.begin(), x_sum_.end(), 0.0);
         std::fill(y_sum_.begin(), y_sum_.end(), 0.0);
         sum_weights_ = 0.0;
 
-        // Set x_current_ and y_current_ for the next iteration's starting point
-        x_current_ = restart_x;
-        y_current_ = restart_y;
+        restart_scheme_.last_restart_iter_ = iter;
 
         // Recompute Ax and ATy for the restarted iterates
         linalg::Ax(lp, x_current_, Ax_cache_);
@@ -607,7 +615,7 @@ void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
   // iterates.
   double primal_diff_norm = linalg::diffTwoNorm(x_at_last_restart_, x_current_);
   double dual_diff_norm = linalg::diffTwoNorm(y_at_last_restart_, y_current_);
-
+ 
   double dMeanStepSize = std::sqrt(stepsize_.primal_step *
                                        stepsize_.dual_step);
 
@@ -615,7 +623,7 @@ void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
   // 2. Update the primal weight (beta = omega^2) if movements are significant.
   if (std::min(primal_diff_norm, dual_diff_norm) > 1e-10) {
     double beta_update_ratio = dual_diff_norm / primal_diff_norm;
-    double old_beta = working_params.omega * working_params.omega;
+    double old_beta = stepsize_.beta;
 
     double dLogBetaUpdate = 0.5 * std::log(beta_update_ratio) +
                             0.5 * std::log(std::sqrt(old_beta));
@@ -626,6 +634,7 @@ void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
   stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
   working_params.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
   working_params.omega = std::sqrt(stepsize_.beta);
+  restart_scheme_.UpdateBeta(stepsize_.beta);
 }
 
 void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
@@ -1365,3 +1374,4 @@ double PDLPSolver::ComputeNonlinearity(const std::vector<double>& delta_primal,
   }
   return std::abs(nonlinearity);
 }
+

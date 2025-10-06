@@ -42,6 +42,7 @@ class RestartScheme {
                     const SolverResults& average_results);
 
   int GetLastRestartIter() const { return last_restart_iter_; }
+  int last_restart_iter_ = 0;
   void passParams(PrimalDualParams* params) { params_ = params; };
   void passLogOptions(const HighsLogOptions* log_options) {
     log_options_ = log_options;
@@ -59,6 +60,14 @@ class RestartScheme {
   };
   void SetLastRestartIter(int iter) { last_restart_iter_ = iter; };
 
+    // State for adaptive restart
+  //dPrimalFeasLastRestart = primal_feas_last_restart_
+  //dDualFeasLastRestart = dual_feas_last_restart_;
+  //dDualityGapLastRestart = duality_gap_last_restart_;
+  double primal_feas_last_restart_ = 0.0;
+  double dual_feas_last_restart_ = 0.0;
+  double duality_gap_last_restart_ = 0.0;
+
  private:
   PrimalDualParams* params_;
   const HighsLogOptions* log_options_;
@@ -67,13 +76,7 @@ class RestartScheme {
 
   RestartStrategy strategy_ = RestartStrategy::NO_RESTART;
   int fixed_restart_interval_ = 100;
-  int last_restart_iter_ = 0;
   double beta_;
-
-  // State for adaptive restart
-  double primal_feas_last_restart_ = 0.0;
-  double dual_feas_last_restart_ = 0.0;
-  double duality_gap_last_restart_ = 0.0;
   
   double primal_feas_last_candidate_ = 0.0;
   double dual_feas_last_candidate_ = 0.0;

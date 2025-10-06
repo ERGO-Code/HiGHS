@@ -156,7 +156,7 @@ RestartInfo RestartScheme::Check(int current_iter,
   debugPdlpRestartLog(debug_pdlp_log_file_, current_iter, mu_current,
                           mu_average);
   double candidate_score;
-  bool restart_to_average;
+  bool restart_to_average = false;
   if (mu_current < mu_average) {
     candidate_score = mu_current;
     restart_to_average = false;
@@ -168,11 +168,12 @@ RestartInfo RestartScheme::Check(int current_iter,
   // 2. Check the three restart conditions in order
   bool should_restart = false;
   PDHG_restart_choice restart_choice_for_logic = PDHG_NO_RESTART;
-
+ 
   if ((current_iter - last_restart_iter_) >= 0.36 * current_iter) {
     // Condition 1: Artificial Restart
     should_restart = true;
   } else {
+
     double mu_last_restart = compute_score(beta_, primal_feas_last_restart_,
                                            dual_feas_last_restart_, duality_gap_last_restart_);
     
@@ -201,9 +202,13 @@ RestartInfo RestartScheme::Check(int current_iter,
     duality_gap_last_candidate_ = current_results.duality_gap;
   }
 
-  // NOTE: Your main solver loop is responsible for calling `SetLastRestartIter(current_iter)`
-  // when it receives `should_restart = true`. This function does not modify that state directly,
-  // it only determines if it *should* happen.
+  if (should_restart ) {
+    if (restart_to_average){
+      std::cout << "Last restart was iter " << last_restart_iter_ << ": average\n";
+    } else {
+      std::cout << "Last restart was iter " << last_restart_iter_ << ": current\n";
+    }
+  }
   
   return RestartInfo(should_restart, restart_to_average);
 }
