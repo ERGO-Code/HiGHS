@@ -315,6 +315,7 @@ restart:
     mipdata_->domains.emplace_back(mipdata_->domain);
     worker.globaldom_ = &mipdata_->domains.back();
     worker.globaldom_->addCutpool(*worker.cutpool_);
+    assert(worker.globaldom_->getDomainChangeStack().empty());
     worker.globaldom_->addConflictPool(*worker.conflictpool_);
     worker.resetSearch();
     worker.lprelaxation_->setMipWorker(worker);
@@ -328,6 +329,7 @@ restart:
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
                                          options_mip_->mip_pool_soft_limit);
     mipdata_->domains.back().addCutpool(mipdata_->cutpools.back());
+    assert(mipdata_->domains.back().getDomainChangeStack().empty());
     mipdata_->domains.back().addConflictPool(mipdata_->conflictpools.back());
     mipdata_->workers.emplace_back(
         *this, &mipdata_->lps.back(), &mipdata_->domains.back(),
@@ -440,7 +442,7 @@ restart:
       mipdata_->conflictpools[i].syncConflictPool(mipdata_->conflictPool);
     }
     for (HighsInt i = 1; i < mipdata_->cutpools.size(); ++i) {
-      mipdata_->cutpools[i].performAging();
+      // mipdata_->cutpools[i].performAging();
       mipdata_->cutpools[i].syncCutPool(*this, mipdata_->cutpool);
     }
     mipdata_->cutpool.performAging();

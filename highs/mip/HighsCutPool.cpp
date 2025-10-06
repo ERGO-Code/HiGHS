@@ -183,6 +183,9 @@ void HighsCutPool::performAging() {
       ++numLpCuts;
     }
     if (numLps_[i] == 0) {
+      // TODO MT: This doesn't work.... What happens if a cut was generated, and
+      // then used in propagation, but never added. It has age 0 but never is in
+      // an LP.....
       lpCutRemoved(i);
     }
     if (ages_[i] < 0) continue;
