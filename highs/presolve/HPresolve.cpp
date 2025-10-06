@@ -1164,17 +1164,17 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // check if upper bound on variable is implied (due to worst-case lower
     // bound)
-    bool tryFixingToLower =
+    bool upperImpliedByWorstCase =
         model->col_cost_[j] >= 0.0 &&
         computeWorstCaseLowerBound(j) <= model->col_upper_[j] + primal_feastol;
-    upperImplied = upperImplied || tryFixingToLower;
+    upperImplied = upperImplied || upperImpliedByWorstCase;
 
     // check if lower bound on variable is implied (due to worst-case upper
     // bound)
-    bool tryFixingToUpper =
+    bool lowerImpliedByWorstCase =
         model->col_cost_[j] <= 0.0 &&
         computeWorstCaseUpperBound(j) >= model->col_lower_[j] - primal_feastol;
-    lowerImplied = lowerImplied || tryFixingToUpper;
+    lowerImplied = lowerImplied || lowerImpliedByWorstCase;
 
     // determine which rows to check
     bool checkPosRow = upperImplied || hasPosCliques;
@@ -1284,7 +1284,8 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // the worst-case lower bound provides an upper bound on the variable (see
     // dual fixing method)
-    if (tryFixingToLower && !lowerImplied && bestRowMinus != -1) {
+    if (upperImpliedByWorstCase && model->col_lower_[j] != -kHighsInf &&
+        bestRowMinus != -1) {
       // since the variable's objective coefficient is non-negative,
       // try to fix it to its lower bound
       HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
@@ -1294,7 +1295,8 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // the worst-case upper bound provides a lower bound on the variable (see
     // dual fixing method)
-    if (tryFixingToUpper && !upperImplied && bestRowPlus != -1) {
+    if (lowerImpliedByWorstCase && model->col_upper_[j] != kHighsInf &&
+        bestRowPlus != -1) {
       // since the variable's objective coefficient is non-positive,
       // try to fix it to its upper bound
       HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
