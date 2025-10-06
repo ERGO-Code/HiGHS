@@ -111,14 +111,14 @@ jobs:
       - name: Run test-hipo-afiro
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: ./Release/bin/unit_tests test-hipo-afiro
+        run: ./Debug/bin/unit_tests test-hipo-afiro
 
       - name: Run test-hipo-deterministic
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: ./Release/bin/unit_tests test-hipo-deterministic
+        run: ./Debug/bin/unit_tests test-hipo-deterministic
 
       - name: Run test-hipo-deterministic again
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: ./Release/bin/unit_tests test-hipo-deterministic
+        run: ./Debug/bin/unit_tests test-hipo-deterministic
