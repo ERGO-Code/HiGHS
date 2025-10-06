@@ -1177,7 +1177,8 @@ HPresolve::Result HPresolve::dominatedColumns(
     lowerImplied = lowerImplied || tryFixingToUpper;
 
     // skip column if both bounds are not implied
-    if (!upperImplied && !lowerImplied) continue;
+    if (!hasPosCliques && !hasNegCliques && !upperImplied && !lowerImplied)
+      continue;
 
     // remember number of fixed columns
     HighsInt oldNumFixed = numFixedCols;
