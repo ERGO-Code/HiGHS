@@ -54,7 +54,7 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
     Highs highs;
     highs.setOptionValue("output_flag", dev_run);
     highs.setOptionValue(kSolverString, kHipoString);
-    highs.setOptionValue(kParallelString, kHighsOnString);
+    highs.setOptionValue(kParallelString, kHighsOffString);
     highs.setOptionValue(kRunCrossoverString, kHighsOffString);
     highs.readModel(filename);
     HighsStatus status = highs.run();
@@ -67,7 +67,7 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
     Highs highs;
     highs.setOptionValue("output_flag", dev_run);
     highs.setOptionValue(kSolverString, kHipoString);
-    highs.setOptionValue(kParallelString, kHighsOnString);
+    highs.setOptionValue(kParallelString, kHighsOffString);
     highs.setOptionValue(kRunCrossoverString, kHighsOffString);
     highs.readModel(filename);
     HighsStatus status = highs.run();
