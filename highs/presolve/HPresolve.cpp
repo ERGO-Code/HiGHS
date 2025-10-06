@@ -1052,12 +1052,6 @@ HPresolve::Result HPresolve::dominatedColumns(
            model->col_lower_[i] == 0.0 && model->col_upper_[i] == 1.0;
   };
 
-  auto isBoundedInteger = [&](HighsInt i) {
-    return model->integrality_[i] == HighsVarType::kInteger &&
-           model->col_lower_[i] != -kHighsInf &&
-           model->col_upper_[i] != kHighsInf;
-  };
-
   auto addSignature = [&](HighsInt row, HighsInt col, uint32_t rowLowerFinite,
                           uint32_t rowUpperFinite) {
     HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 59);
@@ -1154,17 +1148,36 @@ HPresolve::Result HPresolve::dominatedColumns(
 
   HighsInt numFixedCols = 0;
   for (HighsInt j = 0; j < model->num_col_; ++j) {
+    // skip deleted columns
     if (colDeleted[j]) continue;
-    bool upperImplied = isUpperImplied(j);
-    bool lowerImplied = isLowerImplied(j);
+
+    // consider cliques
     bool colIsBinary = isBinary(j);
-    bool colIsBoundedInteger = isBoundedInteger(j);
     bool hasPosCliques =
         colIsBinary && mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0;
     bool hasNegCliques =
         colIsBinary && mipsolver->mipdata_->cliquetable.numCliques(j, 0) > 0;
 
-    if (!colIsBoundedInteger && !upperImplied && !lowerImplied) continue;
+    // check if bounds are implied
+    bool lowerImplied = isLowerImplied(j);
+    bool upperImplied = isUpperImplied(j);
+
+    // check if upper bound on variable is implied (due to worst-case lower
+    // bound)
+    bool tryFixingToLower =
+        model->col_cost_[j] >= 0.0 &&
+        computeWorstCaseLowerBound(j) <= model->col_upper_[j] + primal_feastol;
+    upperImplied = upperImplied || tryFixingToLower;
+
+    // check if lower bound on variable is implied (due to worst-case upper
+    // bound)
+    bool tryFixingToUpper =
+        model->col_cost_[j] <= 0.0 &&
+        computeWorstCaseUpperBound(j) >= model->col_lower_[j] - primal_feastol;
+    lowerImplied = lowerImplied || tryFixingToUpper;
+
+    // skip column if both bounds are not implied
+    if (!upperImplied && !lowerImplied) continue;
 
     HighsInt oldNumFixed = numFixedCols;
 
@@ -1177,22 +1190,19 @@ HPresolve::Result HPresolve::dominatedColumns(
     HighsInt bestRowMinusScale = 0;
     double ajBestRowMinus = 0.0;
 
-    bool checkPosRow = upperImplied || colIsBoundedInteger;
-    bool checkNegRow = lowerImplied || colIsBoundedInteger;
-
     for (const HighsSliceNonzero& nonz : getColumnVector(j)) {
       HighsInt row = nonz.index();
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
       double val = scale * nonz.value();
-      if (checkPosRow && val > 0.0 && rowsize[row] < bestRowPlusLen) {
+      if (upperImplied && val > 0.0 && rowsize[row] < bestRowPlusLen) {
         bestRowPlus = row;
         bestRowPlusLen = rowsize[row];
         bestRowPlusScale = scale;
         ajBestRowPlus = val;
       }
 
-      if (checkNegRow && val < 0.0 && rowsize[row] < bestRowMinusLen) {
+      if (lowerImplied && val < 0.0 && rowsize[row] < bestRowMinusLen) {
         bestRowMinus = row;
         bestRowMinusLen = rowsize[row];
         bestRowMinusScale = scale;
@@ -1218,87 +1228,72 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
-    if (colIsBoundedInteger) {
-      // lambda for checking whether an integer variable can be fixed
-      auto integerCanBeFixed = [&](HighsInt col, HighsInt k, double bestVal,
-                                   double val, HighsInt direction,
-                                   HighsInt multiplier, bool isEqOrRangedRow) {
-        HighsInt mydirection = multiplier * direction;
-        return direction * bestVal <=
-                   mydirection * val + options->small_matrix_value &&
-               (!isEqOrRangedRow ||
-                direction * bestVal >=
-                    mydirection * val - options->small_matrix_value) &&
-               checkDomination(direction, col, mydirection, k);
-      };
+    // lambda for checking whether a variable can be fixed due to worst-case
+    // bounds
+    auto colCanBeFixedDueToWorstCaseBound =
+        [&](HighsInt col, HighsInt k, double bestVal, double val,
+            HighsInt direction, HighsInt multiplier, bool isEqOrRangedRow) {
+          HighsInt mydirection = multiplier * direction;
+          return direction * bestVal <=
+                     mydirection * val + options->small_matrix_value &&
+                 (!isEqOrRangedRow ||
+                  direction * bestVal >=
+                      mydirection * val - options->small_matrix_value) &&
+                 checkDomination(direction, col, mydirection, k);
+        };
 
-      // lambda for fixing integer variables
-      auto checkFixInteger = [&](HighsInt row, HighsInt col, HighsInt direction,
-                                 double scale, double bestVal) {
-        storeRow(row);
-        bool isEqOrRangedRow = isRanged(row);
+    // lambda for fixing variables due to worst-case bounds
+    auto checkFixDueToWorstCaseBound = [&](HighsInt row, HighsInt col,
+                                           HighsInt direction, double scale,
+                                           double bestVal) {
+      storeRow(row);
+      bool isEqOrRangedRow = isRanged(row);
 
-        for (const HighsSliceNonzero& nonz : getStoredRow()) {
-          HighsInt k = nonz.index();
-          if (k == col || colDeleted[k]) continue;
+      for (const HighsSliceNonzero& nonz : getStoredRow()) {
+        HighsInt k = nonz.index();
+        if (k == col || colDeleted[k]) continue;
 
-          double ak = nonz.value() * scale;
+        double ak = nonz.value() * scale;
 
-          if (integerCanBeFixed(col, k, bestVal, ak, direction, HighsInt{1},
-                                isEqOrRangedRow) ||
-              integerCanBeFixed(col, k, bestVal, ak, direction, HighsInt{-1},
-                                isEqOrRangedRow)) {
-            // direction =  1: fix integer variable to its upper bound
-            // direction = -1: fix integer variable to its lower bound
-            ++numFixedCols;
-            HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-            break;
-          }
-        }
-
-        // remove row singletons and doubleton equations if integer variable was
-        // fixed
-        if (colDeleted[col]) {
-          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-          HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
-        }
-        return Result::kOk;
-      };
-
-      // the worst-case lower bound provides an upper bound on the integer
-      // variable (see dual fixing method)
-      if (model->col_cost_[j] >= 0.0 &&
-          computeWorstCaseLowerBound(j) <=
-              model->col_upper_[j] + primal_feastol) {
-        // upper bound on integer variable is implied (due to worst-case lower
-        // bound)
-        upperImplied = true;
-        if (!lowerImplied && bestRowMinus != -1) {
-          // since the integer variable's objective coefficient is non-negative,
-          // try to fix it to its lower bound
-          HPRESOLVE_CHECKED_CALL(checkFixInteger(bestRowMinus, j, HighsInt{-1},
-                                                 bestRowMinusScale,
-                                                 ajBestRowMinus));
-          if (colDeleted[j]) continue;
+        if (colCanBeFixedDueToWorstCaseBound(col, k, bestVal, ak, direction,
+                                             HighsInt{1}, isEqOrRangedRow) ||
+            colCanBeFixedDueToWorstCaseBound(col, k, bestVal, ak, direction,
+                                             HighsInt{-1}, isEqOrRangedRow)) {
+          // direction =  1: fix variable to its upper bound
+          // direction = -1: fix variable to its lower bound
+          ++numFixedCols;
+          HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
+          break;
         }
       }
 
-      // the worst-case upper bound provides a lower bound on the integer
-      // variable (see dual fixing method)
-      if (model->col_cost_[j] <= 0.0 &&
-          computeWorstCaseUpperBound(j) >=
-              model->col_lower_[j] - primal_feastol) {
-        // lower bound on integer variable is implied (due to worst-case upper
-        // bound)
-        lowerImplied = true;
-        if (!upperImplied && bestRowPlus != -1) {
-          // since the integer variable's objective coefficient is non-positive,
-          // try to fix it to its upper bound
-          HPRESOLVE_CHECKED_CALL(checkFixInteger(
-              bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
-          if (colDeleted[j]) continue;
-        }
+      // remove row singletons and doubleton equations if variable was
+      // fixed
+      if (colDeleted[col]) {
+        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+        HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
       }
+      return Result::kOk;
+    };
+
+    // the worst-case lower bound provides an upper bound on the variable (see
+    // dual fixing method)
+    if (tryFixingToLower && !lowerImplied && bestRowMinus != -1) {
+      // since the variable's objective coefficient is non-negative,
+      // try to fix it to its lower bound
+      HPRESOLVE_CHECKED_CALL(checkFixDueToWorstCaseBound(
+          bestRowMinus, j, HighsInt{-1}, bestRowMinusScale, ajBestRowMinus));
+      if (colDeleted[j]) continue;
+    }
+
+    // the worst-case upper bound provides a lower bound on the variable (see
+    // dual fixing method)
+    if (tryFixingToUpper && !upperImplied && bestRowPlus != -1) {
+      // since the variable's objective coefficient is non-positive,
+      // try to fix it to its upper bound
+      HPRESOLVE_CHECKED_CALL(checkFixDueToWorstCaseBound(
+          bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
+      if (colDeleted[j]) continue;
     }
 
     // lambda for determining whether column bound is finite (in given
