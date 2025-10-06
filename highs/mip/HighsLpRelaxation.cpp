@@ -220,8 +220,12 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
 
 void HighsLpRelaxation::loadModel() {
   HighsLp lpmodel = *mipsolver.model_;
-  lpmodel.col_lower_ = mipsolver.mipdata_->domain.col_lower_;
-  lpmodel.col_upper_ = mipsolver.mipdata_->domain.col_upper_;
+  lpmodel.col_lower_ = (worker_ && mipsolver.mipdata_->parallelLockActive())
+                           ? worker_->globaldom_->col_lower_
+                           : mipsolver.mipdata_->domain.col_lower_;
+  lpmodel.col_upper_ = (worker_ && mipsolver.mipdata_->parallelLockActive())
+                           ? worker_->globaldom_->col_upper_
+                           : mipsolver.mipdata_->domain.col_upper_;
   lpmodel.offset_ = 0;
   lprows.clear();
   lprows.reserve(lpmodel.num_row_);
@@ -946,7 +950,9 @@ void HighsLpRelaxation::storeDualInfProof() {
   }
 
   HighsDomain& globaldomain =
-      worker_ ? worker_->getGlobalDomain() : mipsolver.mipdata_->domain;
+      (worker_ && mipsolver.mipdata_->parallelLockActive())
+          ? worker_->getGlobalDomain()
+          : mipsolver.mipdata_->domain;
 
   for (HighsInt i : row_ap.getNonzeros()) {
     double val = row_ap.getValue(i);
@@ -1012,10 +1018,14 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofvals.clear();
 
   if (lpsolver.getSolution().dual_valid) {
-    hasdualproof = computeDualProof(
-        worker_ ? worker_->getGlobalDomain() : mipsolver.mipdata_->domain,
-        mipsolver.mipdata_->upper_limit, dualproofinds, dualproofvals,
-        dualproofrhs);
+    hasdualproof =
+        computeDualProof((worker_ && mipsolver.mipdata_->parallelLockActive())
+                             ? worker_->getGlobalDomain()
+                             : mipsolver.mipdata_->domain,
+                         (worker_ && mipsolver.mipdata_->parallelLockActive())
+                             ? worker_->upper_limit
+                             : mipsolver.mipdata_->upper_limit,
+                         dualproofinds, dualproofvals, dualproofrhs);
   } else {
     hasdualproof = false;
   }
@@ -1214,9 +1224,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                      HighsLogType::kWarning,
                      "HighsLpRelaxation::run LP is unbounded with no basis, "
                      "but not returning Status::kError\n");
-      if (info.primal_solution_status == kSolutionStatusFeasible)
-        mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value,
-                                        kSolutionSourceUnbounded);
+      if (info.primal_solution_status == kSolutionStatusFeasible) {
+        if (!mipsolver.mipdata_->parallelLockActive() || !worker_) {
+          mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value,
+                                          kSolutionSourceUnbounded);
+        } else {
+          worker_->trySolution(lpsolver.getSolution().col_value,
+                               kSolutionSourceUnbounded);
+        }
+      }
 
       return Status::kUnbounded;
     case HighsModelStatus::kUnknown:
@@ -1303,7 +1319,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
         HighsCDouble objsum = 0;
         bool roundable = true;
         const HighsDomain& globaldom =
-            worker_ ? worker_->getGlobalDomain() : mipsolver.mipdata_->domain;
+            (worker_ && mipsolver.mipdata_->parallelLockActive())
+                ? worker_->getGlobalDomain()
+                : mipsolver.mipdata_->domain;
 
         for (HighsInt i : mipsolver.mipdata_->integral_cols) {
           // for the fractionality we assume that LP bounds are not violated

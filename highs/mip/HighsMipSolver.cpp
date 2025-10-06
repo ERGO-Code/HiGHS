@@ -350,6 +350,12 @@ restart:
       mipdata_->removeFixedIndices();
       analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
     }
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      for (HighsInt i = 0; i < numCol(); ++i) {
+        assert(mipdata_->domain.col_lower_[i] == worker.globaldom_->col_lower_[i]);
+        assert(mipdata_->domain.col_upper_[i] == worker.globaldom_->col_upper_[i]);
+      }
+    }
   };
 
   // TODO: Should we be propagating this first?
@@ -461,6 +467,7 @@ restart:
     // TODO MT: Is it simpler to just copy the domain each time
     if (mipdata_->hasMultipleWorkers()) {
       for (HighsMipWorker& worker : mipdata_->workers) {
+        worker.globaldom_->backtrackToGlobal();
         for (const HighsDomainChange& domchg :
              mipdata_->domain.getDomainChangeStack()) {
           worker.getGlobalDomain().changeBound(
