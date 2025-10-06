@@ -16,7 +16,7 @@
 #include <iostream>
 #include <vector>
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
   // Test that hipo runs and finds correct solution for afiro
@@ -44,7 +44,7 @@ TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
 TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
   // Test that hipo finds the exact same solution if run twice
 
-  std::string model = "80bau3b.mps";
+  std::string model = "afiro.mps";
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
 
   HighsInt iter_1, iter_2;
