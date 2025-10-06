@@ -4807,6 +4807,21 @@ HighsStatus Highs::openLogFile(const std::string& log_file) {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::closeLogFile() {
+  // Work with a copy of the pointer for brevity
+  FILE* log_stream = this->options_.log_options.log_stream;
+  if (log_stream != nullptr) {
+    assert(log_stream != stdout);
+    fflush(log_stream);
+    fclose(log_stream);
+    // Set the true log_stream to nullptr to give a test whether it
+    // has been closed (and avoid trying to close it again which
+    // causes an error)
+    this->options_.log_options.log_stream = nullptr;
+  }
+  return HighsStatus::kOk;
+}
+
 void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
