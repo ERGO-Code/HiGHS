@@ -29,8 +29,8 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
   sepa_ptr_ = std::unique_ptr<HighsSeparation>(new HighsSeparation(*this));
 
   // add local cutpool
-  search_ptr_->getLocalDomain().addCutpool(*cutpool_);
-  search_ptr_->getLocalDomain().addConflictPool(*conflictpool_);
+  // search_ptr_->getLocalDomain().addCutpool(*cutpool_);
+  // search_ptr_->getLocalDomain().addConflictPool(*conflictpool_);
 
   search_ptr_->setLpRelaxation(lprelaxation_);
   sepa_ptr_->setLpRelaxation(lprelaxation_);

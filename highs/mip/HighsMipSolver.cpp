@@ -327,6 +327,8 @@ restart:
                                     options_mip_->mip_pool_soft_limit, i + 1);
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
                                          options_mip_->mip_pool_soft_limit);
+    mipdata_->domains.back().addCutpool(mipdata_->cutpools.back());
+    mipdata_->domains.back().addConflictPool(mipdata_->conflictpools.back());
     mipdata_->workers.emplace_back(
         *this, &mipdata_->lps.back(), &mipdata_->domains.back(),
         &mipdata_->cutpools.back(), &mipdata_->conflictpools.back());
