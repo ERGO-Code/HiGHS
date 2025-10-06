@@ -985,51 +985,21 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   return HighsStatus::kOk;
 }
 
-bool Highs::feasibleWrtBounds(const bool columns,
-                              const HighsIndexCollection& index_collection,
-                              const std::vector<double>& lower,
-                              const std::vector<double>& upper) const {
+bool Highs::feasibleWrtBounds(const bool columns) const {
   if (this->info_.primal_solution_status != kSolutionStatusFeasible)
     return false;
   const HighsLp& lp = model_.lp_;
   const double primal_feasibility_tolerance =
       this->options_.primal_feasibility_tolerance;
-  assert(ok(index_collection));
-  HighsInt from_k;
-  HighsInt to_k;
-  limits(index_collection, from_k, to_k);
-  if (from_k > to_k) return true;
-
-  const bool& interval = index_collection.is_interval_;
-  const bool& mask = index_collection.is_mask_;
-  const vector<HighsInt>& ix_set = index_collection.set_;
-  const vector<HighsInt>& ix_mask = index_collection.mask_;
-
   std::vector<double> value = columns ?
     this->solution_.col_value :
     this->solution_.row_value;
-
-  HighsInt lp_ix;
-  HighsInt usr_ix = -1;
-  HighsInt ix_dim = value.size();
-  // Surely this is checked elsewhere
-  assert(0 <= from_k && to_k < ix_dim);
-  assert(from_k <= to_k);
-  for (HighsInt k = from_k; k < to_k + 1; k++) {
-    if (interval || mask) {
-      lp_ix = k;
-    } else {
-      lp_ix = ix_set[k];
-    }
-    HighsInt ix = lp_ix;
-    if (interval) {
-      usr_ix++;
-    } else {
-      usr_ix = k;
-    }
-    if (mask && !ix_mask[ix]) continue;
-    if (value[ix] < lower[usr_ix] - primal_feasibility_tolerance) return false;
-    if (value[ix] > upper[usr_ix] + primal_feasibility_tolerance) return false;
+  std::vector<double> lower = columns ? lp.col_lower_ : lp.row_lower_;
+  std::vector<double> upper = columns ? lp.col_upper_ : lp.row_upper_;
+  HighsInt dim = columns ? lp.num_col_ : lp.num_row_;
+  for (HighsInt iX = 0; iX < dim; iX++) {
+    if (value[iX] < lower[iX] - primal_feasibility_tolerance) return false;
+    if (value[iX] > upper[iX] + primal_feasibility_tolerance) return false;
   }
   return true;
 }
@@ -1086,19 +1056,14 @@ HighsStatus Highs::changeColBoundsInterface(
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, true);
   // Deduce the consequences of new col bounds
-  if (!this->basis_.useful) {
-    const bool columns = true;
-    const bool feasible = feasibleWrtBounds(columns, index_collection,
-					    local_colLower, local_colUpper);
-    //    highsLogUser(options_.log_options, HighsLogType::kInfo,
-    printf(
-		 "feasibleWrtBounds is %s\n", feasible ? "True" : "False");
-    if (feasible) {
-      feasibleWrtBounds(columns, index_collection,
-			local_colLower, local_colUpper);
-    }
+  if (!this->basis_.useful && feasibleWrtBounds()) {
+    // Retain the solution if there's no basis, and the solution is
+    // feasible
+    invalidateModelStatusAndInfo();
+  } else {
+    // Invalidate the solution
+    invalidateModelStatusSolutionAndInfo();
   }
-  invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;

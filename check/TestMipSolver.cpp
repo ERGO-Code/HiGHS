@@ -1075,11 +1075,16 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
 
   REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
-  // In calling changeColsBounds, the incumbent solution is cleared,
-  // so there is no information from which to construct an advanced
-  // basis. Hence simplex starts from a logical basis and requires a
-  // positive number of iterations (#2556)
-  REQUIRE(h.getInfo().simplex_iteration_count > 0);
+  // In calling changeColsBounds, the incumbent solution was always
+  // cleared, so there was no information from which to construct an
+  // advanced basis. Hence simplex starts from a logical basis and
+  // requires a positive number of iterations (#2556)
+  //
+  // Before code to retain solution if changing the bounds and
+  // solution remains feasible
+  //
+  //  REQUIRE(h.getInfo().simplex_iteration_count > 0);
+  REQUIRE(h.getInfo().simplex_iteration_count == 0);
 
   // Now, passing the MIP solution, there is information from which to
   // construct an advanced basis. In the case of flugpl, this is

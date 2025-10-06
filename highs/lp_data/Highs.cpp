@@ -3723,8 +3723,12 @@ void Highs::invalidateSolverDualData() {
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
-  invalidateModelStatus();
+  invalidateModelStatusAndInfo();
   invalidateSolution();
+}
+
+void Highs::invalidateModelStatusAndInfo() {
+  invalidateModelStatus();
   invalidateRanging();
   invalidateInfo();
   invalidateIis();

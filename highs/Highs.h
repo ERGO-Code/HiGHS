@@ -1568,6 +1568,9 @@ class Highs {
   // Invalidates the model status, solution_ and info_
   void invalidateModelStatusSolutionAndInfo();
   //
+  // Invalidates the model status and info_
+  void invalidateModelStatusAndInfo();
+  //
   // Sets model status to HighsModelStatus::kNotset
   void invalidateModelStatus();
   //
@@ -1637,10 +1640,7 @@ class Highs {
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
 
-  bool feasibleWrtBounds(const bool columns,
-                         const HighsIndexCollection& index_collection,
-                         const std::vector<double>& lower,
-			 const std::vector<double>& upper) const;
+  bool feasibleWrtBounds(const bool columns = true) const;
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_col_lower,
                                        const double* usr_col_upper);
