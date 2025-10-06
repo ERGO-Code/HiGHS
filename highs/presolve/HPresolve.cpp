@@ -1368,13 +1368,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     };
 
     // try to fix variables using row 'bestRowMinus'
-    if (checkNegRow && bestRowMinus != -1)
+    if (bestRowMinus != -1)
       HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowMinus, j, HighsInt{-1},
                                          bestRowMinusScale, ajBestRowMinus,
                                          lowerImplied));
 
     // try to fix variables using row 'bestRowPlus'
-    if (checkPosRow && bestRowPlus != -1)
+    if (bestRowPlus != -1)
       HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowPlus, j, HighsInt{1},
                                          bestRowPlusScale, ajBestRowPlus,
                                          upperImplied));
