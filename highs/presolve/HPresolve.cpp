@@ -1243,9 +1243,9 @@ HPresolve::Result HPresolve::dominatedColumns(
         };
 
     // lambda for fixing variables due to worst-case bounds
-    auto checkFixDueToWorstCaseBound = [&](HighsInt row, HighsInt col,
-                                           HighsInt direction, double scale,
-                                           double bestVal) {
+    auto checkFixColDueToWorstCaseBound = [&](HighsInt row, HighsInt col,
+                                              HighsInt direction, double scale,
+                                              double bestVal) {
       storeRow(row);
       bool isEqOrRangedRow = isRanged(row);
 
@@ -1281,7 +1281,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     if (tryFixingToLower && !lowerImplied && bestRowMinus != -1) {
       // since the variable's objective coefficient is non-negative,
       // try to fix it to its lower bound
-      HPRESOLVE_CHECKED_CALL(checkFixDueToWorstCaseBound(
+      HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
           bestRowMinus, j, HighsInt{-1}, bestRowMinusScale, ajBestRowMinus));
       if (colDeleted[j]) continue;
     }
@@ -1291,7 +1291,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     if (tryFixingToUpper && !upperImplied && bestRowPlus != -1) {
       // since the variable's objective coefficient is non-positive,
       // try to fix it to its upper bound
-      HPRESOLVE_CHECKED_CALL(checkFixDueToWorstCaseBound(
+      HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
           bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
       if (colDeleted[j]) continue;
     }
