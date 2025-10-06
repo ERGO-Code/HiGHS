@@ -49,16 +49,16 @@ class FormatHandler {
 
   // local copies to be moved at the end
   std::vector<double>& frontal_;
-  std::vector<double> clique_{};
+  std::vector<double>& clique_;
   std::vector<double> local_reg_{};
-  std::vector<Int> swaps_{};
-  std::vector<double> pivot_2x2_{};
+  std::vector<Int>& swaps_;
+  std::vector<double>& pivot_2x2_;
 
  public:
   FormatHandler(const Symbolic& S, Int sn, const Regul& regul,
-                std::vector<double>& frontal);
-  void terminate(std::vector<double>& clique, std::vector<double>& total_reg,
-                 std::vector<Int>& swaps, std::vector<double>& pivot_2x2);
+                std::vector<double>& frontal, std::vector<double>& clique,
+                std::vector<Int>& swaps, std::vector<double>& pivot_2x2);
+  void terminate(std::vector<double>& total_reg);
 
   // avoid copies
   FormatHandler(const FormatHandler&) = delete;

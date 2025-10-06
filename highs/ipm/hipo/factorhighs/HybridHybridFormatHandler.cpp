@@ -8,9 +8,11 @@
 namespace hipo {
 
 HybridHybridFormatHandler::HybridHybridFormatHandler(
-    const Symbolic& S, Int sn, const Regul& regul, DataCollector& data,
-    std::vector<double>& frontal)
-    : FormatHandler(S, sn, regul, frontal), data_{data} {
+    const Symbolic& S, Int sn, const Regul& regul, std::vector<double>& frontal,
+    std::vector<double>& clique, std::vector<Int>& swaps,
+    std::vector<double>& pivot_2x2, DataCollector& data)
+    : FormatHandler(S, sn, regul, frontal, clique, swaps, pivot_2x2),
+      data_{data} {
   // initialise frontal and clique
   initFrontal();
   initClique();
@@ -28,7 +30,7 @@ void HybridHybridFormatHandler::initFrontal() {
 }
 
 void HybridHybridFormatHandler::initClique() {
-  clique_.resize(S_->cliqueSize(sn_));
+  clique_.assign(S_->cliqueSize(sn_), 0.0);
 }
 
 void HybridHybridFormatHandler::assembleFrontal(Int i, Int j, double val) {

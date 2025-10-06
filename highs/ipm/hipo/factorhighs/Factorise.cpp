@@ -200,8 +200,9 @@ void Factorise::processSupernode(Int sn) {
 
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
-  std::unique_ptr<FormatHandler> FH(
-      new HybridHybridFormatHandler(S_, sn, regul_, data_, sn_columns_[sn]));
+  std::unique_ptr<FormatHandler> FH(new HybridHybridFormatHandler(
+      S_, sn, regul_, sn_columns_[sn], schur_contribution_[sn], swaps_[sn],
+      pivot_2x2_[sn], data_));
 
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactorisePrepare, clock.stop());
@@ -344,8 +345,7 @@ void Factorise::processSupernode(Int sn) {
   FH->extremeEntries();
 
   // terminate the format handler
-  FH->terminate(schur_contribution_[sn], total_reg_, swaps_[sn],
-                pivot_2x2_[sn]);
+  FH->terminate(total_reg_);
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactoriseTerminate, clock.stop());
 #endif

@@ -7,7 +7,10 @@
 namespace hipo {
 
 FormatHandler::FormatHandler(const Symbolic& S, Int sn, const Regul& regul,
-                             std::vector<double>& frontal)
+                             std::vector<double>& frontal,
+                             std::vector<double>& clique,
+                             std::vector<Int>& swaps,
+                             std::vector<double>& pivot_2x2)
     : S_{&S},
       regul_{regul},
       sn_{sn},
@@ -15,25 +18,16 @@ FormatHandler::FormatHandler(const Symbolic& S, Int sn, const Regul& regul,
       sn_size_{S_->snStart(sn_ + 1) - S_->snStart(sn_)},
       ldf_{S_->ptr(sn_ + 1) - S_->ptr(sn_)},
       ldc_{ldf_ - sn_size_},
-      frontal_{frontal} {
-  local_reg_.resize(sn_size_);
-  swaps_.resize(sn_size_);
-  pivot_2x2_.resize(sn_size_);
+      frontal_{frontal},
+      clique_{clique},
+      swaps_{swaps},
+      pivot_2x2_{pivot_2x2} {
+  local_reg_.assign(sn_size_, 0.0);
+  swaps_.assign(sn_size_, 0);
+  pivot_2x2_.assign(sn_size_, 0.0);
 }
 
-void FormatHandler::terminate(std::vector<double>& clique,
-                              std::vector<double>& total_reg,
-                              std::vector<Int>& swaps,
-                              std::vector<double>& pivot_2x2) {
-  // Move local copies of data into their final position.
-  // In this way, the shared objects sn_columns_ and schur_contribution_ are
-  // accessed only here, while a local copy is used for the assembly and dense
-  // factorisation. This should avoid the problem of false sharing.
-
-  clique = std::move(clique_);
-  swaps = std::move(swaps_);
-  pivot_2x2 = std::move(pivot_2x2_);
-
+void FormatHandler::terminate(std::vector<double>& total_reg) {
   // Move local regularisation into total regularisation.
   for (Int i = 0; i < sn_size_; ++i)
     total_reg[S_->snStart(sn_) + i] = local_reg_[i];
