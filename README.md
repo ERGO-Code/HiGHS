@@ -84,7 +84,7 @@ As an alternative, HiGHS can be installed using the `meson` build interface:
 meson setup bbdir -Dwith_tests=True
 meson test -C bbdir
 ```
-_The meson build files are provided by the community and are not officially supported by the HiGHS development team._
+_The meson build files are provided by the community and are not officially supported by the HiGHS development team._ **If you use this method and encounter issues, please consider contributing fixes or updates by checking the [HiGHS Contribution Guide](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md).**
 
 #### Build with Nix
 
