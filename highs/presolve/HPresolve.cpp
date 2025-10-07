@@ -1164,17 +1164,25 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // check if upper bound on variable is implied (due to worst-case lower
     // bound)
-    bool upperImpliedByWorstCase =
-        model->col_cost_[j] >= 0.0 &&
-        computeWorstCaseLowerBound(j) <= model->col_upper_[j] + primal_feastol;
-    upperImplied = upperImplied || upperImpliedByWorstCase;
+    bool upperImpliedByWorstCase = false;
+    if (model->col_cost_[j] >= 0.0) {
+      double lowerBound = computeWorstCaseLowerBound(j);
+      upperImpliedByWorstCase =
+          lowerBound != kHighsInf &&
+          lowerBound <= model->col_upper_[j] + primal_feastol;
+      upperImplied = upperImplied || upperImpliedByWorstCase;
+    }
 
     // check if lower bound on variable is implied (due to worst-case upper
     // bound)
-    bool lowerImpliedByWorstCase =
-        model->col_cost_[j] <= 0.0 &&
-        computeWorstCaseUpperBound(j) >= model->col_lower_[j] - primal_feastol;
-    lowerImplied = lowerImplied || lowerImpliedByWorstCase;
+    bool lowerImpliedByWorstCase = false;
+    if (model->col_cost_[j] <= 0.0) {
+      double upperBound = computeWorstCaseUpperBound(j);
+      lowerImpliedByWorstCase =
+          upperBound != -kHighsInf &&
+          upperBound >= model->col_lower_[j] - primal_feastol;
+      lowerImplied = lowerImplied || lowerImpliedByWorstCase;
+    }
 
     // determine which rows to check
     bool checkPosRow = upperImplied || hasPosCliques;
