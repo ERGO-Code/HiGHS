@@ -1292,8 +1292,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // the worst-case lower bound provides an upper bound on the variable (see
     // dual fixing method)
-    if (upperImpliedByWorstCase && model->col_lower_[j] != -kHighsInf &&
-        bestRowMinus != -1) {
+    if (upperImpliedByWorstCase && bestRowMinus != -1) {
       // since the variable's objective coefficient is non-negative,
       // try to fix it to its lower bound
       HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
@@ -1303,8 +1302,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // the worst-case upper bound provides a lower bound on the variable (see
     // dual fixing method)
-    if (lowerImpliedByWorstCase && model->col_upper_[j] != kHighsInf &&
-        bestRowPlus != -1) {
+    if (lowerImpliedByWorstCase && bestRowPlus != -1) {
       // since the variable's objective coefficient is non-positive,
       // try to fix it to its upper bound
       HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
