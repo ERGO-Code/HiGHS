@@ -4266,7 +4266,12 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   if (boundDiff <= primal_feastol) {
     if (boundDiff <= options->small_matrix_value ||
         getMaxAbsColVal(col) * boundDiff <= primal_feastol) {
+      // check for primal infeasibility
       if (boundDiff < -primal_feastol) return Result::kPrimalInfeasible;
+      // check for unboundedness
+      if (std::abs(model->col_lower_[col]) == kHighsInf)
+        return Result::kDualInfeasible;
+      // remove fixed column
       postsolve_stack.removedFixedCol(col, model->col_lower_[col],
                                       model->col_cost_[col],
                                       getColumnVector(col));
@@ -4612,8 +4617,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
                              : -computeWorstCaseUpperBound(col);
 
     // return if no bound was found or bound is too large
-    if (newBound == -kHighsInf || newBound >= currentBound - primal_feastol ||
-        std::abs(newBound) > hugeBound)
+    if (newBound != -kHighsInf && (newBound >= currentBound - primal_feastol ||
+                                   std::abs(newBound) > hugeBound))
       return false;
 
     // round up to make sure that all rows are redundant
