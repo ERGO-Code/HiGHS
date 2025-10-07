@@ -1256,40 +1256,6 @@ HPresolve::Result HPresolve::dominatedColumns(
                  checkDomination(direction, col, mydirection, k);
         };
 
-    // lambda for fixing variables due to worst-case bounds
-    auto checkFixColDueToWorstCaseBound = [&](HighsInt row, HighsInt col,
-                                              HighsInt direction, double scale,
-                                              double bestVal) {
-      storeRow(row);
-      bool isEqOrRangedRow = isRanged(row);
-
-      for (const HighsSliceNonzero& nonz : getStoredRow()) {
-        HighsInt k = nonz.index();
-        if (k == col || colDeleted[k]) continue;
-
-        double ak = nonz.value() * scale;
-
-        if (colCanBeFixedDueToWorstCaseBound(col, k, bestVal, ak, direction,
-                                             HighsInt{1}, isEqOrRangedRow) ||
-            colCanBeFixedDueToWorstCaseBound(col, k, bestVal, ak, direction,
-                                             HighsInt{-1}, isEqOrRangedRow)) {
-          // direction =  1: fix variable to its upper bound
-          // direction = -1: fix variable to its lower bound
-          ++numFixedCols;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-          break;
-        }
-      }
-
-      // remove row singletons and doubleton equations if variable was
-      // fixed
-      if (colDeleted[col]) {
-        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-        HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
-      }
-      return Result::kOk;
-    };
-
     // lambda for determining whether column bound is finite (in given
     // direction)
     auto isBoundFinite = [&](HighsInt col, HighsInt direction) {
@@ -1320,7 +1286,8 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // lambda for fixing variables
     auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
-                           double scale, double bestVal, bool boundImplied) {
+                           double scale, double bestVal, bool boundImplied,
+                           bool useWorstCaseBound) {
       storeRow(row);
       bool isEqOrRangedRow = isRanged(row);
 
@@ -1330,8 +1297,18 @@ HPresolve::Result HPresolve::dominatedColumns(
 
         double ak = nonz.value() * scale;
 
-        if (colCanBeFixed(col, k, bestVal, ak, direction, HighsInt{1},
-                          boundImplied, isEqOrRangedRow)) {
+        if (useWorstCaseBound &&
+            (colCanBeFixedDueToWorstCaseBound(col, k, bestVal, ak, direction,
+                                              HighsInt{1}, isEqOrRangedRow) ||
+             colCanBeFixedDueToWorstCaseBound(col, k, bestVal, ak, direction,
+                                              HighsInt{-1}, isEqOrRangedRow))) {
+          // direction =  1: fix variable x_j to its upper bound
+          // direction = -1: fix variable x_j to its lower bound
+          ++numFixedCols;
+          HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
+          break;
+        } else if (colCanBeFixed(col, k, bestVal, ak, direction, HighsInt{1},
+                                 boundImplied, isEqOrRangedRow)) {
           // direction =  1:
           // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
           // direction = -1:
@@ -1347,43 +1324,27 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           HPRESOLVE_CHECKED_CALL(fixCol(k, direction));
         }
+        // remove row singletons if variable was fixed
         if (colDeleted[k])
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       }
+      // remove row singletons if variable was fixed
+      if (colDeleted[col])
+        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return Result::kOk;
     };
 
-    // the worst-case lower bound provides an upper bound on the variable (see
-    // dual fixing method)
-    if (upperImpliedByWorstCase && bestRowMinus != -1) {
-      // since the variable's objective coefficient is non-negative,
-      // try to fix it to its lower bound
-      HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
-          bestRowMinus, j, HighsInt{-1}, bestRowMinusScale, ajBestRowMinus));
-      if (colDeleted[j]) continue;
-    }
-
-    // the worst-case upper bound provides a lower bound on the variable (see
-    // dual fixing method)
-    if (lowerImpliedByWorstCase && bestRowPlus != -1) {
-      // since the variable's objective coefficient is non-positive,
-      // try to fix it to its upper bound
-      HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
-          bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
-      if (colDeleted[j]) continue;
-    }
-
     // try to fix variables using row 'bestRowMinus'
     if (bestRowMinus != -1)
-      HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowMinus, j, HighsInt{-1},
-                                         bestRowMinusScale, ajBestRowMinus,
-                                         lowerImplied));
+      HPRESOLVE_CHECKED_CALL(
+          checkFixCol(bestRowMinus, j, HighsInt{-1}, bestRowMinusScale,
+                      ajBestRowMinus, lowerImplied, upperImpliedByWorstCase));
 
     // try to fix variables using row 'bestRowPlus'
-    if (bestRowPlus != -1)
-      HPRESOLVE_CHECKED_CALL(checkFixCol(bestRowPlus, j, HighsInt{1},
-                                         bestRowPlusScale, ajBestRowPlus,
-                                         upperImplied));
+    if (!colDeleted[j] && bestRowPlus != -1)
+      HPRESOLVE_CHECKED_CALL(
+          checkFixCol(bestRowPlus, j, HighsInt{1}, bestRowPlusScale,
+                      ajBestRowPlus, upperImplied, lowerImpliedByWorstCase));
 
     // remove doubleton equations
     if (numFixedCols != oldNumFixed)
