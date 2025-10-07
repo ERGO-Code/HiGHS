@@ -172,19 +172,21 @@ void Factorise::processSupernode(Int sn) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
 
+  highs::parallel::TaskGroup tg;
+
   if (flag_stop_) return;
 
   if (S_.parTree()) {
     // spawn children of this supernode in reverse order
     Int child_to_spawn = first_child_reverse_[sn];
     while (child_to_spawn != -1) {
-      highs::parallel::spawn([=]() { processSupernode(child_to_spawn); });
+      tg.spawn([=]() { processSupernode(child_to_spawn); });
       child_to_spawn = next_child_reverse_[child_to_spawn];
     }
 
     // wait for first child to finish, before starting the parent (if there is a
     // first child)
-    if (first_child_reverse_[sn] != -1) highs::parallel::sync();
+    if (first_child_reverse_[sn] != -1) tg.sync();
   }
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -240,7 +242,7 @@ void Factorise::processSupernode(Int sn) {
 
     if (S_.parTree()) {
       // sync with spawned child, apart from the first one
-      if (child_sn != first_child_[sn]) highs::parallel::sync();
+      if (child_sn != first_child_[sn]) tg.sync();
 
       if (flag_stop_) return;
 
@@ -356,6 +358,8 @@ bool Factorise::run(Numeric& num) {
   Clock clock;
 #endif
 
+  highs::parallel::TaskGroup tg;
+
   total_reg_.assign(n_, 0.0);
 
   // allocate space
@@ -372,15 +376,13 @@ bool Factorise::run(Numeric& num) {
     // spawn tasks for root supernodes
     for (Int sn = 0; sn < S_.sn(); ++sn) {
       if (S_.snParent(sn) == -1) {
-        highs::parallel::spawn([=]() { processSupernode(sn); });
+        tg.spawn([=]() { processSupernode(sn); });
         ++spawned_roots;
       }
     }
 
     // sync tasks for root supernodes
-    for (Int root = 0; root < spawned_roots; ++root) {
-      highs::parallel::sync();
-    }
+    tg.taskWait();
   } else {
     // go through each supernode serially
     for (Int sn = 0; sn < S_.sn(); ++sn) {
