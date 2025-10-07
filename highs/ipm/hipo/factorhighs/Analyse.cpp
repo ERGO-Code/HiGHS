@@ -118,12 +118,24 @@ Int Analyse::getPermutation() {
                                    METIS_DBG_MOVEINFO | METIS_DBG_SEPINFO |
                                    METIS_DBG_CONNINFO | METIS_DBG_CONTIGINFO;
 
-  std::vector<Int> vwgt(n_, 1);
-
-  printf("%zu %zu\n", sizeof(Int), sizeof(idx_t));
+  options[METIS_OPTION_NUMBERING] = 0;
 
   if (log_) log_->printDevInfo("Running Metis\n");
-  Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), vwgt.data(),
+  if (log_) {
+    printf("%p\n", &n_);
+    printf("%p\n", temp_ptr.data());
+    printf("%p\n", temp_rows.data());
+    printf("%p\n", perm_.data());
+    printf("%p\n", iperm_.data());
+
+    printf("%zu\n", n_);
+    printf("%zu\n", temp_ptr.size());
+    printf("%zu\n", temp_rows.size());
+    printf("%zu\n", perm_.size());
+    printf("%zu\n", iperm_.size());
+  }
+
+  Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                             options, perm_.data(), iperm_.data());
   if (log_) log_->printDevInfo("Metis done\n");
   if (status != METIS_OK) {
