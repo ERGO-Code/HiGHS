@@ -1290,26 +1290,6 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
-    // the worst-case lower bound provides an upper bound on the variable (see
-    // dual fixing method)
-    if (upperImpliedByWorstCase && bestRowMinus != -1) {
-      // since the variable's objective coefficient is non-negative,
-      // try to fix it to its lower bound
-      HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
-          bestRowMinus, j, HighsInt{-1}, bestRowMinusScale, ajBestRowMinus));
-      if (colDeleted[j]) continue;
-    }
-
-    // the worst-case upper bound provides a lower bound on the variable (see
-    // dual fixing method)
-    if (lowerImpliedByWorstCase && bestRowPlus != -1) {
-      // since the variable's objective coefficient is non-positive,
-      // try to fix it to its upper bound
-      HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
-          bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
-      if (colDeleted[j]) continue;
-    }
-
     // lambda for determining whether column bound is finite (in given
     // direction)
     auto isBoundFinite = [&](HighsInt col, HighsInt direction) {
@@ -1372,6 +1352,26 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
       return Result::kOk;
     };
+
+    // the worst-case lower bound provides an upper bound on the variable (see
+    // dual fixing method)
+    if (upperImpliedByWorstCase && bestRowMinus != -1) {
+      // since the variable's objective coefficient is non-negative,
+      // try to fix it to its lower bound
+      HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
+          bestRowMinus, j, HighsInt{-1}, bestRowMinusScale, ajBestRowMinus));
+      if (colDeleted[j]) continue;
+    }
+
+    // the worst-case upper bound provides a lower bound on the variable (see
+    // dual fixing method)
+    if (lowerImpliedByWorstCase && bestRowPlus != -1) {
+      // since the variable's objective coefficient is non-positive,
+      // try to fix it to its upper bound
+      HPRESOLVE_CHECKED_CALL(checkFixColDueToWorstCaseBound(
+          bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus));
+      if (colDeleted[j]) continue;
+    }
 
     // try to fix variables using row 'bestRowMinus'
     if (bestRowMinus != -1)
