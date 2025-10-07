@@ -363,8 +363,8 @@ restart:
   };
 
   // TODO: Should we be propagating this first?
-  if (num_workers > 1) resetGlobalDomain(true);
   destroyOldWorkers();
+  if (num_workers > 1) resetGlobalDomain(true);
   if (num_workers > 1) constructAdditionalWorkerData(master_worker);
   master_worker.upper_bound = mipdata_->upper_bound;
   master_worker.upper_limit = mipdata_->upper_limit;
@@ -465,14 +465,13 @@ restart:
   };
 
   auto resetWorkerDomains = [&]() -> void {
-    // 1. Backtrack to global domain for all local global domains
+    // 1. Backtrack to global domain for all local global domains (not needed)
     // 2. Push all changes from the true global domain
     // 3. Clear changedCols and domChgStack, and reset local search domain for
     // all workers
     // TODO MT: Is it simpler to just copy the domain each time
     if (mipdata_->hasMultipleWorkers()) {
       for (HighsMipWorker& worker : mipdata_->workers) {
-        worker.globaldom_->backtrackToGlobal();
         for (const HighsDomainChange& domchg :
              mipdata_->domain.getDomainChangeStack()) {
           worker.getGlobalDomain().changeBound(
