@@ -1239,6 +1239,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           return Result::kDualInfeasible;
         }
       }
+      // remove row singletons if variable was fixed
+      HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return Result::kOk;
     };
 
@@ -1324,13 +1326,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           HPRESOLVE_CHECKED_CALL(fixCol(k, direction));
         }
-        // remove row singletons if variable was fixed
-        if (colDeleted[k])
-          HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       }
-      // remove row singletons if variable was fixed
-      if (colDeleted[col])
-        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return Result::kOk;
     };
 
