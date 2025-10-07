@@ -4614,7 +4614,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     newBound = direction > 0 ? computeWorstCaseLowerBound(col)
                              : -computeWorstCaseUpperBound(col);
 
-    // return if no bound was found or bound is too large
+    // return if bound is too large
     if (newBound != -kHighsInf && (newBound >= currentBound - primal_feastol ||
                                    std::abs(newBound) > hugeBound))
       return false;
