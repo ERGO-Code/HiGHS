@@ -112,7 +112,7 @@ Int Analyse::getPermutation() {
 
   // set logging of Metis depending on debug level
   options[METIS_OPTION_DBGLVL] = 0;
-  if (log_->debug(2))
+ // if (log_->debug(2))
     options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN |
                                    METIS_DBG_REFINE | METIS_DBG_IPART |
                                    METIS_DBG_MOVEINFO | METIS_DBG_SEPINFO |
@@ -121,19 +121,6 @@ Int Analyse::getPermutation() {
   options[METIS_OPTION_NUMBERING] = 0;
 
   if (log_) log_->printDevInfo("Running Metis\n");
-  if (log_) {
-    printf("%p\n", &n_);
-    printf("%p\n", temp_ptr.data());
-    printf("%p\n", temp_rows.data());
-    printf("%p\n", perm_.data());
-    printf("%p\n", iperm_.data());
-
-    printf("%zu\n", n_);
-    printf("%zu\n", temp_ptr.size());
-    printf("%zu\n", temp_rows.size());
-    printf("%zu\n", perm_.size());
-    printf("%zu\n", iperm_.size());
-  }
 
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                             options, perm_.data(), iperm_.data());
@@ -142,6 +129,9 @@ Int Analyse::getPermutation() {
     if (log_) log_->printDevInfo("Error with Metis\n");
     return kRetMetisError;
   }
+
+  for (Int i : perm_) printf("%d ", i);
+  printf("\n");
 
   return kRetOk;
 }

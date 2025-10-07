@@ -77,6 +77,17 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
     iter_2 = highs.getInfo().ipm_iteration_count;
     highs.resetGlobalScheduler(true);
   }
+  {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue(kSolverString, kHipoString);
+    highs.setOptionValue(kParallelString, kHighsOnString);
+    highs.setOptionValue(kRunCrossoverString, kHighsOffString);
+    highs.readModel(filename);
+    HighsStatus status = highs.run();
+    REQUIRE(status == HighsStatus::kOk);
+    highs.resetGlobalScheduler(true);
+  }
 
   REQUIRE(iter_1 == iter_2);
   REQUIRE(solution_1.value_valid == solution_2.value_valid);
