@@ -4606,17 +4606,15 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     // do not accept huge bounds
     double hugeBound = primal_feastol / kHighsTiny;
 
-    // initialise
-    currentBound *= direction;
-
     // compute worst-case bounds (direction = 1: lower bound,
     // direction = -1: upper bound)
     newBound = direction > 0 ? computeWorstCaseLowerBound(col)
                              : -computeWorstCaseUpperBound(col);
 
     // return if bound is too large
-    if (newBound != -kHighsInf && (newBound >= currentBound - primal_feastol ||
-                                   std::abs(newBound) > hugeBound))
+    if (newBound != -kHighsInf &&
+        (newBound >= direction * currentBound - primal_feastol ||
+         std::abs(newBound) > hugeBound))
       return false;
 
     // round up to make sure that all rows are redundant
