@@ -68,11 +68,11 @@ class PDLPSolver {
   double PowerMethod();
 
   // --- Step Update Methods (previously in Step) ---
-  StepSizeConfig InitializeStepSizesPowerMethod(double op_norm_sq);
-  std::vector<double> UpdateX();
-  std::vector<double> UpdateY();
+  void InitializeStepSizes();
+  std::vector<double> UpdateX(double primal_step);
+  std::vector<double> UpdateY(double dual_step);
   void UpdateIteratesFixed();
-  void UpdateIteratesAdaptive(int& step_size_iter_count);
+  void UpdateIteratesAdaptive();
   bool UpdateIteratesMalitskyPock(bool first_malitsky_iteration);
 
   // --- Step Size Helper Methods (previously in PdlpStep) ---

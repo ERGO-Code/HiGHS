@@ -343,19 +343,15 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
 void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   Timer solver_timer;
-
   const HighsLp& lp = lp_;
 
   debug_pdlp_log_file_ = fopen("HiPDLP.log", "w");
   assert(debug_pdlp_log_file_);
 
   // --- 0. Using PowerMethod to estimate the largest eigenvalue ---
-  const double op_norm_sq = PowerMethod();
-  stepsize_ =
-      InitializeStepSizesPowerMethod(op_norm_sq);
-  const double fixed_eta = 0.99 / sqrt(op_norm_sq);
+  InitializeStepSizes();
+  
   PrimalDualParams working_params = params_;
-
   working_params.omega = std::sqrt(stepsize_.dual_step / stepsize_.primal_step);
   working_params.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
   current_eta_ = working_params.eta;
@@ -386,7 +382,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   ratio_last_two_step_sizes_ = 1.0;
   bool using_malitsky_averaging =
       (params_.step_size_strategy == StepSizeStrategy::MALITSKY_POCK);
-  bool primal_average_initialized = false;
+  bool primal_average_initialized = false; 
 
   // Initialize vectors for matrix-vector products
   std::vector<double> Ax_avg(lp.num_row_, 0.0);
@@ -534,7 +530,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         break;
 
       case StepSizeStrategy::ADAPTIVE:
-        UpdateIteratesAdaptive(iter);
+        UpdateIteratesAdaptive();
         break;
 
       case StepSizeStrategy::MALITSKY_POCK:
@@ -1170,54 +1166,84 @@ void AdaptiveLinesearchParams::initialise() {
 //  SECTION 4: Step Update Methods (from step.cc)
 // =============================================================================
 
-StepSizeConfig PDLPSolver::InitializeStepSizesPowerMethod(double op_norm_sq) {
-  StepSizeConfig config;
-  config.power_method_lambda = op_norm_sq;
-  double cost_norm = linalg::compute_cost_norm(lp_, 2.0);
-  double rhs_norm = linalg::compute_rhs_norm(lp_, 2.0);
+void PDLPSolver::InitializeStepSizes() {
+  double cost_norm_sq = linalg::vector_norm_squared(lp_.col_cost_);
+  double rhs_norm_sq = linalg::vector_norm_squared(lp_.row_lower_);
 
-  highsLogUser(params_.log_options_, HighsLogType::kInfo,
-               "Cost norm: %g, RHS norm: %g\n", cost_norm, rhs_norm);
-  config.beta = cost_norm * cost_norm / (rhs_norm * rhs_norm + 1e-10);
+  if (std::min(cost_norm_sq, rhs_norm_sq) > 1e-6) {
+    stepsize_.beta = cost_norm_sq / rhs_norm_sq;
+  } else {
+    stepsize_.beta = 1.0;
+  }
 
-  const double safety_factor = 0.8;
-  double base_step = safety_factor / std::sqrt(op_norm_sq);
-
-  config.primal_step = base_step / std::sqrt(config.beta);
-  config.dual_step = base_step * std::sqrt(config.beta);
-  return config;
+    // Initialize step sizes based on strategy
+  if (params_.step_size_strategy == StepSizeStrategy::FIXED) {
+    // Use power method for fixed step size
+    const double op_norm_sq = PowerMethod();
+    stepsize_.power_method_lambda = op_norm_sq;
+    
+    const double safety_factor = 0.8;
+    double base_step = safety_factor / std::sqrt(op_norm_sq);
+    
+    stepsize_.primal_step = base_step / std::sqrt(stepsize_.beta);
+    stepsize_.dual_step = base_step * std::sqrt(stepsize_.beta);
+    
+    highsLogUser(params_.log_options_, HighsLogType::kInfo,
+                 "Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
+                 op_norm_sq, stepsize_.primal_step, stepsize_.dual_step);
+  } else {
+    // Use matrix infinity norm for adaptive step size
+    // Compute infinity norm of matrix elements
+    double mat_elem_norm_inf = 0.0;
+    const HighsSparseMatrix& matrix = lp_.a_matrix_;
+    for (int i = 0; i < matrix.numNz(); ++i) {
+      mat_elem_norm_inf = std::max(mat_elem_norm_inf, std::abs(matrix.value_[i]));
+    }
+    
+    if (mat_elem_norm_inf < 1e-10) {
+      mat_elem_norm_inf = 1.0;  // Avoid division by zero
+    }
+    
+    // Initialize step sizes using infinity norm
+    stepsize_.primal_step = (1.0 / mat_elem_norm_inf) / std::sqrt(stepsize_.beta);
+    stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
+    
+    highsLogUser(params_.log_options_, HighsLogType::kInfo,
+                 "Initial step sizes from matrix inf-norm = %g: primal = %g; dual = %g\n",
+                 mat_elem_norm_inf, stepsize_.primal_step, stepsize_.dual_step);
+  }
 }
 
-std::vector<double> PDLPSolver::UpdateX() {
+std::vector<double> PDLPSolver::UpdateX(double primal_step) {
   std::vector<double> x_new(lp_.num_col_);
   debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     double gradient = lp_.col_cost_[i] - ATy_cache_[i];
-    x_new[i] = linalg::project_box(x_current_[i] - stepsize_.primal_step * gradient,
+    x_new[i] = linalg::project_box(x_current_[i] - primal_step * gradient,
                                    lp_.col_lower_[i], lp_.col_upper_[i]);
   }
   return x_new;
 }
 
-std::vector<double> PDLPSolver::UpdateY() {
+std::vector<double> PDLPSolver::UpdateY(double dual_step) {
   std::vector<double> y_new(lp_.num_row_);
   for (HighsInt j = 0; j < lp_.num_row_; j++) {
     double extr_ax = 2 * Ax_next_[j] - Ax_cache_[j];
     bool is_equality = (lp_.row_lower_[j] == lp_.row_upper_[j]);
     double q = lp_.row_lower_[j];
-    double dual_update = y_current_[j] + stepsize_.dual_step * (q - extr_ax);
+    double dual_update = y_current_[j] + dual_step * (q - extr_ax);
     y_new[j] = is_equality ? dual_update : linalg::project_non_negative(dual_update);
   }
   return y_new;
 }
 
 void PDLPSolver::UpdateIteratesFixed() {
-  x_next_ = UpdateX();
+  x_next_ = UpdateX(stepsize_.primal_step);
   linalg::Ax(lp_, x_next_, Ax_next_);
-  y_next_ = UpdateY();
+  y_next_ = UpdateY(stepsize_.dual_step);
 }
 
-void PDLPSolver::UpdateIteratesAdaptive(int& step_size_iter_count) {
+void PDLPSolver::UpdateIteratesAdaptive() {
   const double MIN_ETA = 1e-6;
   const double MAX_ETA = 1.0;
 
@@ -1225,7 +1251,16 @@ void PDLPSolver::UpdateIteratesAdaptive(int& step_size_iter_count) {
   int inner_iterations = 0;
   int num_rejected_steps = 0;
 
-while (!accepted_step) {
+  double dStepSizeUpdate = std::sqrt(stepsize_.primal_step *
+                                         stepsize_.dual_step);
+
+  // Compute candidate solution
+  std::vector<double> x_candidate(lp_.num_col_);
+  std::vector<double> y_candidate(lp_.num_row_);
+  std::vector<double> ax_candidate(lp_.num_row_);
+  std::vector<double> aty_candidate(lp_.num_col_);                                       
+  while (!accepted_step) {
+    stepsize_.step_size_iter++; //nStepSizeIter
     inner_iterations++;
 
     if (inner_iterations >= 60) {
@@ -1235,18 +1270,16 @@ while (!accepted_step) {
       break;
     }
 
-    // Compute candidate solution
-    std::vector<double> x_candidate(lp_.num_col_);
-    std::vector<double> y_candidate(lp_.num_row_);
-    std::vector<double> ax_candidate(lp_.num_row_);
-    std::vector<double> aty_candidate(lp_.num_col_);
+    // Calculate step sizes for this iteration
+    double primal_step_update = dStepSizeUpdate / std::sqrt(stepsize_.beta);
+    double dual_step_update = dStepSizeUpdate * std::sqrt(stepsize_.beta);
 
     // Primal update
-    x_candidate = UpdateX();
+    x_candidate = UpdateX(primal_step_update);
     linalg::Ax(lp_, x_candidate, ax_candidate);
 
     // Dual update
-    y_candidate = UpdateY();
+    y_candidate = UpdateY(dual_step_update);
     linalg::ATy(lp_, y_candidate, aty_candidate);
 
     // Compute deltas
@@ -1265,11 +1298,13 @@ while (!accepted_step) {
     }
 
     // Check numerical stability
+    /*
     if (!CheckNumericalStability(delta_x, delta_y)) {
       std::cerr << "Numerical instability detected" << std::endl;
-      current_eta_ *= 0.5;  // Drastically reduce step size
+      dStepSizeUpdate *= 0.5;  // Drastically reduce step size
       continue;
     }
+    */
 
     // Compute movement and nonlinearity
     double movement = ComputeMovement(delta_x, delta_y);
@@ -1278,7 +1313,7 @@ while (!accepted_step) {
 
     // Compute step size limit
     double step_size_limit = (nonlinearity > 1e-12)
-                                 ? (movement / (2.0 * nonlinearity))
+                                 ? (movement / (1.0 * nonlinearity))
                                  :  // in cupdlp-c, the factor is 1
                                  std::numeric_limits<double>::infinity();
 
@@ -1288,12 +1323,7 @@ while (!accepted_step) {
     = %g\n", int(inner_iterations), current_eta, movement, nonlinearity.
     step_size_limit);
     */
-    if (current_eta_ <= step_size_limit) {
-      // Accept the step
-      x_next_ = x_candidate;
-      y_next_ = y_candidate;
-      Ax_next_ = ax_candidate;
-      ATy_cache_ = aty_candidate;
+    if (dStepSizeUpdate <= step_size_limit) {
       accepted_step = true;
     } else {
       num_rejected_steps++;
@@ -1303,7 +1333,7 @@ while (!accepted_step) {
     double first_term =
         (std::isinf(step_size_limit))
             ? step_size_limit
-            : (1.0 - std::pow(step_size_iter_count + 1.0,
+            : (1.0 - std::pow(stepsize_.step_size_iter + 1.0,
                               -params_.adaptive_linesearch_params
                                    .step_size_reduction_exponent)) *
                   step_size_limit;
@@ -1311,13 +1341,23 @@ while (!accepted_step) {
     double second_term =
         (1.0 +
          std::pow(
-             step_size_iter_count + 1.0,
+             stepsize_.step_size_iter + 1.0,
              -params_.adaptive_linesearch_params.step_size_growth_exponent)) *
-        current_eta_;
+        dStepSizeUpdate;
 
-    current_eta_ = std::min(first_term, second_term);
-    current_eta_ = std::max(MIN_ETA, std::min(MAX_ETA, current_eta_));
+    dStepSizeUpdate = std::min(first_term, second_term);
+    //current_eta_ = std::max(MIN_ETA, std::min(MAX_ETA, current_eta_));
   }
+
+  x_next_ = x_candidate;
+  y_next_ = y_candidate;
+  Ax_next_ = ax_candidate;
+  ATy_next_ = aty_candidate;
+  
+  current_eta_ = dStepSizeUpdate;
+  stepsize_.primal_step = dStepSizeUpdate / std::sqrt(stepsize_.beta);
+  std::cout << "new primal step: " << stepsize_.primal_step << std::endl;
+  stepsize_.dual_step = dStepSizeUpdate * std::sqrt(stepsize_.beta);
 }
 
 bool PDLPSolver::UpdateIteratesMalitskyPock(

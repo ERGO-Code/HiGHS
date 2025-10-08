@@ -60,7 +60,7 @@ class RestartScheme {
   };
   void SetLastRestartIter(int iter) { last_restart_iter_ = iter; };
 
-    // State for adaptive restart
+  // State for adaptive restart
   //dPrimalFeasLastRestart = primal_feas_last_restart_
   //dDualFeasLastRestart = dual_feas_last_restart_;
   //dDualityGapLastRestart = duality_gap_last_restart_;
