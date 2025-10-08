@@ -951,17 +951,16 @@ HighsStatus Highs::run() {
     if (this->userScaleModel(user_scale_data) == HighsStatus::kError)
       return HighsStatus::kError;
     this->userScaleSolution(user_scale_data);
+    // Indicate that the scaling has been applied
+    user_scale_data.applied = true;
     // Zero the user scale values to prevent further scaling
     this->options_.user_cost_scale = 0;
     this->options_.user_bound_scale = 0;
   }
 
   // Assess whether to warn the user about excessive bounds and costs
-  assessCostBoundScaling(this->options_.log_options, this->model_,
-			 kExcessivelySmallCostValue,
-			 kExcessivelyLargeCostValue,
-			 kExcessivelySmallBoundValue,
-			 kExcessivelyLargeBoundValue,
+  assessCostBoundScaling(this->options_.log_options,
+			 this->model_,
 			 user_scale_data);
 
   HighsStatus status;
@@ -1002,6 +1001,8 @@ HighsStatus Highs::run() {
     // negated to undo user scaling
     this->options_.user_cost_scale = -user_scale_data.user_cost_scale;
     this->options_.user_bound_scale = -user_scale_data.user_bound_scale;
+    // Indicate that the scaling has not been applied
+    user_scale_data.applied = false;
     highsLogUser(this->options_.log_options, HighsLogType::kInfo,
                  "After solving the user-scaled model, the unscaled solution "
                  "has objective value %.12g\n",
@@ -2007,6 +2008,20 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
   }
   return computeIllConditioning(ill_conditioning, constraint, method,
                                 ill_conditioning_bound);
+}
+
+HighsStatus Highs::getCostBoundScaling(HighsInt& suggested_cost_scale,
+				       HighsInt& suggested_bound_scale) {
+  this->logHeader();
+  HighsUserScaleData data;
+  initialiseUserScaleData(this->options_, data);
+  assessCostBoundScaling(this->options_.log_options, this->model_,
+			 data, false);
+  suggested_cost_scale = data.suggested_user_cost_scale;
+  suggested_bound_scale = data.suggested_user_bound_scale;
+  printf("Highs::getCostBoundScaling suggested cost / bound scale values of %d / %d\n",
+	 int(suggested_cost_scale), int(suggested_bound_scale));
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getIis(HighsIis& iis) {

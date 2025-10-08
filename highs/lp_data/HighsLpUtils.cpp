@@ -3686,6 +3686,7 @@ void HighsUserScaleData::initialise(const HighsInt& user_cost_scale_,
   this->num_large_matrix_values = 0;
   this->suggested_user_cost_scale = 0;
   this->suggested_user_bound_scale = 0;
+  this->applied = false;
 }
 
 bool HighsUserScaleData::scaleError(std::string& message) const {

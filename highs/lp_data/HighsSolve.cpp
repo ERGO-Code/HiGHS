@@ -349,12 +349,13 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 // recommendations
 void assessCostBoundScaling(const HighsLogOptions log_options,
 			    const HighsModel& model,
-			    const double small_cost,
-			    const double large_cost,
-			    const double small_bound,
-			    const double large_bound,
-			    HighsUserScaleData& user_scale_data) {
+			    HighsUserScaleData& user_scale_data,
+			    const bool excessive) {
   const bool user_cost_or_bound_scale = user_scale_data.user_cost_scale || user_scale_data.user_bound_scale;
+  const double small_cost = excessive ? kExcessivelySmallCostValue : kOkSmallCostValue;
+  const double large_cost = excessive ? kExcessivelyLargeCostValue : kOkLargeCostValue;
+  const double small_bound = excessive ? kExcessivelySmallBoundValue : kOkSmallBoundValue;
+  const double large_bound = excessive ? kExcessivelyLargeBoundValue : kOkLargeBoundValue;
   std::stringstream message;
   if (user_cost_or_bound_scale) {
     if (user_scale_data.user_cost_scale)
@@ -502,7 +503,7 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
       // All scalable values are excessively large, so obviously suggest
       // scaling them down
       ratio = 1.0 / min_value;
-      assert(0 == 11);
+      //assert(0 == 11);
     } else if (0 < max_value && max_value < small_value) {
       // All scalable values are excessively small, so obviously suggest
       // scaling them up
@@ -516,12 +517,12 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
 	  ratio = 1.0 / max_value;
 	  if (ratio * min_value < small_value) {
 	    ratio = std::sqrt(1.0 / (max_value * min_value));
-	    assert(0 == 325);
+	    //assert(0 == 325);
 	  }
-	  assert(0 == 33);
+	  //assert(0 == 33);
 	} else {
 	  ratio = 1.0 / max_value;
-	  assert(0 == 44);
+	  //assert(0 == 44);
 	}
       } else if (0 < min_value && min_value < small_value) {
 	// Min value is excessively small, so look to scale it up,
@@ -531,12 +532,12 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
 	  ratio = 1.0 / min_value;
 	  if (ratio * max_value > large_value) {
 	    ratio = std::sqrt(1.0 / (max_value * min_value));
-	    assert(0 == 545);
+	    //assert(0 == 545);
 	  }
-	  assert(0 == 55);
+	  //assert(0 == 55);
 	} else {
 	  ratio = 1.0 / min_value;	  
-	  assert(0 == 66);
+	  //assert(0 == 66);
 	}
       }	
     }

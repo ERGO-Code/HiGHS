@@ -20,9 +20,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsBasis& basis);
 void assessCostBoundScaling(const HighsLogOptions log_options,
 			    const HighsModel& model,
-			    const double small_cost,
-			    const double large_cost,
-			    const double small_bound,
-			    const double large_bound,
-			    HighsUserScaleData& user_scale_data);
+			    HighsUserScaleData& user_scale_data,
+			    const bool excesive = true);
 #endif  // LP_DATA_HIGHSSOLVE_H_

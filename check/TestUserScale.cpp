@@ -79,7 +79,15 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   lp.a_matrix_.start_ = {0, 2, 4};
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 2, 4};
+
+  HighsInt suggested_cost_scale;
+  HighsInt suggested_bound_scale;
+  highs.getCostBoundScaling(suggested_cost_scale, suggested_bound_scale);
+
   highs.passModel(lp);
+
+  highs.getCostBoundScaling(suggested_cost_scale, suggested_bound_scale);
+
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
