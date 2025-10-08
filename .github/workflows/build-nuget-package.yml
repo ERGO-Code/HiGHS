@@ -10,9 +10,6 @@ jobs:
   # Build macos intel
   build_macos_intel:
     runs-on: macos-15-intel
-    # strategy:
-      # matrix:
-      #   python: [3.11]
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS
