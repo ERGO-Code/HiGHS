@@ -497,47 +497,15 @@ void assessExcessiveCostBoundScaling(const HighsLogOptions log_options,
   // Determine recommended user scaling values
   auto suggestScaling = [&](double min_value, double max_value, double small_value, double large_value) {
     double ratio = 1;
-    if (min_value > large_value) {
-      // All scalable values are large, so obviously suggest
-      // scaling them down
-      ratio = 1.0 / min_value;
+    if (max_value > large_value) {
+      // Max scalable value is large, so suggest scaling values down
+      // so that the max value is large_value
+      ratio = large_value / max_value;
       //assert(0 == 11);
     } else if (0 < max_value && max_value < small_value) {
-      // All scalable values are small, so obviously suggest
-      // scaling them up
-      ratio = 1.0 / max_value;
-    } else {
-      if (max_value > large_value) {
-	// Max value is large, so look to scale it down
-	if (0 < min_value) {
-	  // Chance that small values may be scaled down below
-	  // small_value, so look for balance
-	  ratio = 1.0 / max_value;
-	  if (ratio * min_value < small_value) {
-	    ratio = std::sqrt(1.0 / (max_value * min_value));
-	    //assert(0 == 325);
-	  }
-	  //assert(0 == 33);
-	} else {
-	  ratio = 1.0 / max_value;
-	  //assert(0 == 44);
-	}
-      } else if (0 < min_value && min_value < small_value) {
-	// Min value is small, so look to scale it up,
-	if (0 < max_value) {
-	  // Chance that large values may be scaled up above
-	  // large_value, so look for balance
-	  ratio = 1.0 / min_value;
-	  if (ratio * max_value > large_value) {
-	    ratio = std::sqrt(1.0 / (max_value * min_value));
-	    //assert(0 == 545);
-	  }
-	  //assert(0 == 55);
-	} else {
-	  ratio = 1.0 / min_value;	  
-	  //assert(0 == 66);
-	}
-      }	
+      // All scalable values are small, so suggest scaling them up so
+      // the max value is small_value
+      ratio = small_value / max_value;
     }
     assert(ratio);
     return ratio;
