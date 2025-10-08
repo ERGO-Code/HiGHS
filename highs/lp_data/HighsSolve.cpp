@@ -347,15 +347,16 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 // determine the model coefficient ranges, assess it for values
 // outside the [small, large] range, and give appropriate scaling
 // recommendations
-void assessCostBoundScaling(const HighsLogOptions log_options,
-			    const HighsModel& model,
-			    HighsUserScaleData& user_scale_data,
-			    const bool excessive) {
+void assessExcessiveCostBoundScaling(const HighsLogOptions log_options,
+				     const HighsModel& model,
+				     HighsUserScaleData& user_scale_data) {
+  const HighsLp& lp = model.lp_;
+  if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
   const bool user_cost_or_bound_scale = user_scale_data.user_cost_scale || user_scale_data.user_bound_scale;
-  const double small_cost = excessive ? kExcessivelySmallCostValue : kOkSmallCostValue;
-  const double large_cost = excessive ? kExcessivelyLargeCostValue : kOkLargeCostValue;
-  const double small_bound = excessive ? kExcessivelySmallBoundValue : kOkSmallBoundValue;
-  const double large_bound = excessive ? kExcessivelyLargeBoundValue : kOkLargeBoundValue;
+  const double small_cost = kExcessivelySmallCostValue;
+  const double large_cost = kExcessivelyLargeCostValue;
+  const double small_bound = kExcessivelySmallBoundValue;
+  const double large_bound = kExcessivelyLargeBoundValue;
   std::stringstream message;
   if (user_cost_or_bound_scale) {
     if (user_scale_data.user_cost_scale)
@@ -367,7 +368,7 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
 				     user_scale_data.user_bound_scale);
     }
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Assessing excessive costs or bounds after applying%s\n", message.str().c_str());
+		 "Assessing costs and bounds after applying%s\n", message.str().c_str());
   }
   // Lambda for assessing a finite nonzero
   auto assessFiniteNonzero = [&](const double value, double& min_value,
@@ -378,7 +379,6 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
       max_value = std::max(abs_value, max_value);
     }
   };
-  const HighsLp& lp = model.lp_;
   double min_continuous_col_cost = kHighsInf;
   double min_noncontinuous_col_cost = kHighsInf;
   double max_continuous_col_cost = -kHighsInf;
@@ -481,14 +481,12 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
   if (max_col_cost > large_cost) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively large costs\n", problem.c_str());
-
   if (0 < min_col_bound && min_col_bound < small_bound) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively small column bounds\n", problem.c_str());
   if (max_col_bound > large_bound) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively large column bounds\n", problem.c_str());
-
   if (0 < min_row_bound && min_row_bound < small_bound) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively small row bounds\n", problem.c_str());
@@ -500,17 +498,17 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
   auto suggestScaling = [&](double min_value, double max_value, double small_value, double large_value) {
     double ratio = 1;
     if (min_value > large_value) {
-      // All scalable values are excessively large, so obviously suggest
+      // All scalable values are large, so obviously suggest
       // scaling them down
       ratio = 1.0 / min_value;
       //assert(0 == 11);
     } else if (0 < max_value && max_value < small_value) {
-      // All scalable values are excessively small, so obviously suggest
+      // All scalable values are small, so obviously suggest
       // scaling them up
       ratio = 1.0 / max_value;
     } else {
       if (max_value > large_value) {
-	// Max value is excessively large, so look to scale it down
+	// Max value is large, so look to scale it down
 	if (0 < min_value) {
 	  // Chance that small values may be scaled down below
 	  // small_value, so look for balance
@@ -525,7 +523,7 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
 	  //assert(0 == 44);
 	}
       } else if (0 < min_value && min_value < small_value) {
-	// Min value is excessively small, so look to scale it up,
+	// Min value is small, so look to scale it up,
 	if (0 < max_value) {
 	  // Chance that large values may be scaled up above
 	  // large_value, so look for balance
@@ -594,7 +592,7 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
     !user_scale_data.user_cost_scale;
   message.str(std::string());
   if (order_of_magnitude_message)
-    message << highsFormatToString("   Consider scaling the costs by 1e%+1d", 
+    message << highsFormatToString("   Consider scaling the  costs by 1e%+1d", 
 				   int(suggested_cost_scale_order_of_magnitude));
   if (user_scale_data.suggested_user_cost_scale) {
     if (!order_of_magnitude_message) {
@@ -602,7 +600,7 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
     } else {
       message << ", or";
     }
-    message << highsFormatToString(" setting the user_cost_scale option to %d\n",
+    message << highsFormatToString(" setting the  user_cost_scale option to %d",
 				   int(user_scale_data.suggested_user_cost_scale));
   }
   if (order_of_magnitude_message || user_scale_data.suggested_user_cost_scale)
@@ -622,7 +620,7 @@ void assessCostBoundScaling(const HighsLogOptions log_options,
     } else {
       message << ", or";
     }
-    message << highsFormatToString(" setting the user_bound_scale option to %d\n",
+    message << highsFormatToString(" setting the user_bound_scale option to %d",
 				   int(user_scale_data.suggested_user_bound_scale));
   }
   if (order_of_magnitude_message || user_scale_data.suggested_user_bound_scale)

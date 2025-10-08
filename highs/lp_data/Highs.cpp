@@ -959,7 +959,7 @@ HighsStatus Highs::run() {
   }
 
   // Assess whether to warn the user about excessive bounds and costs
-  assessCostBoundScaling(this->options_.log_options,
+  assessExcessiveCostBoundScaling(this->options_.log_options,
 			 this->model_,
 			 user_scale_data);
 
@@ -2015,8 +2015,7 @@ HighsStatus Highs::getCostBoundScaling(HighsInt& suggested_cost_scale,
   this->logHeader();
   HighsUserScaleData data;
   initialiseUserScaleData(this->options_, data);
-  assessCostBoundScaling(this->options_.log_options, this->model_,
-			 data, false);
+  assessExcessiveCostBoundScaling(this->options_.log_options, this->model_, data);
   suggested_cost_scale = data.suggested_user_cost_scale;
   suggested_bound_scale = data.suggested_user_bound_scale;
   printf("Highs::getCostBoundScaling suggested cost / bound scale values of %d / %d\n",
