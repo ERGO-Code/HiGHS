@@ -28,7 +28,7 @@ jobs:
         run: |
           cmake --version
           gfortran-14 --version
-          cmake $GITHUB_WORKSPACE -DFORTRAN=ON 
+          cmake $GITHUB_WORKSPACE -DFORTRAN=ON -DCMAKE_Fortran_COMPILER=fortran-14
 
       - name: Build
         shell: bash
