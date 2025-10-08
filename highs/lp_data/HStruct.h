@@ -196,6 +196,8 @@ struct HighsUserScaleData {
   HighsInt num_infinite_row_bounds;
   HighsInt num_small_matrix_values;
   HighsInt num_large_matrix_values;
+  HighsInt suggested_user_cost_scale;
+  HighsInt suggested_user_bound_scale;
   void initialise(const HighsInt& user_cost_scale_,
                   const HighsInt& user_bound_scale_,
                   const double& infinite_cost_, const double& infinite_bound_,

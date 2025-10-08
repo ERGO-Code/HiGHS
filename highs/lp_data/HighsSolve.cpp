@@ -344,11 +344,16 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 }
 
 // Assuming that any user scaling in user_scale_data has been applied,
-// determine the model coefficient ranges, assess it for excessive
-// values, and give scaling recommendations, when appropriate
-void assessExcessiveBoundCost(const HighsLogOptions log_options,
-                              const HighsModel& model,
-                              const HighsUserScaleData& user_scale_data) {
+// determine the model coefficient ranges, assess it for values
+// outside the [small, large] range, and give appropriate scaling
+// recommendations
+void assessCostBoundScaling(const HighsLogOptions log_options,
+			    const HighsModel& model,
+			    const double small_cost,
+			    const double large_cost,
+			    const double small_bound,
+			    const double large_bound,
+			    HighsUserScaleData& user_scale_data) {
   const bool user_cost_or_bound_scale = user_scale_data.user_cost_scale || user_scale_data.user_bound_scale;
   std::stringstream message;
   if (user_cost_or_bound_scale) {
@@ -469,24 +474,24 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
 
   const std::string problem = user_cost_or_bound_scale ? "User-scaled problem" : "Problem";
 
-  if (0 < min_col_cost && min_col_cost < kExcessivelySmallCostValue) 
+  if (0 < min_col_cost && min_col_cost < small_cost) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively small costs\n", problem.c_str());
-  if (max_col_cost > kExcessivelyLargeCostValue) 
+  if (max_col_cost > large_cost) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively large costs\n", problem.c_str());
 
-  if (0 < min_col_bound && min_col_bound < kExcessivelySmallBoundValue) 
+  if (0 < min_col_bound && min_col_bound < small_bound) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively small column bounds\n", problem.c_str());
-  if (max_col_bound > kExcessivelyLargeBoundValue) 
+  if (max_col_bound > large_bound) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively large column bounds\n", problem.c_str());
 
-  if (0 < min_row_bound && min_row_bound < kExcessivelySmallBoundValue) 
+  if (0 < min_row_bound && min_row_bound < small_bound) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively small row bounds\n", problem.c_str());
-  if (max_row_bound > kExcessivelyLargeBoundValue) 
+  if (max_row_bound > large_bound) 
     highsLogUser(log_options, HighsLogType::kWarning,
 		 "%s has excessively large row bounds\n", problem.c_str());
 
@@ -541,11 +546,11 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
     
   double suggested_bound_scaling = suggestScaling(min_scalable_bound,
 						  max_scalable_bound,
-						  kExcessivelySmallBoundValue,
-						  kExcessivelyLargeBoundValue);
+						  small_bound,
+						  large_bound);
   // Determine the suggested (new) value for user_bound_scale,
   // allowing for the fact that the current value has been applied
-  HighsInt suggested_user_bound_scale =
+  user_scale_data.suggested_user_bound_scale =
     user_scale_data.user_bound_scale +
     std::ceil(std::log2(suggested_bound_scaling));
   // Determine the order of magnitude of the suggested bound scaling -
@@ -557,7 +562,7 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
   //
   // Determine the corresponding extreme non-continuous costs and
   // update the extreme costs so that cost scalign can be suggested
-  double suggested_user_bound_scale_value = pow(2.0, suggested_user_bound_scale);
+  double suggested_user_bound_scale_value = pow(2.0, user_scale_data.suggested_user_bound_scale);
   min_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   max_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   min_col_cost =
@@ -569,11 +574,11 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
   
   double suggested_cost_scaling = suggestScaling(min_col_cost,
 						 max_col_cost,
-						 kExcessivelySmallCostValue,
-						 kExcessivelyLargeCostValue);
+						 small_cost,
+						 large_cost);
   // Determine the suggested (new) value for user_cost_scale,
   // allowing for the fact that the current value has been applied
-  HighsInt suggested_user_cost_scale =
+  user_scale_data.suggested_user_cost_scale =
     user_scale_data.user_cost_scale +
     std::ceil(std::log2(suggested_cost_scaling));
   // Determine the order of magnitude of the suggested cost scaling -
@@ -590,16 +595,16 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
   if (order_of_magnitude_message)
     message << highsFormatToString("   Consider scaling the costs by 1e%+1d", 
 				   int(suggested_cost_scale_order_of_magnitude));
-  if (suggested_user_cost_scale) {
+  if (user_scale_data.suggested_user_cost_scale) {
     if (!order_of_magnitude_message) {
       message << "   Consider";
     } else {
       message << ", or";
     }
     message << highsFormatToString(" setting the user_cost_scale option to %d\n",
-				   int(suggested_user_cost_scale));
+				   int(user_scale_data.suggested_user_cost_scale));
   }
-  if (order_of_magnitude_message || suggested_user_cost_scale)
+  if (order_of_magnitude_message || user_scale_data.suggested_user_cost_scale)
     highsLogUser(log_options, HighsLogType::kWarning, "%s\n", message.str().c_str());
 
   message.str(std::string());
@@ -610,16 +615,16 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
   if (order_of_magnitude_message)
     message << highsFormatToString("   Consider scaling the bounds by 1e%+1d", 
 				   int(suggested_bound_scale_order_of_magnitude));
-  if (suggested_user_bound_scale) {
+  if (user_scale_data.suggested_user_bound_scale) {
     if (!order_of_magnitude_message) {
       message << "   Consider";
     } else {
       message << ", or";
     }
     message << highsFormatToString(" setting the user_bound_scale option to %d\n",
-				   int(suggested_user_bound_scale));
+				   int(user_scale_data.suggested_user_bound_scale));
   }
-  if (order_of_magnitude_message || suggested_user_bound_scale)
+  if (order_of_magnitude_message || user_scale_data.suggested_user_bound_scale)
     highsLogUser(log_options, HighsLogType::kWarning, "%s\n", message.str().c_str());
   
 }

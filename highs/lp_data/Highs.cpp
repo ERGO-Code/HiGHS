@@ -957,8 +957,12 @@ HighsStatus Highs::run() {
   }
 
   // Assess whether to warn the user about excessive bounds and costs
-  assessExcessiveBoundCost(this->options_.log_options, this->model_,
-                           user_scale_data);
+  assessCostBoundScaling(this->options_.log_options, this->model_,
+			 kExcessivelySmallCostValue,
+			 kExcessivelyLargeCostValue,
+			 kExcessivelySmallBoundValue,
+			 kExcessivelyLargeBoundValue,
+			 user_scale_data);
 
   HighsStatus status;
   if (!this->multi_linear_objective_.size()) {
