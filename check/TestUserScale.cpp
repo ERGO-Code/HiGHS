@@ -65,7 +65,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
   HighsLp lp;
   lp.num_col_ = 2;
