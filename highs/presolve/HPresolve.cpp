@@ -1247,14 +1247,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     // lambda for checking whether column 'col' dominates column 'k'
     auto colIsDominating = [&](HighsInt col, HighsInt k, double bestVal,
                                double val, HighsInt direction,
-                               HighsInt multiplier, bool isEqOrRangedRow) {
-      HighsInt mydirection = multiplier * direction;
+                               HighsInt direction_k, bool isEqOrRangedRow) {
       return direction * bestVal <=
-                 mydirection * val + options->small_matrix_value &&
+                 direction_k * val + options->small_matrix_value &&
              (!isEqOrRangedRow ||
               direction * bestVal >=
-                  mydirection * val - options->small_matrix_value) &&
-             checkDomination(direction, col, mydirection, k);
+                  direction_k * val - options->small_matrix_value) &&
+             checkDomination(direction, col, direction_k, k);
     };
 
     // lambda for determining whether column bound is finite (in given
@@ -1268,13 +1267,12 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // lambda for checking whether a variable can be fixed
     auto colCanBeFixed = [&](HighsInt col, HighsInt k, HighsInt direction,
-                             HighsInt multiplier, bool boundImplied) {
-      HighsInt mydirection = multiplier * direction;
-      return isBoundFinite(k, mydirection) &&
+                             HighsInt direction_k, bool boundImplied) {
+      return isBoundFinite(k, direction_k) &&
              (boundImplied ||
               mipsolver->mipdata_->cliquetable.haveCommonClique(
                   HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
-                  HighsCliqueTable::CliqueVar(k, mydirection > 0 ? 1 : 0)));
+                  HighsCliqueTable::CliqueVar(k, direction_k > 0 ? 1 : 0)));
     };
 
     // lambda for fixing variables
@@ -1282,8 +1280,9 @@ HPresolve::Result HPresolve::dominatedColumns(
                            HighsInt direction, HighsInt multiplier,
                            bool isEqOrRangedRow, bool boundImplied,
                            bool hasCliques, bool useWorstCaseBound) {
+      HighsInt direction_k = multiplier * direction;
       if ((useWorstCaseBound || boundImplied || hasCliques) &&
-          colIsDominating(col, k, bestVal, val, direction, multiplier,
+          colIsDominating(col, k, bestVal, val, direction, direction_k,
                           isEqOrRangedRow)) {
         if (useWorstCaseBound) {
           // direction =  1: fix variable x_j to its upper bound
@@ -1291,7 +1290,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
         } else if ((boundImplied || hasCliques) &&
-                   colCanBeFixed(col, k, direction, multiplier, boundImplied)) {
+                   colCanBeFixed(col, k, direction, direction_k,
+                                 boundImplied)) {
           // direction =  1, multiplier =  1:
           // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
           // direction =  1, multiplier = -1:
@@ -1301,7 +1301,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           // direction = -1, multiplier = -1:
           // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
           ++numFixedCols;
-          HPRESOLVE_CHECKED_CALL(fixCol(k, -multiplier * direction));
+          HPRESOLVE_CHECKED_CALL(fixCol(k, -direction_k));
         }
       }
       return Result::kOk;
