@@ -1244,19 +1244,18 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
-    // lambda for checking whether a variable can be fixed due to worst-case
-    // bounds
-    auto colCanBeFixedDueToWorstCaseBound =
-        [&](HighsInt col, HighsInt k, double bestVal, double val,
-            HighsInt direction, HighsInt multiplier, bool isEqOrRangedRow) {
-          HighsInt mydirection = multiplier * direction;
-          return direction * bestVal <=
-                     mydirection * val + options->small_matrix_value &&
-                 (!isEqOrRangedRow ||
-                  direction * bestVal >=
-                      mydirection * val - options->small_matrix_value) &&
-                 checkDomination(direction, col, mydirection, k);
-        };
+    // lambda for checking whether column 'col' dominates column 'k'
+    auto colIsDominating = [&](HighsInt col, HighsInt k, double bestVal,
+                               double val, HighsInt direction,
+                               HighsInt multiplier, bool isEqOrRangedRow) {
+      HighsInt mydirection = multiplier * direction;
+      return direction * bestVal <=
+                 mydirection * val + options->small_matrix_value &&
+             (!isEqOrRangedRow ||
+              direction * bestVal >=
+                  mydirection * val - options->small_matrix_value) &&
+             checkDomination(direction, col, mydirection, k);
+    };
 
     // lambda for determining whether column bound is finite (in given
     // direction)
@@ -1268,28 +1267,50 @@ HPresolve::Result HPresolve::dominatedColumns(
     };
 
     // lambda for checking whether a variable can be fixed
-    auto colCanBeFixed = [&](HighsInt col, HighsInt k, double bestVal,
-                             double val, HighsInt direction,
-                             HighsInt multiplier, bool boundImplied,
-                             bool isEqOrRangedRow) {
+    auto colCanBeFixed = [&](HighsInt col, HighsInt k, HighsInt direction,
+                             HighsInt multiplier, bool boundImplied) {
       HighsInt mydirection = multiplier * direction;
       return isBoundFinite(k, mydirection) &&
-             direction * bestVal <=
-                 mydirection * val + options->small_matrix_value &&
-             (!isEqOrRangedRow ||
-              direction * bestVal >=
-                  mydirection * val - options->small_matrix_value) &&
              (boundImplied ||
               mipsolver->mipdata_->cliquetable.haveCommonClique(
                   HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
-                  HighsCliqueTable::CliqueVar(k, mydirection > 0 ? 1 : 0))) &&
-             checkDomination(direction, col, mydirection, k);
+                  HighsCliqueTable::CliqueVar(k, mydirection > 0 ? 1 : 0)));
     };
 
     // lambda for fixing variables
-    auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt direction,
-                           double scale, double bestVal, bool boundImplied,
-                           bool useWorstCaseBound) {
+    auto checkFixCol = [&](HighsInt col, HighsInt k, double bestVal, double val,
+                           HighsInt direction, HighsInt multiplier,
+                           bool isEqOrRangedRow, bool boundImplied,
+                           bool hasCliques, bool useWorstCaseBound) {
+      if ((useWorstCaseBound || boundImplied || hasCliques) &&
+          colIsDominating(col, k, bestVal, val, direction, multiplier,
+                          isEqOrRangedRow)) {
+        if (useWorstCaseBound) {
+          // direction =  1: fix variable x_j to its upper bound
+          // direction = -1: fix variable x_j to its lower bound
+          ++numFixedCols;
+          HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
+        } else if ((boundImplied || hasCliques) &&
+                   colCanBeFixed(col, k, direction, multiplier, boundImplied)) {
+          // direction =  1, multiplier =  1:
+          // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
+          // direction =  1, multiplier = -1:
+          // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
+          // direction = -1, multiplier =  1:
+          // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
+          // direction = -1, multiplier = -1:
+          // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
+          ++numFixedCols;
+          HPRESOLVE_CHECKED_CALL(fixCol(k, -multiplier * direction));
+        }
+      }
+      return Result::kOk;
+    };
+
+    // lambda for fixing variables
+    auto checkCol = [&](HighsInt row, HighsInt col, HighsInt direction,
+                        double scale, double bestVal, bool boundImplied,
+                        bool hasCliques, bool useWorstCaseBound) {
       storeRow(row);
       bool isEqOrRangedRow = isRanged(row);
 
@@ -1299,32 +1320,17 @@ HPresolve::Result HPresolve::dominatedColumns(
 
         double ak = nonz.value() * scale;
 
-        if (useWorstCaseBound &&
-            (colCanBeFixedDueToWorstCaseBound(col, k, bestVal, ak, direction,
-                                              HighsInt{1}, isEqOrRangedRow) ||
-             colCanBeFixedDueToWorstCaseBound(col, k, bestVal, ak, direction,
-                                              HighsInt{-1}, isEqOrRangedRow))) {
-          // direction =  1: fix variable x_j to its upper bound
-          // direction = -1: fix variable x_j to its lower bound
-          ++numFixedCols;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-          break;
-        } else if (colCanBeFixed(col, k, bestVal, ak, direction, HighsInt{1},
-                                 boundImplied, isEqOrRangedRow)) {
-          // direction =  1:
-          // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
-          // direction = -1:
-          // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
-          ++numFixedCols;
-          HPRESOLVE_CHECKED_CALL(fixCol(k, -direction));
-        } else if (colCanBeFixed(col, k, bestVal, ak, direction, HighsInt{-1},
-                                 boundImplied, isEqOrRangedRow)) {
-          // direction =  1:
-          // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
-          // direction = -1:
-          // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
-          ++numFixedCols;
-          HPRESOLVE_CHECKED_CALL(fixCol(k, direction));
+        // try to fix variables
+        HPRESOLVE_CHECKED_CALL(checkFixCol(
+            col, k, bestVal, ak, direction, HighsInt{1}, isEqOrRangedRow,
+            boundImplied, hasCliques, useWorstCaseBound));
+        if (colDeleted[col]) break;
+
+        if (!colDeleted[k]) {
+          HPRESOLVE_CHECKED_CALL(checkFixCol(
+              col, k, bestVal, ak, direction, HighsInt{-1}, isEqOrRangedRow,
+              boundImplied, hasCliques, useWorstCaseBound));
+          if (colDeleted[col]) break;
         }
       }
       return Result::kOk;
@@ -1332,15 +1338,15 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // try to fix variables using row 'bestRowMinus'
     if (bestRowMinus != -1)
-      HPRESOLVE_CHECKED_CALL(
-          checkFixCol(bestRowMinus, j, HighsInt{-1}, bestRowMinusScale,
-                      ajBestRowMinus, lowerImplied, upperImpliedByWorstCase));
+      HPRESOLVE_CHECKED_CALL(checkCol(
+          bestRowMinus, j, HighsInt{-1}, bestRowMinusScale, ajBestRowMinus,
+          lowerImplied, hasNegCliques, upperImpliedByWorstCase));
 
     // try to fix variables using row 'bestRowPlus'
     if (!colDeleted[j] && bestRowPlus != -1)
       HPRESOLVE_CHECKED_CALL(
-          checkFixCol(bestRowPlus, j, HighsInt{1}, bestRowPlusScale,
-                      ajBestRowPlus, upperImplied, lowerImpliedByWorstCase));
+          checkCol(bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus,
+                   upperImplied, hasPosCliques, lowerImpliedByWorstCase));
 
     // remove doubleton equations
     if (numFixedCols != oldNumFixed)
