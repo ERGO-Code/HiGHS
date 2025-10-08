@@ -1184,13 +1184,6 @@ HPresolve::Result HPresolve::dominatedColumns(
       lowerImplied = lowerImplied || lowerImpliedByWorstCase;
     }
 
-    // determine which rows to check
-    bool checkPosRow = upperImplied || hasPosCliques;
-    bool checkNegRow = lowerImplied || hasNegCliques;
-
-    // skip column if there is nothing to do
-    if (!checkPosRow && !checkNegRow) continue;
-
     // remember number of fixed columns
     HighsInt oldNumFixed = numFixedCols;
 
@@ -1207,13 +1200,13 @@ HPresolve::Result HPresolve::dominatedColumns(
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
       double val = scale * nonz.value();
-      if (checkPosRow && val > 0.0 && rowsize[row] < bestRowPlusLen) {
+      if (val > 0.0 && rowsize[row] < bestRowPlusLen) {
         bestRowPlus = row;
         bestRowPlusLen = rowsize[row];
         ajBestRowPlus = nonz.value();
       }
 
-      if (checkNegRow && val < 0.0 && rowsize[row] < bestRowMinusLen) {
+      if (val < 0.0 && rowsize[row] < bestRowMinusLen) {
         bestRowMinus = row;
         bestRowMinusLen = rowsize[row];
         ajBestRowMinus = nonz.value();
@@ -1240,52 +1233,97 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
-    // lambda for checking whether column 'col' dominates column 'k'
-    auto colIsDominating = [&](HighsInt row, HighsInt col, HighsInt k,
-                               double bestVal, double val, HighsInt direction,
-                               HighsInt direction_k) {
-      // check already known non-zeros of selected columns in advance to avoid
-      // (potentially slow) element-wise comparison if possible
-      return checkDominationNonZero(row, direction * bestVal,
-                                    direction_k * val) &&
-             checkDomination(direction, col, direction_k, k);
-    };
-
-    // lambda for determining whether column bound is finite (in given
-    // direction)
-    auto isBoundFinite = [&](HighsInt col, HighsInt direction) {
-      if (direction < 0)
-        return model->col_upper_[col] != kHighsInf;
-      else
-        return model->col_lower_[col] != -kHighsInf;
-    };
-
-    // lambda for checking whether a variable can be fixed
-    auto colCanBeFixed = [&](HighsInt col, HighsInt k, HighsInt direction,
-                             HighsInt direction_k, bool boundImplied) {
-      return isBoundFinite(k, direction_k) &&
-             (boundImplied ||
-              mipsolver->mipdata_->cliquetable.haveCommonClique(
-                  HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
-                  HighsCliqueTable::CliqueVar(k, direction_k > 0 ? 1 : 0)));
+    // lambda for tightening bounds
+    auto tightenBounds = [&](HighsInt col, double colBound, HighsInt direction,
+                             HighsInt otherCol, double otherColBound) {
+      // bound should be finite
+      assert(std::abs(otherColBound) != kHighsInf);
+      // return if variable is already fixed
+      if (model->col_lower_[col] == model->col_upper_[col]) return;
+      // initialise bounds
+      double lowerBound = -kHighsInf;
+      double upperBound = kHighsInf;
+      // predictive bound analysis, see Theorem 3 from Gamrath et al.'s paper
+      if (direction > 0) {
+        // (i) x_j <= MINL^k_j(otherColBound)
+        upperBound = computeImpliedUpperBound(col, otherCol, otherColBound);
+        // (iii) x_j >= min{colBound, MAXL^k_j(otherColBound)}
+        lowerBound = std::min(
+            colBound, computeImpliedLowerBound(col, otherCol, otherColBound));
+        if (model->col_cost_[col] <= 0) {
+          // (v) if c_j <= 0, then x_j >= min{colBound,
+          //                                  MINU^k_j(otherColBound)}
+          lowerBound =
+              std::max(lowerBound,
+                       std::min(colBound, computeWorstCaseUpperBound(
+                                              col, otherCol, otherColBound)));
+        }
+      } else {
+        // (ii) x_k >= MAXL^j_k(otherColBound)
+        lowerBound = computeImpliedLowerBound(col, otherCol, otherColBound);
+        // (iv) x_k <= max{colBound, MINL^j_k(otherColBound)}
+        upperBound = std::max(
+            colBound, computeImpliedUpperBound(col, otherCol, otherColBound));
+        if (model->col_cost_[col] >= 0) {
+          // (vi) if c_k >= 0, then x_k <= max{colBound,
+          //                                   MAXU^j_k(otherColBound)}
+          upperBound =
+              std::min(upperBound,
+                       std::max(colBound, computeWorstCaseLowerBound(
+                                              col, otherCol, otherColBound)));
+        }
+      }
+      // update bounds
+      if (lowerBound > model->col_lower_[col] + primal_feastol) {
+        if (model->integrality_[col] != HighsVarType::kContinuous ||
+            lowerBound == model->col_upper_[col])
+          changeColLower(col, lowerBound);
+      }
+      if (upperBound < model->col_upper_[col] - primal_feastol) {
+        if (model->integrality_[col] != HighsVarType::kContinuous ||
+            upperBound == model->col_lower_[col])
+          changeColUpper(col, upperBound);
+      }
     };
 
     // lambda for fixing variables
     auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt k,
                            double bestVal, double val, HighsInt direction,
                            HighsInt multiplier, bool boundImplied,
-                           bool hasCliques, bool useWorstCaseBound) {
+                           bool hasCliques, bool otherBoundImpliedByWorstCase) {
       HighsInt direction_k = multiplier * direction;
-      if ((useWorstCaseBound || boundImplied || hasCliques) &&
-          colIsDominating(row, col, k, bestVal, val, direction, direction_k)) {
-        if (useWorstCaseBound) {
+      // get bounds
+      double dominatingBound =
+          direction > 0 ? model->col_upper_[col] : model->col_lower_[col];
+      double dominatedBound =
+          direction_k > 0 ? model->col_lower_[k] : model->col_upper_[k];
+      // check if selected bounds are finite
+      bool isDominatingBoundFinite = direction * dominatingBound != kHighsInf;
+      bool isDominatedBoundFinite = direction_k * dominatedBound != -kHighsInf;
+      // try to fix variable 'col'?
+      bool tryToFixCol = boundImplied && otherBoundImpliedByWorstCase;
+      // try to fix variable 'k'?
+      bool tryToFixK = (boundImplied || hasCliques) && isDominatedBoundFinite;
+      // try predictive bound analysis?
+      bool tryToStrengthenBounds =
+          isDominatingBoundFinite || isDominatedBoundFinite;
+      // check whether column 'col' dominates column 'k'; check already
+      // known non-zeros of selected columns in advance to avoid
+      // (potentially slow) element-wise comparison if possible
+      if ((tryToFixCol || tryToFixK || tryToStrengthenBounds) &&
+          checkDominationNonZero(row, direction * bestVal, direction_k * val) &&
+          checkDomination(direction, col, direction_k, k)) {
+        if (tryToFixCol) {
           // direction =  1: fix variable x_j to its upper bound
           // direction = -1: fix variable x_j to its lower bound
           ++numFixedCols;
           HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-        } else if ((boundImplied || hasCliques) &&
-                   colCanBeFixed(col, k, direction, direction_k,
-                                 boundImplied)) {
+        } else if (tryToFixK &&
+                   (boundImplied ||
+                    mipsolver->mipdata_->cliquetable.haveCommonClique(
+                        HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
+                        HighsCliqueTable::CliqueVar(
+                            k, direction_k > 0 ? 1 : 0)))) {
           // direction =  1, multiplier =  1:
           // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
           // direction =  1, multiplier = -1:
@@ -1296,6 +1334,14 @@ HPresolve::Result HPresolve::dominatedColumns(
           // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
           ++numFixedCols;
           HPRESOLVE_CHECKED_CALL(fixCol(k, -direction_k));
+        } else if (tryToStrengthenBounds) {
+          // tighten bounds via predictive bound analysis, see Theorem 3 from
+          // Gamrath et al.'s paper
+          if (isDominatedBoundFinite)
+            tightenBounds(col, dominatingBound, direction, k, dominatedBound);
+          if (isDominatingBoundFinite)
+            tightenBounds(k, dominatedBound, -direction_k, col,
+                          dominatingBound);
         }
       }
       return Result::kOk;
@@ -1304,7 +1350,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     // lambda for fixing variables
     auto checkCol = [&](HighsInt row, HighsInt col, HighsInt direction,
                         double bestVal, bool boundImplied, bool hasCliques,
-                        bool useWorstCaseBound) {
+                        bool otherBoundImpliedByWorstCase) {
       storeRow(row);
       for (const HighsSliceNonzero& nonz : getStoredRow()) {
         HighsInt k = nonz.index();
@@ -1312,15 +1358,15 @@ HPresolve::Result HPresolve::dominatedColumns(
         double ak = nonz.value();
 
         // try to fix variables
-        HPRESOLVE_CHECKED_CALL(checkFixCol(row, col, k, bestVal, ak, direction,
-                                           HighsInt{1}, boundImplied,
-                                           hasCliques, useWorstCaseBound));
+        HPRESOLVE_CHECKED_CALL(checkFixCol(
+            row, col, k, bestVal, ak, direction, HighsInt{1}, boundImplied,
+            hasCliques, otherBoundImpliedByWorstCase));
         if (colDeleted[col]) break;
 
         if (!colDeleted[k]) {
-          HPRESOLVE_CHECKED_CALL(
-              checkFixCol(row, col, k, bestVal, ak, direction, HighsInt{-1},
-                          boundImplied, hasCliques, useWorstCaseBound));
+          HPRESOLVE_CHECKED_CALL(checkFixCol(
+              row, col, k, bestVal, ak, direction, HighsInt{-1}, boundImplied,
+              hasCliques, otherBoundImpliedByWorstCase));
           if (colDeleted[col]) break;
         }
       }
