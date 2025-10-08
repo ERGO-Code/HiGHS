@@ -1301,7 +1301,8 @@ HPresolve::Result HPresolve::dominatedColumns(
       bool isDominatingBoundFinite = direction * dominatingBound != kHighsInf;
       bool isDominatedBoundFinite = direction_k * dominatedBound != -kHighsInf;
       // try to fix variable 'col'?
-      bool tryToFixCol = boundImplied && otherBoundImpliedByWorstCase;
+      bool tryToFixCol =
+          (boundImplied || hasCliques) && otherBoundImpliedByWorstCase;
       // try to fix variable 'k'?
       bool tryToFixK = (boundImplied || hasCliques) && isDominatedBoundFinite;
       // try predictive bound analysis?
