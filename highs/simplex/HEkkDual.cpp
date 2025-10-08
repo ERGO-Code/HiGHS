@@ -2731,7 +2731,7 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
               analysis.sum_dual_phase_1_lp_dual_infeasibility);
 }
 
-bool HEkkDual::dualInfoOk(const HighsLp& lp) {
+bool HEkkDual::dualInfoOk(const HighsLp& lp) const {
   HighsInt lp_num_col = lp.num_col_;
   HighsInt lp_num_row = lp.num_row_;
   bool dimensions_ok;

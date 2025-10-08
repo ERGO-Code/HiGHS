@@ -37,12 +37,10 @@ class FilereaderLp : public Filereader {
   // functions to write files
   HighsInt linelength;
   void writeToFile(FILE* file, const char* format, ...);
-  void writeToFileLineend(FILE* file);
+  void writeToFileLineEnd(FILE* file);
   void writeToFileValue(FILE* file, const double value,
                         const bool force_plus = true);
-  void writeToFileVar(FILE* file, const HighsInt var_index);
   void writeToFileVar(FILE* file, const std::string var_name);
-  void writeToFileCon(FILE* file, const HighsInt con_index);
   void writeToFileMatrixRow(FILE* file, const HighsInt iRow,
                             const HighsSparseMatrix ar_matrix,
                             const std::vector<string> col_names);

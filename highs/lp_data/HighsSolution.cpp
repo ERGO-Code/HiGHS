@@ -199,7 +199,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double primal_infeasibility;
   double relative_primal_infeasibility;
   double dual_infeasibility;
-  double cost;
+  double cost = 0.0;
   double lower;
   double upper;
   double value;
@@ -1665,15 +1665,35 @@ bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
   return num_basic_variables == lp.num_row_;
 }
 
+bool isColPrimalSolutionRightSize(const HighsLp& lp,
+                                  const HighsSolution& solution) {
+  return solution.col_value.size() == static_cast<size_t>(lp.num_col_);
+}
+
+bool isRowPrimalSolutionRightSize(const HighsLp& lp,
+                                  const HighsSolution& solution) {
+  return solution.row_value.size() == static_cast<size_t>(lp.num_row_);
+}
+
 bool isPrimalSolutionRightSize(const HighsLp& lp,
                                const HighsSolution& solution) {
-  return solution.col_value.size() == static_cast<size_t>(lp.num_col_) &&
-         solution.row_value.size() == static_cast<size_t>(lp.num_row_);
+  return isColPrimalSolutionRightSize(lp, solution) &&
+         isRowPrimalSolutionRightSize(lp, solution);
+}
+
+bool isColDualSolutionRightSize(const HighsLp& lp,
+                                const HighsSolution& solution) {
+  return solution.col_dual.size() == static_cast<size_t>(lp.num_col_);
+}
+
+bool isRowDualSolutionRightSize(const HighsLp& lp,
+                                const HighsSolution& solution) {
+  return solution.row_dual.size() == static_cast<size_t>(lp.num_row_);
 }
 
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
-  return solution.col_dual.size() == static_cast<size_t>(lp.num_col_) &&
-         solution.row_dual.size() == static_cast<size_t>(lp.num_row_);
+  return isColDualSolutionRightSize(lp, solution) &&
+         isRowDualSolutionRightSize(lp, solution);
 }
 
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
@@ -1687,7 +1707,7 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
 }
 
 void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
-                         const HighsInfo& info, const std::string& solver) {
+                         const HighsInfo& info, const std::string& message) {
   const HighsLogOptions& log_options = options.log_options;
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
@@ -1714,7 +1734,8 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
   HighsLogType log_type =
       has_kkt_failures ? HighsLogType::kWarning : HighsLogType::kInfo;
 
-  highsLogUser(log_options, log_type, "LP solution KKT conditions\n");
+  highsLogUser(log_options, log_type, "LP solution KKT conditions%s%s\n",
+               message == "" ? "" : ": ", message == "" ? "" : message.c_str());
 
   highsLogUser(
       log_options, HighsLogType::kInfo,
@@ -1772,8 +1793,8 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
 }
 
 bool HighsSolution::hasUndefined() const {
-  for (HighsInt iCol = 0; iCol < HighsInt(this->col_value.size()); iCol++)
-    if (this->col_value[iCol] == kHighsUndefined) return true;
+  for (double value : this->col_value)
+    if (value == kHighsUndefined) return true;
   return false;
 }
 

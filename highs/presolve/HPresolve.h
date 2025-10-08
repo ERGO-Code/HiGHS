@@ -139,6 +139,23 @@ class HPresolve {
     kDualInfeasible,
     kStopped,
   };
+
+  struct StatusResult {
+   private:
+    bool my_flag;
+    Result my_result;
+
+   public:
+    // clang-format off
+    StatusResult(bool flag) : my_flag(flag), my_result(Result::kOk) {};
+    // clang-format on
+    StatusResult(Result result) : my_result(result) {
+      my_flag = (result == Result::kOk);
+    };
+    explicit operator bool() const { return my_flag; };
+    explicit operator Result() const { return my_result; };
+  };
+
   HighsPresolveStatus presolve_status_;
   HPresolveAnalysis analysis_;
 
@@ -157,9 +174,20 @@ class HPresolve {
 
   double getMaxAbsRowVal(HighsInt row) const;
 
+  bool checkUpdateColImpliedBounds(HighsInt row, double* rowLower = nullptr,
+                                   double* rowUpper = nullptr) const;
+
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
+  void updateColImpliedBounds(HighsInt row);
+
+  bool checkUpdateRowDualImpliedBounds(HighsInt col,
+                                       double* dualRowLower = nullptr,
+                                       double* dualRowUpper = nullptr) const;
+
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
+
+  void updateRowDualImpliedBounds(HighsInt col);
 
   void resetColImpliedBounds(HighsInt col, HighsInt row = -1);
 
@@ -179,20 +207,34 @@ class HPresolve {
                                        HighsPostsolveStack::RowType& rowType,
                                        bool relaxRowDualBounds = false);
 
+  bool isEquation(HighsInt row) const;
+
+  bool isRanged(HighsInt row) const;
+
+  bool isRedundant(HighsInt row) const;
+
+  bool yieldsImpliedLowerBound(HighsInt row, double val) const;
+
+  bool yieldsImpliedUpperBound(HighsInt row, double val) const;
+
   bool isImpliedEquationAtLower(HighsInt row) const;
 
   bool isImpliedEquationAtUpper(HighsInt row) const;
 
-  bool isImpliedIntegral(HighsInt col);
+  StatusResult isImpliedIntegral(HighsInt col);
 
-  bool isImpliedInteger(HighsInt col);
+  StatusResult isImpliedInteger(HighsInt col) const;
 
-  bool convertImpliedInteger(HighsInt col, HighsInt row = -1,
-                             bool skipInputChecks = false);
+  StatusResult convertImpliedInteger(HighsInt col, HighsInt row = -1,
+                                     bool skipInputChecks = false);
 
   bool isLowerImplied(HighsInt col) const;
 
+  bool isLowerStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
+
   bool isUpperImplied(HighsInt col) const;
+
+  bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
   HighsInt countFillin(HighsInt row);
 
@@ -294,7 +336,14 @@ class HPresolve {
 
   void storeCurrentProblemSize();
 
-  double problemSizeReduction();
+  double problemSizeReduction() const;
+
+  void computeColBounds(HighsInt col, HighsInt boundCol = -1,
+                        double boundColValue = -kHighsInf,
+                        double* lowerBound = nullptr,
+                        double* upperBound = nullptr,
+                        double* worstCaseLowerBound = nullptr,
+                        double* worstCaseUpperBound = nullptr);
 
  public:
   // for LP presolve
@@ -341,6 +390,20 @@ class HPresolve {
   Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                             bool handleSingletonRows = true);
 
+  Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
+
+  double computeImpliedLowerBound(HighsInt col, HighsInt boundCol = -1,
+                                  double boundColValue = kHighsInf);
+
+  double computeImpliedUpperBound(HighsInt col, HighsInt boundCol = -1,
+                                  double boundColValue = kHighsInf);
+
+  double computeWorstCaseLowerBound(HighsInt col, HighsInt boundCol = -1,
+                                    double boundColValue = kHighsInf);
+
+  double computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol = -1,
+                                    double boundColValue = kHighsInf);
+
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
@@ -375,7 +438,7 @@ class HPresolve {
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
                                 HighsInt& num_strenghtened);
 
-  HighsInt detectImpliedIntegers();
+  Result detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
 

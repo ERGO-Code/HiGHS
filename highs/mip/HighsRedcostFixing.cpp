@@ -15,20 +15,18 @@ HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) const {
   if (lurkingColLower.empty()) return domchgs;
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
-    for (auto it = lurkingColLower[col].begin();
-         it != lurkingColLower[col].end(); ++it) {
-      if (it->second > mipsolver.mipdata_->domain.col_lower_[col])
+    for (const auto& lower : lurkingColLower[col]) {
+      if (lower.second > mipsolver.mipdata_->domain.col_lower_[col])
         domchgs.emplace_back(
-            it->first,
-            HighsDomainChange{(double)it->second, col, HighsBoundType::kLower});
+            lower.first, HighsDomainChange{static_cast<double>(lower.second),
+                                           col, HighsBoundType::kLower});
     }
 
-    for (auto it = lurkingColUpper[col].begin();
-         it != lurkingColUpper[col].end(); ++it) {
-      if (it->second < mipsolver.mipdata_->domain.col_upper_[col])
+    for (const auto& upper : lurkingColUpper[col]) {
+      if (upper.second < mipsolver.mipdata_->domain.col_upper_[col])
         domchgs.emplace_back(
-            it->first,
-            HighsDomainChange{(double)it->second, col, HighsBoundType::kUpper});
+            upper.first, HighsDomainChange{static_cast<double>(upper.second),
+                                           col, HighsBoundType::kUpper});
     }
   }
 
@@ -202,6 +200,27 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   mipsolver.mipdata_->lp.computeBasicDegenerateDuals(
       mipsolver.mipdata_->feastol);
 
+  // Compute maximum number of steps per column with large domain
+  // max_steps = 2 ** k, k = max(5, min(10 ,round(log(|D| / 10)))),
+  // D = {col : integral_cols | (ub - lb) >= 512}
+  // This is to avoid doing 2**10 steps when there's many unbounded columns
+  HighsInt numRedcostLargeDomainCols = 0;
+  for (HighsInt col : mipsolver.mipdata_->integral_cols) {
+    if ((mipsolver.mipdata_->domain.col_upper_[col] -
+         mipsolver.mipdata_->domain.col_lower_[col]) >= 512 &&
+        std::abs(lpredcost[col]) > mipsolver.mipdata_->feastol) {
+      numRedcostLargeDomainCols++;
+    }
+  }
+  HighsInt maxNumStepsExp = 10;
+  int expshift = 0;
+  std::frexp(numRedcostLargeDomainCols / 10, &expshift);
+  if (expshift > 5) {
+    expshift = std::min(expshift, static_cast<int>(maxNumStepsExp));
+    maxNumStepsExp = maxNumStepsExp - expshift + 5;
+  }
+  HighsInt maxNumSteps = static_cast<HighsInt>(1ULL << maxNumStepsExp);
+
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     if (lpredcost[col] > mipsolver.mipdata_->feastol) {
       // col <= (cutoffbound - lpobj)/redcost + lb
@@ -220,13 +239,14 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
 
       HighsInt maxub;
       if (mipsolver.mipdata_->domain.col_upper_[col] == kHighsInf)
-        maxub = lb + 1024;
+        maxub = lb + maxNumSteps;
       else
         maxub = (HighsInt)std::floor(
             mipsolver.mipdata_->domain.col_upper_[col] - 0.5);
 
       HighsInt step = 1;
-      if (maxub - lb > 1024) step = (maxub - lb + 1023) >> 10;
+      if (maxub - lb > maxNumSteps)
+        step = (maxub - lb + maxNumSteps - 1) >> maxNumStepsExp;
 
       for (HighsInt lurkub = lb; lurkub <= maxub; lurkub += step) {
         double fracbound = (lurkub - lb + 1) - 10 * mipsolver.mipdata_->feastol;
@@ -278,12 +298,13 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
 
       HighsInt minlb;
       if (mipsolver.mipdata_->domain.col_lower_[col] == -kHighsInf)
-        minlb = ub - 1024;
+        minlb = ub - maxNumSteps;
       else
         minlb = (HighsInt)(mipsolver.mipdata_->domain.col_lower_[col] + 1.5);
 
       HighsInt step = 1;
-      if (ub - minlb > 1024) step = (ub - minlb + 1023) >> 10;
+      if (ub - minlb > maxNumSteps)
+        step = (ub - minlb + maxNumSteps - 1) >> maxNumStepsExp;
 
       for (HighsInt lurklb = minlb; lurklb <= ub; lurklb += step) {
         double fracbound = (lurklb - ub - 1) + 10 * mipsolver.mipdata_->feastol;

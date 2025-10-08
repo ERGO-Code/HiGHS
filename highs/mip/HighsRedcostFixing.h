@@ -22,8 +22,8 @@ class HighsMipSolver;
 class HighsLpRelaxation;
 
 class HighsRedcostFixing {
-  std::vector<std::multimap<double, int>> lurkingColUpper;
-  std::vector<std::multimap<double, int>> lurkingColLower;
+  std::vector<std::multimap<double, HighsInt>> lurkingColUpper;
+  std::vector<std::multimap<double, HighsInt>> lurkingColLower;
 
  public:
   std::vector<std::pair<double, HighsDomainChange>> getLurkingBounds(

@@ -56,8 +56,16 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << "HiGHS v1" << std::endl;
   f << "None" << std::endl;
   f.close();
-  return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::kOk);
+  // HiGHS v1 basis file is deprecated, but read, so warning is
+  // returned
+  REQUIRE(highs.readBasis(invalid_basis_file) == HighsStatus::kWarning);
+
+  // Write and read a file for an invalid basis
+  f.open(invalid_basis_file, std::ios::out);
+  f << "HiGHS_basis_file v2" << std::endl;
+  f << "None" << std::endl;
+  f.close();
+  REQUIRE(highs.readBasis(invalid_basis_file) == HighsStatus::kOk);
 
   // Write and read a file for incompatible number of columns
   f.open(invalid_basis_file, std::ios::out);
@@ -306,4 +314,44 @@ void testBasisRestart(Highs& highs, const std::string& basis_file,
   }
 
   REQUIRE(info.simplex_iteration_count == 0);
+}
+
+TEST_CASE("Basis-read", "[highs_basis_data]") {
+  // Duplicates test_read_basis in test_highspy.py
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 1};
+  lp.col_lower_.assign(lp.num_col_, -kHighsInf);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+  lp.row_lower_ = {2, 0};
+  lp.row_upper_.assign(lp.num_row_, kHighsInf);
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {-1, 1, 1, 1};
+
+  HighsBasisStatus status_before = HighsBasisStatus::kNonbasic;
+  HighsBasisStatus status_after = HighsBasisStatus::kBasic;
+  Highs h1;
+  const HighsBasis& basis1 = h1.getBasis();
+  h1.passModel(lp);
+  REQUIRE(basis1.col_status[0] == status_before);
+  h1.run();
+  REQUIRE(basis1.col_status[0] == status_after);
+
+  Highs h2;
+  const HighsBasis& basis2 = h2.getBasis();
+  h2.passModel(lp);
+  REQUIRE(basis2.col_status[0] == status_before);
+
+  const std::string basis_file = test_name + ".bas";
+  h1.writeBasis(basis_file);
+  h2.readBasis(basis_file);
+  REQUIRE(basis2.col_status[0] == status_after);
+
+  std::remove(basis_file.c_str());
+  h1.resetGlobalScheduler(true);
+  h2.resetGlobalScheduler(true);
 }

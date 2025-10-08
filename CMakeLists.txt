@@ -73,7 +73,7 @@ option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
 
 option(BUILD_CXX_EXE "Build C++ executable" ON)
-message(STATUS "Build C++ library: ${BUILD_CXX_EXE}")
+message(STATUS "Build C++ executable: ${BUILD_CXX_EXE}")
 
 option(BUILD_TESTING "Build Tests" ON)
 
@@ -500,7 +500,10 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
-include(CPack)
+if(CPack_CMake_INCLUDED EQUAL 0)
+  include(CPack)
+endif()
+
 set(CPACK_PACKAGE_VERSION_MAJOR "${HIGHS_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")

@@ -142,8 +142,8 @@ class HEkkPrimal {
 
   HighsInt num_flip_since_rebuild;
   // Primal phase 1 tools
-  vector<pair<double, int> > ph1SorterR;
-  vector<pair<double, int> > ph1SorterT;
+  vector<pair<double, HighsInt>> ph1SorterR;
+  vector<pair<double, HighsInt>> ph1SorterT;
   // Edge weights
   // Edge weight
   vector<double> edge_weight_;

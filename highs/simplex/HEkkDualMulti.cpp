@@ -947,8 +947,8 @@ void HEkkDual::majorRollback() {
     ekk_instance_.updateMatrix(finish->variable_out, finish->variable_in);
 
     // 3. Roll back flips
-    for (unsigned i = 0; i < finish->flipList.size(); i++) {
-      ekk_instance_.flipBound(finish->flipList[i]);
+    for (HighsInt var : finish->flipList) {
+      ekk_instance_.flipBound(var);
     }
 
     // 4. Roll back cost
@@ -960,7 +960,7 @@ void HEkkDual::majorRollback() {
   }
 }
 
-bool HEkkDual::checkNonUnitWeightError(std::string message) {
+bool HEkkDual::checkNonUnitWeightError(std::string message) const {
   bool error_found = false;
   if (edge_weight_mode == EdgeWeightMode::kDantzig) {
     std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;

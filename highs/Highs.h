@@ -42,13 +42,7 @@ const char* highsGithash();
 class Highs {
  public:
   Highs();
-  virtual ~Highs() {
-    FILE* log_stream = options_.log_options.log_stream;
-    if (log_stream != nullptr) {
-      assert(log_stream != stdout);
-      fclose(log_stream);
-    }
-  }
+  virtual ~Highs() { this->closeLogFile(); }
 
   /**
    * @brief Return the version as a string
@@ -89,6 +83,11 @@ class Highs {
    * @brief Clear all solution data associated with the model
    */
   HighsStatus clearSolver();
+
+  /**
+   * @brief Clear all dual data associated with the model
+   */
+  HighsStatus clearSolverDualData();
 
   /**
    * Methods for model input
@@ -429,13 +428,14 @@ class Highs {
                                 double* value = nullptr);
 
   /**
-   * @brief Return a const reference to the presolved HighsLp instance in HiGHS
+   * @brief Return a const reference to the internal presolved HighsLp
+   * instance
    */
   const HighsLp& getPresolvedLp() const { return presolved_model_.lp_; }
 
   /**
-   * @brief Return a const reference to the presolved HighsModel instance in
-   * HiGHS
+   * @brief Return a const reference to the internal presolved
+   * HighsModel instance
    */
   const HighsModel& getPresolvedModel() const { return presolved_model_; }
 
@@ -471,9 +471,15 @@ class Highs {
   const HighsModel& getModel() const { return model_; }
 
   /**
-   * @brief Return a const reference to the internal HighsSolution instance
+   * @brief Return a const reference to the internal HighsSolution
+   * instance
    */
   const HighsSolution& getSolution() const { return solution_; }
+
+  /**
+   * @brief Return a const reference to the internal IIS LP instance
+   */
+  const HighsLp& getIisLp() const { return iis_.model_.lp_; }
 
   /**
    * @brief Zero all clocks in the internal HighsTimer instance
@@ -481,7 +487,8 @@ class Highs {
   void zeroAllClocks() { timer_.zeroAllClocks(); };
 
   /**
-   * @brief Return a const reference to the internal HighsSolution instance
+   * @brief Return a const reference to the internal HighsSolution
+   * instance
    */
   const std::vector<HighsObjectiveSolution>& getSavedMipSolutions() const {
     return saved_objective_and_solution_;
@@ -845,6 +852,11 @@ class Highs {
   HighsStatus writePresolvedModel(const std::string& filename = "");
 
   /**
+   * @brief Write out the internal IIS LP instance to a file
+   */
+  HighsStatus writeIisModel(const std::string& filename = "");
+
+  /**
    * @brief Write out the given model to a file
    */
   HighsStatus writeLocalModel(HighsModel& model,
@@ -853,7 +865,7 @@ class Highs {
   /**
    * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string& filename = "") const;
+  HighsStatus writeBasis(const std::string& filename = "");
 
   /**
    * Methods for incumbent model modification
@@ -1199,6 +1211,11 @@ class Highs {
   HighsStatus openLogFile(const std::string& log_file = "");
 
   /**
+   * @brief Close any open log file
+   */
+  HighsStatus closeLogFile();
+
+  /**
    * @brief Interpret common qualifiers to string values
    */
   std::string presolveStatusToString(
@@ -1542,6 +1559,12 @@ class Highs {
   // invalidateRanging(), invalidateInfo(), invalidateEkk() and
   // invalidateIis()
   void invalidateSolverData();
+
+  // Invalidates all solver dual data in Highs class members by calling
+  // invalidateModelStatus(), invalidateRanging(), and invalidateInfo()
+  //
+  // Used when only the objective changes
+  void invalidateSolverDualData();
   //
   // Invalidates the model status, solution_ and info_
   void invalidateModelStatusSolutionAndInfo();
@@ -1646,10 +1669,12 @@ class Highs {
   HighsStatus getRangingInterface();
 
   HighsStatus getIisInterface();
+  HighsStatus getIisInterfaceReturn(const HighsStatus return_status);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const bool feasible_model,
-      const HighsInt original_num_col, const HighsInt original_num_row,
+      const std::string& original_model_name, const HighsInt original_num_col,
+      const HighsInt original_num_row,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
       const std::vector<double> original_col_upper,
@@ -1674,7 +1699,7 @@ class Highs {
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   HighsStatus checkOptimality(const std::string& solver_type);
-  HighsStatus lpKktCheck(const std::string& message);
+  HighsStatus lpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 
   HighsStatus handleInfCost();

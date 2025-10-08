@@ -362,8 +362,8 @@ class HEkkDual {
   void exitPhase1ResetDuals();
   void reportOnPossibleLpDualInfeasibility();
 
-  bool checkNonUnitWeightError(std::string message);
-  bool dualInfoOk(const HighsLp& lp);
+  bool checkNonUnitWeightError(std::string message) const;
+  bool dualInfoOk(const HighsLp& lp) const;
   bool bailoutOnDualObjective();
   HighsDebugStatus debugDualSimplex(const std::string message,
                                     const bool initialise = false);

@@ -25,6 +25,7 @@ if(FAST_BUILD)
     endif()
 
     set_target_properties(highs-bin PROPERTIES OUTPUT_NAME highs)
+    set_target_properties(highs-bin PROPERTIES UNITY_BUILD OFF)
 
     target_compile_features(highs-bin PRIVATE cxx_std_11)
     target_link_libraries(highs-bin PRIVATE ${PROJECT_NAMESPACE}::highs)
@@ -77,6 +78,8 @@ else()
   target_include_directories(highs PRIVATE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/app>
   )
+
+  set_target_properties(highs PROPERTIES UNITY_BUILD OFF)
 
   # install the binary
   install(TARGETS highs EXPORT highs-targets

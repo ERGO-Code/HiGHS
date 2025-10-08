@@ -200,3 +200,19 @@ TEST_CASE("test-2087", "[highs_ipm]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("test-2527", "[highs_ipm]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  HighsLp lp = h.getLp();
+  lp.col_cost_.assign(lp.num_col_, 0);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kIpmString);
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  h.resetGlobalScheduler(true);
+}

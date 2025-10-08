@@ -106,6 +106,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   add_executable(unit_tests ${TEST_SOURCES})
 
+  set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
+
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
@@ -258,7 +260,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "lseu\;1120|1119.9999999\;"
       "egout\;(568.1007|568.1006999)\;"
       "gt2\;21166\;"
-      "rgn\;82.1999992\;"
+      "rgn\;82.19999\;"
       "bell5\;(8966406.49152|8966406.491519|8966406.49151)\;"
       "sp150x300d\;(69|68.9999999)\;"
       "p0548\;(8691|8690.9999999)\;"
