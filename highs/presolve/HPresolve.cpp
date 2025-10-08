@@ -1197,11 +1197,9 @@ HPresolve::Result HPresolve::dominatedColumns(
     // initialise
     HighsInt bestRowPlus = -1;
     HighsInt bestRowPlusLen = kHighsIInf;
-    HighsInt bestRowPlusScale = 0;
     double ajBestRowPlus = 0.0;
     HighsInt bestRowMinus = -1;
     HighsInt bestRowMinusLen = kHighsIInf;
-    HighsInt bestRowMinusScale = 0;
     double ajBestRowMinus = 0.0;
 
     for (const HighsSliceNonzero& nonz : getColumnVector(j)) {
@@ -1212,15 +1210,13 @@ HPresolve::Result HPresolve::dominatedColumns(
       if (checkPosRow && val > 0.0 && rowsize[row] < bestRowPlusLen) {
         bestRowPlus = row;
         bestRowPlusLen = rowsize[row];
-        bestRowPlusScale = scale;
-        ajBestRowPlus = val;
+        ajBestRowPlus = nonz.value();
       }
 
       if (checkNegRow && val < 0.0 && rowsize[row] < bestRowMinusLen) {
         bestRowMinus = row;
         bestRowMinusLen = rowsize[row];
-        bestRowMinusScale = scale;
-        ajBestRowMinus = val;
+        ajBestRowMinus = nonz.value();
       }
     }
 
@@ -1245,14 +1241,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     };
 
     // lambda for checking whether column 'col' dominates column 'k'
-    auto colIsDominating = [&](HighsInt col, HighsInt k, double bestVal,
-                               double val, HighsInt direction,
-                               HighsInt direction_k, bool isEqOrRangedRow) {
-      return direction * bestVal <=
-                 direction_k * val + options->small_matrix_value &&
-             (!isEqOrRangedRow ||
-              direction * bestVal >=
-                  direction_k * val - options->small_matrix_value) &&
+    auto colIsDominating = [&](HighsInt row, HighsInt col, HighsInt k,
+                               double bestVal, double val, HighsInt direction,
+                               HighsInt direction_k) {
+      // check already known non-zeros of selected columns in advance to avoid
+      // (potentially slow) element-wise comparison if possible
+      return checkDominationNonZero(row, direction * bestVal,
+                                    direction_k * val) &&
              checkDomination(direction, col, direction_k, k);
     };
 
@@ -1276,14 +1271,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     };
 
     // lambda for fixing variables
-    auto checkFixCol = [&](HighsInt col, HighsInt k, double bestVal, double val,
-                           HighsInt direction, HighsInt multiplier,
-                           bool isEqOrRangedRow, bool boundImplied,
+    auto checkFixCol = [&](HighsInt row, HighsInt col, HighsInt k,
+                           double bestVal, double val, HighsInt direction,
+                           HighsInt multiplier, bool boundImplied,
                            bool hasCliques, bool useWorstCaseBound) {
       HighsInt direction_k = multiplier * direction;
       if ((useWorstCaseBound || boundImplied || hasCliques) &&
-          colIsDominating(col, k, bestVal, val, direction, direction_k,
-                          isEqOrRangedRow)) {
+          colIsDominating(row, col, k, bestVal, val, direction, direction_k)) {
         if (useWorstCaseBound) {
           // direction =  1: fix variable x_j to its upper bound
           // direction = -1: fix variable x_j to its lower bound
@@ -1309,27 +1303,24 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // lambda for fixing variables
     auto checkCol = [&](HighsInt row, HighsInt col, HighsInt direction,
-                        double scale, double bestVal, bool boundImplied,
-                        bool hasCliques, bool useWorstCaseBound) {
+                        double bestVal, bool boundImplied, bool hasCliques,
+                        bool useWorstCaseBound) {
       storeRow(row);
-      bool isEqOrRangedRow = isRanged(row);
-
       for (const HighsSliceNonzero& nonz : getStoredRow()) {
         HighsInt k = nonz.index();
         if (k == col || colDeleted[k]) continue;
-
-        double ak = nonz.value() * scale;
+        double ak = nonz.value();
 
         // try to fix variables
-        HPRESOLVE_CHECKED_CALL(checkFixCol(
-            col, k, bestVal, ak, direction, HighsInt{1}, isEqOrRangedRow,
-            boundImplied, hasCliques, useWorstCaseBound));
+        HPRESOLVE_CHECKED_CALL(checkFixCol(row, col, k, bestVal, ak, direction,
+                                           HighsInt{1}, boundImplied,
+                                           hasCliques, useWorstCaseBound));
         if (colDeleted[col]) break;
 
         if (!colDeleted[k]) {
-          HPRESOLVE_CHECKED_CALL(checkFixCol(
-              col, k, bestVal, ak, direction, HighsInt{-1}, isEqOrRangedRow,
-              boundImplied, hasCliques, useWorstCaseBound));
+          HPRESOLVE_CHECKED_CALL(
+              checkFixCol(row, col, k, bestVal, ak, direction, HighsInt{-1},
+                          boundImplied, hasCliques, useWorstCaseBound));
           if (colDeleted[col]) break;
         }
       }
@@ -1338,15 +1329,15 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // try to fix variables using row 'bestRowMinus'
     if (bestRowMinus != -1)
-      HPRESOLVE_CHECKED_CALL(checkCol(
-          bestRowMinus, j, HighsInt{-1}, bestRowMinusScale, ajBestRowMinus,
-          lowerImplied, hasNegCliques, upperImpliedByWorstCase));
+      HPRESOLVE_CHECKED_CALL(checkCol(bestRowMinus, j, HighsInt{-1},
+                                      ajBestRowMinus, lowerImplied,
+                                      hasNegCliques, upperImpliedByWorstCase));
 
     // try to fix variables using row 'bestRowPlus'
     if (!colDeleted[j] && bestRowPlus != -1)
-      HPRESOLVE_CHECKED_CALL(
-          checkCol(bestRowPlus, j, HighsInt{1}, bestRowPlusScale, ajBestRowPlus,
-                   upperImplied, hasPosCliques, lowerImpliedByWorstCase));
+      HPRESOLVE_CHECKED_CALL(checkCol(bestRowPlus, j, HighsInt{1},
+                                      ajBestRowPlus, upperImplied,
+                                      hasPosCliques, lowerImpliedByWorstCase));
 
     // remove doubleton equations
     if (numFixedCols != oldNumFixed)
