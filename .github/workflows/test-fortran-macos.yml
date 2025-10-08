@@ -14,7 +14,7 @@ jobs:
         id: setup-fortran
         with:
           compiler: gcc 
-          version: 11
+          version: 13
 
       # - name: Install GFortran
       #   run: brew install gfortran gcc
