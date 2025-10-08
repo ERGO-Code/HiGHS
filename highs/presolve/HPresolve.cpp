@@ -1297,7 +1297,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           direction > 0 ? model->col_upper_[col] : model->col_lower_[col];
       double dominatedBound =
           direction_k > 0 ? model->col_lower_[k] : model->col_upper_[k];
-      // check if selected bounds are finite
+      // check if bounds are finite
       bool isDominatingBoundFinite = direction * dominatingBound != kHighsInf;
       bool isDominatedBoundFinite = direction_k * dominatedBound != -kHighsInf;
       // try to fix variable 'col'?
@@ -1309,7 +1309,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       bool tryToStrengthenBounds =
           isDominatingBoundFinite || isDominatedBoundFinite;
       // check whether column 'col' dominates column 'k'; check already
-      // known non-zeros of selected columns in advance to avoid
+      // known non-zeros in selected columns in advance to avoid
       // (potentially slow) element-wise comparison if possible
       if ((tryToFixCol || tryToFixK || tryToStrengthenBounds) &&
           checkDominationNonZero(row, direction * bestVal, direction_k * val) &&
