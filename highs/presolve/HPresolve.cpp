@@ -1275,23 +1275,15 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
       // update bounds
       if (lowerBound > model->col_lower_[col] + primal_feastol) {
-        if (lowerBound == model->col_upper_[col]) {
-          if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
-            // Handle unboundedness
-            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-            return Result::kDualInfeasible;
-          }
-        } else if (model->integrality_[col] != HighsVarType::kContinuous)
+        if (lowerBound == model->col_upper_[col])
+          HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{1}));
+        else if (model->integrality_[col] != HighsVarType::kContinuous)
           changeColLower(col, lowerBound);
       }
       if (upperBound < model->col_upper_[col] - primal_feastol) {
-        if (upperBound == model->col_lower_[col]) {
-          if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
-            // Handle unboundedness
-            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
-            return Result::kDualInfeasible;
-          }
-        } else if (model->integrality_[col] != HighsVarType::kContinuous)
+        if (upperBound == model->col_lower_[col])
+          HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{-1}));
+        else if (model->integrality_[col] != HighsVarType::kContinuous)
           changeColUpper(col, upperBound);
       }
       return Result::kOk;
