@@ -1214,33 +1214,32 @@ void PDLPSolver::InitializeStepSizes() {
   }
 }
 
-std::vector<double> PDLPSolver::UpdateX(double primal_step) {
+std::vector<double> PDLPSolver::UpdateX(const std::vector<double> &x, const std::vector<double> &aty,double primal_step) {
   std::vector<double> x_new(lp_.num_col_);
-  debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
-    double gradient = lp_.col_cost_[i] - ATy_cache_[i];
-    x_new[i] = linalg::project_box(x_current_[i] - primal_step * gradient,
+    double gradient = lp_.col_cost_[i] - aty[i];
+    x_new[i] = linalg::project_box(x[i] - primal_step * gradient,
                                    lp_.col_lower_[i], lp_.col_upper_[i]);
   }
   return x_new;
 }
 
-std::vector<double> PDLPSolver::UpdateY(double dual_step) {
+std::vector<double> PDLPSolver::UpdateY(const std::vector<double> &y, const std::vector<double> &ax , const std::vector<double> &ax_next, double dual_step) {
   std::vector<double> y_new(lp_.num_row_);
   for (HighsInt j = 0; j < lp_.num_row_; j++) {
-    double extr_ax = 2 * Ax_next_[j] - Ax_cache_[j];
+    double extr_ax = 2 * ax_next[j] - ax[j];
     bool is_equality = (lp_.row_lower_[j] == lp_.row_upper_[j]);
     double q = lp_.row_lower_[j];
-    double dual_update = y_current_[j] + dual_step * (q - extr_ax);
+    double dual_update = y[j] + dual_step * (q - extr_ax);
     y_new[j] = is_equality ? dual_update : linalg::project_non_negative(dual_update);
   }
   return y_new;
 }
 
 void PDLPSolver::UpdateIteratesFixed() {
-  x_next_ = UpdateX(stepsize_.primal_step);
+  x_next_ = UpdateX(x_current_, ATy_cache_,stepsize_.primal_step);
   linalg::Ax(lp_, x_next_, Ax_next_);
-  y_next_ = UpdateY(stepsize_.dual_step);
+  y_next_ = UpdateY(y_current_, Ax_cache_,Ax_next_, stepsize_.dual_step);
 }
 
 void PDLPSolver::UpdateIteratesAdaptive() {
@@ -1255,32 +1254,36 @@ void PDLPSolver::UpdateIteratesAdaptive() {
                                          stepsize_.dual_step);
 
   // Compute candidate solution
-  std::vector<double> x_candidate(lp_.num_col_);
-  std::vector<double> y_candidate(lp_.num_row_);
-  std::vector<double> ax_candidate(lp_.num_row_);
-  std::vector<double> aty_candidate(lp_.num_col_);                                       
+  std::vector<double> x_candidate = x_current_; // Start from current x
+  std::vector<double> y_candidate = y_current_; // Start from current y
+  std::vector<double> ax_candidate = Ax_cache_; // Start from current Ax
+  std::vector<double> aty_candidate = ATy_cache_; // Start from current ATy
+  std::vector<double> xupdate = x_next_;
+  std::vector<double> yupdate = y_next_;
+  std::vector<double> axupdate = Ax_next_;
+  std::vector<double> atyupdate = ATy_next_;
   while (!accepted_step) {
     stepsize_.step_size_iter++; //nStepSizeIter
     inner_iterations++;
-
+    /* cupdlp does not have a max iteration limit here
     if (inner_iterations >= 60) {
       std::cerr << "Warning: Adaptive line search exceeded 60 iterations."
                 << std::endl;
       // Force accept the last candidate
       break;
     }
-
+    */
     // Calculate step sizes for this iteration
     double primal_step_update = dStepSizeUpdate / std::sqrt(stepsize_.beta);
     double dual_step_update = dStepSizeUpdate * std::sqrt(stepsize_.beta);
 
     // Primal update
-    x_candidate = UpdateX(primal_step_update);
-    linalg::Ax(lp_, x_candidate, ax_candidate);
+    xupdate  = UpdateX(x_candidate, aty_candidate,primal_step_update); //need to take aty
+    linalg::Ax(lp_, xupdate , axupdate);
 
     // Dual update
-    y_candidate = UpdateY(dual_step_update);
-    linalg::ATy(lp_, y_candidate, aty_candidate);
+    yupdate = UpdateY(y_candidate, ax_candidate,axupdate, dual_step_update);
+    linalg::ATy(lp_, yupdate, atyupdate);
 
     // Compute deltas
     std::vector<double> delta_x(lp_.num_col_);
@@ -1288,13 +1291,13 @@ void PDLPSolver::UpdateIteratesAdaptive() {
     std::vector<double> delta_aty(lp_.num_col_);
 
     for (size_t i = 0; i < x_candidate.size(); ++i) {
-      delta_x[i] = x_candidate[i] - x_current_[i];
+      delta_x[i] = xupdate[i] - x_candidate[i];
     }
     for (size_t i = 0; i < y_candidate.size(); ++i) {
-      delta_y[i] = y_candidate[i] - y_current_[i];
+      delta_y[i] = yupdate[i] - y_candidate[i];
     }
     for (size_t i = 0; i < aty_candidate.size(); ++i) {
-      delta_aty[i] = aty_candidate[i] - ATy_cache_[i];
+      delta_aty[i] = atyupdate[i] - aty_candidate[i];
     }
 
     // Check numerical stability
@@ -1310,12 +1313,10 @@ void PDLPSolver::UpdateIteratesAdaptive() {
     double movement = ComputeMovement(delta_x, delta_y);
     double nonlinearity =
         ComputeNonlinearity(delta_x, delta_aty);
-
     // Compute step size limit
-    double step_size_limit = (nonlinearity > 1e-12)
-                                 ? (movement / (1.0 * nonlinearity))
-                                 :  // in cupdlp-c, the factor is 1
-                                 std::numeric_limits<double>::infinity();
+    double step_size_limit = (nonlinearity != 0.0)
+    ? (movement / std::fabs(nonlinearity))  
+    : std::numeric_limits<double>::infinity();
 
     /*
     highsLogUser(*log_options_, HighsLogType::kInfo,
@@ -1349,14 +1350,13 @@ void PDLPSolver::UpdateIteratesAdaptive() {
     //current_eta_ = std::max(MIN_ETA, std::min(MAX_ETA, current_eta_));
   }
 
-  x_next_ = x_candidate;
-  y_next_ = y_candidate;
-  Ax_next_ = ax_candidate;
-  ATy_next_ = aty_candidate;
+  x_next_ = xupdate;
+  y_next_ = yupdate;
+  Ax_next_ = axupdate;
+  ATy_next_ = atyupdate;
   
   current_eta_ = dStepSizeUpdate;
   stepsize_.primal_step = dStepSizeUpdate / std::sqrt(stepsize_.beta);
-  std::cout << "new primal step: " << stepsize_.primal_step << std::endl;
   stepsize_.dual_step = dStepSizeUpdate * std::sqrt(stepsize_.beta);
 }
 
@@ -1412,6 +1412,6 @@ double PDLPSolver::ComputeNonlinearity(const std::vector<double>& delta_primal,
   for (size_t i = 0; i < delta_primal.size(); ++i) {
     nonlinearity += delta_primal[i] * delta_aty[i];
   }
-  return std::abs(nonlinearity);
+  return nonlinearity; // cupdlp does not take absolute value
 }
 

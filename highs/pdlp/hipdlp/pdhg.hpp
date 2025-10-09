@@ -69,8 +69,8 @@ class PDLPSolver {
 
   // --- Step Update Methods (previously in Step) ---
   void InitializeStepSizes();
-  std::vector<double> UpdateX(double primal_step);
-  std::vector<double> UpdateY(double dual_step);
+  std::vector<double> UpdateX(const std::vector<double> &x, const std::vector<double> &aty,double primal_step);
+  std::vector<double> UpdateY(const std::vector<double> &y, const std::vector<double> &ax , const std::vector<double> &ax_next, double dual_step);
   void UpdateIteratesFixed();
   void UpdateIteratesAdaptive();
   bool UpdateIteratesMalitskyPock(bool first_malitsky_iteration);

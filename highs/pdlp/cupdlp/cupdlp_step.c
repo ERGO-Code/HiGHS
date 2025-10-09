@@ -247,7 +247,6 @@ cupdlp_retcode PDHG_Update_Iterate_Adaptive_Step_Size(CUPDLPwork *pdhg) {
   while (!isDone) {
     ++stepsize->nStepSizeIter;
     ++stepIterThis;
-
     cupdlp_float dPrimalStepUpdate = dStepSizeUpdate / sqrt(stepsize->dBeta);
     cupdlp_float dDualStepUpdate = dStepSizeUpdate * sqrt(stepsize->dBeta);
 
@@ -265,7 +264,6 @@ cupdlp_retcode PDHG_Update_Iterate_Adaptive_Step_Size(CUPDLPwork *pdhg) {
     cupdlp_float dInteraction = 0.0;
 
     cupdlp_compute_interaction_and_movement(pdhg, &dMovement, &dInteraction);
-
 #if CUPDLP_DUMP_LINESEARCH_STATS && CUPDLP_DEBUG
     cupdlp_float dInteractiony = 0.0;
     //      Δy' (AΔx)
@@ -311,6 +309,17 @@ cupdlp_retcode PDHG_Update_Iterate_Adaptive_Step_Size(CUPDLPwork *pdhg) {
     if (stepIterThis > 200) break;  // avoid unlimited runs due to bugs.
 #endif
   }
+
+  double debug_pdlp_data_ax_norm = 0.0;
+  cupdlp_twoNorm(pdhg, problem->nRows, ax->data,
+                  &debug_pdlp_data_ax_norm);
+  pdhg->debug_pdlp_data_.ax_norm = debug_pdlp_data_ax_norm;
+
+
+  double debug_pdlp_data_aty_norm = 0.0;
+  cupdlp_twoNorm(pdhg, problem->nCols, aty->data,
+                  &debug_pdlp_data_aty_norm);
+  pdhg->debug_pdlp_data_.aty_norm = debug_pdlp_data_aty_norm;
 
   stepsize->dPrimalStep = dStepSizeUpdate / sqrt(stepsize->dBeta);
   stepsize->dDualStep = dStepSizeUpdate * sqrt(stepsize->dBeta);
