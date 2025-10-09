@@ -28,7 +28,7 @@ jobs:
         run: vcpkg install metis
 
       - name: Install OpenBLAS
-        run: vcpkg install openblas
+        run: vcpkg install openblas[simplethread]
 
       - name: Create build dir
         run: cmake -E make_directory ${{runner.workspace}}/build
