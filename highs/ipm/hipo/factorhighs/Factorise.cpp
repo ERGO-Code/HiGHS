@@ -351,19 +351,9 @@ void Factorise::processSupernode(Int sn) {
 #endif
 }
 
-#ifdef HIPO_USES_OPENBLAS
-extern "C" {
-int openblas_get_num_threads();
-}
-#endif
-
 bool Factorise::run(Numeric& num) {
 #if HIPO_TIMING_LEVEL >= 1
   Clock clock;
-#endif
-
-#ifdef HIPO_USES_OPENBLAS
-  printf("Factorise threads %d\n", openblas_get_num_threads());
 #endif
 
   total_reg_.assign(n_, 0.0);

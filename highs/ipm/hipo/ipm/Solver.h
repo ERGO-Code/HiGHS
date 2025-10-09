@@ -1,6 +1,7 @@
 #ifndef HIPO_SOLVER_H
 #define HIPO_SOLVER_H
 
+#include <atomic>
 #include <string>
 
 #include "Control.h"
@@ -332,6 +333,10 @@ class Solver {
   void printOutput() const;
   void printSummary() const;
 };
+
+#ifdef HIPO_USES_OPENBLAS
+static std::atomic<Int> openblasSetThreadsCounter{};
+#endif
 
 }  // namespace hipo
 
