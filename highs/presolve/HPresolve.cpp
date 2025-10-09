@@ -1239,7 +1239,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       // bound should be finite
       assert(std::abs(otherColBound) != kHighsInf);
       // return if variable is already fixed
-      if (model->col_lower_[col] == model->col_upper_[col]) return;
+      if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
       // initialise bounds
       double lowerBound = -kHighsInf;
       double upperBound = kHighsInf;
@@ -1275,15 +1275,26 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
       // update bounds
       if (lowerBound > model->col_lower_[col] + primal_feastol) {
-        if (model->integrality_[col] != HighsVarType::kContinuous ||
-            lowerBound == model->col_upper_[col])
+        if (lowerBound == model->col_upper_[col]) {
+          if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
+            // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
+          }
+        } else if (model->integrality_[col] != HighsVarType::kContinuous)
           changeColLower(col, lowerBound);
       }
       if (upperBound < model->col_upper_[col] - primal_feastol) {
-        if (model->integrality_[col] != HighsVarType::kContinuous ||
-            upperBound == model->col_lower_[col])
+        if (upperBound == model->col_lower_[col]) {
+          if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
+            // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
+          }
+        } else if (model->integrality_[col] != HighsVarType::kContinuous)
           changeColUpper(col, upperBound);
       }
+      return Result::kOk;
     };
 
     // lambda for fixing variables
@@ -1319,30 +1330,33 @@ HPresolve::Result HPresolve::dominatedColumns(
           // direction = -1: fix variable x_j to its lower bound
           ++numFixedCols;
           HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-        } else if (tryToFixK &&
-                   (boundImplied ||
-                    mipsolver->mipdata_->cliquetable.haveCommonClique(
-                        HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
-                        HighsCliqueTable::CliqueVar(
-                            k, direction_k > 0 ? 1 : 0)))) {
-          // direction =  1, multiplier =  1:
-          // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
-          // direction =  1, multiplier = -1:
-          // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
-          // direction = -1, multiplier =  1:
-          // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
-          // direction = -1, multiplier = -1:
-          // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
-          ++numFixedCols;
-          HPRESOLVE_CHECKED_CALL(fixCol(k, -direction_k));
-        } else if (tryToStrengthenBounds) {
-          // tighten bounds via predictive bound analysis, see Theorem 3 from
-          // Gamrath et al.'s paper
-          if (isDominatedBoundFinite)
-            tightenBounds(col, dominatingBound, direction, k, dominatedBound);
-          if (isDominatingBoundFinite)
-            tightenBounds(k, dominatedBound, -direction_k, col,
-                          dominatingBound);
+        } else {
+          if (tryToFixK &&
+              (boundImplied ||
+               mipsolver->mipdata_->cliquetable.haveCommonClique(
+                   HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
+                   HighsCliqueTable::CliqueVar(k, direction_k > 0 ? 1 : 0)))) {
+            // direction =  1, multiplier =  1:
+            // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
+            // direction =  1, multiplier = -1:
+            // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
+            // direction = -1, multiplier =  1:
+            // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
+            // direction = -1, multiplier = -1:
+            // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
+            ++numFixedCols;
+            HPRESOLVE_CHECKED_CALL(fixCol(k, -direction_k));
+          }
+          if (!colDeleted[k] && tryToStrengthenBounds) {
+            // tighten bounds via predictive bound analysis, see Theorem 3 from
+            // Gamrath et al.'s paper
+            if (isDominatedBoundFinite)
+              HPRESOLVE_CHECKED_CALL(tightenBounds(
+                  col, dominatingBound, direction, k, dominatedBound));
+            if (!colDeleted[col] && isDominatingBoundFinite)
+              HPRESOLVE_CHECKED_CALL(tightenBounds(
+                  k, dominatedBound, -direction_k, col, dominatingBound));
+          }
         }
       }
       return Result::kOk;
@@ -4667,17 +4681,28 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       newBound = std::max(newBound, model->col_lower_[col]);
       // update upper bound
       // only modify bounds on continuous variables if it leads to fixing
-      if (model->integrality_[col] != HighsVarType::kContinuous ||
-          newBound == model->col_lower_[col])
+      if (newBound == model->col_lower_[col]) {
+        if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
+          // Handle unboundedness
+          presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+          return Result::kDualInfeasible;
+        }
+      } else if (model->integrality_[col] != HighsVarType::kContinuous)
         changeColUpper(col, newBound);
+
     } else if (hasTighterBound(col, HighsInt{-1}, model->col_lower_[col],
                                newBound)) {
       // do not make bounds inconsistent
       newBound = std::min(newBound, model->col_upper_[col]);
       // update lower bound
       // only modify bounds on continuous variables if it leads to fixing
-      if (model->integrality_[col] != HighsVarType::kContinuous ||
-          newBound == model->col_upper_[col])
+      if (newBound == model->col_upper_[col]) {
+        if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
+          // Handle unboundedness
+          presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+          return Result::kDualInfeasible;
+        }
+      } else if (model->integrality_[col] != HighsVarType::kContinuous)
         changeColLower(col, newBound);
     }
   }
