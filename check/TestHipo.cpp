@@ -45,11 +45,11 @@ TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
 TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
   // Test that hipo finds the exact same solution if run twice
 
-  std::string model = "adlittle.mps";
+  std::string model = "80bau3b.mps";
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
 
-  HighsInt iter_1, iter_2;
-  HighsSolution solution_1, solution_2;
+  HighsInt iter_1, iter_2, iter_3;
+  HighsSolution solution_1, solution_2, solution_3;
 
   {
     Highs highs;
@@ -86,6 +86,8 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
     highs.readModel(filename);
     HighsStatus status = highs.run();
     REQUIRE(status == HighsStatus::kOk);
+    solution_3 = highs.getSolution();
+    iter_3 = highs.getInfo().ipm_iteration_count;
     highs.resetGlobalScheduler(true);
   }
 
@@ -96,4 +98,12 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
   REQUIRE(solution_1.row_value == solution_2.row_value);
   REQUIRE(solution_1.col_dual == solution_2.col_dual);
   REQUIRE(solution_1.row_dual == solution_2.row_dual);
+
+  REQUIRE(iter_1 == iter_3);
+  REQUIRE(solution_1.value_valid == solution_3.value_valid);
+  REQUIRE(solution_1.dual_valid == solution_3.dual_valid);
+  REQUIRE(solution_1.col_value == solution_3.col_value);
+  REQUIRE(solution_1.row_value == solution_3.row_value);
+  REQUIRE(solution_1.col_dual == solution_3.col_dual);
+  REQUIRE(solution_1.row_dual == solution_3.row_dual);
 }
