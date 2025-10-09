@@ -1,6 +1,7 @@
 #ifndef FACTORHIGHS_FACTORISE_H
 #define FACTORHIGHS_FACTORISE_H
 
+#include <atomic>
 #include <cmath>
 
 #include "Numeric.h"
@@ -29,6 +30,12 @@ class Factorise {
   // reverse linked lists of chidlren
   std::vector<Int> first_child_reverse_{};
   std::vector<Int> next_child_reverse_{};
+
+  // number of children left to process for each supernode
+  // This vector's size must be determined at construction and cannot be
+  // resized, because std::atomic<Int> is not copy constructible/assignable.
+  std::vector<std::atomic<Int>> child_left_;
+  std::atomic<Int> roots_left_{};
 
   // generated elements, aka Schur complements.
   std::vector<std::vector<double>> schur_contribution_{};

@@ -20,7 +20,12 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
                      const std::vector<double>& valA, const Regul& regul,
                      const Log* log, DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns)
-    : S_{S}, sn_columns_{sn_columns}, regul_{regul}, log_{log}, data_{data} {
+    : S_{S},
+      child_left_(S_.sn()),
+      sn_columns_{sn_columns},
+      regul_{regul},
+      log_{log},
+      data_{data} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -63,6 +68,18 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
     first_child_reverse_ = first_child_;
     next_child_reverse_ = next_child_;
     reverseLinkedList(first_child_reverse_, next_child_reverse_);
+
+    // create vector with number of children for each supernode
+    for (Int sn = 0; sn < S_.sn(); ++sn) {
+      Int child = first_child_[sn];
+      while (child != -1) {
+        child_left_[sn]++;
+        child = next_child_[child];
+      }
+
+      // count number of roots
+      if (S_.snParent(sn) == -1) roots_left_++;
+    }
   }
 
   // compute largest diagonal entry in absolute value
@@ -172,22 +189,7 @@ void Factorise::processSupernode(Int sn) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
 
-  highs::parallel::TaskGroup tg;
-
   if (flag_stop_) return;
-
-  if (S_.parTree()) {
-    // spawn children of this supernode in reverse order
-    Int child_to_spawn = first_child_reverse_[sn];
-    while (child_to_spawn != -1) {
-      tg.spawn([=]() { processSupernode(child_to_spawn); });
-      child_to_spawn = next_child_reverse_[child_to_spawn];
-    }
-
-    // wait for first child to finish, before starting the parent (if there is a
-    // first child)
-    if (first_child_reverse_[sn] != -1) tg.sync();
-  }
 
 #if HIPO_TIMING_LEVEL >= 2
   Clock clock;
@@ -240,17 +242,10 @@ void Factorise::processSupernode(Int sn) {
     // Schur contribution of the current child
     std::vector<double>& child_clique = schur_contribution_[child_sn];
 
-    if (S_.parTree()) {
-      // sync with spawned child, apart from the first one
-      if (child_sn != first_child_[sn]) tg.sync();
-
-      if (flag_stop_) return;
-
-      if (child_clique.size() == 0) {
-        if (log_) log_->printDevInfo("Missing child supernode contribution\n");
-        flag_stop_ = true;
-        return;
-      }
+    if (child_clique.size() == 0) {
+      if (log_) log_->printDevInfo("Missing child supernode contribution\n");
+      flag_stop_ = true;
+      return;
     }
 
     // determine size of clique of child
@@ -351,6 +346,22 @@ void Factorise::processSupernode(Int sn) {
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactoriseTerminate, clock.stop());
 #endif
+
+  // finished processing this supernode.
+  // check if the parent should be spawned
+  highs::parallel::TaskGroup tg;
+  if (S_.parTree()) {
+    Int parent = S_.snParent(sn);
+    if (parent != -1) {
+      Int left = child_left_[parent].fetch_sub(1) - 1;
+      if (left == 0) {
+        tg.spawn([this, parent]() { processSupernode(parent); });
+      }
+    } else {
+      roots_left_.fetch_sub(1);
+    }
+  }
+  tg.taskWait();
 }
 
 bool Factorise::run(Numeric& num) {
@@ -372,16 +383,14 @@ bool Factorise::run(Numeric& num) {
   sn_columns_.resize(S_.sn());
 
   if (S_.parTree()) {
-    Int spawned_roots{};
-    // spawn tasks for root supernodes
     for (Int sn = 0; sn < S_.sn(); ++sn) {
-      if (S_.snParent(sn) == -1) {
-        tg.spawn([=]() { processSupernode(sn); });
-        ++spawned_roots;
+      // spawn only the leaves
+      if (first_child_[sn] == -1) {
+        tg.spawn([this, sn]() { processSupernode(sn); });
       }
     }
 
-    // sync tasks for root supernodes
+    // sync all spawned tasks
     tg.taskWait();
   } else {
     // go through each supernode serially
