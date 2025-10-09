@@ -406,6 +406,7 @@ HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
 // function to set number of threads of openblas
 extern "C" {
 void openblas_set_num_threads(int num_threads);
+int openblas_get_num_threads();
 }
 #endif
 
@@ -449,6 +450,8 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
 #ifdef HIPO_USES_OPENBLAS
   // force openblas to run in serial, for determinism and better performance
   openblas_set_num_threads(1);
+  printf("Setting number of threads\n");
+  printf("Wrapper threads %d\n", openblas_get_num_threads());
 #endif
 
   // Create solver instance
