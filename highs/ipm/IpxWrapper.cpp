@@ -448,10 +448,7 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
 
 #ifdef HIPO_USES_OPENBLAS
   //  force openblas to run in serial, for determinism and better performance
-  if (hipo::openblasSetThreadsCounter.fetch_add(1) == 0) {
-    openblas_set_num_threads(1);
-    printf("Setting threads\n");
-  }
+  openblas_set_num_threads(1);
 #endif
 
   // Create solver instance
