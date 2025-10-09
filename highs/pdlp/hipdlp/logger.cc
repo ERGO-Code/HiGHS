@@ -71,12 +71,6 @@ void Logger::print_params(const PrimalDualParams& params) {
       {RestartStrategy::NO_RESTART, "None"},
       {RestartStrategy::FIXED_RESTART, "Fixed"},
       {RestartStrategy::ADAPTIVE_RESTART, "Adaptive"}};
-  std::map<ScalingMethod, std::string> scaling_map = {
-      {ScalingMethod::NONE, "None"},
-      {ScalingMethod::RUIZ, "Ruiz"},
-      {ScalingMethod::POCK_CHAMBOLLE, "Pock-Chambolle"},
-      {ScalingMethod::L2_NORM, "L2-Norm"},
-      {ScalingMethod::COMBINED, "Combined"}};
   std::map<StepSizeStrategy, std::string> step_size_map = {
       {StepSizeStrategy::FIXED, "Fixed"},
       {StepSizeStrategy::ADAPTIVE, "Adaptive"},
@@ -92,10 +86,39 @@ void Logger::print_params(const PrimalDualParams& params) {
      << enum_to_string(params.restart_strategy, restart_map);
   info(ss.str());
   ss.str("");
-  ss << "  - Scaling Method: "
-     << "to fix";
+
+  std::string scaling_method = "None";
+  if (params.use_ruiz_scaling && params.use_pc_scaling && params.use_l2_scaling) {
+      scaling_method = "Combined (Ruiz + PC + L2)";
+  } else if (params.use_ruiz_scaling && params.use_pc_scaling) {
+      scaling_method = "Ruiz + Pock-Chambolle";
+  } else if (params.use_ruiz_scaling && params.use_l2_scaling) {
+      scaling_method = "Ruiz + L2-Norm";
+  } else if (params.use_pc_scaling && params.use_l2_scaling) {
+      scaling_method = "Pock-Chambolle + L2-Norm";
+  } else if (params.use_ruiz_scaling) {
+      scaling_method = "Ruiz";
+  } else if (params.use_pc_scaling) {
+      scaling_method = "Pock-Chambolle";
+  } else if (params.use_l2_scaling) {
+      scaling_method = "L2-Norm";
+  }
+  
+  ss << "  - Scaling Method: " << scaling_method;
   info(ss.str());
   ss.str("");
+  
+  // Optionally, add more details about scaling parameters if any scaling is used
+  if (params.use_ruiz_scaling) {
+      ss.str("");
+      ss << "   * Ruiz iterations: " << params.ruiz_iterations;
+      info(ss.str());
+  }
+  if (params.use_pc_scaling) {
+      ss.str("");
+      ss << "   * PC alpha: " << params.pc_alpha;
+      info(ss.str());
+  }
   ss << "  - Step Size Strategy: "
      << enum_to_string(params.step_size_strategy, step_size_map);
   info(ss.str());
