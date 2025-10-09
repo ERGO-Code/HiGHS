@@ -285,11 +285,9 @@ class HPresolve {
 
   void markColDeleted(HighsInt col);
 
-  bool fixColToLowerOrUnbounded(HighsPostsolveStack& postsolve_stack,
-                                HighsInt col);
+  Result fixColToLower(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  bool fixColToUpperOrUnbounded(HighsPostsolveStack& postsolve_stack,
-                                HighsInt col);
+  Result fixColToUpper(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   void fixColToZero(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
