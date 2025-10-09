@@ -105,33 +105,37 @@ Int Analyse::getPermutation() {
   }
 
   // call Metis
-  Int options[METIS_NOPTIONS];
-  METIS_SetDefaultOptions(options);
-  // fix seed of rng inside Metis, to make it deterministic (?)
-  options[METIS_OPTION_SEED] = 42;
+  /*
+    Int options[METIS_NOPTIONS];
+    METIS_SetDefaultOptions(options);
+    // fix seed of rng inside Metis, to make it deterministic (?)
+    options[METIS_OPTION_SEED] = 42;
 
-  // set logging of Metis depending on debug level
-  options[METIS_OPTION_DBGLVL] = 0;
- // if (log_->debug(2))
+    // set logging of Metis depending on debug level
+    options[METIS_OPTION_DBGLVL] = 0;
+    // if (log_->debug(2))
     options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN |
                                    METIS_DBG_REFINE | METIS_DBG_IPART |
                                    METIS_DBG_MOVEINFO | METIS_DBG_SEPINFO |
                                    METIS_DBG_CONNINFO | METIS_DBG_CONTIGINFO;
 
-  options[METIS_OPTION_NUMBERING] = 0;
+    options[METIS_OPTION_NUMBERING] = 0;
 
-  if (log_) log_->printDevInfo("Running Metis\n");
+    if (log_) log_->printDevInfo("Running Metis\n");
 
-  Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
-                            options, perm_.data(), iperm_.data());
-  if (log_) log_->printDevInfo("Metis done\n");
-  if (status != METIS_OK) {
-    if (log_) log_->printDevInfo("Error with Metis\n");
-    return kRetMetisError;
+    Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
+                              options, perm_.data(), iperm_.data());
+    if (log_) log_->printDevInfo("Metis done\n");
+    if (status != METIS_OK) {
+      if (log_) log_->printDevInfo("Error with Metis\n");
+      return kRetMetisError;
+    }
+  */
+
+  for (Int i = 0; i < n_; ++i) {
+    perm_[i] = i;
+    iperm_[i] = i;
   }
-
-  for (Int i : perm_) printf("%d ", i);
-  printf("\n");
 
   return kRetOk;
 }
