@@ -262,7 +262,7 @@ class HighsLogType:
 
 class HighsLp:
     a_matrix_: HighsSparseMatrix
-    col_cost_: list[float]
+    col_cost_: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
     col_lower_: list[float]
     col_names_: list[str]
     col_upper_: list[float]
@@ -298,7 +298,7 @@ class HighsLinearObjective:
     abs_tolerance: float
     rel_tolerance: float
     priority: int
-    
+
     def __init__(self) -> None: ...
 
 
@@ -790,6 +790,8 @@ class _Highs:
         values: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
     ) -> HighsStatus: ...
     def addLinearObjective(self, linear_objective: HighsLinearObjective) -> HighsStatus: ...
+    def getNumLinearObjectives(self) -> int: ...
+    def getLinearObjective(self, index: int) -> HighsLinearObjective: ...
     def addVar(self, lower_bound: float, upper_bound: float) -> HighsStatus: ...
     def addVars(
         self,
