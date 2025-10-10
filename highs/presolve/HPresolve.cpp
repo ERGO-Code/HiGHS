@@ -1048,8 +1048,8 @@ HPresolve::Result HPresolve::dominatedColumns(
   // non-zero signatures for comparing columns
   std::vector<std::pair<uint32_t, uint32_t>> signatures(model->num_col_);
 
-  // count overall number of dominance checks and number of checks performed for
-  // predictive bound analysis
+  // count overall number of domination checks and number of checks performed
+  // for predictive bound analysis
   size_t numDomChecks = 0;
   size_t numDomChecksPredBndAnalysis = 0;
 
@@ -1335,8 +1335,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           (tryToFixCol || tryToFixK || tryToStrengthenBounds) &&
           checkDominationNonZero(row, direction * bestVal, direction_k * val);
       if (performDominationCheck) {
+        // check for domination
         if (checkDomination(direction, col, direction_k, k)) {
-          // increment counter for number of dominance checks
           if (tryToFixCol) {
             // direction =  1: fix variable x_j to its upper bound
             // direction = -1: fix variable x_j to its lower bound
@@ -1358,8 +1358,6 @@ HPresolve::Result HPresolve::dominatedColumns(
               // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
               HPRESOLVE_CHECKED_CALL(fixCol(k, -direction_k));
             }
-            // increment counter for number of dominance checks for predictive
-            // bound analysis
             if (!colDeleted[k] && tryToStrengthenBounds) {
               // tighten bounds via predictive bound analysis, see Theorem 3
               // from Gamrath et al.'s paper
@@ -1372,14 +1370,14 @@ HPresolve::Result HPresolve::dominatedColumns(
             }
           }
         }
-        // increment counter for number of dominance checks due to predictive
+        // increment counter for number of domination checks due to predictive
         // bound analysis
         if (!tryToFixCol && !tryToFixK) numDomChecksPredBndAnalysis++;
       }
       return Result::kOk;
     };
 
-    // lambda for finding a dominance relationship in the given row
+    // lambda for finding a domination relationship in the given row
     auto checkRow = [&](HighsInt row, HighsInt col, HighsInt direction,
                         double bestVal, bool boundImplied, bool hasCliques,
                         bool otherBoundImpliedByWorstCase) {
