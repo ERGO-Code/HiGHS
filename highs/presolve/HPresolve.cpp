@@ -1155,9 +1155,6 @@ HPresolve::Result HPresolve::dominatedColumns(
       addSignature(row, col, rowUpperFinite, rowLowerFinite);
   }
 
-  // use predictive bound analysis?
-  const bool usePredictiveBoundAnalysis = true;
-
   // count number of fixed columns and modified bounds
   HighsInt numFixedCols = 0;
   HighsInt numBoundsModified = 0;
@@ -1165,13 +1162,6 @@ HPresolve::Result HPresolve::dominatedColumns(
   for (HighsInt j = 0; j < model->num_col_; ++j) {
     // skip deleted columns
     if (colDeleted[j]) continue;
-
-    // consider cliques
-    bool colIsBinary = isBinary(j);
-    bool hasPosCliques =
-        colIsBinary && mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0;
-    bool hasNegCliques =
-        colIsBinary && mipsolver->mipdata_->cliquetable.numCliques(j, 0) > 0;
 
     // check if bounds are implied
     bool lowerImplied = isLowerImplied(j);
@@ -1199,15 +1189,6 @@ HPresolve::Result HPresolve::dominatedColumns(
       lowerImplied = lowerImplied || lowerImpliedByWorstCase;
     }
 
-    // determine which rows to check
-    bool checkPosRow =
-        usePredictiveBoundAnalysis || upperImplied || hasPosCliques;
-    bool checkNegRow =
-        usePredictiveBoundAnalysis || lowerImplied || hasNegCliques;
-
-    // skip column if there is nothing to do
-    if (!checkPosRow && !checkNegRow) continue;
-
     // remember number of fixed columns
     HighsInt oldNumFixed = numFixedCols;
 
@@ -1224,13 +1205,13 @@ HPresolve::Result HPresolve::dominatedColumns(
       HighsInt scale = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
       double val = scale * nonz.value();
-      if (checkPosRow && val > 0.0 && rowsize[row] < bestRowPlusLen) {
+      if (val > 0.0 && rowsize[row] < bestRowPlusLen) {
         bestRowPlus = row;
         bestRowPlusLen = rowsize[row];
         ajBestRowPlus = nonz.value();
       }
 
-      if (checkNegRow && val < 0.0 && rowsize[row] < bestRowMinusLen) {
+      if (val < 0.0 && rowsize[row] < bestRowMinusLen) {
         bestRowMinus = row;
         bestRowMinusLen = rowsize[row];
         ajBestRowMinus = nonz.value();
@@ -1314,8 +1295,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     // the other one and (2) fixing variables or strengthening bounds
     auto checkCols = [&](HighsInt row, HighsInt col, HighsInt k, double bestVal,
                          double val, HighsInt direction, HighsInt multiplier,
-                         bool boundImplied, bool hasCliques,
-                         bool otherBoundImpliedByWorstCase) {
+                         bool boundImplied, bool otherBoundImpliedByWorstCase) {
       HighsInt direction_k = multiplier * direction;
       // get bounds
       double dominatingBound =
@@ -1326,10 +1306,13 @@ HPresolve::Result HPresolve::dominatedColumns(
       bool isDominatingBoundFinite = direction * dominatingBound != kHighsInf;
       bool isDominatedBoundFinite = direction_k * dominatedBound != -kHighsInf;
       // try to fix variable 'col'?
-      bool tryToFixCol =
-          (boundImplied || hasCliques) && otherBoundImpliedByWorstCase;
+      bool tryToFixCol = boundImplied && otherBoundImpliedByWorstCase;
       // try to fix variable 'k'?
-      bool tryToFixK = (boundImplied || hasCliques) && isDominatedBoundFinite;
+      bool tryToFixK =
+          isDominatedBoundFinite &&
+          (boundImplied ||
+           (isBinary(col) && mipsolver->mipdata_->cliquetable.numCliques(
+                                 col, direction > 0 ? 1 : 0) > 0));
       // try predictive bound analysis (both variables have same type)?
       bool tryToStrengthenBounds =
           (isDominatingBoundFinite || isDominatedBoundFinite) &&
@@ -1388,7 +1371,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // lambda for finding a domination relationship in the given row
     auto checkRow = [&](HighsInt row, HighsInt col, HighsInt direction,
-                        double bestVal, bool boundImplied, bool hasCliques,
+                        double bestVal, bool boundImplied,
                         bool otherBoundImpliedByWorstCase) {
       storeRow(row);
       for (const HighsSliceNonzero& nonz : getStoredRow()) {
@@ -1398,14 +1381,14 @@ HPresolve::Result HPresolve::dominatedColumns(
 
         // try to fix variables or strengthen bounds
         HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, bestVal, ak, direction,
-                                         HighsInt{1}, boundImplied, hasCliques,
+                                         HighsInt{1}, boundImplied,
                                          otherBoundImpliedByWorstCase));
         if (colDeleted[col]) break;
 
         if (!colDeleted[k]) {
-          HPRESOLVE_CHECKED_CALL(checkCols(
-              row, col, k, bestVal, ak, direction, HighsInt{-1}, boundImplied,
-              hasCliques, otherBoundImpliedByWorstCase));
+          HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, bestVal, ak, direction,
+                                           HighsInt{-1}, boundImplied,
+                                           otherBoundImpliedByWorstCase));
           if (colDeleted[col]) break;
         }
       }
@@ -1416,13 +1399,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     if (bestRowMinus != -1)
       HPRESOLVE_CHECKED_CALL(checkRow(bestRowMinus, j, HighsInt{-1},
                                       ajBestRowMinus, lowerImplied,
-                                      hasNegCliques, upperImpliedByWorstCase));
+                                      upperImpliedByWorstCase));
 
     // use row 'bestRowPlus'
     if (!colDeleted[j] && bestRowPlus != -1)
       HPRESOLVE_CHECKED_CALL(checkRow(bestRowPlus, j, HighsInt{1},
                                       ajBestRowPlus, upperImplied,
-                                      hasPosCliques, lowerImpliedByWorstCase));
+                                      lowerImpliedByWorstCase));
 
     // remove doubleton equations
     if (numFixedCols != oldNumFixed)
