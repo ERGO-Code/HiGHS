@@ -1158,8 +1158,9 @@ HPresolve::Result HPresolve::dominatedColumns(
   // use predictive bound analysis?
   const bool usePredictiveBoundAnalysis = true;
 
-  // count number of fixed columns
+  // count number of fixed columns and modified bounds
   HighsInt numFixedCols = 0;
+  HighsInt numBoundsModified = 0;
 
   for (HighsInt j = 0; j < model->num_col_; ++j) {
     // skip deleted columns
@@ -1293,14 +1294,18 @@ HPresolve::Result HPresolve::dominatedColumns(
       if (lowerBound > model->col_lower_[col] + primal_feastol) {
         if (lowerBound == model->col_upper_[col])
           HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{1}));
-        else if (model->integrality_[col] != HighsVarType::kContinuous)
+        else if (model->integrality_[col] != HighsVarType::kContinuous) {
+          numBoundsModified++;
           changeColLower(col, lowerBound);
+        }
       }
       if (upperBound < model->col_upper_[col] - primal_feastol) {
         if (upperBound == model->col_lower_[col])
           HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{-1}));
-        else if (model->integrality_[col] != HighsVarType::kContinuous)
+        else if (model->integrality_[col] != HighsVarType::kContinuous) {
+          numBoundsModified++;
           changeColUpper(col, upperBound);
+        }
       }
       return Result::kOk;
     };
