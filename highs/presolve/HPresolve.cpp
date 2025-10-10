@@ -1093,8 +1093,8 @@ HPresolve::Result HPresolve::dominatedColumns(
     numDomChecks++;
 
     // rule out domination from integers to continuous variables
-    if (model->integrality_[j] != HighsVarType::kContinuous &&
-        model->integrality_[k] != HighsVarType::kInteger)
+    if (model->integrality_[j] == HighsVarType::kInteger &&
+        model->integrality_[k] == HighsVarType::kContinuous)
       return false;
 
     // check the signatures
