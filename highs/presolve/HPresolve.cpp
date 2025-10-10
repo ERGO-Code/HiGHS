@@ -1093,7 +1093,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     numDomChecks++;
 
     // rule out domination from integers to continuous variables
-    if (model->integrality_[j] == HighsVarType::kInteger &&
+    if (model->integrality_[j] != HighsVarType::kContinuous &&
         model->integrality_[k] != HighsVarType::kInteger)
       return false;
 
@@ -1330,9 +1330,13 @@ HPresolve::Result HPresolve::dominatedColumns(
           (boundImplied || hasCliques) && otherBoundImpliedByWorstCase;
       // try to fix variable 'k'?
       bool tryToFixK = (boundImplied || hasCliques) && isDominatedBoundFinite;
-      // try predictive bound analysis?
+      // try predictive bound analysis (both variables have same type)?
       bool tryToStrengthenBounds =
-          isDominatingBoundFinite || isDominatedBoundFinite;
+          (isDominatingBoundFinite || isDominatedBoundFinite) &&
+          ((model->integrality_[col] != HighsVarType::kContinuous &&
+            model->integrality_[k] != HighsVarType::kContinuous) ||
+           (model->integrality_[col] != HighsVarType::kInteger &&
+            model->integrality_[k] != HighsVarType::kInteger));
       // check whether column 'col' dominates column 'k'; check already
       // known non-zeros in selected columns in advance to avoid
       // (potentially slow) element-wise comparison if possible
