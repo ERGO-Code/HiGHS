@@ -1273,6 +1273,8 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
       // update bounds
       if (lowerBound > model->col_lower_[col] + primal_feastol) {
+        if (model->integrality_[col] != HighsVarType::kContinuous)
+          lowerBound = std::ceil(lowerBound - primal_feastol);
         if (lowerBound == model->col_upper_[col])
           HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{1}));
         else if (model->integrality_[col] != HighsVarType::kContinuous) {
@@ -1281,6 +1283,8 @@ HPresolve::Result HPresolve::dominatedColumns(
         }
       }
       if (upperBound < model->col_upper_[col] - primal_feastol) {
+        if (model->integrality_[col] != HighsVarType::kContinuous)
+          upperBound = std::floor(upperBound + primal_feastol);
         if (upperBound == model->col_lower_[col])
           HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{-1}));
         else if (model->integrality_[col] != HighsVarType::kContinuous) {
@@ -1296,6 +1300,8 @@ HPresolve::Result HPresolve::dominatedColumns(
     auto checkCols = [&](HighsInt row, HighsInt col, HighsInt k, double bestVal,
                          double val, HighsInt direction, HighsInt multiplier,
                          bool boundImplied, bool otherBoundImpliedByWorstCase) {
+      // compute direction for dominated variable
+      // (1: lower bound; -1: upper bound)
       HighsInt direction_k = multiplier * direction;
       // get bounds
       double dominatingBound =
@@ -1305,67 +1311,67 @@ HPresolve::Result HPresolve::dominatedColumns(
       // check if bounds are finite
       bool isDominatingBoundFinite = direction * dominatingBound != kHighsInf;
       bool isDominatedBoundFinite = direction_k * dominatedBound != -kHighsInf;
-      // try to fix variable 'col'?
+      // check whether variable 'col' can potentially be fixed
       bool tryToFixCol = boundImplied && otherBoundImpliedByWorstCase;
-      // try to fix variable 'k'?
+      // check whether variable 'k' can potentially be fixed. check if there are
+      // cliques in advance instead of directly searching for a common clique.
       bool tryToFixK =
           isDominatedBoundFinite &&
           (boundImplied ||
            (isBinary(col) && mipsolver->mipdata_->cliquetable.numCliques(
                                  col, direction > 0 ? 1 : 0) > 0));
-      // try predictive bound analysis (both variables have same type)?
+      // check whether predictive bound analysis can be performed. both
+      // variables need to have the same type.
       bool tryToStrengthenBounds =
           (isDominatingBoundFinite || isDominatedBoundFinite) &&
           ((model->integrality_[col] != HighsVarType::kContinuous &&
             model->integrality_[k] != HighsVarType::kContinuous) ||
            (model->integrality_[col] != HighsVarType::kInteger &&
             model->integrality_[k] != HighsVarType::kInteger));
-      // check whether column 'col' dominates column 'k'; check already
-      // known non-zeros in selected columns in advance to avoid
-      // (potentially slow) element-wise comparison if possible
+      // check whether variable 'col' dominates variable 'k'; check already
+      // known non-zeros in respective columns in advance to avoid
+      // (potentially slow) element-wise comparison if possible.
       bool performDominationCheck =
           (tryToFixCol || tryToFixK || tryToStrengthenBounds) &&
           checkDominationNonZero(row, direction * bestVal, direction_k * val);
-      if (performDominationCheck) {
-        // check for domination
-        if (checkDomination(direction, col, direction_k, k)) {
-          if (tryToFixCol) {
-            // direction =  1: fix variable x_j to its upper bound
-            // direction = -1: fix variable x_j to its lower bound
-            HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-          } else {
-            if (tryToFixK &&
-                (boundImplied ||
-                 mipsolver->mipdata_->cliquetable.haveCommonClique(
-                     HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
-                     HighsCliqueTable::CliqueVar(k,
-                                                 direction_k > 0 ? 1 : 0)))) {
-              // direction =  1, multiplier =  1:
-              // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
-              // direction =  1, multiplier = -1:
-              // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
-              // direction = -1, multiplier =  1:
-              // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
-              // direction = -1, multiplier = -1:
-              // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
-              HPRESOLVE_CHECKED_CALL(fixCol(k, -direction_k));
-            }
-            if (!colDeleted[k] && tryToStrengthenBounds) {
-              // tighten bounds via predictive bound analysis, see Theorem 3
-              // from Gamrath et al.'s paper
-              if (isDominatedBoundFinite)
-                HPRESOLVE_CHECKED_CALL(tightenBounds(
-                    col, dominatingBound, direction, k, dominatedBound));
-              if (!colDeleted[col] && isDominatingBoundFinite)
-                HPRESOLVE_CHECKED_CALL(tightenBounds(
-                    k, dominatedBound, -direction_k, col, dominatingBound));
-            }
+      if (!performDominationCheck) return Result::kOk;
+      // check for domination
+      if (checkDomination(direction, col, direction_k, k)) {
+        if (tryToFixCol) {
+          // direction =  1: fix variable x_j to its upper bound
+          // direction = -1: fix variable x_j to its lower bound
+          HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
+        } else {
+          if (tryToFixK &&
+              (boundImplied ||
+               mipsolver->mipdata_->cliquetable.haveCommonClique(
+                   HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
+                   HighsCliqueTable::CliqueVar(k, direction_k > 0 ? 1 : 0)))) {
+            // direction =  1, multiplier =  1:
+            // case (i)   ub(x_j) =  inf,  x_j >  x_k: set x_k = lb(x_k)
+            // direction =  1, multiplier = -1:
+            // case (ii)  ub(x_j) =  inf,  x_j > -x_k: set x_k = ub(x_k)
+            // direction = -1, multiplier =  1:
+            // case (iii) lb(x_j) = -inf, -x_j > -x_k: set x_k = ub(x_k)
+            // direction = -1, multiplier = -1:
+            // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
+            HPRESOLVE_CHECKED_CALL(fixCol(k, -direction_k));
+          }
+          if (!colDeleted[k] && tryToStrengthenBounds) {
+            // tighten bounds via predictive bound analysis, see Theorem 3
+            // from Gamrath et al.'s paper
+            if (isDominatedBoundFinite)
+              HPRESOLVE_CHECKED_CALL(tightenBounds(
+                  col, dominatingBound, direction, k, dominatedBound));
+            if (!colDeleted[col] && isDominatingBoundFinite)
+              HPRESOLVE_CHECKED_CALL(tightenBounds(
+                  k, dominatedBound, -direction_k, col, dominatingBound));
           }
         }
-        // increment counter for number of domination checks due to predictive
-        // bound analysis
-        if (!tryToFixCol && !tryToFixK) numDomChecksPredBndAnalysis++;
       }
+      // increment counter for number of domination checks due to predictive
+      // bound analysis
+      if (!tryToFixCol && !tryToFixK) numDomChecksPredBndAnalysis++;
       return Result::kOk;
     };
 
@@ -4651,21 +4657,23 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       // do not make bounds inconsistent
       newBound = std::max(newBound, model->col_lower_[col]);
       // update upper bound
-      // only modify bounds on continuous variables if it leads to fixing
-      if (newBound == model->col_lower_[col])
-        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
-      else if (model->integrality_[col] != HighsVarType::kContinuous)
-        changeColUpper(col, newBound);
+      if (newBound < model->col_upper_[col] - primal_feastol) {
+        if (newBound == model->col_lower_[col])
+          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+        else if (model->integrality_[col] != HighsVarType::kContinuous)
+          changeColUpper(col, newBound);
+      }
     } else if (hasTighterBound(col, HighsInt{-1}, model->col_lower_[col],
                                newBound)) {
       // do not make bounds inconsistent
       newBound = std::min(newBound, model->col_upper_[col]);
-      // update lower bound
-      // only modify bounds on continuous variables if it leads to fixing
-      if (newBound == model->col_upper_[col])
-        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
-      else if (model->integrality_[col] != HighsVarType::kContinuous)
-        changeColLower(col, newBound);
+      if (newBound > model->col_lower_[col] + primal_feastol) {
+        // update lower bound
+        if (newBound == model->col_upper_[col])
+          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+        else if (model->integrality_[col] != HighsVarType::kContinuous)
+          changeColLower(col, newBound);
+      }
     }
   }
   return Result::kOk;
