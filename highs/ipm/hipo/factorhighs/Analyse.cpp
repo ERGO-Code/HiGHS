@@ -87,10 +87,10 @@ Int Analyse::getPermutation() {
   }
 
   // compute column pointers from column counts
-  std::vector<Int> temp_ptr(n_ + 1 + extra, 0);
+  std::vector<Int> temp_ptr(n_ + 1, 0);
   counts2Ptr(temp_ptr, work);
 
-  std::vector<Int> temp_rows(temp_ptr.back() + extra, 0);
+  std::vector<Int> temp_rows(temp_ptr.back(), 0);
 
   for (Int j = 0; j < n_; ++j) {
     for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
@@ -105,6 +105,9 @@ Int Analyse::getPermutation() {
       temp_rows[work[i]++] = j;
     }
   }
+
+  temp_rows.resize(temp_ptr.back() + extra);
+  temp_ptr.resize(n_ + 1 + extra);
 
   // call Metis
 
