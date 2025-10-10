@@ -548,7 +548,8 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   // matrix columns of non-continuous variables to be scaled
   //
   // Determine the corresponding extreme non-continuous costs and
-  // update the extreme costs so that cost scaling can be suggested
+  // update the extreme costs so that objective scaling can be
+  // suggested
   double suggested_user_bound_scale_value = pow(2.0, user_scale_data.suggested_user_bound_scale);
   min_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   max_noncontinuous_col_cost *= suggested_user_bound_scale_value;
