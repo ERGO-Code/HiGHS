@@ -59,8 +59,10 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
 Int Analyse::getPermutation() {
   // Use Metis to compute a nested dissection permutation of the original matrix
 
-  perm_.resize(n_);
-  iperm_.resize(n_);
+  const Int extra = 10;
+
+  perm_.resize(n_ + extra);
+  iperm_.resize(n_ + extra);
 
   // Build temporary full copy of the matrix, to be used for Metis.
   // NB: Metis adjacency list should not contain the vertex itself, so diagonal
@@ -85,10 +87,10 @@ Int Analyse::getPermutation() {
   }
 
   // compute column pointers from column counts
-  std::vector<Int> temp_ptr(n_ + 1, 0);
+  std::vector<Int> temp_ptr(n_ + 1 + extra, 0);
   counts2Ptr(temp_ptr, work);
 
-  std::vector<Int> temp_rows(temp_ptr.back(), 0);
+  std::vector<Int> temp_rows(temp_ptr.back() + extra, 0);
 
   for (Int j = 0; j < n_; ++j) {
     for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
@@ -106,18 +108,18 @@ Int Analyse::getPermutation() {
 
   // call Metis
 
-  Int options[METIS_NOPTIONS];
+  Int options[METIS_NOPTIONS + extra];
   METIS_SetDefaultOptions(options);
   // fix seed of rng inside Metis, to make it deterministic (?)
   options[METIS_OPTION_SEED] = 42;
 
   // set logging of Metis depending on debug level
   options[METIS_OPTION_DBGLVL] = 0;
-  // if (log_->debug(2))
-  options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN |
-                                 METIS_DBG_REFINE | METIS_DBG_IPART |
-                                 METIS_DBG_MOVEINFO | METIS_DBG_SEPINFO |
-                                 METIS_DBG_CONNINFO | METIS_DBG_CONTIGINFO;
+  if (log_->debug(2))
+    options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN |
+                                   METIS_DBG_REFINE | METIS_DBG_IPART |
+                                   METIS_DBG_MOVEINFO | METIS_DBG_SEPINFO |
+                                   METIS_DBG_CONNINFO | METIS_DBG_CONTIGINFO;
 
   options[METIS_OPTION_NUMBERING] = 0;
 
@@ -144,6 +146,9 @@ Int Analyse::getPermutation() {
     if (log_) log_->printDevInfo("Error with Metis\n");
     return kRetMetisError;
   }
+
+  perm_.resize(n_);
+  iperm_.resize(n_);
 
   return kRetOk;
 }
