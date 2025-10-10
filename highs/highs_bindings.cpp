@@ -389,6 +389,12 @@ highs_getReducedColumnSparse(Highs* h, HighsInt col) {
                          py::cast(solution_index));
 }
 
+std::tuple<HighsStatus, HighsLp> highs_getFixedLp(Highs* h) {
+  HighsLp lp;
+  HighsStatus status = h->getFixedLp(lp);
+  return std::make_tuple(status, lp);
+}
+
 std::tuple<HighsStatus, bool> highs_getDualRayExist(Highs* h) {
   bool has_dual_ray;
   HighsStatus status = h->getDualRay(has_dual_ray);
@@ -1021,6 +1027,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kError", HighsLogType::kError);
   py::enum_<IisStrategy>(m, "IisStrategy", py::module_local())
       .value("kIisStrategyMin", IisStrategy::kIisStrategyMin)
+      .value("kIisStrategyLight", IisStrategy::kIisStrategyLight)
       .value("kIisStrategyFromLpRowPriority",
              IisStrategy::kIisStrategyFromLpRowPriority)
       .value("kIisStrategyFromLpColPriority",
@@ -1392,6 +1399,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getReducedRowSparse", &highs_getReducedRowSparse)
       .def("getReducedColumn", &highs_getReducedColumn)
       .def("getReducedColumnSparse", &highs_getReducedColumnSparse)
+      .def("getFixedLp", &highs_getFixedLp)
       .def("getDualRayExist", &highs_getDualRayExist)
       .def("getDualRay", &highs_getDualRay)
       .def("getDualUnboundednessDirectionExist",
@@ -1426,6 +1434,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
 
       .def("writeModel", &Highs::writeModel)
       .def("writePresolvedModel", &Highs::writePresolvedModel)
+      .def("writeIisModel", &Highs::writeIisModel)
       .def("crossover", &Highs::crossover)
       .def("changeObjectiveSense", &Highs::changeObjectiveSense)
       .def("changeObjectiveOffset", &Highs::changeObjectiveOffset)

@@ -2160,3 +2160,41 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
 
         status = model.getModelStatus()
         self.assertEqual(status, highspy.HighsModelStatus.kOptimal)
+
+    def test_get_fixed_lp(self):
+        # Min    f  = -3x_0 - 2x_1 - x_2
+        # s.t.          x_0 +  x_1 + x_2 <=  7
+        #              4x_0 + 2x_1 + x_2  = 12
+        #              x_0 >=0; x_1 >= 0; x_2 binary
+        inf = highspy.kHighsInf
+        model = highspy.Highs()
+        num_vars = 3
+        model.addVars(num_vars, np.array([0.0, 0.0, 0.0]), np.array([2.0, 4.0, inf]))
+        num_cons = 2
+        lower = np.array([-inf, 12], dtype=np.double)
+        upper = np.array([7, 12], dtype=np.double)
+        num_new_nz = 6
+        starts = np.array([0, 2, 4])
+        indices = np.array([0, 1, 0, 1, 0, 1])
+        values = np.array([1, 4, 1, 2, 1, 1], dtype=np.double)
+        model.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
+        model.changeColsIntegrality(1, np.array([2]), np.array([highspy.HighsVarType.kInteger]))
+        model.setOptionValue("presolve", "off")
+        model.run()
+        mip_objective_function_value = model.getInfo().objective_function_value
+        solution = model.getSolution()
+        [status, fixed_lp] = model.getFixedLp()
+        self.assertEqual(status, highspy.HighsStatus.kOk)
+        model.passModel(fixed_lp)
+        model.setSolution(solution)
+        model.run()
+        self.assertEqual(model.getInfo().objective_function_value, mip_objective_function_value)
+        self.assertEqual(model.getInfo().simplex_iteration_count, 0)
+        
+
+        
+        
+        
+        
+        
+        

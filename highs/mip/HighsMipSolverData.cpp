@@ -709,7 +709,8 @@ void HighsMipSolverData::runMipPresolve(
   }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
-  if (numRestarts == 0)
+  // Report the final presolve reductions unless this is a restart
+  if (mipsolver.options_mip_->presolve != kHighsOffString && numRestarts == 0)
     reportPresolveReductions(mipsolver.options_mip_->log_options,
                              presolve_status, *mipsolver.orig_model_,
                              *mipsolver.model_);
