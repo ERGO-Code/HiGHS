@@ -3003,8 +3003,8 @@ HighsStatus Highs::userScaleModel(HighsUserScaleData& data) {
 HighsStatus Highs::userScaleSolution(HighsUserScaleData& data,
                                      bool update_kkt) {
   HighsStatus return_status = HighsStatus::kOk;
-  if (!data.user_cost_scale && !data.user_bound_scale) return HighsStatus::kOk;
-  double cost_scale_value = std::pow(2, data.user_cost_scale);
+  if (!data.user_objective_scale && !data.user_bound_scale) return HighsStatus::kOk;
+  double objective_scale_value = std::pow(2, data.user_objective_scale);
   double bound_scale_value = std::pow(2, data.user_bound_scale);
   const HighsLp& lp = this->model_.lp_;
   const bool has_integrality = lp.integrality_.size();
@@ -3021,15 +3021,15 @@ HighsStatus Highs::userScaleSolution(HighsUserScaleData& data,
     }
   }
   if (info_.dual_solution_status != kSolutionStatusNone) {
-    if (data.user_cost_scale) {
+    if (data.user_objective_scale) {
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-        this->solution_.col_dual[iCol] *= cost_scale_value;
+        this->solution_.col_dual[iCol] *= objective_scale_value;
       for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-        this->solution_.row_dual[iRow] *= cost_scale_value;
+        this->solution_.row_dual[iRow] *= objective_scale_value;
     }
   }
   if (!update_kkt) return return_status;
-  info_.objective_function_value *= (bound_scale_value * cost_scale_value);
+  info_.objective_function_value *= (bound_scale_value * objective_scale_value);
   getKktFailures(options_, model_, solution_, basis_, info_);
   return reportKktFailures(model_.lp_, options_, info_,
                            "After removing user scaling")

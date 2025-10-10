@@ -316,8 +316,9 @@ struct HighsOptionsStruct {
   double objective_bound;
   double objective_target;
   HighsInt threads;
-  HighsInt user_bound_scale;
+  // V2.0: Should be user_objective_scale to accommodate Hessian
   HighsInt user_cost_scale;
+  HighsInt user_bound_scale;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;

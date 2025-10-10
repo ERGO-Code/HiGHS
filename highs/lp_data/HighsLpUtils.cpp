@@ -791,20 +791,20 @@ void userScaleCosts(const vector<HighsVarType>& integrality,
                     const bool apply) {
   data.num_infinite_costs = 0;
   const HighsInt user_bound_scale = data.user_bound_scale;
-  const HighsInt user_cost_scale = data.user_cost_scale;
-  if (!user_bound_scale && !user_cost_scale) return;
+  const HighsInt user_objective_scale = data.user_objective_scale;
+  if (!user_bound_scale && !user_objective_scale) return;
   const HighsInt num_col = cost.size();
   if (num_col <= 0) return;
   const HighsInt integrality_size = HighsInt(integrality.size());
   const bool has_integrality = integrality_size > 0;
   double bound_scale_value = std::pow(2, user_bound_scale);
-  double cost_scale_value = std::pow(2, user_cost_scale);
+  double objective_scale_value = std::pow(2, user_objective_scale);
   assert(!has_integrality || integrality_size >= num_col);
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     double value = cost[iCol];
     if (has_integrality && integrality[iCol] != HighsVarType::kContinuous)
       value *= bound_scale_value;
-    value *= cost_scale_value;
+    value *= objective_scale_value;
     if (std::abs(value) > data.infinite_cost) data.num_infinite_costs++;
     if (apply) cost[iCol] = value;
   }
@@ -3666,13 +3666,13 @@ void initialiseUserScaleData(const HighsOptions& options,
                              options.large_matrix_value);
 }
 
-void HighsUserScaleData::initialise(const HighsInt& user_cost_scale_,
+void HighsUserScaleData::initialise(const HighsInt& user_objective_scale_,
                                     const HighsInt& user_bound_scale_,
                                     const double& infinite_cost_,
                                     const double& infinite_bound_,
                                     const double& small_matrix_value_,
                                     const double& large_matrix_value_) {
-  this->user_cost_scale = user_cost_scale_;
+  this->user_objective_scale = user_objective_scale_;
   this->user_bound_scale = user_bound_scale_;
   this->infinite_cost = infinite_cost_;
   this->infinite_bound = infinite_bound_;
@@ -3684,7 +3684,7 @@ void HighsUserScaleData::initialise(const HighsInt& user_cost_scale_,
   this->num_infinite_row_bounds = 0;
   this->num_small_matrix_values = 0;
   this->num_large_matrix_values = 0;
-  this->suggested_user_cost_scale = 0;
+  this->suggested_user_objective_scale = 0;
   this->suggested_user_bound_scale = 0;
   this->applied = false;
 }
@@ -3695,15 +3695,15 @@ bool HighsUserScaleData::scaleError(std::string& message) const {
           this->num_large_matrix_values ==
       0)
     return false;
-  assert(this->user_cost_scale != 0 || this->user_bound_scale != 0);
+  assert(this->user_objective_scale != 0 || this->user_bound_scale != 0);
   std::stringstream ss;
   ss.str(std::string());
   ss << "User scaling of";
-  if (this->user_cost_scale != 0) {
-    ss << " 2**(" << this->user_cost_scale << ") for costs";
+  if (this->user_objective_scale != 0) {
+    ss << " 2**(" << this->user_objective_scale << ") for costs";
   }
   if (this->user_bound_scale != 0) {
-    if (this->user_cost_scale != 0) ss << " and";
+    if (this->user_objective_scale != 0) ss << " and";
     ss << " 2**(" << this->user_bound_scale << ") for bounds";
   }
   ss << " yields";

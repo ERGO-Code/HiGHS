@@ -946,7 +946,7 @@ HighsStatus Highs::run() {
   HighsUserScaleData user_scale_data;
   initialiseUserScaleData(this->options_, user_scale_data);
   const bool user_scaling =
-      user_scale_data.user_cost_scale || user_scale_data.user_bound_scale;
+      user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
   if (user_scaling) {
     if (this->userScaleModel(user_scale_data) == HighsStatus::kError)
       return HighsStatus::kError;
@@ -958,8 +958,10 @@ HighsStatus Highs::run() {
     this->options_.user_bound_scale = 0;
   }
 
-  // Assess whether to warn the user about excessive bounds and costs
-  assessExcessiveCostBoundScaling(this->options_.log_options,
+  // Determine coefficient ranges and possibly warn the user about
+  // excessive values, obtaining suggested values for user_objective_scale
+  // and user_bound_scale
+  assessExcessiveObjectiveBoundScaling(this->options_.log_options,
 			 this->model_,
 			 user_scale_data);
 
@@ -986,7 +988,7 @@ HighsStatus Highs::run() {
     // Unscale the incumbent model and solution
     //
     // Flip the scaling sign
-    user_scale_data.user_cost_scale *= -1;
+    user_scale_data.user_objective_scale *= -1;
     user_scale_data.user_bound_scale *= -1;
     HighsStatus unscale_status = this->userScaleModel(user_scale_data);
     if (unscale_status == HighsStatus::kError) {
@@ -999,7 +1001,7 @@ HighsStatus Highs::run() {
     unscale_status = this->userScaleSolution(user_scale_data, update_kkt);
     // Restore the user scale values, remembering that they've been
     // negated to undo user scaling
-    this->options_.user_cost_scale = -user_scale_data.user_cost_scale;
+    this->options_.user_cost_scale = -user_scale_data.user_objective_scale;
     this->options_.user_bound_scale = -user_scale_data.user_bound_scale;
     // Indicate that the scaling has not been applied
     user_scale_data.applied = false;
@@ -2010,16 +2012,16 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
                                 ill_conditioning_bound);
 }
 
-HighsStatus Highs::getCostBoundScaling(HighsInt& suggested_cost_scale,
+HighsStatus Highs::getCostBoundScaling(HighsInt& suggested_objective_scale,
 				       HighsInt& suggested_bound_scale) {
   this->logHeader();
   HighsUserScaleData data;
   initialiseUserScaleData(this->options_, data);
-  assessExcessiveCostBoundScaling(this->options_.log_options, this->model_, data);
-  suggested_cost_scale = data.suggested_user_cost_scale;
+  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_, data);
+  suggested_objective_scale = data.suggested_user_objective_scale;
   suggested_bound_scale = data.suggested_user_bound_scale;
   printf("Highs::getCostBoundScaling suggested cost / bound scale values of %d / %d\n",
-	 int(suggested_cost_scale), int(suggested_bound_scale));
+	 int(suggested_objective_scale), int(suggested_bound_scale));
   return HighsStatus::kOk;
 }
 

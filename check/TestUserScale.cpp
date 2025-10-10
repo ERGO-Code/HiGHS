@@ -116,3 +116,91 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+HighsLp lp0(const double cost, const double bound) {
+  // This MIP is unbounded and causes assert in presolve!
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {cost, -2*cost};
+  lp.col_lower_ = {0, 1e-8};
+  lp.col_upper_ = {bound, bound};
+  lp.row_lower_ = {-kHighsInf, bound};
+  lp.row_upper_ = {bound, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, -1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  return lp;
+}
+
+HighsLp lp1(const double cost, const double bound) {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-cost, 2*cost};
+  lp.col_lower_ = {0, 1e-8};
+  lp.col_upper_ = {bound, bound};
+  lp.row_lower_ = {-kHighsInf, bound};
+  lp.row_upper_ = {bound, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, -1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  return lp;
+}
+
+HighsHessian hessian(const double value) {
+  HighsHessian hessian;
+  hessian.dim_ = 2;
+  hessian.start_ = {0, 1, 2};
+  hessian.index_ = {0, 1};
+  hessian.value_ = {value, 10*value};
+  return hessian;
+}
+
+TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
+    Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  //  highs.setOptionValue("output_flag", dev_run);
+  // Preolve on triggers assert
+  const bool expose_presolve_bug = false;
+  if (expose_presolve_bug) {
+    highs.setOptionValue("presolve", kHighsOffString);
+    highs.setOptionValue("presolve_reductions", 0);
+    HighsLp lp = lp0(1.0, kHighsInf);
+    highs.passModel(lp);
+    highs.run();
+  }
+
+  const bool mip_test = false;
+  if (mip_test) {
+    HighsLp lp = lp1(1.0, 1.0);
+    highs.passModel(lp);
+    HighsInt suggested_cost_scale;
+    HighsInt suggested_bound_scale;
+    highs.getCostBoundScaling(suggested_cost_scale, suggested_bound_scale);
+    highs.run();
+    highs.writeSolution("", 1);
+  }
+
+  const bool qp_test = true;
+  if (qp_test) {
+    HighsModel model;
+    model.lp_ = lp1(1.0, 1.0);
+    model.lp_.integrality_.clear();
+    model.hessian_ = hessian(1.0);
+    highs.passModel(model);
+    highs.writeModel("qp.mps");
+    HighsInt suggested_cost_scale;
+    HighsInt suggested_bound_scale;
+    highs.getCostBoundScaling(suggested_cost_scale, suggested_bound_scale);
+    highs.run();
+    highs.writeSolution("", 1);
+  }
+
+  highs.resetGlobalScheduler(true);
+
+}
+

@@ -578,7 +578,7 @@ class Highs {
   /**
    * @brief Get the suggested cost and bound scaling for the incumbent model
    */
-  HighsStatus getCostBoundScaling(HighsInt& suggested_cost_scale,
+  HighsStatus getCostBoundScaling(HighsInt& suggested_objective_scale,
 				  HighsInt& suggested_bound_scale);
 
   /**

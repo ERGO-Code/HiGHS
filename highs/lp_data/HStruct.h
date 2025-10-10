@@ -184,7 +184,7 @@ struct HighsSimplexStats {
 };
 
 struct HighsUserScaleData {
-  HighsInt user_cost_scale;
+  HighsInt user_objective_scale;
   HighsInt user_bound_scale;
   double infinite_cost;
   double infinite_bound;
@@ -196,10 +196,10 @@ struct HighsUserScaleData {
   HighsInt num_infinite_row_bounds;
   HighsInt num_small_matrix_values;
   HighsInt num_large_matrix_values;
-  HighsInt suggested_user_cost_scale;
+  HighsInt suggested_user_objective_scale;
   HighsInt suggested_user_bound_scale;
   bool applied;
-  void initialise(const HighsInt& user_cost_scale_,
+  void initialise(const HighsInt& user_objective_scale_,
                   const HighsInt& user_bound_scale_,
                   const double& infinite_cost_, const double& infinite_bound_,
                   const double& small_matrix_value_,
