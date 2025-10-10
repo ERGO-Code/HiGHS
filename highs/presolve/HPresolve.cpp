@@ -5202,64 +5202,61 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
   if (worstCaseLowerBound != nullptr) *worstCaseLowerBound = -kHighsInf;
   if (worstCaseUpperBound != nullptr) *worstCaseUpperBound = kHighsInf;
 
+  // lambda for actual bound computation
+  auto computeBound = [&](const nonZeros& triplet, double rhs,
+                          HighsInt direction, bool isWorstCaseBound) {
+    HighsCDouble residual;
+    if ((direction > 0 && !isWorstCaseBound) ||
+        (direction < 0 && isWorstCaseBound)) {
+      residual = isWorstCaseBound ? impliedRowBounds.getResidualSumLower(
+                                        triplet.row, col, triplet.jval,
+                                        boundCol, triplet.kval, boundColValue)
+                                  : impliedRowBounds.getResidualSumLowerOrig(
+                                        triplet.row, col, triplet.jval,
+                                        boundCol, triplet.kval, boundColValue);
+      if (residual == -kHighsInf) return std::copysign(kHighsInf, triplet.jval);
+    } else {
+      residual = isWorstCaseBound ? impliedRowBounds.getResidualSumUpper(
+                                        triplet.row, col, triplet.jval,
+                                        boundCol, triplet.kval, boundColValue)
+                                  : impliedRowBounds.getResidualSumUpperOrig(
+                                        triplet.row, col, triplet.jval,
+                                        boundCol, triplet.kval, boundColValue);
+      if (residual == kHighsInf) return -std::copysign(kHighsInf, triplet.jval);
+    }
+    return static_cast<double>((static_cast<HighsCDouble>(rhs) - residual) /
+                               triplet.jval);
+  };
+
+  // lambda for updating tightest bounds
+  auto updateBounds = [&](const nonZeros& triplet, double rhs,
+                          HighsInt direction) {
+    if (direction * rhs == kHighsInf) return;
+    if (direction * triplet.jval < 0) {
+      // lower bounds
+      if (lowerBound != nullptr)
+        *lowerBound =
+            std::max(*lowerBound, computeBound(triplet, rhs, direction, false));
+      if (worstCaseLowerBound != nullptr)
+        *worstCaseLowerBound = std::max(
+            *worstCaseLowerBound, computeBound(triplet, rhs, direction, true));
+    } else {
+      // upper bounds
+      if (upperBound != nullptr)
+        *upperBound =
+            std::min(*upperBound, computeBound(triplet, rhs, direction, false));
+      if (worstCaseUpperBound != nullptr)
+        *worstCaseUpperBound = std::min(
+            *worstCaseUpperBound, computeBound(triplet, rhs, direction, true));
+    }
+  };
+
   // compute bounds
   for (const auto& triplet : nzs) {
-    // lambda for actual bound computation
-    auto computeBound = [&](double rhs, double val, HighsInt direction,
-                            bool isWorstCaseBound) {
-      HighsCDouble residual;
-      if ((direction > 0 && !isWorstCaseBound) ||
-          (direction < 0 && isWorstCaseBound)) {
-        residual = isWorstCaseBound
-                       ? impliedRowBounds.getResidualSumLower(
-                             triplet.row, col, triplet.jval, boundCol,
-                             triplet.kval, boundColValue)
-                       : impliedRowBounds.getResidualSumLowerOrig(
-                             triplet.row, col, triplet.jval, boundCol,
-                             triplet.kval, boundColValue);
-        if (residual == -kHighsInf) return std::copysign(kHighsInf, val);
-      } else {
-        residual = isWorstCaseBound
-                       ? impliedRowBounds.getResidualSumUpper(
-                             triplet.row, col, triplet.jval, boundCol,
-                             triplet.kval, boundColValue)
-                       : impliedRowBounds.getResidualSumUpperOrig(
-                             triplet.row, col, triplet.jval, boundCol,
-                             triplet.kval, boundColValue);
-        if (residual == kHighsInf) return -std::copysign(kHighsInf, val);
-      }
-      return static_cast<double>((static_cast<HighsCDouble>(rhs) - residual) /
-                                 val);
-    };
-
-    // lambda for updating tightest bounds
-    auto updateBounds = [&](double rhs, HighsInt direction) {
-      if (direction * rhs == kHighsInf) return;
-      if (direction * triplet.jval < 0) {
-        // lower bounds
-        if (lowerBound != nullptr)
-          *lowerBound = std::max(
-              *lowerBound, computeBound(rhs, triplet.jval, direction, false));
-        if (worstCaseLowerBound != nullptr)
-          *worstCaseLowerBound =
-              std::max(*worstCaseLowerBound,
-                       computeBound(rhs, triplet.jval, direction, true));
-      } else {
-        // upper bounds
-        if (upperBound != nullptr)
-          *upperBound = std::min(
-              *upperBound, computeBound(rhs, triplet.jval, direction, false));
-        if (worstCaseUpperBound != nullptr)
-          *worstCaseUpperBound =
-              std::min(*worstCaseUpperBound,
-                       computeBound(rhs, triplet.jval, direction, true));
-      }
-    };
-
     // compute bounds using right-hand side (direction = 1) and left-hand side
     // (direction = -1)
-    updateBounds(model->row_upper_[triplet.row], HighsInt{1});
-    updateBounds(model->row_lower_[triplet.row], HighsInt{-1});
+    updateBounds(triplet, model->row_upper_[triplet.row], HighsInt{1});
+    updateBounds(triplet, model->row_lower_[triplet.row], HighsInt{-1});
   }
 }
 
