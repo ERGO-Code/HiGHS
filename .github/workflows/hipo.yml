@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: |
           vcpkg install metis
-          vcpkg install openblas
+          vcpkg install openblas[threads]
           cmake -E make_directory build
           cd build
           cmake `
