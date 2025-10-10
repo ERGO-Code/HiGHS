@@ -8,7 +8,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -505,12 +505,16 @@ static void runMipUserSolutionTest(
   assert(model.size() == require_origin.size());
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("parallel", "off");
+  highs.setOptionValue("threads", 1);
+  highs.setOptionValue("log_dev_level", 5);
   highs.setOptionValue("mip_rel_gap", 0);
   HighsInt from_model = 0;
   HighsInt to_model = HighsInt(model.size());
   for (HighsInt iModel = from_model; iModel < to_model; iModel++) {
     const std::string filename =
         std::string(HIGHS_DIR) + "/check/instances/" + model[iModel] + ".mps";
+    std::cout << filename << std::endl;
     highs.readModel(filename);
     highs.run();
     std::vector<double> optimal_solution = highs.getSolution().col_value;
