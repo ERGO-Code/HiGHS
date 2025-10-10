@@ -105,36 +105,44 @@ Int Analyse::getPermutation() {
   }
 
   // call Metis
-  /*
-    Int options[METIS_NOPTIONS];
-    METIS_SetDefaultOptions(options);
-    // fix seed of rng inside Metis, to make it deterministic (?)
-    options[METIS_OPTION_SEED] = 42;
 
-    // set logging of Metis depending on debug level
-    options[METIS_OPTION_DBGLVL] = 0;
-    // if (log_->debug(2))
-    options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN |
-                                   METIS_DBG_REFINE | METIS_DBG_IPART |
-                                   METIS_DBG_MOVEINFO | METIS_DBG_SEPINFO |
-                                   METIS_DBG_CONNINFO | METIS_DBG_CONTIGINFO;
+  Int options[METIS_NOPTIONS];
+  METIS_SetDefaultOptions(options);
+  // fix seed of rng inside Metis, to make it deterministic (?)
+  options[METIS_OPTION_SEED] = 42;
 
-    options[METIS_OPTION_NUMBERING] = 0;
+  // set logging of Metis depending on debug level
+  options[METIS_OPTION_DBGLVL] = 0;
+  // if (log_->debug(2))
+  options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN |
+                                 METIS_DBG_REFINE | METIS_DBG_IPART |
+                                 METIS_DBG_MOVEINFO | METIS_DBG_SEPINFO |
+                                 METIS_DBG_CONNINFO | METIS_DBG_CONTIGINFO;
 
-    if (log_) log_->printDevInfo("Running Metis\n");
+  options[METIS_OPTION_NUMBERING] = 0;
 
-    Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
-                              options, perm_.data(), iperm_.data());
-    if (log_) log_->printDevInfo("Metis done\n");
-    if (status != METIS_OK) {
-      if (log_) log_->printDevInfo("Error with Metis\n");
-      return kRetMetisError;
-    }
-  */
+  if (log_) log_->printDevInfo("Running Metis\n");
 
-  for (Int i = 0; i < n_; ++i) {
-    perm_[i] = i;
-    iperm_[i] = i;
+  if (n_ < 100) {
+    printf("%d\n", n_);
+    for (Int i : temp_ptr) printf("%d ", i);
+    printf("\n");
+    for (Int i : temp_rows) printf("%d ", i);
+    printf("\n");
+    for (Int i = 0; i < METIS_NOPTIONS; ++i) printf("%d ", options[i]);
+    printf("\n");
+    for (Int i : perm_) printf("%d ", i);
+    printf("\n");
+    for (Int i : iperm_) printf("%d ", i);
+    printf("\n");
+  }
+
+  Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
+                            options, perm_.data(), iperm_.data());
+  if (log_) log_->printDevInfo("Metis done\n");
+  if (status != METIS_OK) {
+    if (log_) log_->printDevInfo("Error with Metis\n");
+    return kRetMetisError;
   }
 
   return kRetOk;
