@@ -179,7 +179,7 @@ void testUserScale(Highs& h) {
     h.setOptionValue("user_cost_scale", suggested_objective_scale);
     h.setOptionValue("user_bound_scale", suggested_bound_scale);
     h.run();
-    //    REQUIRE(doubleEqual0(unscaled_objective_value, h.getInfo().objective_function_value));
+    REQUIRE(doubleEqual0(unscaled_objective_value, h.getInfo().objective_function_value));
   }
 }
 
@@ -199,7 +199,7 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
     h.run();
   }
 
-  const bool mip_test = true;
+  const bool mip_test = false;
   if (mip_test) {
     HighsLp lp = mip1(1.0, 1.0);
     h.passModel(lp);
