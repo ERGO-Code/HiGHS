@@ -42,9 +42,9 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
     REQUIRE(highs.setOptionValue("user_bound_scale", user_bound_scale) ==
             HighsStatus::kOk);
 
-    HighsInt user_cost_scale = 4;
-    double user_cost_scale_value = std::pow(2, user_cost_scale);
-    REQUIRE(highs.setOptionValue("user_cost_scale", user_cost_scale) ==
+    HighsInt user_objective_scale = 4;
+    double user_objective_scale_value = std::pow(2, user_objective_scale);
+    REQUIRE(highs.setOptionValue("user_cost_scale", user_objective_scale) ==
             HighsStatus::kOk);
 
     highs.run();
@@ -80,26 +80,26 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 2, 4};
 
-  HighsInt suggested_cost_scale;
+  HighsInt suggested_objective_scale;
   HighsInt suggested_bound_scale;
-  highs.getCostBoundScaling(suggested_cost_scale, suggested_bound_scale);
+  highs.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
 
   highs.passModel(lp);
 
-  highs.getCostBoundScaling(suggested_cost_scale, suggested_bound_scale);
+  highs.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
 
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
 
-  REQUIRE(highs.setOptionValue("user_cost_scale", -30) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("user_objective_scale", -30) == HighsStatus::kOk);
   highs.clearSolver();
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(solution.col_value[0] == 0);
   REQUIRE(solution.col_value[1] == 0);
 
-  REQUIRE(highs.setOptionValue("user_cost_scale", 0) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("user_objective_scale", 0) == HighsStatus::kOk);
 
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
@@ -110,7 +110,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   highs.readModel(filename);
 
-  REQUIRE(highs.setOptionValue("user_cost_scale", -30) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("user_objective_scale", -30) == HighsStatus::kOk);
 
   highs.run();
 
@@ -118,7 +118,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
 }
 
 HighsLp lp0(const double cost, const double bound) {
-  // This MIP is unbounded and causes assert in presolve!
+  // This LP is unbounded and causes assert in presolve!
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
@@ -130,6 +130,11 @@ HighsLp lp0(const double cost, const double bound) {
   lp.a_matrix_.start_ = {0, 2, 4};
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 1, -1};
+  return lp;
+}
+
+HighsLp mip0(const double cost, const double bound) {
+  HighsLp lp = lp0(cost, bound);
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
   return lp;
 }
@@ -146,6 +151,11 @@ HighsLp lp1(const double cost, const double bound) {
   lp.a_matrix_.start_ = {0, 2, 4};
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 1, -1};
+  return lp;
+}
+
+HighsLp mip1(const double cost, const double bound) {
+  HighsLp lp = lp1(cost, bound);
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
   return lp;
 }
@@ -159,48 +169,53 @@ HighsHessian hessian(const double value) {
   return hessian;
 }
 
+void testUserScale(Highs& h) {
+  h.run();
+  double unscaled_objective_value = h.getInfo().objective_function_value;
+  HighsInt suggested_objective_scale;
+  HighsInt suggested_bound_scale;
+  h.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
+  if (suggested_objective_scale || suggested_bound_scale) {
+    h.setOptionValue("user_cost_scale", suggested_objective_scale);
+    h.setOptionValue("user_bound_scale", suggested_bound_scale);
+    h.run();
+    REQUIRE(doubleEqual0(unscaled_objective_value, h.getInfo().objective_function_value));
+  }
+}
+
+
 TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
-    Highs highs;
-  const HighsInfo& info = highs.getInfo();
-  const HighsSolution& solution = highs.getSolution();
-  //  highs.setOptionValue("output_flag", dev_run);
+  Highs h;
+  const HighsInfo& info = h.getInfo();
+  const HighsSolution& solution = h.getSolution();
+  //  h.setOptionValue("output_flag", dev_run);
   // Preolve on triggers assert
   const bool expose_presolve_bug = false;
   if (expose_presolve_bug) {
-    highs.setOptionValue("presolve", kHighsOffString);
-    highs.setOptionValue("presolve_reductions", 0);
-    HighsLp lp = lp0(1.0, kHighsInf);
-    highs.passModel(lp);
-    highs.run();
+    h.setOptionValue("presolve", kHighsOffString);
+    h.setOptionValue("presolve_reductions", 0);
+    HighsLp lp = mip0(1.0, kHighsInf);
+    h.passModel(lp);
+    h.run();
   }
 
-  const bool mip_test = false;
+  const bool mip_test = true;
   if (mip_test) {
-    HighsLp lp = lp1(1.0, 1.0);
-    highs.passModel(lp);
-    HighsInt suggested_cost_scale;
-    HighsInt suggested_bound_scale;
-    highs.getCostBoundScaling(suggested_cost_scale, suggested_bound_scale);
-    highs.run();
-    highs.writeSolution("", 1);
+    HighsLp lp = mip1(1.0, 1.0);
+    h.passModel(lp);
+    testUserScale(h);
   }
 
   const bool qp_test = true;
   if (qp_test) {
     HighsModel model;
-    model.lp_ = lp1(1.0, 1.0);
-    model.lp_.integrality_.clear();
-    model.hessian_ = hessian(1.0);
-    highs.passModel(model);
-    highs.writeModel("qp.mps");
-    HighsInt suggested_cost_scale;
-    HighsInt suggested_bound_scale;
-    highs.getCostBoundScaling(suggested_cost_scale, suggested_bound_scale);
-    highs.run();
-    highs.writeSolution("", 1);
+    model.lp_ = lp1(1e-8, 1.0);
+    model.hessian_ = hessian(1e-8);
+    h.passModel(model);
+    testUserScale(h);
   }
 
-  highs.resetGlobalScheduler(true);
+  h.resetGlobalScheduler(true);
 
 }
 

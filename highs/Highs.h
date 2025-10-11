@@ -576,10 +576,10 @@ class Highs {
                                  const double ill_conditioning_bound = 1e-4);
 
   /**
-   * @brief Get the suggested cost and bound scaling for the incumbent model
+   * @brief Get the suggested objective and bound scaling for the incumbent model
    */
-  HighsStatus getCostBoundScaling(HighsInt& suggested_objective_scale,
-				  HighsInt& suggested_bound_scale);
+  HighsStatus getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
+				       HighsInt& suggested_bound_scale);
 
   /**
    * @brief Get (any) irreducible infeasible subsystem (IIS)
