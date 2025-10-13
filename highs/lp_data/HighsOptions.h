@@ -785,7 +785,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int =
         new OptionRecordInt(kRandomSeedString, "Random seed used in HiGHS",
-                            advanced, &random_seed, 0, 2, kHighsIInf);
+                            advanced, &random_seed, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
