@@ -338,8 +338,7 @@ class HPresolve {
 
   void computeColBounds(HighsInt col, HighsInt boundCol = -1,
                         double boundColValue = -kHighsInf,
-                        bool boundColCoeffsMustHaveSameSign = false,
-                        bool boundColCoeffsMustHaveOppositeSign = false,
+                        HighsInt boundColCoeffPattern = 0,
                         double* lowerBound = nullptr,
                         double* upperBound = nullptr,
                         double* worstCaseLowerBound = nullptr,
@@ -392,25 +391,21 @@ class HPresolve {
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  double computeImpliedLowerBound(
-      HighsInt col, HighsInt boundCol = -1, double boundColValue = kHighsInf,
-      bool boundColCoeffsMustHaveSameSign = false,
-      bool boundColCoeffsMustHaveOppositeSign = false);
+  double computeImpliedLowerBound(HighsInt col, HighsInt boundCol = -1,
+                                  double boundColValue = kHighsInf,
+                                  HighsInt boundColCoeffPattern = 0);
 
-  double computeImpliedUpperBound(
-      HighsInt col, HighsInt boundCol = -1, double boundColValue = kHighsInf,
-      bool boundColCoeffsMustHaveSameSign = false,
-      bool boundColCoeffsMustHaveOppositeSign = false);
+  double computeImpliedUpperBound(HighsInt col, HighsInt boundCol = -1,
+                                  double boundColValue = kHighsInf,
+                                  HighsInt boundColCoeffPattern = 0);
 
-  double computeWorstCaseLowerBound(
-      HighsInt col, HighsInt boundCol = -1, double boundColValue = kHighsInf,
-      bool boundColCoeffsMustHaveSameSign = false,
-      bool boundColCoeffsMustHaveOppositeSign = false);
+  double computeWorstCaseLowerBound(HighsInt col, HighsInt boundCol = -1,
+                                    double boundColValue = kHighsInf,
+                                    HighsInt boundColCoeffPattern = 0);
 
-  double computeWorstCaseUpperBound(
-      HighsInt col, HighsInt boundCol = -1, double boundColValue = kHighsInf,
-      bool boundColCoeffsMustHaveSameSign = false,
-      bool boundColCoeffsMustHaveOppositeSign = false);
+  double computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol = -1,
+                                    double boundColValue = kHighsInf,
+                                    HighsInt boundColCoeffPattern = 0);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
