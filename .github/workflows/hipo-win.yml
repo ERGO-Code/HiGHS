@@ -41,9 +41,10 @@ jobs:
       - name: Install METIS
         shell: bash
         run: |
+          INSTALLS_PREFIX=$(cygpath "${{ runner.workspace }}")/installs
           cd METIS
           pwd
-          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=$INSTALLS_PREFIX
           cmake --build build --parallel --config Release
           cmake --install build --config Release
 
@@ -57,10 +58,11 @@ jobs:
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
+          METIS_ROOT=$(cygpath "${{ runner.workspace }}")/installs
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
           -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
+          -DMETIS_ROOT=$METIS_ROOT
 
       - name: Build 
         shell: bash
@@ -117,9 +119,10 @@ jobs:
       - name: Install METIS
         shell: bash
         run: |
+          INSTALLS_PREFIX=$(cygpath "${{ runner.workspace }}")/installs
           cd METIS
           pwd
-          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=$INSTALLS_PREFIX
           cmake --build build --parallel --config Debug
           cmake --install build --config Debug
 
@@ -133,10 +136,11 @@ jobs:
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
+          METIS_ROOT=$(cygpath "${{ runner.workspace }}")/installs
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
           -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
+          -DMETIS_ROOT=$METIS_ROOT
 
       - name: Build 
         shell: bash
@@ -272,9 +276,10 @@ jobs:
       - name: Install METIS
         shell: bash
         run: |
+          INSTALLS_PREFIX=$(cygpath "${{ runner.workspace }}")/installs
           cd METIS
           pwd
-          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=$INSTALLS_PREFIX
           cmake --build build --parallel --config Debug
           cmake --install build --config Debug
 
@@ -288,11 +293,12 @@ jobs:
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
+          METIS_ROOT=$(cygpath "${{ runner.workspace }}")/installs
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
           -DALL_TESTS=ON \
           -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
+          -DMETIS_ROOT=$METIS_ROOT
 
       - name: Build 
         shell: bash

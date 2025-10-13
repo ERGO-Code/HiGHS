@@ -1,10 +1,32 @@
 # BLAS
+option(BLAS_ROOT "Root directory of BLAS or OpenBLAS" "")
+message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
 
-find_package(BLAS REQUIRED)
+if (WIN32)
 
-if(BLAS_FOUND)
-    message(STATUS "Using BLAS library: ${BLAS_LIBRARIES}")
-    message(STATUS "BLAS include dirs: ${BLAS_INCLUDE_DIRS}")
+    find_package(OpenBLAS CONFIG REQUIRED) 
+    message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
+
+elseif(NOT APPLE)
+    # LINUX
+    find_library(OPENBLAS_LIB 
+        NAMES openblas 
+        HINTS "${BLAS_ROOT}/lib")
+
+    if(OPENBLAS_LIB)
+        message("Found OpenBLAS library at ${OPENBLAS_LIB}")
+
+    else(OPENBLAS_LIB)
+        find_library(BLAS_LIB 
+            NAMES blas HINTS 
+            "${BLAS_ROOT}/lib")
+
+        if(NOT BLAS_LIB)
+            message(FATAL_ERROR "No BLAS library found")
+        endif(NOT BLAS_LIB)
+        message("Found BLAS library at ${BLAS_LIB}")
+    endif(OPENBLAS_LIB)
+
 endif()
 
 # METIS
