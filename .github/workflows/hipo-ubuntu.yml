@@ -13,18 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
@@ -33,34 +26,13 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      # - name: Check installs 
-      #   working-directory: ${{runner.workspace}}
-      #   run: |
-      #     cd installs
-      #     ls 
-      #     ls lib
-
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          cd lib
-          ln libGKlib.so.0 libGKlib.so
-          ls 
-
       - name: Install METIS
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
-          make
-          make install
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Release
+          cmake install --build
 
       # no default blas available on runner
 
@@ -85,8 +57,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
-          -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
       - name: Build 
         working-directory: ${{runner.workspace}}/build
@@ -112,18 +83,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
@@ -132,28 +96,14 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          cd lib
-          ln libGKlib.so.0 libGKlib.so
-          ls 
-
       - name: Install METIS
         shell: bash
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
-          make
-          make install
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Debug
+          cmake install --build
 
       - name: Cache APT packages
         uses: actions/cache@v4
@@ -177,7 +127,6 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs \
           -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build 
@@ -204,18 +153,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
@@ -224,34 +166,13 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      # - name: Check installs 
-      #   working-directory: ${{runner.workspace}}
-      #   run: |
-      #     cd installs
-      #     ls 
-      #     ls lib
-
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          cd lib
-          ln libGKlib.so.0 libGKlib.so
-          ls 
-
       - name: Install METIS
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
-          make
-          make install
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Release
+          cmake install --build
 
       # no default blas available on runner
 
@@ -276,8 +197,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DALL_TESTS=ON \
-          -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs
+          -DMETIS_ROOT=${{runner.workspace}}/installs 
 
       - name: Build 
         working-directory: ${{runner.workspace}}/build
@@ -303,18 +223,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
@@ -323,28 +236,13 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          cd lib
-          ln libGKlib.so.0 libGKlib.so
-          ls 
-
       - name: Install METIS
-        shell: bash
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
-          make
-          make install
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Debug
+          cmake install --build
 
       - name: Cache APT packages
         uses: actions/cache@v4
@@ -368,7 +266,6 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DALL_TESTS=ON \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs \
           -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build 
