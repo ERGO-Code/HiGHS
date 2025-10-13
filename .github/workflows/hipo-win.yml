@@ -193,9 +193,10 @@ jobs:
       - name: Install METIS
         shell: bash
         run: |
+          INSTALLS_PREFIX=$(cygpath "${{ runner.workspace }}")/installs
           cd METIS
           pwd
-          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=$INSTALLS_PREFIX
           cmake --build build --parallel --config Release
           cmake --install build --config Release
 
