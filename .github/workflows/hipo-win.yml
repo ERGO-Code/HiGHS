@@ -209,11 +209,12 @@ jobs:
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
+          METIS_ROOT=$(cygpath "${{ runner.workspace }}")/installs
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
           -DALL_TESTS=ON \
           -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
+          -DMETIS_ROOT=METIS_ROOT
 
       - name: Build 
         shell: bash
