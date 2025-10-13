@@ -42,7 +42,7 @@ jobs:
         run: |
           cd METIS
           pwd
-          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake -S. -B build -DGKLIB_PATH=$GITHUB.WORKSPACE }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
           cmake --build build --parallel --config Release
           cmake --install build
 
@@ -117,7 +117,7 @@ jobs:
         run: |
           cd METIS
           pwd
-          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
           cmake --build build --parallel --config Debug
           cmake --install build
 
@@ -192,7 +192,7 @@ jobs:
         run: |
           cd METIS
           pwd
-          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
           cmake --build build --parallel --config Release
           cmake --install build
 
@@ -268,7 +268,7 @@ jobs:
         run: |
           cd METIS
           pwd
-          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
           cmake --build build --parallel --config Debug
           cmake --install build
 
