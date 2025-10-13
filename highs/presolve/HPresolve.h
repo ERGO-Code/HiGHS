@@ -338,6 +338,8 @@ class HPresolve {
 
   void computeColBounds(HighsInt col, HighsInt boundCol = -1,
                         double boundColValue = -kHighsInf,
+                        bool boundColCoeffsMustHaveSameSign = false,
+                        bool boundColCoeffsMustHaveOppositeSign = false,
                         double* lowerBound = nullptr,
                         double* upperBound = nullptr,
                         double* worstCaseLowerBound = nullptr,
@@ -390,17 +392,25 @@ class HPresolve {
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  double computeImpliedLowerBound(HighsInt col, HighsInt boundCol = -1,
-                                  double boundColValue = kHighsInf);
+  double computeImpliedLowerBound(
+      HighsInt col, HighsInt boundCol = -1, double boundColValue = kHighsInf,
+      bool boundColCoeffsMustHaveSameSign = false,
+      bool boundColCoeffsMustHaveOppositeSign = false);
 
-  double computeImpliedUpperBound(HighsInt col, HighsInt boundCol = -1,
-                                  double boundColValue = kHighsInf);
+  double computeImpliedUpperBound(
+      HighsInt col, HighsInt boundCol = -1, double boundColValue = kHighsInf,
+      bool boundColCoeffsMustHaveSameSign = false,
+      bool boundColCoeffsMustHaveOppositeSign = false);
 
-  double computeWorstCaseLowerBound(HighsInt col, HighsInt boundCol = -1,
-                                    double boundColValue = kHighsInf);
+  double computeWorstCaseLowerBound(
+      HighsInt col, HighsInt boundCol = -1, double boundColValue = kHighsInf,
+      bool boundColCoeffsMustHaveSameSign = false,
+      bool boundColCoeffsMustHaveOppositeSign = false);
 
-  double computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol = -1,
-                                    double boundColValue = kHighsInf);
+  double computeWorstCaseUpperBound(
+      HighsInt col, HighsInt boundCol = -1, double boundColValue = kHighsInf,
+      bool boundColCoeffsMustHaveSameSign = false,
+      bool boundColCoeffsMustHaveOppositeSign = false);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 

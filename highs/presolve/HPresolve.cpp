@@ -1233,7 +1233,9 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // lambda for tightening bounds
     auto tightenBounds = [&](HighsInt col, double colBound, HighsInt direction,
-                             HighsInt otherCol, double otherColBound) {
+                             HighsInt otherCol, double otherColBound,
+                             bool mustHaveOppositeCoeffSign) {
+      bool mustHaveSameCoeffSign = !mustHaveOppositeCoeffSign;
       // bound should be finite
       assert(std::abs(otherColBound) != kHighsInf);
       // return if variable is already fixed
@@ -1244,31 +1246,43 @@ HPresolve::Result HPresolve::dominatedColumns(
       // predictive bound analysis, see Theorem 3 from Gamrath et al.'s paper
       if (direction > 0) {
         // (i) x_j <= MINL^k_j(otherColBound)
-        upperBound = computeImpliedUpperBound(col, otherCol, otherColBound);
+        upperBound = computeImpliedUpperBound(col, otherCol, otherColBound,
+                                              mustHaveSameCoeffSign,
+                                              mustHaveOppositeCoeffSign);
         // (iii) x_j >= min{colBound, MAXL^k_j(otherColBound)}
         lowerBound = std::min(
-            colBound, computeImpliedLowerBound(col, otherCol, otherColBound));
+            colBound, computeImpliedLowerBound(col, otherCol, otherColBound,
+                                               mustHaveSameCoeffSign,
+                                               mustHaveOppositeCoeffSign));
         if (model->col_cost_[col] <= 0) {
           // (v) if c_j <= 0, then x_j >= min{colBound,
           //                                  MINU^k_j(otherColBound)}
-          lowerBound =
-              std::max(lowerBound,
-                       std::min(colBound, computeWorstCaseUpperBound(
-                                              col, otherCol, otherColBound)));
+          double worstCaseUpper = computeWorstCaseUpperBound(
+              col, otherCol, otherColBound, mustHaveSameCoeffSign,
+              mustHaveOppositeCoeffSign);
+          if (model->integrality_[col] != HighsVarType::kContinuous)
+            worstCaseUpper = std::floor(worstCaseUpper + primal_feastol);
+          lowerBound = std::max(lowerBound, std::min(colBound, worstCaseUpper));
         }
       } else {
         // (ii) x_k >= MAXL^j_k(otherColBound)
-        lowerBound = computeImpliedLowerBound(col, otherCol, otherColBound);
+        lowerBound = computeImpliedLowerBound(col, otherCol, otherColBound,
+                                              mustHaveSameCoeffSign,
+                                              mustHaveOppositeCoeffSign);
         // (iv) x_k <= max{colBound, MINL^j_k(otherColBound)}
         upperBound = std::max(
-            colBound, computeImpliedUpperBound(col, otherCol, otherColBound));
+            colBound, computeImpliedUpperBound(col, otherCol, otherColBound,
+                                               mustHaveSameCoeffSign,
+                                               mustHaveOppositeCoeffSign));
         if (model->col_cost_[col] >= 0) {
           // (vi) if c_k >= 0, then x_k <= max{colBound,
           //                                   MAXU^j_k(otherColBound)}
-          upperBound =
-              std::min(upperBound,
-                       std::max(colBound, computeWorstCaseLowerBound(
-                                              col, otherCol, otherColBound)));
+          double worstCaseLower = computeWorstCaseLowerBound(
+              col, otherCol, otherColBound, mustHaveSameCoeffSign,
+              mustHaveOppositeCoeffSign);
+          if (model->integrality_[col] != HighsVarType::kContinuous)
+            worstCaseLower = std::ceil(worstCaseLower - primal_feastol);
+          upperBound = std::min(upperBound, std::max(colBound, worstCaseLower));
         }
       }
       // update bounds
@@ -1321,13 +1335,9 @@ HPresolve::Result HPresolve::dominatedColumns(
            (isBinary(col) && mipsolver->mipdata_->cliquetable.numCliques(
                                  col, direction > 0 ? 1 : 0) > 0));
       // check whether predictive bound analysis can be performed. both
-      // variables need to have the same type.
+      // variables need be continuous.
       bool tryToStrengthenBounds =
-          (isDominatingBoundFinite || isDominatedBoundFinite) &&
-          ((model->integrality_[col] != HighsVarType::kContinuous &&
-            model->integrality_[k] != HighsVarType::kContinuous) ||
-           (model->integrality_[col] != HighsVarType::kInteger &&
-            model->integrality_[k] != HighsVarType::kInteger));
+          isDominatingBoundFinite || isDominatedBoundFinite;
       // check whether variable 'col' dominates variable 'k'; check already
       // known non-zeros in respective columns in advance to avoid
       // (potentially slow) element-wise comparison if possible.
@@ -1361,11 +1371,13 @@ HPresolve::Result HPresolve::dominatedColumns(
             // tighten bounds via predictive bound analysis, see Theorem 3
             // from Gamrath et al.'s paper
             if (isDominatedBoundFinite)
-              HPRESOLVE_CHECKED_CALL(tightenBounds(
-                  col, dominatingBound, direction, k, dominatedBound));
+              HPRESOLVE_CHECKED_CALL(tightenBounds(col, dominatingBound,
+                                                   direction, k, dominatedBound,
+                                                   direction != direction_k));
             if (!colDeleted[col] && isDominatingBoundFinite)
-              HPRESOLVE_CHECKED_CALL(tightenBounds(
-                  k, dominatedBound, -direction_k, col, dominatingBound));
+              HPRESOLVE_CHECKED_CALL(
+                  tightenBounds(k, dominatedBound, -direction_k, col,
+                                dominatingBound, direction != direction_k));
           }
         }
       }
@@ -4679,32 +4691,45 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   return Result::kOk;
 }
 
-double HPresolve::computeImpliedLowerBound(HighsInt col, HighsInt boundCol,
-                                           double boundColValue) {
+double HPresolve::computeImpliedLowerBound(
+    HighsInt col, HighsInt boundCol, double boundColValue,
+    bool boundColCoeffsMustHaveSameSign,
+    bool boundColCoeffsMustHaveOppositeSign) {
   double lowerBound;
-  computeColBounds(col, boundCol, boundColValue, &lowerBound);
+  computeColBounds(col, boundCol, boundColValue, boundColCoeffsMustHaveSameSign,
+                   boundColCoeffsMustHaveOppositeSign, &lowerBound);
   return lowerBound;
 }
 
-double HPresolve::computeImpliedUpperBound(HighsInt col, HighsInt boundCol,
-                                           double boundColValue) {
+double HPresolve::computeImpliedUpperBound(
+    HighsInt col, HighsInt boundCol, double boundColValue,
+    bool boundColCoeffsMustHaveSameSign,
+    bool boundColCoeffsMustHaveOppositeSign) {
   double upperBound;
-  computeColBounds(col, boundCol, boundColValue, nullptr, &upperBound);
+  computeColBounds(col, boundCol, boundColValue, boundColCoeffsMustHaveSameSign,
+                   boundColCoeffsMustHaveOppositeSign, nullptr, &upperBound);
   return upperBound;
 }
 
-double HPresolve::computeWorstCaseLowerBound(HighsInt col, HighsInt boundCol,
-                                             double boundColValue) {
+double HPresolve::computeWorstCaseLowerBound(
+    HighsInt col, HighsInt boundCol, double boundColValue,
+    bool boundColCoeffsMustHaveSameSign,
+    bool boundColCoeffsMustHaveOppositeSign) {
   double lowerBound;
-  computeColBounds(col, boundCol, boundColValue, nullptr, nullptr, &lowerBound);
+  computeColBounds(col, boundCol, boundColValue, boundColCoeffsMustHaveSameSign,
+                   boundColCoeffsMustHaveOppositeSign, nullptr, nullptr,
+                   &lowerBound);
   return lowerBound;
 }
 
-double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
-                                             double boundColValue) {
+double HPresolve::computeWorstCaseUpperBound(
+    HighsInt col, HighsInt boundCol, double boundColValue,
+    bool boundColCoeffsMustHaveSameSign,
+    bool boundColCoeffsMustHaveOppositeSign) {
   double upperBound;
-  computeColBounds(col, boundCol, boundColValue, nullptr, nullptr, nullptr,
-                   &upperBound);
+  computeColBounds(col, boundCol, boundColValue, boundColCoeffsMustHaveSameSign,
+                   boundColCoeffsMustHaveOppositeSign, nullptr, nullptr,
+                   nullptr, &upperBound);
   return upperBound;
 }
 
@@ -5132,13 +5157,17 @@ double HPresolve::problemSizeReduction() const {
 }
 
 void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
-                                 double boundColValue, double* lowerBound,
-                                 double* upperBound,
+                                 double boundColValue,
+                                 bool boundColCoeffsMustHaveSameSign,
+                                 bool boundColCoeffsMustHaveOppositeSign,
+                                 double* lowerBound, double* upperBound,
                                  double* worstCaseLowerBound,
                                  double* worstCaseUpperBound) {
   assert(!colDeleted[col]);
   assert(boundCol == -1 || !colDeleted[boundCol]);
   assert(col != boundCol);
+  assert(!boundColCoeffsMustHaveSameSign ||
+         !boundColCoeffsMustHaveOppositeSign);
 
   // return if nothing to do
   if (lowerBound == nullptr && upperBound == nullptr &&
@@ -5168,6 +5197,16 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
   std::vector<nonZeros> nzs;
   nzs.reserve(colsize[col]);
 
+  auto storeTriplet = [&](HighsInt row, double jval, double kval) {
+    if (boundColCoeffsMustHaveSameSign &&
+        std::signbit(jval) != std::signbit(kval))
+      return;
+    if (boundColCoeffsMustHaveOppositeSign &&
+        std::signbit(jval) == std::signbit(kval))
+      return;
+    nzs.push_back({row, jval, kval});
+  };
+
   // store triplets (row, nonzero, nonzero) in a vector to speed up bound
   // computation
   if (boundCol != -1) {
@@ -5177,7 +5216,7 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
         if (skipNonZero(colNz.index(), colNz.value())) continue;
         HighsInt nzPos = findNonzero(colNz.index(), boundCol);
         if (nzPos == -1) continue;
-        nzs.push_back({colNz.index(), colNz.value(), Avalue[nzPos]});
+        storeTriplet(colNz.index(), colNz.value(), Avalue[nzPos]);
       }
     } else {
       for (const auto& colNz : getColumnVector(boundCol)) {
@@ -5185,7 +5224,7 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
         if (nzPos == -1) continue;
         // skip non-zero if it does not yield requested bounds
         if (skipNonZero(colNz.index(), Avalue[nzPos])) continue;
-        nzs.push_back({colNz.index(), Avalue[nzPos], colNz.value()});
+        storeTriplet(colNz.index(), Avalue[nzPos], colNz.value());
       }
     }
   } else {
