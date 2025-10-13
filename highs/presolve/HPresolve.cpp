@@ -1335,9 +1335,13 @@ HPresolve::Result HPresolve::dominatedColumns(
            (isBinary(col) && mipsolver->mipdata_->cliquetable.numCliques(
                                  col, direction > 0 ? 1 : 0) > 0));
       // check whether predictive bound analysis can be performed. both
-      // variables need be continuous.
+      // variables need to have the same type.
       bool tryToStrengthenBounds =
-          isDominatingBoundFinite || isDominatedBoundFinite;
+          (isDominatingBoundFinite || isDominatedBoundFinite) &&
+          ((model->integrality_[col] != HighsVarType::kContinuous &&
+            model->integrality_[k] != HighsVarType::kContinuous) ||
+           (model->integrality_[col] != HighsVarType::kInteger &&
+            model->integrality_[k] != HighsVarType::kInteger));
       // check whether variable 'col' dominates variable 'k'; check already
       // known non-zeros in respective columns in advance to avoid
       // (potentially slow) element-wise comparison if possible.
