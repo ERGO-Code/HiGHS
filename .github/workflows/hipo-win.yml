@@ -43,7 +43,7 @@ jobs:
           pwd
           cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
           cmake --build build --parallel --config Release
-          cmake install --build
+          cmake --install build
 
       - name: Install OpenBLAS
         run: vcpkg install openblas
@@ -117,7 +117,7 @@ jobs:
           pwd
           cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
           cmake --build build --parallel --config Debug
-          cmake install --build
+          cmake --install build
 
       - name: Install OpenBLAS
         run: vcpkg install openblas
@@ -191,7 +191,7 @@ jobs:
           pwd
           cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
           cmake --build build --parallel --config Release
-          cmake install --build
+          cmake --install build
 
       - name: Install OpenBLAS
         run: vcpkg install openblas
@@ -266,7 +266,7 @@ jobs:
           pwd
           cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
           cmake --build build --parallel --config Debug
-          cmake install --build
+          cmake --install build
 
       - name: Install OpenBLAS
         run: vcpkg install openblas
