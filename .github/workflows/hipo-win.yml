@@ -24,19 +24,26 @@ jobs:
           restore-keys: |
             vcpkg-${{ runner.os }}-
 
-      # - name: Install GKlib
-      #   run: vcpkg install gklib
+      - name: Checkout METIS
+        uses: actions/checkout@v4
+        with:
+          repository: galabovaa/METIS
+          ref: 510-w
+          path: METIS
 
-      # - name: ls
-      #   run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
+      - name: Create installs dir
+        working-directory: ${{runner.workspace}}
+        run: | 
+          mkdir installs
+          ls
 
       - name: Install METIS
-        run: vcpkg install metis
-
-        # run: ls C:/vcpkg/packages/metis_x64-windows/
-        # run: ls C:/vcpkg/packages/metis_x64-windows/lib
-        # run: ls C:/vcpkg/packages/metis_x64-windows/share
-        # run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
+        run: |
+          cd METIS
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Release
+          cmake install --build
 
       - name: Install OpenBLAS
         run: vcpkg install openblas
@@ -50,9 +57,8 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
-
-         # -DCMAKE_CXX_FLAGS="-I C:/vcpkg/packages/gklib_x64-windows/include/GKlib"
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
       - name: Build 
         shell: bash
@@ -92,8 +98,26 @@ jobs:
           restore-keys: |
             vcpkg-${{ runner.os }}-
 
+      - name: Checkout METIS
+        uses: actions/checkout@v4
+        with:
+          repository: galabovaa/METIS
+          ref: 510-w
+          path: METIS
+
+      - name: Create installs dir
+        working-directory: ${{runner.workspace}}
+        run: | 
+          mkdir installs
+          ls
+
       - name: Install METIS
-        run: vcpkg install metis
+        run: |
+          cd METIS
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Debug
+          cmake install --build
 
       - name: Install OpenBLAS
         run: vcpkg install openblas
@@ -107,7 +131,8 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
       - name: Build 
         shell: bash
@@ -147,8 +172,26 @@ jobs:
           restore-keys: |
             vcpkg-${{ runner.os }}-
 
+      - name: Checkout METIS
+        uses: actions/checkout@v4
+        with:
+          repository: galabovaa/METIS
+          ref: 510-w
+          path: METIS
+
+      - name: Create installs dir
+        working-directory: ${{runner.workspace}}
+        run: | 
+          mkdir installs
+          ls
+
       - name: Install METIS
-        run: vcpkg install metis
+        run: |
+          cd METIS
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Release
+          cmake install --build
 
       - name: Install OpenBLAS
         run: vcpkg install openblas
@@ -163,7 +206,8 @@ jobs:
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
           -DALL_TESTS=ON \
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
       - name: Build 
         shell: bash
@@ -203,8 +247,26 @@ jobs:
           restore-keys: |
             vcpkg-${{ runner.os }}-
 
+      - name: Checkout METIS
+        uses: actions/checkout@v4
+        with:
+          repository: galabovaa/METIS
+          ref: 510-w
+          path: METIS
+
+      - name: Create installs dir
+        working-directory: ${{runner.workspace}}
+        run: | 
+          mkdir installs
+          ls
+
       - name: Install METIS
-        run: vcpkg install metis
+        run: |
+          cd METIS
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Debug
+          cmake install --build
 
       - name: Install OpenBLAS
         run: vcpkg install openblas
@@ -219,7 +281,8 @@ jobs:
           cmake $GITHUB_WORKSPACE \
           -DHIPO=ON \
           -DALL_TESTS=ON \
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
       - name: Build 
         shell: bash
