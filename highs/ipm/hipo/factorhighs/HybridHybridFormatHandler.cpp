@@ -154,6 +154,7 @@ void HybridHybridFormatHandler::assembleClique(const std::vector<double>& child,
 }
 
 void HybridHybridFormatHandler::extremeEntries() {
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
   double minD = 1e100;
   double maxD = 0.0;
   double minoffD = 1e100;
@@ -199,6 +200,7 @@ void HybridHybridFormatHandler::extremeEntries() {
   }
 
   data_.setExtremeEntries(minD, maxD, minoffD, maxoffD);
+#endif
 }
 
 }  // namespace hipo
