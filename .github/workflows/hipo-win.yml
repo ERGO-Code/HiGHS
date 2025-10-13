@@ -214,7 +214,7 @@ jobs:
           -DHIPO=ON \
           -DALL_TESTS=ON \
           -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
-          -DMETIS_ROOT=METIS_ROOT
+          -DMETIS_ROOT=$METIS_ROOT
 
       - name: Build 
         shell: bash
