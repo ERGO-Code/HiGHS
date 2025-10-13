@@ -13,18 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
@@ -33,21 +26,15 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
       - name: Install METIS
         run: |
           cd METIS
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Release
+          cmake install --build
 
-      - name: Check METIS and GKlib
+      - name: Check METIS 
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
@@ -61,8 +48,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
-          -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs 
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
       - name: Build 
         working-directory: ${{runner.workspace}}/build
@@ -88,18 +74,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
@@ -108,21 +87,15 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
       - name: Install METIS
         run: |
           cd METIS
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Debug
+          cmake install --build
 
-      - name: Check METIS and GKlib
+      - name: Check METIS
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
@@ -137,7 +110,6 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs \
           -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build 
@@ -164,18 +136,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
@@ -184,21 +149,15 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
       - name: Install METIS
         run: |
           cd METIS
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Release
+          cmake install --build
 
-      - name: Check METIS and GKlib
+      - name: Check METIS
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
@@ -212,8 +171,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DALL_TESTS=ON \
-          -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs 
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
       - name: Build 
         working-directory: ${{runner.workspace}}/build
@@ -239,18 +197,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
@@ -259,21 +210,15 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
       - name: Install METIS
         run: |
           cd METIS
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
+          pwd
+          cmake -S. -B build -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs 
+          cmake --build build --parallel --config Debug
+          cmake install --build
 
-      - name: Check METIS and GKlib
+      - name: Check METIS
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
@@ -288,7 +233,6 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DALL_TESTS=ON \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs \
           -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build 
