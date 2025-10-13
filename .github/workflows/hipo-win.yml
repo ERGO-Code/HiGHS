@@ -39,7 +39,7 @@ jobs:
         # run: ls C:/vcpkg/packages/gklib_x64-windows/share/gklib
 
       - name: Install OpenBLAS
-        run: vcpkg install openblas
+        run: vcpkg install openblas[threads]
 
       - name: Create build dir
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -96,7 +96,7 @@ jobs:
         run: vcpkg install metis
 
       - name: Install OpenBLAS
-        run: vcpkg install openblas
+        run: vcpkg install openblas[threads]
 
       - name: Create build dir
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -151,7 +151,7 @@ jobs:
         run: vcpkg install metis
 
       - name: Install OpenBLAS
-        run: vcpkg install openblas
+        run: vcpkg install openblas[threads]
 
       - name: Create build dir
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -207,7 +207,7 @@ jobs:
         run: vcpkg install metis
 
       - name: Install OpenBLAS
-        run: vcpkg install openblas
+        run: vcpkg install openblas[threads]
 
       - name: Create build dir
         run: cmake -E make_directory ${{runner.workspace}}/build
