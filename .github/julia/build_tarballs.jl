@@ -33,7 +33,10 @@ cmake -DCMAKE_INSTALL_PREFIX=${prefix} \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=${BUILD_SHARED} \
     -DZLIB_USE_STATIC_LIBS=${BUILD_STATIC} \
-    -DFAST_BUILD=ON ..
+    -DHIPO=ON \
+    -DBLAS_ROOT="${prefix}" \
+    -DMETIS_ROOT=${prefix} \
+    ..
 
 if [[ "${target}" == *-linux-* ]]; then
         make -j ${nproc}
@@ -60,6 +63,8 @@ platforms = expand_cxxstring_abis(platforms)
 dependencies = [
     Dependency("CompilerSupportLibraries_jll"),
     Dependency("Zlib_jll"),
+    Dependency("METIS_jll"),
+    Dependency("OpenBLAS32_jll"),
     HostBuildDependency(PackageSpec(; name="CMake_jll")),
 ]
 
