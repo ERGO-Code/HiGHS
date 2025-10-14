@@ -505,6 +505,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 // Lifted flow cover inequalities for mixed 0-1 integer programs.
 // Mathematical Programming, 85(3), 439-467.
 bool HighsCutGeneration::separateLiftedFlowCover() {
+  const double vubEpsilon = 1e-8;
   // Compute the lifting data (ld) first
   struct LiftingData {
     std::vector<double> m;
@@ -525,7 +526,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
     // col is in N- \ C-
     if (snfr.flowCoverStatus[i] == -1 && snfr.coef[i] == -1) {
       assert(snfr.vubCoef[i] >= 0);
-      if (snfr.vubCoef[i] > snfr.lambda + 1e-8) {
+      if (snfr.vubCoef[i] > snfr.lambda + vubEpsilon) {
         ld.m[ld.r] = snfr.vubCoef[i];
         ++ld.r;
       } else {
@@ -538,7 +539,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
     } else if (snfr.flowCoverStatus[i] == 1 && snfr.coef[i] == 1) {
       // col is in C+
       assert(snfr.vubCoef[i] > 0);
-      if (snfr.vubCoef[i] > snfr.lambda + 1e-8) {
+      if (snfr.vubCoef[i] > snfr.lambda + vubEpsilon) {
         ld.m[ld.r] = snfr.vubCoef[i];
         ++ld.r;
         ld.mp = std::min(ld.mp, snfr.vubCoef[i]);
@@ -582,11 +583,11 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
     double vubcoefpluslambda = vubcoef + snfr.lambda;
 
     HighsInt i = 0;
-    while (i < ld.r && vubcoefpluslambda >= ld.M[i + 1] + 1e-8) {
+    while (i < ld.r && vubcoefpluslambda >= ld.M[i + 1] + vubEpsilon) {
       ++i;
     }
 
-    if (vubcoef <= ld.M[i] - 1e-8) {
+    if (vubcoef <= ld.M[i] - vubEpsilon) {
       assert(ld.M[i] < vubcoefpluslambda);
       alpha = 1;
       beta = -i * HighsCDouble(snfr.lambda) + ld.M[i];
@@ -599,25 +600,24 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
 
   auto evaluateLiftingFunction = [&](double vubcoef) {
     HighsInt i = 0;
-    while (i < ld.r && vubcoef + snfr.lambda >= ld.M[i + 1] + 1e-8) {
+    while (i < ld.r && vubcoef + snfr.lambda >= ld.M[i + 1] + vubEpsilon) {
       ++i;
     }
     if (i < ld.t) {
       HighsCDouble liftedcoef = i * HighsCDouble(snfr.lambda);
-      if (ld.M[i] < vubcoef + 1e-8) {
+      if (ld.M[i] < vubcoef + vubEpsilon) {
         return static_cast<double>(liftedcoef);
       }
-      assert(i > 0 && ld.M[i] < vubcoef + snfr.lambda - 1e-8 &&
+      assert(i > 0 && ld.M[i] < vubcoef + snfr.lambda - vubEpsilon &&
              vubcoef <= ld.M[i]);
       liftedcoef += vubcoef;
       liftedcoef -= ld.M[i];
       return static_cast<double>(liftedcoef);
-    }
-    if (i < ld.r) {
+    } else if (i < ld.r) {
       HighsCDouble tmp = HighsCDouble(ld.m[i]) - ld.mp - ld.ml + snfr.lambda;
       if (tmp < 0) tmp = 0;
       tmp += ld.M[i] + ld.ml;
-      if (tmp < vubcoef + snfr.lambda - 1e-8) {
+      if (tmp < vubcoef + snfr.lambda - vubEpsilon) {
         return static_cast<double>(i * HighsCDouble(snfr.lambda));
       }
       assert(ld.M[i] <= vubcoef + snfr.lambda + feastol &&
@@ -630,7 +630,7 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
       return static_cast<double>(i * HighsCDouble(snfr.lambda) + vubcoef -
                                  ld.M[i]);
     }
-    assert(i == ld.r && ld.M[i] <= vubcoef + snfr.lambda + 1e-8);
+    assert(i == ld.r && ld.M[i] <= vubcoef + snfr.lambda + vubEpsilon);
     return static_cast<double>(ld.r * HighsCDouble(snfr.lambda) + vubcoef -
                                ld.M[ld.r]);
   };
@@ -640,37 +640,37 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
   // L-- = N- \ (L- union C-)
   HighsCDouble tmpRhs = ld.d1;
   rowlen = 0;
+
+  auto addCutNonZero = [&](const double& coef, const HighsInt& index,
+                           const bool complement) -> void {
+    vals[rowlen] = coef;
+    inds[rowlen] = index;
+    if (complement) {
+      tmpRhs -= vals[rowlen];
+      vals[rowlen] = -vals[rowlen];
+    }
+    rowlen++;
+  };
+
   for (HighsInt i = 0; i != snfr.numNnzs; ++i) {
     // col is in N- \ C-
     if (snfr.flowCoverStatus[i] == -1 && snfr.coef[i] == -1) {
-      if (snfr.vubCoef[i] > snfr.lambda + 1e-8) {
+      if (snfr.vubCoef[i] > snfr.lambda + vubEpsilon) {
         if (snfr.origBinCols[i] != -1) {
           // col is in L-
-          vals[rowlen] = -snfr.lambda;
-          inds[rowlen] = snfr.origBinCols[i];
-          if (snfr.complementation[i]) {
-            tmpRhs -= vals[rowlen];
-            vals[rowlen] = -vals[rowlen];
-          }
-          rowlen++;
+          addCutNonZero(-snfr.lambda, snfr.origBinCols[i],
+                        snfr.complementation[i]);
         } else {
           tmpRhs += snfr.lambda;
         }
       } else {
         // col is in L--
         if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
-          vals[rowlen] = -snfr.aggrContCoef[i];
-          inds[rowlen] = snfr.origContCols[i];
-          rowlen++;
+          addCutNonZero(-snfr.aggrContCoef[i], snfr.origContCols[i], false);
         }
         if (snfr.origBinCols[i] != -1 && snfr.aggrBinCoef[i] != 0) {
-          vals[rowlen] = -snfr.aggrBinCoef[i];
-          inds[rowlen] = snfr.origBinCols[i];
-          if (snfr.complementation[i]) {
-            tmpRhs -= vals[rowlen];
-            vals[rowlen] = -vals[rowlen];
-          }
-          rowlen++;
+          addCutNonZero(-snfr.aggrBinCoef[i], snfr.origBinCols[i],
+                        snfr.complementation[i]);
         }
         tmpRhs += snfr.aggrConstant[i];
       }
@@ -679,13 +679,8 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
       if (snfr.origBinCols[i] != -1) {
         double liftedbincoef = evaluateLiftingFunction(snfr.vubCoef[i]);
         if (liftedbincoef != 0) {
-          vals[rowlen] = -liftedbincoef;
-          inds[rowlen] = snfr.origBinCols[i];
-          if (snfr.complementation[i]) {
-            tmpRhs -= vals[rowlen];
-            vals[rowlen] = -vals[rowlen];
-          }
-          rowlen++;
+          addCutNonZero(-liftedbincoef, snfr.origBinCols[i],
+                        snfr.complementation[i]);
           tmpRhs -= liftedbincoef;
         }
       }
@@ -697,20 +692,13 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
       if (alphabeta.first == 1) {
         assert(alphabeta.second > 0);
         if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
-          vals[rowlen] = snfr.aggrContCoef[i];
-          inds[rowlen] = snfr.origContCols[i];
-          rowlen++;
+          addCutNonZero(snfr.aggrContCoef[i], snfr.origContCols[i], false);
         }
         HighsCDouble binvarcoef = snfr.aggrBinCoef[i] - alphabeta.second;
         if (snfr.origBinCols[i] != -1) {
           if (binvarcoef != 0) {
-            vals[rowlen] = static_cast<double>(binvarcoef);
-            inds[rowlen] = snfr.origBinCols[i];
-            if (snfr.complementation[i]) {
-              tmpRhs -= binvarcoef;
-              vals[rowlen] = -vals[rowlen];
-            }
-            rowlen++;
+            addCutNonZero(static_cast<double>(binvarcoef), snfr.origBinCols[i],
+                          snfr.complementation[i]);
           }
         } else {
           tmpRhs -= binvarcoef;
@@ -722,24 +710,18 @@ bool HighsCutGeneration::separateLiftedFlowCover() {
       assert(snfr.flowCoverStatus[i] == 1 && snfr.coef[i] == 1);
       HighsCDouble bincoef = snfr.aggrBinCoef[i];
       HighsCDouble constant = snfr.aggrConstant[i];
-      if (snfr.origBinCols[i] != -1 && snfr.vubCoef[i] >= snfr.lambda + 1e-8) {
+      if (snfr.origBinCols[i] != -1 &&
+          snfr.vubCoef[i] >= snfr.lambda + vubEpsilon) {
         // col is in C++
         constant += HighsCDouble(snfr.vubCoef[i]) - snfr.lambda;
         bincoef -= HighsCDouble(snfr.vubCoef[i]) - snfr.lambda;
       }
       if (snfr.origBinCols[i] != -1 && bincoef != 0) {
-        vals[rowlen] = static_cast<double>(bincoef);
-        inds[rowlen] = snfr.origBinCols[i];
-        if (snfr.complementation[i]) {
-          tmpRhs -= bincoef;
-          vals[rowlen] = -vals[rowlen];
-        }
-        rowlen++;
+        addCutNonZero(static_cast<double>(bincoef), snfr.origBinCols[i],
+                      snfr.complementation[i]);
       }
       if (snfr.origContCols[i] != -1 && snfr.aggrContCoef[i] != 0) {
-        vals[rowlen] = snfr.aggrContCoef[i];
-        inds[rowlen] = snfr.origContCols[i];
-        rowlen++;
+        addCutNonZero(snfr.aggrContCoef[i], snfr.origContCols[i], false);
       }
       tmpRhs -= constant;
     }
