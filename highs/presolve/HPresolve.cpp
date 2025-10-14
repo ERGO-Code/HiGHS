@@ -1163,9 +1163,6 @@ HPresolve::Result HPresolve::dominatedColumns(
     // skip deleted columns
     if (colDeleted[j]) continue;
 
-    // remember number of fixed columns
-    HighsInt oldNumFixed = numFixedCols;
-
     // initialise
     HighsInt bestRowPlus = -1;
     HighsInt bestRowPlusLen = kHighsIInf;
