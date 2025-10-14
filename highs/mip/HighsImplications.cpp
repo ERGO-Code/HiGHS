@@ -395,7 +395,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
   // assume that VUBs do not have infinite coefficients and infinite constant
   // terms since such VUBs effectively evaluate to NaN.
   assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
-  if (numVarBounds >= maxVarBounds) return;
+  if (tooManyVarBounds()) return;
 
   VarBound vub{vubcoef, vubconstant};
 
@@ -424,7 +424,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   // assume that VLBs do not have infinite coefficients and infinite constant
   // terms since such VLBs effectively evaluate to NaN.
   assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
-  if (numVarBounds >= maxVarBounds) return;
+  if (tooManyVarBounds()) return;
 
   VarBound vlb{vlbcoef, vlbconstant};
 
@@ -732,13 +732,9 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
     if (infeasible) return;
   });
 
-  if (!delVbds.empty()) {
-    for (HighsInt vubCol : delVbds) {
-      vubs[col].erase(vubCol);
-      numVarBounds--;
-    }
-    delVbds.clear();
-  }
+  for (HighsInt vubCol : delVbds) vubs[col].erase(vubCol);
+  numVarBounds -= delVbds.size();
+  delVbds.clear();
 
   vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) {
     bool redundant = false;
@@ -748,10 +744,8 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
     if (infeasible) return;
   });
 
-  for (HighsInt vlbCol : delVbds) {
-    vlbs[col].erase(vlbCol);
-    numVarBounds--;
-  }
+  for (HighsInt vlbCol : delVbds) vlbs[col].erase(vlbCol);
+  numVarBounds -= delVbds.size();
 }
 
 void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,

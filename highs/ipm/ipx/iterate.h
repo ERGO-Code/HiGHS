@@ -199,6 +199,9 @@ public:
     // The method can only be called after Postprocess().
     void DropToComplementarity(Vector& x, Vector& y, Vector& z) const;
 
+    double bounds_measure_;
+    double costs_measure_;
+
 private:
     // A (primal or dual) variable that is required to be positive in the IPM is
     // not moved closer to zero than kBarrierMin.

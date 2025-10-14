@@ -66,7 +66,7 @@ class HighsImplications {
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
     numVarBounds = 0;
-    maxVarBounds = 5000000 + 10 * numcol;
+    maxVarBounds = calcMaxVarBounds(numcol);
   }
 
   std::function<void(HighsInt, HighsInt, HighsInt, double)>
@@ -89,12 +89,18 @@ class HighsImplications {
     vlbs.shrink_to_fit();
     vlbs.resize(numcol);
     numVarBounds = 0;
-    maxVarBounds = 5000000 + 10 * numcol;
+    maxVarBounds = calcMaxVarBounds(numcol);
 
     nextCleanupCall = mipsolver.numNonzero();
   }
 
-  HighsInt getNumImplications() const { return numImplications; }
+  constexpr static int64_t calcMaxVarBounds(HighsInt numcol) {
+    return int64_t{5000000} + 10 * static_cast<int64_t>(numcol);
+  };
+
+  HighsInt getNumImplications() const {
+    return static_cast<HighsInt>(numImplications);
+  }
 
   const std::vector<HighsDomainChange>& getImplications(HighsInt col, bool val,
                                                         bool& infeasible) {
@@ -114,9 +120,7 @@ class HighsImplications {
     return implications[loc].computed;
   }
 
-  HighsInt getNumVarBounds() const { return numVarBounds; }
-
-  HighsInt getMaxVarBounds() const { return maxVarBounds; }
+  bool tooManyVarBounds() const { return numVarBounds >= maxVarBounds; }
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
               double vubconstant);
