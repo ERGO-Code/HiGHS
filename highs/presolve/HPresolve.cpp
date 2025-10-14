@@ -1167,28 +1167,6 @@ HPresolve::Result HPresolve::dominatedColumns(
     bool lowerImplied = isLowerImplied(j);
     bool upperImplied = isUpperImplied(j);
 
-    // check if upper bound on variable is implied (due to worst-case lower
-    // bound)
-    bool upperImpliedByWorstCase = false;
-    if (model->col_cost_[j] >= 0.0) {
-      double lowerBound = computeWorstCaseLowerBound(j);
-      upperImpliedByWorstCase =
-          lowerBound != kHighsInf &&
-          lowerBound <= model->col_upper_[j] + primal_feastol;
-      upperImplied = upperImplied || upperImpliedByWorstCase;
-    }
-
-    // check if lower bound on variable is implied (due to worst-case upper
-    // bound)
-    bool lowerImpliedByWorstCase = false;
-    if (model->col_cost_[j] <= 0.0) {
-      double upperBound = computeWorstCaseUpperBound(j);
-      lowerImpliedByWorstCase =
-          upperBound != -kHighsInf &&
-          upperBound >= model->col_lower_[j] - primal_feastol;
-      lowerImplied = lowerImplied || lowerImpliedByWorstCase;
-    }
-
     // remember number of fixed columns
     HighsInt oldNumFixed = numFixedCols;
 
@@ -1226,8 +1204,9 @@ HPresolve::Result HPresolve::dominatedColumns(
       } else {
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
       }
-      // remove row singletons if variable was fixed
+      // remove row singletons and doubleton equations
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+      HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
       return Result::kOk;
     };
 
@@ -1306,7 +1285,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     // the other one and (2) fixing variables or strengthening bounds
     auto checkCols = [&](HighsInt row, HighsInt col, HighsInt k, double bestVal,
                          double val, HighsInt direction, HighsInt multiplier,
-                         bool boundImplied, bool otherBoundImpliedByWorstCase) {
+                         bool boundImplied) {
       // compute direction for dominated variable
       // (1: lower bound; -1: upper bound)
       HighsInt direction_k = multiplier * direction;
@@ -1318,11 +1297,9 @@ HPresolve::Result HPresolve::dominatedColumns(
       // check if bounds are finite
       bool isDominatingBoundFinite = direction * dominatingBound != kHighsInf;
       bool isDominatedBoundFinite = direction_k * dominatedBound != -kHighsInf;
-      // check whether variable 'col' can potentially be fixed
-      bool tryToFixCol = boundImplied && otherBoundImpliedByWorstCase;
       // check whether variable 'k' can potentially be fixed. check if there are
       // cliques in advance instead of directly searching for a common clique.
-      bool tryToFixK =
+      bool tryToFix =
           isDominatedBoundFinite &&
           (boundImplied ||
            (isBinary(col) && mipsolver->mipdata_->cliquetable.numCliques(
@@ -1339,17 +1316,12 @@ HPresolve::Result HPresolve::dominatedColumns(
       // known non-zeros in respective columns in advance to avoid
       // (potentially slow) element-wise comparison if possible.
       bool performDominationCheck =
-          (tryToFixCol || tryToFixK || tryToStrengthenBounds) &&
+          (tryToFix || tryToStrengthenBounds) &&
           checkDominationNonZero(row, direction * bestVal, direction_k * val);
-      if (!performDominationCheck) return Result::kOk;
-      // check for domination
-      if (checkDomination(direction, col, direction_k, k)) {
-        if (tryToFixCol) {
-          // direction =  1: fix variable x_j to its upper bound
-          // direction = -1: fix variable x_j to its lower bound
-          HPRESOLVE_CHECKED_CALL(fixCol(col, direction));
-        } else {
-          if (tryToFixK &&
+      if (performDominationCheck) {
+        // check for domination
+        if (checkDomination(direction, col, direction_k, k)) {
+          if (tryToFix &&
               (boundImplied ||
                mipsolver->mipdata_->cliquetable.haveCommonClique(
                    HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
@@ -1363,8 +1335,7 @@ HPresolve::Result HPresolve::dominatedColumns(
             // direction = -1, multiplier = -1:
             // case (iv)  lb(x_j) = -inf, -x_j >  x_k: set x_k = lb(x_k)
             HPRESOLVE_CHECKED_CALL(fixCol(k, -direction_k));
-          }
-          if (!colDeleted[k] && tryToStrengthenBounds) {
+          } else if (tryToStrengthenBounds) {
             // tighten bounds via predictive bound analysis, see Theorem 3
             // from Gamrath et al.'s paper
             if (isDominatedBoundFinite)
@@ -1377,17 +1348,16 @@ HPresolve::Result HPresolve::dominatedColumns(
                                 dominatingBound, direction * direction_k));
           }
         }
+        // increment counter for number of domination checks due to predictive
+        // bound analysis
+        if (!tryToFix) numDomChecksPredBndAnalysis++;
       }
-      // increment counter for number of domination checks due to predictive
-      // bound analysis
-      if (!tryToFixCol && !tryToFixK) numDomChecksPredBndAnalysis++;
       return Result::kOk;
     };
 
     // lambda for finding a domination relationship in the given row
     auto checkRow = [&](HighsInt row, HighsInt col, HighsInt direction,
-                        double bestVal, bool boundImplied,
-                        bool otherBoundImpliedByWorstCase) {
+                        double bestVal, bool boundImplied) {
       storeRow(row);
       for (const HighsSliceNonzero& nonz : getStoredRow()) {
         HighsInt k = nonz.index();
@@ -1396,14 +1366,12 @@ HPresolve::Result HPresolve::dominatedColumns(
 
         // try to fix variables or strengthen bounds
         HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, bestVal, ak, direction,
-                                         HighsInt{1}, boundImplied,
-                                         otherBoundImpliedByWorstCase));
+                                         HighsInt{1}, boundImplied));
         if (colDeleted[col]) break;
 
         if (!colDeleted[k]) {
           HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, bestVal, ak, direction,
-                                           HighsInt{-1}, boundImplied,
-                                           otherBoundImpliedByWorstCase));
+                                           HighsInt{-1}, boundImplied));
           if (colDeleted[col]) break;
         }
       }
@@ -1413,18 +1381,12 @@ HPresolve::Result HPresolve::dominatedColumns(
     // use row 'bestRowMinus'
     if (bestRowMinus != -1)
       HPRESOLVE_CHECKED_CALL(checkRow(bestRowMinus, j, HighsInt{-1},
-                                      ajBestRowMinus, lowerImplied,
-                                      upperImpliedByWorstCase));
+                                      ajBestRowMinus, isLowerImplied(j)));
 
     // use row 'bestRowPlus'
     if (!colDeleted[j] && bestRowPlus != -1)
       HPRESOLVE_CHECKED_CALL(checkRow(bestRowPlus, j, HighsInt{1},
-                                      ajBestRowPlus, upperImplied,
-                                      lowerImpliedByWorstCase));
-
-    // remove doubleton equations
-    if (numFixedCols != oldNumFixed)
-      HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
+                                      ajBestRowPlus, isUpperImplied(j)));
   }
 
   if (numFixedCols)
@@ -5265,7 +5227,7 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
       if (lowerBound != nullptr)
         *lowerBound =
             std::max(*lowerBound, computeBound(triplet, rhs, direction, false));
-      if (worstCaseLowerBound != nullptr)
+      if (worstCaseLowerBound != nullptr && *worstCaseLowerBound != kHighsInf)
         *worstCaseLowerBound = std::max(
             *worstCaseLowerBound, computeBound(triplet, rhs, direction, true));
     } else {
@@ -5273,7 +5235,7 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
       if (upperBound != nullptr)
         *upperBound =
             std::min(*upperBound, computeBound(triplet, rhs, direction, false));
-      if (worstCaseUpperBound != nullptr)
+      if (worstCaseUpperBound != nullptr && *worstCaseUpperBound != -kHighsInf)
         *worstCaseUpperBound = std::min(
             *worstCaseUpperBound, computeBound(triplet, rhs, direction, true));
     }
