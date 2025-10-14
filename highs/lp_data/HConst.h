@@ -39,6 +39,7 @@ const double kExcessivelyLargeCostValue = 1e10;
 const double kExcessivelySmallBoundValue = 1e-4;
 const double kExcessivelySmallCostValue = 1e-4;
 
+const HighsInt kNoThreadInstance = -1;
 const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
 
@@ -218,8 +219,9 @@ enum class HighsModelStatus {
   kSolutionLimit,
   kInterrupt,
   kMemoryLimit,
+  kHighsInterrupt,
   kMin = kNotset,
-  kMax = kMemoryLimit
+  kMax = kHighsInterrupt
 };
 
 enum HighsCallbackType : int {
@@ -269,19 +271,29 @@ enum PresolveRuleType : int {
   kPresolveRuleDependentFreeCols,
   kPresolveRuleAggregator,
   kPresolveRuleParallelRowsAndCols,
+  kPresolveRuleSparsify,
   kPresolveRuleProbing,
   kPresolveRuleMax = kPresolveRuleProbing,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount,
 };
 
-enum IisStrategy {
+enum IisStrategy : int {
   kIisStrategyMin = 0,
-  kIisStrategyFromLpRowPriority = kIisStrategyMin,  // 0
-  kIisStrategyFromLpColPriority,                    // 1
-  //  kIisStrategyFromRayRowPriority,                     // 2
-  //  kIisStrategyFromRayColPriority,                     // 3
+  kIisStrategyLight = kIisStrategyMin,  // 0
+  kIisStrategyFromLpRowPriority,        // 1
+  kIisStrategyFromLpColPriority,        // 2
+  //  kIisStrategyFromRayRowPriority,                     // 3
+  //  kIisStrategyFromRayColPriority,                     // 4
   kIisStrategyMax = kIisStrategyFromLpColPriority
+};
+
+enum IisStatus {
+  kIisStatusMin = 0,
+  kIisStatusInConflict = kIisStatusMin,  // 0
+  kIisStatusNotInConflict,               // 1
+  kIisStatusMaybeInConflict,             // 2
+  kIisStatusMax = kIisStatusMaybeInConflict
 };
 
 // Default KKT tolerance

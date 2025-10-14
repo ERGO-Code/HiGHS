@@ -1,5 +1,5 @@
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 copy_file(
     name = "highs-config",
@@ -16,9 +16,8 @@ cc_library(
 
 cc_library(
     name = "highs",
-    srcs = glob([
+    srcs = ["highs/interfaces/highs_c_api.cpp"] + glob([
         "extern/filereaderlp/*.cpp",
-        "highs/interfaces/highs_c_api.cpp",
         "highs/io/*.cpp",
         "highs/ipm/*.cpp",
         "highs/ipm/ipx/*.cc",
@@ -35,18 +34,21 @@ cc_library(
         "highs/test_kkt/*.cpp",
         "highs/util/*.cpp",
     ]),
-    hdrs = glob([
-        "**/*.h",
+    hdrs = [
         "highs/mip/feasibilityjump.hh",
+    ] + glob([
+        "**/*.h",
         "highs/qpsolver/*.hpp",
-        "highs/Highs.h",
         "extern/filereaderlp/*.hpp",
         "extern/zstr/*.hpp",
     ]),
-    copts = [
-        "-Wno-unused-variable",
-        "-Wno-unused-but-set-variable",
-    ],
+    copts = select({
+        "@rules_cc//cc/compiler:msvc-cl": [],
+        "//conditions:default": [
+            "-Wno-unused-variable",
+            "-Wno-unused-but-set-variable",
+        ],
+    }),
     includes = [
         "extern",
         # "extern/filereaderlp",
@@ -66,7 +68,10 @@ cc_library(
         # "highs/util",
         "bazel-bin",
     ],
-    linkopts = ["-lpthread"],
+    linkopts = select({
+        "@rules_cc//cc/compiler:msvc-cl": ["-DEFAULTLIB:shell32.lib"],
+        "//conditions:default": ["-lpthread"],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         "//:config",
@@ -76,8 +81,10 @@ cc_library(
 
 cc_library(
     name = "highs-runtime-opts",
-    hdrs = ["app/HighsRuntimeOptions.h",
-            "app/CLI11.hpp"],
+    hdrs = [
+        "app/CLI11.hpp",
+        "app/HighsRuntimeOptions.h",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//:highs",
@@ -180,11 +187,13 @@ TEST_NAMES = [
 [cc_test(
     name = name,
     srcs = ["check/%s.cpp" % name],
-    copts = [
-        "-Iextern",
-        "-Wno-unused-variable",
-        "-Wno-unused-but-set-variable",
-    ],
+    copts = ["-Iextern"] + select({
+        "@rules_cc//cc/compiler:msvc-cl": [],
+        "//conditions:default": [
+            "-Wno-unused-variable",
+            "-Wno-unused-but-set-variable",
+        ],
+    }),
     deps = [
         ":highs",
         ":test_lib",

@@ -128,7 +128,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
   for (HighsInt i = 0; i < chLimit; i++) chIndex[i] = -1;
 
   const HighsUInt chooseCHECK = chLimit * 2;
-  vector<pair<double, int>> setP;
+  vector<pair<double, HighsInt>> setP;
   setP.reserve(chooseCHECK);
 
   std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
@@ -206,8 +206,8 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
   // Store the setP
   pdqsort(setP.begin(), setP.end());
   if ((HighsInt)(setP.size()) > chLimit) setP.resize(chLimit);
-  *chCount = setP.size();
-  for (unsigned i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;
+  *chCount = static_cast<HighsInt>(setP.size());
+  for (size_t i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;
   analysis->simplexTimerStop(ChuzrDualClock);
 }
 

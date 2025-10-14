@@ -148,14 +148,24 @@ void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
                                   HighsInfo& highs_info);
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 
+bool isColPrimalSolutionRightSize(const HighsLp& lp,
+                                  const HighsSolution& solution);
+bool isRowPrimalSolutionRightSize(const HighsLp& lp,
+                                  const HighsSolution& solution);
 bool isPrimalSolutionRightSize(const HighsLp& lp,
                                const HighsSolution& solution);
+
+bool isColDualSolutionRightSize(const HighsLp& lp,
+                                const HighsSolution& solution);
+bool isRowDualSolutionRightSize(const HighsLp& lp,
+                                const HighsSolution& solution);
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
+
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
 
 void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
                          const HighsInfo& highs_info,
-                         const std::string& solver = "");
+                         const std::string& message = "");
 
 #endif  // LP_DATA_HIGHSSOLUTION_H_

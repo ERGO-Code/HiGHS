@@ -1,3 +1,10 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -474,9 +481,9 @@ class FeasibilityJumpSolver {
                         double equalityTolerance = 1e-5,
                         double violationTolerance = 1e-5,
                         double _weightUpdateDecay = 1.0)
-      : logOptions(_logOptions),
-        problem(equalityTolerance, violationTolerance),
-        jumpMove(equalityTolerance) {
+      : problem(equalityTolerance, violationTolerance),
+        jumpMove(equalityTolerance),
+        logOptions(_logOptions) {
     weightUpdateDecay = _weightUpdateDecay;
     rng = std::mt19937(seed);
   }

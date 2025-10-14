@@ -46,7 +46,7 @@ linear optimization problems of the form
 
 $$ \min \quad \dfrac{1}{2}x^TQx + c^Tx \qquad \textrm{s.t.}~ \quad L \leq Ax \leq U; \quad l \leq x \leq u $$
 
-where Q must be positive semi-definite and, if Q is zero, there may be a requirement that some of the variables take integer values. Thus HiGHS can solve linear programming (LP) problems, convex quadratic programming (QP) problems, and mixed integer programming (MIP) problems. It is mainly written in C++, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations. No third-party dependencies are required.
+where $Q$ must be positive semi-definite and, if $Q$ is zero, there may be a requirement that some of the variables take integer values. Thus HiGHS can solve linear programming (LP) problems, convex quadratic programming (QP) problems, and mixed integer programming (MIP) problems. It is mainly written in C++, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations. No third-party dependencies are required.
 
 HiGHS has primal and dual revised simplex solvers, originally written by Qi Huangfu and further developed by Julian Hall. It also has an interior point solver for LP written by Lukas Schork, an active set solver for QP written by Michael Feldmeier, and a MIP solver written by Leona Gottwald. Other features have been added by Julian Hall and Ivet Galabova, who manages the software engineering of HiGHS and interfaces to C, C#, FORTRAN, Julia and Python.
 
@@ -84,7 +84,7 @@ As an alternative, HiGHS can be installed using the `meson` build interface:
 meson setup bbdir -Dwith_tests=True
 meson test -C bbdir
 ```
-_The meson build files are provided by the community and are not officially supported by the HiGHS development team._
+_The meson build files are provided by the community and are not officially supported by the HiGHS development team._ **If you use this method and encounter issues, please consider contributing fixes or updates by checking the [HiGHS Contribution Guide](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md).**
 
 #### Build with Nix
 

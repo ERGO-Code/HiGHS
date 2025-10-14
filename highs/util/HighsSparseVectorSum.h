@@ -75,7 +75,7 @@ class HighsSparseVectorSum {
 
   template <typename IsZero>
   void cleanup(IsZero&& isZero) {
-    HighsInt numNz = nonzeroinds.size();
+    HighsInt numNz = static_cast<HighsInt>(nonzeroinds.size());
 
     for (HighsInt i = numNz - 1; i >= 0; --i) {
       HighsInt pos = nonzeroinds[i];
