@@ -1973,10 +1973,10 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
       rhs = tmpRhs;
     } else {
       // accept cut and increase minimum efficiency requirement for cmir cut
-      if (allowRejectCut) {
-        minMirEfficacy = std::max(minEfficacy, efficacy + feastol);
+      if (minEfficacy > 10 * feastol) {
+        minMirEfficacy = std::max(minEfficacy, efficacy + 10 * feastol);
       } else {
-        minMirEfficacy = efficacy + (10 * feastol);
+        minMirEfficacy += efficacy;
       }
       std::swap(tmpRhs, rhs);
     }
