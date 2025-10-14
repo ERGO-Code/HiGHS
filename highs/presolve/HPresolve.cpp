@@ -1163,10 +1163,6 @@ HPresolve::Result HPresolve::dominatedColumns(
     // skip deleted columns
     if (colDeleted[j]) continue;
 
-    // check if bounds are implied
-    bool lowerImplied = isLowerImplied(j);
-    bool upperImplied = isUpperImplied(j);
-
     // remember number of fixed columns
     HighsInt oldNumFixed = numFixedCols;
 
