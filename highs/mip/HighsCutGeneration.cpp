@@ -721,8 +721,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
           double aj = downaj;
           updateViolationAndNorm(j, aj, viol, sqrnorm);
         } else {
-          double pj =
-              fast_ceil(k * (fj - f0) * oneoveroneminusf0 - feastol);
+          double pj = fast_ceil(k * (fj - f0) * oneoveroneminusf0 - feastol);
           double aj = downaj + (pj / (k + 1));
           updateViolationAndNorm(j, aj, viol, sqrnorm);
         }
