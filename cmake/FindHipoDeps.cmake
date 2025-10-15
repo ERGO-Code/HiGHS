@@ -111,7 +111,7 @@ if (NOT (GKLIB_ROOT STREQUAL ""))
 
     else()
         find_path(GKLIB_PATH
-            NAMES "gklib.h"
+            NAMES "gklib.h" "GKlib.h"
             REQUIRED
             PATHS "${GKLIB_ROOT}/include"
             NO_DEFAULT_PATH)
