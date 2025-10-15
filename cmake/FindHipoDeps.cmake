@@ -11,13 +11,14 @@ elseif(NOT APPLE)
     # If a BLAS install was specified try to use it first.
     if (NOT (BLAS_ROOT STREQUAL ""))
         message(STATUS "Looking for blas CMake targets file in " ${BLAS_ROOT})
-        find_package(OpenBLAS CONFIG NO_DEFAULT_PATH)
+        find_package(OpenBLAS NO_DEFAULT_PATH)
     else()
-        find_package(OpenBLAS CONFIG)
+        find_package(OpenBLAS)
     endif()
 
     if(OpenBLAS_FOUND)
         message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
+        set(OPENBLAS_LIB OpenBLAS::OpenBLAS)
     else()
         find_library(OPENBLAS_LIB
             NAMES openblas
@@ -27,8 +28,8 @@ elseif(NOT APPLE)
             message("Found OpenBLAS library at ${OPENBLAS_LIB}")
         else()
             find_library(BLAS_LIB
-                NAMES blas HINTS
-                "${BLAS_ROOT}/lib")
+                NAMES blas
+                HINTS "${BLAS_ROOT}/lib")
 
             if(BLAS_LIB)
                 message("Found BLAS library at ${BLAS_LIB}")
@@ -111,7 +112,7 @@ if (NOT (GKLIB_ROOT STREQUAL ""))
 
     else()
         find_path(GKLIB_PATH
-            NAMES "gklib.h" "GKlib.h"
+            NAMES "gklib.h"
             REQUIRED
             PATHS "${GKLIB_ROOT}/include"
             NO_DEFAULT_PATH)
