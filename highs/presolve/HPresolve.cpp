@@ -1274,11 +1274,19 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
+    // lambda for checking whether two variables have the same type
+    auto varsHaveSameType = [&](HighsInt col1, HighsInt col2) {
+      return ((model->integrality_[col1] != HighsVarType::kContinuous &&
+               model->integrality_[col2] != HighsVarType::kContinuous) ||
+              (model->integrality_[col1] != HighsVarType::kInteger &&
+               model->integrality_[col2] != HighsVarType::kInteger));
+    };
+
     // lambda for (1) checking whether one of the two columns is dominated by
     // the other one and (2) fixing variables or strengthening bounds
-    auto checkCols = [&](HighsInt row, HighsInt col, HighsInt k, double bestVal,
-                         double val, HighsInt direction, HighsInt multiplier,
-                         bool boundImplied) {
+    auto checkCols = [&](HighsInt row, HighsInt col, HighsInt k,
+                         HighsInt direction, HighsInt multiplier,
+                         bool boundImplied, bool hasCliques, bool sameVarType) {
       // compute direction for dominated variable
       // (1: lower bound; -1: upper bound)
       HighsInt direction_k = multiplier * direction;
@@ -1292,26 +1300,12 @@ HPresolve::Result HPresolve::dominatedColumns(
       bool isDominatedBoundFinite = direction_k * dominatedBound != -kHighsInf;
       // check whether variable 'k' can potentially be fixed. check if there are
       // cliques in advance instead of directly searching for a common clique.
-      bool tryToFix =
-          isDominatedBoundFinite &&
-          (boundImplied ||
-           (isBinary(col) && mipsolver->mipdata_->cliquetable.numCliques(
-                                 col, direction > 0 ? 1 : 0) > 0));
+      bool tryToFix = isDominatedBoundFinite && (boundImplied || hasCliques);
       // check whether predictive bound analysis can be performed. both
       // variables need to have the same type.
       bool tryToStrengthenBounds =
-          (isDominatingBoundFinite || isDominatedBoundFinite) &&
-          ((model->integrality_[col] != HighsVarType::kContinuous &&
-            model->integrality_[k] != HighsVarType::kContinuous) ||
-           (model->integrality_[col] != HighsVarType::kInteger &&
-            model->integrality_[k] != HighsVarType::kInteger));
-      // check whether variable 'col' dominates variable 'k'; check already
-      // known non-zeros in respective columns in advance to avoid
-      // (potentially slow) element-wise comparison if possible.
-      bool performDominationCheck =
-          (tryToFix || tryToStrengthenBounds) &&
-          checkDominationNonZero(row, direction * bestVal, direction_k * val);
-      if (performDominationCheck) {
+          (isDominatingBoundFinite || isDominatedBoundFinite) && sameVarType;
+      if (tryToFix || tryToStrengthenBounds) {
         // check for domination
         if (checkDomination(direction, col, direction_k, k)) {
           if (tryToFix &&
@@ -1350,21 +1344,39 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // lambda for finding a domination relationship in the given row
     auto checkRow = [&](HighsInt row, HighsInt col, HighsInt direction,
-                        double bestVal, bool boundImplied) {
+                        double bestVal, bool boundImplied, bool hasCliques) {
       storeRow(row);
       for (const HighsSliceNonzero& nonz : getStoredRow()) {
+        // get column index
         HighsInt k = nonz.index();
+
+        // skip column 'col' and deleted columns
         if (k == col || colDeleted[k]) continue;
+
+        // get coefficient
         double ak = nonz.value();
 
-        // try to fix variables or strengthen bounds
-        HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, bestVal, ak, direction,
-                                         HighsInt{1}, boundImplied));
-        if (colDeleted[col]) break;
+        // check if variables have the same type
+        bool sameVarType = varsHaveSameType(col, k);
 
-        if (!colDeleted[k]) {
-          HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, bestVal, ak, direction,
-                                           HighsInt{-1}, boundImplied));
+        // skip checks if nothing to do
+        if (!boundImplied && !hasCliques && !sameVarType) continue;
+
+        // try to fix variables or strengthen bounds
+        // check already known non-zeros in respective columns in advance to
+        // avoid (potentially slow) element-wise comparison if possible.
+        if (checkDominationNonZero(row, direction * bestVal, direction * ak)) {
+          HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, direction, HighsInt{1},
+                                           boundImplied, hasCliques,
+                                           sameVarType));
+          if (colDeleted[col]) break;
+        }
+
+        if (!colDeleted[k] &&
+            checkDominationNonZero(row, direction * bestVal, -direction * ak)) {
+          HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, direction, HighsInt{-1},
+                                           boundImplied, hasCliques,
+                                           sameVarType));
           if (colDeleted[col]) break;
         }
       }
@@ -1373,13 +1385,17 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // use row 'bestRowMinus'
     if (bestRowMinus != -1)
-      HPRESOLVE_CHECKED_CALL(checkRow(bestRowMinus, j, HighsInt{-1},
-                                      ajBestRowMinus, isLowerImplied(j)));
+      HPRESOLVE_CHECKED_CALL(checkRow(
+          bestRowMinus, j, HighsInt{-1}, ajBestRowMinus, isLowerImplied(j),
+          isBinary(j) &&
+              mipsolver->mipdata_->cliquetable.numCliques(j, 0) > 0));
 
     // use row 'bestRowPlus'
     if (!colDeleted[j] && bestRowPlus != -1)
-      HPRESOLVE_CHECKED_CALL(checkRow(bestRowPlus, j, HighsInt{1},
-                                      ajBestRowPlus, isUpperImplied(j)));
+      HPRESOLVE_CHECKED_CALL(checkRow(
+          bestRowPlus, j, HighsInt{1}, ajBestRowPlus, isUpperImplied(j),
+          isBinary(j) &&
+              mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0));
   }
 
   if (numFixedCols)
