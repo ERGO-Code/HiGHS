@@ -143,13 +143,20 @@ HighsLp mip0(const double cost, const double bound) {
 
 HighsLp lp1(const double cost, const double col_lower, const double bound) {
   HighsLp lp;
+  // Set up the LP
+  //
+  // min -4C x -7C y
+  //
+  // st x + y <= 6B; -2B <= x-y
+  //
+  // b <= [x, y] <= 10*B
   lp.num_col_ = 2;
   lp.num_row_ = 2;
-  lp.col_cost_ = {-cost, 2*cost};
+  lp.col_cost_ = {-4*cost, -7*cost};
   lp.col_lower_ = {col_lower, col_lower};
-  lp.col_upper_ = {bound, bound};
-  lp.row_lower_ = {-kHighsInf, bound};
-  lp.row_upper_ = {bound, kHighsInf};
+  lp.col_upper_ = {10*bound, 10*bound};
+  lp.row_lower_ = {-kHighsInf, -2*bound};
+  lp.row_upper_ = {6*bound, kHighsInf};
   lp.a_matrix_.start_ = {0, 2, 4};
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 1, -1};
@@ -159,6 +166,7 @@ HighsLp lp1(const double cost, const double col_lower, const double bound) {
 HighsLp mip1(const double cost, const double col_lower, const double bound) {
   HighsLp lp = lp1(cost, col_lower, bound);
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  lp.col_lower_[0] = 0;
   return lp;
 }
 
@@ -167,7 +175,7 @@ HighsHessian hessian(const double value) {
   hessian.dim_ = 2;
   hessian.start_ = {0, 1, 2};
   hessian.index_ = {0, 1};
-  hessian.value_ = {value, 10*value};
+  hessian.value_ = {value, 2*value};
   return hessian;
 }
 
@@ -209,6 +217,13 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
     HighsLp lp = mip0(1.0, kHighsInf);
     h.passModel(lp);
     h.run();
+  }
+
+  const bool lp_test = true;
+  if (lp_test) {
+    HighsLp lp = lp1(1.0, 0.0, 1.0);
+    h.passModel(lp);
+    testUserScale(h);
   }
 
   const bool mip_test = false;
