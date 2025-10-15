@@ -193,7 +193,7 @@ else()
 
       if(TARGET OpenBLAS::OpenBLAS)
           target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
-      elseif(DEFINED OPENBLAS_LIB)
+      elseif(OPENBLAS_LIB)
           message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
           target_link_libraries(highs PRIVATE ${OPENBLAS_LIB})
           target_include_directories(highs PRIVATE ${OPENBLAS_INCLUDE_DIR})
@@ -202,7 +202,7 @@ else()
       endif()
 
       target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-    else() 
+    else()
         # LINUX
         if(BLAS_LIB)
             target_link_libraries(highs "${BLAS_LIB}")
