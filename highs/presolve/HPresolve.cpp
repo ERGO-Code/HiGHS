@@ -1424,19 +1424,13 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   // columns since it may allow stronger dual presolve and more aggregations
   double hugeBound = primal_feastol / kHighsTiny;
   for (HighsInt i = 0; i != model->num_col_; ++i) {
-    if (model->col_lower_[i] >= implColLower[i] &&
-        model->col_upper_[i] <= implColUpper[i])
-      continue;
+    if (std::abs(implColLower[i]) <= hugeBound &&
+        implColLower[i] > model->col_lower_[i])
+      changeColLower(i, implColLower[i]);
 
-    if (std::abs(implColLower[i]) <= hugeBound) {
-      double newLb = implColLower[i];
-      if (newLb > model->col_lower_[i]) changeColLower(i, newLb);
-    }
-
-    if (std::abs(implColUpper[i]) <= hugeBound) {
-      double newUb = implColUpper[i];
-      if (newUb < model->col_upper_[i]) changeColUpper(i, newUb);
-    }
+    if (std::abs(implColUpper[i]) <= hugeBound &&
+        implColUpper[i] < model->col_upper_[i])
+      changeColUpper(i, implColUpper[i]);
   }
 
   HighsInt oldNumProbed = numProbed;
