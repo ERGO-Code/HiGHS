@@ -30,7 +30,7 @@ jobs:
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
-        run: | 
+        run: |
           mkdir installs
           ls
 
@@ -44,7 +44,7 @@ jobs:
       - name: Install METIS
         run: |
           cd METIS
-          make config prefix=${{runner.workspace}}/installs 
+          make config prefix=${{runner.workspace}}/installs
           make
           make install
 
@@ -52,12 +52,12 @@ jobs:
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
-          ls 
+          ls
           ls lib
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
-         
+
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
@@ -67,12 +67,12 @@ jobs:
           -DMETIS_ROOT=${{runner.workspace}}/installs \
           -DGKLIB_ROOT=${{runner.workspace}}/installs
 
-      - name: Build 
+      - name: Build
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
 
-      - name: Test executable 
+      - name: Test executable
         working-directory: ${{runner.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
