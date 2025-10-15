@@ -9,8 +9,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
-        config: [Release, Debug]
-        all_tests: [ON, OFF]
+        # config: [Release, Debug]
+        # all_tests: [ON, OFF]
 
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,8 @@ jobs:
           path: overlay-ports
 
       # todo: add overlay
-      - name: Install metis
+      - name: Install metis 
+        shell: pwsh
         run: |
           vcpkg install metis gklib `
           --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/metis" `
