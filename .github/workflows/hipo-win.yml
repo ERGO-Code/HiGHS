@@ -29,8 +29,8 @@ jobs:
         shell: pwsh
         run: |
           vcpkg install metis gklib `
-          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/metis" `
-          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/gklib"
+          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/metis" `
+          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/gklib"
 
       - name: Install OpenBLAS
         run: vcpkg install openblas[threads]
