@@ -822,13 +822,15 @@ void IPM::PrintHeader() {
   std::stringstream h_logging_stream;
   h_logging_stream.str(std::string());
   h_logging_stream
-    << (kTerminationLogging ? "\n" : "")
-    << " "  << Format("Iter", 4)
-    << "  " << Format("P.res", 8) << " " << Format("D.res", 8)
-    << "  " << Format("P.obj", 15) << " " << Format("D.obj", 15)
-    << "  " << Format("mu", 8);
+    << " " << Format("Iter", 4)
+    << "  " << Format("primal obj", 15)
+    << "  " << Format("dual obj", 15)
+    << "  " << Format("pinf", 9)
+    << "  " << Format("dinf", 9)
+    << "  " << Format("gap", 8);
+    //  h_logging_stream << "  " << Format("mu", 8);
   if (!control_.timelessLog())
-    h_logging_stream << "  " << Format("Time", 7);
+    h_logging_stream << "  " << Format("time", 7);
   control_.hLog(h_logging_stream);
   control_.Debug()
     << "  " << Format("stepsizes", 9)
@@ -842,17 +844,29 @@ void IPM::PrintHeader() {
 void IPM::PrintOutput() {
     const bool ipm_optimal = iterate_->feasible() && iterate_->optimal();
 
-    if (kTerminationLogging) PrintHeader();
+    double logging_pobj = iterate_->pobjective_after_postproc();
+    double logging_dobj = iterate_->dobjective_after_postproc();
+    double logging_presidual = iterate_->presidual();
+    double logging_dresidual = iterate_->dresidual();
+
+    // Now logging relative primal and dual infeasibility, and also
+    // the relative primal dual objective gap
+    logging_presidual /= iterate_->bounds_measure_;
+    logging_dresidual /= iterate_->costs_measure_;
+    double logging_gap = std::abs(logging_pobj - logging_dobj) /
+      (1.0+0.5 *std::fabs(logging_pobj + logging_dobj));
+
     std::stringstream h_logging_stream;
     h_logging_stream.str(std::string());
     h_logging_stream
       << " "  << Format(info_->iter, 3)
       << (ipm_optimal ? "*" : " ")
-      << "  " << Scientific(iterate_->presidual(), 8, 2)
-      << " "  << Scientific(iterate_->dresidual(), 8, 2)
-      << "  " << Scientific(iterate_->pobjective_after_postproc(), 15, 8)
-      << " "  << Scientific(iterate_->dobjective_after_postproc(), 15, 8)
-      << "  " << Scientific(iterate_->mu(), 8, 2);
+      << "  " << Scientific(logging_pobj, 15, 8)
+      << "  " << Scientific(logging_dobj, 15, 8)
+      << "  " << Scientific(logging_presidual, 9, 2)
+      << "  " << Scientific(logging_dresidual, 9, 2)
+      << "  " << Scientific(logging_gap, 8, 2);
+    //    h_logging_stream << "  " << Scientific(iterate_->mu(), 8, 2);
     if (!control_.timelessLog())
       h_logging_stream << "  " << Fixed(control_.Elapsed(), 6, 0) << "s";
     control_.hLog(h_logging_stream);
