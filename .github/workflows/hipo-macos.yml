@@ -34,28 +34,12 @@ jobs:
           mkdir installs
           ls
 
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
+      - name: Install GKLIB
         run: |
           cd GKlib
           make config shared=1 prefix=${{runner.workspace}}/installs
           make
           make install
-
-      # - name: Check installs 
-      #   working-directory: ${{runner.workspace}}
-      #   run: |
-      #     cd installs
-      #     ls 
-      #     ls lib
-
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          cd lib
-          ln libGKlib.so.0 libGKlib.so
-          ls 
 
       - name: Install METIS
         run: |
@@ -64,7 +48,7 @@ jobs:
           make
           make install
 
-      - name: Check METIS 
+      - name: Check METIS and GKlib
         working-directory: ${{runner.workspace}}
         run: |
           cd installs

@@ -21,6 +21,10 @@ jobs:
           ref: main
           path: overlay-ports
 
+      - name: List overlay contents
+        shell: pwsh
+        run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/overlay-ports"
+
       - name: Install metis with overlay port
         shell: pwsh
         run: |

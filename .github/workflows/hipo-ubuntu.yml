@@ -34,8 +34,7 @@ jobs:
           mkdir installs
           ls
 
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
+      - name: Install GKlib
         run: |
           cd GKlib
           make config shared=1 prefix=${{runner.workspace}}/installs
