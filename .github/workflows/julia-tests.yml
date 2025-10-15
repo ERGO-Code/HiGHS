@@ -1,4 +1,4 @@
-name: JuliaCompileAndTest
+name: JuliaCompileAndTest_
 on: [push, pull_request]
 # needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
