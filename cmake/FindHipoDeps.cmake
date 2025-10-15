@@ -3,20 +3,20 @@ set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
 message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
 
 if (WIN32)
-    find_package(OpenBLAS CONFIG REQUIRED) 
+    find_package(OpenBLAS CONFIG REQUIRED)
     message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
 elseif(NOT APPLE)
     # LINUX
-    find_library(OPENBLAS_LIB 
-        NAMES openblas 
+    find_library(OPENBLAS_LIB
+        NAMES openblas
         HINTS "${BLAS_ROOT}/lib")
 
     if(OPENBLAS_LIB)
         message("Found OpenBLAS library at ${OPENBLAS_LIB}")
 
     else(OPENBLAS_LIB)
-        find_library(BLAS_LIB 
-            NAMES blas HINTS 
+        find_library(BLAS_LIB
+            NAMES blas HINTS
             "${BLAS_ROOT}/lib")
 
         if(NOT BLAS_LIB)

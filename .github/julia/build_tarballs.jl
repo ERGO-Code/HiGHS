@@ -34,7 +34,7 @@ cmake -DCMAKE_INSTALL_PREFIX=${prefix} \
     -DBUILD_SHARED_LIBS=${BUILD_SHARED} \
     -DZLIB_USE_STATIC_LIBS=${BUILD_STATIC} \
     -DHIPO=ON \
-    -DBLAS_LIBRARIES="${libdir}/libopenblas.${dlext}" \
+    -DBLAS_ROOT="${libdir}/libopenblas.${dlext}" \
     -DMETIS_ROOT=${prefix} \
     ..
 

@@ -179,7 +179,7 @@ else()
   # Optional HIPO
   if (HIPO)
 
-    target_include_directories(highs PRIVATE 
+    target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
@@ -192,7 +192,7 @@ else()
     elseif(WIN32)
         target_link_libraries(highs OpenBLAS::OpenBLAS)
         target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-    else() 
+    else()
         # LINUX
         if(BLAS_LIB)
             target_link_libraries(highs "${BLAS_LIB}")
