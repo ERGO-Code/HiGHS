@@ -30,7 +30,7 @@ jobs:
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
-        run: | 
+        run: |
           mkdir installs
           ls
 
@@ -41,11 +41,11 @@ jobs:
           make
           make install
 
-      # - name: Check installs 
+      # - name: Check installs
       #   working-directory: ${{runner.workspace}}
       #   run: |
       #     cd installs
-      #     ls 
+      #     ls
       #     ls lib
 
       - name: Copy GKlib shared (bug)
@@ -54,12 +54,12 @@ jobs:
           cd installs
           cd lib
           ln libGKlib.so.0 libGKlib.so
-          ls 
+          ls
 
       - name: Install METIS
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
+          make config shared=1 prefix=${{runner.workspace}}/installs
           make
           make install
 
@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           sudo apt update
-          sudo apt install libopenblas-dev 
+          sudo apt install libopenblas-dev
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -91,12 +91,12 @@ jobs:
           -DMETIS_ROOT=${{runner.workspace}}/installs \
           -DGKLIB_ROOT=${{runner.workspace}}/installs
 
-      - name: Build 
+      - name: Build
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
 
-      - name: Test executable 
+      - name: Test executable
         working-directory: ${{runner.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 

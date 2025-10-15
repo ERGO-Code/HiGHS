@@ -33,9 +33,11 @@ jobs:
           --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/gklib"
 
       - name: Install OpenBLAS
+        shell: pwsh
         run: vcpkg install openblas[threads]
 
-      - name: Configure CMake 
+      - name: Configure CMake
+        shell: pwsh
         run: |
           cmake `
           -S "$env:GITHUB_WORKSPACE/HiGHS" `
@@ -44,18 +46,21 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
           -DALL_TESTS=${{ matrix.all_tests }}
 
-      - name: Build 
+      - name: Build
+        shell: pwsh
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel --config ${{ matrix.config }}
 
-      - name: Test executable 
+      - name: Test executable
+        shell: pwsh
         working-directory: ${{runner.workspace}}/build
         run: |
           & ".\Release\bin\highs.exe" --solver=hipo `
           "${{ runner.workspace }}/highs-tests/HiGHS/check/instances/afiro.mps"
 
       - name: Ctest
+        shell: pwsh
         working-directory: ${{runner.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
