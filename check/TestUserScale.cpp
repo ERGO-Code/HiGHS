@@ -224,6 +224,10 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
     HighsLp lp = lp1(1.0, 0.0, 1.0);
     h.passModel(lp);
     testUserScale(h);
+    lp.sense_ = ObjSense::kMaximize;
+    h.passModel(lp);
+    testUserScale(h);
+    
   }
 
   const bool mip_test = false;
