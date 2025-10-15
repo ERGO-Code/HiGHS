@@ -7,30 +7,49 @@ if (WIN32)
     message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
 elseif(NOT APPLE)
     # LINUX
-    find_library(OPENBLAS_LIB
-        NAMES openblas
-        HINTS "${BLAS_ROOT}/lib")
 
-    if(OPENBLAS_LIB)
-        message("Found OpenBLAS library at ${OPENBLAS_LIB}")
+    # If a BLAS install was specified try to use it first.
+    if (NOT (BLAS_ROOT STREQUAL ""))
+        message(STATUS "Looking for blas CMake targets file in " ${BLAS_ROOT})
+        find_package(OpenBLAS CONFIG NO_DEFAULT_PATH)
+    else()
+        find_package(OpenBLAS CONFIG)
+    endif()
 
-    else(OPENBLAS_LIB)
-        find_library(BLAS_LIB
-            NAMES blas HINTS
-            "${BLAS_ROOT}/lib")
+    if(OpenBLAS_FOUND)
+        message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
+    else()
+        find_library(OPENBLAS_LIB
+            NAMES openblas
+            HINTS "${BLAS_ROOT}/lib")
 
-        if(NOT BLAS_LIB)
-            message(FATAL_ERROR "No BLAS library found")
-        endif(NOT BLAS_LIB)
-        message("Found BLAS library at ${BLAS_LIB}")
-    endif(OPENBLAS_LIB)
+        if(OPENBLAS_LIB)
+            message("Found OpenBLAS library at ${OPENBLAS_LIB}")
+        else()
+            find_library(BLAS_LIB
+                NAMES blas HINTS
+                "${BLAS_ROOT}/lib")
+
+            if(BLAS_LIB)
+                message("Found BLAS library at ${BLAS_LIB}")
+            else()
+                message(FATAL_ERROR "No BLAS library found")
+            endif()
+        endif()
+    endif()
 endif()
 
 # METIS
 set(METIS_ROOT "" CACHE STRING "Root directory of METIS")
 message(STATUS "METIS_ROOT is " ${METIS_ROOT})
 
-find_package(metis CONFIG)
+# If a METIS install was specified try to use it first.
+if (NOT (METIS_ROOT STREQUAL ""))
+    message(STATUS "Looking for METIS CMake targets file in " ${METIS_ROOT})
+    find_package(metis CONFIG NO_DEFAULT_PATH)
+else()
+    find_package(metis CONFIG)
+endif()
 
 if(metis_FOUND)
     message(STATUS "metis CMake config path: ${metis_DIR}")
@@ -49,7 +68,21 @@ else()
         PATHS "${METIS_ROOT}/lib" "${METIS_ROOT}/bin"
         NO_DEFAULT_PATH)
 
-    message("Found Metis library at ${METIS_LIB}")
+    if(METIS_LIB)
+        message("Found Metis library at ${METIS_LIB}")
+    else()
+        # METIS_ROOT was not successful
+        message("Metis not found in METIS_PATH, fallback to default search.")
+        if (NOT (METIS_ROOT STREQUAL ""))
+            find_package(metis CONFIG)
+
+            if (metis_FOUND)
+                message(STATUS "metis CMake config path: ${metis_DIR}")
+            else()
+                message(FATAL_ERROR "No Metis library found")
+            endif()
+        endif()
+    endif()
 endif()
 
 # GKlib optional for newer versions on ubuntu and macos
@@ -57,7 +90,7 @@ set(GKLIB_ROOT "" CACHE STRING "Root directory of GKlib")
 if (NOT (GKLIB_ROOT STREQUAL ""))
     message(STATUS "GKLIB_ROOT is " ${GKLIB_ROOT})
 
-    find_package(GKlib CONFIG)
+    find_package(GKlib CONFIG NO_DEFAILT_PATH)
 
     if(GKlib_FOUND)
         message(STATUS "gklib CMake config path: ${GKlib_DIR}")
@@ -91,6 +124,18 @@ if (NOT (GKLIB_ROOT STREQUAL ""))
             PATHS "${GKLIB_ROOT}/lib"
             NO_DEFAULT_PATH)
 
-        message("Found GKlib library at ${GKLIB_LIB}")
+        if(GKLIB_LIB)
+            message("Found GKlib library at ${GKLIB_LIB}")
+        else()
+            # GKLIB_ROOT was not successful
+            message("GKlib not found in GKLIB_PATH, fallback to default search.")
+            find_package(GKlib CONFIG)
+
+            if (GKlib_FOUND)
+                message(STATUS "GKlib CMake config path: ${GKlib_DIR}")
+            else()
+                message(FATAL_ERROR "No GKLib library found")
+            endif()
+        endif()
     endif()
 endif()

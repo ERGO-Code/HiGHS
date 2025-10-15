@@ -531,6 +531,7 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
   REQUIRE(h.getInfo().pdlp_iteration_count > 0);
 
   REQUIRE(h.setOptionValue(kSolverString, kIpmString) == HighsStatus::kOk);
+  h.setOptionValue("output_flag", true);
   h.run();
   REQUIRE(h.getInfo().ipm_iteration_count > 0);
 
