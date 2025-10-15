@@ -42,13 +42,7 @@ const char* highsGithash();
 class Highs {
  public:
   Highs();
-  virtual ~Highs() {
-    FILE* log_stream = options_.log_options.log_stream;
-    if (log_stream != nullptr) {
-      assert(log_stream != stdout);
-      fclose(log_stream);
-    }
-  }
+  virtual ~Highs() { this->closeLogFile(); }
 
   /**
    * @brief Return the version as a string
@@ -164,6 +158,21 @@ class Highs {
    */
   HighsStatus addLinearObjective(const HighsLinearObjective& linear_objective,
                                  const HighsInt iObj = -1);
+
+  /**
+   * @brief Get number of linear objectives from the incumbent model
+   */
+  HighsInt getNumLinearObjectives() const {
+    return multi_linear_objective_.size();
+  }
+
+  /**
+   * @brief Get a linear objective from the incumbent model
+   */
+  const HighsLinearObjective& getLinearObjective(const HighsInt idx) const {
+    assert(idx >= 0 && idx < int(multi_linear_objective_.size()));
+    return multi_linear_objective_[idx];
+  }
 
   /**
    * @brief Clear the multiple linear objective data
@@ -1235,6 +1244,11 @@ class Highs {
    * @brief Open a named log file
    */
   HighsStatus openLogFile(const std::string& log_file = "");
+
+  /**
+   * @brief Close any open log file
+   */
+  HighsStatus closeLogFile();
 
   /**
    * @brief Interpret common qualifiers to string values

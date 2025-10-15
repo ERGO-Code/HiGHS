@@ -4069,7 +4069,10 @@ HighsStatus Highs::callSolveMip() {
     // If the original model has semi-variables, its solution is
     // (still) given by the first model_.lp_.num_col_ entries of the
     // solution from the MIP solver
-    solution_.col_value.resize(model_.lp_.num_col_);
+    //
+    // #2547 This resize is unnecessary
+    //
+    // solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
     this->saved_objective_and_solution_ = solver.saved_objective_and_solution_;
     model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
@@ -4780,6 +4783,21 @@ HighsStatus Highs::crossover(const HighsSolution& user_solution) {
 
 HighsStatus Highs::openLogFile(const std::string& log_file) {
   highsOpenLogFile(options_.log_options, options_.records, log_file);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::closeLogFile() {
+  // Work with a copy of the pointer for brevity
+  FILE* log_stream = this->options_.log_options.log_stream;
+  if (log_stream != nullptr) {
+    assert(log_stream != stdout);
+    fflush(log_stream);
+    fclose(log_stream);
+    // Set the true log_stream to nullptr to give a test whether it
+    // has been closed (and avoid trying to close it again which
+    // causes an error)
+    this->options_.log_options.log_stream = nullptr;
+  }
   return HighsStatus::kOk;
 }
 
