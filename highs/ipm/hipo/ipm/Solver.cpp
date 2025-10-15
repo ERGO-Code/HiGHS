@@ -395,7 +395,7 @@ double Solver::stepToBoundary(const std::vector<double>& x,
   // Use lo=1 for xl and zl, lo=0 for xu and zu.
   // Return the blocking index in block.
 
-  const double damp = 1.0 - std::numeric_limits<double>::epsilon();
+  const double damp = 1.0 - 100.0 * std::numeric_limits<double>::epsilon();
 
   double alpha = 1.0;
   Int bl = -1;
