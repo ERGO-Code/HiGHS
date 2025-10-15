@@ -40,7 +40,7 @@ jobs:
         shell: pwsh
         run: |
           cmake `
-          -S "$env:GITHUB_WORKSPACE/HiGHS" `
+          -S "$env:GITHUB_WORKSPACE" `
           -B "${{ runner.workspace }}/build" `
           -DHIPO=ON `
           -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
