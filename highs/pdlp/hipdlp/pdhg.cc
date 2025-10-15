@@ -377,16 +377,19 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   // Use member variables for iterates for cleaner state management
   x_current_ = x;
   y_current_ = y;
+  linalg::project_bounds(lp_, x_current_);
+  x_sum_ = x_current_;
+  x_avg_ = x_current_;
+  linalg::Ax(lp, x_current_, Ax_cache_);
+  std::vector<double> Ax_avg = Ax_cache_;
+  std::vector<double> ATy_avg(lp.num_col_, 0.0);
+  
   num_rejected_steps_ = 0;
   bool first_malitsky_iteration = true;
   ratio_last_two_step_sizes_ = 1.0;
   bool using_malitsky_averaging =
       (params_.step_size_strategy == StepSizeStrategy::MALITSKY_POCK);
   bool primal_average_initialized = false; 
-
-  // Initialize vectors for matrix-vector products
-  std::vector<double> Ax_avg(lp.num_row_, 0.0);
-  std::vector<double> ATy_avg(lp.num_col_, 0.0);
 
   // Store iterates at last restart for primal weight update
   x_at_last_restart_ = x_current_;
@@ -400,7 +403,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   debug_pdlp_data_.ax_average_norm = 0.0;
   debug_pdlp_data_.aty_average_norm = 0.0;
   debug_pdlp_data_.x_average_norm = 0.0;
-  debug_pdlp_data_.ax_norm = 0.0;
+  debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_cache_);
 
   for (int iter = 0; iter < params_.max_iterations; ++iter) {
     debugPdlpIterLog(debug_pdlp_log_file_, iter, &debug_pdlp_data_,

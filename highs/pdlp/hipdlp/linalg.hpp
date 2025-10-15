@@ -18,6 +18,7 @@
 namespace linalg {
 double project_box(double x, double l, double u);
 double project_non_negative(double y);
+void project_bounds(const HighsLp& lp, std::vector<double>& x);
 
 // Function to compute A*x for a given HighsLp and vector x
 void Ax(const HighsLp& lp, const std::vector<double>& x,
