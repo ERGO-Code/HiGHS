@@ -10,7 +10,9 @@ const double inf = kHighsInf;
 bool doubleEqual0(const double v0, const double v1) {
   double rel_difference = std::fabs(v0 - v1) / std::max(1.0, std::fabs(v0));
   bool ok = rel_difference < 1e-12;
-  if (dev_run && !ok)
+  if (
+      //dev_run &&
+      !ok)
     printf("UserScaleDoubleEqual: %g and %g have relative difference = %g\n",
            v0, v1, rel_difference);
   return ok;
@@ -139,12 +141,12 @@ HighsLp mip0(const double cost, const double bound) {
   return lp;
 }
 
-HighsLp lp1(const double cost, const double bound) {
+HighsLp lp1(const double cost, const double col_lower, const double bound) {
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
   lp.col_cost_ = {-cost, 2*cost};
-  lp.col_lower_ = {0, 1e-8};
+  lp.col_lower_ = {col_lower, col_lower};
   lp.col_upper_ = {bound, bound};
   lp.row_lower_ = {-kHighsInf, bound};
   lp.row_upper_ = {bound, kHighsInf};
@@ -154,8 +156,8 @@ HighsLp lp1(const double cost, const double bound) {
   return lp;
 }
 
-HighsLp mip1(const double cost, const double bound) {
-  HighsLp lp = lp1(cost, bound);
+HighsLp mip1(const double cost, const double col_lower, const double bound) {
+  HighsLp lp = lp1(cost, col_lower, bound);
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
   return lp;
 }
@@ -170,17 +172,26 @@ HighsHessian hessian(const double value) {
 }
 
 void testUserScale(Highs& h) {
+  printf("\nWithout user scaling\n");
+  h.writeModel("");
   h.run();
+  h.writeSolution("", 1);
   double unscaled_objective_value = h.getInfo().objective_function_value;
   HighsInt suggested_objective_scale;
   HighsInt suggested_bound_scale;
   h.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
-  if (suggested_objective_scale || suggested_bound_scale) {
-    h.setOptionValue("user_cost_scale", suggested_objective_scale);
-    h.setOptionValue("user_bound_scale", suggested_bound_scale);
-    h.run();
-    REQUIRE(doubleEqual0(unscaled_objective_value, h.getInfo().objective_function_value));
+  const bool has_suggested_scaling = suggested_objective_scale || suggested_bound_scale;
+  if (!has_suggested_scaling) {
+    suggested_objective_scale = 2;
+    suggested_bound_scale = 1;
   }
+
+  h.setOptionValue("user_cost_scale", suggested_objective_scale);
+  h.setOptionValue("user_bound_scale", suggested_bound_scale);
+  printf("\nWith user scaling\n");
+  h.run();
+  h.writeSolution("", 1);
+  REQUIRE(doubleEqual0(unscaled_objective_value, h.getInfo().objective_function_value));
 }
 
 
@@ -189,6 +200,7 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   const HighsInfo& info = h.getInfo();
   const HighsSolution& solution = h.getSolution();
   //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("qp_regularization_value", 0);
   // Preolve on triggers assert
   const bool expose_presolve_bug = false;
   if (expose_presolve_bug) {
@@ -201,7 +213,7 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
 
   const bool mip_test = false;
   if (mip_test) {
-    HighsLp lp = mip1(1.0, 1.0);
+    HighsLp lp = mip1(1.0, 0.0, 1.0);
     h.passModel(lp);
     testUserScale(h);
   }
@@ -209,8 +221,10 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   const bool qp_test = true;
   if (qp_test) {
     HighsModel model;
-    model.lp_ = lp1(1e-8, 1.0);
-    model.hessian_ = hessian(1e-8);
+    //    model.lp_ = lp1(1e-8, 1.0);
+    //    model.hessian_ = hessian(1e-8);
+    model.lp_ = lp1(1.0, 0.0, 1.0);
+    model.hessian_ = hessian(1.0);
     h.passModel(model);
     testUserScale(h);
   }

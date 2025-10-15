@@ -545,7 +545,8 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   HighsInt suggested_bound_scale_order_of_magnitude =
     std::ceil(std::log10(suggested_bound_scaling));
   // Applying the suggested bound scaling requires the costs and
-  // matrix columns of non-continuous variables to be scaled
+  // matrix columns of non-continuous variables to be scaled, and any
+  // Hessian entries are also scaled
   //
   // Determine the corresponding extreme non-continuous costs and
   // update the extreme costs so that objective scaling can be
@@ -553,6 +554,9 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   double suggested_user_bound_scale_value = pow(2.0, user_scale_data.suggested_user_bound_scale);
   min_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   max_noncontinuous_col_cost *= suggested_user_bound_scale_value;
+  min_hessian_value /= suggested_user_bound_scale_value;
+  max_hessian_value /= suggested_user_bound_scale_value;
+  
   min_col_cost =
     std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
   max_col_cost =

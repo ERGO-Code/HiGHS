@@ -520,7 +520,7 @@ void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
                "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
 }
 
-void userScaleHessian(HighsHessian hessian, HighsUserScaleData& data,
+void userScaleHessian(HighsHessian& hessian, HighsUserScaleData& data,
                       const bool apply) {
   data.num_infinite_hessian_values = 0;
   if (!hessian.dim_) return;
