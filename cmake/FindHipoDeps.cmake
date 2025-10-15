@@ -9,7 +9,7 @@ elseif(NOT APPLE)
     # LINUX
     find_library(OPENBLAS_LIB
         NAMES openblas
-        HINTS "${BLAS_ROOT}/lib")
+        HINTS "${BLAS_ROOT}/lib" "${BLAS_ROOT}")
 
     if(OPENBLAS_LIB)
         message("Found OpenBLAS library at ${OPENBLAS_LIB}")
