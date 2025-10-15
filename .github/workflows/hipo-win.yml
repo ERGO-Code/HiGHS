@@ -56,7 +56,7 @@ jobs:
         shell: pwsh
         working-directory: ${{runner.workspace}}/build
         run: |
-          & ".\Release\bin\highs.exe" --solver=hipo `
+          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Ctest
