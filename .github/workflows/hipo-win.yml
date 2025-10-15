@@ -9,63 +9,49 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
+        config: [Release, Debug]
+        all_tests: [ON, OFF]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout METIS
+      - name: Checkout metis overlay ports
         uses: actions/checkout@v4
         with:
-          repository: galabovaa/METIS
-          ref: 510-w
-          path: METIS
+          repository: galabovaa/metis-overlay-ports
+          ref: main
+          path: overlay-ports
 
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: | 
-          ls
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        shell: bash
+      # todo: add overlay
+      - name: Install metis
         run: |
-          INSTALLS_PREFIX=$(cygpath "${{ runner.workspace }}")/installs
-          cd METIS
-          pwd
-          cmake -S. -B build -DGKLIB_PATH=$GITHUB_WORKSPACE/METIS/GKlib -DCMAKE_INSTALL_PREFIX=$INSTALLS_PREFIX
-          cmake --build build --parallel --config Release
-          cmake --install build --config Release
+          vcpkg install metis gklib `
+          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/metis" `
+          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/gklib"
 
       - name: Install OpenBLAS
         run: vcpkg install openblas[threads]
 
-      - name: Create build dir
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
       - name: Configure cmake
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
         run: |
-          METIS_ROOT=$(cygpath "${{ runner.workspace }}")/installs
-          cmake $GITHUB_WORKSPACE \
-          -DHIPO=ON \
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake \
-          -DMETIS_ROOT=$METIS_ROOT
+          cmake `
+          -S "$env:GITHUB_WORKSPACE/HiGHS" `
+          -B "${{ runner.workspace }}/build" `
+          -DHIPO=ON `
+          -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build 
-        shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel --config Release
 
       - name: Test executable 
-        shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: ./Release/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: |
+          & ".\Release\bin\highs.exe" --solver=hipo `
+          "${{ runner.workspace }}/highs-tests/HiGHS/check/instances/afiro.mps"
 
       - name: Ctest
-        shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure -C Release
