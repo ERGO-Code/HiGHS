@@ -1349,7 +1349,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   double flowCoverRhs = rhs_;
   double flowCoverEfficacy = 0;
   if (genFlowCover && !lpRelaxation.getMipSolver().submip &&
-      !lpRelaxation.getMipSolver().mipdata_->continuous_cols.empty()) {
+      !lpRelaxation.getMipSolver().mipdata_->continuous_cols.empty() &&
+      lpRelaxation.getMipSolver().options_mip_->mip_cut_flow_cover) {
     flowCoverVals = vals_;
     flowCoverInds = inds_;
     flowCoverSuccess = tryGenerateFlowCoverCut(
