@@ -1398,9 +1398,11 @@ HPresolve::Result HPresolve::dominatedColumns(
               mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0));
   }
 
-  if (numFixedCols)
+  if (numFixedCols > 0 || numBoundsModified > 0)
     highsLogDev(options->log_options, HighsLogType::kInfo,
-                "Fixed %d dominated columns\n", numFixedCols);
+                "Fixed %d dominated columns and strengthened %d bounds\n",
+                static_cast<int>(numFixedCols),
+                static_cast<int>(numBoundsModified));
 
   return Result::kOk;
 }
