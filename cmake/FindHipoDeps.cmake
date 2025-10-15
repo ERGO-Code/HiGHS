@@ -90,7 +90,7 @@ set(GKLIB_ROOT "" CACHE STRING "Root directory of GKlib")
 if (NOT (GKLIB_ROOT STREQUAL ""))
     message(STATUS "GKLIB_ROOT is " ${GKLIB_ROOT})
 
-    find_package(GKlib CONFIG NO_DEFAILT_PATH)
+    find_package(GKlib CONFIG NO_DEFAULT_PATH)
 
     if(GKlib_FOUND)
         message(STATUS "gklib CMake config path: ${GKlib_DIR}")
