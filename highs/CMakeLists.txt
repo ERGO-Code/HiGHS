@@ -179,7 +179,7 @@ else()
   # Optional HIPO
   if (HIPO)
 
-    target_include_directories(highs PRIVATE 
+    target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
@@ -190,8 +190,18 @@ else()
         target_link_libraries(highs "-framework Accelerate")
         target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
     elseif(WIN32)
-        target_link_libraries(highs OpenBLAS::OpenBLAS)
-        target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+
+      if(TARGET OpenBLAS::OpenBLAS)
+          target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
+      elseif(DEFINED OPENBLAS_LIB)
+          message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
+          target_link_libraries(highs PRIVATE ${OPENBLAS_LIB})
+          target_include_directories(highs PRIVATE ${OPENBLAS_INCLUDE_DIR})
+      else()
+          message(FATAL_ERROR "OpenBLAS not found on Windows.")
+      endif()
+
+      target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
     else() 
         # LINUX
         if(BLAS_LIB)
