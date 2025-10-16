@@ -34,7 +34,7 @@ cmake -DCMAKE_INSTALL_PREFIX=${prefix} \
     -DBUILD_SHARED_LIBS=${BUILD_SHARED} \
     -DZLIB_USE_STATIC_LIBS=${BUILD_STATIC} \
     -DHIPO=ON \
-    -DBLAS_ROOT="${prefix}" \
+    -DBLA_VENDOR=OpenBLAS \
     -DMETIS_ROOT=${prefix} \
     ..
 
