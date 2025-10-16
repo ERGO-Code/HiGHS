@@ -34,44 +34,19 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKlib Release
-        if: ${{ matrix.config == 'Release' }}
+      - name: Install GKlib
         run: |
           cd GKlib
           make config prefix=${{runner.workspace}}/installs
           make
           make install
 
-      - name: Install GKlib Debug
-        if: ${{ matrix.config == 'Debug' }}
-        run: |
-          cd GKlib
-          make config prefix=${{runner.workspace}}/installs gdb=1 debug=1
-          make
-          make install
-
-      - name: Install METIS Release
-        if: ${{ matrix.config == 'Release'}}
+      - name: Install METIS
         run: |
           cd METIS
           make config prefix=${{runner.workspace}}/installs
           make
           make install
-
-      - name: Install METIS Debug
-        if: ${{ matrix.config == 'Debug'}}
-        run: |
-          cd METIS
-          make config prefix=${{runner.workspace}}/installs gdb=1 debug=1
-          make
-          make install
-
-      - name: Check METIS and GKlib
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls
-          ls lib
 
       - name: Check METIS and GKlib
         working-directory: ${{runner.workspace}}
