@@ -3003,7 +3003,8 @@ HighsStatus Highs::userScaleModel(HighsUserScaleData& data) {
 HighsStatus Highs::userScaleSolution(HighsUserScaleData& data,
                                      bool update_kkt) {
   HighsStatus return_status = HighsStatus::kOk;
-  if (!data.user_objective_scale && !data.user_bound_scale) return HighsStatus::kOk;
+  if (!data.user_objective_scale && !data.user_bound_scale)
+    return HighsStatus::kOk;
   double objective_scale_value = std::pow(2, data.user_objective_scale);
   double bound_scale_value = std::pow(2, data.user_bound_scale);
   const HighsLp& lp = this->model_.lp_;

@@ -11,7 +11,7 @@ bool doubleEqual0(const double v0, const double v1) {
   double rel_difference = std::fabs(v0 - v1) / std::max(1.0, std::fabs(v0));
   bool ok = rel_difference < 1e-12;
   if (
-      //dev_run &&
+      // dev_run &&
       !ok)
     printf("UserScaleDoubleEqual: %g and %g have relative difference = %g\n",
            v0, v1, rel_difference);
@@ -84,11 +84,13 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
 
   HighsInt suggested_objective_scale;
   HighsInt suggested_bound_scale;
-  highs.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
+  highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                 suggested_bound_scale);
 
   highs.passModel(lp);
 
-  highs.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
+  highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                 suggested_bound_scale);
 
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
@@ -124,7 +126,7 @@ HighsLp lp0(const double cost, const double bound) {
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
-  lp.col_cost_ = {cost, -2*cost};
+  lp.col_cost_ = {cost, -2 * cost};
   lp.col_lower_ = {0, 1e-8};
   lp.col_upper_ = {bound, bound};
   lp.row_lower_ = {-kHighsInf, bound};
@@ -150,13 +152,20 @@ HighsLp lp1(const double cost, const double col_lower, const double bound) {
   // st x + y <= 6B; -2B <= x-y
   //
   // b <= [x, y] <= 10*B
+  //
+  // Optimal minimizer is [2B, 4B] so, if this should scale with B and
+  // test the scaling bounds down scenario
+  //
+  // Optimal maximizer is [b, b] so, if b and B are small (but bigger
+  // than B) this should test the "all small bounds" scaled up
+  // scenario
   lp.num_col_ = 2;
   lp.num_row_ = 2;
-  lp.col_cost_ = {-4*cost, -7*cost};
+  lp.col_cost_ = {-4 * cost, -7 * cost};
   lp.col_lower_ = {col_lower, col_lower};
-  lp.col_upper_ = {10*bound, 10*bound};
-  lp.row_lower_ = {-kHighsInf, -2*bound};
-  lp.row_upper_ = {6*bound, kHighsInf};
+  lp.col_upper_ = {10 * bound, 10 * bound};
+  lp.row_lower_ = {-kHighsInf, -2 * bound};
+  lp.row_upper_ = {6 * bound, kHighsInf};
   lp.a_matrix_.start_ = {0, 2, 4};
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 1, -1};
@@ -171,11 +180,19 @@ HighsLp mip1(const double cost, const double col_lower, const double bound) {
 }
 
 HighsHessian hessian(const double value) {
+  // Together with lp1:
+  //
+  // Optimal minimizer is [3B, 3B] so, if this should scale with B and
+  // test the scaling bounds down scenario
+  //
+  // Optimal maximizer is [b, b] so, if b and B are small (but bigger
+  // than B) this should test the "all small bounds" scaled up
+  // scenario
   HighsHessian hessian;
   hessian.dim_ = 2;
   hessian.start_ = {0, 1, 2};
   hessian.index_ = {0, 1};
-  hessian.value_ = {value, 2*value};
+  hessian.value_ = {value, 2 * value};
   return hessian;
 }
 
@@ -188,7 +205,8 @@ void testUserScale(Highs& h) {
   HighsInt suggested_objective_scale;
   HighsInt suggested_bound_scale;
   h.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
-  const bool has_suggested_scaling = suggested_objective_scale || suggested_bound_scale;
+  const bool has_suggested_scaling =
+      suggested_objective_scale || suggested_bound_scale;
   if (!has_suggested_scaling) {
     suggested_objective_scale = 2;
     suggested_bound_scale = 1;
@@ -199,9 +217,43 @@ void testUserScale(Highs& h) {
   printf("\nWith user scaling\n");
   h.run();
   h.writeSolution("", 1);
-  REQUIRE(doubleEqual0(unscaled_objective_value, h.getInfo().objective_function_value));
+  REQUIRE(doubleEqual0(unscaled_objective_value,
+                       h.getInfo().objective_function_value));
 }
 
+void testLp(Highs& h, const double cost, const double col_lower,
+            const double bound) {
+  HighsLp lp = lp1(cost, col_lower, bound);
+  h.passModel(lp);
+  testUserScale(h);
+  lp.sense_ = ObjSense::kMaximize;
+  h.passModel(lp);
+  testUserScale(h);
+}
+
+void testMip(Highs& h, const double cost, const double col_lower,
+             const double bound) {
+  HighsLp mip = mip1(cost, col_lower, bound);
+  h.passModel(mip);
+  testUserScale(h);
+  mip.sense_ = ObjSense::kMaximize;
+  h.passModel(mip);
+  testUserScale(h);
+}
+
+void testQp(Highs& h, const double cost, const double value,
+            const double col_lower, const double bound) {
+  HighsModel qp;
+  qp.lp_ = lp1(cost, col_lower, bound);
+  qp.hessian_ = hessian(value);
+  h.passModel(qp);
+  testUserScale(h);
+  qp.lp_.sense_ = ObjSense::kMaximize;
+  for (HighsInt iEl = 0; iEl < qp.hessian_.start_[qp.hessian_.dim_]; iEl++)
+    qp.hessian_.value_[iEl] *= -1;
+  h.passModel(qp);
+  testUserScale(h);
+}
 
 TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   Highs h;
@@ -209,6 +261,7 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   const HighsSolution& solution = h.getSolution();
   //  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("qp_regularization_value", 0);
+  h.setOptionValue("presolve", kHighsOffString);
   // Preolve on triggers assert
   const bool expose_presolve_bug = false;
   if (expose_presolve_bug) {
@@ -221,34 +274,34 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
 
   const bool lp_test = true;
   if (lp_test) {
-    HighsLp lp = lp1(1.0, 0.0, 1.0);
-    h.passModel(lp);
-    testUserScale(h);
-    lp.sense_ = ObjSense::kMaximize;
-    h.passModel(lp);
-    testUserScale(h);
-    
+    printf("\n================\nill-scaled-model: LP test\n================\n");
+    testLp(h, 1.0, 0.0, 1.0);
+    printf(
+        "\n================\nill-scaled-model: LP test - small costs and "
+        "column LB\n================\n");
+    testLp(h, 1e-8, 1e-8, 1.0);
   }
 
-  const bool mip_test = false;
+  const bool mip_test = true;
   if (mip_test) {
-    HighsLp lp = mip1(1.0, 0.0, 1.0);
-    h.passModel(lp);
-    testUserScale(h);
+    printf(
+        "\n================\nill-scaled-model: MIP test\n================\n");
+    testMip(h, 1.0, 0.0, 1.0);
+    printf(
+        "\n================\nill-scaled-model: MIP test - small costs and "
+        "column LB\n================\n");
+    testMip(h, 1e-8, 1e-8, 1.0);
   }
 
   const bool qp_test = true;
   if (qp_test) {
-    HighsModel model;
-    //    model.lp_ = lp1(1e-8, 1.0);
-    //    model.hessian_ = hessian(1e-8);
-    model.lp_ = lp1(1.0, 0.0, 1.0);
-    model.hessian_ = hessian(1.0);
-    h.passModel(model);
-    testUserScale(h);
+    printf("\n================\nill-scaled-model: QP test\n================\n");
+    testQp(h, 1.0, 1.0, 0.0, 1.0);
+    printf(
+        "\n================\nill-scaled-model: QP test - small costs and "
+        "column LB\n================\n");
+    testQp(h, 1e-8, 1e-4, 1e-8, 1.0);
   }
 
   h.resetGlobalScheduler(true);
-
 }
-

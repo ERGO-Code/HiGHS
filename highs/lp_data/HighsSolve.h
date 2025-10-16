@@ -19,6 +19,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsInfo& highs_info, HighsSolution& solution,
                                  HighsBasis& basis);
 void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
-					  const HighsModel& model,
-					  HighsUserScaleData& user_scale_data);
+                                          const HighsModel& model,
+                                          HighsUserScaleData& user_scale_data);
 #endif  // LP_DATA_HIGHSSOLVE_H_

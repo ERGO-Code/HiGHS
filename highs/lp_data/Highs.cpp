@@ -961,9 +961,8 @@ HighsStatus Highs::run() {
   // Determine coefficient ranges and possibly warn the user about
   // excessive values, obtaining suggested values for user_objective_scale
   // and user_bound_scale
-  assessExcessiveObjectiveBoundScaling(this->options_.log_options,
-			 this->model_,
-			 user_scale_data);
+  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
+                                       user_scale_data);
   this->writeModel("");
   HighsStatus status;
   if (!this->multi_linear_objective_.size()) {
@@ -2013,15 +2012,18 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
 }
 
 HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
-					    HighsInt& suggested_bound_scale) {
+                                            HighsInt& suggested_bound_scale) {
   this->logHeader();
   HighsUserScaleData data;
   initialiseUserScaleData(this->options_, data);
-  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_, data);
+  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
+                                       data);
   suggested_objective_scale = data.suggested_user_objective_scale;
   suggested_bound_scale = data.suggested_user_bound_scale;
-  printf("Highs::getObjectiveBoundScaling suggested cost / bound scale values of %d / %d\n",
-	 int(suggested_objective_scale), int(suggested_bound_scale));
+  printf(
+      "Highs::getObjectiveBoundScaling suggested cost / bound scale values of "
+      "%d / %d\n",
+      int(suggested_objective_scale), int(suggested_bound_scale));
   return HighsStatus::kOk;
 }
 

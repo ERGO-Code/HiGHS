@@ -348,27 +348,31 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 // outside the [small, large] range, and give appropriate scaling
 // recommendations
 void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
-				     const HighsModel& model,
-				     HighsUserScaleData& user_scale_data) {
+                                          const HighsModel& model,
+                                          HighsUserScaleData& user_scale_data) {
   const HighsLp& lp = model.lp_;
   if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
-  const bool user_cost_or_bound_scale = user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
-  const double small_objective_coefficient = kExcessivelySmallObjectiveCoefficient;
-  const double large_objective_coefficient = kExcessivelyLargeObjectiveCoefficient;
+  const bool user_cost_or_bound_scale =
+      user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
+  const double small_objective_coefficient =
+      kExcessivelySmallObjectiveCoefficient;
+  const double large_objective_coefficient =
+      kExcessivelyLargeObjectiveCoefficient;
   const double small_bound = kExcessivelySmallBoundValue;
   const double large_bound = kExcessivelyLargeBoundValue;
   std::stringstream message;
   if (user_cost_or_bound_scale) {
     if (user_scale_data.user_objective_scale)
       message << highsFormatToString(" user_cost_scale option value of %d",
-				     user_scale_data.user_objective_scale);
+                                     user_scale_data.user_objective_scale);
     if (user_scale_data.user_bound_scale) {
       if (user_scale_data.user_objective_scale) message << " and";
       message << highsFormatToString(" user_bound_scale option value of %d",
-				     user_scale_data.user_bound_scale);
+                                     user_scale_data.user_bound_scale);
     }
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Assessing costs and bounds after applying%s\n", message.str().c_str());
+                 "Assessing costs and bounds after applying%s\n",
+                 message.str().c_str());
   }
   // Lambda for assessing a finite nonzero
   auto assessFiniteNonzero = [&](const double value, double& min_value,
@@ -410,21 +414,21 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
     }
   }
   double min_col_cost =
-    std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
+      std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
   double max_col_cost =
-    std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
+      std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
   double min_col_bound =
-    std::min(min_continuous_col_bound, min_noncontinuous_col_bound);
+      std::min(min_continuous_col_bound, min_noncontinuous_col_bound);
   double max_col_bound =
-    std::max(max_continuous_col_bound, max_noncontinuous_col_bound);
-  
+      std::max(max_continuous_col_bound, max_noncontinuous_col_bound);
+
   double min_matrix_value = kHighsInf;
   double max_matrix_value = -kHighsInf;
   const HighsInt num_matrix_nz = lp.a_matrix_.numNz();
   for (HighsInt iEl = 0; iEl < num_matrix_nz; iEl++)
     assessFiniteNonzero(lp.a_matrix_.value_[iEl], min_matrix_value,
                         max_matrix_value);
-  
+
   double min_row_bound = kHighsInf;
   double max_row_bound = -kHighsInf;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
@@ -436,18 +440,19 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   double max_continuous_hessian_value = -kHighsInf;
   const HighsInt num_hessian_nz = model.hessian_.numNz();
   for (HighsInt iEl = 0; iEl < num_hessian_nz; iEl++)
-    assessFiniteNonzero(model.hessian_.value_[iEl], min_continuous_hessian_value,
+    assessFiniteNonzero(model.hessian_.value_[iEl],
+                        min_continuous_hessian_value,
                         max_continuous_hessian_value);
-  
+
   // Determine the minimum and maximum overall bounds that can be
   // scaled with user_bound_scale before zeroing extrema due to
   // absence of finite nonzero bounds
-  
+
   double min_scalable_bound = std::min(min_continuous_col_bound, min_row_bound);
   double max_scalable_bound = std::max(max_continuous_col_bound, max_row_bound);
   if (min_scalable_bound == kHighsInf) min_scalable_bound = 0;
   if (max_scalable_bound == -kHighsInf) max_scalable_bound = 0;
-  
+
   if (min_col_cost == kHighsInf) min_col_cost = 0;
   if (max_col_cost == -kHighsInf) max_col_cost = 0;
   if (min_col_bound == kHighsInf) min_col_bound = 0;
@@ -459,7 +464,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   double max_hessian_value = max_continuous_hessian_value;
   if (min_hessian_value == kHighsInf) min_hessian_value = 0;
   if (max_hessian_value == -kHighsInf) max_hessian_value = 0;
-  
+
   // Report on the coefficient ranges
   highsLogUser(log_options, HighsLogType::kInfo, "Coefficient ranges:\n");
   if (num_matrix_nz)
@@ -468,9 +473,10 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   if (lp.num_col_) {
     highsLogUser(log_options, HighsLogType::kInfo, "  Cost    [%5.0e, %5.0e]\n",
                  min_col_cost, max_col_cost);
-    if (num_hessian_nz) 
-      highsLogUser(log_options, HighsLogType::kInfo, "  Hessian [%5.0e, %5.0e]\n",
-		   min_hessian_value, max_hessian_value);
+    if (num_hessian_nz)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "  Hessian [%5.0e, %5.0e]\n", min_hessian_value,
+                   max_hessian_value);
     highsLogUser(log_options, HighsLogType::kInfo, "  Bound   [%5.0e, %5.0e]\n",
                  min_col_bound, max_col_bound);
   }
@@ -488,35 +494,41 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   // max_row_bound = 0
   assert(max_row_bound >= 0);
 
-  const std::string problem = user_cost_or_bound_scale ? "User-scaled problem" : "Problem";
+  const std::string problem =
+      user_cost_or_bound_scale ? "User-scaled problem" : "Problem";
 
-  if (0 < min_col_cost && min_col_cost < small_objective_coefficient) 
+  if (0 < min_col_cost && min_col_cost < small_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s has some excessively small costs\n", problem.c_str());
-  if (max_col_cost > large_objective_coefficient) 
+                 "%s has some excessively small costs\n", problem.c_str());
+  if (max_col_cost > large_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s has some excessively large costs\n", problem.c_str());
-  if (0 < min_hessian_value && min_hessian_value < small_objective_coefficient) 
+                 "%s has some excessively large costs\n", problem.c_str());
+  if (0 < min_hessian_value && min_hessian_value < small_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s has some excessively small Hessian values\n", problem.c_str());
-  if (max_hessian_value > large_objective_coefficient) 
+                 "%s has some excessively small Hessian values\n",
+                 problem.c_str());
+  if (max_hessian_value > large_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s has some excessively large Hessian values\n", problem.c_str());
-  if (0 < min_col_bound && min_col_bound < small_bound) 
+                 "%s has some excessively large Hessian values\n",
+                 problem.c_str());
+  if (0 < min_col_bound && min_col_bound < small_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s has some excessively small column bounds\n", problem.c_str());
-  if (max_col_bound > large_bound) 
+                 "%s has some excessively small column bounds\n",
+                 problem.c_str());
+  if (max_col_bound > large_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s has some excessively large column bounds\n", problem.c_str());
-  if (0 < min_row_bound && min_row_bound < small_bound) 
+                 "%s has some excessively large column bounds\n",
+                 problem.c_str());
+  if (0 < min_row_bound && min_row_bound < small_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s has some excessively small row bounds\n", problem.c_str());
-  if (max_row_bound > large_bound) 
+                 "%s has some excessively small row bounds\n", problem.c_str());
+  if (max_row_bound > large_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s has some excessively large row bounds\n", problem.c_str());
+                 "%s has some excessively large row bounds\n", problem.c_str());
 
   // Determine recommended user scaling values
-  auto suggestScaling = [&](double min_value, double max_value, double small_value, double large_value) {
+  auto suggestScaling = [&](double min_value, double max_value,
+                            double small_value, double large_value) {
     double ratio = 1;
     if (max_value > large_value) {
       // Max scalable value is large, so suggest scaling values down
@@ -531,19 +543,18 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
     assert(ratio);
     return ratio;
   };
-    
-  double suggested_bound_scaling =
-    suggestScaling(min_scalable_bound, max_scalable_bound,
-		   small_bound, large_bound);
+
+  double suggested_bound_scaling = suggestScaling(
+      min_scalable_bound, max_scalable_bound, small_bound, large_bound);
   // Determine the suggested (new) value for user_bound_scale,
   // allowing for the fact that the current value has been applied
+  HighsInt dl_user_bound_scale = std::ceil(std::log2(suggested_bound_scaling));
   user_scale_data.suggested_user_bound_scale =
-    user_scale_data.user_bound_scale +
-    std::ceil(std::log2(suggested_bound_scaling));
+      user_scale_data.user_bound_scale + dl_user_bound_scale;
   // Determine the order of magnitude of the suggested bound scaling -
   // just for logging
   HighsInt suggested_bound_scale_order_of_magnitude =
-    std::ceil(std::log10(suggested_bound_scaling));
+      std::ceil(std::log10(suggested_bound_scaling));
   // Applying the suggested bound scaling requires the costs and
   // matrix columns of non-continuous variables to be scaled, and any
   // Hessian entries are also scaled
@@ -551,75 +562,79 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   // Determine the corresponding extreme non-continuous costs and
   // update the extreme costs so that objective scaling can be
   // suggested
-  double suggested_user_bound_scale_value = pow(2.0, user_scale_data.suggested_user_bound_scale);
+  double suggested_user_bound_scale_value =
+      pow(2.0, user_scale_data.suggested_user_bound_scale);
   min_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   max_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   min_hessian_value /= suggested_user_bound_scale_value;
   max_hessian_value /= suggested_user_bound_scale_value;
-  
-  min_col_cost =
-    std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
-  max_col_cost =
-    std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
-  double min_objective_coefficient = std::min(min_col_cost, min_continuous_hessian_value);
-  double max_objective_coefficient = std::max(max_col_cost, max_continuous_hessian_value);
+
+  min_col_cost = std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
+  max_col_cost = std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
+  double min_objective_coefficient =
+      std::min(min_col_cost, min_continuous_hessian_value);
+  double max_objective_coefficient =
+      std::max(max_col_cost, max_continuous_hessian_value);
   if (min_objective_coefficient == kHighsInf) min_objective_coefficient = 0;
   if (max_objective_coefficient == -kHighsInf) max_objective_coefficient = 0;
-  
+
   double suggested_objective_scaling =
-    suggestScaling(min_objective_coefficient,
-		   max_objective_coefficient,
-		   small_objective_coefficient,
-		   large_objective_coefficient);
+      suggestScaling(min_objective_coefficient, max_objective_coefficient,
+                     small_objective_coefficient, large_objective_coefficient);
   // Determine the suggested (new) value for user_objective_scale,
   // allowing for the fact that the current value has been applied
+  HighsInt dl_user_objective_scale =
+      std::ceil(std::log2(suggested_objective_scaling));
   user_scale_data.suggested_user_objective_scale =
-    user_scale_data.user_objective_scale +
-    std::ceil(std::log2(suggested_objective_scaling));
+      user_scale_data.user_objective_scale + dl_user_objective_scale;
   // Determine the order of magnitude of the suggested objective scaling -
   // just for logging
   HighsInt suggested_objective_scale_order_of_magnitude =
-    std::ceil(std::log10(suggested_objective_scaling));
+      std::ceil(std::log10(suggested_objective_scaling));
 
   // Only report the order of magnitude scaling if there is no user
   // scaling
   bool order_of_magnitude_message =
-    suggested_objective_scale_order_of_magnitude &&
-    !user_scale_data.user_objective_scale;
+      suggested_objective_scale_order_of_magnitude &&
+      !user_scale_data.user_objective_scale;
   message.str(std::string());
   if (order_of_magnitude_message)
-    message << highsFormatToString("   Consider scaling the objective by 1e%+1d", 
-				   int(suggested_objective_scale_order_of_magnitude));
-  if (user_scale_data.suggested_user_objective_scale) {
+    message << highsFormatToString(
+        "   Consider scaling the objective by 1e%+1d",
+        int(suggested_objective_scale_order_of_magnitude));
+  if (dl_user_objective_scale) {
     if (!order_of_magnitude_message) {
       message << "   Consider";
     } else {
       message << ", or";
     }
-    message << highsFormatToString(" setting the user_cost_scale option to %d",
-				   int(user_scale_data.suggested_user_objective_scale));
+    message << highsFormatToString(
+        " setting the user_cost_scale option to %d",
+        int(user_scale_data.suggested_user_objective_scale));
   }
-  if (order_of_magnitude_message || user_scale_data.suggested_user_objective_scale)
-    highsLogUser(log_options, HighsLogType::kWarning, "%s\n", message.str().c_str());
+  if (order_of_magnitude_message || dl_user_objective_scale)
+    highsLogUser(log_options, HighsLogType::kWarning, "%s\n",
+                 message.str().c_str());
 
   message.str(std::string());
-  order_of_magnitude_message =
-    suggested_bound_scale_order_of_magnitude &&
-    !user_scale_data.user_bound_scale;
+  order_of_magnitude_message = suggested_bound_scale_order_of_magnitude &&
+                               !user_scale_data.user_bound_scale;
   message.str(std::string());
   if (order_of_magnitude_message)
-    message << highsFormatToString("   Consider scaling the    bounds by 1e%+1d", 
-				   int(suggested_bound_scale_order_of_magnitude));
-  if (user_scale_data.suggested_user_bound_scale) {
+    message << highsFormatToString(
+        "   Consider scaling the    bounds by 1e%+1d",
+        int(suggested_bound_scale_order_of_magnitude));
+  if (dl_user_bound_scale) {
     if (!order_of_magnitude_message) {
       message << "   Consider";
     } else {
       message << ", or";
     }
-    message << highsFormatToString(" setting the user_bound_scale option to %d",
-				   int(user_scale_data.suggested_user_bound_scale));
+    message << highsFormatToString(
+        " setting the user_bound_scale option to %d",
+        int(user_scale_data.suggested_user_bound_scale));
   }
-  if (order_of_magnitude_message || user_scale_data.suggested_user_bound_scale)
-    highsLogUser(log_options, HighsLogType::kWarning, "%s\n", message.str().c_str());
-  
+  if (order_of_magnitude_message || dl_user_bound_scale)
+    highsLogUser(log_options, HighsLogType::kWarning, "%s\n",
+                 message.str().c_str());
 }
