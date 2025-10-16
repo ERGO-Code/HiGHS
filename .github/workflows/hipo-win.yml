@@ -96,7 +96,7 @@ jobs:
           cd METIS
           pwd
           cmake -S. -B build `
-          -DGKLIB_PATH="$env:$GITHUB_WORKSPACE/METIS/GKlib"
+          -DGKLIB_PATH="$env:GITHUB_WORKSPACE/METIS/GKlib"
           -DCMAKE_INSTALL_PREFIX="${{ runner.workspace }}/installs" `
           -DCMAKE_BUILD_TYPE=${{ matrix.config }}
           cmake --build build --parallel --config ${{ matrix.config }}

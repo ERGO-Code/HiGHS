@@ -35,7 +35,6 @@ jobs:
           ls
 
       - name: Install GKlib Release
-        working-directory: GKlib
         if: ${{ matrix.config == 'Release' }}
         run: |
           cd GKlib
@@ -44,7 +43,6 @@ jobs:
           make install
 
       - name: Install GKlib Debug
-        working-directory: GKlib
         if: ${{ matrix.config == 'Debug' }}
         run: |
           cd GKlib

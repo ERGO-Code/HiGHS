@@ -2,84 +2,109 @@
 set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
 message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
 
-if (WIN32)
-    if (NOT (BLAS_ROOT STREQUAL ""))
-        message(STATUS "Looking for blas in " ${BLAS_ROOT})
-        set(OpenBLAS_ROOT ${BLAS_ROOT})
-        message(STATUS "OpenBLAS_ROOT is ${OpenBLAS_ROOT} ")
-        find_package(OpenBLAS CONFIG NO_DEFAULT_PATH)
+set(BLA_VENDOR "" CACHE STRING "For blas trampoline")
 
-        if(OpenBLAS_FOUND)
-            message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
-        else()
-            message(STATUS "OpenBLAS not found in ${BLAS_ROOT}")
-        endif()
+# Optionally set the vendor:
+# set(BLA_VENDOR libblastrampoline)
 
-    endif()
-    if ((BLAS_ROOT STREQUAL "") OR (NOT OpenBLAS_FOUND))
-        message(STATUS "Looking for blas")
+if (BLA_VENDOR STREQUAL "")
+    if (WIN32)
+        if (NOT (BLAS_ROOT STREQUAL ""))
+            message(STATUS "Looking for blas in " ${BLAS_ROOT})
+            set(OpenBLAS_ROOT ${BLAS_ROOT})
+            message(STATUS "OpenBLAS_ROOT is ${OpenBLAS_ROOT} ")
+            find_package(OpenBLAS CONFIG NO_DEFAULT_PATH)
 
-        find_package(OpenBLAS REQUIRED)
-
-        if(OpenBLAS_FOUND)
-            if(TARGET OpenBLAS::OpenBLAS)
+            if(OpenBLAS_FOUND)
                 message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
-            elseif(OPENBLAS_LIB)
-                message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
             else()
-                message(STATUS "OpenBLAS found but no target?")
-            endif()
-        else()
-            message(FATAL_ERROR "No BLAS library found")
-        endif()
-    endif()
-elseif(NOT APPLE)
-    # LINUX
-
-    # If a BLAS install was specified try to use it first.
-    if (NOT (BLAS_ROOT STREQUAL ""))
-        message(STATUS "Looking for blas in " ${BLAS_ROOT})
-
-        find_library(OPENBLAS_LIB
-            NAMES openblas
-            HINTS "${BLAS_ROOT}/lib"
-            NO_DEFAULT_PATH)
-
-        if(OPENBLAS_LIB)
-            message("Found OpenBLAS library at ${OPENBLAS_LIB}")
-        else()
-            find_library(BLAS_LIB
-                NAMES blas
-                HINTS "${BLAS_ROOT}/lib"
-                NO_DEFAULT_PATH)
-
-            if(BLAS_LIB)
-                message("Found BLAS library at ${BLAS_LIB}")
-            else()
-                message("Did not find blas library at ${BLAS_ROOT}")
-                message("Attempting default locations search")
+                message(STATUS "OpenBLAS not found in ${BLAS_ROOT}")
             endif()
         endif()
-    endif()
-    if ((BLAS_ROOT STREQUAL "") OR (NOT OPENBLAS_LIB AND NOT BLAS_LIB))
 
-        find_library(OPENBLAS_LIB
-            NAMES openblas
-            HINTS "${BLAS_ROOT}/lib")
+        if ((BLAS_ROOT STREQUAL "") OR (NOT OpenBLAS_FOUND))
+            # (NOT OpenBLAS_FOUND AND NOT BLAS_FOUND))
+            message(STATUS "Looking for blas")
 
-        if(OPENBLAS_LIB)
-            message("Found OpenBLAS library at ${OPENBLAS_LIB}")
-        else()
-            find_library(BLAS_LIB
-                NAMES blas
-                HINTS "${BLAS_ROOT}/lib")
+            find_package(OpenBLAS REQUIRED)
 
-            if(BLAS_LIB)
-                message("Found BLAS library at ${BLAS_LIB}")
+            if(OpenBLAS_FOUND)
+                if(TARGET OpenBLAS::OpenBLAS)
+                    message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
+                elseif(OPENBLAS_LIB)
+                    message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
+                else()
+                    # try blas
+                    # find_package(BLAS)
+                    # if (BLAS_FOUND)
+                    #     message(STATUS "Using BLAS library: ${BLAS_LIBRARIES}")
+                    #     message(STATUS "BLAS include dirs: ${BLAS_INCLUDE_DIRS}")
+                    # else()
+                    #     message(STATUS "OpenBLAS found but no target?")
+                    # endif()
+                endif()
             else()
                 message(FATAL_ERROR "No BLAS library found")
             endif()
         endif()
+
+    elseif(NOT APPLE)
+        # LINUX
+
+        # If a BLAS install was specified try to use it first.
+        if (NOT (BLAS_ROOT STREQUAL ""))
+            message(STATUS "Looking for blas in " ${BLAS_ROOT})
+
+            find_library(OPENBLAS_LIB
+                NAMES openblas
+                HINTS "${BLAS_ROOT}/lib"
+                NO_DEFAULT_PATH)
+
+            if(OPENBLAS_LIB)
+                message("Found OpenBLAS library at ${OPENBLAS_LIB}")
+            else()
+                find_library(BLAS_LIB
+                    NAMES blas
+                    HINTS "${BLAS_ROOT}/lib"
+                    NO_DEFAULT_PATH)
+
+                if(BLAS_LIB)
+                    message("Found BLAS library at ${BLAS_LIB}")
+                else()
+                    message("Did not find blas library at ${BLAS_ROOT}")
+                    message("Attempting default locations search")
+                endif()
+            endif()
+        endif()
+        if ((BLAS_ROOT STREQUAL "") OR (NOT OPENBLAS_LIB AND NOT BLAS_LIB))
+
+            find_library(OPENBLAS_LIB
+                NAMES openblas
+                HINTS "${BLAS_ROOT}/lib")
+
+            if(OPENBLAS_LIB)
+                message("Found OpenBLAS library at ${OPENBLAS_LIB}")
+            else()
+                find_library(BLAS_LIB
+                    NAMES blas
+                    HINTS "${BLAS_ROOT}/lib")
+
+                if(BLAS_LIB)
+                    message("Found BLAS library at ${BLAS_LIB}")
+                else()
+                    message(FATAL_ERROR "No BLAS library found")
+                endif()
+            endif()
+        endif()
+    endif()
+else()
+    # if (NOT BLA_VENDOR STREQUALS "")
+    find_package(BLAS REQUIRED)
+    if (BLAS_FOUND)
+        message(STATUS "Using BLAS library: ${BLAS_LIBRARIES}")
+        message(STATUS "BLAS include dirs: ${BLAS_INCLUDE_DIRS}")
+    else()
+        message(FATAL_ERROR "No BLAS library found!")
     endif()
 endif()
 
