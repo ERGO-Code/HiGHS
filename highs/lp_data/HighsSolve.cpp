@@ -534,7 +534,6 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
       // Max scalable value is large, so suggest scaling values down
       // so that the max value is large_value
       ratio = large_value / max_value;
-      assert(0 == 11);
     } else if (0 < max_value && max_value < small_value) {
       // All scalable values are small, so suggest scaling them up so
       // the max value is small_value

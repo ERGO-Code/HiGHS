@@ -2020,10 +2020,6 @@ HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
                                        data);
   suggested_objective_scale = data.suggested_user_objective_scale;
   suggested_bound_scale = data.suggested_user_bound_scale;
-  printf(
-      "Highs::getObjectiveBoundScaling suggested cost / bound scale values of "
-      "%d / %d\n",
-      int(suggested_objective_scale), int(suggested_bound_scale));
   return HighsStatus::kOk;
 }
 
