@@ -35,7 +35,7 @@ jobs:
           ls
 
       - name: Install GKLIB
-        run:
+        run: |
           cd GKlib
           cmake -S. -B build \
           -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
@@ -134,7 +134,9 @@ jobs:
 
       - name: Install METIS
         run: |
-          cmake -S. -B build \
+          cmake \
+          -S $GITHUB_WORKSPACE\METIS \
+          -B build \
           -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
           -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
           -DCMAKE_BUILD_TYPE=${{ matrix.config }}
