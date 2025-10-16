@@ -1204,7 +1204,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     };
 
     // lambda for tightening bounds
-    auto tightenBounds = [&](HighsInt col, double colBound, HighsInt direction,
+    auto tightenBounds = [&](HighsInt col, double colBound, bool colIsAtUpper,
                              HighsInt otherCol, double otherColBound,
                              HighsInt otherColCoeffPattern) {
       // bound should be finite
@@ -1215,7 +1215,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       double lowerBound = -kHighsInf;
       double upperBound = kHighsInf;
       // predictive bound analysis, see Theorem 3 from Gamrath et al.'s paper
-      if (direction > 0) {
+      if (colIsAtUpper) {
         // (i) x_j <= MINL^k_j(otherColBound)
         upperBound = computeImpliedUpperBound(col, otherCol, otherColBound,
                                               otherColCoeffPattern);
@@ -1326,12 +1326,12 @@ HPresolve::Result HPresolve::dominatedColumns(
             // tighten bounds via predictive bound analysis, see Theorem 3
             // from Gamrath et al.'s paper
             if (isDominatedBoundFinite)
-              HPRESOLVE_CHECKED_CALL(tightenBounds(col, dominatingBound,
-                                                   direction, k, dominatedBound,
-                                                   direction * direction_k));
+              HPRESOLVE_CHECKED_CALL(
+                  tightenBounds(col, dominatingBound, direction > 0, k,
+                                dominatedBound, direction * direction_k));
             if (!colDeleted[col] && isDominatingBoundFinite)
               HPRESOLVE_CHECKED_CALL(
-                  tightenBounds(k, dominatedBound, -direction_k, col,
+                  tightenBounds(k, dominatedBound, direction_k < 0, col,
                                 dominatingBound, direction * direction_k));
           }
         }
