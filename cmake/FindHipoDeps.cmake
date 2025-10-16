@@ -11,14 +11,30 @@ elseif(NOT APPLE)
     # If a BLAS install was specified try to use it first.
     if (NOT (BLAS_ROOT STREQUAL ""))
         message(STATUS "Looking for blas CMake targets file in " ${BLAS_ROOT})
-        find_package(OpenBLAS CONFIG NO_DEFAULT_PATH)
-    else()
-        find_package(OpenBLAS CONFIG)
-    endif()
 
-    if(OpenBLAS_FOUND)
-        message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
-    else()
+        find_library(OPENBLAS_LIB
+            NAMES openblas
+            HINTS "${BLAS_ROOT}/lib"
+            NO_DEFAULT_PATH)
+
+        if(OPENBLAS_LIB)
+            message("Found OpenBLAS library at ${OPENBLAS_LIB}")
+        else()
+            find_library(BLAS_LIB
+                NAMES blas
+                HINTS "${BLAS_ROOT}/lib"
+                NO_DEFAULT_PATH)
+
+            if(BLAS_LIB)
+                message("Found BLAS library at ${BLAS_LIB}")
+            else()
+                message("Did not find blas library at ${BLAS_ROOT}")
+                message("Attempting default locations search")
+            endif()
+        endif()
+    endif()
+    if ((BLAS_ROOT STREQUAL "") OR (NOT OPENBLAS_LIB AND NOT BLAS_LIB))
+
         find_library(OPENBLAS_LIB
             NAMES openblas
             HINTS "${BLAS_ROOT}/lib")
@@ -27,8 +43,8 @@ elseif(NOT APPLE)
             message("Found OpenBLAS library at ${OPENBLAS_LIB}")
         else()
             find_library(BLAS_LIB
-                NAMES blas HINTS
-                "${BLAS_ROOT}/lib")
+                NAMES blas
+                HINTS "${BLAS_ROOT}/lib")
 
             if(BLAS_LIB)
                 message("Found BLAS library at ${BLAS_LIB}")
