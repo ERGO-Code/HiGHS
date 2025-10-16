@@ -34,22 +34,46 @@ jobs:
           mkdir installs
           ls
 
-      - name: Install GKLIB
+      - name: Install GKlib Release
+        working-directory: GKlib
+        if: ${{ matrix.config == 'Release' }}
         run: |
           cd GKlib
-          cmake -S. -B build \
-          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
-          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
-          cmake --build build --parallel
-          cmake --install build
+          make config shared=1 prefix=${{runner.workspace}}/installs
+          make
+          make install
 
-      - name: Install METIS
+      - name: Install GKlib Debug
+        working-directory: GKlib
+        if: ${{ matrix.config == 'Debug' }}
         run: |
-          cmake -S. -B build \
-          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
-          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
-          cmake --build build --parallel
-          cmake --install build
+          cd GKlib
+          make config shared=1 prefix=${{runner.workspace}}/installs gdb=1 debug=1
+          make
+          make install
+
+      - name: Install METIS Release
+        if: ${{ matrix.config == 'Release'}}
+        run: |
+          cd METIS
+          make config shared=1 prefix=${{runner.workspace}}/installs
+          make
+          make install
+
+      - name: Install METIS Debug
+        if: ${{ matrix.config == 'Debug'}}
+        run: |
+          cd METIS
+          make config shared=1 prefix=${{runner.workspace}}/installs gdb=1 debug=1
+          make
+          make install
+
+      - name: Check METIS and GKlib
+        working-directory: ${{runner.workspace}}
+        run: |
+          cd installs
+          ls
+          ls lib
 
       - name: Check METIS and GKlib
         working-directory: ${{runner.workspace}}
@@ -111,7 +135,7 @@ jobs:
       - name: Install METIS
         run: |
           cmake \
-          -S $GITHUB_WORKSPACE\METIS \
+          -S $GITHUB_WORKSPACE/METIS \
           -B build \
           -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
           -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
