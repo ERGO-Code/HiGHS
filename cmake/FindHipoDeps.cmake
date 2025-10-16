@@ -11,7 +11,7 @@ if (WIN32)
 
         if(OpenBLAS_FOUND)
             message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
-        else() 
+        else()
             message(STATUS "OpenBLAS not found in ${BLAS_ROOT}")
         endif()
 
@@ -19,7 +19,7 @@ if (WIN32)
     if ((BLAS_ROOT STREQUAL "") OR (NOT OpenBLAS_FOUND))
         message(STATUS "Looking for blas")
 
-        find_package(OpenBLAS CONFIG REQUIRED)
+        find_package(OpenBLAS REQUIRED)
 
         if(OpenBLAS_FOUND)
             if(TARGET OpenBLAS::OpenBLAS)
@@ -90,9 +90,9 @@ message(STATUS "METIS_ROOT is " ${METIS_ROOT})
 # If a METIS install was specified try to use it first.
 if (NOT (METIS_ROOT STREQUAL ""))
     message(STATUS "Looking for METIS CMake targets file in " ${METIS_ROOT})
-    find_package(metis CONFIG NO_DEFAULT_PATH)
+    find_package(metis CONFIG NO_DEFAULT_PATH QUIET)
 else()
-    find_package(metis CONFIG)
+    find_package(metis CONFIG QUIET)
 endif()
 
 if(metis_FOUND)
