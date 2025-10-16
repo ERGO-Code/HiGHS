@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <random>
 #include <stack>
 
@@ -1284,6 +1285,72 @@ void Analyse::computeBlockStart() {
   }
 }
 
+void Analyse::findTreeSplitting() {
+  // Split the tree into single nodes and subtrees.
+  // The subtrees have at most 1% of total operations.
+  // The tree is parallelised by creating a task for each single node and a task
+  // for each subtree.
+
+  // linked lists of children
+  std::vector<Int> head, next;
+  childrenLinkedList(sn_parent_, head, next);
+
+  // compute number of operations for each supernode
+  std::vector<double> sn_ops(sn_count_);
+  double total_ops = dense_ops_;
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    // supernode size
+    const Int sz = sn_start_[sn + 1] - sn_start_[sn];
+
+    // frontal size
+    const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
+
+    // number of operations for this supernode
+    for (Int i = 0; i < sz; ++i) {
+      sn_ops[sn] += (double)(fr - i - 1) * (fr - i - 1);
+    }
+
+    // add assembly operations times spops_weight to the parent
+    if (sn_parent_[sn] != -1) {
+      const Int ldc = fr - sz;
+      sn_ops[sn_parent_[sn]] += ldc * (ldc + 1) / 2 * spops_weight;
+      total_ops += ldc * (ldc + 1) / 2 * spops_weight;
+    }
+  }
+
+  // compute number of operations to process each subtree
+  std::vector<double> subtree_ops(sn_count_, 0.0);
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    subtree_ops[sn] += sn_ops[sn];
+    if (sn_parent_[sn] != -1) {
+      subtree_ops[sn_parent_[sn]] += subtree_ops[sn];
+    }
+  }
+
+  // Find first descendant of each supernode
+  std::vector<Int> first_desc;
+  firstDescendant(sn_parent_, first_desc);
+
+  // Divide the tree into single nodes and subtrees, such that each subtree has
+  // at most small_thresh operations overall.
+  const double small_thresh = small_thresh_coeff * total_ops;
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    if (subtree_ops[sn] > small_thresh) {
+      // sn is a single node
+      tree_splitting_.insert({sn, {NodeType::single, -1}});
+
+    } else if (sn_parent_[sn] == -1 ||
+               subtree_ops[sn_parent_[sn]] > small_thresh) {
+      // sn is head of a subtree
+      tree_splitting_.insert({sn, {NodeType::subtree, first_desc[sn]}});
+
+    } else {
+      // sn is part of a subtree, but not the head
+      continue;
+    }
+  }
+}
+
 Int Analyse::run(Symbolic& S) {
   // Perform analyse phase and store the result into the symbolic object S.
   // After Run returns, the Analyse object is not valid.
@@ -1359,6 +1426,8 @@ Int Analyse::run(Symbolic& S) {
   computeBlockStart();
   computeCriticalPath();
 
+  findTreeSplitting();
+
   // move relevant stuff into S
   S.n_ = n_;
   S.sn_ = sn_count_;
@@ -1406,6 +1475,7 @@ Int Analyse::run(Symbolic& S) {
   S.relind_clique_ = std::move(relind_clique_);
   S.consecutive_sums_ = std::move(consecutive_sums_);
   S.clique_block_start_ = std::move(clique_block_start_);
+  S.tree_splitting_ = std::move(tree_splitting_);
 
 #if HIPO_TIMING_LEVEL >= 1
   data_.sumTime(kTimeAnalyse, clock_total.stop());

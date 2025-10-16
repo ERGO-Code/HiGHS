@@ -11,7 +11,6 @@
 #include "SymScaling.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
-#include "parallel/HighsParallel.h"
 
 namespace hipo {
 
@@ -168,30 +167,27 @@ void Factorise::permute(const std::vector<Int>& iperm) {
   valA_ = std::move(new_val);
 }
 
-class TaskGroupSpecial : public highs::parallel::TaskGroup {
+TaskGroupSpecial::~TaskGroupSpecial() {
   // Using TaskGroup may throw an exception when tasks are cancelled. Not sure
   // exactly why this happens, but for now this fix seems to work.
 
- public:
-  ~TaskGroupSpecial() {
-    // No virtual destructor in TaskGroup. Do not call this class via pointer to
-    // the base!
+  // No virtual destructor in TaskGroup. Do not call this class via pointer to
+  // the base!
 
-    cancel();
+  cancel();
 
-    // re-call taskWait if it throws, until it succeeds
-    while (true) {
-      try {
-        taskWait();
-        break;
-      } catch (HighsTask::Interrupt) {
-        continue;
-      }
+  // re-call taskWait if it throws, until it succeeds
+  while (true) {
+    try {
+      taskWait();
+      break;
+    } catch (HighsTask::Interrupt) {
+      continue;
     }
   }
-};
+}
 
-void Factorise::processSupernode(Int sn) {
+void Factorise::processSupernode(Int sn, bool parallelise) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
 
@@ -199,11 +195,12 @@ void Factorise::processSupernode(Int sn) {
 
   if (flag_stop_) return;
 
-  if (S_.parTree()) {
+  if (parallelise) {
     // spawn children of this supernode in reverse order
     Int child_to_spawn = first_child_reverse_[sn];
     while (child_to_spawn != -1) {
-      tg.spawn([=]() { processSupernode(child_to_spawn); });
+      if (spawnNode(child_to_spawn, tg)) return;
+
       child_to_spawn = next_child_reverse_[child_to_spawn];
     }
 
@@ -263,7 +260,7 @@ void Factorise::processSupernode(Int sn) {
     // Schur contribution of the current child
     std::vector<double>& child_clique = schur_contribution_[child_sn];
 
-    if (S_.parTree()) {
+    if (parallelise) {
       // sync with spawned child, apart from the first one
       if (child_sn != first_child_[sn]) tg.sync();
 
@@ -376,6 +373,35 @@ void Factorise::processSupernode(Int sn) {
 #endif
 }
 
+void Factorise::processSubtree(Int start, Int end) {
+  for (Int sn = start; sn < end; ++sn) {
+    processSupernode(sn, false);
+  }
+}
+
+bool Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
+  auto it = S_.treeSplitting().find(sn);
+
+  if (it == S_.treeSplitting().end()) {
+    log_->printDevInfo("Missing supernode from tree splitting\n");
+    flag_stop_ = true;
+    return true;
+  }
+
+  if (it->second.type == NodeType::single) {
+    // sn is single node, spawn only that
+    tg.spawn([=]() { processSupernode(sn, true); });
+
+  } else {
+    // sn is subtree, spawn the whole subtree
+    Int start = it->second.first;
+    Int end = sn + 1;
+    tg.spawn([=]() { processSubtree(start, end); });
+  }
+
+  return false;
+}
+
 bool Factorise::run(Numeric& num) {
 #if HIPO_TIMING_LEVEL >= 1
   Clock clock;
@@ -395,12 +421,10 @@ bool Factorise::run(Numeric& num) {
   sn_columns_.resize(S_.sn());
 
   if (S_.parTree()) {
-    Int spawned_roots{};
     // spawn tasks for root supernodes
     for (Int sn = 0; sn < S_.sn(); ++sn) {
       if (S_.snParent(sn) == -1) {
-        tg.spawn([=]() { processSupernode(sn); });
-        ++spawned_roots;
+        if (spawnNode(sn, tg)) return true;
       }
     }
 
@@ -409,7 +433,7 @@ bool Factorise::run(Numeric& num) {
   } else {
     // go through each supernode serially
     for (Int sn = 0; sn < S_.sn(); ++sn) {
-      processSupernode(sn);
+      processSupernode(sn, false);
     }
   }
 

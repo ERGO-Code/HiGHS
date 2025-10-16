@@ -265,6 +265,23 @@ double getDiagStart(Int n, Int k, Int nb, Int n_blocks, std::vector<Int>& start,
   return result;
 }
 
+void firstDescendant(const std::vector<Int>& parent, std::vector<Int>& first) {
+  // Given an elimination tree, find the first descendant of each node, i.e.
+  // given a node j, first[j] is the descendant of j with smallest number.
+  // Taken from Tim Davis "Direct Methods for Sparse Linear Systems".
+
+  const Int n = parent.size();
+  first.assign(n, -1);
+
+  for (Int i = 0; i < n; ++i) {
+    Int j = i;
+    while (j != -1 && first[j] == -1) {
+      first[j] = i;
+      j = parent[j];
+    }
+  }
+}
+
 Clock::Clock() { start(); }
 void Clock::start() { t0 = std::chrono::high_resolution_clock::now(); }
 double Clock::stop() const {

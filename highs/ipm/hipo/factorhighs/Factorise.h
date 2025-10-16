@@ -7,8 +7,14 @@
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Log.h"
+#include "parallel/HighsParallel.h"
 
 namespace hipo {
+
+class TaskGroupSpecial : public highs::parallel::TaskGroup {
+ public:
+  ~TaskGroupSpecial();
+};
 
 class Factorise {
  public:
@@ -68,7 +74,9 @@ class Factorise {
 
  public:
   void permute(const std::vector<Int>& iperm);
-  void processSupernode(Int sn);
+  void processSupernode(Int sn, bool parallelise);
+  void processSubtree(Int start, Int end);
+  bool spawnNode(Int sn, const TaskGroupSpecial& tg);
 
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
