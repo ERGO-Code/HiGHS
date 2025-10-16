@@ -10,7 +10,7 @@ elseif(NOT APPLE)
 
     # If a BLAS install was specified try to use it first.
     if (NOT (BLAS_ROOT STREQUAL ""))
-        message(STATUS "Looking for blas CMake targets file in " ${BLAS_ROOT})
+        message(STATUS "Looking for blas in " ${BLAS_ROOT})
 
         find_library(OPENBLAS_LIB
             NAMES openblas
