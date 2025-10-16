@@ -114,6 +114,7 @@ jobs:
           -B "${{ runner.workspace }}/build" `
           -DHIPO=ON `
           -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+          -DMETIS_ROOT="${{ runner.workspace }}/installs" `
           -DALL_TESTS=${{ matrix.all_tests }}
 
       - name: Build
