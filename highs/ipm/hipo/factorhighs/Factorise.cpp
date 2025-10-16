@@ -373,12 +373,6 @@ void Factorise::processSupernode(Int sn, bool parallelise) {
 #endif
 }
 
-void Factorise::processSubtree(Int start, Int end) {
-  for (Int sn = start; sn < end; ++sn) {
-    processSupernode(sn, false);
-  }
-}
-
 bool Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
   auto it = S_.treeSplitting().find(sn);
 
@@ -396,7 +390,11 @@ bool Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
     // sn is subtree, spawn the whole subtree
     Int start = it->second.first;
     Int end = sn + 1;
-    tg.spawn([=]() { processSubtree(start, end); });
+    tg.spawn([=]() {
+      for (Int sn = start; sn < end; ++sn) {
+        processSupernode(sn, false);
+      }
+    });
   }
 
   return false;
