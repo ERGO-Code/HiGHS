@@ -199,19 +199,23 @@ HighsHessian hessian(const double value) {
 void testUserScale(Highs& h) {
   h.setOptionValue("user_cost_scale", 0);
   h.setOptionValue("user_bound_scale", 0);
-  if (dev_run) printf("\n---------------\nWithout user scaling\n---------------\n");
+  if (dev_run)
+    printf("\n---------------\nWithout user scaling\n---------------\n");
   h.writeModel("");
   h.run();
   h.writeSolution("", 1);
   double unscaled_objective_value = h.getInfo().objective_function_value;
-  if (dev_run) printf("\n---------------\nWith user scaling\n---------------\n");
+  if (dev_run)
+    printf("\n---------------\nWith user scaling\n---------------\n");
   HighsInt suggested_objective_scale;
   HighsInt suggested_bound_scale;
   h.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
-  if (dev_run) printf(
-      "Highs::getObjectiveBoundScaling suggested cost / bound scale values of "
-      "%d / %d\n",
-      int(suggested_objective_scale), int(suggested_bound_scale));
+  if (dev_run)
+    printf(
+        "Highs::getObjectiveBoundScaling suggested cost / bound scale values "
+        "of "
+        "%d / %d\n",
+        int(suggested_objective_scale), int(suggested_bound_scale));
   const bool has_suggested_scaling =
       suggested_objective_scale || suggested_bound_scale;
   if (!has_suggested_scaling) {
@@ -296,31 +300,38 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   const double small_hessian = 1e-4;
   const double small_col_lower = 1e-8;
   if (lp_test) {
-    if (dev_run) printf("\n================\nill-scaled-model: LP test\n================\n");
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: LP test\n================\n");
     testLp(h, ok_cost, ok_col_lower, ok_bound);
     if (small_cost_test) {
-      if (dev_run) printf(
-	     "\n================\nill-scaled-model: LP test - small costs and "
-	     "column LB\n================\n");
+      if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: LP test - small costs and "
+            "column LB\n================\n");
       testLp(h, small_cost, small_col_lower, ok_bound);
     }
   }
 
   if (mip_test) {
-    if (dev_run) printf(
-        "\n================\nill-scaled-model: MIP test\n================\n");
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: MIP test\n================\n");
     testMip(h, ok_cost, ok_col_lower, ok_bound);
-    
+
     if (small_cost_test) {
-      if (dev_run) printf(
-	     "\n================\nill-scaled-model: MIP test - small costs and "
-	     "column LB\n================\n");
+      if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: MIP test - small costs and "
+            "column LB\n================\n");
       testMip(h, small_cost, small_col_lower, ok_bound);
     }
   }
 
   if (qp_test) {
-    if (dev_run) printf("\n================\nill-scaled-model: QP test\n================\n");
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: QP test\n================\n");
     testQp(h, ok_cost, ok_hessian, ok_col_lower, ok_bound);
     // QP solver can't handle small costs and Hessian
   }

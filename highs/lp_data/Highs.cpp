@@ -963,7 +963,7 @@ HighsStatus Highs::run() {
   // and user_bound_scale
   assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
                                        user_scale_data);
-  this->writeModel("");
+  //  this->writeModel("");
   HighsStatus status;
   if (!this->multi_linear_objective_.size()) {
     status = this->optimizeModel();
