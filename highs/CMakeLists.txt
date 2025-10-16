@@ -217,7 +217,7 @@ else()
       endif(APPLE)
     else()
       # BLA_VENDOR Specified
-      target_link_libraries(highs BLAS::BLAS)
+      target_link_libraries(highs PRIVATE BLAS::BLAS)
 
       string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
       if(blas_lower MATCHES "openblas")

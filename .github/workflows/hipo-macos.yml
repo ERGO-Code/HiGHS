@@ -38,7 +38,7 @@ jobs:
         if: ${{ matrix.config == 'Release' }}
         run: |
           cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
+          make config prefix=${{runner.workspace}}/installs
           make
           make install
 
@@ -46,7 +46,7 @@ jobs:
         if: ${{ matrix.config == 'Debug' }}
         run: |
           cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs gdb=1 debug=1
+          make config prefix=${{runner.workspace}}/installs gdb=1 debug=1
           make
           make install
 
@@ -54,7 +54,7 @@ jobs:
         if: ${{ matrix.config == 'Release'}}
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs
+          make config prefix=${{runner.workspace}}/installs
           make
           make install
 
@@ -62,7 +62,7 @@ jobs:
         if: ${{ matrix.config == 'Debug'}}
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs gdb=1 debug=1
+          make config prefix=${{runner.workspace}}/installs gdb=1 debug=1
           make
           make install
 
