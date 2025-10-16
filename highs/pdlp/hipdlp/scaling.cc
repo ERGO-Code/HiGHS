@@ -305,6 +305,9 @@ void Scaling::ApplyScaling(const std::vector<double>& col_scaling,
       lp_->a_matrix_.value_[el] /= (row_scaling[row] * col_scaling[col]);
     }
   }
+
+  //TO DO: scale offset
+  
 }
 
 void Scaling::unscaleSolution(std::vector<double>& x,

@@ -47,6 +47,8 @@ void PDLPSolver::preprocessLp() {
     logger_.info("Original LP matrix must be in column-wise format,");
   }
 
+  lp_.offset_ = original_lp_->offset_;
+
   int num_new_cols = 0;
   int nEqs = 0;
   constraint_types_.resize(nRows_orig);
@@ -378,8 +380,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   x_current_ = x;
   y_current_ = y;
   linalg::project_bounds(lp_, x_current_);
-  x_sum_ = x_current_;
-  x_avg_ = x_current_;
+  linalg::project_bounds(lp_, x_sum_);
+  linalg::project_bounds(lp_, x_avg_);
   linalg::Ax(lp, x_current_, Ax_cache_);
   std::vector<double> Ax_avg = Ax_cache_;
   std::vector<double> ATy_avg(lp.num_col_, 0.0);
@@ -507,9 +509,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
         // Recompute Ax and ATy for the restarted iterates
         linalg::Ax(lp, x_current_, Ax_cache_);
-        debug_pdlp_data_.ax_norm = linalg::vector_norm(Ax_cache_);
         linalg::ATy(lp, y_current_, ATy_cache_);
-        debug_pdlp_data_.aty_norm = linalg::vector_norm(ATy_cache_);
         restart_scheme_.SetLastRestartIter(iter);
 
         //continue; //same logic as cupdlp
@@ -816,7 +816,7 @@ PDLPSolver::ComputeDualityGap(const std::vector<double>& x,
 }
 
 double PDLPSolver::ComputeDualObjective(const std::vector<double>& y) {
-  double dual_obj = 0.0;
+  double dual_obj = lp_.offset_;
 
   // Compute b'y (or rhs'y in cuPDLP notation)
   for (int i = 0; i < lp_.num_row_; ++i) {
@@ -851,7 +851,7 @@ bool PDLPSolver::CheckConvergence(const int iter, const std::vector<double>& x,
 
   // Compute primal feasibility
   double primal_feasibility = 
-      ComputePrimalFeasibility(ax_vector);
+  ComputePrimalFeasibility(ax_vector);
   results.primal_feasibility = primal_feasibility;
 
   // Compute dual feasibility
@@ -859,11 +859,11 @@ bool PDLPSolver::CheckConvergence(const int iter, const std::vector<double>& x,
   results.dual_feasibility = dual_feasibility;
 
   // Compute objectives
-  double primal_obj = 0.0;
+  double primal_obj =  lp_.offset_;
   for (int i = 0; i < lp_.num_col_; ++i) {
     primal_obj += lp_.col_cost_[i] * x[i];
   }
-  results.primal_obj = primal_obj;
+  results.primal_obj = primal_obj ;
 
   double dual_obj = ComputeDualObjective(y);
   results.dual_obj = dual_obj;
