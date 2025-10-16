@@ -12,7 +12,7 @@ if (WIN32)
             message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
         endif()
     endif()
-    if ((BLAS_ROOT STREQUAL "") OR (NOT OpenBLAS_Found))
+    if ((BLAS_ROOT STREQUAL "") OR (NOT OpenBLAS_FOUND))
         find_package(OpenBLAS CONFIG REQUIRED)
 
         if(OpenBLAS_FOUND)
