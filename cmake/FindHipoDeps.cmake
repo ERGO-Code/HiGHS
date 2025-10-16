@@ -31,9 +31,9 @@ elseif(NOT APPLE)
                 message("Did not find blas library at ${BLAS_ROOT}")
                 message("Attempting default locations search")
             endif()
+        endif()
     endif()
-    if ((BLAS_ROOT STREQUAL "") OR 
-        (NOT OPENBLAS_LIB and NOT BLAS_LIB))
+    if ((BLAS_ROOT STREQUAL "") OR (NOT OPENBLAS_LIB AND NOT BLAS_LIB))
 
         find_library(OPENBLAS_LIB
             NAMES openblas
