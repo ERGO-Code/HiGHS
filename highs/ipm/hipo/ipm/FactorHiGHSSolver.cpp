@@ -5,6 +5,7 @@
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
+#include "parallel/HighsParallel.h"
 
 namespace hipo {
 
@@ -121,8 +122,7 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
-                                        int64_t nz_limit) {
+Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A) {
   // Build lower triangular structure of AAt.
   // This approach uses a column-wise copy of A, a partial row-wise copy and a
   // vector of corresponding indices.
@@ -194,9 +194,15 @@ Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
     }
     // intersection of row with rows below finished.
 
-    // if the total number of nonzeros exceeds the maximum, return error
-    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= nz_limit)
+    // if the total number of nonzeros overflows the int type, return OoM
+    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >= kHighsIInf)
       return kStatusOoM;
+
+    // if the total number of nonzeros exceeds the maximum, return error.
+    // this is useful when the number of nnz from AS factor is known.
+    if ((int64_t)ptrNE_[row] + (int64_t)nz_in_col >=
+        NE_nz_limit_.load(std::memory_order_relaxed))
+      return kStatusErrorAnalyse;
 
     // update pointers
     ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
@@ -380,7 +386,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   std::vector<Int> ptrLower, rowsLower;
   if (Int status = getASstructure(model_.A(), ptrLower, rowsLower))
     return status;
-  if (info_) info_->matrix_structure_time = clock.stop();
+  if (info_) info_->AS_structure_time = clock.stop();
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(model_.A().num_col_ + model_.A().num_row_, -1);
@@ -401,16 +407,12 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   return status ? kStatusErrorAnalyse : kStatusOk;
 }
 
-Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
+Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status. If building the matrix failed, the status is
   // set to OoM.
 
-  log_.printDevInfo("Building NE structure\n");
-
   Clock clock;
-  if (Int status = buildNEstructure(model_.A(), nz_limit)) return status;
-  if (info_) info_->matrix_structure_time = clock.stop();
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(model_.A().num_row_, 1);
@@ -441,24 +443,57 @@ Int FactorHiGHSSolver::chooseNla() {
 
   Clock clock;
 
-  // Perform analyse phase of augmented system
-  if (analyseAS(symb_AS)) failure_AS = true;
+  // Perform analyseAS concurrently with buildNEstructure. Then, perform
+  // analyseNE. Metis is not thread-safe, so cannot perform the two analyse at
+  // the same time.
+  highs::parallel::TaskGroup tg;
 
-  // Perform analyse phase of normal equations
-  if (model_.m() > kMinRowsForDensity &&
-      model_.maxColDensity() > kDenseColThresh) {
-    // Normal equations would be too expensive because there are dense
-    // columns, so skip it.
-    failure_NE = true;
-  } else {
-    // If NE has more nonzeros than the factor of AS, then it's likely that AS
-    // will be preferred, so stop computation of NE.
+  tg.spawn([&, this]() {
+    // Perform analyse phase of augmented system
+    if (analyseAS(symb_AS)) failure_AS = true;
+
+    // Set a multiple of the number of nonzeros in the factor
+    // of AS as an upper limit for the number of nonzeros of NE.
+    // This is potentially non-deterministic, because NE_nz_limit_ changes at a
+    // random moment for function buildNEstructure. However, the most likely
+    // outcome is that it stops the NE structure when it would not be chosen
+    // anyway, so it shouldn't have a visible effect. There may be pathological
+    // cases where this is not true though.
     int64_t NE_nz_limit = symb_AS.nz() * kSymbNzMult;
     if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
+    NE_nz_limit_.store(NE_nz_limit, std::memory_order_relaxed);
+  });
 
-    Int NE_status = analyseNE(symb_NE, NE_nz_limit);
+  // Run the two tasks sequentially in debug mode
+  if (log_.debug(1)) tg.taskWait();
+
+  tg.spawn([&, this]() {
+    if (model_.m() > kMinRowsForDensity &&
+        model_.maxColDensity() > kDenseColThresh) {
+      // Normal equations would be too expensive because there are dense
+      // columns, so skip it.
+      failure_NE = true;
+      log_.printDevInfo("NE skipped\n");
+    } else {
+      log_.printDevInfo("Building NE structure\n");
+
+      Clock clock;
+      if (Int status = buildNEstructure(model_.A())) {
+        failure_NE = true;
+        if (status == kStatusErrorAnalyse)
+          log_.printDevInfo("NE stopped early\n");
+        if (status == kStatusOoM) log_.printDevInfo("NE matrix is too large\n");
+      }
+      if (info_) info_->NE_structure_time = clock.stop();
+    }
+  });
+
+  tg.taskWait();
+
+  // Perform analyse phase of normal equations
+  if (!failure_NE) {
+    Int NE_status = analyseNE(symb_NE);
     if (NE_status) failure_NE = true;
-    if (NE_status == kStatusOoM) log_.printDevInfo("NE matrix is too large\n");
   }
 
   Int status = kStatusOk;
@@ -529,11 +564,16 @@ Int FactorHiGHSSolver::setNla() {
     }
 
     case kOptionNlaNormEq: {
-      Int status = analyseNE(S_);
-      if (status == kStatusOoM) {
+      Clock clock;
+      Int status = buildNEstructure(model_.A());
+      if (info_) info_->NE_structure_time = clock.stop();
+      if (status) {
         log_.printe("NE requested, matrix is too large\n");
-        return kStatusOoM;
-      } else if (status) {
+        return kStatusErrorAnalyse;
+      }
+
+      status = analyseNE(S_);
+      if (status) {
         log_.printe("NE requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }

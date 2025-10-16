@@ -2,6 +2,7 @@
 #define HIPO_FACTORHIGHS_SOLVER_H
 
 #include <algorithm>
+#include <atomic>
 
 #include "Info.h"
 #include "IpmData.h"
@@ -24,6 +25,7 @@ class FactorHiGHSSolver : public LinearSolver {
   std::vector<double> valNE_;
   std::vector<Int> ptrNE_rw_, idxNE_rw_;
   std::vector<Int> corr_NE_;
+  std::atomic<int64_t> NE_nz_limit_{kHighsIInf};
 
   const Regularisation& regul_;
 
@@ -38,13 +40,12 @@ class FactorHiGHSSolver : public LinearSolver {
   Int setNla();
   void setParallel();
 
-  Int buildNEstructure(const HighsSparseMatrix& A,
-                       int64_t nz_limit = kHighsIInf);
+  Int buildNEstructure(const HighsSparseMatrix& A);
   Int buildNEvalues(const HighsSparseMatrix& A,
                     const std::vector<double>& scaling);
 
   Int analyseAS(Symbolic& S);
-  Int analyseNE(Symbolic& S, int64_t nz_limit = kHighsIInf);
+  Int analyseNE(Symbolic& S);
 
  public:
   FactorHiGHSSolver(Options& options, const Model& model,

@@ -1478,10 +1478,12 @@ void Solver::printSummary() const {
                << fix(info_.analyse_AS_time, 0, 2) << '\n';
     log_stream << textline("Analyse NE time:")
                << fix(info_.analyse_NE_time, 0, 2) << '\n';
+    log_stream << textline("AS structure time:")
+               << fix(info_.AS_structure_time, 0, 2) << '\n';
+    log_stream << textline("NE structure time:")
+               << fix(info_.NE_structure_time, 0, 2) << '\n';
     log_stream << textline("Matrix time:") << fix(info_.matrix_time, 0, 2)
                << '\n';
-    log_stream << textline("Matrix structure time:")
-               << fix(info_.matrix_structure_time, 0, 2) << '\n';
     log_stream << textline("Factorisation time:")
                << fix(info_.factor_time, 0, 2) << '\n';
     log_stream << textline("Solve time:") << fix(info_.solve_time, 0, 2)
