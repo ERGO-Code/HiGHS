@@ -3032,7 +3032,7 @@ HighsStatus Highs::userScaleSolution(HighsUserScaleData& data,
   if (!update_kkt) return return_status;
   // In scaling the objective function value, have to consider the offset
   double objective_function_value =
-    info_.objective_function_value - model_.lp_.offset_;
+      info_.objective_function_value - model_.lp_.offset_;
   objective_function_value *= (bound_scale_value * objective_scale_value);
   objective_function_value += model_.lp_.offset_;
   info_.objective_function_value = objective_function_value;

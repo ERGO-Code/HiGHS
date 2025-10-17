@@ -1062,8 +1062,8 @@ double Highs_getObjectiveValue(const void* highs);
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-  HighsInt Highs_getDualObjectiveValue(const void* highs,
-				       double* dual_objective_value);
+HighsInt Highs_getDualObjectiveValue(const void* highs,
+                                     double* dual_objective_value);
 
 /**
  * Get the indices of the rows and columns that make up the basis matrix ``B``
@@ -2427,14 +2427,16 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
  * coefficients and bound values
  *
  * @param highs                                A pointer to the Highs instance.
- * @param HighsInt* suggested_objective_scale  The suggested value of user_cost_scale
- * @param HighsInt* suggested_bound_scale      The suggested value of user_bound_scale
+ * @param HighsInt* suggested_objective_scale  The suggested value of
+ * user_cost_scale
+ * @param HighsInt* suggested_bound_scale      The suggested value of
+ * user_bound_scale
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_getObjectiveBoundScaling(void* highs,
-					HighsInt* suggested_objective_scale,
-					HighsInt* suggested_bound_scale);
+                                        HighsInt* suggested_objective_scale,
+                                        HighsInt* suggested_bound_scale);
 
 /**
  * Releases all resources held by the global scheduler instance.
