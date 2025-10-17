@@ -2283,6 +2283,8 @@ void testUserObjectiveBoundScaling() {
   return_status = Highs_getDualObjectiveValue(highs, &dual_objective_value);
   assert(return_status == kHighsStatusOk);
 
+  assertDoubleValuesEqual("PDobjective", unscaled_objective_value, dual_objective_value);
+
   HighsInt suggested_objective_scale;
   HighsInt suggested_bound_scale;
   return_status = Highs_getObjectiveBoundScaling(highs,

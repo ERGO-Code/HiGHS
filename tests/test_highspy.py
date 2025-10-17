@@ -2223,3 +2223,31 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         self.assertEqual(obj_expr2.vals, [1.0, 2.0, 3.0])
         self.assertEqual(obj_expr2.constant, 5.0)
         self.assertEqual(sense2, highspy.ObjSense.kMaximize)
+
+    def test_get_user_objective_bound_scale(self):
+        inf = highspy.kHighsInf
+        h = highspy.Highs()
+        h.setOptionValue("output_flag", False)
+        h.addVars(2, np.array([1e-8, 1e-8]), np.array([1e8, 1e8]))
+        h.changeColsCost(2, np.array([0, 1]), np.array([-4e6, -7e6], dtype=np.double))
+        num_cons = 2
+        lower = np.array([-inf, -2e+8], dtype=np.double)
+        upper = np.array([6e+8, inf], dtype=np.double)
+        num_new_nz = 4
+        starts = np.array([0, 2])
+        indices = np.array([0, 1, 0, 1])
+        values = np.array([1, 1, 1, -1], dtype=np.double)
+        h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
+        h.run()
+        unscaled_objective_value = h.getObjectiveValue()
+        [status, dual_objective_value] = h.getDualObjectiveValue()
+        self.assertAlmostEqual(unscaled_objective_value, dual_objective_value)
+        [status, suggested_objective_scale, suggested_bound_scale] = h.getObjectiveBoundScaling();
+        h.setOptionValue("user_cost_scale", suggested_objective_scale)
+        h.setOptionValue("user_bound_scale", suggested_bound_scale)
+        h.run()
+        scaled_objective_value = h.getObjectiveValue()
+        self.assertAlmostEqual(unscaled_objective_value, scaled_objective_value)
+        
+        
+        
