@@ -325,6 +325,10 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
         printf(
             "\n================\nill-scaled-model: LP test - large bounds\n================\n");
       testLp(h, ok_cost, small_col_lower, large_bound);
+    if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: LP test - large costs and bounds\n================\n");
+      testLp(h, large_cost, small_col_lower, large_bound);
   }
 
   if (mip_test) {
