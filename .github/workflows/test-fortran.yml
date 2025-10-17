@@ -26,6 +26,10 @@ jobs:
       - run: |
           cmake -E make_directory ${{runner.workspace}}/build
           cd ${{runner.workspace}}
-          cmake $GITHUB_WORKSPACE -DFORTRAN=ON
+          if [[ "${{ matrix.os }}" == "macos-15-intel" ]]; then
+            cmake $GITHUB_WORKSPACE -DFORTRAN=ON -DCMAKE_Fortran_COMPILER=gfortran-14
+          else
+            cmake $GITHUB_WORKSPACE -DFORTRAN=ON
+          fi
           cmake --build . --parallel
           ./bin/fortrantest
