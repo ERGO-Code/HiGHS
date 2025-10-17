@@ -910,7 +910,7 @@ void userScaleMatrix(const vector<HighsVarType>& integrality,
 
 HighsStatus userScaleStatus(const HighsLogOptions& log_options,
                             const HighsUserScaleData& data) {
-  HighsStatus return_status;
+  HighsStatus return_status = HighsStatus::kOk;
   std::string message;
   if (data.scaleWarning(message)) {
     highsLogUser(log_options, HighsLogType::kWarning, "%s\n", message.c_str());
