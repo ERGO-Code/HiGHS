@@ -51,6 +51,9 @@ const double kDynamicDiagCoeff = 1e-24;
 const Int kMaxRefinementIter = 3;
 const double kRefinementTolerance = 1e-12;
 
+// metis
+const Int kMetisSeed = 42;
+
 struct Regul {
   double primal{};
   double dual{};
