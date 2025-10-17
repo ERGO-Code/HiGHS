@@ -3,12 +3,13 @@ name: hipo-ubuntu
 on: [push, pull_request]
 
 jobs:
-  release:
-    runs-on: ${{ matrix.os }}
+  ubuntu_gh:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        config: [Release, Debug]
+        all_tests: [OFF]
 
     steps:
       - uses: actions/checkout@v4
@@ -29,22 +30,22 @@ jobs:
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
-        run: | 
+        run: |
           mkdir installs
           ls
 
-      - name: Install GKLIB
+      - name: Install GKlib
         run: |
           cd GKlib
           make config shared=1 prefix=${{runner.workspace}}/installs
           make
           make install
 
-      # - name: Check installs 
+      # - name: Check installs
       #   working-directory: ${{runner.workspace}}
       #   run: |
       #     cd installs
-      #     ls 
+      #     ls
       #     ls lib
 
       - name: Copy GKlib shared (bug)
@@ -53,12 +54,12 @@ jobs:
           cd installs
           cd lib
           ln libGKlib.so.0 libGKlib.so
-          ls 
+          ls
 
       - name: Install METIS
         run: |
           cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
+          make config shared=1 prefix=${{runner.workspace}}/installs
           make
           make install
 
@@ -76,7 +77,7 @@ jobs:
         shell: bash
         run: |
           sudo apt update
-          sudo apt install libopenblas-dev 
+          sudo apt install libopenblas-dev
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -85,15 +86,17 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }} \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
           -DGKLIB_ROOT=${{runner.workspace}}/installs
 
-      - name: Build 
+      - name: Build
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
 
-      - name: Test executable 
+      - name: Test executable
         working-directory: ${{runner.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
@@ -102,156 +105,40 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
-  debug:
-    runs-on: ${{ matrix.os }}
+  ubuntu_510:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        config: [Release, Debug]
+        all_tests: [ON, OFF]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
-        run: | 
+        run: |
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          cd lib
-          ln libGKlib.so.0 libGKlib.so
-          ls 
-
-      - name: Install METIS
-        shell: bash
-        run: |
-          cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
-          make
-          make install
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev 
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON \
-          -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs \
-          -DCMAKE_BUILD_TYPE=Debug
-
-      - name: Build 
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake --build . --parallel
-
-      - name: Test executable 
-        working-directory: ${{runner.workspace}}/build
-        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
-
-      - name: Ctest
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          ctest --parallel --timeout 300 --output-on-failure
-
-  release_all_tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/METIS
-          ref: master
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: | 
-          mkdir installs
-          ls
-
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      # - name: Check installs 
-      #   working-directory: ${{runner.workspace}}
-      #   run: |
-      #     cd installs
-      #     ls 
-      #     ls lib
-
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          cd lib
-          ln libGKlib.so.0 libGKlib.so
-          ls 
-
       - name: Install METIS
         run: |
-          cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
-          make
-          make install
+          cmake \
+          -S $GITHUB_WORKSPACE/METIS \
+          -B build \
+          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
+          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          cmake --build build --parallel
+          cmake --install build
 
       # no default blas available on runner
 
@@ -267,7 +154,7 @@ jobs:
         shell: bash
         run: |
           sudo apt update
-          sudo apt install libopenblas-dev 
+          sudo apt install libopenblas-dev
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -275,16 +162,17 @@ jobs:
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON -DALL_TESTS=ON \
-          -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }} \
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
-      - name: Build 
+      - name: Build
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
 
-      - name: Test executable 
+      - name: Test executable
         working-directory: ${{runner.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
@@ -293,58 +181,42 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
-  debug_all_tests:
-    runs-on: ${{ matrix.os }}
+  ubuntu_510-ts:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        config: [Release, Debug]
+        all_tests: [ON, OFF]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-ts
           path: METIS
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
-        run: | 
+        run: |
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config shared=1 prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      - name: Copy GKlib shared (bug)
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          cd lib
-          ln libGKlib.so.0 libGKlib.so
-          ls 
-
       - name: Install METIS
-        shell: bash
         run: |
-          cd METIS
-          make config shared=1 prefix=${{runner.workspace}}/installs 
-          make
-          make install
+          cmake \
+          -S $GITHUB_WORKSPACE/METIS \
+          -B build \
+          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
+          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          cmake --build build --parallel
+          cmake --install build
+
+      # no default blas available on runner
 
       - name: Cache APT packages
         uses: actions/cache@v4
@@ -358,7 +230,7 @@ jobs:
         shell: bash
         run: |
           sudo apt update
-          sudo apt install libopenblas-dev 
+          sudo apt install libopenblas-dev
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -366,17 +238,17 @@ jobs:
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON -DALL_TESTS=ON \
-          -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs \
-          -DCMAKE_BUILD_TYPE=Debug
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }} \
+          -DMETIS_ROOT=${{runner.workspace}}/installs
 
-      - name: Build 
+      - name: Build
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
 
-      - name: Test executable 
+      - name: Test executable
         working-directory: ${{runner.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 

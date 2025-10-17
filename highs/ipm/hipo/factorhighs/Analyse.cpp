@@ -105,10 +105,12 @@ Int Analyse::getPermutation() {
   }
 
   // call Metis
+  Int metis_seed = 42;
+
   Int options[METIS_NOPTIONS];
   METIS_SetDefaultOptions(options);
   // fix seed of rng inside Metis, to make it deterministic (?)
-  options[METIS_OPTION_SEED] = 42;
+  options[METIS_OPTION_SEED] = metis_seed;
 
   // set logging of Metis depending on debug level
   options[METIS_OPTION_DBGLVL] = 0;
@@ -116,8 +118,14 @@ Int Analyse::getPermutation() {
     options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
 
   if (log_) log_->printDevInfo("Running Metis\n");
+#ifdef METIS_THREAD_SAFE
+  unsigned rng_state = metis_seed;
+  Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
+                            options, perm_.data(), iperm_.data(), &rng_state);
+#else
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                             options, perm_.data(), iperm_.data());
+#endif
   if (log_) log_->printDevInfo("Metis done\n");
   if (status != METIS_OK) {
     if (log_) log_->printDevInfo("Error with Metis\n");
