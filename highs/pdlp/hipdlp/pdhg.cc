@@ -393,10 +393,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       (params_.step_size_strategy == StepSizeStrategy::MALITSKY_POCK);
   bool primal_average_initialized = false; 
 
-  // Store iterates at last restart for primal weight update
-  x_at_last_restart_ = x_current_;
-  y_at_last_restart_ = y_current_;
-
   logger_.print_iteration_header();
 
   // --- 2. Main PDHG Loop ---

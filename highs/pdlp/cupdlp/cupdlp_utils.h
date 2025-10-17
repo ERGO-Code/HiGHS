@@ -195,7 +195,7 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
 
   void debugPdlpIterHeaderLog(FILE* file);
   void debugPdlpDataInitialise(struct DebugPdlpData* debug_pdlp);
-  void debugPdlpIterLog(FILE* file, const int iter_num, const struct DebugPdlpData* debug_pdlp, const double beta);
+  void debugPdlpIterLog(FILE* file, const int iter_num, const struct DebugPdlpData* debug_pdlp, const double beta, const double primal_step, const double dual_step);
   void debugPdlpFeasOptLog(FILE* file,
 			   const int iter_num,
 			   const double primal_obj, const double dual_obj,

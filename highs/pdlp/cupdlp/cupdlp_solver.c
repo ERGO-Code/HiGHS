@@ -546,7 +546,10 @@ void PDHG_Init_Variables(const cupdlp_int* has_variables, CUPDLPwork *work) {
   // XXX: PDLP Does not project x0,  so we uncomment for 1-1 comparison
 
   PDHG_Project_Bounds(work, x->data);
-
+  double x_norm;
+  cupdlp_twoNorm(work, lp->nCols, x->data, &x_norm);
+  cupdlp_printf("||x0||_2 = %e\n", x_norm);
+  
   // cupdlp_zero(iterates->y, cupdlp_float, lp->nRows);
   if (!*has_variables)
     CUPDLP_ZERO_VEC(y->data, cupdlp_float, lp->nRows);
@@ -554,7 +557,14 @@ void PDHG_Init_Variables(const cupdlp_int* has_variables, CUPDLPwork *work) {
   // Ax(work, iterates->ax, iterates->x);
   // ATyCPU(work, iterates->aty, iterates->y);
   Ax(work, ax, x);
+  double ax_norm;
+  cupdlp_twoNorm(work, lp->nRows, ax->data, &ax_norm);
+  cupdlp_printf("||Ax0||_2 = %e\n", ax_norm);
+  work->debug_pdlp_data_.ax_norm = ax_norm;
   ATy(work, aty, y);
+  double aty_norm;
+  cupdlp_twoNorm(work, lp->nCols, aty->data, &aty_norm);
+  work->debug_pdlp_data_.aty_norm = aty_norm;
 
   // cupdlp_zero(iterates->xSum, cupdlp_float, lp->nCols);
   // cupdlp_zero(iterates->ySum, cupdlp_float, lp->nRows);
@@ -897,6 +907,7 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
 
   pdhg->debug_pdlp_log_file_ = fopen("cuPDLP.log", "w");
   assert(pdhg->debug_pdlp_log_file_);
+  debugPdlpDataInitialise(&pdhg->debug_pdlp_data_);
 
   // PDHG_Init_Data does nothing!
   PDHG_Init_Data(pdhg);
@@ -916,9 +927,9 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
   const int iter_log_between_header = 50;
   int iter_log_since_header = iter_log_between_header;
   debugPdlpIterHeaderLog(pdhg->debug_pdlp_log_file_);
-  debugPdlpDataInitialise(&pdhg->debug_pdlp_data_);
+  
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
-    debugPdlpIterLog(pdhg->debug_pdlp_log_file_, timers->nIter, &pdhg->debug_pdlp_data_, pdhg->stepsize->dBeta);
+    debugPdlpIterLog(pdhg->debug_pdlp_log_file_, timers->nIter, &pdhg->debug_pdlp_data_, pdhg->stepsize->dBeta, pdhg->stepsize->dPrimalStep, pdhg->stepsize->dDualStep);
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS && CUPDLP_DEBUG
     PDHG_Dump_Stats(pdhg);
@@ -1040,6 +1051,17 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
 
       PDHG_Restart_Iterate(pdhg);
     }
+
+    CUPDLPvec *ax = iterates->ax[timers->nIter % 2];
+    CUPDLPvec *aty = iterates->aty[timers->nIter % 2];
+    double debug_pdlp_data_ax_norm = 0.0;
+    cupdlp_twoNorm(pdhg, problem->nRows, ax->data,
+                    &debug_pdlp_data_ax_norm);
+    pdhg->debug_pdlp_data_.ax_norm = debug_pdlp_data_ax_norm;
+    double debug_pdlp_data_aty_norm = 0.0;
+    cupdlp_twoNorm(pdhg, problem->nCols, aty->data, &debug_pdlp_data_aty_norm);
+    pdhg->debug_pdlp_data_.aty_norm = debug_pdlp_data_aty_norm;
+
 
     // CUPDLP_CALL(PDHG_Update_Iterate(pdhg));
     if (PDHG_Update_Iterate(pdhg) == RETCODE_FAILED) {

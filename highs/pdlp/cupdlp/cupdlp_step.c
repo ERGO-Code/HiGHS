@@ -18,10 +18,6 @@ void PDHG_primalGradientStep(CUPDLPwork *work, CUPDLPvec *xUpdate,
                              cupdlp_float dPrimalStepSize) {
   CUPDLPproblem *problem = work->problem;
 
-// print norm of A'y
-double debug_pdlp_data_aty_norm = 0.0;
-cupdlp_twoNorm(work, problem->nCols, ATy->data, &debug_pdlp_data_aty_norm);
-  work->debug_pdlp_data_.aty_norm = debug_pdlp_data_aty_norm;
 
 #if !defined(CUPDLP_CPU) && USE_KERNELS
   cupdlp_pgrad_cuda(xUpdate->data, x->data, problem->cost,
@@ -197,11 +193,6 @@ void PDHG_Update_Iterate_Constant_Step_Size(CUPDLPwork *pdhg) {
   CUPDLPvec *atyUpdate = iterates->aty[(iter + 1) % 2];
 
   Ax(pdhg, ax, x);
-  //pint norm of Ax
-  double debug_pdlp_data_ax_norm = 0.0;
-  cupdlp_twoNorm(pdhg, problem->nRows, ax->data,
-                  &debug_pdlp_data_ax_norm);
-  pdhg->debug_pdlp_data_.ax_norm = debug_pdlp_data_ax_norm;
   ATy(pdhg, aty, y);
 
   // x^{k+1} = proj_{X}(x^k - dPrimalStep * (c - A'y^k))
@@ -310,17 +301,6 @@ cupdlp_retcode PDHG_Update_Iterate_Adaptive_Step_Size(CUPDLPwork *pdhg) {
 #endif
   }
 
-  double debug_pdlp_data_ax_norm = 0.0;
-  cupdlp_twoNorm(pdhg, problem->nRows, ax->data,
-                  &debug_pdlp_data_ax_norm);
-  pdhg->debug_pdlp_data_.ax_norm = debug_pdlp_data_ax_norm;
-
-
-  double debug_pdlp_data_aty_norm = 0.0;
-  cupdlp_twoNorm(pdhg, problem->nCols, aty->data,
-                  &debug_pdlp_data_aty_norm);
-  pdhg->debug_pdlp_data_.aty_norm = debug_pdlp_data_aty_norm;
-
   stepsize->dPrimalStep = dStepSizeUpdate / sqrt(stepsize->dBeta);
   stepsize->dDualStep = dStepSizeUpdate * sqrt(stepsize->dBeta);
 
@@ -426,7 +406,7 @@ void PDHG_Compute_Average_Iterate(CUPDLPwork *work) {
   work->debug_pdlp_data_.x_average_norm = debug_pdlp_data_x_average_norm;
 
   cupdlp_float debug_pdlp_data_ax_average_norm = 0.0;
-  cupdlp_twoNormSquared(work, lp->nCols, iterates->axAverage->data, &debug_pdlp_data_ax_average_norm);
+  cupdlp_twoNormSquared(work, lp->nRows, iterates->axAverage->data, &debug_pdlp_data_ax_average_norm);
   work->debug_pdlp_data_.ax_average_norm = debug_pdlp_data_ax_average_norm;
 
   // Uncomment this once Yanyu is computing aty_average_norm 

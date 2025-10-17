@@ -54,6 +54,8 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 
   // 4. Solve with HiPdlp
   std::vector<double> x, y;
+  x.resize(pdlp.getnCol(),0.0);
+  y.resize(pdlp.getnRow(), 0.0);
   pdlp.solve(x, y);
 
   // 5. Unscale with HiPdlp

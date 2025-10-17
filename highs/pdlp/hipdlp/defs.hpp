@@ -38,6 +38,7 @@ struct StepSizeConfig {
   double dual_step;
   double beta;
   double power_method_lambda;
+  int step_size_iter = 0; //nStepSizeIter
 };
 
 struct MalitskyPockParams {

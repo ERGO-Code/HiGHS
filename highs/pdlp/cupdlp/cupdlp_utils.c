@@ -1783,7 +1783,7 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
 }
 
 void debugPdlpIterHeaderLog(FILE* file) {
-  fprintf(file, "  Iter      ||Ax||     ||Aty||  ||Ax_Avg|| ||Aty_Avg||   beta  PrimalStep DualStep \n");
+  fprintf(file, "  Iter      ||Ax||     ||Aty||  ||Ax_Avg|| ||Aty_Avg|| ||x_avg||   beta    PrimalStep   DualStep \n");
 }
 
 void debugPdlpDataInitialise(struct DebugPdlpData* debug_pdlp) {
@@ -1794,12 +1794,13 @@ void debugPdlpDataInitialise(struct DebugPdlpData* debug_pdlp) {
 }
 
 void debugPdlpIterLog(FILE* file, const int iter_num, const struct DebugPdlpData* debug_pdlp, const double beta, const double primal_step, const double dual_step) {
-  fprintf(file, "%6d %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g\n",
+  fprintf(file, "%6d %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g\n",
 	  iter_num,
 	  debug_pdlp->ax_norm,
 	  debug_pdlp->aty_norm,
 	  debug_pdlp->ax_average_norm,
 	  debug_pdlp->aty_average_norm,
+    debug_pdlp->x_average_norm,
 	  beta,
     primal_step,
     dual_step);

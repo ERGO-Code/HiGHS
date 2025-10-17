@@ -405,6 +405,7 @@ struct DebugPdlpData {
   double aty_norm;
   double ax_average_norm;
   double aty_average_norm;
+  double x_average_norm;
 };
     
 struct CUPDLP_WORK {
