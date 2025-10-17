@@ -120,8 +120,9 @@ Int Analyse::getPermutation() {
   // in local variable.
   if (log_) log_->printDevInfo("Using thread-safe Metis\n");
   unsigned rng_state = kMetisSeed;
-  Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
-                            options, perm_.data(), iperm_.data(), &rng_state);
+  Int status =
+      METIS_NodeND_ts(&n_, temp_ptr.data(), temp_rows.data(), NULL, options,
+                      perm_.data(), iperm_.data(), &rng_state);
 #else
   // Default version of Metis. This gives non-deterministic results if multiple
   // matrices are reordered concurrently.
