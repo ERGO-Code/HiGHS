@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;//false;
 const double inf = kHighsInf;
 
 bool doubleEqual0(const double v0, const double v1) {
@@ -283,11 +283,12 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
     h.run();
   }
 
-  const bool all_test = true;
-  const bool lp_test = all_test || false;
-  const bool mip_test = all_test || true;
+  const bool all_test = true;//false;//
+  const bool lp_test = all_test || true;
+  const bool mip_test = all_test || false;
   const bool qp_test = all_test || false;
 
+  const bool ok_test = all_test || false;
   const double ok_cost = 1.0;
   const double ok_hessian = 1.0;
   const double ok_col_lower = 0.0;
@@ -295,15 +296,20 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
 
   // If the costs are too small, it becomes a feasibility problem,
   // so don't get the same objective value in testUserScale
-  const bool small_cost_test = true;
+  const bool small_cost_test = all_test || false;
   const double small_cost = 0.5e-4;
   const double small_hessian = 1e-4;
   const double small_col_lower = 1e-8;
+  const double large_cost = 1e8;
+  const double large_hessian = 1e4;
+  const double large_bound = 1e8;
   if (lp_test) {
-    if (dev_run)
-      printf(
-          "\n================\nill-scaled-model: LP test\n================\n");
-    testLp(h, ok_cost, ok_col_lower, ok_bound);
+    if (ok_test) {
+      if (dev_run)
+	printf(
+	       "\n================\nill-scaled-model: LP test\n================\n");
+      testLp(h, ok_cost, ok_col_lower, ok_bound);
+    }
     if (small_cost_test) {
       if (dev_run)
         printf(
@@ -311,13 +317,23 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
             "column LB\n================\n");
       testLp(h, small_cost, small_col_lower, ok_bound);
     }
+    if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: LP test - large costs\n================\n");
+      testLp(h, large_cost, small_col_lower, ok_bound);
+    if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: LP test - large bounds\n================\n");
+      testLp(h, ok_cost, small_col_lower, large_bound);
   }
 
   if (mip_test) {
-    if (dev_run)
-      printf(
-          "\n================\nill-scaled-model: MIP test\n================\n");
-    testMip(h, ok_cost, ok_col_lower, ok_bound);
+    if (ok_test) {
+      if (dev_run)
+	printf(
+	       "\n================\nill-scaled-model: MIP test\n================\n");
+      testMip(h, ok_cost, ok_col_lower, ok_bound);
+    }
 
     if (small_cost_test) {
       if (dev_run)
@@ -326,14 +342,32 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
             "column LB\n================\n");
       testMip(h, small_cost, small_col_lower, ok_bound);
     }
+    if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: MIP test - large costs\n================\n");
+      testMip(h, large_cost, small_col_lower, ok_bound);
+    if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: MIP test - large bounds\n================\n");
+      testMip(h, ok_cost, small_col_lower, large_bound);
   }
 
   if (qp_test) {
-    if (dev_run)
-      printf(
-          "\n================\nill-scaled-model: QP test\n================\n");
-    testQp(h, ok_cost, ok_hessian, ok_col_lower, ok_bound);
+    if (ok_test) {
+      if (dev_run)
+	printf(
+	       "\n================\nill-scaled-model: QP test\n================\n");
+      testQp(h, ok_cost, ok_hessian, ok_col_lower, ok_bound);
+    }
     // QP solver can't handle small costs and Hessian
+    if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: QP test - large costs\n================\n");
+      testQp(h, large_cost, ok_hessian, ok_col_lower, ok_bound);
+    if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: QP test - large bounds\n================\n");
+      testQp(h, ok_cost, ok_hessian, small_col_lower, large_bound);
   }
 
   h.resetGlobalScheduler(true);
