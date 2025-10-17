@@ -186,7 +186,7 @@ else()
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
     )
 
-    if (BLA_VENDOR STREQUAL "")
+    if (NOT USE_CMAKE_FIND_BLAS)
       if(APPLE)
           target_link_libraries(highs PRIVATE "-framework Accelerate")
           target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
@@ -216,7 +216,6 @@ else()
           endif(BLAS_LIB)
       endif(APPLE)
     else()
-      # BLA_VENDOR Specified
       target_link_libraries(highs PRIVATE BLAS::BLAS)
 
       string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
