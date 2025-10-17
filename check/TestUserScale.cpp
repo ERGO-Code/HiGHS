@@ -161,6 +161,7 @@ HighsLp lp1(const double cost, const double col_lower, const double bound) {
   // scenario
   lp.num_col_ = 2;
   lp.num_row_ = 2;
+  lp.offset_ = 1e-4;
   lp.col_cost_ = {-4 * cost, -7 * cost};
   lp.col_lower_ = {col_lower, col_lower};
   lp.col_upper_ = {10 * bound, 10 * bound};
