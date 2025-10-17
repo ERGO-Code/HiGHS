@@ -2,12 +2,17 @@
 set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
 message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
 
-set(BLA_VENDOR "" CACHE STRING "For blas trampoline")
+set(USE_CMAKE_FIND_BLAS ON)
+
+# if ((NOT BLAS_LIBRARIES STREQUAL "") OR
+#     (NOT BLA_VENDOR STREQUAL ""))
+#     set(USE_CMAKE_FIND_BLAS ON)
+# endif()
 
 # Optionally set the vendor:
 # set(BLA_VENDOR libblastrampoline)
 
-if (BLA_VENDOR STREQUAL "")
+if (NOT USE_CMAKE_FIND_BLAS)
     if (WIN32)
         if (NOT (BLAS_ROOT STREQUAL ""))
             message(STATUS "Looking for blas in " ${BLAS_ROOT})
@@ -98,7 +103,6 @@ if (BLA_VENDOR STREQUAL "")
         endif()
     endif()
 else()
-    # if (NOT BLA_VENDOR STREQUALS "")
     find_package(BLAS REQUIRED)
     if (BLAS_FOUND)
         message(STATUS "Using BLAS library: ${BLAS_LIBRARIES}")
