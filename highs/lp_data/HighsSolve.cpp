@@ -549,13 +549,11 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
     assert(base == 2 || base == 10);
     HighsInt rounded_log = 0;
     if (base == 2) {
-      rounded_log = value < 1 ?
-	std::floor(std::log2(value)) :
-	std::ceil(std::log2(value));
+      rounded_log = value < 1 ? std::floor(std::log2(value))
+                              : std::ceil(std::log2(value));
     } else {
-      rounded_log = value < 1 ?
-	std::floor(std::log10(value)) :
-	std::ceil(std::log10(value));
+      rounded_log = value < 1 ? std::floor(std::log10(value))
+                              : std::ceil(std::log10(value));
     }
     return rounded_log;
   };
@@ -569,7 +567,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   // Determine the order of magnitude of the suggested bound scaling -
   // just for logging
   HighsInt suggested_bound_scale_order_of_magnitude =
-    outerRoundedLog(suggested_bound_scaling, 10);
+      outerRoundedLog(suggested_bound_scaling, 10);
   // Applying the suggested bound scaling requires the costs and
   // matrix columns of non-continuous variables to be scaled, and any
   // Hessian entries are also scaled
@@ -598,7 +596,8 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
                      small_objective_coefficient, large_objective_coefficient);
   // Determine the suggested (new) value for user_objective_scale,
   // allowing for the fact that the current value has been applied
-  HighsInt dl_user_objective_scale = outerRoundedLog(suggested_objective_scaling, 2);
+  HighsInt dl_user_objective_scale =
+      outerRoundedLog(suggested_objective_scaling, 2);
   user_scale_data.suggested_user_objective_scale =
       user_scale_data.user_objective_scale + dl_user_objective_scale;
   // Determine the order of magnitude of the suggested objective scaling -

@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;//false;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 bool doubleEqual0(const double v0, const double v1) {
@@ -67,7 +67,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
   HighsLp lp;
   lp.num_col_ = 2;
@@ -283,7 +283,7 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
     h.run();
   }
 
-  const bool all_test = true;//false;//
+  const bool all_test = true;  // false;//
   const bool lp_test = all_test || true;
   const bool mip_test = all_test || false;
   const bool qp_test = all_test || false;
@@ -306,8 +306,9 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   if (lp_test) {
     if (ok_test) {
       if (dev_run)
-	printf(
-	       "\n================\nill-scaled-model: LP test\n================\n");
+        printf(
+            "\n================\nill-scaled-model: LP "
+            "test\n================\n");
       testLp(h, ok_cost, ok_col_lower, ok_bound);
     }
     if (small_cost_test) {
@@ -318,24 +319,28 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
       testLp(h, small_cost, small_col_lower, ok_bound);
     }
     if (dev_run)
-        printf(
-            "\n================\nill-scaled-model: LP test - large costs\n================\n");
-      testLp(h, large_cost, small_col_lower, ok_bound);
+      printf(
+          "\n================\nill-scaled-model: LP test - large "
+          "costs\n================\n");
+    testLp(h, large_cost, small_col_lower, ok_bound);
     if (dev_run)
-        printf(
-            "\n================\nill-scaled-model: LP test - large bounds\n================\n");
-      testLp(h, ok_cost, small_col_lower, large_bound);
+      printf(
+          "\n================\nill-scaled-model: LP test - large "
+          "bounds\n================\n");
+    testLp(h, ok_cost, small_col_lower, large_bound);
     if (dev_run)
-        printf(
-            "\n================\nill-scaled-model: LP test - large costs and bounds\n================\n");
-      testLp(h, large_cost, small_col_lower, large_bound);
+      printf(
+          "\n================\nill-scaled-model: LP test - large costs and "
+          "bounds\n================\n");
+    testLp(h, large_cost, small_col_lower, large_bound);
   }
 
   if (mip_test) {
     if (ok_test) {
       if (dev_run)
-	printf(
-	       "\n================\nill-scaled-model: MIP test\n================\n");
+        printf(
+            "\n================\nill-scaled-model: MIP "
+            "test\n================\n");
       testMip(h, ok_cost, ok_col_lower, ok_bound);
     }
 
@@ -347,31 +352,46 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
       testMip(h, small_cost, small_col_lower, ok_bound);
     }
     if (dev_run)
-        printf(
-            "\n================\nill-scaled-model: MIP test - large costs\n================\n");
-      testMip(h, large_cost, small_col_lower, ok_bound);
+      printf(
+          "\n================\nill-scaled-model: MIP test - large "
+          "costs\n================\n");
+    testMip(h, large_cost, small_col_lower, ok_bound);
     if (dev_run)
-        printf(
-            "\n================\nill-scaled-model: MIP test - large bounds\n================\n");
-      testMip(h, ok_cost, small_col_lower, large_bound);
+      printf(
+          "\n================\nill-scaled-model: MIP test - large "
+          "bounds\n================\n");
+    testMip(h, ok_cost, small_col_lower, large_bound);
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: MIP test - large costs and "
+          "bounds\n================\n");
+    testMip(h, large_cost, small_col_lower, large_bound);
   }
 
   if (qp_test) {
     if (ok_test) {
       if (dev_run)
-	printf(
-	       "\n================\nill-scaled-model: QP test\n================\n");
+        printf(
+            "\n================\nill-scaled-model: QP "
+            "test\n================\n");
       testQp(h, ok_cost, ok_hessian, ok_col_lower, ok_bound);
     }
     // QP solver can't handle small costs and Hessian
     if (dev_run)
-        printf(
-            "\n================\nill-scaled-model: QP test - large costs\n================\n");
-      testQp(h, large_cost, ok_hessian, ok_col_lower, ok_bound);
+      printf(
+          "\n================\nill-scaled-model: QP test - large "
+          "costs\n================\n");
+    testQp(h, large_cost, ok_hessian, ok_col_lower, ok_bound);
     if (dev_run)
-        printf(
-            "\n================\nill-scaled-model: QP test - large bounds\n================\n");
-      testQp(h, ok_cost, ok_hessian, small_col_lower, large_bound);
+      printf(
+          "\n================\nill-scaled-model: QP test - large "
+          "bounds\n================\n");
+    testQp(h, ok_cost, ok_hessian, small_col_lower, large_bound);
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: QP test - large costs and "
+          "bounds\n================\n");
+    testQp(h, large_cost, large_hessian, small_col_lower, large_bound);
   }
 
   h.resetGlobalScheduler(true);
