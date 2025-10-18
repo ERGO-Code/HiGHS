@@ -55,6 +55,7 @@ class PDLPSolver {
  private:
   // --- Core Algorithm Logic ---
   void Initialize();
+  void printConstraintInfo();
   bool CheckConvergence(const int iter, const std::vector<double>& x,
                         const std::vector<double>& y,
                         const std::vector<double>& ax_vector,

@@ -35,6 +35,113 @@ void vecPrint(const std::vector<double>& vec, const char* name) {
   std::cout << "]" << std::endl;
 }
 
+void PDLPSolver::printConstraintInfo() {
+  if (original_lp_ == nullptr) return;
+  
+  int nRows = original_lp_->num_row_;
+  int nCols = original_lp_->num_col_;
+  
+  // Count constraint types BEFORE preprocessing
+  int eq_count = 0, leq_count = 0, geq_count = 0, bound_count = 0, free_count = 0;
+  
+  for (int i = 0; i < nRows; ++i) {
+    bool has_lower = original_lp_->row_lower_[i] > -kHighsInf;
+    bool has_upper = original_lp_->row_upper_[i] < kHighsInf;
+    
+    if (has_lower && has_upper) {
+      if (original_lp_->row_lower_[i] == original_lp_->row_upper_[i]) {
+        eq_count++;
+      } else {
+        bound_count++;
+      }
+    } else if (has_lower) {
+      geq_count++;
+    } else if (has_upper) {
+      leq_count++;
+    } else {
+      free_count++;
+    }
+  }
+  
+  // Count variable bound types
+  int var_fixed = 0, var_lower_only = 0, var_upper_only = 0;
+  int var_boxed = 0, var_free = 0;
+  
+  for (int i = 0; i < nCols; ++i) {
+    bool has_lower = original_lp_->col_lower_[i] > -kHighsInf;
+    bool has_upper = original_lp_->col_upper_[i] < kHighsInf;
+    
+    if (has_lower && has_upper) {
+      if (original_lp_->col_lower_[i] == original_lp_->col_upper_[i]) {
+        var_fixed++;
+      } else {
+        var_boxed++;
+      }
+    } else if (has_lower) {
+      var_lower_only++;
+    } else if (has_upper) {
+      var_upper_only++;
+    } else {
+      var_free++;
+    }
+  }
+  
+  logger_.info("=== BEFORE PREPROCESSING ===");
+  logger_.info("Rows: " + std::to_string(nRows) + ", Cols: " + std::to_string(nCols));
+  logger_.info("\nConstraint types:");
+  logger_.info("  Equality constraints (=): " + std::to_string(eq_count));
+  logger_.info("  One-sided inequality (>=): " + std::to_string(geq_count));
+  logger_.info("  One-sided inequality (<=): " + std::to_string(leq_count));
+  logger_.info("  Two-sided inequality: " + std::to_string(bound_count));
+  logger_.info("  Free constraints: " + std::to_string(free_count));
+  
+  logger_.info("\nVariable bound types:");
+  logger_.info("  Fixed variables (l = u): " + std::to_string(var_fixed));
+  logger_.info("  Boxed variables (l <= x <= u): " + std::to_string(var_boxed));
+  logger_.info("  Lower bounded only (l <= x): " + std::to_string(var_lower_only));
+  logger_.info("  Upper bounded only (x <= u): " + std::to_string(var_upper_only));
+  logger_.info("  Free variables: " + std::to_string(var_free));
+  
+  logger_.info("\n=== AFTER PREPROCESSING ===");
+  logger_.info("Rows: " + std::to_string(lp_.num_row_) + 
+               ", Cols: " + std::to_string(lp_.num_col_));
+  logger_.info("Equality rows (first " + std::to_string(num_eq_rows_) + " rows)");
+  logger_.info("Inequality rows (remaining " + 
+               std::to_string(lp_.num_row_ - num_eq_rows_) + " rows)");
+  logger_.info("Slack variables added: " + 
+               std::to_string(lp_.num_col_ - nCols));
+  
+  // Count variable bounds in processed LP
+  int proc_var_fixed = 0, proc_var_lower_only = 0, proc_var_upper_only = 0;
+  int proc_var_boxed = 0, proc_var_free = 0;
+  
+  for (int i = 0; i < lp_.num_col_; ++i) {
+    bool has_lower = lp_.col_lower_[i] > -kHighsInf;
+    bool has_upper = lp_.col_upper_[i] < kHighsInf;
+    
+    if (has_lower && has_upper) {
+      if (lp_.col_lower_[i] == lp_.col_upper_[i]) {
+        proc_var_fixed++;
+      } else {
+        proc_var_boxed++;
+      }
+    } else if (has_lower) {
+      proc_var_lower_only++;
+    } else if (has_upper) {
+      proc_var_upper_only++;
+    } else {
+      proc_var_free++;
+    }
+  }
+  
+  logger_.info("\nProcessed variable bound types:");
+  logger_.info("  Fixed variables: " + std::to_string(proc_var_fixed));
+  logger_.info("  Boxed variables: " + std::to_string(proc_var_boxed));
+  logger_.info("  Lower bounded only: " + std::to_string(proc_var_lower_only));
+  logger_.info("  Upper bounded only: " + std::to_string(proc_var_upper_only));
+  logger_.info("  Free variables: " + std::to_string(proc_var_free));
+}
+
 void PDLPSolver::preprocessLp() {
   logger_.info(
       "Preprocessing LP using cupdlp formulation (slack variables for "
@@ -228,6 +335,8 @@ void PDLPSolver::preprocessLp() {
                std::to_string(processed_lp.num_col_) + " cols.");
   logger_.info("Unscaled norms: ||c|| = " + std::to_string(unscaled_c_norm_) +
                ", ||b|| = " + std::to_string(unscaled_rhs_norm_));
+
+  printConstraintInfo();
 }
 
 PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
@@ -283,11 +392,18 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   results_.primal_obj = final_primal_objective;
 
   // 4. Recover Dual Row Values (y)
-  for (int i = 0; i < original_lp_->num_row_; ++i) {
-    if (constraint_types_[i] == LEQ) {
-      solution.row_dual[i] = -y_current_[i];
+  std::vector<double> y_reordered = y_current_;
+  for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
+    int reordered_row = constraint_new_idx_[orig_row];
+    
+    // Get the dual value from the reordered position
+    double dual_value = y_reordered[reordered_row];
+    
+    // Apply sign correction for LEQ constraints
+    if (constraint_types_[orig_row] == LEQ) {
+      solution.row_dual[orig_row] = -dual_value;
     } else {
-      solution.row_dual[i] = y_current_[i];
+      solution.row_dual[orig_row] = dual_value;
     }
   }
 
@@ -311,15 +427,15 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   linalg::Ax(unscaled_processed_lp_, x_current_, ax_current_);
 
   int slack_variable_idx = original_num_col_;
-  for (int i = 0; i < original_lp_->num_row_; ++i) {
-    if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
-      solution.row_value[i] = x_current_[slack_variable_idx++];
-    } else if (constraint_types_[i] == LEQ) {
-      // We transformed Ax <= b to -Ax >= -b. The original row value is Ax.
-      // The calculated ax_current_ is for -Ax, so we flip the sign back.
-      solution.row_value[i] = -ax_current_[i];
+  for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
+    int reordered_row = constraint_new_idx_[orig_row];
+    
+    if (constraint_types_[orig_row] == BOUND || constraint_types_[orig_row] == FREE) {
+      solution.row_value[orig_row] = x_current_[slack_variable_idx++];
+    } else if (constraint_types_[orig_row] == LEQ) {
+      solution.row_value[orig_row] = -ax_current_[reordered_row];
     } else {  // EQ, GEQ
-      solution.row_value[i] = ax_current_[i];
+      solution.row_value[orig_row] = ax_current_[reordered_row];
     }
   }
 
