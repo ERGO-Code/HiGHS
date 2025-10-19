@@ -468,12 +468,11 @@ class Highs {
   }
 
   /**
-   * @brief Return a const pointer to the original row indices for the
-   * presolved model
+   * @brief Return an LP associated with a MIP and its solution, with
+   * each integer variable fixed to the value it takes in the MIP
+   * solution. If no solution is available, an error is returned.
    */
-  const HighsInt* getPresolveOrigRowsIndex() const {
-    return presolve_.data_.postSolveStack.getOrigRowsIndex();
-  }
+  HighsStatus getFixedLp(HighsLp& lp) const;
 
   /**
    * @brief Return a const reference to the incumbent LP
@@ -1606,6 +1605,9 @@ class Highs {
   // Invalidates the model status, solution_ and info_
   void invalidateModelStatusSolutionAndInfo();
   //
+  // Invalidates the model status and info_
+  void invalidateModelStatusAndInfo();
+  //
   // Sets model status to HighsModelStatus::kNotset
   void invalidateModelStatus();
   //
@@ -1674,6 +1676,8 @@ class Highs {
                                          const HighsVarType* usr_inegrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
+
+  bool feasibleWrtBounds(const bool columns = true) const;
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_col_lower,
                                        const double* usr_col_upper);
