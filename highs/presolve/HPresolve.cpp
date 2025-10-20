@@ -1306,6 +1306,9 @@ HPresolve::Result HPresolve::dominatedColumns(
       bool tryToStrengthenBounds =
           (isDominatingBoundFinite || isDominatedBoundFinite) && sameVarType;
       if (tryToFix || tryToStrengthenBounds) {
+        // increment counter for number of domination checks due to predictive
+        // bound analysis
+        if (!tryToFix) numDomChecksPredBndAnalysis++;
         // check for domination
         if (checkDomination(direction, col, direction_k, k)) {
           if (tryToFix &&
@@ -1335,9 +1338,6 @@ HPresolve::Result HPresolve::dominatedColumns(
                                 dominatingBound, direction * direction_k));
           }
         }
-        // increment counter for number of domination checks due to predictive
-        // bound analysis
-        if (!tryToFix) numDomChecksPredBndAnalysis++;
       }
       return Result::kOk;
     };
