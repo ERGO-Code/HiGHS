@@ -1398,7 +1398,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // try to generate a cut
   if (!tryGenerateCut(
           inds_, vals_, hasUnboundedInts, hasGeneralInts, hasContinuous,
-          std::max(flowCoverEfficacy - (10 * feastol), 10 * feastol),
+          std::max(0.9 * flowCoverEfficacy, 10 * feastol),
           onlyInitialCMIRScale)) {
     cmirSuccess = false;
     goto postprocess;
@@ -1597,6 +1597,9 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
   // 4. Don't consider any inequality with too many non-zeros
   // 5. Don't consider any inequality with too few continuous cols
 
+  HighsInt maxLen = 100 + 0.05 * (lpRelaxation.numCols());
+  if (rowlen > maxLen) return false;
+
   HighsInt numZeros = 0;
   HighsInt numContCols = 0;
   double maxact = -feastol;
@@ -1655,9 +1658,6 @@ bool HighsCutGeneration::preprocessSNFRelaxation() {
     }
   }
 
-  HighsInt maxLen = 100 + 0.15 * (lpRelaxation.numCols());
-  if (rowlen - numZeros > maxLen) return false;
-
   if (numZeros != 0) {
     // remove zeros in place
     for (HighsInt i = rowlen - 1; i >= 0; --i) {
@@ -1689,10 +1689,8 @@ bool HighsCutGeneration::computeFlowCover() {
     if (abs(snfr.vubCoef[i]) < feastol) {
       snfr.flowCoverStatus[i] = -1;
       nNonFlowCover++;
-      continue;
-    }
-    // x_i is fractional -> becomes an item in knapsack (decides if in cover)
-    if (fractionality(snfr.binSolval[i]) > feastol) {
+    } else if (fractionality(snfr.binSolval[i]) > feastol) {
+      // x_i is fractional -> becomes an item in knapsack (decides if in cover)
       items[nitems] = i;
       nitems++;
       if (snfr.coef[i] == 1) {
@@ -1736,8 +1734,6 @@ bool HighsCutGeneration::computeFlowCover() {
   double knapsackWeight = 0;
   std::vector<double> weights(nitems);
   std::vector<double> profitweightratios(nitems);
-  std::vector<HighsInt> perm(nitems);
-  std::iota(perm.begin(), perm.end(), 0);
   for (HighsInt i = 0; i < nitems; ++i) {
     weights[i] = snfr.vubCoef[items[i]];
     if (snfr.coef[items[i]] == 1) {
@@ -1746,6 +1742,8 @@ bool HighsCutGeneration::computeFlowCover() {
       profitweightratios[i] = snfr.binSolval[items[i]] / weights[i];
     }
   }
+  std::vector<HighsInt> perm(nitems);
+  std::iota(perm.begin(), perm.end(), 0);
   pdqsort_branchless(perm.begin(), perm.end(),
                      [&](const HighsInt a, const HighsInt b) {
                        return profitweightratios[a] > profitweightratios[b];

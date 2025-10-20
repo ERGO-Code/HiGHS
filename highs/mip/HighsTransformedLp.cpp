@@ -764,6 +764,11 @@ bool HighsTransformedLp::transformSNFRelaxation(
     double lb = getLb(col);
     double ub = getUb(col);
 
+    if (lb == -kHighsInf || ub == kHighsInf) {
+      vectorsum.clear();
+      return false;
+    }
+
     if (ub - lb < mip.options_mip_->small_matrix_value) {
       rhs -= std::min(lb, ub) * vals[i];
       tmpSnfrRhs -= std::min(lb, ub) * vals[i];
@@ -775,11 +780,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
     if (i >= numNz - numBinCols && vectorsum.getValue(col) == 0) {
       ++i;
       continue;
-    }
-
-    if (lb == -kHighsInf || ub == kHighsInf) {
-      vectorsum.clear();
-      return false;
     }
 
     // the code below uses the difference between the column upper and lower
