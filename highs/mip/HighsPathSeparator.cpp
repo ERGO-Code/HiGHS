@@ -351,7 +351,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         // generate cut
         double rhs = 0;
         success = cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs,
-                                     false, currPathLen == 1);
+                                     false, true);
 
         lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
         if (!aggregatedPath.empty() || bestOutArcCol != -1 ||
@@ -361,7 +361,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         // generate reverse cut
         rhs = 0;
         success |= cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs,
-                                      false, currPathLen == 1);
+                                      false, true);
 
         if (success || (bestOutArcCol == -1 && bestInArcCol == -1)) break;
 
