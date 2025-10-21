@@ -41,7 +41,6 @@ class PDLPSolver {
   void unscaleSolution(std::vector<double>& x, std::vector<double>& y);
   PostSolveRetcode postprocess(HighsSolution& solution);
   void logSummary();
-  void solveReturn();
 
   // --- Getters ---
   TerminationStatus getTerminationCode() const { return results_.term_code; }
@@ -59,49 +58,50 @@ class PDLPSolver {
 
  private:
   // --- Core Algorithm Logic ---
-  void Initialize();
+  void solveReturn();
+  void initialize();
   void printConstraintInfo();
-  bool CheckConvergence(const int iter, const std::vector<double>& x,
+  bool checkConvergence(const int iter, const std::vector<double>& x,
                         const std::vector<double>& y,
                         const std::vector<double>& ax_vector,
                         const std::vector<double>& aty_vector, double epsilon,
                         SolverResults& results, const char* type);
-  void UpdateAverageIterates(const std::vector<double>& x,
+  void updateAverageIterates(const std::vector<double>& x,
                              const std::vector<double>& y,
                              const PrimalDualParams& params, int inner_iter);
-  void ComputeAverageIterate(std::vector<double>& ax_avg,
+  void computeAverageIterate(std::vector<double>& ax_avg,
                                        std::vector<double>& aty_avg);
   double PowerMethod();
 
-  // --- Step Update Methods (previously in Step) ---
-  void InitializeStepSizes();
-  std::vector<double> UpdateX(const std::vector<double> &x, const std::vector<double> &aty,double primal_step);
-  std::vector<double> UpdateY(const std::vector<double> &y, const std::vector<double> &ax , const std::vector<double> &ax_next, double dual_step);
-  void UpdateIteratesFixed();
-  void UpdateIteratesAdaptive();
-  bool UpdateIteratesMalitskyPock(bool first_malitsky_iteration);
+  // --- Step update Methods (previously in Step) ---
+  void initializeStepSizes();
+  std::vector<double> updateX(const std::vector<double> &x, const std::vector<double> &aty,double primal_step);
+  std::vector<double> updateY(const std::vector<double> &y, const std::vector<double> &ax , const std::vector<double> &ax_next, double dual_step);
+  void updateIteratesFixed();
+  void updateIteratesAdaptive();
+  bool updateIteratesMalitskyPock(bool first_malitsky_iteration);
 
   // --- Step Size Helper Methods (previously in PdlpStep) ---
   bool CheckNumericalStability(const std::vector<double>& delta_x,
                                const std::vector<double>& delta_y);
-  double ComputeMovement(const std::vector<double>& delta_primal,
+  double computeMovement(const std::vector<double>& delta_primal,
                          const std::vector<double>& delta_dual);
-  double ComputeNonlinearity(const std::vector<double>& delta_primal,
+  double computeNonlinearity(const std::vector<double>& delta_primal,
                              const std::vector<double>& delta_aty);
 
   // --- Feasibility, Duality, and KKT Checks ---
-  std::vector<double> ComputeLambda(const std::vector<double>& y,
+  std::vector<double> computeLambda(const std::vector<double>& y,
                                     const std::vector<double>& ATy_vector);
-  double ComputeDualObjective(const std::vector<double>& y);
-  double ComputePrimalFeasibility(
+  double computeDualObjective(const std::vector<double>& y);
+  double computePrimalFeasibility(
       const std::vector<double>& Ax_vector);
-  void ComputeDualSlacks(const std::vector<double>& ATy_vector);
-  double ComputeDualFeasibility(
+  void computeDualSlacks(const std::vector<double>& ATy_vector);
+  double computeDualFeasibility(
       const std::vector<double>& ATy_vector);
-  std::tuple<double, double, double, double, double> ComputeDualityGap(
+  std::tuple<double, double, double, double, double> computeDualityGap(
       const std::vector<double>& x, const std::vector<double>& y,
       const std::vector<double>& lambda);
-  void PDHG_Compute_Step_Size_Ratio(PrimalDualParams& working_params);
+  void computeStepSizeRatio(PrimalDualParams& working_params);
   void hipdlpTimerStart(const HighsInt hipdlp_clock);
   void hipdlpTimerStop(const HighsInt hipdlp_clock);
 

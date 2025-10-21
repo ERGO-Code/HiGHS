@@ -79,7 +79,6 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
                             pdlp_solution.row_dual.data(), lp.num_row_);
   pdlp.reportHipdlpTimer();
 
-  pdlp.solveReturn();
   // --- Print Summary ---
   pdlp.logSummary();
 

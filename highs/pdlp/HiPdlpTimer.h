@@ -25,9 +25,14 @@ enum iClockHipdlp {
   // IterateUpdate clocks
   kHipdlpClockMatrixMultiply,
   kHipdlpClockMatrixTransposeMultiply,
-  kHipdlpClockProjection,
+  kHipdlpClockProjectX,
+  kHipdlpClockProjectY,
   kHipdlpClockStepSizeAdjustment,
   // AverageIterate clocks
+  kHipdlpClockAverageIterateUpdateX,
+  kHipdlpClockAverageIterateUpdateY,
+  kHipdlpClockAverageIterateComputeX,
+  kHipdlpClockAverageIterateComputeY,
   kHipdlpClockAverageIterateMatrixMultiply,
   kHipdlpClockAverageIterateMatrixTransposeMultiply,
 
@@ -56,8 +61,10 @@ class HipdlpTimer {
       timer_pointer->clock_def("Ax");
     clock[kHipdlpClockMatrixTransposeMultiply] =
       timer_pointer->clock_def("Aty");
-    clock[kHipdlpClockProjection] =
-      timer_pointer->clock_def("Projection");
+    clock[kHipdlpClockProjectX] =
+      timer_pointer->clock_def("Project X");
+    clock[kHipdlpClockProjectY] =
+      timer_pointer->clock_def("Project Y");
     clock[kHipdlpClockStepSizeAdjustment] =
       timer_pointer->clock_def("Step size adjustment");
     clock[kHipdlpClockConvergenceCheck] =
@@ -66,6 +73,14 @@ class HipdlpTimer {
       timer_pointer->clock_def("Restart check");
     clock[kHipdlpClockAverageIterate] =
       timer_pointer->clock_def("Average iterate");
+    clock[kHipdlpClockAverageIterateUpdateX] =
+      timer_pointer->clock_def("Average iterate update X");
+    clock[kHipdlpClockAverageIterateUpdateY] =
+      timer_pointer->clock_def("Average iterate update Y");
+    clock[kHipdlpClockAverageIterateComputeX] =
+      timer_pointer->clock_def("Average iterate compute X");
+    clock[kHipdlpClockAverageIterateComputeY] =
+      timer_pointer->clock_def("Average iterate compute Y");
     clock[kHipdlpClockAverageIterateMatrixMultiply] =
       timer_pointer->clock_def("Average iterate Ax");
     clock[kHipdlpClockAverageIterateMatrixTransposeMultiply] =
@@ -113,7 +128,7 @@ class HipdlpTimer {
   void reportHipdlpIterateUpdateClock(const HighsTimerClock& hipdlp_timer_clock) {
     const std::vector<HighsInt> hipdlp_clock_list{
       kHipdlpClockMatrixMultiply, kHipdlpClockMatrixTransposeMultiply,
-      kHipdlpClockProjection, kHipdlpClockStepSizeAdjustment
+      kHipdlpClockProjectX, kHipdlpClockProjectY, kHipdlpClockStepSizeAdjustment
     };
     reportHipdlpClockList("HipdlpIterUpd", hipdlp_clock_list, hipdlp_timer_clock,
 			  kHipdlpClockIterateUpdate);
@@ -121,6 +136,10 @@ class HipdlpTimer {
 
   void reportHipdlpAverageIterateClock(const HighsTimerClock& hipdlp_timer_clock) {
     const std::vector<HighsInt> hipdlp_clock_list{
+      kHipdlpClockAverageIterateUpdateX,
+      kHipdlpClockAverageIterateUpdateY,
+      kHipdlpClockAverageIterateComputeX,
+      kHipdlpClockAverageIterateComputeY,
       kHipdlpClockAverageIterateMatrixMultiply,
       kHipdlpClockAverageIterateMatrixTransposeMultiply
     };

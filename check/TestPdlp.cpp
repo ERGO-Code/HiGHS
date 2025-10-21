@@ -392,11 +392,11 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp-timer", "[pdlp]") {
-  std::string model = "adlittle";
+  std::string model = "shell";
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
-  // h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.setOptionValue("solver", kHiPdlpString) == HighsStatus::kOk);
   HighsInt pdlp_features_off = 
