@@ -1273,14 +1273,14 @@ class Highs {
   }
 
   /**
-   * @Brief Put a copy of the current iterate - basis; invertible
+   * @brief Put a copy of the current iterate - basis; invertible
    * representation and dual edge weights - into storage within
    * HSimplexNla. Advanced method: for HiGHS MIP solver
    */
   HighsStatus putIterate();
 
   /**
-   * @Brief Get a copy of the iterate stored within HSimplexNla and
+   * @brief Get a copy of the iterate stored within HSimplexNla and
    * overwrite the current iterate. Advanced method: for HiGHS MIP
    * solver
    */
@@ -1315,7 +1315,7 @@ class Highs {
                                        HVector& row_ep_buffer);
 
   /**
-   * @Brief Get the primal simplex phase 1 dual values. Advanced
+   * @brief Get the primal simplex phase 1 dual values. Advanced
    * method: for HiGHS IIS calculation
    */
   const std::vector<double>& getPrimalPhase1Dual() const {
