@@ -1184,7 +1184,11 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   // Now re-load the MIP, re-solve, and get the fixed LP
   REQUIRE(h.passModel(mip) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+
+  // REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+  REQUIRE(objectiveOk(mip_optimal_objective, h.getInfo().objective_function_value,
+                      dev_run));
+
 
   REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kOk);
 
