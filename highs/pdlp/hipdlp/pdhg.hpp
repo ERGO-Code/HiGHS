@@ -51,8 +51,6 @@ class PDLPSolver {
   // --- Debugging ---
   FILE* debug_pdlp_log_file_ = nullptr;
   DebugPdlpData debug_pdlp_data_;
-  DetailedTimings timings_;
-  const DetailedTimings& getTimings() const { return timings_; }
 
   void reportHipdlpTimer();
   void closeDebugLog();
