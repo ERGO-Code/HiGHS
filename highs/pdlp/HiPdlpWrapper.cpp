@@ -56,7 +56,11 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   std::vector<double> x, y;
   x.resize(pdlp.getnCol(),0.0);
   y.resize(pdlp.getnRow(), 0.0);
+  auto solve_start = std::chrono::high_resolution_clock::now();
   pdlp.solve(x, y);
+  auto solve_end = std::chrono::high_resolution_clock::now();
+  pdlp.timings_.total_time = std::chrono::duration<double>(solve_end - solve_start).count();
+  pdlp.timings_.print("HiPdlp :");
 
   // 5. Unscale with HiPdlp
   pdlp.unscaleSolution(x, y);

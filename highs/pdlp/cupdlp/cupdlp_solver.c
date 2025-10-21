@@ -1003,24 +1003,23 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
       }
 
       if (PDHG_Check_Termination_Average(pdhg, termination_print)) {
-	// cupdlp_printf("Optimal average solution.\n");
-	
-    cupdlp_int iter = pdhg->timers->nIter;
-    CUPDLPvec *x = iterates->x[iter % 2];
-    CUPDLPvec *y = iterates->y[iter % 2];
-    CUPDLPvec *ax = iterates->ax[iter % 2];
-    CUPDLPvec *aty = iterates->aty[iter % 2];
+      // cupdlp_printf("Optimal average solution.\n");
+        cupdlp_int iter = pdhg->timers->nIter;
+        CUPDLPvec *x = iterates->x[iter % 2];
+        CUPDLPvec *y = iterates->y[iter % 2];
+        CUPDLPvec *ax = iterates->ax[iter % 2];
+        CUPDLPvec *aty = iterates->aty[iter % 2];
 
-    CUPDLP_COPY_VEC(x->data, iterates->xAverage->data, cupdlp_float, problem->nCols);
-    CUPDLP_COPY_VEC(y->data, iterates->yAverage->data, cupdlp_float, problem->nRows);
-    CUPDLP_COPY_VEC(ax->data, iterates->axAverage->data, cupdlp_float, problem->nRows);
-    CUPDLP_COPY_VEC(aty->data, iterates->atyAverage->data, cupdlp_float, problem->nCols);
-    CUPDLP_COPY_VEC(resobj->dSlackPos, resobj->dSlackPosAverage, cupdlp_float, problem->nCols);
-    CUPDLP_COPY_VEC(resobj->dSlackNeg, resobj->dSlackNegAverage, cupdlp_float, problem->nCols);
+        CUPDLP_COPY_VEC(x->data, iterates->xAverage->data, cupdlp_float, problem->nCols);
+        CUPDLP_COPY_VEC(y->data, iterates->yAverage->data, cupdlp_float, problem->nRows);
+        CUPDLP_COPY_VEC(ax->data, iterates->axAverage->data, cupdlp_float, problem->nRows);
+        CUPDLP_COPY_VEC(aty->data, iterates->atyAverage->data, cupdlp_float, problem->nCols);
+        CUPDLP_COPY_VEC(resobj->dSlackPos, resobj->dSlackPosAverage, cupdlp_float, problem->nCols);
+        CUPDLP_COPY_VEC(resobj->dSlackNeg, resobj->dSlackNegAverage, cupdlp_float, problem->nCols);
 
-	resobj->termIterate = AVERAGE_ITERATE;
-	resobj->termCode = OPTIMAL;
-	break;
+        resobj->termIterate = AVERAGE_ITERATE;
+        resobj->termCode = OPTIMAL;
+        break;
       }
 
       if (PDHG_Check_Infeasibility(pdhg, 0) == INFEASIBLE_OR_UNBOUNDED) {
@@ -1061,8 +1060,7 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
     double debug_pdlp_data_aty_norm = 0.0;
     cupdlp_twoNorm(pdhg, problem->nCols, aty->data, &debug_pdlp_data_aty_norm);
     pdhg->debug_pdlp_data_.aty_norm = debug_pdlp_data_aty_norm;
-
-
+    
     // CUPDLP_CALL(PDHG_Update_Iterate(pdhg));
     if (PDHG_Update_Iterate(pdhg) == RETCODE_FAILED) {
       // cupdlp_printf("Time limit reached.\n");

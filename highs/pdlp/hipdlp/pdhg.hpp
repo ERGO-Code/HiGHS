@@ -46,11 +46,13 @@ class PDLPSolver {
   TerminationStatus getTerminationCode() const { return results_.term_code; }
   int getIterationCount() const { return final_iter_count_; }
   int getnCol() const { return lp_.num_col_; }
-  int getnRow() const { return lp_.num_row_; }
+  int getnRow() const { return lp_.num_row_; } 
 
   // --- Debugging ---
   FILE* debug_pdlp_log_file_ = nullptr;
   DebugPdlpData debug_pdlp_data_;
+  DetailedTimings timings_;
+  const DetailedTimings& getTimings() const { return timings_; }
 
  private:
   // --- Core Algorithm Logic ---

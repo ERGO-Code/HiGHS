@@ -259,7 +259,6 @@ _srcs = [
     'pdlp/hipdlp/pdhg.cc',
     'pdlp/hipdlp/restart.cc',
     'pdlp/hipdlp/scaling.cc',
-    'pdlp/hipdlp/step.cc',
     'presolve/HPresolve.cpp',
     'presolve/HPresolveAnalysis.cpp',
     'presolve/HighsPostsolveStack.cpp',

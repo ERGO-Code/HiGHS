@@ -3,6 +3,7 @@
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
+#include <chrono>
 
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-3;
@@ -333,7 +334,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
-  std::string model = "afiro";  //"adlittle";//"afiro";//
+  std::string model = "adlittle";  //"adlittle";//"afiro";// shell// stair //25fv47 //fit2p
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
@@ -341,10 +342,13 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kHiPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
+  h.setOptionValue("presolve", "off");
 
-  HighsInt pdlp_features_off =
-      // kPdlpScalingOff +
-      kPdlpRestartOff + kPdlpAdaptiveStepSizeOff;
+  HighsInt pdlp_features_off = 
+      //kPdlpScalingOff +
+      //kPdlpRestartOff 
+      kPdlpAdaptiveStepSizeOff
+      ;
   h.setOptionValue("pdlp_features_off", pdlp_features_off);
 
   HighsInt pdlp_scaling =  // 0;
@@ -352,11 +356,20 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
       //+ kPdlpScalingL2
       + kPdlpScalingPC;
   h.setOptionValue("pdlp_scaling_mode", pdlp_scaling);
-  h.setOptionValue("pdlp_step_size_strategy", 0);
+  h.setOptionValue("pdlp_step_size_strategy", 1);
   h.setOptionValue("pdlp_restart_strategy", 2);
-  //  h.setOptionValue("pdlp_iteration_limit", 15);
+  h.setOptionValue("pdlp_iteration_limit",3520);
   //  h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+  auto start_hipdlp = std::chrono::high_resolution_clock::now();
   HighsStatus run_status = h.run();
+  auto end_hipdlp = std::chrono::high_resolution_clock::now();
+  auto duration_hipdlp = std::chrono::duration_cast<std::chrono::milliseconds>(end_hipdlp - start_hipdlp);
+  std::cout << "\n--- HiPDLP Results ---" << std::endl;
+  std::cout << "Status: " << h.modelStatusToString(h.getModelStatus()) << std::endl;
+  std::cout << "Iterations: " << h.getInfo().pdlp_iteration_count << std::endl;
+  std::cout << "Wall time: " << duration_hipdlp.count() / 1000.0 << " seconds" << std::endl;
+  std::cout << "Objective: " << h.getInfo().objective_function_value << std::endl;
+  
   //  REQUIRE(run_status == HighsStatus::kOk);
   //  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   //  REQUIRE(h.getInfo().pdlp_iteration_count == 11880);
@@ -365,7 +378,15 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
     h.clearSolver();
     h.setOptionValue("solver", kCuPdlpString);
     h.setOptionValue("pdlp_log_level", 2);
+    auto start_cupdlp = std::chrono::high_resolution_clock::now();
     run_status = h.run();
+    auto end_cupdlp = std::chrono::high_resolution_clock::now();
+    auto duration_cupdlp = std::chrono::duration_cast<std::chrono::milliseconds>(end_cupdlp - start_cupdlp);
+    std::cout << "\n--- cuPDLP Results ---" << std::endl;
+    std::cout << "Status: " << h.modelStatusToString(h.getModelStatus()) << std::endl;
+    std::cout << "Iterations: " << h.getInfo().pdlp_iteration_count << std::endl;
+    std::cout << "Wall time: " << duration_cupdlp.count() / 1000.0 << " seconds" << std::endl;
+    std::cout << "Objective: " <<  h.getInfo().objective_function_value << std::endl;
   }
   h.resetGlobalScheduler(true);
 }

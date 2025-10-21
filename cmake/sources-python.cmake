@@ -242,7 +242,6 @@ set(highs_sources_python
     highs/pdlp/hipdlp/pdhg.cc
     highs/pdlp/hipdlp/restart.cc
     highs/pdlp/hipdlp/scaling.cc
-    highs/pdlp/hipdlp/step.cc
     highs/presolve/HighsPostsolveStack.cpp
     highs/presolve/HighsSymmetry.cpp
     highs/presolve/HPresolve.cpp
@@ -381,7 +380,6 @@ set(highs_headers_python
     highs/pdlp/hipdlp/restart.hpp
     highs/pdlp/hipdlp/scaling.hpp
     highs/pdlp/hipdlp/solver_results.hpp
-    highs/pdlp/hipdlp/step.hpp
     highs/presolve/HighsPostsolveStack.h
     highs/presolve/HighsSymmetry.h
     highs/presolve/HPresolve.h
