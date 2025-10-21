@@ -143,6 +143,7 @@ void PDLPSolver::printConstraintInfo() {
 }
 
 void PDLPSolver::preprocessLp() {
+  hipdlpTimerStart(kHipdlpClockPreprocess);
   logger_.info(
       "Preprocessing LP using cupdlp formulation (slack variables for "
       "bounds)...");
@@ -337,11 +338,13 @@ void PDLPSolver::preprocessLp() {
                ", ||b|| = " + std::to_string(unscaled_rhs_norm_));
 
   printConstraintInfo();
+  hipdlpTimerStop(kHipdlpClockPreprocess);
 }
 
 PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   logger_.info("Post-solving the solution...");
 
+  hipdlpTimerStart(kHipdlpClockPostprocess);
   if (original_lp_ == nullptr) {
     return PostSolveRetcode::DIMENSION_MISMATCH;
   }
@@ -456,10 +459,12 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   solution.dual_valid = true;
   logger_.info("Post-solve complete.");
 
+  hipdlpTimerStop(kHipdlpClockPostprocess);
   return PostSolveRetcode::OK;
 }
 
 void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
+  hipdlpTimerStart(kHipdlpClockSolve);
   auto solve_start = std::chrono::high_resolution_clock::now();
   Timer solver_timer;
   const HighsLp& lp = lp_;
@@ -534,6 +539,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       logger_.info("Time limit reached.");
       final_iter_count_ = iter;
       results_.term_code = TerminationStatus::TIMEOUT;
+      hipdlpTimerStop(kHipdlpClockSolve);
       return;
     }
 
@@ -543,10 +549,12 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     
     bool_checking = (bool_checking || iter % PDHG_CHECK_INTERVAL == 0);
     if (bool_checking) {
+      hipdlpTimerStart(kHipdlpClockAverageIterate);
       auto avg_start = std::chrono::high_resolution_clock::now();
       ComputeAverageIterate(Ax_avg, ATy_avg);
       auto avg_end = std::chrono::high_resolution_clock::now();
       timings_.average_iterate_time += std::chrono::duration<double>(avg_end - avg_start).count();
+      hipdlpTimerStop(kHipdlpClockAverageIterate);
 
       // Reset the average iterate accumulation
       int inner_iter = iter - restart_scheme_.GetLastRestartIter();
@@ -582,6 +590,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         y = y_current_;
         results_ = current_results;
         results_.term_code = TerminationStatus::OPTIMAL;
+  hipdlpTimerStop(kHipdlpClockSolve);
         return;
       }
 
@@ -593,6 +602,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         y = y_avg_;
         results_ = average_results;
         results_.term_code = TerminationStatus::OPTIMAL;
+  hipdlpTimerStop(kHipdlpClockSolve);
         return;
       }
 
@@ -645,6 +655,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     }
 
     // --- 5. Core PDHG Update Step ---
+    hipdlpTimerStart(kHipdlpClockIterateUpdate);
     auto update_start = std::chrono::high_resolution_clock::now();
     bool step_success = true;
 
@@ -675,6 +686,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
           // Reset to average and terminate
           x = x_avg_;
           y = y_avg_;
+	  hipdlpTimerStop(kHipdlpClockIterateUpdate);
+	  hipdlpTimerStop(kHipdlpClockSolve);
           return;
         }
     }
@@ -683,19 +696,24 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     // Compute ATy for the new iterate
     Ax_cache_ = Ax_next_; 
+  hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
     auto aty_start = std::chrono::high_resolution_clock::now();
     linalg::ATy(lp, y_next_, ATy_cache_);
     auto aty_end = std::chrono::high_resolution_clock::now();
     timings_.matrix_multiply_time += std::chrono::duration<double>(aty_end - aty_start).count();
+  hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
 
+    hipdlpTimerStop(kHipdlpClockIterateUpdate);
 
     // --- 6. Update Average Iterates ---
     // The number of iterations since the last restart
     int inner_iter = iter - restart_scheme_.GetLastRestartIter();
+    hipdlpTimerStart(kHipdlpClockAverageIterate);
     auto avg_update_start = std::chrono::high_resolution_clock::now();
     UpdateAverageIterates(x_next_, y_next_, working_params, inner_iter);
     auto avg_update_end = std::chrono::high_resolution_clock::now();
     timings_.average_iterate_time += std::chrono::duration<double>(avg_update_end - avg_update_start).count();
+    hipdlpTimerStop(kHipdlpClockAverageIterate);
 
 
     // --- 7. Prepare for next iteration ---
@@ -715,6 +733,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   results_.term_code = TerminationStatus::TIMEOUT;
   auto solve_end = std::chrono::high_resolution_clock::now();
   timings_.total_time = std::chrono::duration<double>(solve_end - solve_start).count();
+  hipdlpTimerStop(kHipdlpClockSolve);
   return;
 }
 
@@ -810,8 +829,15 @@ void PDLPSolver::ComputeAverageIterate(std::vector<double>& ax_avg,
   }
 
   debug_pdlp_data_.x_average_norm = linalg::vector_norm_squared(x_avg_);
+
+  hipdlpTimerStart(kHipdlpClockAverageIterateMatrixMultiply);
   linalg::Ax(lp_, x_avg_, ax_avg);
+  hipdlpTimerStop(kHipdlpClockAverageIterateMatrixMultiply);
+
+  hipdlpTimerStart(kHipdlpClockAverageIterateMatrixTransposeMultiply);
   linalg::ATy(lp_, y_avg_, aty_avg);
+  hipdlpTimerStop(kHipdlpClockAverageIterateMatrixTransposeMultiply);
+
   debug_pdlp_data_.ax_average_norm = linalg::vector_norm_squared(ax_avg);
   debug_pdlp_data_.aty_average_norm = linalg::vector_norm_squared(aty_avg);
 }
@@ -1178,6 +1204,9 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.passHighsLogOptions(options.log_options);
   logger_.print_header();
 
+  hipdlp_clocks_.timer_pointer_ = &timer;
+  hipdlp_timer_.initialiseHipdlpClocks(hipdlp_clocks_);
+
   params_.initialise();
   //  params.eta = 0; Not set in parse_options_file
   //  params.omega = 0; Not set in parse_options_file
@@ -1381,23 +1410,31 @@ std::vector<double> PDLPSolver::UpdateY(const std::vector<double> &y, const std:
 }
 
 void PDLPSolver::UpdateIteratesFixed() {
+  hipdlpTimerStart(kHipdlpClockProjection);
   auto proj_start = std::chrono::high_resolution_clock::now();
   x_next_ = UpdateX(x_current_, ATy_cache_, stepsize_.primal_step);
   auto proj_end = std::chrono::high_resolution_clock::now();
   timings_.projection_time += std::chrono::duration<double>(proj_end - proj_start).count();
+  hipdlpTimerStop(kHipdlpClockProjection);
   
+  hipdlpTimerStart(kHipdlpClockMatrixMultiply);
   auto ax_start = std::chrono::high_resolution_clock::now();
   linalg::Ax(lp_, x_next_, Ax_next_);
   auto ax_end = std::chrono::high_resolution_clock::now();
   timings_.matrix_multiply_time += std::chrono::duration<double>(ax_end - ax_start).count();
+  hipdlpTimerStop(kHipdlpClockMatrixMultiply);
   
+  hipdlpTimerStart(kHipdlpClockProjection);
   auto proj_y_start = std::chrono::high_resolution_clock::now();
   y_next_ = UpdateY(y_current_, Ax_cache_, Ax_next_, stepsize_.dual_step);
   auto proj_y_end = std::chrono::high_resolution_clock::now();
   timings_.projection_time += std::chrono::duration<double>(proj_y_end - proj_y_start).count();
+  hipdlpTimerStop(kHipdlpClockProjection);
 }
 
 void PDLPSolver::UpdateIteratesAdaptive() {
+  hipdlpTimerStart(kHipdlpClockStepSizeAdjustment);
+
   auto step_adjust_start = std::chrono::high_resolution_clock::now();
   const double MIN_ETA = 1e-6;
   const double MAX_ETA = 1.0;
@@ -1434,26 +1471,34 @@ void PDLPSolver::UpdateIteratesAdaptive() {
     double dual_step_update = dStepSizeUpdate * std::sqrt(stepsize_.beta);
 
     // Primal update
+  hipdlpTimerStart(kHipdlpClockProjection);
     auto proj_start = std::chrono::high_resolution_clock::now();
     xupdate = UpdateX(x_candidate, aty_candidate, primal_step_update);
     auto proj_end = std::chrono::high_resolution_clock::now();
     timings_.projection_time += std::chrono::duration<double>(proj_end - proj_start).count();
-    
+   hipdlpTimerStop(kHipdlpClockProjection);
+   
+  hipdlpTimerStart(kHipdlpClockMatrixMultiply);
     auto ax_start = std::chrono::high_resolution_clock::now();
     linalg::Ax(lp_, xupdate, axupdate);
     auto ax_end = std::chrono::high_resolution_clock::now();
     timings_.matrix_multiply_time += std::chrono::duration<double>(ax_end - ax_start).count();
+  hipdlpTimerStop(kHipdlpClockMatrixMultiply);
 
     // Dual update with timing
+   hipdlpTimerStart(kHipdlpClockProjection);
     auto proj_y_start = std::chrono::high_resolution_clock::now();
     yupdate = UpdateY(y_candidate, ax_candidate, axupdate, dual_step_update);
     auto proj_y_end = std::chrono::high_resolution_clock::now();
     timings_.projection_time += std::chrono::duration<double>(proj_y_end - proj_y_start).count();
+   hipdlpTimerStop(kHipdlpClockProjection);
     
+  hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
     auto aty_start = std::chrono::high_resolution_clock::now();
     linalg::ATy(lp_, yupdate, atyupdate);
     auto aty_end = std::chrono::high_resolution_clock::now();
     timings_.matrix_multiply_time += std::chrono::duration<double>(aty_end - aty_start).count();
+  hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
 
     // Compute deltas
     std::vector<double> delta_x(lp_.num_col_);
@@ -1531,6 +1576,7 @@ void PDLPSolver::UpdateIteratesAdaptive() {
 
   auto step_adjust_end = std::chrono::high_resolution_clock::now();
   timings_.step_size_adjustment_time += std::chrono::duration<double>(step_adjust_end - step_adjust_start).count();
+  hipdlpTimerStop(kHipdlpClockStepSizeAdjustment);
 }
 
 bool PDLPSolver::UpdateIteratesMalitskyPock(
@@ -1588,3 +1634,20 @@ double PDLPSolver::ComputeNonlinearity(const std::vector<double>& delta_primal,
   return nonlinearity; // cupdlp does not take absolute value
 }
 
+void PDLPSolver::reportHipdlpTimer() {
+  hipdlp_timer_.reportHipdlpCoreClock(hipdlp_clocks_);
+  hipdlp_timer_.reportHipdlpSolveClock(hipdlp_clocks_);
+  hipdlp_timer_.reportHipdlpIterateUpdateClock(hipdlp_clocks_);
+  hipdlp_timer_.reportHipdlpAverageIterateClock(hipdlp_clocks_);
+  hipdlp_timer_.reportHipdlpMatrixMultiplyClock(hipdlp_clocks_);
+}
+
+void PDLPSolver::hipdlpTimerStart(const HighsInt hipdlp_clock) {
+  HighsInt highs_timer_clock = hipdlp_clocks_.clock_[hipdlp_clock];
+  hipdlp_clocks_.timer_pointer_->start(highs_timer_clock);
+}
+
+void PDLPSolver::hipdlpTimerStop(const HighsInt hipdlp_clock) {
+  HighsInt highs_timer_clock = hipdlp_clocks_.clock_[hipdlp_clock];
+  hipdlp_clocks_.timer_pointer_->stop(highs_timer_clock);
+}
