@@ -1,0 +1,145 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file pdlp/HiPdlpTimer.h
+ * @brief Indices of HiPDLP iClocks
+ */
+#ifndef PDLP_HIPDLPTIMER_H_
+#define PDLP_HIPDLPTIMER_H_
+
+// Clocks for profiling HiPDLP
+enum iClockHipdlp {
+  kHipdlpClockTotal = 0,
+  kHipdlpClockPreprocess,
+  kHipdlpClockSolve,
+  kHipdlpClockPostprocess,
+  // Solve clocks
+  kHipdlpClockIterateUpdate,
+  kHipdlpClockConvergenceCheck,
+  kHipdlpClockRestartCheck,
+  kHipdlpClockAverageIterate,
+  // IterateUpdate clocks
+  kHipdlpClockMatrixMultiply,
+  kHipdlpClockMatrixTransposeMultiply,
+  kHipdlpClockProjection,
+  kHipdlpClockStepSizeAdjustment,
+  // AverageIterate clocks
+  kHipdlpClockAverageIterateMatrixMultiply,
+  kHipdlpClockAverageIterateMatrixTransposeMultiply,
+
+  kNumHipdlpClock  //!< Number of HIPDLP clocks
+};
+
+const double tolerance_percent_report = 0.1;
+
+class HipdlpTimer {
+ public:
+  void initialiseHipdlpClocks(HighsTimerClock& hipdlp_timer_clock) {
+    HighsTimer* timer_pointer = hipdlp_timer_clock.timer_pointer_;
+    std::vector<HighsInt>& clock = hipdlp_timer_clock.clock_;
+
+    clock.resize(kNumHipdlpClock);
+    clock[kHipdlpClockTotal] = 0;
+    clock[kHipdlpClockPreprocess] =
+      timer_pointer->clock_def("HiPDLP preprocess");
+    clock[kHipdlpClockSolve] =
+      timer_pointer->clock_def("HiPDLP solve");
+    clock[kHipdlpClockPostprocess] =
+      timer_pointer->clock_def("HiPDLP postprocess");
+    clock[kHipdlpClockIterateUpdate] =
+      timer_pointer->clock_def("Iterate update");
+    clock[kHipdlpClockMatrixMultiply] =
+      timer_pointer->clock_def("Ax");
+    clock[kHipdlpClockMatrixTransposeMultiply] =
+      timer_pointer->clock_def("Aty");
+    clock[kHipdlpClockProjection] =
+      timer_pointer->clock_def("Projection");
+    clock[kHipdlpClockStepSizeAdjustment] =
+      timer_pointer->clock_def("Step size adjustment");
+    clock[kHipdlpClockConvergenceCheck] =
+      timer_pointer->clock_def("Convergence check");
+    clock[kHipdlpClockRestartCheck] =
+      timer_pointer->clock_def("Restart check");
+    clock[kHipdlpClockAverageIterate] =
+      timer_pointer->clock_def("Average iterate");
+    clock[kHipdlpClockAverageIterateMatrixMultiply] =
+      timer_pointer->clock_def("Average iterate Ax");
+    clock[kHipdlpClockAverageIterateMatrixTransposeMultiply] =
+      timer_pointer->clock_def("Average iterate Aty");
+  };
+
+  bool reportHipdlpClockList(const char* grepStamp,
+                          const std::vector<HighsInt> hipdlp_clock_list,
+                          const HighsTimerClock& hipdlp_timer_clock,
+                          const HighsInt kHipdlpClockIdeal = kHipdlpClockTotal,
+                          const double tolerance_percent_report_ = -1) {
+    HighsTimer* timer_pointer = hipdlp_timer_clock.timer_pointer_;
+    if (!timer_pointer->printf_flag) return false;
+    const std::vector<HighsInt>& clock = hipdlp_timer_clock.clock_;
+    HighsInt hipdlp_clock_list_size = hipdlp_clock_list.size();
+    std::vector<HighsInt> clockList;
+    clockList.resize(hipdlp_clock_list_size);
+    for (HighsInt en = 0; en < hipdlp_clock_list_size; en++) {
+      clockList[en] = clock[hipdlp_clock_list[en]];
+    }
+    const double ideal_sum_time =
+        timer_pointer->clock_time[clock[kHipdlpClockIdeal]];
+    const double tolerance_percent_report =
+        tolerance_percent_report_ >= 0 ? tolerance_percent_report_ : 1e-8;
+    return timer_pointer->reportOnTolerance(
+        grepStamp, clockList, ideal_sum_time, tolerance_percent_report);
+  };
+
+  void reportHipdlpCoreClock(const HighsTimerClock& hipdlp_timer_clock) {
+    const std::vector<HighsInt> hipdlp_clock_list{
+        kHipdlpClockPreprocess, kHipdlpClockSolve, kHipdlpClockPostprocess};
+    reportHipdlpClockList("HipdlpCore___", hipdlp_clock_list, hipdlp_timer_clock,
+			  kHipdlpClockTotal);
+  };
+
+  void reportHipdlpSolveClock(const HighsTimerClock& hipdlp_timer_clock) {
+    const std::vector<HighsInt> hipdlp_clock_list{
+      kHipdlpClockIterateUpdate, kHipdlpClockConvergenceCheck,
+      kHipdlpClockRestartCheck, kHipdlpClockAverageIterate
+    };
+    reportHipdlpClockList("HipdlpSolve__", hipdlp_clock_list, hipdlp_timer_clock,
+			  kHipdlpClockSolve);
+  };
+
+  void reportHipdlpIterateUpdateClock(const HighsTimerClock& hipdlp_timer_clock) {
+    const std::vector<HighsInt> hipdlp_clock_list{
+      kHipdlpClockMatrixMultiply, kHipdlpClockMatrixTransposeMultiply,
+      kHipdlpClockProjection, kHipdlpClockStepSizeAdjustment
+    };
+    reportHipdlpClockList("HipdlpIterUpd", hipdlp_clock_list, hipdlp_timer_clock,
+			  kHipdlpClockIterateUpdate);
+  };
+
+  void reportHipdlpAverageIterateClock(const HighsTimerClock& hipdlp_timer_clock) {
+    const std::vector<HighsInt> hipdlp_clock_list{
+      kHipdlpClockAverageIterateMatrixMultiply,
+      kHipdlpClockAverageIterateMatrixTransposeMultiply
+    };
+    reportHipdlpClockList("HipdlpAvgIter", hipdlp_clock_list, hipdlp_timer_clock,
+			  kHipdlpClockAverageIterate);
+  };
+
+  void reportHipdlpMatrixMultiplyClock(const HighsTimerClock& hipdlp_timer_clock) {
+    const std::vector<HighsInt> hipdlp_clock_list{
+      kHipdlpClockMatrixMultiply,
+      kHipdlpClockMatrixTransposeMultiply,
+      kHipdlpClockAverageIterateMatrixMultiply,
+      kHipdlpClockAverageIterateMatrixTransposeMultiply
+    };
+    reportHipdlpClockList("HipdlpMtxMult", hipdlp_clock_list, hipdlp_timer_clock,
+			  kHipdlpClockSolve);
+  };
+
+};
+
+#endif /* PDLP_HIPDLPTIMER_H_ */
+
