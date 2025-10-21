@@ -53,7 +53,6 @@ class PDLPSolver {
   DebugPdlpData debug_pdlp_data_;
   DetailedTimings timings_;
   const DetailedTimings& getTimings() const { return timings_; }
-
  private:
   // --- Core Algorithm Logic ---
   void Initialize();

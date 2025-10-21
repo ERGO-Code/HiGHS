@@ -460,7 +460,6 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 }
 
 void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
-  auto solve_start = std::chrono::high_resolution_clock::now();
   Timer solver_timer;
   const HighsLp& lp = lp_;
 
@@ -479,12 +478,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   highsLogUser(params_.log_options_, HighsLogType::kInfo,
                "Using power method step sizes: eta = %g, omega = %g\n",
                working_params.eta, working_params.omega);
-
-  highsLogUser(params_.log_options_, HighsLogType::kInfo,
-               "Initial step sizes from power method lambda = %g: primal = %g; "
-               "dual = %g\n",
-               stepsize_.power_method_lambda, stepsize_.primal_step,
-               stepsize_.dual_step);
 
   // --- 1. Initialization ---
   restart_scheme_.passLogOptions(&working_params.log_options_);
@@ -713,8 +706,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   y = y_avg_;
 
   results_.term_code = TerminationStatus::TIMEOUT;
-  auto solve_end = std::chrono::high_resolution_clock::now();
-  timings_.total_time = std::chrono::duration<double>(solve_end - solve_start).count();
   return;
 }
 

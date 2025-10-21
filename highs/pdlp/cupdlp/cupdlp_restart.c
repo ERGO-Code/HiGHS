@@ -80,7 +80,7 @@ PDHG_restart_choice PDHG_Check_Restart_GPU(CUPDLPwork *work) {
     resobj->dDualFeasLastCandidate = resobj->dDualFeasAverage;
     resobj->dDualityGapLastCandidate = resobj->dDualityGapAverage;
   }
-  work->settings->nLogLevel = 2;
+
   if (restart_choice != PDHG_NO_RESTART) {
     if (muCurrent < muAverage) {
         if (work->settings->nLogLevel > 1)
