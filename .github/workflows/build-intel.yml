@@ -1,7 +1,6 @@
 name: build-intel
 
 on: [push, pull_request]
-# on: []
 
 jobs:
   build:
