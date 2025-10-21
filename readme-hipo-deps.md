@@ -97,4 +97,4 @@ Go to step 8.
 
 ### Notes
 
-Make sure, that in the HiGHS CMake output, the path where the GKlib library is found matches the path where the GKlib include header is. If not, there may be a system GKlib library which is being picked up by mistake. I is working on resolving this. 
+Make sure, that in the HiGHS CMake output, the path where the GKlib library is found matches the path where the GKlib include header is. If not, there may be a system GKlib library which is being picked up by mistake.

@@ -1,13 +1,10 @@
 # BLAS
-set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
-message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
-
 set(USE_CMAKE_FIND_BLAS ON)
 
-# if ((NOT BLAS_LIBRARIES STREQUAL "") OR
-#     (NOT BLA_VENDOR STREQUAL ""))
-#     set(USE_CMAKE_FIND_BLAS ON)
-# endif()
+set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
+if (NOT (BLAS_ROOT STREQUAL ""))
+    message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
+endif()
 
 # Optionally set the vendor:
 # set(BLA_VENDOR libblastrampoline)
