@@ -162,4 +162,37 @@ namespace pdlp_iterate_ops {
 // Compute z_new = z_old -
 };
 
+struct DetailedTimings {
+  double total_time = 0.0;
+  double iterate_update_time = 0.0;
+  double matrix_multiply_time = 0.0;  // Ax and ATy
+  double convergence_check_time = 0.0;
+  double restart_check_time = 0.0;
+  double average_iterate_time = 0.0;
+  double projection_time = 0.0;
+  double step_size_adjustment_time = 0.0;
+  double other_time = 0.0;
+  
+  void print(const std::string& solver_name) const {
+    std::cout << "\n=== " << solver_name << " Detailed Timings ===" << std::endl;
+    std::cout << "Total time:              " << total_time << " s" << std::endl;
+    std::cout << "Iterate update:          " << iterate_update_time 
+              << " s (" << (iterate_update_time/total_time*100) << "%)" << std::endl;
+    std::cout << "  - Matrix multiply:     " << matrix_multiply_time 
+              << " s (" << (matrix_multiply_time/total_time*100) << "%)" << std::endl;
+    std::cout << "  - Projection:          " << projection_time 
+              << " s (" << (projection_time/total_time*100) << "%)" << std::endl;
+    std::cout << "  - Step size adjust:    " << step_size_adjustment_time 
+              << " s (" << (step_size_adjustment_time/total_time*100) << "%)" << std::endl;
+    std::cout << "Convergence check:       " << convergence_check_time 
+              << " s (" << (convergence_check_time/total_time*100) << "%)" << std::endl;
+    std::cout << "Restart check:           " << restart_check_time 
+              << " s (" << (restart_check_time/total_time*100) << "%)" << std::endl;
+    std::cout << "Average iterate comp:    " << average_iterate_time 
+              << " s (" << (average_iterate_time/total_time*100) << "%)" << std::endl;
+    std::cout << "Other:                   " << other_time 
+              << " s (" << (other_time/total_time*100) << "%)" << std::endl;
+  }
+};
+
 #endif

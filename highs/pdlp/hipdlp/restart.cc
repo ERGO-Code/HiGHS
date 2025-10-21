@@ -201,7 +201,7 @@ RestartInfo RestartScheme::Check(int current_iter,
     dual_feas_last_candidate_ = current_results.dual_feasibility;
     duality_gap_last_candidate_ = current_results.duality_gap;
   }
-
+/*
   if (should_restart ) {
     if (restart_to_average){
       std::cout << "Last restart was iter " << last_restart_iter_ << ": average\n";
@@ -209,6 +209,6 @@ RestartInfo RestartScheme::Check(int current_iter,
       std::cout << "Last restart was iter " << last_restart_iter_ << ": current\n";
     }
   }
-  
+*/  
   return RestartInfo(should_restart, restart_to_average);
 }
