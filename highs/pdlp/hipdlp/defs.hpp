@@ -173,25 +173,45 @@ struct DetailedTimings {
   double step_size_adjustment_time = 0.0;
   double other_time = 0.0;
   
-  void print(const std::string& solver_name) const {
-    std::cout << "\n=== " << solver_name << " Detailed Timings ===" << std::endl;
-    std::cout << "Total time:              " << total_time << " s" << std::endl;
-    std::cout << "Iterate update:          " << iterate_update_time 
-              << " s (" << (iterate_update_time/total_time*100) << "%)" << std::endl;
-    std::cout << "  - Matrix multiply:     " << matrix_multiply_time 
-              << " s (" << (matrix_multiply_time/total_time*100) << "%)" << std::endl;
-    std::cout << "  - Projection:          " << projection_time 
-              << " s (" << (projection_time/total_time*100) << "%)" << std::endl;
-    std::cout << "  - Step size adjust:    " << step_size_adjustment_time 
-              << " s (" << (step_size_adjustment_time/total_time*100) << "%)" << std::endl;
-    std::cout << "Convergence check:       " << convergence_check_time 
-              << " s (" << (convergence_check_time/total_time*100) << "%)" << std::endl;
-    std::cout << "Restart check:           " << restart_check_time 
-              << " s (" << (restart_check_time/total_time*100) << "%)" << std::endl;
-    std::cout << "Average iterate comp:    " << average_iterate_time 
-              << " s (" << (average_iterate_time/total_time*100) << "%)" << std::endl;
-    std::cout << "Other:                   " << other_time 
-              << " s (" << (other_time/total_time*100) << "%)" << std::endl;
+  void print(const std::string& solver_name,
+	     const HighsLogOptions log_options) const {
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "\n=== %s Detailed Timings ===\n",
+		 solver_name.c_str());
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "Total time:              %6.2f s\n", total_time);
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "Iterate update:          %6.2f s (%3.0f \%)\n", 
+		 iterate_update_time,
+		 iterate_update_time/total_time*100);
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "  - Matrix multiply:     %6.2f s (%3.0f \%)\n", 
+		 matrix_multiply_time,
+		 matrix_multiply_time/total_time*100);
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "  - Projection:          %6.2f s (%3.0f \%)\n", 
+		 projection_time,
+		 projection_time/total_time*100);
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "  - Step size adjust:    %6.2f s (%3.0f \%)\n", 
+		 step_size_adjustment_time,
+		 step_size_adjustment_time/total_time*100);
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "Convergence check:       %6.2f s (%3.0f \%)\n", 
+		 convergence_check_time,
+		 convergence_check_time/total_time*100);
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "Restart check:           %6.2f s (%3.0f \%)\n", 
+		 restart_check_time,
+		 restart_check_time/total_time*100);
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "Average iterate comp:    %6.2f s (%3.0f \%)\n", 
+		 average_iterate_time,
+		 average_iterate_time/total_time*100);
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "Other:                   %6.2f s (%3.0f \%)\n", 
+		 other_time,
+		 other_time/total_time*100);
   }
 };
 

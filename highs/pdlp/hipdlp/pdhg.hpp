@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "Highs.h"
+#include "pdlp/HiPdlpTimer.h"
 #include "linalg.hpp"
 #include "logger.hpp"
 #include "restart.hpp"
@@ -53,6 +54,9 @@ class PDLPSolver {
   DebugPdlpData debug_pdlp_data_;
   DetailedTimings timings_;
   const DetailedTimings& getTimings() const { return timings_; }
+
+  void reportHipdlpTimer();
+
  private:
   // --- Core Algorithm Logic ---
   void Initialize();
@@ -98,6 +102,8 @@ class PDLPSolver {
       const std::vector<double>& x, const std::vector<double>& y,
       const std::vector<double>& lambda);
   void PDHG_Compute_Step_Size_Ratio(PrimalDualParams& working_params);
+  void hipdlpTimerStart(const HighsInt hipdlp_clock);
+  void hipdlpTimerStop(const HighsInt hipdlp_clock);
 
   // --- Problem Data and Parameters ---
   HighsLp lp_;
@@ -127,6 +133,9 @@ class PDLPSolver {
   std::vector<double> dSlackPos_;
   std::vector<double> dSlackNeg_;
   Timer total_timer;
+
+  HipdlpTimer hipdlp_timer_;
+  HighsTimerClock hipdlp_clocks_;
 
   // --- Scaling ---
   Scaling scaling_;

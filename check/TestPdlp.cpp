@@ -390,3 +390,23 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   }
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("hi-pdlp-timer", "[pdlp]") {
+  std::string model = "adlittle";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  // h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("solver", kHiPdlpString) == HighsStatus::kOk);
+  HighsInt pdlp_features_off = 
+      //kPdlpScalingOff +
+      //kPdlpRestartOff 
+      kPdlpAdaptiveStepSizeOff
+      ;
+  h.setOptionValue("pdlp_features_off", pdlp_features_off);
+  HighsStatus run_status = h.run();
+  h.resetGlobalScheduler(true);
+
+}
+
