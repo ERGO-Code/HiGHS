@@ -77,6 +77,9 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   debugPdlpFinalSolutionLog(pdlp.debug_pdlp_log_file_,
                             pdlp_solution.col_value.data(), lp.num_col_,
                             pdlp_solution.row_dual.data(), lp.num_row_);
+  pdlp.closeDebugLog();
+
+  // Report profiling
   pdlp.reportHipdlpTimer();
 
   // --- Print Summary ---

@@ -55,10 +55,11 @@ class PDLPSolver {
   const DetailedTimings& getTimings() const { return timings_; }
 
   void reportHipdlpTimer();
+  void closeDebugLog();
 
  private:
   // --- Core Algorithm Logic ---
-  void solveReturn();
+  void solveReturn(const TerminationStatus term_code);
   void initialize();
   void printConstraintInfo();
   bool checkConvergence(const int iter, const std::vector<double>& x,

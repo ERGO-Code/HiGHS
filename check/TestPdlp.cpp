@@ -392,7 +392,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
 }
 
 TEST_CASE("hi-pdlp-timer", "[pdlp]") {
-  std::string model = "shell";
+  std::string model = "shell";//"avgas";//
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;

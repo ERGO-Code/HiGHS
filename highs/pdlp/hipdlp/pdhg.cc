@@ -538,8 +538,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     if (solver_timer.read() > params_.time_limit) {
       logger_.info("Time limit reached.");
       final_iter_count_ = iter;
-      results_.term_code = TerminationStatus::TIMEOUT;
-      return solveReturn();
+      return solveReturn(TerminationStatus::TIMEOUT);
     }
 
     // --- 3. Convergence and Restart Check (BEFORE iterate update) ---
@@ -562,6 +561,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       SolverResults current_results;
       SolverResults average_results;
 
+      hipdlpTimerStart(kHipdlpClockConvergenceCheck);
       auto conv_start = std::chrono::high_resolution_clock::now();
       // Compute residuals for current iterate
       bool current_converged = checkConvergence(
@@ -574,6 +574,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
                            params_.tolerance, average_results, "[A]");
       auto conv_end = std::chrono::high_resolution_clock::now();
       timings_.convergence_check_time += std::chrono::duration<double>(conv_end - conv_start).count();
+      hipdlpTimerStop(kHipdlpClockConvergenceCheck);
 
       debugPdlpIterHeaderLog(debug_pdlp_log_file_);
 
@@ -588,8 +589,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         x = x_current_;
         y = y_current_;
         results_ = current_results;
-        results_.term_code = TerminationStatus::OPTIMAL;
-        return solveReturn();
+        return solveReturn(TerminationStatus::OPTIMAL);
       }
 
       if (average_converged) {
@@ -599,8 +599,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         x = x_avg_;
         y = y_avg_;
         results_ = average_results;
-        results_.term_code = TerminationStatus::OPTIMAL;
-        return solveReturn();
+        return solveReturn(TerminationStatus::OPTIMAL);
       }
 
       // --- 4. Restart Check (using computed results) ---
@@ -684,7 +683,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
           x = x_avg_;
           y = y_avg_;
 	  hipdlpTimerStop(kHipdlpClockIterateUpdate);
-          return solveReturn();
+          return solveReturn(TerminationStatus::ERROR);
         }
     }
     auto update_end = std::chrono::high_resolution_clock::now();
@@ -726,16 +725,15 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   x = x_avg_;
   y = y_avg_;
 
-  results_.term_code = TerminationStatus::TIMEOUT;
   auto solve_end = std::chrono::high_resolution_clock::now();
   timings_.total_time = std::chrono::duration<double>(solve_end - solve_start).count();
 
-  return solveReturn();
+  return solveReturn(TerminationStatus::TIMEOUT);
 }
 
-void PDLPSolver::solveReturn() {
+void PDLPSolver::solveReturn(const TerminationStatus term_code) {
+  results_.term_code = term_code;
   hipdlpTimerStop(kHipdlpClockSolve);  
-  if (debug_pdlp_log_file_) fclose(debug_pdlp_log_file_);
 }
 
 void PDLPSolver::initialize() {
@@ -1649,4 +1647,8 @@ void PDLPSolver::hipdlpTimerStart(const HighsInt hipdlp_clock) {
 void PDLPSolver::hipdlpTimerStop(const HighsInt hipdlp_clock) {
   HighsInt highs_timer_clock = hipdlp_clocks_.clock_[hipdlp_clock];
   hipdlp_clocks_.timer_pointer_->stop(highs_timer_clock);
+}
+
+void PDLPSolver::closeDebugLog() {
+  if (debug_pdlp_log_file_) fclose(debug_pdlp_log_file_);
 }
