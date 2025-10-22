@@ -14,11 +14,13 @@
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
 
-// The method below runs simplex, ipx or pdlp solver on the lp.
+// The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
+  HighsSubSolverCallTime& sub_solver_call_time =
+      solver_object.sub_solver_call_time_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);
@@ -35,6 +37,30 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                         return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
+  const bool use_only_ipm = useIpm(options.solver) || options.run_centring;
+  bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
+#ifndef HIPO
+  // Shouldn't be possible to choose HiPO if it's not in the build
+  assert(!use_hipo);
+  use_hipo = false;
+#endif
+  const bool use_ipx = use_only_ipm && !use_hipo;
+  // Now actually solve LPs!
+  //
+  // lambda for solving LP by simplex
+  auto simplexSolve = [&]() -> HighsStatus {
+    return_status = HighsStatus::kOk;
+    call_status = solveLpSimplex(solver_object);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveLpSimplex");
+    if (return_status == HighsStatus::kError) return return_status;
+    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Inconsistent solution returned from solver\n");
+      return_status = HighsStatus::kError;
+    }
+    return return_status;
+  };
   if (!solver_object.lp_.num_row_ || solver_object.lp_.a_matrix_.numNz() == 0) {
     // LP is unconstrained due to having no rows or a zero constraint
     // matrix, so solve directly
@@ -42,22 +68,53 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-  } else if (options.solver == kIpmString || options.run_centring ||
-             options.solver == kPdlpString) {
+  } else if (use_only_ipm || options.solver == kPdlpString) {
     // Use IPM or PDLP
-    if (options.solver == kIpmString || options.run_centring) {
-      // Use IPX to solve the LP
-      try {
-        call_status = solveLpIpx(solver_object);
-      } catch (const std::exception& exception) {
-        highsLogDev(options.log_options, HighsLogType::kError,
-                    "Exception %s in solveLpIpx\n", exception.what());
-        call_status = HighsStatus::kError;
+    if (use_only_ipm) {
+      // Use IPM to solve the LP
+      if (use_hipo) {
+#ifdef HIPO
+        // Use HIPO to solve the LP
+        sub_solver_call_time.num_call[kSubSolverHipo]++;
+        sub_solver_call_time.run_time[kSubSolverHipo] =
+            -solver_object.timer_.read();
+        try {
+          call_status = solveLpHipo(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpHipo\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+        sub_solver_call_time.run_time[kSubSolverHipo] +=
+            solver_object.timer_.read();
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLpHipo");
+#else
+        highsLogUser(options.log_options, HighsLogType::kError,
+                     "HiPO is not available in this build.\n");
+        return HighsStatus::kError;
+#endif
+      } else if (use_ipx) {
+        sub_solver_call_time.num_call[kSubSolverIpx]++;
+        sub_solver_call_time.run_time[kSubSolverIpx] =
+            -solver_object.timer_.read();
+        try {
+          call_status = solveLpIpx(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpIpx\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+        sub_solver_call_time.run_time[kSubSolverIpx] +=
+            solver_object.timer_.read();
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLpIpx");
       }
-      return_status = interpretCallStatus(options.log_options, call_status,
-                                          return_status, "solveLpIpx");
     } else {
       // Use cuPDLP-C to solve the LP
+      sub_solver_call_time.num_call[kSubSolverPdlp]++;
+      sub_solver_call_time.run_time[kSubSolverPdlp] =
+          -solver_object.timer_.read();
       try {
         call_status = solveLpCupdlp(solver_object);
       } catch (const std::exception& exception) {
@@ -65,6 +122,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                     "Exception %s in solveLpCupdlp\n", exception.what());
         call_status = HighsStatus::kError;
       }
+      sub_solver_call_time.run_time[kSubSolverPdlp] +=
+          solver_object.timer_.read();
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLpCupdlp");
     }
@@ -74,9 +133,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // Non-error return requires a primal solution
     assert(solver_object.solution_.value_valid);
 
-    if (options.solver == kIpmString || options.run_centring) {
+    if (useIpm(options.solver) || options.run_centring) {
       // Setting the IPM-specific values of (highs_)info_ has been done in
-      // solveLpIpx
+      // solveLpHipo/Ipx
       const bool unwelcome_ipx_status =
           solver_object.model_status_ == HighsModelStatus::kUnknown ||
           (solver_object.model_status_ ==
@@ -106,22 +165,11 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
           // case there's no basis to start simplex
           //
           // ToDo: Check whether simplex can exploit the primal solution
-          // returned by IPX
+          // returned by HiPO/IPX
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "IPX solution is imprecise, so clean up with simplex\n");
-          // Reset the return status since it will now be determined by
-          // the outcome of the simplex solve
-          return_status = HighsStatus::kOk;
-          call_status = solveLpSimplex(solver_object);
-          return_status = interpretCallStatus(options.log_options, call_status,
-                                              return_status, "solveLpSimplex");
+                       "IPM solution is imprecise, so clean up with simplex\n");
+          return_status = simplexSolve();
           if (return_status == HighsStatus::kError) return return_status;
-          if (!isSolutionRightSize(solver_object.lp_,
-                                   solver_object.solution_)) {
-            highsLogUser(options.log_options, HighsLogType::kError,
-                         "Inconsistent solution returned from solver\n");
-            return HighsStatus::kError;
-          }
         }  // options.run_crossover == kHighsOnString
            // clang-format off
       }  // unwelcome_ipx_status
@@ -129,15 +177,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     }
   } else {
     // Use Simplex
-    call_status = solveLpSimplex(solver_object);
-    return_status = interpretCallStatus(options.log_options, call_status,
-                                        return_status, "solveLpSimplex");
+    return_status = simplexSolve();
     if (return_status == HighsStatus::kError) return return_status;
-    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Inconsistent solution returned from solver\n");
-      return HighsStatus::kError;
-    }
   }
   // Analyse the HiGHS (basic) solution
   if (debugHighsLpSolution(message, solver_object) ==
@@ -541,4 +582,44 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
           int(suggested_bound_scale_exponent), int(suggested_user_bound_scale));
     }
   }
+}
+
+bool useIpm(const std::string& solver) {
+  return solver == kIpmString || solver == kHipoString || solver == kIpxString;
+}
+
+// Decide whether to use the HiPO IPM solver
+bool useHipo(const HighsOptions& options,
+             const std::string& specific_solver_option, const HighsLp& lp,
+             const bool logging) {
+  // specific_solver_option wll be "solver", "mip_lp_solver" or
+  // "mip_ipm_solver" according to context
+  assert(specific_solver_option == kSolverString ||
+         specific_solver_option == kMipLpSolverString ||
+         specific_solver_option == kMipIpmSolverString);
+  const std::string specific_solver_option_value =
+      specific_solver_option == kSolverString        ? options.solver
+      : specific_solver_option == kMipLpSolverString ? options.mip_lp_solver
+                                                     : options.mip_ipm_solver;
+  // In the MIP solver there are situations where IPM must be used
+  const bool force_ipm = specific_solver_option == kMipIpmSolverString;
+
+  // Initialize to value for valgrind.
+  bool use_hipo = false;
+
+  if (specific_solver_option_value == kIpxString) {
+    use_hipo = false;
+  } else if (specific_solver_option_value == kIpmString ||
+             specific_solver_option_value == kHipoString || force_ipm) {
+#ifdef HIPO
+    use_hipo = true;
+#else
+    use_hipo = false;
+#endif
+  }
+  if (options.run_centring) use_hipo = false;
+  // Later decide between HiPO and IPX based on LP properties
+  if (specific_solver_option == kMipIpmSolverString) return use_hipo;
+  // Later decide between simplex, HiPO and IPX based on LP properties
+  return use_hipo;
 }
