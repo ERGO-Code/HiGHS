@@ -1820,7 +1820,6 @@ void testGetModel() {
   assert(ck_sense == sense);
 
   double* ck_col_cost = (double*)malloc(sizeof(double) * ck_num_col);
-  ;
   double* ck_col_lower = (double*)malloc(sizeof(double) * ck_num_col);
   double* ck_col_upper = (double*)malloc(sizeof(double) * ck_num_col);
   double* ck_row_lower = (double*)malloc(sizeof(double) * ck_num_row);
@@ -2301,6 +2300,112 @@ void testUserObjectiveBoundScaling() {
 
   double scaled_objective_value = Highs_getObjectiveValue(highs);
   assertDoubleValuesEqual("objective_value", unscaled_objective_value, scaled_objective_value);
+void testFixedLp() {
+  // The use of Highs_getFixedLp is illustrated for the MIP
+  //
+  // Min    f  = -3x_0 - 2x_1 - x_2
+  // s.t.          x_0 +  x_1 + x_2 <=  7
+  //              4x_0 + 2x_1 + x_2  = 12
+  //              x_0 >=0; x_1 >= 0; x_2 binary
+
+  const HighsInt num_col = 3;
+  const HighsInt num_row = 2;
+  const HighsInt num_nz = 6;
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  HighsInt sense = kHighsObjSenseMinimize;
+  double offset = 0;
+
+  // Define the column costs, lower bounds and upper bounds
+  double col_cost[3] = {-3.0, -2.0, -1.0};
+  double col_lower[3] = {0.0, 0.0, 0.0};
+  double col_upper[3] = {1.0e30, 1.0e30, 1.0};
+  // Define the row lower bounds and upper bounds
+  double row_lower[2] = {-1.0e30, 12.0};
+  double row_upper[2] = {7.0, 12.0};
+  // Define the constraint matrix column-wise
+  HighsInt a_start[3] = {0, 2, 4};
+  HighsInt a_index[6] = {0, 1, 0, 1, 0, 1};
+  double a_value[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
+  HighsInt integrality[3] = {kHighsVarTypeContinuous, kHighsVarTypeContinuous,
+                             kHighsVarTypeInteger};
+
+  void* highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_setStringOptionValue(highs, "presolve", "off");
+  HighsInt return_status =
+    Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
+		  col_cost, col_lower, col_upper, row_lower, row_upper,
+		  a_start, a_index, a_value, integrality);
+  assert(return_status == kHighsStatusOk);
+  return_status = Highs_run(highs);
+  double mip_objective_function_value;
+  return_status = Highs_getDoubleInfoValue(highs, "objective_function_value",
+                                           &mip_objective_function_value);
+  assert(return_status == kHighsStatusOk);
+
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  return_status = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusOk);
+
+  HighsInt fixed_lp_num_col;
+  HighsInt fixed_lp_num_row;
+  HighsInt fixed_lp_num_nz;
+  HighsInt fixed_lp_sense;
+  double fixed_lp_offset;
+  Highs_getFixedLp(highs, kHighsMatrixFormatColwise, &fixed_lp_num_col, &fixed_lp_num_row,
+		   &fixed_lp_num_nz, &fixed_lp_sense, &fixed_lp_offset, NULL, NULL, NULL, NULL, NULL,
+		   NULL, NULL, NULL);
+
+  assert(fixed_lp_num_col == num_col);
+  assert(fixed_lp_num_row == num_row);
+  assert(fixed_lp_num_nz == num_nz);
+  assert(fixed_lp_sense == sense);
+
+  double* fixed_lp_col_cost = (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_col_lower = (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_col_upper = (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_row_lower = (double*)malloc(sizeof(double) * fixed_lp_num_row);
+  double* fixed_lp_row_upper = (double*)malloc(sizeof(double) * fixed_lp_num_row);
+  HighsInt* fixed_lp_a_start = (HighsInt*)malloc(sizeof(HighsInt) * fixed_lp_num_col);
+  HighsInt* fixed_lp_a_index = (HighsInt*)malloc(sizeof(HighsInt) * fixed_lp_num_nz);
+  double* fixed_lp_a_value = (double*)malloc(sizeof(double) * num_nz);
+
+  // Get the arrays
+  Highs_getFixedLp(highs, kHighsMatrixFormatColwise, &fixed_lp_num_col, &fixed_lp_num_row,
+		   &fixed_lp_num_nz, &fixed_lp_sense, &fixed_lp_offset, fixed_lp_col_cost, fixed_lp_col_lower,
+		   fixed_lp_col_upper, fixed_lp_row_lower, fixed_lp_row_upper, fixed_lp_a_start, fixed_lp_a_index,
+		   fixed_lp_a_value);
+  
+  return_status = Highs_passLp(highs,
+			       fixed_lp_num_col, fixed_lp_num_row, fixed_lp_num_nz,
+			       kHighsMatrixFormatColwise,
+			       fixed_lp_sense, fixed_lp_offset,
+			       fixed_lp_col_cost, fixed_lp_col_lower, fixed_lp_col_upper,
+			       fixed_lp_row_lower, fixed_lp_row_upper,
+			       fixed_lp_a_start, fixed_lp_a_index, fixed_lp_a_value);
+  assert(return_status == kHighsStatusOk);
+
+  return_status = Highs_setSolution(highs, col_value, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusOk);
+
+  return_status = Highs_run(highs);
+  double objective_function_value;
+  return_status = Highs_getDoubleInfoValue(highs, "objective_function_value",
+                                           &objective_function_value);
+  assert(return_status == kHighsStatusOk);
+  assert(objective_function_value == mip_objective_function_value);
+  
+ 
+  free(col_value);
+  free(fixed_lp_col_cost);
+  free(fixed_lp_col_lower);
+  free(fixed_lp_col_upper);
+  free(fixed_lp_row_lower);
+  free(fixed_lp_row_upper);
+  free(fixed_lp_a_start);
+  free(fixed_lp_a_index);
+  free(fixed_lp_a_value);
+  
   Highs_destroy(highs);
 }
 
@@ -2329,6 +2434,7 @@ int main() {
     testDeleteRowResolveWithBasis();
     testIis();
     testUserObjectiveBoundScaling();
+    testFixedLp();
   return 0;
 }
 //  testSetSolution();

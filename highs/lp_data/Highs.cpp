@@ -1387,18 +1387,36 @@ HighsStatus Highs::optimizeModel() {
   }
   if (basis_.valid) assert(basis_.useful);
 
-  if ((has_basis || options_.presolve == kHighsOffString || unconstrained_lp) &&
+  const bool without_presolve = options_.presolve == kHighsOffString;
+  if ((unconstrained_lp || has_basis || without_presolve) &&
       solver_will_use_basis) {
     // There is a valid basis for the problem, presolve is off, or LP
     // has no constraint matrix, and the solver will use the basis
-    ekk_instance_.lp_name_ =
-        "LP without presolve, or with basis, or unconstrained";
+    // (otherwise it's better to use presolve, if it's not switched
+    // off)
+    //
+    // Determine a coherent message about how the LP is being solved
+    std::stringstream lp_solve_ss;
+    if (unconstrained_lp) {
+      lp_solve_ss << "Solving unconstrained LP";
+    } else if (has_basis) {
+      if (without_presolve) {
+        lp_solve_ss << "Solving LP with useful basis";
+      } else {
+        lp_solve_ss << "Solving LP with useful basis so presolve not used";
+      }
+    } else {
+      // One of unconstrained_lp, has_basis and without_presolve must
+      // be true, and the first two anren't
+      assert(without_presolve);
+      lp_solve_ss << "Solving LP without presolve or useful basis";
+    }
+    std::string lp_solve = lp_solve_ss.str();
+    ekk_instance_.lp_name_ = lp_solve;
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
-    solveLp(incumbent_lp,
-            "Solving LP without presolve, or with basis, or unconstrained",
-            this_solve_original_lp_time);
+    solveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
@@ -1926,6 +1944,51 @@ HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
   if (rhs) {
     for (HighsInt iRow = 0; iRow < num_row; iRow++)
       rhs[iRow] = this->standard_form_rhs_[iRow];
+  }
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getFixedLp(HighsLp& lp) const {
+  if (!this->model_.lp_.isMip()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Incumbent model is not a MIP, so cannot form fixed LP\n");
+    return HighsStatus::kError;
+  }
+  if (!this->solution_.value_valid) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Incumbent model does not have a valid solution, so cannot "
+                 "form fixed LP\n");
+    return HighsStatus::kError;
+  }
+  lp = this->model_.lp_;
+  const std::vector<HighsVarType> integrality = this->model_.lp_.integrality_;
+  lp.integrality_.clear();
+  HighsInt num_non_conts_fractional = 0;
+  double max_fractional = 0;
+  for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++) {
+    double value = this->solution_.col_value[iCol];
+    // Fix integer and semi-integer variables at their
+    // value. Semi-continuous variables are fixed at zero if they are
+    // closer to zero than their lower bound
+    if (integrality[iCol] == HighsVarType::kInteger ||
+        integrality[iCol] == HighsVarType::kSemiInteger ||
+        (integrality[iCol] == HighsVarType::kSemiContinuous &&
+         value < lp.col_lower_[iCol] - value)) {
+      double fractional = fractionality(value);
+      if (fractional > this->options_.mip_feasibility_tolerance) {
+        num_non_conts_fractional++;
+        max_fractional = std::max(fractional, max_fractional);
+      }
+      lp.col_lower_[iCol] = value;
+      lp.col_upper_[iCol] = value;
+    }
+  }
+  if (num_non_conts_fractional) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kWarning,
+        "Fixed LP has %d variables fixed at max fractional value of %g\n",
+        int(num_non_conts_fractional), max_fractional);
+    return HighsStatus::kWarning;
   }
   return HighsStatus::kOk;
 }
@@ -3709,8 +3772,12 @@ void Highs::invalidateSolverDualData() {
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
-  invalidateModelStatus();
+  invalidateModelStatusAndInfo();
   invalidateSolution();
+}
+
+void Highs::invalidateModelStatusAndInfo() {
+  invalidateModelStatus();
   invalidateRanging();
   invalidateInfo();
   invalidateIis();
