@@ -57,7 +57,7 @@ endif()
 # message("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   message(STATUS "Compiler is IntelLLVM")
-  if (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS "3.23.0") 
+  if (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS "3.23.0")
       message(FATAL_ERROR "Need at least CMake 3.23 for IntelLLVM support of IntelDPCPP package on Windows")
   elseif(CMAKE_VERSION VERSION_LESS "3.23.0")
       message(FATAL_ERROR "CMake 3.20.5 is the minimum recommended for IntelLLVM on Linux")
@@ -121,9 +121,9 @@ endif()
 
 option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 
-# Address | Thread | Leak 
+# Address | Thread | Leak
 # Linux atm
-# Only Debug is theted atm 
+# Only Debug atm
 # See below for RelWithDeb info, todo test wip
 set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
 
@@ -137,7 +137,7 @@ message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
 message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 
-if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0") 
+if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0")
     message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
 endif()
 
@@ -158,11 +158,11 @@ if (CUPDLP_GPU)
     # With FindCUDAConf.cmake
     # Need to have the CUDA_HOME environment variable set.
     include(FindCUDAConf)
-  else() 
+  else()
     # Without FindCUDAConf.cmake
     enable_language(CUDA)
     find_package(CUDAToolkit REQUIRED)
-    
+
     set(CUDA_LIBRARY-NOTFOUND, OFF)
     set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
   endif()
@@ -205,7 +205,7 @@ if (BUILD_CXX)
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-    # for multi-config build system (e.g. xcode) 
+    # for multi-config build system (e.g. xcode)
     foreach(OutputConfig IN LISTS CMAKE_CONFIGURATION_TYPES)
       string(TOUPPER ${OutputConfig} OUTPUTCONFIG)
       set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OutputConfig}/${CMAKE_INSTALL_LIBDIR})
@@ -244,14 +244,14 @@ if (BUILD_CXX)
     option(STDCALL "Build highs with the __stdcall convention" OFF)
   endif()
 
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR 
-    CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR  
-    CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") 
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
+    CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
+    CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-  # elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
+  # elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   # not recognised by cl
-  #   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
-  endif()  
+  #   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11")
+  endif()
 
   # Basic type
   include(CMakePushCheckState)
@@ -275,7 +275,7 @@ if (BUILD_CXX)
   check_type_size("int *" SIZEOF_INT_P LANGUAGE CXX)
   message(STATUS "Found int * size: ${SIZEOF_INT_P}")
   cmake_pop_check_state()
- 
+
   # Use current CMAKE_C_FLAGS and CMAKE_CXX_FLAGS when checking for IPO support,
   # instead of defaults: https://cmake.org/cmake/help/latest/policy/CMP0138.html
   if(MSVC AND BUILD_SHARED_LIBS)
@@ -293,7 +293,7 @@ if (BUILD_CXX)
     set(ipo_supported NO)
     message(STATUS "IPO / LTO not currently supported building HiGHS on MinGW")
   else()
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL  "3.24.0") 
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL  "3.24.0")
       cmake_policy(SET CMP0138 NEW)
     endif()
 
@@ -371,7 +371,7 @@ else()
     HIGHS_HAVE_BUILTIN_CLZ)
 endif()
 
-set(CMAKE_MACOSX_RPATH ON)
+set(CMAKE_MACOSX_RPATH TRUE)
 
 if (BUILD_DOTNET)
     set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -428,7 +428,7 @@ endif()
 
 # For debug of cuda locally
 
-# does not work with older CMake 
+# does not work with older CMake
 # add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
 
 # add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-G>")
@@ -453,7 +453,7 @@ if(MSVC)
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-D_CRT_SECURE_NO_WARNINGS>")
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
 
-  # Try to split large pdb files into objects. 
+  # Try to split large pdb files into objects.
   # https://github.com/tensorflow/tensorflow/issues/31610
   # add_compile_options("/Z7")
   # add_link_options("/DEBUG:FASTLINK")
@@ -614,11 +614,11 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
   message(STATUS "Building in coverage mode")
 
   # Enable coverage flags
-  add_compile_options(-O0) 
-  add_compile_options(--coverage) 
-  add_compile_options(-fprofile-update=atomic) 
+  add_compile_options(-O0)
+  add_compile_options(--coverage)
+  add_compile_options(-fprofile-update=atomic)
 
-  add_link_options(-O0) 
+  add_link_options(-O0)
   add_link_options(--coverage)    # Ensure coverage data is linked correctly
 
   find_program(GCOV_PATH gcov)

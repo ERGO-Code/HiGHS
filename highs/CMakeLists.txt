@@ -51,8 +51,11 @@ if(NOT FAST_BUILD)
   endif()
 
   # set the install rpath to the installed destination
-  set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  if(APPLE)
+      set_target_properties(libhighs PROPERTIES INSTALL_RPATH "@loader_path")
+  elseif (UNIX)
+      set_target_properties(libhighs PROPERTIES INSTALL_RPATH "$ORIGIN")
+  endif()
 
   # install the header files of highs
   foreach(file ${headers})
