@@ -41,7 +41,4 @@ void completeHessian(const HighsInt full_dim, HighsHessian& hessian);
 void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
                    const HighsInt num_nz, const HighsInt* start,
                    const HighsInt* index, const double* value);
-
-void userScaleHessian(HighsHessian& hessian, HighsUserScaleData& data,
-                      const bool apply = true);
 #endif  // MODEL_HIGHSHESSIANUTILS_H_

@@ -613,12 +613,6 @@ double Highs_getObjectiveValue(const void* highs) {
   return ((Highs*)highs)->getObjectiveValue();
 }
 
-HighsInt Highs_getDualObjectiveValue(const void* highs,
-                                     double* dual_objective_value) {
-  return (HighsInt)((Highs*)highs)
-      ->getDualObjectiveValue(*dual_objective_value);
-}
-
 HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables) {
   return (HighsInt)((Highs*)highs)->getBasicVariables(basic_variables);
 }
@@ -1375,14 +1369,6 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
     }
   }
   return status;
-}
-
-HighsInt Highs_getObjectiveBoundScaling(void* highs,
-                                        HighsInt* suggested_objective_scale,
-                                        HighsInt* suggested_bound_scale) {
-  return (HighsInt)((Highs*)highs)
-      ->getObjectiveBoundScaling(*suggested_objective_scale,
-                                 *suggested_bound_scale);
 }
 
 HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,
