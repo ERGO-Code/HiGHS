@@ -514,26 +514,3 @@ void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
   highsLogUser(log_options, HighsLogType::kInfo,
                "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
 }
-
-void userScaleHessian(HighsHessian& hessian, HighsUserScaleData& data,
-                      const bool apply) {
-  data.num_infinite_hessian_values = 0;
-  if (!hessian.dim_) return;
-  const HighsInt user_objective_scale = data.user_objective_scale;
-  const HighsInt user_bound_scale = data.user_bound_scale;
-  if (!user_objective_scale && !user_bound_scale) return;
-  // If variable bounds are scaled by bound_scale_value, then linear
-  // term in objective is scaled by bound_scale_value, but Hessian
-  // term is scaled by bound_scale_value**2, so have to scale down the
-  // Hessian values so linear and Hessian terms are both scaled by the
-  // same constant value
-  double objective_scale_value = std::pow(2, user_objective_scale);
-  double bound_scale_value = std::pow(2, -user_bound_scale);
-  for (HighsInt iEl = 0; iEl < hessian.start_[hessian.dim_]; iEl++) {
-    double value =
-        hessian.value_[iEl] * objective_scale_value * bound_scale_value;
-    if (std::abs(value) > data.infinite_cost)
-      data.num_infinite_hessian_values++;
-    if (apply) hessian.value_[iEl] = value;
-  }
-}

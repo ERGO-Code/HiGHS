@@ -379,6 +379,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   // model object for this LP
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
+  // Apply any user scaling in call to optionChangeAction
+  return_status =
+      interpretCallStatus(options_.log_options, optionChangeAction(),
+                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -532,6 +536,20 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   // number of columns in the model is completed
   if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
 
+  if (this->model_.lp_.user_cost_scale_) {
+    // Assess and apply any user cost scaling
+    if (!hessian.scaleOk(this->model_.lp_.user_cost_scale_,
+                         this->options_.small_matrix_value,
+                         this->options_.large_matrix_value)) {
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "User cost scaling yields zeroed or excessive Hessian values\n");
+      return HighsStatus::kError;
+    }
+    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
+    for (HighsInt iEl = 0; iEl < hessian.numNz(); iEl++)
+      hessian.value_[iEl] *= cost_scale_value;
+  }
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
   return returnFromHighs(return_status);
@@ -941,33 +959,9 @@ HighsStatus Highs::run() {
 
   if (!options_.use_warm_start) this->clearSolver();
   this->reportModelStats();
-
-  // Possibly apply user-defined scaling to the incumbent model and solution
-  HighsUserScaleData user_scale_data;
-  initialiseUserScaleData(this->options_, user_scale_data);
-  const bool user_scaling =
-      user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
-  if (user_scaling) {
-    if (this->userScaleModel(user_scale_data) == HighsStatus::kError)
-      return HighsStatus::kError;
-    this->userScaleSolution(user_scale_data);
-    // Indicate that the scaling has been applied
-    user_scale_data.applied = true;
-    // Zero the user scale values to prevent further scaling
-    this->options_.user_cost_scale = 0;
-    this->options_.user_bound_scale = 0;
-  }
-
-  // Determine coefficient ranges and possibly warn the user about
-  // excessive values, obtaining suggested values for user_objective_scale
-  // and user_bound_scale
-  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
-                                       user_scale_data);
-  // Used when deveoping unit tests in TestUserScale.cpp
-  //  this->writeModel("");
-  HighsStatus status;
-  if (!this->multi_linear_objective_.size()) {
-    status = this->optimizeModel();
+  HighsInt num_linear_objective = this->multi_linear_objective_.size();
+  if (num_linear_objective == 0) {
+    HighsStatus status = this->optimizeModel();
     if (options_had_highs_files) {
       // This call to Highs::run() had HiGHS files in options, so
       // recover HiGHS files to options_
@@ -981,46 +975,9 @@ HighsStatus Highs::run() {
       if (this->options_.write_basis_file != "")
         status = this->writeBasis(this->options_.write_basis_file);
     }
-  } else {
-    status = this->multiobjectiveSolve();
+    return status;
   }
-  if (user_scaling) {
-    // Unscale the incumbent model and solution
-    //
-    // Flip the scaling sign
-    user_scale_data.user_objective_scale *= -1;
-    user_scale_data.user_bound_scale *= -1;
-    HighsStatus unscale_status = this->userScaleModel(user_scale_data);
-    if (unscale_status == HighsStatus::kError) {
-      highsLogUser(
-          this->options_.log_options, HighsLogType::kError,
-          "Unexpected error removing user scaling from the incumbent model\n");
-      assert(unscale_status != HighsStatus::kError);
-    }
-    const bool update_kkt = true;
-    unscale_status = this->userScaleSolution(user_scale_data, update_kkt);
-    // Restore the user scale values, remembering that they've been
-    // negated to undo user scaling
-    this->options_.user_cost_scale = -user_scale_data.user_objective_scale;
-    this->options_.user_bound_scale = -user_scale_data.user_bound_scale;
-    // Indicate that the scaling has not been applied
-    user_scale_data.applied = false;
-    highsLogUser(this->options_.log_options, HighsLogType::kInfo,
-                 "After solving the user-scaled model, the unscaled solution "
-                 "has objective value %.12g\n",
-                 this->info_.objective_function_value);
-    if (model_status_ == HighsModelStatus::kOptimal &&
-        unscale_status != HighsStatus::kOk) {
-      // KKT errors in the unscaled optimal solution, so log a warning and
-      // return
-      highsLogUser(
-          this->options_.log_options, HighsLogType::kWarning,
-          "User scaled problem solved to optimality, but unscaled solution "
-          "does not satisfy feasibilty and optimality tolerances\n");
-      status = HighsStatus::kWarning;
-    }
-  }
-  return status;
+  return this->multiobjectiveSolve();
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -1097,6 +1054,12 @@ HighsStatus Highs::optimizeModel() {
                 "called_return_from_optimize_model false\n");
     return HighsStatus::kError;
   }
+
+  // Check whether model is consistent with any user bound/cost scaling
+  assert(this->model_.lp_.user_bound_scale_ == this->options_.user_bound_scale);
+  assert(this->model_.lp_.user_cost_scale_ == this->options_.user_cost_scale);
+  // Assess whether to warn the user about excessive bounds and costs
+  assessExcessiveBoundCost(options_.log_options, this->model_);
 
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
@@ -2073,18 +2036,6 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
   }
   return computeIllConditioning(ill_conditioning, constraint, method,
                                 ill_conditioning_bound);
-}
-
-HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
-                                            HighsInt& suggested_bound_scale) {
-  this->logHeader();
-  HighsUserScaleData data;
-  initialiseUserScaleData(this->options_, data);
-  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
-                                       data);
-  suggested_objective_scale = data.suggested_user_objective_scale;
-  suggested_bound_scale = data.suggested_user_bound_scale;
-  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getIis(HighsIis& iis) {

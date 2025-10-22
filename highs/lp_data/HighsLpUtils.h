@@ -61,29 +61,12 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
-                        const HighsLogOptions& log_options);
+bool boundScaleOk(const std::vector<double>& lower,
+                  const std::vector<double>& upper, const HighsInt bound_scale,
+                  const double infinite_bound);
 
-void userScaleLp(HighsLp& lp, HighsUserScaleData& data,
-                 const bool apply = true);
-
-void userScaleCosts(const vector<HighsVarType>& integrality,
-                    vector<double>& cost, HighsUserScaleData& data,
-                    const bool apply = true);
-
-void userScaleColBounds(const vector<HighsVarType>& integrality,
-                        vector<double>& lower, vector<double>& upper,
-                        HighsUserScaleData& data, const bool apply = true);
-
-void userScaleRowBounds(vector<double>& lower, vector<double>& upper,
-                        HighsUserScaleData& data, const bool apply = true);
-
-void userScaleMatrix(const vector<HighsVarType>& integrality,
-                     HighsSparseMatrix& matrix, HighsUserScaleData& data,
-                     const bool apply = true);
-
-HighsStatus userScaleStatus(const HighsLogOptions& log_options,
-                            const HighsUserScaleData& data);
+bool costScaleOk(const std::vector<double>& cost, const HighsInt cost_scale,
+                 const double infinite_cost);
 
 HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
                                 bool& made_semi_variable_mods);
@@ -124,10 +107,9 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
                                const HighsInt col, const double new_value,
                                const bool zero_new_value);
 
-HighsStatus changeLpIntegrality(HighsLp& lp,
-                                const HighsIndexCollection& index_collection,
-                                const vector<HighsVarType>& new_integrality,
-                                const HighsOptions options);
+void changeLpIntegrality(HighsLp& lp,
+                         const HighsIndexCollection& index_collection,
+                         const vector<HighsVarType>& new_integrality);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
                    const vector<double>& new_col_cost,
@@ -321,6 +303,4 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
                             HighsInt* sub_matrix_index,
                             double* sub_matrix_value);
 
-void initialiseUserScaleData(const HighsOptions& options,
-                             HighsUserScaleData& user_scale_data);
 #endif  // LP_DATA_HIGHSLPUTILS_H_
