@@ -22,14 +22,7 @@ double project_non_negative(double x) { return std::max(0.0, x); }
 
 void project_bounds(const HighsLp& lp, std::vector<double>& x) {
   for (HighsInt i = 0; i < lp.num_col_; ++i) {
-    // Project to upper bound
-    if (x[i] > lp.col_upper_[i]) {
-      x[i] = lp.col_upper_[i];
-    }
-    // Project to lower bound
-    if (x[i] < lp.col_lower_[i]) {
-      x[i] = lp.col_lower_[i];
-    }
+    x[i] = std::max(lp.col_lower_[i], std::min(x[i], lp.col_upper_[i]));
   }
 }
 
