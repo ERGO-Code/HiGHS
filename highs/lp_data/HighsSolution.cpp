@@ -1811,28 +1811,59 @@ void HighsSolution::clear() {
   this->row_dual.clear();
 }
 
+void HighsSolution::print(const std::string& prefix,
+                          const std::string& message) const {
+  HighsInt num_col = this->col_value.size();
+  HighsInt num_row = this->row_value.size();
+  printf("%s HighsSolution(num_col = %d, num_row = %d): %s\n", prefix.c_str(),
+         int(num_col), int(num_row), message.c_str());
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    printf("%s col_value[%3d] = %11.4g\n", prefix.c_str(), int(iCol),
+           this->col_value[iCol]);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    printf("%s row_value[%3d] = %11.4g\n", prefix.c_str(), int(iRow),
+           this->row_value[iRow]);
+
+  num_col = this->col_dual.size();
+  num_row = this->row_dual.size();
+  printf("%s HighsSolution(num_col = %d, num_row = %d): %s\n", prefix.c_str(),
+         int(num_col), int(num_row), message.c_str());
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    printf("%s col_dual[%3d] = %11.4g\n", prefix.c_str(), int(iCol),
+           this->col_dual[iCol]);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    printf("%s row_dual[%3d] = %11.4g\n", prefix.c_str(), int(iRow),
+           this->row_dual[iRow]);
+}
+
 void HighsObjectiveSolution::clear() { this->col_value.clear(); }
 
-void HighsBasis::print(std::string message) const {
+void HighsBasis::print(const std::string& prefix,
+                       const std::string& message) const {
   if (!this->useful) return;
-  this->printScalars(message);
+  this->printScalars(prefix, message);
   for (HighsInt iCol = 0; iCol < HighsInt(this->col_status.size()); iCol++)
-    printf("Basis: col_status[%2d] = %d\n", int(iCol),
+    printf("%s HighsBasis: col_status[%2d] = %d\n", prefix.c_str(), int(iCol),
            int(this->col_status[iCol]));
   for (HighsInt iRow = 0; iRow < HighsInt(this->row_status.size()); iRow++)
-    printf("Basis: row_status[%2d] = %d\n", int(iRow),
+    printf("%s HighsBasis: row_status[%2d] = %d\n", prefix.c_str(), int(iRow),
            int(this->row_status[iRow]));
 }
 
-void HighsBasis::printScalars(std::string message) const {
-  printf("\nBasis: %s\n", message.c_str());
-  printf(" valid = %d\n", this->valid);
-  printf(" alien = %d\n", this->alien);
-  printf(" useful = %d\n", this->useful);
-  printf(" was_alien = %d\n", this->was_alien);
-  printf(" debug_id = %d\n", int(this->debug_id));
-  printf(" debug_update_count = %d\n", int(this->debug_update_count));
-  printf(" debug_origin_name = %s\n", this->debug_origin_name.c_str());
+void HighsBasis::printScalars(const std::string& prefix,
+                              const std::string& message) const {
+  HighsInt num_col = this->col_status.size();
+  HighsInt num_row = this->row_status.size();
+  printf("\n%s HighsBasis(num_col = %d, num_row = %d): %s\n", prefix.c_str(), int(num_col), int(num_row), message.c_str());
+  printf("%s valid = %d\n", prefix.c_str(), this->valid);
+  printf("%s alien = %d\n", prefix.c_str(), this->alien);
+  printf("%s useful = %d\n", prefix.c_str(), this->useful);
+  printf("%s was_alien = %d\n", prefix.c_str(), this->was_alien);
+  printf("%s debug_id = %d\n", prefix.c_str(), int(this->debug_id));
+  printf("%s debug_update_count = %d\n", prefix.c_str(),
+         int(this->debug_update_count));
+  printf("%s debug_origin_name = %s\n", prefix.c_str(),
+         this->debug_origin_name.c_str());
 }
 
 void HighsBasis::invalidate() {

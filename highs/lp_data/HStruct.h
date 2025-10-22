@@ -37,6 +37,8 @@ struct HighsSolution {
   bool hasUndefined() const;
   void invalidate();
   void clear();
+  void print(const std::string& prefix = "",
+             const std::string& message = "") const;
 };
 
 struct HighsObjectiveSolution {
@@ -82,8 +84,10 @@ struct HighsBasis {
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
-  void print(std::string message = "") const;
-  void printScalars(std::string message = "") const;
+  void print(const std::string& prefix = "",
+             const std::string& message = "") const;
+  void printScalars(const std::string& prefix = "",
+                    const std::string& message = "") const;
   void invalidate();
   void clear();
 };
