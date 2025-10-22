@@ -468,6 +468,14 @@ class Highs {
   }
 
   /**
+   * @brief Return a const pointer to the original row indices for the
+   * presolved model
+   */
+  const HighsInt* getPresolveOrigRowsIndex() const {
+    return presolve_.data_.postSolveStack.getOrigRowsIndex();
+  }
+
+  /**
    * @brief Return an LP associated with a MIP and its solution, with
    * each integer variable fixed to the value it takes in the MIP
    * solution. If no solution is available, an error is returned.
@@ -1272,14 +1280,14 @@ class Highs {
   }
 
   /**
-   * @Brief Put a copy of the current iterate - basis; invertible
+   * @brief Put a copy of the current iterate - basis; invertible
    * representation and dual edge weights - into storage within
    * HSimplexNla. Advanced method: for HiGHS MIP solver
    */
   HighsStatus putIterate();
 
   /**
-   * @Brief Get a copy of the iterate stored within HSimplexNla and
+   * @brief Get a copy of the iterate stored within HSimplexNla and
    * overwrite the current iterate. Advanced method: for HiGHS MIP
    * solver
    */
@@ -1314,7 +1322,7 @@ class Highs {
                                        HVector& row_ep_buffer);
 
   /**
-   * @Brief Get the primal simplex phase 1 dual values. Advanced
+   * @brief Get the primal simplex phase 1 dual values. Advanced
    * method: for HiGHS IIS calculation
    */
   const std::vector<double>& getPrimalPhase1Dual() const {
