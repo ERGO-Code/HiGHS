@@ -2053,9 +2053,14 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   domchgstack_.push_back(boundchg);
   domchgreason_.push_back(reason);
 
-  if (binary && !infeasible_ && isFixed(boundchg.column))
+  if (binary && !infeasible_ && isFixed(boundchg.column)) {
     mipsolver->mipdata_->cliquetable.addImplications(
         *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
+    if (!infeasible_) {
+      mipsolver->mipdata_->implications.applyImplications(
+          *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
+    }
+  }
 }
 
 void HighsDomain::setDomainChangeStack(

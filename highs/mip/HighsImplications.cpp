@@ -829,3 +829,33 @@ void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
     infeasible = mipsolver.mipdata_->domain.infeasible();
   }
 }
+
+void HighsImplications::applyImplications(HighsDomain& domain,
+                                          const HighsInt col, const bool val) {
+  assert(domain.isFixed(col));
+
+  auto checkImplication = [&](HighsDomainChange& domchg) -> bool {
+    assert(!domain.infeasible());
+    if (domain.isFixed(domchg.column)) return false;
+    if (domchg.boundtype == HighsBoundType::kLower) {
+      if (domchg.boundval >= domain.col_upper_[domchg.column]) {
+        // TODO: Long term: Should there be an implication reason?
+        HighsDomainChange domchgcpy = domchg;
+        domain.changeBound(domchgcpy, HighsDomain::Reason::unspecified());
+      }
+    } else {
+      if (domchg.boundval <= domain.col_lower_[domchg.column]) {
+        HighsDomainChange domchgcpy = domchg;
+        domain.changeBound(domchgcpy, HighsDomain::Reason::unspecified());
+      }
+    }
+    return domain.infeasible();
+  };
+
+  HighsInt loc = 2 * col + val;
+  if (implications[loc].computed) {
+    for (HighsDomainChange& domchg : implications[loc].implics) {
+      if (checkImplication(domchg)) break;
+    }
+  }
+}
