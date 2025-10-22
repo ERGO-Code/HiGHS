@@ -205,11 +205,19 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
       &pdlp_num_iter);
   highs_info.pdlp_iteration_count = pdlp_num_iter;
 
-  // Print final solution using debugPdlpFinalSolutionLog
-  debugPdlpFinalSolutionLog(w->debug_pdlp_log_file_,
-                            highs_solution.col_value.data(), lp.num_col_,
-                            highs_solution.row_dual.data(), lp.num_row_);
-  if (w->debug_pdlp_log_file_) fclose(w->debug_pdlp_log_file_);
+  if (PDLP_DEBUG_LOG) {
+    // Strange, even though w->debug_pdlp_log_file_ is set NULL in
+    // cupdlp_solver.c when !PDLP_DEBUG_LOG, vagrind still considers
+    // it to be an Invalid read of size 8 here, so use PDLP_DEBUG_LOG
+    // to determine call
+    //
+    // Print final solution using debugPdlpFinalSolutionLog
+    debugPdlpFinalSolutionLog(w->debug_pdlp_log_file_,
+                              highs_solution.col_value.data(), lp.num_col_,
+                              highs_solution.row_dual.data(), lp.num_row_);
+    assert(w->debug_pdlp_log_file_);
+    if (w->debug_pdlp_log_file_) fclose(w->debug_pdlp_log_file_);
+  }
   model_status = HighsModelStatus::kUnknown;
   highs_solution.value_valid = value_valid;
   highs_solution.dual_valid = dual_valid;
