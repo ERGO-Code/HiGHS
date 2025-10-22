@@ -15,9 +15,9 @@
 #include <random>
 #include <tuple>
 
-#include "HConst.h"
 #include "defs.hpp"
 #include "linalg.hpp"
+#include "lp_data/HConst.h"
 #include "pdlp/cupdlp/cupdlp.h"  // For pdlpLogging
 #include "restart.hpp"
 
