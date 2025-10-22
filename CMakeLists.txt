@@ -187,11 +187,11 @@ else()
     set(CUDA_LIBRARY-NOTFOUND true)
 endif()
 
-# HiPO deps 
+# HiPO deps
 if(HIPO)
   # find_package(METIS REQUIRED)
   # find_package(GKlib REQUIRED)
-  # does not work with outdated CMake 
+  # does not work with outdated CMake
   include(FindHipoDeps)
 endif()
 
