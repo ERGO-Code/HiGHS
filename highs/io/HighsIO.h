@@ -67,7 +67,7 @@ void highsLogHeader(const HighsLogOptions& log_options, const bool log_githash);
  * @brief Convert a double number to a string using given tolerance
  */
 std::array<char, 32> highsDoubleToString(const double val,
-                                         const double tolerance);
+                                         const double tolerance = 0.0);
 
 /**
  * @brief For _single-line_ user logging with message type notification

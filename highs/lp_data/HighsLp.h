@@ -50,8 +50,6 @@ class HighsLp {
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
 
-  HighsInt user_bound_scale_;
-  HighsInt user_cost_scale_;
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;
@@ -82,12 +80,6 @@ class HighsLp {
   void applyScale();
   void unapplyScale();
   void moveBackLpAndUnapplyScaling(HighsLp& lp);
-  bool userBoundScaleOk(const HighsInt user_bound_scale,
-                        const double infinite_bound) const;
-  void userBoundScale(const HighsInt user_bound_scale);
-  bool userCostScaleOk(const HighsInt user_cost_scale,
-                       const double infinite_cost) const;
-  void userCostScale(const HighsInt user_cost_scale);
   void exactResize();
   bool okNames() const;
   void addColNames(const std::string name, const HighsInt num_new_col = 1);

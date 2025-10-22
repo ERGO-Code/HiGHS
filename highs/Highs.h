@@ -584,6 +584,13 @@ class Highs {
                                  const double ill_conditioning_bound = 1e-4);
 
   /**
+   * @brief Get the suggested objective and bound scaling for the incumbent
+   * model
+   */
+  HighsStatus getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
+                                       HighsInt& suggested_bound_scale);
+
+  /**
    * @brief Get (any) irreducible infeasible subsystem (IIS)
    * information for the incumbent model
    */
@@ -1724,6 +1731,10 @@ class Highs {
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
   HighsStatus optionChangeAction();
+
+  HighsStatus userScaleModel(HighsUserScaleData& data);
+  HighsStatus userScaleSolution(HighsUserScaleData& data,
+                                bool update_kkt = false);
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
                                      const bool constraint,
                                      const HighsInt method,

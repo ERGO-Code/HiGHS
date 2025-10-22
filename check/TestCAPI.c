@@ -214,7 +214,7 @@ HighsInt doubleArraysEqual(const double dim, const double* array0,
 
 void assertDoubleValuesEqual(const char* name, const double is,
                              const double should_be) {
-  const double dl = fabs(is - should_be);
+  const double dl = fabs(is - should_be)/(1e0 + fabs(should_be));
   if (dl > double_equal_tolerance) {
     printf("Value %s = %g differs from %g by %g but should be equal\n", name,
            is, should_be, dl);
@@ -2241,6 +2241,67 @@ void testIis() {
   Highs_destroy(highs);
 }
 
+void testUserObjectiveBoundScaling() {
+  void* highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  HighsInt ret;
+  double inf = Highs_getInfinity(highs);
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 2;
+  const HighsInt num_nz = 4;
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  HighsInt sense = kHighsObjSenseMinimize;
+  double offset = 1e-4;
+
+  // Define the column costs, lower bounds and upper bounds
+  double col_cost[2] = {-4e6, -7e6};
+  double col_lower[2] = {1e-8, 1e-8};
+  double col_upper[2] = {1e8, 1e8};
+  // Define the row lower bounds and upper bounds
+  double row_lower[3] = {-inf, -2e+8};
+  double row_upper[3] = {6e+8, inf};
+  // Define the constraint matrix column-wise
+  HighsInt a_start[2] = {0, 2};
+  HighsInt a_index[5] = {0, 1, 0, 1};
+  double a_value[5] = {1.0, 1.0, 1.0, -1.0};
+  
+  HighsInt return_status =
+    Highs_passLp(highs, num_col, num_row, num_nz,
+		 a_format, sense, offset,
+		 col_cost, col_lower, col_upper, row_lower, row_upper,
+		 a_start, a_index, a_value);
+  assert(return_status == kHighsStatusOk);
+
+  return_status = Highs_run(highs);
+  assert(return_status == kHighsStatusOk);
+  HighsInt model_status = Highs_getModelStatus(highs);
+  assert(model_status == kHighsModelStatusOptimal);
+
+  double unscaled_objective_value = Highs_getObjectiveValue(highs);
+  double dual_objective_value;
+  return_status = Highs_getDualObjectiveValue(highs, &dual_objective_value);
+  assert(return_status == kHighsStatusOk);
+
+  assertDoubleValuesEqual("PDobjective", unscaled_objective_value, dual_objective_value);
+
+  HighsInt suggested_objective_scale;
+  HighsInt suggested_bound_scale;
+  return_status = Highs_getObjectiveBoundScaling(highs,
+						 &suggested_objective_scale,
+						 &suggested_bound_scale);
+  assert(return_status == kHighsStatusOk);
+  
+  Highs_setIntOptionValue(highs, "user_cost_scale", suggested_objective_scale);
+  Highs_setIntOptionValue(highs, "user_bound_scale", suggested_bound_scale);
+  
+  Highs_clearSolver(highs);
+  return_status = Highs_run(highs);
+  assert(return_status == kHighsStatusOk);
+
+  double scaled_objective_value = Highs_getObjectiveValue(highs);
+  assertDoubleValuesEqual("objective_value", unscaled_objective_value, scaled_objective_value);
+}
+
 void testFixedLp() {
   // The use of Highs_getFixedLp is illustrated for the MIP
   //
@@ -2374,6 +2435,7 @@ int main() {
     testDualRayTwice();
     testDeleteRowResolveWithBasis();
     testIis();
+    testUserObjectiveBoundScaling();
     testFixedLp();
   return 0;
 }

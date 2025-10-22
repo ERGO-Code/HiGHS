@@ -117,21 +117,32 @@ static const char* const kHighsCallbackDataOutPdlpIterationCountName =
     "pdlp_iteration_count";
 static const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
-static const char* const kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
+static const char* const kHighsCallbackDataOutMipNodeCountName =
+    "mip_node_count";
 static const char* const kHighsCallbackDataOutMipTotalLpIterationsName =
     "mip_total_lp_iterations";
-static const char* const kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
-static const char* const kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
+static const char* const kHighsCallbackDataOutMipPrimalBoundName =
+    "mip_primal_bound";
+static const char* const kHighsCallbackDataOutMipDualBoundName =
+    "mip_dual_bound";
 static const char* const kHighsCallbackDataOutMipGapName = "mip_gap";
 static const char* const kHighsCallbackDataOutMipSolutionName = "mip_solution";
-static const char* const kHighsCallbackDataOutCutpoolNumColName = "cutpool_num_col";
-static const char* const kHighsCallbackDataOutCutpoolNumCutName = "cutpool_num_cut";
-static const char* const kHighsCallbackDataOutCutpoolNumNzName = "cutpool_num_nz";
-static const char* const kHighsCallbackDataOutCutpoolStartName = "cutpool_start";
-static const char* const kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
-static const char* const kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
-static const char* const kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
-static const char* const kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
+static const char* const kHighsCallbackDataOutCutpoolNumColName =
+    "cutpool_num_col";
+static const char* const kHighsCallbackDataOutCutpoolNumCutName =
+    "cutpool_num_cut";
+static const char* const kHighsCallbackDataOutCutpoolNumNzName =
+    "cutpool_num_nz";
+static const char* const kHighsCallbackDataOutCutpoolStartName =
+    "cutpool_start";
+static const char* const kHighsCallbackDataOutCutpoolIndexName =
+    "cutpool_index";
+static const char* const kHighsCallbackDataOutCutpoolValueName =
+    "cutpool_value";
+static const char* const kHighsCallbackDataOutCutpoolLowerName =
+    "cutpool_lower";
+static const char* const kHighsCallbackDataOutCutpoolUpperName =
+    "cutpool_upper";
 
 const HighsInt kHighsIisStrategyLight = 0;
 const HighsInt kHighsIisStrategyFromLpRowPriority = 1;  // WIP
@@ -1053,6 +1064,17 @@ HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
  * @returns The primal objective function value
  */
 double Highs_getObjectiveValue(const void* highs);
+
+/**
+ * Get the dual objective function value.
+ *
+ * @param highs                    A pointer to the Highs instance.
+ * @param dual_objective_value     The dual objective value
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getDualObjectiveValue(const void* highs,
+                                     double* dual_objective_value);
 
 /**
  * Get the indices of the rows and columns that make up the basis matrix ``B``
@@ -2408,27 +2430,25 @@ HighsInt Highs_feasibilityRelaxation(void* highs,
  * an LP, QP, or the relaxation of a MIP. If no IIS is found, then the
  * number of IIS columns and rows will be zero.
  *
- * @param highs                      A pointer to the Highs instance.
- * @param const HighsInt iis_num_col Number of columns in the IIS.
- * @param const HighsInt iis_num_row Number of rows in the IIS.
- * @param const HighsInt* col_index  An array of length [iis_num_col], to be
- *                                   filled with the indices of original
- *                                   variables in the IIS.
- * @param const HighsInt* row_index  An array of length [iis_num_col], to be
- *                                   filled with the indices of original
- *                                   constraints in the IIS.
- * @param const HighsInt* col_bound  An array of length [iis_num_col], to be
- *                                   filled with the bound status of variables
- *                                   in the IIS.
- * @param const HighsInt* row_bound  An array of length [iis_num_col], to be
- *                                   filled with the bound status of constraints
- *                                   in the IIS.
- * @param const HighsInt* col_status An array of length [num_col], to be
- *                                   filled with the IIS status of all original
- *                                   variables.
- * @param const HighsInt* row_status n array of length [num_col], to be
- *                                   filled with the IIS status of all original
- *                                   constraints.
+ * @param highs                A pointer to the Highs instance.
+ * @param HighsInt iis_num_col Number of columns in the IIS.
+ * @param HighsInt iis_num_row Number of rows in the IIS.
+ * @param HighsInt* col_index  An array of length [iis_num_col], to be
+ *                             filled with the indices of original
+ *                             variables in the IIS.
+ * @param HighsInt* row_index  An array of length [iis_num_col], to be
+ *                             filled with the indices of original
+ *                             constraints in the IIS.
+ * @param HighsInt* col_bound  An array of length [iis_num_col], to be
+ *                             filled with the bound status of variables
+ *                             in the IIS.
+ * @param HighsInt* row_bound  An array of length [iis_num_col], to be
+ *                             filled with the bound status of constraints
+ *                             in the IIS.
+ * @param HighsInt* col_status An array of length [num_col], to be filled
+ *                             with the IIS status of all original variables.
+ * @param HighsInt* row_status An array of length [num_col], to be filled
+ *                             with the IIS status of all original constraints.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -2436,6 +2456,23 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
                       HighsInt* col_index, HighsInt* row_index,
                       HighsInt* col_bound, HighsInt* row_bound,
                       HighsInt* col_status, HighsInt* row_status);
+/**
+ * Identify suggested values of the options user_cost_scale and
+ * user_bound_scale to address extremely large or small objective
+ * coefficients and bound values
+ *
+ * @param highs                                A pointer to the Highs instance.
+ * @param HighsInt* suggested_objective_scale  The suggested value of
+ * user_cost_scale
+ * @param HighsInt* suggested_bound_scale      The suggested value of
+ * user_bound_scale
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getObjectiveBoundScaling(void* highs,
+                                        HighsInt* suggested_objective_scale,
+                                        HighsInt* suggested_bound_scale);
+
 /**
  * Releases all resources held by the global scheduler instance.
  *
@@ -2527,7 +2564,7 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
  *
  * @returns Thse HiGHS compilation date.
  */
-static const char* Highs_compilationDate(void);
+const char* Highs_compilationDate(void);
 
 // These are deprecated because they don't follow the style guide. Constants
 // must begin with `k`.
