@@ -1186,9 +1186,8 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
 
   // REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
-  REQUIRE(objectiveOk(mip_optimal_objective, h.getInfo().objective_function_value,
-                      dev_run));
-
+  REQUIRE(objectiveOk(mip_optimal_objective,
+                      h.getInfo().objective_function_value, dev_run));
 
   REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kOk);
 
