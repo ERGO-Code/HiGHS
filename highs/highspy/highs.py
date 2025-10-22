@@ -4,7 +4,7 @@ import numpy as np
 from numbers import Integral
 from itertools import product
 from threading import Thread, local, RLock, Lock
-from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast, Union
+from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast, Union, Tuple
 
 from ._core import (
     ObjSense,
@@ -178,6 +178,23 @@ class Highs(_Highs):
         Alias for the solve method.
         """
         return self.solve()
+
+
+    def getObjective(self) -> Tuple[highs_linear_expression, ObjSense]:
+        """
+        Retrieves the current objective function (as a linear expression) and sense.
+        """
+        lp = super().getLp()
+        assert(isinstance(lp.col_cost_, np.ndarray))
+        nonzero_idxs = np.nonzero(lp.col_cost_)
+
+        objective = highs_linear_expression()
+        objective.idxs = nonzero_idxs[0].tolist()
+        objective.vals = lp.col_cost_[nonzero_idxs].tolist()
+        objective.constant = lp.offset_
+
+        return objective, super().getObjectiveSense()[1]
+
 
     # reset the objective
     def setObjective(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None, sense: Optional[ObjSense] = None):
@@ -728,9 +745,9 @@ class Highs(_Highs):
                 super().passColName(int(i), str(n))
 
         return (
-            HighspyArray(np.asarray([highs_var(i, self) for i in idx]).reshape(shape), self)
+            HighspyArray(np.asarray([highs_var(int(i), self) for i in idx]).reshape(shape), self)
             if out_array
-            else {index: highs_var(i, self) for index, i in zip(indices, idx)}
+            else {index: highs_var(int(i), self) for index, i in zip(indices, idx)}
         )
 
     @overload
