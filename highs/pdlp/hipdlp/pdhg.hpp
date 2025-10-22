@@ -20,9 +20,9 @@
 #include <vector>
 
 #include "Highs.h"
-#include "pdlp/HiPdlpTimer.h"
 #include "linalg.hpp"
 #include "logger.hpp"
+#include "pdlp/HiPdlpTimer.h"
 #include "restart.hpp"
 #include "scaling.hpp"
 #include "solver_results.hpp"
@@ -46,7 +46,7 @@ class PDLPSolver {
   TerminationStatus getTerminationCode() const { return results_.term_code; }
   int getIterationCount() const { return final_iter_count_; }
   int getnCol() const { return lp_.num_col_; }
-  int getnRow() const { return lp_.num_row_; } 
+  int getnRow() const { return lp_.num_row_; }
 
   // --- Debugging ---
   FILE* debug_pdlp_log_file_ = nullptr;
@@ -69,13 +69,18 @@ class PDLPSolver {
                              const std::vector<double>& y,
                              const PrimalDualParams& params, int inner_iter);
   void computeAverageIterate(std::vector<double>& ax_avg,
-                                       std::vector<double>& aty_avg);
+                             std::vector<double>& aty_avg);
   double PowerMethod();
 
   // --- Step update Methods (previously in Step) ---
   void initializeStepSizes();
-  std::vector<double> updateX(const std::vector<double> &x, const std::vector<double> &aty,double primal_step);
-  std::vector<double> updateY(const std::vector<double> &y, const std::vector<double> &ax , const std::vector<double> &ax_next, double dual_step);
+  std::vector<double> updateX(const std::vector<double>& x,
+                              const std::vector<double>& aty,
+                              double primal_step);
+  std::vector<double> updateY(const std::vector<double>& y,
+                              const std::vector<double>& ax,
+                              const std::vector<double>& ax_next,
+                              double dual_step);
   void updateIteratesFixed();
   void updateIteratesAdaptive();
   bool updateIteratesMalitskyPock(bool first_malitsky_iteration);
@@ -92,11 +97,9 @@ class PDLPSolver {
   std::vector<double> computeLambda(const std::vector<double>& y,
                                     const std::vector<double>& ATy_vector);
   double computeDualObjective(const std::vector<double>& y);
-  double computePrimalFeasibility(
-      const std::vector<double>& Ax_vector);
+  double computePrimalFeasibility(const std::vector<double>& Ax_vector);
   void computeDualSlacks(const std::vector<double>& ATy_vector);
-  double computeDualFeasibility(
-      const std::vector<double>& ATy_vector);
+  double computeDualFeasibility(const std::vector<double>& ATy_vector);
   std::tuple<double, double, double, double, double> computeDualityGap(
       const std::vector<double>& x, const std::vector<double>& y,
       const std::vector<double>& lambda);
@@ -115,7 +118,7 @@ class PDLPSolver {
   SolverResults results_;
   int original_num_col_;
   int num_eq_rows_;
-  std::vector<bool> is_equality_row_; 
+  std::vector<bool> is_equality_row_;
   std::vector<int> constraint_new_idx_;
   std::vector<ConstraintType> constraint_types_;
 

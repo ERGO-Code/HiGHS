@@ -38,7 +38,7 @@ struct StepSizeConfig {
   double dual_step;
   double beta;
   double power_method_lambda;
-  int step_size_iter = 0; //nStepSizeIter
+  int step_size_iter = 0;  // nStepSizeIter
 };
 
 struct MalitskyPockParams {
@@ -172,46 +172,39 @@ struct DetailedTimings {
   double projection_time = 0.0;
   double step_size_adjustment_time = 0.0;
   double other_time = 0.0;
-  
+
   void print(const std::string& solver_name,
-	     const HighsLogOptions log_options) const {
+             const HighsLogOptions log_options) const {
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "\n=== %s Detailed Timings ===\n",
-		 solver_name.c_str());
+                 "\n=== %s Detailed Timings ===\n", solver_name.c_str());
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Total time:              %6.2f s\n", total_time);
+                 "Total time:              %6.2f s\n", total_time);
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Iterate update:          %6.2f s (%3.0f \%)\n", 
-		 iterate_update_time,
-		 iterate_update_time/total_time*100);
+                 "Iterate update:          %6.2f s (%3.0f \%)\n",
+                 iterate_update_time, iterate_update_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "  - Matrix multiply:     %6.2f s (%3.0f \%)\n", 
-		 matrix_multiply_time,
-		 matrix_multiply_time/total_time*100);
+                 "  - Matrix multiply:     %6.2f s (%3.0f \%)\n",
+                 matrix_multiply_time, matrix_multiply_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "  - Projection:          %6.2f s (%3.0f \%)\n", 
-		 projection_time,
-		 projection_time/total_time*100);
+                 "  - Projection:          %6.2f s (%3.0f \%)\n",
+                 projection_time, projection_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "  - Step size adjust:    %6.2f s (%3.0f \%)\n", 
-		 step_size_adjustment_time,
-		 step_size_adjustment_time/total_time*100);
+                 "  - Step size adjust:    %6.2f s (%3.0f \%)\n",
+                 step_size_adjustment_time,
+                 step_size_adjustment_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Convergence check:       %6.2f s (%3.0f \%)\n", 
-		 convergence_check_time,
-		 convergence_check_time/total_time*100);
+                 "Convergence check:       %6.2f s (%3.0f \%)\n",
+                 convergence_check_time,
+                 convergence_check_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Restart check:           %6.2f s (%3.0f \%)\n", 
-		 restart_check_time,
-		 restart_check_time/total_time*100);
+                 "Restart check:           %6.2f s (%3.0f \%)\n",
+                 restart_check_time, restart_check_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Average iterate comp:    %6.2f s (%3.0f \%)\n", 
-		 average_iterate_time,
-		 average_iterate_time/total_time*100);
+                 "Average iterate comp:    %6.2f s (%3.0f \%)\n",
+                 average_iterate_time, average_iterate_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Other:                   %6.2f s (%3.0f \%)\n", 
-		 other_time,
-		 other_time/total_time*100);
+                 "Other:                   %6.2f s (%3.0f \%)\n", other_time,
+                 other_time / total_time * 100);
   }
 };
 
