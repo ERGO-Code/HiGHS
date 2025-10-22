@@ -1854,7 +1854,8 @@ void HighsBasis::printScalars(const std::string& prefix,
                               const std::string& message) const {
   HighsInt num_col = this->col_status.size();
   HighsInt num_row = this->row_status.size();
-  printf("\n%s HighsBasis(num_col = %d, num_row = %d): %s\n", prefix.c_str(), int(num_col), int(num_row), message.c_str());
+  printf("\n%s HighsBasis(num_col = %d, num_row = %d): %s\n", prefix.c_str(),
+         int(num_col), int(num_row), message.c_str());
   printf("%s valid = %d\n", prefix.c_str(), this->valid);
   printf("%s alien = %d\n", prefix.c_str(), this->alien);
   printf("%s useful = %d\n", prefix.c_str(), this->useful);
