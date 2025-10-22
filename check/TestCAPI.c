@@ -2300,6 +2300,8 @@ void testUserObjectiveBoundScaling() {
 
   double scaled_objective_value = Highs_getObjectiveValue(highs);
   assertDoubleValuesEqual("objective_value", unscaled_objective_value, scaled_objective_value);
+}
+
 void testFixedLp() {
   // The use of Highs_getFixedLp is illustrated for the MIP
   //

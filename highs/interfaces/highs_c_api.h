@@ -117,21 +117,32 @@ static const char* const kHighsCallbackDataOutPdlpIterationCountName =
     "pdlp_iteration_count";
 static const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
-static const char* const kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
+static const char* const kHighsCallbackDataOutMipNodeCountName =
+    "mip_node_count";
 static const char* const kHighsCallbackDataOutMipTotalLpIterationsName =
     "mip_total_lp_iterations";
-static const char* const kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
-static const char* const kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
+static const char* const kHighsCallbackDataOutMipPrimalBoundName =
+    "mip_primal_bound";
+static const char* const kHighsCallbackDataOutMipDualBoundName =
+    "mip_dual_bound";
 static const char* const kHighsCallbackDataOutMipGapName = "mip_gap";
 static const char* const kHighsCallbackDataOutMipSolutionName = "mip_solution";
-static const char* const kHighsCallbackDataOutCutpoolNumColName = "cutpool_num_col";
-static const char* const kHighsCallbackDataOutCutpoolNumCutName = "cutpool_num_cut";
-static const char* const kHighsCallbackDataOutCutpoolNumNzName = "cutpool_num_nz";
-static const char* const kHighsCallbackDataOutCutpoolStartName = "cutpool_start";
-static const char* const kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
-static const char* const kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
-static const char* const kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
-static const char* const kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
+static const char* const kHighsCallbackDataOutCutpoolNumColName =
+    "cutpool_num_col";
+static const char* const kHighsCallbackDataOutCutpoolNumCutName =
+    "cutpool_num_cut";
+static const char* const kHighsCallbackDataOutCutpoolNumNzName =
+    "cutpool_num_nz";
+static const char* const kHighsCallbackDataOutCutpoolStartName =
+    "cutpool_start";
+static const char* const kHighsCallbackDataOutCutpoolIndexName =
+    "cutpool_index";
+static const char* const kHighsCallbackDataOutCutpoolValueName =
+    "cutpool_value";
+static const char* const kHighsCallbackDataOutCutpoolLowerName =
+    "cutpool_lower";
+static const char* const kHighsCallbackDataOutCutpoolUpperName =
+    "cutpool_upper";
 
 const HighsInt kHighsIisStrategyLight = 0;
 const HighsInt kHighsIisStrategyFromLpRowPriority = 1;  // WIP
@@ -2553,7 +2564,7 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
  *
  * @returns Thse HiGHS compilation date.
  */
-static const char* Highs_compilationDate(void);
+const char* Highs_compilationDate(void);
 
 // These are deprecated because they don't follow the style guide. Constants
 // must begin with `k`.
