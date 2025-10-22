@@ -9,6 +9,7 @@
  * @brief
  */
 #include "linalg.hpp"
+
 #include "Highs.h"
 
 namespace linalg {
@@ -17,9 +18,7 @@ double project_box(double x, double l, double u) {
   return std::max(l, std::min(x, u));
 }
 
-double project_non_negative(double x) { 
-  return std::max(0.0, x);
-}
+double project_non_negative(double x) { return std::max(0.0, x); }
 
 void project_bounds(const HighsLp& lp, std::vector<double>& x) {
   for (HighsInt i = 0; i < lp.num_col_; ++i) {
@@ -39,7 +38,8 @@ void Ax(const HighsLp& lp, const std::vector<double>& x,
   std::fill(result.begin(), result.end(), 0.0);
   // Assumes column-wise matrix format
   for (HighsInt col = 0; col < lp.num_col_; ++col) {
-    for (HighsInt i = lp.a_matrix_.start_[col]; i < lp.a_matrix_.start_[col + 1]; ++i) {
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; ++i) {
       const HighsInt row = lp.a_matrix_.index_[i];
       result[row] += lp.a_matrix_.value_[i] * x[col];
     }
@@ -52,7 +52,8 @@ void ATy(const HighsLp& lp, const std::vector<double>& y,
   // Assumes column-wise matrix format. For each column `col` of A,
   // this loop calculates dot(column_col, y) and adds it to result[col].
   for (HighsInt col = 0; col < lp.num_col_; ++col) {
-    for (HighsInt i = lp.a_matrix_.start_[col]; i < lp.a_matrix_.start_[col + 1]; ++i) {
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; ++i) {
       const HighsInt row = lp.a_matrix_.index_[i];
       result[col] += lp.a_matrix_.value_[i] * y[row];
     }
@@ -61,7 +62,8 @@ void ATy(const HighsLp& lp, const std::vector<double>& y,
 
 double dot(const std::vector<double>& a, const std::vector<double>& b) {
   if (a.size() != b.size()) {
-    throw std::invalid_argument("Vectors must be of the same size for dot product.");
+    throw std::invalid_argument(
+        "Vectors must be of the same size for dot product.");
   }
   double result = 0.0;
   for (size_t i = 0; i < a.size(); ++i) {
@@ -74,23 +76,21 @@ double dot(const std::vector<double>& a, const std::vector<double>& b) {
 // Norm Functions
 // =================================================================
 
-double nrm2(const std::vector<double>& vec) {
-  return std::sqrt(dot(vec, vec));
-}
+double nrm2(const std::vector<double>& vec) { return std::sqrt(dot(vec, vec)); }
 
 double vector_norm_squared(const std::vector<double>& vec) {
   return dot(vec, vec);
 }
 
 double vector_norm(const double* values, size_t size, double p) {
-  if (std::isinf(p)) { // Infinity norm
+  if (std::isinf(p)) {  // Infinity norm
     double max_val = 0.0;
     for (size_t i = 0; i < size; ++i) {
       max_val = std::max(max_val, std::abs(values[i]));
     }
     return max_val;
   }
-  if (p == 1.0) { // L1 norm
+  if (p == 1.0) {  // L1 norm
     double sum = 0.0;
     for (size_t i = 0; i < size; ++i) {
       sum += std::abs(values[i]);
@@ -125,12 +125,13 @@ void scale(std::vector<double>& vec, double factor) {
 
 void normalize(std::vector<double>& vec) {
   double norm = nrm2(vec);
-  if (norm > 1e-9) { // Use a small tolerance
+  if (norm > 1e-9) {  // Use a small tolerance
     scale(vec, 1.0 / norm);
   }
 }
 
-double diffTwoNorm(const std::vector<double>& v1, const std::vector<double>& v2) {
+double diffTwoNorm(const std::vector<double>& v1,
+                   const std::vector<double>& v2) {
   if (v1.size() != v2.size()) {
     throw std::invalid_argument("Vectors must have the same dimension.");
   }
@@ -141,7 +142,6 @@ double diffTwoNorm(const std::vector<double>& v1, const std::vector<double>& v2)
   }
   return std::sqrt(norm_sq);
 }
-
 
 // =================================================================
 // LP-related Norm Computations
@@ -159,15 +159,17 @@ double compute_rhs_norm(const HighsLp& lp, double p) {
     }
     return max_val;
   }
-  
+
   double sum = 0.0;
   for (double val : lp.row_lower_) {
     if (std::isfinite(val)) {
-        if (p == 1.0) sum += std::abs(val);
-        else sum += std::pow(std::abs(val), p);
+      if (p == 1.0)
+        sum += std::abs(val);
+      else
+        sum += std::pow(std::abs(val), p);
     }
   }
-  
+
   if (p == 2.0) return std::sqrt(sum);
   if (p == 1.0) return sum;
   return std::pow(sum, 1.0 / p);
@@ -188,7 +190,8 @@ std::vector<double> compute_column_norms(const HighsLp& lp, double p) {
 std::vector<double> compute_row_norms(const HighsLp& lp, double p) {
   std::vector<double> row_norms(lp.num_row_, 0.0);
   for (HighsInt col = 0; col < lp.num_col_; ++col) {
-    for (HighsInt i = lp.a_matrix_.start_[col]; i < lp.a_matrix_.start_[col + 1]; ++i) {
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; ++i) {
       const HighsInt row = lp.a_matrix_.index_[i];
       const double abs_val = std::abs(lp.a_matrix_.value_[i]);
       if (std::isinf(p)) {

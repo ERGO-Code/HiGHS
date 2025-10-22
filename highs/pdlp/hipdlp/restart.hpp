@@ -27,7 +27,8 @@ struct RestartInfo {
       true;  // If true, restart to average; otherwise, to current
 
   RestartInfo(bool should_restart_, bool restart_to_average_)
-      : should_restart(should_restart_), restart_to_average(restart_to_average_){};
+      : should_restart(should_restart_),
+        restart_to_average(restart_to_average_){};
 
   RestartInfo() = default;
 };
@@ -61,9 +62,9 @@ class RestartScheme {
   void SetLastRestartIter(int iter) { last_restart_iter_ = iter; };
 
   // State for adaptive restart
-  //dPrimalFeasLastRestart = primal_feas_last_restart_
-  //dDualFeasLastRestart = dual_feas_last_restart_;
-  //dDualityGapLastRestart = duality_gap_last_restart_;
+  // dPrimalFeasLastRestart = primal_feas_last_restart_
+  // dDualFeasLastRestart = dual_feas_last_restart_;
+  // dDualityGapLastRestart = duality_gap_last_restart_;
   double primal_feas_last_restart_ = 0.0;
   double dual_feas_last_restart_ = 0.0;
   double duality_gap_last_restart_ = 0.0;
@@ -77,7 +78,7 @@ class RestartScheme {
   RestartStrategy strategy_ = RestartStrategy::NO_RESTART;
   int fixed_restart_interval_ = 100;
   double beta_;
-  
+
   double primal_feas_last_candidate_ = 0.0;
   double dual_feas_last_candidate_ = 0.0;
   double duality_gap_last_candidate_ = 0.0;

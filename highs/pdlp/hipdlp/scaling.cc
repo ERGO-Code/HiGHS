@@ -306,8 +306,7 @@ void Scaling::ApplyScaling(const std::vector<double>& col_scaling,
     }
   }
 
-  //TO DO: scale offset
-  
+  // TO DO: scale offset
 }
 
 void Scaling::unscaleSolution(std::vector<double>& x,

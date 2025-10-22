@@ -15,11 +15,11 @@
 #include <random>
 #include <tuple>
 
-#include "HConst.h"
+#include "defs.hpp"
 #include "linalg.hpp"
+#include "lp_data/HConst.h"
 #include "pdlp/cupdlp/cupdlp.h"  // For pdlpLogging
 #include "restart.hpp"
-#include "defs.hpp"
 
 #define PDHG_CHECK_INTERVAL 40
 static constexpr double kDivergentMovement = 1e10;
@@ -37,17 +37,18 @@ void vecPrint(const std::vector<double>& vec, const char* name) {
 
 void PDLPSolver::printConstraintInfo() {
   if (original_lp_ == nullptr) return;
-  
+
   int nRows = original_lp_->num_row_;
   int nCols = original_lp_->num_col_;
-  
+
   // Count constraint types BEFORE preprocessing
-  int eq_count = 0, leq_count = 0, geq_count = 0, bound_count = 0, free_count = 0;
-  
+  int eq_count = 0, leq_count = 0, geq_count = 0, bound_count = 0,
+      free_count = 0;
+
   for (int i = 0; i < nRows; ++i) {
     bool has_lower = original_lp_->row_lower_[i] > -kHighsInf;
     bool has_upper = original_lp_->row_upper_[i] < kHighsInf;
-    
+
     if (has_lower && has_upper) {
       if (original_lp_->row_lower_[i] == original_lp_->row_upper_[i]) {
         eq_count++;
@@ -62,15 +63,15 @@ void PDLPSolver::printConstraintInfo() {
       free_count++;
     }
   }
-  
+
   // Count variable bound types
   int var_fixed = 0, var_lower_only = 0, var_upper_only = 0;
   int var_boxed = 0, var_free = 0;
-  
+
   for (int i = 0; i < nCols; ++i) {
     bool has_lower = original_lp_->col_lower_[i] > -kHighsInf;
     bool has_upper = original_lp_->col_upper_[i] < kHighsInf;
-    
+
     if (has_lower && has_upper) {
       if (original_lp_->col_lower_[i] == original_lp_->col_upper_[i]) {
         var_fixed++;
@@ -85,40 +86,44 @@ void PDLPSolver::printConstraintInfo() {
       var_free++;
     }
   }
-  
+
   logger_.info("=== BEFORE PREPROCESSING ===");
-  logger_.info("Rows: " + std::to_string(nRows) + ", Cols: " + std::to_string(nCols));
+  logger_.info("Rows: " + std::to_string(nRows) +
+               ", Cols: " + std::to_string(nCols));
   logger_.info("\nConstraint types:");
   logger_.info("  Equality constraints (=): " + std::to_string(eq_count));
   logger_.info("  One-sided inequality (>=): " + std::to_string(geq_count));
   logger_.info("  One-sided inequality (<=): " + std::to_string(leq_count));
   logger_.info("  Two-sided inequality: " + std::to_string(bound_count));
   logger_.info("  Free constraints: " + std::to_string(free_count));
-  
+
   logger_.info("\nVariable bound types:");
   logger_.info("  Fixed variables (l = u): " + std::to_string(var_fixed));
   logger_.info("  Boxed variables (l <= x <= u): " + std::to_string(var_boxed));
-  logger_.info("  Lower bounded only (l <= x): " + std::to_string(var_lower_only));
-  logger_.info("  Upper bounded only (x <= u): " + std::to_string(var_upper_only));
+  logger_.info("  Lower bounded only (l <= x): " +
+               std::to_string(var_lower_only));
+  logger_.info("  Upper bounded only (x <= u): " +
+               std::to_string(var_upper_only));
   logger_.info("  Free variables: " + std::to_string(var_free));
-  
+
   logger_.info("\n=== AFTER PREPROCESSING ===");
-  logger_.info("Rows: " + std::to_string(lp_.num_row_) + 
+  logger_.info("Rows: " + std::to_string(lp_.num_row_) +
                ", Cols: " + std::to_string(lp_.num_col_));
-  logger_.info("Equality rows (first " + std::to_string(num_eq_rows_) + " rows)");
-  logger_.info("Inequality rows (remaining " + 
+  logger_.info("Equality rows (first " + std::to_string(num_eq_rows_) +
+               " rows)");
+  logger_.info("Inequality rows (remaining " +
                std::to_string(lp_.num_row_ - num_eq_rows_) + " rows)");
-  logger_.info("Slack variables added: " + 
+  logger_.info("Slack variables added: " +
                std::to_string(lp_.num_col_ - nCols));
-  
+
   // Count variable bounds in processed LP
   int proc_var_fixed = 0, proc_var_lower_only = 0, proc_var_upper_only = 0;
   int proc_var_boxed = 0, proc_var_free = 0;
-  
+
   for (int i = 0; i < lp_.num_col_; ++i) {
     bool has_lower = lp_.col_lower_[i] > -kHighsInf;
     bool has_upper = lp_.col_upper_[i] < kHighsInf;
-    
+
     if (has_lower && has_upper) {
       if (lp_.col_lower_[i] == lp_.col_upper_[i]) {
         proc_var_fixed++;
@@ -133,7 +138,7 @@ void PDLPSolver::printConstraintInfo() {
       proc_var_free++;
     }
   }
-  
+
   logger_.info("\nProcessed variable bound types:");
   logger_.info("  Fixed variables: " + std::to_string(proc_var_fixed));
   logger_.info("  Boxed variables: " + std::to_string(proc_var_boxed));
@@ -215,9 +220,9 @@ void PDLPSolver::preprocessLp() {
   is_equality_row_.resize(nRows_orig, false);
   for (int i = 0; i < nRows_orig; ++i) {
     int new_row_idx = constraint_new_idx_[i];
-    is_equality_row_[new_row_idx] = (constraint_types_[i] == EQ || 
-                                      constraint_types_[i] == BOUND || 
-                                      constraint_types_[i] == FREE);
+    is_equality_row_[new_row_idx] =
+        (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
+         constraint_types_[i] == FREE);
   }
 
   // 5. Populate costs and bounds for original and new slack variables
@@ -267,50 +272,51 @@ void PDLPSolver::preprocessLp() {
   // First, get the original matrix in column-wise format
   HighsSparseMatrix original_matrix = original_lp_->a_matrix_;
   original_matrix.ensureColwise();
-  
+
   // Create new matrix
   HighsSparseMatrix& processed_matrix = processed_lp.a_matrix_;
   processed_matrix.clear();
   processed_matrix.format_ = MatrixFormat::kColwise;
   processed_matrix.num_col_ = processed_lp.num_col_;
   processed_matrix.num_row_ = processed_lp.num_row_;
-  
+
   // Reserve space
   processed_matrix.start_.resize(processed_lp.num_col_ + 1);
   processed_matrix.index_.reserve(original_matrix.numNz() + num_new_cols);
   processed_matrix.value_.reserve(original_matrix.numNz() + num_new_cols);
-  
+
   // Build column by column
   processed_matrix.start_[0] = 0;
   for (int col = 0; col < nCols_orig; ++col) {
     // For each column, add entries in the new row order
     std::vector<std::pair<int, double>> col_entries;
-    
-    for (int el = original_matrix.start_[col]; el < original_matrix.start_[col + 1]; ++el) {
+
+    for (int el = original_matrix.start_[col];
+         el < original_matrix.start_[col + 1]; ++el) {
       int old_row = original_matrix.index_[el];
       int new_row = constraint_new_idx_[old_row];
       double val = original_matrix.value_[el];
-      
+
       // Apply scaling for LEQ constraints
       if (constraint_types_[old_row] == LEQ) {
         val = -val;
       }
-      
+
       col_entries.push_back({new_row, val});
     }
-    
+
     // Sort by row index to maintain proper sparse matrix format
     std::sort(col_entries.begin(), col_entries.end());
-    
+
     // Add to matrix
     for (const auto& entry : col_entries) {
       processed_matrix.index_.push_back(entry.first);
       processed_matrix.value_.push_back(entry.second);
     }
-    
+
     processed_matrix.start_[col + 1] = processed_matrix.index_.size();
   }
-  
+
   // Add slack variable columns
   current_slack_col = nCols_orig;
   for (int i = 0; i < nRows_orig; ++i) {
@@ -318,7 +324,8 @@ void PDLPSolver::preprocessLp() {
       int row_idx = constraint_new_idx_[i];
       processed_matrix.index_.push_back(row_idx);
       processed_matrix.value_.push_back(-1.0);
-      processed_matrix.start_[current_slack_col + 1] = processed_matrix.index_.size();
+      processed_matrix.start_[current_slack_col + 1] =
+          processed_matrix.index_.size();
       current_slack_col++;
     }
   }
@@ -398,10 +405,10 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   std::vector<double> y_reordered = y_current_;
   for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
     int reordered_row = constraint_new_idx_[orig_row];
-    
+
     // Get the dual value from the reordered position
     double dual_value = y_reordered[reordered_row];
-    
+
     // Apply sign correction for LEQ constraints
     if (constraint_types_[orig_row] == LEQ) {
       solution.row_dual[orig_row] = -dual_value;
@@ -432,8 +439,9 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   int slack_variable_idx = original_num_col_;
   for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
     int reordered_row = constraint_new_idx_[orig_row];
-    
-    if (constraint_types_[orig_row] == BOUND || constraint_types_[orig_row] == FREE) {
+
+    if (constraint_types_[orig_row] == BOUND ||
+        constraint_types_[orig_row] == FREE) {
       solution.row_value[orig_row] = x_current_[slack_variable_idx++];
     } else if (constraint_types_[orig_row] == LEQ) {
       solution.row_value[orig_row] = -ax_current_[reordered_row];
@@ -465,17 +473,17 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
 void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   hipdlpTimerStart(kHipdlpClockSolve);
-  auto solve_start = std::chrono::high_resolution_clock::now();
   Timer solver_timer;
   const HighsLp& lp = lp_;
 
-  debug_pdlp_log_file_ = fopen("HiPDLP.log", "w");
-  assert(debug_pdlp_log_file_);
+  if (PDLP_DEBUG_LOG) {
+    debug_pdlp_log_file_ = fopen("HiPDLP.log", "w");
+    assert(debug_pdlp_log_file_);
+  }
 
   // --- 0. Using PowerMethod to estimate the largest eigenvalue ---
-  auto init_start = std::chrono::high_resolution_clock::now();
-  InitializeStepSizes();
-  
+  initializeStepSizes();
+
   PrimalDualParams working_params = params_;
   working_params.omega = std::sqrt(stepsize_.dual_step / stepsize_.primal_step);
   working_params.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
@@ -489,7 +497,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   restart_scheme_.passLogOptions(&working_params.log_options_);
   restart_scheme_.passDebugPdlpLogFile(debug_pdlp_log_file_);
   restart_scheme_.passDebugPdlpData(&debug_pdlp_data_);
-  Initialize();  // Sets initial x, y and results_
+  initialize();  // Sets initial x, y and results_
   restart_scheme_.passParams(&working_params);
   restart_scheme_.Initialize(results_);
 
@@ -502,18 +510,15 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   linalg::Ax(lp, x_current_, Ax_cache_);
   std::vector<double> Ax_avg = Ax_cache_;
   std::vector<double> ATy_avg(lp.num_col_, 0.0);
-  
+
   num_rejected_steps_ = 0;
   bool first_malitsky_iteration = true;
   ratio_last_two_step_sizes_ = 1.0;
   bool using_malitsky_averaging =
       (params_.step_size_strategy == StepSizeStrategy::MALITSKY_POCK);
-  bool primal_average_initialized = false; 
+  bool primal_average_initialized = false;
 
   logger_.print_iteration_header();
-
-  auto init_end = std::chrono::high_resolution_clock::now();
-  timings_.other_time += std::chrono::duration<double>(init_end - init_start).count();
 
   // --- 2. Main PDHG Loop ---
   debugPdlpIterHeaderLog(debug_pdlp_log_file_);
@@ -532,22 +537,16 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     if (solver_timer.read() > params_.time_limit) {
       logger_.info("Time limit reached.");
       final_iter_count_ = iter;
-      results_.term_code = TerminationStatus::TIMEOUT;
-      hipdlpTimerStop(kHipdlpClockSolve);
-      return;
+      return solveReturn(TerminationStatus::TIMEOUT);
     }
 
     // --- 3. Convergence and Restart Check (BEFORE iterate update) ---
-    bool bool_checking = (iter < 10) ||
-                         (iter == (params_.max_iterations - 1));
-    
+    bool bool_checking = (iter < 10) || (iter == (params_.max_iterations - 1));
+
     bool_checking = (bool_checking || iter % PDHG_CHECK_INTERVAL == 0);
     if (bool_checking) {
       hipdlpTimerStart(kHipdlpClockAverageIterate);
-      auto avg_start = std::chrono::high_resolution_clock::now();
-      ComputeAverageIterate(Ax_avg, ATy_avg);
-      auto avg_end = std::chrono::high_resolution_clock::now();
-      timings_.average_iterate_time += std::chrono::duration<double>(avg_end - avg_start).count();
+      computeAverageIterate(Ax_avg, ATy_avg);
       hipdlpTimerStop(kHipdlpClockAverageIterate);
 
       // Reset the average iterate accumulation
@@ -557,18 +556,17 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       SolverResults current_results;
       SolverResults average_results;
 
-      auto conv_start = std::chrono::high_resolution_clock::now();
+      hipdlpTimerStart(kHipdlpClockConvergenceCheck);
       // Compute residuals for current iterate
-      bool current_converged = CheckConvergence(
-          iter, x_current_, y_current_, Ax_cache_, ATy_cache_,
-          params_.tolerance, current_results, "[L]");
+      bool current_converged =
+          checkConvergence(iter, x_current_, y_current_, Ax_cache_, ATy_cache_,
+                           params_.tolerance, current_results, "[L]");
 
       // Compute residuals for average iterate
       bool average_converged =
-          CheckConvergence(iter, x_avg_, y_avg_, Ax_avg, ATy_avg,
+          checkConvergence(iter, x_avg_, y_avg_, Ax_avg, ATy_avg,
                            params_.tolerance, average_results, "[A]");
-      auto conv_end = std::chrono::high_resolution_clock::now();
-      timings_.convergence_check_time += std::chrono::duration<double>(conv_end - conv_start).count();
+      hipdlpTimerStop(kHipdlpClockConvergenceCheck);
 
       debugPdlpIterHeaderLog(debug_pdlp_log_file_);
 
@@ -583,9 +581,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         x = x_current_;
         y = y_current_;
         results_ = current_results;
-        results_.term_code = TerminationStatus::OPTIMAL;
-  hipdlpTimerStop(kHipdlpClockSolve);
-        return;
+        return solveReturn(TerminationStatus::OPTIMAL);
       }
 
       if (average_converged) {
@@ -595,21 +591,21 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         x = x_avg_;
         y = y_avg_;
         results_ = average_results;
-        results_.term_code = TerminationStatus::OPTIMAL;
-  hipdlpTimerStop(kHipdlpClockSolve);
-        return;
+        return solveReturn(TerminationStatus::OPTIMAL);
       }
 
       // --- 4. Restart Check (using computed results) ---
-      auto restart_start = std::chrono::high_resolution_clock::now();
       RestartInfo restart_info =
           restart_scheme_.Check(iter, current_results, average_results);
 
       if (restart_info.should_restart) {
         if (restart_info.restart_to_average) {
-          restart_scheme_.primal_feas_last_restart_ = average_results.primal_feasibility;
-          restart_scheme_.dual_feas_last_restart_ = average_results.dual_feasibility;
-          restart_scheme_.duality_gap_last_restart_ = average_results.duality_gap;
+          restart_scheme_.primal_feas_last_restart_ =
+              average_results.primal_feasibility;
+          restart_scheme_.dual_feas_last_restart_ =
+              average_results.dual_feasibility;
+          restart_scheme_.duality_gap_last_restart_ =
+              average_results.duality_gap;
 
           x_current_ = x_avg_;
           y_current_ = y_avg_;
@@ -617,13 +613,16 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
           Ax_cache_ = Ax_avg;
           ATy_cache_ = ATy_avg;
         } else {
-          restart_scheme_.primal_feas_last_restart_ = current_results.primal_feasibility;
-          restart_scheme_.dual_feas_last_restart_ = current_results.dual_feasibility;
-          restart_scheme_.duality_gap_last_restart_ = current_results.duality_gap;
+          restart_scheme_.primal_feas_last_restart_ =
+              current_results.primal_feasibility;
+          restart_scheme_.dual_feas_last_restart_ =
+              current_results.dual_feasibility;
+          restart_scheme_.duality_gap_last_restart_ =
+              current_results.duality_gap;
         }
 
         // Perform the primal weight update using z^{n,0} and z^{n-1,0}
-        PDHG_Compute_Step_Size_Ratio(working_params);
+        computeStepSizeRatio(working_params);
         current_eta_ = working_params.eta;
         restart_scheme_.passParams(&working_params);
 
@@ -635,22 +634,16 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         sum_weights_ = 0.0;
 
         restart_scheme_.last_restart_iter_ = iter;
-        auto matvec_start = std::chrono::high_resolution_clock::now();
         // Recompute Ax and ATy for the restarted iterates
         linalg::Ax(lp, x_current_, Ax_cache_);
         linalg::ATy(lp, y_current_, ATy_cache_);
-        auto matvec_end = std::chrono::high_resolution_clock::now();
-        timings_.matrix_multiply_time += std::chrono::duration<double>(matvec_end - matvec_start).count();
-        
+
         restart_scheme_.SetLastRestartIter(iter);
       }
-      auto restart_end = std::chrono::high_resolution_clock::now();
-      timings_.restart_check_time += std::chrono::duration<double>(restart_end - restart_start).count();
     }
 
-    // --- 5. Core PDHG Update Step ---
+    // --- 5. Core PDHG update Step ---
     hipdlpTimerStart(kHipdlpClockIterateUpdate);
-    auto update_start = std::chrono::high_resolution_clock::now();
     bool step_success = true;
 
     // Store current iterates before update (for next iteration's x_current_,
@@ -663,16 +656,15 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     switch (params_.step_size_strategy) {
       case StepSizeStrategy::FIXED:
-        UpdateIteratesFixed();
+        updateIteratesFixed();
         break;
 
       case StepSizeStrategy::ADAPTIVE:
-        UpdateIteratesAdaptive();
+        updateIteratesAdaptive();
         break;
 
       case StepSizeStrategy::MALITSKY_POCK:
-        step_success = UpdateIteratesMalitskyPock(
-            first_malitsky_iteration);
+        step_success = updateIteratesMalitskyPock(first_malitsky_iteration);
 
         if (!step_success) {
           std::cerr << "Malitsky-Pock step failed at iteration " << iter
@@ -680,22 +672,16 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
           // Reset to average and terminate
           x = x_avg_;
           y = y_avg_;
-	  hipdlpTimerStop(kHipdlpClockIterateUpdate);
-	  hipdlpTimerStop(kHipdlpClockSolve);
-          return;
+          hipdlpTimerStop(kHipdlpClockIterateUpdate);
+          return solveReturn(TerminationStatus::ERROR);
         }
     }
-    auto update_end = std::chrono::high_resolution_clock::now();
-    timings_.iterate_update_time += std::chrono::duration<double>(update_end - update_start).count();
 
     // Compute ATy for the new iterate
-    Ax_cache_ = Ax_next_; 
-  hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
-    auto aty_start = std::chrono::high_resolution_clock::now();
+    Ax_cache_ = Ax_next_;
+    hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
     linalg::ATy(lp, y_next_, ATy_cache_);
-    auto aty_end = std::chrono::high_resolution_clock::now();
-    timings_.matrix_multiply_time += std::chrono::duration<double>(aty_end - aty_start).count();
-  hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
+    hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
 
     hipdlpTimerStop(kHipdlpClockIterateUpdate);
 
@@ -703,12 +689,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     // The number of iterations since the last restart
     int inner_iter = iter - restart_scheme_.GetLastRestartIter();
     hipdlpTimerStart(kHipdlpClockAverageIterate);
-    auto avg_update_start = std::chrono::high_resolution_clock::now();
-    UpdateAverageIterates(x_next_, y_next_, working_params, inner_iter);
-    auto avg_update_end = std::chrono::high_resolution_clock::now();
-    timings_.average_iterate_time += std::chrono::duration<double>(avg_update_end - avg_update_start).count();
+    updateAverageIterates(x_next_, y_next_, working_params, inner_iter);
     hipdlpTimerStop(kHipdlpClockAverageIterate);
-
 
     // --- 7. Prepare for next iteration ---
     x_current_ = x_next_;
@@ -724,18 +706,15 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   x = x_avg_;
   y = y_avg_;
 
-  results_.term_code = TerminationStatus::TIMEOUT;
-  auto solve_end = std::chrono::high_resolution_clock::now();
-  timings_.total_time = std::chrono::duration<double>(solve_end - solve_start).count();
+  return solveReturn(TerminationStatus::TIMEOUT);
+}
+
+void PDLPSolver::solveReturn(const TerminationStatus term_code) {
+  results_.term_code = term_code;
   hipdlpTimerStop(kHipdlpClockSolve);
-  return;
 }
 
-void PDLPSolver::solveReturn() {
-  if (debug_pdlp_log_file_) fclose(debug_pdlp_log_file_);
-}
-
-void PDLPSolver::Initialize() {
+void PDLPSolver::initialize() {
   // Initialize x and y based on the LP problem
   x_current_.resize(lp_.num_col_, 0.0);
   y_current_.resize(lp_.num_row_, 0.0);
@@ -762,24 +741,21 @@ void PDLPSolver::Initialize() {
 }
 
 // Update primal weight
-void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
-    PrimalDualParams& working_params) {
+void PDLPSolver::computeStepSizeRatio(PrimalDualParams& working_params) {
   // 1. Calculate the L2 norm of the difference between current and last-restart
   // iterates.
   double primal_diff_norm = linalg::diffTwoNorm(x_at_last_restart_, x_current_);
   double dual_diff_norm = linalg::diffTwoNorm(y_at_last_restart_, y_current_);
- 
-  double dMeanStepSize = std::sqrt(stepsize_.primal_step *
-                                       stepsize_.dual_step);
 
+  double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
   // 2. Update the primal weight (beta = omega^2) if movements are significant.
   if (std::min(primal_diff_norm, dual_diff_norm) > 1e-10) {
     double beta_update_ratio = dual_diff_norm / primal_diff_norm;
     double old_beta = stepsize_.beta;
 
-    double dLogBetaUpdate = 0.5 * std::log(beta_update_ratio) +
-                            0.5 * std::log(std::sqrt(old_beta));
+    double dLogBetaUpdate =
+        0.5 * std::log(beta_update_ratio) + 0.5 * std::log(std::sqrt(old_beta));
     stepsize_.beta = std::exp(2.0 * dLogBetaUpdate);
   }
 
@@ -790,37 +766,36 @@ void PDLPSolver::PDHG_Compute_Step_Size_Ratio(
   restart_scheme_.UpdateBeta(stepsize_.beta);
 }
 
-void PDLPSolver::UpdateAverageIterates(const std::vector<double>& x,
+void PDLPSolver::updateAverageIterates(const std::vector<double>& x,
                                        const std::vector<double>& y,
                                        const PrimalDualParams& params,
                                        int inner_iter) {
-
   double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
-  // Debug: print what we're adding
-    double x_norm_before = linalg::vector_norm(x_sum_);
+  hipdlpTimerStart(kHipdlpClockAverageIterateUpdateX);
+  for (size_t i = 0; i < x.size(); ++i) x_sum_[i] += x[i] * dMeanStepSize;
+  hipdlpTimerStop(kHipdlpClockAverageIterateUpdateX);
 
-  for (size_t i = 0; i < x.size(); ++i) {
-    x_sum_[i] += x[i] * dMeanStepSize;
-  }
-  for (size_t i = 0; i < y.size(); ++i) {
-    y_sum_[i] += y[i] * dMeanStepSize;
-  }
+  hipdlpTimerStart(kHipdlpClockAverageIterateUpdateY);
+  for (size_t i = 0; i < y.size(); ++i) y_sum_[i] += y[i] * dMeanStepSize;
+  hipdlpTimerStop(kHipdlpClockAverageIterateUpdateY);
 
   sum_weights_ += dMeanStepSize;
 }
 
-void PDLPSolver::ComputeAverageIterate(std::vector<double>& ax_avg,
+void PDLPSolver::computeAverageIterate(std::vector<double>& ax_avg,
                                        std::vector<double>& aty_avg) {
   double dPrimalScale = sum_weights_ > 1e-10 ? 1.0 / sum_weights_ : 1.0;
   double dDualScale = sum_weights_ > 1e-10 ? 1.0 / sum_weights_ : 1.0;
 
-  for (size_t i = 0; i < x_avg_.size(); ++i) {
+  hipdlpTimerStart(kHipdlpClockAverageIterateComputeX);
+  for (size_t i = 0; i < x_avg_.size(); ++i)
     x_avg_[i] = x_sum_[i] * dPrimalScale;
-  }
-  for (size_t i = 0; i < y_avg_.size(); ++i) {
-    y_avg_[i] = y_sum_[i] * dDualScale; 
-  }
+  hipdlpTimerStop(kHipdlpClockAverageIterateComputeX);
+
+  hipdlpTimerStart(kHipdlpClockAverageIterateComputeY);
+  for (size_t i = 0; i < y_avg_.size(); ++i) y_avg_[i] = y_sum_[i] * dDualScale;
+  hipdlpTimerStop(kHipdlpClockAverageIterateComputeY);
 
   debug_pdlp_data_.x_average_norm = linalg::vector_norm_squared(x_avg_);
 
@@ -837,7 +812,7 @@ void PDLPSolver::ComputeAverageIterate(std::vector<double>& ax_avg,
 }
 
 // lambda = c - proj_{\Lambda}(c - K^T y)
-std::vector<double> PDLPSolver::ComputeLambda(
+std::vector<double> PDLPSolver::computeLambda(
     const std::vector<double>& y, const std::vector<double>& ATy_vector) {
   std::vector<double> lambda(lp_.num_col_, 0.0);
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
@@ -860,11 +835,11 @@ std::vector<double> PDLPSolver::ComputeLambda(
   return lambda;
 }
 
-double PDLPSolver::ComputePrimalFeasibility(
+double PDLPSolver::computePrimalFeasibility(
     const std::vector<double>& Ax_vector) {
   std::vector<double> primal_residual(lp_.num_row_, 0.0);
 
-  // Compute Ax - rhs 
+  // Compute Ax - rhs
   for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     primal_residual[i] = Ax_vector[i] - lp_.row_lower_[i];
 
@@ -885,7 +860,7 @@ double PDLPSolver::ComputePrimalFeasibility(
   return linalg::vector_norm(primal_residual);
 }
 
-void PDLPSolver::ComputeDualSlacks(const std::vector<double>& ATy_vector) {
+void PDLPSolver::computeDualSlacks(const std::vector<double>& ATy_vector) {
   // Ensure vectors are correctly sized
   if (dSlackPos_.size() != lp_.num_col_) dSlackPos_.resize(lp_.num_col_);
   if (dSlackNeg_.size() != lp_.num_col_) dSlackNeg_.resize(lp_.num_col_);
@@ -904,16 +879,16 @@ void PDLPSolver::ComputeDualSlacks(const std::vector<double>& ATy_vector) {
   }
 }
 
-double PDLPSolver::ComputeDualFeasibility(
+double PDLPSolver::computeDualFeasibility(
     const std::vector<double>& ATy_vector) {
-  ComputeDualSlacks(ATy_vector);  // This updates dSlackPos_ and dSlackNeg_
+  computeDualSlacks(ATy_vector);  // This updates dSlackPos_ and dSlackNeg_
 
   std::vector<double> dual_residual(lp_.num_col_);
 
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     // Matching CUPDLP: c - A'y - dSlackPos + dSlackNeg
-    dual_residual[i] = lp_.col_cost_[i] - ATy_vector[i] 
-                      - dSlackPos_[i] + dSlackNeg_[i];
+    dual_residual[i] =
+        lp_.col_cost_[i] - ATy_vector[i] - dSlackPos_[i] + dSlackNeg_[i];
   }
 
   // Apply scaling if needed
@@ -930,7 +905,7 @@ double PDLPSolver::ComputeDualFeasibility(
 }
 
 std::tuple<double, double, double, double, double>
-PDLPSolver::ComputeDualityGap(const std::vector<double>& x,
+PDLPSolver::computeDualityGap(const std::vector<double>& x,
                               const std::vector<double>& y,
                               const std::vector<double>& lambda) {
   double qTy = 0.0;
@@ -976,7 +951,7 @@ PDLPSolver::ComputeDualityGap(const std::vector<double>& x,
                          cTx);
 }
 
-double PDLPSolver::ComputeDualObjective(const std::vector<double>& y) {
+double PDLPSolver::computeDualObjective(const std::vector<double>& y) {
   double dual_obj = lp_.offset_;
 
   // Compute b'y (or rhs'y in cuPDLP notation)
@@ -1001,32 +976,31 @@ double PDLPSolver::ComputeDualObjective(const std::vector<double>& y) {
   return dual_obj;
 }
 
-bool PDLPSolver::CheckConvergence(const int iter, const std::vector<double>& x,
+bool PDLPSolver::checkConvergence(const int iter, const std::vector<double>& x,
                                   const std::vector<double>& y,
                                   const std::vector<double>& ax_vector,
                                   const std::vector<double>& aty_vector,
                                   double epsilon, SolverResults& results,
                                   const char* type) {
   // Compute dual slacks first
-  ComputeDualSlacks(aty_vector);
+  computeDualSlacks(aty_vector);
 
   // Compute primal feasibility
-  double primal_feasibility = 
-  ComputePrimalFeasibility(ax_vector);
+  double primal_feasibility = computePrimalFeasibility(ax_vector);
   results.primal_feasibility = primal_feasibility;
 
   // Compute dual feasibility
-  double dual_feasibility = ComputeDualFeasibility(aty_vector);
+  double dual_feasibility = computeDualFeasibility(aty_vector);
   results.dual_feasibility = dual_feasibility;
 
   // Compute objectives
-  double primal_obj =  lp_.offset_;
+  double primal_obj = lp_.offset_;
   for (int i = 0; i < lp_.num_col_; ++i) {
     primal_obj += lp_.col_cost_[i] * x[i];
   }
-  results.primal_obj = primal_obj ;
+  results.primal_obj = primal_obj;
 
-  double dual_obj = ComputeDualObjective(y);
+  double dual_obj = computeDualObjective(y);
   results.dual_obj = dual_obj;
 
   // Compute duality gap
@@ -1039,11 +1013,13 @@ bool PDLPSolver::CheckConvergence(const int iter, const std::vector<double>& x,
   results.relative_obj_gap = relative_obj_gap;
 
   debugPdlpFeasOptLog(debug_pdlp_log_file_, iter, primal_obj, dual_obj,
-                      relative_obj_gap, primal_feasibility / (1.0 + unscaled_rhs_norm_),
+                      relative_obj_gap,
+                      primal_feasibility / (1.0 + unscaled_rhs_norm_),
                       dual_feasibility / (1.0 + unscaled_c_norm_), type);
 
   // Check convergence criteria (matching cuPDLP)
-  bool primal_feasible = primal_feasibility < epsilon * (1.0 + unscaled_rhs_norm_);
+  bool primal_feasible =
+      primal_feasibility < epsilon * (1.0 + unscaled_rhs_norm_);
   bool dual_feasible = dual_feasibility < epsilon * (1.0 + unscaled_c_norm_);
   bool gap_small = relative_obj_gap < epsilon;
 
@@ -1328,12 +1304,11 @@ void AdaptiveLinesearchParams::initialise() {
   this->step_size_growth_exponent = 0.6;
 }
 
-
 // =============================================================================
 //  SECTION 4: Step Update Methods (from step.cc)
 // =============================================================================
 
-void PDLPSolver::InitializeStepSizes() {
+void PDLPSolver::initializeStepSizes() {
   double cost_norm_sq = linalg::vector_norm_squared(lp_.col_cost_);
   double rhs_norm_sq = linalg::vector_norm_squared(lp_.row_lower_);
 
@@ -1343,20 +1318,21 @@ void PDLPSolver::InitializeStepSizes() {
     stepsize_.beta = 1.0;
   }
 
-    // Initialize step sizes based on strategy
+  // Initialize step sizes based on strategy
   if (params_.step_size_strategy == StepSizeStrategy::FIXED) {
     // Use power method for fixed step size
     const double op_norm_sq = PowerMethod();
     stepsize_.power_method_lambda = op_norm_sq;
-    
+
     const double safety_factor = 0.8;
     double base_step = safety_factor / std::sqrt(op_norm_sq);
-    
+
     stepsize_.primal_step = base_step / std::sqrt(stepsize_.beta);
     stepsize_.dual_step = base_step * std::sqrt(stepsize_.beta);
-    
+
     highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                 "Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
+                 "Initial step sizes from power method lambda = %g: primal = "
+                 "%g; dual = %g\n",
                  op_norm_sq, stepsize_.primal_step, stepsize_.dual_step);
   } else {
     // Use matrix infinity norm for adaptive step size
@@ -1364,24 +1340,29 @@ void PDLPSolver::InitializeStepSizes() {
     double mat_elem_norm_inf = 0.0;
     const HighsSparseMatrix& matrix = lp_.a_matrix_;
     for (int i = 0; i < matrix.numNz(); ++i) {
-      mat_elem_norm_inf = std::max(mat_elem_norm_inf, std::abs(matrix.value_[i]));
+      mat_elem_norm_inf =
+          std::max(mat_elem_norm_inf, std::abs(matrix.value_[i]));
     }
-    
+
     if (mat_elem_norm_inf < 1e-10) {
       mat_elem_norm_inf = 1.0;  // Avoid division by zero
     }
-    
+
     // Initialize step sizes using infinity norm
-    stepsize_.primal_step = (1.0 / mat_elem_norm_inf) / std::sqrt(stepsize_.beta);
+    stepsize_.primal_step =
+        (1.0 / mat_elem_norm_inf) / std::sqrt(stepsize_.beta);
     stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
-    
+
     highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                 "Initial step sizes from matrix inf-norm = %g: primal = %g; dual = %g\n",
+                 "Initial step sizes from matrix inf-norm = %g: primal = %g; "
+                 "dual = %g\n",
                  mat_elem_norm_inf, stepsize_.primal_step, stepsize_.dual_step);
   }
 }
 
-std::vector<double> PDLPSolver::UpdateX(const std::vector<double> &x, const std::vector<double> &aty,double primal_step) {
+std::vector<double> PDLPSolver::updateX(const std::vector<double>& x,
+                                        const std::vector<double>& aty,
+                                        double primal_step) {
   std::vector<double> x_new(lp_.num_col_);
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     double gradient = lp_.col_cost_[i] - aty[i];
@@ -1391,45 +1372,39 @@ std::vector<double> PDLPSolver::UpdateX(const std::vector<double> &x, const std:
   return x_new;
 }
 
-std::vector<double> PDLPSolver::UpdateY(const std::vector<double> &y, const std::vector<double> &ax , const std::vector<double> &ax_next, double dual_step) {
+std::vector<double> PDLPSolver::updateY(const std::vector<double>& y,
+                                        const std::vector<double>& ax,
+                                        const std::vector<double>& ax_next,
+                                        double dual_step) {
   std::vector<double> y_new(lp_.num_row_);
   for (HighsInt j = 0; j < lp_.num_row_; j++) {
     double extr_ax = 2 * ax_next[j] - ax[j];
     bool is_equality = (lp_.row_lower_[j] == lp_.row_upper_[j]);
     double q = lp_.row_lower_[j];
     double dual_update = y[j] + dual_step * (q - extr_ax);
-    y_new[j] = is_equality ? dual_update : linalg::project_non_negative(dual_update);
+    y_new[j] =
+        is_equality ? dual_update : linalg::project_non_negative(dual_update);
   }
   return y_new;
 }
 
-void PDLPSolver::UpdateIteratesFixed() {
-  hipdlpTimerStart(kHipdlpClockProjection);
-  auto proj_start = std::chrono::high_resolution_clock::now();
-  x_next_ = UpdateX(x_current_, ATy_cache_, stepsize_.primal_step);
-  auto proj_end = std::chrono::high_resolution_clock::now();
-  timings_.projection_time += std::chrono::duration<double>(proj_end - proj_start).count();
-  hipdlpTimerStop(kHipdlpClockProjection);
-  
+void PDLPSolver::updateIteratesFixed() {
+  hipdlpTimerStart(kHipdlpClockProjectX);
+  x_next_ = updateX(x_current_, ATy_cache_, stepsize_.primal_step);
+  hipdlpTimerStop(kHipdlpClockProjectX);
+
   hipdlpTimerStart(kHipdlpClockMatrixMultiply);
-  auto ax_start = std::chrono::high_resolution_clock::now();
   linalg::Ax(lp_, x_next_, Ax_next_);
-  auto ax_end = std::chrono::high_resolution_clock::now();
-  timings_.matrix_multiply_time += std::chrono::duration<double>(ax_end - ax_start).count();
   hipdlpTimerStop(kHipdlpClockMatrixMultiply);
-  
-  hipdlpTimerStart(kHipdlpClockProjection);
-  auto proj_y_start = std::chrono::high_resolution_clock::now();
-  y_next_ = UpdateY(y_current_, Ax_cache_, Ax_next_, stepsize_.dual_step);
-  auto proj_y_end = std::chrono::high_resolution_clock::now();
-  timings_.projection_time += std::chrono::duration<double>(proj_y_end - proj_y_start).count();
-  hipdlpTimerStop(kHipdlpClockProjection);
+
+  hipdlpTimerStart(kHipdlpClockProjectY);
+  y_next_ = updateY(y_current_, Ax_cache_, Ax_next_, stepsize_.dual_step);
+  hipdlpTimerStop(kHipdlpClockProjectY);
 }
 
-void PDLPSolver::UpdateIteratesAdaptive() {
+void PDLPSolver::updateIteratesAdaptive() {
   hipdlpTimerStart(kHipdlpClockStepSizeAdjustment);
 
-  auto step_adjust_start = std::chrono::high_resolution_clock::now();
   const double MIN_ETA = 1e-6;
   const double MAX_ETA = 1.0;
 
@@ -1437,20 +1412,20 @@ void PDLPSolver::UpdateIteratesAdaptive() {
   int inner_iterations = 0;
   int num_rejected_steps = 0;
 
-  double dStepSizeUpdate = std::sqrt(stepsize_.primal_step *
-                                         stepsize_.dual_step);
+  double dStepSizeUpdate =
+      std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
   // Compute candidate solution
-  std::vector<double> x_candidate = x_current_; // Start from current x
-  std::vector<double> y_candidate = y_current_; // Start from current y
-  std::vector<double> ax_candidate = Ax_cache_; // Start from current Ax
-  std::vector<double> aty_candidate = ATy_cache_; // Start from current ATy
+  std::vector<double> x_candidate = x_current_;    // Start from current x
+  std::vector<double> y_candidate = y_current_;    // Start from current y
+  std::vector<double> ax_candidate = Ax_cache_;    // Start from current Ax
+  std::vector<double> aty_candidate = ATy_cache_;  // Start from current ATy
   std::vector<double> xupdate = x_next_;
   std::vector<double> yupdate = y_next_;
   std::vector<double> axupdate = Ax_next_;
   std::vector<double> atyupdate = ATy_next_;
   while (!accepted_step) {
-    stepsize_.step_size_iter++; //nStepSizeIter
+    stepsize_.step_size_iter++;  // nStepSizeIter
     inner_iterations++;
     /* cupdlp does not have a max iteration limit here
     if (inner_iterations >= 60) {
@@ -1465,34 +1440,22 @@ void PDLPSolver::UpdateIteratesAdaptive() {
     double dual_step_update = dStepSizeUpdate * std::sqrt(stepsize_.beta);
 
     // Primal update
-  hipdlpTimerStart(kHipdlpClockProjection);
-    auto proj_start = std::chrono::high_resolution_clock::now();
-    xupdate = UpdateX(x_candidate, aty_candidate, primal_step_update);
-    auto proj_end = std::chrono::high_resolution_clock::now();
-    timings_.projection_time += std::chrono::duration<double>(proj_end - proj_start).count();
-   hipdlpTimerStop(kHipdlpClockProjection);
-   
-  hipdlpTimerStart(kHipdlpClockMatrixMultiply);
-    auto ax_start = std::chrono::high_resolution_clock::now();
+    hipdlpTimerStart(kHipdlpClockProjectX);
+    xupdate = updateX(x_candidate, aty_candidate, primal_step_update);
+    hipdlpTimerStop(kHipdlpClockProjectX);
+
+    hipdlpTimerStart(kHipdlpClockMatrixMultiply);
     linalg::Ax(lp_, xupdate, axupdate);
-    auto ax_end = std::chrono::high_resolution_clock::now();
-    timings_.matrix_multiply_time += std::chrono::duration<double>(ax_end - ax_start).count();
-  hipdlpTimerStop(kHipdlpClockMatrixMultiply);
+    hipdlpTimerStop(kHipdlpClockMatrixMultiply);
 
     // Dual update with timing
-   hipdlpTimerStart(kHipdlpClockProjection);
-    auto proj_y_start = std::chrono::high_resolution_clock::now();
-    yupdate = UpdateY(y_candidate, ax_candidate, axupdate, dual_step_update);
-    auto proj_y_end = std::chrono::high_resolution_clock::now();
-    timings_.projection_time += std::chrono::duration<double>(proj_y_end - proj_y_start).count();
-   hipdlpTimerStop(kHipdlpClockProjection);
-    
-  hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
-    auto aty_start = std::chrono::high_resolution_clock::now();
+    hipdlpTimerStart(kHipdlpClockProjectY);
+    yupdate = updateY(y_candidate, ax_candidate, axupdate, dual_step_update);
+    hipdlpTimerStop(kHipdlpClockProjectY);
+
+    hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
     linalg::ATy(lp_, yupdate, atyupdate);
-    auto aty_end = std::chrono::high_resolution_clock::now();
-    timings_.matrix_multiply_time += std::chrono::duration<double>(aty_end - aty_start).count();
-  hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
+    hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
 
     // Compute deltas
     std::vector<double> delta_x(lp_.num_col_);
@@ -1519,13 +1482,12 @@ void PDLPSolver::UpdateIteratesAdaptive() {
     */
 
     // Compute movement and nonlinearity
-    double movement = ComputeMovement(delta_x, delta_y);
-    double nonlinearity =
-        ComputeNonlinearity(delta_x, delta_aty);
+    double movement = computeMovement(delta_x, delta_y);
+    double nonlinearity = computeNonlinearity(delta_x, delta_aty);
     // Compute step size limit
     double step_size_limit = (nonlinearity != 0.0)
-    ? (movement / std::fabs(nonlinearity))  
-    : std::numeric_limits<double>::infinity();
+                                 ? (movement / std::fabs(nonlinearity))
+                                 : std::numeric_limits<double>::infinity();
 
     /*
     highsLogUser(*log_options_, HighsLogType::kInfo,
@@ -1556,27 +1518,24 @@ void PDLPSolver::UpdateIteratesAdaptive() {
         dStepSizeUpdate;
 
     dStepSizeUpdate = std::min(first_term, second_term);
-    //current_eta_ = std::max(MIN_ETA, std::min(MAX_ETA, current_eta_));
+    // current_eta_ = std::max(MIN_ETA, std::min(MAX_ETA, current_eta_));
   }
 
   x_next_ = xupdate;
   y_next_ = yupdate;
   Ax_next_ = axupdate;
   ATy_next_ = atyupdate;
-  
+
   current_eta_ = dStepSizeUpdate;
   stepsize_.primal_step = dStepSizeUpdate / std::sqrt(stepsize_.beta);
   stepsize_.dual_step = dStepSizeUpdate * std::sqrt(stepsize_.beta);
 
-  auto step_adjust_end = std::chrono::high_resolution_clock::now();
-  timings_.step_size_adjustment_time += std::chrono::duration<double>(step_adjust_end - step_adjust_start).count();
   hipdlpTimerStop(kHipdlpClockStepSizeAdjustment);
 }
 
-bool PDLPSolver::UpdateIteratesMalitskyPock(
-    bool first_iteration) {
-    std::vector<double> x_candidate(lp_.num_col_);
-    return true; 
+bool PDLPSolver::updateIteratesMalitskyPock(bool first_iteration) {
+  std::vector<double> x_candidate(lp_.num_col_);
+  return true;
 }
 
 // =============================================================================
@@ -1585,12 +1544,12 @@ bool PDLPSolver::UpdateIteratesMalitskyPock(
 
 bool PDLPSolver::CheckNumericalStability(const std::vector<double>& delta_x,
                                          const std::vector<double>& delta_y) {
-  double movement = ComputeMovement(delta_x, delta_y);
+  double movement = computeMovement(delta_x, delta_y);
 
   if (movement == 0.0) {
-  highsLogUser(log_options_, HighsLogType::kInfo,
-                "Warning: Zero movement detected - numerical termination\n");
-  return false;
+    highsLogUser(log_options_, HighsLogType::kInfo,
+                 "Warning: Zero movement detected - numerical termination\n");
+    return false;
   }
 
   if (movement > kDivergentMovement) {
@@ -1598,10 +1557,10 @@ bool PDLPSolver::CheckNumericalStability(const std::vector<double>& delta_x,
                  "Warning: Divergent movement detected: %g\n", movement);
     return false;
   }
-    return true; // Placeholder
+  return true;  // Placeholder
 }
 
-double PDLPSolver::ComputeMovement(const std::vector<double>& delta_primal,
+double PDLPSolver::computeMovement(const std::vector<double>& delta_primal,
                                    const std::vector<double>& delta_dual) {
   double primal_squared_norm = 0.0;
   for (const auto& val : delta_primal) {
@@ -1618,14 +1577,14 @@ double PDLPSolver::ComputeMovement(const std::vector<double>& delta_primal,
          (0.5 / primal_weight) * dual_squared_norm;
 }
 
-double PDLPSolver::ComputeNonlinearity(const std::vector<double>& delta_primal,
+double PDLPSolver::computeNonlinearity(const std::vector<double>& delta_primal,
                                        const std::vector<double>& delta_aty) {
   // Nonlinearity = |Δx' * Δ(A'y)|
   double nonlinearity = 0.0;
   for (size_t i = 0; i < delta_primal.size(); ++i) {
     nonlinearity += delta_primal[i] * delta_aty[i];
   }
-  return nonlinearity; // cupdlp does not take absolute value
+  return nonlinearity;  // cupdlp does not take absolute value
 }
 
 void PDLPSolver::reportHipdlpTimer() {
@@ -1644,4 +1603,8 @@ void PDLPSolver::hipdlpTimerStart(const HighsInt hipdlp_clock) {
 void PDLPSolver::hipdlpTimerStop(const HighsInt hipdlp_clock) {
   HighsInt highs_timer_clock = hipdlp_clocks_.clock_[hipdlp_clock];
   hipdlp_clocks_.timer_pointer_->stop(highs_timer_clock);
+}
+
+void PDLPSolver::closeDebugLog() {
+  if (debug_pdlp_log_file_) fclose(debug_pdlp_log_file_);
 }

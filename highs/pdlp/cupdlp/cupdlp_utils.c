@@ -1783,6 +1783,7 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
 }
 
 void debugPdlpIterHeaderLog(FILE* file) {
+  if (!file) return;
   fprintf(file, "  Iter      ||Ax||     ||Aty||  ||Ax_Avg|| ||Aty_Avg|| ||x_avg||   beta    PrimalStep   DualStep \n");
 }
 
@@ -1794,6 +1795,7 @@ void debugPdlpDataInitialise(struct DebugPdlpData* debug_pdlp) {
 }
 
 void debugPdlpIterLog(FILE* file, const int iter_num, const struct DebugPdlpData* debug_pdlp, const double beta, const double primal_step, const double dual_step) {
+  if (!file) return;
   fprintf(file, "%6d %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g\n",
 	  iter_num,
 	  debug_pdlp->ax_norm,
@@ -1811,6 +1813,7 @@ void debugPdlpFeasOptLog(FILE* file,
 			 const double primal_obj, const double dual_obj,
 			 const double gap, const double primal_feas, const double dual_feas,
 			 const char* type) {
+  if (!file) return;
   fprintf(file,
 	  "%6d Feasibility-optimality %s\n"
 	  "  primal_obj  = %11.4g\n"
@@ -1822,16 +1825,19 @@ void debugPdlpFeasOptLog(FILE* file,
 }
 
 void debugPdlpRestartLog(FILE* file, const int iter_num, const double current_score, const double average_score) {
+  if (!file) return;
   fprintf(file, "Restart at iter %6d: Current Score = %.6g, Average Score = %.6g\n", iter_num, current_score, average_score);
 }
 
 void debugPdlpRestarScoretLog(FILE* file, const double weight_squared, const double primal_feas, 
 const double dual_feas, const double obj_gap) {
+  if (!file) return;
   fprintf(file, "Restart Score: Weight^2 = %.6g, Primal Feas = %.6g, Dual Feas = %.6g, Obj Gap = %.6g\n", 
   weight_squared, primal_feas, dual_feas, obj_gap);
 }
 
 void debugPdlpFinalSolutionLog(FILE* file, const double* x, int nCols, const double* y, int nRows) {    
+  if (!file) return;
   fprintf(file,"Primal solution (x):\n");
   for (int i = 0; i < nCols; ++i) {
       fprintf(file, "x[%d]=%g\n", i, x[i]);
