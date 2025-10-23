@@ -17,9 +17,7 @@
 #include <sstream>
 #include <vector>
 
-#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsSolution.h"
-#include "model/HighsHessianUtils.h"
 #include "util/stringutil.h"
 
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
@@ -197,7 +195,8 @@ void writeLpObjective(FILE* file, const HighsLogOptions& log_options,
 
 void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
                          const double objective_value) {
-  auto objStr = highsDoubleToString(objective_value);
+  auto objStr = highsDoubleToString(objective_value,
+                                    kHighsSolutionValueToStringTolerance);
   std::string s = highsFormatToString("Objective %s\n", objStr.data());
   highsFprintfString(file, log_options, s);
 }
@@ -467,7 +466,8 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     ss << highsFormatToString("Model status: %s\n",
                               utilModelStatusToString(model_status).c_str());
     highsFprintfString(file, log_options, ss.str());
-    auto objStr = highsDoubleToString(info.objective_function_value);
+    auto objStr = highsDoubleToString((double)info.objective_function_value,
+                                      kHighsSolutionValueToStringTolerance);
     highsFprintfString(file, log_options, "\n");
     ss.str(std::string());
     ss << highsFormatToString("Objective value: %s\n", objStr.data());
@@ -499,8 +499,8 @@ void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
   ss.str(std::string());
   if (raw) {
     double double_value = objective_function_value;
-    auto double_string = highsDoubleToString(double_value);
-    // kGlpsolSolutionValueToStringTolerance);
+    auto double_string = highsDoubleToString(
+        double_value, kGlpsolSolutionValueToStringTolerance);
     // Last term of 0 for dual should (also) be blank when not MIP
     ss << highsFormatToString("i %d %s%s%s\n", (int)row_id, is_mip ? "" : "b ",
                               double_string.data(), is_mip ? "" : " 0");
@@ -781,8 +781,8 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       }
     }
     double double_value = has_objective ? info.objective_function_value : 0;
-    auto double_string = highsDoubleToString(double_value);
-    //, kHighsSolutionValueToStringTolerance);
+    auto double_string =
+        highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
     ss << highsFormatToString(" %s\n", double_string.data());
     highsFprintfString(file, log_options, ss.str());
   }

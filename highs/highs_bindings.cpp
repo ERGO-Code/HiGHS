@@ -177,15 +177,6 @@ HighsStatus highs_mipPostsolve(Highs* h, const HighsSolution& solution) {
   return h->postsolve(solution);
 }
 
-std::tuple<HighsStatus, HighsInt, HighsInt> highs_getObjectiveBoundScaling(Highs* h) {
-  HighsInt suggested_user_objective_scaling;
-  HighsInt suggested_user_bound_scaling;
-  HighsStatus status =
-    h->getObjectiveBoundScaling(suggested_user_objective_scaling,
-				suggested_user_bound_scaling);
-  return std::make_tuple(status, suggested_user_objective_scaling, suggested_user_bound_scaling);
-}
-
 HighsStatus highs_writeSolution(Highs* h, const std::string filename,
                                 const HighsInt style) {
   return h->writeSolution(filename, style);
@@ -199,12 +190,6 @@ std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h) {
   HighsRanging ranging;
   HighsStatus status = h->getRanging(ranging);
   return std::make_tuple(status, ranging);
-}
-
-std::tuple<HighsStatus, double> highs_getDualObjectiveValue(Highs* h) {
-  double dual_objective_value;
-  HighsStatus status = h->getDualObjectiveValue(dual_objective_value);
-  return std::make_tuple(status, dual_objective_value);
 }
 
 std::tuple<HighsStatus, dense_array_t<HighsInt>> highs_getBasicVariables(
@@ -1370,7 +1355,6 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
           py::arg("local_upper_penalty") = py::none(),
           py::arg("local_rhs_penalty") = py::none())
       .def("getIis", &Highs::getIis)
-      .def("getObjectiveBoundScaling", &highs_getObjectiveBoundScaling)
       .def("presolve", &Highs::presolve,
            py::call_guard<py::gil_scoped_release>())
       .def("writeSolution", &highs_writeSolution)
@@ -1420,7 +1404,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
       .def("getRanging", &highs_getRanging)
       .def("getObjectiveValue", &Highs::getObjectiveValue)
-      .def("getDualObjectiveValue", &highs_getDualObjectiveValue)
+      .def("getDualObjectiveValue", &Highs::getDualObjectiveValue)
       .def("getBasicVariables", &highs_getBasicVariables)
       .def("getBasisInverseRow", &highs_getBasisInverseRow)
       .def("getBasisInverseRowSparse", &highs_getBasisInverseRowSparse)
@@ -1521,7 +1505,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("row_index", &HighsIis::row_index_)
       .def_readwrite("col_bound", &HighsIis::col_bound_)
       .def_readwrite("row_bound", &HighsIis::row_bound_)
-      .def_readwrite("info", &HighsIis::info_);
+      .def_readwrite("info", &HighsIis::info_)
+      .def_readwrite("model", &HighsIis::model_);
   // structs
   py::class_<HighsSolution>(m, "HighsSolution", py::module_local())
       .def(py::init<>())

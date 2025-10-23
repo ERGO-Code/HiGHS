@@ -1066,17 +1066,6 @@ HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
 double Highs_getObjectiveValue(const void* highs);
 
 /**
- * Get the dual objective function value.
- *
- * @param highs                    A pointer to the Highs instance.
- * @param dual_objective_value     The dual objective value
- *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
- */
-HighsInt Highs_getDualObjectiveValue(const void* highs,
-                                     double* dual_objective_value);
-
-/**
  * Get the indices of the rows and columns that make up the basis matrix ``B``
  * of a basic feasible solution.
  *
@@ -2430,25 +2419,27 @@ HighsInt Highs_feasibilityRelaxation(void* highs,
  * an LP, QP, or the relaxation of a MIP. If no IIS is found, then the
  * number of IIS columns and rows will be zero.
  *
- * @param highs                A pointer to the Highs instance.
- * @param HighsInt iis_num_col Number of columns in the IIS.
- * @param HighsInt iis_num_row Number of rows in the IIS.
- * @param HighsInt* col_index  An array of length [iis_num_col], to be
- *                             filled with the indices of original
- *                             variables in the IIS.
- * @param HighsInt* row_index  An array of length [iis_num_col], to be
- *                             filled with the indices of original
- *                             constraints in the IIS.
- * @param HighsInt* col_bound  An array of length [iis_num_col], to be
- *                             filled with the bound status of variables
- *                             in the IIS.
- * @param HighsInt* row_bound  An array of length [iis_num_col], to be
- *                             filled with the bound status of constraints
- *                             in the IIS.
- * @param HighsInt* col_status An array of length [num_col], to be filled
- *                             with the IIS status of all original variables.
- * @param HighsInt* row_status An array of length [num_col], to be filled
- *                             with the IIS status of all original constraints.
+ * @param highs                      A pointer to the Highs instance.
+ * @param const HighsInt iis_num_col Number of columns in the IIS.
+ * @param const HighsInt iis_num_row Number of rows in the IIS.
+ * @param const HighsInt* col_index  An array of length [iis_num_col], to be
+ *                                   filled with the indices of original
+ *                                   variables in the IIS.
+ * @param const HighsInt* row_index  An array of length [iis_num_col], to be
+ *                                   filled with the indices of original
+ *                                   constraints in the IIS.
+ * @param const HighsInt* col_bound  An array of length [iis_num_col], to be
+ *                                   filled with the bound status of variables
+ *                                   in the IIS.
+ * @param const HighsInt* row_bound  An array of length [iis_num_col], to be
+ *                                   filled with the bound status of constraints
+ *                                   in the IIS.
+ * @param const HighsInt* col_status An array of length [num_col], to be
+ *                                   filled with the IIS status of all original
+ *                                   variables.
+ * @param const HighsInt* row_status n array of length [num_col], to be
+ *                                   filled with the IIS status of all original
+ *                                   constraints.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -2564,7 +2555,7 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
  *
  * @returns Thse HiGHS compilation date.
  */
-const char* Highs_compilationDate(void);
+static const char* Highs_compilationDate(void);
 
 // These are deprecated because they don't follow the style guide. Constants
 // must begin with `k`.

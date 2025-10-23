@@ -10,7 +10,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const double require_optimal_objective = 0,
            const double require_iteration_count = -1) {
   SpecialLps special_lps;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   if (dev_run)
     REQUIRE(highs.setOptionValue("log_dev_level", kHighsLogDevLevelDetailed) ==
             HighsStatus::kOk);
@@ -208,7 +208,17 @@ void issue425(Highs& highs) {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   solve(highs, "on", "simplex", require_model_status, 0, -1);
   solve(highs, "off", "simplex", require_model_status, 0, 3);
-  solve(highs, "off", "ipm", require_model_status, 0, 4);
+  const bool use_hipo =
+#ifdef HIPO
+      true;
+#else
+      false;
+#endif
+  if (use_hipo) {
+    solve(highs, "off", "ipm", require_model_status, 0, -15);
+  } else {
+    solve(highs, "off", "ipx", require_model_status, 0, 4);
+  }
 }
 
 void issue669(Highs& highs) {
@@ -517,7 +527,16 @@ void almostNotUnbounded(Highs& highs) {
   //  REQUIRE(highs.writeModel("epsilon_unbounded.mps") ==
   //  HighsStatus::WARNING);
   solve(highs, "off", "simplex", require_model_status0);
-  solve(highs, "off", "ipm", require_model_status0);
+  const bool use_hipo_if_in_build = false;
+  if (use_hipo_if_in_build) {
+    // HiPO_fails due to infinite loop
+    //
+    // Prevent infinite loop in HiPO
+    highs.setOptionValue("ipm_iteration_limit", 200);
+    solve(highs, "off", "ipm", require_model_status0);
+  } else {
+    solve(highs, "off", "ipx", require_model_status0);
+  }
 
   // LP is feasible on [1+alpha, alpha] with objective -1 so optimal,
   // but has open set of optimal solutions
@@ -649,108 +668,108 @@ void smallValue(Highs& highs) {
 
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   distillation(highs);
 }
 
 TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue272(highs);
 }
 TEST_CASE("LP-280", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue280(highs);
 }
 TEST_CASE("LP-282", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue282(highs);
 }
 TEST_CASE("LP-285", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue285(highs);
 }
 
 TEST_CASE("LP-295", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue295(highs);
 }
 
 TEST_CASE("LP-306", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue306(highs);
 }
 TEST_CASE("LP-316", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue316(highs);
 }
 TEST_CASE("LP-425", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue425(highs);
 }
 TEST_CASE("LP-669", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue669(highs);
 }
 TEST_CASE("LP-galenet", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   mpsGalenet(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   primalDualInfeasible1(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   primalDualInfeasible2(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible3", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   primalDualInfeasible3(highs);
 }
 TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   mpsUnbounded(highs);
 }
 
 // for some reason hangs on IPX with presolve off: add to doctest
 TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   mpsGas11(highs);
 }
 
 TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   almostNotUnbounded(highs);
 }
 TEST_CASE("LP-singular-starting-basis", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   singularStartingBasis(highs);
 }
 TEST_CASE("LP-unconstrained", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   unconstrained(highs);
 }
 
 TEST_CASE("LP-small-value", "[highs_test_special_lps]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   smallValue(highs);
 }

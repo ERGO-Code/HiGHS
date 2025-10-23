@@ -468,6 +468,14 @@ class Highs {
   }
 
   /**
+   * @brief Return a const pointer to the original row indices for the
+   * presolved model
+   */
+  const HighsInt* getPresolveOrigRowsIndex() const {
+    return presolve_.data_.postSolveStack.getOrigRowsIndex();
+  }
+
+  /**
    * @brief Return an LP associated with a MIP and its solution, with
    * each integer variable fixed to the value it takes in the MIP
    * solution. If no solution is available, an error is returned.
@@ -582,13 +590,6 @@ class Highs {
                                  const bool constraint,
                                  const HighsInt method = 0,
                                  const double ill_conditioning_bound = 1e-4);
-
-  /**
-   * @brief Get the suggested objective and bound scaling for the incumbent
-   * model
-   */
-  HighsStatus getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
-                                       HighsInt& suggested_bound_scale);
 
   /**
    * @brief Get (any) irreducible infeasible subsystem (IIS)
@@ -1220,6 +1221,26 @@ class Highs {
   HighsStatus setBasis();
 
   /**
+   * @brief Return a const reference to the internal sub-solver call and time
+   * instance
+   */
+  const HighsSubSolverCallTime& getSubSolverCallTime() const {
+    return sub_solver_call_time_;
+  }
+
+  /**
+   * @brief Report internal sub-solver call and time instance
+   */
+  void reportSubSolverCallTime() const;
+
+  /**
+   * @brief Initialise the internal sub-solver call and time instance
+   */
+  void initialiseSubSolverCallTime() {
+    this->sub_solver_call_time_.initialise();
+  }
+
+  /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
    * if successful, set the internal HighsBasis and HighsSolution
    * instance
@@ -1272,14 +1293,14 @@ class Highs {
   }
 
   /**
-   * @Brief Put a copy of the current iterate - basis; invertible
+   * @brief Put a copy of the current iterate - basis; invertible
    * representation and dual edge weights - into storage within
    * HSimplexNla. Advanced method: for HiGHS MIP solver
    */
   HighsStatus putIterate();
 
   /**
-   * @Brief Get a copy of the iterate stored within HSimplexNla and
+   * @brief Get a copy of the iterate stored within HSimplexNla and
    * overwrite the current iterate. Advanced method: for HiGHS MIP
    * solver
    */
@@ -1314,7 +1335,7 @@ class Highs {
                                        HVector& row_ep_buffer);
 
   /**
-   * @Brief Get the primal simplex phase 1 dual values. Advanced
+   * @brief Get the primal simplex phase 1 dual values. Advanced
    * method: for HiGHS IIS calculation
    */
   const std::vector<double>& getPrimalPhase1Dual() const {
@@ -1512,6 +1533,8 @@ class Highs {
   HEkk ekk_instance_;
 
   HighsPresolveLog presolve_log_;
+
+  HighsSubSolverCallTime sub_solver_call_time_;
 
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether
@@ -1731,10 +1754,6 @@ class Highs {
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
   HighsStatus optionChangeAction();
-
-  HighsStatus userScaleModel(HighsUserScaleData& data);
-  HighsStatus userScaleSolution(HighsUserScaleData& data,
-                                bool update_kkt = false);
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
                                      const bool constraint,
                                      const HighsInt method,

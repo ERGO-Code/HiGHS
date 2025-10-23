@@ -1706,20 +1706,15 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
          basis.row_status.size() == static_cast<size_t>(lp.num_row_);
 }
 
-bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
-                       const HighsInfo& info, const std::string& message) {
+void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
+                         const HighsInfo& info, const std::string& message) {
   const HighsLogOptions& log_options = options.log_options;
-  double mip_feasibility_tolerance = options.mip_feasibility_tolerance;
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
   double optimality_tolerance = options.optimality_tolerance;
-  const bool is_mip = lp.isMip();
-  if (is_mip) {
-    primal_feasibility_tolerance = mip_feasibility_tolerance;
-  } else if (options.kkt_tolerance != kDefaultKktTolerance) {
-    mip_feasibility_tolerance = options.kkt_tolerance;
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
     primal_feasibility_tolerance = options.kkt_tolerance;
     dual_feasibility_tolerance = options.kkt_tolerance;
     primal_residual_tolerance = options.kkt_tolerance;
@@ -1728,44 +1723,34 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
   }
 
   const bool force_report = false;
-  const bool complementarity_error =
-      !is_mip && info.primal_dual_objective_error > optimality_tolerance;
-  const bool integrality_error =
-      is_mip && info.max_integrality_violation >= mip_feasibility_tolerance;
   const bool has_kkt_failures =
-      integrality_error || info.num_primal_infeasibilities > 0 ||
+      info.num_primal_infeasibilities > 0 ||
       info.num_dual_infeasibilities > 0 ||
       info.num_primal_residual_errors > 0 ||
-      info.num_dual_residual_errors > 0 || complementarity_error;
-  if (!has_kkt_failures && !force_report) return has_kkt_failures;
+      info.num_dual_residual_errors > 0 ||
+      info.primal_dual_objective_error > optimality_tolerance;
+  if (!has_kkt_failures && !force_report) return;
 
   HighsLogType log_type =
       has_kkt_failures ? HighsLogType::kWarning : HighsLogType::kInfo;
 
-  highsLogUser(log_options, log_type, "Solution optimality conditions%s%s\n",
+  highsLogUser(log_options, log_type, "LP solution KKT conditions%s%s\n",
                message == "" ? "" : ": ", message == "" ? "" : message.c_str());
-  if (is_mip && info.max_integrality_violation >= 0)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "    max      %8.3g                                  "
-                 "integrality violations"
-                 "     (tolerance = %4.0e)\n",
-                 info.max_integrality_violation, mip_feasibility_tolerance);
-  if (info.num_primal_infeasibilities >= 0)
-    highsLogUser(
-        log_options, HighsLogType::kInfo,
-        "num/max %6d / %8.3g (relative %6d / %8.3g) primal "
-        "infeasibilities     (tolerance = %4.0e)\n",
-        int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
-        int(info.num_relative_primal_infeasibilities),
-        info.max_relative_primal_infeasibility, primal_feasibility_tolerance);
-  if (info.num_dual_infeasibilities >= 0)
-    highsLogUser(
-        log_options, HighsLogType::kInfo,
-        "num/max %6d / %8.3g (relative %6d / %8.3g)   dual "
-        "infeasibilities     (tolerance = %4.0e)\n",
-        int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
-        int(info.num_relative_dual_infeasibilities),
-        info.max_relative_dual_infeasibility, dual_feasibility_tolerance);
+
+  highsLogUser(
+      log_options, HighsLogType::kInfo,
+      "num/max %6d / %8.3g (relative %6d / %8.3g) primal "
+      "infeasibilities     (tolerance = %4.0e)\n",
+      int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
+      int(info.num_relative_primal_infeasibilities),
+      info.max_relative_primal_infeasibility, primal_feasibility_tolerance);
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "num/max %6d / %8.3g (relative %6d / %8.3g)   dual "
+               "infeasibilities     (tolerance = %4.0e)\n",
+               int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
+               int(info.num_relative_dual_infeasibilities),
+               info.max_relative_dual_infeasibility,
+               dual_feasibility_tolerance);
   if (info.num_primal_residual_errors >= 0)
     highsLogUser(
         log_options, HighsLogType::kInfo,
@@ -1793,10 +1778,9 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
         info.primal_dual_objective_error, optimality_tolerance);
   }
   if (printf_kkt) {
-    printf("grepKktFailures,%s,%s,%s,%g,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",
+    printf("grepLpKktFailures,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",
            options.solver.c_str(), lp.model_name_.c_str(),
-           lp.origin_name_.c_str(), info.max_integrality_violation,
-           int(info.num_primal_infeasibilities),
+           lp.origin_name_.c_str(), int(info.num_primal_infeasibilities),
            int(info.num_dual_infeasibilities),
            int(info.num_primal_residual_errors),
            int(info.num_dual_residual_errors),
@@ -1806,7 +1790,6 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
            int(info.num_relative_dual_residual_errors),
            info.primal_dual_objective_error);
   }
-  return has_kkt_failures;
 }
 
 bool HighsSolution::hasUndefined() const {
@@ -1828,28 +1811,60 @@ void HighsSolution::clear() {
   this->row_dual.clear();
 }
 
+void HighsSolution::print(const std::string& prefix,
+                          const std::string& message) const {
+  HighsInt num_col = this->col_value.size();
+  HighsInt num_row = this->row_value.size();
+  printf("%s HighsSolution(num_col = %d, num_row = %d): %s\n", prefix.c_str(),
+         int(num_col), int(num_row), message.c_str());
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    printf("%s col_value[%3d] = %11.4g\n", prefix.c_str(), int(iCol),
+           this->col_value[iCol]);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    printf("%s row_value[%3d] = %11.4g\n", prefix.c_str(), int(iRow),
+           this->row_value[iRow]);
+
+  num_col = this->col_dual.size();
+  num_row = this->row_dual.size();
+  printf("%s HighsSolution(num_col = %d, num_row = %d): %s\n", prefix.c_str(),
+         int(num_col), int(num_row), message.c_str());
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    printf("%s col_dual[%3d] = %11.4g\n", prefix.c_str(), int(iCol),
+           this->col_dual[iCol]);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    printf("%s row_dual[%3d] = %11.4g\n", prefix.c_str(), int(iRow),
+           this->row_dual[iRow]);
+}
+
 void HighsObjectiveSolution::clear() { this->col_value.clear(); }
 
-void HighsBasis::print(std::string message) const {
+void HighsBasis::print(const std::string& prefix,
+                       const std::string& message) const {
+  this->printScalars(prefix, message);
   if (!this->useful) return;
-  this->printScalars(message);
   for (HighsInt iCol = 0; iCol < HighsInt(this->col_status.size()); iCol++)
-    printf("Basis: col_status[%2d] = %d\n", int(iCol),
+    printf("%s HighsBasis: col_status[%2d] = %d\n", prefix.c_str(), int(iCol),
            int(this->col_status[iCol]));
   for (HighsInt iRow = 0; iRow < HighsInt(this->row_status.size()); iRow++)
-    printf("Basis: row_status[%2d] = %d\n", int(iRow),
+    printf("%s HighsBasis: row_status[%2d] = %d\n", prefix.c_str(), int(iRow),
            int(this->row_status[iRow]));
 }
 
-void HighsBasis::printScalars(std::string message) const {
-  printf("\nBasis: %s\n", message.c_str());
-  printf(" valid = %d\n", this->valid);
-  printf(" alien = %d\n", this->alien);
-  printf(" useful = %d\n", this->useful);
-  printf(" was_alien = %d\n", this->was_alien);
-  printf(" debug_id = %d\n", int(this->debug_id));
-  printf(" debug_update_count = %d\n", int(this->debug_update_count));
-  printf(" debug_origin_name = %s\n", this->debug_origin_name.c_str());
+void HighsBasis::printScalars(const std::string& prefix,
+                              const std::string& message) const {
+  HighsInt num_col = this->col_status.size();
+  HighsInt num_row = this->row_status.size();
+  printf("\n%s HighsBasis(num_col = %d, num_row = %d): %s\n", prefix.c_str(),
+         int(num_col), int(num_row), message.c_str());
+  printf("%s valid = %d\n", prefix.c_str(), this->valid);
+  printf("%s alien = %d\n", prefix.c_str(), this->alien);
+  printf("%s useful = %d\n", prefix.c_str(), this->useful);
+  printf("%s was_alien = %d\n", prefix.c_str(), this->was_alien);
+  printf("%s debug_id = %d\n", prefix.c_str(), int(this->debug_id));
+  printf("%s debug_update_count = %d\n", prefix.c_str(),
+         int(this->debug_update_count));
+  printf("%s debug_origin_name = %s\n", prefix.c_str(),
+         this->debug_origin_name.c_str());
 }
 
 void HighsBasis::invalidate() {
