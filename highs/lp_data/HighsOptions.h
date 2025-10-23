@@ -704,10 +704,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string = new OptionRecordString(
-        kSolverString,
-        "LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
-        advanced, &solver, kHighsChooseString);
+    record_string =
+        new OptionRecordString(kSolverString,
+                               "LP solver option: \"choose\", \"simplex\", "
+                               "\"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
+                               advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -1221,16 +1222,17 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_min_logging_interval, 0, 5, kHighsInf);
     records.push_back(record_double);
 
-    record_string = new OptionRecordString(
-        kMipLpSolverString,
-        "MIP LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\" or \"hipo\"",
-        advanced, &mip_lp_solver, kHighsChooseString);
+    record_string =
+        new OptionRecordString(kMipLpSolverString,
+                               "MIP LP solver option: \"choose\", \"simplex\", "
+                               "\"ipm\", \"ipx\" or \"hipo\"",
+                               advanced, &mip_lp_solver, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kMipIpmSolverString,
-                               "MIP IPM solver option: \"choose\", \"ipx\" or \"hipo\"",
-                               advanced, &mip_ipm_solver, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kMipIpmSolverString,
+        "MIP IPM solver option: \"choose\", \"ipx\" or \"hipo\"", advanced,
+        &mip_ipm_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_double = new OptionRecordDouble(
