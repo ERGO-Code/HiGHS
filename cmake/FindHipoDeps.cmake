@@ -106,7 +106,7 @@ else()
             set (BLA_VENDOR Apple)
         elseif(LINUX)
             set (BLA_VENDOR OpenBLAS)
-        elseif(WIN31)
+        elseif(WIN32)
             set (BLA_VENDOR OpenBLAS)
         endif()
 
