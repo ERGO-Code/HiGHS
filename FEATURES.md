@@ -18,16 +18,18 @@ Only for LPs is there a choice of solver. Previously, when setting the `solver` 
 
 As per [#2487](https://github.com/ERGO-Code/HiGHS/issues/2487), trivial heuristics now run before feasibility jump (FJ), and FJ will use any existing incumbent. FJ will clip any finite variable values in the incumbent to lower and upper bounds, and falls back to the existing logic (lower bound if finite, else upper bound if finite, else 0) for any infinite values in the incumbent.
 
-Prompted by [#2460](https://github.com/ERGO-Code/HiGHS/issues/2460), the options `user_cost_scale` and `user_bound_scale` apply uniform (power-of-two) scaling to the objective and bounds of a model, and now respect the following restrictions
+Prompted by [#2460](https://github.com/ERGO-Code/HiGHS/issues/2460), the options `user_objective_scale` and `user_bound_scale` apply uniform (power-of-two) scaling to the objective and bounds of a model, and now respect the following restrictions
 - For a MIP, column bounds cannot be scaled, so the scaling is achieved by scaling the cost and constraint matrix column
 - For a QP, Hessian entries must be scaled down (up) when bounds are scaled up (down) so that all terms in the objective are scaled by a constant.
 
-After HiGHS determines and logs the coefficient ranges and warns about extreme values, it recommends values of `user_cost_scale` and `user_bound_scale` if
+Formerly the options `user_cost_scale` and `user_bound_scale` allowed uniform (power-of-two) scaling to the costs and bounds of an LP. The option `user_cost_scale` is now replaced by `user_objective_scale`.
+
+After HiGHS determines and logs the coefficient ranges and warns about extreme values, it recommends values of `user_objective_scale` and `user_bound_scale` if
 - All the objective coefficients (bound values) are smaller than the "excessively small constant" `kExcessivelySmallObjectiveCoefficient` (`kExcessivelySmallBoundValue`) - both of which are 1e-4 - suggesting that they are scaled up so that the largest value becomes (just over) the excessively small constant. Since the smallest value can be arbitrarily small, scaling so that this becomes (just over) the small constant is inadvisable, as the largest value could then be scaled up to an extremely large value.
 - All the objective coefficients (bound values) are larger than the "excessively large constant" `kExcessivelyLargeObjectiveCoefficient` (`kExcessivelyLargeBoundValue`) - both of which are 1e6 - suggesting that they are scaled down so that the largest value becomes (just over) the excessively large constant.
 
 The recommended objective scaling is determined with respect to the recommended bound scaling
-Users can obtain the recommended values of user_cost_scale and user_bound_scale by calling `Highs::getObjectiveBoundScaling`
+Users can obtain the recommended values of `user_objective_scale` and `user_bound_scale` by calling `Highs::getObjectiveBoundScaling`
 
 The irreducible infeasibility system (IIS) facility now detects infeasibility due to bounds on constraint activity values being incompatible with constraint bounds. A `kIisStrategyLight` mode for the `iis_strategy` option has been introduced so that only infeasibility due to incompatible variable/constraint bounds and constraint activity values is checked for. The model corresponding to any known IIS is now formed and held as a data member of the `HighsIis` class. The `HighsIis` class is available via `highspy`, and its data members are available via the C API.
 

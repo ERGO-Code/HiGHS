@@ -115,14 +115,14 @@
 - Range: {0, 2147483647}
 - Default: 0
 
-## user\_bound\_scale
-- Exponent of power-of-two bound scaling for model
+## user\_objective\_scale
+- Exponent of power-of-two objective scaling for model
 - Type: integer
 - Range: {-2147483647, 2147483647}
 - Default: 0
 
-## user\_cost\_scale
-- Exponent of power-of-two cost scaling for model
+## user\_bound\_scale
+- Exponent of power-of-two bound scaling for model
 - Type: integer
 - Range: {-2147483647, 2147483647}
 - Default: 0
