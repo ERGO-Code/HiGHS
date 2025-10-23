@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- Solver option: "simplex", "choose", "ipm", "hipo" or "pdlp". If "simplex"/"ipm"/"hipo"/"pdlp" is chosen then, for a MIP (QP) the integrality constraint (quadratic term) will be ignored
+- LP solver option: "choose", "simplex", "ipm", "ipx", "hipo" or "pdlp"
 - Type: string
 - Default: "choose"
 
@@ -241,6 +241,11 @@
 - Type: boolean
 - Default: "false"
 
+## write\_iis\_model\_file
+- Write IIS model file
+- Type: string
+- Default: ""
+
 ## mip\_detect\_symmetry
 - Whether MIP symmetry should be detected
 - Type: boolean
@@ -397,6 +402,16 @@
 - Range: [0, inf]
 - Default: 5
 
+## mip\_lp\_solver
+- MIP LP solver option: "choose", "simplex", "ipm", "ipx" or "hipo"
+- Type: string
+- Default: "choose"
+
+## mip\_ipm\_solver
+- MIP IPM solver option: "choose", "ipx" or "hipo"
+- Type: string
+- Default: "choose"
+
 ## [ipm\_optimality\_tolerance](@id option-ipm-optimality-tolerance)
 - IPM optimality tolerance
 - Type: double
@@ -410,12 +425,12 @@
 - Default: 2147483647
 
 ## [hipo\_system](@id option-hipo-system)
-- Type of Newton system for HiPO: "augmented", "normaleq" or "choose"
+- HiPO Newton system option: "augmented", "normaleq" or "choose"
 - Type: string
 - Default: "choose"
 
 ## [hipo\_parallel\_type](@id option-hipo-parallel)
-- Type of parallelism for HiPO: "tree", "node", "both"
+- HiPO parallel option: "tree", "node" or "both"
 - Type: string
 - Default: "both"
 
@@ -424,11 +439,6 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 128
-
-## pdlp\_native\_termination
-- Use native termination for PDLP solver: Default = false
-- Type: boolean
-- Default: "false"
 
 ## pdlp\_scaling
 - Scaling option for PDLP solver: Default = true
@@ -471,8 +481,14 @@
 - Range: [0, inf]
 - Default: 1e-07
 
+## iis\_strategy
+- Strategy for IIS calculation: Light test / Full and prioritise rows / Full and prioritise columns (0/1/2)
+- Type: integer
+- Range: {0, 2}
+- Default: 0
+
 ## blend\_multi\_objectives
-- Blend multiple objectives or apply lexicographically: Default = true
+- Blend multiple objectives or apply lexicographically
 - Type: boolean
 - Default: "true"
 

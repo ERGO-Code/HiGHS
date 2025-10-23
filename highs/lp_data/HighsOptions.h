@@ -706,12 +706,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kSolverString,
-        "LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\""
-#ifdef HIPO
-        ", \"hipo\" or \"pdlp\"",
-#else
-        " or \"pdlp\"",
-#endif
+        "LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
@@ -1228,23 +1223,13 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kMipLpSolverString,
-        "MIP LP solver option: \"choose\", \"simplex\", \"ipm\""
-#ifdef HIPO
-        ", \"ipx\" or \"hipo\"",
-#else
-        "or \"ipx\"",
-#endif
+        "MIP LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\" or \"hipo\"",
         advanced, &mip_lp_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string =
         new OptionRecordString(kMipIpmSolverString,
-                               "MIP IPM solver option: \"choose\""
-#ifdef HIPO
-                               ", \"ipx\" or \"hipo\"",
-#else
-                               "or \"ipx\"",
-#endif
+                               "MIP IPM solver option: \"choose\", \"ipx\" or \"hipo\"",
                                advanced, &mip_ipm_solver, kHighsChooseString);
     records.push_back(record_string);
 
