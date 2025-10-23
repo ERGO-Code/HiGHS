@@ -7,10 +7,16 @@
 
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
-// #include "GKlib.h"
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
+
+// define correct int type for Metis before header is included
+#ifdef HIGHSINT64
+#define IDXTYPEWIDTH 64
+#else
+#define IDXTYPEWIDTH 32
+#endif
 #include "metis.h"
 
 namespace hipo {
@@ -104,7 +110,7 @@ Int Analyse::getPermutation() {
     }
   }
 
-  Int options[METIS_NOPTIONS];
+  idx_t options[METIS_NOPTIONS];
   METIS_SetDefaultOptions(options);
   options[METIS_OPTION_SEED] = kMetisSeed;
 

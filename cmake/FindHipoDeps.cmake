@@ -6,11 +6,6 @@ endif()
 
 set(USE_CMAKE_FIND_BLAS ON)
 
-# if ((NOT BLAS_LIBRARIES STREQUAL "") OR
-#     (NOT BLA_VENDOR STREQUAL ""))
-#     set(USE_CMAKE_FIND_BLAS ON)
-# endif()
-
 # Optionally set the vendor:
 # set(BLA_VENDOR libblastrampoline)
 
