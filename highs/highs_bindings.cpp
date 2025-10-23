@@ -1506,7 +1506,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("col_bound", &HighsIis::col_bound_)
       .def_readwrite("row_bound", &HighsIis::row_bound_)
       .def_readwrite("info", &HighsIis::info_)
-      .def_readwrite("model", &HighsModel::model_);
+      .def_readwrite("model", &HighsIis::model_);
   // structs
   py::class_<HighsSolution>(m, "HighsSolution", py::module_local())
       .def(py::init<>())
