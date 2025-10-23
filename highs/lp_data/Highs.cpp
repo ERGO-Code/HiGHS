@@ -1026,6 +1026,7 @@ HighsStatus Highs::run() {
       status = HighsStatus::kWarning;
     }
   }
+  if (this->options_.log_dev_level > 0) this->reportSubSolverCallTime();
   return status;
 }
 
