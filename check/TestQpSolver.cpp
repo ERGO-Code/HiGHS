@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
