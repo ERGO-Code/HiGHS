@@ -46,8 +46,8 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
 
     HighsInt user_objective_scale = 4;
     double user_objective_scale_value = std::pow(2, user_objective_scale);
-    REQUIRE(highs.setOptionValue("user_cost_scale", user_objective_scale) ==
-            HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue("user_objective_scale",
+                                 user_objective_scale) == HighsStatus::kOk);
 
     highs.run();
 
@@ -57,7 +57,8 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
 
     model = mip_model;
     REQUIRE(highs.setOptionValue("user_bound_scale", 0) == HighsStatus::kOk);
-    REQUIRE(highs.setOptionValue("user_cost_scale", 0) == HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue("user_objective_scale", 0) ==
+            HighsStatus::kOk);
   }
 
   highs.resetGlobalScheduler(true);
@@ -96,14 +97,15 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
 
-  REQUIRE(highs.setOptionValue("user_cost_scale", -30) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("user_objective_scale", -30) ==
+          HighsStatus::kOk);
   highs.clearSolver();
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(solution.col_value[0] == 0);
   REQUIRE(solution.col_value[1] == 0);
 
-  REQUIRE(highs.setOptionValue("user_cost_scale", 0) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("user_objective_scale", 0) == HighsStatus::kOk);
 
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
@@ -114,7 +116,8 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   highs.readModel(filename);
 
-  REQUIRE(highs.setOptionValue("user_cost_scale", -30) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("user_objective_scale", -30) ==
+          HighsStatus::kOk);
 
   highs.run();
 
@@ -198,7 +201,7 @@ HighsHessian hessian(const double value) {
 }
 
 void testUserScale(Highs& h) {
-  h.setOptionValue("user_cost_scale", 0);
+  h.setOptionValue("user_objective_scale", 0);
   h.setOptionValue("user_bound_scale", 0);
   if (dev_run)
     printf("\n---------------\nWithout user scaling\n---------------\n");
@@ -224,7 +227,7 @@ void testUserScale(Highs& h) {
     suggested_bound_scale = 1;
   }
 
-  h.setOptionValue("user_cost_scale", suggested_objective_scale);
+  h.setOptionValue("user_objective_scale", suggested_objective_scale);
   h.setOptionValue("user_bound_scale", suggested_bound_scale);
   h.clearSolver();
   h.run();

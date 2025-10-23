@@ -1221,7 +1221,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("objective_target", &HighsOptions::objective_target)
       .def_readwrite("threads", &HighsOptions::threads)
       .def_readwrite("user_bound_scale", &HighsOptions::user_bound_scale)
-      .def_readwrite("user_cost_scale", &HighsOptions::user_cost_scale)
+      .def_readwrite("user_objective_scale", &HighsOptions::user_objective_scale)
       .def_readwrite("highs_debug_level", &HighsOptions::highs_debug_level)
       .def_readwrite("highs_analysis_level",
                      &HighsOptions::highs_analysis_level)

@@ -2457,13 +2457,13 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
                       HighsInt* col_bound, HighsInt* row_bound,
                       HighsInt* col_status, HighsInt* row_status);
 /**
- * Identify suggested values of the options user_cost_scale and
+ * Identify suggested values of the options user_objective_scale and
  * user_bound_scale to address extremely large or small objective
  * coefficients and bound values
  *
  * @param highs                                A pointer to the Highs instance.
  * @param HighsInt* suggested_objective_scale  The suggested value of
- * user_cost_scale
+ * user_objective_scale
  * @param HighsInt* suggested_bound_scale      The suggested value of
  * user_bound_scale
  *

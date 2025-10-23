@@ -2272,7 +2272,7 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         [status, dual_objective_value] = h.getDualObjectiveValue()
         self.assertAlmostEqual(unscaled_objective_value, dual_objective_value)
         [status, suggested_objective_scale, suggested_bound_scale] = h.getObjectiveBoundScaling();
-        h.setOptionValue("user_cost_scale", suggested_objective_scale)
+        h.setOptionValue("user_objective_scale", suggested_objective_scale)
         h.setOptionValue("user_bound_scale", suggested_bound_scale)
         h.run()
         scaled_objective_value = h.getObjectiveValue()

@@ -3660,9 +3660,9 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
 
 void initialiseUserScaleData(const HighsOptions& options,
                              HighsUserScaleData& user_scale_data) {
-  user_scale_data.initialise(options.user_cost_scale, options.user_bound_scale,
-                             options.infinite_cost, options.infinite_bound,
-                             options.small_matrix_value,
+  user_scale_data.initialise(options.user_objective_scale,
+                             options.user_bound_scale, options.infinite_cost,
+                             options.infinite_bound, options.small_matrix_value,
                              options.large_matrix_value);
 }
 

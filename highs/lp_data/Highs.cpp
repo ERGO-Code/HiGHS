@@ -954,7 +954,7 @@ HighsStatus Highs::run() {
     // Indicate that the scaling has been applied
     user_scale_data.applied = true;
     // Zero the user scale values to prevent further scaling
-    this->options_.user_cost_scale = 0;
+    this->options_.user_objective_scale = 0;
     this->options_.user_bound_scale = 0;
   }
 
@@ -1001,7 +1001,7 @@ HighsStatus Highs::run() {
     unscale_status = this->userScaleSolution(user_scale_data, update_kkt);
     // Restore the user scale values, remembering that they've been
     // negated to undo user scaling
-    this->options_.user_cost_scale = -user_scale_data.user_objective_scale;
+    this->options_.user_objective_scale = -user_scale_data.user_objective_scale;
     this->options_.user_bound_scale = -user_scale_data.user_bound_scale;
     // Indicate that the scaling has not been applied
     user_scale_data.applied = false;

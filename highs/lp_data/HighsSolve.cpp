@@ -363,7 +363,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   std::stringstream message;
   if (user_cost_or_bound_scale) {
     if (user_scale_data.user_objective_scale)
-      message << highsFormatToString(" user_cost_scale option value of %d",
+      message << highsFormatToString(" user_objective_scale option value of %d",
                                      user_scale_data.user_objective_scale);
     if (user_scale_data.user_bound_scale) {
       if (user_scale_data.user_objective_scale) message << " and";
@@ -622,7 +622,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
       message << ", or";
     }
     message << highsFormatToString(
-        " setting the user_cost_scale option to %d",
+        " setting the user_objective_scale option to %d",
         int(user_scale_data.suggested_user_objective_scale));
   }
   if (order_of_magnitude_message || dl_user_objective_scale)
