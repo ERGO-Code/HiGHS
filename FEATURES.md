@@ -1,6 +1,6 @@
-## Build changes
-
 ## Code changes
+
+HiPO is out! Our new factorisation-based interior point solver, developed by Filippo Zanetti, is officially integrated in HiGHS! HiPO is multi-threaded and will improve the performance on many large instances. Metis and BLAS are required for HiPO. In this version, HiPO will be available when HiGHS is built from source with CMake. It can be accessed from C++, C and will also be available when HiGHS is called from JuMP. In a future release, HiPO will be available from Python, C# and more.
 
 Forcing column reduction now checks the bound on the column dual rather than whether the dual row activity is zero fixing [#2409](https://github.com/ERGO-Code/HiGHS/issues/2409)
 
@@ -45,3 +45,6 @@ Prompted by [#2581](https://github.com/ERGO-Code/HiGHS/issues/2581), the QP exam
 
 Prompted by [#2582](https://github.com/ERGO-Code/HiGHS/issues/2582), the C API constants are declared `static const` to prevent multiple definition linker errors
 
+## Build changes
+
+The Bazel build now supports building with Cuda with an optional parameter `cupdlp_gpu`.
