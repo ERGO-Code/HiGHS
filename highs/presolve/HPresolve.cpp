@@ -3167,6 +3167,10 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
   if (colDeleted[col]) return Result::kOk;
 
+  // singleton column stuffing
+  HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
+  if (colDeleted[col]) return Result::kOk;
+
   // update column implied bounds
   updateColImpliedBounds(row, col, colCoef);
 
@@ -4327,6 +4331,10 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
   if (colDeleted[col]) return Result::kOk;
 
+  // singleton column stuffing
+  HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
+  if (colDeleted[col]) return Result::kOk;
+
   // update dual implied bounds of all rows in given column
   if (model->integrality_[col] != HighsVarType::kInteger)
     updateRowDualImpliedBounds(col);
@@ -4656,6 +4664,42 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         changeColLower(col, newBound);
     }
   }
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::singletonColStuffing(
+    HighsPostsolveStack& postsolve_stack, HighsInt col) {
+  // singleton column stuffing
+  if (colDeleted[col] || colsize[col] != 1) return;
+
+  std::vector<std::tuple<HighsInt, double, double>> lowerSumCols;
+  std::vector<std::tuple<HighsInt, double, double>> upperSumCols;
+
+  auto sortCols = [&](std::vector<std::tuple<HighsInt, double, double>>& vec) {
+    pdqsort(vec.begin(), vec.end(),
+            [&](const std::tuple<HighsInt, double, double>& col1,
+                const std::tuple<HighsInt, double, double>& col2) {
+              return std::get<2>(col1) < std::get<2>(col2);
+            });
+  };
+
+  HighsInt row = Arow[colhead[col]];
+  for (auto& nz : getRowVector(row)) {
+    if (colsize[nz.index()] != 1 ||
+        model->col_lower_[nz.index()] == -kHighsInf ||
+        model->col_upper_[nz.index()] == kHighsInf)
+      continue;
+    if (nz.value() > 0 && model->col_cost_[nz.index()] < 0)
+      upperSumCols.push_back(std::make_tuple(
+          nz.index(), nz.value(), model->col_cost_[nz.index()] / nz.value()));
+    else if (nz.value() < 0 && model->col_cost_[nz.index()] > 0)
+      lowerSumCols.push_back(std::make_tuple(
+          nz.index(), nz.value(), -model->col_cost_[nz.index()] / nz.value()));
+  }
+
+  sortCols(lowerSumCols);
+  sortCols(upperSumCols);
+
   return Result::kOk;
 }
 

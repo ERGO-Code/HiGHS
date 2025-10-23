@@ -392,6 +392,9 @@ class HPresolve {
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
+  Result singletonColStuffing(HighsPostsolveStack& postsolve_stack,
+                              HighsInt col);
+
   double computeImpliedLowerBound(HighsInt col, HighsInt boundCol = -1,
                                   double boundColValue = kHighsInf);
 
