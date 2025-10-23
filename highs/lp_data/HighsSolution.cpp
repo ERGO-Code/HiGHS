@@ -1706,15 +1706,20 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
          basis.row_status.size() == static_cast<size_t>(lp.num_row_);
 }
 
-void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
-                         const HighsInfo& info, const std::string& message) {
+bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
+                       const HighsInfo& info, const std::string& message) {
   const HighsLogOptions& log_options = options.log_options;
+  double mip_feasibility_tolerance = options.mip_feasibility_tolerance;
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
   double optimality_tolerance = options.optimality_tolerance;
-  if (options.kkt_tolerance != kDefaultKktTolerance) {
+  const bool is_mip = lp.isMip();
+  if (is_mip) {
+    primal_feasibility_tolerance = mip_feasibility_tolerance;
+  } else if (options.kkt_tolerance != kDefaultKktTolerance) {
+    mip_feasibility_tolerance = options.kkt_tolerance;
     primal_feasibility_tolerance = options.kkt_tolerance;
     dual_feasibility_tolerance = options.kkt_tolerance;
     primal_residual_tolerance = options.kkt_tolerance;
@@ -1723,34 +1728,44 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
   }
 
   const bool force_report = false;
+  const bool complementarity_error =
+      !is_mip && info.primal_dual_objective_error > optimality_tolerance;
+  const bool integrality_error =
+      is_mip && info.max_integrality_violation >= mip_feasibility_tolerance;
   const bool has_kkt_failures =
-      info.num_primal_infeasibilities > 0 ||
+      integrality_error || info.num_primal_infeasibilities > 0 ||
       info.num_dual_infeasibilities > 0 ||
       info.num_primal_residual_errors > 0 ||
-      info.num_dual_residual_errors > 0 ||
-      info.primal_dual_objective_error > optimality_tolerance;
-  if (!has_kkt_failures && !force_report) return;
+      info.num_dual_residual_errors > 0 || complementarity_error;
+  if (!has_kkt_failures && !force_report) return has_kkt_failures;
 
   HighsLogType log_type =
       has_kkt_failures ? HighsLogType::kWarning : HighsLogType::kInfo;
 
-  highsLogUser(log_options, log_type, "LP solution KKT conditions%s%s\n",
+  highsLogUser(log_options, log_type, "Solution optimality conditions%s%s\n",
                message == "" ? "" : ": ", message == "" ? "" : message.c_str());
-
-  highsLogUser(
-      log_options, HighsLogType::kInfo,
-      "num/max %6d / %8.3g (relative %6d / %8.3g) primal "
-      "infeasibilities     (tolerance = %4.0e)\n",
-      int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
-      int(info.num_relative_primal_infeasibilities),
-      info.max_relative_primal_infeasibility, primal_feasibility_tolerance);
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "num/max %6d / %8.3g (relative %6d / %8.3g)   dual "
-               "infeasibilities     (tolerance = %4.0e)\n",
-               int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
-               int(info.num_relative_dual_infeasibilities),
-               info.max_relative_dual_infeasibility,
-               dual_feasibility_tolerance);
+  if (is_mip && info.max_integrality_violation >= 0)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "    max      %8.3g                                  "
+                 "integrality violations"
+                 "     (tolerance = %4.0e)\n",
+                 info.max_integrality_violation, mip_feasibility_tolerance);
+  if (info.num_primal_infeasibilities >= 0)
+    highsLogUser(
+        log_options, HighsLogType::kInfo,
+        "num/max %6d / %8.3g (relative %6d / %8.3g) primal "
+        "infeasibilities     (tolerance = %4.0e)\n",
+        int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
+        int(info.num_relative_primal_infeasibilities),
+        info.max_relative_primal_infeasibility, primal_feasibility_tolerance);
+  if (info.num_dual_infeasibilities >= 0)
+    highsLogUser(
+        log_options, HighsLogType::kInfo,
+        "num/max %6d / %8.3g (relative %6d / %8.3g)   dual "
+        "infeasibilities     (tolerance = %4.0e)\n",
+        int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
+        int(info.num_relative_dual_infeasibilities),
+        info.max_relative_dual_infeasibility, dual_feasibility_tolerance);
   if (info.num_primal_residual_errors >= 0)
     highsLogUser(
         log_options, HighsLogType::kInfo,
@@ -1778,9 +1793,10 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
         info.primal_dual_objective_error, optimality_tolerance);
   }
   if (printf_kkt) {
-    printf("grepLpKktFailures,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",
+    printf("grepKktFailures,%s,%s,%s,%g,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",
            options.solver.c_str(), lp.model_name_.c_str(),
-           lp.origin_name_.c_str(), int(info.num_primal_infeasibilities),
+           lp.origin_name_.c_str(), info.max_integrality_violation,
+           int(info.num_primal_infeasibilities),
            int(info.num_dual_infeasibilities),
            int(info.num_primal_residual_errors),
            int(info.num_dual_residual_errors),
@@ -1790,6 +1806,7 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
            int(info.num_relative_dual_residual_errors),
            info.primal_dual_objective_error);
   }
+  return has_kkt_failures;
 }
 
 bool HighsSolution::hasUndefined() const {
