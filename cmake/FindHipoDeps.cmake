@@ -63,7 +63,7 @@ if (NOT USE_CMAKE_FIND_BLAS)
                 NO_DEFAULT_PATH)
 
             if(OPENBLAS_LIB)
-                message("Found OpenBLAS library at ${OPENBLAS_LIB}")
+                message(STATUS "Found OpenBLAS library at ${OPENBLAS_LIB}")
             else()
                 find_library(BLAS_LIB
                     NAMES blas
@@ -71,10 +71,10 @@ if (NOT USE_CMAKE_FIND_BLAS)
                     NO_DEFAULT_PATH)
 
                 if(BLAS_LIB)
-                    message("Found BLAS library at ${BLAS_LIB}")
+                    message(STATUS "Found BLAS library at ${BLAS_LIB}")
                 else()
-                    message("Did not find blas library at ${BLAS_ROOT}")
-                    message("Attempting default locations search")
+                    message(STATUS "Did not find blas library at ${BLAS_ROOT}")
+                    message(STATUS "Attempting default locations search")
                 endif()
             endif()
         endif()
@@ -85,14 +85,14 @@ if (NOT USE_CMAKE_FIND_BLAS)
                 HINTS "${BLAS_ROOT}/lib")
 
             if(OPENBLAS_LIB)
-                message("Found OpenBLAS library at ${OPENBLAS_LIB}")
+                message(STATUS "Found OpenBLAS library at ${OPENBLAS_LIB}")
             else()
                 find_library(BLAS_LIB
                     NAMES blas
                     HINTS "${BLAS_ROOT}/lib")
 
                 if(BLAS_LIB)
-                    message("Found BLAS library at ${BLAS_LIB}")
+                    message(STATUS "Found BLAS library at ${BLAS_LIB}")
                 else()
                     message(FATAL_ERROR "No BLAS library found")
                 endif()
@@ -157,7 +157,7 @@ else()
         PATHS "${METIS_ROOT}/include"
         NO_DEFAULT_PATH)
 
-    message("Found Metis header at ${METIS_PATH}")
+    message(STATUS "Found Metis header at ${METIS_PATH}")
 
     find_library(METIS_LIB
         NAMES metis libmetis
@@ -166,10 +166,10 @@ else()
         NO_DEFAULT_PATH)
 
     if(METIS_LIB)
-        message("Found Metis library at ${METIS_LIB}")
+        message(STATUS "Found Metis library at ${METIS_LIB}")
     else()
         # METIS_ROOT was not successful
-        message("Metis not found in METIS_PATH, fallback to default search.")
+        message(STATUS "Metis not found in METIS_PATH, fallback to default search.")
         if (NOT (METIS_ROOT STREQUAL ""))
             find_package(metis CONFIG)
 
@@ -213,7 +213,7 @@ if (NOT (GKLIB_ROOT STREQUAL ""))
             PATHS "${GKLIB_ROOT}/include"
             NO_DEFAULT_PATH)
 
-        message("Found GKlib header at ${GKLIB_PATH}")
+        message(STATUS "Found GKlib header at ${GKLIB_PATH}")
 
         find_library(GKLIB_LIB
             NAMES GKlib libGKlib
@@ -222,10 +222,10 @@ if (NOT (GKLIB_ROOT STREQUAL ""))
             NO_DEFAULT_PATH)
 
         if(GKLIB_LIB)
-            message("Found GKlib library at ${GKLIB_LIB}")
+            message(STATUS "Found GKlib library at ${GKLIB_LIB}")
         else()
             # GKLIB_ROOT was not successful
-            message("GKlib not found in GKLIB_PATH, fallback to default search.")
+            message(STATUS "GKlib not found in GKLIB_PATH, fallback to default search.")
             find_package(GKlib CONFIG)
 
             if (GKlib_FOUND)
