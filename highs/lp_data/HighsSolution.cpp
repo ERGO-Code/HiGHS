@@ -1840,8 +1840,8 @@ void HighsObjectiveSolution::clear() { this->col_value.clear(); }
 
 void HighsBasis::print(const std::string& prefix,
                        const std::string& message) const {
-  if (!this->useful) return;
   this->printScalars(prefix, message);
+  if (!this->useful) return;
   for (HighsInt iCol = 0; iCol < HighsInt(this->col_status.size()); iCol++)
     printf("%s HighsBasis: col_status[%2d] = %d\n", prefix.c_str(), int(iCol),
            int(this->col_status[iCol]));

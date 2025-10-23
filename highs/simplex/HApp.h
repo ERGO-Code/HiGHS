@@ -40,6 +40,23 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Copy the simplex iteration count to highs_info_ from ekk_instance
   solver_object.highs_info_.simplex_iteration_count =
       ekk_instance.iteration_count_;
+  // Identify which clock to stop. Can't inspect the basis, as there
+  // will generally be one after simplex, so have to deduce whether
+  // there was one before
+  const HighsInt sub_solver_ix =
+      solver_object.sub_solver_call_time_.run_time[kSubSolverSimplexBasis] < 0
+          ? kSubSolverSimplexBasis
+          : kSubSolverSimplexNoBasis;
+  const HighsInt sub_solver_not_ix = sub_solver_ix == kSubSolverSimplexBasis
+                                         ? kSubSolverSimplexNoBasis
+                                         : kSubSolverSimplexBasis;
+  assert(solver_object.sub_solver_call_time_.run_time[sub_solver_not_ix] >= 0);
+  (void)sub_solver_not_ix;
+  assert(solver_object.sub_solver_call_time_.run_time[sub_solver_ix] < 0);
+  // Update the call count and run time
+  solver_object.sub_solver_call_time_.num_call[sub_solver_ix]++;
+  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] +=
+      solver_object.timer_.read();
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);
@@ -100,7 +117,11 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(retained_ekk_data_ok);
     return_status = HighsStatus::kError;
   }
-
+  const HighsInt sub_solver_ix =
+      basis.valid ? kSubSolverSimplexBasis : kSubSolverSimplexNoBasis;
+  assert(solver_object.sub_solver_call_time_.run_time.size() > 0);
+  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] =
+      -solver_object.timer_.read();
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;
