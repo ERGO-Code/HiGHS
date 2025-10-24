@@ -36,6 +36,11 @@ class Highs(_Highs):
     __solver_started: Lock = Lock()
     __solver_status: Optional[HighsStatus] = None
 
+    @staticmethod
+    def float_array(vals):
+        if isinstance(vals,np.ndarray): return vals
+        return np.asarray(vals,dtype=np.float64)
+
     def __init__(self):
         super().__init__()
         self.callbacks = [HighsCallback(cb.HighsCallbackType(_), self) for _ in range(int(cb.HighsCallbackType.kCallbackMax) + 1)]
@@ -179,6 +184,15 @@ class Highs(_Highs):
         """
         return self.solve()
 
+    def getSolution(self):
+        #retriving the current solution to numpy vector fields
+        solution = super().getSolution()
+        solution.col_value = Highs.float_array(solution.col_value)
+        solution.col_dual = Highs.float_array(solution.col_dual)
+        solution.row_value = Highs.float_array(solution.row_value)
+        solution.row_dual = Highs.float_array(solution.row_dual)
+        return solution
+
     # reset the objective
     def setObjective(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None, sense: Optional[ObjSense] = None):
         """
@@ -294,7 +308,7 @@ class Highs(_Highs):
         Returns:
             The value of the variable in the solution.
         """
-        return Highs.internal_get_value(super().getSolution().col_value, var)
+        return Highs.internal_get_value(self.getSolution().col_value, var)
 
     @overload
     def vals(self, idxs: Union[Integral, highs_var, highs_cons]) -> float: ...
@@ -321,7 +335,7 @@ class Highs(_Highs):
         Returns:
             If idxs is a Mapping, returns a dict where keys are the same keys from the input idxs and values are the solution values of the corresponding variables. If idxs is an iterable, returns a list of solution values for the variables.
         """
-        return Highs.internal_get_value(super().getSolution().col_value, idxs)
+        return Highs.internal_get_value(self.getSolution().col_value, idxs)
 
     def variableName(self, var: Union[Integral, highs_var]):
         """
@@ -414,7 +428,7 @@ class Highs(_Highs):
         Returns:
             A list of values for all variables in the solution.
         """
-        return super().getSolution().col_value
+        return self.getSolution().col_value
 
     def variableDual(
         self,
@@ -429,7 +443,7 @@ class Highs(_Highs):
         Returns:
             The dual value of the specified variable in the solution.
         """
-        return Highs.internal_get_value(super().getSolution().col_dual, var)
+        return Highs.internal_get_value(self.getSolution().col_dual, var)
 
     def variableDuals(
         self,
@@ -444,7 +458,7 @@ class Highs(_Highs):
         Returns:
             If idxs is a Mapping, returns a dict where keys are the same keys from the input idxs and values are the dual values of the corresponding variables. If idxs is an iterable, returns a list of dual values for the variables.
         """
-        return Highs.internal_get_value(super().getSolution().col_dual, idxs)
+        return Highs.internal_get_value(self.getSolution().col_dual, idxs)
 
     def allVariableDuals(self):
         """
@@ -453,7 +467,7 @@ class Highs(_Highs):
         Returns:
             A list of dual values for all variables in the solution.
         """
-        return super().getSolution().col_dual
+        return self.getSolution().col_dual
 
     def constrValue(
         self,
@@ -468,7 +482,7 @@ class Highs(_Highs):
         Returns:
             The value of the specified constraint in the solution.
         """
-        return Highs.internal_get_value(super().getSolution().row_value, con)
+        return Highs.internal_get_value(self.getSolution().row_value, con)
 
     def constrValues(
         self,
@@ -483,7 +497,7 @@ class Highs(_Highs):
         Returns:
             If cons is a Mapping, returns a dict where keys are the same keys from the input cons and values are the solution values of the corresponding constraints. If cons is an iterable, returns a list of solution values for the constraints.
         """
-        return Highs.internal_get_value(super().getSolution().row_value, cons)
+        return Highs.internal_get_value(self.getSolution().row_value, cons)
 
     def allConstrValues(self):
         """
@@ -492,7 +506,7 @@ class Highs(_Highs):
         Returns:
             A list of values for all constraints in the solution.
         """
-        return super().getSolution().row_value
+        return self.getSolution().row_value
 
     def constrDual(
         self,
@@ -507,7 +521,7 @@ class Highs(_Highs):
         Returns:
             The dual value of the specified constraint in the solution.
         """
-        return Highs.internal_get_value(super().getSolution().row_dual, con)
+        return Highs.internal_get_value(self.getSolution().row_dual, con)
 
     def constrDuals(
         self,
@@ -522,7 +536,7 @@ class Highs(_Highs):
         Returns:
             If cons is a Mapping, returns a dict where keys are the same keys from the input cons and values are the dual values of the corresponding constraints. If cons is an iterable, returns a list of dual values for the constraints.
         """
-        return Highs.internal_get_value(super().getSolution().row_dual, cons)
+        return Highs.internal_get_value(self.getSolution().row_dual, cons)
 
     def allConstrDuals(self):
         """
@@ -531,7 +545,7 @@ class Highs(_Highs):
         Returns:
             A list of dual values for all constraints in the solution.
         """
-        return super().getSolution().row_dual
+        return self.getSolution().row_dual
 
     def addVariable(
         self,
