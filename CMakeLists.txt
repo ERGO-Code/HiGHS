@@ -632,6 +632,8 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
     message(FATAL_ERROR "Warning: to enable coverage, you must compile in Debug mode")
   endif()
 
+  if()
+
   # Disable IPO
   set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
   message(STATUS "Building in coverage mode")
