@@ -1727,7 +1727,7 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
     optimality_tolerance = options.kkt_tolerance;
   }
 
-  const bool force_report = false;
+  const bool force_report = options.log_dev_level >= kHighsLogDevLevelInfo;
   const bool complementarity_error =
       !is_mip && info.primal_dual_objective_error > optimality_tolerance;
   const bool integrality_error =

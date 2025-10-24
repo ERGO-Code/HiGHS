@@ -1,6 +1,6 @@
-# [Feasibilty and optimality](@id kkt)
+# [Feasibility and optimality](@id kkt)
 
-Mathematically, continuous optimization problems have exact feasibilty
+Mathematically, continuous optimization problems have exact feasibility
 and optimality conditions. However, since solvers cannot always
 satisfy these conditions exactly when using floating-point arithmetic,
 they do so to within tolerances. As explored below, some solvers aim
@@ -12,7 +12,7 @@ and can give a misleading claim of optimality. To achieve consistency,
 HiGHS reassesses the optimal solution claimed by such a solver in a
 reasonable and uniform manner.
 
-### Feasibilty and optimality conditions
+### Feasibility and optimality conditions
 
 To discuss tolerances and their use in different solvers, consider the
 standard form linear programming (LP) problem with ``n`` variables and
@@ -26,7 +26,7 @@ standard form linear programming (LP) problem with ``n`` variables and
 \end{aligned}
 ```
 
-The feasibilty and optimality conditions (KKT conditions) are that, at
+The feasibility and optimality conditions (KKT conditions) are that, at
 a point ``x``, there exist (row) dual values ``y`` and reduced costs
 (column dual values) ``s`` such that
 
