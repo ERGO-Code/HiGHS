@@ -4,17 +4,17 @@ on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: [macos-15-intel]
+    runs-on: [macos-13]
     
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: fortran-lang/setup-fortran@v1.8
+      - uses: fortran-lang/setup-fortran@v1.6
         id: setup-fortran
         with:
           compiler: gcc 
-          version: 14
+          version: 11
 
       # - name: Install GFortran
       #   run: brew install gfortran gcc
@@ -27,8 +27,8 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --version
-          gfortran-14 --version
-          cmake $GITHUB_WORKSPACE -DFORTRAN=ON -DCMAKE_Fortran_COMPILER=gfortran-14
+          gfortran-11 --version
+          cmake $GITHUB_WORKSPACE -DFORTRAN=ON 
 
       - name: Build
         shell: bash

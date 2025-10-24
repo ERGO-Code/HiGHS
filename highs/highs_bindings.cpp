@@ -18,7 +18,6 @@ using namespace pybind11::literals;
 template <typename T>
 using dense_array_t = py::array_t<T, py::array::c_style | py::array::forcecast>;
 
-// 'getter' wrapper around std::vector<T> to numpy array without copying data
 template <typename Base, typename T>
 std::function<dense_array_t<T>(const Base&)> make_readonly_ptr(
     std::vector<T> Base::* member) {
@@ -26,21 +25,6 @@ std::function<dense_array_t<T>(const Base&)> make_readonly_ptr(
     // last parameter means we keep ownership
     return dense_array_t<T>((self.*member).size(), (self.*member).data(),
                             py::cast(self));
-  };
-}
-
-// 'setter' wrapper around numpy array to std::vector<T> (copies the data from python)
-template <typename Base, typename T>
-std::function<void(Base&, dense_array_t<T>)> make_setter_ptr(
-    std::vector<T> Base::* member) {
-  return [member](Base& self, dense_array_t<T> array) -> void {
-    auto buf = array.request();
-    if (buf.ndim != 1) {
-      throw std::runtime_error("Expected a 1D array");
-    }
-    
-    (self.*member) = std::move(std::vector<T>(static_cast<T*>(buf.ptr),
-                                   static_cast<T*>(buf.ptr) + buf.shape[0]));
   };
 }
 
@@ -403,12 +387,6 @@ highs_getReducedColumnSparse(Highs* h, HighsInt col) {
                                  solution_index_ptr);
   return std::make_tuple(status, py::cast(solution_vector), solution_num_nz,
                          py::cast(solution_index));
-}
-
-std::tuple<HighsStatus, HighsLp> highs_getFixedLp(Highs* h) {
-  HighsLp lp;
-  HighsStatus status = h->getFixedLp(lp);
-  return std::make_tuple(status, lp);
 }
 
 std::tuple<HighsStatus, bool> highs_getDualRayExist(Highs* h) {
@@ -1043,7 +1021,6 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kError", HighsLogType::kError);
   py::enum_<IisStrategy>(m, "IisStrategy", py::module_local())
       .value("kIisStrategyMin", IisStrategy::kIisStrategyMin)
-      .value("kIisStrategyLight", IisStrategy::kIisStrategyLight)
       .value("kIisStrategyFromLpRowPriority",
              IisStrategy::kIisStrategyFromLpRowPriority)
       .value("kIisStrategyFromLpColPriority",
@@ -1083,8 +1060,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def(py::init<>())
       .def_readwrite("num_col_", &HighsLp::num_col_)
       .def_readwrite("num_row_", &HighsLp::num_row_)
-      .def_property("col_cost_", make_readonly_ptr(&HighsLp::col_cost_),
-                    make_setter_ptr(&HighsLp::col_cost_))
+      .def_readwrite("col_cost_", &HighsLp::col_cost_)
       .def_readwrite("col_lower_", &HighsLp::col_lower_)
       .def_readwrite("col_upper_", &HighsLp::col_upper_)
       .def_readwrite("row_lower_", &HighsLp::row_lower_)
@@ -1308,8 +1284,6 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("passHessian", &highs_passHessian)
       .def("passHessian", &highs_passHessianPointers)
       .def("addLinearObjective", &highs_addLinearObjective)
-      .def("getNumLinearObjectives", &Highs::getNumLinearObjectives)
-      .def("getLinearObjective", &Highs::getLinearObjective)
       .def("clearLinearObjectives", &Highs::clearLinearObjectives)
       .def("passColName", &Highs::passColName)
       .def("passRowName", &Highs::passRowName)
@@ -1417,7 +1391,6 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getReducedRowSparse", &highs_getReducedRowSparse)
       .def("getReducedColumn", &highs_getReducedColumn)
       .def("getReducedColumnSparse", &highs_getReducedColumnSparse)
-      .def("getFixedLp", &highs_getFixedLp)
       .def("getDualRayExist", &highs_getDualRayExist)
       .def("getDualRay", &highs_getDualRay)
       .def("getDualUnboundednessDirectionExist",
@@ -1452,7 +1425,6 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
 
       .def("writeModel", &Highs::writeModel)
       .def("writePresolvedModel", &Highs::writePresolvedModel)
-      .def("writeIisModel", &Highs::writeIisModel)
       .def("crossover", &Highs::crossover)
       .def("changeObjectiveSense", &Highs::changeObjectiveSense)
       .def("changeObjectiveOffset", &Highs::changeObjectiveOffset)

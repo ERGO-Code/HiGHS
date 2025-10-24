@@ -25,22 +25,19 @@ void highsOpenLogFile(HighsLogOptions& log_options,
   OptionStatus status =
       getOptionIndex(log_options, "log_file", option_records, index);
   assert(status == OptionStatus::kOk);
-  if (log_options.log_stream != nullptr) {
+  if (log_options.log_stream != NULL) {
     // Current log file stream is not null, so flush and close it
     fflush(log_options.log_stream);
     fclose(log_options.log_stream);
-    // Set the stream to null to give a test whether it has been
-    // closed (and avoid trying to close it again which causes an
-    // error)
-    log_options.log_stream = nullptr;
   }
-  assert(!log_options.log_stream);
-  // If new log file name is not empty, open it, appending if possible
-  //
-  // If fopen fails then it returns nullptr, so log_file is open for
-  // writing or nullptr
-  if (log_file.compare(""))
+  if (log_file.compare("")) {
+    // New log file name is not empty, so open it, appending if
+    // possible
     log_options.log_stream = fopen(log_file.c_str(), "a");
+  } else {
+    // New log file name is empty, so set the stream to null
+    log_options.log_stream = NULL;
+  }
   OptionRecordString& option = *(OptionRecordString*)option_records[index];
   option.assignvalue(log_file);
 }

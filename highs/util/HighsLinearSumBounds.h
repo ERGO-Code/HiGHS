@@ -90,25 +90,17 @@ class HighsLinearSumBounds {
                            double oldImplVarLower,
                            HighsInt oldImplVarLowerSource);
 
-  double getResidualSumLower(HighsInt sum, HighsInt var, double coefficient,
-                             HighsInt boundVar = -1,
-                             double boundVarCoefficient = -kHighsInf,
-                             double boundVarValue = -kHighsInf) const;
+  double getResidualSumLower(HighsInt sum, HighsInt var,
+                             double coefficient) const;
 
-  double getResidualSumUpper(HighsInt sum, HighsInt var, double coefficient,
-                             HighsInt boundVar = -1,
-                             double boundVarCoefficient = -kHighsInf,
-                             double boundVarValue = -kHighsInf) const;
+  double getResidualSumUpper(HighsInt sum, HighsInt var,
+                             double coefficient) const;
 
-  double getResidualSumLowerOrig(HighsInt sum, HighsInt var, double coefficient,
-                                 HighsInt boundVar = -1,
-                                 double boundVarCoefficient = -kHighsInf,
-                                 double boundVarValue = -kHighsInf) const;
+  double getResidualSumLowerOrig(HighsInt sum, HighsInt var,
+                                 double coefficient) const;
 
-  double getResidualSumUpperOrig(HighsInt sum, HighsInt var, double coefficient,
-                                 HighsInt boundVar = -1,
-                                 double boundVarCoefficient = -kHighsInf,
-                                 double boundVarValue = -kHighsInf) const;
+  double getResidualSumUpperOrig(HighsInt sum, HighsInt var,
+                                 double coefficient) const;
 
   template <typename T = double>
   double getSumLowerOrig(HighsInt sum, T offset = T()) const {
@@ -167,17 +159,8 @@ class HighsLinearSumBounds {
   double getImplVarLower(HighsInt sum, double myVarLower, double myImplVarLower,
                          HighsInt myImplVarLowerSource) const;
 
-  void update(HighsInt& numInf, HighsCDouble& activity, HighsInt direction,
-              double bound, double coefficient) const;
-
-  void update(HighsInt& numInfs, HighsCDouble& activity, double oldBound,
-              double newBound, double coefficient) const;
-
-  void residual(HighsInt& numInfs, HighsCDouble& activity, double oldVarBound,
-                double coefficient, HighsInt boundVar = -1,
-                double boundVarCoefficient = kHighsInf,
-                double oldBoundVarBound = kHighsInf,
-                double newBoundVarBound = kHighsInf) const;
+  void update(HighsInt& numInf, HighsCDouble& sum, bool isBoundFinite,
+              HighsInt direction, double bound, double coefficient);
 
   void handleVarUpper(HighsInt sum, double coefficient, double myVarUpper,
                       HighsInt direction);

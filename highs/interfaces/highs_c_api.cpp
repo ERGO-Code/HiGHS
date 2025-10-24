@@ -1296,23 +1296,6 @@ HighsInt Highs_getLp(const void* highs, const HighsInt a_format,
                               a_start, a_index, a_value, integrality);
 }
 
-HighsInt Highs_getFixedLp(const void* highs, const HighsInt a_format,
-                          HighsInt* num_col, HighsInt* num_row,
-                          HighsInt* num_nz, HighsInt* sense, double* offset,
-                          double* col_cost, double* col_lower,
-                          double* col_upper, double* row_lower,
-                          double* row_upper, HighsInt* a_start,
-                          HighsInt* a_index, double* a_value) {
-  HighsLp lp;
-  HighsInt status = HighsInt(((Highs*)highs)->getFixedLp(lp));
-  if (status == kHighsStatusError) return status;
-  HighsInt* integrality = nullptr;
-  Highs_getHighsLpData(lp, a_format, num_col, num_row, num_nz, sense, offset,
-                       col_cost, col_lower, col_upper, row_lower, row_upper,
-                       a_start, a_index, a_value, integrality);
-  return status;
-}
-
 HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               HighsInt* num_col, HighsInt* num_row,
                               HighsInt* num_nz, HighsInt* sense, double* offset,

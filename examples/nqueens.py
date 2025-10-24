@@ -13,8 +13,8 @@ h.silent()
 
 x = h.addBinaries(N, N)
 
-h.addConstrs(x.sum(axis=1) == 1)    # each row has exactly one queen
-h.addConstrs(x.sum(axis=0) == 1)    # each col has exactly one queen
+h.addConstrs(x.sum(axis=0) == 1)    # each row has exactly one queen
+h.addConstrs(x.sum(axis=1) == 1)    # each col has exactly one queen
 
 y = np.fliplr(x)
 h.addConstrs(x.diagonal(k).sum() <= 1 for k in range(-N + 1, N))   # each diagonal has at most one queen

@@ -11,7 +11,7 @@ class Program {
        // minimize x_2 + (1/2)(2x_1^2 - 2x_1x_3 + 0.2x_2^2 + 2x_3^2)
        //
        // subject to x_1 + x_2 + x_3 >= 1; x>=0
-      double[] cc = {0, 1, 0};
+       double[] cc = {0, 1, 0};
       double[] cl = {0, 0, 0};
       double[] cu = {1.0e30, 1.0e30, 1.0e30};
       double[] rl = {1};
@@ -52,10 +52,10 @@ class Program {
          Console.WriteLine("x" + i + " = " + sol.colvalue[i] + " is " + bas.colbasisstatus[i]);
       }
        // Add the Hessian
-      int dim = 3;
-      int[] qstart = {0, 2, 3, 4};
-      int[] qindex = {0, 1, 1, 2};
-      double[] qvalue = {2, -1, 0.2, 2};
+      int dim = 2;
+      int[] qstart = {0, 2, 3};
+      int[] qindex = {0, 1, 1};
+      double[] qvalue = {2, -1, 2};
       HessianFormat q_format = HessianFormat.kTriangular;
       HighsHessian hessian = new HighsHessian(dim, qstart, qindex, qvalue, q_format);
       status = solver.passHessian(hessian);

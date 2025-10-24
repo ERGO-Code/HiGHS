@@ -59,74 +59,125 @@ void HighsLinearSumBounds::updatedImplVarLower(HighsInt sum, HighsInt var,
 }
 
 double HighsLinearSumBounds::getResidualSumLower(HighsInt sum, HighsInt var,
-                                                 double coefficient,
-                                                 HighsInt boundVar,
-                                                 double boundVarCoefficient,
-                                                 double boundVarValue) const {
-  HighsCDouble activity = sumLower[sum];
-  HighsInt numInfs = numInfSumLower[sum];
-  residual(
-      numInfs, activity,
-      (coefficient > 0 ? getImplVarLower(sum, var) : getImplVarUpper(sum, var)),
-      coefficient, boundVar, boundVarCoefficient,
-      (boundVar != -1
-           ? (boundVarCoefficient > 0 ? getImplVarLower(sum, boundVar)
-                                      : getImplVarUpper(sum, boundVar))
-           : kHighsInf),
-      boundVarValue);
-  return (numInfs == 0 ? static_cast<double>(activity) : -kHighsInf);
+                                                 double coefficient) const {
+  switch (numInfSumLower[sum]) {
+    case 0:
+      if (coefficient > 0) {
+        return static_cast<double>(
+            sumLower[sum] -
+            static_cast<HighsCDouble>(getImplVarLower(sum, var)) * coefficient);
+      } else {
+        return static_cast<double>(
+            sumLower[sum] -
+            static_cast<HighsCDouble>(getImplVarUpper(sum, var)) * coefficient);
+      }
+      break;
+    case 1:
+      if (coefficient > 0) {
+        return getImplVarLower(sum, var) == -kHighsInf
+                   ? static_cast<double>(sumLower[sum])
+                   : -kHighsInf;
+      } else {
+        return getImplVarUpper(sum, var) == kHighsInf
+                   ? static_cast<double>(sumLower[sum])
+                   : -kHighsInf;
+      }
+      break;
+    default:
+      return -kHighsInf;
+  }
 }
 
 double HighsLinearSumBounds::getResidualSumUpper(HighsInt sum, HighsInt var,
-                                                 double coefficient,
-                                                 HighsInt boundVar,
-                                                 double boundVarCoefficient,
-                                                 double boundVarValue) const {
-  HighsCDouble activity = sumUpper[sum];
-  HighsInt numInfs = numInfSumUpper[sum];
-  residual(
-      numInfs, activity,
-      (coefficient < 0 ? getImplVarLower(sum, var) : getImplVarUpper(sum, var)),
-      coefficient, boundVar, boundVarCoefficient,
-      (boundVar != -1
-           ? (boundVarCoefficient < 0 ? getImplVarLower(sum, boundVar)
-                                      : getImplVarUpper(sum, boundVar))
-           : kHighsInf),
-      boundVarValue);
-  return (numInfs == 0 ? static_cast<double>(activity) : kHighsInf);
+                                                 double coefficient) const {
+  switch (numInfSumUpper[sum]) {
+    case 0:
+      if (coefficient > 0) {
+        return static_cast<double>(
+            sumUpper[sum] -
+            static_cast<HighsCDouble>(getImplVarUpper(sum, var)) * coefficient);
+      } else {
+        return static_cast<double>(
+            sumUpper[sum] -
+            static_cast<HighsCDouble>(getImplVarLower(sum, var)) * coefficient);
+      }
+      break;
+    case 1:
+      if (coefficient > 0) {
+        return getImplVarUpper(sum, var) == kHighsInf
+                   ? static_cast<double>(sumUpper[sum])
+                   : kHighsInf;
+      } else {
+        return getImplVarLower(sum, var) == -kHighsInf
+                   ? static_cast<double>(sumUpper[sum])
+                   : kHighsInf;
+      }
+      break;
+    default:
+      return kHighsInf;
+  }
 }
 
-double HighsLinearSumBounds::getResidualSumLowerOrig(
-    HighsInt sum, HighsInt var, double coefficient, HighsInt boundVar,
-    double boundVarCoefficient, double boundVarValue) const {
-  HighsCDouble activity = sumLowerOrig[sum];
-  HighsInt numInfs = numInfSumLowerOrig[sum];
-  residual(numInfs, activity, (coefficient > 0 ? varLower[var] : varUpper[var]),
-           coefficient, boundVar, boundVarCoefficient,
-           (boundVar != -1 ? (boundVarCoefficient > 0 ? varLower[boundVar]
-                                                      : varUpper[boundVar])
-                           : kHighsInf),
-           boundVarValue);
-  return (numInfs == 0 ? static_cast<double>(activity) : -kHighsInf);
+double HighsLinearSumBounds::getResidualSumLowerOrig(HighsInt sum, HighsInt var,
+                                                     double coefficient) const {
+  switch (numInfSumLowerOrig[sum]) {
+    case 0:
+      if (coefficient > 0)
+        return static_cast<double>(sumLowerOrig[sum] -
+                                   static_cast<HighsCDouble>(varLower[var]) *
+                                       coefficient);
+      else
+        return static_cast<double>(sumLowerOrig[sum] -
+                                   static_cast<HighsCDouble>(varUpper[var]) *
+                                       coefficient);
+      break;
+    case 1:
+      if (coefficient > 0)
+        return varLower[var] == -kHighsInf
+                   ? static_cast<double>(sumLowerOrig[sum])
+                   : -kHighsInf;
+      else
+        return varUpper[var] == kHighsInf
+                   ? static_cast<double>(sumLowerOrig[sum])
+                   : -kHighsInf;
+      break;
+    default:
+      return -kHighsInf;
+  }
 }
 
-double HighsLinearSumBounds::getResidualSumUpperOrig(
-    HighsInt sum, HighsInt var, double coefficient, HighsInt boundVar,
-    double boundVarCoefficient, double boundVarValue) const {
-  HighsCDouble activity = sumUpperOrig[sum];
-  HighsInt numInfs = numInfSumUpperOrig[sum];
-  residual(numInfs, activity, (coefficient < 0 ? varLower[var] : varUpper[var]),
-           coefficient, boundVar, boundVarCoefficient,
-           (boundVar != -1 ? (boundVarCoefficient < 0 ? varLower[boundVar]
-                                                      : varUpper[boundVar])
-                           : kHighsInf),
-           boundVarValue);
-  return (numInfs == 0 ? static_cast<double>(activity) : kHighsInf);
+double HighsLinearSumBounds::getResidualSumUpperOrig(HighsInt sum, HighsInt var,
+                                                     double coefficient) const {
+  switch (numInfSumUpperOrig[sum]) {
+    case 0:
+      if (coefficient > 0)
+        return static_cast<double>(sumUpperOrig[sum] -
+                                   static_cast<HighsCDouble>(varUpper[var]) *
+                                       coefficient);
+      else
+        return static_cast<double>(sumUpperOrig[sum] -
+                                   static_cast<HighsCDouble>(varLower[var]) *
+                                       coefficient);
+      break;
+    case 1:
+      if (coefficient > 0)
+        return varUpper[var] == kHighsInf
+                   ? static_cast<double>(sumUpperOrig[sum])
+                   : kHighsInf;
+      else
+        return varLower[var] == -kHighsInf
+                   ? static_cast<double>(sumUpperOrig[sum])
+                   : kHighsInf;
+      break;
+    default:
+      return kHighsInf;
+  }
 }
 
 void HighsLinearSumBounds::shrink(const std::vector<HighsInt>& newIndices,
                                   HighsInt newSize) {
-  for (size_t i = 0; i != newIndices.size(); ++i) {
+  HighsInt oldNumInds = newIndices.size();
+  for (HighsInt i = 0; i != oldNumInds; ++i) {
     if (newIndices[i] != -1) {
       sumLower[newIndices[i]] = sumLower[i];
       sumUpper[newIndices[i]] = sumUpper[i];
@@ -173,67 +224,45 @@ double HighsLinearSumBounds::getImplVarLower(
                                       : std::max(myImplVarLower, myVarLower));
 }
 
-void HighsLinearSumBounds::update(HighsInt& numInfs, HighsCDouble& activity,
-                                  HighsInt direction, double bound,
-                                  double coefficient) const {
-  if (std::abs(bound) != kHighsInf)
-    activity += direction * static_cast<HighsCDouble>(bound) * coefficient;
+void HighsLinearSumBounds::update(HighsInt& numInf, HighsCDouble& sum,
+                                  bool isBoundFinite, HighsInt direction,
+                                  double bound, double coefficient) {
+  if (!isBoundFinite)
+    numInf += direction;
   else
-    numInfs += direction;
-}
-
-void HighsLinearSumBounds::update(HighsInt& numInfs, HighsCDouble& activity,
-                                  double oldBound, double newBound,
-                                  double coefficient) const {
-  if (oldBound == newBound) return;
-  update(numInfs, activity, HighsInt{-1}, oldBound, coefficient);
-  update(numInfs, activity, HighsInt{1}, newBound, coefficient);
-}
-
-void HighsLinearSumBounds::residual(HighsInt& numInfs, HighsCDouble& activity,
-                                    double varBound, double coefficient,
-                                    HighsInt boundVar,
-                                    double boundVarCoefficient,
-                                    double oldBoundVarBound,
-                                    double newBoundVarBound) const {
-  // remove contribution of 'var'
-  update(numInfs, activity, HighsInt{-1}, varBound, coefficient);
-  // update contribution of 'boundVar'
-  if (boundVar != -1)
-    update(numInfs, activity, oldBoundVarBound, newBoundVarBound,
-           boundVarCoefficient);
+    sum += direction * static_cast<HighsCDouble>(bound) * coefficient;
 }
 
 void HighsLinearSumBounds::handleVarUpper(HighsInt sum, double coefficient,
                                           double myVarUpper,
                                           HighsInt direction) {
   update(coefficient > 0 ? numInfSumUpperOrig[sum] : numInfSumLowerOrig[sum],
-         coefficient > 0 ? sumUpperOrig[sum] : sumLowerOrig[sum], direction,
-         myVarUpper, coefficient);
+         coefficient > 0 ? sumUpperOrig[sum] : sumLowerOrig[sum],
+         myVarUpper != kHighsInf, direction, myVarUpper, coefficient);
 }
 
 void HighsLinearSumBounds::handleVarLower(HighsInt sum, double coefficient,
                                           double myVarLower,
                                           HighsInt direction) {
   update(coefficient > 0 ? numInfSumLowerOrig[sum] : numInfSumUpperOrig[sum],
-         coefficient > 0 ? sumLowerOrig[sum] : sumUpperOrig[sum], direction,
-         myVarLower, coefficient);
+         coefficient > 0 ? sumLowerOrig[sum] : sumUpperOrig[sum],
+         myVarLower != -kHighsInf, direction, myVarLower, coefficient);
 }
 
 void HighsLinearSumBounds::handleImplVarUpper(HighsInt sum, double coefficient,
                                               double myImplVarUpper,
                                               HighsInt direction) {
   update(coefficient > 0 ? numInfSumUpper[sum] : numInfSumLower[sum],
-         coefficient > 0 ? sumUpper[sum] : sumLower[sum], direction,
-         myImplVarUpper, coefficient);
+         coefficient > 0 ? sumUpper[sum] : sumLower[sum],
+         myImplVarUpper != kHighsInf, direction, myImplVarUpper, coefficient);
 }
 
 void HighsLinearSumBounds::handleImplVarLower(HighsInt sum, double coefficient,
                                               double myImplVarLower,
                                               HighsInt direction) {
   update(coefficient > 0 ? numInfSumLower[sum] : numInfSumUpper[sum],
-         coefficient > 0 ? sumLower[sum] : sumUpper[sum], direction,
-         myImplVarLower, coefficient);
+         coefficient > 0 ? sumLower[sum] : sumUpper[sum],
+         myImplVarLower != -kHighsInf, direction, myImplVarLower, coefficient);
 }
 
 void HighsLinearSumBounds::updatedImplVarUpper(HighsInt sum, HighsInt var,

@@ -335,7 +335,6 @@ TEST_CASE("Basis-read", "[highs_basis_data]") {
   HighsBasisStatus status_before = HighsBasisStatus::kNonbasic;
   HighsBasisStatus status_after = HighsBasisStatus::kBasic;
   Highs h1;
-  h1.setOptionValue("output_flag", dev_run);
   const HighsBasis& basis1 = h1.getBasis();
   h1.passModel(lp);
   REQUIRE(basis1.col_status[0] == status_before);
@@ -343,7 +342,6 @@ TEST_CASE("Basis-read", "[highs_basis_data]") {
   REQUIRE(basis1.col_status[0] == status_after);
 
   Highs h2;
-  h2.setOptionValue("output_flag", dev_run);
   const HighsBasis& basis2 = h2.getBasis();
   h2.passModel(lp);
   REQUIRE(basis2.col_status[0] == status_before);
