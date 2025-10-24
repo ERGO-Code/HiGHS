@@ -336,7 +336,7 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 
 TEST_CASE("hi-pdlp", "[pdlp]") {
   std::string model =
-      "25fv47";  //"adlittle";//"afiro";// shell// stair //25fv47 //fit2p
+      "adlittle";  //"adlittle";//"afiro";// shell// stair //25fv47 //fit2p
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
@@ -349,7 +349,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   HighsInt pdlp_features_off = 0 
       // kPdlpScalingOff +
       // kPdlpRestartOff
-      //+ kPdlpAdaptiveStepSizeOff
+      + kPdlpAdaptiveStepSizeOff
       ;
   h.setOptionValue("pdlp_features_off", pdlp_features_off);
 

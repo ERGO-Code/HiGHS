@@ -1308,7 +1308,6 @@ cupdlp_retcode PDHG_PostSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
     for (int iRow = 0; iRow < problem->nRows; iRow++)
     printf("PDHG_PostSolve: Row %d   dual value = %9.3g\n", iRow, y->data[iRow]);
   */
-  
   // unscale
   if (scaling->ifScaled) {
     cupdlp_ediv(x->data, pdhg->colScale, problem->nCols);
