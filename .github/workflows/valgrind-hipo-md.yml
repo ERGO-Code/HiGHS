@@ -1,4 +1,4 @@
-name: valgrind-hipo
+name: valgrind-hipo-md
 
 on: [push, pull_request]
 
@@ -30,6 +30,7 @@ jobs:
           cmake \
           -S $GITHUB_WORKSPACE/METIS \
           -B build \
+          -DCMAKE_BUILD_TYPE=Debug \
           -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
           -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
           cmake --build build --parallel
@@ -122,6 +123,7 @@ jobs:
           cmake \
           -S $GITHUB_WORKSPACE/METIS \
           -B build \
+          -DCMAKE_BUILD_TYPE=Debug \
           -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
           -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
           cmake --build build --parallel
@@ -219,6 +221,7 @@ jobs:
           cmake \
           -S $GITHUB_WORKSPACE/METIS \
           -B build \
+          -DCMAKE_BUILD_TYPE=Debug \
           -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
           -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
           cmake --build build --parallel
