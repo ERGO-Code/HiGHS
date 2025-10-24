@@ -35,8 +35,6 @@ The irreducible infeasibility system (IIS) facility now detects infeasibility du
 
 Prompted by [#2463](https://github.com/ERGO-Code/HiGHS/issues/2463), when HiGHS writes out a solution or basis for a model without column or row names, it creates names. This avoids a mis-match between the ordering of variables when such a model is written out as a .lp file, and then this and a solution or a basis is read in.
 
-Prompted by [#2487](https://github.com/ERGO-Code/HiGHS/issues/2487), the feasibility jump MIP heuristic starts from any incumbent solution, allowing it to improve on an existing feasible solution.
-
 Prompted by [#2528](https://github.com/ERGO-Code/HiGHS/issues/2528), the logging for the HiGHS interior point method (IPM) solvers and PDLP solver has been standardised, and logging has been added to the IPM solver during time-consuming computational phases.
 
 Prompted by [#2557](https://github.com/ERGO-Code/HiGHS/issues/2557), `Highs::getFixedLp` has been added so that, after solving a MIP, the LP with discrete variables fixed at their optimal values can be formed, allowing it to be passed to HiGHS and solved as an LP. 
