@@ -4670,7 +4670,17 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 HPresolve::Result HPresolve::singletonColStuffing(
     HighsPostsolveStack& postsolve_stack, HighsInt col) {
   // singleton column stuffing
-  if (colDeleted[col] || colsize[col] != 1) return;
+
+  auto acceptCol = [&](HighsInt col) {
+    return (colsize[col] == 1 &&
+            model->integrality_[col] != HighsVarType::kInteger &&
+            model->col_lower_[col] != -kHighsInf &&
+            model->col_upper_[col] != kHighsInf &&
+            model->col_lower_[col] != model->col_upper_[col]);
+  };
+
+  // consider only non-fixed bounded singleton continuous columns
+  if (!acceptCol(col)) return Result::kOk;
 
   std::vector<std::tuple<HighsInt, double, double>> lowerSumCols;
   std::vector<std::tuple<HighsInt, double, double>> upperSumCols;
@@ -4683,18 +4693,42 @@ HPresolve::Result HPresolve::singletonColStuffing(
             });
   };
 
+  // get row index
   HighsInt row = Arow[colhead[col]];
+
+  // return if we have an empty or singleton row
+  if (rowsize[row] <= 1) return Result::kOk;
+
+  // get lower and upper bounds on row activity
+  HighsCDouble lowerSum = impliedRowBounds.getSumLowerOrig(row);
+  HighsCDouble upperSum = impliedRowBounds.getSumUpperOrig(row);
+  bool lowerSumFinite = lowerSum != -kHighsInf;
+  bool upperSumFinite = upperSum != kHighsInf;
+
+  // return if both activity bounds are not finite
+  if (!lowerSumFinite && !upperSumFinite) return Result::kOk;
+
   for (auto& nz : getRowVector(row)) {
-    if (colsize[nz.index()] != 1 ||
-        model->col_lower_[nz.index()] == -kHighsInf ||
-        model->col_upper_[nz.index()] == kHighsInf)
-      continue;
-    if (nz.value() > 0 && model->col_cost_[nz.index()] < 0)
-      upperSumCols.push_back(std::make_tuple(
-          nz.index(), nz.value(), model->col_cost_[nz.index()] / nz.value()));
-    else if (nz.value() < 0 && model->col_cost_[nz.index()] > 0)
-      lowerSumCols.push_back(std::make_tuple(
-          nz.index(), nz.value(), -model->col_cost_[nz.index()] / nz.value()));
+    // get column index, coefficient and cost
+    HighsInt j = nz.index();
+    double aj = nz.value();
+    double cj = model->col_cost_[j];
+
+    // consider only non-fixed bounded singleton continuous columns
+    if (!acceptCol(j)) continue;
+
+    // compute delta
+    HighsCDouble delta = aj * (static_cast<HighsCDouble>(model->col_upper_[j]) -
+                               static_cast<HighsCDouble>(model->col_lower_[j]));
+
+    // add singletons to vectors
+    if (upperSumFinite && aj > 0 && cj < 0) {
+      upperSumCols.push_back(std::make_tuple(j, aj, cj / aj));
+      upperSum -= delta;
+    } else if (lowerSumFinite && aj < 0 && cj > 0) {
+      lowerSumCols.push_back(std::make_tuple(j, aj, -cj / aj));
+      lowerSum -= delta;
+    }
   }
 
   sortCols(lowerSumCols);
