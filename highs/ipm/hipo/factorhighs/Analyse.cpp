@@ -121,21 +121,8 @@ Int Analyse::getPermutation() {
 
   if (log_) log_->printDevInfo("Running Metis\n");
 
-#ifdef METIS_THREAD_SAFE
-  // Thread-safe version of Metis that stores state of random-number generator
-  // in local variable.
-  if (log_) log_->printDevInfo("Using thread-safe Metis\n");
-  unsigned rng_state = kMetisSeed;
-  Int status =
-      METIS_NodeND_ts(&n_, temp_ptr.data(), temp_rows.data(), NULL, options,
-                      perm_.data(), iperm_.data(), &rng_state);
-#else
-  // Default version of Metis. This gives non-deterministic results if multiple
-  // matrices are reordered concurrently.
-  if (log_) log_->printDevInfo("Using non-thread-safe Metis\n");
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                             options, perm_.data(), iperm_.data());
-#endif
 
   if (log_) log_->printDevInfo("Metis done\n");
   if (status != METIS_OK) {
