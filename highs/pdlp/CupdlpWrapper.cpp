@@ -209,6 +209,11 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   debugPdlpFinalSolutionLog(w->debug_pdlp_log_file_,
                             highs_solution.col_value.data(), lp.num_col_,
                             highs_solution.row_dual.data(), lp.num_row_);
+  //print col_dual
+  for (HighsInt i = 0; i < lp.num_col_; i++) {
+    std::cout << "Column " << i
+              << " dual value: " << highs_solution.col_dual[i] << std::endl;
+  }
   if (w->debug_pdlp_log_file_) fclose(w->debug_pdlp_log_file_);
   model_status = HighsModelStatus::kUnknown;
   highs_solution.value_valid = value_valid;

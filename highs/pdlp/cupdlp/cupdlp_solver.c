@@ -80,8 +80,7 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, cupdlp_float *dualResidual,
   cupdlp_dot(work, lp->nRows, y, problem->rhs, dDualObj);
 
   #if !defined(CUPDLP_CPU) && USE_KERNELS
-  dualResidual = work->buffer2;
-
+  dualResidual = work->buffer2;         
   cupdlp_float alpha;
   cupdlp_dual_feasibility_kernel_1_cuda(dualResidual, aty,
                                         problem->cost, lp->nCols);
@@ -933,6 +932,11 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
   const int iter_log_between_header = 50;
   int iter_log_since_header = iter_log_between_header;
   debugPdlpIterHeaderLog(pdhg->debug_pdlp_log_file_);
+  //print norm of pdhg->buffer2
+  double xx = 0.0;
+  cupdlp_twoNormSquared(pdhg, problem->data->nCols, pdhg->buffer2,
+                        &xx);
+  cupdlp_printf("||buffer2||_2^2 = %e\n", xx);
   
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
     debugPdlpIterLog(pdhg->debug_pdlp_log_file_, timers->nIter, &pdhg->debug_pdlp_data_, pdhg->stepsize->dBeta, pdhg->stepsize->dPrimalStep, pdhg->stepsize->dDualStep);
@@ -1308,6 +1312,8 @@ cupdlp_retcode PDHG_PostSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
     for (int iRow = 0; iRow < problem->nRows; iRow++)
     printf("PDHG_PostSolve: Row %d   dual value = %9.3g\n", iRow, y->data[iRow]);
   */
+  for (int iCol = 0; iCol < problem->nCols; iCol++)
+    printf("dSlackPos_ before unscale[%d] = %9.3g\n", iCol, resobj->dSlackPos[iCol]);
   // unscale
   if (scaling->ifScaled) {
     cupdlp_ediv(x->data, pdhg->colScale, problem->nCols);

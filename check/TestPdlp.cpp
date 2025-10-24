@@ -374,6 +374,8 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   std::cout << "Objective: " << h.getInfo().objective_function_value
             << std::endl;
 
+  int hipdlp_iteration_count = h.getInfo().pdlp_iteration_count;
+
   //  REQUIRE(run_status == HighsStatus::kOk);
   //  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   //  REQUIRE(h.getInfo().pdlp_iteration_count == 11880);
@@ -398,6 +400,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
     std::cout << "Objective: " << h.getInfo().objective_function_value
               << std::endl;
   }
+  assert(hipdlp_iteration_count == h.getInfo().pdlp_iteration_count);
   h.resetGlobalScheduler(true);
 }
 

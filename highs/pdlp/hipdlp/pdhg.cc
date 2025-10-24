@@ -1270,6 +1270,9 @@ void PDLPSolver::scaleProblem() {
   scaling_.passParams(&params_);
   scaling_.Initialize(lp_);
   scaling_.scaleProblem();
+  //print the norm of lp_.col_cost_
+  unscaled_c_norm_ = linalg::vector_norm(lp_.col_cost_);
+  std::cout << "Unscaled cost norm = " << unscaled_c_norm_ << std::endl;
 }
 
 void PDLPSolver::unscaleSolution(std::vector<double>& x,
@@ -1282,6 +1285,8 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
   const std::vector<double>& col_scale = scaling_.GetColScaling();
   if (!dSlackPos_.empty() && col_scale.size() == dSlackPos_.size()) {
     for (size_t i = 0; i < dSlackPos_.size(); ++i) {
+      std::cout << "dSlackPos_ before unscale[" << i << "] = " << dSlackPos_[i]
+                << std::endl;
       dSlackPos_[i] *= col_scale[i];
       dSlackNeg_[i] *= col_scale[i];
     }
