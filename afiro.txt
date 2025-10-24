@@ -1,0 +1,120 @@
+Running HiGHS 1.9.0 (git hash: ffc55db27): Copyright (c) 2025 HiGHS under MIT licence terms
+Set option presolve to "off"
+Set option solver to "pdlp"
+Set option log_file to "HiGHS.log"
+readMPS: Trying to open file /home/yzhou/Documents/mps_da/afiro.mps
+readMPS: Read NAME    OK
+readMPS: Read ROWS    OK
+readMPS: Read COLUMNS OK
+readMPS: Read RHS     OK
+LP        : afiro
+Rows      : 27
+Cols      : 32
+Nonzeros  : 83
+Running with 14 thread(s)
+Coefficient ranges:
+  Matrix [1e-01, 2e+00]
+  Cost   [3e-01, 1e+01]
+  Bound  [0e+00, 0e+00]
+  RHS    [4e+01, 5e+02]
+Solving model: afiro
+Not presolved: solving the LP
+Solving with cuPDLP-C
+--------------------------------------------------
+running scaling
+- use Ruiz scaling
+- use PC scaling
+--------------------------------------------------
+
+
+--------------------------------------------------
+CUPDHG Parameters:
+--------------------------------------------------
+
+    nIterLim:          2147483647
+    dTimeLim (sec):    inf
+    ifScaling:         1
+    ifRuizScaling:     1
+    ifL2Scaling:       0
+    ifPcScaling:       1
+    eLineSearchMethod: 2
+    dPrimalTol:        1.0000e-07
+    dDualTol:          1.0000e-07
+    dGapTol:           1.0000e-04
+    dFeasTol:          1.0000e-08
+    eRestartMethod:    1
+    nLogLevel:    2
+    nLogInterval:    100
+    iInfNormAbsLocalTermination:    1
+
+--------------------------------------------------
+
+
+  ____ _   _ ____  ____  _     ____
+ / ___| | | |  _ \|  _ \| |   |  _ \
+| |   | | | | |_) | | | | |   | |_) |
+| |___| |_| |  __/| |_| | |___|  __/
+ \____|\___/|_|   |____/|_____|_|
+
+     Iter       Primal.Obj         Dual.Obj        Gap  Primal.Inf  Dual.Inf    Time
+        0  +0.00000000e+00  +0.00000000e+00  +0.00e+00    4.40e+01  6.00e-01   0.00s [L]
+        0  +0.00000000e+00  +0.00000000e+00  +0.00e+00    4.40e+01  6.00e-01   0.00s [A]
+Termination check: 4.400000e+01|8.381595e-05  6.000000e-01|1.104255e-06  0.000000e+00|1.000000e-04
+Last restart was iter 0: average
+Last restart was iter 1: current
+Last restart was iter 2: average
+Last restart was iter 4: average
+Last restart was iter 7: current
+Last restart was iter 40: average
+Last restart was iter 80: average
+Last restart was iter 120: average
+Last restart was iter 160: average
+Last restart was iter 200: average
+Last restart was iter 240: average
+Last restart was iter 280: average
+Last restart was iter 320: average
+Last restart was iter 360: average
+PDHG_Compute_Dual_Feasibility 0: aty               = [ -1.145e-11     -0.2945  -5.743e-12  -7.426e-12   2.057e-11    -0.09821     -0.1051     -0.1102     -0.1193    -0.02706    -0.02491    -0.02252     -0.1991  -6.005e-11   3.135e-11   7.244e-11     -0.4417  -8.632e-11     -0.6585   3.099e-11   2.157e-10     -0.1243     -0.1266     -0.1272     -0.1181    -0.01183    -0.01218     -0.0136     -0.2986   2.861e-10   1.001e-10   4.046e-10 ]
+PDHG_Compute_Dual_Feasibility 0: dualResidual      = [  1.145e-11      0.2945   5.743e-12   7.426e-12  -2.057e-11     0.09821      0.1051      0.1102      0.1193     0.02706     0.02491     0.02252      0.1991   6.005e-11  -3.135e-11  -7.244e-11      0.4417   8.632e-11      0.6585  -3.099e-11  -2.157e-10      0.1243      0.1266      0.1272      0.1181     0.01183     0.01218      0.0136      0.2986  -2.861e-10  -1.001e-10  -4.046e-10 ]
+PDHG_Compute_Dual_Feasibility 0: aty               = [  2.072e-11     -0.2945  -1.259e-11   2.168e-11   2.489e-11    -0.09821     -0.1051     -0.1102     -0.1193    -0.02706    -0.02491    -0.02252     -0.1991  -6.421e-11   2.991e-11  -1.756e-11     -0.4417   2.379e-11     -0.6585  -6.919e-12  -4.614e-11     -0.1243     -0.1266     -0.1272     -0.1181    -0.01183    -0.01218     -0.0136     -0.2986  -6.106e-11  -2.112e-11  -8.636e-11 ]
+PDHG_Compute_Dual_Feasibility 0: dualResidual      = [ -2.072e-11      0.2945   1.259e-11  -2.168e-11  -2.489e-11     0.09821      0.1051      0.1102      0.1193     0.02706     0.02491     0.02252      0.1991   6.421e-11  -2.991e-11   1.756e-11      0.4417  -2.379e-11      0.6585   6.919e-12   4.614e-11      0.1243      0.1266      0.1272      0.1181     0.01183     0.01218      0.0136      0.2986   6.106e-11   2.112e-11   8.636e-11 ]
+dDualInfeasRes 0                                   = [     0.4807      -44.56     -0.3573       0.963      0.4807  5.264e-310  5.264e-310  5.264e-310  5.264e-310  5.264e-310  5.264e-310  5.264e-310      -464.8      -464.8   4.195e-07           0   1.615e-07   1.045e-10   4.509e-10  5.264e-310  5.264e-310   5.468e-07   5.446e-10   2.202e-06   5.468e-07   5.446e-10   2.202e-06  1.976e-323  2.693e-321  1.285e-313   2.646e-55           0 ]
+dDualInfeasRes 0                                   = [     0.4807  5.264e-310  5.264e-310  5.264e-310  5.264e-310  5.264e-310  5.264e-310  5.264e-310      -464.8      -464.8   4.195e-07           0   1.615e-07   1.045e-10   4.509e-10  5.264e-310  5.264e-310   5.468e-07   5.446e-10   2.202e-06   5.468e-07   5.446e-10   2.202e-06  1.976e-323  2.693e-321  1.285e-313   2.646e-55           0  5.264e-310           0           0           0 ]
+Last restart was iter 400: average
+PDHG_Compute_Dual_Feasibility 0: aty               = [  2.072e-11     -0.2945  -1.259e-11   2.168e-11   2.489e-11    -0.09821     -0.1051     -0.1102     -0.1193    -0.02706    -0.02491    -0.02252     -0.1991  -6.421e-11   2.991e-11  -1.756e-11     -0.4417   2.379e-11     -0.6585  -6.919e-12  -4.614e-11     -0.1243     -0.1266     -0.1272     -0.1181    -0.01183    -0.01218     -0.0136     -0.2986  -6.106e-11  -2.112e-11  -8.636e-11 ]
+PDHG_Compute_Dual_Feasibility 0: dualResidual      = [ -2.072e-11      0.2945   1.259e-11  -2.168e-11  -2.489e-11     0.09821      0.1051      0.1102      0.1193     0.02706     0.02491     0.02252      0.1991   6.421e-11  -2.991e-11   1.756e-11      0.4417  -2.379e-11      0.6585   6.919e-12   4.614e-11      0.1243      0.1266      0.1272      0.1181     0.01183     0.01218      0.0136      0.2986   6.106e-11   2.112e-11   8.636e-11 ]
+PDHG_Compute_Dual_Feasibility 0: aty               = [  2.072e-11     -0.2945  -1.259e-11   2.168e-11   2.489e-11    -0.09821     -0.1051     -0.1102     -0.1193    -0.02706    -0.02491    -0.02252     -0.1991  -6.421e-11   2.991e-11  -1.756e-11     -0.4417   2.379e-11     -0.6585  -6.919e-12  -4.614e-11     -0.1243     -0.1266     -0.1272     -0.1181    -0.01183    -0.01218     -0.0136     -0.2986  -6.106e-11  -2.112e-11  -8.636e-11 ]
+PDHG_Compute_Dual_Feasibility 0: dualResidual      = [ -2.072e-11      0.2945   1.259e-11  -2.168e-11  -2.489e-11     0.09821      0.1051      0.1102      0.1193     0.02706     0.02491     0.02252      0.1991   6.421e-11  -2.991e-11   1.756e-11      0.4417  -2.379e-11      0.6585   6.919e-12   4.614e-11      0.1243      0.1266      0.1272      0.1181     0.01183     0.01218      0.0136      0.2986   6.106e-11   2.112e-11   8.636e-11 ]
+     Iter       Primal.Obj         Dual.Obj        Gap  Primal.Inf  Dual.Inf    Time
+      480  -4.64753143e+02  -4.64753143e+02  -1.69e-07    3.85e-08  9.61e-11   0.00s [L]
+      480  -4.64753143e+02  -4.64753143e+02  -4.56e-08    1.82e-08  6.38e-11   0.00s [A]
+
+Solving information:        Optimal current solution.
+          Primal objective: -4.64753143e+02
+            Dual objective: -4.64753143e+02
+   Primal infeas (abs/rel): 3.85e-08 / 4.60e-11
+     Dual infeas (abs/rel): 9.61e-11 / 8.70e-12
+     Duality gap (abs/rel): 1.69e-07 / 1.82e-10
+      Number of iterations: 480
+
+Timing information:
+    Total solver time 0.000000e+00 in 480 iterations
+           Solve time 0.000000e+00 in 480 iterations
+        Iters per sec inf 
+         Scaling time 0.000000e+00
+        Presolve time 0.000000e+00
+                   Ax 0.000000e+00 in 504 calls
+                  Aty 0.000000e+00 in 504 calls
+     ComputeResiduals 0.000000e+00 in 0 calls
+       UpdateIterates 0.000000e+00 in 480 calls
+Postsolve  : 
+Time       :     0.00
+Time Pre   :     0.00
+Time PostLP:     0.00
+For LP            afiro: Presolve     0.00 (  0%): Solve original LP     0.00 ( 99%)
+Model name          : afiro
+Model status        : Optimal
+PDLP      iterations: 480
+Objective value     : -4.6475314293e+02
+Relative P-D gap    :  3.6460351502e-10
+HiGHS run time      :          0.00

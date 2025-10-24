@@ -164,7 +164,6 @@ void PDLPSolver::preprocessLp() {
 
   int num_new_cols = 0;
   int nEqs = 0;
-  sense_origin_ = (original_lp_->sense_ == ObjSense::kMinimize) ? 1 : -1;
   constraint_types_.resize(nRows_orig);
 
   // 1. First pass: Classify constraints and count slack variables needed
@@ -434,27 +433,21 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
     }
   }
 
-  std::vector<double> ax_original(original_lp_->num_row_, 0.0);
+  std::vector<double> ax_current_(unscaled_processed_lp_.num_row_);
+  linalg::Ax(unscaled_processed_lp_, x_current_, ax_current_);
 
-  // Get original matrix in column-wise format
-  HighsSparseMatrix orig_matrix = original_lp_->a_matrix_;
-  orig_matrix.ensureColwise();
-
-  // Compute Ax using only the original columns (not slack variables)
-  for (int col = 0; col < original_num_col_; ++col) {
-      double x_val = x_current_[col];  // Use unscaled x values
-      
-      for (int el = orig_matrix.start_[col]; 
-          el < orig_matrix.start_[col + 1]; ++el) {
-          int row = orig_matrix.index_[el];
-          double a_val = orig_matrix.value_[el];
-          ax_original[row] += a_val * x_val;
-      }
-  }
-
-  // Now ax_original contains the correct row activity values
+  int slack_variable_idx = original_num_col_;
   for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
-      solution.row_value[orig_row] = ax_original[orig_row];
+    int reordered_row = constraint_new_idx_[orig_row];
+
+    if (constraint_types_[orig_row] == BOUND ||
+        constraint_types_[orig_row] == FREE) {
+      solution.row_value[orig_row] = x_current_[slack_variable_idx++];
+    } else if (constraint_types_[orig_row] == LEQ) {
+      solution.row_value[orig_row] = -ax_current_[reordered_row];
+    } else {  // EQ, GEQ
+      solution.row_value[orig_row] = ax_current_[reordered_row];
+    }
   }
 
   // 6. Recover Dual Column Values (Reduced Costs)
@@ -468,7 +461,6 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
       return PostSolveRetcode::DIMENSION_MISMATCH;
     }
     solution.col_dual[i] = dSlackPos_[i] - dSlackNeg_[i];
-    solution.col_dual[i] *= sense_origin_;
   }
 
   solution.value_valid = true;  // to do
@@ -881,23 +873,16 @@ void PDLPSolver::computeDualSlacks(const std::vector<double>& ATy_vector) {
   if (dSlackNeg_.size() != lp_.num_col_) dSlackNeg_.resize(lp_.num_col_);
 
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
-    double dual_residual = lp_.col_cost_[i] - ATy_vector[i];
+    double reduced_cost = lp_.col_cost_[i] - ATy_vector[i];
 
-    // Compute positive slack (for lower bounds)
-        // CUPDLP: max(dual_residual, 0) * hasLower
-        if (lp_.col_lower_[i] > -kHighsInf) {
-            dSlackPos_[i] = std::max(0.0, dual_residual);
-        } else {
-            dSlackPos_[i] = 0.0;
-        }
-        
-        // Compute negative slack (for upper bounds)
-        // CUPDLP: -min(dual_residual, 0) * hasUpper
-        if (lp_.col_upper_[i] < kHighsInf) {
-            dSlackNeg_[i] = std::max(0.0, -dual_residual);
-        } else {
-            dSlackNeg_[i] = 0.0;
-        }
+    // Slack for lower bound l_i <= x_i (dual variable is non-negative)
+    dSlackPos_[i] =
+        (lp_.col_lower_[i] > -kHighsInf) ? std::max(0.0, reduced_cost) : 0.0;
+
+    // Slack for upper bound x_i <= u_i (dual variable is non-positive, so slack
+    // is non-negative)
+    dSlackNeg_[i] =
+        (lp_.col_upper_[i] < kHighsInf) ? std::max(0.0, -reduced_cost) : 0.0;
   }
 }
 
@@ -1261,6 +1246,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   restart_scheme_.passParams(&params_);
   // Copy what's needed to use HiGHS logging
   params_.log_options_ = options.log_options;
+
   // log the options
   logger_.print_params(params_);
 }
@@ -1285,10 +1271,8 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
   const std::vector<double>& col_scale = scaling_.GetColScaling();
   if (!dSlackPos_.empty() && col_scale.size() == dSlackPos_.size()) {
     for (size_t i = 0; i < dSlackPos_.size(); ++i) {
-      std::cout << "dSlackPos_ before unscale[" << i << "] = " << dSlackPos_[i]
-                << std::endl;
-      dSlackPos_[i] *= col_scale[i];
-      dSlackNeg_[i] *= col_scale[i];
+      dSlackPos_[i] /= col_scale[i];
+      dSlackNeg_[i] /= col_scale[i];
     }
   }
 }

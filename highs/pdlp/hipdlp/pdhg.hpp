@@ -121,7 +121,6 @@ class PDLPSolver {
   std::vector<bool> is_equality_row_;
   std::vector<int> constraint_new_idx_;
   std::vector<ConstraintType> constraint_types_;
-  double sense_origin_ = 1;  // 1 (min) or -1 (max)
 
   // --- Solver State ---
   int final_iter_count_ = 0;
