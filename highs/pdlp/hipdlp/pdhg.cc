@@ -635,12 +635,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
         restart_scheme_.last_restart_iter_ = iter;
         // Recompute Ax and ATy for the restarted iterates
-        hipdlpTimerStart(kHipdlpClockMatrixMultiply);
         linalg::Ax(lp, x_current_, Ax_cache_);
-        hipdlpTimerStop(kHipdlpClockMatrixMultiply);
-        hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
         linalg::ATy(lp, y_current_, ATy_cache_);
-        hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
 
         restart_scheme_.SetLastRestartIter(iter);
       }
@@ -683,12 +679,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     // Compute ATy for the new iterate
     Ax_cache_ = Ax_next_;
-    /*
     hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
     linalg::ATy(lp, y_next_, ATy_cache_);
     hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
-    */
-    ATy_cache_ = ATy_next_;
 
     hipdlpTimerStop(kHipdlpClockIterateUpdate);
 
@@ -1410,10 +1403,6 @@ void PDLPSolver::updateIteratesFixed() {
   hipdlpTimerStart(kHipdlpClockProjectY);
   y_next_ = updateY(y_current_, Ax_cache_, Ax_next_, stepsize_.dual_step);
   hipdlpTimerStop(kHipdlpClockProjectY);
-
-  hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
-  linalg::ATy(lp_, y_next_, ATy_next_);
-  hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
 }
 
 void PDLPSolver::updateIteratesAdaptive() {
