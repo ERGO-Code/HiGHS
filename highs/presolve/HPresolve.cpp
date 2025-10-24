@@ -4670,20 +4670,13 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 HPresolve::Result HPresolve::singletonColStuffing(
     HighsPostsolveStack& postsolve_stack, HighsInt col) {
   // singleton column stuffing
-
   auto acceptCol = [&](HighsInt col) {
-    return (colsize[col] == 1 &&
+    return (!colDeleted[col] && colsize[col] == 1 &&
             model->integrality_[col] != HighsVarType::kInteger &&
             model->col_lower_[col] != -kHighsInf &&
             model->col_upper_[col] != kHighsInf &&
             model->col_lower_[col] != model->col_upper_[col]);
   };
-
-  // consider only non-fixed bounded singleton continuous columns
-  if (!acceptCol(col)) return Result::kOk;
-
-  std::vector<std::tuple<HighsInt, double, double>> lowerSumCols;
-  std::vector<std::tuple<HighsInt, double, double>> upperSumCols;
 
   auto sortCols = [&](std::vector<std::tuple<HighsInt, double, double>>& vec) {
     pdqsort(vec.begin(), vec.end(),
@@ -4693,47 +4686,93 @@ HPresolve::Result HPresolve::singletonColStuffing(
             });
   };
 
+  auto computeDelta = [&](HighsInt j, double aj) {
+    return aj * (static_cast<HighsCDouble>(model->col_upper_[j]) -
+                 static_cast<HighsCDouble>(model->col_lower_[j]));
+  };
+
+  // consider only non-fixed bounded singleton continuous columns
+  if (!acceptCol(col)) return Result::kOk;
+
   // get row index
   HighsInt row = Arow[colhead[col]];
 
   // return if we have an empty or singleton row
   if (rowsize[row] <= 1) return Result::kOk;
 
-  // get lower and upper bounds on row activity
-  HighsCDouble lowerSum = impliedRowBounds.getSumLowerOrig(row);
-  HighsCDouble upperSum = impliedRowBounds.getSumUpperOrig(row);
-  bool lowerSumFinite = lowerSum != -kHighsInf;
-  bool upperSumFinite = upperSum != kHighsInf;
+  // store row
+  storeRow(row);
 
-  // return if both activity bounds are not finite
-  if (!lowerSumFinite && !upperSumFinite) return Result::kOk;
+  auto checkRow = [&](HighsInt direction, const double& rhs,
+                      HighsCDouble lowerSum, HighsCDouble upperSum) {
+    // check if activity bounds are finite
+    bool lowerSumFinite = lowerSum != -kHighsInf;
+    bool upperSumFinite = upperSum != kHighsInf;
 
-  for (auto& nz : getRowVector(row)) {
-    // get column index, coefficient and cost
-    HighsInt j = nz.index();
-    double aj = nz.value();
-    double cj = model->col_cost_[j];
+    // return if both activity bounds are not finite or right-hand side if not
+    // finite
+    if ((!lowerSumFinite && !upperSumFinite) || direction * rhs == kHighsInf)
+      return Result::kOk;
 
-    // consider only non-fixed bounded singleton continuous columns
-    if (!acceptCol(j)) continue;
+    // vectors for candidates
+    std::vector<std::tuple<HighsInt, double, double>> lowerSumCols;
+    std::vector<std::tuple<HighsInt, double, double>> upperSumCols;
 
-    // compute delta
-    HighsCDouble delta = aj * (static_cast<HighsCDouble>(model->col_upper_[j]) -
-                               static_cast<HighsCDouble>(model->col_lower_[j]));
+    for (auto& nz : getStoredRow()) {
+      // get column index, coefficient and cost
+      HighsInt j = nz.index();
+      double aj = direction * nz.value();
+      double cj = model->col_cost_[j];
 
-    // add singletons to vectors
-    if (upperSumFinite && aj > 0 && cj < 0) {
-      upperSumCols.push_back(std::make_tuple(j, aj, cj / aj));
-      upperSum -= delta;
-    } else if (lowerSumFinite && aj < 0 && cj > 0) {
-      lowerSumCols.push_back(std::make_tuple(j, aj, -cj / aj));
-      lowerSum -= delta;
+      // consider only non-fixed bounded singleton continuous columns
+      if (!acceptCol(j)) continue;
+
+      // add singletons to vectors
+      if (upperSumFinite && direction * aj > 0 && cj < 0) {
+        upperSumCols.push_back(std::make_tuple(j, aj, direction * cj / aj));
+        upperSum -= computeDelta(j, aj);
+      } else if (lowerSumFinite && direction * aj < 0 && cj > 0) {
+        lowerSumCols.push_back(std::make_tuple(j, aj, -direction * cj / aj));
+        lowerSum -= computeDelta(j, aj);
+      }
     }
-  }
 
-  sortCols(lowerSumCols);
-  sortCols(upperSumCols);
+    // sort candidates
+    sortCols(lowerSumCols);
+    sortCols(upperSumCols);
 
+    // check lower bound on activity
+    for (const auto& t : lowerSumCols) {
+      HighsInt j = std::get<0>(t);
+      double aj = std::get<1>(t);
+      HighsCDouble delta = computeDelta(j, aj);
+      if (direction * delta < direction * (rhs - lowerSum) - primal_feastol)
+        break;
+      lowerSum += delta;
+      fixColToUpperOrUnbounded(postsolve_stack, j);
+    }
+
+    // check upper bound on activity
+    for (const auto& t : upperSumCols) {
+      HighsInt j = std::get<0>(t);
+      double aj = std::get<1>(t);
+      HighsCDouble delta = computeDelta(j, aj);
+      if (direction * delta > direction * (rhs - upperSum) + primal_feastol)
+        break;
+      upperSum += delta;
+      fixColToUpperOrUnbounded(postsolve_stack, j);
+    }
+
+    return Result::kOk;
+  };
+
+  // check row
+  checkRow(HighsInt{1}, model->row_upper_[row],
+           impliedRowBounds.getSumLowerOrig(row),
+           impliedRowBounds.getSumUpperOrig(row));
+  checkRow(HighsInt{-1}, model->row_lower_[row],
+           impliedRowBounds.getSumUpperOrig(row),
+           impliedRowBounds.getSumLowerOrig(row));
   return Result::kOk;
 }
 
