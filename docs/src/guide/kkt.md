@@ -1,6 +1,6 @@
-# [Feasibilty and optimality](@id kkt)
+# [Feasibility and optimality](@id kkt)
 
-Mathematically, continuous optimization problems have exact feasibilty
+Mathematically, continuous optimization problems have exact feasibility
 and optimality conditions. However, since solvers cannot always
 satisfy these conditions exactly when using floating-point arithmetic,
 they do so to within tolerances. As explored below, some solvers aim
@@ -12,7 +12,7 @@ and can give a misleading claim of optimality. To achieve consistency,
 HiGHS reassesses the optimal solution claimed by such a solver in a
 reasonable and uniform manner.
 
-### Feasibilty and optimality conditions
+### Feasibility and optimality conditions
 
 To discuss tolerances and their use in different solvers, consider the
 standard form linear programming (LP) problem with ``n`` variables and
@@ -26,7 +26,7 @@ standard form linear programming (LP) problem with ``n`` variables and
 \end{aligned}
 ```
 
-The feasibilty and optimality conditions (KKT conditions) are that, at
+The feasibility and optimality conditions (KKT conditions) are that, at
 a point ``x``, there exist (row) dual values ``y`` and reduced costs
 (column dual values) ``s`` such that
 
@@ -113,11 +113,12 @@ tolerance.
 
 ### Solutions without a corresponding basis
 
-The HiGHS PDLP solver and the interior point solver without crossover
-(IPX) yield "optimal" primal and dual values that satisfy internal
-conditions for termination of the underlying algorithm. These
-conditions are discussed below, and are used for good reason. However
-they can lead to a misleading claim of optimality.
+The HiGHS PDLP solver and the interior point solvers (HiPO and IPX)
+without crossover yield "optimal" primal and dual values that satisfy
+internal conditions for termination of the underlying algorithm. These
+conditions are discussed below, and are used for good reason. However,
+particularly in the case of PDLP, they can lead to a misleading claim
+of optimality.
 
 #### Interior point solutions
 
@@ -138,6 +139,13 @@ HiGHS. It terminates when
 \end{aligned}
 ```
 
+In practice, the feasibility tolerances are readily satisfied when
+using interior point solvers. Hence their termination generally
+depends on satisfying the optimality tolerance, with relative
+feasibility satisfied to a higher tolerance than required. Thus the
+solution obtained using interior point solvers typically has small
+absolute feasibility errors.
+
 #### PDLP solutions
 
 The PDLP algorithm uses an independent [optimality tolerance](@ref
@@ -155,27 +163,32 @@ feasibility by construction. It terminates when
 \end{aligned}
 ```
 
+Unlike interior point solvers, PDLP does not readily satisfy the
+relative feasibility tolerances. Although they and the optimality
+tolerance are satisfied on successful termination, the solution
+obtained may have meaningful absolute feasibility errors.
+
 #### HiGHS solutions
 
-The relative measures used by PDLP and IPX assume that all components
-of the cost and RHS vectors are relevant. When an LP problem is in
-standard form this is true for ``b``, but not necessarily for the cost
-vector ``c``. Consider a large component of ``c`` for which the
-corresponding reduced cost value in ``s`` is also large, in which case
-the LP solution is insensitive to the cost. This component will
-contribute significantly to ``\|c\|`` and, hence, the RHS of the dual
-residual condition, allowing large values of ``\|c-A^Ty-s\|`` to be
-accepted. However, this can lead to unacceptably large absolute
-residual errors and non-optimal solutions being deemed "optimal". When
-equations in ``Ax=b`` correspond to inequality constraints with large
-RHS values and a slack variable (so the constraint is redundant) the
-same issue occurs in the case of primal residual errors. The solution
-of the LP is not sensitive to this large RHS value, but its
-contribution to ``||b||`` can allow large absolute primal residual
-errors to be overlooked.
+The relative measures used by HiPO, IPX and PDLP assume that all
+components of the cost and RHS vectors are relevant. When an LP
+problem is in standard form this is true for ``b``, but not
+necessarily for the cost vector ``c``. Consider a large component of
+``c`` for which the corresponding reduced cost value in ``s`` is also
+large, in which case the LP solution is insensitive to the cost. This
+component will contribute significantly to ``\|c\|`` and, hence, the
+RHS of the dual residual condition, allowing large values of
+``\|c-A^Ty-s\|`` to be accepted. However, this can lead to
+unacceptably large absolute residual errors and non-optimal solutions
+being deemed "optimal". When equations in ``Ax=b`` correspond to
+inequality constraints with large RHS values and a slack variable (so
+the constraint is redundant) the same issue occurs in the case of
+primal residual errors. The solution of the LP is not sensitive to
+this large RHS value, but its contribution to ``||b||`` can allow
+large absolute primal residual errors to be overlooked.
 
 To make an informed assessment of whether an "optimal" solution
-obtained by IPX or PDLP is acceptable, HiGHS computes infinity norm
+obtained by HiPO, IPX or PDLP is acceptable, HiGHS computes infinity norm
 measures of ``b`` and ``c`` corresponding to the components that
 define the optimal solution. For ``c`` these are the components
 corresponding to positive values of ``x`` and reduced costs that are
