@@ -1,6 +1,6 @@
 name: build-wheels-push
 
-on: []
+# on: []
 on: push
 
 # on:
