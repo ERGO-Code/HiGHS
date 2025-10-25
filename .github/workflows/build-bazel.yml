@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -17,20 +17,43 @@ jobs:
 
       - name: bazel clean
         run: bazel clean
-      
+
       - name: build bazel
         run: bazel build //...
-      
+
       - name: test all
         run: bazel test --test_output=all //...
 
-      - name: test example win
-        if: runner.os == 'Windows'
-        run: ./bazel-bin/call-highs-example.exe
-
-      - name: test example linux and macos
-        if: runner.os != 'Windows'
+      - name: test example
         run: ./bazel-bin/call-highs-example
+
+      - name: Upload bazel-testlogs
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazel-testlogs
+          path: bazel-testlogs/
+
+  bazel-win:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Bazelisk is available via Chocolatey (on Windows)
+      - name: Install Bazelisk
+        run: |
+          choco install bazelisk --yes
+          bazelisk version
+
+      - name: Build with Bazelisk
+        run: bazelisk build //...
+
+      - name: Run tests with Bazelisk
+        run: bazelisk test --test_output=all //...
+
+      - name: test example
+        run: ./bazel-bin/call-highs-example.exe
 
       - name: Upload bazel-testlogs
         uses: actions/upload-artifact@v4
