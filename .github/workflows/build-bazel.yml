@@ -6,6 +6,7 @@ jobs:
   bazel:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
@@ -23,7 +24,12 @@ jobs:
       - name: test all
         run: bazel test --test_output=all //...
 
-      - name: test example
+      - name: test example win
+        if: runner.os == Windows
+        run: ./bazel-bin/call-highs-example.exe
+
+      - name: test example linux and macos
+        if: runner.os != Windows
         run: ./bazel-bin/call-highs-example
 
       - name: Upload bazel-testlogs
