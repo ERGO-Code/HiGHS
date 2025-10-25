@@ -1,12 +1,12 @@
 name: build-wheels-push
 
-# on: []
-# on: push
- 
-on:
- release:
-   types:
-     - published
+on: []
+on: push
+
+# on:
+#  release:
+#    types:
+#      - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -49,10 +49,10 @@ jobs:
           - [ubuntu-24.04, musllinux_x86_64] # No OpenBlas, no test
           - [ubuntu-24.04, musllinux_i686]
           - [ubuntu-24.04-arm, musllinux_aarch64]
-          - [macos-15-intel, macosx_x86_64]
-          - [macos-14, macosx_arm64]
-          - [windows-2022, win_amd64]
-          - [windows-2022, win32]
+          # - [macos-15-intel, macosx_x86_64]
+          # - [macos-14, macosx_arm64]
+          # - [windows-2022, win_amd64]
+          # - [windows-2022, win32]
         python: ["cp38", "cp39","cp310", "cp311","cp312", "cp313"]
 
     steps:
@@ -68,51 +68,22 @@ jobs:
           name: cibw-wheels-${{ matrix.python }}-${{ matrix.buildplat[1] }}
           path: wheelhouse/*.whl
 
-  # upload_testpypi:
-  #   name: >-
-  #     Publish highspy to TestPyPI
-  #   runs-on: ubuntu-latest
-  #   needs: [build_wheels, build_sdist]
-  #   # needs: [build_sdist]
-
-  #   # upload to PyPI on every tag starting with 'v'
-  #   # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-
-  #   environment:
-  #     name: testpypi
-  #     url: https://test.pypi.org/p/highspy
-
-  #   permissions:
-  #     id-token: write  # IMPORTANT: mandatory for trusted publishing
-  #   steps:
-  #     - uses: actions/download-artifact@v4
-  #       with:
-  #         pattern: cibw-*
-  #         path: dist
-  #         merge-multiple: true
-
-  #     - name: Download all
-  #       uses: pypa/gh-action-pypi-publish@release/v1
-  #       with:
-  #         repository-url: https://test.pypi.org/legacy/
-  #         verbose: true
-
-  upload_pypi:
+  upload_testpypi:
     name: >-
-      Publish highspy to PyPI
+      Publish highspy to TestPyPI
     runs-on: ubuntu-latest
     needs: [build_wheels, build_sdist]
+    # needs: [build_sdist]
 
     # upload to PyPI on every tag starting with 'v'
     # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
 
     environment:
-      name: pypi
-      url: https://pypi.org/p/highspy
+      name: testpypi
+      url: https://test.pypi.org/p/highspy
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
-
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -122,3 +93,32 @@ jobs:
 
       - name: Download all
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          verbose: true
+
+  # upload_pypi:
+  #   name: >-
+  #     Publish highspy to PyPI
+  #   runs-on: ubuntu-latest
+  #   needs: [build_wheels, build_sdist]
+
+  #   # upload to PyPI on every tag starting with 'v'
+  #   # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+
+  #   environment:
+  #     name: pypi
+  #     url: https://pypi.org/p/highspy
+
+  #   permissions:
+  #     id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: cibw-*
+  #         path: dist
+  #         merge-multiple: true
+
+  #     - name: Download all
+  #       uses: pypa/gh-action-pypi-publish@release/v1
