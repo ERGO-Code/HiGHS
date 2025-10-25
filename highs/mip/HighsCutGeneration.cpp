@@ -500,6 +500,8 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   return true;
 }
 
+static double fast_ceil(double x) { return (int64_t)x + (x > (int64_t)x); }
+
 static double fast_floor(double x) { return (int64_t)x - (x < (int64_t)x); }
 
 bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
@@ -521,6 +523,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   integerinds.clear();
   integerinds.reserve(rowlen);
 
+  bool strongcg = true;
   double maxabsdelta = 0.0;
   constexpr double maxCMirScale = 1e6;
   constexpr double f0min = 0.005;
@@ -542,9 +545,11 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         maxabsdelta = max(maxabsdelta, delta);
         deltas.push_back(delta);
       }
-    } else {
+    } else if (vals[i] < 0) {
+      // Positive coefficient values later set to 0 so have no contribution
       updateViolationAndNorm(i, vals[i], continuouscontribution,
                              continuoussqrnorm);
+      strongcg = false;
     }
   }
 
@@ -687,12 +692,62 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
   }
 
+  // Calc strongcg cut as potential alternative to CMIR
+  if (bestefficacy <= 0 || rowlen == 0) {
+    strongcg = false;
+  }
+  if (strongcg) {
+    double delta = bestdelta;
+    double scale = 1.0 / delta;
+    double scalrhs = double(rhs) * scale;
+    double downrhs = fast_floor(scalrhs);
+    double f0 = scalrhs - downrhs;
+    double oneoveroneminusf0 = 1.0 / (1.0 - f0);
+    // Skip numerically troublesome cuts
+    double oneoverf0 = 1 / f0;
+    double k = fast_ceil(oneoverf0) - 1;
+    if (oneoverf0 - k < 1e-3 || oneoverf0 - k > 1 - 1e-3) {
+      strongcg = false;
+    } else {
+      // All coefficients of continuous variables are 0 in strong CG cut
+      double sqrnorm = 0;
+      double viol = -downrhs;
+
+      for (HighsInt j : integerinds) {
+        double scalaj = vals[j] * scale;
+        double downaj = fast_floor(scalaj + kHighsTiny);
+        double fj = scalaj - downaj;
+        if (fj <= f0 + feastol) {
+          double aj = downaj;
+          updateViolationAndNorm(j, aj, viol, sqrnorm);
+        } else {
+          double pj = fast_ceil(k * (fj - f0) * oneoveroneminusf0 - feastol);
+          double aj = downaj + (pj / (k + 1));
+          updateViolationAndNorm(j, aj, viol, sqrnorm);
+        }
+      }
+      if (sqrnorm <= kHighsTiny) {
+        strongcg = false;
+      } else {
+        double efficacy = viol / sqrt(sqrnorm);
+        // Use the strong CG cut instead of the CMIR if efficacy is larger
+        if (efficacy < bestefficacy + epsilon) {
+          strongcg = false;
+        } else {
+          bestefficacy = efficacy;
+        }
+      }
+    }
+  }
+
   HighsCDouble scale = 1.0 / HighsCDouble(bestdelta);
   HighsCDouble scalrhs = rhs * scale;
   double downrhs = floor(double(scalrhs));
 
   HighsCDouble f0 = scalrhs - downrhs;
   HighsCDouble oneoveroneminusf0 = 1.0 / (1.0 - f0);
+
+  double k = strongcg ? ceil(static_cast<double>(1 / f0)) - 1 : 0;
 
   rhs = downrhs * bestdelta;
   integralSupport = true;
@@ -711,8 +766,16 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double downaj = floor(double(scalaj + kHighsTiny));
       HighsCDouble fj = scalaj - downaj;
       HighsCDouble aj = downaj;
-      if (fj > f0) aj += (fj - f0) * oneoveroneminusf0;
-
+      if (fj > f0) {
+        if (strongcg) {
+          if (fj - f0 > epsilon) {
+            HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0 - epsilon);
+            aj += pj / (k + 1);
+          }
+        } else {
+          aj += (fj - f0) * oneoveroneminusf0;
+        }
+      }
       vals[j] = double(aj * bestdelta);
     }
   }
@@ -728,8 +791,14 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
     double checkefficacy = checkviol / sqrt(checknorm);
     // the efficacy can become infinite if the cut 0 <= -1 is derived
-    assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
-           fabs(checkefficacy) >= 1e30);
+    if (!strongcg) {
+      assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
+             fabs(checkefficacy) >= 1e30);
+    } else {
+      // Rounded conservatively for scoring => strongcg cut can be stronger
+      assert(bestefficacy - checkefficacy < 0.001 ||
+             fabs(checkefficacy) >= 1e30);
+    }
   }
 #endif
 
