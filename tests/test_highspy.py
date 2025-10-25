@@ -114,7 +114,7 @@ class TestHighsPy(unittest.TestCase):
         h = self.get_basic_model()
         self.assertEqual(h.version(), "1.12.0")
         self.assertEqual(h.versionMajor(), 1)
-        self.assertEqual(h.versionMinor(), 11)
+        self.assertEqual(h.versionMinor(), 12)
         self.assertEqual(h.versionPatch(), 0)
 
     def test_basics(self):
