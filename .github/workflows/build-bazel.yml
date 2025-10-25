@@ -25,11 +25,11 @@ jobs:
         run: bazel test --test_output=all //...
 
       - name: test example win
-        if: runner.os == Windows
+        if: runner.os == 'Windows'
         run: ./bazel-bin/call-highs-example.exe
 
       - name: test example linux and macos
-        if: runner.os != Windows
+        if: runner.os != 'Windows'
         run: ./bazel-bin/call-highs-example
 
       - name: Upload bazel-testlogs
