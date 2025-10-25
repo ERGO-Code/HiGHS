@@ -428,7 +428,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                  "Replaced %d blank %6s name%s by name%s with prefix \"%s\", "
                  "beginning with suffix %d\n",
                  int(num_blank), column ? "column" : "row",
-                 num_blank > 1 ? "s" : "", num_blank > 1 ? "s" : "",
+                 num_blank == 1 ? "" : "s", num_blank == 1 ? "" : "s",
                  name_prefix.c_str(), int(from_name_suffix));
     return HighsStatus::kWarning;
   }
@@ -1410,6 +1410,9 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kInterrupt:
       return "Interrupted by user";
       break;
+    case HighsModelStatus::kHighsInterrupt:
+      return "Interrupted by HiGHS";
+      break;
     case HighsModelStatus::kUnknown:
       return "Unknown";
       break;
@@ -1495,6 +1498,8 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     case HighsModelStatus::kSolutionLimit:
       return HighsStatus::kWarning;
     case HighsModelStatus::kInterrupt:
+      return HighsStatus::kWarning;
+    case HighsModelStatus::kHighsInterrupt:
       return HighsStatus::kWarning;
     case HighsModelStatus::kUnknown:
       return HighsStatus::kWarning;

@@ -1004,7 +1004,7 @@ class TestHighsPy(unittest.TestCase):
     def test_read_basis(self):
         if platform == "linux" or platform == "darwin":
             # Read basis from one run model into an unrun model
-            expected_status_before = highspy.HighsBasisStatus.kLower
+            expected_status_before = highspy.HighsBasisStatus.kNonbasic
             expected_status_after = highspy.HighsBasisStatus.kBasic
 
             h1 = self.get_basic_model()
@@ -2160,3 +2160,95 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
 
         status = model.getModelStatus()
         self.assertEqual(status, highspy.HighsModelStatus.kOptimal)
+
+    def test_get_fixed_lp(self):
+        # Min    f  = -3x_0 - 2x_1 - x_2
+        # s.t.          x_0 +  x_1 + x_2 <=  7
+        #              4x_0 + 2x_1 + x_2  = 12
+        #              x_0 >=0; x_1 >= 0; x_2 binary
+        inf = highspy.kHighsInf
+        model = highspy.Highs()
+        num_vars = 3
+        model.addVars(num_vars, np.array([0.0, 0.0, 0.0]), np.array([2.0, 4.0, inf]))
+        num_cons = 2
+        lower = np.array([-inf, 12], dtype=np.double)
+        upper = np.array([7, 12], dtype=np.double)
+        num_new_nz = 6
+        starts = np.array([0, 2, 4])
+        indices = np.array([0, 1, 0, 1, 0, 1])
+        values = np.array([1, 4, 1, 2, 1, 1], dtype=np.double)
+        model.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
+        model.changeColsIntegrality(1, np.array([2]), np.array([highspy.HighsVarType.kInteger]))
+        model.setOptionValue("presolve", "off")
+        model.run()
+        mip_objective_function_value = model.getInfo().objective_function_value
+        solution = model.getSolution()
+        [status, fixed_lp] = model.getFixedLp()
+        self.assertEqual(status, highspy.HighsStatus.kOk)
+        model.passModel(fixed_lp)
+        model.setSolution(solution)
+        model.run()
+        self.assertEqual(model.getInfo().objective_function_value, mip_objective_function_value)
+        self.assertEqual(model.getInfo().simplex_iteration_count, 0)
+    
+    def test_get_objectives(self):
+        # Build a simple model with 3 vars and a primary (single) objective
+        h = highspy.Highs()
+        h.silent()
+
+        x, y, z, _ = h.addVariables(4, lb=0, ub=10)
+        h.maximize(x + 2 * y + 3 * z + 5)
+
+        # Test getObjective (primary objective)
+        obj_expr, sense = h.getObjective()
+        self.assertEqual(list(map(int, obj_expr.idxs)), [0, 1, 2])
+        self.assertEqual(obj_expr.vals, [1.0, 2.0, 3.0])
+        self.assertEqual(obj_expr.constant, 5.0)
+        self.assertEqual(sense, highspy.ObjSense.kMaximize)
+
+        # No multi-objectives yet
+        self.assertEqual(h.getNumLinearObjectives(), 0)
+
+        # Add two linear objectives (multi-objective data structure)
+        o1 = highspy.HighsLinearObjective()
+        o1.offset = 10.0
+        o1.coefficients = [1.0, 0.0, 0.0, 0.0]
+        o1.priority = 5
+        o1.abs_tolerance = 0.01
+        o1.rel_tolerance = 0.02
+
+        o2 = highspy.HighsLinearObjective()
+        o2.offset = -3.5
+        o2.coefficients = [0.0, 1.0, 1.0, 0.0]
+        o2.priority = 3
+        o2.abs_tolerance = 0.0
+        o2.rel_tolerance = 0.0
+
+        self.assertEqual(h.addLinearObjective(o1), highspy.HighsStatus.kOk)
+        self.assertEqual(h.addLinearObjective(o2), highspy.HighsStatus.kOk)
+
+        # Verify count
+        self.assertEqual(h.getNumLinearObjectives(), 2)
+
+        # Retrieve and verify first added linear objective
+        lo0 = h.getLinearObjective(0)
+        self.assertAlmostEqual(lo0.offset, o1.offset)
+        self.assertEqual(list(lo0.coefficients), o1.coefficients)
+        self.assertEqual(lo0.priority, o1.priority)
+        self.assertAlmostEqual(lo0.abs_tolerance, o1.abs_tolerance)
+        self.assertAlmostEqual(lo0.rel_tolerance, o1.rel_tolerance)
+
+        # Retrieve and verify second added linear objective
+        lo1 = h.getLinearObjective(1)
+        self.assertAlmostEqual(lo1.offset, o2.offset)
+        self.assertEqual(list(lo1.coefficients), o2.coefficients)
+        self.assertEqual(lo1.priority, o2.priority)
+        self.assertAlmostEqual(lo1.abs_tolerance, o2.abs_tolerance)
+        self.assertAlmostEqual(lo1.rel_tolerance, o2.rel_tolerance)
+
+        # Ensure original objective remains unchanged
+        obj_expr2, sense2 = h.getObjective()
+        self.assertEqual(list(map(int, obj_expr2.idxs)), [0, 1, 2])
+        self.assertEqual(obj_expr2.vals, [1.0, 2.0, 3.0])
+        self.assertEqual(obj_expr2.constant, 5.0)
+        self.assertEqual(sense2, highspy.ObjSense.kMaximize)

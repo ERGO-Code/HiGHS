@@ -209,6 +209,14 @@ class HPresolve {
 
   bool isEquation(HighsInt row) const;
 
+  bool isRanged(HighsInt row) const;
+
+  bool isRedundant(HighsInt row) const;
+
+  bool yieldsImpliedLowerBound(HighsInt row, double val) const;
+
+  bool yieldsImpliedUpperBound(HighsInt row, double val) const;
+
   bool isImpliedEquationAtLower(HighsInt row) const;
 
   bool isImpliedEquationAtUpper(HighsInt row) const;
@@ -330,6 +338,13 @@ class HPresolve {
 
   double problemSizeReduction() const;
 
+  void computeColBounds(HighsInt col, HighsInt boundCol = -1,
+                        double boundColValue = -kHighsInf,
+                        double* lowerBound = nullptr,
+                        double* upperBound = nullptr,
+                        double* worstCaseLowerBound = nullptr,
+                        double* worstCaseUpperBound = nullptr);
+
  public:
   // for LP presolve
   bool okSetInput(HighsLp& model_, const HighsOptions& options_,
@@ -374,6 +389,20 @@ class HPresolve {
 
   Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                             bool handleSingletonRows = true);
+
+  Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
+
+  double computeImpliedLowerBound(HighsInt col, HighsInt boundCol = -1,
+                                  double boundColValue = kHighsInf);
+
+  double computeImpliedUpperBound(HighsInt col, HighsInt boundCol = -1,
+                                  double boundColValue = kHighsInf);
+
+  double computeWorstCaseLowerBound(HighsInt col, HighsInt boundCol = -1,
+                                    double boundColValue = kHighsInf);
+
+  double computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol = -1,
+                                    double boundColValue = kHighsInf);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 

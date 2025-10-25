@@ -118,15 +118,23 @@ TEST_CASE("test-1966", "[highs_ipm]") {
   highs.setOptionValue("presolve", kHighsOffString);
   //  if (dev_run) highs.writeModel("");
   HighsModelStatus require_model_status = HighsModelStatus::kNotset;
-  for (int k = 0; k < 2; k++) {
+  int to_k = 2;
+#ifdef HIPO
+  to_k = 3;
+#endif
+  for (int k = 0; k < to_k; k++) {
     if (k == 0) {
-      highs.setOptionValue("solver", kIpmString);
-      if (dev_run) printf("Solving with IPX\n");
-      require_model_status = HighsModelStatus::kInfeasible;
-    } else {
       highs.setOptionValue("solver", kPdlpString);
       if (dev_run) printf("Solving with PDLP\n");
       require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    } else if (k == 1) {
+      highs.setOptionValue("solver", kIpxString);
+      if (dev_run) printf("Solving with IPX\n");
+      require_model_status = HighsModelStatus::kInfeasible;
+    } else {
+      highs.setOptionValue("solver", kHipoString);
+      if (dev_run) printf("Solving with HiPO\n");
+      require_model_status = HighsModelStatus::kInfeasible;
     }
     highs.run();
     REQUIRE(info.primal_solution_status != kSolutionStatusFeasible);
@@ -197,6 +205,22 @@ TEST_CASE("test-2087", "[highs_ipm]") {
 
   h.run();
   REQUIRE(first_ipm_iteration_count == h.getInfo().ipm_iteration_count);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-2527", "[highs_ipm]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  HighsLp lp = h.getLp();
+  lp.col_cost_.assign(lp.num_col_, 0);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kIpmString);
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.run() == HighsStatus::kOk);
 
   h.resetGlobalScheduler(true);
 }

@@ -13,6 +13,7 @@
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
+#include "mip/HighsMipSolver.h"  // For getGapString
 #include "model/HighsHessianUtils.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
@@ -51,13 +52,13 @@ void Highs::reportModelStats() const {
     if (non_continuous) {
       problem_type = "MIQP";
     } else {
-      problem_type = "QP  ";
+      problem_type = "QP";
     }
   } else {
     if (non_continuous) {
-      problem_type = "MIP ";
+      problem_type = "MIP";
     } else {
-      problem_type = "LP  ";
+      problem_type = "LP";
     }
   }
   const HighsInt a_num_nz = lp.a_matrix_.numNz();
@@ -66,9 +67,11 @@ void Highs::reportModelStats() const {
     highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
                 problem_type.c_str(), lp.model_name_.c_str());
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
+                "Row%s      : %" HIGHSINT_FORMAT "\n",
+                lp.num_row_ == 1 ? "" : "s", lp.num_row_);
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
+                "Col%s      : %" HIGHSINT_FORMAT "\n",
+                lp.num_col_ == 1 ? "" : "s", lp.num_col_);
     if (q_num_nz) {
       highsLogDev(log_options, HighsLogType::kInfo,
                   "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
@@ -76,7 +79,8 @@ void Highs::reportModelStats() const {
                   "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
     } else {
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
+                  "Nonzero%s  : %" HIGHSINT_FORMAT "\n",
+                  a_num_nz == 1 ? "" : "s", a_num_nz);
     }
     if (num_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
@@ -93,15 +97,21 @@ void Highs::reportModelStats() const {
     std::stringstream stats_line;
     stats_line << problem_type;
     if (lp.model_name_.length()) stats_line << " " << lp.model_name_;
-    stats_line << " has " << lp.num_row_ << " rows; " << lp.num_col_ << " cols";
+    stats_line << " has " << lp.num_row_ << " row"
+               << (lp.num_row_ == 1 ? "" : "s") << "; " << lp.num_col_ << " col"
+               << (lp.num_col_ == 1 ? "" : "s");
     if (q_num_nz) {
-      stats_line << "; " << a_num_nz << " matrix nonzeros";
-      stats_line << "; " << q_num_nz << " Hessian nonzeros";
+      stats_line << "; " << a_num_nz << " matrix nonzero"
+                 << (a_num_nz == 1 ? "" : "s");
+      stats_line << "; " << q_num_nz << " Hessian nonzero"
+                 << (q_num_nz == 1 ? "" : "s");
     } else {
-      stats_line << "; " << a_num_nz << " nonzeros";
+      stats_line << "; " << a_num_nz << " nonzero"
+                 << (a_num_nz == 1 ? "" : "s");
     }
     if (num_integer)
-      stats_line << "; " << num_integer << " integer variables (" << num_binary
+      stats_line << "; " << num_integer << " integer variable"
+                 << (a_num_nz == 1 ? "" : "s") << " (" << num_binary
                  << " binary)";
     if (num_semi_continuous)
       stats_line << "; " << num_semi_continuous << " semi-continuous variables";
@@ -975,6 +985,24 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   return HighsStatus::kOk;
 }
 
+bool Highs::feasibleWrtBounds(const bool columns) const {
+  if (this->info_.primal_solution_status != kSolutionStatusFeasible)
+    return false;
+  const HighsLp& lp = model_.lp_;
+  const double primal_feasibility_tolerance =
+      this->options_.primal_feasibility_tolerance;
+  std::vector<double> value =
+      columns ? this->solution_.col_value : this->solution_.row_value;
+  std::vector<double> lower = columns ? lp.col_lower_ : lp.row_lower_;
+  std::vector<double> upper = columns ? lp.col_upper_ : lp.row_upper_;
+  HighsInt dim = columns ? lp.num_col_ : lp.num_row_;
+  for (HighsInt iX = 0; iX < dim; iX++) {
+    if (value[iX] < lower[iX] - primal_feasibility_tolerance) return false;
+    if (value[iX] > upper[iX] + primal_feasibility_tolerance) return false;
+  }
+  return true;
+}
+
 HighsStatus Highs::changeColBoundsInterface(
     HighsIndexCollection& index_collection, const double* col_lower,
     const double* col_upper) {
@@ -1027,7 +1055,14 @@ HighsStatus Highs::changeColBoundsInterface(
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, true);
   // Deduce the consequences of new col bounds
-  invalidateModelStatusSolutionAndInfo();
+  if (!this->basis_.useful && feasibleWrtBounds()) {
+    // Retain the solution if there's no basis, and the solution is
+    // feasible
+    invalidateModelStatusAndInfo();
+  } else {
+    // Invalidate the solution
+    invalidateModelStatusSolutionAndInfo();
+  }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
@@ -1085,7 +1120,14 @@ HighsStatus Highs::changeRowBoundsInterface(
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, false);
   // Deduce the consequences of new row bounds
-  invalidateModelStatusSolutionAndInfo();
+  if (!this->basis_.useful && feasibleWrtBounds(false)) {
+    // Retain the solution if there's no basis, and the solution is
+    // feasible
+    invalidateModelStatusAndInfo();
+  } else {
+    // Invalidate the solution
+    invalidateModelStatusSolutionAndInfo();
+  }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
@@ -1487,7 +1529,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // for the current basis, so return_value is the rank deficiency.
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, callback_, options_,
-                                      timer_);
+                                      timer_, sub_solver_call_time_);
     const bool only_from_known_basis = true;
     return_status = interpretCallStatus(
         options_.log_options,
@@ -1857,7 +1899,8 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
 
 HighsStatus Highs::getRangingInterface() {
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
-                                    ekk_instance_, callback_, options_, timer_);
+                                    ekk_instance_, callback_, options_, timer_,
+                                    sub_solver_call_time_);
   solver_object.model_status_ = model_status_;
   return getRangingData(this->ranging_, solver_object);
 }
@@ -2636,7 +2679,7 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::lpKktCheck(const std::string& message) {
+HighsStatus Highs::lpKktCheck(const HighsLp& lp, const std::string& message) {
   if (!this->solution_.value_valid) return HighsStatus::kOk;
   // Must have dual values for an LP if there are primal values
   assert(this->solution_.dual_valid);
@@ -2656,16 +2699,13 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     dual_residual_tolerance = options.kkt_tolerance;
     optimality_tolerance = options.kkt_tolerance;
   }
-  info.objective_function_value =
-      model_.lp_.objectiveValue(solution_.col_value);
+  info.objective_function_value = lp.objectiveValue(solution_.col_value);
   HighsPrimalDualErrors primal_dual_errors;
   const bool get_residuals = !basis_.valid;
-  getLpKktFailures(options, model_.lp_, solution, basis_, info,
-                   primal_dual_errors, get_residuals);
-  //  highsLogUser(options.log_options, HighsLogType::kInfo,
-  //               "Highs::lpKktCheck: %s\n", message.c_str());
+  getLpKktFailures(options, lp, solution, basis_, info, primal_dual_errors,
+                   get_residuals);
   if (this->model_status_ == HighsModelStatus::kOptimal)
-    reportLpKktFailures(model_.lp_, options, info);
+    reportLpKktFailures(lp, options, info, message);
   // get_residuals is false when there is a valid basis, since
   // residual errors are assumed to be small, so
   // info.num_primal_residual_errors = -1, since they aren't
@@ -2727,7 +2767,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     if (info.primal_dual_objective_error > optimality_tolerance) {
       // Ignore primal-dual objective errors if both objectives are small
       const bool ok_dual_objective = computeDualObjectiveValue(
-          nullptr, this->model_.lp_, this->solution_, local_dual_objective);
+          nullptr, lp, this->solution_, local_dual_objective);
       assert(ok_dual_objective);
       if (info.objective_function_value * info.objective_function_value >
               optimality_tolerance &&
@@ -2870,10 +2910,11 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
           info.primal_dual_objective_error / optimality_tolerance;
       foundOptimalityError();
       if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "                 %8.3g relative P-D objective error    "
-                     "(tolerance = %4.0e)\n",
-                     info.primal_dual_objective_error, optimality_tolerance);
+        highsLogUser(
+            log_options, HighsLogType::kWarning,
+            "                    %8.3g relative P-D objective error    "
+            "(tolerance = %4.0e)\n",
+            info.primal_dual_objective_error, optimality_tolerance);
     }
     // Set the primal and dual solution status according to tolerance failure
     if (max_primal_tolerance_relative_violation >
@@ -2921,6 +2962,7 @@ HighsStatus Highs::lpKktCheck(const std::string& message) {
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Model status changed from \"Unknown\" to \"Optimal\"\n");
   }
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
   return HighsStatus::kOk;
 }
 
@@ -3061,6 +3103,7 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
 // Modify status and info if user bound or cost scaling, or
 // primal/dual feasibility tolerances have changed
 HighsStatus Highs::optionChangeAction() {
+  this->timer_.setPrintfFlag(options_.output_flag, options_.log_to_console);
   HighsModel& model = this->model_;
   HighsLp& lp = model.lp_;
   HighsInfo& info = this->info_;
@@ -4298,4 +4341,75 @@ void HighsLinearObjective::clear() {
   this->abs_tolerance = 0.0;
   this->rel_tolerance = 0.0;
   this->priority = 0;
+}
+
+void HighsSubSolverCallTime::initialise() {
+  this->num_call.assign(kSubSolverCount, 0);
+  this->run_time.assign(kSubSolverCount, 0);
+  this->name.assign(kSubSolverCount, "");
+  this->name[kSubSolverSimplexBasis] = "Simplex (basis)";
+  this->name[kSubSolverSimplexNoBasis] = "Simplex (no basis)";
+  this->name[kSubSolverHipo] = "HiPO";
+  this->name[kSubSolverIpx] = "IPX";
+  this->name[kSubSolverHipoAc] = "HiPO (AC)";
+  this->name[kSubSolverIpxAc] = "IPX (AC)";
+  this->name[kSubSolverPdlp] = "PDLP";
+  this->name[kSubSolverQpAsm] = "QP ASM";
+  this->name[kSubSolverMip] = "MIP";
+  this->name[kSubSolverSubMip] = "Sub-MIP";
+}
+
+void HighsSubSolverCallTime::add(
+    const HighsSubSolverCallTime& sub_solver_call_time,
+    const bool analytic_centre) {
+  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
+    HighsInt ToIx = Ix;
+    if (Ix == kSubSolverHipo) {
+      if (analytic_centre) ToIx = kSubSolverHipoAc;
+    } else if (Ix == kSubSolverIpx) {
+      if (analytic_centre) ToIx = kSubSolverIpxAc;
+    }
+    this->num_call[ToIx] += sub_solver_call_time.num_call[Ix];
+    this->run_time[ToIx] += sub_solver_call_time.run_time[Ix];
+  }
+}
+
+void Highs::reportSubSolverCallTime() const {
+  double mip_time = this->sub_solver_call_time_.run_time[kSubSolverMip];
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << highsFormatToString(
+      "\nSub-solver timing\nSolver                 Calls    Time       "
+      "Time/call");
+  if (mip_time > 0) ss << "  MIP%";
+  highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
+
+  double sum_mip_sub_solve_time = 0;
+  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
+    if (this->sub_solver_call_time_.num_call[Ix]) {
+      ss.str(std::string());
+      ss << highsFormatToString(
+          "%-18s %9d %11.4e %11.4e",
+          this->sub_solver_call_time_.name[Ix].c_str(),
+          int(this->sub_solver_call_time_.num_call[Ix]),
+          this->sub_solver_call_time_.run_time[Ix],
+          this->sub_solver_call_time_.run_time[Ix] /
+              (1.0 * this->sub_solver_call_time_.num_call[Ix]));
+      if (mip_time > 0 && Ix != kSubSolverMip) {
+        if (Ix != kSubSolverHipoAc && Ix != kSubSolverIpxAc)
+          sum_mip_sub_solve_time += this->sub_solver_call_time_.run_time[Ix];
+        ss << highsFormatToString(
+            " %5.1f",
+            1e2 * this->sub_solver_call_time_.run_time[Ix] / mip_time);
+      }
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                   ss.str().c_str());
+    }
+  }
+  if (mip_time > 0)
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "TOTAL (excluding AC)         %11.4e             %5.1f\n",
+                 sum_mip_sub_solve_time,
+                 1e2 * sum_mip_sub_solve_time / mip_time);
 }

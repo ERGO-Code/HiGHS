@@ -61,7 +61,8 @@ public enum HighsModelStatus
     kUnknown,
     kSolutionLimit,
     kInterrupt,
-    kMemoryLimit
+    kMemoryLimit,
+    kHighsInterrupt
 }
 
 public enum HighsIntegrality

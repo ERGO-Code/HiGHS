@@ -12,6 +12,7 @@
 
 #include <cmath>
 
+#include "mip/HighsSeparator.h"
 #include "mip/MipTimer.h"
 #include "util/HighsUtils.h"
 
@@ -23,6 +24,7 @@ void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
 }
 
 void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
+  this->sub_solver_call_time_->initialise();
   analyse_mip_time = kHighsAnalysisLevelMipTime & options.highs_analysis_level;
   if (analyse_mip_time) {
     HighsTimerClock clock;
@@ -30,6 +32,16 @@ void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
     MipTimer mip_timer;
     mip_timer.initialiseMipClocks(clock);
     mip_clocks = clock;
+    sepa_name_clock.push_back(
+        std::make_pair(kImplboundSepaString, kMipClockImplboundSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kCliqueSepaString, kMipClockCliqueSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kTableauSepaString, kMipClockTableauSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kPathAggrSepaString, kMipClockPathAggrSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kModKSepaString, kMipClockModKSepa));
   }
 }
 
@@ -85,6 +97,79 @@ HighsInt HighsMipAnalysis::mipTimerNumCall(const HighsInt mip_clock
   return mip_clocks.timer_pointer_->numCall(highs_timer_clock);
 }
 
+void HighsMipAnalysis::mipTimerAdd(const HighsInt mip_clock,
+                                   const HighsInt num_call, const double time
+                                   // , const HighsInt thread_id
+) const {
+  if (!analyse_mip_time) return;
+  HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
+  mip_clocks.timer_pointer_->add(highs_timer_clock, num_call, time);
+}
+
+void HighsMipAnalysis::mipTimerUpdate(
+    const HighsSubSolverCallTime& sub_solver_call_time, const bool valid_basis,
+    const bool presolve, const bool analytic_centre
+    // , const HighsInt thread_id
+) const {
+  if (!analyse_mip_time) return;
+  // If IPM has been run first, then there may be a valid basis for
+  // simplex
+  const bool run_ipm = sub_solver_call_time.num_call[kSubSolverHipo] > 0 ||
+                       sub_solver_call_time.num_call[kSubSolverIpx] > 0;
+  if (!run_ipm) {
+    // If IPM has not been run first, then check that simplex call
+    // counts are consistent with valid_basis and presolve
+    if (valid_basis) {
+      mipTimerAdd(kMipClockSimplexBasisSolveLp,
+                  sub_solver_call_time.num_call[kSubSolverSimplexBasis],
+                  sub_solver_call_time.run_time[kSubSolverSimplexBasis]);
+      assert(sub_solver_call_time.num_call[kSubSolverSimplexNoBasis] == 0);
+    } else if (presolve) {
+      mipTimerAdd(kMipClockSimplexBasisSolveLp,
+                  sub_solver_call_time.num_call[kSubSolverSimplexBasis],
+                  sub_solver_call_time.run_time[kSubSolverSimplexBasis]);
+      mipTimerAdd(kMipClockSimplexNoBasisSolveLp,
+                  sub_solver_call_time.num_call[kSubSolverSimplexNoBasis],
+                  sub_solver_call_time.run_time[kSubSolverSimplexNoBasis]);
+    } else {
+      mipTimerAdd(kMipClockSimplexNoBasisSolveLp,
+                  sub_solver_call_time.num_call[kSubSolverSimplexNoBasis],
+                  sub_solver_call_time.run_time[kSubSolverSimplexNoBasis]);
+      assert(sub_solver_call_time.num_call[kSubSolverSimplexBasis] == 0);
+    }
+  } else {
+    // IPM has been run first, then at least one of the simplex call
+    // counts should be zero
+    assert(sub_solver_call_time.num_call[kSubSolverSimplexBasis] *
+               sub_solver_call_time.num_call[kSubSolverSimplexNoBasis] ==
+           0);
+    mipTimerAdd(kMipClockSimplexBasisSolveLp,
+                sub_solver_call_time.num_call[kSubSolverSimplexBasis],
+                sub_solver_call_time.run_time[kSubSolverSimplexBasis]);
+    mipTimerAdd(kMipClockSimplexNoBasisSolveLp,
+                sub_solver_call_time.num_call[kSubSolverSimplexNoBasis],
+                sub_solver_call_time.run_time[kSubSolverSimplexNoBasis]);
+  }
+  if (sub_solver_call_time.num_call[kSubSolverHipo]) {
+    const HighsInt mip_clock = analytic_centre
+                                   ? kMipClockHipoSolveAnalyticCentreLp
+                                   : kMipClockHipoSolveLp;
+    mipTimerAdd(mip_clock, sub_solver_call_time.num_call[kSubSolverHipo],
+                sub_solver_call_time.run_time[kSubSolverHipo]);
+  }
+  if (sub_solver_call_time.num_call[kSubSolverIpx]) {
+    const HighsInt mip_clock = analytic_centre
+                                   ? kMipClockIpxSolveAnalyticCentreLp
+                                   : kMipClockIpxSolveLp;
+    mipTimerAdd(mip_clock, sub_solver_call_time.num_call[kSubSolverIpx],
+                sub_solver_call_time.run_time[kSubSolverIpx]);
+  }
+  assert(sub_solver_call_time.num_call[kSubSolverMip] == 0);
+  assert(sub_solver_call_time.num_call[kSubSolverPdlp] == 0);
+  assert(sub_solver_call_time.num_call[kSubSolverQpAsm] == 0);
+  assert(sub_solver_call_time.num_call[kSubSolverSubMip] == 0);
+}
+
 void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
   if (header) {
     printf(
@@ -99,7 +184,7 @@ void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
       mip_clocks.clock_[kMipClockSimplexBasisSolveLp];
   HighsInt simplex_no_basis_solve_iclock =
       mip_clocks.clock_[kMipClockSimplexNoBasisSolveLp];
-  HighsInt ipm_solve_iclock = mip_clocks.clock_[kMipClockIpmSolveLp];
+  HighsInt ipm_solve_iclock = mip_clocks.clock_[kMipClockIpxSolveLp];
   //  HighsInt num_no_basis_solve =
   //  mip_clocks.timer_pointer_->clock_num_call[no_basis_solve_iclock]; HighsInt
   //  num_basis_solve =
@@ -153,22 +238,78 @@ void HighsMipAnalysis::reportMipTimer() {
   mip_timer.reportMipEvaluateRootNodeClock(mip_clocks);
   //  mip_timer.reportAltEvaluateRootNodeClock(mip_clocks);
   //  mip_timer.reportMipPresolveClock(mip_clocks);
-  //  mip_timer.reportMipSeparationClock(mip_clocks);
+  //  mip_timer.reportMipRootSeparationClock(mip_clocks);
   //  mip_timer.reportMipSearchClock(mip_clocks);
   //  mip_timer.reportMipDiveClock(mip_clocks);
   //  mip_timer.reportMipNodeSearchClock(mip_clocks);
   //  mip_timer.reportMipDivePrimalHeuristicsClock(mip_clocks);
-  //  mip_timer.reportMipSubMipSolveClock(mip_clocks);
+  mip_timer.reportMipSubMipSolveClock(mip_clocks);
+  mip_timer.reportMipSeparationClock(mip_clocks);
   mip_timer.reportMipSolveLpClock(mip_clocks);
   //  mip_timer.csvMipClock(this->model_name, mip_clocks, true, false);
   //  reportMipSolveLpClock(true);
+  //
   //  mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);
   //  reportMipSolveLpClock(false);
+  //
   //  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, true,
-  //  true); mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks,
-  //  false, true); analyseVectorValues(nullptr, "Node search time",
+  //  true);
+  //
+  //  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, false,
+  //  true);
+  //
+  //  analyseVectorValues(nullptr, "Node search time",
   //                      HighsInt(node_search_time.size()), node_search_time);
+  //
   //  analyseVectorValues(nullptr, "Dive time", HighsInt(dive_time.size()),
   //                      dive_time);
   // mip_timer.reportFjClock(this->model_name, mip_clocks);
+}
+
+HighsInt HighsMipAnalysis::getSepaClockIndex(const std::string& name) const {
+  HighsInt num_sepa_clock = this->sepa_name_clock.size();
+  assert(num_sepa_clock > 0);
+  for (HighsInt iSepaClock = 0; iSepaClock < num_sepa_clock; iSepaClock++) {
+    if (this->sepa_name_clock[iSepaClock].first == name)
+      return this->sepa_name_clock[iSepaClock].second;
+  }
+  return -1;
+}
+
+void HighsMipAnalysis::addSubSolverCallTime(
+    const HighsSubSolverCallTime& sub_solver_call_time,
+    const bool analytic_centre) const {
+  this->sub_solver_call_time_->add(sub_solver_call_time, analytic_centre);
+}
+
+void HighsMipAnalysis::checkSubSolverCallTime(
+    const HighsSubSolverCallTime& sub_solver_call_time) {
+  if (!analyse_mip_time) return;
+  const bool printf_flag = mip_clocks.timer_pointer_->printf_flag;
+  bool error = false;
+  auto check = [&](const HighsInt& sub_solver_clock,
+                   const HighsInt& mip_clock) {
+    HighsInt sub_solver_num_call =
+        sub_solver_call_time.num_call[sub_solver_clock];
+    HighsInt mip_clock_num_call =
+        mip_clocks.timer_pointer_->numCall(mip_clocks.clock_[mip_clock]);
+    const bool ok = sub_solver_num_call == mip_clock_num_call;
+    if (!ok) {
+      if (printf_flag)
+        printf("HighsMipAnalysis::checkSubSolverCallTime: Error for %s\n",
+               sub_solver_call_time.name[sub_solver_clock].c_str());
+      error = true;
+    }
+  };
+  check(kSubSolverSimplexBasis, kMipClockSimplexBasisSolveLp);
+  check(kSubSolverSimplexNoBasis, kMipClockSimplexNoBasisSolveLp);
+  check(kSubSolverHipo, kMipClockHipoSolveLp);
+  check(kSubSolverIpx, kMipClockIpxSolveLp);
+  check(kSubSolverHipoAc, kMipClockHipoSolveAnalyticCentreLp);
+  check(kSubSolverIpxAc, kMipClockIpxSolveAnalyticCentreLp);
+  check(kSubSolverSubMip, kMipClockSubMipSolve);
+  if (printf_flag)
+    printf("\nHighsMipAnalysis::checkSubSolverCallTime: %s\n",
+           error ? "ERROR!" : "OK");
+  assert(!error);
 }

@@ -184,7 +184,7 @@ void presolveSolvePostsolve(const std::string& model_file,
   highs1.setOptionValue("output_flag", dev_run);
   HighsStatus return_status;
   highs0.readModel(model_file);
-  if (solve_relaxation) highs0.setOptionValue("solver", kSimplexString);
+  highs0.setOptionValue("solve_relaxation", solve_relaxation);
   return_status = highs0.presolve();
   REQUIRE(return_status == HighsStatus::kOk);
   HighsPresolveStatus model_presolve_status = highs0.getModelPresolveStatus();
@@ -194,7 +194,7 @@ void presolveSolvePostsolve(const std::string& model_file,
   }
   HighsLp lp = highs0.getPresolvedLp();
   highs1.passModel(lp);
-  if (solve_relaxation) highs1.setOptionValue("solver", kSimplexString);
+  highs1.setOptionValue("solve_relaxation", solve_relaxation);
   highs1.setOptionValue("presolve", kHighsOffString);
   highs1.run();
   HighsSolution solution = highs1.getSolution();
@@ -215,6 +215,7 @@ void presolveSolvePostsolve(const std::string& model_file,
             mip_feasibility_tolerance);
   } else {
     HighsBasis basis = highs1.getBasis();
+    REQUIRE(basis.valid);
     return_status = highs0.postsolve(solution, basis);
     REQUIRE(return_status == HighsStatus::kOk);
     HighsModelStatus model_status = highs0.getModelStatus();
@@ -837,4 +838,28 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
           lp_presolve_requires_basis_postsolve);
 
   h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("dual-bound-tightening", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+
+  // complement variables to get code coverage
+  HighsLp lp = highs.getLp();
+  std::transform(lp.a_matrix_.value_.begin(), lp.a_matrix_.value_.end(),
+                 lp.a_matrix_.value_.begin(), [](double v) { return -v; });
+  std::transform(lp.col_cost_.begin(), lp.col_cost_.end(), lp.col_cost_.begin(),
+                 [](double v) { return -v; });
+  std::transform(lp.col_upper_.begin(), lp.col_upper_.end(),
+                 lp.col_upper_.begin(), [](double v) { return -v; });
+  std::transform(lp.col_lower_.begin(), lp.col_lower_.end(),
+                 lp.col_lower_.begin(), [](double v) { return -v; });
+  std::swap(lp.col_lower_, lp.col_upper_);
+
+  highs.passModel(lp);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
 }
