@@ -48,6 +48,8 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
+    case HighsModelStatus::kInterrupt:
+    case HighsModelStatus::kHighsInterrupt:
     case HighsModelStatus::kUnknown:
       // Should have info
       assert(have_info == true);

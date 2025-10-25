@@ -119,11 +119,21 @@ Int Basis::Factorize() {
 
     // Build column pointers for passing to LU factorization.
     std::vector<Int> begin(m), end(m);
+    Int basis_num_nz = 0;
     for (Int i = 0; i < m; i++) {
         assert(basis_[i] >= 0);
         begin[i] = AI.begin(basis_[i]);
         end[i] = AI.end(basis_[i]);
+	basis_num_nz += (end[i]-begin[i]);
     }
+
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream <<
+      "    Start  factorization " << Format(num_factorizations_+1, 3) <<
+      ": nonzeros in basis = " << Format(basis_num_nz, 9) <<
+      Format("", 14) << Fixed(control_.Elapsed(), 6, 0) << "s\n";
+    control_.hIntervalLog(h_logging_stream);
 
     Int err = 0;                // return code
     while (true) {
@@ -151,6 +161,12 @@ Int Basis::Factorize() {
     }
     time_factorize_ += timer.Elapsed();
     factorization_is_fresh_ = true;
+    h_logging_stream.str(std::string());
+    h_logging_stream <<
+      "    Finish factorization " << Format(num_factorizations_, 3) <<
+      ": fill factor = " << Fixed(lu_->fill_factor(), 6, 2) <<
+      Format("", 23) << Fixed(control_.Elapsed(), 6, 0) << "s\n";
+    control_.hIntervalLog(h_logging_stream);
     return err;
 }
 
@@ -915,9 +931,10 @@ void Basis::PivotFixedVariablesOutOfBasis(const double* colweights, Info* info){
         }
 	std::stringstream h_logging_stream;
 	h_logging_stream.str(std::string());
-	h_logging_stream << " " << remaining.size() << " fixed variables remaining\n";
+	h_logging_stream << Format(remaining.size(), 9) <<
+	  " fixed variables remaining" << Format("", 38) <<
+	  Fixed(control_.Elapsed(), 6, 0) << "s\n";
 	control_.hIntervalLog(h_logging_stream);
-
     }
     control_.Debug()
         << Textline("Number of fixed variables swapped for stability:")

@@ -71,8 +71,9 @@ struct RawToken {
     type = RawTokenType::STR;
     return *this;
   }
-  RawToken& operator=(const double v) {
-    dvalue = v;
+  RawToken& operator=(const std::pair<double, std::string> vs) {
+    dvalue = vs.first;
+    svalue = vs.second;
     type = RawTokenType::CONS;
     return *this;
   }
@@ -339,8 +340,6 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
           std::shared_ptr<LinTerm>(new LinTerm());
       linterm->coef = it->value;
       linterm->var = builder.getvarbyname(name);
-      //	 printf("LpReader: Term   %+g %s\n", linterm->coef,
-      //name.c_str());
       expr->linterms.push_back(linterm);
 
       ++it;
@@ -350,7 +349,6 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
 
     // const
     if (it->type == ProcessedTokenType::CONST) {
-      //      printf("LpReader: Offset change from %+g by %+g\n", expr->offset, it->value);
       expr->offset += it->value;
       ++it;
       continue;
@@ -364,8 +362,6 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
           std::shared_ptr<LinTerm>(new LinTerm());
       linterm->coef = 1.0;
       linterm->var = builder.getvarbyname(name);
-      //	 printf("LpReader: Term   %+g %s\n", linterm->coef,
-      //name.c_str());
       expr->linterms.push_back(linterm);
 
       ++it;
@@ -954,6 +950,15 @@ void Reader::processtokens() {
       continue;
     }
 
+    // constraint identifier - with numeric constant value as name?
+    if (rawtokens[0].istype(RawTokenType::CONS) &&
+        rawtokens[1].istype(RawTokenType::COLON)) {
+      processedtokens.emplace_back(ProcessedTokenType::CONID,
+                                   rawtokens[0].svalue);
+      nextrawtoken(2);
+      continue;
+    }
+
     // check if free
     if (rawtokens[0].istype(RawTokenType::STR) &&
         iskeyword(svalue_lc, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
@@ -1184,7 +1189,6 @@ bool Reader::readnexttoken(RawToken& t) {
 
   // check single character tokens
   char nextchar = this->linebuffer[this->linebufferpos];
-
   switch (nextchar) {
     // check for comment
     case '\\':
@@ -1280,7 +1284,12 @@ bool Reader::readnexttoken(RawToken& t) {
   char* endptr;
   double constant = strtod(startptr, &endptr);
   if (endptr != startptr) {
-    t = constant;
+    // Extract the string corresponding to the double, in case the
+    // double is a constraint name
+    size_t double_len = endptr - startptr;
+    std::string double_name = this->linebuffer.substr(this->linebufferpos, double_len);
+    // t = constant;
+    t = std::make_pair(constant, double_name);
     this->linebufferpos += endptr - startptr;
     return true;
   }

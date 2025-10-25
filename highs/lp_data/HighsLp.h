@@ -38,8 +38,10 @@ class HighsLp {
   std::string origin_name_;
   std::string objective_name_;
 
-  HighsInt new_col_name_ix_ = 0;
-  HighsInt new_row_name_ix_ = 0;
+  std::string col_name_prefix_ = "";
+  std::string row_name_prefix_ = "";
+  HighsInt col_name_suffix_ = 0;
+  HighsInt row_name_suffix_ = 0;
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;
 
@@ -48,8 +50,6 @@ class HighsLp {
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
 
-  HighsInt user_bound_scale_;
-  HighsInt user_cost_scale_;
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;
@@ -60,6 +60,7 @@ class HighsLp {
   bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;
   bool equalButForScalingAndNames(const HighsLp& lp) const;
+  bool equalVectors(const HighsLp& lp) const;
   bool equalNames(const HighsLp& lp) const;
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
@@ -79,13 +80,8 @@ class HighsLp {
   void applyScale();
   void unapplyScale();
   void moveBackLpAndUnapplyScaling(HighsLp& lp);
-  bool userBoundScaleOk(const HighsInt user_bound_scale,
-                        const double infinite_bound) const;
-  void userBoundScale(const HighsInt user_bound_scale);
-  bool userCostScaleOk(const HighsInt user_cost_scale,
-                       const double infinite_cost) const;
-  void userCostScale(const HighsInt user_cost_scale);
   void exactResize();
+  bool okNames() const;
   void addColNames(const std::string name, const HighsInt num_new_col = 1);
   void addRowNames(const std::string name, const HighsInt num_new_row = 1);
   void deleteColsFromVectors(HighsInt& new_num_col,

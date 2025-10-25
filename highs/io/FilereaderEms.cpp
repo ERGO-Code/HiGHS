@@ -269,12 +269,10 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
     f << "names" << std::endl;
 
     f << "columns" << std::endl;
-    for (size_t i = 0; i < lp.col_names_.size(); i++)
-      f << lp.col_names_[i] << std::endl;
+    for (const auto& name : lp.col_names_) f << name << std::endl;
 
     f << "rows" << std::endl;
-    for (size_t i = 0; i < lp.row_names_.size(); i++)
-      f << lp.row_names_[i] << std::endl;
+    for (const auto& name : lp.row_names_) f << name << std::endl;
   }
 
   // todo: integer variables.

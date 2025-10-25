@@ -111,11 +111,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   local_lp.col_names_.clear();
   local_lp.row_names_.clear();
   highs.passModel(local_lp);
-  REQUIRE(highs.writeSolution(solution_file, 1) == HighsStatus::kOk);
-
-  // Cannot get name of column or row 0
-  REQUIRE(highs.getColName(0, name) == HighsStatus::kError);
-  REQUIRE(highs.getRowName(0, name) == HighsStatus::kError);
+  REQUIRE(highs.writeSolution(solution_file, 1) == HighsStatus::kWarning);
 
   std::remove(solution_file.c_str());
 }

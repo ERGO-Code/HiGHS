@@ -7,12 +7,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # macos 13 is Intel
-  build_macos_13:
-    runs-on: macos-13
-    # strategy:
-      # matrix:
-      #   python: [3.11]
+  # Build macos intel
+  build_macos_intel:
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS
@@ -31,10 +28,10 @@ jobs:
         with:
           name: macos-x64
           path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
-            
-  # macos 14 is M1
-  build_macos_14:
-    runs-on: macos-14 
+
+  # Build macos arm64
+  build_macos_arm:
+    runs-on: macos-14  # macos-14 is arm64
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS
@@ -54,14 +51,14 @@ jobs:
           name: macos-arm64
           path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
-  # Build windows 32 and linux 
+  # Build windows 32 and linux
   build_windows_32:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS
         run: |
-         cmake -E make_directory ${{runner.workspace}}/build32 
+         cmake -E make_directory ${{runner.workspace}}/build32
 
       - name: Configure CMake win32
         shell: bash
@@ -126,7 +123,7 @@ jobs:
 
   build_windows:
     runs-on: windows-latest
-    needs: [build_macos_13, build_macos_14, build_windows_32, build_linux, build_linux_arm64]
+    needs: [build_macos_intel, build_macos_arm, build_windows_32, build_linux, build_linux_arm64]
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS Windows native
@@ -142,10 +139,10 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: cmake --build . --config Release --parallel
-      
+
       - name: Display structure of downloaded files
         run: |
-          pwd 
+          pwd
           ls -R ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes macos-x64
@@ -187,7 +184,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.11.0
+        run: dotnet pack -c Release /p:Version=1.12.0
 
       - uses: actions/upload-artifact@v4
         with:
@@ -201,7 +198,7 @@ jobs:
       name: nuget
 
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    steps: 
+    steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
 
@@ -211,6 +208,6 @@ jobs:
           name: nuget
 
       - name: Dotnet push
-        run: dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://api.nuget.org/v3/index.json 
+        run: dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://api.nuget.org/v3/index.json
       #     env:
       #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
