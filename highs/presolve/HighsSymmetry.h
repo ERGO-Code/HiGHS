@@ -45,7 +45,8 @@ class HighsMatrixColoring {
     // tolerance in which case we create a new color and store it with the key
     // value
     if (it == colorMap.end() || it->first > value + tolerance)
-      it = colorMap.emplace_hint(it, value, colorMap.size() + 1);
+      it = colorMap.emplace_hint(it, value,
+                                 static_cast<u32>(colorMap.size()) + 1);
     return it->second;
   }
 };
@@ -207,7 +208,7 @@ class HighsSymmetryDetection {
   bool compareCurrentGraph(
       const HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>>&
           otherGraph,
-      HighsInt& wrongCell);
+      HighsInt& wrongCell) const;
 
   void removeFixPoints();
   void initializeGroundSet();
@@ -218,9 +219,9 @@ class HighsSymmetryDetection {
   void initializeHashValues();
   bool isomorphicToFirstLeave();
   bool partitionRefinement();
-  bool checkStoredAutomorphism(HighsInt vertex);
+  bool checkStoredAutomorphism(HighsInt vertex) const;
   u32 getVertexHash(HighsInt vertex);
-  HighsInt selectTargetCell();
+  HighsInt selectTargetCell() const;
 
   bool updateCellMembership(HighsInt vertex, HighsInt cell,
                             bool markForRefinement = true);
@@ -251,7 +252,9 @@ class HighsSymmetryDetection {
     HighsInt getComponentByIndex(HighsInt compIndex) const {
       return componentNumber[compIndex];
     }
-    HighsInt numComponents() const { return componentStarts.size() - 1; }
+    HighsInt numComponents() const {
+      return static_cast<HighsInt>(componentStarts.size()) - 1;
+    }
     HighsInt componentSize(HighsInt component) const {
       return componentStarts[component + 1] - componentStarts[component];
     }

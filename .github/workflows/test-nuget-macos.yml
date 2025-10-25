@@ -7,9 +7,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # macos 13 is Intel
-  build_macos_13:
-    runs-on: macos-13
+  build_macos_intel:
+    runs-on: macos-15-intel
     # strategy:
       # matrix:
       #   python: [3.11]
@@ -35,9 +34,9 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.11.0
+        run: dotnet pack -c Release /p:Version=1.12.0
 
-      - name: Add local feed 
+      - name: Add local feed
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
@@ -49,15 +48,14 @@ jobs:
         working-directory: ${{runner.workspace}}/test_nuget
         run: |
           dotnet new console
-          rm Program.cs 
-          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
+          rm Program.cs
+          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs .
+          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets
           dotnet run
 
-            
-  # macos 14 is M1
-  build_macos_14:
-    runs-on: macos-14 
+
+  build_macos_arm:
+    runs-on: macos-14  # macos-14 is arm64
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS
@@ -80,9 +78,9 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.11.0
+        run: dotnet pack -c Release /p:Version=1.12.0
 
-      - name: Add local feed 
+      - name: Add local feed
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
@@ -94,7 +92,7 @@ jobs:
         working-directory: ${{runner.workspace}}/test_nuget
         run: |
           dotnet new console
-          rm Program.cs 
-          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
+          rm Program.cs
+          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs .
+          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets
           dotnet run

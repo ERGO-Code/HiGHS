@@ -14,11 +14,13 @@
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
 
-// The method below runs simplex, ipx or pdlp solver on the lp.
+// The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
+  HighsSubSolverCallTime& sub_solver_call_time =
+      solver_object.sub_solver_call_time_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);
@@ -35,6 +37,30 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                         return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
+  const bool use_only_ipm = useIpm(options.solver) || options.run_centring;
+  bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
+#ifndef HIPO
+  // Shouldn't be possible to choose HiPO if it's not in the build
+  assert(!use_hipo);
+  use_hipo = false;
+#endif
+  const bool use_ipx = use_only_ipm && !use_hipo;
+  // Now actually solve LPs!
+  //
+  // lambda for solving LP by simplex
+  auto simplexSolve = [&]() -> HighsStatus {
+    return_status = HighsStatus::kOk;
+    call_status = solveLpSimplex(solver_object);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveLpSimplex");
+    if (return_status == HighsStatus::kError) return return_status;
+    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Inconsistent solution returned from solver\n");
+      return_status = HighsStatus::kError;
+    }
+    return return_status;
+  };
   if (!solver_object.lp_.num_row_ || solver_object.lp_.a_matrix_.numNz() == 0) {
     // LP is unconstrained due to having no rows or a zero constraint
     // matrix, so solve directly
@@ -42,22 +68,53 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-  } else if (options.solver == kIpmString || options.run_centring ||
-             options.solver == kPdlpString) {
+  } else if (use_only_ipm || options.solver == kPdlpString) {
     // Use IPM or PDLP
-    if (options.solver == kIpmString || options.run_centring) {
-      // Use IPX to solve the LP
-      try {
-        call_status = solveLpIpx(solver_object);
-      } catch (const std::exception& exception) {
-        highsLogDev(options.log_options, HighsLogType::kError,
-                    "Exception %s in solveLpIpx\n", exception.what());
-        call_status = HighsStatus::kError;
+    if (use_only_ipm) {
+      // Use IPM to solve the LP
+      if (use_hipo) {
+#ifdef HIPO
+        // Use HIPO to solve the LP
+        sub_solver_call_time.num_call[kSubSolverHipo]++;
+        sub_solver_call_time.run_time[kSubSolverHipo] =
+            -solver_object.timer_.read();
+        try {
+          call_status = solveLpHipo(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpHipo\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+        sub_solver_call_time.run_time[kSubSolverHipo] +=
+            solver_object.timer_.read();
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLpHipo");
+#else
+        highsLogUser(options.log_options, HighsLogType::kError,
+                     "HiPO is not available in this build.\n");
+        return HighsStatus::kError;
+#endif
+      } else if (use_ipx) {
+        sub_solver_call_time.num_call[kSubSolverIpx]++;
+        sub_solver_call_time.run_time[kSubSolverIpx] =
+            -solver_object.timer_.read();
+        try {
+          call_status = solveLpIpx(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpIpx\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+        sub_solver_call_time.run_time[kSubSolverIpx] +=
+            solver_object.timer_.read();
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLpIpx");
       }
-      return_status = interpretCallStatus(options.log_options, call_status,
-                                          return_status, "solveLpIpx");
     } else {
       // Use cuPDLP-C to solve the LP
+      sub_solver_call_time.num_call[kSubSolverPdlp]++;
+      sub_solver_call_time.run_time[kSubSolverPdlp] =
+          -solver_object.timer_.read();
       try {
         call_status = solveLpCupdlp(solver_object);
       } catch (const std::exception& exception) {
@@ -65,6 +122,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                     "Exception %s in solveLpCupdlp\n", exception.what());
         call_status = HighsStatus::kError;
       }
+      sub_solver_call_time.run_time[kSubSolverPdlp] +=
+          solver_object.timer_.read();
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLpCupdlp");
     }
@@ -74,9 +133,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // Non-error return requires a primal solution
     assert(solver_object.solution_.value_valid);
 
-    if (options.solver == kIpmString || options.run_centring) {
+    if (useIpm(options.solver) || options.run_centring) {
       // Setting the IPM-specific values of (highs_)info_ has been done in
-      // solveLpIpx
+      // solveLpHipo/Ipx
       const bool unwelcome_ipx_status =
           solver_object.model_status_ == HighsModelStatus::kUnknown ||
           (solver_object.model_status_ ==
@@ -106,22 +165,11 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
           // case there's no basis to start simplex
           //
           // ToDo: Check whether simplex can exploit the primal solution
-          // returned by IPX
+          // returned by HiPO/IPX
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "IPX solution is imprecise, so clean up with simplex\n");
-          // Reset the return status since it will now be determined by
-          // the outcome of the simplex solve
-          return_status = HighsStatus::kOk;
-          call_status = solveLpSimplex(solver_object);
-          return_status = interpretCallStatus(options.log_options, call_status,
-                                              return_status, "solveLpSimplex");
+                       "IPM solution is imprecise, so clean up with simplex\n");
+          return_status = simplexSolve();
           if (return_status == HighsStatus::kError) return return_status;
-          if (!isSolutionRightSize(solver_object.lp_,
-                                   solver_object.solution_)) {
-            highsLogUser(options.log_options, HighsLogType::kError,
-                         "Inconsistent solution returned from solver\n");
-            return HighsStatus::kError;
-          }
         }  // options.run_crossover == kHighsOnString
            // clang-format off
       }  // unwelcome_ipx_status
@@ -129,15 +177,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     }
   } else {
     // Use Simplex
-    call_status = solveLpSimplex(solver_object);
-    return_status = interpretCallStatus(options.log_options, call_status,
-                                        return_status, "solveLpSimplex");
+    return_status = simplexSolve();
     if (return_status == HighsStatus::kError) return return_status;
-    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Inconsistent solution returned from solver\n");
-      return HighsStatus::kError;
-    }
   }
   // Analyse the HiGHS (basic) solution
   if (debugHighsLpSolution(message, solver_object) ==
@@ -341,8 +382,38 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   return HighsStatus::kOk;
 }
 
-void assessExcessiveBoundCost(const HighsLogOptions log_options,
-                              const HighsModel& model) {
+// Assuming that any user scaling in user_scale_data has been applied,
+// determine the model coefficient ranges, assess it for values
+// outside the [small, large] range, and give appropriate scaling
+// recommendations
+void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
+                                          const HighsModel& model,
+                                          HighsUserScaleData& user_scale_data) {
+  const HighsLp& lp = model.lp_;
+  if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
+  const bool user_cost_or_bound_scale =
+      user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
+  const double small_objective_coefficient =
+      kExcessivelySmallObjectiveCoefficient;
+  const double large_objective_coefficient =
+      kExcessivelyLargeObjectiveCoefficient;
+  const double small_bound = kExcessivelySmallBoundValue;
+  const double large_bound = kExcessivelyLargeBoundValue;
+  std::stringstream message;
+  if (user_cost_or_bound_scale) {
+    if (user_scale_data.user_objective_scale)
+      message << highsFormatToString(" user_objective_scale option value of %d",
+                                     user_scale_data.user_objective_scale);
+    if (user_scale_data.user_bound_scale) {
+      if (user_scale_data.user_objective_scale) message << " and";
+      message << highsFormatToString(" user_bound_scale option value of %d",
+                                     user_scale_data.user_bound_scale);
+    }
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Assessing costs and bounds after applying%s\n",
+                 message.str().c_str());
+  }
+  // Lambda for assessing a finite nonzero
   auto assessFiniteNonzero = [&](const double value, double& min_value,
                                  double& max_value) {
     double abs_value = std::abs(value);
@@ -351,194 +422,311 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
       max_value = std::max(abs_value, max_value);
     }
   };
-  const HighsLp& lp = model.lp_;
-  double min_finite_col_cost = kHighsInf;
-  double max_finite_col_cost = -kHighsInf;
-  double min_finite_col_bound = kHighsInf;
-  double max_finite_col_bound = -kHighsInf;
-  double min_finite_row_bound = kHighsInf;
-  double max_finite_row_bound = -kHighsInf;
+  double min_continuous_col_cost = kHighsInf;
+  double min_noncontinuous_col_cost = kHighsInf;
+  double max_continuous_col_cost = -kHighsInf;
+  double max_noncontinuous_col_cost = -kHighsInf;
+  double min_continuous_col_bound = kHighsInf;
+  double min_noncontinuous_col_bound = kHighsInf;
+  double max_continuous_col_bound = -kHighsInf;
+  double max_noncontinuous_col_bound = -kHighsInf;
+  double min_continuous_matrix_value = kHighsInf;
+  double min_noncontinuous_matrix_value = kHighsInf;
+  double max_continuous_matrix_value = -kHighsInf;
+  double max_noncontinuous_matrix_value = -kHighsInf;
+  const bool is_mip = lp.integrality_.size();
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (is_mip && lp.integrality_[iCol] != HighsVarType::kContinuous) {
+      assessFiniteNonzero(lp.col_cost_[iCol], min_noncontinuous_col_cost,
+                          max_noncontinuous_col_cost);
+      assessFiniteNonzero(lp.col_lower_[iCol], min_noncontinuous_col_bound,
+                          max_noncontinuous_col_bound);
+      assessFiniteNonzero(lp.col_upper_[iCol], min_noncontinuous_col_bound,
+                          max_noncontinuous_col_bound);
+    } else {
+      assessFiniteNonzero(lp.col_cost_[iCol], min_continuous_col_cost,
+                          max_continuous_col_cost);
+      assessFiniteNonzero(lp.col_lower_[iCol], min_continuous_col_bound,
+                          max_continuous_col_bound);
+      assessFiniteNonzero(lp.col_upper_[iCol], min_continuous_col_bound,
+                          max_continuous_col_bound);
+    }
+  }
+  double min_col_cost =
+      std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
+  double max_col_cost =
+      std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
+  double min_col_bound =
+      std::min(min_continuous_col_bound, min_noncontinuous_col_bound);
+  double max_col_bound =
+      std::max(max_continuous_col_bound, max_noncontinuous_col_bound);
+
   double min_matrix_value = kHighsInf;
   double max_matrix_value = -kHighsInf;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    assessFiniteNonzero(lp.col_cost_[iCol], min_finite_col_cost,
-                        max_finite_col_cost);
-    assessFiniteNonzero(lp.col_lower_[iCol], min_finite_col_bound,
-                        max_finite_col_bound);
-    assessFiniteNonzero(lp.col_upper_[iCol], min_finite_col_bound,
-                        max_finite_col_bound);
-  }
-  if (min_finite_col_cost == kHighsInf) min_finite_col_cost = 0;
-  if (max_finite_col_cost == -kHighsInf) max_finite_col_cost = 0;
-  if (min_finite_col_bound == kHighsInf) min_finite_col_bound = 0;
-  if (max_finite_col_bound == -kHighsInf) max_finite_col_bound = 0;
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    assessFiniteNonzero(lp.row_lower_[iRow], min_finite_row_bound,
-                        max_finite_row_bound);
-    assessFiniteNonzero(lp.row_upper_[iRow], min_finite_row_bound,
-                        max_finite_row_bound);
-  }
-  if (min_finite_row_bound == kHighsInf) min_finite_row_bound = 0;
-  if (max_finite_row_bound == -kHighsInf) max_finite_row_bound = 0;
-  HighsInt num_nz = lp.a_matrix_.numNz();
-  for (HighsInt iEl = 0; iEl < num_nz; iEl++)
+  const HighsInt num_matrix_nz = lp.a_matrix_.numNz();
+  for (HighsInt iEl = 0; iEl < num_matrix_nz; iEl++)
     assessFiniteNonzero(lp.a_matrix_.value_[iEl], min_matrix_value,
                         max_matrix_value);
 
+  double min_row_bound = kHighsInf;
+  double max_row_bound = -kHighsInf;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    assessFiniteNonzero(lp.row_lower_[iRow], min_row_bound, max_row_bound);
+    assessFiniteNonzero(lp.row_upper_[iRow], min_row_bound, max_row_bound);
+  }
+
+  double min_continuous_hessian_value = kHighsInf;
+  double max_continuous_hessian_value = -kHighsInf;
+  const HighsInt num_hessian_nz = model.hessian_.numNz();
+  for (HighsInt iEl = 0; iEl < num_hessian_nz; iEl++)
+    assessFiniteNonzero(model.hessian_.value_[iEl],
+                        min_continuous_hessian_value,
+                        max_continuous_hessian_value);
+
+  // Determine the minimum and maximum overall bounds that can be
+  // scaled with user_bound_scale before zeroing extrema due to
+  // absence of finite nonzero bounds
+
+  double min_scalable_bound = std::min(min_continuous_col_bound, min_row_bound);
+  double max_scalable_bound = std::max(max_continuous_col_bound, max_row_bound);
+  if (min_scalable_bound == kHighsInf) min_scalable_bound = 0;
+  if (max_scalable_bound == -kHighsInf) max_scalable_bound = 0;
+
+  if (min_col_cost == kHighsInf) min_col_cost = 0;
+  if (max_col_cost == -kHighsInf) max_col_cost = 0;
+  if (min_col_bound == kHighsInf) min_col_bound = 0;
+  if (max_col_bound == -kHighsInf) max_col_bound = 0;
+  if (min_row_bound == kHighsInf) min_row_bound = 0;
+  if (max_row_bound == -kHighsInf) max_row_bound = 0;
+
+  double min_hessian_value = min_continuous_hessian_value;
+  double max_hessian_value = max_continuous_hessian_value;
+  if (min_hessian_value == kHighsInf) min_hessian_value = 0;
+  if (max_hessian_value == -kHighsInf) max_hessian_value = 0;
+
+  // Report on the coefficient ranges
   highsLogUser(log_options, HighsLogType::kInfo, "Coefficient ranges:\n");
-  if (num_nz)
-    highsLogUser(log_options, HighsLogType::kInfo, "  Matrix [%5.0e, %5.0e]\n",
+  if (num_matrix_nz)
+    highsLogUser(log_options, HighsLogType::kInfo, "  Matrix  [%5.0e, %5.0e]\n",
                  min_matrix_value, max_matrix_value);
   if (lp.num_col_) {
-    highsLogUser(log_options, HighsLogType::kInfo, "  Cost   [%5.0e, %5.0e]\n",
-                 min_finite_col_cost, max_finite_col_cost);
-    highsLogUser(log_options, HighsLogType::kInfo, "  Bound  [%5.0e, %5.0e]\n",
-                 min_finite_col_bound, max_finite_col_bound);
+    highsLogUser(log_options, HighsLogType::kInfo, "  Cost    [%5.0e, %5.0e]\n",
+                 min_col_cost, max_col_cost);
+    if (num_hessian_nz)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "  Hessian [%5.0e, %5.0e]\n", min_hessian_value,
+                   max_hessian_value);
+    highsLogUser(log_options, HighsLogType::kInfo, "  Bound   [%5.0e, %5.0e]\n",
+                 min_col_bound, max_col_bound);
   }
   if (lp.num_row_)
-    highsLogUser(log_options, HighsLogType::kInfo, "  RHS    [%5.0e, %5.0e]\n",
-                 min_finite_row_bound, max_finite_row_bound);
+    highsLogUser(log_options, HighsLogType::kInfo, "  RHS     [%5.0e, %5.0e]\n",
+                 min_row_bound, max_row_bound);
 
   // LPs with no columns or no finite nonzero costs will have
-  // max_finite_col_cost = 0
-  assert(max_finite_col_cost >= 0);
-  if (max_finite_col_cost > kExcessivelyLargeCostValue) {
-    double user_cost_scale_value = std::pow(2, lp.user_cost_scale_);
-    // Warn that costs are excessively large, and suggest scaling
-    double ratio = kExcessivelyLargeCostValue /
-                   (max_finite_col_cost / user_cost_scale_value);
-    HighsInt suggested_user_cost_scale_setting = std::floor(std::log2(ratio));
-    HighsInt suggested_cost_scale_exponent = std::floor(std::log10(ratio));
-    highsLogUser(
-        log_options, HighsLogType::kWarning,
-        "%s has excessively large costs: consider scaling the costs "
-        "by 1e%+1d or less, or setting option user_cost_scale to %d or less\n",
-        lp.user_cost_scale_ ? "User-scaled problem" : "Problem",
-        int(-suggested_cost_scale_exponent),
-        int(suggested_user_cost_scale_setting));
-  }
+  // max_col_cost = 0
+  assert(max_col_cost >= 0);
   // LPs with no columns or no finite nonzero bounds will have
-  // max_finite_col_bound = 0
-  assert(max_finite_col_bound >= 0);
-  if (max_finite_col_bound > kExcessivelyLargeBoundValue) {
-    double user_bound_scale_value = std::pow(2, lp.user_bound_scale_);
-    // Warn that bounds are excessively large, and suggest scaling
-    double ratio = kExcessivelyLargeBoundValue /
-                   (max_finite_col_bound / user_bound_scale_value);
-    HighsInt suggested_user_bound_scale = std::floor(std::log2(ratio));
-    HighsInt suggested_bound_scale_exponent = std::floor(std::log10(ratio));
-    if (lp.isMip()) {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "%s has excessively large bounds: consider scaling the bounds "
-          "by 1e%+1d or less\n",
-          lp.user_bound_scale_ ? "User-scaled problem" : "Problem",
-          int(-suggested_bound_scale_exponent));
-    } else {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "%s has excessively large bounds: consider scaling the bounds "
-          "by 1e%+1d or less, "
-          "or setting option user_bound_scale to %d or less\n",
-          lp.user_bound_scale_ ? "User-scaled problem" : "Problem",
-          int(-suggested_bound_scale_exponent),
-          int(suggested_user_bound_scale));
-    }
-  }
+  // max_col_bound = 0
+  assert(max_col_bound >= 0);
   // LPs with no rows or no finite nonzero bounds will have
-  // max_finite_row_bound = 0
-  assert(max_finite_row_bound >= 0);
-  if (max_finite_row_bound > kExcessivelyLargeBoundValue) {
-    double user_bound_scale_value = std::pow(2, lp.user_bound_scale_);
-    // Warn that bounds are excessively large, and suggest scaling
-    double ratio = kExcessivelyLargeBoundValue /
-                   (max_finite_row_bound / user_bound_scale_value);
-    HighsInt suggested_user_bound_scale = std::floor(std::log2(ratio));
-    HighsInt suggested_bound_scale_exponent = std::floor(std::log10(ratio));
-    if (lp.isMip()) {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "%s has excessively large bounds: consider scaling the bounds "
-          "by 1e%+1d or less\n",
-          lp.user_bound_scale_ ? "User-scaled problem" : "Problem",
-          int(-suggested_bound_scale_exponent));
-    } else {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "%s has excessively large bounds: consider scaling the bounds "
-          "by 1e%+1d or less, "
-          "or setting option user_bound_scale to %d or less\n",
-          lp.user_bound_scale_ ? "User-scaled problem" : "Problem",
-          int(-suggested_bound_scale_exponent),
-          int(suggested_user_bound_scale));
+  // max_row_bound = 0
+  assert(max_row_bound >= 0);
+
+  const std::string problem =
+      user_cost_or_bound_scale ? "User-scaled problem" : "Problem";
+
+  if (0 < min_col_cost && min_col_cost < small_objective_coefficient)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively small costs\n", problem.c_str());
+  if (max_col_cost > large_objective_coefficient)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively large costs\n", problem.c_str());
+  if (0 < min_hessian_value && min_hessian_value < small_objective_coefficient)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively small Hessian values\n",
+                 problem.c_str());
+  if (max_hessian_value > large_objective_coefficient)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively large Hessian values\n",
+                 problem.c_str());
+  if (0 < min_col_bound && min_col_bound < small_bound)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively small column bounds\n",
+                 problem.c_str());
+  if (max_col_bound > large_bound)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively large column bounds\n",
+                 problem.c_str());
+  if (0 < min_row_bound && min_row_bound < small_bound)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively small row bounds\n", problem.c_str());
+  if (max_row_bound > large_bound)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively large row bounds\n", problem.c_str());
+
+  // Lambda to determine recommended user scaling values
+  auto suggestScaling = [&](double min_value, double max_value,
+                            double small_value, double large_value) {
+    double ratio = 1;
+    if (max_value > large_value) {
+      // Max scalable value is large, so suggest scaling values down
+      // so that the max value is large_value
+      ratio = large_value / max_value;
+    } else if (0 < max_value && max_value < small_value) {
+      // All scalable values are small, so suggest scaling them up so
+      // the max value is small_value
+      ratio = small_value / max_value;
     }
-  }
-  // Now consider warning relating to small maximum costs and bounds
-  if (max_finite_col_cost > 0 &&
-      max_finite_col_cost < kExcessivelySmallCostValue) {
-    double user_cost_scale_value = std::pow(2, lp.user_cost_scale_);
-    // Warn that costs are excessively small, and suggest scaling
-    double ratio = kExcessivelySmallCostValue /
-                   (max_finite_col_cost / user_cost_scale_value);
-    HighsInt suggested_user_cost_scale_setting = std::ceil(std::log2(ratio));
-    HighsInt suggested_cost_scale_exponent = std::ceil(std::log10(ratio));
-    highsLogUser(
-        log_options, HighsLogType::kWarning,
-        "%s has excessively small costs: consider scaling the costs up "
-        "by 1e%+1d or more, "
-        "or setting option user_cost_scale to %d or more\n",
-        lp.user_cost_scale_ ? "User-scaled problem" : "Problem",
-        int(suggested_cost_scale_exponent),
-        int(suggested_user_cost_scale_setting));
-  }
-  if (max_finite_col_bound > 0 &&
-      max_finite_col_bound < kExcessivelySmallBoundValue) {
-    double user_bound_scale_value = std::pow(2, lp.user_bound_scale_);
-    // Warn that bounds are excessively small, and suggest scaling
-    double ratio = kExcessivelySmallBoundValue /
-                   (max_finite_col_bound / user_bound_scale_value);
-    HighsInt suggested_user_bound_scale = std::ceil(std::log2(ratio));
-    HighsInt suggested_bound_scale_exponent = std::ceil(std::log10(ratio));
-    if (lp.isMip()) {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "%s has excessively small bounds: consider scaling the bounds "
-          "by 1e%+1d or more\n",
-          lp.user_bound_scale_ ? "User-scaled problem" : "Problem",
-          int(suggested_bound_scale_exponent));
+    assert(ratio);
+    return ratio;
+  };
+
+  // Lambda to for outward rounding of log
+  auto outerRoundedLog = [&](const double value, const HighsInt base) {
+    assert(value > 0);
+    assert(base == 2 || base == 10);
+    HighsInt rounded_log = 0;
+    if (base == 2) {
+      rounded_log = value < 1 ? std::floor(std::log2(value))
+                              : std::ceil(std::log2(value));
     } else {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "%s has excessively small bounds: consider scaling the bounds "
-          "by 1e%+1d or more, "
-          "or setting option user_bound_scale to %d or more\n",
-          lp.user_bound_scale_ ? "User-scaled problem" : "Problem",
-          int(suggested_bound_scale_exponent), int(suggested_user_bound_scale));
+      rounded_log = value < 1 ? std::floor(std::log10(value))
+                              : std::ceil(std::log10(value));
     }
-  }
-  if (max_finite_row_bound > 0 &&
-      max_finite_row_bound < kExcessivelySmallBoundValue) {
-    double user_bound_scale_value = std::pow(2, lp.user_bound_scale_);
-    // Warn that bounds are excessively small, and suggest scaling
-    double ratio = kExcessivelySmallBoundValue /
-                   (max_finite_row_bound / user_bound_scale_value);
-    HighsInt suggested_user_bound_scale = std::ceil(std::log2(ratio));
-    HighsInt suggested_bound_scale_exponent = std::ceil(std::log10(ratio));
-    if (lp.isMip()) {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "%s has excessively small bounds: consider scaling the bounds "
-          "by 1e%+1d or more\n",
-          lp.user_bound_scale_ ? "User-scaled problem" : "Problem",
-          int(suggested_bound_scale_exponent));
+    return rounded_log;
+  };
+  double suggested_bound_scaling = suggestScaling(
+      min_scalable_bound, max_scalable_bound, small_bound, large_bound);
+  // Determine the suggested (new) value for user_bound_scale,
+  // allowing for the fact that the current value has been applied
+  HighsInt dl_user_bound_scale = outerRoundedLog(suggested_bound_scaling, 2);
+  user_scale_data.suggested_user_bound_scale =
+      user_scale_data.user_bound_scale + dl_user_bound_scale;
+  // Determine the order of magnitude of the suggested bound scaling -
+  // just for logging
+  HighsInt suggested_bound_scale_order_of_magnitude =
+      outerRoundedLog(suggested_bound_scaling, 10);
+  // Applying the suggested bound scaling requires the costs and
+  // matrix columns of non-continuous variables to be scaled, and any
+  // Hessian entries are also scaled
+  //
+  // Determine the corresponding extreme non-continuous costs and
+  // update the extreme costs so that objective scaling can be
+  // suggested
+  double suggested_user_bound_scale_value =
+      pow(2.0, user_scale_data.suggested_user_bound_scale);
+  min_noncontinuous_col_cost *= suggested_user_bound_scale_value;
+  max_noncontinuous_col_cost *= suggested_user_bound_scale_value;
+  min_hessian_value /= suggested_user_bound_scale_value;
+  max_hessian_value /= suggested_user_bound_scale_value;
+
+  min_col_cost = std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
+  max_col_cost = std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
+  double min_objective_coefficient =
+      std::min(min_col_cost, min_continuous_hessian_value);
+  double max_objective_coefficient =
+      std::max(max_col_cost, max_continuous_hessian_value);
+  if (min_objective_coefficient == kHighsInf) min_objective_coefficient = 0;
+  if (max_objective_coefficient == -kHighsInf) max_objective_coefficient = 0;
+
+  double suggested_objective_scaling =
+      suggestScaling(min_objective_coefficient, max_objective_coefficient,
+                     small_objective_coefficient, large_objective_coefficient);
+  // Determine the suggested (new) value for user_objective_scale,
+  // allowing for the fact that the current value has been applied
+  HighsInt dl_user_objective_scale =
+      outerRoundedLog(suggested_objective_scaling, 2);
+  user_scale_data.suggested_user_objective_scale =
+      user_scale_data.user_objective_scale + dl_user_objective_scale;
+  // Determine the order of magnitude of the suggested objective scaling -
+  // just for logging
+  HighsInt suggested_objective_scale_order_of_magnitude =
+      outerRoundedLog(suggested_objective_scaling, 10);
+
+  // Only report the order of magnitude scaling if there is no user
+  // scaling
+  bool order_of_magnitude_message =
+      suggested_objective_scale_order_of_magnitude &&
+      !user_scale_data.user_objective_scale;
+  message.str(std::string());
+  if (order_of_magnitude_message)
+    message << highsFormatToString(
+        "   Consider scaling the objective by 1e%+1d",
+        int(suggested_objective_scale_order_of_magnitude));
+  if (dl_user_objective_scale) {
+    if (!order_of_magnitude_message) {
+      message << "   Consider";
     } else {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "%s has excessively small bounds: consider scaling the bounds "
-          "by 1e%+1d or more, "
-          "or setting option user_bound_scale to %d or more\n",
-          lp.user_bound_scale_ ? "User-scaled problem" : "Problem",
-          int(suggested_bound_scale_exponent), int(suggested_user_bound_scale));
+      message << ", or";
     }
+    message << highsFormatToString(
+        " setting the user_objective_scale option to %d",
+        int(user_scale_data.suggested_user_objective_scale));
   }
+  if (order_of_magnitude_message || dl_user_objective_scale)
+    highsLogUser(log_options, HighsLogType::kWarning, "%s\n",
+                 message.str().c_str());
+
+  message.str(std::string());
+  order_of_magnitude_message = suggested_bound_scale_order_of_magnitude &&
+                               !user_scale_data.user_bound_scale;
+  message.str(std::string());
+  if (order_of_magnitude_message)
+    message << highsFormatToString(
+        "   Consider scaling the    bounds by 1e%+1d",
+        int(suggested_bound_scale_order_of_magnitude));
+  if (dl_user_bound_scale) {
+    if (!order_of_magnitude_message) {
+      message << "   Consider";
+    } else {
+      message << ", or";
+    }
+    message << highsFormatToString(
+        " setting the user_bound_scale option to %d",
+        int(user_scale_data.suggested_user_bound_scale));
+  }
+  if (order_of_magnitude_message || dl_user_bound_scale)
+    highsLogUser(log_options, HighsLogType::kWarning, "%s\n",
+                 message.str().c_str());
+}
+
+bool useIpm(const std::string& solver) {
+  return solver == kIpmString || solver == kHipoString || solver == kIpxString;
+}
+
+// Decide whether to use the HiPO IPM solver
+bool useHipo(const HighsOptions& options,
+             const std::string& specific_solver_option, const HighsLp& lp,
+             const bool logging) {
+  // specific_solver_option wll be "solver", "mip_lp_solver" or
+  // "mip_ipm_solver" according to context
+  assert(specific_solver_option == kSolverString ||
+         specific_solver_option == kMipLpSolverString ||
+         specific_solver_option == kMipIpmSolverString);
+  const std::string specific_solver_option_value =
+      specific_solver_option == kSolverString        ? options.solver
+      : specific_solver_option == kMipLpSolverString ? options.mip_lp_solver
+                                                     : options.mip_ipm_solver;
+  // In the MIP solver there are situations where IPM must be used
+  const bool force_ipm = specific_solver_option == kMipIpmSolverString;
+
+  // Initialize to value for valgrind.
+  bool use_hipo = false;
+
+  if (specific_solver_option_value == kIpxString) {
+    use_hipo = false;
+  } else if (specific_solver_option_value == kIpmString ||
+             specific_solver_option_value == kHipoString || force_ipm) {
+#ifdef HIPO
+    use_hipo = true;
+#else
+    use_hipo = false;
+#endif
+  }
+  if (options.run_centring) use_hipo = false;
+  // Later decide between HiPO and IPX based on LP properties
+  if (specific_solver_option == kMipIpmSolverString) return use_hipo;
+  // Later decide between simplex, HiPO and IPX based on LP properties
+  return use_hipo;
 }

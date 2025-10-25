@@ -5,12 +5,14 @@
 #cmakedefine ZLIB_FOUND
 #cmakedefine CUPDLP_CPU
 #cmakedefine CUPDLP_GPU
+#cmakedefine HIPO
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine HIGHSINT64
 #cmakedefine HIGHS_NO_DEFAULT_THREADS
 #cmakedefine HIGHS_HAVE_MM_PAUSE
 #cmakedefine HIGHS_HAVE_BUILTIN_CLZ
 #cmakedefine HIGHS_HAVE_BITSCAN_REVERSE
+#cmakedefine BLAS_LIBRARIES "@BLAS_LIBRARIES@"
 
 #define HIGHS_GITHASH "@GITHASH@"
 #define HIGHS_VERSION_MAJOR @HIGHS_VERSION_MAJOR@

@@ -34,11 +34,13 @@ const std::string kHighsOnString = "on";
 const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
-const double kExcessivelyLargeBoundValue = 1e10;
-const double kExcessivelyLargeCostValue = 1e10;
-const double kExcessivelySmallBoundValue = 1e-4;
-const double kExcessivelySmallCostValue = 1e-4;
 
+const double kExcessivelySmallObjectiveCoefficient = 1e-4;
+const double kExcessivelyLargeObjectiveCoefficient = 1e6;
+const double kExcessivelySmallBoundValue = 1e-4;
+const double kExcessivelyLargeBoundValue = 1e6;
+
+const HighsInt kNoThreadInstance = -1;
 const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
 
@@ -144,6 +146,9 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
+const std::string kHighsBasisFileV1 = "v1";  // Deprecated
+const std::string kHighsBasisFileV2 = "v2";
+
 enum SolutionStyle {
   kSolutionStyleOldRaw = -1,
   kSolutionStyleRaw = 0,
@@ -163,6 +168,10 @@ enum GlpsolCostRowLocation {
 };
 
 const std::string kHighsFilenameDefault = "";
+const std::string kHighsMinimalColNamePrefix = "c";
+const std::string kHighsMinimalrowNamePrefix = "r";
+const std::string kHighsUniqueColNamePrefix = "c_ekk";
+const std::string kHighsUniquerowNamePrefix = "r_ekk";
 
 enum class HighsPresolveStatus {
   kNotPresolved = -1,
@@ -211,8 +220,9 @@ enum class HighsModelStatus {
   kSolutionLimit,
   kInterrupt,
   kMemoryLimit,
+  kHighsInterrupt,
   kMin = kNotset,
-  kMax = kMemoryLimit
+  kMax = kHighsInterrupt
 };
 
 enum HighsCallbackType : int {
@@ -262,19 +272,43 @@ enum PresolveRuleType : int {
   kPresolveRuleDependentFreeCols,
   kPresolveRuleAggregator,
   kPresolveRuleParallelRowsAndCols,
+  kPresolveRuleSparsify,
   kPresolveRuleProbing,
   kPresolveRuleMax = kPresolveRuleProbing,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
-  kPresolveRuleCount,
+  kPresolveRuleCount
 };
 
-enum IisStrategy {
+enum IisStrategy : int {
   kIisStrategyMin = 0,
-  kIisStrategyFromLpRowPriority = kIisStrategyMin,  // 0
-  kIisStrategyFromLpColPriority,                    // 1
-  //  kIisStrategyFromRayRowPriority,                     // 2
-  //  kIisStrategyFromRayColPriority,                     // 3
+  kIisStrategyLight = kIisStrategyMin,  // 0
+  kIisStrategyFromLpRowPriority,        // 1
+  kIisStrategyFromLpColPriority,        // 2
+  //  kIisStrategyFromRayRowPriority,                     // 3
+  //  kIisStrategyFromRayColPriority,                     // 4
   kIisStrategyMax = kIisStrategyFromLpColPriority
+};
+
+enum IisStatus {
+  kIisStatusMin = 0,
+  kIisStatusInConflict = kIisStatusMin,  // 0
+  kIisStatusNotInConflict,               // 1
+  kIisStatusMaybeInConflict,             // 2
+  kIisStatusMax = kIisStatusMaybeInConflict
+};
+
+enum SubSolverIndex : int {
+  kSubSolverMip = 0,
+  kSubSolverSimplexBasis,
+  kSubSolverSimplexNoBasis,
+  kSubSolverHipo,
+  kSubSolverIpx,
+  kSubSolverHipoAc,
+  kSubSolverIpxAc,
+  kSubSolverPdlp,
+  kSubSolverQpAsm,
+  kSubSolverSubMip,
+  kSubSolverCount
 };
 
 // Default KKT tolerance

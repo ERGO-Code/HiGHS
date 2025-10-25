@@ -42,7 +42,7 @@ void HEkk::initialiseControl() {
 }
 
 void HEkk::updateOperationResultDensity(const double local_density,
-                                        double& density) {
+                                        double& density) const {
   density = (1 - kRunningAverageMultiplier) * density +
             kRunningAverageMultiplier * local_density;
 }

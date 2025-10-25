@@ -42,13 +42,7 @@ const char* highsGithash();
 class Highs {
  public:
   Highs();
-  virtual ~Highs() {
-    FILE* log_stream = options_.log_options.log_stream;
-    if (log_stream != nullptr) {
-      assert(log_stream != stdout);
-      fclose(log_stream);
-    }
-  }
+  virtual ~Highs() { this->closeLogFile(); }
 
   /**
    * @brief Return the version as a string
@@ -89,6 +83,11 @@ class Highs {
    * @brief Clear all solution data associated with the model
    */
   HighsStatus clearSolver();
+
+  /**
+   * @brief Clear all dual data associated with the model
+   */
+  HighsStatus clearSolverDualData();
 
   /**
    * Methods for model input
@@ -159,6 +158,21 @@ class Highs {
    */
   HighsStatus addLinearObjective(const HighsLinearObjective& linear_objective,
                                  const HighsInt iObj = -1);
+
+  /**
+   * @brief Get number of linear objectives from the incumbent model
+   */
+  HighsInt getNumLinearObjectives() const {
+    return multi_linear_objective_.size();
+  }
+
+  /**
+   * @brief Get a linear objective from the incumbent model
+   */
+  const HighsLinearObjective& getLinearObjective(const HighsInt idx) const {
+    assert(idx >= 0 && idx < int(multi_linear_objective_.size()));
+    return multi_linear_objective_[idx];
+  }
 
   /**
    * @brief Clear the multiple linear objective data
@@ -429,13 +443,14 @@ class Highs {
                                 double* value = nullptr);
 
   /**
-   * @brief Return a const reference to the presolved HighsLp instance in HiGHS
+   * @brief Return a const reference to the internal presolved HighsLp
+   * instance
    */
   const HighsLp& getPresolvedLp() const { return presolved_model_.lp_; }
 
   /**
-   * @brief Return a const reference to the presolved HighsModel instance in
-   * HiGHS
+   * @brief Return a const reference to the internal presolved
+   * HighsModel instance
    */
   const HighsModel& getPresolvedModel() const { return presolved_model_; }
 
@@ -461,6 +476,13 @@ class Highs {
   }
 
   /**
+   * @brief Return an LP associated with a MIP and its solution, with
+   * each integer variable fixed to the value it takes in the MIP
+   * solution. If no solution is available, an error is returned.
+   */
+  HighsStatus getFixedLp(HighsLp& lp) const;
+
+  /**
    * @brief Return a const reference to the incumbent LP
    */
   const HighsLp& getLp() const { return model_.lp_; }
@@ -471,9 +493,15 @@ class Highs {
   const HighsModel& getModel() const { return model_; }
 
   /**
-   * @brief Return a const reference to the internal HighsSolution instance
+   * @brief Return a const reference to the internal HighsSolution
+   * instance
    */
   const HighsSolution& getSolution() const { return solution_; }
+
+  /**
+   * @brief Return a const reference to the internal IIS LP instance
+   */
+  const HighsLp& getIisLp() const { return iis_.model_.lp_; }
 
   /**
    * @brief Zero all clocks in the internal HighsTimer instance
@@ -481,7 +509,8 @@ class Highs {
   void zeroAllClocks() { timer_.zeroAllClocks(); };
 
   /**
-   * @brief Return a const reference to the internal HighsSolution instance
+   * @brief Return a const reference to the internal HighsSolution
+   * instance
    */
   const std::vector<HighsObjectiveSolution>& getSavedMipSolutions() const {
     return saved_objective_and_solution_;
@@ -561,6 +590,13 @@ class Highs {
                                  const bool constraint,
                                  const HighsInt method = 0,
                                  const double ill_conditioning_bound = 1e-4);
+
+  /**
+   * @brief Get the suggested objective and bound scaling for the incumbent
+   * model
+   */
+  HighsStatus getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
+                                       HighsInt& suggested_bound_scale);
 
   /**
    * @brief Get (any) irreducible infeasible subsystem (IIS)
@@ -845,6 +881,11 @@ class Highs {
   HighsStatus writePresolvedModel(const std::string& filename = "");
 
   /**
+   * @brief Write out the internal IIS LP instance to a file
+   */
+  HighsStatus writeIisModel(const std::string& filename = "");
+
+  /**
    * @brief Write out the given model to a file
    */
   HighsStatus writeLocalModel(HighsModel& model,
@@ -853,7 +894,7 @@ class Highs {
   /**
    * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string& filename = "") const;
+  HighsStatus writeBasis(const std::string& filename = "");
 
   /**
    * Methods for incumbent model modification
@@ -1187,6 +1228,26 @@ class Highs {
   HighsStatus setBasis();
 
   /**
+   * @brief Return a const reference to the internal sub-solver call and time
+   * instance
+   */
+  const HighsSubSolverCallTime& getSubSolverCallTime() const {
+    return sub_solver_call_time_;
+  }
+
+  /**
+   * @brief Report internal sub-solver call and time instance
+   */
+  void reportSubSolverCallTime() const;
+
+  /**
+   * @brief Initialise the internal sub-solver call and time instance
+   */
+  void initialiseSubSolverCallTime() {
+    this->sub_solver_call_time_.initialise();
+  }
+
+  /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
    * if successful, set the internal HighsBasis and HighsSolution
    * instance
@@ -1197,6 +1258,11 @@ class Highs {
    * @brief Open a named log file
    */
   HighsStatus openLogFile(const std::string& log_file = "");
+
+  /**
+   * @brief Close any open log file
+   */
+  HighsStatus closeLogFile();
 
   /**
    * @brief Interpret common qualifiers to string values
@@ -1234,14 +1300,14 @@ class Highs {
   }
 
   /**
-   * @Brief Put a copy of the current iterate - basis; invertible
+   * @brief Put a copy of the current iterate - basis; invertible
    * representation and dual edge weights - into storage within
    * HSimplexNla. Advanced method: for HiGHS MIP solver
    */
   HighsStatus putIterate();
 
   /**
-   * @Brief Get a copy of the iterate stored within HSimplexNla and
+   * @brief Get a copy of the iterate stored within HSimplexNla and
    * overwrite the current iterate. Advanced method: for HiGHS MIP
    * solver
    */
@@ -1276,7 +1342,7 @@ class Highs {
                                        HVector& row_ep_buffer);
 
   /**
-   * @Brief Get the primal simplex phase 1 dual values. Advanced
+   * @brief Get the primal simplex phase 1 dual values. Advanced
    * method: for HiGHS IIS calculation
    */
   const std::vector<double>& getPrimalPhase1Dual() const {
@@ -1475,6 +1541,8 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
+  HighsSubSolverCallTime sub_solver_call_time_;
+
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether
   // returnFromOptimizeModel() was called after the previous call to
@@ -1542,9 +1610,18 @@ class Highs {
   // invalidateRanging(), invalidateInfo(), invalidateEkk() and
   // invalidateIis()
   void invalidateSolverData();
+
+  // Invalidates all solver dual data in Highs class members by calling
+  // invalidateModelStatus(), invalidateRanging(), and invalidateInfo()
+  //
+  // Used when only the objective changes
+  void invalidateSolverDualData();
   //
   // Invalidates the model status, solution_ and info_
   void invalidateModelStatusSolutionAndInfo();
+  //
+  // Invalidates the model status and info_
+  void invalidateModelStatusAndInfo();
   //
   // Sets model status to HighsModelStatus::kNotset
   void invalidateModelStatus();
@@ -1614,6 +1691,8 @@ class Highs {
                                          const HighsVarType* usr_inegrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
+
+  bool feasibleWrtBounds(const bool columns = true) const;
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_col_lower,
                                        const double* usr_col_upper);
@@ -1646,10 +1725,12 @@ class Highs {
   HighsStatus getRangingInterface();
 
   HighsStatus getIisInterface();
+  HighsStatus getIisInterfaceReturn(const HighsStatus return_status);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const bool feasible_model,
-      const HighsInt original_num_col, const HighsInt original_num_row,
+      const std::string& original_model_name, const HighsInt original_num_col,
+      const HighsInt original_num_row,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
       const std::vector<double> original_col_upper,
@@ -1674,12 +1755,16 @@ class Highs {
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   HighsStatus checkOptimality(const std::string& solver_type);
-  HighsStatus lpKktCheck(const std::string& message);
+  HighsStatus lpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
   HighsStatus optionChangeAction();
+
+  HighsStatus userScaleModel(HighsUserScaleData& data);
+  HighsStatus userScaleSolution(HighsUserScaleData& data,
+                                bool update_kkt = false);
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
                                      const bool constraint,
                                      const HighsInt method,

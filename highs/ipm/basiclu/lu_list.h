@@ -1,3 +1,6 @@
+#ifndef _LU_LIST_H
+#define _LU_LIST_H
+
 /*
  * lu_list.h
  *
@@ -166,3 +169,5 @@ static inline void lu_list_swap(
         blink[e2next] = e1;
     }
 }
+
+#endif

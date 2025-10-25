@@ -2,12 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file model/HighsHessianUtils.h
@@ -46,4 +41,7 @@ void completeHessian(const HighsInt full_dim, HighsHessian& hessian);
 void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
                    const HighsInt num_nz, const HighsInt* start,
                    const HighsInt* index, const double* value);
+
+void userScaleHessian(HighsHessian& hessian, HighsUserScaleData& data,
+                      const bool apply = true);
 #endif  // MODEL_HIGHSHESSIANUTILS_H_

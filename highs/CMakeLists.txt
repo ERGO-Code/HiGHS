@@ -1,11 +1,16 @@
 if (NOT BUILD_CXX)
   return()
 endif()
-  
+
 # Define library.
 include(sources)
 set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
+
+if(HIPO)
+  set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
+  set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers})
+endif()
 
 # Configure the config windows version file
 if(MSVC)
@@ -43,7 +48,7 @@ if(NOT FAST_BUILD)
   set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     PDB_NAME "libhighs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  )
 
   if(ZLIB AND ZLIB_FOUND)
     target_link_libraries(libhighs ZLIB::ZLIB)
@@ -51,8 +56,11 @@ if(NOT FAST_BUILD)
   endif()
 
   # set the install rpath to the installed destination
-  set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  if(APPLE)
+      set_target_properties(libhighs PROPERTIES INSTALL_RPATH "@loader_path")
+  elseif (UNIX)
+      set_target_properties(libhighs PROPERTIES INSTALL_RPATH "$ORIGIN")
+  endif()
 
   # install the header files of highs
   foreach(file ${headers})
@@ -84,7 +92,7 @@ if(NOT FAST_BUILD)
     # target_compile_options(libipx PRIVATE "-Wno-sign-compare")
     # target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
   endif()
-  
+
   install(TARGETS libhighs EXPORT highs-targets
     LIBRARY
     ARCHIVE
@@ -150,8 +158,8 @@ else()
 
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
-  
-  # Optional Cuda 
+
+  # Optional Cuda
   if (CUPDLP_GPU)
 
     target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
@@ -160,16 +168,83 @@ else()
     add_subdirectory(pdlp/cupdlp/cuda)
 
     if (WIN32)
-      target_link_libraries(highs cudalin ${CUDA_LIBRARY})
+      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
     else()
-      target_link_libraries(highs cudalin ${CUDA_LIBRARY} m)
+      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
     endif()
-    
+
     set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
   endif()
 
   target_include_directories(highs PRIVATE ${include_dirs})
+
+  # Optional HIPO
+  if (HIPO)
+
+    target_include_directories(highs PRIVATE
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
+    )
+
+    if (NOT USE_CMAKE_FIND_BLAS)
+      if(APPLE)
+          target_link_libraries(highs PRIVATE "-framework Accelerate")
+          target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
+      elseif(WIN32)
+        if(TARGET OpenBLAS::OpenBLAS)
+            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+            target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
+        elseif(OPENBLAS_LIB)
+            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+            message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
+            target_link_libraries(highs PRIVATE ${OPENBLAS_LIB})
+            target_include_directories(highs PRIVATE ${OPENBLAS_INCLUDE_DIR})
+        else()
+            message(FATAL_ERROR "OpenBLAS not found on Windows.")
+        endif()
+
+        target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+      else()
+          # LINUX
+          if(BLAS_LIB)
+              target_link_libraries(highs PRIVATE "${BLAS_LIB}")
+          elseif(OPENBLAS_LIB)
+              target_link_libraries(highs PRIVATE "${OPENBLAS_LIB}")
+              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+          else()
+              message(FATAL_ERROR "No BLAS library available")
+          endif(BLAS_LIB)
+      endif(APPLE)
+    else()
+      target_link_libraries(highs PRIVATE BLAS::BLAS)
+
+      string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
+      if(blas_lower MATCHES "openblas")
+          target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+      elseif(blas_lower MATCHES "accelerate")
+        target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
+      endif()
+    endif()
+
+    if(metis_FOUND)
+      target_link_libraries(highs PRIVATE metis)
+    else()
+      target_include_directories(highs PRIVATE "${METIS_PATH}")
+      target_link_libraries(highs PRIVATE "${METIS_LIB}")
+    endif()
+
+    if (NOT (GKLIB_ROOT STREQUAL ""))
+      if(GKlib_FOUND)
+        target_link_libraries(highs PRIVATE GKlib::GKlib)
+      else()
+        target_include_directories(highs PRIVATE "${GKLIB_PATH}")
+        target_link_libraries(highs PRIVATE "${GKLIB_LIB}")
+      endif()
+    endif()
+  endif()
 
   if(MSVC)
     list(APPEND highs_compile_opts
@@ -219,9 +294,9 @@ else()
     target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
     )
-    target_link_libraries(highs ZLIB::ZLIB)
+    target_link_libraries(highs PRIVATE ZLIB::ZLIB)
   endif()
-    
+
   # install the header files of highs
   foreach(file ${headers})
     get_filename_component(dir ${file} DIRECTORY)
@@ -236,9 +311,9 @@ else()
 
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
-  
+
   if (UNIX)
-    if ( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")   
+    if ( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
       target_compile_options(highs PRIVATE "-Wall")
       target_compile_options(highs PRIVATE "-Wreturn-type")
       target_compile_options(highs PRIVATE "-Wmissing-declarations")
@@ -248,7 +323,7 @@ else()
       target_compile_options(highs PRIVATE "-Wno-comment")
       target_compile_options(highs PRIVATE "-Wno-unused-label")
 
-      if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")   
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(highs PRIVATE "-Wno-unused-lambda-capture")
       endif()
 
@@ -267,7 +342,7 @@ else()
   endif()
 
   if (BUILD_DOTNET)
-  
+
       # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
       if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
         set(DOTNET_PLATFORM arm64)
@@ -298,8 +373,8 @@ else()
         set(TARGET_FILE_NAME "highs.dll")
       endif()
 
-      add_custom_command(TARGET highs POST_BUILD 
-        COMMAND "${CMAKE_COMMAND}" -E copy 
+      add_custom_command(TARGET highs POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy
           "$<TARGET_FILE:highs>"
         ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native/${TARGET_FILE_NAME}
         COMMENT "Copying to output directory")
@@ -318,7 +393,7 @@ if(FORTRAN_FOUND)
     target_link_libraries(FortranHighs PUBLIC highs)
   endif()
 
-  install(TARGETS FortranHighs 
+  install(TARGETS FortranHighs
     LIBRARY
     ARCHIVE
     RUNTIME
@@ -353,7 +428,7 @@ if(Threads_FOUND)
   include(CheckAtomic)
   if(HAVE_CXX_ATOMICS64_WITH_LIB)
     if(FAST_BUILD)
-      target_link_libraries(highs atomic)
+      target_link_libraries(highs PRIVATE atomic)
     else()
       target_link_libraries(libhighs atomic)
     endif()
@@ -361,7 +436,7 @@ if(Threads_FOUND)
 endif()
 
 if(FAST_BUILD)
-  target_link_libraries(highs Threads::Threads)
+  target_link_libraries(highs PRIVATE Threads::Threads)
 else()
   target_link_libraries(libhighs Threads::Threads)
 endif()
