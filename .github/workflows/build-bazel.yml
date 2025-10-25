@@ -30,8 +30,8 @@ jobs:
       - name: Upload bazel-testlogs
         uses: actions/upload-artifact@v4
         with:
-          name: bazel-testlogs
-          path: bazel-testlogs/
+          name: bazel-testlogs-${{ matrix.os }}
+          path: bazel-testlogs-${{ matrix.os }}/
 
   bazel-win:
     runs-on: windows-latest
@@ -58,5 +58,5 @@ jobs:
       - name: Upload bazel-testlogs
         uses: actions/upload-artifact@v4
         with:
-          name: bazel-testlogs
-          path: bazel-testlogs/
+          name: bazel-testlogs-win
+          path: bazel-testlogs-win/
