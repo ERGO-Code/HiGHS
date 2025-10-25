@@ -172,7 +172,7 @@ class TestHighsPy(unittest.TestCase):
 
         """
         now delete the first constraint and add a new one
-        
+
         min y
         s.t.
         x + y >= 0
@@ -586,7 +586,7 @@ class TestHighsPy(unittest.TestCase):
 
         """
         now delete the first constraint and add a new one
-        
+
         min y
         s.t.
         x + y >= 0
@@ -2190,7 +2190,7 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         model.run()
         self.assertEqual(model.getInfo().objective_function_value, mip_objective_function_value)
         self.assertEqual(model.getInfo().simplex_iteration_count, 0)
-    
+
     def test_get_objectives(self):
         # Build a simple model with 3 vars and a primary (single) objective
         h = highspy.Highs()

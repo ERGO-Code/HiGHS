@@ -34,7 +34,7 @@ jobs:
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
         run: dotnet pack -c Release /p:Version=1.12.0
 
-      - name: Add local feed 
+      - name: Add local feed
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
 
       - name: Dotnet push to local feed
@@ -46,9 +46,9 @@ jobs:
         working-directory: /__w/HiGHS/HiGHS/test_nuget
         run: |
           dotnet new console
-          rm Program.cs 
-          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -s /__w/HiGHS/HiGHS/nugets 
+          rm Program.cs
+          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs .
+          dotnet add package Highs.Native -s /__w/HiGHS/HiGHS/nugets
           dotnet run
 
   build_linux_8:
@@ -78,7 +78,7 @@ jobs:
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
         run: dotnet pack -c Release /p:Version=1.12.0
 
-      - name: Add local feed 
+      - name: Add local feed
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
 
       - name: Dotnet push to local feed
@@ -90,9 +90,9 @@ jobs:
         working-directory: /__w/HiGHS/HiGHS/test_nuget
         run: |
           dotnet new console
-          rm Program.cs 
-          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -s /__w/HiGHS/HiGHS/nugets 
+          rm Program.cs
+          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs .
+          dotnet add package Highs.Native -s /__w/HiGHS/HiGHS/nugets
           dotnet run
 
  

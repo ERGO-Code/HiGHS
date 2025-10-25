@@ -28,7 +28,7 @@ jobs:
         with:
           name: macos-x64
           path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
-            
+
   # Build macos arm64
   build_macos_arm:
     runs-on: macos-14  # macos-14 is arm64
@@ -51,14 +51,14 @@ jobs:
           name: macos-arm64
           path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
-  # Build windows 32 and linux 
+  # Build windows 32 and linux
   build_windows_32:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS
         run: |
-         cmake -E make_directory ${{runner.workspace}}/build32 
+         cmake -E make_directory ${{runner.workspace}}/build32
 
       - name: Configure CMake win32
         shell: bash
@@ -139,10 +139,10 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: cmake --build . --config Release --parallel
-      
+
       - name: Display structure of downloaded files
         run: |
-          pwd 
+          pwd
           ls -R ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes macos-x64
@@ -198,7 +198,7 @@ jobs:
       name: nuget
 
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    steps: 
+    steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
 
@@ -208,6 +208,6 @@ jobs:
           name: nuget
 
       - name: Dotnet push
-        run: dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://api.nuget.org/v3/index.json 
+        run: dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://api.nuget.org/v3/index.json
       #     env:
       #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
