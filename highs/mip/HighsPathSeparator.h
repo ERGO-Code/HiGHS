@@ -31,7 +31,7 @@ class HighsPathSeparator : public HighsSeparator {
                           HighsCutPool& cutpool) override;
 
   HighsPathSeparator(const HighsMipSolver& mipsolver)
-      : HighsSeparator(mipsolver, "PathAggr sepa") {
+      : HighsSeparator(mipsolver, kPathAggrSepaString) {
     randgen.initialise(mipsolver.options_mip_->random_seed);
   }
 };

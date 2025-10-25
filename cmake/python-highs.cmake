@@ -55,6 +55,10 @@ if(MSVC)
   target_compile_options(_core PRIVATE "/bigobj")
 endif()
 
+if (NOT MSVC) 
+  target_compile_options(_core PRIVATE "-ftemplate-depth=2048")
+endif()
+
 # if(MSVC)
 #   # Try to split large pdb files into objects. 
 #   # https://github.com/tensorflow/tensorflow/issues/31610

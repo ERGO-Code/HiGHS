@@ -169,7 +169,7 @@ class HighsInfo : public HighsInfoStruct {
 
  private:
   void deleteRecords() {
-    for (size_t i = 0; i < records.size(); i++) delete records[i];
+    for (auto record : records) delete record;
   }
 
   void initRecords() {

@@ -318,7 +318,7 @@ class HFactor {
 
   void reportLu(const HighsInt l_u_or_both = kReportLuBoth,
                 const bool full = true) const;
-  void reportAsm();
+  void reportAsm() const;
 
   InvertibleRepresentation getInvert() const;
   void setInvert(const InvertibleRepresentation& invert);

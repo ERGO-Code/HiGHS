@@ -2,12 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsHessian.cpp
@@ -34,9 +29,7 @@ void HighsHessian::exactResize() {
     this->index_.resize(num_nz);
     this->value_.resize(num_nz);
   } else {
-    this->start_.clear();
-    this->index_.clear();
-    this->value_.clear();
+    this->clear();
   }
 }
 

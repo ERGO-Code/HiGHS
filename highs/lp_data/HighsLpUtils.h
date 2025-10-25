@@ -27,11 +27,18 @@ class HighsOptions;
 
 using std::vector;
 
-void writeBasisFile(FILE*& file, const HighsBasis& basis);
+void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
+                    const HighsBasis& basis);
 
-HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
-                          const std::string filename);
-HighsStatus readBasisStream(const HighsLogOptions& log_options,
+HighsStatus getIndexFromName(
+    const HighsLogOptions& log_options, std::string& from_method,
+    const bool is_column, const std::string& name,
+    const std::unordered_map<std::string, int>& name2index, HighsInt& index,
+    const std::vector<std::string>& names);
+
+HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsLp& lp,
+                          HighsBasis& basis, const std::string filename);
+HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
                             HighsBasis& basis, std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
@@ -54,12 +61,29 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-bool boundScaleOk(const std::vector<double>& lower,
-                  const std::vector<double>& upper, const HighsInt bound_scale,
-                  const double infinite_bound);
+HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
+                        const HighsLogOptions& log_options);
 
-bool costScaleOk(const std::vector<double>& cost, const HighsInt cost_scale,
-                 const double infinite_cost);
+void userScaleLp(HighsLp& lp, HighsUserScaleData& data,
+                 const bool apply = true);
+
+void userScaleCosts(const vector<HighsVarType>& integrality,
+                    vector<double>& cost, HighsUserScaleData& data,
+                    const bool apply = true);
+
+void userScaleColBounds(const vector<HighsVarType>& integrality,
+                        vector<double>& lower, vector<double>& upper,
+                        HighsUserScaleData& data, const bool apply = true);
+
+void userScaleRowBounds(vector<double>& lower, vector<double>& upper,
+                        HighsUserScaleData& data, const bool apply = true);
+
+void userScaleMatrix(const vector<HighsVarType>& integrality,
+                     HighsSparseMatrix& matrix, HighsUserScaleData& data,
+                     const bool apply = true);
+
+HighsStatus userScaleStatus(const HighsLogOptions& log_options,
+                            const HighsUserScaleData& data);
 
 HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
                                 bool& made_semi_variable_mods);
@@ -100,9 +124,10 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
                                const HighsInt col, const double new_value,
                                const bool zero_new_value);
 
-void changeLpIntegrality(HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
-                         const vector<HighsVarType>& new_integrality);
+HighsStatus changeLpIntegrality(HighsLp& lp,
+                                const HighsIndexCollection& index_collection,
+                                const vector<HighsVarType>& new_integrality,
+                                const HighsOptions options);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
                    const vector<double>& new_col_cost,
@@ -211,13 +236,16 @@ HighsStatus readSolutionFileReturn(const HighsStatus status,
 bool readSolutionFileIgnoreLineOk(std::ifstream& in_file);
 bool readSolutionFileKeywordLineOk(std::string& keyword,
                                    std::ifstream& in_file);
-bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
+bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
+                                          std::string& keyword,
+                                          std::string& value_string,
+                                          HighsInt& value,
                                           std::ifstream& in_file);
 bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
                                     std::ifstream& in_file);
-bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
-                                       std::ifstream& in_file);
+bool readSolutionFileIdDoubleIntLineOk(std::string& id, double& value,
+                                       HighsInt& index, std::ifstream& in_file);
 
 void assessColPrimalSolution(const HighsOptions& options, const double primal,
                              const double lower, const double upper,
@@ -250,10 +278,8 @@ bool isMatrixDataNull(const HighsLogOptions& log_options,
                       const double* usr_matrix_value);
 
 void reportPresolveReductions(const HighsLogOptions& log_options,
-                              const HighsLp& lp, const HighsLp& presolve_lp);
-
-void reportPresolveReductions(const HighsLogOptions& log_options,
-                              const HighsLp& lp, const bool presolve_to_empty);
+                              HighsPresolveStatus presolve_status,
+                              const HighsLp& lp, const HighsLp& presolved_lp);
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
@@ -295,4 +321,6 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
                             HighsInt* sub_matrix_index,
                             double* sub_matrix_value);
 
+void initialiseUserScaleData(const HighsOptions& options,
+                             HighsUserScaleData& user_scale_data);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

@@ -15,6 +15,7 @@
 #include "util/HighsRandom.h"
 
 class HighsMipSolver;
+class HighsLpRelaxation;
 
 class HighsPrimalHeuristics {
  private:

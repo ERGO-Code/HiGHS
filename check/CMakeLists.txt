@@ -48,6 +48,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestHighsRbTree.cpp
       TestHighsSparseMatrix.cpp
       TestHighsVersion.cpp
+      TestHipo.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
@@ -105,6 +106,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
   add_executable(unit_tests ${TEST_SOURCES})
+
+  set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
 
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")

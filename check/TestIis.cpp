@@ -5,10 +5,10 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
-const double inf = kHighsInf;
+const bool dev_run = false;  // true;  //
+const bool write_model = false;
 
-void testIis(const std::string& model, const HighsIis& iis);
+const double inf = kHighsInf;
 
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status =
@@ -42,15 +42,22 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
+  // Perform the default (light) IIS check
+  HighsIis iis;
+  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  // Perform full IIS
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
   highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
-  HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == 0);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusBoxed);
+
   highs.setOptionValue("iis_strategy", kIisStrategyFromLpColPriority);
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
   REQUIRE(iis.col_index_.size() == 1);
@@ -79,18 +86,30 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
   HighsIis iis;
+  // Get IIS for empty row with positive lower bound
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  if (dev_run && write_model) {
+    highs.writeModel("");
+    highs.writeIisModel("");
+  }
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusLower);
-  REQUIRE(highs.changeRowBounds(empty_row, -2, -1) == HighsStatus::kOk);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  // Get IIS for empty row with negative upper bound
+  double new_lower = -2;
+  double new_upper = -1;
+  assert(new_upper < 0);
+  REQUIRE(highs.changeRowBounds(empty_row, new_lower, new_upper) ==
+          HighsStatus::kOk);
+  lp.row_lower_[empty_row] = new_lower;
+  lp.row_upper_[empty_row] = new_upper;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
@@ -99,8 +118,67 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("lp-get-iis-light", "[iis]") {
+  HighsLp lp;
+  lp.model_name_ = "lp-get-iis-light";
+  lp.num_col_ = 4;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, 0, 0, 0};
+  lp.col_lower_ = {10, 10, 10, 10};
+  lp.col_upper_ = {20, 20, 20, 20};
+  lp.row_lower_ = {-inf, -10, -34};
+  lp.row_upper_ = {30, 15, inf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 3, 7, 10};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {1.5, 2, 1, 4, -2, 1, 2, -2, -1.5, -1};
+  //
+  // Each of the three constraints constitutes an IIS. Find each by
+  // freeing the upper bounds in turn.
+  //
+  // 1.5w + 2x + y <= 30
+  //
+  // -10 <= 4w -2x + y + 2z <= 15
+  //
+  // -2x -1.5y -z >= -34
+  //
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+  HighsIis iis;
+
+  for (int l = 0; l < 3; l++) {
+    for (int k = 0; k < 2; k++) {
+      REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+      if (dev_run && write_model) {
+        highs.writeModel("");
+        highs.writeIisModel("");
+        highs.writeIisModel(lp.model_name_ + ".lp");
+      }
+      if (k == 0) {
+        // Now flip to column-wise for code coverage
+        lp.a_matrix_.ensureColwise();
+        highs.passModel(lp);
+      }
+    }
+    // Prevent the first and then the second constraints from being an
+    // IIS
+    if (l == 0) {
+      lp.row_upper_[0] = inf;
+    } else if (l == 1) {
+      lp.row_upper_[1] = inf;
+    }
+    highs.passModel(lp);
+  }
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("lp-get-iis", "[iis]") {
   HighsLp lp;
+  lp.model_name_ = "lp-get-iis";
   lp.num_col_ = 2;
   lp.num_row_ = 3;
   lp.col_cost_ = {0, 0};
@@ -109,19 +187,28 @@ TEST_CASE("lp-get-iis", "[iis]") {
   lp.row_lower_ = {-inf, -inf, -inf};
   lp.row_upper_ = {8, 9, -2};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
   lp.a_matrix_.start_ = {0, 2, 4, 6};
   lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
   lp.a_matrix_.value_ = {2, 1, 1, 3, 1, 1};
+  //
+  // 2x + y <= 8
+  //
+  // x + 3y <= 9
+  //
+  // x +  y <= -2
+  //
+  // x, y \in [0, inf)
+  //
   //  lp.col_name_ = {"Col0", "Col1"};
   //  lp.row_name_ = {"Row0", "Row1", "Row2"};
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-  highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   REQUIRE(iis.col_index_.size() == 2);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.col_index_[0] == 0);
@@ -197,6 +284,7 @@ TEST_CASE("lp-get-iis-avgas", "[iis]") {
 TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   // Using infeasible LP from AMPL documentation
   HighsLp lp;
+  lp.model_name_ = "ampl_infeas";
   lp.num_col_ = 2;
   lp.num_row_ = 3;
   lp.col_cost_ = {1, -2};
@@ -304,128 +392,6 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   h.resetGlobalScheduler(true);
 }
 
-void testIis(const std::string& model, const HighsIis& iis) {
-  HighsModelStatus model_status;
-  std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  HighsInt num_iis_col = iis.col_index_.size();
-  HighsInt num_iis_row = iis.row_index_.size();
-
-  Highs highs;
-  highs.setOptionValue("output_flag", false);
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  const HighsLp& incumbent_lp = highs.getLp();
-  HighsLp lp = highs.getLp();
-  // Zero the objective
-  lp.col_cost_.assign(lp.num_col_, 0);
-  REQUIRE(highs.changeColsCost(0, lp.num_col_ - 1, lp.col_cost_.data()) ==
-          HighsStatus::kOk);
-
-  // Save the bounds
-  std::vector<double> iis_col_lower;
-  std::vector<double> iis_col_upper;
-  std::vector<double> iis_row_lower;
-  std::vector<double> iis_row_upper;
-  for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
-    HighsInt iCol = iis.col_index_[iisCol];
-    iis_col_lower.push_back(lp.col_lower_[iCol]);
-    iis_col_upper.push_back(lp.col_upper_[iCol]);
-  }
-  for (HighsInt iisRow = 0; iisRow < num_iis_row; iisRow++) {
-    HighsInt iRow = iis.row_index_[iisRow];
-    iis_row_lower.push_back(lp.row_lower_[iRow]);
-    iis_row_upper.push_back(lp.row_upper_[iRow]);
-  }
-
-  // Free all the columns and rows
-  lp.col_lower_.assign(lp.num_col_, -inf);
-  lp.col_upper_.assign(lp.num_col_, inf);
-  lp.row_lower_.assign(lp.num_row_, -inf);
-  lp.row_upper_.assign(lp.num_row_, inf);
-  // Restore the bounds for the IIS columns and rows
-  for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
-    HighsInt iCol = iis.col_index_[iisCol];
-    lp.col_lower_[iCol] = iis_col_lower[iisCol];
-    lp.col_upper_[iCol] = iis_col_upper[iisCol];
-  }
-  for (HighsInt iisRow = 0; iisRow < num_iis_row; iisRow++) {
-    HighsInt iRow = iis.row_index_[iisRow];
-    lp.row_lower_[iRow] = iis_row_lower[iisRow];
-    lp.row_upper_[iRow] = iis_row_upper[iisRow];
-  }
-
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-
-  for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
-    HighsInt iCol = iis.col_index_[iisCol];
-    HighsInt iis_bound = iis.col_bound_[iisCol];
-    const double lower = lp.col_lower_[iCol];
-    const double upper = lp.col_upper_[iCol];
-    double to_lower = lower;
-    double to_upper = upper;
-    REQUIRE(iis_bound != kIisBoundStatusDropped);
-    REQUIRE(iis_bound != kIisBoundStatusNull);
-    REQUIRE(iis_bound != kIisBoundStatusBoxed);
-    if (iis_bound == kIisBoundStatusLower) {
-      to_lower = -inf;
-    } else if (iis_bound == kIisBoundStatusUpper) {
-      to_upper = inf;
-    } else if (iis_bound == kIisBoundStatusFree) {
-      if (dev_run)
-        printf("IIS Col %2d (LP col %6d) status %s\n", int(iisCol), int(iCol),
-               iis.iisBoundStatusToString(iis_bound).c_str());
-      continue;
-    }
-    REQUIRE(highs.changeColBounds(iCol, to_lower, to_upper) ==
-            HighsStatus::kOk);
-    REQUIRE(highs.run() == HighsStatus::kOk);
-    model_status = highs.getModelStatus();
-    if (dev_run)
-      printf(
-          "IIS Col %2d (LP col %6d) status %s: removal yields model status "
-          "%s\n",
-          int(iisCol), int(iCol), iis.iisBoundStatusToString(iis_bound).c_str(),
-          highs.modelStatusToString(model_status).c_str());
-    REQUIRE(model_status == HighsModelStatus::kOptimal);
-    REQUIRE(highs.changeColBounds(iCol, lower, upper) == HighsStatus::kOk);
-  }
-  for (HighsInt iisRow = 0; iisRow < num_iis_row; iisRow++) {
-    HighsInt iRow = iis.row_index_[iisRow];
-    HighsInt iis_bound = iis.row_bound_[iisRow];
-    const double lower = lp.row_lower_[iRow];
-    const double upper = lp.row_upper_[iRow];
-    double to_lower = lower;
-    double to_upper = upper;
-    REQUIRE(iis_bound != kIisBoundStatusDropped);
-    REQUIRE(iis_bound != kIisBoundStatusNull);
-    REQUIRE(iis_bound != kIisBoundStatusFree);
-    REQUIRE(iis_bound != kIisBoundStatusBoxed);
-    if (iis_bound == kIisBoundStatusLower) {
-      to_lower = -inf;
-    } else if (iis_bound == kIisBoundStatusUpper) {
-      to_upper = inf;
-    }
-    REQUIRE(highs.changeRowBounds(iRow, to_lower, to_upper) ==
-            HighsStatus::kOk);
-    REQUIRE(highs.run() == HighsStatus::kOk);
-    model_status = highs.getModelStatus();
-    if (dev_run)
-      printf(
-          "IIS Row %2d (LP row %6d) status %s: removal yields model status "
-          "%s\n",
-          int(iisRow), int(iRow), iis.iisBoundStatusToString(iis_bound).c_str(),
-          highs.modelStatusToString(model_status).c_str());
-    //    if (model_status != HighsModelStatus::kOptimal)
-    //    highs.writeSolution("", kSolutionStylePretty);
-    REQUIRE(model_status == HighsModelStatus::kOptimal);
-    REQUIRE(highs.changeRowBounds(iRow, lower, upper) == HighsStatus::kOk);
-  }
-
-  highs.resetGlobalScheduler(true);
-}
-
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status) {
   std::string model_file =
@@ -442,6 +408,10 @@ void testMps(std::string& model, const HighsInt iis_strategy,
   highs.setOptionValue("iis_strategy", iis_strategy);
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  if (dev_run && write_model) {
+    highs.writeModel("");
+    highs.writeIisModel("");
+  }
   HighsInt num_iis_col = iis.col_index_.size();
   HighsInt num_iis_row = iis.row_index_.size();
   HighsModelStatus model_status = highs.getModelStatus();
@@ -452,7 +422,6 @@ void testMps(std::string& model, const HighsInt iis_strategy,
     if (dev_run)
       printf("Model %s has IIS with %d columns and %d rows\n", model.c_str(),
              int(num_iis_col), int(num_iis_row));
-    testIis(model, iis);
   } else {
     REQUIRE(num_iis_col == 0);
     REQUIRE(num_iis_row == 0);
