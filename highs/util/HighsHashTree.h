@@ -392,9 +392,7 @@ class HighsHashTree {
   struct BranchNode {
     Occupation occupation;
 
-    NodePtr* children() {
-      return reinterpret_cast<NodePtr*>(this + 1);
-    }
+    NodePtr* children() { return reinterpret_cast<NodePtr*>(this + 1); }
 
     const NodePtr* children() const {
       return reinterpret_cast<const NodePtr*>(this + 1);
@@ -692,8 +690,7 @@ class HighsHashTree {
       BranchNode* compressedBranch = (BranchNode*)::operator new(newSize);
       newNode = compressedBranch;
 
-      size_t leftSize =
-          sizeof(BranchNode) + size_t(location) * sizeof(NodePtr);
+      size_t leftSize = sizeof(BranchNode) + size_t(location) * sizeof(NodePtr);
       memcpy(compressedBranch, branch, leftSize);
       memcpy(compressedBranch->childPtr(location),
              branch->childPtr(location + 1), rightSize);
@@ -1309,8 +1306,7 @@ class HighsHashTree {
         BranchNode* branch = node.getBranchNode();
         int size = branch->occupation.num_set();
 
-        for (int i = 0; i < size; ++i)
-          for_each_recurse<R>(branch->child(i), f);
+        for (int i = 0; i < size; ++i) for_each_recurse<R>(branch->child(i), f);
       }
     }
   }
