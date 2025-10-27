@@ -784,7 +784,8 @@ HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
  * @param highs     A pointer to the Highs instance.
  * @param option    The name of the option.
  * @param value     A pointer to allocated memory to store the current value of
- *                  the option. This must have length `kHighsMaximumStringLength`.
+ *                  the option. This must have length
+ * `kHighsMaximumStringLength`.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */

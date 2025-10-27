@@ -17,6 +17,8 @@
 
 #include "util/HighsInt.h"
 
+const bool kSimplexScaleDev = true;
+
 const std::string kHighsCopyrightStatement =
     "Copyright (c) 2025 HiGHS under MIT licence terms";
 

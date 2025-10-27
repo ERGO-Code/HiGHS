@@ -3077,3 +3077,29 @@ bool HighsUserScaleData::scaleWarning(std::string& message) const {
   message = ss.str();
   return true;
 }
+
+void HighsScale::print(const std::string& prefix,
+                       const std::string& message) const {
+  double min_row_scale = kHighsInf;
+  double max_row_scale = -kHighsInf;
+  double min_col_scale = kHighsInf;
+  double max_col_scale = -kHighsInf;
+  HighsInt num_row = this->row.size();
+  HighsInt num_col = this->col.size();
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    min_col_scale = std::min(this->col[iCol], min_col_scale);
+    max_col_scale = std::max(this->col[iCol], max_col_scale);
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    min_row_scale = std::min(this->row[iRow], min_row_scale);
+    max_row_scale = std::max(this->row[iRow], max_row_scale);
+  }
+  printf(
+      "%sTxt HighsScale: Cost scale = %g; col scale in [%g, %g]; row scale in "
+      "[%g, %g]; %s\n",
+      prefix.c_str(), this->cost, min_col_scale, max_col_scale, min_row_scale,
+      max_row_scale, message.c_str());
+  printf("%sCsv,%s,%g,%g,%g,%g,%g\n", prefix.c_str(), message.c_str(),
+         this->cost, min_col_scale, max_col_scale, min_row_scale,
+         max_row_scale);
+}

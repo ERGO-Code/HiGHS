@@ -154,7 +154,9 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // considering computing scaling factors if there are none - and
   // then move to EKK
   considerSimplexScaling(options, incumbent_lp);
-  //
+  if (kSimplexScaleDev)
+    incumbent_lp.scale_.print("grepSimplexScaling",
+                              "After scaling, " + incumbent_lp.model_name_);
   const bool was_scaled = incumbent_lp.is_scaled_;
   if (!status.has_basis && !basis.valid && basis.useful) {
     // There is no simplex basis, but there is a useful HiGHS basis
@@ -218,10 +220,10 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   bool solve_unscaled_lp = false;
   bool solved_unscaled_lp = false;
   if (!incumbent_lp.scale_.has_scaling) {
+    solve_unscaled_lp = true;
     //
     // Solve the unscaled LP with unscaled NLA
     //
-    solve_unscaled_lp = true;
     return_status = ekk_instance.solve();
     solved_unscaled_lp = true;
     ekk_instance.unpermute();
@@ -447,6 +449,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(basis.valid);
     highs_info.basis_validity = kBasisValidityValid;
   }
+  if (kSimplexScaleDev) ekk_instance.testBasisCondition();
   // Move the incumbent LP back from Ekk
   incumbent_lp = std::move(ekk_lp);
   incumbent_lp.is_moved_ = false;

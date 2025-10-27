@@ -690,11 +690,9 @@ class Highs {
 
   /**
    * @brief Get the condition number of the current basis matrix,
-   * possibly computing it exactly and reporting the error in the
-   * approximate condition number
+   * possibly computing it exactly
    */
-  HighsStatus getKappa(double& kappa, const bool exact = false,
-                       const bool report = false) const;
+  HighsStatus getKappa(double& kappa, const bool exact = false) const;
 
   /**
    * @brief Get the number of columns in the incumbent model

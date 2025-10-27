@@ -2338,11 +2338,10 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getKappa(double& kappa, const bool exact,
-                            const bool report) const {
+HighsStatus Highs::getKappa(double& kappa, const bool exact) const {
   if (!ekk_instance_.status_.has_invert)
-    return invertRequirementError("getBasisInverseRow");
-  kappa = ekk_instance_.computeBasisCondition(this->model_.lp_, exact, report);
+    return invertRequirementError("getKappa");
+  kappa = ekk_instance_.computeBasisCondition(this->model_.lp_, exact);
   return HighsStatus::kOk;
 }
 

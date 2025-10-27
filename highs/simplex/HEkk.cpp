@@ -3603,8 +3603,22 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   return return_status;
 }
 
-double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact,
-                                   const bool report) const {
+void HEkk::testBasisCondition(const std::string& message) const {
+  double exact_kappa_tt = -timer_->read();
+  bool exact = true;
+  double exact_kappa = this->computeBasisCondition(this->lp_, exact);
+  exact_kappa_tt += timer_->read();
+  double approx_kappa_tt = -timer_->read();
+  exact = false;
+  double approx_kappa = this->computeBasisCondition(this->lp_, exact);
+  approx_kappa_tt += timer_->read();
+  highsLogUser(options_->log_options, HighsLogType::kInfo,
+               "getKappa,%s,%g,%g,%g,%g,%s,%s\n", this->lp_.model_name_.c_str(),
+               exact_kappa, exact_kappa_tt, approx_kappa, approx_kappa_tt,
+               message.c_str(), this->lp_.origin_name_.c_str());
+}
+
+double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact) const {
   HighsInt solver_num_row = lp.num_row_;
   HighsInt solver_num_col = lp.num_col_;
   vector<double> bs_cond_x;
@@ -3616,9 +3630,10 @@ double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact,
 
   const HighsInt* Astart = lp.a_matrix_.start_.data();
   const double* Avalue = lp.a_matrix_.value_.data();
-  double exact_norm_Binv = 0;
+  double norm_Binv = 0;
   if (exact) {
-    // Compute the exact norm of B^{-1}
+    // Compute the exact 1-norm of B^{-1}
+    norm_Binv = 0;
     for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
       row_ep.clear();
       row_ep.index[row_ep.count] = r_n;
@@ -3630,79 +3645,80 @@ double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact,
       double c_norm = 0.0;
       for (HighsInt iX = 0; iX < row_ep.count; iX++)
         c_norm += std::fabs(row_ep.array[row_ep.index[iX]]);
-      exact_norm_Binv = std::max(c_norm, exact_norm_Binv);
+      norm_Binv = std::max(c_norm, norm_Binv);
     }
-  }
-  // Compute the Hager condition number estimate for the basis matrix
-  const double expected_density = 1;
-  bs_cond_x.resize(solver_num_row);
-  bs_cond_y.resize(solver_num_row);
-  bs_cond_z.resize(solver_num_row);
-  bs_cond_w.resize(solver_num_row);
-  // x = ones(n,1)/n;
-  // y = A\x;
-  double mu = 1.0 / solver_num_row;
-  double norm_Binv = 0;
-  for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
-  row_ep.clear();
-  for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
-    double value = bs_cond_x[r_n];
-    if (value) {
-      row_ep.index[row_ep.count] = r_n;
-      row_ep.array[r_n] = value;
-      row_ep.count++;
-    }
-  }
-  for (HighsInt ps_n = 1; ps_n <= 5; ps_n++) {
-    row_ep.packFlag = false;
-    simplex_nla_.ftran(row_ep, expected_density);
-
-    // zeta = sign(y);
-    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
-      bs_cond_y[r_n] = row_ep.array[r_n];
-      if (bs_cond_y[r_n] > 0)
-        bs_cond_w[r_n] = 1.0;
-      else if (bs_cond_y[r_n] < 0)
-        bs_cond_w[r_n] = -1.0;
-      else
-        bs_cond_w[r_n] = 0.0;
-    }
-    // z=A'\zeta;
+  } else {
+    // Compute the Hager 1-norm condition number estimate for the basis matrix
+    const double expected_density = 1;
+    bs_cond_x.resize(solver_num_row);
+    bs_cond_y.resize(solver_num_row);
+    bs_cond_z.resize(solver_num_row);
+    bs_cond_w.resize(solver_num_row);
+    // x = ones(n,1)/n;
+    // y = A\x;
+    double mu = 1.0 / solver_num_row;
+    norm_Binv = 0;
+    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
     row_ep.clear();
     for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
-      double value = bs_cond_w[r_n];
+      double value = bs_cond_x[r_n];
       if (value) {
         row_ep.index[row_ep.count] = r_n;
         row_ep.array[r_n] = value;
         row_ep.count++;
       }
     }
-    row_ep.packFlag = false;
-    simplex_nla_.btran(row_ep, expected_density);
-    double norm_z = 0.0;
-    double ztx = 0.0;
-    norm_Binv = 0.0;
-    HighsInt argmax_z = -1;
-    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
-      bs_cond_z[r_n] = row_ep.array[r_n];
-      double abs_z_v = fabs(bs_cond_z[r_n]);
-      if (abs_z_v > norm_z) {
-        norm_z = abs_z_v;
-        argmax_z = r_n;
+    for (HighsInt ps_n = 1; ps_n <= 5; ps_n++) {
+      row_ep.packFlag = false;
+      simplex_nla_.ftran(row_ep, expected_density);
+      // zeta = sign(y);
+      for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
+        bs_cond_y[r_n] = row_ep.array[r_n];
+        if (bs_cond_y[r_n] > 0)
+          bs_cond_w[r_n] = 1.0;
+        else if (bs_cond_y[r_n] < 0)
+          bs_cond_w[r_n] = -1.0;
+        else
+          bs_cond_w[r_n] = 0.0;
       }
-      ztx += bs_cond_z[r_n] * bs_cond_x[r_n];
-      norm_Binv += fabs(bs_cond_y[r_n]);
+      // z=A'\zeta;
+      row_ep.clear();
+      for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
+        double value = bs_cond_w[r_n];
+        if (value) {
+          row_ep.index[row_ep.count] = r_n;
+          row_ep.array[r_n] = value;
+          row_ep.count++;
+        }
+      }
+      row_ep.packFlag = false;
+      simplex_nla_.btran(row_ep, expected_density);
+      double norm_z = 0.0;
+      double ztx = 0.0;
+      norm_Binv = 0.0;
+      HighsInt argmax_z = -1;
+      for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
+        bs_cond_z[r_n] = row_ep.array[r_n];
+        double abs_z_v = fabs(bs_cond_z[r_n]);
+        if (abs_z_v > norm_z) {
+          norm_z = abs_z_v;
+          argmax_z = r_n;
+        }
+        ztx += bs_cond_z[r_n] * bs_cond_x[r_n];
+        norm_Binv += fabs(bs_cond_y[r_n]);
+      }
+      if (norm_z <= ztx) break;
+      // x = zeros(n,1);
+      // x(fd_i) = 1;
+      for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = 0.0;
+      row_ep.clear();
+      row_ep.count = 1;
+      row_ep.index[0] = argmax_z;
+      row_ep.array[argmax_z] = 1.0;
+      bs_cond_x[argmax_z] = 1.0;
     }
-    if (norm_z <= ztx) break;
-    // x = zeros(n,1);
-    // x(fd_i) = 1;
-    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = 0.0;
-    row_ep.clear();
-    row_ep.count = 1;
-    row_ep.index[0] = argmax_z;
-    row_ep.array[argmax_z] = 1.0;
-    bs_cond_x[argmax_z] = 1.0;
   }
+  // Compute the exact 1-norm of B
   double norm_B = 0.0;
   for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
     HighsInt vr_n = basis_.basicIndex_[r_n];
@@ -3714,19 +3730,7 @@ double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact,
       c_norm += 1.0;
     norm_B = max(c_norm, norm_B);
   }
-  double cond_B = norm_Binv * norm_B;
-  double exact_cond_B = exact_norm_Binv * norm_B;
-  if (exact) {
-    assert(exact_norm_Binv > 0);
-    if (report)
-      highsLogUser(
-          options_->log_options, HighsLogType::kInfo,
-          "HEkk::computeBasisCondition: grep_kappa model,||B||_1,approx "
-          "||B^{-1}||_1,approx_kappa,||B^{-1}||_1,kappa = ,%s,%g,%g,%g,%g,%g\n",
-          lp.model_name_.c_str(), norm_B, norm_Binv, cond_B, exact_norm_Binv,
-          exact_cond_B);
-    return exact_cond_B;
-  }
+  double cond_B = norm_B * norm_Binv;
   return cond_B;
 }
 

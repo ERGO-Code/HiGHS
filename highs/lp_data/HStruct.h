@@ -100,6 +100,8 @@ struct HighsScale {
   double cost;
   std::vector<double> col;
   std::vector<double> row;
+  void print(const std::string& prefix = "",
+             const std::string& message = "") const;
 };
 
 struct HighsLpMods {
