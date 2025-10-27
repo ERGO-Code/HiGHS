@@ -1205,8 +1205,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("objective_bound", &HighsOptions::objective_bound)
       .def_readwrite("objective_target", &HighsOptions::objective_target)
       .def_readwrite("threads", &HighsOptions::threads)
+      .def_readwrite("user_objective_scale", &HighsOptions::user_objective_scale)
       .def_readwrite("user_bound_scale", &HighsOptions::user_bound_scale)
-      .def_readwrite("user_cost_scale", &HighsOptions::user_cost_scale)
       .def_readwrite("highs_debug_level", &HighsOptions::highs_debug_level)
       .def_readwrite("highs_analysis_level",
                      &HighsOptions::highs_analysis_level)
@@ -1505,7 +1505,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("row_index", &HighsIis::row_index_)
       .def_readwrite("col_bound", &HighsIis::col_bound_)
       .def_readwrite("row_bound", &HighsIis::row_bound_)
-      .def_readwrite("info", &HighsIis::info_);
+      .def_readwrite("info", &HighsIis::info_)
+      .def_readwrite("model", &HighsIis::model_);
   // structs
   py::class_<HighsSolution>(m, "HighsSolution", py::module_local())
       .def(py::init<>())

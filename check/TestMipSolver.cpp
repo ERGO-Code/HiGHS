@@ -1263,7 +1263,7 @@ TEST_CASE("row-fixed-lp", "[highs_test_mip_solver]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   double mip_optimal_objective = h.getInfo().objective_function_value;

@@ -2,10 +2,10 @@
 
 <!-- ![Build Status](https://github.com/ERGO-Code/HiGHS/actions/workflows/build.yml/badge.svg) -->
 
-[![Build Status][fast_build_svg]][fast_build_link] 
-[![Build Status][linux_build_svg]][linux_build_link] 
-[![Build Status][macos_build_svg]][macos_build_link] 
-[![Build Status][windows_build_svg]][windows_build_link] 
+[![Build Status][fast_build_svg]][fast_build_link]
+[![Build Status][linux_build_svg]][linux_build_link]
+[![Build Status][macos_build_svg]][macos_build_link]
+[![Build Status][windows_build_svg]][windows_build_link]
 \
 [![Conan Center](https://img.shields.io/conan/v/highs)](https://conan.io/center/recipes/highs)
 \
@@ -152,35 +152,35 @@ options:
       --model_file file          File of model to solve.
       --options_file file        File containing HiGHS options.
       --read_solution_file file  File of solution to read.
-      --read_basis_file text     File of initial basis to read. 
+      --read_basis_file text     File of initial basis to read.
       --write_model_file text    File for writing out model.
       --solution_file text       File for writing out solution.
       --write_basis_file text    File for writing out final basis.
       --presolve text            Set presolve option to:
-                                   "choose" * default 
+                                   "choose" * default
                                    "on"
                                    "off"
-      --solver text              Set solver option to: 
-                                   "choose" * default 
+      --solver text              Set solver option to:
+                                   "choose" * default
                                    "simplex"
-                                   "ipm" 
-      --parallel text            Set parallel option to: 
-                                   "choose" * default 
-                                   "on" 
-                                   "off" 
-      --run_crossover text       Set run_crossover option to: 
-                                   "choose" 
-                                   "on" * default 
-                                   "off" 
+                                   "ipm"
+      --parallel text            Set parallel option to:
+                                   "choose" * default
+                                   "on"
+                                   "off"
+      --run_crossover text       Set run_crossover option to:
+                                   "choose"
+                                   "on" * default
+                                   "off"
       --time_limit float         Run time limit (seconds - double).
-      --random_seed int          Seed to initialize random number 
+      --random_seed int          Seed to initialize random number
                                  generation.
-      --ranging text             Compute cost, bound, RHS and basic 
+      --ranging text             Compute cost, bound, RHS and basic
                                  solution ranging:
-                                   "on" 
-                                   "off" * default 
+                                   "on"
+                                   "off" * default
   -v, --version                  Print version.
-  -h, --help                     Print help. 
+  -h, --help                     Print help.
 
 ```
 For a full list of options, see the [options page](https://ergo-code.github.io/HiGHS/stable/options/definitions/) of the documentation website.
@@ -212,20 +212,20 @@ The installation can be tested using the small example `HiGHS/examples/call_high
 
 The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) also demonstrates how to call `highspy`.
 
-### C 
+### C
 The C API is in `HiGHS/highs/interfaces/highs_c_api.h`. It is included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
 
 ### CSharp
 
-The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/Highs.Native/. 
+The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/Highs.Native/.
 
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.11.0
+dotnet add package Highs.Native --version 1.12.0
 ```
 
-The nuget package contains runtime libraries for 
+The nuget package contains runtime libraries for
 
 * `win-x64`
 * `win-x32`
@@ -236,7 +236,7 @@ The nuget package contains runtime libraries for
 
 Details for building locally can be found in `nuget/README.md`.
 
-### Fortran 
+### Fortran
 
 The Fortran API is in `HiGHS/highs/interfaces/highs_fortran_api.f90`. It is *not* included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
 

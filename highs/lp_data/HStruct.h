@@ -37,6 +37,8 @@ struct HighsSolution {
   bool hasUndefined() const;
   void invalidate();
   void clear();
+  void print(const std::string& prefix = "",
+             const std::string& message = "") const;
 };
 
 struct HighsObjectiveSolution {
@@ -82,8 +84,10 @@ struct HighsBasis {
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
-  void print(std::string message = "") const;
-  void printScalars(std::string message = "") const;
+  void print(const std::string& prefix = "",
+             const std::string& message = "") const;
+  void printScalars(const std::string& prefix = "",
+                    const std::string& message = "") const;
   void invalidate();
   void clear();
 };
@@ -190,6 +194,31 @@ struct HighsSimplexStats {
   double row_DSE_density;
   void report(FILE* file, const std::string message = "") const;
   void initialise(const HighsInt iteration_count_ = 0);
+};
+
+struct HighsUserScaleData {
+  HighsInt user_objective_scale;
+  HighsInt user_bound_scale;
+  double infinite_cost;
+  double infinite_bound;
+  double small_matrix_value;
+  double large_matrix_value;
+  HighsInt num_infinite_costs;
+  HighsInt num_infinite_hessian_values;
+  HighsInt num_infinite_col_bounds;
+  HighsInt num_infinite_row_bounds;
+  HighsInt num_small_matrix_values;
+  HighsInt num_large_matrix_values;
+  HighsInt suggested_user_objective_scale;
+  HighsInt suggested_user_bound_scale;
+  bool applied;
+  void initialise(const HighsInt& user_objective_scale_,
+                  const HighsInt& user_bound_scale_,
+                  const double& infinite_cost_, const double& infinite_bound_,
+                  const double& small_matrix_value_,
+                  const double& large_matrix_value_);
+  bool scaleError(std::string& message) const;
+  bool scaleWarning(std::string& message) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */
