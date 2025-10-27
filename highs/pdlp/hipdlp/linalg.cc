@@ -213,4 +213,17 @@ std::vector<double> compute_row_norms(const HighsLp& lp, double p) {
   return row_norms;
 }
 
+std::vector<double> vector_subtrac(const std::vector<double>& a,
+                                  const std::vector<double>& b) {
+  if (a.size() != b.size()) {
+    throw std::invalid_argument(
+        "Vectors must be of the same size for subtraction.");
+  }
+  std::vector<double> result(a.size());
+  for (size_t i = 0; i < a.size(); ++i) {
+    result[i] = a[i] - b[i];
+  }
+  return result;
+}
+
 }  // namespace linalg

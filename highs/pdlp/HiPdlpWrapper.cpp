@@ -74,11 +74,6 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   debugPdlpFinalSolutionLog(pdlp.debug_pdlp_log_file_,
                             pdlp_solution.col_value.data(), lp.num_col_,
                             pdlp_solution.row_dual.data(), lp.num_row_);
-  //print col_dual
-  for (HighsInt i = 0; i < lp.num_col_; i++) {
-    std::cout << "Column " << i
-              << " dual value: " << pdlp_solution.col_dual[i] << std::endl;
-  }
   pdlp.closeDebugLog();
 
   // Report profiling

@@ -52,6 +52,10 @@ std::vector<double> compute_column_norms(
     const HighsLp& lp, double p = std::numeric_limits<double>::infinity());
 std::vector<double> compute_row_norms(
     const HighsLp& lp, double p = std::numeric_limits<double>::infinity());
+
+std::vector<double> vector_subtrac(const std::vector<double>& a,
+                                  const std::vector<double>& b);
+
 }  // namespace linalg
 
 #endif  // PDLP_HIPDLP_LINALG_HPP

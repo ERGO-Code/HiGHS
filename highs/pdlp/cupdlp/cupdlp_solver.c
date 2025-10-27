@@ -932,12 +932,6 @@ cupdlp_retcode PDHG_Solve(const cupdlp_int* has_variables, CUPDLPwork *pdhg) {
   const int iter_log_between_header = 50;
   int iter_log_since_header = iter_log_between_header;
   debugPdlpIterHeaderLog(pdhg->debug_pdlp_log_file_);
-  //print norm of pdhg->buffer2
-  double xx = 0.0;
-  cupdlp_twoNormSquared(pdhg, problem->data->nCols, pdhg->buffer2,
-                        &xx);
-  cupdlp_printf("||buffer2||_2^2 = %e\n", xx);
-  
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
     debugPdlpIterLog(pdhg->debug_pdlp_log_file_, timers->nIter, &pdhg->debug_pdlp_data_, pdhg->stepsize->dBeta, pdhg->stepsize->dPrimalStep, pdhg->stepsize->dDualStep);
     PDHG_Compute_SolvingTime(pdhg);

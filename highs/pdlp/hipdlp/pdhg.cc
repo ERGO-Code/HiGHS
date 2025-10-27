@@ -568,12 +568,14 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       // Compute residuals for current iterate
       bool current_converged =
           checkConvergence(iter, x_current_, y_current_, Ax_cache_, ATy_cache_,
-                           params_.tolerance, current_results, "[L]");
+                           params_.tolerance, current_results, "[L]",
+                           dSlackPos_, dSlackNeg_);
 
       // Compute residuals for average iterate
       bool average_converged =
           checkConvergence(iter, x_avg_, y_avg_, Ax_avg, ATy_avg,
-                           params_.tolerance, average_results, "[A]");
+                           params_.tolerance, average_results, "[A]",
+                           dSlackPosAvg_, dSlackNegAvg_);
       hipdlpTimerStop(kHipdlpClockConvergenceCheck);
 
       debugPdlpIterHeaderLog(debug_pdlp_log_file_);
@@ -598,6 +600,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
         final_iter_count_ = iter;
         x = x_avg_;
         y = y_avg_;
+        dSlackPos_ = dSlackPosAvg_;
+        dSlackNeg_ = dSlackNegAvg_;
         results_ = average_results;
         return solveReturn(TerminationStatus::OPTIMAL);
       }
@@ -753,6 +757,8 @@ void PDLPSolver::initialize() {
   K_times_x_diff_.resize(lp_.num_row_, 0.0);
   dSlackPos_.resize(lp_.num_col_, 0.0);
   dSlackNeg_.resize(lp_.num_col_, 0.0);
+  dSlackPosAvg_.resize(lp_.num_col_, 0.0);
+  dSlackNegAvg_.resize(lp_.num_col_, 0.0);
 }
 
 // Update primal weight
@@ -875,42 +881,48 @@ double PDLPSolver::computePrimalFeasibility(
   return linalg::vector_norm(primal_residual);
 }
 
-void PDLPSolver::computeDualSlacks(const std::vector<double>& ATy_vector) {
+void PDLPSolver::computeDualSlacks(const std::vector<double>& dualResidual,
+                                   std::vector<double>& dSlackPos,
+                                   std::vector<double>& dSlackNeg) {
   // Ensure vectors are correctly sized
-  if (dSlackPos_.size() != lp_.num_col_) dSlackPos_.resize(lp_.num_col_);
-  if (dSlackNeg_.size() != lp_.num_col_) dSlackNeg_.resize(lp_.num_col_);
+  if (dSlackPos.size() != lp_.num_col_) dSlackPos.resize(lp_.num_col_);
+  if (dSlackNeg.size() != lp_.num_col_) dSlackNeg.resize(lp_.num_col_);
 
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
-    double dual_residual = lp_.col_cost_[i] - ATy_vector[i];
-
     // Compute positive slack (for lower bounds)
-        // CUPDLP: max(dual_residual, 0) * hasLower
-        if (lp_.col_lower_[i] > -kHighsInf) {
-            dSlackPos_[i] = std::max(0.0, dual_residual);
-        } else {
-            dSlackPos_[i] = 0.0;
-        }
-        
-        // Compute negative slack (for upper bounds)
-        // CUPDLP: -min(dual_residual, 0) * hasUpper
-        if (lp_.col_upper_[i] < kHighsInf) {
-            dSlackNeg_[i] = std::max(0.0, -dual_residual);
-        } else {
-            dSlackNeg_[i] = 0.0;
-        }
+    // CUPDLP: max(dual_residual, 0) * hasLower
+    if (lp_.col_lower_[i] > -kHighsInf) {
+      dSlackPos[i] = std::max(0.0, dualResidual[i]);
+    } else {
+      dSlackPos[i] = 0.0;
+    }
+
+    // Compute negative slack (for upper bounds)
+    // CUPDLP: -min(dual_residual, 0) * hasUpper
+    if (lp_.col_upper_[i] < kHighsInf) {
+      dSlackNeg[i] = std::max(0.0, -dualResidual[i]);
+    } else {
+      dSlackNeg[i] = 0.0;
+    }
   }
 }
 
 double PDLPSolver::computeDualFeasibility(
-    const std::vector<double>& ATy_vector) {
-  computeDualSlacks(ATy_vector);  // This updates dSlackPos_ and dSlackNeg_
+    const std::vector<double>& ATy_vector, std::vector<double>& dSlackPos,
+    std::vector<double>& dSlackNeg) {
+  std::vector<double> dualResidual(lp_.num_col_, 0.0);
+  // dualResidual = c-A'y
+  dualResidual = linalg::vector_subtrac(lp_.col_cost_, ATy_vector);
+  double dualResidualNorm = linalg::vector_norm(dualResidual);
+  
+  // Call the refactored function to populate dSlackPos and dSlackNeg
+  computeDualSlacks(dualResidual, dSlackPos, dSlackNeg);
 
   std::vector<double> dual_residual(lp_.num_col_);
 
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     // Matching CUPDLP: c - A'y - dSlackPos + dSlackNeg
-    dual_residual[i] =
-        lp_.col_cost_[i] - ATy_vector[i] - dSlackPos_[i] + dSlackNeg_[i];
+    dual_residual[i] = dualResidual[i] - dSlackPos[i] + dSlackNeg[i];
   }
 
   // Apply scaling if needed
@@ -973,7 +985,9 @@ PDLPSolver::computeDualityGap(const std::vector<double>& x,
                          cTx);
 }
 
-double PDLPSolver::computeDualObjective(const std::vector<double>& y) {
+double PDLPSolver::computeDualObjective(
+    const std::vector<double>& y, const std::vector<double>& dSlackPos,
+    const std::vector<double>& dSlackNeg) {
   double dual_obj = lp_.offset_;
 
   // Compute b'y (or rhs'y in cuPDLP notation)
@@ -984,14 +998,14 @@ double PDLPSolver::computeDualObjective(const std::vector<double>& y) {
   // Add contribution from lower bounds: l'*slackPos
   for (int i = 0; i < lp_.num_col_; ++i) {
     if (lp_.col_lower_[i] > -kHighsInf) {
-      dual_obj += lp_.col_lower_[i] * dSlackPos_[i];
+      dual_obj += lp_.col_lower_[i] * dSlackPos[i];
     }
   }
 
   // Subtract contribution from upper bounds: u'*slackNeg
   for (int i = 0; i < lp_.num_col_; ++i) {
     if (lp_.col_upper_[i] < kHighsInf) {
-      dual_obj -= lp_.col_upper_[i] * dSlackNeg_[i];
+      dual_obj -= lp_.col_upper_[i] * dSlackNeg[i];
     }
   }
 
@@ -1003,16 +1017,20 @@ bool PDLPSolver::checkConvergence(const int iter, const std::vector<double>& x,
                                   const std::vector<double>& ax_vector,
                                   const std::vector<double>& aty_vector,
                                   double epsilon, SolverResults& results,
-                                  const char* type) {
-  // Compute dual slacks first
-  computeDualSlacks(aty_vector);
+                                  const char* type,
+                                  // Add slack vectors as non-const references
+                                  std::vector<double>& dSlackPos,
+                                  std::vector<double>& dSlackNeg) {
+  // computeDualSlacks is now called inside computeDualFeasibility
 
   // Compute primal feasibility
   double primal_feasibility = computePrimalFeasibility(ax_vector);
   results.primal_feasibility = primal_feasibility;
 
   // Compute dual feasibility
-  double dual_feasibility = computeDualFeasibility(aty_vector);
+  // This will populate dSlackPos and dSlackNeg
+  double dual_feasibility =
+      computeDualFeasibility(aty_vector, dSlackPos, dSlackNeg);
   results.dual_feasibility = dual_feasibility;
 
   // Compute objectives
@@ -1022,7 +1040,8 @@ bool PDLPSolver::checkConvergence(const int iter, const std::vector<double>& x,
   }
   results.primal_obj = primal_obj;
 
-  double dual_obj = computeDualObjective(y);
+  // Pass the now-populated slack vectors to computeDualObjective
+  double dual_obj = computeDualObjective(y, dSlackPos, dSlackNeg);
   results.dual_obj = dual_obj;
 
   // Compute duality gap
@@ -1282,8 +1301,6 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
   const std::vector<double>& col_scale = scaling_.GetColScaling();
   if (!dSlackPos_.empty() && col_scale.size() == dSlackPos_.size()) {
     for (size_t i = 0; i < dSlackPos_.size(); ++i) {
-      std::cout << "dSlackPos_ before unscale[" << i << "] = " << dSlackPos_[i]
-                << std::endl;
       dSlackPos_[i] *= col_scale[i];
       dSlackNeg_[i] *= col_scale[i];
     }
