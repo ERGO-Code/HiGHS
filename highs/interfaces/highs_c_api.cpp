@@ -1609,8 +1609,6 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in) {
 // * Deprecated methods*
 // *********************
 
-const char* Highs_compilationDate(void) { return "Deprecated"; }
-
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,
                     const double* col_lower, const double* col_upper,

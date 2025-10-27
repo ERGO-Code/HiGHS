@@ -783,9 +783,8 @@ HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
  *
  * @param highs     A pointer to the Highs instance.
  * @param option    The name of the option.
- * @param value     A pointer to allocated memory (of at least
- *                  `kMaximumStringLength`) to store the current value of the
- *                  option.
+ * @param value     A pointer to allocated memory to store the current value of
+ *                  the option. This must have length `kHighsMaximumStringLength`.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -2532,13 +2531,6 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 // *********************
 // * Deprecated methods*
 // *********************
-
-/**
- * Return the HiGHS compilation date.
- *
- * @returns Thse HiGHS compilation date.
- */
-static const char* Highs_compilationDate(void);
 
 // These are deprecated because they don't follow the style guide. Constants
 // must begin with `k`.

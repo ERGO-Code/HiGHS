@@ -245,8 +245,6 @@ void versionApi() {
     printf("HiGHS version minor %" HIGHSINT_FORMAT "\n", Highs_versionMinor());
     printf("HiGHS version patch %" HIGHSINT_FORMAT "\n", Highs_versionPatch());
     printf("HiGHS githash: %s\n", Highs_githash());
-    // Compilation date is deprecated.
-    // printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
 }
 

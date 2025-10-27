@@ -24,9 +24,9 @@
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
-//using std::fabs;
-//using std::max;
-//using std::min;
+// using std::fabs;
+// using std::max;
+// using std::min;
 
 const HighsInt kMaxLineLength = 80;
 
