@@ -42,9 +42,9 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
 void setSolutionStatus(HighsInfo& highs_info);
 // SCALE:
 
-bool considerScaling(const HighsOptions& options, HighsLp& lp);
-void scaleLp(const HighsOptions& options, HighsLp& lp,
-             const bool force_scaling = false);
+bool considerSimplexScaling(const HighsOptions& options, HighsLp& lp);
+void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
+                    const bool force_scaling = false);
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
                               const HighsInt use_scale_strategy);
 bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
@@ -56,11 +56,10 @@ HighsStatus applyScalingToLpCol(HighsLp& lp, const HighsInt col,
 HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
                                 const double rowScale);
 
-void unscaleSolution(HighsSolution& solution, const HighsScale& scale);
+void simplexUnscaleSolution(HighsSolution& solution, const HighsScale& scale);
 
-void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,
-                      double& cost_scale);
-void unscaleSimplexCost(HighsLp& lp, double cost_scale);
+void simplexScaleCost(const HighsOptions& options, HighsLp& lp);
+void simplexUnscaleCost(HighsLp& lp);
 
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 

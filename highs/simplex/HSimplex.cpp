@@ -115,7 +115,7 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   lp.ensureColwise();
   const bool passed_scaled = lp.is_scaled_;
   // Consider scaling the LP
-  if (!passed_scaled) considerScaling(options, lp);
+  if (!passed_scaled) considerSimplexScaling(options, lp);
   const bool check_basis = basis.alien || (!basis.valid && basis.useful);
   if (check_basis) {
     // The basis needs to be checked for rank deficiency, and possibly
@@ -404,7 +404,7 @@ void setSolutionStatus(HighsInfo& highs_info) {
 }
 // SCALING
 
-bool considerScaling(const HighsOptions& options, HighsLp& lp) {
+bool considerSimplexScaling(const HighsOptions& options, HighsLp& lp) {
   // Indicate whether new scaling has been determined in the return value.
   bool new_scaling = false;
   // Consider scaling the LP - either by finding new factors or by
@@ -432,7 +432,7 @@ bool considerScaling(const HighsOptions& options, HighsLp& lp) {
         kHighsAnalysisLevelModelData & options.highs_analysis_level;
     if (analyse_lp_data) analyseLp(options.log_options, lp);
     */
-    scaleLp(options, lp);
+    simplexScaleLp(options, lp);
     // If the LP is now scaled, then the scaling is new
     new_scaling = lp.is_scaled_;
     /*
@@ -448,8 +448,8 @@ bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   return new_scaling;
 }
 
-void scaleLp(const HighsOptions& options, HighsLp& lp,
-             const bool force_scaling) {
+void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
+                    const bool force_scaling) {
   lp.clearScaling();
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
@@ -539,7 +539,7 @@ void scaleLp(const HighsOptions& options, HighsLp& lp,
   // Record the scaling strategy used
   lp.scale_.strategy = use_scale_strategy;
   // Possibly scale the costs
-  //  if (allow_cost_scaling) scaleSimplexCost(options, lp, scale.cost);
+  //  if (allow_cost_scaling) simplexScaleCost(options, lp);
 
   // If matrix is unscaled, then LP is only scaled if there is a cost scaling
   // factor
@@ -1053,7 +1053,7 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
   return HighsStatus::kOk;
 }
 
-void unscaleSolution(HighsSolution& solution, const HighsScale& scale) {
+void simplexUnscaleSolution(HighsSolution& solution, const HighsScale& scale) {
   assert(scale.has_scaling);
   assert(solution.col_value.size() == static_cast<size_t>(scale.num_col));
   assert(solution.col_dual.size() == static_cast<size_t>(scale.num_col));
@@ -1070,8 +1070,8 @@ void unscaleSolution(HighsSolution& solution, const HighsScale& scale) {
   }
 }
 
-void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,
-                      double& cost_scale) {
+void simplexScaleCost(const HighsOptions& options, HighsLp& lp) {
+  double& cost_scale = lp.scale_.cost;
   // Scale the costs by no less than minAlwCostScale
   double max_allowed_cost_scale = pow(2.0, options.allowed_cost_scale_factor);
   double max_nonzero_cost = 0;
@@ -1111,7 +1111,8 @@ void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,
                max_nonzero_cost);
 }
 
-void unscaleSimplexCost(HighsLp& lp, double cost_scale) {
+void simplexUnscaleCost(HighsLp& lp) {
+  double& cost_scale = lp.scale_.cost;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     lp.col_cost_[iCol] *= cost_scale;
 }

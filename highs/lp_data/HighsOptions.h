@@ -1394,8 +1394,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "allowed_cost_scale_factor",
         "Largest power-of-two factor permitted when scaling the costs",
-        advanced, &allowed_cost_scale_factor, 0,
-	kDefaultAllowedMatrixPow2Scale, kMaxAllowedMatrixPow2Scale);
+        advanced, &allowed_cost_scale_factor, 0, kDefaultAllowedMatrixPow2Scale,
+        kMaxAllowedMatrixPow2Scale);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

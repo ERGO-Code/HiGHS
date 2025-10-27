@@ -153,7 +153,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Consider scaling the LP - either with any existing scaling, or by
   // considering computing scaling factors if there are none - and
   // then move to EKK
-  considerScaling(options, incumbent_lp);
+  considerSimplexScaling(options, incumbent_lp);
   //
   const bool was_scaled = incumbent_lp.is_scaled_;
   if (!status.has_basis && !basis.valid && basis.useful) {
@@ -263,7 +263,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       // Now that the incumbent LP is unscaled, to use the simplex NLA
       // requires scaling to be applied
       ekk_instance.setNlaPointersForLpAndScale(incumbent_lp);
-      unscaleSolution(solution, incumbent_lp.scale_);
+      simplexUnscaleSolution(solution, incumbent_lp.scale_);
       // Determine whether the unscaled LP has been solved
       getUnscaledInfeasibilities(options, incumbent_lp.scale_, ekk_basis,
                                  ekk_info, highs_info);
