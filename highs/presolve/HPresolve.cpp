@@ -4666,11 +4666,9 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 HPresolve::Result HPresolve::singletonColStuffing(
     HighsPostsolveStack& postsolve_stack, HighsInt col) {
   // singleton column stuffing
-  auto acceptCol = [&](HighsInt col) {
+  auto isContSingleton = [&](HighsInt col) {
     return (!colDeleted[col] && colsize[col] == 1 &&
             model->integrality_[col] != HighsVarType::kInteger &&
-            model->col_lower_[col] != -kHighsInf &&
-            model->col_upper_[col] != kHighsInf &&
             model->col_lower_[col] != model->col_upper_[col]);
   };
 
@@ -4684,49 +4682,84 @@ HPresolve::Result HPresolve::singletonColStuffing(
             });
       };
 
-  auto computeDelta = [&](HighsInt j, double aj) {
-    return aj * (static_cast<HighsCDouble>(model->col_upper_[j]) -
-                 static_cast<HighsCDouble>(model->col_lower_[j]));
-  };
-
   // consider only non-fixed bounded singleton continuous columns
-  if (!acceptCol(col)) return Result::kOk;
+  if (!isContSingleton(col)) return Result::kOk;
 
   // get row index
   HighsInt row = Arow[colhead[col]];
 
-  // return if we have an empty or singleton row
-  if (rowsize[row] <= 1) return Result::kOk;
+  // return if we have an empty or singleton row or row is ranged
+  if (rowsize[row] <= 1 || isRanged(row)) return Result::kOk;
 
-  auto checkRow = [&](HighsInt direction, double rhs, double inputSumLower,
-                      double inputSumUpper) {
-    if (rhs == kHighsInf) return Result::kOk;
+  auto checkRow = [&](double rhs, HighsInt direction) {
+    // skip row if rhs is not finite
+    if (direction * rhs == kHighsInf) return Result::kOk;
+
     // vectors for candidates and activity bounds
     std::vector<std::tuple<HighsInt, double, HighsInt, double>> candidates;
-    HighsCDouble sumLower = static_cast<HighsCDouble>(inputSumLower);
-    HighsCDouble sumUpper = static_cast<HighsCDouble>(inputSumUpper);
+    HighsCDouble sumLower = 0.0;
+    HighsCDouble sumUpper = 0.0;
 
     for (auto& nz : getRowVector(row)) {
-      // get column index, coefficient and cost
+      // get column index, coefficient, cost and bounds
       HighsInt j = nz.index();
-      double aj = nz.value();
+      double aj = direction * nz.value();
       double cj = model->col_cost_[j];
+      bool lbFinite = model->col_lower_[j] != -kHighsInf;
+      bool ubFinite = model->col_upper_[j] != kHighsInf;
+      HighsCDouble lb = static_cast<HighsCDouble>(model->col_lower_[j]);
+      HighsCDouble ub = static_cast<HighsCDouble>(model->col_upper_[j]);
 
-      // consider only non-fixed bounded singleton continuous columns
-      if (!acceptCol(j)) continue;
-
-      // add singletons to vectors
-      if (aj > 0 && cj < 0) {
-        // set variable to its lower bound
-        candidates.push_back(std::make_tuple(j, aj, HighsInt{1}, cj / aj));
-        // move variable from upper to lower bound
-        sumUpper -= computeDelta(j, aj);
-      } else if (aj < 0 && cj > 0) {
-        // set variable to its upper bound
-        // (complement variable, i.e. multiply with -1)
-        candidates.push_back(std::make_tuple(j, aj, HighsInt{-1}, cj / aj));
-        // move variable from lower to upper bound
-        sumUpper += computeDelta(j, aj);
+      // consider only non-fixed singleton continuous columns
+      if (isContSingleton(j)) {
+        // check singleton
+        if (aj > 0 && cj < 0) {
+          // use lower bound
+          if (!lbFinite || !ubFinite) return Result::kOk;
+          sumLower += aj * lb;
+          sumUpper += aj * lb;
+          candidates.push_back(std::make_tuple(j, aj, HighsInt{1}, cj / aj));
+        } else if (aj < 0 && cj > 0) {
+          // use upper bound
+          if (!lbFinite || !ubFinite) return Result::kOk;
+          sumLower += aj * ub;
+          sumUpper += aj * ub;
+          // complement variable, i.e. multiply with -1
+          candidates.push_back(std::make_tuple(j, aj, HighsInt{-1}, cj / aj));
+        } else if (aj >= 0 && cj >= 0) {
+          // variable could be handled by dual fixing; use lower bound
+          if (!lbFinite) return Result::kOk;
+          sumLower += aj * lb;
+          sumUpper += aj * lb;
+        } else {
+          assert(aj <= 0 && cj <= 0);
+          // variable could be handled by dual fixing; use upper bound
+          if (!ubFinite) return Result::kOk;
+          sumLower += aj * ub;
+          sumUpper += aj * ub;
+        }
+      } else {
+        // not a continuous singleton
+        if (aj > 0) {
+          if (!lbFinite)
+            sumLower = -kHighsInf;
+          else
+            sumLower += aj * lb;
+          if (!ubFinite)
+            sumUpper = kHighsInf;
+          else
+            sumUpper += aj * ub;
+        } else {
+          if (!ubFinite)
+            sumLower = -kHighsInf;
+          else
+            sumLower += aj * ub;
+          if (!lbFinite)
+            sumUpper = kHighsInf;
+          else
+            sumUpper += aj * lb;
+        }
+        if (sumLower == -kHighsInf && sumUpper == kHighsInf) return Result::kOk;
       }
     }
 
@@ -4735,22 +4768,27 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
     // check candidates
     for (const auto& t : candidates) {
+      // get variable index, coefficient and multiplier (-1 if sign was flipped)
       HighsInt j = std::get<0>(t);
       double aj = std::get<1>(t);
       HighsInt multiplier = std::get<2>(t);
-      HighsCDouble delta = multiplier * computeDelta(j, aj);
-
-      if (delta <= rhs - sumUpper + primal_feastol) {
+      // compute delta
+      HighsCDouble delta = multiplier * aj *
+                           (static_cast<HighsCDouble>(model->col_upper_[j]) -
+                            static_cast<HighsCDouble>(model->col_lower_[j]));
+      // check if variable can be fixed
+      if (delta <= direction * rhs - sumUpper + primal_feastol) {
         if (multiplier < 0)
-          fixColToLowerOrUnbounded(postsolve_stack, j);
+          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
         else
-          fixColToUpperOrUnbounded(postsolve_stack, j);
-      } else if (rhs <= sumLower + primal_feastol) {
+          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
+      } else if (direction * rhs <= sumLower + primal_feastol) {
         if (multiplier < 0)
-          fixColToUpperOrUnbounded(postsolve_stack, j);
+          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
         else
-          fixColToLowerOrUnbounded(postsolve_stack, j);
+          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
       }
+      // update row activities
       sumLower += delta;
       sumUpper += delta;
     }
@@ -4759,9 +4797,9 @@ HPresolve::Result HPresolve::singletonColStuffing(
   };
 
   // check row
-  checkRow(HighsInt{1}, model->row_upper_[row],
-           impliedRowBounds.getSumLowerOrig(row),
-           impliedRowBounds.getSumUpperOrig(row));
+  HPRESOLVE_CHECKED_CALL(checkRow(model->row_upper_[row], HighsInt{1}));
+  HPRESOLVE_CHECKED_CALL(checkRow(model->row_lower_[row], HighsInt{-1}));
+
   return Result::kOk;
 }
 
