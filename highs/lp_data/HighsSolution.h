@@ -135,14 +135,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const IpxSolution& ipx_solution, HighsBasis& highs_basis,
     HighsSolution& highs_solution);
 
-HighsStatus formSimplexLpBasisAndFactorReturn(
-    const HighsStatus return_status, HighsLpSolverObject& solver_object);
-HighsStatus formSimplexLpBasisAndFactor(
-    HighsLpSolverObject& solver_object,
-    const bool only_from_known_basis = false);
-
-void accommodateAlienBasis(HighsLpSolverObject& solver_object);
-
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object);
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
                                   HighsInfo& highs_info);

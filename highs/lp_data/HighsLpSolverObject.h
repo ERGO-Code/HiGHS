@@ -5,7 +5,7 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HighsLpSolverObject.h
+/**@file lp_data/HighsLpSolverObject.h
  * @brief Collection of class instances required to solve an LP
  */
 #ifndef LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_

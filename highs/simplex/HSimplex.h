@@ -13,6 +13,15 @@
 
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpSolverObject.h"
+
+void accommodateAlienBasis(HighsLpSolverObject& solver_object);
+
+HighsStatus formSimplexLpBasisAndFactorReturn(
+    const HighsStatus return_status, HighsLpSolverObject& solver_object);
+HighsStatus formSimplexLpBasisAndFactor(
+    HighsLpSolverObject& solver_object,
+    const bool only_from_known_basis = false);
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol);
@@ -32,6 +41,22 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
 
 void setSolutionStatus(HighsInfo& highs_info);
 // SCALE:
+
+bool considerScaling(const HighsOptions& options, HighsLp& lp);
+void scaleLp(const HighsOptions& options, HighsLp& lp,
+             const bool force_scaling = false);
+bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
+                              const HighsInt use_scale_strategy);
+bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
+                         const HighsInt use_scale_strategy);
+
+HighsStatus applyScalingToLpCol(HighsLp& lp, const HighsInt col,
+                                const double colScale);
+
+HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
+                                const double rowScale);
+
+void unscaleSolution(HighsSolution& solution, const HighsScale& scale);
 
 void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,
                       double& cost_scale);
