@@ -336,8 +336,8 @@ struct HighsOptionsStruct {
   double objective_bound;
   double objective_target;
   HighsInt threads;
+  HighsInt user_objective_scale;
   HighsInt user_bound_scale;
-  HighsInt user_cost_scale;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -514,8 +514,8 @@ struct HighsOptionsStruct {
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),
+        user_objective_scale(0),
         user_bound_scale(0),
-        user_cost_scale(0),
         highs_debug_level(0),
         highs_analysis_level(0),
         simplex_strategy(0),
@@ -704,15 +704,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string = new OptionRecordString(
-        kSolverString,
-        "LP solver option: \"choose\", \"simplex\", \"ipm\", \"ipx\""
-#ifdef HIPO
-        ", \"hipo\" or \"pdlp\"",
-#else
-        " or \"pdlp\"",
-#endif
-        advanced, &solver, kHighsChooseString);
+    record_string =
+        new OptionRecordString(kSolverString,
+                               "LP solver option: \"choose\", \"simplex\", "
+                               "\"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
+                               advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -824,13 +820,14 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "user_bound_scale", "Exponent of power-of-two bound scaling for model",
-        advanced, &user_bound_scale, -kHighsIInf, 0, kHighsIInf);
+        "user_objective_scale",
+        "Exponent of power-of-two objective scaling for model", advanced,
+        &user_objective_scale, -kHighsIInf, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "user_cost_scale", "Exponent of power-of-two cost scaling for model",
-        advanced, &user_cost_scale, -kHighsIInf, 0, kHighsIInf);
+        "user_bound_scale", "Exponent of power-of-two bound scaling for model",
+        advanced, &user_bound_scale, -kHighsIInf, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("highs_debug_level",
@@ -1226,26 +1223,17 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_min_logging_interval, 0, 5, kHighsInf);
     records.push_back(record_double);
 
-    record_string = new OptionRecordString(
-        kMipLpSolverString,
-        "MIP LP solver option: \"choose\", \"simplex\", \"ipm\""
-#ifdef HIPO
-        ", \"ipx\" or \"hipo\"",
-#else
-        "or \"ipx\"",
-#endif
-        advanced, &mip_lp_solver, kHighsChooseString);
+    record_string =
+        new OptionRecordString(kMipLpSolverString,
+                               "MIP LP solver option: \"choose\", \"simplex\", "
+                               "\"ipm\", \"ipx\" or \"hipo\"",
+                               advanced, &mip_lp_solver, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kMipIpmSolverString,
-                               "MIP IPM solver option: \"choose\""
-#ifdef HIPO
-                               ", \"ipx\" or \"hipo\"",
-#else
-                               "or \"ipx\"",
-#endif
-                               advanced, &mip_ipm_solver, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kMipIpmSolverString,
+        "MIP IPM solver option: \"choose\", \"ipx\" or \"hipo\"", advanced,
+        &mip_ipm_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_double = new OptionRecordDouble(

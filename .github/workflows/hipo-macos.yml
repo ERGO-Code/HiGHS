@@ -3,12 +3,13 @@ name: hipo-macos
 on: [push, pull_request]
 
 jobs:
-  release:
-    runs-on: ${{ matrix.os }}
+  macos_gh:
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest]
+        config: [Release, Debug]
+        all_tests: [OFF]
 
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +30,11 @@ jobs:
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
-        run: | 
+        run: |
           mkdir installs
           ls
 
-      - name: Install GKLIB
+      - name: Install GKlib
         run: |
           cd GKlib
           make config prefix=${{runner.workspace}}/installs
@@ -51,25 +52,27 @@ jobs:
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
-          ls 
+          ls
           ls lib
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
-         
+
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }} \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs 
+          -DGKLIB_ROOT=${{runner.workspace}}/installs
 
-      - name: Build 
+      - name: Build
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
 
-      - name: Test executable 
+      - name: Test executable
         working-directory: ${{runner.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
@@ -78,74 +81,67 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
-  debug:
-    runs-on: ${{ matrix.os }}
+  macos_510:
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest]
+        config: [Release, Debug]
+        all_tests: [ON, OFF]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-w
           path: METIS
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
-        run: | 
+        run: |
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
       - name: Install METIS
         run: |
-          cd METIS
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
+          cmake \
+          -S $GITHUB_WORKSPACE/METIS \
+          -B build \
+          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
+          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          cmake --build build --parallel
+          cmake --install build
 
       - name: Check METIS and GKlib
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
-          ls 
+          ls
           ls lib
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
-         
+
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }} \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs \
-          -DCMAKE_BUILD_TYPE=Debug
 
-      - name: Build 
+        # -DGKLIB_ROOT=${{runner.workspace}}/installs
+
+      - name: Build
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
 
-      - name: Test executable 
+      - name: Test executable
         working-directory: ${{runner.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
@@ -154,149 +150,67 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
-  release_all_tests:
-    runs-on: ${{ matrix.os }}
+  macos_ts:
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest]
+        config: [Release, Debug]
+        all_tests: [ON, OFF]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
       - name: Checkout METIS
         uses: actions/checkout@v4
         with:
-          repository: KarypisLab/METIS
-          ref: master
+          repository: galabovaa/METIS
+          ref: 510-ts
           path: METIS
 
       - name: Create installs dir
         working-directory: ${{runner.workspace}}
-        run: | 
+        run: |
           mkdir installs
           ls
 
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
       - name: Install METIS
         run: |
-          cd METIS
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
+          cmake \
+          -S $GITHUB_WORKSPACE/METIS \
+          -B build \
+          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
+          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          cmake --build build --parallel
+          cmake --install build
 
       - name: Check METIS and GKlib
         working-directory: ${{runner.workspace}}
         run: |
           cd installs
-          ls 
-          ls lib
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
-         
-      - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON -DALL_TESTS=ON \
-          -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs 
-
-      - name: Build 
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake --build . --parallel
-
-      - name: Test executable 
-        working-directory: ${{runner.workspace}}/build
-        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
-
-      - name: Ctest
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          ctest --parallel --timeout 300 --output-on-failure
-
-  debug_all_tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Checkout GKlib
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/GKlib
-          ref: master
-          path: GKlib
-
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: KarypisLab/METIS
-          ref: master
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: | 
-          mkdir installs
           ls
-
-      - name: Install GKLIB
-        run: |
-          cd GKlib
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      - name: Install METIS
-        run: |
-          cd METIS
-          make config prefix=${{runner.workspace}}/installs
-          make
-          make install
-
-      - name: Check METIS and GKlib
-        working-directory: ${{runner.workspace}}
-        run: |
-          cd installs
-          ls 
           ls lib
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
-         
+
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON -DALL_TESTS=ON \
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }} \
           -DMETIS_ROOT=${{runner.workspace}}/installs \
-          -DGKLIB_ROOT=${{runner.workspace}}/installs \
-          -DCMAKE_BUILD_TYPE=Debug
 
-      - name: Build 
+        # -DGKLIB_ROOT=${{runner.workspace}}/installs
+
+      - name: Build
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --parallel
 
-      - name: Test executable 
+      - name: Test executable
         working-directory: ${{runner.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 

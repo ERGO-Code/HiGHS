@@ -405,6 +405,12 @@ highs_getReducedColumnSparse(Highs* h, HighsInt col) {
                          py::cast(solution_index));
 }
 
+std::tuple<HighsStatus, HighsLp> highs_getFixedLp(Highs* h) {
+  HighsLp lp;
+  HighsStatus status = h->getFixedLp(lp);
+  return std::make_tuple(status, lp);
+}
+
 std::tuple<HighsStatus, bool> highs_getDualRayExist(Highs* h) {
   bool has_dual_ray;
   HighsStatus status = h->getDualRay(has_dual_ray);
@@ -1037,6 +1043,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kError", HighsLogType::kError);
   py::enum_<IisStrategy>(m, "IisStrategy", py::module_local())
       .value("kIisStrategyMin", IisStrategy::kIisStrategyMin)
+      .value("kIisStrategyLight", IisStrategy::kIisStrategyLight)
       .value("kIisStrategyFromLpRowPriority",
              IisStrategy::kIisStrategyFromLpRowPriority)
       .value("kIisStrategyFromLpColPriority",
@@ -1198,8 +1205,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("objective_bound", &HighsOptions::objective_bound)
       .def_readwrite("objective_target", &HighsOptions::objective_target)
       .def_readwrite("threads", &HighsOptions::threads)
+      .def_readwrite("user_objective_scale", &HighsOptions::user_objective_scale)
       .def_readwrite("user_bound_scale", &HighsOptions::user_bound_scale)
-      .def_readwrite("user_cost_scale", &HighsOptions::user_cost_scale)
       .def_readwrite("highs_debug_level", &HighsOptions::highs_debug_level)
       .def_readwrite("highs_analysis_level",
                      &HighsOptions::highs_analysis_level)
@@ -1411,6 +1418,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getReducedRowSparse", &highs_getReducedRowSparse)
       .def("getReducedColumn", &highs_getReducedColumn)
       .def("getReducedColumnSparse", &highs_getReducedColumnSparse)
+      .def("getFixedLp", &highs_getFixedLp)
       .def("getDualRayExist", &highs_getDualRayExist)
       .def("getDualRay", &highs_getDualRay)
       .def("getDualUnboundednessDirectionExist",
@@ -1445,6 +1453,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
 
       .def("writeModel", &Highs::writeModel)
       .def("writePresolvedModel", &Highs::writePresolvedModel)
+      .def("writeIisModel", &Highs::writeIisModel)
       .def("crossover", &Highs::crossover)
       .def("changeObjectiveSense", &Highs::changeObjectiveSense)
       .def("changeObjectiveOffset", &Highs::changeObjectiveOffset)
@@ -1496,7 +1505,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("row_index", &HighsIis::row_index_)
       .def_readwrite("col_bound", &HighsIis::col_bound_)
       .def_readwrite("row_bound", &HighsIis::row_bound_)
-      .def_readwrite("info", &HighsIis::info_);
+      .def_readwrite("info", &HighsIis::info_)
+      .def_readwrite("model", &HighsIis::model_);
   // structs
   py::class_<HighsSolution>(m, "HighsSolution", py::module_local())
       .def(py::init<>())

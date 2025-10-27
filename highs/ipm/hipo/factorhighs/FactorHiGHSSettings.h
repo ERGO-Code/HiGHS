@@ -55,6 +55,10 @@ const double kRefinementTolerance = 1e-12;
 const double kSmallSubtreesCoeff = 0.01; // 1%
 const double kSpopsWeight = 30.0;
 
+// metis
+const Int kMetisSeed = 42;
+
+
 struct Regul {
   double primal{};
   double dual{};

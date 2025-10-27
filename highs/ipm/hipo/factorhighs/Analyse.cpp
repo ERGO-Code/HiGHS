@@ -8,10 +8,16 @@
 
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
-// #include "GKlib.h"
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
+
+// define correct int type for Metis before header is included
+#ifdef HIGHSINT64
+#define IDXTYPEWIDTH 64
+#else
+#define IDXTYPEWIDTH 32
+#endif
 #include "metis.h"
 
 namespace hipo {
@@ -105,11 +111,9 @@ Int Analyse::getPermutation() {
     }
   }
 
-  // call Metis
-  Int options[METIS_NOPTIONS];
+  idx_t options[METIS_NOPTIONS];
   METIS_SetDefaultOptions(options);
-  // fix seed of rng inside Metis, to make it deterministic (?)
-  options[METIS_OPTION_SEED] = 42;
+  options[METIS_OPTION_SEED] = kMetisSeed;
 
   // set logging of Metis depending on debug level
   options[METIS_OPTION_DBGLVL] = 0;
@@ -117,8 +121,10 @@ Int Analyse::getPermutation() {
     options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
 
   if (log_) log_->printDevInfo("Running Metis\n");
+
   Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                             options, perm_.data(), iperm_.data());
+
   if (log_) log_->printDevInfo("Metis done\n");
   if (status != METIS_OK) {
     if (log_) log_->printDevInfo("Error with Metis\n");

@@ -29,9 +29,7 @@ void HighsHessian::exactResize() {
     this->index_.resize(num_nz);
     this->value_.resize(num_nz);
   } else {
-    this->start_.clear();
-    this->index_.clear();
-    this->value_.clear();
+    this->clear();
   }
 }
 

@@ -56,8 +56,11 @@ if(NOT FAST_BUILD)
   endif()
 
   # set the install rpath to the installed destination
-  set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  if(APPLE)
+      set_target_properties(libhighs PROPERTIES INSTALL_RPATH "@loader_path")
+  elseif (UNIX)
+      set_target_properties(libhighs PROPERTIES INSTALL_RPATH "$ORIGIN")
+  endif()
 
   # install the header files of highs
   foreach(file ${headers})
@@ -165,9 +168,9 @@ else()
     add_subdirectory(pdlp/cupdlp/cuda)
 
     if (WIN32)
-      target_link_libraries(highs cudalin ${CUDA_LIBRARY})
+      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
     else()
-      target_link_libraries(highs cudalin ${CUDA_LIBRARY} m)
+      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
     endif()
 
     set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
@@ -179,47 +182,69 @@ else()
   # Optional HIPO
   if (HIPO)
 
-    target_include_directories(highs PRIVATE 
+    target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
     )
 
-    if(APPLE)
-        target_link_libraries(highs "-framework Accelerate")
-        target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-    elseif(WIN32)
-        target_link_libraries(highs OpenBLAS::OpenBLAS)
-        target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-        target_link_libraries(highs metis)
-        # target_link_libraries(highs gklib)
-    else() 
-        # LINUX
-        if(BLAS_LIB)
-            target_link_libraries(highs "${BLAS_LIB}")
-        elseif(OPENBLAS_LIB)
-            target_link_libraries(highs "${OPENBLAS_LIB}")
+    if (NOT USE_CMAKE_FIND_BLAS)
+      if(APPLE)
+          target_link_libraries(highs PRIVATE "-framework Accelerate")
+          target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
+      elseif(WIN32)
+        if(TARGET OpenBLAS::OpenBLAS)
             target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+            target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
+        elseif(OPENBLAS_LIB)
+            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+            message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
+            target_link_libraries(highs PRIVATE ${OPENBLAS_LIB})
+            target_include_directories(highs PRIVATE ${OPENBLAS_INCLUDE_DIR})
         else()
-            message(FATAL_ERROR "No BLAS library available")
-        endif(BLAS_LIB)
-    endif(APPLE)
+            message(FATAL_ERROR "OpenBLAS not found on Windows.")
+        endif()
 
-    if (NOT WIN32)
-      # Find_package works if deps are installed with vcpkg.
+        target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+      else()
+          # LINUX
+          if(BLAS_LIB)
+              target_link_libraries(highs PRIVATE "${BLAS_LIB}")
+          elseif(OPENBLAS_LIB)
+              target_link_libraries(highs PRIVATE "${OPENBLAS_LIB}")
+              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+          else()
+              message(FATAL_ERROR "No BLAS library available")
+          endif(BLAS_LIB)
+      endif(APPLE)
+    else()
+      target_link_libraries(highs PRIVATE BLAS::BLAS)
 
-      # Metis
-      target_include_directories(highs PRIVATE "${METIS_PATH}")
-      target_link_libraries(highs "${METIS_LIB}")
-
-      # GKlib
-      target_include_directories(highs PRIVATE "${GKLIB_PATH}")
-      target_link_libraries(highs "${GKLIB_LIB}")
+      string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
+      if(blas_lower MATCHES "openblas")
+          target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+      elseif(blas_lower MATCHES "accelerate")
+        target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
+      endif()
     endif()
 
-  endif()
+    if(metis_FOUND)
+      target_link_libraries(highs PRIVATE metis)
+    else()
+      target_include_directories(highs PRIVATE "${METIS_PATH}")
+      target_link_libraries(highs PRIVATE "${METIS_LIB}")
+    endif()
 
+    if (NOT (GKLIB_ROOT STREQUAL ""))
+      if(GKlib_FOUND)
+        target_link_libraries(highs PRIVATE GKlib::GKlib)
+      else()
+        target_include_directories(highs PRIVATE "${GKLIB_PATH}")
+        target_link_libraries(highs PRIVATE "${GKLIB_LIB}")
+      endif()
+    endif()
+  endif()
 
   if(MSVC)
     list(APPEND highs_compile_opts
@@ -269,7 +294,7 @@ else()
     target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
     )
-    target_link_libraries(highs ZLIB::ZLIB)
+    target_link_libraries(highs PRIVATE ZLIB::ZLIB)
   endif()
 
   # install the header files of highs
@@ -403,7 +428,7 @@ if(Threads_FOUND)
   include(CheckAtomic)
   if(HAVE_CXX_ATOMICS64_WITH_LIB)
     if(FAST_BUILD)
-      target_link_libraries(highs atomic)
+      target_link_libraries(highs PRIVATE atomic)
     else()
       target_link_libraries(libhighs atomic)
     endif()
@@ -411,7 +436,7 @@ if(Threads_FOUND)
 endif()
 
 if(FAST_BUILD)
-  target_link_libraries(highs Threads::Threads)
+  target_link_libraries(highs PRIVATE Threads::Threads)
 else()
   target_link_libraries(libhighs Threads::Threads)
 endif()

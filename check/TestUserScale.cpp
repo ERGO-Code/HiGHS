@@ -7,89 +7,59 @@
 const bool dev_run = false;
 const double inf = kHighsInf;
 
-void checkModelScaling(const HighsInt user_bound_scale,
-                       const HighsInt user_cost_scale,
-                       const HighsModel& unscaled_model,
-                       const HighsModel& scaled_model);
-
-void checkLpScaling(const HighsInt user_bound_scale,
-                    const HighsInt user_cost_scale, const HighsLp& unscaled_lp,
-                    const HighsLp& scaled_lp);
-
-void checkSolutionScaling(const HighsInt user_bound_scale,
-                          const HighsInt user_cost_scale,
-                          const HighsSolution& unscaled_solution,
-                          const HighsSolution& scaled_solution);
-
-TEST_CASE("user-cost-scale-after-run", "[highs_user_scale]") {
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  Highs highs;
-  const HighsInfo& info = highs.getInfo();
-  highs.setOptionValue("output_flag", dev_run);
-  highs.readModel(filename);
-  highs.run();
-  HighsInfo unscaled_info = info;
-  HighsSolution unscaled_solution = highs.getSolution();
-  HighsLp unscaled_lp = highs.getLp();
-  double max_primal_infeasibility = info.max_primal_infeasibility;
-  double max_dual_infeasibility = info.max_dual_infeasibility;
-  double sum_dual_infeasibilities = info.sum_dual_infeasibilities;
-  double objective_function_value = info.objective_function_value;
-
-  HighsInt user_bound_scale = 10;
-  double user_bound_scale_value = std::pow(2, user_bound_scale);
-  highs.setOptionValue("user_bound_scale", user_bound_scale);
-
-  HighsInt user_cost_scale = 30;
-  double user_cost_scale_value = std::pow(2, user_cost_scale);
-  highs.setOptionValue("user_cost_scale", user_cost_scale);
-
-  HighsLp scaled_lp = highs.getLp();
-  HighsSolution scaled_solution = highs.getSolution();
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
-  checkSolutionScaling(user_bound_scale, user_cost_scale, unscaled_solution,
-                       scaled_solution);
-
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kNotset);
-  REQUIRE(info.dual_solution_status == kSolutionStatusInfeasible);
-  REQUIRE(info.objective_function_value == user_cost_scale_value *
-                                               user_bound_scale_value *
-                                               objective_function_value);
-  REQUIRE(info.num_dual_infeasibilities == kHighsIllegalInfeasibilityCount);
-  REQUIRE(info.max_dual_infeasibility ==
-          user_cost_scale_value * max_dual_infeasibility);
-  REQUIRE(info.sum_dual_infeasibilities ==
-          user_cost_scale_value * sum_dual_infeasibilities);
-
-  highs.resetGlobalScheduler(true);
+bool doubleEqual0(const double v0, const double v1) {
+  double rel_difference = std::fabs(v0 - v1) / std::max(1.0, std::fabs(v0));
+  bool ok = rel_difference < 1e-12;
+  if (
+      // dev_run &&
+      !ok)
+    printf("UserScaleDoubleEqual: %g and %g have relative difference = %g\n",
+           v0, v1, rel_difference);
+  return ok;
 }
 
-TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
+  const std::string mip_model = "flugpl";  //"rgn";//
+  std::string model = "avgas";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   highs.setOptionValue("output_flag", dev_run);
+  //    REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
+  //    HighsStatus::kOk);
+  HighsInt num_k = 2;
+  if (num_k == 1) model = mip_model;
+  for (HighsInt k = 0; k < num_k; k++) {
+    std::string filename =
+        std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+    highs.readModel(filename);
+    HighsLp unscaled_lp = highs.getLp();
+    const bool is_lp = !unscaled_lp.isMip();
+    //    highs.writeModel("unscaled.mps");
 
-  highs.readModel(filename);
-  HighsLp unscaled_lp = highs.getLp();
+    highs.run();
+    double unscaled_objective = highs.getInfo().objective_function_value;
 
-  HighsInt user_bound_scale = 10;
-  double user_bound_scale_value = std::pow(2, user_bound_scale);
-  highs.setOptionValue("user_bound_scale", user_bound_scale);
+    HighsInt user_bound_scale = 1;
+    double user_bound_scale_value = std::pow(2, user_bound_scale);
+    REQUIRE(highs.setOptionValue("user_bound_scale", user_bound_scale) ==
+            HighsStatus::kOk);
 
-  HighsInt user_cost_scale = 30;
-  double user_cost_scale_value = std::pow(2, user_cost_scale);
-  highs.setOptionValue("user_cost_scale", user_cost_scale);
+    HighsInt user_objective_scale = 4;
+    double user_objective_scale_value = std::pow(2, user_objective_scale);
+    REQUIRE(highs.setOptionValue("user_objective_scale",
+                                 user_objective_scale) == HighsStatus::kOk);
 
-  highs.readModel(filename);
-  HighsLp scaled_lp = highs.getLp();
+    highs.run();
 
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
-  //  checkSolutionScaling(user_bound_scale, user_cost_scale, unscaled_solution,
-  //  scaled_solution);
-  highs.run();
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(doubleEqual0(highs.getInfo().objective_function_value,
+                         unscaled_objective));
+
+    model = mip_model;
+    REQUIRE(highs.setOptionValue("user_bound_scale", 0) == HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue("user_objective_scale", 0) ==
+            HighsStatus::kOk);
+  }
 
   highs.resetGlobalScheduler(true);
 }
@@ -112,146 +82,321 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   lp.a_matrix_.start_ = {0, 2, 4};
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 1, 2, 4};
+
+  HighsInt suggested_objective_scale;
+  HighsInt suggested_bound_scale;
+  highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                 suggested_bound_scale);
+
   highs.passModel(lp);
+
+  highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                 suggested_bound_scale);
+
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
 
-  highs.setOptionValue("user_cost_scale", -30);
+  REQUIRE(highs.setOptionValue("user_objective_scale", -30) ==
+          HighsStatus::kOk);
   highs.clearSolver();
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(solution.col_value[0] == 0);
   REQUIRE(solution.col_value[1] == 0);
 
-  highs.setOptionValue("user_cost_scale", 0);
+  REQUIRE(highs.setOptionValue("user_objective_scale", 0) == HighsStatus::kOk);
 
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
 
+  std::string model = "flugpl";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  highs.readModel(filename);
+
+  REQUIRE(highs.setOptionValue("user_objective_scale", -30) ==
+          HighsStatus::kOk);
+
+  highs.run();
+
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
-  Highs unscaled_highs;
-  Highs scaled_highs;
-  unscaled_highs.setOptionValue("output_flag", dev_run);
-  scaled_highs.setOptionValue("output_flag", dev_run);
-  const HighsLp& unscaled_lp = unscaled_highs.getLp();
-  const HighsLp& scaled_lp = scaled_highs.getLp();
-  const HighsInfo& info = scaled_highs.getInfo();
-  const HighsSolution& solution = scaled_highs.getSolution();
-  const HighsInt user_cost_scale = -30;
-  const HighsInt user_bound_scale = 10;
-  const double unscaled_col0_cost = 1e14;
-  unscaled_highs.addVar(0, inf);
-  scaled_highs.addVar(0, inf);
-  unscaled_highs.changeColCost(0, unscaled_col0_cost);
-  scaled_highs.changeColCost(0, unscaled_col0_cost);
-
-  scaled_highs.setOptionValue("user_cost_scale", user_cost_scale);
-  scaled_highs.setOptionValue("user_bound_scale", user_bound_scale);
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
-
-  const double unscaled_col1_cost = 1e12;
-  unscaled_highs.addVar(1, inf);
-  scaled_highs.addVar(1, inf);
-  unscaled_highs.changeColCost(1, unscaled_col1_cost);
-  scaled_highs.changeColCost(1, unscaled_col1_cost);
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
-
-  std::vector<HighsInt> index = {0, 1};
-  std::vector<double> value0 = {1, 2};
-  std::vector<double> value1 = {1, 4};
-  unscaled_highs.addRow(-inf, 120, 2, index.data(), value0.data());
-  scaled_highs.addRow(-inf, 120, 2, index.data(), value0.data());
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
-
-  unscaled_highs.addRow(-inf, 150, 2, index.data(), value1.data());
-  scaled_highs.addRow(-inf, 150, 2, index.data(), value1.data());
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
-
-  std::vector<double> cost = {0, 10};
-  std::vector<double> lower = {2, 4};
-  std::vector<double> upper = {inf, inf};
-  std::vector<HighsInt> matrix_start = {0, 2};
-  std::vector<HighsInt> matrix_index = {0, 1, 0, 1};
-  std::vector<double> matrix_value = {1, 1, 2, 4};
-  unscaled_highs.addCols(2, cost.data(), lower.data(), upper.data(), 4,
-                         matrix_start.data(), matrix_index.data(),
-                         matrix_value.data());
-  scaled_highs.addCols(2, cost.data(), lower.data(), upper.data(), 4,
-                       matrix_start.data(), matrix_index.data(),
-                       matrix_value.data());
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
-
-  lower = {-inf, 0};
-  upper = {120, 150};
-  matrix_start = {0, 2};
-  matrix_index = {0, 2, 1, 3};
-  matrix_value = {1, 1, 2, 4};
-  unscaled_highs.addRows(2, lower.data(), upper.data(), 4, matrix_start.data(),
-                         matrix_index.data(), matrix_value.data());
-  scaled_highs.addRows(2, lower.data(), upper.data(), 4, matrix_start.data(),
-                       matrix_index.data(), matrix_value.data());
-
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
+HighsLp lp0(const double cost, const double bound) {
+  // This LP is unbounded and causes assert in presolve!
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {cost, -2 * cost};
+  lp.col_lower_ = {0, 1e-8};
+  lp.col_upper_ = {bound, bound};
+  lp.row_lower_ = {-kHighsInf, bound};
+  lp.row_upper_ = {bound, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, -1};
+  return lp;
 }
 
-void checkModelScaling(const HighsInt user_bound_scale,
-                       const HighsInt user_cost_scale,
-                       const HighsModel& unscaled_model,
-                       const HighsModel& scaled_model) {
-  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_model.lp_,
-                 scaled_model.lp_);
+HighsLp mip0(const double cost, const double bound) {
+  HighsLp lp = lp0(cost, bound);
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  return lp;
 }
 
-void checkLpScaling(const HighsInt user_bound_scale,
-                    const HighsInt user_cost_scale, const HighsLp& unscaled_lp,
-                    const HighsLp& scaled_lp) {
-  const double user_bound_scale_value = std::pow(2, user_bound_scale);
-  const double user_cost_scale_value = std::pow(2, user_cost_scale);
-  REQUIRE(unscaled_lp.num_col_ == scaled_lp.num_col_);
-  REQUIRE(unscaled_lp.num_row_ == scaled_lp.num_row_);
-  for (HighsInt iCol = 0; iCol < unscaled_lp.num_col_; iCol++) {
-    REQUIRE(scaled_lp.col_cost_[iCol] ==
-            unscaled_lp.col_cost_[iCol] * user_cost_scale_value);
-    if (unscaled_lp.col_lower_[iCol] > -inf)
-      REQUIRE(scaled_lp.col_lower_[iCol] ==
-              unscaled_lp.col_lower_[iCol] * user_bound_scale_value);
-    if (unscaled_lp.col_upper_[iCol] < inf)
-      REQUIRE(scaled_lp.col_upper_[iCol] ==
-              unscaled_lp.col_upper_[iCol] * user_bound_scale_value);
-  }
-  for (HighsInt iRow = 0; iRow < unscaled_lp.num_row_; iRow++) {
-    if (unscaled_lp.row_lower_[iRow] > -inf)
-      REQUIRE(scaled_lp.row_lower_[iRow] ==
-              unscaled_lp.row_lower_[iRow] * user_bound_scale_value);
-    if (unscaled_lp.row_upper_[iRow] < inf)
-      REQUIRE(scaled_lp.row_upper_[iRow] ==
-              unscaled_lp.row_upper_[iRow] * user_bound_scale_value);
-  }
+HighsLp lp1(const double cost, const double col_lower, const double bound) {
+  HighsLp lp;
+  // Set up the LP
+  //
+  // min -4C x -7C y
+  //
+  // st x + y <= 6B; -2B <= x-y
+  //
+  // b <= [x, y] <= 10*B
+  //
+  // Optimal minimizer is [2B, 4B] so, if this should scale with B and
+  // test the scaling bounds down scenario
+  //
+  // Optimal maximizer is [b, b] so, if b and B are small (but bigger
+  // than B) this should test the "all small bounds" scaled up
+  // scenario
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.offset_ = 1e-4;
+  lp.col_cost_ = {-4 * cost, -7 * cost};
+  lp.col_lower_ = {col_lower, col_lower};
+  lp.col_upper_ = {10 * bound, 10 * bound};
+  lp.row_lower_ = {-kHighsInf, -2 * bound};
+  lp.row_upper_ = {6 * bound, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, -1};
+  return lp;
 }
 
-void checkSolutionScaling(const HighsInt user_bound_scale,
-                          const HighsInt user_cost_scale,
-                          const HighsSolution& unscaled_solution,
-                          const HighsSolution& scaled_solution) {
-  const double user_bound_scale_value = std::pow(2, user_bound_scale);
-  const double user_cost_scale_value = std::pow(2, user_cost_scale);
-  for (HighsInt iCol = 0; iCol < HighsInt(unscaled_solution.col_value.size());
-       iCol++) {
-    REQUIRE(scaled_solution.col_value[iCol] ==
-            unscaled_solution.col_value[iCol] * user_bound_scale_value);
-    REQUIRE(scaled_solution.col_dual[iCol] ==
-            unscaled_solution.col_dual[iCol] * user_cost_scale_value);
+HighsLp mip1(const double cost, const double col_lower, const double bound) {
+  HighsLp lp = lp1(cost, col_lower, bound);
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  lp.col_lower_[0] = 0;
+  return lp;
+}
+
+HighsHessian hessian(const double value) {
+  // Together with lp1:
+  //
+  // Optimal minimizer is [3B, 3B] so, if this should scale with B and
+  // test the scaling bounds down scenario
+  //
+  // Optimal maximizer is [b, b] so, if b and B are small (but bigger
+  // than B) this should test the "all small bounds" scaled up
+  // scenario
+  HighsHessian hessian;
+  hessian.dim_ = 2;
+  hessian.start_ = {0, 1, 2};
+  hessian.index_ = {0, 1};
+  hessian.value_ = {value, 2 * value};
+  return hessian;
+}
+
+void testUserScale(Highs& h) {
+  h.setOptionValue("user_objective_scale", 0);
+  h.setOptionValue("user_bound_scale", 0);
+  if (dev_run)
+    printf("\n---------------\nWithout user scaling\n---------------\n");
+  h.writeModel("");
+  h.run();
+  h.writeSolution("", 1);
+  double unscaled_objective_value = h.getInfo().objective_function_value;
+  if (dev_run)
+    printf("\n---------------\nWith user scaling\n---------------\n");
+  HighsInt suggested_objective_scale;
+  HighsInt suggested_bound_scale;
+  h.getObjectiveBoundScaling(suggested_objective_scale, suggested_bound_scale);
+  if (dev_run)
+    printf(
+        "Highs::getObjectiveBoundScaling suggested cost / bound scale values "
+        "of "
+        "%d / %d\n",
+        int(suggested_objective_scale), int(suggested_bound_scale));
+  const bool has_suggested_scaling =
+      suggested_objective_scale || suggested_bound_scale;
+  if (!has_suggested_scaling) {
+    suggested_objective_scale = 2;
+    suggested_bound_scale = 1;
   }
-  for (HighsInt iRow = 0; iRow < HighsInt(unscaled_solution.row_value.size());
-       iRow++) {
-    REQUIRE(scaled_solution.row_value[iRow] ==
-            unscaled_solution.row_value[iRow] * user_bound_scale_value);
-    REQUIRE(scaled_solution.row_dual[iRow] ==
-            unscaled_solution.row_dual[iRow] * user_cost_scale_value);
+
+  h.setOptionValue("user_objective_scale", suggested_objective_scale);
+  h.setOptionValue("user_bound_scale", suggested_bound_scale);
+  h.clearSolver();
+  h.run();
+  h.writeSolution("", 1);
+  REQUIRE(doubleEqual0(unscaled_objective_value,
+                       h.getInfo().objective_function_value));
+}
+
+void testLp(Highs& h, const double cost, const double col_lower,
+            const double bound) {
+  HighsLp lp = lp1(cost, col_lower, bound);
+  h.passModel(lp);
+  testUserScale(h);
+  lp.sense_ = ObjSense::kMaximize;
+  h.passModel(lp);
+  testUserScale(h);
+}
+
+void testMip(Highs& h, const double cost, const double col_lower,
+             const double bound) {
+  HighsLp mip = mip1(cost, col_lower, bound);
+  h.passModel(mip);
+  testUserScale(h);
+  mip.sense_ = ObjSense::kMaximize;
+  h.passModel(mip);
+  testUserScale(h);
+}
+
+void testQp(Highs& h, const double cost, const double value,
+            const double col_lower, const double bound) {
+  HighsModel qp;
+  qp.lp_ = lp1(cost, col_lower, bound);
+  qp.hessian_ = hessian(value);
+  h.passModel(qp);
+  testUserScale(h);
+  qp.lp_.sense_ = ObjSense::kMaximize;
+  for (HighsInt iEl = 0; iEl < qp.hessian_.start_[qp.hessian_.dim_]; iEl++)
+    qp.hessian_.value_[iEl] *= -1;
+  h.passModel(qp);
+  testUserScale(h);
+}
+
+TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
+  Highs h;
+  const HighsInfo& info = h.getInfo();
+  const HighsSolution& solution = h.getSolution();
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("qp_regularization_value", 0);
+  h.setOptionValue("presolve", kHighsOffString);
+  // Preolve on triggers assert
+  const bool expose_presolve_bug = false;
+  if (expose_presolve_bug) {
+    h.setOptionValue("presolve", kHighsOffString);
+    h.setOptionValue("presolve_reductions", 0);
+    HighsLp lp = mip0(1.0, kHighsInf);
+    h.passModel(lp);
+    h.run();
   }
+
+  const bool all_test = true;  // false;//
+  const bool lp_test = all_test || true;
+  const bool mip_test = all_test || false;
+  const bool qp_test = all_test || false;
+
+  const bool ok_test = all_test || false;
+  const double ok_cost = 1.0;
+  const double ok_hessian = 1.0;
+  const double ok_col_lower = 0.0;
+  const double ok_bound = 1.0;
+
+  // If the costs are too small, it becomes a feasibility problem,
+  // so don't get the same objective value in testUserScale
+  const bool small_cost_test = all_test || false;
+  const double small_cost = 0.5e-4;
+  const double small_hessian = 1e-4;
+  const double small_col_lower = 1e-8;
+  const double large_cost = 1e8;
+  const double large_hessian = 1e4;
+  const double large_bound = 1e8;
+  if (lp_test) {
+    if (ok_test) {
+      if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: LP "
+            "test\n================\n");
+      testLp(h, ok_cost, ok_col_lower, ok_bound);
+    }
+    if (small_cost_test) {
+      if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: LP test - small costs and "
+            "column LB\n================\n");
+      testLp(h, small_cost, small_col_lower, ok_bound);
+    }
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: LP test - large "
+          "costs\n================\n");
+    testLp(h, large_cost, small_col_lower, ok_bound);
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: LP test - large "
+          "bounds\n================\n");
+    testLp(h, ok_cost, small_col_lower, large_bound);
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: LP test - large costs and "
+          "bounds\n================\n");
+    testLp(h, large_cost, small_col_lower, large_bound);
+  }
+
+  if (mip_test) {
+    if (ok_test) {
+      if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: MIP "
+            "test\n================\n");
+      testMip(h, ok_cost, ok_col_lower, ok_bound);
+    }
+
+    if (small_cost_test) {
+      if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: MIP test - small costs and "
+            "column LB\n================\n");
+      testMip(h, small_cost, small_col_lower, ok_bound);
+    }
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: MIP test - large "
+          "costs\n================\n");
+    testMip(h, large_cost, small_col_lower, ok_bound);
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: MIP test - large "
+          "bounds\n================\n");
+    testMip(h, ok_cost, small_col_lower, large_bound);
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: MIP test - large costs and "
+          "bounds\n================\n");
+    testMip(h, large_cost, small_col_lower, large_bound);
+  }
+
+  if (qp_test) {
+    if (ok_test) {
+      if (dev_run)
+        printf(
+            "\n================\nill-scaled-model: QP "
+            "test\n================\n");
+      testQp(h, ok_cost, ok_hessian, ok_col_lower, ok_bound);
+    }
+    // QP solver can't handle small costs and Hessian
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: QP test - large "
+          "costs\n================\n");
+    testQp(h, large_cost, ok_hessian, ok_col_lower, ok_bound);
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: QP test - large "
+          "bounds\n================\n");
+    testQp(h, ok_cost, ok_hessian, small_col_lower, large_bound);
+    if (dev_run)
+      printf(
+          "\n================\nill-scaled-model: QP test - large costs and "
+          "bounds\n================\n");
+    testQp(h, large_cost, large_hessian, small_col_lower, large_bound);
+  }
+
+  h.resetGlobalScheduler(true);
 }

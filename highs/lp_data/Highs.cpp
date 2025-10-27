@@ -379,10 +379,6 @@ HighsStatus Highs::passModel(HighsModel model) {
   // model object for this LP
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
-  // Apply any user scaling in call to optionChangeAction
-  return_status =
-      interpretCallStatus(options_.log_options, optionChangeAction(),
-                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -536,20 +532,6 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   // number of columns in the model is completed
   if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
 
-  if (this->model_.lp_.user_cost_scale_) {
-    // Assess and apply any user cost scaling
-    if (!hessian.scaleOk(this->model_.lp_.user_cost_scale_,
-                         this->options_.small_matrix_value,
-                         this->options_.large_matrix_value)) {
-      highsLogUser(
-          options_.log_options, HighsLogType::kError,
-          "User cost scaling yields zeroed or excessive Hessian values\n");
-      return HighsStatus::kError;
-    }
-    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
-    for (HighsInt iEl = 0; iEl < hessian.numNz(); iEl++)
-      hessian.value_[iEl] *= cost_scale_value;
-  }
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
   return returnFromHighs(return_status);
@@ -965,9 +947,33 @@ HighsStatus Highs::run() {
 
   if (!options_.use_warm_start) this->clearSolver();
   this->reportModelStats();
-  HighsInt num_linear_objective = this->multi_linear_objective_.size();
-  if (num_linear_objective == 0) {
-    HighsStatus status = this->optimizeModel();
+
+  // Possibly apply user-defined scaling to the incumbent model and solution
+  HighsUserScaleData user_scale_data;
+  initialiseUserScaleData(this->options_, user_scale_data);
+  const bool user_scaling =
+      user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
+  if (user_scaling) {
+    if (this->userScaleModel(user_scale_data) == HighsStatus::kError)
+      return HighsStatus::kError;
+    this->userScaleSolution(user_scale_data);
+    // Indicate that the scaling has been applied
+    user_scale_data.applied = true;
+    // Zero the user scale values to prevent further scaling
+    this->options_.user_objective_scale = 0;
+    this->options_.user_bound_scale = 0;
+  }
+
+  // Determine coefficient ranges and possibly warn the user about
+  // excessive values, obtaining suggested values for user_objective_scale
+  // and user_bound_scale
+  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
+                                       user_scale_data);
+  // Used when deveoping unit tests in TestUserScale.cpp
+  //  this->writeModel("");
+  HighsStatus status;
+  if (!this->multi_linear_objective_.size()) {
+    status = this->optimizeModel();
     if (options_had_highs_files) {
       // This call to Highs::run() had HiGHS files in options, so
       // recover HiGHS files to options_
@@ -981,10 +987,47 @@ HighsStatus Highs::run() {
       if (this->options_.write_basis_file != "")
         status = this->writeBasis(this->options_.write_basis_file);
     }
-    this->reportSubSolverCallTime();
-    return status;
+  } else {
+    status = this->multiobjectiveSolve();
   }
-  return this->multiobjectiveSolve();
+  if (user_scaling) {
+    // Unscale the incumbent model and solution
+    //
+    // Flip the scaling sign
+    user_scale_data.user_objective_scale *= -1;
+    user_scale_data.user_bound_scale *= -1;
+    HighsStatus unscale_status = this->userScaleModel(user_scale_data);
+    if (unscale_status == HighsStatus::kError) {
+      highsLogUser(
+          this->options_.log_options, HighsLogType::kError,
+          "Unexpected error removing user scaling from the incumbent model\n");
+      assert(unscale_status != HighsStatus::kError);
+    }
+    const bool update_kkt = true;
+    unscale_status = this->userScaleSolution(user_scale_data, update_kkt);
+    // Restore the user scale values, remembering that they've been
+    // negated to undo user scaling
+    this->options_.user_objective_scale = -user_scale_data.user_objective_scale;
+    this->options_.user_bound_scale = -user_scale_data.user_bound_scale;
+    // Indicate that the scaling has not been applied
+    user_scale_data.applied = false;
+    highsLogUser(this->options_.log_options, HighsLogType::kInfo,
+                 "After solving the user-scaled model, the unscaled solution "
+                 "has objective value %.12g\n",
+                 this->info_.objective_function_value);
+    if (model_status_ == HighsModelStatus::kOptimal &&
+        unscale_status != HighsStatus::kOk) {
+      // KKT errors in the unscaled optimal solution, so log a warning and
+      // return
+      highsLogUser(
+          this->options_.log_options, HighsLogType::kWarning,
+          "User scaled problem solved to optimality, but unscaled solution "
+          "does not satisfy feasibilty and optimality tolerances\n");
+      status = HighsStatus::kWarning;
+    }
+  }
+  if (this->options_.log_dev_level > 0) this->reportSubSolverCallTime();
+  return status;
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -1061,12 +1104,6 @@ HighsStatus Highs::optimizeModel() {
                 "called_return_from_optimize_model false\n");
     return HighsStatus::kError;
   }
-
-  // Check whether model is consistent with any user bound/cost scaling
-  assert(this->model_.lp_.user_bound_scale_ == this->options_.user_bound_scale);
-  assert(this->model_.lp_.user_cost_scale_ == this->options_.user_cost_scale);
-  // Assess whether to warn the user about excessive bounds and costs
-  assessExcessiveBoundCost(options_.log_options, this->model_);
 
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
@@ -1360,17 +1397,36 @@ HighsStatus Highs::optimizeModel() {
   }
   if (basis_.valid) assert(basis_.useful);
 
-  if (((options_.presolve == kHighsOffString || has_basis) &&
-       solver_will_use_basis) ||
-      unconstrained_lp) {
-    ekk_instance_.lp_name_ =
-        "LP without presolve, or with basis, or unconstrained";
+  const bool without_presolve = options_.presolve == kHighsOffString;
+  if ((unconstrained_lp || has_basis || without_presolve) &&
+      solver_will_use_basis) {
+    // There is a valid basis for the problem, presolve is off, or LP
+    // has no constraint matrix, and the solver will use the basis
+    // (otherwise it's better to use presolve, if it's not switched
+    // off)
+    //
+    // Determine a coherent message about how the LP is being solved
+    std::stringstream lp_solve_ss;
+    if (unconstrained_lp) {
+      lp_solve_ss << "Solving unconstrained LP";
+    } else if (has_basis) {
+      if (without_presolve) {
+        lp_solve_ss << "Solving LP with useful basis";
+      } else {
+        lp_solve_ss << "Solving LP with useful basis so presolve not used";
+      }
+    } else {
+      // One of unconstrained_lp, has_basis and without_presolve must
+      // be true, and the first two anren't
+      assert(without_presolve);
+      lp_solve_ss << "Solving LP without presolve or useful basis";
+    }
+    std::string lp_solve = lp_solve_ss.str();
+    ekk_instance_.lp_name_ = lp_solve;
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
-    solveLp(incumbent_lp,
-            "Solving LP without presolve, or with basis, or unconstrained",
-            this_solve_original_lp_time);
+    solveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
@@ -1902,6 +1958,51 @@ HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getFixedLp(HighsLp& lp) const {
+  if (!this->model_.lp_.isMip()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Incumbent model is not a MIP, so cannot form fixed LP\n");
+    return HighsStatus::kError;
+  }
+  if (!this->solution_.value_valid) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Incumbent model does not have a valid solution, so cannot "
+                 "form fixed LP\n");
+    return HighsStatus::kError;
+  }
+  lp = this->model_.lp_;
+  const std::vector<HighsVarType> integrality = this->model_.lp_.integrality_;
+  lp.integrality_.clear();
+  HighsInt num_non_conts_fractional = 0;
+  double max_fractional = 0;
+  for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++) {
+    double value = this->solution_.col_value[iCol];
+    // Fix integer and semi-integer variables at their
+    // value. Semi-continuous variables are fixed at zero if they are
+    // closer to zero than their lower bound
+    if (integrality[iCol] == HighsVarType::kInteger ||
+        integrality[iCol] == HighsVarType::kSemiInteger ||
+        (integrality[iCol] == HighsVarType::kSemiContinuous &&
+         value < lp.col_lower_[iCol] - value)) {
+      double fractional = fractionality(value);
+      if (fractional > this->options_.mip_feasibility_tolerance) {
+        num_non_conts_fractional++;
+        max_fractional = std::max(fractional, max_fractional);
+      }
+      lp.col_lower_[iCol] = value;
+      lp.col_upper_[iCol] = value;
+    }
+  }
+  if (num_non_conts_fractional) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kWarning,
+        "Fixed LP has %d variables fixed at max fractional value of %g\n",
+        int(num_non_conts_fractional), max_fractional);
+    return HighsStatus::kWarning;
+  }
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   has_dual_ray = false;
   return getDualRayInterface(has_dual_ray, dual_ray_value);
@@ -1982,6 +2083,18 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
   }
   return computeIllConditioning(ill_conditioning, constraint, method,
                                 ill_conditioning_bound);
+}
+
+HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
+                                            HighsInt& suggested_bound_scale) {
+  this->logHeader();
+  HighsUserScaleData data;
+  initialiseUserScaleData(this->options_, data);
+  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
+                                       data);
+  suggested_objective_scale = data.suggested_user_objective_scale;
+  suggested_bound_scale = data.suggested_user_bound_scale;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getIis(HighsIis& iis) {
@@ -3669,8 +3782,12 @@ void Highs::invalidateSolverDualData() {
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
-  invalidateModelStatus();
+  invalidateModelStatusAndInfo();
   invalidateSolution();
+}
+
+void Highs::invalidateModelStatusAndInfo() {
+  invalidateModelStatus();
   invalidateRanging();
   invalidateInfo();
   invalidateIis();
