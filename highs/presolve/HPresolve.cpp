@@ -4666,6 +4666,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 HPresolve::Result HPresolve::singletonColStuffing(
     HighsPostsolveStack& postsolve_stack, HighsInt col) {
   // singleton column stuffing
+  // see Gamrath, G., Koch, T., Martin, A. et al., Progress in presolving
+  // for mixed integer programming, Math. Prog. Comp. 7, 367–398 (2015).
   auto isContSingleton = [&](HighsInt col) {
     return (!colDeleted[col] && colsize[col] == 1 &&
             model->integrality_[col] != HighsVarType::kInteger &&
