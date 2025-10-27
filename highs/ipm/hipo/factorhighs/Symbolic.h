@@ -12,7 +12,8 @@ namespace hipo {
 enum NodeType { single, subtree };
 struct NodeData {
   NodeType type;
-  Int first;
+  std::vector<Int> firstdesc;
+  std::vector<Int> group;
 };
 
 // Symbolic factorisation object
@@ -101,6 +102,13 @@ class Symbolic {
   // Starting position of diagonal blocks for hybrid formats
   std::vector<std::vector<Int>> clique_block_start_{};
 
+  // Information to split the elimination tree. Each entry in tree_splitting_
+  // correspond to a task that is executed in parallel.
+  // tree_splitting_ contains pairs (sn, data):
+  // - If data.type is single, then the task processes only the supernode sn.
+  // - If data.type is subtree, then the task processes each subtree rooted at
+  //    data.group[i]. Each subtree requires processing supernodes j,
+  //    data.firstdesc[i] <= j <= data.group[i].
   std::map<Int, NodeData> tree_splitting_;
 
   friend class Analyse;

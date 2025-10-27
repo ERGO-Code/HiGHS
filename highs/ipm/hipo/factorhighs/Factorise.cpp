@@ -199,14 +199,14 @@ void Factorise::processSupernode(Int sn, bool parallelise) {
     // spawn children of this supernode in reverse order
     Int child_to_spawn = first_child_reverse_[sn];
     while (child_to_spawn != -1) {
-      if (spawnNode(child_to_spawn, tg)) return;
+      spawnNode(child_to_spawn, tg);
 
       child_to_spawn = next_child_reverse_[child_to_spawn];
     }
 
     // wait for first child to finish, before starting the parent (if there is a
     // first child)
-    if (first_child_reverse_[sn] != -1) tg.sync();
+    if (first_child_[sn] != -1) syncNode(first_child_[sn], tg);
   }
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -262,7 +262,7 @@ void Factorise::processSupernode(Int sn, bool parallelise) {
 
     if (parallelise) {
       // sync with spawned child, apart from the first one
-      if (child_sn != first_child_[sn]) tg.sync();
+      if (child_sn != first_child_[sn]) syncNode(child_sn, tg);
 
       if (flag_stop_) return;
 
@@ -373,31 +373,42 @@ void Factorise::processSupernode(Int sn, bool parallelise) {
 #endif
 }
 
-bool Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
+void Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
   auto it = S_.treeSplitting().find(sn);
 
   if (it == S_.treeSplitting().end()) {
-    log_->printDevInfo("Missing supernode from tree splitting\n");
-    flag_stop_ = true;
-    return true;
+    // sn is head of small subtree, but not the first subtree in the group.
+    // It will be processed in another task.
+    return;
   }
 
   if (it->second.type == NodeType::single) {
-    // sn is single node, spawn only that
-    tg.spawn([=]() { processSupernode(sn, true); });
+    // sn is single node; spawn only that
+    tg.spawn([this, sn]() { processSupernode(sn, true); });
 
   } else {
-    // sn is subtree, spawn the whole subtree
-    Int start = it->second.first;
-    Int end = sn + 1;
-    tg.spawn([=]() {
-      for (Int sn = start; sn < end; ++sn) {
-        processSupernode(sn, false);
+    // sn is head of the first subtree in a group of small subtrees; spawn all
+    // of them
+
+    tg.spawn([this, it]() {
+      for (Int i = 0; i < it->second.group.size(); ++i) {
+        Int st_head = it->second.group[i];
+        Int start = it->second.firstdesc[i];
+        Int end = st_head + 1;
+        for (Int sn = start; sn < end; ++sn) {
+          processSupernode(sn, false);
+        }
       }
     });
   }
+}
 
-  return false;
+void Factorise::syncNode(Int sn, const TaskGroupSpecial& tg) {
+  // If spawnNode(sn,tg) created a task, then sync it.
+  // This happens only if sn is found in the treeSplitting data structure.
+
+  auto it = S_.treeSplitting().find(sn);
+  if (it != S_.treeSplitting().end()) tg.sync();
 }
 
 bool Factorise::run(Numeric& num) {
@@ -421,9 +432,7 @@ bool Factorise::run(Numeric& num) {
   if (S_.parTree()) {
     // spawn tasks for root supernodes
     for (Int sn = 0; sn < S_.sn(); ++sn) {
-      if (S_.snParent(sn) == -1) {
-        if (spawnNode(sn, tg)) return true;
-      }
+      if (S_.snParent(sn) == -1) spawnNode(sn, tg);
     }
 
     // sync tasks for root supernodes

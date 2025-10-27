@@ -1293,13 +1293,10 @@ void Analyse::computeBlockStart() {
 
 void Analyse::findTreeSplitting() {
   // Split the tree into single nodes and subtrees.
-  // The subtrees have at most 1% of total operations.
+  // The subtrees have at most 1% of total operations. They are group together
+  // so that each group of subtrees has between 1% and 2% of total operations.
   // The tree is parallelised by creating a task for each single node and a task
-  // for each subtree.
-
-  // linked lists of children
-  std::vector<Int> head, next;
-  childrenLinkedList(sn_parent_, head, next);
+  // for each group of subtrees.
 
   // compute number of operations for each supernode
   std::vector<double> sn_ops(sn_count_);
@@ -1337,23 +1334,65 @@ void Analyse::findTreeSplitting() {
   std::vector<Int> first_desc;
   firstDescendant(sn_parent_, first_desc);
 
+  // linked lists of children
+  std::vector<Int> head, next;
+  childrenLinkedList(sn_parent_, head, next);
+
   // Divide the tree into single nodes and subtrees, such that each subtree has
-  // at most small_thresh operations overall.
+  // at most small_thresh operations overall. Group subtrees together, so that
+  // groups have 1-2% operations.
   const double small_thresh = kSmallSubtreesCoeff * total_ops;
   for (Int sn = 0; sn < sn_count_; ++sn) {
     if (subtree_ops[sn] > small_thresh) {
       // sn is a single node
-      tree_splitting_.insert({sn, {NodeType::single, -1}});
+      auto res_insert = tree_splitting_.insert({sn, {}});
+      res_insert.first->second.type = NodeType::single;
 
-    } else if (sn_parent_[sn] == -1 ||
-               subtree_ops[sn_parent_[sn]] > small_thresh) {
-      // sn is head of a subtree
-      tree_splitting_.insert({sn, {NodeType::subtree, first_desc[sn]}});
+      // The children of this sn are either single nodes or head of subtrees.
+      // Divide the head of subtrees in groups, so that each group has 1% to 2%
+      // of total operations. Each group corresponds to one task executed in
+      // parallel.
 
+      double current_ops = 0.0;
+      NodeData* current_nodedata = nullptr;
+      Int child = head[sn];
+      while (child != -1) {
+        bool is_small = subtree_ops[child] <= small_thresh;
+
+        if (is_small) {
+          if (!current_nodedata) {
+            auto res_insert = tree_splitting_.insert({child, {}});
+            current_nodedata = &res_insert.first->second;
+            current_nodedata->type = NodeType::subtree;
+            current_ops = 0.0;
+          }
+
+          current_ops += subtree_ops[child];
+          current_nodedata->group.push_back(child);
+          current_nodedata->firstdesc.push_back(first_desc[child]);
+
+          if (current_ops > small_thresh) current_nodedata = nullptr;
+        }
+
+        child = next[child];
+      }
+
+    } else if (sn_parent_[sn] == -1) {
+      // sn is small root: single task with whole subtree
+      auto res_insert = tree_splitting_.insert({sn, {}});
+      res_insert.first->second.type = NodeType::subtree;
+      res_insert.first->second.group.push_back(sn);
+      res_insert.first->second.firstdesc.push_back(first_desc[sn]);
+    }
+    /*
+    else if (subtree_ops[sn_parent_[sn]] > small_thresh) {
+      // sn is head of a subtree, processed as part of a group of subtrees
+      continue;
     } else {
       // sn is part of a subtree, but not the head
       continue;
     }
+    */
   }
 }
 
