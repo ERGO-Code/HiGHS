@@ -400,7 +400,6 @@ struct HighsOptionsStruct {
   bool mps_parser_type_free;
   bool use_warm_start;
   HighsInt keep_n_rows;
-  HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
   HighsInt allowed_cost_scale_factor;
   HighsInt ipx_dualize_strategy;
@@ -561,7 +560,6 @@ struct HighsOptionsStruct {
         mps_parser_type_free(false),
         use_warm_start(true),
         keep_n_rows(0),
-        cost_scale_factor(0),
         allowed_matrix_scale_factor(0),
         allowed_cost_scale_factor(0),
         ipx_dualize_strategy(0),
@@ -1385,11 +1383,6 @@ class HighsOptions : public HighsOptionsStruct {
                             kKeepNRowsDeleteRows, kKeepNRowsKeepRows);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("cost_scale_factor", "Scaling factor for costs",
-                            advanced, &cost_scale_factor, -20, 0, 20);
-    records.push_back(record_int);
-
     record_int = new OptionRecordInt(
         "allowed_matrix_scale_factor",
         "Largest power-of-two factor permitted when "
@@ -1401,7 +1394,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "allowed_cost_scale_factor",
         "Largest power-of-two factor permitted when scaling the costs",
-        advanced, &allowed_cost_scale_factor, 0, 0, 20);
+        advanced, &allowed_cost_scale_factor, 0,
+	kDefaultAllowedMatrixPow2Scale, kMaxAllowedMatrixPow2Scale);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

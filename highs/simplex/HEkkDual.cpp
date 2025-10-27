@@ -1310,8 +1310,6 @@ void HEkkDual::iterateTasks() {
 }
 
 void HEkkDual::iterationAnalysisData() {
-  double cost_scale_factor =
-      pow(2.0, -ekk_instance_.options_->cost_scale_factor);
   HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->simplex_strategy = info.simplex_strategy;
   analysis->edge_weight_mode = edge_weight_mode;
@@ -1327,7 +1325,7 @@ void HEkkDual::iterationAnalysisData() {
   analysis->edge_weight = 0;
   analysis->primal_delta = delta_primal;
   analysis->primal_step = theta_primal;
-  analysis->dual_step = theta_dual * cost_scale_factor;
+  analysis->dual_step = theta_dual;
   analysis->pivot_value_from_column = alpha_col;
   analysis->pivot_value_from_row = alpha_row;
   analysis->factor_pivot_threshold = info.factor_pivot_threshold;

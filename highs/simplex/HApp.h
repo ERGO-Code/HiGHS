@@ -228,15 +228,6 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     ekk_instance.undualize();
     assert(!ekk_instance.status_.is_permuted &&
            !ekk_instance.status_.is_dualized);
-    if (options.cost_scale_factor) {
-      double cost_scale_factor = pow(2.0, -options.cost_scale_factor);
-      highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "Objective = %11.4g\n",
-                  cost_scale_factor * ekk_instance.info_.dual_objective_value);
-      ekk_instance.model_status_ = HighsModelStatus::kNotset;
-      return_status = HighsStatus::kError;
-    }
-    //
   } else {
     // Indicate that there is no (current) need to refine the solution
     // by solving the unscaled LP with scaled NLA
@@ -256,15 +247,6 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       ekk_instance.undualize();
       assert(!ekk_instance.status_.is_permuted &&
              !ekk_instance.status_.is_dualized);
-      //
-      if (options.cost_scale_factor) {
-        double cost_scale_factor = pow(2.0, -options.cost_scale_factor);
-        highsLogDev(
-            options.log_options, HighsLogType::kInfo, "Objective = %11.4g\n",
-            cost_scale_factor * ekk_instance.info_.dual_objective_value);
-        ekk_instance.model_status_ = HighsModelStatus::kNotset;
-        return_status = HighsStatus::kError;
-      }
       if (return_status == HighsStatus::kError) {
         incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
         return returnFromSolveLpSimplex(solver_object, return_status);

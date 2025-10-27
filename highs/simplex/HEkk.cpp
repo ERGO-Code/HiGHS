@@ -2663,10 +2663,8 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
 }
 
 void HEkk::initialiseLpColCost() {
-  double cost_scale_factor = pow(2.0, options_->cost_scale_factor);
   for (HighsInt iCol = 0; iCol < lp_.num_col_; iCol++) {
-    info_.workCost_[iCol] =
-        (HighsInt)lp_.sense_ * cost_scale_factor * lp_.col_cost_[iCol];
+    info_.workCost_[iCol] = HighsInt(lp_.sense_) * lp_.col_cost_[iCol];
     info_.workShift_[iCol] = 0;
   }
 }
