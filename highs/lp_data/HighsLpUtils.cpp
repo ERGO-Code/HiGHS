@@ -24,9 +24,9 @@
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
-using std::fabs;
-using std::max;
-using std::min;
+//using std::fabs;
+//using std::max;
+//using std::min;
 
 const HighsInt kMaxLineLength = 80;
 
@@ -1449,24 +1449,6 @@ void reportMatrix(const HighsLogOptions& log_options, const std::string message,
 }
 
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
-  /*
-  vector<double> min_colBound;
-  vector<double> min_rowBound;
-  vector<double> colRange;
-  vector<double> rowRange;
-  min_colBound.resize(lp.num_col_);
-  min_rowBound.resize(lp.num_row_);
-  colRange.resize(lp.num_col_);
-  rowRange.resize(lp.num_row_);
-  for (HighsInt col = 0; col < lp.num_col_; col++)
-    min_colBound[col] = min(fabs(lp.col_lower_[col]), fabs(lp.col_upper_[col]));
-  for (HighsInt row = 0; row < lp.num_row_; row++)
-    min_rowBound[row] = min(fabs(lp.row_lower_[row]), fabs(lp.row_upper_[row]));
-  for (HighsInt col = 0; col < lp.num_col_; col++)
-    colRange[col] = lp.col_upper_[col] - lp.col_lower_[col];
-  for (HighsInt row = 0; row < lp.num_row_; row++)
-    rowRange[row] = lp.row_upper_[row] - lp.row_lower_[row];
-  */
   std::string message;
   if (lp.is_scaled_) {
     message = "Scaled";
@@ -1488,20 +1470,10 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
                       lp.col_lower_, true, lp.model_name_);
   analyseVectorValues(&log_options, "Column upper bounds", lp.num_col_,
                       lp.col_upper_, true, lp.model_name_);
-  //  analyseVectorValues(&log_options, "Column min abs bound", lp.num_col_,
-  //                      min_colBound, true, lp.model_name_);
-  //  analyseVectorValues(&log_options, "Column range", lp.num_col_, colRange,
-  //  true,
-  //                      lp.model_name_);
   analyseVectorValues(&log_options, "Row lower bounds", lp.num_row_,
                       lp.row_lower_, true, lp.model_name_);
   analyseVectorValues(&log_options, "Row upper bounds", lp.num_row_,
                       lp.row_upper_, true, lp.model_name_);
-  //  analyseVectorValues(&log_options, "Row min abs bound", lp.num_row_,
-  //                      min_rowBound, true, lp.model_name_);
-  //  analyseVectorValues(&log_options, "Row range", lp.num_row_, rowRange,
-  //  true,
-  //                      lp.model_name_);
   analyseVectorValues(&log_options, "Matrix sparsity",
                       lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.value_,
                       true, lp.model_name_);
@@ -2068,7 +2040,7 @@ HighsStatus assessLpPrimalSolution(const std::string message,
           std::max(row_infeasibility, max_row_infeasibility);
       sum_row_infeasibilities += row_infeasibility;
     }
-    double row_residual = fabs(primal - row_value[iRow]);
+    double row_residual = std::fabs(primal - row_value[iRow]);
     if (row_residual > kRowResidualTolerance) {
       if (row_residual > 2 * max_row_residual) {
         highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -2516,7 +2488,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
          en < lp.a_matrix_.start_[col + 1]; en++) {
       double value = lp.a_matrix_.value_[en];
       // All nonzeros must be +1 or -1
-      if (fabs(value) != 1) return false;
+      if (std::fabs(value) != 1) return false;
     }
   }
   double average_col_num_en = lp.a_matrix_.start_[lp.num_col_];

@@ -16,7 +16,7 @@
 #include <cmath>
 #include <vector>
 
-// #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsLpUtils.h"
 // #include "util/HighsSort.h"
 
 using std::max;
@@ -427,17 +427,13 @@ bool considerSimplexScaling(const HighsOptions& options, HighsLp& lp) {
   if (try_scaling) {
     // Scaling will be tried, so ensure that any previous scaling is not applied
     lp.unapplyScale();
-    /*
     const bool analyse_lp_data =
         kHighsAnalysisLevelModelData & options.highs_analysis_level;
     if (analyse_lp_data) analyseLp(options.log_options, lp);
-    */
     simplexScaleLp(options, lp);
     // If the LP is now scaled, then the scaling is new
     new_scaling = lp.is_scaled_;
-    /*
     if (analyse_lp_data && lp.is_scaled_) analyseLp(options.log_options, lp);
-    */
   } else if (lp.scale_.has_scaling) {
     // Scaling factors are known, so ensure that they are applied
     lp.applyScale();
