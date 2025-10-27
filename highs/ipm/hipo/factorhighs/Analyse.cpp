@@ -1316,11 +1316,11 @@ void Analyse::findTreeSplitting() {
       sn_ops[sn] += (double)(fr - i - 1) * (fr - i - 1);
     }
 
-    // add assembly operations times kSpopsWeight to the parent
+    // add assembly operations times kSpopsWeightSplitting to the parent
     if (sn_parent_[sn] != -1) {
       const Int ldc = fr - sz;
-      sn_ops[sn_parent_[sn]] += ldc * (ldc + 1) / 2 * kSpopsWeight;
-      total_ops += ldc * (ldc + 1) / 2 * kSpopsWeight;
+      sn_ops[sn_parent_[sn]] += ldc * (ldc + 1) / 2 * kSpopsWeightSplitting;
+      total_ops += ldc * (ldc + 1) / 2 * kSpopsWeightSplitting;
     }
   }
 
