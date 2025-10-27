@@ -52,8 +52,8 @@ const Int kMaxRefinementIter = 3;
 const double kRefinementTolerance = 1e-12;
 
 // tree splitting
-const double small_thresh_coeff = 0.01;
-const double spops_weight = 30.0;
+const double kSmallSubtreesCoeff = 0.01; // 1%
+const double kSpopsWeight = 30.0;
 
 struct Regul {
   double primal{};

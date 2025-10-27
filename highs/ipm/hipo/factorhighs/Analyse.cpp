@@ -1310,11 +1310,11 @@ void Analyse::findTreeSplitting() {
       sn_ops[sn] += (double)(fr - i - 1) * (fr - i - 1);
     }
 
-    // add assembly operations times spops_weight to the parent
+    // add assembly operations times kSpopsWeight to the parent
     if (sn_parent_[sn] != -1) {
       const Int ldc = fr - sz;
-      sn_ops[sn_parent_[sn]] += ldc * (ldc + 1) / 2 * spops_weight;
-      total_ops += ldc * (ldc + 1) / 2 * spops_weight;
+      sn_ops[sn_parent_[sn]] += ldc * (ldc + 1) / 2 * kSpopsWeight;
+      total_ops += ldc * (ldc + 1) / 2 * kSpopsWeight;
     }
   }
 
@@ -1333,7 +1333,7 @@ void Analyse::findTreeSplitting() {
 
   // Divide the tree into single nodes and subtrees, such that each subtree has
   // at most small_thresh operations overall.
-  const double small_thresh = small_thresh_coeff * total_ops;
+  const double small_thresh = kSmallSubtreesCoeff * total_ops;
   for (Int sn = 0; sn < sn_count_; ++sn) {
     if (subtree_ops[sn] > small_thresh) {
       // sn is a single node
