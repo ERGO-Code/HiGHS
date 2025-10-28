@@ -75,7 +75,7 @@ class Factorise {
  public:
   void permute(const std::vector<Int>& iperm);
   void processSupernode(Int sn, bool parallelise);
-  void spawnNode(Int sn, const TaskGroupSpecial& tg);
+  void spawnNode(Int sn, const TaskGroupSpecial& tg, bool do_spawn = true);
   void syncNode(Int sn, const TaskGroupSpecial& tg);
 
  public:

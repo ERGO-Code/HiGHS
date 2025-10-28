@@ -196,17 +196,23 @@ void Factorise::processSupernode(Int sn, bool parallelise) {
   if (flag_stop_) return;
 
   if (parallelise) {
-    // spawn children of this supernode in reverse order
-    Int child_to_spawn = first_child_reverse_[sn];
-    while (child_to_spawn != -1) {
-      spawnNode(child_to_spawn, tg);
+    // if there is only one child, do not parallelise
+    if (first_child_[sn] != -1 && next_child_[first_child_[sn]] == -1) {
+      spawnNode(first_child_[sn], tg, false);
+      parallelise = false;
+    } else {
+      // spawn children of this supernode in reverse order
+      Int child_to_spawn = first_child_reverse_[sn];
+      while (child_to_spawn != -1) {
+        spawnNode(child_to_spawn, tg);
 
-      child_to_spawn = next_child_reverse_[child_to_spawn];
+        child_to_spawn = next_child_reverse_[child_to_spawn];
+      }
+
+      // wait for first child to finish, before starting the parent (if there is
+      // a first child)
+      if (first_child_[sn] != -1) syncNode(first_child_[sn], tg);
     }
-
-    // wait for first child to finish, before starting the parent (if there is a
-    // first child)
-    if (first_child_[sn] != -1) syncNode(first_child_[sn], tg);
   }
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -373,7 +379,11 @@ void Factorise::processSupernode(Int sn, bool parallelise) {
 #endif
 }
 
-void Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
+void Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg, bool do_spawn) {
+  // if do_spawn is true, a task is actually spawned, otherwise, it is executed
+  // immediately. This avoids the overhead of spawning a task if a supernode has
+  // a single child.
+
   auto it = S_.treeSplitting().find(sn);
 
   if (it == S_.treeSplitting().end()) {
@@ -384,7 +394,13 @@ void Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
 
   if (it->second.type == NodeType::single) {
     // sn is single node; spawn only that
-    tg.spawn([this, sn]() { processSupernode(sn, true); });
+
+    auto lambda = [this, sn]() { processSupernode(sn, true); };
+
+    if (do_spawn)
+      tg.spawn(std::move(lambda));
+    else
+      lambda();
 
   } else {
     // sn is head of the first subtree in a group of small subtrees; spawn all
@@ -392,7 +408,7 @@ void Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
 
     const NodeData* nd_ptr = &(it->second);
 
-    tg.spawn([this, nd_ptr]() {
+    auto lambda = [this, nd_ptr]() {
       for (Int i = 0; i < nd_ptr->group.size(); ++i) {
         Int st_head = nd_ptr->group[i];
         Int start = nd_ptr->firstdesc[i];
@@ -401,7 +417,12 @@ void Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
           processSupernode(sn, false);
         }
       }
-    });
+    };
+
+    if (do_spawn)
+      tg.spawn(std::move(lambda));
+    else
+      lambda();
   }
 }
 
