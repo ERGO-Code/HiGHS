@@ -91,7 +91,7 @@ class Analyse {
   void colCount();
   void fundamentalSupernodes();
   void relaxSupernodes();
-  void relaxSupernodesSize();
+  double doRelaxSupernodes(int64_t max_artificial_nz);
   void afterRelaxSn();
   void snPattern();
   void relativeIndCols();

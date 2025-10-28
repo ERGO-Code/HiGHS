@@ -396,157 +396,9 @@ void Analyse::fundamentalSupernodes() {
   sn_parent_.back() = -1;
 }
 
-void Analyse::relaxSupernodes() {
-  // Child which produces smallest number of fake nonzeros is merged if
-  // resulting sn has fewer than max_artificial_nz fake nonzeros.
-  // Multiple values of max_artificial_nz are tried, chosen with bisection
-  // method, until the percentage of artificial nonzeros is in the range [1,2]%.
-
-  Int max_artificial_nz = kStartThreshRelax;
-  Int largest_below = -1;
-  Int smallest_above = -1;
-
-  for (Int iter = 0; iter < kMaxIterRelax; ++iter) {
-    // =================================================
-    // Build information about supernodes
-    // =================================================
-    std::vector<Int> sn_size(sn_count_);
-    std::vector<Int> clique_size(sn_count_);
-    fake_nz_.assign(sn_count_, 0);
-    for (Int i = 0; i < sn_count_; ++i) {
-      sn_size[i] = sn_start_[i + 1] - sn_start_[i];
-      clique_size[i] = col_count_[sn_start_[i]] - sn_size[i];
-      fake_nz_[i] = 0;
-    }
-
-    // build linked lists of children
-    std::vector<Int> first_child, next_child;
-    childrenLinkedList(sn_parent_, first_child, next_child);
-
-    // =================================================
-    // Merge supernodes
-    // =================================================
-    merged_into_.assign(sn_count_, -1);
-    merged_sn_ = 0;
-
-    for (Int sn = 0; sn < sn_count_; ++sn) {
-      // keep iterating through the children of the supernode, until there's no
-      // more child to merge with
-
-      while (true) {
-        Int child = first_child[sn];
-
-        // info for first criterion
-        int64_t nz_fakenz = kHighsIInf;
-        Int size_fakenz = 0;
-        Int child_fakenz = -1;
-
-        while (child != -1) {
-          // how many zero rows would become nonzero
-          const int64_t rows_filled =
-              sn_size[sn] + clique_size[sn] - clique_size[child];
-
-          // how many zero entries would become nonzero
-          const int64_t nz_added = rows_filled * sn_size[child];
-
-          // how many artificial nonzeros would the merged supernode have
-          const int64_t total_art_nz =
-              nz_added + fake_nz_[sn] + fake_nz_[child];
-
-          // Save child with smallest number of artificial zeros created.
-          // Ties are broken based on size of child.
-          if (total_art_nz < nz_fakenz ||
-              (total_art_nz == nz_fakenz && size_fakenz < sn_size[child])) {
-            nz_fakenz = total_art_nz;
-            size_fakenz = sn_size[child];
-            child_fakenz = child;
-          }
-
-          child = next_child[child];
-        }
-
-        if (nz_fakenz <= max_artificial_nz) {
-          // merging creates fewer nonzeros than the maximum allowed
-
-          // update information of parent
-          sn_size[sn] += size_fakenz;
-          fake_nz_[sn] = nz_fakenz;
-
-          // count number of merged supernodes
-          ++merged_sn_;
-
-          // save information about merging of supernodes
-          merged_into_[child_fakenz] = sn;
-
-          // remove child from linked list of children
-          child = first_child[sn];
-          if (child == child_fakenz) {
-            // child_smallest is the first child
-            first_child[sn] = next_child[child_fakenz];
-          } else {
-            while (next_child[child] != child_fakenz) {
-              child = next_child[child];
-            }
-            // now child is the previous child of child_smallest
-            next_child[child] = next_child[child_fakenz];
-          }
-
-        } else {
-          // no more children can be merged with parent
-          break;
-        }
-      }
-    }
-
-    // compute total number of artificial nonzeros and artificial ops for this
-    // value of max_artificial_nz
-    double temp_art_nz{};
-    double temp_art_ops{};
-    for (Int sn = 0; sn < sn_count_; ++sn) {
-      if (merged_into_[sn] == -1) {
-        temp_art_nz += fake_nz_[sn];
-
-        const double nn = sn_size[sn];
-        const double cc = clique_size[sn];
-        temp_art_ops += (nn + cc) * (nn + cc) * nn - (nn + cc) * nn * (nn + 1) +
-                        nn * (nn + 1) * (2 * nn + 1) / 6;
-      }
-    }
-    temp_art_ops -= dense_ops_norelax_;
-
-    // if enough fake nz or ops have been added, stop.
-    const double ratio_fake =
-        temp_art_ops / (temp_art_ops + dense_ops_norelax_);
-
-    // try to find ratio in interval [0.01,0.02] using bisection
-    if (ratio_fake < kLowerRatioRelax) {
-      // ratio too small
-      largest_below = max_artificial_nz;
-      if (smallest_above == -1) {
-        max_artificial_nz *= 2;
-      } else {
-        max_artificial_nz = (largest_below + smallest_above) / 2;
-      }
-    } else if (ratio_fake > kUpperRatioRelax) {
-      // ratio too large
-      smallest_above = max_artificial_nz;
-      if (largest_below == -1) {
-        max_artificial_nz /= 2;
-      } else {
-        max_artificial_nz = (largest_below + smallest_above) / 2;
-      }
-    } else {
-      // good ratio
-      return;
-    }
-  }
-}
-
-void Analyse::relaxSupernodesSize() {
-  // Smallest child is merged with parent, if child is small enough.
-
+double Analyse::doRelaxSupernodes(int64_t max_artificial_nz) {
   // =================================================
-  // build information about supernodes
+  // Build information about supernodes
   // =================================================
   std::vector<Int> sn_size(sn_count_);
   std::vector<Int> clique_size(sn_count_);
@@ -575,9 +427,9 @@ void Analyse::relaxSupernodesSize() {
       Int child = first_child[sn];
 
       // info for first criterion
-      Int size_smallest = kHighsIInf;
-      Int child_smallest = -1;
-      int64_t nz_smallest = 0;
+      int64_t nz_fakenz = kHighsIInf;
+      Int size_fakenz = 0;
+      Int child_fakenz = -1;
 
       while (child != -1) {
         // how many zero rows would become nonzero
@@ -590,39 +442,42 @@ void Analyse::relaxSupernodesSize() {
         // how many artificial nonzeros would the merged supernode have
         const int64_t total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
 
-        if (sn_size[child] < size_smallest) {
-          size_smallest = sn_size[child];
-          child_smallest = child;
-          nz_smallest = total_art_nz;
+        // Save child with smallest number of artificial zeros created.
+        // Ties are broken based on size of child.
+        if (total_art_nz < nz_fakenz ||
+            (total_art_nz == nz_fakenz && size_fakenz < sn_size[child])) {
+          nz_fakenz = total_art_nz;
+          size_fakenz = sn_size[child];
+          child_fakenz = child;
         }
 
         child = next_child[child];
       }
 
-      if (size_smallest < kSnSizeRelax && sn_size[sn] < kSnSizeRelax) {
-        // smallest supernode is small enough to be merged with parent
+      if (nz_fakenz <= max_artificial_nz) {
+        // merging creates fewer nonzeros than the maximum allowed
 
         // update information of parent
-        sn_size[sn] += size_smallest;
-        fake_nz_[sn] = nz_smallest;
+        sn_size[sn] += size_fakenz;
+        fake_nz_[sn] = nz_fakenz;
 
         // count number of merged supernodes
         ++merged_sn_;
 
         // save information about merging of supernodes
-        merged_into_[child_smallest] = sn;
+        merged_into_[child_fakenz] = sn;
 
         // remove child from linked list of children
         child = first_child[sn];
-        if (child == child_smallest) {
+        if (child == child_fakenz) {
           // child_smallest is the first child
-          first_child[sn] = next_child[child_smallest];
+          first_child[sn] = next_child[child_fakenz];
         } else {
-          while (next_child[child] != child_smallest) {
+          while (next_child[child] != child_fakenz) {
             child = next_child[child];
           }
           // now child is the previous child of child_smallest
-          next_child[child] = next_child[child_smallest];
+          next_child[child] = next_child[child_fakenz];
         }
 
       } else {
@@ -631,6 +486,83 @@ void Analyse::relaxSupernodesSize() {
       }
     }
   }
+
+  // compute total number of artificial nonzeros and artificial ops for this
+  // value of max_artificial_nz
+  double temp_art_nz{};
+  double temp_art_ops{};
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    if (merged_into_[sn] == -1) {
+      temp_art_nz += fake_nz_[sn];
+
+      const double nn = sn_size[sn];
+      const double cc = clique_size[sn];
+      temp_art_ops += (nn + cc) * (nn + cc) * nn - (nn + cc) * nn * (nn + 1) +
+                      nn * (nn + 1) * (2 * nn + 1) / 6;
+    }
+  }
+  temp_art_ops -= dense_ops_norelax_;
+
+  // if enough fake nz or ops have been added, stop.
+  const double ratio_fake = temp_art_ops / (temp_art_ops + dense_ops_norelax_);
+
+  return ratio_fake;
+}
+
+void Analyse::relaxSupernodes() {
+  // Child which produces smallest number of fake nonzeros is merged if
+  // resulting sn has fewer than max_artificial_nz fake nonzeros.
+  // Multiple values of max_artificial_nz are tried, chosen with bisection
+  // method, until the percentage of artificial nonzeros is in the range [1,2]%.
+
+  int64_t max_artificial_nz = kStartThreshRelax;
+  int64_t largest_below = -1;
+  int64_t smallest_above = -1;
+
+  double best_dist_ratio = kHighsInf;
+  int64_t best_max_art_nz = -1;
+
+  for (Int iter = 0; iter < kMaxIterRelax; ++iter) {
+    // relax the supernodes and obtain the ratio of how many new ops have been
+    // added with the current value of max_artificial_nz
+    const double ratio_fake = doRelaxSupernodes(max_artificial_nz);
+
+    // store the best ratio, in case a good ratio is never found
+    double dist_ratio_fake = std::min(std::abs(ratio_fake - kLowerRatioRelax),
+                                      std::abs(ratio_fake - kUpperRatioRelax));
+    if (dist_ratio_fake < best_dist_ratio) {
+      best_dist_ratio = dist_ratio_fake;
+      best_max_art_nz = max_artificial_nz;
+    }
+
+    // try to find ratio in interval [0.01,0.02] using bisection
+    if (ratio_fake < kLowerRatioRelax) {
+      // ratio too small
+      largest_below = max_artificial_nz;
+      if (smallest_above == -1) {
+        max_artificial_nz *= 2;
+      } else {
+        max_artificial_nz = (largest_below + smallest_above) / 2;
+      }
+    } else if (ratio_fake > kUpperRatioRelax) {
+      // ratio too large
+      smallest_above = max_artificial_nz;
+      if (largest_below == -1) {
+        max_artificial_nz /= 2;
+      } else {
+        max_artificial_nz = (largest_below + smallest_above) / 2;
+      }
+    } else {
+      // good ratio
+      return;
+    }
+  }
+
+  // If reach here, no good ratio was found within kMaxIterRelax
+  // To avoid having a catastrophically bad ratio in pathological problems,
+  // choose the best ratio found
+
+  doRelaxSupernodes(best_max_art_nz);
 }
 
 void Analyse::afterRelaxSn() {
