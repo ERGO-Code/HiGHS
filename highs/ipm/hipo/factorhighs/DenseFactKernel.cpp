@@ -1,3 +1,4 @@
+#include "DenseFact.h"
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
