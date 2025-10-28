@@ -48,6 +48,14 @@ const std::map<Int, NodeData>& Symbolic::treeSplitting() const {
   return tree_splitting_;
 }
 
+Int Symbolic::snRoots() const {
+  Int roots = 0;
+  for (Int i : sn_parent_)
+    if (i == -1) ++roots;
+
+  return roots;
+}
+
 std::string memoryString(double mem) {
   std::stringstream ss;
 
@@ -77,8 +85,8 @@ void Symbolic::print(const Log& log, bool verbose) const {
     log_stream << textline("Critical ops:") << sci(critops_, 0, 1) << '\n';
     log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)
                << '\n';
-    log_stream << textline("Number of tasks:") << integer(tree_splitting_.size())
-               << '\n';
+    log_stream << textline("Number of tasks:")
+               << integer(tree_splitting_.size()) << '\n';
     log_stream << textline("Artificial nz:") << sci(artificial_nz_, 0, 1)
                << '\n';
     log_stream << textline("Artificial ops:") << sci(artificial_ops_, 0, 1)
@@ -94,6 +102,7 @@ void Symbolic::print(const Log& log, bool verbose) const {
                << '\n';
     log_stream << textline("Sn avg size:") << sci((double)n_ / sn_, 0, 1)
                << '\n';
+    log_stream << textline("Sn roots:") << integer(snRoots()) << '\n';
   }
 
   log_stream << '\n';

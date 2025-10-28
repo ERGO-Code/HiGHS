@@ -129,6 +129,7 @@ class Symbolic {
   Int ptr(Int i) const;
   Int snStart(Int i) const;
   Int snParent(Int i) const;
+  Int snRoots() const;
   Int relindCols(Int i) const;
   Int relindClique(Int i, Int j) const;
   Int consecutiveSums(Int i, Int j) const;
