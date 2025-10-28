@@ -401,6 +401,17 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   return status ? kStatusErrorAnalyse : kStatusOk;
 }
 
+void FactorHiGHSSolver::freeNEmemory() {
+  // Swap NE data structures with empty vectors, to guarantee that memory is
+  // freed.
+
+  std::vector<Int>().swap(ptrNE_);
+  std::vector<Int>().swap(rowsNE_);
+  std::vector<Int>().swap(ptrNE_rw_);
+  std::vector<Int>().swap(idxNE_rw_);
+  std::vector<Int>().swap(corr_NE_);
+}
+
 Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status. If building the matrix failed, the status is
@@ -507,6 +518,7 @@ Int FactorHiGHSSolver::chooseNla() {
   if (status != kStatusErrorAnalyse) {
     if (options_.nla == kOptionNlaAugmented) {
       S_ = std::move(symb_AS);
+      freeNEmemory();
     } else {
       S_ = std::move(symb_NE);
     }
