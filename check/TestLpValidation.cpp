@@ -108,48 +108,6 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   lp.a_matrix_.index_[1] = 1;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
-  /*
-  if (dev_run) printf("Give valid scale_.strategy\n");
-  lp.scale_.strategy = kSimplexScaleStrategyOff;
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
-
-  if (dev_run) printf("Give valid scale_.num_col\n");
-  lp.scale_.num_col = 0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
-
-  if (dev_run) printf("Give valid scale_.num_row\n");
-  lp.scale_.num_row = 0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
-
-  if (dev_run) printf("Give valid scale_.col.size()\n");
-  lp.scale_.col.resize(0);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
-
-  if (dev_run) printf("Give valid scale_.row.size()\n");
-  lp.scale_.row.resize(0);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-
-  if (dev_run) printf("Set scale_.strategy =
-  kSimplexScaleStrategyMaxValue015\n"); lp.scale_.strategy =
-  kSimplexScaleStrategyMaxValue015; REQUIRE(highs.passModel(lp) ==
-  HighsStatus::kError);
-
-  if (dev_run) printf("Give valid scale_.num_col\n");
-  lp.scale_.num_col = true_num_col;
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
-
-  if (dev_run) printf("Give valid scale_.num_row\n");
-  lp.scale_.num_row = true_num_row;
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
-
-  if (dev_run) printf("Give valid scale_.col.size()\n");
-  lp.scale_.col.resize(true_num_col);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
-
-  if (dev_run) printf("Give valid scale_.row.size()\n");
-  lp.scale_.row.resize(true_num_row);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  */
 }
 
 TEST_CASE("LP-validation", "[highs_data]") {

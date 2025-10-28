@@ -484,16 +484,18 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
 	max_cost = std::max(abs_cost, max_cost);
       }
     }
-    printf("grepSimplexRangeTxt HighsScale: costs in [%g, %g]; matrix in [%g, %g]; %s: %s\n",
-	   min_cost, max_cost,
-	   original_matrix_min_value, original_matrix_max_value,
-	   lp.model_name_.c_str(),
-	   lp.origin_name_.c_str());
-    printf("grepSimplexRangeCsv,%g,%g,%g,%g,%s,%s\n",
-	   min_cost, max_cost,
-	   original_matrix_min_value, original_matrix_max_value,
-	   lp.model_name_.c_str(),
-	   lp.origin_name_.c_str());
+    if (kSimplexScaleDevReport) {
+      printf("grepSimplexRangeTxt HighsScale: costs in [%g, %g]; matrix in [%g, %g]; %s: %s\n",
+	     min_cost, max_cost,
+	     original_matrix_min_value, original_matrix_max_value,
+	     lp.model_name_.c_str(),
+	     lp.origin_name_.c_str());
+      printf("grepSimplexRangeCsv,%g,%g,%g,%g,%s,%s\n",
+	     min_cost, max_cost,
+	     original_matrix_min_value, original_matrix_max_value,
+	     lp.model_name_.c_str(),
+	     lp.origin_name_.c_str());
+    }
   }
   // Possibly force scaling, otherwise base the decision on the range
   // of values in the matrix, values that will be used later for
@@ -504,21 +506,20 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
                                  no_scaling_original_matrix_min_value) &&
                                     (original_matrix_max_value <=
                                      no_scaling_original_matrix_max_value);
+  HighsScale& scale = lp.scale_;
   bool scaled_matrix = false;
   if (no_scaling) {
-    // No matrix scaling, but possible cost scaling
-    if (options.highs_analysis_level)
-      highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "Scaling: Matrix has [min, max] values of [%g, %g] within "
-                  "[%g, %g] so no scaling performed\n",
-                  original_matrix_min_value, original_matrix_max_value,
-                  no_scaling_original_matrix_min_value,
-                  no_scaling_original_matrix_max_value);
+    // No matrix scaling
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+		"Scaling: Matrix has [min, max] values of [%g, %g] within "
+		"[%g, %g] so no scaling performed\n",
+		original_matrix_min_value, original_matrix_max_value,
+		no_scaling_original_matrix_min_value,
+		no_scaling_original_matrix_max_value);
   } else {
     // Try scaling, so assign unit factors - partly because initial
     // factors may be assumed by the scaling method, but also because
     // scaling factors may not be computed for empty rows/columns
-    HighsScale& scale = lp.scale_;
     scale.col.assign(numCol, 1);
     scale.row.assign(numRow, 1);
     const bool equilibration_scaling =
@@ -549,17 +550,18 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
       scale.cost = 1.0;
       lp.is_scaled_ = true;
     }
-    bool scaled_costs = false;
-    if (kSimplexScaleDev &&
-	use_scale_strategy == kSimplexScaleStrategyMaxValue0157) {
-      // Consider cost scaling
-      simplexScaleCost(options, lp);
-      scaled_costs = scale.cost != 1.0;
-      lp.is_scaled_ = true;
-    }
-    // If neither costs nor matrix are scaled, then clear the scaling
-    if (!scaled_costs && !scaled_matrix) lp.clearScaling();
   }
+  bool scaled_costs = false;
+  if (kSimplexScaleDev &&
+      use_scale_strategy == kSimplexScaleStrategyMaxValueMatrixAndCost) {
+    // Consider cost scaling
+    simplexScaleCost(options, lp);
+    scaled_costs = scale.cost != 1.0;
+    scale.has_scaling = true;
+    lp.is_scaled_ = true;
+  }
+  // If neither costs nor matrix are scaled, then clear the scaling
+  if (!scaled_costs && !scaled_matrix) lp.clearScaling();
   // Record the scaling strategy used
   lp.scale_.strategy = use_scale_strategy;
 }
@@ -898,26 +900,7 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   vector<HighsInt>& Aindex = lp.a_matrix_.index_;
   vector<double>& Avalue = lp.a_matrix_.value_;
 
-  assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue);
-  assert(kSimplexScaleStrategyMaxValue015 == kSimplexScaleStrategyMaxValue);
-  assert(kSimplexScaleStrategyMaxValue0157 == kSimplexScaleStrategyMaxValue);
-
-  // The 015(7) values refer to bit settings in FICO's scaling options.
-  // Specifically
-  //
-  // 0: Row scaling
-  //
-  // 1: Column scaling
-  //
-  // 5: Scale by maximum element
-  //
-  // 7: Scale objective function for the simplex method
-  //
-  // Note that 7 is not yet implemented, so
-  // kSimplexScaleStrategyMaxValue015 and
-  // kSimplexScaleStrategyMaxValue0157 are equivalent. However, cost
-  // scaling could be well worth adding, now that the unscaled problem
-  // can be solved using scaled NLA
+  assert(options.simplex_scale_strategy >= kSimplexScaleStrategyMaxValue);
 
   const double log2 = log(2.0);
   const double max_allow_scale = pow(2.0, options.allowed_matrix_scale_factor);
@@ -1093,40 +1076,38 @@ void simplexScaleCost(const HighsOptions& options, HighsLp& lp) {
   // Scale the costs by no less than minAlwCostScale
   double max_allowed_cost_scale = pow(2.0, options.allowed_cost_scale_factor);
   double max_nonzero_cost = 0;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (lp.col_cost_[iCol]) {
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    if (lp.col_cost_[iCol]) 
       max_nonzero_cost = max(fabs(lp.col_cost_[iCol]), max_nonzero_cost);
-    }
-  }
-  // Scaling the costs up effectively increases the dual tolerance to
-  // which the problem is solved - so, if the max cost is small the
-  // scaling factor pushes it up by a power of 2 so it's close to 1
-  // Scaling the costs down effectively decreases the dual tolerance
-  // to which the problem is solved - so this can't be done too much
-  cost_scale = 1;
-  const double ln2 = log(2.0);
-  // Scale if the max cost is positive and outside the range [1/16, 16]
-  if ((max_nonzero_cost > 0) &&
-      ((max_nonzero_cost < (1.0 / 16)) || (max_nonzero_cost > 16))) {
+  // Scaling the costs up effectively means that the problem is solved
+  // to a smaller dual tolerance, which seems pointless. HiGHS will
+  // warn about excessively small costs, and users can set
+  // user_objective_scale to a positive value.
+  //
+  // Scaling the costs down effectively means that the problem is
+  // solved to a larger dual tolerance, which may require clean-up
+  // iterations when the scaling is removed after solving the scaled
+  // problem
+  cost_scale = 1.0;
+  // Scale if the max cost is greater than 16
+  if (max_nonzero_cost > 16) {
     cost_scale = max_nonzero_cost;
-    cost_scale = pow(2.0, floor(log(cost_scale) / ln2 + 0.5));
+    cost_scale = pow(2.0, floor(log(cost_scale) / log(2.0) + 0.5));
     cost_scale = min(cost_scale, max_allowed_cost_scale);
   }
-  if (cost_scale == 1) {
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "LP cost vector not scaled down: max cost is %g\n",
-                 max_nonzero_cost);
-    return;
+  if (cost_scale == 1.0) {
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+		"LP cost vector not scaled down: max cost is %g\n",
+		max_nonzero_cost);
+  } else {
+    // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at
+    // most max_allowed_cost_scale
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      lp.col_cost_[iCol] /= cost_scale;
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+		"LP cost vector scaled down by %g: max scaled cost is %g\n", cost_scale,
+		max_nonzero_cost/cost_scale);
   }
-  // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at
-  // most max_allowed_cost_scale
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    lp.col_cost_[iCol] /= cost_scale;
-  }
-  max_nonzero_cost /= cost_scale;
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "LP cost vector scaled down by %g: max cost is %g\n", cost_scale,
-               max_nonzero_cost);
 }
 
 void simplexUnscaleCost(HighsLp& lp) {

@@ -281,10 +281,12 @@ void HighsLp::unapplyScale() {
   assert(scale.has_scaling);
   // Unapply the scaling to the bounds, costs and matrix, and record
   // that it has been unapplied
+  assert(scale.cost);
+  const double unscale_cost_mu = 1.0 / scale.cost;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     this->col_lower_[iCol] *= scale.col[iCol];
     this->col_upper_[iCol] *= scale.col[iCol];
-    this->col_cost_[iCol] /= scale.col[iCol];
+    this->col_cost_[iCol] /= (unscale_cost_mu * scale.col[iCol]);
   }
   for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
     this->row_lower_[iRow] /= scale.row[iRow];

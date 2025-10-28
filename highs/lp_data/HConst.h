@@ -17,7 +17,8 @@
 
 #include "util/HighsInt.h"
 
-const bool kSimplexScaleDev = false;
+const bool kSimplexScaleDev = true;
+const bool kSimplexScaleDevReport = kSimplexScaleDev && false;
 
 const std::string kHighsCopyrightStatement =
     "Copyright (c) 2025 HiGHS under MIT licence terms";
@@ -55,9 +56,8 @@ enum SimplexScaleStrategy {
   kSimplexScaleStrategyEquilibration,                   // 2
   kSimplexScaleStrategyForcedEquilibration,             // 3
   kSimplexScaleStrategyMaxValue,                        // 4
-  kSimplexScaleStrategyMaxValue015 = kSimplexScaleStrategyMaxValue,
-  kSimplexScaleStrategyMaxValue0157 = kSimplexScaleStrategyMaxValue,
-  kSimplexScaleStrategyMax = kSimplexScaleStrategyMaxValue
+  kSimplexScaleStrategyMaxValueMatrixAndCost,           // 5
+  kSimplexScaleStrategyMax = kSimplexScaleStrategyMaxValueMatrixAndCost
 };
 
 enum HighsDebugLevel {

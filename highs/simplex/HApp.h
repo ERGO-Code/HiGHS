@@ -155,7 +155,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // considering computing scaling factors if there are none - and
   // then move to EKK
   considerSimplexScaling(options, incumbent_lp);
-  if (kSimplexScaleDev)
+  if (kSimplexScaleDevReport)
     incumbent_lp.scale_.print("grepSimplexScaling",
                               "After scaling, " + incumbent_lp.model_name_ +
 			      "," + incumbent_lp.origin_name_);

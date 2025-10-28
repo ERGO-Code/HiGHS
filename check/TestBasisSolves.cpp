@@ -617,19 +617,47 @@ TEST_CASE("Kappa", "[highs_basis_solves]") {
 }
 
 TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
-  std::string model;
-  // model = "chip";
-  //  model = "avgas";
-  model = "adlittle";
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-
   Highs highs;
   //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyMaxValue);
+  highs.setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
+  const bool model_test = false;
+  if (model_test) {
+    std::string model;
+    // model = "chip";
+    //  model = "avgas";
+    model = "adlittle";
+    std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+    // Read the LP given by filename
+    highs.readModel(filename);
+    highs.run();
 
-  // Read the LP given by filename
-  highs.readModel(filename);
-
-  highs.setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyMaxValue0157);
+  /*
+  highs.clearSolver();
+  highs.setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyMaxValueMatrixAndCost);
   highs.run();
+  */
+  }
+  const bool lp_test = false;
+  if (lp_test) {
+    const double cost = 1e6;
+    HighsLp lp;
+    lp.num_col_ = 2;
+    lp.num_row_ = 2;
+    lp.offset_ = 1e-4;
+    lp.col_cost_ = {-4.1 * cost, -7.3 * cost};
+    lp.col_lower_ = {0, 0};
+    lp.col_upper_ = {10, 10};
+    lp.row_lower_ = {-kHighsInf, -2};
+    lp.row_upper_ = {6, kHighsInf};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {0.95, 0.98, 0.97, -1.01};
+    highs.passModel(lp);
+    highs.setOptionValue("presolve", kHighsOffString);
+    highs.setOptionValue("simplex_scale_strategy",
+			 kSimplexScaleStrategyMaxValueMatrixAndCost);
+    highs.run();
+  }
 }

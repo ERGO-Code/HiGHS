@@ -3613,10 +3613,11 @@ void HEkk::testBasisCondition(const HighsLp& lp,
   exact = false;
   double approx_kappa = this->computeBasisCondition(lp, exact);
   approx_kappa_tt += timer_->read();
-  highsLogUser(options_->log_options, HighsLogType::kInfo,
-               "getKappa,%s,%g,%g,%g,%g,%s,%s\n", lp.model_name_.c_str(),
-               exact_kappa, exact_kappa_tt, approx_kappa, approx_kappa_tt,
-               message.c_str(), lp.origin_name_.c_str());
+  if (kSimplexScaleDevReport) 
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+		 "getKappa,%s,%g,%g,%g,%g,%s,%s\n", lp.model_name_.c_str(),
+		 exact_kappa, exact_kappa_tt, approx_kappa, approx_kappa_tt,
+		 message.c_str(), lp.origin_name_.c_str());
 }
 
 double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact) const {
