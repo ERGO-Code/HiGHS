@@ -4675,12 +4675,13 @@ HPresolve::Result HPresolve::singletonColStuffing(
   };
 
   auto sortCols =
-      [&](std::vector<std::tuple<HighsInt, double, HighsInt, double>>& vec) {
+      [&](std::vector<std::tuple<HighsInt, double, HighsInt>>& vec) {
         pdqsort(
             vec.begin(), vec.end(),
-            [&](const std::tuple<HighsInt, double, HighsInt, double>& col1,
-                const std::tuple<HighsInt, double, HighsInt, double>& col2) {
-              return std::get<2>(col1) < std::get<2>(col2);
+            [&](const std::tuple<HighsInt, double, HighsInt>& col1,
+                const std::tuple<HighsInt, double, HighsInt>& col2) {
+              return model->col_cost_[std::get<0>(col1)] / std::get<1>(col1) <
+                     model->col_cost_[std::get<0>(col2)] / std::get<1>(col2);
             });
       };
 
@@ -4698,7 +4699,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
     if (direction * rhs == kHighsInf) return Result::kOk;
 
     // vectors for candidates and activity bounds
-    std::vector<std::tuple<HighsInt, double, HighsInt, double>> candidates;
+    std::vector<std::tuple<HighsInt, double, HighsInt>> candidates;
     HighsCDouble sumLower = 0.0;
     HighsCDouble sumUpper = 0.0;
 
@@ -4707,62 +4708,35 @@ HPresolve::Result HPresolve::singletonColStuffing(
       HighsInt j = nz.index();
       double aj = direction * nz.value();
       double cj = model->col_cost_[j];
-      bool lbFinite = model->col_lower_[j] != -kHighsInf;
-      bool ubFinite = model->col_upper_[j] != kHighsInf;
       HighsCDouble lb = static_cast<HighsCDouble>(model->col_lower_[j]);
       HighsCDouble ub = static_cast<HighsCDouble>(model->col_upper_[j]);
 
       // consider only non-fixed singleton continuous columns
+      HighsCDouble lowerSumBound = lb;
+      HighsCDouble upperSumBound = ub;
       if (isContSingleton(j)) {
         // check singleton
-        if (aj > 0 && cj < 0) {
-          // use lower bound
-          if (!lbFinite || !ubFinite) return Result::kOk;
-          sumLower += aj * lb;
-          sumUpper += aj * lb;
-          candidates.push_back(std::make_tuple(j, aj, HighsInt{1}, cj / aj));
-        } else if (aj < 0 && cj > 0) {
-          // use upper bound
-          if (!lbFinite || !ubFinite) return Result::kOk;
-          sumLower += aj * ub;
-          sumUpper += aj * ub;
-          // complement variable, i.e. multiply with -1
-          candidates.push_back(std::make_tuple(j, aj, HighsInt{-1}, cj / aj));
-        } else if (aj >= 0 && cj >= 0) {
-          // variable could be handled by dual fixing; use lower bound
-          if (!lbFinite) return Result::kOk;
-          sumLower += aj * lb;
-          sumUpper += aj * lb;
-        } else {
-          assert(aj <= 0 && cj <= 0);
-          // variable could be handled by dual fixing; use upper bound
-          if (!ubFinite) return Result::kOk;
-          sumLower += aj * ub;
-          sumUpper += aj * ub;
-        }
-      } else {
-        // not a continuous singleton
         if (aj > 0) {
-          if (!lbFinite)
-            sumLower = -kHighsInf;
-          else
-            sumLower += aj * lb;
-          if (!ubFinite)
-            sumUpper = kHighsInf;
-          else
-            sumUpper += aj * ub;
+          // use lower bound
+          upperSumBound = lb;
+          // candidate for stuffing?
+          if (cj < 0) candidates.push_back(std::make_tuple(j, aj, HighsInt{1}));
         } else {
-          if (!ubFinite)
-            sumLower = -kHighsInf;
-          else
-            sumLower += aj * ub;
-          if (!lbFinite)
-            sumUpper = kHighsInf;
-          else
-            sumUpper += aj * lb;
+          // use upper bound
+          lowerSumBound = ub;
+          // candidate for stuffing? multiply column with -1
+          if (cj > 0)
+            candidates.push_back(std::make_tuple(j, aj, HighsInt{-1}));
         }
-        if (sumLower == -kHighsInf && sumUpper == kHighsInf) return Result::kOk;
-      }
+      } else if (aj < 0)
+        std::swap(lowerSumBound, upperSumBound);
+      // update activities
+      sumLower = abs(lowerSumBound) != kHighsInf ? sumLower + aj * lowerSumBound
+                                                 : -kHighsInf;
+      sumUpper = abs(upperSumBound) != kHighsInf ? sumUpper + aj * upperSumBound
+                                                 : kHighsInf;
+      // return if both bounds are not finite
+      if (sumLower == -kHighsInf && sumUpper == kHighsInf) return Result::kOk;
     }
 
     // sort candidates
@@ -4774,7 +4748,11 @@ HPresolve::Result HPresolve::singletonColStuffing(
       HighsInt j = std::get<0>(t);
       double aj = std::get<1>(t);
       HighsInt multiplier = std::get<2>(t);
-      // compute delta
+      // both bounds have to be finite
+      if (model->col_lower_[j] == -kHighsInf ||
+          model->col_upper_[j] == kHighsInf)
+        break;
+      // compute delta (bound difference)
       HighsCDouble delta = multiplier * aj *
                            (static_cast<HighsCDouble>(model->col_upper_[j]) -
                             static_cast<HighsCDouble>(model->col_lower_[j]));
