@@ -442,19 +442,19 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
   // Compute Ax using only the original columns (not slack variables)
   for (int col = 0; col < original_num_col_; ++col) {
-      double x_val = x_current_[col];  // Use unscaled x values
-      
-      for (int el = orig_matrix.start_[col]; 
-          el < orig_matrix.start_[col + 1]; ++el) {
-          int row = orig_matrix.index_[el];
-          double a_val = orig_matrix.value_[el];
-          ax_original[row] += a_val * x_val;
-      }
+    double x_val = x_current_[col];  // Use unscaled x values
+
+    for (int el = orig_matrix.start_[col]; el < orig_matrix.start_[col + 1];
+         ++el) {
+      int row = orig_matrix.index_[el];
+      double a_val = orig_matrix.value_[el];
+      ax_original[row] += a_val * x_val;
+    }
   }
 
   // Now ax_original contains the correct row activity values
   for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
-      solution.row_value[orig_row] = ax_original[orig_row];
+    solution.row_value[orig_row] = ax_original[orig_row];
   }
 
   // 6. Recover Dual Column Values (Reduced Costs)
@@ -566,16 +566,14 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
       hipdlpTimerStart(kHipdlpClockConvergenceCheck);
       // Compute residuals for current iterate
-      bool current_converged =
-          checkConvergence(iter, x_current_, y_current_, Ax_cache_, ATy_cache_,
-                           params_.tolerance, current_results, "[L]",
-                           dSlackPos_, dSlackNeg_);
+      bool current_converged = checkConvergence(
+          iter, x_current_, y_current_, Ax_cache_, ATy_cache_,
+          params_.tolerance, current_results, "[L]", dSlackPos_, dSlackNeg_);
 
       // Compute residuals for average iterate
-      bool average_converged =
-          checkConvergence(iter, x_avg_, y_avg_, Ax_avg, ATy_avg,
-                           params_.tolerance, average_results, "[A]",
-                           dSlackPosAvg_, dSlackNegAvg_);
+      bool average_converged = checkConvergence(
+          iter, x_avg_, y_avg_, Ax_avg, ATy_avg, params_.tolerance,
+          average_results, "[A]", dSlackPosAvg_, dSlackNegAvg_);
       hipdlpTimerStop(kHipdlpClockConvergenceCheck);
 
       debugPdlpIterHeaderLog(debug_pdlp_log_file_);
@@ -907,14 +905,14 @@ void PDLPSolver::computeDualSlacks(const std::vector<double>& dualResidual,
   }
 }
 
-double PDLPSolver::computeDualFeasibility(
-    const std::vector<double>& ATy_vector, std::vector<double>& dSlackPos,
-    std::vector<double>& dSlackNeg) {
+double PDLPSolver::computeDualFeasibility(const std::vector<double>& ATy_vector,
+                                          std::vector<double>& dSlackPos,
+                                          std::vector<double>& dSlackNeg) {
   std::vector<double> dualResidual(lp_.num_col_, 0.0);
   // dualResidual = c-A'y
   dualResidual = linalg::vector_subtrac(lp_.col_cost_, ATy_vector);
   double dualResidualNorm = linalg::vector_norm(dualResidual);
-  
+
   // Call the refactored function to populate dSlackPos and dSlackNeg
   computeDualSlacks(dualResidual, dSlackPos, dSlackNeg);
 
@@ -985,9 +983,9 @@ PDLPSolver::computeDualityGap(const std::vector<double>& x,
                          cTx);
 }
 
-double PDLPSolver::computeDualObjective(
-    const std::vector<double>& y, const std::vector<double>& dSlackPos,
-    const std::vector<double>& dSlackNeg) {
+double PDLPSolver::computeDualObjective(const std::vector<double>& y,
+                                        const std::vector<double>& dSlackPos,
+                                        const std::vector<double>& dSlackNeg) {
   double dual_obj = lp_.offset_;
 
   // Compute b'y (or rhs'y in cuPDLP notation)
@@ -1012,15 +1010,12 @@ double PDLPSolver::computeDualObjective(
   return dual_obj;
 }
 
-bool PDLPSolver::checkConvergence(const int iter, const std::vector<double>& x,
-                                  const std::vector<double>& y,
-                                  const std::vector<double>& ax_vector,
-                                  const std::vector<double>& aty_vector,
-                                  double epsilon, SolverResults& results,
-                                  const char* type,
-                                  // Add slack vectors as non-const references
-                                  std::vector<double>& dSlackPos,
-                                  std::vector<double>& dSlackNeg) {
+bool PDLPSolver::checkConvergence(
+    const int iter, const std::vector<double>& x, const std::vector<double>& y,
+    const std::vector<double>& ax_vector, const std::vector<double>& aty_vector,
+    double epsilon, SolverResults& results, const char* type,
+    // Add slack vectors as non-const references
+    std::vector<double>& dSlackPos, std::vector<double>& dSlackNeg) {
   // computeDualSlacks is now called inside computeDualFeasibility
 
   // Compute primal feasibility

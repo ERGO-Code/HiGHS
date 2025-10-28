@@ -214,7 +214,7 @@ std::vector<double> compute_row_norms(const HighsLp& lp, double p) {
 }
 
 std::vector<double> vector_subtrac(const std::vector<double>& a,
-                                  const std::vector<double>& b) {
+                                   const std::vector<double>& b) {
   if (a.size() != b.size()) {
     throw std::invalid_argument(
         "Vectors must be of the same size for subtraction.");

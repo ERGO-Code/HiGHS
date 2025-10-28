@@ -61,14 +61,13 @@ class PDLPSolver {
   void initialize();
   void printConstraintInfo();
   bool checkConvergence(const int iter, const std::vector<double>& x,
-                                  const std::vector<double>& y,
-                                  const std::vector<double>& ax_vector,
-                                  const std::vector<double>& aty_vector,
-                                  double epsilon, SolverResults& results,
-                                  const char* type,
-                                  // Add slack vectors as non-const references
-                                  std::vector<double>& dSlackPos,
-                                  std::vector<double>& dSlackNeg);
+                        const std::vector<double>& y,
+                        const std::vector<double>& ax_vector,
+                        const std::vector<double>& aty_vector, double epsilon,
+                        SolverResults& results, const char* type,
+                        // Add slack vectors as non-const references
+                        std::vector<double>& dSlackPos,
+                        std::vector<double>& dSlackNeg);
   void updateAverageIterates(const std::vector<double>& x,
                              const std::vector<double>& y,
                              const PrimalDualParams& params, int inner_iter);
@@ -100,14 +99,16 @@ class PDLPSolver {
   // --- Feasibility, Duality, and KKT Checks ---
   std::vector<double> computeLambda(const std::vector<double>& y,
                                     const std::vector<double>& ATy_vector);
-  double computeDualObjective(const std::vector<double>& y, const std::vector<double>& dSlackPos,
-    const std::vector<double>& dSlackNeg);
+  double computeDualObjective(const std::vector<double>& y,
+                              const std::vector<double>& dSlackPos,
+                              const std::vector<double>& dSlackNeg);
   double computePrimalFeasibility(const std::vector<double>& Ax_vector);
   void computeDualSlacks(const std::vector<double>& dualResidual,
-                                   std::vector<double>& dSlackPos,
-                                   std::vector<double>& dSlackNeg);
-  double computeDualFeasibility(const std::vector<double>& ATy_vector, std::vector<double>& dSlackPos,
-    std::vector<double>& dSlackNeg);
+                         std::vector<double>& dSlackPos,
+                         std::vector<double>& dSlackNeg);
+  double computeDualFeasibility(const std::vector<double>& ATy_vector,
+                                std::vector<double>& dSlackPos,
+                                std::vector<double>& dSlackNeg);
   std::tuple<double, double, double, double, double> computeDualityGap(
       const std::vector<double>& x, const std::vector<double>& y,
       const std::vector<double>& lambda);

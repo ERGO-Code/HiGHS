@@ -6,6 +6,12 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
+#ifdef CUPDLP_GPU
+#include <cublas_v2.h>
+#include <cuda_runtime.h>
+#include <cusparse.h>
+#endif
+
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-3;
 const double kkt_tolerance = 1e-4;
@@ -419,5 +425,46 @@ TEST_CASE("hi-pdlp-timer", "[pdlp]") {
       kPdlpAdaptiveStepSizeOff;
   h.setOptionValue("pdlp_features_off", pdlp_features_off);
   HighsStatus run_status = h.run();
+
   h.resetGlobalScheduler(true);
 }
+
+#ifdef CUPDLP_GPU
+TEST_CASE("cuda-sandbox", "[pdlp]") {
+  printf("Hello World - cuda-sandbox\n");
+  cusparseHandle_t cusparsehandle;
+  cusparseCreate(&cusparsehandle);
+  int v_cuda_runtime = 0;
+  int v_cuda_driver = 0;
+  int v_cusparse = 0;
+  int n_devices = 0;
+  cudaGetDeviceCount(&n_devices);
+  assert(n_devices == 1);
+  cudaDeviceProp prop;
+  cudaGetDeviceProperties(&prop, 0);
+  printf("Cuda device %d: %s\n", 0, prop.name);
+  printf("  Clock rate (KHz): %d\n", prop.clockRate);
+  printf("  Memory clock rate (KHz): %d\n", prop.memoryClockRate);
+  printf("  Memory bus width (bits): %d\n", prop.memoryBusWidth);
+  printf("  Peak memory bandwidth (GB/s): %f\n",
+         2.0 * prop.memoryClockRate * (prop.memoryBusWidth / 8) / 1.0e6);
+  printf("  Global memory available on device (GB): %f\n",
+         prop.totalGlobalMem / 1.0e9);
+  printf("  Shared memory available per block (B): %zu\n",
+         prop.sharedMemPerBlock);
+  printf("  Warp size in threads: %d\n", prop.warpSize);
+  printf("  Maximum number of threads per block: %d\n",
+         prop.maxThreadsPerBlock);
+  printf("  Compute capability: %d.%d\n", prop.major, prop.minor);
+  printf("  Number of multiprocessors on device: %d\n",
+         prop.multiProcessorCount);
+
+  cudaRuntimeGetVersion(&v_cuda_runtime);
+  cudaDriverGetVersion(&v_cuda_driver);
+
+  cusparseGetVersion(cusparsehandle, &v_cusparse);
+  printf("Cuda runtime version %d\n", v_cuda_runtime);
+  printf("Cuda driver  version %d\n", v_cuda_driver);
+  printf("cuSparse     version %d\n", v_cusparse);
+}
+#endif
