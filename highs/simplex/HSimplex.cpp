@@ -1056,18 +1056,31 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
 
 void simplexUnscaleSolution(HighsSolution& solution, const HighsScale& scale) {
   assert(scale.has_scaling);
-  assert(solution.col_value.size() == static_cast<size_t>(scale.num_col));
-  assert(solution.col_dual.size() == static_cast<size_t>(scale.num_col));
-  assert(solution.row_value.size() == static_cast<size_t>(scale.num_row));
-  assert(solution.row_dual.size() == static_cast<size_t>(scale.num_row));
-
-  for (HighsInt iCol = 0; iCol < scale.num_col; iCol++) {
-    solution.col_value[iCol] *= scale.col[iCol];
-    solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
-  }
-  for (HighsInt iRow = 0; iRow < scale.num_row; iRow++) {
-    solution.row_value[iRow] /= scale.row[iRow];
-    solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
+  const bool has_cost_scaling = scale.cost > 1.0;
+  const bool has_matrix_scaling = scale.col.size() && scale.row.size();
+  assert(has_cost_scaling || has_matrix_scaling);
+  HighsInt num_col = solution.col_value.size();
+  HighsInt num_row = solution.row_value.size();
+  if (has_matrix_scaling) {
+    assert(scale.num_col == num_col);
+    assert(scale.num_row == num_row);
+    assert(solution.col_value.size() == scale.col.size());
+    assert(solution.row_value.size() == scale.row.size());
+    assert(solution.col_dual.size() == scale.col.size());
+    assert(solution.row_dual.size() == scale.row.size());
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      solution.col_value[iCol] *= scale.col[iCol];
+      solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
+    }
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      solution.row_value[iRow] /= scale.row[iRow];
+      solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
+    }
+  } else {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) 
+      solution.col_dual[iCol] *= scale.cost;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) 
+      solution.row_dual[iRow] *= scale.cost;
   }
 }
 
@@ -1095,6 +1108,7 @@ void simplexScaleCost(const HighsOptions& options, HighsLp& lp) {
     cost_scale = pow(2.0, floor(log(cost_scale) / log(2.0) + 0.5));
     cost_scale = min(cost_scale, max_allowed_cost_scale);
   }
+  assert(cost_scale >= 1.0);
   if (cost_scale == 1.0) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
 		"LP cost vector not scaled down: max cost is %g\n",
