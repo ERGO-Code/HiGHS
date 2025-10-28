@@ -59,7 +59,7 @@ class Analyse {
   std::vector<Int> sn_parent_{};
 
   // temporary storage for relaxing supernodes
-  std::vector<Int> fake_nz_{};
+  std::vector<int64_t> fake_nz_{};
   std::vector<Int> merged_into_{};
   Int merged_sn_{};
 
