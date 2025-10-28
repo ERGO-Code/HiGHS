@@ -1181,9 +1181,6 @@ try_again:
     tmpSolver.passModel(std::move(fixedModel));
     // Until a good decision can be made on whether to use simplex,
     // HiPO or IPX to solve an LP without a basis, use simplex
-    printf(
-        "HighsMipSolverData::transformNewIntegerFeasibleSolution "
-        "tmpSolver.run();\n");
     tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.run();
     if (!mipsolver.submip) {

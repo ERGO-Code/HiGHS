@@ -25,8 +25,8 @@ void FactorHiGHSSolver::clear() {
   FH_.newIter();
 }
 
-Int getASstructure(const HighsSparseMatrix& A, std::vector<Int>& ptr,
-                   std::vector<Int>& rows) {
+static Int getASstructure(const HighsSparseMatrix& A, std::vector<Int>& ptr,
+                          std::vector<Int>& rows) {
   // Augmented system structure
 
   Int nA = A.num_col_;
