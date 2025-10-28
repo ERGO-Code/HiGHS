@@ -480,21 +480,20 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       double abs_cost = std::fabs(lp.col_cost_[iCol]);
       if (abs_cost > 0) {
-	min_cost = std::min(abs_cost, min_cost);
-	max_cost = std::max(abs_cost, max_cost);
+        min_cost = std::min(abs_cost, min_cost);
+        max_cost = std::max(abs_cost, max_cost);
       }
     }
     if (kSimplexScaleDevReport) {
-      printf("grepSimplexRangeTxt HighsScale: costs in [%g, %g]; matrix in [%g, %g]; %s: %s\n",
-	     min_cost, max_cost,
-	     original_matrix_min_value, original_matrix_max_value,
-	     lp.model_name_.c_str(),
-	     lp.origin_name_.c_str());
-      printf("grepSimplexRangeCsv,%g,%g,%g,%g,%s,%s\n",
-	     min_cost, max_cost,
-	     original_matrix_min_value, original_matrix_max_value,
-	     lp.model_name_.c_str(),
-	     lp.origin_name_.c_str());
+      printf(
+          "grepSimplexRangeTxt HighsScale: costs in [%g, %g]; matrix in [%g, "
+          "%g]; %s: %s\n",
+          min_cost, max_cost, original_matrix_min_value,
+          original_matrix_max_value, lp.model_name_.c_str(),
+          lp.origin_name_.c_str());
+      printf("grepSimplexRangeCsv,%g,%g,%g,%g,%s,%s\n", min_cost, max_cost,
+             original_matrix_min_value, original_matrix_max_value,
+             lp.model_name_.c_str(), lp.origin_name_.c_str());
     }
   }
   // Possibly force scaling, otherwise base the decision on the range
@@ -511,11 +510,11 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
   if (no_scaling) {
     // No matrix scaling
     highsLogDev(options.log_options, HighsLogType::kInfo,
-		"Scaling: Matrix has [min, max] values of [%g, %g] within "
-		"[%g, %g] so no scaling performed\n",
-		original_matrix_min_value, original_matrix_max_value,
-		no_scaling_original_matrix_min_value,
-		no_scaling_original_matrix_max_value);
+                "Scaling: Matrix has [min, max] values of [%g, %g] within "
+                "[%g, %g] so no scaling performed\n",
+                original_matrix_min_value, original_matrix_max_value,
+                no_scaling_original_matrix_min_value,
+                no_scaling_original_matrix_max_value);
   } else {
     // Try scaling, so assign unit factors - partly because initial
     // factors may be assumed by the scaling method, but also because
@@ -1078,9 +1077,9 @@ void simplexUnscaleSolution(HighsSolution& solution, const HighsScale& scale) {
       solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
     }
   } else {
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) 
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
       solution.col_dual[iCol] *= scale.cost;
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) 
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
       solution.row_dual[iRow] *= scale.cost;
   }
 }
@@ -1091,7 +1090,7 @@ void simplexScaleCost(const HighsOptions& options, HighsLp& lp) {
   double max_allowed_cost_scale = pow(2.0, options.allowed_cost_scale_factor);
   double max_nonzero_cost = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    if (lp.col_cost_[iCol]) 
+    if (lp.col_cost_[iCol])
       max_nonzero_cost = max(fabs(lp.col_cost_[iCol]), max_nonzero_cost);
   // Scaling the costs up effectively means that the problem is solved
   // to a smaller dual tolerance, which seems pointless. HiGHS will
@@ -1112,16 +1111,16 @@ void simplexScaleCost(const HighsOptions& options, HighsLp& lp) {
   assert(cost_scale >= 1.0);
   if (cost_scale == 1.0) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
-		"LP cost vector not scaled down: max cost is %g\n",
-		max_nonzero_cost);
+                "LP cost vector not scaled down: max cost is %g\n",
+                max_nonzero_cost);
   } else {
     // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at
     // most max_allowed_cost_scale
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       lp.col_cost_[iCol] /= cost_scale;
     highsLogDev(options.log_options, HighsLogType::kInfo,
-		"LP cost vector scaled down by %g: max scaled cost is %g\n", cost_scale,
-		max_nonzero_cost/cost_scale);
+                "LP cost vector scaled down by %g: max scaled cost is %g\n",
+                cost_scale, max_nonzero_cost / cost_scale);
   }
 }
 

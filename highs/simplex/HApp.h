@@ -74,7 +74,8 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Set the simplex NLA scaling
   ekk_instance.setNlaPointersForLpAndScale(incumbent_lp);
   assert(ekk_instance.debugNlaScalingOk(incumbent_lp));
-  if (kSimplexScaleDev) ekk_instance.testBasisCondition(incumbent_lp, "Unscaled LP");
+  if (kSimplexScaleDev)
+    ekk_instance.testBasisCondition(incumbent_lp, "Unscaled LP");
   HighsInt alt_debug_level = -1;
   // Forced expensive debug for development work
   //  alt_debug_level = kHighsDebugLevelExpensive;
@@ -158,7 +159,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   if (kSimplexScaleDevReport)
     incumbent_lp.scale_.print("grepSimplexScaling",
                               "After scaling, " + incumbent_lp.model_name_ +
-			      "," + incumbent_lp.origin_name_);
+                                  "," + incumbent_lp.origin_name_);
   const bool was_scaled = incumbent_lp.is_scaled_;
   if (!status.has_basis && !basis.valid && basis.useful) {
     // There is no simplex basis, but there is a useful HiGHS basis
@@ -255,7 +256,8 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
         return returnFromSolveLpSimplex(solver_object, return_status);
       }
-      if (kSimplexScaleDev) ekk_instance.testBasisCondition(ekk_lp, "Scaled LP");
+      if (kSimplexScaleDev)
+        ekk_instance.testBasisCondition(ekk_lp, "Scaled LP");
       // Copy solution data from the EKK instance
       scaled_model_status = ekk_instance.model_status_;
       highs_info.objective_function_value = ekk_info.primal_objective_value;

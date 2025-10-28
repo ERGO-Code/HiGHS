@@ -107,7 +107,6 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   if (dev_run) printf("Give valid a_matrix_.index_[1]\n");
   lp.a_matrix_.index_[1] = 1;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-
 }
 
 TEST_CASE("LP-validation", "[highs_data]") {

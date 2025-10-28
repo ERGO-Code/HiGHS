@@ -1341,9 +1341,9 @@ void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
       double factor;
       const HighsInt iVar = this->basis_.basicIndex_[iRow];
       if (iVar < num_col) {
-	factor = col_scale[iVar];
+        factor = col_scale[iVar];
       } else {
-	factor = 1.0 / row_scale[iVar - num_col];
+        factor = 1.0 / row_scale[iVar - num_col];
       }
       this->info_.baseLower_[iRow] *= factor;
       this->info_.baseUpper_[iRow] *= factor;
@@ -3614,7 +3614,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
 }
 
 void HEkk::testBasisCondition(const HighsLp& lp,
-			      const std::string& message) const {
+                              const std::string& message) const {
   double exact_kappa_tt = -timer_->read();
   bool exact = true;
   double exact_kappa = this->computeBasisCondition(lp, exact);
@@ -3623,11 +3623,11 @@ void HEkk::testBasisCondition(const HighsLp& lp,
   exact = false;
   double approx_kappa = this->computeBasisCondition(lp, exact);
   approx_kappa_tt += timer_->read();
-  if (kSimplexScaleDevReport) 
+  if (kSimplexScaleDevReport)
     highsLogUser(options_->log_options, HighsLogType::kInfo,
-		 "getKappa,%s,%g,%g,%g,%g,%s,%s\n", lp.model_name_.c_str(),
-		 exact_kappa, exact_kappa_tt, approx_kappa, approx_kappa_tt,
-		 message.c_str(), lp.origin_name_.c_str());
+                 "getKappa,%s,%g,%g,%g,%g,%s,%s\n", lp.model_name_.c_str(),
+                 exact_kappa, exact_kappa_tt, approx_kappa, approx_kappa_tt,
+                 message.c_str(), lp.origin_name_.c_str());
 }
 
 double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact) const {

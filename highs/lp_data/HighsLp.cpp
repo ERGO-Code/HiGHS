@@ -297,7 +297,7 @@ void HighsLp::unapplyScale() {
     }
     this->a_matrix_.unapplyScale(scale);
   } else {
-    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) 
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
       this->col_cost_[iCol] *= scale.cost;
   }
   this->is_scaled_ = false;

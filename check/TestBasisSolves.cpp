@@ -621,25 +621,25 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
   //  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyMaxValue);
   highs.setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
-  const bool model_test = false;
+  const bool model_test = true;
   if (model_test) {
     std::string model;
     // model = "chip";
     //  model = "avgas";
-    model = "adlittle";
+    // model = "adlittle";
+    model = "25fv47";
     std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+        std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
     // Read the LP given by filename
     highs.readModel(filename);
     highs.run();
 
-  /*
-  highs.clearSolver();
-  highs.setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyMaxValueMatrixAndCost);
-  highs.run();
-  */
+    highs.clearSolver();
+    highs.setOptionValue("simplex_scale_strategy",
+                         kSimplexScaleStrategyMaxValueMatrixAndCost);
+    highs.run();
   }
-  const bool lp_test = true;
+  const bool lp_test = false;
   if (lp_test) {
     const double cost = 1e6;
     HighsLp lp;
@@ -657,7 +657,7 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
     highs.passModel(lp);
     highs.setOptionValue("presolve", kHighsOffString);
     highs.setOptionValue("simplex_scale_strategy",
-			 kSimplexScaleStrategyMaxValueMatrixAndCost);
+                         kSimplexScaleStrategyMaxValueMatrixAndCost);
     highs.run();
     highs.writeSolution("", 1);
   }
