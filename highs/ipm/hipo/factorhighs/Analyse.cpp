@@ -438,20 +438,20 @@ void Analyse::relaxSupernodes() {
         Int child = first_child[sn];
 
         // info for first criterion
-        Int nz_fakenz = kHighsIInf;
+        int64_t nz_fakenz = kHighsIInf;
         Int size_fakenz = 0;
         Int child_fakenz = -1;
 
         while (child != -1) {
           // how many zero rows would become nonzero
-          const Int rows_filled =
+          const int64_t rows_filled =
               sn_size[sn] + clique_size[sn] - clique_size[child];
 
           // how many zero entries would become nonzero
-          const Int nz_added = rows_filled * sn_size[child];
+          const int64_t nz_added = rows_filled * sn_size[child];
 
           // how many artificial nonzeros would the merged supernode have
-          const Int total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
+          const int64_t total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
 
           // Save child with smallest number of artificial zeros created.
           // Ties are broken based on size of child.
@@ -577,18 +577,18 @@ void Analyse::relaxSupernodesSize() {
       // info for first criterion
       Int size_smallest = kHighsIInf;
       Int child_smallest = -1;
-      Int nz_smallest = 0;
+      int64_t nz_smallest = 0;
 
       while (child != -1) {
         // how many zero rows would become nonzero
-        const Int rows_filled =
+        const int64_t rows_filled =
             sn_size[sn] + clique_size[sn] - clique_size[child];
 
         // how many zero entries would become nonzero
-        const Int nz_added = rows_filled * sn_size[child];
+        const int64_t nz_added = rows_filled * sn_size[child];
 
         // how many artificial nonzeros would the merged supernode have
-        const Int total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
+        const int64_t total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
 
         if (sn_size[child] < size_smallest) {
           size_smallest = sn_size[child];
@@ -699,7 +699,7 @@ void Analyse::afterRelaxSn() {
       }
 
       // keep track of total number of artificial nonzeros
-      artificial_nz_ += (int64_t)fake_nz_[sn];
+      artificial_nz_ += fake_nz_[sn];
 
       // Compute number of indices for new sn.
       // This is equal to the number of columns in the new sn plus the clique
