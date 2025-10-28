@@ -390,10 +390,12 @@ void Factorise::spawnNode(Int sn, const TaskGroupSpecial& tg) {
     // sn is head of the first subtree in a group of small subtrees; spawn all
     // of them
 
-    tg.spawn([this, it]() {
-      for (Int i = 0; i < it->second.group.size(); ++i) {
-        Int st_head = it->second.group[i];
-        Int start = it->second.firstdesc[i];
+    const NodeData* nd_ptr = &(it->second);
+
+    tg.spawn([this, nd_ptr]() {
+      for (Int i = 0; i < nd_ptr->group.size(); ++i) {
+        Int st_head = nd_ptr->group[i];
+        Int start = nd_ptr->firstdesc[i];
         Int end = st_head + 1;
         for (Int sn = start; sn < end; ++sn) {
           processSupernode(sn, false);
