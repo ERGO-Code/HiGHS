@@ -3603,19 +3603,20 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   return return_status;
 }
 
-void HEkk::testBasisCondition(const std::string& message) const {
+void HEkk::testBasisCondition(const HighsLp& lp,
+			      const std::string& message) const {
   double exact_kappa_tt = -timer_->read();
   bool exact = true;
-  double exact_kappa = this->computeBasisCondition(this->lp_, exact);
+  double exact_kappa = this->computeBasisCondition(lp, exact);
   exact_kappa_tt += timer_->read();
   double approx_kappa_tt = -timer_->read();
   exact = false;
-  double approx_kappa = this->computeBasisCondition(this->lp_, exact);
+  double approx_kappa = this->computeBasisCondition(lp, exact);
   approx_kappa_tt += timer_->read();
   highsLogUser(options_->log_options, HighsLogType::kInfo,
-               "getKappa,%s,%g,%g,%g,%g,%s,%s\n", this->lp_.model_name_.c_str(),
+               "getKappa,%s,%g,%g,%g,%g,%s,%s\n", lp.model_name_.c_str(),
                exact_kappa, exact_kappa_tt, approx_kappa, approx_kappa_tt,
-               message.c_str(), this->lp_.origin_name_.c_str());
+               message.c_str(), lp.origin_name_.c_str());
 }
 
 double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact) const {

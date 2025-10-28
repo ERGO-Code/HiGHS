@@ -474,6 +474,27 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
   double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
   lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
+  if (kSimplexScaleDev) {
+    double min_cost = kHighsInf;
+    double max_cost = -kHighsInf;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      double abs_cost = std::fabs(lp.col_cost_[iCol]);
+      if (abs_cost > 0) {
+	min_cost = std::min(abs_cost, min_cost);
+	max_cost = std::max(abs_cost, max_cost);
+      }
+    }
+    printf("grepSimplexRangeTxt HighsScale: costs in [%g, %g]; matrix in [%g, %g]; %s: %s\n",
+	   min_cost, max_cost,
+	   original_matrix_min_value, original_matrix_max_value,
+	   lp.model_name_.c_str(),
+	   lp.origin_name_.c_str());
+    printf("grepSimplexRangeCsv,%g,%g,%g,%g,%s,%s\n",
+	   min_cost, max_cost,
+	   original_matrix_min_value, original_matrix_max_value,
+	   lp.model_name_.c_str(),
+	   lp.origin_name_.c_str());
+  }
   // Possibly force scaling, otherwise base the decision on the range
   // of values in the matrix, values that will be used later for
   // reporting
@@ -527,19 +548,20 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
       scale.num_row = numRow;
       scale.cost = 1.0;
       lp.is_scaled_ = true;
-    } else {
-      // Matrix is not scaled, so clear the scaling
-      lp.clearScaling();
     }
+    bool scaled_costs = false;
+    if (kSimplexScaleDev &&
+	use_scale_strategy == kSimplexScaleStrategyMaxValue0157) {
+      // Consider cost scaling
+      simplexScaleCost(options, lp);
+      scaled_costs = scale.cost != 1.0;
+      lp.is_scaled_ = true;
+    }
+    // If neither costs nor matrix are scaled, then clear the scaling
+    if (!scaled_costs && !scaled_matrix) lp.clearScaling();
   }
   // Record the scaling strategy used
   lp.scale_.strategy = use_scale_strategy;
-  // Possibly scale the costs
-  //  if (allow_cost_scaling) simplexScaleCost(options, lp);
-
-  // If matrix is unscaled, then LP is only scaled if there is a cost scaling
-  // factor
-  //  if (!scaled_matrix) lp.is_scaled_ = scale.cost != 1;
 }
 
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,

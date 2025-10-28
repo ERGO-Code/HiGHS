@@ -128,7 +128,8 @@ class HEkk {
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
 
-  void testBasisCondition(const std::string& message = "") const;
+  void testBasisCondition(const HighsLp& lp,
+			  const std::string& message = "") const;
   double computeBasisCondition(const HighsLp& lp,
                                const bool exact = false) const;
 

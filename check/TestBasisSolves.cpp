@@ -620,7 +620,7 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
   std::string model;
   // model = "chip";
   //  model = "avgas";
-  model = "afiro";
+  model = "adlittle";
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
 
@@ -630,5 +630,6 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
   // Read the LP given by filename
   highs.readModel(filename);
 
+  highs.setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyMaxValue0157);
   highs.run();
 }
