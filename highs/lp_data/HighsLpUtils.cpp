@@ -219,10 +219,20 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   bool legal_scale_row_size = false;
   bool legal_scale_col_size = false;
   if (lp.scale_.has_scaling) {
-    legal_scale_num_col = lp.scale_.num_col == num_col;
-    legal_scale_num_row = lp.scale_.num_row == num_row;
-    legal_scale_row_size = scale_row_size >= num_row;
-    legal_scale_col_size = scale_col_size >= num_col;
+    if (scale_col_size) {
+      legal_scale_num_col = lp.scale_.num_col == num_col;
+      legal_scale_col_size = scale_col_size >= num_col;
+    } else {
+      legal_scale_num_col = lp.scale_.num_col == 0;
+      legal_scale_col_size = true; // Since scale_col_size = 0
+    }
+    if (scale_row_size) {
+      legal_scale_num_row = lp.scale_.num_row == num_row;
+      legal_scale_row_size = scale_row_size >= num_row;
+    } else {
+      legal_scale_num_row = lp.scale_.num_row == 0;
+      legal_scale_row_size = true; // Since scale_row_size = 0
+    }
   } else {
     legal_scale_num_col = lp.scale_.num_col == 0;
     legal_scale_num_row = lp.scale_.num_row == 0;

@@ -414,6 +414,9 @@ void HEkk::moveLp(HighsLpSolverObject& solver_object) {
   // The simplex algorithm runs in the same space as the LP that has
   // just been moved in. This is a scaled space if the LP is scaled.
   this->simplex_in_scaled_space_ = this->lp_.is_scaled_;
+  // Set the cost scale value so internal primal and dual objectives
+  // are computed using the unscaled costs
+  this->cost_scale_ = this->lp_.is_scaled_ ? this->lp_.scale_.cost : 1.0;
   //
   // Update other EKK pointers. Currently just pointers to the
   // HighsOptions and HighsTimer members of the Highs class that are
@@ -1297,16 +1300,21 @@ void HEkk::deleteRows(const HighsIndexCollection& index_collection) {
 
 void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
   if (!this->simplex_in_scaled_space_) return;
-  assert(incumbent_lp.scale_.has_scaling);
+  const HighsScale& scale = incumbent_lp.scale_;
+  assert(scale.has_scaling);
+  const bool has_cost_scaling = scale.cost > 1.0;
+  const bool has_matrix_scaling = scale.col.size() && scale.row.size();
+  assert(has_cost_scaling || has_matrix_scaling);
+  assert(scale.cost);
   const HighsInt num_col = incumbent_lp.num_col_;
   const HighsInt num_row = incumbent_lp.num_row_;
-  const vector<double>& col_scale = incumbent_lp.scale_.col;
-  const vector<double>& row_scale = incumbent_lp.scale_.row;
+  const vector<double>& col_scale = scale.col;
+  const vector<double>& row_scale = scale.row;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     const HighsInt iVar = iCol;
-    const double factor = col_scale[iCol];
-    this->info_.workCost_[iVar] /= factor;
-    this->info_.workDual_[iVar] /= factor;
+    const double factor = has_matrix_scaling ? col_scale[iCol] : 1.0;
+    this->info_.workCost_[iVar] /= (factor / scale.cost);
+    this->info_.workDual_[iVar] /= (factor / scale.cost);
     this->info_.workShift_[iVar] /= factor;
     this->info_.workLower_[iVar] *= factor;
     this->info_.workUpper_[iVar] *= factor;
@@ -1317,9 +1325,9 @@ void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     const HighsInt iVar = num_col + iRow;
-    const double factor = row_scale[iRow];
-    this->info_.workCost_[iVar] *= factor;
-    this->info_.workDual_[iVar] *= factor;
+    const double factor = has_matrix_scaling ? row_scale[iRow] : 1.0;
+    this->info_.workCost_[iVar] *= (factor * scale.cost);
+    this->info_.workDual_[iVar] *= (factor * scale.cost);
     this->info_.workShift_[iVar] *= factor;
     this->info_.workLower_[iVar] /= factor;
     this->info_.workUpper_[iVar] /= factor;
@@ -1328,17 +1336,19 @@ void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
     this->info_.workLowerShift_[iVar] /= factor;
     this->info_.workUpperShift_[iVar] /= factor;
   }
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    double factor;
-    const HighsInt iVar = this->basis_.basicIndex_[iRow];
-    if (iVar < num_col) {
-      factor = col_scale[iVar];
-    } else {
-      factor = 1.0 / row_scale[iVar - num_col];
+  if (has_matrix_scaling) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      double factor;
+      const HighsInt iVar = this->basis_.basicIndex_[iRow];
+      if (iVar < num_col) {
+	factor = col_scale[iVar];
+      } else {
+	factor = 1.0 / row_scale[iVar - num_col];
+      }
+      this->info_.baseLower_[iRow] *= factor;
+      this->info_.baseUpper_[iRow] *= factor;
+      this->info_.baseValue_[iRow] *= factor;
     }
-    this->info_.baseLower_[iRow] *= factor;
-    this->info_.baseUpper_[iRow] *= factor;
-    this->info_.baseValue_[iRow] *= factor;
   }
   this->simplex_in_scaled_space_ = false;
 }

@@ -639,7 +639,7 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
   highs.run();
   */
   }
-  const bool lp_test = false;
+  const bool lp_test = true;
   if (lp_test) {
     const double cost = 1e6;
     HighsLp lp;
@@ -659,5 +659,6 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
     highs.setOptionValue("simplex_scale_strategy",
 			 kSimplexScaleStrategyMaxValueMatrixAndCost);
     highs.run();
+    highs.writeSolution("", 1);
   }
 }

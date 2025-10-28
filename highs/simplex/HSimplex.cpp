@@ -1058,6 +1058,7 @@ void simplexUnscaleSolution(HighsSolution& solution, const HighsScale& scale) {
   assert(scale.has_scaling);
   const bool has_cost_scaling = scale.cost > 1.0;
   const bool has_matrix_scaling = scale.col.size() && scale.row.size();
+  assert(scale.cost);
   assert(has_cost_scaling || has_matrix_scaling);
   HighsInt num_col = solution.col_value.size();
   HighsInt num_row = solution.row_value.size();
