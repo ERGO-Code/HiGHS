@@ -133,9 +133,7 @@ void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
 
 double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow,
                                             const HVector& row_ep) const {
-  if (scale_ == NULL) {
-    return row_ep.norm2();
-  }
+  if (!hasMatrixScale()) return row_ep.norm2();
   const vector<double>& row_scale = scale_->row;
   // Get the 2-norm of row_ep in the scaled space otherwise for
   // checking
@@ -186,7 +184,7 @@ double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow,
 void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
                                      const HighsInt variable_in,
                                      const HighsInt row_out) {
-  if (scale_ == NULL) return;
+  if (!hasMatrixScale()) return;
   // For (\hat)aq, UPDATE needs packValue and array[row_out] to
   // correspond to \bar{B}^{-1}(R.aq.cq), but CB.\bar{B}^{-1}(R.aq)
   // has been computed.
@@ -221,13 +219,13 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
 }
 
 double HSimplexNla::variableScaleFactor(const HighsInt iVar) const {
-  if (scale_ == NULL) return 1.0;
+  if (!hasMatrixScale()) return 1.0;
   return iVar < lp_->num_col_ ? scale_->col[iVar]
                               : 1.0 / scale_->row[iVar - lp_->num_col_];
 }
 
 double HSimplexNla::basicColScaleFactor(const HighsInt iCol) const {
-  if (scale_ == NULL) return 1.0;
+  if (!hasMatrixScale()) return 1.0;
   return variableScaleFactor(basic_index_[iCol]);
 }
 
@@ -243,7 +241,7 @@ void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
 }
 
 void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs) const {
-  if (scale_ == NULL) return;
+  if (!hasMatrixScale()) return;
   const vector<double>& row_scale = scale_->row;
   HighsInt to_entry;
   const bool use_row_indices =
@@ -255,7 +253,7 @@ void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs) const {
 }
 
 void HSimplexNla::applyBasisMatrixColScale(HVector& rhs) const {
-  if (scale_ == NULL) return;
+  if (!hasMatrixScale()) return;
   const vector<double>& col_scale = scale_->col;
   const vector<double>& row_scale = scale_->row;
   HighsInt to_entry;
@@ -273,7 +271,7 @@ void HSimplexNla::applyBasisMatrixColScale(HVector& rhs) const {
 }
 
 void HSimplexNla::unapplyBasisMatrixRowScale(HVector& rhs) const {
-  if (scale_ == NULL) return;
+  if (!hasMatrixScale()) return;
   const vector<double>& row_scale = scale_->row;
   HighsInt to_entry;
   const bool use_row_indices =
@@ -421,9 +419,15 @@ void HSimplexNla::reportPackValue(const std::string message,
   printf("\n");
 }
 
+bool HSimplexNla::hasMatrixScale() const {
+  if (scale_ == nullptr) return false;
+  if (scale_->col.size() && scale_->row.size()) return true;
+  return false;
+}
+
 HighsDebugStatus HSimplexNla::debugCheckData(const std::string message) const {
   std::string scale_status;
-  if (scale_ == NULL) {
+  if (!hasMatrixScale()) {
     scale_status = "NULL";
   } else {
     scale_status = "non-NULL";
@@ -439,7 +443,7 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message) const {
   const HighsInt* factor_Aindex = factor_.getAindex();
   const double* factor_Avalue = factor_.getAvalue();
 
-  if (scale_ == NULL) {
+  if (!hasMatrixScale()) {
     if (factor_Astart != lp_->a_matrix_.start_.data()) error0_found = true;
     if (factor_Aindex != lp_->a_matrix_.index_.data()) error1_found = true;
     if (factor_Avalue != lp_->a_matrix_.value_.data()) error2_found = true;

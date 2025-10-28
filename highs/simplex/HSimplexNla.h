@@ -111,6 +111,7 @@ class HSimplexNla {
                          const HVector* vector, const bool force = false) const;
   void reportPackValue(const std::string message, const HVector* vector,
                        const bool force = false) const;
+  bool hasMatrixScale() const;
   // Debug methods
   HighsDebugStatus debugCheckData(const std::string message = "") const;
   HighsDebugStatus debugCheckInvert(const std::string message,
