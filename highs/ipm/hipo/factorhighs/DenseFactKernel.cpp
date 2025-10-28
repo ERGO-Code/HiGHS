@@ -11,7 +11,7 @@ namespace hipo {
 
 // Dense Factorisation kernel
 
-std::pair<Int, double> maxInCol(Int j, Int n, Int m, double* A, Int lda) {
+static std::pair<Int, double> maxInCol(Int j, Int n, Int m, double* A, Int lda) {
   // Given the symemtric matrix A, of size nxn, accessed with leading dimension
   // lda, in upper triangular format, ignoring rows 0:j-1, find the maximum in
   // row/col m.
@@ -37,7 +37,7 @@ std::pair<Int, double> maxInCol(Int j, Int n, Int m, double* A, Int lda) {
   return {r, maxval};
 }
 
-void staticReg(double& pivot, Int sign, const Regul& regval, double& totalreg) {
+static void staticReg(double& pivot, Int sign, const Regul& regval, double& totalreg) {
   // apply static regularisation
 
   double old_pivot = pivot;
@@ -48,9 +48,9 @@ void staticReg(double& pivot, Int sign, const Regul& regval, double& totalreg) {
   totalreg = pivot - old_pivot;
 }
 
-bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
-                       double thresh, const Regul& regval, double* totalreg,
-                       DataCollector& data) {
+static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
+                              double thresh, const Regul& regval, double* totalreg,
+                              DataCollector& data) {
   // Perform Bunch-Kaufman pivoting within a block of the supernode (see Schenk,
   // Gartner, ETNA 2006).
   // It works only for upper triangular A.
