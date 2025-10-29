@@ -262,7 +262,7 @@ class HighsLogType:
 
 class HighsLp:
     a_matrix_: HighsSparseMatrix
-    col_cost_: list[float]
+    col_cost_: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
     col_lower_: list[float]
     col_names_: list[str]
     col_upper_: list[float]
@@ -525,11 +525,11 @@ class HighsScale:
     pass
 
 class HighsSolution:
-    col_dual: list[float]
-    col_value: list[float]
+    col_dual: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
+    col_value: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
     dual_valid: bool
-    row_dual: list[float]
-    row_value: list[float]
+    row_dual: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
+    row_value: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
     value_valid: bool
 
     def __init__(self) -> None: ...

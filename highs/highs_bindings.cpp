@@ -28,6 +28,16 @@ std::function<dense_array_t<T>(const Base&)> make_readonly_ptr(
   };
 }
 
+template<typename Base, typename T>
+std::function<void(Base&, dense_array_t<T>)> make_vector_setter(
+    std::vector<T> Base::* member){
+  return [member](Base& self,dense_array_t<T>values){
+    auto buf = values.request();
+    auto ptr = static_cast<T*>(buf.ptr);
+    (self.*member).assign(ptr, ptr + buf.size);
+  };
+}
+
 HighsStatus highs_passModel(Highs* h, HighsModel& model) {
   return h->passModel(model);
 }
@@ -1059,7 +1069,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def(py::init<>())
       .def_readwrite("num_col_", &HighsLp::num_col_)
       .def_readwrite("num_row_", &HighsLp::num_row_)
-      .def_readwrite("col_cost_", &HighsLp::col_cost_)
+      .def_property("col_cost_", make_readonly_ptr(&HighsLp::col_cost_),
+                    make_vector_setter(&HighsLp::col_cost_))
       .def_readwrite("col_lower_", &HighsLp::col_lower_)
       .def_readwrite("col_upper_", &HighsLp::col_upper_)
       .def_readwrite("row_lower_", &HighsLp::row_lower_)
