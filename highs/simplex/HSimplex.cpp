@@ -474,26 +474,15 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
   double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
   lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
+  double original_min_cost = kHighsInf;
+  double original_max_cost = -kHighsInf;
   if (kSimplexScaleDev) {
-    double min_cost = kHighsInf;
-    double max_cost = -kHighsInf;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       double abs_cost = std::fabs(lp.col_cost_[iCol]);
       if (abs_cost > 0) {
-        min_cost = std::min(abs_cost, min_cost);
-        max_cost = std::max(abs_cost, max_cost);
+        original_min_cost = std::min(abs_cost, original_min_cost);
+        original_max_cost = std::max(abs_cost, original_max_cost);
       }
-    }
-    if (kSimplexScaleDevReport) {
-      printf(
-          "grepSimplexRangeTxt HighsScale: costs in [%g, %g]; matrix in [%g, "
-          "%g]; %s: %s\n",
-          min_cost, max_cost, original_matrix_min_value,
-          original_matrix_max_value, lp.model_name_.c_str(),
-          lp.origin_name_.c_str());
-      printf("grepSimplexRangeCsv,%g,%g,%g,%g,%s,%s\n", min_cost, max_cost,
-             original_matrix_min_value, original_matrix_max_value,
-             lp.model_name_.c_str(), lp.origin_name_.c_str());
     }
   }
   // Possibly force scaling, otherwise base the decision on the range
@@ -550,6 +539,22 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
       lp.is_scaled_ = true;
     }
   }
+
+  double scaled_matrix_min_value = kHighsInf;
+  double scaled_matrix_max_value = 0;
+  lp.a_matrix_.range(scaled_matrix_min_value, scaled_matrix_max_value);
+  double col_scaled_min_cost = kHighsInf;
+  double col_scaled_max_cost = -kHighsInf;
+  if (kSimplexScaleDev) {
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      double abs_cost = std::fabs(lp.col_cost_[iCol]);
+      if (abs_cost > 0) {
+        col_scaled_min_cost = std::min(abs_cost, col_scaled_min_cost);
+        col_scaled_max_cost = std::max(abs_cost, col_scaled_max_cost);
+      }
+    }
+  }
+
   bool scaled_costs = false;
   if (kSimplexScaleDev &&
       use_scale_strategy == kSimplexScaleStrategyMaxValueMatrixAndCost) {
@@ -563,6 +568,41 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
   if (!scaled_costs && !scaled_matrix) lp.clearScaling();
   // Record the scaling strategy used
   lp.scale_.strategy = use_scale_strategy;
+
+  double final_min_cost = kHighsInf;
+  double final_max_cost = -kHighsInf;
+  if (kSimplexScaleDev) {
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      double abs_cost = std::fabs(lp.col_cost_[iCol]);
+      if (abs_cost > 0) {
+        final_min_cost = std::min(abs_cost, final_min_cost);
+        final_max_cost = std::max(abs_cost, final_max_cost);
+      }
+    }
+  }
+
+  if (kSimplexScaleDevReport) {
+    printf(
+	   "grepSimplexRangeTxt HighsScale: "
+	   "Original costs in [%g, %g] and matrix in [%g, %g];"
+	   "Scaled costs in [%g, %g] and matrix in [%g, %g];"
+	   "Final costs in [%g, %g];"
+	   " %s: %s\n",
+	   original_min_cost, original_max_cost,
+	   original_matrix_min_value, original_matrix_max_value,
+	   col_scaled_min_cost, col_scaled_max_cost,
+	   scaled_matrix_min_value, scaled_matrix_max_value,
+	   final_min_cost, final_max_cost,
+	   lp.model_name_.c_str(),
+	   lp.origin_name_.c_str());
+    printf("grepSimplexRangeCsv,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%s,%s\n",
+	   original_min_cost, original_max_cost,
+	   original_matrix_min_value, original_matrix_max_value,
+	   col_scaled_min_cost, col_scaled_max_cost,
+	   scaled_matrix_min_value, scaled_matrix_max_value,
+	   final_min_cost, final_max_cost,
+	   lp.model_name_.c_str(), lp.origin_name_.c_str());
+  }
 }
 
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
@@ -1101,13 +1141,8 @@ void simplexScaleCost(const HighsOptions& options, HighsLp& lp) {
   // solved to a larger dual tolerance, which may require clean-up
   // iterations when the scaling is removed after solving the scaled
   // problem
-  cost_scale = 1.0;
-  // Scale if the max cost is greater than 16
-  if (max_nonzero_cost > 16) {
-    cost_scale = max_nonzero_cost;
-    cost_scale = pow(2.0, floor(log(cost_scale) / log(2.0) + 0.5));
-    cost_scale = min(cost_scale, max_allowed_cost_scale);
-  }
+  cost_scale = max_nonzero_cost > 16 ?
+    min(pow(2.0, floor(log2(max_nonzero_cost))), max_allowed_cost_scale) : 1.0;
   assert(cost_scale >= 1.0);
   if (cost_scale == 1.0) {
     highsLogDev(options.log_options, HighsLogType::kInfo,

@@ -625,9 +625,10 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
   if (model_test) {
     std::string model;
     // model = "chip";
-    //  model = "avgas";
+    // model = "avgas";
     // model = "adlittle";
-    model = "25fv47";
+    // model = "25fv47";
+     model = "etamacro";
     std::string filename =
         std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
     // Read the LP given by filename
