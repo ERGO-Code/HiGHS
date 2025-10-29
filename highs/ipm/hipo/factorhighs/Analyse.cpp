@@ -845,7 +845,7 @@ void Analyse::relativeIndClique() {
     const Int sn_clique_size = sn_column_size - sn_size;
 
     // count number of assembly operations during factorise
-    sparse_ops_ += sn_clique_size * (sn_clique_size + 1) / 2;
+    sparse_ops_ += (double)sn_clique_size * (sn_clique_size + 1) / 2;
 
     relind_clique_[sn].resize(sn_clique_size);
 
