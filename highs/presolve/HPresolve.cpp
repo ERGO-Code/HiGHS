@@ -4691,16 +4691,27 @@ HPresolve::Result HPresolve::singletonColStuffing(
             });
       };
 
-  // consider only non-fixed singleton continuous columns
-  if (!isContSingleton(col)) return Result::kOk;
+  // lambda for updating row activity bounds
+  auto updateActivityBounds = [&](HighsCDouble& sumLower,
+                                  HighsCDouble& sumUpper, double aj,
+                                  double lowerSumBound, double upperSumBound) {
+    if (sumLower != -kHighsInf) {
+      if (std::abs(lowerSumBound) != kHighsInf)
+        sumLower += aj * static_cast<HighsCDouble>(lowerSumBound);
+      else
+        sumLower = -kHighsInf;
+    }
+    if (sumUpper != kHighsInf) {
+      if (std::abs(upperSumBound) != kHighsInf)
+        sumUpper += aj * static_cast<HighsCDouble>(upperSumBound);
+      else
+        sumUpper = kHighsInf;
+    }
+    return (sumLower != -kHighsInf || sumUpper != kHighsInf);
+  };
 
-  // get row index
-  HighsInt row = Arow[colhead[col]];
-
-  // return if we have an empty or singleton row or row is ranged
-  if (rowsize[row] <= 1 || isRanged(row)) return Result::kOk;
-
-  auto checkRow = [&](double rhs, HighsInt direction) {
+  // lambda for actual stuffing
+  auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
     // skip row if rhs is not finite
     if (direction * rhs == kHighsInf) return Result::kOk;
 
@@ -4710,37 +4721,32 @@ HPresolve::Result HPresolve::singletonColStuffing(
     HighsCDouble sumUpper = 0.0;
 
     for (auto& nz : getRowVector(row)) {
-      // get column index, coefficient and cost
+      // get column index, coefficient, cost and bounds
       HighsInt j = nz.index();
       double aj = direction * nz.value();
       double cj = model->col_cost_[j];
-      HighsCDouble lowerSumBound =
-          static_cast<HighsCDouble>(model->col_lower_[j]);
-      HighsCDouble upperSumBound =
-          static_cast<HighsCDouble>(model->col_upper_[j]);
+      double sumLowerBound = model->col_lower_[j];
+      double sumUpperBound = model->col_upper_[j];
       if (isContSingleton(j)) {
         // check singleton
         if (aj > 0) {
           // use lower bound
-          upperSumBound = lowerSumBound;
+          sumUpperBound = sumLowerBound;
           // candidate for stuffing?
           if (cj < 0) candidates.push_back(std::make_tuple(j, aj, HighsInt{1}));
         } else {
           // use upper bound
-          lowerSumBound = upperSumBound;
+          sumLowerBound = sumUpperBound;
           // candidate for stuffing? multiply column with -1
           if (cj > 0)
             candidates.push_back(std::make_tuple(j, aj, HighsInt{-1}));
         }
       } else if (aj < 0)
-        std::swap(lowerSumBound, upperSumBound);
+        std::swap(sumLowerBound, sumUpperBound);
       // update activities
-      sumLower = abs(lowerSumBound) != kHighsInf ? sumLower + aj * lowerSumBound
-                                                 : -kHighsInf;
-      sumUpper = abs(upperSumBound) != kHighsInf ? sumUpper + aj * upperSumBound
-                                                 : kHighsInf;
-      // return if both bounds are not finite
-      if (sumLower == -kHighsInf && sumUpper == kHighsInf) return Result::kOk;
+      if (!updateActivityBounds(sumLower, sumUpper, aj, sumLowerBound,
+                                sumUpperBound))
+        return Result::kOk;
     }
 
     // sort candidates
@@ -4780,9 +4786,18 @@ HPresolve::Result HPresolve::singletonColStuffing(
     return Result::kOk;
   };
 
+  // consider only non-fixed singleton continuous columns
+  if (!isContSingleton(col)) return Result::kOk;
+
+  // get row index
+  HighsInt row = Arow[colhead[col]];
+
+  // return if we have an empty or singleton row or row is ranged
+  if (rowsize[row] <= 1 || isRanged(row)) return Result::kOk;
+
   // check row
-  HPRESOLVE_CHECKED_CALL(checkRow(model->row_upper_[row], HighsInt{1}));
-  HPRESOLVE_CHECKED_CALL(checkRow(model->row_lower_[row], HighsInt{-1}));
+  HPRESOLVE_CHECKED_CALL(checkRow(row, model->row_upper_[row], HighsInt{1}));
+  HPRESOLVE_CHECKED_CALL(checkRow(row, model->row_lower_[row], HighsInt{-1}));
 
   return Result::kOk;
 }
