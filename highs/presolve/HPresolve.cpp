@@ -4693,21 +4693,15 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
   // lambda for updating row activity bounds
   auto updateActivityBounds = [&](HighsCDouble& sumLower,
-                                  HighsCDouble& sumUpper, double aj,
+                                  HighsCDouble& sumUpper, bool& sumLowerFinite,
+                                  bool& sumUpperFinite, double aj,
                                   double lowerSumBound, double upperSumBound) {
-    if (sumLower != -kHighsInf) {
-      if (std::abs(lowerSumBound) != kHighsInf)
-        sumLower += aj * static_cast<HighsCDouble>(lowerSumBound);
-      else
-        sumLower = -kHighsInf;
-    }
-    if (sumUpper != kHighsInf) {
-      if (std::abs(upperSumBound) != kHighsInf)
-        sumUpper += aj * static_cast<HighsCDouble>(upperSumBound);
-      else
-        sumUpper = kHighsInf;
-    }
-    return (sumLower != -kHighsInf || sumUpper != kHighsInf);
+    sumLowerFinite = sumLowerFinite && std::abs(lowerSumBound) != kHighsInf;
+    sumUpperFinite = sumUpperFinite && std::abs(upperSumBound) != kHighsInf;
+    if (sumLowerFinite)
+      sumLower += aj * static_cast<HighsCDouble>(lowerSumBound);
+    if (sumUpperFinite)
+      sumUpper += aj * static_cast<HighsCDouble>(upperSumBound);
   };
 
   // lambda for actual stuffing
@@ -4719,6 +4713,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
     std::vector<std::tuple<HighsInt, double, HighsInt>> candidates;
     HighsCDouble sumLower = 0.0;
     HighsCDouble sumUpper = 0.0;
+    bool sumLowerFinite = true;
+    bool sumUpperFinite = true;
 
     for (auto& nz : getRowVector(row)) {
       // get column index, coefficient, cost and bounds
@@ -4744,9 +4740,9 @@ HPresolve::Result HPresolve::singletonColStuffing(
       } else if (aj < 0)
         std::swap(sumLowerBound, sumUpperBound);
       // update activities
-      if (!updateActivityBounds(sumLower, sumUpper, aj, sumLowerBound,
-                                sumUpperBound))
-        return Result::kOk;
+      updateActivityBounds(sumLower, sumUpper, sumLowerFinite, sumUpperFinite,
+                           aj, sumLowerBound, sumUpperBound);
+      if (!sumLowerFinite && !sumUpperFinite) return Result::kOk;
     }
 
     // sort candidates
@@ -4767,20 +4763,22 @@ HPresolve::Result HPresolve::singletonColStuffing(
                            (static_cast<HighsCDouble>(model->col_upper_[j]) -
                             static_cast<HighsCDouble>(model->col_lower_[j]));
       // check if variable can be fixed
-      if (delta <= direction * rhs - sumUpper + primal_feastol) {
+      if (sumUpperFinite &&
+          delta <= direction * rhs - sumUpper + primal_feastol) {
         if (multiplier < 0)
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
         else
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
-      } else if (direction * rhs <= sumLower + primal_feastol) {
+      } else if (sumLowerFinite &&
+                 direction * rhs <= sumLower + primal_feastol) {
         if (multiplier < 0)
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
         else
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
       }
       // update row activities
-      sumLower += delta;
-      sumUpper += delta;
+      if (sumLowerFinite) sumLower += delta;
+      if (sumUpperFinite) sumUpper += delta;
     }
 
     return Result::kOk;
