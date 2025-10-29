@@ -82,6 +82,17 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
 
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
+#ifndef HIPO
+  if (value == kHipoString) {
+    highsLogUser(
+        report_log_options, HighsLogType::kError,
+        "The HiPO solver was requested via the \"%s\" option, but this build "
+        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
+        "and -DHIPO=ON to enable HiPO.\n",
+        kSolverString.c_str());
+    return false;
+  }
+#endif
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
 #ifdef HIPO
@@ -106,6 +117,17 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
+#ifndef HIPO
+  if (value == kHipoString) {
+    highsLogUser(
+        report_log_options, HighsLogType::kError,
+        "The HiPO solver was requested via the \"%s\" option, but this build "
+        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
+        "and -DHIPO=ON to enable HiPO.\n",
+        kMipLpSolverString.c_str());
+    return false;
+  }
+#endif
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
 #ifdef HIPO
@@ -131,6 +153,17 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
 
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
+#ifndef HIPO
+  if (value == kHipoString) {
+    highsLogUser(
+        report_log_options, HighsLogType::kError,
+        "The HiPO solver was requested via the \"%s\" option, but this build "
+        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
+        "and -DHIPO=ON to enable HiPO.\n",
+        kMipIpmSolverString.c_str());
+    return false;
+  }
+#endif
   if (value == kHighsChooseString || value == kIpmString ||
 #ifdef HIPO
       value == kHipoString ||
