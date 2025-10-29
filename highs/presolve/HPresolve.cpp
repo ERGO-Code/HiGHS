@@ -4710,26 +4710,24 @@ HPresolve::Result HPresolve::singletonColStuffing(
     HighsCDouble sumUpper = 0.0;
 
     for (auto& nz : getRowVector(row)) {
-      // get column index, coefficient, cost and bounds
+      // get column index, coefficient and cost
       HighsInt j = nz.index();
       double aj = direction * nz.value();
       double cj = model->col_cost_[j];
-      HighsCDouble lb = static_cast<HighsCDouble>(model->col_lower_[j]);
-      HighsCDouble ub = static_cast<HighsCDouble>(model->col_upper_[j]);
-
-      // consider only non-fixed singleton continuous columns
-      HighsCDouble lowerSumBound = lb;
-      HighsCDouble upperSumBound = ub;
+      HighsCDouble lowerSumBound =
+          static_cast<HighsCDouble>(model->col_lower_[j]);
+      HighsCDouble upperSumBound =
+          static_cast<HighsCDouble>(model->col_upper_[j]);
       if (isContSingleton(j)) {
         // check singleton
         if (aj > 0) {
           // use lower bound
-          upperSumBound = lb;
+          upperSumBound = lowerSumBound;
           // candidate for stuffing?
           if (cj < 0) candidates.push_back(std::make_tuple(j, aj, HighsInt{1}));
         } else {
           // use upper bound
-          lowerSumBound = ub;
+          lowerSumBound = upperSumBound;
           // candidate for stuffing? multiply column with -1
           if (cj > 0)
             candidates.push_back(std::make_tuple(j, aj, HighsInt{-1}));
