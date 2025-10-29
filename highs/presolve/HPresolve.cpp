@@ -4468,6 +4468,35 @@ HPresolve::Result HPresolve::detectDominatedCol(
   return Result::kOk;
 }
 
+void HPresolve::computeLocks(
+    HighsInt col, bool considerObjective,
+    std::function<bool(HighsInt, bool)> lockCallback) const {
+  // if the callback returns true, we stop examining the locks
+  if (considerObjective) {
+    // consider objective function
+    if (model->col_cost_[col] < 0) {
+      // downlock
+      if (lockCallback(-1, false)) return;
+    } else if (model->col_cost_[col] > 0) {
+      // uplock
+      if (lockCallback(-1, true)) return;
+    }
+  }
+
+  // check coefficients
+  for (const auto& nz : getColumnVector(col)) {
+    // implied lower bound -> downlock
+    if (yieldsImpliedLowerBound(nz.index(), nz.value()) &&
+        lockCallback(nz.index(), false))
+      break;
+
+    // implied upper bound -> uplock
+    if (yieldsImpliedUpperBound(nz.index(), nz.value()) &&
+        lockCallback(nz.index(), true))
+      break;
+  }
+}
+
 HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
                                         HighsInt col) {
   // fix variables or tighten bounds using dual arguments
@@ -4478,43 +4507,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
-
-  // lambda for computing locks
-  auto computeLocks = [&](HighsInt col, HighsInt& numDownLocks,
-                          HighsInt& numUpLocks, HighsInt& downLockRow,
-                          HighsInt& upLockRow) {
-    // initialise
-    numDownLocks = 0;
-    numUpLocks = 0;
-    downLockRow = -1;
-    upLockRow = -1;
-
-    // consider objective function
-    if (model->col_cost_[col] > 0)
-      numUpLocks++;
-    else if (model->col_cost_[col] < 0)
-      numDownLocks++;
-
-    // check coefficients
-    for (const auto& nz : getColumnVector(col)) {
-      // update number of locks
-      if (yieldsImpliedLowerBound(nz.index(), nz.value())) {
-        // implied lower bound -> downlock
-        numDownLocks++;
-        downLockRow = nz.index();
-      }
-
-      if (yieldsImpliedUpperBound(nz.index(), nz.value())) {
-        // implied upper bound -> uplock
-        numUpLocks++;
-        upLockRow = nz.index();
-      }
-
-      // stop early if there are locks in both directions, since the variable
-      // cannot be fixed in this case.
-      if (numDownLocks > 1 && numUpLocks > 1) break;
-    }
-  };
 
   // lambda for variable substitution
   auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
@@ -4604,12 +4596,26 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     return true;
   };
 
-  // compute locks
+  // lambda callback for lock computation
   HighsInt numDownLocks = 0;
   HighsInt numUpLocks = 0;
   HighsInt downLockRow = -1;
   HighsInt upLockRow = -1;
-  computeLocks(col, numDownLocks, numUpLocks, downLockRow, upLockRow);
+  auto lockCallback = [&](HighsInt row, bool isUpLock) {
+    // count locks and remember row index
+    if (isUpLock) {
+      numUpLocks++;
+      upLockRow = row;
+    } else {
+      numDownLocks++;
+      downLockRow = row;
+    }
+    // stop early if there are locks in both directions, since the variable
+    // cannot be fixed in this case.
+    return numDownLocks > 1 && numUpLocks > 1;
+  };
+  // compute locks
+  computeLocks(col, true, lockCallback);
 
   // check if variable can be fixed
   if (numDownLocks == 0 || numUpLocks == 0) {

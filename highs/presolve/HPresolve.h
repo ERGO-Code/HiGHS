@@ -389,6 +389,9 @@ class HPresolve {
   Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                             bool handleSingletonRows = true);
 
+  void computeLocks(HighsInt col, bool considerObjective,
+                    std::function<bool(HighsInt, bool)> lockCallback) const;
+
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   Result singletonColStuffing(HighsPostsolveStack& postsolve_stack,
