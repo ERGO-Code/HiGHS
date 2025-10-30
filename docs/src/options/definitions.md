@@ -440,7 +440,7 @@
 - Range: {0, 2147483647}
 - Default: 128
 
-## hipo\_metis\_no2hop
+## [hipo\_metis\_no2hop](@id option-hipo-metis-no2hop)
 - Set option no2hop in Metis when using HiPO
 - Type: boolean
 - Default: false
