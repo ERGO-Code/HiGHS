@@ -29,7 +29,8 @@ void highsLogHeader(const HighsLogOptions& log_options,
 
 #ifdef HIPO
 #ifdef BLAS_LIBRARIES
-  highsLogUser(log_options, HighsLogType::kInfo, "Using blas: %s\n", BLAS_LIBRARIES);
+  highsLogUser(log_options, HighsLogType::kInfo, "Using blas: %s\n",
+               BLAS_LIBRARIES);
 #else
   highsLogUser(log_options, HighsLogType::kInfo, "Using blas: unknown\n");
 #endif

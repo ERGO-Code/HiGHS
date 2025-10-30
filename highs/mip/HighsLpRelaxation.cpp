@@ -1098,6 +1098,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     const std::string mip_lp_solver = mipsolver.options_mip_->mip_lp_solver;
     if (useIpm(mip_lp_solver)) {
       bool use_hipo = mip_lp_solver == kHipoString;
+      // Later still, pass mip_lp_solver and take action on failure in
+      // solveLp
 #ifndef HIPO
       // Shouldn't be possible to choose HiPO if it's not in the build
       assert(!use_hipo);
@@ -1318,10 +1320,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // here. Later pass mip_ipm_solver and take action on failure in
         // solveLp
         bool use_hipo =
-#ifdef HIPO
+            /*
+      #ifdef HIPO
+            // Later use HiPO by default
             mip_ipm_solver == kHighsChooseString ||
-#endif
+      #endif
+            */
             mip_ipm_solver == kHipoString;
+        // Later still, pass mip_ipm_solver and take action on failure in
+        // solveLp
 #ifndef HIPO
         // Shouldn't be possible to choose HiPO if it's not in the build
         assert(!use_hipo);
