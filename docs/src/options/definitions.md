@@ -440,6 +440,11 @@
 - Range: {0, 2147483647}
 - Default: 128
 
+## hipo\_metis\_no2hop
+- Set option no2hop in Metis when using HiPO
+- Type: boolean
+- Default: false
+
 ## pdlp\_scaling
 - Scaling option for PDLP solver: Default = true
 - Type: boolean
