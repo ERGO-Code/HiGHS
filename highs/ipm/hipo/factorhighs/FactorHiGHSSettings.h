@@ -36,7 +36,7 @@ namespace hipo {
 const Int kStartThreshRelax = 256;
 const double kUpperRatioRelax = 0.02;
 const double kLowerRatioRelax = 0.01;
-const Int kMaxIterRelax = 10;
+const Int kMaxIterRelax = 20;
 const Int kSnSizeRelax = 16;
 
 // dense factorisation

@@ -36,7 +36,7 @@ HiGHS has two interior point (IPM) solvers:
 
   This solver is serial.
 
-  Setting the option [__solver__](@ref option-solver) to "ipm" forces the IPX solver to be used
+  Setting the option [__solver__](@ref option-solver) to "ipx" forces the IPX solver to be used
 
 * HiPO is based on a direct factorisation, as discussed in 
 
@@ -50,6 +50,12 @@ HiGHS has two interior point (IPM) solvers:
   The [hipo\_system](@ref option-hipo-system) option can be used to select the approach to use when solving the Newton systems 
   within the interior point solver: select "augmented" to force the solver to use the augmented system, "normaleq" for normal 
   equations, or "choose" to leave the choice to the solver.
+
+  HiPO uses Metis internally to reorder the Newton system matrix. In case of large fill-in in the factorisation, two alternatives are available for users to try:
+  * Setting the [hipo\_metis\_no2hop](@ref option-hipo-metis-no2hop) option to "true" may improve the quality of the ordering in some cases.
+  * Linking the Metis library from branch 510-ts in [this fork](https://github.com/galabovaa/METIS/tree/510-ts), instead of branch 521-ts, may improve the quality of the ordering in some cases. This is available only if HiGHS is compiled from source.
+
+Setting the option [__solver__](@ref option-solver) to "ipm" selects the HiPO solver, if the build supports it, otherwise it selects the IPX solver.
 
 #### Primal-dual hybrid gradient method
 

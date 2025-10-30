@@ -41,6 +41,9 @@ struct Options {
   OptionCrossover crossover = kOptionCrossoverDefault;
   OptionParallel parallel = kOptionParallelDefault;
 
+  // Metis options
+  bool metis_no2hop = false;
+
   // Ipm parameters
   Int max_iter = kMaxIterDefault;
   double feasibility_tol = kIpmTolDefault;

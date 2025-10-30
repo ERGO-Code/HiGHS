@@ -546,6 +546,9 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   // block size option
   hipo_options.block_size = options.hipo_block_size;
 
+  // metis options
+  hipo_options.metis_no2hop = options.hipo_metis_no2hop;
+
   hipo.setOptions(hipo_options);
   hipo.setTimer(timer);
   hipo.setCallback(callback);

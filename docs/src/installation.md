@@ -30,11 +30,11 @@ Note, that `[threads]` is required for HiPO.
 To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` coud be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
 
 #### Metis
-There are some known issues with Metis so the recommented version is in [this fork](https://github.com/galabovaa/METIS/tree/510-ts), branch 510-ts. This is version 5.10 with several patches for more reliable build and execution. Clone the repository with
+There are some known issues with Metis so the recommented version is in [this fork](https://github.com/galabovaa/METIS/tree/521-ts), branch 521-ts. This is version 5.2.1 with several patches for more reliable build and execution. Clone the repository with
 ```
 git clone https://github.com/galabovaa/METIS.git
 cd METIS
-git checkout 510-ts
+git checkout 521-ts
 ```
 
 Then build with
