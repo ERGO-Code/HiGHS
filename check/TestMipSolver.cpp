@@ -1140,6 +1140,7 @@ void getFixedLpRun(Highs& h,
   if (output_flag)
     printf("\nSimplex iteration count = %d\n",
 	   int(h.getInfo().simplex_iteration_count));
+    h.setOptionValue("output_flag", dev_run);
 }
 
 TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
@@ -1205,8 +1206,10 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   // optimal, so no simplex iterations are required
   h.clearSolver();
   h.setSolution(solution);
-  REQUIRE(h.run() == HighsStatus::kOk);
-
+  getFixedLpRun(h,
+		"Solving the externally fixed LP using the MIP solution as passed",
+		HighsModelStatus::kOptimal,
+		output_flag);
   REQUIRE(objectiveOk(mip_optimal_objective,
                       h.getInfo().objective_function_value, dev_run));
   REQUIRE(h.getInfo().simplex_iteration_count == 0);
@@ -1217,8 +1220,6 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
 		"Solving the original MIP",
 		HighsModelStatus::kOptimal,
 		false);
-  h.setOptionValue("output_flag", true);
-
   REQUIRE(objectiveOk(mip_optimal_objective,
                       h.getInfo().objective_function_value, dev_run));
 
