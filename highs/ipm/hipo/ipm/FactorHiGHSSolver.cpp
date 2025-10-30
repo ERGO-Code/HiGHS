@@ -450,6 +450,9 @@ Int FactorHiGHSSolver::chooseNla() {
   bool failure_NE = false;
   bool failure_AS = false;
 
+  symb_NE.setMetisNo2hop(options_.metis_no2hop);
+  symb_AS.setMetisNo2hop(options_.metis_no2hop);
+
   Clock clock;
 
   // Perform analyse phase of augmented system
@@ -486,6 +489,11 @@ Int FactorHiGHSSolver::chooseNla() {
   } else if (failure_AS && failure_NE) {
     status = kStatusErrorAnalyse;
     log_.printe("Both NE and AS failed analyse phase\n");
+    if ((symb_AS.fillin() > 50 || symb_NE.fillin() > 50) &&
+        !options_.metis_no2hop)
+      log_.print(
+          "Large fill-in in factorisation. Consider setting the "
+          "hipo_metis_no2hop option to true\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
@@ -529,6 +537,8 @@ Int FactorHiGHSSolver::chooseNla() {
 
 Int FactorHiGHSSolver::setNla() {
   std::stringstream log_stream;
+
+  S_.setMetisNo2hop(options_.metis_no2hop);
 
   switch (options_.nla) {
     case kOptionNlaAugmented: {

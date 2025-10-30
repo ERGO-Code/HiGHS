@@ -84,7 +84,7 @@ class Analyse {
   DataCollector& data_;
 
   // Functions to perform analyse phase
-  Int getPermutation();
+  Int getPermutation(bool metis_no2hop);
   void permute(const std::vector<Int>& iperm);
   void eTree();
   void postorder();

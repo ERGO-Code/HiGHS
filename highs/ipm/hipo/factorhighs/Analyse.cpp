@@ -62,7 +62,7 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   ready_ = true;
 }
 
-Int Analyse::getPermutation() {
+Int Analyse::getPermutation(bool metis_no2hop) {
   // Use Metis to compute a nested dissection permutation of the original matrix
 
   perm_.resize(n_);
@@ -118,6 +118,9 @@ Int Analyse::getPermutation() {
   options[METIS_OPTION_DBGLVL] = 0;
   if (log_->debug(2))
     options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
+
+  // set no2hop=1 if the user requested it
+  if (metis_no2hop) options[METIS_OPTION_NO2HOP] = 1;
 
   if (log_) log_->printDevInfo("Running Metis\n");
 
@@ -1236,7 +1239,7 @@ Int Analyse::run(Symbolic& S) {
 #if HIPO_TIMING_LEVEL >= 2
   Clock clock_items;
 #endif
-  if (Int metis_status = getPermutation()) return kRetMetisError;
+  if (getPermutation(S.metisNo2hop())) return kRetMetisError;
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeAnalyseMetis, clock_items.stop());
 #endif
