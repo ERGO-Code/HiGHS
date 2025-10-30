@@ -17,7 +17,7 @@
 
 #include "util/HighsInt.h"
 
-const bool kSimplexScaleDev = true;
+const bool kSimplexScaleDev = false;//true;
 const bool kSimplexScaleDevReport = kSimplexScaleDev && true;
 
 const std::string kHighsCopyrightStatement =
