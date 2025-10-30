@@ -1351,6 +1351,8 @@ Int Analyse::run(Symbolic& S) {
 
 #if HIPO_TIMING_LEVEL >= 1
   data_.sumTime(kTimeAnalyse, clock_total.stop());
+#else
+  (void)data_;  // to avoid an unused-private-field warning
 #endif
 
   return kRetOk;
