@@ -1422,13 +1422,6 @@ void Solver::printInfo() const {
   std::stringstream log_stream;
   log_stream << "\nRunning HiPO\n";
 
-  // Print blas path
-#ifdef BLAS_LIBRARIES
-  log_stream << textline("BLAS:") << BLAS_LIBRARIES << '\n';
-#else
-  log_stream << textline("BLAS:") << "Unknown\n";
-#endif
-
   // Print number of threads
   if (options_.parallel == kOptionParallelOff)
     log_stream << textline("Threads:") << 1 << '\n';
