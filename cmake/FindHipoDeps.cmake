@@ -240,7 +240,7 @@ if (NOT (GKLIB_ROOT STREQUAL ""))
             message(STATUS "Found GKlib library at ${GKLIB_LIB}")
         else()
             # GKLIB_ROOT was not successful
-            message(FATAL_ERROR "No GKLib library found at ${GKLIB_ROOT}")
+            message(FATAL_ERROR "No GKlib library found at ${GKLIB_ROOT}")
         endif()
     endif()
 endif()
