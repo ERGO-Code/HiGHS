@@ -3,7 +3,7 @@ name: hipo-win
 on: [push, pull_request]
 
 jobs:
-  win-vcpkg:
+  vcpkg-latest:
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -14,23 +14,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout metis overlay ports
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/metis-overlay-ports
-          ref: main
-          path: overlay-ports
+      # - name: Checkout metis overlay ports
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: galabovaa/metis-overlay-ports
+      #     ref: main
+      #     path: overlay-ports
 
-      - name: List overlay contents
-        shell: pwsh
-        run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/overlay-ports"
+      # - name: List overlay contents
+      #   shell: pwsh
+      #   run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/overlay-ports"
+
+      # - name: Install metis with overlay port
+      #   shell: pwsh
+      #   run: |
+      #     vcpkg install metis gklib `
+      #     --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/metis" `
+      #     --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/gklib"
 
       - name: Install metis with overlay port
         shell: pwsh
         run: |
-          vcpkg install metis gklib `
-          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/metis" `
-          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/gklib"
+          vcpkg install metis
 
       - name: Install OpenBLAS
         shell: pwsh
@@ -44,148 +49,6 @@ jobs:
           -B "${{ runner.workspace }}/build" `
           -DHIPO=ON `
           -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-          -DALL_TESTS=${{ matrix.all_tests }}
-
-      - name: Build
-        shell: pwsh
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake --build . --parallel --config ${{ matrix.config }}
-
-      - name: Test executable
-        shell: pwsh
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
-          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
-
-      - name: Ctest
-        shell: pwsh
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
-
-  win-510:
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [Release, Debug]
-        all_tests: [ON, OFF]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/METIS
-          ref: 510-w
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: |
-          ls
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        shell: pwsh
-        run: |
-          cd METIS
-          pwd
-          cmake -S. -B build `
-          -DGKLIB_PATH="$env:GITHUB_WORKSPACE/METIS/GKlib" `
-          -DCMAKE_INSTALL_PREFIX="${{ runner.workspace }}/installs" `
-          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
-          cmake --build build --parallel --config ${{ matrix.config }}
-          cmake --install build --config ${{ matrix.config }}
-
-      - name: Install OpenBLAS
-        shell: pwsh
-        run: vcpkg install openblas[threads]
-
-      - name: Configure CMake
-        shell: pwsh
-        run: |
-          cmake `
-          -S "$env:GITHUB_WORKSPACE" `
-          -B "${{ runner.workspace }}/build" `
-          -DHIPO=ON `
-          -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-          -DMETIS_ROOT="${{ runner.workspace }}/installs" `
-          -DALL_TESTS=${{ matrix.all_tests }}
-
-      - name: Build
-        shell: pwsh
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake --build . --parallel --config ${{ matrix.config }}
-
-      - name: Test executable
-        shell: pwsh
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
-          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
-
-      - name: Ctest
-        shell: pwsh
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
-
-  win-510-ts:
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [Release, Debug]
-        all_tests: [ON, OFF]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/METIS
-          ref: 510-ts
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: |
-          ls
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        shell: pwsh
-        run: |
-          cd METIS
-          pwd
-          cmake -S. -B build `
-          -DGKLIB_PATH="$env:GITHUB_WORKSPACE/METIS/GKlib" `
-          -DCMAKE_INSTALL_PREFIX="${{ runner.workspace }}/installs" `
-          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
-          cmake --build build --parallel --config ${{ matrix.config }}
-          cmake --install build --config ${{ matrix.config }}
-
-      - name: Install OpenBLAS
-        shell: pwsh
-        run: vcpkg install openblas[threads]
-
-      - name: Configure CMake
-        shell: pwsh
-        run: |
-          cmake `
-          -S "$env:GITHUB_WORKSPACE" `
-          -B "${{ runner.workspace }}/build" `
-          -DHIPO=ON `
-          -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-          -DMETIS_ROOT="${{ runner.workspace }}/installs" `
           -DALL_TESTS=${{ matrix.all_tests }}
 
       - name: Build
