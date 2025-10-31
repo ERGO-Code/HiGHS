@@ -312,24 +312,28 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
   sum_dual_infeasibilities = 0;
 
   double scale_mu = 1.0;
-  assert(int(scale.col.size()) == scale.num_col);
-  assert(int(scale.row.size()) == scale.num_row);
-  for (HighsInt iVar = 0; iVar < scale.num_col + scale.num_row; iVar++) {
+  const HighsInt use_num_var = basis.nonbasicFlag_.size();
+  const HighsInt use_num_row = basis.basicIndex_.size();
+  const HighsInt use_num_col = use_num_var - use_num_row;
+  const bool has_matrix_scaling =
+    int(scale.col.size()) == use_num_col &&
+    int(scale.row.size()) == use_num_row;
+  for (HighsInt iVar = 0; iVar < use_num_var; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
     // No dual infeasibility for fixed rows and columns
     if (info.workLower_[iVar] == info.workUpper_[iVar]) continue;
-    bool col = iVar < scale.num_col;
+    bool col = iVar < use_num_col;
     HighsInt iCol = 0;
     HighsInt iRow = 0;
     if (col) {
       iCol = iVar;
-      assert(int(scale.col.size()) > iCol);
-      scale_mu = 1 / (scale.col[iCol] / scale.cost);
+      double col_scale = has_matrix_scaling ? scale.col[iCol] : 1.0;
+      scale_mu = 1 / (col_scale / scale.cost);
     } else {
-      iRow = iVar - scale.num_col;
-      assert(int(scale.row.size()) > iRow);
-      scale_mu = scale.row[iRow] * scale.cost;
+      iRow = iVar - use_num_col;
+      double row_scale = has_matrix_scaling ? scale.row[iRow] : 1.0;
+      scale_mu = row_scale * scale.cost;
     }
     const double dual = info.workDual_[iVar];
     const double lower = info.workLower_[iVar];
@@ -353,34 +357,36 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
       sum_dual_infeasibilities += dual_infeasibility;
     }
   }
-  // Look at the primal infeasibilities of basic variables
-  for (HighsInt ix = 0; ix < scale.num_row; ix++) {
-    HighsInt iVar = basis.basicIndex_[ix];
-    bool col = iVar < scale.num_col;
-    HighsInt iCol = 0;
-    HighsInt iRow = 0;
-    if (col) {
-      iCol = iVar;
-      scale_mu = scale.col[iCol];
-    } else {
-      iRow = iVar - scale.num_col;
-      scale_mu = 1 / scale.row[iRow];
-    }
-    double unscaled_lower = info.baseLower_[ix] * scale_mu;
-    double unscaled_value = info.baseValue_[ix] * scale_mu;
-    double unscaled_upper = info.baseUpper_[ix] * scale_mu;
-    // @primal_infeasibility calculation
-    double primal_infeasibility = 0;
-    if (unscaled_value < unscaled_lower - primal_feasibility_tolerance) {
-      primal_infeasibility = unscaled_lower - unscaled_value;
-    } else if (unscaled_value > unscaled_upper + primal_feasibility_tolerance) {
-      primal_infeasibility = unscaled_value - unscaled_upper;
-    }
-    if (primal_infeasibility > 0) {
-      num_primal_infeasibilities++;
-      max_primal_infeasibility =
+  if (has_matrix_scaling) {
+    // Look at the primal infeasibilities of basic variables
+    for (HighsInt ix = 0; ix < use_num_row; ix++) {
+      HighsInt iVar = basis.basicIndex_[ix];
+      bool col = iVar < use_num_col;
+      HighsInt iCol = 0;
+      HighsInt iRow = 0;
+      if (col) {
+	iCol = iVar;
+	scale_mu = scale.col[iCol];
+      } else {
+	iRow = iVar - use_num_col;
+	scale_mu = 1 / scale.row[iRow];
+      }
+      double unscaled_lower = info.baseLower_[ix] * scale_mu;
+      double unscaled_value = info.baseValue_[ix] * scale_mu;
+      double unscaled_upper = info.baseUpper_[ix] * scale_mu;
+      // @primal_infeasibility calculation
+      double primal_infeasibility = 0;
+      if (unscaled_value < unscaled_lower - primal_feasibility_tolerance) {
+	primal_infeasibility = unscaled_lower - unscaled_value;
+      } else if (unscaled_value > unscaled_upper + primal_feasibility_tolerance) {
+	primal_infeasibility = unscaled_value - unscaled_upper;
+      }
+      if (primal_infeasibility > 0) {
+	num_primal_infeasibilities++;
+	max_primal_infeasibility =
           max(primal_infeasibility, max_primal_infeasibility);
-      sum_primal_infeasibilities += primal_infeasibility;
+	sum_primal_infeasibilities += primal_infeasibility;
+      }
     }
   }
   setSolutionStatus(highs_info);
@@ -467,97 +473,103 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
     // something more intelligent
     use_scale_strategy = kSimplexScaleStrategyForcedEquilibration;
   }
-  // Find out range of matrix values and skip matrix scaling if all
-  // |values| are in [0.2, 5]
-  const double no_scaling_original_matrix_min_value = 0.2;
-  const double no_scaling_original_matrix_max_value = 5.0;
+  HighsScale& scale = lp.scale_;
+  bool scaled_costs = false;
+  const bool allow_cost_scaling =
+    use_scale_strategy == kSimplexScaleStrategyCost ||
+    use_scale_strategy == kSimplexScaleStrategyMaxValueMatrixAndCost;
+  bool scaled_matrix = false;
+  const bool allow_matrix_scaling = use_scale_strategy > 0;
   double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
-  lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
   double original_min_cost = kHighsInf;
   double original_max_cost = -kHighsInf;
-  if (kSimplexScaleDev) {
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      double abs_cost = std::fabs(lp.col_cost_[iCol]);
-      if (abs_cost > 0) {
-        original_min_cost = std::min(abs_cost, original_min_cost);
-        original_max_cost = std::max(abs_cost, original_max_cost);
-      }
-    }
-  }
-  // Possibly force scaling, otherwise base the decision on the range
-  // of values in the matrix, values that will be used later for
-  // reporting
-  const bool no_scaling = force_scaling
-                              ? false
-                              : (original_matrix_min_value >=
-                                 no_scaling_original_matrix_min_value) &&
-                                    (original_matrix_max_value <=
-                                     no_scaling_original_matrix_max_value);
-  HighsScale& scale = lp.scale_;
-  bool scaled_matrix = false;
-  if (no_scaling) {
-    // No matrix scaling
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "Scaling: Matrix has [min, max] values of [%g, %g] within "
-                "[%g, %g] so no scaling performed\n",
-                original_matrix_min_value, original_matrix_max_value,
-                no_scaling_original_matrix_min_value,
-                no_scaling_original_matrix_max_value);
-  } else {
-    // Try scaling, so assign unit factors - partly because initial
-    // factors may be assumed by the scaling method, but also because
-    // scaling factors may not be computed for empty rows/columns
-    scale.col.assign(numCol, 1);
-    scale.row.assign(numRow, 1);
-    const bool equilibration_scaling =
-        use_scale_strategy == kSimplexScaleStrategyEquilibration ||
-        use_scale_strategy == kSimplexScaleStrategyForcedEquilibration;
-    // Try scaling. Value of scaled_matrix indicates whether scaling
-    // was considered valuable (and performed). If it's not valuable
-    // then the matrix remains unscaled
-    if (equilibration_scaling) {
-      scaled_matrix = equilibrationScaleMatrix(options, lp, use_scale_strategy);
-    } else {
-      scaled_matrix = maxValueScaleMatrix(options, lp, use_scale_strategy);
-    }
-    if (scaled_matrix) {
-      // Matrix is scaled, so scale the bounds and costs
-      for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-        colLower[iCol] /= scale.col[iCol];
-        colUpper[iCol] /= scale.col[iCol];
-        colCost[iCol] *= scale.col[iCol];
-      }
-      for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-        rowLower[iRow] *= scale.row[iRow];
-        rowUpper[iRow] *= scale.row[iRow];
-      }
-      scale.has_scaling = true;
-      scale.num_col = numCol;
-      scale.num_row = numRow;
-      scale.cost = 1.0;
-      lp.is_scaled_ = true;
-    }
-  }
-
   double scaled_matrix_min_value = kHighsInf;
   double scaled_matrix_max_value = 0;
-  lp.a_matrix_.range(scaled_matrix_min_value, scaled_matrix_max_value);
   double col_scaled_min_cost = kHighsInf;
   double col_scaled_max_cost = -kHighsInf;
   if (kSimplexScaleDev) {
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       double abs_cost = std::fabs(lp.col_cost_[iCol]);
       if (abs_cost > 0) {
-        col_scaled_min_cost = std::min(abs_cost, col_scaled_min_cost);
-        col_scaled_max_cost = std::max(abs_cost, col_scaled_max_cost);
+	original_min_cost = std::min(abs_cost, original_min_cost);
+	original_max_cost = std::max(abs_cost, original_max_cost);
       }
     }
   }
+  if (allow_matrix_scaling) {
+    // Consider matrix scalig
+    //
+    // Find out range of matrix values and skip matrix scaling if all
+    // |values| are in [0.2, 5]
+    const double no_scaling_original_matrix_min_value = 0.2;
+    const double no_scaling_original_matrix_max_value = 5.0;
+    lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
+    // Possibly force scaling, otherwise base the decision on the range
+    // of values in the matrix, values that will be used later for
+    // reporting
+    const bool no_scaling = force_scaling
+      ? false
+      : (original_matrix_min_value >=
+	 no_scaling_original_matrix_min_value) &&
+      (original_matrix_max_value <=
+       no_scaling_original_matrix_max_value);
+    if (no_scaling) {
+      // No matrix scaling
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+		  "Scaling: Matrix has [min, max] values of [%g, %g] within "
+		  "[%g, %g] so no scaling performed\n",
+		  original_matrix_min_value, original_matrix_max_value,
+		  no_scaling_original_matrix_min_value,
+		  no_scaling_original_matrix_max_value);
+    } else {
+      // Try scaling, so assign unit factors - partly because initial
+      // factors may be assumed by the scaling method, but also because
+      // scaling factors may not be computed for empty rows/columns
+      scale.col.assign(numCol, 1);
+      scale.row.assign(numRow, 1);
+      const bool equilibration_scaling =
+        use_scale_strategy == kSimplexScaleStrategyEquilibration ||
+        use_scale_strategy == kSimplexScaleStrategyForcedEquilibration;
+      // Try scaling. Value of scaled_matrix indicates whether scaling
+      // was considered valuable (and performed). If it's not valuable
+      // then the matrix remains unscaled
+      if (equilibration_scaling) {
+	scaled_matrix = equilibrationScaleMatrix(options, lp, use_scale_strategy);
+      } else {
+	scaled_matrix = maxValueScaleMatrix(options, lp, use_scale_strategy);
+      }
+      if (scaled_matrix) {
+	// Matrix is scaled, so scale the bounds and costs
+	for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+	  colLower[iCol] /= scale.col[iCol];
+	  colUpper[iCol] /= scale.col[iCol];
+	  colCost[iCol] *= scale.col[iCol];
+	}
+	for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+	  rowLower[iRow] *= scale.row[iRow];
+	  rowUpper[iRow] *= scale.row[iRow];
+	}
+	scale.has_scaling = true;
+	scale.num_col = numCol;
+	scale.num_row = numRow;
+	scale.cost = 1.0;
+	lp.is_scaled_ = true;
+      }
+    }
 
-  bool scaled_costs = false;
-  if (kSimplexScaleDev &&
-      use_scale_strategy == kSimplexScaleStrategyMaxValueMatrixAndCost) {
+    lp.a_matrix_.range(scaled_matrix_min_value, scaled_matrix_max_value);
+    if (kSimplexScaleDev) {
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+	double abs_cost = std::fabs(lp.col_cost_[iCol]);
+	if (abs_cost > 0) {
+	  col_scaled_min_cost = std::min(abs_cost, col_scaled_min_cost);
+	  col_scaled_max_cost = std::max(abs_cost, col_scaled_max_cost);
+	}
+      }
+    }
+  }
+  if (kSimplexScaleDev && allow_cost_scaling) {
     // Consider cost scaling
     simplexScaleCost(options, lp);
     scaled_costs = scale.cost != 1.0;
@@ -582,26 +594,40 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
   }
 
   if (kSimplexScaleDevReport) {
-    printf(
-	   "grepSimplexRangeTxt HighsScale: "
-	   "Original costs in [%g, %g] and matrix in [%g, %g];"
-	   "Scaled costs in [%g, %g] and matrix in [%g, %g];"
-	   "Final costs in [%g, %g];"
-	   " %s: %s\n",
-	   original_min_cost, original_max_cost,
-	   original_matrix_min_value, original_matrix_max_value,
-	   col_scaled_min_cost, col_scaled_max_cost,
-	   scaled_matrix_min_value, scaled_matrix_max_value,
-	   final_min_cost, final_max_cost,
-	   lp.model_name_.c_str(),
-	   lp.origin_name_.c_str());
-    printf("grepSimplexRangeCsv,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%s,%s\n",
-	   original_min_cost, original_max_cost,
-	   original_matrix_min_value, original_matrix_max_value,
-	   col_scaled_min_cost, col_scaled_max_cost,
-	   scaled_matrix_min_value, scaled_matrix_max_value,
-	   final_min_cost, final_max_cost,
-	   lp.model_name_.c_str(), lp.origin_name_.c_str());
+    if (allow_matrix_scaling) {
+      printf("grepSimplexRangeTxt HighsScale: "
+	     "Original costs in [%g, %g] and matrix in [%g, %g];"
+	     "Scaled costs in [%g, %g] and matrix in [%g, %g];"
+	     "Final costs in [%g, %g];"
+	     " %s: %s\n",
+	     original_min_cost, original_max_cost,
+	     original_matrix_min_value, original_matrix_max_value,
+	     col_scaled_min_cost, col_scaled_max_cost,
+	     scaled_matrix_min_value, scaled_matrix_max_value,
+	     final_min_cost, final_max_cost,
+	     lp.model_name_.c_str(),
+	     lp.origin_name_.c_str());
+      printf("grepSimplexRangeCsv,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%s,%s\n",
+	     original_min_cost, original_max_cost,
+	     original_matrix_min_value, original_matrix_max_value,
+	     col_scaled_min_cost, col_scaled_max_cost,
+	     scaled_matrix_min_value, scaled_matrix_max_value,
+	     final_min_cost, final_max_cost,
+	     lp.model_name_.c_str(), lp.origin_name_.c_str());
+    } else {
+      printf("grepSimplexRangeTxt HighsScale: "
+	     "Original costs in [%g, %g];"
+	     "Final costs in [%g, %g];"
+	     " %s: %s\n",
+	     original_min_cost, original_max_cost,
+	     final_min_cost, final_max_cost,
+	     lp.model_name_.c_str(),
+	     lp.origin_name_.c_str());
+      printf("grepSimplexRangeCsv,%g,%g,%g,%g,%s,%s\n",
+	     original_min_cost, original_max_cost,
+	     final_min_cost, final_max_cost,
+	     lp.model_name_.c_str(), lp.origin_name_.c_str());
+    }
   }
 }
 

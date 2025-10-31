@@ -50,8 +50,9 @@ const bool kExtendInvertWhenAddingRows = false;
 enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
 
 enum SimplexScaleStrategy {
-  kSimplexScaleStrategyMin = 0,
-  kSimplexScaleStrategyOff = kSimplexScaleStrategyMin,  // 0
+  kSimplexScaleStrategyMin = -1,
+  kSimplexScaleStrategyCost = kSimplexScaleStrategyMin, // -1
+  kSimplexScaleStrategyOff,                             // 0
   kSimplexScaleStrategyChoose,                          // 1
   kSimplexScaleStrategyEquilibration,                   // 2
   kSimplexScaleStrategyForcedEquilibration,             // 3

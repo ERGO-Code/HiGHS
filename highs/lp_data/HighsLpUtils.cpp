@@ -205,7 +205,9 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   ok = legal_a_matrix_num_row && ok;
 
   HighsInt scale_strategy = (HighsInt)lp.scale_.strategy;
-  bool legal_scale_strategy = scale_strategy >= 0;
+  bool legal_scale_strategy =
+    kSimplexScaleStrategyMin <= scale_strategy &&
+    scale_strategy <= kSimplexScaleStrategyMax;
   if (!legal_scale_strategy)
     highsLogUser(
         log_options, HighsLogType::kError,

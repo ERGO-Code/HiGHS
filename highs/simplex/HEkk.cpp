@@ -442,7 +442,8 @@ HighsSparseMatrix* HEkk::getScaledAMatrixPointer() {
   // (that is a member of the HEkk class), with the latter returned if
   // the LP has scaling factors but is unscaled.
   HighsSparseMatrix* local_scaled_a_matrix = &(this->lp_.a_matrix_);
-  if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_) {
+  if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_ &&
+      this->lp_.scale_.col.size() && this->lp_.scale_.row.size()) {
     scaled_a_matrix_ = this->lp_.a_matrix_;
     scaled_a_matrix_.applyScale(this->lp_.scale_);
     local_scaled_a_matrix = &scaled_a_matrix_;

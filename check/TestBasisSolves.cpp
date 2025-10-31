@@ -633,11 +633,9 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
         std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
     // Read the LP given by filename
     highs.readModel(filename);
-    highs.run();
-
-    highs.clearSolver();
     highs.setOptionValue("simplex_scale_strategy",
-                         kSimplexScaleStrategyMaxValueMatrixAndCost);
+                         kSimplexScaleStrategyCost);
+    //                         kSimplexScaleStrategyMaxValueMatrixAndCost);
     highs.run();
   }
   const bool lp_test = false;
