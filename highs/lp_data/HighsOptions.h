@@ -1127,7 +1127,7 @@ class HighsOptions : public HighsOptionsStruct {
         "Maximal age of dynamic LP rows before "
         "they are removed from the LP relaxation in the MIP solver",
         advanced, &mip_lp_age_limit, 0, 10,
-        std::numeric_limits<int16_t>::max());
+        (std::numeric_limits<int16_t>::max)());
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
