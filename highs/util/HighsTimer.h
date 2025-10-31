@@ -294,7 +294,7 @@ class HighsTimer {
       HighsInt iClock = clock_list[i];
       percent_sum_clock_times[i] = 100.0 * clock_time[iClock] / sum_clock_times;
       max_percent_sum_clock_times =
-          std::max(percent_sum_clock_times[i], max_percent_sum_clock_times);
+          (std::max)(percent_sum_clock_times[i], max_percent_sum_clock_times);
     }
     if (max_percent_sum_clock_times < tolerance_percent_report)
       return non_null_report;
