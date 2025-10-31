@@ -15,6 +15,7 @@
 #include <queue>
 #include <set>
 #include <vector>
+#include <functional>
 
 #include "lp_data/HConst.h"
 #include "mip/HighsDomainChange.h"

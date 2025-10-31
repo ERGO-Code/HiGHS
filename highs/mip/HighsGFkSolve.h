@@ -17,6 +17,7 @@
 #include <queue>
 #include <tuple>
 #include <vector>
+#include <functional>
 
 #include "lp_data/HConst.h"
 
