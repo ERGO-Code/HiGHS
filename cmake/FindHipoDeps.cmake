@@ -153,7 +153,6 @@ if(metis_FOUND)
 else()
     find_path(METIS_PATH
         NAMES "metis.h"
-        REQUIRED
         PATHS "${METIS_ROOT}/include"
         NO_DEFAULT_PATH)
 
@@ -161,7 +160,6 @@ else()
 
     find_library(METIS_LIB
         NAMES metis libmetis
-        REQUIRED
         PATHS "${METIS_ROOT}/lib" "${METIS_ROOT}/bin"
         NO_DEFAULT_PATH)
 
@@ -178,14 +176,12 @@ else()
             else()
                 # METIS_ROOT was not successful and there is no cmake config
                 find_path(METIS_PATH
-                    NAMES "metis.h"
-                    REQUIRED)
+                    NAMES "metis.h")
 
                 message(STATUS "Found Metis header at ${METIS_PATH}")
 
                 find_library(METIS_LIB
-                    NAMES metis libmetis
-                    REQUIRED)
+                    NAMES metis libmetis)
 
                 if(METIS_LIB)
                     message(STATUS "Found Metis library at ${METIS_LIB}")
