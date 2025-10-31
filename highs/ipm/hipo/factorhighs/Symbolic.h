@@ -114,6 +114,10 @@ class Symbolic {
   //    data.firstdesc[i] <= j <= data.group[i].
   std::map<Int, NodeData> tree_splitting_;
 
+  // For each supernode, is_in_tree_splitting_[sn] is true if sn is found in the
+  // tree_splitting_ data structure. Avoids too many lookups into the map.
+  std::vector<bool> is_in_tree_splitting_;
+
   friend class Analyse;
 
  public:
@@ -149,6 +153,7 @@ class Symbolic {
   const std::vector<Int>& snStart() const;
   const std::vector<Int>& pivotSign() const;
   const std::map<Int, NodeData>& treeSplitting() const;
+  bool isInTreeSplitting(Int sn) const;
 
   void print(const Log& log, bool verbose = false) const;
 };

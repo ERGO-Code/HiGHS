@@ -52,7 +52,7 @@ const Int kMaxRefinementIter = 3;
 const double kRefinementTolerance = 1e-12;
 
 // tree splitting
-const double kSmallSubtreesCoeff = 0.01; // 1%
+const double kSmallSubtreesCoeff = 0.001; // 0.1%
 const double kSpopsWeightSplitting = 30.0;
 
 // metis

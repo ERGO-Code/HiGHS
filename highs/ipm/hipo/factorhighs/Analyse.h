@@ -78,6 +78,7 @@ class Analyse {
   std::vector<std::vector<Int>> clique_block_start_{};
 
   std::map<Int, NodeData> tree_splitting_;
+  std::vector<bool> is_in_tree_splitting_;
 
   // block size
   Int nb_{};
