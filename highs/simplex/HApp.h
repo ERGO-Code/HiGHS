@@ -424,9 +424,11 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
           (scaled_model_status != HighsModelStatus::kObjectiveTarget);
       assert(force_phase2 == !force_phase1);
       if (kSimplexScaleDevReport) {
-	printf("\n====================\n"
-	       "Model %s requires the unscaled LP to be solved with scaled NLA\n"
-	       "====================\n\n", ekk_lp.model_name_.c_str());
+        printf(
+            "\n====================\n"
+            "Model %s requires the unscaled LP to be solved with scaled NLA\n"
+            "====================\n\n",
+            ekk_lp.model_name_.c_str());
       }
       return_status = ekk_instance.solve(force_phase2);
       solved_unscaled_lp = true;

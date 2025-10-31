@@ -1123,24 +1123,25 @@ TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 }
 
-void getFixedLpRun(Highs& h,
-		   const std::string& message,
-		   const HighsModelStatus required_model_status,
-		   const bool output_flag) {
+void getFixedLpRun(Highs& h, const std::string& message,
+                   const HighsModelStatus required_model_status,
+                   const bool output_flag) {
   h.setOptionValue("output_flag", output_flag);
- std:string presolve;
+std:
+  string presolve;
   h.getOptionValue("presolve", presolve);
   if (output_flag)
-    printf("\n============================================================"
-	   "\n %s: presolve = %s"
-	   "\n============================================================\n",
-	   message.c_str(), presolve.c_str());
+    printf(
+        "\n============================================================"
+        "\n %s: presolve = %s"
+        "\n============================================================\n",
+        message.c_str(), presolve.c_str());
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == required_model_status);
   if (output_flag)
     printf("\nSimplex iteration count = %d\n",
-	   int(h.getInfo().simplex_iteration_count));
-    h.setOptionValue("output_flag", dev_run);
+           int(h.getInfo().simplex_iteration_count));
+  h.setOptionValue("output_flag", dev_run);
 }
 
 TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
@@ -1163,9 +1164,8 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kError);
 
-  getFixedLpRun(h, "Solving the original MIP",
-		HighsModelStatus::kOptimal,
-		output_flag);
+  getFixedLpRun(h, "Solving the original MIP", HighsModelStatus::kOptimal,
+                output_flag);
   double mip_optimal_objective = h.getInfo().objective_function_value;
   HighsSolution solution = h.getSolution();
 
@@ -1184,10 +1184,9 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   h.changeColsBounds(num_set_entries, col_set.data(), fixed_value.data(),
                      fixed_value.data());
   h.setOptionValue("presolve", kHighsOffString);
-  getFixedLpRun(h,
-		"Solving the externally fixed LP using the MIP solution as retained",
-		HighsModelStatus::kOptimal,
-		output_flag);
+  getFixedLpRun(
+      h, "Solving the externally fixed LP using the MIP solution as retained",
+      HighsModelStatus::kOptimal, output_flag);
   REQUIRE(objectiveOk(mip_optimal_objective,
                       h.getInfo().objective_function_value, dev_run));
   // In calling changeColsBounds, the incumbent solution was always
@@ -1206,20 +1205,17 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   // optimal, so no simplex iterations are required
   h.clearSolver();
   h.setSolution(solution);
-  getFixedLpRun(h,
-		"Solving the externally fixed LP using the MIP solution as passed",
-		HighsModelStatus::kOptimal,
-		output_flag);
+  getFixedLpRun(
+      h, "Solving the externally fixed LP using the MIP solution as passed",
+      HighsModelStatus::kOptimal, output_flag);
   REQUIRE(objectiveOk(mip_optimal_objective,
                       h.getInfo().objective_function_value, dev_run));
   REQUIRE(h.getInfo().simplex_iteration_count == 0);
 
   // Now re-load the MIP, re-solve, and get the fixed LP
   REQUIRE(h.passModel(mip) == HighsStatus::kOk);
-  getFixedLpRun(h,
-		"Solving the original MIP",
-		HighsModelStatus::kOptimal,
-		false);
+  getFixedLpRun(h, "Solving the original MIP", HighsModelStatus::kOptimal,
+                false);
   REQUIRE(objectiveOk(mip_optimal_objective,
                       h.getInfo().objective_function_value, dev_run));
 
@@ -1227,19 +1223,15 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kOk);
 
   REQUIRE(h.passModel(fixed_lp) == HighsStatus::kOk);
-  getFixedLpRun(h,
-		"Solving the extracted fixed LP from a logical basis",
-		HighsModelStatus::kOptimal,
-		output_flag);
+  getFixedLpRun(h, "Solving the extracted fixed LP from a logical basis",
+                HighsModelStatus::kOptimal, output_flag);
   REQUIRE(objectiveOk(mip_optimal_objective,
                       h.getInfo().objective_function_value, dev_run));
 
   h.clearSolver();
   h.setOptionValue("presolve", kHighsOnString);
-  getFixedLpRun(h,
-		"Solving the extracted fixed LP from a logical basis",
-		HighsModelStatus::kOptimal,
-		output_flag);
+  getFixedLpRun(h, "Solving the extracted fixed LP from a logical basis",
+                HighsModelStatus::kOptimal, output_flag);
   REQUIRE(objectiveOk(mip_optimal_objective,
                       h.getInfo().objective_function_value, dev_run));
   h.setOptionValue("presolve", kHighsOffString);
@@ -1247,10 +1239,8 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   // Now run from saved solution (without presolve)
   h.clearSolver();
   h.setSolution(solution);
-  getFixedLpRun(h,
-		"Solving the extracted fixed LP with saved solution",
-		HighsModelStatus::kOptimal,
-		output_flag);
+  getFixedLpRun(h, "Solving the extracted fixed LP with saved solution",
+                HighsModelStatus::kOptimal, output_flag);
   REQUIRE(objectiveOk(mip_optimal_objective,
                       h.getInfo().objective_function_value, dev_run));
   REQUIRE(h.getInfo().simplex_iteration_count == 0);
@@ -1262,21 +1252,17 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
     std::vector<HighsVarType> integrality = h.getLp().integrality_;
     for (HighsInt iCol = 0; iCol < fixed_lp.num_col_; iCol++) {
       if (integrality[iCol] != HighsVarType::kContinuous) {
-	solution.col_value[iCol] -= 0.01;
-	break;
+        solution.col_value[iCol] -= 0.01;
+        break;
       }
     }
-    getFixedLpRun(h,
-		  "Solving the original MIP so solution can be set",
-		  HighsModelStatus::kOptimal,
-		  false);
+    getFixedLpRun(h, "Solving the original MIP so solution can be set",
+                  HighsModelStatus::kOptimal, false);
     h.setSolution(solution);
     REQUIRE(h.getFixedLp(fixed_lp) == HighsStatus::kWarning);
     REQUIRE(h.passModel(fixed_lp) == HighsStatus::kOk);
-    getFixedLpRun(h,
-		  "Solving the extracted LP fixed to be infeasible",
-		  HighsModelStatus::kInfeasible,
-		  output_flag);
+    getFixedLpRun(h, "Solving the extracted LP fixed to be infeasible",
+                  HighsModelStatus::kInfeasible, output_flag);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
   }
 

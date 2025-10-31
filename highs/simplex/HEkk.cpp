@@ -3612,8 +3612,6 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
 
 void HEkk::testBasisCondition(const HighsLp& lp,
                               const std::string& message) const {
-  return;
-  /*
   double exact_kappa_tt = -timer_->read();
   bool exact = true;
   double exact_kappa = this->computeBasisCondition(lp, exact);
@@ -3627,7 +3625,6 @@ void HEkk::testBasisCondition(const HighsLp& lp,
                  "getKappa,%s,%g,%g,%g,%g,%s,%s\n", lp.model_name_.c_str(),
                  exact_kappa, exact_kappa_tt, approx_kappa, approx_kappa_tt,
                  message.c_str(), lp.origin_name_.c_str());
-  */
 }
 
 double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact) const {

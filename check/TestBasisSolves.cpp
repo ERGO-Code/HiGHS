@@ -628,13 +628,12 @@ TEST_CASE("scaling-kappa", "[highs_basis_solves]") {
     // model = "avgas";
     // model = "adlittle";
     // model = "25fv47";
-     model = "etamacro";
+    model = "etamacro";
     std::string filename =
         std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
     // Read the LP given by filename
     highs.readModel(filename);
-    highs.setOptionValue("simplex_scale_strategy",
-                         kSimplexScaleStrategyCost);
+    highs.setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyCost);
     //                         kSimplexScaleStrategyMaxValueMatrixAndCost);
     highs.run();
   }
