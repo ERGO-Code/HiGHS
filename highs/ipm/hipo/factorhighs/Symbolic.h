@@ -22,6 +22,9 @@ class Symbolic {
   bool parallel_tree_ = false;
   bool parallel_node_ = false;
 
+  // metis options
+  bool metis_no2hop_ = false;
+
   // Size of blocks for dense factorisation
   Int block_size_;
 
@@ -116,6 +119,7 @@ class Symbolic {
  public:
   Symbolic();
   void setParallel(bool par_tree, bool par_node);
+  void setMetisNo2hop(bool metis_no2hop);
 
   // provide const access to symbolic factorisation
   int64_t nz() const;
@@ -125,6 +129,7 @@ class Symbolic {
   Int blockSize() const;
   Int size() const;
   Int sn() const;
+  double fillin() const;
   Int rows(Int i) const;
   Int ptr(Int i) const;
   Int snStart(Int i) const;
@@ -137,6 +142,7 @@ class Symbolic {
   Int cliqueSize(Int sn) const;
   bool parTree() const;
   bool parNode() const;
+  bool metisNo2hop() const;
   const std::vector<Int>& ptr() const;
   const std::vector<Int>& iperm() const;
   const std::vector<Int>& snParent() const;

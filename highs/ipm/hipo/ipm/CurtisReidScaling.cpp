@@ -7,8 +7,8 @@
 
 namespace hipo {
 
-void product(const double* x, std::vector<double>& y,
-             const std::vector<Int>& ptr, const std::vector<Int>& rows) {
+static void product(const double* x, std::vector<double>& y,
+                    const std::vector<Int>& ptr, const std::vector<Int>& rows) {
   // Multiply by matrix E, i.e. matrix A with all entries equal to one
   // E * x = y
   Int n = ptr.size() - 1;
@@ -19,9 +19,9 @@ void product(const double* x, std::vector<double>& y,
   }
 }
 
-void product_transpose(const double* x, std::vector<double>& y,
-                       const std::vector<Int>& ptr,
-                       const std::vector<Int>& rows) {
+static void product_transpose(const double* x, std::vector<double>& y,
+                              const std::vector<Int>& ptr,
+                              const std::vector<Int>& rows) {
   // Multiply by matrix E^T, i.e. matrix A^T with all entries equal to one
   // E^T * x = y
   Int n = ptr.size() - 1;

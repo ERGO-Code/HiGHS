@@ -25,8 +25,8 @@ void FactorHiGHSSolver::clear() {
   FH_.newIter();
 }
 
-Int getASstructure(const HighsSparseMatrix& A, std::vector<Int>& ptr,
-                   std::vector<Int>& rows) {
+static Int getASstructure(const HighsSparseMatrix& A, std::vector<Int>& ptr,
+                          std::vector<Int>& rows) {
   // Augmented system structure
 
   Int nA = A.num_col_;
@@ -401,6 +401,17 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   return status ? kStatusErrorAnalyse : kStatusOk;
 }
 
+void FactorHiGHSSolver::freeNEmemory() {
+  // Swap NE data structures with empty vectors, to guarantee that memory is
+  // freed.
+
+  std::vector<Int>().swap(ptrNE_);
+  std::vector<Int>().swap(rowsNE_);
+  std::vector<Int>().swap(ptrNE_rw_);
+  std::vector<Int>().swap(idxNE_rw_);
+  std::vector<Int>().swap(corr_NE_);
+}
+
 Int FactorHiGHSSolver::analyseNE(Symbolic& S, int64_t nz_limit) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status. If building the matrix failed, the status is
@@ -439,6 +450,9 @@ Int FactorHiGHSSolver::chooseNla() {
   bool failure_NE = false;
   bool failure_AS = false;
 
+  symb_NE.setMetisNo2hop(options_.metis_no2hop);
+  symb_AS.setMetisNo2hop(options_.metis_no2hop);
+
   Clock clock;
 
   // Perform analyse phase of augmented system
@@ -475,6 +489,11 @@ Int FactorHiGHSSolver::chooseNla() {
   } else if (failure_AS && failure_NE) {
     status = kStatusErrorAnalyse;
     log_.printe("Both NE and AS failed analyse phase\n");
+    if ((symb_AS.fillin() > 50 || symb_NE.fillin() > 50) &&
+        !options_.metis_no2hop)
+      log_.print(
+          "Large fill-in in factorisation. Consider setting the "
+          "hipo_metis_no2hop option to true\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
@@ -507,6 +526,7 @@ Int FactorHiGHSSolver::chooseNla() {
   if (status != kStatusErrorAnalyse) {
     if (options_.nla == kOptionNlaAugmented) {
       S_ = std::move(symb_AS);
+      freeNEmemory();
     } else {
       S_ = std::move(symb_NE);
     }
@@ -517,6 +537,8 @@ Int FactorHiGHSSolver::chooseNla() {
 
 Int FactorHiGHSSolver::setNla() {
   std::stringstream log_stream;
+
+  S_.setMetisNo2hop(options_.metis_no2hop);
 
   switch (options_.nla) {
     case kOptionNlaAugmented: {

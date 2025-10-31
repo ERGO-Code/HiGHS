@@ -26,6 +26,15 @@ void highsLogHeader(const HighsLogOptions& log_options,
                "Running HiGHS %d.%d.%d%s: %s\n", (int)HIGHS_VERSION_MAJOR,
                (int)HIGHS_VERSION_MINOR, (int)HIGHS_VERSION_PATCH,
                githash_text.c_str(), kHighsCopyrightStatement.c_str());
+
+#ifdef HIPO
+#ifdef BLAS_LIBRARIES
+  highsLogUser(log_options, HighsLogType::kInfo, "Using blas: %s\n",
+               BLAS_LIBRARIES);
+#else
+  highsLogUser(log_options, HighsLogType::kInfo, "Using blas: unknown\n");
+#endif
+#endif
 }
 
 std::array<char, 32> highsDoubleToString(const double val,

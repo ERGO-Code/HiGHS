@@ -8,12 +8,12 @@
 
 namespace hipo {
 
-void applyRotation(double& x, double& y, double c, double s) {
+static void applyRotation(double& x, double& y, double c, double s) {
   double t = c * x + s * y;
   y = -s * x + c * y;
   x = t;
 }
-void getRotation(double x, double y, double& c, double& s) {
+static void getRotation(double x, double y, double& c, double& s) {
   if (y == 0.0) {
     c = 1.0;
     s = 0.0;
@@ -27,8 +27,8 @@ void getRotation(double x, double y, double& c, double& s) {
     s = t * c;
   }
 }
-void update(std::vector<double>& x, Int k, std::vector<double>& H, Int ldh,
-            std::vector<double>& s, std::vector<std::vector<double>>& V) {
+static void update(std::vector<double>& x, Int k, std::vector<double>& H, Int ldh,
+                   std::vector<double>& s, std::vector<std::vector<double>>& V) {
   // Solve H * y = s
   std::vector<double> y = s;
   for (Int i = k; i >= 0; --i) {

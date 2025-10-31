@@ -42,6 +42,7 @@ class FactorHiGHSSolver : public LinearSolver {
                        int64_t nz_limit = kHighsIInf);
   Int buildNEvalues(const HighsSparseMatrix& A,
                     const std::vector<double>& scaling);
+  void freeNEmemory();
 
   Int analyseAS(Symbolic& S);
   Int analyseNE(Symbolic& S, int64_t nz_limit = kHighsIInf);

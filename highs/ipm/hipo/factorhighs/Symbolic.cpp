@@ -14,6 +14,10 @@ void Symbolic::setParallel(bool par_tree, bool par_node) {
   parallel_node_ = par_node;
 }
 
+void Symbolic::setMetisNo2hop(bool metis_no2hop) {
+  metis_no2hop_ = metis_no2hop;
+}
+
 int64_t Symbolic::nz() const { return nz_; }
 double Symbolic::flops() const { return flops_; }
 double Symbolic::spops() const { return spops_; }
@@ -21,6 +25,7 @@ double Symbolic::critops() const { return critops_; }
 Int Symbolic::blockSize() const { return block_size_; }
 Int Symbolic::size() const { return n_; }
 Int Symbolic::sn() const { return sn_; }
+double Symbolic::fillin() const { return fillin_; }
 Int Symbolic::rows(Int i) const { return rows_[i]; }
 Int Symbolic::ptr(Int i) const { return ptr_[i]; }
 Int Symbolic::snStart(Int i) const { return sn_start_[i]; }
@@ -38,6 +43,7 @@ Int Symbolic::cliqueSize(Int sn) const {
 }
 bool Symbolic::parTree() const { return parallel_tree_; }
 bool Symbolic::parNode() const { return parallel_node_; }
+bool Symbolic::metisNo2hop() const { return metis_no2hop_; }
 
 const std::vector<Int>& Symbolic::ptr() const { return ptr_; }
 const std::vector<Int>& Symbolic::iperm() const { return iperm_; }
@@ -56,7 +62,7 @@ Int Symbolic::snRoots() const {
   return roots;
 }
 
-std::string memoryString(double mem) {
+static std::string memoryString(double mem) {
   std::stringstream ss;
 
   if (mem < 1024)
@@ -104,9 +110,16 @@ void Symbolic::print(const Log& log, bool verbose) const {
                << '\n';
     log_stream << textline("Sn roots:") << integer(snRoots()) << '\n';
   }
-
-  log_stream << '\n';
   log.print(log_stream);
+
+  // Warn about large fill-in
+  if (fillin_ > 50 && !metis_no2hop_) {
+    log.printw(
+        "Large fill-in in factorisation. Consider setting the "
+        "hipo_metis_no2hop option to true\n");
+  }
+
+  log.print("\n");
 }
 
 }  // namespace hipo

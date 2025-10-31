@@ -3192,6 +3192,10 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
   if (colDeleted[col]) return Result::kOk;
 
+  // singleton column stuffing
+  HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
+  if (colDeleted[col]) return Result::kOk;
+
   // update column implied bounds
   updateColImpliedBounds(row, col, colCoef);
 
@@ -4335,6 +4339,10 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
   if (colDeleted[col]) return Result::kOk;
 
+  // singleton column stuffing
+  HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
+  if (colDeleted[col]) return Result::kOk;
+
   // update dual implied bounds of all rows in given column
   if (model->integrality_[col] != HighsVarType::kInteger)
     updateRowDualImpliedBounds(col);
@@ -4460,6 +4468,35 @@ HPresolve::Result HPresolve::detectDominatedCol(
   return Result::kOk;
 }
 
+void HPresolve::computeLocks(
+    HighsInt col, bool considerObjective,
+    std::function<bool(HighsInt, bool)> lockCallback) const {
+  // if the callback returns true, we stop examining the locks
+  if (considerObjective) {
+    // consider objective function
+    if (model->col_cost_[col] < 0) {
+      // downlock
+      if (lockCallback(-1, false)) return;
+    } else if (model->col_cost_[col] > 0) {
+      // uplock
+      if (lockCallback(-1, true)) return;
+    }
+  }
+
+  // check coefficients
+  for (const auto& nz : getColumnVector(col)) {
+    // implied lower bound -> downlock
+    if (yieldsImpliedLowerBound(nz.index(), nz.value()) &&
+        lockCallback(nz.index(), false))
+      break;
+
+    // implied upper bound -> uplock
+    if (yieldsImpliedUpperBound(nz.index(), nz.value()) &&
+        lockCallback(nz.index(), true))
+      break;
+  }
+}
+
 HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
                                         HighsInt col) {
   // fix variables or tighten bounds using dual arguments
@@ -4470,43 +4507,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
-
-  // lambda for computing locks
-  auto computeLocks = [&](HighsInt col, HighsInt& numDownLocks,
-                          HighsInt& numUpLocks, HighsInt& downLockRow,
-                          HighsInt& upLockRow) {
-    // initialise
-    numDownLocks = 0;
-    numUpLocks = 0;
-    downLockRow = -1;
-    upLockRow = -1;
-
-    // consider objective function
-    if (model->col_cost_[col] > 0)
-      numUpLocks++;
-    else if (model->col_cost_[col] < 0)
-      numDownLocks++;
-
-    // check coefficients
-    for (const auto& nz : getColumnVector(col)) {
-      // update number of locks
-      if (yieldsImpliedLowerBound(nz.index(), nz.value())) {
-        // implied lower bound -> downlock
-        numDownLocks++;
-        downLockRow = nz.index();
-      }
-
-      if (yieldsImpliedUpperBound(nz.index(), nz.value())) {
-        // implied upper bound -> uplock
-        numUpLocks++;
-        upLockRow = nz.index();
-      }
-
-      // stop early if there are locks in both directions, since the variable
-      // cannot be fixed in this case.
-      if (numDownLocks > 1 && numUpLocks > 1) break;
-    }
-  };
 
   // lambda for variable substitution
   auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
@@ -4596,12 +4596,26 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     return true;
   };
 
-  // compute locks
+  // lambda callback for lock computation
   HighsInt numDownLocks = 0;
   HighsInt numUpLocks = 0;
   HighsInt downLockRow = -1;
   HighsInt upLockRow = -1;
-  computeLocks(col, numDownLocks, numUpLocks, downLockRow, upLockRow);
+  auto lockCallback = [&](HighsInt row, bool isUpLock) {
+    // count locks and remember row index
+    if (isUpLock) {
+      numUpLocks++;
+      upLockRow = row;
+    } else {
+      numDownLocks++;
+      downLockRow = row;
+    }
+    // stop early if there are locks in both directions, since the variable
+    // cannot be fixed in this case.
+    return numDownLocks > 1 && numUpLocks > 1;
+  };
+  // compute locks
+  computeLocks(col, true, lockCallback);
 
   // check if variable can be fixed
   if (numDownLocks == 0 || numUpLocks == 0) {
@@ -4652,6 +4666,137 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       }
     }
   }
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::singletonColStuffing(
+    HighsPostsolveStack& postsolve_stack, HighsInt col) {
+  // singleton column stuffing
+  // see Gamrath, G., Koch, T., Martin, A. et al., Progress in presolving
+  // for mixed integer programming, Math. Prog. Comp. 7, 367–398 (2015).
+  auto isContSingleton = [&](HighsInt col) {
+    return (!colDeleted[col] && colsize[col] == 1 &&
+            model->integrality_[col] != HighsVarType::kInteger &&
+            model->col_lower_[col] != model->col_upper_[col]);
+  };
+
+  auto sortCols =
+      [&](std::vector<std::tuple<HighsInt, double, HighsInt>>& vec) {
+        pdqsort(
+            vec.begin(), vec.end(),
+            [&](const std::tuple<HighsInt, double, HighsInt>& col1,
+                const std::tuple<HighsInt, double, HighsInt>& col2) {
+              return model->col_cost_[std::get<0>(col1)] / std::get<1>(col1) <
+                     model->col_cost_[std::get<0>(col2)] / std::get<1>(col2);
+            });
+      };
+
+  // lambda for updating row activity bounds
+  auto updateActivityBounds = [&](HighsCDouble& sumLower,
+                                  HighsCDouble& sumUpper, bool& sumLowerFinite,
+                                  bool& sumUpperFinite, double aj,
+                                  double lowerSumBound, double upperSumBound) {
+    sumLowerFinite = sumLowerFinite && std::abs(lowerSumBound) != kHighsInf;
+    sumUpperFinite = sumUpperFinite && std::abs(upperSumBound) != kHighsInf;
+    if (sumLowerFinite)
+      sumLower += aj * static_cast<HighsCDouble>(lowerSumBound);
+    if (sumUpperFinite)
+      sumUpper += aj * static_cast<HighsCDouble>(upperSumBound);
+  };
+
+  // lambda for actual stuffing
+  auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
+    // skip row if rhs is not finite
+    if (direction * rhs == kHighsInf) return Result::kOk;
+
+    // vectors for candidates and activity bounds
+    std::vector<std::tuple<HighsInt, double, HighsInt>> candidates;
+    HighsCDouble sumLower = 0.0;
+    HighsCDouble sumUpper = 0.0;
+    bool sumLowerFinite = true;
+    bool sumUpperFinite = true;
+
+    for (auto& nz : getRowVector(row)) {
+      // get column index, coefficient, cost and bounds
+      HighsInt j = nz.index();
+      double aj = direction * nz.value();
+      double cj = model->col_cost_[j];
+      double sumLowerBound = model->col_lower_[j];
+      double sumUpperBound = model->col_upper_[j];
+      if (isContSingleton(j)) {
+        // check singleton
+        if (aj > 0) {
+          // use lower bound
+          sumUpperBound = sumLowerBound;
+          // candidate for stuffing?
+          if (cj < 0) candidates.push_back(std::make_tuple(j, aj, HighsInt{1}));
+        } else {
+          // use upper bound
+          sumLowerBound = sumUpperBound;
+          // candidate for stuffing? multiply column with -1
+          if (cj > 0)
+            candidates.push_back(std::make_tuple(j, aj, HighsInt{-1}));
+        }
+      } else if (aj < 0)
+        std::swap(sumLowerBound, sumUpperBound);
+      // update activities
+      updateActivityBounds(sumLower, sumUpper, sumLowerFinite, sumUpperFinite,
+                           aj, sumLowerBound, sumUpperBound);
+      if (!sumLowerFinite && !sumUpperFinite) return Result::kOk;
+    }
+
+    // sort candidates
+    sortCols(candidates);
+
+    // check candidates
+    for (const auto& t : candidates) {
+      // get variable index, coefficient and multiplier (-1 if sign was flipped)
+      HighsInt j = std::get<0>(t);
+      double aj = std::get<1>(t);
+      HighsInt multiplier = std::get<2>(t);
+      // both bounds have to be finite
+      if (model->col_lower_[j] == -kHighsInf ||
+          model->col_upper_[j] == kHighsInf)
+        break;
+      // compute delta (bound difference)
+      HighsCDouble delta = multiplier * aj *
+                           (static_cast<HighsCDouble>(model->col_upper_[j]) -
+                            static_cast<HighsCDouble>(model->col_lower_[j]));
+      // check if variable can be fixed
+      if (sumUpperFinite &&
+          delta <= direction * rhs - sumUpper + primal_feastol) {
+        if (multiplier < 0)
+          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
+        else
+          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
+      } else if (sumLowerFinite &&
+                 direction * rhs <= sumLower + primal_feastol) {
+        if (multiplier < 0)
+          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
+        else
+          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
+      }
+      // update row activities
+      if (sumLowerFinite) sumLower += delta;
+      if (sumUpperFinite) sumUpper += delta;
+    }
+
+    return Result::kOk;
+  };
+
+  // consider only non-fixed singleton continuous columns
+  if (!isContSingleton(col)) return Result::kOk;
+
+  // get row index
+  HighsInt row = Arow[colhead[col]];
+
+  // return if we have an empty or singleton row or row is ranged
+  if (rowsize[row] <= 1 || isRanged(row)) return Result::kOk;
+
+  // check row
+  HPRESOLVE_CHECKED_CALL(checkRow(row, model->row_upper_[row], HighsInt{1}));
+  HPRESOLVE_CHECKED_CALL(checkRow(row, model->row_lower_[row], HighsInt{-1}));
+
   return Result::kOk;
 }
 

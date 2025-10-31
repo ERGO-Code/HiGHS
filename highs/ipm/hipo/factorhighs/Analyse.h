@@ -86,14 +86,14 @@ class Analyse {
   DataCollector& data_;
 
   // Functions to perform analyse phase
-  Int getPermutation();
+  Int getPermutation(bool metis_no2hop);
   void permute(const std::vector<Int>& iperm);
   void eTree();
   void postorder();
   void colCount();
   void fundamentalSupernodes();
   void relaxSupernodes();
-  void relaxSupernodesSize();
+  double doRelaxSupernodes(int64_t max_artificial_nz);
   void afterRelaxSn();
   void snPattern();
   void relativeIndCols();

@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: galabovaa/METIS
-          ref: 510-ts
+          ref: 521-ts
           path: METIS
 
       - name: Create installs dir
@@ -108,7 +108,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: galabovaa/METIS
-          ref: 510-ts
+          ref: 521-ts
           path: METIS
 
       - name: Create installs dir
@@ -205,7 +205,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: galabovaa/METIS
-          ref: 510-ts
+          ref: 521-ts
           path: METIS
 
       - name: Create installs dir
