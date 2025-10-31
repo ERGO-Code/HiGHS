@@ -551,8 +551,6 @@ void simplexScaleLp(const HighsOptions& options, HighsLp& lp,
 	  rowUpper[iRow] *= scale.row[iRow];
 	}
 	scale.has_scaling = true;
-	scale.num_col = numCol;
-	scale.num_row = numRow;
 	scale.cost = 1.0;
 	lp.is_scaled_ = true;
       }
@@ -1128,8 +1126,6 @@ void simplexUnscaleSolution(HighsSolution& solution, const HighsScale& scale) {
   HighsInt num_col = solution.col_value.size();
   HighsInt num_row = solution.row_value.size();
   if (has_matrix_scaling) {
-    assert(scale.num_col == num_col);
-    assert(scale.num_row == num_row);
     assert(solution.col_value.size() == scale.col.size());
     assert(solution.row_value.size() == scale.row.size());
     assert(solution.col_dual.size() == scale.col.size());

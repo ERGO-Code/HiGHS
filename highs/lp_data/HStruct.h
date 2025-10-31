@@ -95,8 +95,6 @@ struct HighsBasis {
 struct HighsScale {
   HighsInt strategy;
   bool has_scaling;
-  HighsInt num_col;
-  HighsInt num_row;
   double cost;
   std::vector<double> col;
   std::vector<double> row;

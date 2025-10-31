@@ -222,39 +222,19 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   bool legal_scale_col_size = false;
   if (lp.scale_.has_scaling) {
     if (scale_col_size) {
-      legal_scale_num_col = lp.scale_.num_col == num_col;
       legal_scale_col_size = scale_col_size >= num_col;
     } else {
-      legal_scale_num_col = lp.scale_.num_col == 0;
       legal_scale_col_size = true;  // Since scale_col_size = 0
     }
     if (scale_row_size) {
-      legal_scale_num_row = lp.scale_.num_row == num_row;
       legal_scale_row_size = scale_row_size >= num_row;
     } else {
-      legal_scale_num_row = lp.scale_.num_row == 0;
       legal_scale_row_size = true;  // Since scale_row_size = 0
     }
   } else {
-    legal_scale_num_col = lp.scale_.num_col == 0;
-    legal_scale_num_row = lp.scale_.num_row == 0;
     legal_scale_row_size = scale_row_size == 0;
     legal_scale_col_size = scale_col_size == 0;
   }
-  if (!legal_scale_num_col)
-    highsLogUser(
-        log_options, HighsLogType::kError,
-        "LP dimension validation (%s) fails on scale_.num_col = %d != %d\n",
-        message.c_str(), (int)lp.scale_.num_col,
-        (int)(lp.scale_.has_scaling ? num_col : 0));
-  ok = legal_scale_num_col && ok;
-  if (!legal_scale_num_row)
-    highsLogUser(
-        log_options, HighsLogType::kError,
-        "LP dimension validation (%s) fails on scale_.num_row = %d != %d\n",
-        message.c_str(), (int)lp.scale_.num_row,
-        (int)(lp.scale_.has_scaling ? num_row : 0));
-  ok = legal_scale_num_row && ok;
   if (!legal_scale_col_size)
     highsLogUser(
         log_options, HighsLogType::kError,

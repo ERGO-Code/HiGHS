@@ -487,7 +487,6 @@ HighsStatus Highs::addColsInterface(
     scale.col.resize(newNumCol);
     for (HighsInt iCol = 0; iCol < ext_num_new_col; iCol++)
       scale.col[lp.num_col_ + iCol] = 1.0;
-    scale.num_col = newNumCol;
     // Apply the existing row scaling to the new columns
     local_a_matrix.applyRowScale(scale);
     // Consider applying column scaling to the new columns.
@@ -617,7 +616,6 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     scale.row.resize(newNumRow);
     for (HighsInt iRow = 0; iRow < ext_num_new_row; iRow++)
       scale.row[lp.num_row_ + iRow] = 1.0;
-    scale.num_row = newNumRow;
     // Apply the existing column scaling to the new rows
     local_ar_matrix.applyColScale(scale);
     // Consider applying row scaling to the new rows.
@@ -737,7 +735,6 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
     lp.scale_.col.resize(lp.num_col_);
-    lp.scale_.num_col = lp.num_col_;
   }
   // Deduce the consequences of deleting columns
   invalidateModelStatusSolutionAndInfo();
@@ -793,7 +790,6 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.row, index_collection);
     lp.scale_.row.resize(lp.num_row_);
-    lp.scale_.num_row = lp.num_row_;
   }
   // Deduce the consequences of deleting rows
   invalidateModelStatusSolutionAndInfo();

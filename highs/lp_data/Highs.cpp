@@ -343,7 +343,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // scale factors to be passed
   assert(!lp.is_scaled_);
   assert(!lp.is_moved_);
-  lp.resetScale();
+  lp.clearScale();
   // Check that the LP array dimensions are valid
   if (!lpDimensionsOk("passModel", lp, options_.log_options))
     return HighsStatus::kError;

@@ -110,8 +110,6 @@ bool HighsLp::equalScaling(const HighsLp& lp) const {
   bool equal = true;
   equal = this->scale_.strategy == lp.scale_.strategy && equal;
   equal = this->scale_.has_scaling == lp.scale_.has_scaling && equal;
-  equal = this->scale_.num_col == lp.scale_.num_col && equal;
-  equal = this->scale_.num_row == lp.scale_.num_row && equal;
   equal = this->scale_.cost == lp.scale_.cost && equal;
   equal = this->scale_.col == lp.scale_.col && equal;
   equal = this->scale_.row == lp.scale_.row && equal;
@@ -141,14 +139,6 @@ HighsCDouble HighsLp::objectiveCDoubleValue(
 void HighsLp::setMatrixDimensions() {
   this->a_matrix_.num_col_ = this->num_col_;
   this->a_matrix_.num_row_ = this->num_row_;
-}
-
-void HighsLp::resetScale() {
-  // Should allow user-supplied scale to be retained
-  //  const bool dimensions_ok =
-  //    this->scale_.num_col_ == this->num_col_ &&
-  //    this->scale_.num_row_ == this->num_row_;
-  this->clearScale();
 }
 
 void HighsLp::setFormat(const MatrixFormat format) {
@@ -231,8 +221,6 @@ void HighsLp::clear() {
 void HighsLp::clearScale() {
   this->scale_.strategy = kSimplexScaleStrategyOff;
   this->scale_.has_scaling = false;
-  this->scale_.num_col = 0;
-  this->scale_.num_row = 0;
   this->scale_.cost = 0;
   this->scale_.col.clear();
   this->scale_.row.clear();

@@ -718,8 +718,6 @@ HighsStatus HEkk::dualize() {
       std::vector<double> temp_scale = lp_.scale_.row;
       lp_.scale_.row = lp_.scale_.col;
       lp_.scale_.col = temp_scale;
-      lp_.scale_.num_col = dual_num_col;
-      lp_.scale_.num_row = dual_num_row;
     }
   }
   // Change optimization sense
@@ -917,8 +915,6 @@ HighsStatus HEkk::undualize() {
       lp_.scale_.col = temp_scale;
       lp_.scale_.col.resize(original_num_col_);
       lp_.scale_.row.resize(original_num_row_);
-      lp_.scale_.num_col = original_num_col_;
-      lp_.scale_.num_row = original_num_row_;
     }
   }
   // Change optimization sense
