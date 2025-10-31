@@ -210,7 +210,7 @@ else()
       else()
           # LINUX
           if(BLAS_LIB)
-              target_link_libraries(highs PRIVATE "${BLAS_LIB}")
+              target_link_libraries(highs PRIVATE "${BLAS_LIB}" cblas)
           elseif(OPENBLAS_LIB)
               target_link_libraries(highs PRIVATE "${OPENBLAS_LIB}")
               target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
