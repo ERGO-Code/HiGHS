@@ -14,10 +14,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <queue>
 #include <tuple>
 #include <vector>
-#include <functional>
 
 #include "lp_data/HConst.h"
 
