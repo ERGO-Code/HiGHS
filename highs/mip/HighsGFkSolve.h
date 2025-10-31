@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <queue>
 #include <tuple>
 #include <vector>
