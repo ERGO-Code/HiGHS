@@ -1157,7 +1157,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
   // count number of fixed columns and modified bounds
   HighsInt numFixedCols = 0;
-  HighsInt numBoundsModified = 0;
+  HighsInt numModifiedBounds = 0;
 
   for (HighsInt j = 0; j < model->num_col_; ++j) {
     // skip deleted columns
@@ -1257,7 +1257,7 @@ HPresolve::Result HPresolve::dominatedColumns(
         if (lowerBound == model->col_upper_[col])
           HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{1}));
         else if (model->integrality_[col] != HighsVarType::kContinuous) {
-          numBoundsModified++;
+          numModifiedBounds++;
           changeColLower(col, lowerBound);
         }
       }
@@ -1267,7 +1267,7 @@ HPresolve::Result HPresolve::dominatedColumns(
         if (upperBound == model->col_lower_[col])
           HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{-1}));
         else if (model->integrality_[col] != HighsVarType::kContinuous) {
-          numBoundsModified++;
+          numModifiedBounds++;
           changeColUpper(col, upperBound);
         }
       }
@@ -1398,11 +1398,11 @@ HPresolve::Result HPresolve::dominatedColumns(
               mipsolver->mipdata_->cliquetable.numCliques(j, 1) > 0));
   }
 
-  if (numFixedCols > 0 || numBoundsModified > 0)
+  if (numFixedCols > 0 || numModifiedBounds > 0)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Fixed %d dominated columns and strengthened %d bounds\n",
                 static_cast<int>(numFixedCols),
-                static_cast<int>(numBoundsModified));
+                static_cast<int>(numModifiedBounds));
 
   return Result::kOk;
 }
@@ -4674,6 +4674,10 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // singleton column stuffing
   // see Gamrath, G., Koch, T., Martin, A. et al., Progress in presolving
   // for mixed integer programming, Math. Prog. Comp. 7, 367–398 (2015).
+
+  // count number of fixed columns
+  HighsInt numFixedCols = 0;
+
   auto isContSingleton = [&](HighsInt col) {
     return (!colDeleted[col] && colsize[col] == 1 &&
             model->integrality_[col] != HighsVarType::kInteger &&
@@ -4765,12 +4769,14 @@ HPresolve::Result HPresolve::singletonColStuffing(
       // check if variable can be fixed
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
+        numFixedCols++;
         if (multiplier < 0)
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
         else
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
       } else if (sumLowerFinite &&
                  direction * rhs <= sumLower + primal_feastol) {
+        numFixedCols++;
         if (multiplier < 0)
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
         else
@@ -4796,6 +4802,11 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // check row
   HPRESOLVE_CHECKED_CALL(checkRow(row, model->row_upper_[row], HighsInt{1}));
   HPRESOLVE_CHECKED_CALL(checkRow(row, model->row_lower_[row], HighsInt{-1}));
+
+  if (numFixedCols > 0)
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "Singleton column stuffing fixed %d columns",
+                static_cast<int>(numFixedCols));
 
   return Result::kOk;
 }
