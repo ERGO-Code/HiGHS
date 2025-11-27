@@ -146,15 +146,21 @@ void DataCollector::printTimes(const Log& log) const {
              << fix(times[kTimeFactorisePrepare] / times[kTimeFactorise] * 100,
                     4, 1)
              << "%)\n";
-  log_stream << "\tAssemble children in F: "
+  log_stream << "\tAssemble original:      "
              << fix(times[kTimeFactoriseAssembleOriginal], 8, 4) << " ("
              << fix(times[kTimeFactoriseAssembleOriginal] /
                         times[kTimeFactorise] * 100,
                     4, 1)
              << "%)\n";
-  log_stream << "\tAssemble children in C: "
+  log_stream << "\tAssemble children in F: "
              << fix(times[kTimeFactoriseAssembleChildrenFrontal], 8, 4) << " ("
              << fix(times[kTimeFactoriseAssembleChildrenFrontal] /
+                        times[kTimeFactorise] * 100,
+                    4, 1)
+             << "%)\n";
+  log_stream << "\tAssemble children in C: "
+             << fix(times[kTimeFactoriseAssembleChildrenClique], 8, 4) << " ("
+             << fix(times[kTimeFactoriseAssembleChildrenClique] /
                         times[kTimeFactorise] * 100,
                     4, 1)
              << "%)\n";

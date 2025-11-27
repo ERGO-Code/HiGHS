@@ -22,13 +22,13 @@ class Symbolic {
 
   // Statistics about symbolic factorisation
   Int n_{};
-  int64_t nz_{};
+  Int64 nz_{};
   Int sn_{};
   double fillin_{};
   double flops_{};
   double spops_{};
   double critops_{};
-  int64_t artificial_nz_{};
+  Int64 artificial_nz_{};
   double artificial_ops_{};
   double serial_storage_{};
   Int largest_front_{};
@@ -42,7 +42,8 @@ class Symbolic {
 
   // Sparsity pattern of each supernode of L
   std::vector<Int> rows_{};
-  std::vector<Int> ptr_{};
+  std::vector<Int64> ptr_{};
+  // NB: difference (ptr_[sn+1] - ptr_[sn]) fits into Int
 
   // Supernodal elimination tree:
   // - sn_parent_[i] gives the parent of supernode i in the supernodal
@@ -95,7 +96,9 @@ class Symbolic {
   std::vector<Int> pivot_sign_{};
 
   // Starting position of diagonal blocks for hybrid formats
-  std::vector<std::vector<Int>> clique_block_start_{};
+  std::vector<std::vector<Int64>> clique_block_start_{};
+
+  Int64 max_stack_size_{};
 
   friend class Analyse;
 
@@ -105,7 +108,7 @@ class Symbolic {
   void setMetisNo2hop(bool metis_no2hop);
 
   // provide const access to symbolic factorisation
-  int64_t nz() const;
+  Int64 nz() const;
   double flops() const;
   double spops() const;
   double critops() const;
@@ -113,19 +116,21 @@ class Symbolic {
   Int size() const;
   Int sn() const;
   double fillin() const;
-  Int rows(Int i) const;
-  Int ptr(Int i) const;
+  Int rows(Int64 i) const;
+  Int64 ptr(Int i) const;
   Int snStart(Int i) const;
   Int snParent(Int i) const;
   Int relindCols(Int i) const;
   Int relindClique(Int i, Int j) const;
   Int consecutiveSums(Int i, Int j) const;
-  Int cliqueBlockStart(Int sn, Int bl) const;
-  Int cliqueSize(Int sn) const;
+  Int64 cliqueBlockStart(Int sn, Int bl) const;
+  Int64 cliqueSize(Int sn) const;
+  Int64 maxStackSize() const;
   bool parTree() const;
   bool parNode() const;
   bool metisNo2hop() const;
-  const std::vector<Int>& ptr() const;
+  double storage() const;
+  const std::vector<Int64>& ptr() const;
   const std::vector<Int>& iperm() const;
   const std::vector<Int>& snParent() const;
   const std::vector<Int>& snStart() const;

@@ -378,6 +378,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     ipm.setOptionValue("run_crossover", kHighsOffString);
+    ipm.setOptionValue("run_centring", true);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     lpmodel.integrality_.clear();

@@ -17,7 +17,8 @@ class HybridSolveHandler : public SolveHandler {
   HybridSolveHandler(const Symbolic& S,
                      const std::vector<std::vector<double>>& sn_columns,
                      const std::vector<std::vector<Int>>& swaps,
-                     const std::vector<std::vector<double>>& pivot_2x2);
+                     const std::vector<std::vector<double>>& pivot_2x2,
+                     DataCollector& data);
 };
 
 }  // namespace hipo

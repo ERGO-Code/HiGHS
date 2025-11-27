@@ -4,21 +4,6 @@
 
 namespace hipo {
 
-void counts2Ptr(std::vector<Int>& ptr, std::vector<Int>& w) {
-  // Given the column counts in the vector w (of size n),
-  // compute the column pointers in the vector ptr (of size n+1),
-  // and copy the first n pointers back into w.
-
-  Int temp_nz{};
-  Int n = w.size();
-  for (Int j = 0; j < n; ++j) {
-    ptr[j] = temp_nz;
-    temp_nz += w[j];
-    w[j] = ptr[j];
-  }
-  ptr[n] = temp_nz;
-}
-
 void inversePerm(const std::vector<Int>& perm, std::vector<Int>& iperm) {
   // Given the permutation perm, produce the inverse permutation iperm.
   // perm[i] : i-th entry to use in the new order.
@@ -208,8 +193,8 @@ void processEdge(Int j, Int i, const std::vector<Int>& first,
   prevleaf[i] = j;
 }
 
-double getDiagStart(Int n, Int k, Int nb, Int n_blocks, std::vector<Int>& start,
-                    bool triang) {
+Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
+                   std::vector<Int64>& start, bool triang) {
   // start position of diagonal blocks for blocked dense formats
   start.assign(n_blocks, 0);
   for (Int i = 1; i < n_blocks; ++i) {
@@ -218,8 +203,8 @@ double getDiagStart(Int n, Int k, Int nb, Int n_blocks, std::vector<Int>& start,
   }
 
   Int jb = std::min(nb, k - (n_blocks - 1) * nb);
-  double result = (double)start.back() + (double)(n - (n_blocks - 1) * nb) * jb;
-  if (triang) result -= (double)jb * (jb - 1) / 2;
+  Int64 result = start.back() + (Int64)(n - (n_blocks - 1) * nb) * jb;
+  if (triang) result -= jb * (jb - 1) / 2;
   return result;
 }
 

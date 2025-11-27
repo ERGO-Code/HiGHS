@@ -19,9 +19,8 @@ Int Numeric::solve(std::vector<double>& x) const {
   if (!sn_columns_ || !S_) return kRetInvalidPointer;
 
   // initialise solve handler
-  SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, pivot_2x2_));
-
-  SH_->setData(data_);
+  SH_.reset(
+      new HybridSolveHandler(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_));
 
 #if HIPO_TIMING_LEVEL >= 1
   Clock clock{};
@@ -44,9 +43,6 @@ Int Numeric::solve(std::vector<double>& x) const {
 
 #if HIPO_TIMING_LEVEL >= 2
   if (data_) data_->sumTime(kTimeSolveSolve, clock_fine.stop());
-#endif
-
-#if HIPO_TIMING_LEVEL >= 2
   clock_fine.start();
 #endif
   // unpermute solution

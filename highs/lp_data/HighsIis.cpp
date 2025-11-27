@@ -864,15 +864,15 @@ bool HighsIis::indexStatusOk(const HighsLp& lp) const {
   const HighsInt illegal_status = -99;
   for (HighsInt iX = 0; iX < num_iis_col; iX++) {
     HighsInt iCol = this->col_index_[iX];
-    if (col_status_[iCol] != true_iis ? kIisStatusInConflict
-                                      : kIisStatusMaybeInConflict)
+    if (col_status_[iCol] !=
+        (true_iis ? kIisStatusInConflict : kIisStatusMaybeInConflict))
       return indexStatusOkReturn(false);
     col_status[iCol] = illegal_status;
   }
   for (HighsInt iX = 0; iX < num_iis_row; iX++) {
     HighsInt iRow = this->row_index_[iX];
-    if (row_status_[iRow] != true_iis ? kIisStatusInConflict
-                                      : kIisStatusMaybeInConflict)
+    if (row_status_[iRow] !=
+        (true_iis ? kIisStatusInConflict : kIisStatusMaybeInConflict))
       return indexStatusOkReturn(false);
     row_status[iRow] = illegal_status;
   }

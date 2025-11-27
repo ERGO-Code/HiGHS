@@ -28,10 +28,12 @@ const double kSymbNzMult = 5.0;
 
 // parameters for choice of parallelism
 const double kLargeFlopsThresh = 1e7;
-const double kLargeSpeedupThresh = 1.5;
+const double kLargeSpeedupThresh = 1;
 const double kLargeSnThresh = 20.0;
-const double kSmallSnThresh = 5.0;
+const double kSmallSnThresh = 3.0;
 const Int kMinNumberSn = 10;
+const double kLargeStorageGB = 20.0;
+const double kLargeFillin = 50.0;
 
 // parameters for dense columns
 const double kDenseColThresh = 0.5;

@@ -1,6 +1,7 @@
 #ifndef FACTOR_HIGHS_H
 #define FACTOR_HIGHS_H
 
+#include "CliqueStack.h"
 #include "DataCollector.h"
 #include "Numeric.h"
 #include "Symbolic.h"
@@ -61,6 +62,7 @@ class FHsolver {
   DataCollector data_;
   Regul regul_;
   Numeric N_;
+  CliqueStack serial_stack_;
 
   const Int nb_;  // block size
   static const Int default_nb_ = 128;

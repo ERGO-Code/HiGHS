@@ -37,7 +37,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
   const Int n_blocks = (k - 1) / nb + 1;
 
   // start of diagonal blocks
-  std::vector<Int> diag_start(n_blocks);
+  std::vector<Int64> diag_start(n_blocks);
   getDiagStart(n, k, nb, n_blocks, diag_start);
 
   // size of blocks
@@ -77,7 +77,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
     const Int M = n - nb * j - jb;
 
     // block of columns below diagonal block j
-    const Int R_pos = diag_start[j] + this_diag_size;
+    const Int64 R_pos = diag_start[j] + this_diag_size;
     double* R = &A[R_pos];
 
     // ===========================================================================
@@ -85,7 +85,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
     // ===========================================================================
     double max_in_R = -1.0;
     if (jb == 1) {
-      for (Int i = 0; i < M * jb; ++i)
+      for (Int64 i = 0; i < M * jb; ++i)
         max_in_R = std::max(max_in_R, std::abs(R[i]));
     }
 
@@ -151,7 +151,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
 
       // check entries of L
       /*double max_in_R = -1.0;
-      for (Int i = 0; i < M * jb; ++i) {
+      for (Int64 i = 0; i < M * jb; ++i) {
         max_in_R = std::max(max_in_R, std::abs(R[i]));
       }
       if (max_in_R > 1e8) printf("%.1e, %5d %5d\n", max_in_R, jb, M);*/
@@ -159,7 +159,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
       // ===========================================================================
       // UPDATE FRONTAL
       // ===========================================================================
-      Int offset{};
+      Int64 offset{};
 
       // go through remaining blocks of columns
       for (Int jj = j + 1; jj < n_blocks; ++jj) {
@@ -192,7 +192,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
       // UPDATE SCHUR COMPLEMENT
       // ===========================================================================
       if (k < n) {
-        Int B_offset{};
+        Int64 B_offset{};
 
         // go through blocks of columns of the Schur complement
         for (Int sb = 0; sb < s_blocks; ++sb) {
@@ -255,8 +255,8 @@ Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb, DataCollector& data) {
 
   std::vector<double> buf(nrow * nb);
 
-  Int startAtoBuf = 0;
-  Int startBuftoA = 0;
+  Int64 startAtoBuf = 0;
+  Int64 startBuftoA = 0;
 
   for (Int k = 0; k <= (ncol - 1) / nb; ++k) {
     // Number of columns in the block. Can be smaller than nb for last block.

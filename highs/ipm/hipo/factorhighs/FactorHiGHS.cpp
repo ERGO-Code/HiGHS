@@ -44,7 +44,8 @@ Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
 Int FHsolver::factorise(const Symbolic& S, const std::vector<Int>& rows,
                         const std::vector<Int>& ptr,
                         const std::vector<double>& vals) {
-  Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_, sn_columns_);
+  Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_, sn_columns_,
+                     &serial_stack_);
   return fact_obj.run(N_);
 }
 

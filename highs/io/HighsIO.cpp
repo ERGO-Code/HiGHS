@@ -14,6 +14,7 @@
 #include <cstdarg>
 #include <cstdio>
 
+#include "ipm/hipo/auxiliary/AutoDetect.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
@@ -28,11 +29,20 @@ void highsLogHeader(const HighsLogOptions& log_options,
                githash_text.c_str(), kHighsCopyrightStatement.c_str());
 
 #ifdef HIPO
+  std::string blas_model =
+      hipo::getIntegerModelString(hipo::getBlasIntegerModel());
+
 #ifdef BLAS_LIBRARIES
-  highsLogUser(log_options, HighsLogType::kInfo, "Using blas: %s\n",
-               BLAS_LIBRARIES);
+  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s - %s\n",
+               BLAS_LIBRARIES, blas_model.c_str());
 #else
-  highsLogUser(log_options, HighsLogType::kInfo, "Using blas: unknown\n");
+#ifdef HIPO_USES_OPENBLAS
+  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: OpenBLAS - %s\n",
+               blas_model.c_str());
+#else
+  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: unknown - %s\n",
+               blas_model.c_str());
+#endif
 #endif
 #endif
 }

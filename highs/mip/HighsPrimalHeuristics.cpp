@@ -297,9 +297,8 @@ void HighsPrimalHeuristics::rootReducedCost() {
   HeuristicNeighbourhood neighbourhood(mipsolver, localdom);
 
   double currCutoff = kHighsInf;
-  double lower_bound;
-
-  lower_bound = mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol;
+  double lower_bound =
+      mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol;
 
   for (const std::pair<double, HighsDomainChange>& domchg : lurkingBounds) {
     currCutoff = domchg.first;

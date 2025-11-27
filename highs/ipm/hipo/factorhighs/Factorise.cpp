@@ -8,7 +8,6 @@
 #include "FormatHandler.h"
 #include "HybridHybridFormatHandler.h"
 #include "ReturnValues.h"
-#include "SymScaling.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
 #include "parallel/HighsParallel.h"
@@ -19,8 +18,14 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
                      const std::vector<Int>& ptrA,
                      const std::vector<double>& valA, const Regul& regul,
                      const Log* log, DataCollector& data,
-                     std::vector<std::vector<double>>& sn_columns)
-    : S_{S}, sn_columns_{sn_columns}, regul_{regul}, log_{log}, data_{data} {
+                     std::vector<std::vector<double>>& sn_columns,
+                     CliqueStack* stack)
+    : S_{S},
+      sn_columns_{sn_columns},
+      regul_{regul},
+      log_{log},
+      data_{data},
+      stack_{stack} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -58,12 +63,10 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
   // create linked lists of children in supernodal elimination tree
   childrenLinkedList(S_.snParent(), first_child_, next_child_);
 
-  if (S_.parTree()) {
-    // create reverse linked lists of children
-    first_child_reverse_ = first_child_;
-    next_child_reverse_ = next_child_;
-    reverseLinkedList(first_child_reverse_, next_child_reverse_);
-  }
+  // create reverse linked lists of children
+  first_child_reverse_ = first_child_;
+  next_child_reverse_ = next_child_;
+  reverseLinkedList(first_child_reverse_, next_child_reverse_);
 
   // compute largest diagonal entry in absolute value
   max_diag_ = 0.0;
@@ -185,19 +188,22 @@ void Factorise::processSupernode(Int sn) {
 
   TaskGroupSpecial tg;
 
+  const bool parallel = S_.parTree();
+  const bool serial = !parallel;
+
   if (flag_stop_) return;
 
-  if (S_.parTree()) {
-    // spawn children of this supernode in reverse order
-    Int child_to_spawn = first_child_reverse_[sn];
+  if (parallel) {
+    // spawn children of this supernode in forward order
+    Int child_to_spawn = first_child_[sn];
     while (child_to_spawn != -1) {
       tg.spawn([=]() { processSupernode(child_to_spawn); });
-      child_to_spawn = next_child_reverse_[child_to_spawn];
+      child_to_spawn = next_child_[child_to_spawn];
     }
 
     // wait for first child to finish, before starting the parent (if there is a
     // first child)
-    if (first_child_reverse_[sn] != -1) tg.sync();
+    if (first_child_[sn] != -1) tg.sync();
   }
 
 #if HIPO_TIMING_LEVEL >= 2
@@ -211,10 +217,20 @@ void Factorise::processSupernode(Int sn) {
   const Int sn_end = S_.snStart(sn + 1);
   const Int sn_size = sn_end - sn_begin;
 
+  // When the tree is processed in serial, use CliqueStack to store the cliques.
+  // Otherwise, use local storage in FormatHandler.
+  double* clique_ptr = nullptr;
+  if (serial) {
+    bool reallocation = false;
+    clique_ptr = stack_->setup(S_.cliqueSize(sn), reallocation);
+    if (reallocation && log_)
+      log_->printDevInfo("Reallocation of CliqueStack\n");
+  }
+
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
-  std::unique_ptr<FormatHandler> FH(
-      new HybridHybridFormatHandler(S_, sn, regul_, data_, sn_columns_[sn]));
+  std::unique_ptr<FormatHandler> FH(new HybridHybridFormatHandler(
+      S_, sn, regul_, data_, sn_columns_[sn], clique_ptr));
 
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactorisePrepare, clock.stop());
@@ -246,22 +262,32 @@ void Factorise::processSupernode(Int sn) {
   // ===================================================
   // Assemble frontal matrices of children
   // ===================================================
-  Int child_sn = first_child_[sn];
+  Int child_sn = first_child_reverse_[sn];
   while (child_sn != -1) {
-    // Schur contribution of the current child
-    std::vector<double>& child_clique = schur_contribution_[child_sn];
+    // Child contribution is found:
+    // - in cliquestack, if we are processing the tree in serial.
+    // - in schur_contribution_ if we are processing the tree in parallel.
+    // Children are always summed from last to first.
 
-    if (S_.parTree()) {
+    const double* child_clique;
+
+    if (parallel) {
       // sync with spawned child, apart from the first one
-      if (child_sn != first_child_[sn]) tg.sync();
+      if (child_sn != first_child_reverse_[sn]) tg.sync();
 
       if (flag_stop_) return;
 
-      if (child_clique.size() == 0) {
+      child_clique = schur_contribution_[child_sn].data();
+
+      if (!child_clique) {
         if (log_) log_->printDevInfo("Missing child supernode contribution\n");
         flag_stop_ = true;
         return;
       }
+    } else {
+      Int child;
+      child_clique = stack_->getChild(child);
+      assert(child == child_sn);
     }
 
     // determine size of clique of child
@@ -316,12 +342,15 @@ void Factorise::processSupernode(Int sn) {
 #endif
 
     // Schur contribution of the child is no longer needed
-    // Swap with temporary empty vector to deallocate memory
-    std::vector<double> temp_empty;
-    schur_contribution_[child_sn].swap(temp_empty);
+    if (parallel) {
+      // Swap with temporary empty vector to deallocate memory
+      std::vector<double>().swap(schur_contribution_[child_sn]);
+    } else {
+      stack_->popChild();
+    }
 
     // move on to the next child
-    child_sn = next_child_[child_sn];
+    child_sn = next_child_reverse_[child_sn];
   }
 
   if (flag_stop_) return;
@@ -359,6 +388,9 @@ void Factorise::processSupernode(Int sn) {
   // terminate the format handler
   FH->terminate(schur_contribution_[sn], total_reg_, swaps_[sn],
                 pivot_2x2_[sn]);
+
+  if (serial) stack_->pushWork(sn);
+
 #if HIPO_TIMING_LEVEL >= 2
   data_.sumTime(kTimeFactoriseTerminate, clock.stop());
 #endif
@@ -395,6 +427,10 @@ bool Factorise::run(Numeric& num) {
     // sync tasks for root supernodes
     tg.taskWait();
   } else {
+    // processing the tree in serial requires a CliqueStack
+    if (!stack_) return true;
+    if (stack_->empty()) stack_->init(S_.maxStackSize());
+
     // go through each supernode serially
     for (Int sn = 0; sn < S_.sn(); ++sn) {
       processSupernode(sn);

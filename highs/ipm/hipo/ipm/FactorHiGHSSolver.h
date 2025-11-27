@@ -20,10 +20,11 @@ class FactorHiGHSSolver : public LinearSolver {
   Symbolic S_;
 
   // normal equations data
-  std::vector<Int> ptrNE_, rowsNE_;
+  std::vector<Int> ptrNE_;
+  std::vector<Int> rowsNE_;
   std::vector<double> valNE_;
-  std::vector<Int> ptrNE_rw_, idxNE_rw_;
-  std::vector<Int> corr_NE_;
+  std::vector<Int> ptrA_rw_, idxA_rw_;
+  std::vector<Int> corr_A_;
 
   const Regularisation& regul_;
 
@@ -38,14 +39,13 @@ class FactorHiGHSSolver : public LinearSolver {
   Int setNla();
   void setParallel();
 
-  Int buildNEstructure(const HighsSparseMatrix& A,
-                       int64_t nz_limit = kHighsIInf);
+  Int buildNEstructure(const HighsSparseMatrix& A, Int64 nz_limit = kHighsIInf);
   Int buildNEvalues(const HighsSparseMatrix& A,
                     const std::vector<double>& scaling);
   void freeNEmemory();
 
   Int analyseAS(Symbolic& S);
-  Int analyseNE(Symbolic& S, int64_t nz_limit = kHighsIInf);
+  Int analyseNE(Symbolic& S, Int64 nz_limit = kHighsIInf);
 
  public:
   FactorHiGHSSolver(Options& options, const Model& model,

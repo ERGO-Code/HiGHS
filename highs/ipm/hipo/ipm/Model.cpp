@@ -539,8 +539,8 @@ Int Model::loadIntoIpx(ipx::LpSolver& lps) const {
 
 void Model::multWithoutSlack(double alpha, const std::vector<double>& x,
                              std::vector<double>& y, bool trans) const {
-  assert(x.size() == trans ? m_ : n_orig_);
-  assert(y.size() == trans ? n_orig_ : m_);
+  assert(x.size() == (trans ? m_ : n_orig_));
+  assert(y.size() == (trans ? n_orig_ : m_));
 
   if (trans) {
     for (Int col = 0; col < n_orig_; ++col) {

@@ -51,6 +51,8 @@ On Windows, do not forget to specify configuration type
 cmake --build build --config Release
 ```
 
+If you compile HiGHS with 64-bit integers (HIGHSINT64=ON), then Metis must also be compiled with 64-bit integers.
+
 ### HiPO
 
 To install HiPO, on Linux and MacOS, run
