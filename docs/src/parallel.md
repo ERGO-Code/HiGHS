@@ -4,10 +4,10 @@
 
 HiGHS currently has limited opportunities for exploiting parallel
 computing. When using a CPU, these are currently restricted to the
-dual simplex solver for LP, and the MIP solver. Details of these and
-future plans are set out below. HiGHS has an implementation of a first
-order method (PDLP) for solving LPs that can exploit the availability of a
-[GPU](@ref gpu).
+dual simplex solver for LP, the factorisation-based interior point solver,
+and the MIP solver. Details of these and future plans are set out below.
+HiGHS has an implementation of a first order method (PDLP) for solving LPs
+that can exploit the availability of a [GPU](@ref gpu).
 
 By default, when running in parallel, HiGHS will use half the
 available threads on a machine. This number can be modified by setting
@@ -47,14 +47,32 @@ clique tables, and when the interior point solver is used to compute
 the analytic centre. This parallelism is always advantageous, so is
 performed regardless of the value of the [parallel](@ref) option.
 
+## IPM
+
+The interior point solver HiPO uses multiple threads to process the 
+elimination tree during the multifrontal factorisation (_tree level_)
+and to perform the dense factorisation of the frontal matrices 
+(_node level_).
+
+If the [parallel](@ref) option is set "on", the level of parallelism is 
+determined by the [hipo\_parallel\_type](@ref option-hipo-parallel) option, 
+which can be "tree" for tree level only, "node" for node level only, or 
+"both" for both levels.
+
+If the [parallel](@ref) option is set "choose", the solver selects which 
+level to use based on a heuristic. When the [parallel](@ref) option is set 
+"choose" or "off", the value of the hipo\_parallel\_type option is ignored.
+
+
 ## Future plans
 
 The MIP solver has been written with parallel tree search in mind. Some
 work has started (Feb 2025), and it is hoped that a prototype solver
 will be available during 2025.
 
-Development of a new parallel interior point solver began 2023, and a
-prototype solver is expected to be be available during 2025.
+Multi-threading within HiPO will be extended to other phases of the solver,
+including the solve phase of the factorisation and the process of assemblying 
+the matrices.
 
 First-order solvers for LP are still very much in their infancy, and
 are not robust. Hence the availability of a PDLP solver for LP is

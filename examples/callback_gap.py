@@ -1,6 +1,6 @@
 # An example of solving the Generalized Assignment Problem (GAP) using highspy
 # Also demonstrates how to use callbacks to print cuts as they are found
-from highspy import *
+from highspy import Highs
 import numpy as np
 
 #

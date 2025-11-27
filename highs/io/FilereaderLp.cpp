@@ -343,8 +343,8 @@ void FilereaderLp::writeToFileVar(FILE* file, const std::string var_name) {
 }
 
 void FilereaderLp::writeToFileMatrixRow(FILE* file, const HighsInt iRow,
-                                        const HighsSparseMatrix ar_matrix,
-                                        const std::vector<string> col_names) {
+                                        const HighsSparseMatrix& ar_matrix,
+                                        const std::vector<string>& col_names) {
   assert(ar_matrix.isRowwise());
 
   for (HighsInt iEl = ar_matrix.start_[iRow]; iEl < ar_matrix.start_[iRow + 1];

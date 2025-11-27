@@ -8,7 +8,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;  // true;//
+const bool dev_run = false;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -397,12 +397,21 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
   highs.setCallback(userInterruptCallback);
   highs.startCallback(kCallbackIpmInterrupt);
   highs.readModel(filename);
-  highs.setOptionValue("solver", kIpmString);
-  HighsStatus status = highs.run();
-  REQUIRE(status == HighsStatus::kWarning);
+  highs.setOptionValue("solver", kIpxString);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
-  REQUIRE(highs.getInfo().ipm_iteration_count > adlittle_ipm_iteration_limit);
+  REQUIRE(highs.getInfo().ipm_iteration_count ==
+          adlittle_ipm_iteration_limit + 1);
 
+  highs.readModel(filename);
+#ifdef HIPO
+  REQUIRE(highs.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
+  ;
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  REQUIRE(highs.getInfo().ipm_iteration_count ==
+          adlittle_ipm_iteration_limit + 1);
+#endif
   highs.resetGlobalScheduler(true);
 }
 

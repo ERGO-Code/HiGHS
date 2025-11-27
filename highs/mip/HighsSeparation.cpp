@@ -23,8 +23,11 @@
 #include "mip/HighsTransformedLp.h"
 
 HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
-  implBoundClock = mipsolver.timer_.clock_def("Implbound sepa");
-  cliqueClock = mipsolver.timer_.clock_def("Clique sepa");
+  if (mipsolver.analysis_.analyse_mip_time) {
+    implBoundClock =
+        mipsolver.analysis_.getSepaClockIndex(kImplboundSepaString);
+    cliqueClock = mipsolver.analysis_.getSepaClockIndex(kCliqueSepaString);
+  }
   separators.emplace_back(new HighsTableauSeparator(mipsolver));
   separators.emplace_back(new HighsPathSeparator(mipsolver));
   separators.emplace_back(new HighsModkSeparator(mipsolver));
@@ -75,10 +78,10 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     return numBoundChgs;
   };
 
-  lp->getMipSolver().timer_.start(implBoundClock);
+  lp->getMipSolver().analysis_.mipTimerStart(implBoundClock);
   mipdata.implications.separateImpliedBounds(*lp, lp->getSolution().col_value,
                                              mipdata.cutpool, mipdata.feastol);
-  lp->getMipSolver().timer_.stop(implBoundClock);
+  lp->getMipSolver().analysis_.mipTimerStop(implBoundClock);
 
   HighsInt ncuts = 0;
   HighsInt numboundchgs = propagateAndResolve();
@@ -87,10 +90,10 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
-  lp->getMipSolver().timer_.start(cliqueClock);
+  lp->getMipSolver().analysis_.mipTimerStart(cliqueClock);
   mipdata.cliquetable.separateCliques(lp->getMipSolver(), sol.col_value,
                                       mipdata.cutpool, mipdata.feastol);
-  lp->getMipSolver().timer_.stop(cliqueClock);
+  lp->getMipSolver().analysis_.mipTimerStop(cliqueClock);
 
   numboundchgs = propagateAndResolve();
   if (numboundchgs == -1)

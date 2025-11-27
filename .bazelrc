@@ -1,3 +1,7 @@
+build --enable_platform_specific_config
+
+build:windows --enable_runfiles
+
 build:asan --strip=never
 build:asan --copt -fsanitize=address
 build:asan --copt -O1

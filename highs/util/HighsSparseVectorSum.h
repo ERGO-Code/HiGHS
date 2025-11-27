@@ -39,7 +39,7 @@ class HighsSparseVectorSum {
     }
 
     if (values[index] == 0.0)
-      values[index] = std::numeric_limits<double>::min();
+      values[index] = (std::numeric_limits<double>::min)();
   }
 
   void add(HighsInt index, HighsCDouble value) {
@@ -51,7 +51,7 @@ class HighsSparseVectorSum {
     }
 
     if (values[index] == 0.0)
-      values[index] = std::numeric_limits<double>::min();
+      values[index] = (std::numeric_limits<double>::min)();
   }
 
   const std::vector<HighsInt>& getNonzeros() const { return nonzeroinds; }
@@ -75,7 +75,7 @@ class HighsSparseVectorSum {
 
   template <typename IsZero>
   void cleanup(IsZero&& isZero) {
-    HighsInt numNz = nonzeroinds.size();
+    HighsInt numNz = static_cast<HighsInt>(nonzeroinds.size());
 
     for (HighsInt i = numNz - 1; i >= 0; --i) {
       HighsInt pos = nonzeroinds[i];

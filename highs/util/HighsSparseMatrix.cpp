@@ -890,12 +890,12 @@ void HighsSparseMatrix::considerRowScaling(
         row_scale_value =
             min(max(min_allow_row_scale, row_scale_value), max_allow_row_scale);
         row_scale[iRow] = row_scale_value;
-        // Scale the rowumn
+        // Scale the row
         for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
              iEl++)
           this->value_[iEl] *= row_scale[iRow];
       } else {
-        // Empty rowumn
+        // Empty row
         row_scale[iRow] = 1;
       }
     }

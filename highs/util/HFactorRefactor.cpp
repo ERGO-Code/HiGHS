@@ -185,7 +185,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
     //
     // First of all complete the L factor with identity columns so
     // that FtranL counts the RHS entries in rows that don't yet have
-    // picots by running to completion. In the hyper-sparse code,
+    // pivots by running to completion. In the hyper-sparse code,
     // these will HOPEFULLY be skipped
     //
     // There are already l_start entries for the first stage rows, but

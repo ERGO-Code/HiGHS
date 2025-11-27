@@ -1820,7 +1820,6 @@ void testGetModel() {
   assert(ck_sense == sense);
 
   double* ck_col_cost = (double*)malloc(sizeof(double) * ck_num_col);
-  ;
   double* ck_col_lower = (double*)malloc(sizeof(double) * ck_num_col);
   double* ck_col_upper = (double*)malloc(sizeof(double) * ck_num_col);
   double* ck_row_lower = (double*)malloc(sizeof(double) * ck_num_row);
@@ -2142,9 +2141,12 @@ void testIis() {
   //
   // with variables in [0, 1], constraints 0 and 2 form an IIS with
   // 
-  // x free (so should be removed?); 0 <= y; 0 <= z
+  // x free; 0 <= y; 0 <= z
   //
   // x + y - z >= 2; x + 2y + z <= 1
+  //
+  // x may be free, but can't immediately be removed, otherwise
+  // removing y >= 0 yields an infeasible LP
   //
   ret = Highs_addCol(highs, 0.0, 0.0, 1.0, 0, NULL, NULL);
   assert(ret == 0);
@@ -2239,33 +2241,244 @@ void testIis() {
     }
   }
 
+  // Re #2635 check with feasible LP
+  Highs_clearModel(highs);
+
+  ret = Highs_addCol(highs, 0.0, 0.0, inf, 0, NULL, NULL);
+  assert(ret == 0);
+  ret = Highs_addCol(highs, 0.0, 0.0, inf, 0, NULL, NULL);
+  assert(ret == 0);
+  index[0] = 0;
+  index[1] = 1;
+  value_1[0] = 1;
+  value_1[1] = 2;
+  value_2[0] = 1;
+  value_2[1] = 4;
+  ret = Highs_addRow(highs, -inf, 80, 2, index, value_1);
+  assert(ret == 0);
+  ret = Highs_addRow(highs, -inf, 120, 2, index, value_2);
+  assert(ret == 0);
+
+  ret = Highs_getLp(highs, kHighsMatrixFormatRowwise,
+		    &num_col, &num_row, &num_nz,
+		    &sense, &offset,
+		    NULL, NULL, NULL, 
+		    NULL, NULL,
+		    NULL, NULL, NULL,
+		    NULL);
+
+  HighsInt* col_index = NULL;
+  HighsInt* row_index = NULL;
+  HighsInt* col_bound = NULL;
+  HighsInt* row_bound = NULL;
+  HighsInt* col_status = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* row_status = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+
+  // First try with kIisStrategyLight
+  Highs_setIntOptionValue(highs, "iis_strategy", kHighsIisStrategyLight);
+  
+  for (int k = 0 ; k < 2; k++) {
+    HighsInt iis_num_col;
+    HighsInt iis_num_row;
+    ret = Highs_getIis(highs,
+		       &iis_num_col, &iis_num_row,
+		       NULL, NULL,
+		       NULL, NULL,
+		       NULL, NULL);
+    assert(ret == 0);
+
+    assert(iis_num_col == 0);
+    assert(iis_num_row == 0);
+    ret = Highs_getIis(highs,
+		       &iis_num_col, &iis_num_row,
+		       col_index, row_index,
+		       col_bound, row_bound,
+		       col_status, row_status);
+    assert(ret == 0);
+    if (k == 0) {
+      // Before running HiGHS, model status is unknown
+      assert(col_status[0] == kHighsIisStatusMaybeInConflict);
+      assert(col_status[1] == kHighsIisStatusMaybeInConflict);
+      assert(row_status[0] == kHighsIisStatusMaybeInConflict);
+      assert(row_status[1] == kHighsIisStatusMaybeInConflict);
+    } else {
+      // After running HiGHS, model status is known to be optimal
+      assert(col_status[0] == kHighsIisStatusNotInConflict);
+      assert(col_status[1] == kHighsIisStatusNotInConflict);
+      assert(row_status[0] == kHighsIisStatusNotInConflict);
+      assert(row_status[1] == kHighsIisStatusNotInConflict);
+    }
+    Highs_run(highs);
+  }
+
+  // Now try with kHighsIisStrategyFromLpRowPriority
+  Highs_clearSolver(highs);
+  Highs_setIntOptionValue(highs, "iis_strategy",
+			  kHighsIisStrategyFromLpRowPriority);
+  HighsInt iis_num_col;
+  HighsInt iis_num_row;
+  ret = Highs_getIis(highs,
+		     &iis_num_col, &iis_num_row,
+		     NULL, NULL,
+		     NULL, NULL,
+		     NULL, NULL);
+  assert(ret == 0);
+
+  assert(iis_num_col == 0);
+  assert(iis_num_row == 0);
+  ret = Highs_getIis(highs,
+		     &iis_num_col, &iis_num_row,
+		     col_index, row_index,
+		     col_bound, row_bound,
+		     col_status, row_status);
+  assert(ret == 0);
+  // With kHighsIisStrategyFromLpRowPriority, model status is found to
+  // be feasible
+  assert(col_status[0] == kHighsIisStatusNotInConflict);
+  assert(col_status[1] == kHighsIisStatusNotInConflict);
+  assert(row_status[0] == kHighsIisStatusNotInConflict);
+  assert(row_status[1] == kHighsIisStatusNotInConflict);
+
+  free(col_status);
+  free(row_status);
+
+  Highs_destroy(highs);
+}
+
+void testFixedLp() {
+  // The use of Highs_getFixedLp is illustrated for the MIP
+  //
+  // Min    f  = -3x_0 - 2x_1 - x_2
+  // s.t.          x_0 +  x_1 + x_2 <=  7
+  //              4x_0 + 2x_1 + x_2  = 12
+  //              x_0 >=0; x_1 >= 0; x_2 binary
+
+  const HighsInt num_col = 3;
+  const HighsInt num_row = 2;
+  const HighsInt num_nz = 6;
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  HighsInt sense = kHighsObjSenseMinimize;
+  double offset = 0;
+
+  // Define the column costs, lower bounds and upper bounds
+  double col_cost[3] = {-3.0, -2.0, -1.0};
+  double col_lower[3] = {0.0, 0.0, 0.0};
+  double col_upper[3] = {1.0e30, 1.0e30, 1.0};
+  // Define the row lower bounds and upper bounds
+  double row_lower[2] = {-1.0e30, 12.0};
+  double row_upper[2] = {7.0, 12.0};
+  // Define the constraint matrix column-wise
+  HighsInt a_start[3] = {0, 2, 4};
+  HighsInt a_index[6] = {0, 1, 0, 1, 0, 1};
+  double a_value[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
+  HighsInt integrality[3] = {kHighsVarTypeContinuous, kHighsVarTypeContinuous,
+                             kHighsVarTypeInteger};
+
+  void* highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_setStringOptionValue(highs, "presolve", "off");
+  HighsInt return_status =
+    Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
+		  col_cost, col_lower, col_upper, row_lower, row_upper,
+		  a_start, a_index, a_value, integrality);
+  assert(return_status == kHighsStatusOk);
+  return_status = Highs_run(highs);
+  double mip_objective_function_value;
+  return_status = Highs_getDoubleInfoValue(highs, "objective_function_value",
+                                           &mip_objective_function_value);
+  assert(return_status == kHighsStatusOk);
+
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  return_status = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusOk);
+
+  HighsInt fixed_lp_num_col;
+  HighsInt fixed_lp_num_row;
+  HighsInt fixed_lp_num_nz;
+  HighsInt fixed_lp_sense;
+  double fixed_lp_offset;
+  Highs_getFixedLp(highs, kHighsMatrixFormatColwise, &fixed_lp_num_col, &fixed_lp_num_row,
+		   &fixed_lp_num_nz, &fixed_lp_sense, &fixed_lp_offset, NULL, NULL, NULL, NULL, NULL,
+		   NULL, NULL, NULL);
+
+  assert(fixed_lp_num_col == num_col);
+  assert(fixed_lp_num_row == num_row);
+  assert(fixed_lp_num_nz == num_nz);
+  assert(fixed_lp_sense == sense);
+
+  double* fixed_lp_col_cost = (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_col_lower = (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_col_upper = (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_row_lower = (double*)malloc(sizeof(double) * fixed_lp_num_row);
+  double* fixed_lp_row_upper = (double*)malloc(sizeof(double) * fixed_lp_num_row);
+  HighsInt* fixed_lp_a_start = (HighsInt*)malloc(sizeof(HighsInt) * fixed_lp_num_col);
+  HighsInt* fixed_lp_a_index = (HighsInt*)malloc(sizeof(HighsInt) * fixed_lp_num_nz);
+  double* fixed_lp_a_value = (double*)malloc(sizeof(double) * num_nz);
+
+  // Get the arrays
+  Highs_getFixedLp(highs, kHighsMatrixFormatColwise, &fixed_lp_num_col, &fixed_lp_num_row,
+		   &fixed_lp_num_nz, &fixed_lp_sense, &fixed_lp_offset, fixed_lp_col_cost, fixed_lp_col_lower,
+		   fixed_lp_col_upper, fixed_lp_row_lower, fixed_lp_row_upper, fixed_lp_a_start, fixed_lp_a_index,
+		   fixed_lp_a_value);
+  
+  return_status = Highs_passLp(highs,
+			       fixed_lp_num_col, fixed_lp_num_row, fixed_lp_num_nz,
+			       kHighsMatrixFormatColwise,
+			       fixed_lp_sense, fixed_lp_offset,
+			       fixed_lp_col_cost, fixed_lp_col_lower, fixed_lp_col_upper,
+			       fixed_lp_row_lower, fixed_lp_row_upper,
+			       fixed_lp_a_start, fixed_lp_a_index, fixed_lp_a_value);
+  assert(return_status == kHighsStatusOk);
+
+  return_status = Highs_setSolution(highs, col_value, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusOk);
+
+  return_status = Highs_run(highs);
+  double objective_function_value;
+  return_status = Highs_getDoubleInfoValue(highs, "objective_function_value",
+                                           &objective_function_value);
+  assert(return_status == kHighsStatusOk);
+  assert(objective_function_value == mip_objective_function_value);
+  
+ 
+  free(col_value);
+  free(fixed_lp_col_cost);
+  free(fixed_lp_col_lower);
+  free(fixed_lp_col_upper);
+  free(fixed_lp_row_lower);
+  free(fixed_lp_row_upper);
+  free(fixed_lp_a_start);
+  free(fixed_lp_a_index);
+  free(fixed_lp_a_value);
+  
   Highs_destroy(highs);
 }
 
 int main() {
-    minimalApiIllegalLp();
-    testCallback();
-    versionApi();
-    fullApi();
-    minimalApiLp();
-    minimalApiMip();
-    minimalApiQp();
-    fullApiOptions();
-    fullApiLp();
-    fullApiMip();
-    fullApiQp();
-    passPresolveGetLp();
-    options();
-    testGetColsByRange();
-    testPassHessian();
-    testRanging();
-    testFeasibilityRelaxation();
-    testGetModel();
-    testMultiObjective();
-    testQpIndefiniteFailure();
-    testDualRayTwice();
-    testDeleteRowResolveWithBasis();
+  minimalApiIllegalLp();
+  testCallback();
+  versionApi();
+  fullApi();
+  minimalApiLp();
+  minimalApiMip();
+  minimalApiQp();
+  fullApiOptions();
+  fullApiLp();
+  fullApiMip();
+  fullApiQp();
+  passPresolveGetLp();
+  options();
+  testGetColsByRange();
+  testPassHessian();
+  testRanging();
+  testFeasibilityRelaxation();
+  testGetModel();
+  testMultiObjective();
+  testQpIndefiniteFailure();
+  testDualRayTwice();
+  testDeleteRowResolveWithBasis();
   testIis();
+  testFixedLp();
   return 0;
 }
 //  testSetSolution();

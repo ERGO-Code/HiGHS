@@ -391,14 +391,30 @@ class HighsHashTree {
 
   struct BranchNode {
     Occupation occupation;
-    NodePtr child[1];
+
+    NodePtr* children() { return reinterpret_cast<NodePtr*>(this + 1); }
+
+    const NodePtr* children() const {
+      return reinterpret_cast<const NodePtr*>(this + 1);
+    }
+
+    NodePtr& child(int index) { return children()[index]; }
+
+    const NodePtr& child(int index) const { return children()[index]; }
+
+    NodePtr* childPtr(int index) { return children() + index; }
+
+    const NodePtr* childPtr(int index) const { return children() + index; }
   };
+
+  static_assert(sizeof(BranchNode) % alignof(NodePtr) == 0,
+                "BranchNode trailing storage must stay NodePtr aligned");
 
   // allocate branch nodes in multiples of 64 bytes to reduce allocator stress
   // with different sizes and reduce reallocations of nodes
   static constexpr size_t getBranchNodeSize(int numChilds) {
-    return (sizeof(BranchNode) + size_t(numChilds - 1) * sizeof(NodePtr) + 63) &
-           ~63;
+    return (sizeof(BranchNode) + size_t(numChilds) * sizeof(NodePtr) + 63) &
+           ~size_t(63);
   };
 
   static BranchNode* createBranchingNode(int numChilds) {
@@ -421,20 +437,19 @@ class HighsHashTree {
     size_t rightSize = rightChilds * sizeof(NodePtr);
 
     if (newSize == getBranchNodeSize(location + rightChilds)) {
-      memmove(&branch->child[location + 1], &branch->child[location],
+      memmove(branch->childPtr(location + 1), branch->childPtr(location),
               rightSize);
 
       return branch;
     }
 
     BranchNode* newBranch = (BranchNode*)::operator new(newSize);
-    // sizeof(Branch) already contains the size for 1 pointer. So we just
-    // need to add the left and right sizes up for the number of
-    // additional pointers
-    size_t leftSize = sizeof(BranchNode) + (location - 1) * sizeof(NodePtr);
+    // copy the header plus the pointers left of the insertion index into the
+    // new storage
+    size_t leftSize = sizeof(BranchNode) + size_t(location) * sizeof(NodePtr);
 
     memcpy(newBranch, branch, leftSize);
-    memcpy(&newBranch->child[location + 1], &branch->child[location],
+    memcpy(newBranch->childPtr(location + 1), branch->childPtr(location),
            rightSize);
 
     destroyBranchingNode(branch);
@@ -573,7 +588,7 @@ class HighsHashTree {
               branch->occupation.num_set_until(static_cast<uint8_t>(pos)) - 1;
 
           do {
-            if (find_recurse(branch->child[j],
+            if (find_recurse(branch->child(j),
                              compute_hash(leaf->entries[i].key()), hashPos + 1,
                              leaf->entries[i].key()))
               return &leaf->entries[i];
@@ -603,7 +618,7 @@ class HighsHashTree {
       // threshold
       int childEntries = 0;
       for (int i = 0; i <= newNumChild; ++i) {
-        childEntries += branch->child[i].numEntriesEstimate();
+        childEntries += branch->child(i).numEntriesEstimate();
         if (childEntries > kLeafBurstThreshold) break;
       }
 
@@ -617,7 +632,7 @@ class HighsHashTree {
         // accesses of nodes that are not in cache.
         childEntries = 0;
         for (int i = 0; i <= newNumChild; ++i)
-          childEntries += branch->child[i].numEntries();
+          childEntries += branch->child(i).numEntries();
 
         // check again if we exceed due to the extremely unlikely case
         // of having less than 5 list nodes with together more than 30 entries
@@ -628,28 +643,28 @@ class HighsHashTree {
               InnerLeaf<1>* newLeafSize1 = new InnerLeaf<1>;
               newNode = newLeafSize1;
               for (int i = 0; i <= newNumChild; ++i)
-                mergeIntoLeaf(newLeafSize1, hashPos, branch->child[i]);
+                mergeIntoLeaf(newLeafSize1, hashPos, branch->child(i));
               break;
             }
             case 2: {
               InnerLeaf<2>* newLeafSize2 = new InnerLeaf<2>;
               newNode = newLeafSize2;
               for (int i = 0; i <= newNumChild; ++i)
-                mergeIntoLeaf(newLeafSize2, hashPos, branch->child[i]);
+                mergeIntoLeaf(newLeafSize2, hashPos, branch->child(i));
               break;
             }
             case 3: {
               InnerLeaf<3>* newLeafSize3 = new InnerLeaf<3>;
               newNode = newLeafSize3;
               for (int i = 0; i <= newNumChild; ++i)
-                mergeIntoLeaf(newLeafSize3, hashPos, branch->child[i]);
+                mergeIntoLeaf(newLeafSize3, hashPos, branch->child(i));
               break;
             }
             case 4: {
               InnerLeaf<4>* newLeafSize4 = new InnerLeaf<4>;
               newNode = newLeafSize4;
               for (int i = 0; i <= newNumChild; ++i)
-                mergeIntoLeaf(newLeafSize4, hashPos, branch->child[i]);
+                mergeIntoLeaf(newLeafSize4, hashPos, branch->child(i));
               break;
             }
             default:
@@ -667,7 +682,7 @@ class HighsHashTree {
     size_t rightSize = (newNumChild - location) * sizeof(NodePtr);
     if (newSize == getBranchNodeSize(newNumChild + 1)) {
       // allocated size class is the same, so we do not allocate a new node
-      memmove(&branch->child[location], &branch->child[location + 1],
+      memmove(branch->childPtr(location), branch->childPtr(location + 1),
               rightSize);
       newNode = branch;
     } else {
@@ -675,11 +690,10 @@ class HighsHashTree {
       BranchNode* compressedBranch = (BranchNode*)::operator new(newSize);
       newNode = compressedBranch;
 
-      size_t leftSize =
-          offsetof(BranchNode, child) + location * sizeof(NodePtr);
+      size_t leftSize = sizeof(BranchNode) + size_t(location) * sizeof(NodePtr);
       memcpy(compressedBranch, branch, leftSize);
-      memcpy(&compressedBranch->child[location], &branch->child[location + 1],
-             rightSize);
+      memcpy(compressedBranch->childPtr(location),
+             branch->childPtr(location + 1), rightSize);
 
       destroyBranchingNode(branch);
     }
@@ -775,16 +789,16 @@ class HighsHashTree {
         branch->occupation = occupation;
 
         if (hashPos + 1 == kMaxDepth) {
-          for (int i = 0; i < branchSize; ++i) branch->child[i] = nullptr;
+          for (int i = 0; i < branchSize; ++i) branch->child(i) = nullptr;
 
           for (int i = 0; i < leaf->size; ++i) {
             int pos =
                 occupation.num_set_until(get_first_chunk16(leaf->hashes[i])) -
                 1;
-            if (branch->child[pos].getType() == kEmpty)
-              branch->child[pos] = new ListLeaf(std::move(leaf->entries[i]));
+            if (branch->child(pos).getType() == kEmpty)
+              branch->child(pos) = new ListLeaf(std::move(leaf->entries[i]));
             else {
-              ListLeaf* listLeaf = branch->child[pos].getListLeaf();
+              ListLeaf* listLeaf = branch->child(pos).getListLeaf();
               ListNode* newNode = new ListNode(std::move(listLeaf->first));
               listLeaf->first.next = newNode;
               listLeaf->first.entry = std::move(leaf->entries[i]);
@@ -797,11 +811,11 @@ class HighsHashTree {
           ListLeaf* listLeaf;
 
           int pos = occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
-          if (branch->child[pos].getType() == kEmpty) {
+          if (branch->child(pos).getType() == kEmpty) {
             listLeaf = new ListLeaf(std::move(entry));
-            branch->child[pos] = listLeaf;
+            branch->child(pos) = listLeaf;
           } else {
-            listLeaf = branch->child[pos].getListLeaf();
+            listLeaf = branch->child(pos).getListLeaf();
             ListNode* newNode = new ListNode(std::move(listLeaf->first));
             listLeaf->first.next = newNode;
             listLeaf->first.entry = std::move(entry);
@@ -821,13 +835,13 @@ class HighsHashTree {
           if (maxEntriesPerLeaf <= InnerLeaf<1>::capacity()) {
             // all items can go into the smallest leaf size
             for (int i = 0; i < branchSize; ++i)
-              branch->child[i] = new InnerLeaf<1>;
+              branch->child(i) = new InnerLeaf<1>;
 
             for (int i = 0; i < leaf->size; ++i) {
               int pos =
                   occupation.num_set_until(get_first_chunk16(leaf->hashes[i])) -
                   1;
-              branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
+              branch->child(pos).getInnerLeafSizeClass1()->insert_entry(
                   compute_hash(leaf->entries[i].key()), hashPos + 1,
                   leaf->entries[i]);
             }
@@ -836,7 +850,7 @@ class HighsHashTree {
 
             int pos =
                 occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
-            return branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
+            return branch->child(pos).getInnerLeafSizeClass1()->insert_entry(
                 hash, hashPos + 1, entry);
           } else {
             // there are many collisions, determine the exact sizes first
@@ -852,16 +866,16 @@ class HighsHashTree {
             for (int i = 0; i < branchSize; ++i) {
               switch (entries_to_size_class(sizes[i])) {
                 case 1:
-                  branch->child[i] = new InnerLeaf<1>;
+                  branch->child(i) = new InnerLeaf<1>;
                   break;
                 case 2:
-                  branch->child[i] = new InnerLeaf<2>;
+                  branch->child(i) = new InnerLeaf<2>;
                   break;
                 case 3:
-                  branch->child[i] = new InnerLeaf<3>;
+                  branch->child(i) = new InnerLeaf<3>;
                   break;
                 case 4:
-                  branch->child[i] = new InnerLeaf<4>;
+                  branch->child(i) = new InnerLeaf<4>;
                   break;
                 default:
                   // Unexpected result from 'entries_to_size_class'
@@ -874,24 +888,24 @@ class HighsHashTree {
                   occupation.num_set_until(get_first_chunk16(leaf->hashes[i])) -
                   1;
 
-              switch (branch->child[pos].getType()) {
+              switch (branch->child(pos).getType()) {
                 case kInnerLeafSizeClass1:
-                  branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
+                  branch->child(pos).getInnerLeafSizeClass1()->insert_entry(
                       compute_hash(leaf->entries[i].key()), hashPos + 1,
                       leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass2:
-                  branch->child[pos].getInnerLeafSizeClass2()->insert_entry(
+                  branch->child(pos).getInnerLeafSizeClass2()->insert_entry(
                       compute_hash(leaf->entries[i].key()), hashPos + 1,
                       leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass3:
-                  branch->child[pos].getInnerLeafSizeClass3()->insert_entry(
+                  branch->child(pos).getInnerLeafSizeClass3()->insert_entry(
                       compute_hash(leaf->entries[i].key()), hashPos + 1,
                       leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass4:
-                  branch->child[pos].getInnerLeafSizeClass4()->insert_entry(
+                  branch->child(pos).getInnerLeafSizeClass4()->insert_entry(
                       compute_hash(leaf->entries[i].key()), hashPos + 1,
                       leaf->entries[i]);
                   break;
@@ -904,14 +918,14 @@ class HighsHashTree {
           delete leaf;
 
           int pos = occupation.num_set_until(hashChunk) - 1;
-          insertNode = &branch->child[pos];
+          insertNode = branch->childPtr(pos);
           ++hashPos;
         } else {
           // extremely unlikely that the new branch node only gets one
           // child in that case create it and defer the insertion into
           // the next depth
-          branch->child[0] = leaf;
-          insertNode = &branch->child[0];
+          branch->child(0) = leaf;
+          insertNode = branch->childPtr(0);
           ++hashPos;
           leaf->rehash(hashPos);
         }
@@ -930,12 +944,12 @@ class HighsHashTree {
           branch = addChildToBranchNode(branch, get_hash_chunk(hash, hashPos),
                                         location);
 
-          branch->child[location] = nullptr;
+          branch->child(location) = nullptr;
           branch->occupation.set(get_hash_chunk(hash, hashPos));
         }
 
         *insertNode = branch;
-        insertNode = &branch->child[location];
+        insertNode = branch->childPtr(location);
         ++hashPos;
       }
     }
@@ -1038,9 +1052,9 @@ class HighsHashTree {
 
         int location =
             branch->occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
-        erase_recurse(&branch->child[location], hash, hashPos + 1, key);
+        erase_recurse(branch->childPtr(location), hash, hashPos + 1, key);
 
-        if (branch->child[location].getType() != kEmpty) return;
+        if (branch->child(location).getType() != kEmpty) return;
 
         branch->occupation.flip(get_hash_chunk(hash, hashPos));
 
@@ -1088,7 +1102,7 @@ class HighsHashTree {
           return nullptr;
         int location =
             branch->occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
-        node = branch->child[location];
+        node = branch->child(location);
         ++hashPos;
       }
     }
@@ -1147,8 +1161,8 @@ class HighsHashTree {
               branch2->occupation.num_set_until(static_cast<uint8_t>(pos)) - 1;
 
           const HighsHashTableEntry<K, V>* match =
-              find_common_recurse(branch1->child[location1],
-                                  branch2->child[location2], hashPos + 1);
+              find_common_recurse(branch1->child(location1),
+                                  branch2->child(location2), hashPos + 1);
           if (match != nullptr) return match;
         }
 
@@ -1191,7 +1205,7 @@ class HighsHashTree {
         BranchNode* branch = node.getBranchNode();
         int size = branch->occupation.num_set();
 
-        for (int i = 0; i < size; ++i) destroy_recurse(branch->child[i]);
+        for (int i = 0; i < size; ++i) destroy_recurse(branch->child(i));
 
         destroyBranchingNode(branch);
       }
@@ -1240,7 +1254,7 @@ class HighsHashTree {
             (BranchNode*)::operator new(getBranchNodeSize(size));
         newBranch->occupation = branch->occupation;
         for (int i = 0; i < size; ++i)
-          newBranch->child[i] = copy_recurse(branch->child[i]);
+          newBranch->child(i) = copy_recurse(branch->child(i));
 
         return newBranch;
       }
@@ -1292,7 +1306,7 @@ class HighsHashTree {
         BranchNode* branch = node.getBranchNode();
         int size = branch->occupation.num_set();
 
-        for (int i = 0; i < size; ++i) for_each_recurse<R>(branch->child[i], f);
+        for (int i = 0; i < size; ++i) for_each_recurse<R>(branch->child(i), f);
       }
     }
   }
@@ -1354,7 +1368,7 @@ class HighsHashTree {
         int size = branch->occupation.num_set();
 
         for (int i = 0; i < size; ++i) {
-          auto x = for_each_recurse<R>(branch->child[i], f);
+          auto x = for_each_recurse<R>(branch->child(i), f);
           if (x) return x;
         }
       }

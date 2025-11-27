@@ -128,12 +128,16 @@ void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
                       const std::string log_file);
 
-bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
-                              const string& name, const string& value);
-bool commandLineOffOnOk(const HighsLogOptions& report_log_options,
-                        const string& name, const string& value);
-bool commandLineSolverOk(const HighsLogOptions& report_log_options,
+bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
+                         const string& name, const string& value);
+bool optionOffOnOk(const HighsLogOptions& report_log_options,
+                   const string& name, const string& value);
+bool optionSolverOk(const HighsLogOptions& report_log_options,
+                    const string& value);
+bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value);
+bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
+                          const string& value);
 
 bool boolFromString(std::string value, bool& bool_value);
 
@@ -259,6 +263,8 @@ void reportOption(FILE* file, const HighsLogOptions& report_log_options,
 
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";
+const string kHipoString = "hipo";
+const string kIpxString = "ipx";
 const string kPdlpString = "pdlp";
 
 const HighsInt kKeepNRowsDeleteRows = -1;
@@ -286,6 +292,20 @@ const string kReadSolutionFileString = "read_solution_file";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
+
+// Strings for HiPO system option
+const string kHipoSystemString = "hipo_system";
+const string kHipoAugmentedString = "augmented";
+const string kHipoNormalEqString = "normaleq";
+
+// Strings for MIP LP/IPM options
+const string kMipLpSolverString = "mip_lp_solver";
+const string kMipIpmSolverString = "mip_ipm_solver";
+// Strings for HiPO parallel method
+const string kHipoParallelString = "hipo_parallel_type";
+const string kHipoTreeString = "tree";
+const string kHipoNodeString = "node";
+const string kHipoBothString = "both";
 
 struct HighsOptionsStruct {
   // Run-time options read from the command line
@@ -316,8 +336,8 @@ struct HighsOptionsStruct {
   double objective_bound;
   double objective_target;
   HighsInt threads;
+  HighsInt user_objective_scale;
   HighsInt user_bound_scale;
-  HighsInt user_cost_scale;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -349,6 +369,10 @@ struct HighsOptionsStruct {
   // Options for IPM solver
   double ipm_optimality_tolerance;
   HighsInt ipm_iteration_limit;
+  std::string hipo_system;
+  std::string hipo_parallel_type;
+  HighsInt hipo_block_size;
+  bool hipo_metis_no2hop;
 
   // Options for PDLP solver
   bool pdlp_scaling;
@@ -448,7 +472,10 @@ struct HighsOptionsStruct {
   bool mip_heuristic_run_root_reduced_cost;
   bool mip_heuristic_run_zi_round;
   bool mip_heuristic_run_shifting;
+  bool mip_cut_flow_cover;
   double mip_min_logging_interval;
+  std::string mip_lp_solver;
+  std::string mip_ipm_solver;
 
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
@@ -489,8 +516,8 @@ struct HighsOptionsStruct {
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),
+        user_objective_scale(0),
         user_bound_scale(0),
-        user_cost_scale(0),
         highs_debug_level(0),
         highs_analysis_level(0),
         simplex_strategy(0),
@@ -515,6 +542,10 @@ struct HighsOptionsStruct {
         timeless_log(false),
         ipm_optimality_tolerance(0.0),
         ipm_iteration_limit(0),
+        hipo_system(""),
+        hipo_parallel_type(""),
+        hipo_block_size(0),
+        hipo_metis_no2hop(false),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
@@ -600,6 +631,7 @@ struct HighsOptionsStruct {
         mip_heuristic_run_root_reduced_cost(false),
         mip_heuristic_run_zi_round(false),
         mip_heuristic_run_shifting(false),
+        mip_cut_flow_cover(false),
         mip_min_logging_interval(0.0),
 #ifdef HIGHS_DEBUGSOL
         mip_debug_solution_file(""),
@@ -676,13 +708,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string = new OptionRecordString(
-        kSolverString,
-        "Solver option: \"simplex\", \"choose\", \"ipm\" or \"pdlp\". If "
-        "\"simplex\"/\"ipm\"/\"pdlp\" is chosen then, for a MIP (QP) the "
-        "integrality "
-        "constraint (quadratic term) will be ignored",
-        advanced, &solver, kHighsChooseString);
+    record_string =
+        new OptionRecordString(kSolverString,
+                               "LP solver option: \"choose\", \"simplex\", "
+                               "\"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
+                               advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -794,13 +824,14 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "user_bound_scale", "Exponent of power-of-two bound scaling for model",
-        advanced, &user_bound_scale, -kHighsIInf, 0, kHighsIInf);
+        "user_objective_scale",
+        "Exponent of power-of-two objective scaling for model", advanced,
+        &user_objective_scale, -kHighsIInf, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "user_cost_scale", "Exponent of power-of-two cost scaling for model",
-        advanced, &user_cost_scale, -kHighsIInf, 0, kHighsIInf);
+        "user_bound_scale", "Exponent of power-of-two bound scaling for model",
+        advanced, &user_bound_scale, -kHighsIInf, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("highs_debug_level",
@@ -1098,7 +1129,7 @@ class HighsOptions : public HighsOptionsStruct {
         "Maximal age of dynamic LP rows before "
         "they are removed from the LP relaxation in the MIP solver",
         advanced, &mip_lp_age_limit, 0, 10,
-        std::numeric_limits<int16_t>::max());
+        (std::numeric_limits<int16_t>::max)());
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -1177,6 +1208,11 @@ class HighsOptions : public HighsOptionsStruct {
                                        &mip_heuristic_run_shifting, false);
     records.push_back(record_bool);
 
+    record_bool =
+        new OptionRecordBool("mip_cut_flow_cover", "Enable flow cover cuts",
+                             advanced, &mip_cut_flow_cover, true);
+    records.push_back(record_bool);
+
     record_double = new OptionRecordDouble(
         "mip_rel_gap",
         "Tolerance on relative gap, |ub-lb|/|ub|, to determine whether "
@@ -1196,6 +1232,19 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_min_logging_interval, 0, 5, kHighsInf);
     records.push_back(record_double);
 
+    record_string =
+        new OptionRecordString(kMipLpSolverString,
+                               "MIP LP solver option: \"choose\", \"simplex\", "
+                               "\"ipm\", \"ipx\" or \"hipo\"",
+                               advanced, &mip_lp_solver, kHighsChooseString);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kMipIpmSolverString,
+        "MIP IPM solver option: \"choose\", \"ipx\" or \"hipo\"", advanced,
+        &mip_ipm_solver, kHighsChooseString);
+    records.push_back(record_string);
+
     record_double = new OptionRecordDouble(
         "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
         &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
@@ -1206,6 +1255,29 @@ class HighsOptions : public HighsOptionsStruct {
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
+
+    record_string = new OptionRecordString(
+        kHipoSystemString,
+        "HiPO Newton system option: \"augmented\", \"normaleq\" or \"choose\".",
+        advanced, &hipo_system, kHighsChooseString);
+    records.push_back(record_string);
+
+    record_string =
+        new OptionRecordString(kHipoParallelString,
+                               "HiPO parallel option: \"tree\", "
+                               "\"node\" or \"both\".",
+                               advanced, &hipo_parallel_type, kHipoBothString);
+    records.push_back(record_string);
+
+    record_int = new OptionRecordInt(
+        "hipo_block_size", "Block size for dense linear algebra within HiPO",
+        advanced, &hipo_block_size, 0, 128, kHighsIInf);
+    records.push_back(record_int);
+
+    record_bool =
+        new OptionRecordBool("hipo_metis_no2hop", "Use option no2hop in Metis",
+                             advanced, &hipo_metis_no2hop, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
@@ -1247,17 +1319,10 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "iis_strategy",
         "Strategy for IIS calculation: "
-        //        "Use LP and p"
-        "Light test / "
-        "Full and prioritise rows / "
-        //        "Use LP and p"
-        "Full and prioritise columns"
-        //        "Use unbounded dual ray and prioritise low number of rows / "
-        //        "Use ray and prioritise low numbers of columns "
-        " (0/1/2"
-        //        "/3/4)",
-        ")",
-        advanced, &iis_strategy, kIisStrategyMin, kIisStrategyLight,
+        "0 => Light test; 1 => Try dual ray; "
+        "2 => Try elastic LP; 4 => Prioritise columns; "
+        "8 => Find true IIS; 16 => Find relaxation IIS for MIP",
+        advanced, &iis_strategy, kIisStrategyMin, kIisStrategyDefault,
         kIisStrategyMax);
     records.push_back(record_int);
 

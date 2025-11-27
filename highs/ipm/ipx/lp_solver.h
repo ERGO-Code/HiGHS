@@ -164,6 +164,8 @@ public:
     // Returns -1 if no basis was available and 0 otherwise.
     Int SymbolicInvert(Int* rowcounts, Int* colcounts);
 
+  void setTimerOffset(const double offset) {this->control_.setTimerOffset(offset); }
+
 private:
     void ClearSolution();
     void InteriorPointSolve();

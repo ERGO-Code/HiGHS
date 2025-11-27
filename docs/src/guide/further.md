@@ -125,8 +125,8 @@ linear objective is represented by the following data, held in the
 
 Multi-objective optimization in HiGHS is defined by the following methods
 
-- [addLinearObjective](@ref Multi-objective-optimization] - Add a single `HighsLinearObjective` instance to any already stored in HiGHS
-- [clearLinearObjectives](@ref Multi-objective-optimization] - Clears any linear objectives stored in HiGHS
+- [addLinearObjective](@ref Multi-objective-optimization) - Add a single `HighsLinearObjective` instance to any already stored in HiGHS
+- [clearLinearObjectives](@ref Multi-objective-optimization) - Clears any linear objectives stored in HiGHS
 
 When there is at least one `HighsLinearObjective` instance in HiGHS,
 the `col_cost_` data in the incumbent model is ignored.

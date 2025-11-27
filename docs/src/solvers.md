@@ -26,15 +26,36 @@ J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142,
 
 #### Interior point
 
-HiGHS has one interior point (IPM) solver based on the preconditioned conjugate gradient method, as discussed in
+HiGHS has two interior point (IPM) solvers:
 
-_Implementation of an interior point method with basis
-preconditioning_, L. Schork and J. Gondzio, Mathematical Programming Computation, 12, 603-635, 2020. [DOI:
-10.1007/s12532-020-00181-8](https://link.springer.com/article/10.1007/s12532-020-00181-8).
+* IPX is based on the preconditioned conjugate gradient method, as discussed in
 
-This solver is serial. An interior point solver based on direct factorization is being developed.
+  _Implementation of an interior point method with basis
+  preconditioning_, Mathematical Programming Computation, 12, 603-635, 2020. [DOI:
+  10.1007/s12532-020-00181-8](https://link.springer.com/article/10.1007/s12532-020-00181-8).
 
-Setting the option [__solver__](@ref option-solver) to "ipm" forces the IPM solver to be used
+  This solver is serial.
+
+  Setting the option [__solver__](@ref option-solver) to "ipx" forces the IPX solver to be used
+
+* HiPO is based on a direct factorisation, as discussed in 
+
+  _A factorisation-based regularised interior point method using the augmented system_, F. Zanetti and J. Gondzio, 2025, 
+  [available on arxiv](https://arxiv.org/abs/2508.04370)
+
+  This solver is parallel.
+
+  Setting the option [__solver__](@ref option-solver) to "hipo" forces the HiPO solver to be used.
+
+  The [hipo\_system](@ref option-hipo-system) option can be used to select the approach to use when solving the Newton systems 
+  within the interior point solver: select "augmented" to force the solver to use the augmented system, "normaleq" for normal 
+  equations, or "choose" to leave the choice to the solver.
+
+  HiPO uses Metis internally to reorder the Newton system matrix. In case of large fill-in in the factorisation, two alternatives are available for users to try:
+  * Setting the [hipo\_metis\_no2hop](@ref option-hipo-metis-no2hop) option to "true" may improve the quality of the ordering in some cases.
+  * Linking the Metis library from branch 510-ts in [this fork](https://github.com/galabovaa/METIS/tree/510-ts), instead of branch 521-ts, may improve the quality of the ordering in some cases. This is available only if HiGHS is compiled from source.
+
+Setting the option [__solver__](@ref option-solver) to "ipm" selects the HiPO solver, if the build supports it, otherwise it selects the IPX solver.
 
 #### Primal-dual hybrid gradient method
 
@@ -55,7 +76,7 @@ search is work in progress.
 ## QP
 
 The HiGHS solver for convex QP problems uses an established primal
-active set method. The new interior point solver will also be able to
+active set method. The new interior point solver HiPO will soon be able to
 solve convex QP problems.
 
 

@@ -42,8 +42,8 @@ class FilereaderLp : public Filereader {
                         const bool force_plus = true);
   void writeToFileVar(FILE* file, const std::string var_name);
   void writeToFileMatrixRow(FILE* file, const HighsInt iRow,
-                            const HighsSparseMatrix ar_matrix,
-                            const std::vector<string> col_names);
+                            const HighsSparseMatrix& ar_matrix,
+                            const std::vector<string>& col_names);
 };
 
 #endif
