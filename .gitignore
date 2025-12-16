@@ -33,6 +33,10 @@ local.properties
 # PDT-specific
 .buildpath
 
+#################
+## Zed Editor
+#################
+.cache
 
 #################
 ## Visual Studio

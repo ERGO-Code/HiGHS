@@ -1,8 +1,6 @@
 #ifndef HIPO_FACTORHIGHS_SOLVER_H
 #define HIPO_FACTORHIGHS_SOLVER_H
 
-#include <algorithm>
-
 #include "Info.h"
 #include "IpmData.h"
 #include "LinearSolver.h"
@@ -20,11 +18,12 @@ class FactorHiGHSSolver : public LinearSolver {
   Symbolic S_;
 
   // normal equations data
-  std::vector<Int> ptrNE_;
-  std::vector<Int> rowsNE_;
-  std::vector<double> valNE_;
-  std::vector<Int> ptrA_rw_, idxA_rw_;
-  std::vector<Int> corr_A_;
+  std::vector<Int> ptrLower_;
+  std::vector<Int> rowsLower_;
+  std::vector<double> valLower_;
+  std::vector<Int> ptrA_rw_, idxA_rw_; // Symbolic row-wise (CSR) copy of A
+  std::vector<Int> corr_A_; // ?
+  bool amat_set_ = false;
 
   const Regularisation& regul_;
 
@@ -42,7 +41,11 @@ class FactorHiGHSSolver : public LinearSolver {
   Int buildNEstructure(const HighsSparseMatrix& A, Int64 nz_limit = kHighsIInf);
   Int buildNEvalues(const HighsSparseMatrix& A,
                     const std::vector<double>& scaling);
-  void freeNEmemory();
+
+  Int buildASstructure(const HighsSparseMatrix& A,
+                       const std::vector<double>& scaling);
+  Int updateASdiagonal(const HighsSparseMatrix& A,
+      const std::vector<double>& scaling);
 
   Int analyseAS(Symbolic& S);
   Int analyseNE(Symbolic& S, Int64 nz_limit = kHighsIInf);

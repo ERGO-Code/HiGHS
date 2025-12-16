@@ -1,7 +1,5 @@
 #include "FactorHiGHSSolver.h"
 
-#include <limits>
-
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
@@ -92,9 +90,9 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
                                      const std::vector<double>& scaling) {
   // given the NE structure already computed, fill in the NE values
 
-  assert(!ptrNE_.empty() && !rowsNE_.empty());
+  assert(!ptrLower_.empty() && !rowsLower_.empty());
 
-  valNE_.assign(rowsNE_.size(), 0.0);
+  valLower_.assign(rowsLower_.size(), 0.0);
 
   std::vector<double> work(A.num_row_, 0.0);
 
@@ -127,9 +125,9 @@ Int FactorHiGHSSolver::buildNEvalues(const HighsSparseMatrix& A,
     // intersection of row with rows below finished.
 
     // read from work, using indices of column "row" of AAt
-    for (Int el = ptrNE_[row]; el < ptrNE_[row + 1]; ++el) {
-      Int index = rowsNE_[el];
-      valNE_[el] = work[index];
+    for (Int el = ptrLower_[row]; el < ptrLower_[row + 1]; ++el) {
+      Int index = rowsLower_[el];
+      valLower_[el] = work[index];
       work[index] = 0.0;
     }
   }
@@ -170,11 +168,11 @@ Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
     }
   }
 
-  ptrNE_.clear();
-  rowsNE_.clear();
+  ptrLower_.clear();
+  rowsLower_.clear();
 
   // ptr is allocated its exact size
-  ptrNE_.resize(A.num_row_ + 1, 0);
+  ptrLower_.resize(A.num_row_ + 1, 0);
 
   // keep track if given entry is nonzero, in column considered
   std::vector<bool> is_nz(A.num_row_, false);
@@ -211,21 +209,77 @@ Int FactorHiGHSSolver::buildNEstructure(const HighsSparseMatrix& A,
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error.
-    if ((Int64)ptrNE_[row] + nz_in_col >= nz_limit) return kStatusOverflow;
+    if ((Int64)ptrLower_[row] + nz_in_col >= nz_limit) return kStatusOverflow;
 
     // update pointers
-    ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
+    ptrLower_[row + 1] = ptrLower_[row] + nz_in_col;
 
     // now assign indices
     for (Int i = 0; i < nz_in_col; ++i) {
       Int index = temp_index[i];
       // push_back is better then reserve, because the final length is not known
-      rowsNE_.push_back(index);
+      rowsLower_.push_back(index);
       is_nz[index] = false;
     }
   }
 
   return kStatusOk;
+}
+
+Int FactorHiGHSSolver::buildASstructure(const HighsSparseMatrix& A,
+                                        const std::vector<double>& scaling) {
+  Int nA = A.num_col_;
+  Int mA = A.num_row_;
+  Int nzA = A.numNz();
+
+  ptrLower_.resize(nA + mA + 1);
+  rowsLower_.resize(nA + nzA + mA);
+  valLower_.resize(nA + nzA + mA);
+
+  // build lower triangle
+  Int next = 0;
+
+  for (Int i = 0; i < nA; ++i) {
+    // diagonal element
+    rowsLower_[next] = i;
+    valLower_[next] = -scaling[i];
+    next++;
+
+    // column of A
+    for (Int el = A.start_[i]; el < A.start_[i + 1]; ++el) {
+      rowsLower_[next] = A.index_[el] + nA;
+      valLower_[next] = A.value_[el];
+      next++;
+    }
+
+    ptrLower_[i + 1] = next;
+  }
+
+  // 2,2 block
+  for (Int i = 0; i < mA; ++i) {
+    rowsLower_[next] = nA + i;
+    valLower_[next++] = 0.0;
+    ptrLower_[nA + i + 1] = ptrLower_[nA + i] + 1;
+  }
+  return 0;
+}
+
+Int FactorHiGHSSolver::updateASdiagonal(const HighsSparseMatrix& A,
+                                      const std::vector<double>& scaling) {
+  Int nA = A.num_col_;
+
+  // build lower triangle
+  Int next = 0;
+
+  for (Int i = 0; i < nA; ++i) {
+    // diagonal element
+    valLower_[next] = -scaling[i];
+    next++;
+
+    // move the pointer by the number of nonzeros in the i-th column of A
+    next += A.start_[i + 1] - A.start_[i];
+  }
+  return 0;
 }
 
 Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
@@ -235,42 +289,13 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
 
   Clock clock;
 
-  // initialise
-  std::vector<Int> ptrLower;
-  std::vector<Int> rowsLower;
-  std::vector<double> valLower;
-
-  Int nA = A.num_col_;
-  Int mA = A.num_row_;
-  Int nzA = A.numNz();
-
-  ptrLower.resize(nA + mA + 1);
-  rowsLower.resize(nA + nzA + mA);
-  valLower.resize(nA + nzA + mA);
-
-  // build lower triangle
-  Int next = 0;
-
-  for (Int i = 0; i < nA; ++i) {
-    // diagonal element
-    rowsLower[next] = i;
-    valLower[next++] = -scaling[i];
-
-    // column of A
-    for (Int el = A.start_[i]; el < A.start_[i + 1]; ++el) {
-      rowsLower[next] = A.index_[el] + nA;
-      valLower[next++] = A.value_[el];
-    }
-
-    ptrLower[i + 1] = next;
+  if (amat_set_ == true) {
+    std::ignore = updateASdiagonal(A, scaling);
+  } else {
+    std::ignore = buildASstructure(A, scaling);
+    amat_set_ = true;
   }
 
-  // 2,2 block
-  for (Int i = 0; i < mA; ++i) {
-    rowsLower[next] = nA + i;
-    valLower[next++] = 0.0;
-    ptrLower[nA + i + 1] = ptrLower[nA + i] + 1;
-  }
   if (info_) info_->matrix_time += clock.stop();
 
   // set static regularisation, since it may have changed
@@ -278,7 +303,7 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
 
   // factorise matrix
   clock.start();
-  if (FH_.factorise(S_, rowsLower, ptrLower, valLower))
+  if (FH_.factorise(S_, rowsLower_, ptrLower_, valLower_))
     return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
@@ -305,11 +330,8 @@ Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
 
   // factorise
   clock.start();
-  // make copies of structure, because factorise object will take ownership and
-  // modify them.
-  std::vector<Int> ptrNE(ptrNE_);
-  std::vector<Int> rowsNE(rowsNE_);
-  if (FH_.factorise(S_, rowsNE, ptrNE, valNE_)) return kStatusErrorFactorise;
+  if (FH_.factorise(S_, rowsLower_, ptrLower_, valLower_))
+    return kStatusErrorFactorise;
   if (info_) {
     info_->factor_time += clock.stop();
     info_->factor_number++;
@@ -385,9 +407,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   log_.printDevInfo("Building AS structure\n");
 
   Clock clock;
-  std::vector<Int> ptrLower;
-  std::vector<Int> rowsLower;
-  if (Int status = getASstructure(model_.A(), ptrLower, rowsLower))
+  if (Int status = getASstructure(model_.A(), ptrLower_, rowsLower_))
     return status;
   if (info_) info_->matrix_structure_time = clock.stop();
 
@@ -399,7 +419,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   log_.printDevInfo("Performing AS analyse phase\n");
 
   clock.start();
-  Int status = FH_.analyse(S, rowsLower, ptrLower, pivot_signs);
+  Int status = FH_.analyse(S, rowsLower_, ptrLower_, pivot_signs);
   if (info_) info_->analyse_AS_time = clock.stop();
 
   if (status && log_.debug(2)) {
@@ -408,17 +428,6 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   }
 
   return status ? kStatusErrorAnalyse : kStatusOk;
-}
-
-void FactorHiGHSSolver::freeNEmemory() {
-  // Swap NE data structures with empty vectors, to guarantee that memory is
-  // freed.
-
-  std::vector<Int>().swap(ptrNE_);
-  std::vector<Int>().swap(rowsNE_);
-  std::vector<Int>().swap(ptrA_rw_);
-  std::vector<Int>().swap(idxA_rw_);
-  std::vector<Int>().swap(corr_A_);
 }
 
 Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
@@ -438,7 +447,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
   log_.printDevInfo("Performing NE analyse phase\n");
 
   clock.start();
-  Int status = FH_.analyse(S, rowsNE_, ptrNE_, pivot_signs);
+  Int status = FH_.analyse(S, rowsLower_, ptrLower_, pivot_signs);
   if (info_) info_->analyse_NE_time = clock.stop();
 
   if (status && log_.debug(2)) {
@@ -548,7 +557,6 @@ Int FactorHiGHSSolver::chooseNla() {
   if (status == kStatusOk) {
     if (options_.nla == kOptionNlaAugmented) {
       S_ = std::move(symb_AS);
-      freeNEmemory();
     } else {
       S_ = std::move(symb_NE);
     }
