@@ -23,14 +23,17 @@ public class Solver : IDisposable
     /// <summary>
     /// The name of the Highs library.
     /// </summary>
-    private const string HighsLibName = "_highs";
+    private const string HighsLibName = "highs";
 
     #region Library Imports
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_call(
+    [DllImport(HighsLibName)]
+    private static extern int Highs_lpCall(
         int numcol,
         int numrow,
         int numnz,
+        int aformat,
+        int sense,
+        double offset,
         double[] colcost,
         double[] collower,
         double[] colupper,
@@ -47,33 +50,84 @@ public class Solver : IDisposable
         int[] rowbasisstatus,
         ref int modelstatus);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
+    private static extern int Highs_mipCall(
+        int numcol,
+        int numrow,
+        int numnz,
+        int aformat,
+        int sense,
+        double offset,
+        double[] colcost,
+        double[] collower,
+        double[] colupper,
+        double[] rowlower,
+        double[] rowupper,
+        int[] astart,
+        int[] aindex,
+        double[] avalue,
+        int[] integrality,
+        double[] colvalue,
+        double[] rowvalue,
+        ref int modelstatus);
+
+    [DllImport(HighsLibName)]
+    private static extern int Highs_qpCall(
+    int numcol,
+    int numrow,
+    int numnz,
+    int qnumnz,
+    int aformat,
+    int qformat,
+    int sense,
+    double offset,
+    double[] colcost,
+    double[] collower,
+    double[] colupper,
+    double[] rowlower,
+    double[] rowupper,
+    int[] astart,
+    int[] aindex,
+    double[] avalue,
+    int[] qstart,
+    int[] qindex,
+    double[] qvalue,
+
+    double[] colvalue,
+    double[] coldual,
+    double[] rowvalue,
+    double[] rowdual,
+    int[] colbasisstatus,
+    int[] rowbasisstatus,
+    ref int modelstatus);
+
+    [DllImport(HighsLibName)]
     private static extern IntPtr Highs_create();
 
-    [LibraryImport(HighsLibName)]
-    private static extern void Highs_destroy(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern void Highs_destroy(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_run(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_run(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_readModel(IntPtr _highs, string filename);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_readModel(IntPtr highs, string filename);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_writeModel(IntPtr _highs, string filename);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_writeModel(IntPtr highs, string filename);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_writePresolvedModel(IntPtr _highs, string filename);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_writePresolvedModel(IntPtr highs, string filename);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_writeSolutionPretty(IntPtr _highs, string filename);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_writeSolutionPretty(IntPtr highs, string filename);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getInfinity(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getInfinity(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_passLp(
-        IntPtr _highs,
+        IntPtr highs,
         int numcol,
         int numrow,
         int numnz,
@@ -89,9 +143,9 @@ public class Solver : IDisposable
         int[] aindex,
         double[] avalue);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_passMip(
-        IntPtr _highs,
+        IntPtr highs,
         int numcol,
         int numrow,
         int numnz,
@@ -108,63 +162,100 @@ public class Solver : IDisposable
         double[] avalue,
         int[] highs_integrality);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_setOptionValue(IntPtr _highs, string option, string value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_passModel(
+        IntPtr highs,
+        int numcol,
+        int numrow,
+        int numnz,
+        int qnumnz,
+        int aformat,
+        int qformat,
+        int sense,
+        double offset,
+        double[] colcost,
+        double[] collower,
+        double[] colupper,
+        double[] rowlower,
+        double[] rowupper,
+        int[] astart,
+        int[] aindex,
+        double[] avalue,
+        int[] qstart,
+        int[] qindex,
+        double[] qvalue,
+        int[] highs_integrality);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_setBoolOptionValue(IntPtr _highs, string option, int value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_passHessian(
+        IntPtr highs,
+        int dim,
+        int numnz,
+        int q_format,
+        int[] qstart,
+        int[] qindex,
+        double[] qvalue);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_setIntOptionValue(IntPtr _highs, string option, int value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_setOptionValue(IntPtr highs, string option, string value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_setDoubleOptionValue(IntPtr _highs, string option, double value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_setBoolOptionValue(IntPtr highs, string option, int value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_setStringOptionValue(IntPtr _highs, string option, string value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_setIntOptionValue(IntPtr highs, string option, int value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getBoolOptionValue(IntPtr _highs, string option, out int value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_setDoubleOptionValue(IntPtr highs, string option, double value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getIntOptionValue(IntPtr _highs, string option, out int value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_setStringOptionValue(IntPtr highs, string option, string value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getDoubleOptionValue(IntPtr _highs, string option, out double value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getBoolOptionValue(IntPtr highs, string option, out int value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getStringOptionValue(IntPtr _highs, string option, [Out] StringBuilder value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getIntOptionValue(IntPtr highs, string option, out int value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getSolution(IntPtr _highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getDoubleOptionValue(IntPtr highs, string option, out double value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getNumCol(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getStringOptionValue(IntPtr highs, string option, [Out] StringBuilder value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getNumRow(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getSolution(IntPtr highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getNumNz(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getNumCol(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getBasis(IntPtr _highs, int[] colstatus, int[] rowstatus);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getNumRow(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
-    private static extern double Highs_getObjectiveValue(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getNumNz(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getIterationCount(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getHessianNumNz(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getModelStatus(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getBasis(IntPtr highs, int[] colstatus, int[] rowstatus);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_addRow(IntPtr _highs, double lower, double upper, int num_new_nz, int[] indices, double[] values);
+    [DllImport(HighsLibName)]
+    private static extern double Highs_getObjectiveValue(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getIterationCount(IntPtr highs);
+
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getModelStatus(IntPtr highs);
+
+    [DllImport(HighsLibName)]
+    private static extern int Highs_addRow(IntPtr highs, double lower, double upper, int num_new_nz, int[] indices, double[] values);
+
+    [DllImport(HighsLibName)]
     private static extern int Highs_addRows(
-        IntPtr _highs,
+        IntPtr highs,
         int num_new_row,
         double[] lower,
         double[] upper,
@@ -173,9 +264,9 @@ public class Solver : IDisposable
         int[] indices,
         double[] values);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_addCol(
-        IntPtr _highs,
+        IntPtr highs,
         double cost,
         double lower,
         double upper,
@@ -183,9 +274,9 @@ public class Solver : IDisposable
         int[] indices,
         double[] values);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_addCols(
-        IntPtr _highs,
+        IntPtr highs,
         int num_new_col,
         double[] costs,
         double[] lower,
@@ -195,78 +286,84 @@ public class Solver : IDisposable
         int[] indices,
         double[] values);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeObjectiveSense(IntPtr _highs, int sense);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeObjectiveSense(IntPtr highs, int sense);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeColCost(IntPtr _highs, int col, double cost);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeColCost(IntPtr highs, int column, double cost);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeColsCostBySet(IntPtr _highs, int num_set_entries, int[] set, double[] cost);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeColsCostBySet(IntPtr highs, int num_set_entries, int[] set, double[] cost);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeColsCostByMask(IntPtr _highs, int[] mask, double[] cost);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeColsCostByMask(IntPtr highs, int[] mask, double[] cost);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeColBounds(IntPtr _highs, int col, double lower, double upper);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeColBounds(IntPtr highs, int column, double lower, double upper);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeColsBoundsByRange(IntPtr _highs, int from_col, int to_col, double[] lower, double[] upper);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeColsBoundsByRange(IntPtr highs, int from_col, int to_col, double[] lower, double[] upper);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeColsBoundsBySet(IntPtr _highs, int num_set_entries, int[] set, double[] lower, double[] upper);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeColsBoundsBySet(IntPtr highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeColsBoundsByMask(IntPtr _highs, int[] mask, double[] lower, double[] upper);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeColsBoundsByMask(IntPtr highs, int[] mask, double[] lower, double[] upper);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeRowBounds(IntPtr _highs, int row, double lower, double upper);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeRowBounds(IntPtr highs, int row, double lower, double upper);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeRowsBoundsBySet(IntPtr _highs, int num_set_entries, int[] set, double[] lower, double[] upper);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeRowsBoundsByRange(IntPtr highs, int from_row, int to_row, double[] lower, double[] upper);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeRowsBoundsByMask(IntPtr _highs, int[] mask, double[] lower, double[] upper);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeRowsBoundsBySet(IntPtr highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeColsIntegralityByRange(IntPtr _highs, int from_col, int to_col, int[] integrality);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeRowsBoundsByMask(IntPtr highs, int[] mask, double[] lower, double[] upper);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_changeCoeff(IntPtr _highs, int row, int col, double value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeColsIntegralityByRange(IntPtr highs, int from_col, int to_col, int[] integrality);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_deleteColsByRange(IntPtr _highs, int from_col, int to_col);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_changeCoeff(IntPtr highs, int row, int column, double value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_deleteColsBySet(IntPtr _highs, int num_set_entries, int[] set);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_deleteColsByRange(IntPtr highs, int from_col, int to_col);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_deleteColsByMask(IntPtr _highs, int[] mask);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_deleteColsBySet(IntPtr highs, int num_set_entries, int[] set);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_deleteRowsByRange(IntPtr _highs, int from_row, int to_row);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_deleteColsByMask(IntPtr highs, int[] mask);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_deleteRowsBySet(IntPtr _highs, int num_set_entries, int[] set);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_deleteRowsByRange(IntPtr highs, int from_row, int to_row);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_deleteRowsByMask(IntPtr _highs, int[] mask);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_deleteRowsBySet(IntPtr highs, int num_set_entries, int[] set);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getDoubleInfoValue(IntPtr _highs, string info, out double value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_deleteRowsByMask(IntPtr highs, int[] mask);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getIntInfoValue(IntPtr _highs, string info, out int value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getDoubleInfoValue(IntPtr highs, string info, out double value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getInt64InfoValue(IntPtr _highs, string info, out long value);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getIntInfoValue(IntPtr highs, string info, out int value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_setSolution(IntPtr _highs, double[] col_value, double[] row_value, double[] col_dual, double[] row_dual);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getInt64InfoValue(IntPtr highs, string info, out long value);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
+    private static extern int Highs_setSolution(IntPtr highs, double[] col_value, double[] row_value, double[] col_dual, double[] row_dual);
+
+    [DllImport(HighsLibName)]
+    private static extern int Highs_setSparseSolution(IntPtr highs, int num_entries, int[] index, double[] value);
+
+    [DllImport(HighsLibName)]
     private static extern int Highs_getColsByRange(
-        IntPtr _highs,
+        IntPtr highs,
         int from_col,
         int to_col,
         ref int num_col,
@@ -278,9 +375,9 @@ public class Solver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_getColsBySet(
-        IntPtr _highs,
+        IntPtr highs,
         int num_set_entries,
         int[] set,
         ref int num_col,
@@ -292,9 +389,9 @@ public class Solver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_getColsByMask(
-        IntPtr _highs,
+        IntPtr highs,
         int[] mask,
         ref int num_col,
         double[] costs,
@@ -305,9 +402,9 @@ public class Solver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_getRowsByRange(
-        IntPtr _highs,
+        IntPtr highs,
         int from_row,
         int to_row,
         ref int num_row,
@@ -318,9 +415,9 @@ public class Solver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_getRowsBySet(
-        IntPtr _highs,
+        IntPtr highs,
         int num_set_entries,
         int[] set,
         ref int num_row,
@@ -331,9 +428,9 @@ public class Solver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_getRowsByMask(
-        IntPtr _highs,
+        IntPtr highs,
         int[] mask,
         ref int num_row,
         double[] lower,
@@ -343,65 +440,65 @@ public class Solver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getBasicVariables(IntPtr _highs, int[] basic_variables);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getBasicVariables(IntPtr highs, int[] basic_variables);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getBasisInverseRow(IntPtr _highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getBasisInverseRow(IntPtr highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getBasisInverseCol(IntPtr _highs, int col, double[] col_vector, ref int col_num_nz, int[] col_indices);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getBasisInverseCol(IntPtr highs, int column, double[] col_vector, ref int col_num_nz, int[] col_indices);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_getBasisSolve(
-        IntPtr _highs,
+        IntPtr highs,
         double[] rhs,
         double[] solution_vector,
         ref int solution_num_nz,
         int[] solution_indices);
 
-    [LibraryImport(HighsLibName)]
+    [DllImport(HighsLibName)]
     private static extern int Highs_getBasisTransposeSolve(
-        IntPtr _highs,
+        IntPtr highs,
         double[] rhs,
         double[] solution_vector,
         ref int solution_nz,
         int[] solution_indices);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getReducedRow(IntPtr _highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getReducedRow(IntPtr highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_getReducedColumn(IntPtr _highs, int col, double[] col_vector, ref int col_num_nz, int[] col_indices);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_getReducedColumn(IntPtr highs, int column, double[] col_vector, ref int col_num_nz, int[] col_indices);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_clearModel(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_clearModel(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_clearSolver(IntPtr _highs);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_clearSolver(IntPtr highs);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_passColName(IntPtr _highs, int col, string name);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_passColName(IntPtr highs, int column, string name);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_passRowName(IntPtr _highs, int row, string name);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_passRowName(IntPtr highs, int row, string name);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_writeOptions(IntPtr _highs, string filename);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_writeOptions(IntPtr highs, string filename);
 
-    [LibraryImport(HighsLibName)]
-    private static extern int Highs_writeOptionsDeviations(IntPtr _highs, string filename);
+    [DllImport(HighsLibName)]
+    private static extern int Highs_writeOptionsDeviations(IntPtr highs, string filename);
     #endregion
 
     /// <summary>
-    /// Calls the Highs solver in a single call.
+    /// Calls the Highs solver in a single call of a LP.
     /// </summary>
     /// <param name="model"></param>
     /// <param name="solution"></param>
     /// <param name="basisInfo"></param>
     /// <param name="modelStatus"></param>
     /// <returns></returns>
-    public static Status Call(Model model, ref Solution solution, out BasisInfo basisInfo, out ModelStatus modelStatus)
+    public static Status LpCall(Model model, ref Solution solution, out BasisInfo basisInfo, out ModelStatus modelStatus)
     {
         var numberOfColumns = model.ColumnCost.Length;
         var numberOfRows = model.RowLower.Length;
@@ -412,10 +509,13 @@ public class Solver : IDisposable
 
         var modelstate = 0;
 
-        var status = (Status)Highs_call(
+        var status = (Status)Highs_lpCall(
             numberOfColumns,
             numberOfRows,
             numberOfMatrixValues,
+            (int)model.MatrixFormat,
+            (int)model.ObjectiveSense,
+            model.Offset,
             model.ColumnCost,
             model.ColumnLower,
             model.ColumnUpper,
@@ -433,7 +533,100 @@ public class Solver : IDisposable
             ref modelstate);
 
         modelStatus = (ModelStatus)modelstate;
-        basisInfo = new([.. columnBasisStatus.Select(x => (BasisStatus)x)], [.. rowBasisStatus.Select(x => (BasisStatus)x)]);
+        basisInfo = new(Array.ConvertAll(columnBasisStatus, c => (BasisStatus)c), Array.ConvertAll(rowBasisStatus, r => (BasisStatus)r));
+
+        return status;
+    }
+
+    /// <summary>
+    /// Calls the Highs solver in a single call of a Mip.
+    /// </summary>
+    /// <param name="model"></param>
+    /// <param name="solution"></param>
+    /// <param name="modelStatus"></param>
+    /// <returns></returns>
+    public static Status MipCall(Model model, ref Solution solution, out ModelStatus modelStatus)
+    {
+        var numberOfColumns = model.ColumnCost.Length;
+        var numberOfRows = model.RowLower.Length;
+        var numberOfMatrixValues = model.MatrixValues.Length;
+
+        var modelstate = 0;
+
+        var status = (Status)Highs_mipCall(
+            numberOfColumns,
+            numberOfRows,
+            numberOfMatrixValues,
+            (int)model.MatrixFormat,
+            (int)model.ObjectiveSense,
+            model.Offset,
+            model.ColumnCost,
+            model.ColumnLower,
+            model.ColumnUpper,
+            model.RowLower,
+            model.RowUpper,
+            model.MatrixStart,
+            model.MatrixIndices,
+            model.MatrixValues,
+            Array.ConvertAll(model.VariableTypes, v => (int)v),
+            solution.ColumnValue,
+            solution.RowValue,
+            ref modelstate);
+
+        modelStatus = (ModelStatus)modelstate;
+
+        return status;
+    }
+
+    /// <summary>
+    /// Calls the Highs solver in a single call of a QP.
+    /// </summary>
+    /// <param name="model"></param>
+    /// <param name="solution"></param>
+    /// <param name="modelStatus"></param>
+    /// <returns></returns>
+    public static Status QPCall(Model model, ref Solution solution, out BasisInfo basisInfo, out ModelStatus modelStatus)
+    {
+        var numberOfColumns = model.ColumnCost.Length;
+        var numberOfRows = model.RowLower.Length;
+        var numberOfMatrixValues = model.MatrixValues.Length;
+        var numberOfHessianValues = model.Hessian.Values.Length;
+
+        var columnBasisStatus = new int[numberOfColumns];
+        var rowBasisStatus = new int[numberOfRows];
+
+        var modelstate = 0;
+
+        var status = (Status)Highs_qpCall(
+            numberOfColumns,
+            numberOfRows,
+            numberOfMatrixValues,
+            numberOfHessianValues,
+            (int)model.MatrixFormat,
+            (int)model.Hessian.HessianFormat,
+            (int)model.ObjectiveSense,
+            model.Offset,
+            model.ColumnCost,
+            model.ColumnLower,
+            model.ColumnUpper,
+            model.RowLower,
+            model.RowUpper,
+            model.MatrixStart,
+            model.MatrixIndices,
+            model.MatrixValues,
+            model.Hessian.Start,
+            model.Hessian.Index,
+            model.Hessian.Values,
+            solution.ColumnValue,
+            solution.ColumnDual,
+            solution.RowValue,
+            solution.RowDual,
+            columnBasisStatus,
+            rowBasisStatus,
+            ref modelstate);
+
+        modelStatus = (ModelStatus)modelstate;
+        basisInfo = new(Array.ConvertAll(columnBasisStatus, c => (BasisStatus)c), Array.ConvertAll(rowBasisStatus, r => (BasisStatus)r));
 
         return status;
     }
@@ -511,45 +704,55 @@ public class Solver : IDisposable
     /// <returns></returns>
     public double GetInfinity() => Highs_getInfinity(_highs);
 
-    public Status passLp(HighsModel model)
+    /// <summary>
+    /// Passes the LP model to Highs.
+    /// </summary>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    public Status PassLp(Model model)
     {
         return (Status)Highs_passLp(
             _highs,
-            model.colcost.Length,
-            model.rowlower.Length,
-            model.avalue.Length,
-            (int)model.a_format,
-            (int)model.sense,
-            model.offset,
-            model.colcost,
-            model.collower,
-            model.colupper,
-            model.rowlower,
-            model.rowupper,
-            model.astart,
-            model.aindex,
-            model.avalue);
+            model.ColumnCost.Length,
+            model.RowLower.Length,
+            model.MatrixValues.Length,
+            (int)model.MatrixFormat,
+            (int)model.ObjectiveSense,
+            model.Offset,
+            model.ColumnCost,
+            model.ColumnLower,
+            model.ColumnUpper,
+            model.RowLower,
+            model.RowUpper,
+            model.MatrixStart,
+            model.MatrixIndices,
+            model.MatrixValues);
     }
 
-    public Status passMip(HighsModel model)
+    /// <summary>
+    /// Passes the MIP model to Highs.
+    /// </summary>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    public Status PassMip(Model model)
     {
         return (Status)Highs_passMip(
             _highs,
-            model.colcost.Length,
-            model.rowlower.Length,
-            model.avalue.Length,
-            (int)model.a_format,
-            (int)model.sense,
-            model.offset,
-            model.colcost,
-            model.collower,
-            model.colupper,
-            model.rowlower,
-            model.rowupper,
-            model.astart,
-            model.aindex,
-            model.avalue,
-            model.highs_integrality);
+            model.ColumnCost.Length,
+            model.RowLower.Length,
+            model.MatrixValues.Length,
+            (int)model.MatrixFormat,
+            (int)model.ObjectiveSense,
+            model.Offset,
+            model.ColumnCost,
+            model.ColumnLower,
+            model.ColumnUpper,
+            model.RowLower,
+            model.RowUpper,
+            model.MatrixStart,
+            model.MatrixIndices,
+            model.MatrixValues,
+            Array.ConvertAll(model.VariableTypes, v => (int)v));
     }
 
     /// <summary>
@@ -592,7 +795,13 @@ public class Solver : IDisposable
     /// <returns></returns>
     public Status SetIntOptionValue(string option, int value) => (Status)Highs_setIntOptionValue(_highs, option, value);
 
-    public Status getStringOptionValue(string option, out string value)
+    /// <summary>
+    /// Gets the string option value.
+    /// </summary>
+    /// <param name="option"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public Status GetStringOptionValue(string option, out string value)
     {
         var stringBuilder = new StringBuilder();
         var result = (Status)Highs_getStringOptionValue(_highs, option, stringBuilder);
@@ -600,94 +809,172 @@ public class Solver : IDisposable
         return result;
     }
 
-    public Status getBoolOptionValue(string option, out int value)
+    /// <summary>
+    /// Gets the boolean option value.
+    /// </summary>
+    /// <param name="option"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public Status GetBoolOptionValue(string option, out int value) => (Status)Highs_getBoolOptionValue(_highs, option, out value);
+
+    /// <summary>
+    /// Gets the double option value.
+    /// </summary>
+    /// <param name="option"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public Status GetDoubleOptionValue(string option, out double value) => (Status)Highs_getDoubleOptionValue(_highs, option, out value);
+
+    /// <summary>
+    /// Gets the integer option value.
+    /// </summary>
+    /// <param name="option"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public Status GetIntOptionValue(string option, out int value) => (Status)Highs_getIntOptionValue(_highs, option, out value);
+
+    /// <summary>
+    /// Gets the number of columns.
+    /// </summary>
+    /// <returns></returns>
+    public int GetNumberOfColumns() => Highs_getNumCol(_highs);
+
+    /// <summary>
+    /// Gets the number of rows.
+    /// </summary>
+    /// <returns></returns>
+    public int GetNumberOfRows() => Highs_getNumRow(_highs);
+
+    /// <summary>
+    /// Gets the number of non-zero entries.
+    /// </summary>
+    /// <returns></returns>
+    public int GetNumberOfNonZeroEntries() => Highs_getNumNz(_highs);
+
+    /// <summary>
+    /// Gets the solution.
+    /// </summary>
+    /// <param name="solution"></param>
+    /// <returns></returns>
+    public Status GetSolution(out Solution solution)
     {
-        return (Status)Highs_getBoolOptionValue(_highs, option, out value);
+        var numberOfColumns = GetNumberOfColumns();
+        var numberOfRows = GetNumberOfRows();
+
+        solution = new Solution(numberOfColumns, numberOfRows);
+        return (Status)Highs_getSolution(_highs, solution.ColumnValue, solution.ColumnDual, solution.RowValue, solution.RowDual);
     }
 
-    public Status getDoubleOptionValue(string option, out double value)
+    /// <summary>
+    /// Passes the Hessian to Highs.
+    /// </summary>
+    /// <param name="hessian"></param>
+    /// <returns></returns>
+    public Status PassHessian(Hessian hessian)
     {
-        return (Status)Highs_getDoubleOptionValue(_highs, option, out value);
+        return (Status)Highs_passHessian(_highs,
+                                         hessian.Dimension,
+                                         hessian.Values.Length,
+                                         (int)hessian.HessianFormat,
+                                         hessian.Start,
+                                         hessian.Index,
+                                         hessian.Values);
     }
 
-    public Status getIntOptionValue(string option, out int value)
+    /// <summary>
+    /// Gets the basis information.
+    /// </summary>
+    /// <returns></returns>
+    public Status GetBasis(out BasisInfo basisInfo)
     {
-        return (Status)Highs_getIntOptionValue(_highs, option, out value);
+        var numberOfColumns = GetNumberOfColumns();
+        var numberOfRows = GetNumberOfRows();
+
+        var columnBasisStatus = new int[numberOfColumns];
+        var rowBasisStatus = new int[numberOfRows];
+
+        var status = (Status)Highs_getBasis(_highs, columnBasisStatus, rowBasisStatus);
+        if (status == Status.Error)
+        {
+            basisInfo = null;
+            return Status.Error;
+        }
+
+        basisInfo = new BasisInfo(Array.ConvertAll(columnBasisStatus, x => (BasisStatus)x), Array.ConvertAll(rowBasisStatus, x => (BasisStatus)x));
+
+        return status;
     }
 
-    public int getNumCol()
-    {
-        return Highs_getNumCol(_highs);
-    }
+    /// <summary>
+    /// Gets the objective value.
+    /// </summary>
+    /// <returns></returns>
+    public double GetObjectiveValue() => Highs_getObjectiveValue(_highs);
 
-    public int getNumRow()
-    {
-        return Highs_getNumRow(_highs);
-    }
+    /// <summary>
+    /// Gets the model status.
+    /// </summary>
+    /// <returns></returns>
+    public ModelStatus GetModelStatus() => (ModelStatus)Highs_getModelStatus(_highs);
 
-    public int getNumNz()
-    {
-        return Highs_getNumNz(_highs);
-    }
+    /// <summary>
+    /// Gets the iteration count.
+    /// </summary>
+    /// <returns></returns>
+    public int GetIterationCount() => Highs_getIterationCount(_highs);
 
-    public HighsSolution getSolution()
-    {
-        int numberOfColumns = getNumCol();
-        int numberOfRows = getNumRow();
-
-        HighsSolution sol = new HighsSolution(numberOfColumns, numberOfRows);
-        Highs_getSolution(_highs, sol.colvalue, sol.coldual, sol.rowvalue, sol.rowdual);
-
-        return sol;
-    }
-
-    public HighsBasis getBasis()
-    {
-        int numberOfColumns = getNumCol();
-        int numberOfRows = getNumRow();
-
-        int[] colbasstat = new int[numberOfColumns];
-        int[] rowbasstat = new int[numberOfRows];
-
-        Highs_getBasis(_highs, colbasstat, rowbasstat);
-        HighsBasis bas = new HighsBasis(
-            colbasstat.Select(x => (HighsBasisStatus)x).ToArray(),
-            rowbasstat.Select(x => (HighsBasisStatus)x).ToArray());
-
-        return bas;
-    }
-
-    public double getObjectiveValue()
-    {
-        return Highs_getObjectiveValue(_highs);
-    }
-
-    public HighsModelStatus GetModelStatus()
-    {
-        return (HighsModelStatus)Highs_getModelStatus(_highs);
-    }
-
-    public int getIterationCount()
-    {
-        return Highs_getIterationCount(_highs);
-    }
-
-    public Status addRow(double lower, double upper, int[] indices, double[] values)
+    /// <summary>
+    /// Adds a row to the model.
+    /// </summary>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <param name="indices"></param>
+    /// <param name="values"></param>
+    /// <returns></returns>
+    public Status AddRow(double lower, double upper, int[] indices, double[] values)
     {
         return (Status)Highs_addRow(_highs, lower, upper, indices.Length, indices, values);
     }
 
-    public Status addRows(double[] lower, double[] upper, int[] starts, int[] indices, double[] values)
+    /// <summary>
+    /// Adds multiple rows to the model.
+    /// </summary>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <param name="starts"></param>
+    /// <param name="indices"></param>
+    /// <param name="values"></param>
+    /// <returns></returns>
+    public Status AddRows(double[] lower, double[] upper, int[] starts, int[] indices, double[] values)
     {
         return (Status)Highs_addRows(_highs, lower.Length, lower, upper, indices.Length, starts, indices, values);
     }
 
-    public Status addCol(double cost, double lower, double upper, int[] indices, double[] values)
+    /// <summary>
+    /// Adds a column to the model.
+    /// </summary>
+    /// <param name="cost"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <param name="indices"></param>
+    /// <param name="values"></param>
+    /// <returns></returns>
+    public Status AddColumn(double cost, double lower, double upper, int[] indices, double[] values)
     {
         return (Status)Highs_addCol(_highs, cost, lower, upper, indices.Length, indices, values);
     }
 
-    public Status addCols(double[] costs, double[] lower, double[] upper, int[] starts, int[] indices, double[] values)
+    /// <summary>
+    /// Adds multiple columns to the model.
+    /// </summary>
+    /// <param name="costs"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <param name="starts"></param>
+    /// <param name="indices"></param>
+    /// <param name="values"></param>
+    /// <returns></returns>
+    public Status AddColumns(double[] costs, double[] lower, double[] upper, int[] starts, int[] indices, double[] values)
     {
         return (Status)Highs_addCols(
             _highs,
@@ -701,114 +988,196 @@ public class Solver : IDisposable
             values);
     }
 
-    public Status changeObjectiveSense(HighsObjectiveSense sense)
+    /// <summary>
+    /// Changes the objective sense.
+    /// </summary>
+    /// <param name="sense"></param>
+    /// <returns></returns>
+    public Status ChangeObjectiveSense(ObjectiveSense sense) => (Status)Highs_changeObjectiveSense(_highs, (int)sense);
+
+    /// <summary>
+    /// Changes the cost of a column.
+    /// </summary>
+    /// <param name="column"></param>
+    /// <param name="cost"></param>
+    /// <returns></returns>
+    public Status ChangeColumnCost(int column, double cost) => (Status)Highs_changeColCost(_highs, column, cost);
+
+    /// <summary>
+    /// Changes the costs of multiple columns by set.
+    /// </summary>
+    /// <param name="columns"></param>
+    /// <param name="costs"></param>
+    /// <returns></returns>
+    public Status ChangeColumnsCostBySet(int[] columns, double[] costs) => (Status)Highs_changeColsCostBySet(_highs, columns.Length, columns, costs);
+
+    /// <summary>
+    /// Changes the costs of multiple columns by mask.
+    /// </summary>
+    /// <param name="mask"></param>
+    /// <param name="cost"></param>
+    /// <returns></returns>
+    public Status ChangeColumnsCostByMask(bool[] mask, double[] cost) => (Status)Highs_changeColsCostByMask(_highs, Array.ConvertAll(mask, x => x ? 1 : 0), cost);
+
+    /// <summary>
+    /// Changes the bounds of a column.
+    /// </summary>
+    /// <param name="column"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <returns></returns>
+    public Status ChangeColumnBounds(int column, double lower, double upper) => (Status)Highs_changeColBounds(_highs, column, lower, upper);
+
+    /// <summary>
+    /// Changes the bounds of multiple columns by range.
+    /// </summary>
+    /// <param name="from"></param>
+    /// <param name="to"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <returns></returns>
+    public Status ChangeColumnsBoundsByRange(int from, int to, double[] lower, double[] upper) => (Status)Highs_changeColsBoundsByRange(_highs, from, to, lower, upper);
+
+    /// <summary>
+    /// Changes the bounds of multiple columns by set.
+    /// </summary>
+    /// <param name="columns"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <returns></returns>
+    public Status ChangeColumnsBoundsBySet(int[] columns, double[] lower, double[] upper)
     {
-        return (Status)Highs_changeObjectiveSense(_highs, (int)sense);
+        return (Status)Highs_changeColsBoundsBySet(_highs, columns.Length, columns, lower, upper);
     }
 
-    public Status changeColCost(int col, double cost)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="mask"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <returns></returns>
+    public Status ChangeColumnsBoundsByMask(bool[] mask, double[] lower, double[] upper)
     {
-        return (Status)Highs_changeColCost(_highs, col, cost);
+        return (Status)Highs_changeColsBoundsByMask(_highs, Array.ConvertAll(mask, x => x ? 1 : 0), lower, upper);
     }
 
-    public Status changeColsCostBySet(int[] cols, double[] costs)
-    {
-        return (Status)Highs_changeColsCostBySet(_highs, cols.Length, cols, costs);
-    }
+    /// <summary>
+    /// Changes the bounds of a row.
+    /// </summary>
+    /// <param name="row"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <returns></returns>
+    public Status ChangeRowBounds(int row, double lower, double upper) => (Status)Highs_changeRowBounds(_highs, row, lower, upper);
 
-    public Status changeColsCostByMask(bool[] mask, double[] cost)
-    {
-        return (Status)Highs_changeColsCostByMask(_highs, mask.Select(x => x ? 1 : 0).ToArray(), cost);
-    }
+    /// <summary>
+    /// Changes the bounds of multiple rows by range.
+    /// </summary>
+    /// <param name="rows"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <returns></returns>
+    public Status ChangeRowsBoundsBySet(int[] rows, double[] lower, double[] upper) => (Status)Highs_changeRowsBoundsBySet(_highs, rows.Length, rows, lower, upper);
 
-    public Status changeColBounds(int col, double lower, double upper)
-    {
-        return (Status)Highs_changeColBounds(_highs, col, lower, upper);
-    }
+    /// <summary>
+    /// Changes the bounds of multiple rows by mask.
+    /// </summary>
+    /// <param name="mask"></param>
+    /// <param name="lower"></param>
+    /// <param name="upper"></param>
+    /// <returns></returns>
+    public Status ChangeRowsBoundsByMask(bool[] mask, double[] lower, double[] upper) => (Status)Highs_changeRowsBoundsByMask(_highs, Array.ConvertAll(mask, x => x ? 1 : 0), lower, upper);
 
-    public Status changeColsBoundsByRange(int from, int to, double[] lower, double[] upper)
-    {
-        return (Status)Highs_changeColsBoundsByRange(_highs, from, to, lower, upper);
-    }
-
-    public Status changeColsBoundsBySet(int[] cols, double[] lower, double[] upper)
-    {
-        return (Status)Highs_changeColsBoundsBySet(_highs, cols.Length, cols, lower, upper);
-    }
-
-    public Status changeColsBoundsByMask(bool[] mask, double[] lower, double[] upper)
-    {
-        return (Status)Highs_changeColsBoundsByMask(_highs, mask.Select(x => x ? 1 : 0).ToArray(), lower, upper);
-    }
-
-    public Status changeRowBounds(int row, double lower, double upper)
-    {
-        return (Status)Highs_changeRowBounds(_highs, row, lower, upper);
-    }
-
-    public Status changeRowsBoundsBySet(int[] rows, double[] lower, double[] upper)
-    {
-        return (Status)Highs_changeRowsBoundsBySet(_highs, rows.Length, rows, lower, upper);
-    }
-
-    public Status changeRowsBoundsByMask(bool[] mask, double[] lower, double[] upper)
-    {
-        return (Status)Highs_changeRowsBoundsByMask(_highs, mask.Select(x => x ? 1 : 0).ToArray(), lower, upper);
-    }
-
-    public Status changeColsIntegralityByRange(int from_col, int to_col, HighsIntegrality[] integrality)
+    /// <summary>
+    /// Changes the integrality of multiple columns by range.
+    /// </summary>
+    /// <param name="from_col"></param>
+    /// <param name="to_col"></param>
+    /// <param name="integrality"></param>
+    /// <returns></returns>
+    public Status ChangeColumnsIntegralityByRange(int from_col, int to_col, VariableType[] integrality)
     {
         return (Status)Highs_changeColsIntegralityByRange(_highs, from_col, to_col, Array.ConvertAll(integrality, item => (int)item));
     }
 
-    public Status changeCoeff(int row, int col, double value)
-    {
-        return (Status)Highs_changeCoeff(_highs, row, col, value);
-    }
+    /// <summary>
+    /// Changes a coefficient in the constraint matrix.
+    /// </summary>
+    /// <param name="row"></param>
+    /// <param name="column"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public Status ChangeCoefficient(int row, int column, double value) => (Status)Highs_changeCoeff(_highs, row, column, value);
 
-    public Status deleteColsByRange(int from, int to)
-    {
-        return (Status)Highs_deleteColsByRange(_highs, from, to);
-    }
+    /// <summary>
+    /// Deletes multiple columns by range.
+    /// </summary>
+    /// <param name="from"></param>
+    /// <param name="to"></param>
+    /// <returns></returns>
+    public Status DeleteColumnsByRange(int from, int to) => (Status)Highs_deleteColsByRange(_highs, from, to);
 
-    public Status deleteColsBySet(int[] cols)
-    {
-        return (Status)Highs_deleteColsBySet(_highs, cols.Length, cols);
-    }
+    /// <summary>
+    /// Deletes multiple columns by set.
+    /// </summary>
+    /// <param name="columns"></param>
+    /// <returns></returns>
+    public Status DeleteColumnsBySet(int[] columns) => (Status)Highs_deleteColsBySet(_highs, columns.Length, columns);
 
-    public Status deleteColsByMask(bool[] mask)
-    {
-        return (Status)Highs_deleteColsByMask(_highs, mask.Select(x => x ? 1 : 0).ToArray());
-    }
+    /// <summary>
+    /// Deletes multiple columns by mask.
+    /// </summary>
+    /// <param name="mask"></param>
+    /// <returns></returns>
+    public Status DeleteColumnsByMask(bool[] mask) => (Status)Highs_deleteColsByMask(_highs, Array.ConvertAll(mask, x => x ? 1 : 0));
 
-    public Status deleteRowsByRange(int from, int to)
-    {
-        return (Status)Highs_deleteRowsByRange(_highs, from, to);
-    }
+    /// <summary>
+    /// Deletes multiple rows by range.
+    /// </summary>
+    /// <param name="from"></param>
+    /// <param name="to"></param>
+    /// <returns></returns>
+    public Status DeleteRowsByRange(int from, int to) => (Status)Highs_deleteRowsByRange(_highs, from, to);
 
-    public Status deleteRowsBySet(int[] rows)
-    {
-        return (Status)Highs_deleteRowsBySet(_highs, rows.Length, rows);
-    }
+    /// <summary>
+    /// Deletes multiple rows by set.
+    /// </summary>
+    /// <param name="rows"></param>
+    /// <returns></returns>
+    public Status DeleteRowsBySet(int[] rows) => (Status)Highs_deleteRowsBySet(_highs, rows.Length, rows);
 
-    public Status deleteRowsByMask(bool[] mask)
-    {
-        return (Status)Highs_deleteRowsByMask(_highs, mask.Select(x => x ? 1 : 0).ToArray());
-    }
+    /// <summary>
+    /// Deletes multiple rows by mask.
+    /// </summary>
+    /// <param name="mask"></param>
+    /// <returns></returns>
+    public Status DeleteRowsByMask(bool[] mask) => (Status)Highs_deleteRowsByMask(_highs, Array.ConvertAll(mask, x => x ? 1 : 0));
 
-    delegate int HighsGetInfoDelegate<TValue>(IntPtr _highs, string infoName, out TValue output);
+    /// <summary>
+    /// Delegate for getting info values.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="highs"></param>
+    /// <param name="infoName"></param>
+    /// <param name="output"></param>
+    /// <returns></returns>
+    delegate int HighsGetInfoDelegate<TValue>(IntPtr highs, string infoName, out TValue output);
 
+    /// <summary>
+    /// Gets a value or a fallback if an error occurs.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="highsGetInfoDelegate"></param>
+    /// <param name="infoName"></param>
+    /// <param name="fallback"></param>
+    /// <returns></returns>
     private TValue GetValueOrFallback<TValue>(HighsGetInfoDelegate<TValue> highsGetInfoDelegate, string infoName, TValue fallback)
     {
         try
         {
             var status = (Status)highsGetInfoDelegate(_highs, infoName, out var value);
-            if (status != Status.kOk)
-            {
-                return fallback;
-            }
-
-            return value;
+            return status != Status.Ok ? fallback : value;
         }
         catch
         {
@@ -820,60 +1189,123 @@ public class Solver : IDisposable
     /// Gets the current solution info.
     /// </summary>
     /// <returns>The <see cref="SolutionInfo"/>.</returns>
-    public SolutionInfo getInfo()
+    public SolutionInfo GetInfo()
     {
         // TODO: This object does not contian the "complete" info from the C api. Add further props, if you need them.
-        var info = new SolutionInfo()
-        {
-            MipGap = GetValueOrFallback(Highs_getDoubleInfoValue, "mip_gap", double.NaN),
-            DualBound = GetValueOrFallback(Highs_getDoubleInfoValue, "mip_dual_bound", double.NaN),
-            ObjectiveValue = GetValueOrFallback(Highs_getDoubleInfoValue, "objective_function_value", double.NaN),
-            NodeCount = GetValueOrFallback(Highs_getInt64InfoValue, "mip_node_count", 0L),
-            IpmIterationCount = GetValueOrFallback(Highs_getIntInfoValue, "ipm_iteration_count", 0),
-            SimplexIterationCount = GetValueOrFallback(Highs_getIntInfoValue, "simplex_iteration_count", 0),
-            PdlpIterationCount = GetValueOrFallback(Highs_getIntInfoValue, "pdlp_iteration_count", 0),
-        };
-        return info;
+        return new SolutionInfo(GetValueOrFallback(Highs_getIntInfoValue, "simplex_iteration_count", 0),
+                                GetValueOrFallback(Highs_getIntInfoValue, "ipm_iteration_count", 0),
+                                GetValueOrFallback(Highs_getIntInfoValue, "pdlp_iteration_count", 0),
+                                GetValueOrFallback(Highs_getDoubleInfoValue, "mip_gap", double.NaN),
+                                GetValueOrFallback(Highs_getDoubleInfoValue, "mip_dual_bound", double.NaN),
+                                GetValueOrFallback(Highs_getInt64InfoValue, "mip_node_count", 0L),
+                                GetValueOrFallback(Highs_getDoubleInfoValue, "objective_function_value", double.NaN));
     }
 
-    public Status setSolution(HighsSolution solution)
+    /// <summary>
+    /// Sets the solution.
+    /// </summary>
+    /// <param name="solution"></param>
+    /// <returns></returns>
+    public Status SetSolution(Solution solution) => (Status)Highs_setSolution(_highs, solution.ColumnValue, solution.ColumnDual, solution.RowValue, solution.RowDual);
+
+    /// <summary>
+    /// Set a partial primal solution by passing values for a set of variables
+    /// </summary>
+    /// <remarks>
+    /// The sparse solution set by this function has values for a subset of the model's variables.
+    /// For each entry in <paramref name="valuesByIndex"/>, the key identifies a variable by index, and
+    /// the value indicates the variable's value in the sparse solution.
+    /// </remarks>
+    /// <param name="valuesByIndex">A dictionary that maps variable indices to variable values</param>
+    /// <returns></returns>
+    public Status SetSparseSolution(IReadOnlyDictionary<int, double> valuesByIndex)
     {
-        return (Status)Highs_setSolution(_highs, solution.colvalue, solution.coldual, solution.rowvalue, solution.rowdual);
+        return (Status)Highs_setSparseSolution(_highs, valuesByIndex.Count, [.. valuesByIndex.Keys], [.. valuesByIndex.Values]);
     }
 
-    public Status getBasicVariables(ref int[] basic_variables)
-    {
-        return (Status)Highs_getBasicVariables(_highs, basic_variables);
-    }
+    /// <summary>
+    /// Gets the basic variables.
+    /// </summary>
+    /// <param name="basic_variables"></param>
+    /// <returns></returns>
+    public Status GetBasicVariables(ref int[] basic_variables) => (Status)Highs_getBasicVariables(_highs, basic_variables);
 
-    public Status getBasisInverseRow(int row, double[] row_vector, ref int row_num_nz, int[] row_indices)
+    /// <summary>
+    /// Gets a row of the basis inverse.
+    /// </summary>
+    /// <param name="row"></param>
+    /// <param name="row_vector"></param>
+    /// <param name="row_num_nz"></param>
+    /// <param name="row_indices"></param>
+    /// <returns></returns>
+    public Status GetBasisInverseRow(int row, double[] row_vector, ref int row_num_nz, int[] row_indices)
     {
         return (Status)Highs_getBasisInverseRow(_highs, row, row_vector, ref row_num_nz, row_indices);
     }
 
-    public Status getBasisInverseCol(int col, double[] col_vector, ref int col_num_nz, int[] col_indices)
+    /// <summary>
+    /// Gets a column of the basis inverse.
+    /// </summary>
+    /// <param name="column"></param>
+    /// <param name="column_vector"></param>
+    /// <param name="column_num_nz"></param>
+    /// <param name="column_indices"></param>
+    /// <returns></returns>
+    public Status GetBasisInverseColumn(int column, double[] column_vector, ref int column_num_nz, int[] column_indices)
     {
-        return (Status)Highs_getBasisInverseCol(_highs, col, col_vector, ref col_num_nz, col_indices);
+        return (Status)Highs_getBasisInverseCol(_highs, column, column_vector, ref column_num_nz, column_indices);
     }
 
-    public Status getBasisSolve(double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices)
+    /// <summary>
+    /// Gets the basis solve.
+    /// </summary>
+    /// <param name="rhs"></param>
+    /// <param name="solution_vector"></param>
+    /// <param name="solution_num_nz"></param>
+    /// <param name="solution_indices"></param>
+    /// <returns></returns>
+    public Status GetBasisSolve(double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices)
     {
         return (Status)Highs_getBasisSolve(_highs, rhs, solution_vector, ref solution_num_nz, solution_indices);
     }
 
-    public Status getBasisTransposeSolve(double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices)
+    /// <summary>
+    /// Gets the basis transpose solve.
+    /// </summary>
+    /// <param name="rhs"></param>
+    /// <param name="solution_vector"></param>
+    /// <param name="solution_num_nz"></param>
+    /// <param name="solution_indices"></param>
+    /// <returns></returns>
+    public Status GetBasisTransposeSolve(double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices)
     {
         return (Status)Highs_getBasisTransposeSolve(_highs, rhs, solution_vector, ref solution_num_nz, solution_indices);
     }
 
-    public Status getReducedRow(int row, double[] row_vector, ref int row_num_nz, int[] row_indices)
+    /// <summary>
+    /// Gets a reduced row.
+    /// </summary>
+    /// <param name="row"></param>
+    /// <param name="row_vector"></param>
+    /// <param name="row_num_nz"></param>
+    /// <param name="row_indices"></param>
+    /// <returns></returns>
+    public Status GetReducedRow(int row, double[] row_vector, ref int row_num_nz, int[] row_indices)
     {
         return (Status)Highs_getReducedRow(_highs, row, row_vector, ref row_num_nz, row_indices);
     }
 
-    public Status getReducedColumn(int col, double[] col_vector, ref int col_num_nz, int[] col_indices)
+    /// <summary>
+    /// Gets a reduced column.
+    /// </summary>
+    /// <param name="column"></param>
+    /// <param name="column_vector"></param>
+    /// <param name="column_num_nz"></param>
+    /// <param name="column_indices"></param>
+    /// <returns></returns>
+    public Status GetReducedColumn(int column, double[] column_vector, ref int column_num_nz, int[] column_indices)
     {
-        return (Status)Highs_getReducedColumn(_highs, col, col_vector, ref col_num_nz, col_indices);
+        return (Status)Highs_getReducedColumn(_highs, column, column_vector, ref column_num_nz, column_indices);
     }
 
     /// <summary>
@@ -891,10 +1323,10 @@ public class Solver : IDisposable
     /// <summary>
     /// Passes the name of a column.
     /// </summary>
-    /// <param name="col"></param>
+    /// <param name="column"></param>
     /// <param name="name"></param>
     /// <returns></returns>
-    public Status PassColumnName(int col, string name) => (Status)Highs_passColName(_highs, col, name);
+    public Status PassColumnName(int column, string name) => (Status)Highs_passColName(_highs, column, name);
 
     /// <summary>
     /// Passes the name of a row.

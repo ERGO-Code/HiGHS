@@ -55,4 +55,8 @@ public record Model
     /// The integrality of the variables
     /// </summary>
     public VariableType[] VariableTypes = [];
+    /// <summary>
+    /// The Hessian for quadratic objectives
+    /// </summary>
+    public Hessian Hessian = null;
 }
