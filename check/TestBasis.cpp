@@ -5,14 +5,19 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
-const std::string basis_file = "adlittle.bas";
 HighsBasis basis_data;
 
-void testBasisReloadModel(Highs& highs, const bool from_file);
-void testBasisRestart(Highs& highs, const bool from_file);
+void testBasisReloadModel(Highs& highs, const std::string& basis_file,
+                          const bool from_file);
+void testBasisRestart(Highs& highs, const std::string& basis_file,
+                      const bool from_file);
 
 // No commas in test case name.
 TEST_CASE("Basis-file", "[highs_basis_file]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string basis_file = test_name + ".bas";
+  const std::string invalid_basis_file = test_name + "-Invalid.bas";
+
   HighsStatus return_status;
   std::string model0_file =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
@@ -38,7 +43,6 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   REQUIRE(return_status == HighsStatus::kError);
 
   // Check error return for some invalid basis files
-  std::string invalid_basis_file = "InvalidBasis.bas";
   std::ofstream f;
   // Write and read a file for unsupported HiGHS version
   f.open(invalid_basis_file, std::ios::out);
@@ -52,8 +56,16 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << "HiGHS v1" << std::endl;
   f << "None" << std::endl;
   f.close();
-  return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::kOk);
+  // HiGHS v1 basis file is deprecated, but read, so warning is
+  // returned
+  REQUIRE(highs.readBasis(invalid_basis_file) == HighsStatus::kWarning);
+
+  // Write and read a file for an invalid basis
+  f.open(invalid_basis_file, std::ios::out);
+  f << "HiGHS_basis_file v2" << std::endl;
+  f << "None" << std::endl;
+  f.close();
+  REQUIRE(highs.readBasis(invalid_basis_file) == HighsStatus::kOk);
 
   // Write and read a file for incompatible number of columns
   f.open(invalid_basis_file, std::ios::out);
@@ -64,14 +76,18 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   return_status = highs.readBasis(invalid_basis_file);
   REQUIRE(return_status == HighsStatus::kError);
 
-  testBasisRestart(highs, true);
-  testBasisReloadModel(highs, true);
+  testBasisRestart(highs, basis_file, true);
+  testBasisReloadModel(highs, basis_file, true);
 
   std::remove(basis_file.c_str());
   std::remove(invalid_basis_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Basis-data", "[highs_basis_data]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string basis_file = test_name + "adlittle.bas";
   HighsStatus return_status;
   std::string model0_file =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
@@ -93,8 +109,10 @@ TEST_CASE("Basis-data", "[highs_basis_data]") {
   basis_data = highs.getBasis();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  testBasisRestart(highs, false);
-  testBasisReloadModel(highs, false);
+  testBasisRestart(highs, basis_file, false);
+  testBasisReloadModel(highs, basis_file, false);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
@@ -130,6 +148,8 @@ TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
   highs.setBasis(basis);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Basis-no-basic", "[highs_basis_data]") {
@@ -154,6 +174,8 @@ TEST_CASE("Basis-no-basic", "[highs_basis_data]") {
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(highs.getInfo().objective_function_value == -0.5);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Basis-singular", "[highs_basis_data]") {
@@ -179,7 +201,8 @@ TEST_CASE("Basis-singular", "[highs_basis_data]") {
 }
 
 // No commas in test case name.
-void testBasisReloadModel(Highs& highs, const bool from_file) {
+void testBasisReloadModel(Highs& highs, const std::string& basis_file,
+                          const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after solving a different LP
   HighsStatus return_status;
@@ -227,7 +250,8 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 
-void testBasisRestart(Highs& highs, const bool from_file) {
+void testBasisRestart(Highs& highs, const std::string& basis_file,
+                      const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after changing a bound, solving
   // - so that the internal basis changes - and then restoring the
@@ -290,4 +314,46 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   }
 
   REQUIRE(info.simplex_iteration_count == 0);
+}
+
+TEST_CASE("Basis-read", "[highs_basis_data]") {
+  // Duplicates test_read_basis in test_highspy.py
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 1};
+  lp.col_lower_.assign(lp.num_col_, -kHighsInf);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+  lp.row_lower_ = {2, 0};
+  lp.row_upper_.assign(lp.num_row_, kHighsInf);
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {-1, 1, 1, 1};
+
+  HighsBasisStatus status_before = HighsBasisStatus::kNonbasic;
+  HighsBasisStatus status_after = HighsBasisStatus::kBasic;
+  Highs h1;
+  h1.setOptionValue("output_flag", dev_run);
+  const HighsBasis& basis1 = h1.getBasis();
+  h1.passModel(lp);
+  REQUIRE(basis1.col_status[0] == status_before);
+  h1.run();
+  REQUIRE(basis1.col_status[0] == status_after);
+
+  Highs h2;
+  h2.setOptionValue("output_flag", dev_run);
+  const HighsBasis& basis2 = h2.getBasis();
+  h2.passModel(lp);
+  REQUIRE(basis2.col_status[0] == status_before);
+
+  const std::string basis_file = test_name + ".bas";
+  h1.writeBasis(basis_file);
+  h2.readBasis(basis_file);
+  REQUIRE(basis2.col_status[0] == status_after);
+
+  std::remove(basis_file.c_str());
+  h1.resetGlobalScheduler(true);
+  h2.resetGlobalScheduler(true);
 }

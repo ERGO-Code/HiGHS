@@ -16,8 +16,6 @@ test_array = [
   ['test_callbacks', 'TestCallbacks.cpp'],
   ['test_ekk', 'TestEkk.cpp'],
   ['test_factor', 'TestFactor.cpp'],
-  ['test_freezebasis', 'TestFreezeBasis.cpp'],
-  ['test_hotstart', 'TestHotStart.cpp'],
   ['test_main', 'TestMain.cpp'],
   ['test_names', 'TestNames.cpp'],
   ['test_options', 'TestOptions.cpp'],
@@ -71,10 +69,11 @@ foreach test : test_array
       )
 endforeach
 
-if get_option('with_c')
-  test('test_capi',
-      executable('capi_unit_tests', 'TestCAPI.c',
-    include_directories: _incdirs,
-    link_with : highslib,
-  ))
-endif
+
+test('test_capi',
+     executable('capi_unit_tests',
+                sources: ['TestCAPI.c', highs_conf_file],
+                include_directories: _incdirs,
+                link_with : highslib,
+               )
+    )

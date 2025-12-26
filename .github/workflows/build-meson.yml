@@ -45,6 +45,6 @@ jobs:
       #   run: |
       #     meson configure bbdir -Dwith_pybind11=True
       #     meson compile -C bbdir
-      #     LD_LIBRARY_PATH=$(pwd)/bbdir/src \
+      #     LD_LIBRARY_PATH=$(pwd)/bbdir/highs \
       #     PYTHONPATH=$(pwd)/bbdir \
       #     python examples/call_highs_from_python.py

@@ -2,10 +2,10 @@
 
 <!-- ![Build Status](https://github.com/ERGO-Code/HiGHS/actions/workflows/build.yml/badge.svg) -->
 
-[![Build Status][fast_build_svg]][fast_build_link] 
-[![Build Status][linux_build_svg]][linux_build_link] 
-[![Build Status][macos_build_svg]][macos_build_link] 
-[![Build Status][windows_build_svg]][windows_build_link] 
+[![Build Status][fast_build_svg]][fast_build_link]
+[![Build Status][linux_build_svg]][linux_build_link]
+[![Build Status][macos_build_svg]][macos_build_link]
+[![Build Status][windows_build_svg]][windows_build_link]
 \
 [![Conan Center](https://img.shields.io/conan/v/highs)](https://conan.io/center/recipes/highs)
 \
@@ -46,7 +46,7 @@ linear optimization problems of the form
 
 $$ \min \quad \dfrac{1}{2}x^TQx + c^Tx \qquad \textrm{s.t.}~ \quad L \leq Ax \leq U; \quad l \leq x \leq u $$
 
-where Q must be positive semi-definite and, if Q is zero, there may be a requirement that some of the variables take integer values. Thus HiGHS can solve linear programming (LP) problems, convex quadratic programming (QP) problems, and mixed integer programming (MIP) problems. It is mainly written in C++, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations. No third-party dependencies are required.
+where $Q$ must be positive semi-definite and, if $Q$ is zero, there may be a requirement that some of the variables take integer values. Thus HiGHS can solve linear programming (LP) problems, convex quadratic programming (QP) problems, and mixed integer programming (MIP) problems. It is mainly written in C++, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations. No third-party dependencies are required.
 
 HiGHS has primal and dual revised simplex solvers, originally written by Qi Huangfu and further developed by Julian Hall. It also has an interior point solver for LP written by Lukas Schork, an active set solver for QP written by Michael Feldmeier, and a MIP solver written by Leona Gottwald. Other features have been added by Julian Hall and Ivet Galabova, who manages the software engineering of HiGHS and interfaces to C, C#, FORTRAN, Julia and Python.
 
@@ -84,7 +84,7 @@ As an alternative, HiGHS can be installed using the `meson` build interface:
 meson setup bbdir -Dwith_tests=True
 meson test -C bbdir
 ```
-_The meson build files are provided by the community and are not officially supported by the HiGHS development team._
+_The meson build files are provided by the community and are not officially supported by the HiGHS development team._ **If you use this method and encounter issues, please consider contributing fixes or updates by checking the [HiGHS Contribution Guide](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md).**
 
 #### Build with Nix
 
@@ -143,37 +143,51 @@ When HiGHS is run from the command line, some fundamental option values may be
 specified directly. Many more may be specified via a file. Formally, the usage
 is:
 
-```
+```shell
 $ bin/highs --help
-HiGHS options
-Usage:
-  bin/highs [OPTION...] [file]
+usage:
+      ./bin/highs [options] [file]
 
-      --model_file arg          File of model to solve.
-      --read_solution_file arg  File of solution to read.
-      --options_file arg        File containing HiGHS options.
-      --presolve arg            Presolve: "choose" by default - "on"/"off"
-                                are alternatives.
-      --solver arg              Solver: "choose" by default - "simplex"/"ipm"
-                                are alternatives.
-      --parallel arg            Parallel solve: "choose" by default -
-                                "on"/"off" are alternatives.
-      --run_crossover arg       Run crossover: "on" by default -
-                                "choose"/"off" are alternatives.
-      --time_limit arg          Run time limit (seconds - double).
-      --solution_file arg       File for writing out model solution.
-      --write_model_file arg    File for writing out model.
-      --random_seed arg         Seed to initialize random number generation.
-      --ranging arg             Compute cost, bound, RHS and basic solution
-                                ranging.
-      --version                 Print version.
-  -h, --help                    Print help.
+options:
+      --model_file file          File of model to solve.
+      --options_file file        File containing HiGHS options.
+      --read_solution_file file  File of solution to read.
+      --read_basis_file text     File of initial basis to read.
+      --write_model_file text    File for writing out model.
+      --solution_file text       File for writing out solution.
+      --write_basis_file text    File for writing out final basis.
+      --presolve text            Set presolve option to:
+                                   "choose" * default
+                                   "on"
+                                   "off"
+      --solver text              Set solver option to:
+                                   "choose" * default
+                                   "simplex"
+                                   "ipm"
+      --parallel text            Set parallel option to:
+                                   "choose" * default
+                                   "on"
+                                   "off"
+      --run_crossover text       Set run_crossover option to:
+                                   "choose"
+                                   "on" * default
+                                   "off"
+      --time_limit float         Run time limit (seconds - double).
+      --random_seed int          Seed to initialize random number
+                                 generation.
+      --ranging text             Compute cost, bound, RHS and basic
+                                 solution ranging:
+                                   "on"
+                                   "off" * default
+  -v, --version                  Print version.
+  -h, --help                     Print help.
+
 ```
 For a full list of options, see the [options page](https://ergo-code.github.io/HiGHS/stable/options/definitions/) of the documentation website.
 
 ## Interfaces
 
-There are HiGHS interfaces for C, C#, FORTRAN, and Python in `HiGHS/src/interfaces`, with example driver files in `HiGHS/examples/`. More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/stable/interfaces/other/.
+There are HiGHS interfaces for C, C#, FORTRAN, and Python in `HiGHS/highs/interfaces`, with example driver files in `HiGHS/examples/`. More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/stable/interfaces/other/.
 
 We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
@@ -198,20 +212,20 @@ The installation can be tested using the small example `HiGHS/examples/call_high
 
 The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) also demonstrates how to call `highspy`.
 
-### C 
-The C API is in `HiGHS/src/interfaces/highs_c_api.h`. It is included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
+### C
+The C API is in `HiGHS/highs/interfaces/highs_c_api.h`. It is included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
 
 ### CSharp
 
-The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/Highs.Native/. 
+The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/Highs.Native/.
 
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.7.2
+dotnet add package Highs.Native --version 1.12.0
 ```
 
-The nuget package contains runtime libraries for 
+The nuget package contains runtime libraries for
 
 * `win-x64`
 * `win-x32`
@@ -222,9 +236,9 @@ The nuget package contains runtime libraries for
 
 Details for building locally can be found in `nuget/README.md`.
 
-### Fortran 
+### Fortran
 
-The Fortran API is in `HiGHS/src/interfaces/highs_fortran_api.f90`. It is *not* included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
+The Fortran API is in `HiGHS/highs/interfaces/highs_fortran_api.f90`. It is *not* included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
 
 
 ## Reference

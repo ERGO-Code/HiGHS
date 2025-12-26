@@ -1,4 +1,4 @@
-execfile("../src/interfaces/highs_lp_solver.py")
+execfile("../highs/interfaces/highs_lp_solver.py")
 
 cc = (1.0, -2.0)
 cl = (0.0, 0.0)

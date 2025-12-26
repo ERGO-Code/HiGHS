@@ -10,7 +10,7 @@
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../src/interfaces/highs_csharp_api.cs" Link="highs_csharp_api.cs" />
+    <Compile Include="../highs/interfaces/highs_csharp_api.cs" Link="highs_csharp_api.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../LICENSE.txt" Pack="true" PackagePath=""/>

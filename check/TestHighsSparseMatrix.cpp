@@ -16,7 +16,6 @@ bool infNormDiffOk(const std::vector<double> x0, const std::vector<double> x1) {
 
 // No commas in test case name.
 TEST_CASE("Sparse-matrix-products", "[highs_sparse_matrix]") {
-  HighsStatus status;
   Highs highs;
   HighsRandom random;
   for (int k = 0; k < 2; k++) {

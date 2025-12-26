@@ -1,0 +1,46 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file lp_data/HighsModel.cpp
+ * @brief
+ */
+#include "model/HighsModel.h"
+
+#include <cassert>
+
+bool HighsModel::operator==(const HighsModel& model) const {
+  bool equal = equalButForNames(model);
+  equal = this->lp_.equalNames(model.lp_) && equal;
+  return equal;
+}
+
+bool HighsModel::equalButForNames(const HighsModel& model) const {
+  bool equal = this->lp_.equalButForNames(model.lp_);
+  equal = this->hessian_ == model.hessian_ && equal;
+  return equal;
+}
+
+void HighsModel::clear() {
+  this->lp_.clear();
+  this->hessian_.clear();
+}
+
+double HighsModel::objectiveValue(const std::vector<double>& solution) const {
+  return this->hessian_.objectiveValue(solution) +
+         this->lp_.objectiveValue(solution);
+}
+
+void HighsModel::objectiveGradient(const std::vector<double>& solution,
+                                   std::vector<double>& gradient) const {
+  if (this->hessian_.dim_ > 0) {
+    this->hessian_.product(solution, gradient);
+  } else {
+    gradient.assign(this->lp_.num_col_, 0);
+  }
+  for (HighsInt iCol = 0; iCol < this->lp_.num_col_; iCol++)
+    gradient[iCol] += this->lp_.col_cost_[iCol];
+}

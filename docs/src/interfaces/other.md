@@ -16,11 +16,19 @@ including [pre-build libraries](https://github.com/coin-or/GAMSlinks/releases).
 
 ## Javascript
 
- * HiGHS can be used from javascript directly inside a web browser thanks to
+ * HiGHS can be used from Javascript directly inside a web browser thanks to
    [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/)
    and the [npm package](https://www.npmjs.com/package/highs).
  * Alternatively, HiGHS also has a [native Node.js](https://www.npmjs.com/package/highs-solver)
    interface.
+
+## MATLAB
+
+* [HiGHSMEX](https://github.com/savyasachi/HiGHSMEX) is a MATLAB interface that provides all the functionality of HiGHS, except the following: Reading problem data from a model file; Setting names for the rows and columns of the model, or setting name for the objective; Advanced features such as solution of systems using the current basis matrix.
+
+  The interface is avalailable for Windows, MacOS and Linux, and has been tested on Windows and MacOS. Pre-built binaries (mex files) for Windows and MacOS are available in the repository, which also includes instructions for building from source in [README.md](https://github.com/savyasachi/HiGHSMEX/blob/main/README.md).
+
+* The HiGHS MIP and dual simplex LP solvers have been used _within_ MATLAB (so for all architectures) by default since release 2024a.
 
 ## R
 

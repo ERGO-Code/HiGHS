@@ -563,4 +563,55 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   // Solve
   highs.run();
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("Kappa", "[highs_basis_solves]") {
+  // chip optimal basis matrix is B=[1, 2; 1, 4] with
+  //
+  // ||B||_1=6; ||B^{-1}||_1=5/2 so kappa_1 = 15
+  //
+  // ||B||_2=4.56; ||B^{-1}||_inf=2.355 so kappa_inf = 10.9
+  //
+  // ||B||_inf=6; ||B^{-1}||_inf=5/2 so kappa_inf = 15
+  //
+  double chip_kappa = 15;
+
+  std::string model;
+  model = "chip";
+  // model = "avgas";
+  // model = "adlittle";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  // Read the LP given by filename
+  highs.readModel(filename);
+
+  double kappa;
+  REQUIRE(highs.getKappa(kappa) == HighsStatus::kError);
+
+  highs.run();
+
+  REQUIRE(highs.getKappa(kappa) == HighsStatus::kOk);
+  if (dev_run)
+    printf("highs.getKappa for %s yields %g\n", model.c_str(), kappa);
+
+  if (model == "chip") REQUIRE(std::fabs(kappa - chip_kappa) < 1e-4);
+
+  highs.clearModel();
+
+  const bool test_mip = true;
+  if (test_mip) {
+    model = "flugpl";
+    filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+    highs.readModel(filename);
+    highs.run();
+    REQUIRE(highs.getKappa(kappa) == HighsStatus::kError);
+  }
+
+  highs.resetGlobalScheduler(true);
 }

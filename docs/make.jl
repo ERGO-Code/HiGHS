@@ -2,8 +2,9 @@
 *                                                                       *
 *    This file is part of the HiGHS linear optimization suite           *
 *                                                                       *
-*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    *
+*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    *
 *    Leona Gottwald and Michael Feldmeier                               *
+*                                                                       *
 *    Available as open-source under the MIT License                     *
 *                                                                       *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *=#
@@ -38,11 +39,13 @@ Documenter.makedocs(
     strict = !("strict=false" in ARGS),
     doctest = ("doctest=only" in ARGS) ? :only : true,
     repo = "https://github.com/ERGO-Code/HiGHS/tree/latest{path}",
-    linkcheck = true,
+    linkcheck = false,
     linkcheck_ignore = [
         "https://crates.io/crates/highs",
         "https://crates.io/crates/good_lp",
         "https://link.springer.com/article/10.1007/s12532-017-0130-5",
+	"https://link.springer.com/article/10.1007/s12532-020-00181-8",
+	"https://github.com/ERGO-Code/HiGHS/blob/master/highs/Highs.h"
     ],
     pages = [
         "About" => "index.md",
@@ -52,7 +55,10 @@ Documenter.makedocs(
             "guide/index.md",
             "guide/basic.md",
             "guide/further.md",
-            "guide/advanced.md"
+            "guide/advanced.md",
+            "guide/gpu.md",
+            "guide/kkt.md",
+            "guide/numerics.md"
         ],
 	"Data structures" => Any[
 	    "structures/index.md",
@@ -61,9 +67,15 @@ Documenter.makedocs(
                 "structures/classes/index.md",
                 "structures/classes/HighsSparseMatrix.md",
                 "structures/classes/HighsLp.md",
-                "structures/classes/HighsSolution.md",
-                "structures/classes/HighsBasis.md",
-                "structures/classes/HighsInfo.md",
+                "structures/classes/HighsHessian.md",
+                "structures/classes/HighsModel.md"
+            ],
+	    "Structures" => Any[
+                "structures/structs/index.md",
+                "structures/structs/HighsSolution.md",
+                "structures/structs/HighsBasis.md",
+                "structures/structs/HighsInfo.md",
+                "structures/structs/HighsLinearObjective.md"
             ],
 	],
         "Callbacks" => "callbacks.md",
@@ -88,6 +100,7 @@ Documenter.makedocs(
             "options/definitions.md"
         ],
         "Parallel" => "parallel.md",
+        "Solvers" => "solvers.md",
         "Terminology" => "terminology.md",
     ],
 )

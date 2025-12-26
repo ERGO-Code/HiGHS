@@ -1,25 +1,25 @@
 set(include_dirs
-  ${CMAKE_SOURCE_DIR}/extern
-  ${CMAKE_SOURCE_DIR}/extern/filereader
-  ${CMAKE_SOURCE_DIR}/extern/pdqsort
-  ${CMAKE_SOURCE_DIR}/extern/zstr
-  ${CMAKE_SOURCE_DIR}/src
-  ${CMAKE_SOURCE_DIR}/src/interfaces
-  ${CMAKE_SOURCE_DIR}/src/io
-  ${CMAKE_SOURCE_DIR}/src/ipm
-  ${CMAKE_SOURCE_DIR}/src/ipm/ipx
-  ${CMAKE_SOURCE_DIR}/src/ipm/basiclu
-  ${CMAKE_SOURCE_DIR}/src/lp_data
-  ${CMAKE_SOURCE_DIR}/src/mip
-  ${CMAKE_SOURCE_DIR}/src/model
-  ${CMAKE_SOURCE_DIR}/src/parallel
-  ${CMAKE_SOURCE_DIR}/src/pdlp
-  ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
-  ${CMAKE_SOURCE_DIR}/src/presolve
-  ${CMAKE_SOURCE_DIR}/src/qpsolver
-  ${CMAKE_SOURCE_DIR}/src/simplex
-  ${CMAKE_SOURCE_DIR}/src/test
-  ${CMAKE_SOURCE_DIR}/src/util
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/filereader>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/pdqsort>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/interfaces>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/ipx>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/basiclu>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/lp_data>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/mip>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/model>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/test_kkt>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
 set(cupdlp_sources
@@ -27,7 +27,7 @@ set(cupdlp_sources
   pdlp/cupdlp/cupdlp_linalg.c
   pdlp/cupdlp/cupdlp_proj.c
   pdlp/cupdlp/cupdlp_restart.c
-  pdlp/cupdlp/cupdlp_scaling_cuda.c
+  pdlp/cupdlp/cupdlp_scaling.c
   pdlp/cupdlp/cupdlp_solver.c
   pdlp/cupdlp/cupdlp_step.c
   pdlp/cupdlp/cupdlp_utils.c)
@@ -38,10 +38,17 @@ set(cupdlp_headers
   pdlp/cupdlp/cupdlp_linalg.h
   pdlp/cupdlp/cupdlp_proj.h
   pdlp/cupdlp/cupdlp_restart.h
-  pdlp/cupdlp/cupdlp_scaling_cuda.h
+  pdlp/cupdlp/cupdlp_scaling.h
   pdlp/cupdlp/cupdlp_solver.h
   pdlp/cupdlp/cupdlp_step.h
   pdlp/cupdlp/cupdlp_utils.c)
+
+set(cuda_sources
+  pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
+  pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
+  pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
+  pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu)
+
 
 set(basiclu_sources
   ipm/basiclu/basiclu_factorize.c
@@ -169,6 +176,88 @@ set(ipx_headers
   ipm/ipx/timer.h
   ipm/ipx/utils.h)
 
+set(hipo_sources 
+    ipm/hipo/ipm/CurtisReidScaling.cpp 
+    ipm/hipo/ipm/IpmData.cpp 
+    ipm/hipo/ipm/FactorHiGHSSolver.cpp 
+    ipm/hipo/ipm/Control.cpp
+    ipm/hipo/ipm/Iterate.cpp 
+    ipm/hipo/ipm/LogHighs.cpp
+    ipm/hipo/ipm/Model.cpp
+    ipm/hipo/ipm/Solver.cpp)
+
+set(hipo_headers
+    ipm/hipo/ipm/CurtisReidScaling.h
+    ipm/hipo/ipm/IpmData.h
+    ipm/hipo/ipm/FactorHiGHSSolver.h
+    ipm/hipo/ipm/Parameters.h
+    ipm/hipo/ipm/Control.h
+    ipm/hipo/ipm/Info.h
+    ipm/hipo/ipm/Iterate.h
+    ipm/hipo/ipm/LinearSolver.h
+    ipm/hipo/ipm/LogHighs.h
+    ipm/hipo/ipm/Model.h
+    ipm/hipo/ipm/Options.h
+    ipm/hipo/ipm/Solver.h
+    ipm/hipo/ipm/Status.h)
+
+set(factor_highs_sources
+    ipm/hipo/factorhighs/Analyse.cpp
+    ipm/hipo/factorhighs/CallAndTimeBlas.cpp
+    ipm/hipo/factorhighs/DataCollector.cpp
+    ipm/hipo/factorhighs/DenseFactHybrid.cpp
+    ipm/hipo/factorhighs/DenseFactKernel.cpp
+    ipm/hipo/factorhighs/DgemmParallel.cpp
+    ipm/hipo/factorhighs/FactorHiGHS.cpp
+    ipm/hipo/factorhighs/Factorise.cpp
+    ipm/hipo/factorhighs/FormatHandler.cpp
+    ipm/hipo/factorhighs/HybridHybridFormatHandler.cpp
+    ipm/hipo/factorhighs/HybridSolveHandler.cpp
+    ipm/hipo/factorhighs/KrylovMethodsIpm.cpp
+    ipm/hipo/factorhighs/Numeric.cpp
+    ipm/hipo/factorhighs/SolveHandler.cpp
+    ipm/hipo/factorhighs/Swaps.cpp
+    ipm/hipo/factorhighs/SymScaling.cpp
+    ipm/hipo/factorhighs/Symbolic.cpp)
+
+set(factor_highs_headers
+    ipm/hipo/factorhighs/Analyse.h
+    ipm/hipo/factorhighs/CallAndTimeBlas.h
+    ipm/hipo/factorhighs/DataCollector.h
+    ipm/hipo/factorhighs/DenseFact.h
+    ipm/hipo/factorhighs/DgemmParallel.h
+    ipm/hipo/factorhighs/FactorHiGHS.h
+    ipm/hipo/factorhighs/FactorHiGHSSettings.h
+    ipm/hipo/factorhighs/Factorise.h
+    ipm/hipo/factorhighs/FormatHandler.h
+    ipm/hipo/factorhighs/HybridHybridFormatHandler.h
+    ipm/hipo/factorhighs/HybridSolveHandler.h
+    ipm/hipo/factorhighs/KrylovMethodsIpm.h
+    ipm/hipo/factorhighs/Numeric.h
+    ipm/hipo/factorhighs/ReturnValues.h
+    ipm/hipo/factorhighs/SolveHandler.h
+    ipm/hipo/factorhighs/Swaps.h
+    ipm/hipo/factorhighs/SymScaling.h
+    ipm/hipo/factorhighs/Symbolic.h
+    ipm/hipo/factorhighs/Timing.h)
+
+set(hipo_util_sources
+    ipm/hipo/auxiliary/Auxiliary.cpp
+    ipm/hipo/auxiliary/KrylovMethods.cpp
+    ipm/hipo/auxiliary/Log.cpp
+    ipm/hipo/auxiliary/VectorOperations.cpp)
+
+set(hipo_util_headers
+    ipm/hipo/auxiliary/Auxiliary.h
+    ipm/hipo/auxiliary/IntConfig.h
+    ipm/hipo/auxiliary/KrylovMethods.h
+    ipm/hipo/auxiliary/Log.h
+    ipm/hipo/auxiliary/mycblas.h
+    ipm/hipo/auxiliary/VectorOperations.h)
+
+# redefinition of 'kHighsInf'
+set_source_files_properties (../extern/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 set(highs_sources
     ../extern/filereaderlp/reader.cpp
     interfaces/highs_c_api.cpp
@@ -184,6 +273,7 @@ set(highs_sources
     lp_data/Highs.cpp
     lp_data/HighsCallback.cpp
     lp_data/HighsDebug.cpp
+    lp_data/HighsIis.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsInfoDebug.cpp
     lp_data/HighsDeprecated.cpp
@@ -204,10 +294,12 @@ set(highs_sources
     mip/HighsDebugSol.cpp
     mip/HighsDomain.cpp
     mip/HighsDynamicRowMatrix.cpp
+    mip/HighsFeasibilityJump.cpp
     mip/HighsGFkSolve.cpp
     mip/HighsImplications.cpp
     mip/HighsLpAggregator.cpp
     mip/HighsLpRelaxation.cpp
+    mip/HighsMipAnalysis.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
     mip/HighsModkSeparator.cpp
@@ -259,8 +351,8 @@ set(highs_sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test/KktCh2.cpp
-    test/DevKkt.cpp
+    test_kkt/KktCh2.cpp
+    test_kkt/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -302,6 +394,7 @@ set(highs_headers
     lp_data/HighsCallback.h
     lp_data/HighsCallbackStruct.h
     lp_data/HighsDebug.h
+    lp_data/HighsIis.h
     lp_data/HighsInfo.h
     lp_data/HighsInfoDebug.h
     lp_data/HighsLp.h
@@ -310,12 +403,12 @@ set(highs_headers
     lp_data/HighsModelUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
-    lp_data/HighsRuntimeOptions.h
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HStruct.h
+    mip/feasibilityjump.hh
     mip/HighsCliqueTable.h
     mip/HighsConflictPool.h
     mip/HighsCutGeneration.h
@@ -328,6 +421,7 @@ set(highs_headers
     mip/HighsImplications.h
     mip/HighsLpAggregator.h
     mip/HighsLpRelaxation.h
+    mip/HighsMipAnalysis.h
     mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
     mip/HighsModkSeparator.h
@@ -342,6 +436,7 @@ set(highs_headers
     mip/HighsSeparator.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
+    mip/MipTimer.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
@@ -404,8 +499,8 @@ set(highs_headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    test/DevKkt.h
-    test/KktCh2.h
+    test_kkt/DevKkt.h
+    test_kkt/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h

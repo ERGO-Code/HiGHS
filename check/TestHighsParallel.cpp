@@ -24,10 +24,18 @@ int64_t fib(const int64_t n) {
   if (n <= 20) return fib_sequential(n);
 
   int64_t n1;
-  parallel::spawn([&]() { n1 = fib(n - 1); });
+  parallel::spawn([&]() {
+    n1 = fib(n - 1);
+    TSAN_ANNOTATE_HAPPENS_BEFORE(&n1);
+  });
+
   int64_t n2 = fib(n - 2);
+  TSAN_ANNOTATE_HAPPENS_BEFORE(&n2);
+
   parallel::sync();
 
+  TSAN_ANNOTATE_HAPPENS_AFTER(&n1);
+  TSAN_ANNOTATE_HAPPENS_AFTER(&n2);
   // printf("fib(%ld) = %ld + %ld = %ld\n", n, n1, n2, n1 + n2);
   return n1 + n2;
 }
@@ -216,6 +224,7 @@ TEST_CASE("MatrixMultHighs", "[parallel]") {
   parallel::initialize_scheduler(numThreads);
   if (dev_run) std::cout << "\nhighs workstealing for loop:" << std::endl;
   matrix_multiplication("highs", parallel::num_threads(), 1);
+  HighsTaskExecutor::shutdown();
 }
 
 TEST_CASE("FibonacciTasksHighs", "[parallel]") {
@@ -237,6 +246,7 @@ TEST_CASE("FibonacciTasksHighs", "[parallel]") {
   // REQUIRE(result == 20365011074);
   // fib 41
   REQUIRE(result == 267914296);
+  HighsTaskExecutor::shutdown();
 }
 
 #if 0

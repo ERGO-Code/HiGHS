@@ -10,6 +10,41 @@ const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
+bool okValueDifference(const double& v_test, const double& v_true) {
+  double difference = fabs(v_test - v_true) / std::max(1.0, fabs(v_true));
+  return difference < double_equal_tolerance;
+}
+
+void testPrimalDualObjective(Highs& h,
+                             const double required_objective_function_value) {
+  const HighsInfo& info = h.getInfo();
+  double objective_function_value = info.objective_function_value;
+  const HighsSolution& solution = h.getSolution();
+  double alt_objective_function_value =
+      h.getModel().objectiveValue(solution.col_value);
+  double dual_objective_function_value;
+  REQUIRE(h.getDualObjectiveValue(dual_objective_function_value) ==
+          HighsStatus::kOk);
+  double alt_objective_function_value_error =
+      fabs(objective_function_value - alt_objective_function_value);
+  if (dev_run)
+    printf(
+        "(Primal, Alt, Dual) objective = (%17.10g, %17.10g, %17.10g) alt error "
+        "= %17.10g; P-D error = %17.10g\n",
+        objective_function_value, alt_objective_function_value,
+        dual_objective_function_value, alt_objective_function_value_error,
+        info.primal_dual_objective_error);
+  REQUIRE(okValueDifference(objective_function_value,
+                            required_objective_function_value));
+  REQUIRE(okValueDifference(dual_objective_function_value,
+                            required_objective_function_value));
+  REQUIRE(okValueDifference(alt_objective_function_value,
+                            required_objective_function_value));
+  double optimality_tolerance;
+  h.getOptionValue("optimality_tolerance", optimality_tolerance);
+  REQUIRE(fabs(info.primal_dual_objective_error) < optimality_tolerance);
+}
+
 TEST_CASE("qp-unbounded", "[qpsolver]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/qpunbounded.lp";
@@ -19,6 +54,8 @@ TEST_CASE("qp-unbounded", "[qpsolver]") {
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("qp-infeasible", "[qpsolver]") {
@@ -30,9 +67,12 @@ TEST_CASE("qp-infeasible", "[qpsolver]") {
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("qpsolver", "[qpsolver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   double required_objective_function_value;
   double required_x0;
   double required_x1;
@@ -48,7 +88,6 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   const double required_col_dual1 = 0;
   const double required_row_dual0 = 0.8;
   const double required_row_dual1 = 0;
-  const double required_row_dual2 = 0;
 
   // At the optimal solution g-Qx = [0.8, -1.6] with only constraint 0
   // active. It has normal [1, -2], so dual of 0.8 is correct
@@ -63,16 +102,15 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   HighsStatus return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::kOk);
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
+
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  double alt_objective_function_value =
-      model.objectiveValue(solution.col_value);
-  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
 
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
 
@@ -99,17 +137,16 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::kOk);
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
+
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
 
-  alt_objective_function_value = model.objectiveValue(solution.col_value);
-  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
-          double_equal_tolerance);
-
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
 
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
@@ -117,7 +154,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   // Test writeModel by writing out qjh.mps...
-  filename = "qjh.mps";
+  filename = test_name + ".mps";
   highs.writeModel(filename);
 
   // ... and reading it in again
@@ -129,12 +166,8 @@ TEST_CASE("qpsolver", "[qpsolver]") {
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
 
-  alt_objective_function_value = model.objectiveValue(solution.col_value);
-  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
 
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[2] - required_x2) < double_equal_tolerance);
@@ -153,6 +186,8 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   highs.setOptionValue("solve_relaxation", true);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {
@@ -168,7 +203,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   // Oscar's edge case
   //
-  // min x^2 + x = x(x + 1)
+  // min 1/4 + x^2 + x = 1/4 + x(x + 1)
+  //
+  // x* = -1/2; f* = 0
 
   lp.model_name_ = "qod";
   lp.num_col_ = 1;
@@ -193,11 +230,14 @@ TEST_CASE("test-qod", "[qpsolver]") {
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) {
-    printf("One variable unconstrained QP: objective = %g; solution:\n",
+    printf("\nOne variable unconstrained QP: objective = %g; solution:\n",
            objective_function_value);
     highs.writeSolution("", kSolutionStylePretty);
   }
@@ -205,13 +245,8 @@ TEST_CASE("test-qod", "[qpsolver]") {
   required_objective_function_value = 0;
   required_x0 = -0.5;
 
-  double alt_objective_function_value =
-      model.objectiveValue(solution.col_value);
-  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
 
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
 
   // Add a variable x1 with objective x1^2 - x1
@@ -221,6 +256,14 @@ TEST_CASE("test-qod", "[qpsolver]") {
   if (dev_run) highs.writeModel("");
 
   // Can solve the model before the Hessian has been replaced
+  if (dev_run)
+    printf(
+        "\nTwo variable unconstrained QP with semi-definite Hessian - is "
+        "unbounded\n");
+  // Reinstate the QP regularization since the Hessian is only semi-definite
+  REQUIRE(highs.setOptionValue("qp_regularization_value",
+                               kHessianRegularizationValue) ==
+          HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -235,6 +278,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
   return_status = highs.passHessian(hessian);
   REQUIRE(return_status == HighsStatus::kOk);
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -247,12 +293,8 @@ TEST_CASE("test-qod", "[qpsolver]") {
   required_objective_function_value = -0.25;
   required_x1 = 0.5;
 
-  alt_objective_function_value = model.objectiveValue(solution.col_value);
-  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
 
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
 
@@ -288,14 +330,13 @@ TEST_CASE("test-qod", "[qpsolver]") {
   required_objective_function_value = 0.125;
   required_x0 = -0.25;
   required_x1 = 0.75;
-  alt_objective_function_value = model.objectiveValue(solution.col_value);
-  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
-          double_equal_tolerance);
 
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
+
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {
@@ -339,11 +380,14 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+
   required_objective_function_value = -5.50;
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
@@ -362,9 +406,9 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   if (dev_run) highs.writeModel("");
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+
   required_objective_function_value = -5.25;
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-          double_equal_tolerance);
+  testPrimalDualObjective(highs, required_objective_function_value);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
@@ -400,10 +444,13 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     REQUIRE(return_status == HighsStatus::kOk);
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
-    REQUIRE(fabs(objective_function_value - required_objective_function_value) <
-            double_equal_tolerance);
+
+    testPrimalDualObjective(highs, required_objective_function_value);
+
     return_status = highs.clearModel();
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-min-negative-definite", "[qpsolver]") {
@@ -425,6 +472,8 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
   // Run should fail since objective is non-convex
   REQUIRE(highs.run() == HighsStatus::kError);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-max-negative-definite", "[qpsolver]") {
@@ -463,24 +512,28 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
   REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
   // Make the problem a maximization
   REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
   const double required_objective_function_value = 1.25;
-  REQUIRE(fabs(highs.getObjectiveValue() - required_objective_function_value) <
-          double_equal_tolerance);
+
+  testPrimalDualObjective(highs, required_objective_function_value);
+
   const HighsSolution& solution = highs.getSolution();
   REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - 1.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[2] - 2.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_dual[0] + 1.0) < double_equal_tolerance);
   REQUIRE(fabs(solution.row_dual[0] + 0.5) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-semi-definite0", "[qpsolver]") {
   HighsStatus return_status;
-  HighsModelStatus model_status;
-  double required_objective_function_value;
 
   HighsModel local_model;
   HighsLp& lp = local_model.lp_;
@@ -513,16 +566,17 @@ TEST_CASE("test-semi-definite0", "[qpsolver]") {
 
   //  highs.writeModel("semi-definite.mps");
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-semi-definite1", "[qpsolver]") {
-  HighsStatus return_status;
-  HighsModelStatus model_status;
-  double required_objective_function_value;
-
   HighsLp lp;
   HighsHessian hessian;
 
@@ -551,20 +605,25 @@ TEST_CASE("test-semi-definite1", "[qpsolver]") {
   hessian.value_ = {1.0, -1.0, 1.0};
   REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
+
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  const double required_objective_function_value = -1.5;
+
+  testPrimalDualObjective(highs, required_objective_function_value);
+
   const HighsSolution& solution = highs.getSolution();
-  const double objective_function_value = highs.getObjectiveValue();
-  REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - 1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1]) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-semi-definite2", "[qpsolver]") {
-  HighsStatus return_status;
-  HighsModelStatus model_status;
-  double required_objective_function_value;
-
   HighsLp lp;
   HighsHessian hessian;
 
@@ -593,27 +652,22 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
   hessian.value_ = {1.0};
   REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
 
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
+
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  const double required_objective_function_value = -1.5;
+
+  testPrimalDualObjective(highs, required_objective_function_value);
+
   const HighsSolution& solution = highs.getSolution();
-  const double objective_function_value = highs.getObjectiveValue();
-  REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] + 1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - 2) < double_equal_tolerance);
-}
 
-void hessianProduct(const HighsHessian& hessian, const std::vector<double>& arg,
-                    std::vector<double>& result) {
-  HighsInt dim = hessian.dim_;
-  assert(HighsInt(arg.size()) == dim);
-  result.resize(dim);
-  for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    double sum = 0;
-    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
-         iEl++)
-      sum += hessian.value_[iEl] * arg[hessian.index_[iEl]];
-    result[iCol] = sum;
-  }
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qp-modification", "[qpsolver]") {
@@ -657,6 +711,10 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
     printf("\nNow solve the QP\n\n");
     incumbent_model.hessian_.print();
   }
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
+
   highs.run();
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   // Add a new variables and ensure that the Hessian dimension is correct
@@ -700,12 +758,12 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   for (HighsInt iCol = delete_col; iCol < dim; iCol++)
     arg1[iCol] = arg1[iCol + 1];
   arg0[delete_col] = 0;
-  hessianProduct(hessian0, arg0, result0);
+  hessian0.product(arg0, result0);
   for (HighsInt iCol = delete_col; iCol < dim; iCol++)
     result0[iCol] = result0[iCol + 1];
 
   arg1.resize(dim);
-  hessianProduct(incumbent_model.hessian_, arg1, result1);
+  incumbent_model.hessian_.product(arg1, result1);
   for (HighsInt iCol = 0; iCol < dim; iCol++)
     REQUIRE(result0[iCol] == result1[iCol]);
 
@@ -721,6 +779,8 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   }
   highs.run();
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qp-delete-col", "[qpsolver]") {
@@ -771,13 +831,13 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   arg1[2] = arg1[4];
   arg0[1] = 0;
   arg0[3] = 0;
-  hessianProduct(hessian0, arg0, result0);
+  hessian0.product(arg0, result0);
   result0[1] = result0[2];
   result0[2] = result0[4];
 
   dim = 3;
   arg1.resize(dim);
-  hessianProduct(incumbent_model.hessian_, arg1, result1);
+  incumbent_model.hessian_.product(arg1, result1);
   for (HighsInt iCol = 0; iCol < dim; iCol++)
     REQUIRE(result0[iCol] == result1[iCol]);
 
@@ -860,17 +920,17 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
       arg1[iRow] = arg1[iCol];
     }
   }
-  hessianProduct(hessian0, arg0, result0);
+  hessian0.product(arg0, result0);
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     HighsInt iRow = mask[iCol];
     if (iRow >= 0) result0[iRow] = result0[iCol];
   }
   dim = incumbent_model.hessian_.dim_;
   arg1.resize(dim);
-  hessianProduct(incumbent_model.hessian_, arg1, result1);
+  incumbent_model.hessian_.product(arg1, result1);
 
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    REQUIRE(result0[iCol] == result1[iCol]);
+    REQUIRE(fabs(result0[iCol] - result1[iCol]) < 1e-8);
   }
 }
 
@@ -881,6 +941,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
   highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
+  double required_objective_function_value = 0;
   for (HighsInt k = 0; k < 2; k++) {
     if (dev_run)
       printf(
@@ -893,7 +954,9 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
       const std::string filename =
           std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
       REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+      required_objective_function_value = -0.035012965733477348;
     } else if (k == 2) {
+      // Not currently tested
       const std::string filename =
           std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
       REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
@@ -915,9 +978,15 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
       model.hessian_.index_ = {0, 1};
       model.hessian_.value_ = {2, 2};
       REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+      required_objective_function_value = -2;
     }
+    // Zero the QP regularization so "true" solution is obtained
+    REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+            HighsStatus::kOk);
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
+
+    testPrimalDualObjective(highs, required_objective_function_value);
 
     if (dev_run) highs.writeSolution("", 1);
 
@@ -979,16 +1048,28 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     highs.setSolution(solution);
     basis.alien = true;
     highs.setBasis(basis);
-    return_status = highs.run();
-    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(info.qp_iteration_count == 0);
+    if (k == 0) {
+      // Modify the constraint so that the solution and basis are not
+      // feasible and one iteration is needed
+      REQUIRE(highs.changeCoeff(0, 1, 2.0) == HighsStatus::kOk);
+      REQUIRE(highs.changeRowBounds(0, 4.0, kHighsInf) == HighsStatus::kOk);
+      highs.clearSolver();
+      basis.alien = false;
+      highs.setBasis(basis);
+      highs.setSolution(solution);
+      return_status = highs.run();
+      REQUIRE(info.qp_iteration_count == 1);
+    }
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qp-terminations", "[qpsolver]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  const HighsInfo& info = highs.getInfo();
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
@@ -1011,4 +1092,49 @@ TEST_CASE("test-qp-terminations", "[qpsolver]") {
   REQUIRE(highs.run() == HighsStatus::kError);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
   highs.setOptionValue("qp_nullspace_limit", 4000);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("rowless-qp", "[qpsolver]") {
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {0, -3};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  hessian.dim_ = 2;
+  hessian.start_ = {0, 2, 3};
+  hessian.index_ = {0, 1, 1};
+  hessian.value_ = {2, 1, 2};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.writeSolution("", kSolutionStylePretty) ==
+          HighsStatus::kWarning);
+
+  const double required_objective_function_value = -2.25;
+
+  testPrimalDualObjective(highs, required_objective_function_value);
+
+  const std::vector<double>& col_value = highs.getSolution().col_value;
+  if (dev_run)
+    printf("Solution (%24.18g, %24.18g)\n", col_value[0], col_value[1]);
+  double dl_solution = std::fabs(col_value[0]);
+  REQUIRE(dl_solution < 1e-6);
+  dl_solution = std::fabs(col_value[1] - 1.5);
+  REQUIRE(dl_solution < 1e-6);
+
+  highs.resetGlobalScheduler(true);
 }

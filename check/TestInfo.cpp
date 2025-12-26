@@ -9,6 +9,8 @@
 const bool dev_run = false;
 
 TEST_CASE("highs-info", "[highs_info]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string highs_info_file = test_name + ".info";
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
@@ -62,7 +64,6 @@ TEST_CASE("highs-info", "[highs_info]") {
     REQUIRE(return_status == HighsStatus::kOk);
   }
 
-  std::string highs_info_file = "Highs.info";
   return_status = highs.writeInfo(highs_info_file);
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -101,4 +102,6 @@ TEST_CASE("highs-info", "[highs_info]") {
            highs_info.ipm_iteration_count);
   }
   std::remove(highs_info_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }

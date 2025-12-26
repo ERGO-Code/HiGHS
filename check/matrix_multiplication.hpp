@@ -1,13 +1,13 @@
-#include <algorithm> 
-#include <cassert>
-#include <cstdio>
-#include <chrono>
-#include <iostream>
-#include <iomanip>
-#include <thread>
-#include <random>
-#include <cmath>
+#include <algorithm>
 #include <atomic>
+#include <cassert>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <iomanip>
+#include <iostream>
+#include <random>
+#include <thread>
 
 extern int N;
 extern double **a, **b, **c;
@@ -20,7 +20,7 @@ inline void allocate_matrix() {
   a = static_cast<double**>(std::malloc(N * sizeof(double*)));
   b = static_cast<double**>(std::malloc(N * sizeof(double*)));
   c = static_cast<double**>(std::malloc(N * sizeof(double*)));
-  for(int i=0; i<N; ++i) {
+  for (int i = 0; i < N; ++i) {
     a[i] = static_cast<double*>(std::malloc(N * sizeof(double)));
     b[i] = static_cast<double*>(std::malloc(N * sizeof(double)));
     c[i] = static_cast<double*>(std::malloc(N * sizeof(double)));
@@ -28,7 +28,7 @@ inline void allocate_matrix() {
 }
 
 inline void deallocate_matrix() {
-  for(int i=0; i<N; ++i) {
+  for (int i = 0; i < N; ++i) {
     std::free(a[i]);
     std::free(b[i]);
     std::free(c[i]);
@@ -39,12 +39,11 @@ inline void deallocate_matrix() {
 }
 
 inline int64_t reduce_sum() {
-  int64_t sum {0};
-  for(int i=0; i<N; i++) {
-    for(int j=0; j<N; ++j) {
+  int64_t sum{0};
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < N; ++j) {
       sum += c[i][j];
     }
   }
   return sum;
 }
-

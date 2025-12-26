@@ -9,45 +9,35 @@ import highspy
 h = highspy.Highs()
 h.silent()
 
-varNames = list()
-varNames.append('Tables')
-varNames.append('Sets of chairs')
+items = ['Tables', 'SetsOfChairs']
+x = h.addVariables(items, obj = [10, 25], name = items)
 
-x1 = h.addVariable(obj = 10, name = varNames[0])
-x2 = h.addVariable(obj = 25, name = varNames[1])
-
-vars = list()
-vars.append(x1)
-vars.append(x2)
-
-constrNames = list()
-constrNames.append('Assembly')
-constrNames.append('Finishing')
-
-h.addConstr(x1 + 2*x2 <=  80, name = constrNames[0])
-h.addConstr(x1 + 4*x2 <= 120, name = constrNames[1])
-
+constrNames = ['Assembly', 'Finishing']
+cons = h.addConstrs(x['Tables'] + 2*x['SetsOfChairs'] <=  80, 
+                    x['Tables'] + 4*x['SetsOfChairs'] <= 120, name = constrNames)
 h.setMaximize()
 
 status = h.writeModel('Chip.lp')
-print('writeModel(\'Chip.lp\') status =', status)
+print(f"writeModel('Chip.lp') status = {status}")
 status = h.writeModel('Chip.mps')
-print('writeModel(\'Chip.mps\') status =', status)
+print(f"writeModel('Chip.mps') status = {status}\n")
 
 h.solve()
 
-for var in vars:
-    print('Make', h.variableValue(var), h.variableName(var), ': Reduced cost', h.variableDual(var))
-print('Make', h.variableValues(vars), 'of', h.variableNames(vars))
+for n, var in x.items():
+    print('Make', h.variableValue(var), n, ': Reduced cost', h.variableDual(var))
+
+print()
+print('Make', h.vals(x))
 print('Make', h.allVariableValues(), 'of', h.allVariableNames())
+print()
 
-for name in constrNames:
-    print('Constraint', name, 'has value', h.constrValue(name), 'and dual', h.constrDual(name))
-
-print('Constraints have values', h.constrValues(constrNames), 'and duals', h.constrDuals(constrNames))
-
+for c in cons:
+    print('Constraint', c.name, 'has value', h.constrValue(c), 'and dual', h.constrDual(c))
+    
+print('Constraints have values', h.constrValues(cons), 'and duals', h.constrDuals(cons))
 print('Constraints have values', h.allConstrValues(), 'and duals', h.allConstrDuals())
-
+print()
 print('Optimal objective value is', h.getObjectiveValue())
 
 

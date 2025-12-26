@@ -1,0 +1,88 @@
+name: build-python-sdist
+
+on: [push, pull_request]
+
+jobs:
+  build_sdist_ubuntu:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist
+
+      - name: check metadata
+        run: pipx run twine check dist/*
+
+      - name: install highspy
+        run: |
+          python3 -m pip install dist/*.tar.gz --user 
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_sdist_mac:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist
+
+      - name: check metadata
+        run: pipx run twine check dist/*
+
+      - name: install highspy
+        run: |
+          python3 -m venv path/to/venv
+          source path/to/venv/bin/activate
+          python3 -m pip install dist/*.tar.gz 
+
+      - name: Test Python Examples
+        run: |
+         source path/to/venv/bin/activate
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_sdist_win:
+    runs-on: windows-latest 
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist
+
+      - name: check metadata
+        run: pipx run twine check dist/*
+
+      - name: install highspy
+        run: |
+          $item = Get-ChildItem dist
+          python -m pip install "$item"
+
+      - name: Test Python Examples
+        run: |
+         python ./examples/call_highs_from_python_highspy.py
+         python ./examples/call_highs_from_python_mps.py
+         python ./examples/call_highs_from_python.py
+         python ./examples/minimal.py

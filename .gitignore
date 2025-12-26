@@ -230,6 +230,7 @@ pip-log.txt
 
 # Unit test / coverage reports
 .coverage
+cov.info
 .tox
 
 #Translations
@@ -249,7 +250,7 @@ pip-log.txt
 #SCIP interface
 lpi_highs.cpp
 
-src/highspy/highs_bindings.*.so
+highs/highspy/highs_bindings.*.so
 
 # Model written with HiGHSDEV=on
 HighsRunModel.mps
@@ -283,3 +284,12 @@ CMakeSettings.json
 # Nix
 .direnv/
 result
+
+# Extra unit tests
+highs-unit-tests
+highs-problem-set
+
+# Generated HiGHS options file
+Options.md
+
+build-latest

@@ -1,0 +1,68 @@
+name: code-coverage
+
+on: [pull_request]
+
+jobs:
+  debug:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install 
+        run: sudo apt-get update && sudo apt-get install lcov 
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DHIGHS_COVERAGE=ON -DALL_TESTS=ON -DBUILD_SHARED_LIBS=OFF -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          cmake --build . --parallel --config Debug
+
+      - name: Test
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ctest --parallel --timeout 300 --output-on-failure 
+
+      - name: Generate Report
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          lcov -d . -c -o cov.info --ignore-errors empty
+          lcov --remove cov.info "/usr/include/*" -o cov.info
+          lcov --remove cov.info "/usr/lib/*" -o cov.info
+          lcov --remove cov.info "extern/pdqsort/*" -o cov.info
+          lcov --remove cov.info "extern/zstr/*" -o cov.info
+          lcov --remove cov.info "extern/catch*" -o cov.info
+          lcov --remove cov.info "app/CLI11*" -o cov.info
+          lcov --remove cov.info "highs/test_kkt*" -o cov.info
+          lcov --list cov.info
+          mv cov.info coverage.info
+
+      - name: Genhtml Results Summary 
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          genhtml -o coverage coverage.info
+
+      # Made it past the first token issue. 
+      # May need some more time to porpagate on the codecov side. 
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ERGO-Code/HiGHS
+          fail_ci_if_error: true # optional (default = false)
+          files: ${{runner.workspace}}/build/coverage.info # optional
+          # name: codecov-umbrella # optional
+          verbose: true # optional (default = false)

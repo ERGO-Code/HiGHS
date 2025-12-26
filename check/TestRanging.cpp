@@ -63,6 +63,8 @@ HighsStatus quietRun(Highs& highs) {
   HighsStatus call_status = highs.run();
   if (dev_run) highs.setOptionValue("output_flag", true);
   return call_status;
+
+  highs.resetGlobalScheduler(true);
 }
 
 void colCostColumnHeader() {
@@ -551,4 +553,6 @@ void testRanging(Highs& highs) {
   }
   REQUIRE(num_relative_error < 10);
   REQUIRE(max_relative_error < relative_error_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }

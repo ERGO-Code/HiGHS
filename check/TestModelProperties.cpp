@@ -1,5 +1,6 @@
 #include <cmath>
 
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 
@@ -43,6 +44,7 @@ TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
                                    ill_conditioning_bound) == HighsStatus::kOk);
   REQUIRE(highs.getIllConditioning(ill_conditioning, constraint, 1, 10) ==
           HighsStatus::kOk);
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("simple-ill-conditioning", "[highs_model_properties]") {

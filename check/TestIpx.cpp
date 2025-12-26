@@ -1,4 +1,5 @@
 #include "HCheckConfig.h"
+#include "Highs.h"
 #include "catch.hpp"
 #include "ipm/ipx/ipx_status.h"
 #include "ipm/ipx/lp_solver.h"
@@ -22,6 +23,7 @@ using Int = ipxint;
 
 constexpr HighsInt num_var = 12;
 constexpr HighsInt num_constr = 9;
+const double offset = 0;
 const double obj[] = {-0.2194, 0.0, 0.0,   0.0,     0.0, 0.0,
                       0.0,     0.0, -0.32, -0.5564, 0.6, -0.48};
 const double lb[num_var] = {0.0};
@@ -44,17 +46,18 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   ipx::Parameters parameters;
   if (!dev_run) parameters.display = 0;
   parameters.highs_logging = false;
+  parameters.timeless_log = false;
   lps.SetParameters(parameters);
 
   // Solve the LP.
-  Int load_status = lps.LoadModel(num_var, obj, lb, ub, num_constr, Ap, Ai, Ax,
-                                  rhs, constr_type);
+  Int load_status = lps.LoadModel(num_var, offset, obj, lb, ub, num_constr, Ap,
+                                  Ai, Ax, rhs, constr_type);
   REQUIRE(load_status == 0);
 
   highs::parallel::initialize_scheduler();
 
-  HighsCallback callback;
-  // Set pointer to null callback
+  // set empty callback to avoid issues
+  HighsCallback callback(nullptr);
   lps.SetCallback(&callback);
 
   Int status = lps.Solve();
@@ -86,4 +89,8 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   REQUIRE(fabs(ipx_col_value[11] - 339.9) < 1);
 
   (void)(info);  // surpress unused variable.
+
+  // hack to reset global scheduler
+  Highs h;
+  h.resetGlobalScheduler(true);
 }

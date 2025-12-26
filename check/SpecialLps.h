@@ -334,7 +334,7 @@ class SpecialLps {
 
   void ThreeDLp(HighsLp& lp, HighsModelStatus& require_model_status,
                 double& optimal_objective) {
-    lp.model_name_ = "distillation";
+    lp.model_name_ = "3-d LP";
     lp.num_col_ = 3;
     lp.num_row_ = 2;
     lp.col_cost_ = {1, 2, 3};

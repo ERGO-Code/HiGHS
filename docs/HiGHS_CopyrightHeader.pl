@@ -5,8 +5,6 @@ $infile='';
 $CopyrightHeaderLine0 = "/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */";
 $CopyrightHeaderLine1 = "/*                                                                       */";
 $CopyrightHeaderLine2 = "/*    This file is part of the HiGHS linear optimization suite           */";
-$CopyrightHeaderLine3 = "/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */";
-$CopyrightHeaderLine4 = "/*    Leona Gottwald and Michael Feldmeier                               */";
 $CopyrightHeaderLine5 = "/*    Available as open-source under the MIT License                     */";
 $RemoveCopyrightHeader = 0;
 while(<>) {
@@ -29,9 +27,6 @@ while(<>) {
 	print(outfile "$CopyrightHeaderLine0\n");
 	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine2\n");
-	print(outfile "$CopyrightHeaderLine1\n");
-	print(outfile "$CopyrightHeaderLine3\n");
-	print(outfile "$CopyrightHeaderLine4\n");
 	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine5\n");
 	print(outfile "$CopyrightHeaderLine1\n");

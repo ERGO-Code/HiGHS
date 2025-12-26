@@ -139,3 +139,4 @@ relative to the primal bound is a better measure. When the gap reaches
 zero then the MIP is solved to optimality. However, it is often
 preferable to stop the MIP solver when the relative gap is below a
 specified tolerance.
+

@@ -1,9 +1,11 @@
+// #include <algorithm>
 #include <cstdio>
 #include <cstring>
 
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
+#include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
 
 const bool dev_run = false;
@@ -31,15 +33,21 @@ struct MipData {
   HighsVarType* integrality;
 };
 
+struct UserMipSolution {
+  double optimal_objective_value;
+  std::vector<double> optimal_solution;
+  HighsInt require_external_solution_query_origin;
+};
+
 // Callback that saves message for comparison
 HighsCallbackFunctionType myLogCallback =
     [](int callback_type, const std::string& message,
-       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
        void* user_callback_data) { strcpy(printed_log, message.c_str()); };
 
 HighsCallbackFunctionType userMipSolutionCallback =
     [](int callback_type, const std::string& message,
-       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
        void* user_callback_data) {
       if (dev_run) {
         printf(
@@ -91,7 +99,7 @@ HighsCallbackFunctionType userMipSolutionCallback =
 
 HighsCallbackFunctionType userInterruptCallback =
     [](int callback_type, const std::string& message,
-       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
        void* user_callback_data) {
       // Extract local_callback_data from user_callback_data unless it
       // is nullptr
@@ -121,9 +129,10 @@ HighsCallbackFunctionType userInterruptCallback =
           REQUIRE(local_callback_data == kUserCallbackNoData);
         }
         if (callback_type == kCallbackLogging) {
-          if (dev_run)
-            printf("userInterruptCallback(type %2d; data %2d): %s",
-                   callback_type, local_callback_data, message.c_str());
+          if (dev_run) printf("Callback: %s", message.c_str());
+          //            printf("userInterruptCallback(type %2d; data %2d): %s",
+          //                   callback_type, local_callback_data,
+          //                   message.c_str());
         } else if (callback_type == kCallbackSimplexInterrupt) {
           if (dev_run)
             printf(
@@ -161,12 +170,12 @@ HighsCallbackFunctionType userInterruptCallback =
 
 HighsCallbackFunctionType userMipCutPoolCallback =
     [](int callback_type, const std::string& message,
-       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
        void* user_callback_data) {
       if (dev_run) {
         printf("userMipCutPoolCallback: dim(%2d, %2d, %2d)\n",
                int(data_out->cutpool_num_col), int(data_out->cutpool_num_cut),
-               int(data_out->cutpool_num_nz));
+               int(data_out->cutpool_value.size()));
         for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
           printf("Cut %d\n", int(iCut));
           for (HighsInt iEl = data_out->cutpool_start[iCut];
@@ -178,11 +187,90 @@ HighsCallbackFunctionType userMipCutPoolCallback =
       }
     };
 
-std::function<void(int, const std::string&, const HighsCallbackDataOut*,
-                   HighsCallbackDataIn*, void*)>
+HighsCallbackFunctionType userkMipUserSolution =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      UserMipSolution callback_data =
+          *(static_cast<UserMipSolution*>(user_callback_data));
+      if (data_out->external_solution_query_origin ==
+          callback_data.require_external_solution_query_origin) {
+        if (data_out->mip_primal_bound >
+            callback_data.optimal_objective_value) {
+          // If current objective value is not optimal, pass the
+          // optimal solution as a user solution
+          if (dev_run)
+            printf(
+                "userkMipUserSolution: origin = %d; %g = mip_primal_bound > "
+                "optimal_objective_value = %g\n",
+                int(data_out->external_solution_query_origin),
+                data_out->mip_primal_bound,
+                callback_data.optimal_objective_value);
+          data_in->user_has_solution = true;
+          data_in->user_solution = callback_data.optimal_solution;
+        }
+      }
+    };
+
+HighsCallbackFunctionType userkMipUserSetSolution =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      const auto& callback_data =
+          *(static_cast<UserMipSolution*>(user_callback_data));
+      if (data_out->external_solution_query_origin ==
+          callback_data.require_external_solution_query_origin) {
+        if (dev_run)
+          printf(
+              "userkMipUserSetSolution: origin = %d; %g = mip_primal_bound > "
+              "optimal_objective_value = %g\n",
+              int(data_out->external_solution_query_origin),
+              data_out->mip_primal_bound,
+              callback_data.optimal_objective_value);
+
+        data_in->setSolution(callback_data.optimal_solution.size(),
+                             callback_data.optimal_solution.data());
+      }
+    };
+
+HighsCallbackFunctionType userkMipUserSetPartialSolution =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      const auto& callback_data =
+          *(static_cast<UserMipSolution*>(user_callback_data));
+      if (data_out->external_solution_query_origin ==
+          callback_data.require_external_solution_query_origin) {
+        if (dev_run)
+          printf(
+              "userkMipUserSetPartialSolution: origin = %d; %g = "
+              "mip_primal_bound > "
+              "optimal_objective_value = %g\n",
+              int(data_out->external_solution_query_origin),
+              data_out->mip_primal_bound,
+              callback_data.optimal_objective_value);
+
+        // get every other index
+        std::vector<HighsInt> index;
+        std::vector<double> value;
+
+        for (HighsInt i = 0; i < callback_data.optimal_solution.size(); i++) {
+          if (i % 2 == 0) {
+            index.push_back(i);
+            value.push_back(callback_data.optimal_solution[i]);
+          }
+        }
+
+        data_in->setSolution(index.size(), index.data(), value.data());
+        data_in->repairSolution();
+      }
+    };
+
+std::function<void(int, const std::string&, const HighsCallbackOutput*,
+                   HighsCallbackInput*, void*)>
     userDataCallback = [](int callback_type, const std::string& message,
-                          const HighsCallbackDataOut* data_out,
-                          HighsCallbackDataIn* data_in,
+                          const HighsCallbackOutput* data_out,
+                          HighsCallbackInput* data_in,
                           void* user_callback_data) {
       assert(callback_type == kCallbackMipInterrupt ||
              callback_type == kCallbackMipLogging ||
@@ -190,15 +278,16 @@ std::function<void(int, const std::string&, const HighsCallbackDataOut*,
       if (dev_run)
         printf(
             "userDataCallback: Node count = %" PRId64
+            "; LP total iterations = %" PRId64
             "; Time = %6.2f; "
             "Bounds (%11.4g, %11.4g); Gap = %11.4g; Objective = %11.4g: %s\n",
-            data_out->mip_node_count, data_out->running_time,
-            data_out->mip_dual_bound, data_out->mip_primal_bound,
-            data_out->mip_gap, data_out->objective_function_value,
-            message.c_str());
+            data_out->mip_node_count, data_out->mip_total_lp_iterations,
+            data_out->running_time, data_out->mip_dual_bound,
+            data_out->mip_primal_bound, data_out->mip_gap,
+            data_out->objective_function_value, message.c_str());
     };
 
-TEST_CASE("my-callback-logging", "[highs-callback]") {
+TEST_CASE("my-callback-logging", "[highs_callback]") {
   bool output_flag = true;  // Still runs quietly
   bool log_to_console = false;
   HighsInt log_dev_level = kHighsLogDevLevelInfo;
@@ -248,7 +337,7 @@ TEST_CASE("my-callback-logging", "[highs-callback]") {
   }
 }
 
-TEST_CASE("highs-callback-logging", "[highs-callback]") {
+TEST_CASE("highs-callback-logging", "[highs_callback]") {
   // Uses userInterruptCallback to start logging lines with
   // "userInterruptCallback(kUserCallbackData): " since
   // Highs::setCallback has second argument p_user_callback_data
@@ -262,9 +351,28 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
   highs.startCallback(kCallbackLogging);
   highs.readModel(filename);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
+TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  int user_callback_data = kUserCallbackData;
+  void* p_user_callback_data =
+      reinterpret_cast<void*>(static_cast<intptr_t>(user_callback_data));
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  highs.run();
+  highs.setCallback(userInterruptCallback, p_user_callback_data);
+  highs.startCallback(kCallbackLogging);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  if (dev_run) highs.writeBasis("");
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   Highs highs;
@@ -277,9 +385,11 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().simplex_iteration_count >
           adlittle_simplex_iteration_limit);
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-ipm-interrupt", "[highs-callback]") {
+TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   Highs highs;
@@ -287,14 +397,25 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs-callback]") {
   highs.setCallback(userInterruptCallback);
   highs.startCallback(kCallbackIpmInterrupt);
   highs.readModel(filename);
-  highs.setOptionValue("solver", kIpmString);
-  HighsStatus status = highs.run();
-  REQUIRE(status == HighsStatus::kWarning);
+  highs.setOptionValue("solver", kIpxString);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
-  REQUIRE(highs.getInfo().ipm_iteration_count > adlittle_ipm_iteration_limit);
+  REQUIRE(highs.getInfo().ipm_iteration_count ==
+          adlittle_ipm_iteration_limit + 1);
+
+  highs.readModel(filename);
+#ifdef HIPO
+  REQUIRE(highs.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
+  ;
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  REQUIRE(highs.getInfo().ipm_iteration_count ==
+          adlittle_ipm_iteration_limit + 1);
+#endif
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-interrupt", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -306,9 +427,11 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-improving", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -319,9 +442,11 @@ TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
   highs.startCallback(kCallbackMipImprovingSolution);
   highs.readModel(filename);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-data", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -331,9 +456,11 @@ TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
   highs.startCallback(kCallbackMipLogging);
   highs.readModel(filename);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-solution", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-solution", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -351,15 +478,132 @@ TEST_CASE("highs-callback-mip-solution", "[highs-callback]") {
   highs.setCallback(userMipSolutionCallback, p_user_callback_data);
   highs.startCallback(kCallbackMipSolution);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
+TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
-  //  MipData user_callback_data;
-  highs.setCallback(userMipCutPoolCallback);  //, p_user_callback_data);
+  highs.setCallback(userMipCutPoolCallback);
   highs.startCallback(kCallbackMipGetCutPool);
   highs.run();
+
+  highs.resetGlobalScheduler(true);
+}
+
+static void runMipUserSolutionTest(
+    HighsCallbackFunctionType callback_function) {
+  //  const std::vector<std::string> model = {"rgn", "flugpl", "gt2", "egout",
+  //  "bell5", "lseu", "sp150x300d"};//, "p0548", "dcmulti"}; const
+  //  std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4, 5, 6};
+  const std::vector<std::string> model = {"p0548", "flugpl", "gt2", "egout",
+                                          "sp150x300d"};
+  const std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4};  //, 4, 5, 6};
+  assert(model.size() == require_origin.size());
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  HighsInt from_model = 0;
+  HighsInt to_model = HighsInt(model.size());
+  for (HighsInt iModel = from_model; iModel < to_model; iModel++) {
+    const std::string filename =
+        std::string(HIGHS_DIR) + "/check/instances/" + model[iModel] + ".mps";
+    highs.readModel(filename);
+    highs.run();
+    std::vector<double> optimal_solution = highs.getSolution().col_value;
+    double objective_function_value0 = highs.getInfo().objective_function_value;
+    highs.clearSolver();
+
+    UserMipSolution user_callback_data;
+    user_callback_data.optimal_objective_value = objective_function_value0;
+    user_callback_data.optimal_solution = optimal_solution;
+    user_callback_data.require_external_solution_query_origin =
+        require_origin[iModel];
+    void* p_user_callback_data = (void*)(&user_callback_data);
+
+    highs.setCallback(callback_function, p_user_callback_data);
+    highs.startCallback(kCallbackMipUserSolution);
+    highs.run();
+    highs.stopCallback(kCallbackMipUserSolution);
+    double objective_function_value1 = highs.getInfo().objective_function_value;
+    double objective_diff =
+        std::fabs(objective_function_value1 - objective_function_value0) /
+        std::max(1.0, std::fabs(objective_function_value0));
+    REQUIRE(objective_diff < 1e-12);
+  }
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
+  runMipUserSolutionTest(userkMipUserSolution);
+}
+
+TEST_CASE("highs-callback-mip-user-set-solution", "[highs-callback]") {
+  runMipUserSolutionTest(userkMipUserSetSolution);
+}
+
+TEST_CASE("highs-callback-mip-user-set-partial-solution", "[highs-callback]") {
+  runMipUserSolutionTest(userkMipUserSetPartialSolution);
+}
+
+// HighsCCallbackType
+static void cstyle_userCallback(const int callback_type, const char* message,
+                                const HighsCallbackDataOut* data_out,
+                                HighsCallbackDataIn* data_in,
+                                void* user_callback_data) {
+  HighsCallbackType cbType = static_cast<HighsCallbackType>(callback_type);
+  HighsCallbackOutput* cbOut =
+      static_cast<HighsCallbackOutput*>(data_out->cbdata);
+
+  assert(user_callback_data != nullptr);
+  double local_callback_data = *static_cast<double*>(user_callback_data);
+
+  if (dev_run) {
+    switch (cbType) {
+      case HighsCallbackType::kCallbackLogging:
+        printf("userCallback(%11.4g): %s\n", local_callback_data, message);
+        break;
+
+      case HighsCallbackType::kCallbackMipImprovingSolution:
+        printf("userCallback(%11.4g): improving solution with objective = %g\n",
+               local_callback_data, cbOut->objective_function_value);
+        printf("userCallback(%11.4g): improving solution with value[0] = %g\n",
+               local_callback_data, cbOut->mip_solution[0]);
+        break;
+
+      case HighsCallbackType::kCallbackMipLogging:
+        printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
+        break;
+
+      case HighsCallbackType::kCallbackMipInterrupt:
+        printf("userCallback(%11.4g): MIP interrupt\n", local_callback_data);
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (cbType == HighsCallbackType::kCallbackMipLogging ||
+      cbType == HighsCallbackType::kCallbackMipInterrupt) {
+    data_in->user_interrupt = true;
+  }
+}
+
+// test that the c callback also works in c++
+TEST_CASE("highs-callback-mip-user-solution-c", "[highs-callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.readModel(filename);
+
+  double my_callback_data = 5.5;
+  highs.setCallback(cstyle_userCallback, static_cast<void*>(&my_callback_data));
+  highs.startCallback(kCallbackMipSolution);
+
+  highs.run();
+  highs.resetGlobalScheduler(true);
 }

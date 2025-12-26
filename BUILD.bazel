@@ -1,11 +1,28 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_cuda//cuda:defs.bzl", "cuda_library", "requires_cuda")
 
 copy_file(
     name = "highs-config",
-    src = "src/HConfig.h.bazel.in",
+    src = "highs/HConfig.h.bazel.in",
     out = "HConfig.h",
     visibility = ["//visibility:public"],
+)
+
+bool_flag(
+    name = "cupdlp_gpu",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "cupdlp_gpu_enabled",
+    flag_values = {
+        "@rules_cuda//cuda:enable": "True",
+        "@local_cuda//:valid_toolchain_found": "True",
+        ":cupdlp_gpu": "True",
+    },
 )
 
 cc_library(
@@ -14,64 +31,112 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
-cc_library(
-    name = "highs",
+cuda_library(
+    name = "cupdlp",
     srcs = glob([
-        "extern/filereaderlp/*.cpp",
-        "extern/zlib/*.cpp",
-        "src/interfaces/highs_c_api.cpp",
-        "src/io/*.cpp",
-        "src/ipm/*.cpp",
-        "src/ipm/ipx/*.cc",
-        "src/ipm/basiclu/*.c",
-        "src/lp_data/*.cpp",
-        "src/mip/*.cpp",
-        "src/model/*.cpp",
-        "src/parallel/*.cpp",
-        "src/pdlp/*.cpp",
-        "src/pdlp/cupdlp/*.c",
-        "src/presolve/*.cpp",
-        "src/qpsolver/*.cpp",
-        "src/simplex/*.cpp",
-        "src/test/*.cpp",
-        "src/util/*.cpp",
+        "highs/pdlp/cupdlp/cuda/*.cu",
     ]),
     hdrs = glob([
-        "HConfig.h",
+        "highs/pdlp/cupdlp/cuda/*.cuh",
+    ]),
+    defines = ["CUPDLP_GPU"],
+    target_compatible_with = requires_cuda(),
+    deps = [
+        "@local_cuda//:cublas",
+        "@local_cuda//:cusparse",
+    ],
+)
+
+cc_library(
+    name = "highs",
+    srcs = ["highs/interfaces/highs_c_api.cpp"] + glob([
+        "extern/filereaderlp/*.cpp",
+        "highs/io/*.cpp",
+        "highs/ipm/*.cpp",
+        "highs/ipm/ipx/*.cc",
+        "highs/ipm/basiclu/*.c",
+        "highs/lp_data/*.cpp",
+        "highs/mip/*.cpp",
+        "highs/model/*.cpp",
+        "highs/parallel/*.cpp",
+        "highs/pdlp/*.cpp",
+        "highs/pdlp/cupdlp/*.c",
+        "highs/presolve/*.cpp",
+        "highs/qpsolver/*.cpp",
+        "highs/simplex/*.cpp",
+        "highs/test_kkt/*.cpp",
+        "highs/util/*.cpp",
+    ]),
+    hdrs = [
+        "highs/mip/feasibilityjump.hh",
+    ] + glob([
         "**/*.h",
-        "src/qpsolver/*.hpp",
-        "src/Highs.h",
+        "highs/qpsolver/*.hpp",
         "extern/filereaderlp/*.hpp",
         "extern/zstr/*.hpp",
     ]),
-    copts = [
-        "-Wno-unused-variable",
-        "-Wno-unused-but-set-variable",
-    ],
+    copts = select({
+        "@rules_cc//cc/compiler:msvc-cl": [],
+        "//conditions:default": [
+            "-Wno-unused-variable",
+            "-Wno-unused-but-set-variable",
+        ],
+    }),
+    defines = select({
+        ":cupdlp_gpu_enabled": ["CUPDLP_GPU"],
+        "//conditions:default": ["CUPDLP_CPU"],
+    }),
     includes = [
         "extern",
         # "extern/filereaderlp",
         # "extern/zstr",
-        "src",
-        # "src/ipm",
-        # "src/ipm/ipx",
-        # "src/ipm/basiclu",
-        # "src/lp_data",
-        # "src/mip",
-        # "src/model",
-        # "src/parallel",
-        # "src/presolve",
-        # "src/qpsolver",
-        # "src/simplex",
-        # "src/test",
-        # "src/util",
-        "bazel-bin",
+        "highs",
+        # "highs/ipm",
+        # "highs/ipm/ipx",
+        # "highs/ipm/basiclu",
+        # "highs/lp_data",
+        # "highs/mip",
+        # "highs/model",
+        # "highs/parallel",
+        # "highs/presolve",
+        # "highs/qpsolver",
+        # "highs/simplex",
+        # "highs/test_kkt",
+        # "highs/util",
     ],
-    linkopts = ["-lpthread"],
+    linkopts = select({
+        "@rules_cc//cc/compiler:msvc-cl": ["-DEFAULTLIB:shell32.lib"],
+        "//conditions:default": ["-lpthread"],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         "//:config",
         "@zlib",
+    ] + select({
+        ":cupdlp_gpu_enabled": [":cupdlp"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "highs-runtime-opts",
+    hdrs = [
+        "app/CLI11.hpp",
+        "app/HighsRuntimeOptions.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:highs",
+    ],
+)
+
+cc_binary(
+    name = "highs-bin",
+    srcs = ["app/RunHighs.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:highs",
+        "//:highs-runtime-opts",
     ],
 )
 
@@ -129,15 +194,13 @@ TEST_NAMES = [
     "TestEkk",
     "TestFactor",
     "TestFilereader",
-    "TestFreezeBasis",
     "TestHighsGFkSolve",
     "TestHighsHash",
     "TestHighsHessian",
     "TestHighsIntegers",
     "TestHighsModel",
-    "TestHighsParallel",
+    # "TestHighsParallel",
     "TestHighsRbTree",
-    "TestHotStart",
     "TestHSet",
     "TestICrash",
     "TestInfo",
@@ -163,11 +226,13 @@ TEST_NAMES = [
 [cc_test(
     name = name,
     srcs = ["check/%s.cpp" % name],
-    copts = [
-        "-Iextern",
-        "-Wno-unused-variable",
-        "-Wno-unused-but-set-variable",
-    ],
+    copts = ["-Iextern"] + select({
+        "@rules_cc//cc/compiler:msvc-cl": [],
+        "//conditions:default": [
+            "-Wno-unused-variable",
+            "-Wno-unused-but-set-variable",
+        ],
+    }),
     deps = [
         ":highs",
         ":test_lib",
