@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36811.4 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HighsInterface", "HighsInterface\HighsInterface.csproj", "{4177FE0E-0692-4E0F-987A-3C6DDC739E31}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Highs", "Highs.csproj", "{97E314AD-8C55-4E72-9FFA-6BA9EA34F55E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{4177FE0E-0692-4E0F-987A-3C6DDC739E31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4177FE0E-0692-4E0F-987A-3C6DDC739E31}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4177FE0E-0692-4E0F-987A-3C6DDC739E31}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4177FE0E-0692-4E0F-987A-3C6DDC739E31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97E314AD-8C55-4E72-9FFA-6BA9EA34F55E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97E314AD-8C55-4E72-9FFA-6BA9EA34F55E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97E314AD-8C55-4E72-9FFA-6BA9EA34F55E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97E314AD-8C55-4E72-9FFA-6BA9EA34F55E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {A40CDFF4-67AB-46EA-BC93-0D261FE12DA2}
+		SolutionGuid = {AEB74AA2-A995-4A88-BCB4-32F2033C8C90}
 	EndGlobalSection
 EndGlobal
