@@ -5,7 +5,7 @@ namespace Highs.Records;
 /// <summary>
 /// This defines a model for Highs
 /// </summary>
-public record Model
+public record HighsModel
 {
     /// <summary>
     /// The objective sense
