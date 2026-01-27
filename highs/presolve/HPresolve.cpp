@@ -4626,8 +4626,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     sMinus.reserve(rowsize[row]);
     std::vector<HighsInt> sPlusMark(model->num_col_, 0);
     std::vector<HighsInt> sMinusMark(model->num_col_, 0);
-    storeRow(row);
-    for (const auto& rowNz : getStoredRow()) {
+    for (const auto& rowNz : getRowVector(row)) {
       bool useCol = true;
       HighsInt colDirection = model->col_cost_[rowNz.index()] >= 0 ? 1 : -1;
       for (const auto& colNz : getColumnVector(rowNz.index())) {
