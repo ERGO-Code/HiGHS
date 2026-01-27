@@ -4618,6 +4618,38 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     return Result::kOk;
   };
 
+  // lambda that checks column for single equation handling
+  auto checkColumn = [&](HighsInt col, HighsInt colDirection, HighsInt row) {
+    for (const auto& colNz : getColumnVector(col)) {
+      if (colNz.index() == row) continue;
+      HighsInt rowDirection =
+          model->row_lower_[colNz.index()] != -kHighsInf &&
+                  model->row_upper_[colNz.index()] == kHighsInf
+              ? -1
+              : 1;
+      if (isRanged(colNz.index()) ||
+          colDirection * rowDirection * colNz.value() < 0)
+        return false;
+    }
+    return true;
+  };
+
+  // lambda that updates activities for single equation handling
+  auto updateActivity = [&](HighsInt col, double val, HighsCDouble& activity,
+                            bool& activityFinite, HighsInt direction) {
+    if (direction * val > 0) {
+      // use upper bound
+      activityFinite = activityFinite && model->col_upper_[col] != kHighsInf;
+      if (activityFinite)
+        activity += static_cast<HighsCDouble>(val) * model->col_upper_[col];
+    } else {
+      // use lower bound
+      activityFinite = activityFinite && model->col_lower_[col] != -kHighsInf;
+      if (activityFinite)
+        activity += static_cast<HighsCDouble>(val) * model->col_lower_[col];
+    }
+  };
+
   // lambda for handling single equations
   auto handleSingleEquations = [&](HighsInt row) {
     std::vector<std::pair<HighsInt, double>> sPlus;
@@ -4627,33 +4659,22 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     std::vector<HighsInt> sPlusMark(model->num_col_, 0);
     std::vector<HighsInt> sMinusMark(model->num_col_, 0);
     for (const auto& rowNz : getRowVector(row)) {
-      bool useCol = true;
-      HighsInt colDirection = model->col_cost_[rowNz.index()] >= 0 ? 1 : -1;
-      for (const auto& colNz : getColumnVector(rowNz.index())) {
-        if (colNz.index() == row) continue;
-        HighsInt rowDirection =
-            model->row_lower_[colNz.index()] != -kHighsInf &&
-                    model->row_upper_[colNz.index()] == kHighsInf
-                ? -1
-                : 1;
-        useCol = useCol && !isEquation(colNz.index()) &&
-                 colDirection * rowDirection * colNz.value() >= 0;
-        if (!useCol) break;
-      }
-      if (!useCol) continue;
-      if (colDirection > 0) {
+      if (model->col_cost_[rowNz.index()] >= 0 &&
+          checkColumn(col, HighsInt{1}, row)) {
         sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sPlusMark[rowNz.index()] = 1;
-      } else {
+      } else if (model->col_cost_[rowNz.index()] <= 0 &&
+                 checkColumn(col, HighsInt{-1}, row)) {
         sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMinusMark[rowNz.index()] = 1;
       }
     }
+    // compute activities
     HighsCDouble activityPlus = 0.0;
     HighsCDouble activityMinus = 0.0;
     bool activityPlusFinite = true;
     bool activityMinusFinite = true;
-    for (const auto& rowNz : getStoredRow()) {
+    for (const auto& rowNz : getRowVector(row)) {
       HighsInt swapPlus =
           sPlusMark[rowNz.index()] != 0 && model->integrality_[rowNz.index()] ==
                                                HighsVarType::kContinuous
@@ -4662,46 +4683,19 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       HighsInt swapMinus = sMinusMark[rowNz.index()] != 0 &&
                                    model->integrality_[rowNz.index()] ==
                                        HighsVarType::kContinuous
-                               ? -1
-                               : 1;
-      double coefPlus = swapPlus * rowNz.value();
-      double coefMinus = swapMinus * rowNz.value();
-      if (coefPlus > 0) {
-        // use upper bound
-        activityPlusFinite =
-            activityPlusFinite && model->col_upper_[rowNz.index()] != kHighsInf;
-        if (activityPlusFinite)
-          activityPlus += static_cast<HighsCDouble>(coefPlus) *
-                          model->col_upper_[rowNz.index()];
-      } else {
-        // use lower bound
-        activityPlusFinite = activityPlusFinite &&
-                             model->col_lower_[rowNz.index()] != -kHighsInf;
-        if (activityPlusFinite)
-          activityPlus += static_cast<HighsCDouble>(coefPlus) *
-                          model->col_lower_[rowNz.index()];
-      }
-      if (coefMinus < 0) {
-        // use upper bound
-        activityMinusFinite = activityMinusFinite &&
-                              model->col_upper_[rowNz.index()] != kHighsInf;
-        if (activityMinusFinite)
-          activityMinus += static_cast<HighsCDouble>(coefMinus) *
-                           model->col_upper_[rowNz.index()];
-      } else {
-        // use lower bound
-        activityMinusFinite = activityMinusFinite &&
-                              model->col_lower_[rowNz.index()] != -kHighsInf;
-        if (activityMinusFinite)
-          activityMinus += static_cast<HighsCDouble>(coefMinus) *
-                           model->col_lower_[rowNz.index()];
-      }
+                               ? 1
+                               : -1;
+      updateActivity(rowNz.index(), rowNz.value(), activityPlus,
+                     activityPlusFinite, swapPlus);
+      updateActivity(rowNz.index(), rowNz.value(), activityMinus,
+                     activityMinusFinite, swapMinus);
       if (!activityPlusFinite && !activityMinusFinite) break;
     }
+    // fix variables
     if (activityPlusFinite &&
         activityPlus <= model->row_lower_[row] + primal_feastol) {
       // fix all variables in sMinus
-      for (auto& elm : sMinus) {
+      for (const auto& elm : sMinus) {
         if (elm.second > 0)
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
         else
@@ -4711,7 +4705,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     if (activityMinusFinite &&
         activityMinus >= model->row_lower_[row] - primal_feastol) {
       // fix all variables in sPlus
-      for (auto& elm : sPlus) {
+      for (const auto& elm : sPlus) {
         if (elm.second > 0)
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
         else
