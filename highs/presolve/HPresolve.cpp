@@ -4618,6 +4618,110 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     return Result::kOk;
   };
 
+  // lambda for handling single equations
+  auto handleSingleEquations = [&](HighsInt row) {
+    std::vector<std::pair<HighsInt, double>> sPlus;
+    std::vector<std::pair<HighsInt, double>> sMinus;
+    sPlus.reserve(rowsize[row]);
+    sMinus.reserve(rowsize[row]);
+    std::vector<HighsInt> sPlusMark(model->num_col_, 0);
+    std::vector<HighsInt> sMinusMark(model->num_col_, 0);
+    storeRow(row);
+    for (const auto& rowNz : getStoredRow()) {
+      bool useCol = true;
+      HighsInt colDirection = model->col_cost_[rowNz.index()] >= 0 ? 1 : -1;
+      for (const auto& colNz : getColumnVector(rowNz.index())) {
+        if (colNz.index() == row) continue;
+        HighsInt rowDirection =
+            model->row_lower_[colNz.index()] != -kHighsInf &&
+                    model->row_upper_[colNz.index()] == kHighsInf
+                ? -1
+                : 1;
+        useCol = useCol && !isEquation(colNz.index()) &&
+                 colDirection * rowDirection * colNz.value() >= 0;
+        if (!useCol) break;
+      }
+      if (!useCol) continue;
+      if (colDirection > 0) {
+        sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
+        sPlusMark[rowNz.index()] = 1;
+      } else {
+        sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
+        sMinusMark[rowNz.index()] = 1;
+      }
+    }
+    HighsCDouble activityPlus = 0.0;
+    HighsCDouble activityMinus = 0.0;
+    bool activityPlusFinite = true;
+    bool activityMinusFinite = true;
+    for (const auto& rowNz : getStoredRow()) {
+      HighsInt swapPlus =
+          sPlusMark[rowNz.index()] != 0 && model->integrality_[rowNz.index()] ==
+                                               HighsVarType::kContinuous
+              ? -1
+              : 1;
+      HighsInt swapMinus = sMinusMark[rowNz.index()] != 0 &&
+                                   model->integrality_[rowNz.index()] ==
+                                       HighsVarType::kContinuous
+                               ? -1
+                               : 1;
+      double coefPlus = swapPlus * rowNz.value();
+      double coefMinus = swapMinus * rowNz.value();
+      if (coefPlus > 0) {
+        // use upper bound
+        activityPlusFinite =
+            activityPlusFinite && model->col_upper_[rowNz.index()] != kHighsInf;
+        if (activityPlusFinite)
+          activityPlus += static_cast<HighsCDouble>(coefPlus) *
+                          model->col_upper_[rowNz.index()];
+      } else {
+        // use lower bound
+        activityPlusFinite = activityPlusFinite &&
+                             model->col_lower_[rowNz.index()] != -kHighsInf;
+        if (activityPlusFinite)
+          activityPlus += static_cast<HighsCDouble>(coefPlus) *
+                          model->col_lower_[rowNz.index()];
+      }
+      if (coefMinus < 0) {
+        // use upper bound
+        activityMinusFinite = activityMinusFinite &&
+                              model->col_upper_[rowNz.index()] != kHighsInf;
+        if (activityMinusFinite)
+          activityMinus += static_cast<HighsCDouble>(coefMinus) *
+                           model->col_upper_[rowNz.index()];
+      } else {
+        // use lower bound
+        activityMinusFinite = activityMinusFinite &&
+                              model->col_lower_[rowNz.index()] != -kHighsInf;
+        if (activityMinusFinite)
+          activityMinus += static_cast<HighsCDouble>(coefMinus) *
+                           model->col_lower_[rowNz.index()];
+      }
+      if (!activityPlusFinite && !activityMinusFinite) break;
+    }
+    if (activityPlusFinite &&
+        activityPlus <= model->row_lower_[row] + primal_feastol) {
+      // fix all variables in sMinus
+      for (auto& elm : sMinus) {
+        if (elm.second > 0)
+          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
+        else
+          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
+      }
+    }
+    if (activityMinusFinite &&
+        activityMinus >= model->row_lower_[row] - primal_feastol) {
+      // fix all variables in sPlus
+      for (auto& elm : sPlus) {
+        if (elm.second > 0)
+          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
+        else
+          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
+      }
+    }
+    return Result::kOk;
+  };
+
   // lambda for computing tighter bounds
   auto hasTighterBound = [&](HighsInt col, HighsInt direction,
                              double currentBound, double& newBound) {
@@ -4676,6 +4780,15 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     else
       HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
   } else {
+    if (numDownLocks == 1 && numUpLocks == 1 && downLockRow != -1 &&
+        downLockRow == upLockRow &&
+        model->row_lower_[downLockRow] == model->row_upper_[downLockRow]) {
+      // see section 6.1 "Extension of dual fixing for single equations",
+      // Achterberg et al., Presolve Reductions in Mixed Integer Programming,
+      // INFORMS Journal on Computing 32(2):473-506.
+      HPRESOLVE_CHECKED_CALL(handleSingleEquations(downLockRow));
+      if (colDeleted[col]) return Result::kOk;
+    }
     if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
         model->col_upper_[col] != kHighsInf) {
       // try substitution
