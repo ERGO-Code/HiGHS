@@ -4759,7 +4759,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   auto lockCallback = [&](HighsInt row, bool hasDownLock, bool hasUpLock) {
     // remember first equation in column
     if (equationRow == -1 && row != -1 && isEquation(row)) equationRow = row;
-
     // count locks and remember row index
     if (hasUpLock) {
       numUpLocks++;
@@ -4791,9 +4790,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       // INFORMS Journal on Computing 32(2):473-506.
       HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
       if (colDeleted[col]) return Result::kOk;
-    }
-    if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
-        model->col_upper_[col] != kHighsInf) {
+    } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
+               model->col_upper_[col] != kHighsInf) {
       // try substitution
       if (numDownLocks == 1 && downLockRow != -1) {
         HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
