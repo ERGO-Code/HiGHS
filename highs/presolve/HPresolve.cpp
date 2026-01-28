@@ -4521,29 +4521,26 @@ HPresolve::Result HPresolve::detectDominatedCol(
 
 void HPresolve::computeLocks(
     HighsInt col, bool considerObjective,
-    std::function<bool(HighsInt, bool)> lockCallback) const {
+    std::function<bool(HighsInt, bool, bool)> lockCallback) const {
   // if the callback returns true, we stop examining the locks
   if (considerObjective) {
     // consider objective function
     if (model->col_cost_[col] < 0) {
       // downlock
-      if (lockCallback(-1, false)) return;
+      if (lockCallback(-1, true, false)) return;
     } else if (model->col_cost_[col] > 0) {
       // uplock
-      if (lockCallback(-1, true)) return;
+      if (lockCallback(-1, false, true)) return;
     }
   }
 
   // check coefficients
   for (const auto& nz : getColumnVector(col)) {
     // implied lower bound -> downlock
-    if (yieldsImpliedLowerBound(nz.index(), nz.value()) &&
-        lockCallback(nz.index(), false))
-      break;
-
     // implied upper bound -> uplock
-    if (yieldsImpliedUpperBound(nz.index(), nz.value()) &&
-        lockCallback(nz.index(), true))
+    if (lockCallback(nz.index(),
+                     yieldsImpliedLowerBound(nz.index(), nz.value()),
+                     yieldsImpliedUpperBound(nz.index(), nz.value())))
       break;
   }
 }
@@ -4652,7 +4649,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   };
 
   // lambda for handling single equations
-  auto handleSingleEquations = [&](HighsInt row) {
+  auto handleSingleEquation = [&](HighsInt row) {
     std::vector<std::pair<HighsInt, double>> sPlus;
     std::vector<std::pair<HighsInt, double>> sMinus;
     sPlus.reserve(rowsize[row]);
@@ -4757,12 +4754,17 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   HighsInt numUpLocks = 0;
   HighsInt downLockRow = -1;
   HighsInt upLockRow = -1;
-  auto lockCallback = [&](HighsInt row, bool isUpLock) {
+  HighsInt equationRow = -1;
+  auto lockCallback = [&](HighsInt row, bool hasDownLock, bool hasUpLock) {
+    // remember first equation in column
+    if (equationRow == -1 && row != -1 && isEquation(row)) equationRow = row;
+
     // count locks and remember row index
-    if (isUpLock) {
+    if (hasUpLock) {
       numUpLocks++;
       upLockRow = row;
-    } else {
+    }
+    if (hasDownLock) {
       numDownLocks++;
       downLockRow = row;
     }
@@ -4770,6 +4772,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     // cannot be fixed in this case.
     return numDownLocks > 1 && numUpLocks > 1;
   };
+
   // compute locks
   computeLocks(col, true, lockCallback);
 
@@ -4781,13 +4784,12 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     else
       HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
   } else {
-    if (numDownLocks == 1 && numUpLocks == 1 && downLockRow != -1 &&
-        downLockRow == upLockRow &&
-        model->row_lower_[downLockRow] == model->row_upper_[downLockRow]) {
+    // handle single equation
+    if (equationRow != -1 && (numDownLocks == 1 || numUpLocks == 1)) {
       // see section 6.1 "Extension of dual fixing for single equations",
       // Achterberg et al., Presolve Reductions in Mixed Integer Programming,
       // INFORMS Journal on Computing 32(2):473-506.
-      HPRESOLVE_CHECKED_CALL(handleSingleEquations(downLockRow));
+      HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
       if (colDeleted[col]) return Result::kOk;
     }
     if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
