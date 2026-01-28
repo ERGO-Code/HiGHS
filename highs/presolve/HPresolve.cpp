@@ -4668,30 +4668,38 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       }
     }
     // compute activities
-    HighsCDouble activityPlus = 0.0;
-    HighsCDouble activityMinus = 0.0;
-    bool activityPlusFinite = true;
-    bool activityMinusFinite = true;
+    HighsCDouble activityTPlus = 0.0;
+    HighsCDouble activityTMinus = 0.0;
+    HighsCDouble activitySCPlus = 0.0;
+    HighsCDouble activitySCMinus = 0.0;
+    bool activityTPlusFinite = true;
+    bool activityTMinusFinite = true;
+    bool activitySCPlusFinite = true;
+    bool activitySCMinusFinite = true;
     for (const auto& rowNz : getRowVector(row)) {
-      HighsInt swapPlus =
-          sMark[rowNz.index()] <= 0 || model->integrality_[rowNz.index()] !=
-                                           HighsVarType::kContinuous
-              ? 1
-              : -1;
-      HighsInt swapMinus =
-          sMark[rowNz.index()] >= 0 || model->integrality_[rowNz.index()] !=
-                                           HighsVarType::kContinuous
-              ? -1
-              : 1;
-      updateActivity(rowNz.index(), rowNz.value(), activityPlus,
-                     activityPlusFinite, swapPlus);
-      updateActivity(rowNz.index(), rowNz.value(), activityMinus,
-                     activityMinusFinite, swapMinus);
-      if (!activityPlusFinite && !activityMinusFinite) break;
+      if (sMark[rowNz.index()] <= 0 ||
+          model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
+        updateActivity(rowNz.index(), rowNz.value(), activityTPlus,
+                       activityTPlusFinite, HighsInt{1});
+      else
+        updateActivity(rowNz.index(), rowNz.value(), activitySCPlus,
+                       activitySCPlusFinite, HighsInt{-1});
+      if (sMark[rowNz.index()] >= 0 ||
+          model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
+        updateActivity(rowNz.index(), rowNz.value(), activityTMinus,
+                       activityTMinusFinite, HighsInt{-1});
+      else
+        updateActivity(rowNz.index(), rowNz.value(), activitySCMinus,
+                       activitySCMinusFinite, HighsInt{1});
+      if ((!activityTPlusFinite || !activitySCPlusFinite) &&
+          (!activityTMinusFinite || !activitySCMinusFinite))
+        break;
     }
     // fix variables
-    if (activityPlusFinite &&
-        activityPlus <= model->row_lower_[row] + primal_feastol) {
+    if (activityTPlusFinite && activitySCPlusFinite &&
+        activityTPlus > model->row_lower_[row] + primal_feastol &&
+        activityTPlus + activitySCPlus <=
+            model->row_lower_[row] + primal_feastol) {
       // fix all variables in sMinus
       for (const auto& elm : sMinus) {
         if (elm.second > 0)
@@ -4700,8 +4708,10 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
       }
     }
-    if (activityMinusFinite &&
-        activityMinus >= model->row_lower_[row] - primal_feastol) {
+    if (activityTMinusFinite && activitySCMinusFinite &&
+        activityTMinus < model->row_lower_[row] - primal_feastol &&
+        activityTMinus + activitySCMinus >=
+            model->row_lower_[row] - primal_feastol) {
       // fix all variables in sPlus
       for (const auto& elm : sPlus) {
         if (elm.second > 0)
