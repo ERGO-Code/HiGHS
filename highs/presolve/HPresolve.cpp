@@ -4656,17 +4656,16 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     std::vector<std::pair<HighsInt, double>> sMinus;
     sPlus.reserve(rowsize[row]);
     sMinus.reserve(rowsize[row]);
-    std::vector<HighsInt> sPlusMark(model->num_col_, 0);
-    std::vector<HighsInt> sMinusMark(model->num_col_, 0);
+    std::vector<HighsInt> sMark(model->num_col_, 0);
     for (const auto& rowNz : getRowVector(row)) {
       if (model->col_cost_[rowNz.index()] >= 0 &&
           checkColumn(col, HighsInt{1}, row)) {
         sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
-        sPlusMark[rowNz.index()] = 1;
+        sMark[rowNz.index()] = 1;
       } else if (model->col_cost_[rowNz.index()] <= 0 &&
                  checkColumn(col, HighsInt{-1}, row)) {
         sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
-        sMinusMark[rowNz.index()] = 1;
+        sMark[rowNz.index()] = -1;
       }
     }
     // compute activities
@@ -4676,15 +4675,15 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     bool activityMinusFinite = true;
     for (const auto& rowNz : getRowVector(row)) {
       HighsInt swapPlus =
-          sPlusMark[rowNz.index()] != 0 && model->integrality_[rowNz.index()] ==
-                                               HighsVarType::kContinuous
+          sMark[rowNz.index()] <= 0 || model->integrality_[rowNz.index()] !=
+                                           HighsVarType::kContinuous
+              ? 1
+              : -1;
+      HighsInt swapMinus =
+          sMark[rowNz.index()] >= 0 || model->integrality_[rowNz.index()] !=
+                                           HighsVarType::kContinuous
               ? -1
               : 1;
-      HighsInt swapMinus = sMinusMark[rowNz.index()] != 0 &&
-                                   model->integrality_[rowNz.index()] ==
-                                       HighsVarType::kContinuous
-                               ? 1
-                               : -1;
       updateActivity(rowNz.index(), rowNz.value(), activityPlus,
                      activityPlusFinite, swapPlus);
       updateActivity(rowNz.index(), rowNz.value(), activityMinus,
