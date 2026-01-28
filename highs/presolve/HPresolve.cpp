@@ -4620,6 +4620,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
   // lambda that checks column for single equation handling
   auto checkColumn = [&](HighsInt col, HighsInt colDirection, HighsInt row) {
+    if (colDirection * model->col_cost_[col] < 0) return false;
     for (const auto& colNz : getColumnVector(col)) {
       if (colNz.index() == row) continue;
       HighsInt rowDirection =
@@ -4658,12 +4659,10 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     sMinus.reserve(rowsize[row]);
     std::vector<HighsInt> sMark(model->num_col_, 0);
     for (const auto& rowNz : getRowVector(row)) {
-      if (model->col_cost_[rowNz.index()] >= 0 &&
-          checkColumn(col, HighsInt{1}, row)) {
+      if (checkColumn(rowNz.index(), HighsInt{1}, row)) {
         sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMark[rowNz.index()] = 1;
-      } else if (model->col_cost_[rowNz.index()] <= 0 &&
-                 checkColumn(col, HighsInt{-1}, row)) {
+      } else if (checkColumn(rowNz.index(), HighsInt{-1}, row)) {
         sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMark[rowNz.index()] = -1;
       }
