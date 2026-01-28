@@ -4650,6 +4650,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
 
   // lambda for handling single equations
   auto handleSingleEquation = [&](HighsInt row) {
+    assert(isEquation(row));
     std::vector<std::pair<HighsInt, double>> sPlus;
     std::vector<std::pair<HighsInt, double>> sMinus;
     sPlus.reserve(rowsize[row]);
@@ -4772,7 +4773,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     // cannot be fixed in this case.
     return numDownLocks > 1 && numUpLocks > 1;
   };
-
   // compute locks
   computeLocks(col, true, lockCallback);
 
