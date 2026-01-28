@@ -571,28 +571,19 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   hipo.setTimer(timer);
   hipo.setCallback(callback);
 
-  // Transform problem to correct formulation
-  hipo::Int num_col, num_row;
-  std::vector<double> obj, rhs, lower, upper, Aval;
-  std::vector<hipo::Int> Aptr, Aind;
-  std::vector<char> constraints;
-  double offset;
-  fillInIpxData(lp, num_col, num_row, offset, obj, lower, upper, Aptr, Aind,
-                Aval, rhs, constraints);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "HiPO model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
-               " columns and %" HIGHSINT_FORMAT " nonzeros\n",
-               num_row, num_col, Aptr[num_col]);
-
   // Load the problem
-  hipo::Int load_status = hipo.load(
-      num_col, num_row, obj.data(), rhs.data(), lower.data(), upper.data(),
-      Aptr.data(), Aind.data(), Aval.data(), constraints.data(), offset);
-
+  hipo::Int load_status = hipo.load(lp);
   if (load_status) {
     model_status = HighsModelStatus::kSolveError;
     return HighsStatus::kError;
   }
+
+  // This information about the problem loaded into HiPO is needed for later
+  HighsInt num_row, num_col;
+  hipo.getOriginalDims(num_row, num_col);
+  std::vector<double> rhs;
+  std::vector<char> constraints;
+  fillInRhsAndConstraints(lp, rhs, constraints);
 
   hipo.solve();
 
@@ -797,29 +788,7 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
 
   const HighsInt num_slack = general_bounded_rows.size();
 
-  // For each row except free rows add entry to char array and set up rhs
-  // vector
-  rhs.reserve(num_row);
-  constraint_type.reserve(num_row);
-
-  for (int row = 0; row < num_row; row++) {
-    if (lp.row_lower_[row] > -kHighsInf && lp.row_upper_[row] >= kHighsInf) {
-      rhs.push_back(lp.row_lower_[row]);
-      constraint_type.push_back('>');
-    } else if (lp.row_lower_[row] <= -kHighsInf &&
-               lp.row_upper_[row] < kHighsInf) {
-      rhs.push_back(lp.row_upper_[row]);
-      constraint_type.push_back('<');
-    } else if (lp.row_lower_[row] == lp.row_upper_[row]) {
-      rhs.push_back(lp.row_upper_[row]);
-      constraint_type.push_back('=');
-    } else if (lp.row_lower_[row] > -kHighsInf &&
-               lp.row_upper_[row] < kHighsInf) {
-      // general bounded
-      rhs.push_back(0);
-      constraint_type.push_back('=');
-    }
-  }
+  fillInRhsAndConstraints(lp, rhs, constraint_type);
 
   std::vector<HighsInt> reduced_rowmap(lp.num_row_, -1);
   if (free_rows.size() > 0) {
@@ -901,7 +870,36 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     obj[col] = (HighsInt)lp.sense_ * lp.col_cost_[col];
   }
-  obj.insert(obj.end(), num_slack, 0);
+}
+
+void fillInRhsAndConstraints(const HighsLp& lp, std::vector<double>& rhs,
+                             std::vector<char>& constraint_type) {
+  // For each row except free rows add entry to char array and set up rhs
+  // vector
+
+  const HighsInt num_row = lp.num_row_;
+
+  rhs.reserve(num_row);
+  constraint_type.reserve(num_row);
+
+  for (int row = 0; row < num_row; row++) {
+    if (lp.row_lower_[row] > -kHighsInf && lp.row_upper_[row] >= kHighsInf) {
+      rhs.push_back(lp.row_lower_[row]);
+      constraint_type.push_back('>');
+    } else if (lp.row_lower_[row] <= -kHighsInf &&
+               lp.row_upper_[row] < kHighsInf) {
+      rhs.push_back(lp.row_upper_[row]);
+      constraint_type.push_back('<');
+    } else if (lp.row_lower_[row] == lp.row_upper_[row]) {
+      rhs.push_back(lp.row_upper_[row]);
+      constraint_type.push_back('=');
+    } else if (lp.row_lower_[row] > -kHighsInf &&
+               lp.row_upper_[row] < kHighsInf) {
+      // general bounded
+      rhs.push_back(0);
+      constraint_type.push_back('=');
+    }
+  }
 }
 
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,

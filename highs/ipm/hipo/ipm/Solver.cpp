@@ -9,13 +9,8 @@
 
 namespace hipo {
 
-Int Solver::load(const Int num_var, const Int num_con, const double* obj,
-                 const double* rhs, const double* lower, const double* upper,
-                 const Int* A_ptr, const Int* A_rows, const double* A_vals,
-                 const char* constraints, double offset) {
-  if (model_.init(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows,
-                  A_vals, constraints, offset))
-    return kStatusBadModel;
+Int Solver::load(const HighsLp& lp) {
+  if (model_.init(lp)) return kStatusBadModel;
 
   m_ = model_.m();
   n_ = model_.n();
@@ -23,10 +18,10 @@ Int Solver::load(const Int num_var, const Int num_con, const double* obj,
   info_.ipx_used = false;
   info_.m_solver = m_;
   info_.n_solver = n_;
-  info_.m_original = num_con;
-  info_.n_original = num_var;
+  info_.m_original = model_.m_orig();
+  info_.n_original = model_.n_orig();
 
-  return 0;
+  return kStatusOk;
 }
 
 void Solver::setOptions(const Options& options) {
@@ -188,6 +183,7 @@ bool Solver::prepareIpx() {
   ipx_param.ipm_optimality_tol = options_.optimality_tol;
   ipx_param.start_crossover_tol = options_.crossover_tol;
   ipx_param.time_limit = options_.time_limit;
+  ipx_param.timeless_log = options_.timeless_log;
   ipx_param.ipm_maxiter = options_.max_iter - iter_;
   ipx_lps_.SetParameters(ipx_param);
 
@@ -1198,34 +1194,41 @@ void Solver::printSummary() const {
 
   if (logH_.debug(1)) {
     log_stream << textline("Correctors:") << integer(info_.correctors) << '\n';
-    log_stream << textline("Analyse AS time:")
-               << fix(info_.analyse_AS_time, 0, 2) << '\n';
-    log_stream << textline("Analyse NE time:")
-               << fix(info_.analyse_NE_time, 0, 2) << '\n';
-    log_stream << textline("Matrix time:") << fix(info_.matrix_time, 0, 2)
-               << '\n';
-    log_stream << textline("Matrix structure time:")
-               << fix(info_.matrix_structure_time, 0, 2) << '\n';
-    log_stream << textline("Factorisation time:")
-               << fix(info_.factor_time, 0, 2) << '\n';
-    log_stream << textline("Solve time:") << fix(info_.solve_time, 0, 2)
-               << '\n';
-    log_stream << textline("Residual time:") << fix(info_.residual_time, 0, 2)
-               << '\n';
-    log_stream << textline("Omega time:") << fix(info_.omega_time, 0, 2)
-               << '\n';
     log_stream << textline("Factorisations:") << integer(info_.factor_number)
                << '\n';
     log_stream << textline("Solves:") << integer(info_.solve_number) << '\n';
-    log_stream << textline("Avg time per factorisation:")
-               << sci(info_.factor_time / info_.factor_number, 0, 2) << '\n';
-    log_stream << textline("Avg time per solve:")
-               << sci(info_.solve_time / info_.solve_number, 0, 2) << '\n';
+
+    if (!options_.timeless_log) {
+      log_stream << textline("Analyse AS time:")
+                 << fix(info_.analyse_AS_time, 0, 2) << '\n';
+      log_stream << textline("Analyse NE time:")
+                 << fix(info_.analyse_NE_time, 0, 2) << '\n';
+      log_stream << textline("Matrix time:") << fix(info_.matrix_time, 0, 2)
+                 << '\n';
+      log_stream << textline("Matrix structure time:")
+                 << fix(info_.matrix_structure_time, 0, 2) << '\n';
+      log_stream << textline("Factorisation time:")
+                 << fix(info_.factor_time, 0, 2) << '\n';
+      log_stream << textline("Solve time:") << fix(info_.solve_time, 0, 2)
+                 << '\n';
+      log_stream << textline("Residual time:") << fix(info_.residual_time, 0, 2)
+                 << '\n';
+      log_stream << textline("Omega time:") << fix(info_.omega_time, 0, 2)
+                 << '\n';
+      log_stream << textline("Avg time per factorisation:")
+                 << sci(info_.factor_time / info_.factor_number, 0, 2) << '\n';
+      log_stream << textline("Avg time per solve:")
+                 << sci(info_.solve_time / info_.solve_number, 0, 2) << '\n';
+    }
   }
 
   logH_.print(log_stream);
 }
 
+void Solver::getOriginalDims(Int& num_row, Int& num_col) const {
+  num_row = model_.m_orig();
+  num_col = model_.n_orig();
+}
 const Info& Solver::getInfo() const { return info_; }
 void Solver::getInteriorSolution(
     std::vector<double>& x, std::vector<double>& xl, std::vector<double>& xu,

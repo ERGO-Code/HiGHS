@@ -19,6 +19,7 @@
 #include "ipm/hipo/factorhighs/FactorHiGHS.h"
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsCallback.h"
+#include "lp_data/HighsLp.h"
 #include "util/HighsSparseMatrix.h"
 #include "util/HighsTimer.h"
 
@@ -77,18 +78,7 @@ class Solver {
   //  <= : add slack    0 <= s_i <= +inf
   //  >= : add slack -inf <= s_i <=    0
   // ===================================================================================
-  Int load(const Int num_var,        // number of variables
-           const Int num_con,        // number of constraints
-           const double* obj,        // objective function c
-           const double* rhs,        // rhs vector b
-           const double* lower,      // lower bound vector
-           const double* upper,      // upper bound vector
-           const Int* A_ptr,         // column pointers of A
-           const Int* A_rows,        // row indices of A
-           const double* A_vals,     // values of A
-           const char* constraints,  // type of constraints
-           double offset             // offset from presolve
-  );
+  Int load(const HighsLp& lp);
 
   // ===================================================================================
   // Specify options, callback and timer.
@@ -115,6 +105,7 @@ class Solver {
   void getSolution(std::vector<double>& x, std::vector<double>& slack,
                    std::vector<double>& y, std::vector<double>& z) const;
   const Info& getInfo() const;
+  void getOriginalDims(Int& num_row, Int& num_col) const;
 
   // check the status of the solver
   bool solved() const;
