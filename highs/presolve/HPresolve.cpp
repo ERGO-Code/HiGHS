@@ -4537,11 +4537,13 @@ void HPresolve::computeLocks(
   // check coefficients
   for (const auto& nz : getColumnVector(col)) {
     // implied lower bound -> downlock
+    bool hasDownLock = yieldsImpliedLowerBound(nz.index(), nz.value());
     // implied upper bound -> uplock
-    if (lockCallback(nz.index(),
-                     yieldsImpliedLowerBound(nz.index(), nz.value()),
-                     yieldsImpliedUpperBound(nz.index(), nz.value())))
-      break;
+    bool hasUpLock = yieldsImpliedUpperBound(nz.index(), nz.value());
+    // callback
+    if (hasDownLock || hasUpLock) {
+      if (lockCallback(nz.index(), hasDownLock, hasUpLock)) break;
+    }
   }
 }
 
@@ -4755,10 +4757,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   HighsInt numUpLocks = 0;
   HighsInt downLockRow = -1;
   HighsInt upLockRow = -1;
-  HighsInt equationRow = -1;
   auto lockCallback = [&](HighsInt row, bool hasDownLock, bool hasUpLock) {
-    // remember first equation in column
-    if (equationRow == -1 && row != -1 && isEquation(row)) equationRow = row;
     // count locks and remember row index
     if (hasUpLock) {
       numUpLocks++;
@@ -4783,27 +4782,34 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     else
       HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
   } else {
-    // handle single equation
-    if (equationRow != -1 && (numDownLocks == 1 || numUpLocks == 1)) {
-      // see section 6.1 "Extension of dual fixing for single equations",
-      // Achterberg et al., Presolve Reductions in Mixed Integer Programming,
-      // INFORMS Journal on Computing 32(2):473-506.
-      HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
-      if (colDeleted[col]) return Result::kOk;
-    } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
-               model->col_upper_[col] != kHighsInf) {
-      // try substitution
-      if (numDownLocks == 1 && downLockRow != -1) {
-        HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
-                                             model->col_upper_[col],
-                                             model->col_lower_[col]));
+    bool hasSingleDownLock = numDownLocks == 1 && downLockRow != -1;
+    bool hasSingleUpLock = numUpLocks == 1 && upLockRow != -1;
+    if (hasSingleDownLock || hasSingleUpLock) {
+      HighsInt equationRow =
+          hasSingleDownLock && isEquation(downLockRow)
+              ? downLockRow
+              : (hasSingleUpLock && isEquation(upLockRow) ? upLockRow : -1);
+      if (equationRow != -1) {
+        // see section 6.1 "Extension of dual fixing for single equations",
+        // Achterberg et al., Presolve Reductions in Mixed Integer
+        // Programming, INFORMS Journal on Computing 32(2):473-506.
+        HPRESOLVE_CHECKED_CALL(handleSingleEquation(downLockRow));
         if (colDeleted[col]) return Result::kOk;
-      }
-      if (numUpLocks == 1 && upLockRow != -1) {
-        HPRESOLVE_CHECKED_CALL(substituteCol(col, upLockRow, HighsInt{-1},
-                                             model->col_lower_[col],
-                                             model->col_upper_[col]));
-        if (colDeleted[col]) return Result::kOk;
+      } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
+                 model->col_upper_[col] != kHighsInf) {
+        // try substitution
+        if (hasSingleDownLock) {
+          HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
+                                               model->col_upper_[col],
+                                               model->col_lower_[col]));
+          if (colDeleted[col]) return Result::kOk;
+        }
+        if (hasSingleUpLock) {
+          HPRESOLVE_CHECKED_CALL(substituteCol(col, upLockRow, HighsInt{-1},
+                                               model->col_lower_[col],
+                                               model->col_upper_[col]));
+          if (colDeleted[col]) return Result::kOk;
+        }
       }
     }
     // try to strengthen bounds
