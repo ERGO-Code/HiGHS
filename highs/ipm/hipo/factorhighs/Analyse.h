@@ -32,7 +32,7 @@ class Analyse {
   double critical_ops_{};
   std::vector<Int> signs_{};
 
-  // Permutation and inverse permutation from Metis
+  // Permutation and inverse permutation
   std::vector<Int> perm_{};
   std::vector<Int> iperm_{};
 
@@ -85,8 +85,10 @@ class Analyse {
   const Log* log_;
   DataCollector& data_;
 
+  const std::string& ordering_;
+
   // Functions to perform analyse phase
-  Int getPermutation(bool metis_no2hop);
+  Int getPermutation();
   void permute(const std::vector<Int>& iperm);
   void eTree();
   void postorder();
@@ -110,7 +112,7 @@ class Analyse {
   // Constructor: matrix must be in lower triangular format
   Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
           const std::vector<Int>& signs, Int nb, const Log* log,
-          DataCollector& data);
+          DataCollector& data, const std::string& ordering);
 
   // Run analyse phase and save the result in Symbolic object S
   Int run(Symbolic& S);

@@ -2252,3 +2252,59 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         self.assertEqual(obj_expr2.vals, [1.0, 2.0, 3.0])
         self.assertEqual(obj_expr2.constant, 5.0)
         self.assertEqual(sense2, highspy.ObjSense.kMaximize)
+
+    def test_get_iis(self):
+        h = highspy.Highs()
+#        h.silent()
+        # Build an infeasible LP problem
+        # Problem: minimize x + y
+        # Subject to: x + y <= 0.5 and x + y >= 2.0 (contradictory constraints)
+        # Bounds: 0 <= x <= 1, 0 <= y <= 1
+
+        lp = highspy.HighsLp()
+        lp.num_col_ = 2
+        lp.num_row_ = 2
+
+        # Objective: minimize x + y
+        lp.col_cost_ = [1.0, 1.0]
+
+        # Variable bounds: 0 <= x <= 1, 0 <= y <= 1
+        lp.col_lower_ = [0.0, 0.0]
+        lp.col_upper_ = [1.0, 1.0]
+
+        # Constraints:
+        # Row 0: x + y <= 0.5
+        # Row 1: -x - y <= -2.0  (equivalent to x + y >= 2.0)
+        lp.row_lower_ = [-np.inf, -np.inf]
+        lp.row_upper_ = [0.5, -2.0]
+
+        # Constraint matrix (CSC format)
+        lp.a_matrix_.start_ = [0, 2, 4]
+        lp.a_matrix_.index_ = [0, 1, 0, 1]  # Row indices
+        lp.a_matrix_.value_ = [1.0, 1.0, -1.0, -1.0]  # Coefficients
+
+        # Pass model to HiGHS
+        h.passModel(lp)
+
+        # Solve the problem
+        h.run()
+
+        model_status = h.getModelStatus()
+        self.assertEqual(model_status, highspy.HighsModelStatus.kInfeasible)
+
+        h.setOptionValue("iis_strategy", highspy.IisStrategy.kIisStrategyIrreducible)
+        [status, iis] = h.getIis()
+
+        self.assertEqual(iis.valid_, True)
+        self.assertEqual(iis.col_index_[0], 0)
+        self.assertEqual(iis.col_index_[1], 1)
+        self.assertEqual(iis.row_index_[0], 1)
+
+        self.assertEqual(iis.col_bound_[0], highspy.IisBoundStatus.kIisBoundStatusLower)
+        self.assertEqual(iis.col_bound_[1], highspy.IisBoundStatus.kIisBoundStatusUpper)
+        self.assertEqual(iis.row_bound_[0], highspy.IisBoundStatus.kIisBoundStatusUpper)
+
+        self.assertEqual(iis.col_status_[0], highspy.IisStatus.kIisStatusInConflict)
+        self.assertEqual(iis.col_status_[1], highspy.IisStatus.kIisStatusInConflict)
+        self.assertEqual(iis.row_status_[0], highspy.IisStatus.kIisStatusNotInConflict)
+        self.assertEqual(iis.row_status_[1], highspy.IisStatus.kIisStatusInConflict)

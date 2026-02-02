@@ -18,43 +18,29 @@ Int Numeric::solve(std::vector<double>& x) const {
 
   if (!sn_columns_ || !S_) return kRetInvalidPointer;
 
+  HIPO_CLOCK_CREATE;
+
   // initialise solve handler
-  SH_.reset(
-      new HybridSolveHandler(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_));
+  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_);
 
-#if HIPO_TIMING_LEVEL >= 1
-  Clock clock{};
-#endif
-
-#if HIPO_TIMING_LEVEL >= 2
-  Clock clock_fine{};
-#endif
   // permute rhs
+  HIPO_CLOCK_START(2);
   permuteVectorInverse(x, S_->iperm());
-#if HIPO_TIMING_LEVEL >= 2
-  if (data_) data_->sumTime(kTimeSolvePrepare, clock_fine.stop());
-  clock_fine.start();
-#endif
+  HIPO_CLOCK_STOP(2, *data_, kTimeSolvePrepare);
 
   // solve
-  SH_->forwardSolve(x);
-  SH_->diagSolve(x);
-  SH_->backwardSolve(x);
+  HIPO_CLOCK_START(2);
+  SH.forwardSolve(x);
+  SH.diagSolve(x);
+  SH.backwardSolve(x);
+  HIPO_CLOCK_STOP(2, *data_, kTimeSolveSolve);
 
-#if HIPO_TIMING_LEVEL >= 2
-  if (data_) data_->sumTime(kTimeSolveSolve, clock_fine.stop());
-  clock_fine.start();
-#endif
   // unpermute solution
+  HIPO_CLOCK_START(2);
   permuteVector(x, S_->iperm());
-#if HIPO_TIMING_LEVEL >= 2
-  if (data_) data_->sumTime(kTimeSolvePrepare, clock_fine.stop());
-#endif
+  HIPO_CLOCK_STOP(2, *data_, kTimeSolvePrepare);
 
-#if HIPO_TIMING_LEVEL >= 1
-  if (data_) data_->sumTime(kTimeSolve, clock.stop());
-#endif
-
+  HIPO_CLOCK_STOP(1, *data_, kTimeSolve);
   return kRetOk;
 }
 

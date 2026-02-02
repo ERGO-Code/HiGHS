@@ -182,6 +182,9 @@ class HighsCliqueTable {
                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
                                  CliqueVar* q, HighsInt N);
 
+  bool fixCol(HighsDomain& globaldom, CliqueVar v,
+              bool doProcessInfeasibleVertices = false);
+
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
   void doAddClique(const CliqueVar* cliquevars, HighsInt numcliquevars,

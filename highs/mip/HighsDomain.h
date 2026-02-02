@@ -324,8 +324,7 @@ class HighsDomain {
 
   void recomputeCapacityThreshold(HighsInt row);
 
-  void updateRedundantRows(HighsInt row, HighsInt direction, HighsInt numInf,
-                           HighsCDouble activity, double bound);
+  void updateRedundantRows(HighsInt row);
 
   double doChangeBound(const HighsDomainChange& boundchg);
 
@@ -440,22 +439,22 @@ class HighsDomain {
 
   void removeContinuousChangedCols() {
     for (HighsInt i : changedcols_)
-      changedcolsflags_[i] =
-          mipsolver->variableType(i) != HighsVarType::kContinuous;
+      changedcolsflags_[i] = mipsolver->isColIntegral(i);
 
     changedcols_.erase(
         std::remove_if(changedcols_.begin(), changedcols_.end(),
-                       [&](HighsInt i) { return !changedcolsflags_[i]; }),
+                       [&](HighsInt i) { return !isChangedCol(i); }),
         changedcols_.end());
   }
 
-  void clearChangedCols(HighsInt start) {
-    HighsInt end = changedcols_.size();
-    for (HighsInt i = start; i != end; ++i)
+  void clearChangedCols(size_t start) {
+    for (size_t i = start; i != changedcols_.size(); ++i)
       changedcolsflags_[changedcols_[i]] = 0;
 
     changedcols_.resize(start);
   }
+
+  bool isChangedCol(HighsInt col) const { return changedcolsflags_[col] != 0; }
 
   void markPropagate(HighsInt row);
 
@@ -611,12 +610,12 @@ class HighsDomain {
   double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut) const;
 
   bool isBinary(HighsInt col) const {
-    return mipsolver->variableType(col) != HighsVarType::kContinuous &&
-           col_lower_[col] == 0.0 && col_upper_[col] == 1.0;
+    return mipsolver->isColIntegral(col) && col_lower_[col] == 0.0 &&
+           col_upper_[col] == 1.0;
   }
 
   bool isGlobalBinary(HighsInt col) const {
-    return mipsolver->variableType(col) != HighsVarType::kContinuous &&
+    return mipsolver->isColIntegral(col) &&
            mipsolver->model_->col_lower_[col] == 0.0 &&
            mipsolver->model_->col_upper_[col] == 1.0;
   }
@@ -648,6 +647,8 @@ class HighsDomain {
   double getRedundantRowValue(HighsInt row) const;
 
   void setRecordRedundantRows(bool val) { recordRedundantRows_ = val; };
+
+  bool isRedundantRow(HighsInt row) const;
 };
 
 #endif

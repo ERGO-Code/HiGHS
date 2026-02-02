@@ -15,7 +15,7 @@
 
 const bool kIisDevReport = false;
 
-enum IisBoundStatus {
+enum IisBoundStatus : int {
   kIisBoundStatusDropped = -1,
   kIisBoundStatusNull,   // 0
   kIisBoundStatusFree,   // 1

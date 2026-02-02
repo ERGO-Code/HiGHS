@@ -2,47 +2,25 @@
 
 #include "Parameters.h"
 #include "Status.h"
+#include "ipm/IpxWrapper.h"
 #include "ipm/hipo/auxiliary/Log.h"
 
 namespace hipo {
 
-Int Model::init(const Int num_var, const Int num_con, const double* obj,
-                const double* rhs, const double* lower, const double* upper,
-                const Int* A_ptr, const Int* A_rows, const double* A_vals,
-                const char* constraints, double offset) {
-  // copy the input into the model
+Int Model::init(const HighsLp& lp) {
+  fillInIpxData(lp, n_orig_, m_orig_, offset_, c_, lower_, upper_, A_.start_,
+                A_.index_, A_.value_, b_, constraints_);
 
-  if (checkData(num_var, num_con, obj, rhs, lower, upper, A_ptr, A_rows, A_vals,
-                constraints))
+  if (checkData(n_orig_, m_orig_, c_, b_, lower_, upper_, A_.start_, A_.index_,
+                A_.value_, constraints_))
     return kStatusBadModel;
 
-  n_orig_ = num_var;
-  m_orig_ = num_con;
-  c_orig_ = obj;
-  b_orig_ = rhs;
-  lower_orig_ = lower;
-  upper_orig_ = upper;
-  A_ptr_orig_ = A_ptr;
-  A_rows_orig_ = A_rows;
-  A_vals_orig_ = A_vals;
-  constraints_orig_ = constraints;
-  offset_ = offset;
+  lp_orig_ = &lp;
 
-  n_ = num_var;
-  m_ = num_con;
-  c_ = std::vector<double>(obj, obj + n_);
-  b_ = std::vector<double>(rhs, rhs + m_);
-  lower_ = std::vector<double>(lower, lower + n_);
-  upper_ = std::vector<double>(upper, upper + n_);
-
-  Int Annz = A_ptr[n_];
+  n_ = n_orig_;
+  m_ = m_orig_;
   A_.num_col_ = n_;
   A_.num_row_ = m_;
-  A_.start_ = std::vector<Int>(A_ptr, A_ptr + n_ + 1);
-  A_.index_ = std::vector<Int>(A_rows, A_rows + Annz);
-  A_.value_ = std::vector<double>(A_vals, A_vals + Annz);
-
-  constraints_ = std::vector<char>(constraints, constraints + m_);
 
   preprocess();
   scale();
@@ -59,20 +37,24 @@ Int Model::init(const Int num_var, const Int num_con, const double* obj,
   return 0;
 }
 
-Int Model::checkData(const Int num_var, const Int num_con, const double* obj,
-                     const double* rhs, const double* lower,
-                     const double* upper, const Int* A_ptr, const Int* A_rows,
-                     const double* A_vals, const char* constraints) const {
+Int Model::checkData(
+    const Int num_var, const Int num_con, const std::vector<double>& obj,
+    const std::vector<double>& rhs, const std::vector<double>& lower,
+    const std::vector<double>& upper, const std::vector<Int>& A_ptr,
+    const std::vector<Int>& A_rows, const std::vector<double>& A_vals,
+    const std::vector<char>& constraints) const {
   // Check if model provided by the user is ok.
   // Return kStatusBadModel if something is wrong.
 
-  // Pointers are valid
-  if (!obj || !rhs || !lower || !upper || !A_ptr || !A_rows || !A_vals ||
-      !constraints)
-    return kStatusBadModel;
-
   // Dimensions are valid
   if (num_var <= 0 || num_con < 0) return kStatusBadModel;
+
+  // Vectors are of correct size
+  if (obj.size() != num_var || rhs.size() != num_con ||
+      lower.size() != num_var || upper.size() != num_var ||
+      constraints.size() != num_con || A_ptr.size() != num_var + 1 ||
+      A_rows.size() != A_ptr.back() || A_vals.size() != A_ptr.back())
+    return kStatusBadModel;
 
   // Vectors are valid
   for (Int i = 0; i < num_var; ++i)
@@ -530,9 +512,22 @@ void Model::denseColumns() {
 }
 
 Int Model::loadIntoIpx(ipx::LpSolver& lps) const {
+  Int ipx_m, ipx_n;
+  std::vector<double> ipx_b, ipx_c, ipx_lower, ipx_upper, ipx_A_vals;
+  std::vector<Int> ipx_A_ptr, ipx_A_rows;
+  std::vector<char> ipx_constraints;
+  double ipx_offset;
+
+  if (!lp_orig_) return kStatusError;
+
+  fillInIpxData(*lp_orig_, ipx_n, ipx_m, ipx_offset, ipx_c, ipx_lower,
+                ipx_upper, ipx_A_ptr, ipx_A_rows, ipx_A_vals, ipx_b,
+                ipx_constraints);
+
   Int load_status = lps.LoadModel(
-      n_orig_, offset_, c_orig_, lower_orig_, upper_orig_, m_orig_, A_ptr_orig_,
-      A_rows_orig_, A_vals_orig_, b_orig_, constraints_orig_);
+      ipx_n, ipx_offset, ipx_c.data(), ipx_lower.data(), ipx_upper.data(),
+      ipx_m, ipx_A_ptr.data(), ipx_A_rows.data(), ipx_A_vals.data(),
+      ipx_b.data(), ipx_constraints.data());
 
   return load_status;
 }

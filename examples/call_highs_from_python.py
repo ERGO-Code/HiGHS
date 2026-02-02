@@ -328,12 +328,11 @@ num_var = h.getNumCol()
 solution = h.getSolution()
 basis = h.getBasis()
 info = h.getInfo()
-#
-col_status = basis.col_status
-col_value = list(solution.col_value)
 # basis.col_status is already a list, but accessing values in
 # solution.col_value directly is very inefficient, so convert it to a
 # list
+col_status = basis.col_status
+col_value = list(solution.col_value)
 model_status = h.getModelStatus()
 print("Model status = ", h.modelStatusToString(model_status))
 print("Optimal objective = ", info.objective_function_value)
@@ -384,8 +383,66 @@ for iCase in range(0, 2):
 
     print(f"user_callback_data = {user_callback_data}: Success!")
     h.clearSolver()
-    
 
+# ~~~
+# Clear so that incumbent model is empty
+h.clear()
 
+# Build an infeasible LP problem
+# Problem: minimize x + y
+# Subject to: x + y <= 0.5 and x + y >= 2.0 (contradictory constraints)
+# Bounds: 0 <= x <= 1, 0 <= y <= 1
 
+lp = highspy.HighsLp()
+lp.num_col_ = 2
+lp.num_row_ = 2
 
+# Objective: minimize x + y
+lp.col_cost_ = [1.0, 1.0]
+
+# Variable bounds: 0 <= x <= 1, 0 <= y <= 1
+lp.col_lower_ = [0.0, 0.0]
+lp.col_upper_ = [1.0, 1.0]
+
+# Constraints:
+# Row 0: x + y <= 0.5
+# Row 1: -x - y <= -2.0  (equivalent to x + y >= 2.0)
+lp.row_lower_ = [-np.inf, -np.inf]
+lp.row_upper_ = [0.5, -2.0]
+
+# Constraint matrix (CSC format)
+lp.a_matrix_.start_ = [0, 2, 4]
+lp.a_matrix_.index_ = [0, 1, 0, 1]  # Row indices
+lp.a_matrix_.value_ = [1.0, 1.0, -1.0, -1.0]  # Coefficients
+
+# Pass model to HiGHS
+h.passModel(lp)
+
+# Solve the problem
+h.run()
+
+model_status = h.getModelStatus()
+
+# Change the IIS strategy from the default (use the "light" strategy
+# of testing for incompatible bounds and bounds on row activities that
+# are incomparible with row bounds) to an attempt to find an IIS -
+# although the "light" strategy is sufficient for this LP
+
+h.setOptionValue("iis_strategy", highspy.IisStrategy.kIisStrategyIrreducible)
+
+[status, iis] = h.getIis()
+
+iis_num_col = len(iis.col_index_)
+for iX in range(iis_num_col) :
+    print("IIS col ", iX, " is ", iis.col_index_[iX], " with bound status ", iis.col_bound_[iX])
+
+iis_num_row = len(iis.row_index_)
+for iX in range(iis_num_row) :
+    print("IIS row ", iX, " is ", iis.row_index_[iX], " with bound status ", iis.row_bound_[iX])
+
+# Status -1 => Not in conflict; 0 => Maybe in conflict; 1 => in conflict
+for iX in range(lp.num_col_) :
+    print("Col ", iX, " has IIS status ", iis.col_status_[iX])
+
+for iX in range(lp.num_row_) :
+    print("Row ", iX, " has IIS status ", iis.row_status_[iX])

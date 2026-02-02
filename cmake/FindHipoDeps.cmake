@@ -1,4 +1,191 @@
-# BLAS
+# Fetch OpenBLAS
+if (BUILD_OPENBLAS)
+    include(FetchContent)
+    set(FETCHCONTENT_QUIET OFF)
+    set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+    # set(BUILD_SHARED_LIBS ON)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(BUILD_TESTING OFF)
+    set(CMAKE_Fortran_COMPILER OFF)
+
+    # Define the size-minimizing flags as a list
+    set(OPENBLAS_MINIMAL_FLAGS
+        # Exclude components not used by HiGHS
+        -DONLY_CBLAS:BOOL=ON
+        -DNO_LAPACK:BOOL=ON
+        -DNO_LAPACKE:BOOL=ON
+        -DNO_COMPLEX:BOOL=ON
+        -DNO_COMPLEX16:BOOL=ON
+        -DNO_DOUBLE_COMPLEX:BOOL=ON
+        -DNO_SINGLE:BOOL=ON
+    )
+
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|armv8|arm")
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            message(FATAL_ERROR "The HiGHS build with OpenBLAS does not yet support 32-bit ARM architectures. \
+            You could try to compile OpenBLAS separately on your machine, see https://github.com/OpenMathLib/OpenBLAS. \
+            Then link with HiGHS by passing the path to the OpenBLAS installation via BLAS_ROOT. \
+            Please don't hesitate to get in touch with us with details about your related issues.")
+
+            # Unreachable, revisit later. Could not get it to work on the CI, -DNOASM=1 is not being respected and openblas
+            # keeps trying to use 64bit registers which are not available. Works fine on 32bit amd and 64bit arm.
+            message(STATUS "ARM architecture detected. 32bit.")
+
+            # list(APPEND OPENBLAS_MINIMAL_FLAGS -DARMV7:BOOL=ON)
+             # Set environment variable to disable assembly
+            # set(ENV{NOASM} "1")
+            # set(NOASM 1)
+
+            list(APPEND OPENBLAS_MINIMAL_FLAGS
+                -DTARGET=GENERIC
+                -DBINARY=32
+                -DNOASM=1
+                -DDYNAMIC_ARCH:BOOL=OFF
+                -DUSE_THREAD:BOOL=OFF
+                # Aggressively disable complex operations
+                -DNO_CGEMM:BOOL=ON
+                -DNO_ZGEMM:BOOL=ON
+                -DNO_CTRMM:BOOL=ON
+                -DNO_ZTRMM:BOOL=ON
+                -DNO_CTRSM:BOOL=ON
+                -DNO_ZTRSM:BOOL=ON
+                # Disable all Level 3 BLAS (includes TRMM, TRSM, etc.)
+                -DNO_LEVEL3:BOOL=ON
+                -DCMAKE_C_FLAGS="-march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp"
+                -DCMAKE_ASM_FLAGS="-march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp"
+                -DCMAKE_CXX_FLAGS="-march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp"
+                # -DARM_SOFTFP_ABI=1
+                # -DCMAKE_ASM_FLAGS="-mfpu=vfpv3-d16"
+                # -DCMAKE_C_FLAGS="-march=armv7-a -mfpu=vfpv3-d16"
+                # -DCMAKE_ASM_FLAGS="-march=armv7-a -mfpu=vfpv3-d16"
+                # -DCMAKE_CXX_FLAGS="-march=armv7-a -mfpu=vfpv3-d16"
+            )
+            # list(APPEND OPENBLAS_MINIMAL_FLAGS -DTARGET=GENERIC)
+            # list(APPEND OPENBLAS_MINIMAL_FLAGS
+            #     -DDYNAMIC_ARCH:BOOL=OFF
+            #     -DUSE_THREAD:BOOL=OFF        # Simplify build
+            #     -DNO_WARMUP:BOOL=ON          # Skip warmup routine
+            #     # -DNO_GETARCH:BOOL=ON
+            #     # -DUSE_VFPV3:BOOL=ON
+            #     # -DUSE_VFPV3_D32:BOOL=OFF   # crucial: only use d0–d15
+            #     # -DNO_TRMM:BOOL=ON
+            #     # -DNO_TRSM:BOOL=ON
+            #     -DNO_L3:BOOL=ON               # skip complex Level-3 kernels
+            #     # -DCMAKE_ASM_FLAGS="-mfpu=vfpv3-d16"
+            #     # -DUSE_GENERIC:BOOL=ON
+            # )
+            # # Explicitly disable assembly
+
+            # set(CMAKE_ASM_COMPILER "")
+            # set(NOASM 1)
+
+            # set(SKIP_PARSE_GETARCH TRUE)
+        else()
+            message(STATUS "ARM architecture detected. Applying -DTARGET=ARMV8.")
+            list(APPEND OPENBLAS_MINIMAL_FLAGS -DTARGET=ARMV8)
+            # list(APPEND OPENBLAS_MINIMAL_FLAGS -DONLY_BLAS=ON -DNO_LAPACK=ON -DNO_LAPACKE=ON)
+        endif()
+    # else()
+        # list(APPEND OPENBLAS_MINIMAL_FLAGS -DONLY_BLAS=ON -DNO_LAPACK=ON -DNO_LAPACKE=ON)
+    endif()
+
+    # CMAKE_SIZEOF_VOID_P is 4 for 32-bit builds, 8 for 64-bit builds.
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        message(STATUS "32-bit target detected. Applying 32-bit configuration flags for OpenBLAS.")
+
+        if (WIN32)
+            list(APPEND OPENBLAS_MINIMAL_FLAGS -DCMAKE_GENERATOR_PLATFORM=Win32)
+        endif()
+
+        # Crucial for static linking: Force OpenBLAS to use the static runtime
+        # if (NOT BUILD_SHARED_LIBS)
+        #     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+        # endif()
+        # now global
+
+        # list(APPEND OPENBLAS_MINIMAL_FLAGS -DUSE_THREAD=OFF)
+        list(APPEND OPENBLAS_MINIMAL_FLAGS -DINTERFACE64=0)
+
+        # If the MSVC runtime library issue persists, you can try this flag as well,
+        # though CMAKE_GENERATOR_PLATFORM should usually be sufficient.
+        # list(APPEND OPENBLAS_MINIMAL_FLAGS -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL)
+    endif()
+
+    if(UNIX AND NOT APPLE)
+        execute_process(
+            COMMAND bash -c "grep -m1 'model name' /proc/cpuinfo | grep -i skylake"
+            RESULT_VARIABLE SKYLAKE_CHECK
+            OUTPUT_QUIET
+            ERROR_QUIET
+        )
+
+        if(SKYLAKE_CHECK EQUAL 0)
+            message(STATUS "Skylake detected - adjusting OpenBLAS target to avoid register spills")
+            set(OPENBLAS_TARGET "HASWELL" CACHE STRING "OpenBLAS target architecture" FORCE)
+            set(NO_AVX512 ON CACHE BOOL "Disable AVX512" FORCE)
+            # set(CMAKE_C_FLAGS_OPENBLAS "-DTARGET=HASWELL -DNO_AVX512=1")
+        else()
+            message(STATUS " NOT Skylake")
+        endif()
+    endif()
+
+    set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
+
+    # Override CMAKE_BUILD_TYPE for OpenBLAS subdirectory
+    set(CMAKE_BUILD_TYPE_BACKUP ${CMAKE_BUILD_TYPE})
+    set(CMAKE_BUILD_TYPE Release)
+
+    message(CHECK_START "Fetching OpenBLAS")
+    list(APPEND CMAKE_MESSAGE_INDENT "  ")
+    FetchContent_Declare(
+        openblas
+        GIT_REPOSITORY "https://github.com/OpenMathLib/OpenBLAS.git"
+        GIT_TAG        "v0.3.30"
+        GIT_SHALLOW TRUE
+        UPDATE_COMMAND git reset --hard
+        CMAKE_ARGS
+            ${OPENBLAS_MINIMAL_FLAGS}
+            # Force optimization even in Debug builds to avoid register spills
+            # Force high optimization and strip debug symbols for the kernels
+            # -DCMAKE_BUILD_TYPE=Release
+            # -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS_OPENBLAS}
+            # -DCMAKE_C_FLAGS="-O3 -fomit-frame-pointer"
+            # -DCMAKE_C_FLAGS_RELEASE="-O3 -fomit-frame-pointer"
+            # -DCMAKE_C_FLAGS_DEBUG="-O2 -fomit-frame-pointer"
+            # -DCORE_OPTIMIZATION="-O3"
+    )
+    FetchContent_MakeAvailable(openblas)
+
+    if (ALL_TESTS)
+        set(BUILD_TESTING ON)
+    endif()
+
+    set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_BACKUP})
+
+    list(POP_BACK CMAKE_MESSAGE_INDENT)
+    message(CHECK_PASS "fetched")
+
+    if (TARGET openblas)
+        get_target_property(_openblas_aliased openblas ALIASED_TARGET)
+        if(_openblas_aliased)
+            set(_openblas_target ${_openblas_aliased})
+            message(STATUS "OpenBLAS is an alias for: ${_openblas_target}")
+        else()
+            set(_openblas_target openblas)
+        endif()
+    elseif (TARGET openblas_static)
+        set(_openblas_target openblas_static)
+    elseif (TARGET openblas_shared)
+        set(_openblas_target openblas_shared)
+    else()
+        message(FATAL_ERROR "OpenBLAS target not found")
+    endif()
+    message(STATUS "OpenBLAS target: ${_openblas_target}")
+
+    return()
+endif()
+
+# Find BLAS
 set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
 if (NOT BLAS_ROOT STREQUAL "")
     message(STATUS "BLAS_ROOT is " ${BLAS_ROOT})
@@ -141,111 +328,6 @@ else()
             else()
                 message(FATAL_ERROR "No BLAS library found!")
             endif()
-        endif()
-    endif()
-endif()
-
-# METIS
-set(METIS_ROOT "" CACHE STRING "Root directory of METIS")
-message(STATUS "METIS_ROOT is " ${METIS_ROOT})
-
-# If a METIS install was specified try to use it first.
-if (NOT (METIS_ROOT STREQUAL ""))
-    message(STATUS "Looking for METIS CMake targets file in " ${METIS_ROOT})
-    find_package(metis CONFIG NO_DEFAULT_PATH QUIET)
-else()
-    find_package(metis CONFIG QUIET)
-endif()
-
-if(metis_FOUND)
-    message(STATUS "metis CMake config path: ${metis_DIR}")
-else()
-    find_path(METIS_PATH
-        NAMES "metis.h"
-        PATHS "${METIS_ROOT}/include"
-        NO_DEFAULT_PATH)
-
-    message(STATUS "Found Metis header at ${METIS_PATH}")
-
-    find_library(METIS_LIB
-        NAMES metis libmetis
-        PATHS "${METIS_ROOT}/lib" "${METIS_ROOT}/bin"
-        NO_DEFAULT_PATH)
-
-    if(METIS_LIB)
-        message(STATUS "Found Metis library at ${METIS_LIB}")
-    else()
-        # METIS_ROOT was not successful
-        message(STATUS "Metis not found in METIS_PATH, fallback to default search.")
-        if (NOT (METIS_ROOT STREQUAL ""))
-            find_package(metis CONFIG)
-
-            if (metis_FOUND)
-                message(STATUS "metis CMake config path: ${metis_DIR}")
-            else()
-                # METIS_ROOT was not successful and there is no cmake config
-                find_path(METIS_PATH
-                    NAMES "metis.h")
-
-                message(STATUS "Found Metis header at ${METIS_PATH}")
-
-                find_library(METIS_LIB
-                    NAMES metis libmetis)
-
-                if(METIS_LIB)
-                    message(STATUS "Found Metis library at ${METIS_LIB}")
-                else()
-                    message(FATAL_ERROR "No Metis library found")
-                endif()
-            endif()
-        endif()
-    endif()
-endif()
-
-# GKlib optional for newer versions on ubuntu and macos
-set(GKLIB_ROOT "" CACHE STRING "Root directory of GKlib")
-if (NOT (GKLIB_ROOT STREQUAL ""))
-    message(STATUS "GKLIB_ROOT is " ${GKLIB_ROOT})
-
-    find_package(GKlib CONFIG NO_DEFAULT_PATH)
-
-    if(GKlib_FOUND)
-        message(STATUS "gklib CMake config path: ${GKlib_DIR}")
-
-        # get_cmake_property(_vars VARIABLES)
-        # foreach(_v IN LISTS _vars)
-        #     if(_v MATCHES "GKlib")
-        #     message(STATUS "${_v} = ${${_v}}")
-        #     endif()
-        # endforeach()
-
-        # get_property(_targets DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY IMPORTED_TARGETS)
-        # foreach(_t IN LISTS _targets)
-        # if(_t MATCHES "GKlib")
-        #     message(STATUS "GKlib exported target: ${_t}")
-        # endif()
-        # endforeach()
-
-    else()
-        find_path(GKLIB_PATH
-            NAMES "gklib.h" "GKlib.h"
-            REQUIRED
-            PATHS "${GKLIB_ROOT}/include"
-            NO_DEFAULT_PATH)
-
-        message(STATUS "Found GKlib header at ${GKLIB_PATH}")
-
-        find_library(GKLIB_LIB
-            NAMES GKlib libGKlib
-            REQUIRED
-            PATHS "${GKLIB_ROOT}/lib"
-            NO_DEFAULT_PATH)
-
-        if(GKLIB_LIB)
-            message(STATUS "Found GKlib library at ${GKLIB_LIB}")
-        else()
-            # GKLIB_ROOT was not successful
-            message(FATAL_ERROR "No GKlib library found at ${GKLIB_ROOT}")
         endif()
     endif()
 endif()

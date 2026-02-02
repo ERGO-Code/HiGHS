@@ -85,3 +85,54 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
   REQUIRE(solution_1.col_dual == solution_2.col_dual);
   REQUIRE(solution_1.row_dual == solution_2.row_dual);
 }
+
+TEST_CASE("test-hipo-orderings", "[highs_hipo]") {
+  // Test that hipo orderings work correctly
+
+  std::string model = "adlittle.mps";
+  const double expected_obj = 2.2549e5;
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("solver", kHipoString);
+  highs.setOptionValue("timeless_log", kHighsOnString);
+
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
+  highs.readModel(filename);
+
+  // metis
+  {
+    highs.setOptionValue(kHipoOrderingString, kHipoMetisString);
+    HighsStatus status = highs.run();
+    REQUIRE(status == HighsStatus::kOk);
+
+    const double actual_obj = highs.getObjectiveValue();
+
+    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
+            1e-4);
+  }
+
+  // amd
+  {
+    highs.setOptionValue(kHipoOrderingString, kHipoAmdString);
+    HighsStatus status = highs.run();
+    REQUIRE(status == HighsStatus::kOk);
+
+    const double actual_obj = highs.getObjectiveValue();
+    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
+            1e-4);
+  }
+
+  // rcm
+  {
+    highs.setOptionValue(kHipoOrderingString, kHipoRcmString);
+    HighsStatus status = highs.run();
+    REQUIRE(status == HighsStatus::kOk);
+
+    const double actual_obj = highs.getObjectiveValue();
+    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
+            1e-4);
+  }
+
+  highs.resetGlobalScheduler(true);
+}

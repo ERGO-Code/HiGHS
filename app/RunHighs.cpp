@@ -13,7 +13,21 @@
 #include "Highs.h"
 #include "HighsRuntimeOptions.h"
 
+static bool written_cli_copyright_line = false;
+
+void cliCopyrightLine(const HighsLogOptions& log_options) {
+  if (written_cli_copyright_line) return;
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Command line parsed using CLI11 %s: Copyright (c) 2017-2025 "
+               "University of Cincinnati\n",
+               CLI11_VERSION);
+  written_cli_copyright_line = true;
+}
+
 int runHighsReturn(Highs& highs, const int status) {
+  // Possibly write out the HiGHS and CLI copyright lines
+  highs.logHeader();
+  cliCopyrightLine(highs.getOptions().log_options);
   // Close any log file explicitly
   highs.closeLogFile();
   // Check that the log file has been closed
@@ -35,9 +49,9 @@ int main(int argc, char** argv) {
   HighsCommandLineOptions cmd_options;
   HighsOptions loaded_options;
 
-  // Set "HiGHS.log" as the default log_file for the app so that
+  // Set kHighsRunLogFile as the default log_file for the app so that
   // log_file has this value if it isn't set in the file
-  loaded_options.log_file = "HiGHS.log";
+  loaded_options.log_file = kHighsRunLogFile;
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
 
@@ -86,9 +100,13 @@ int main(int argc, char** argv) {
 
   // Pass the option settings to HiGHS. Only error-checking produces
   // output, but values are checked in loadOptions, so it's safe to
-  // call this first so that printHighsVersionCopyright uses reporting
+  // call this first so that Highs::logHeader() uses reporting
   // settings defined in any options file.
   highs.passOptions(loaded_options);
+
+  highs.logHeader();
+  // Acknowledge use of CLI for command line parsing
+  cliCopyrightLine(log_options);
   // Log changes from the default option settings
   highs.writeOptions("", true);
 

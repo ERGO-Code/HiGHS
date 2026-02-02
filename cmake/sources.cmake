@@ -1,11 +1,11 @@
 set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/filereader>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/pdqsort>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/interfaces>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io/filereader>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/ipx>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/basiclu>
@@ -243,14 +243,12 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/Timing.h)
 
 set(hipo_util_sources
-    ipm/hipo/auxiliary/AutoDetect.cpp
     ipm/hipo/auxiliary/Auxiliary.cpp
     ipm/hipo/auxiliary/KrylovMethods.cpp
     ipm/hipo/auxiliary/Log.cpp
     ipm/hipo/auxiliary/VectorOperations.cpp)
 
 set(hipo_util_headers
-    ipm/hipo/auxiliary/AutoDetect.h
     ipm/hipo/auxiliary/Auxiliary.h
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
@@ -258,11 +256,78 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/mycblas.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
+set(hipo_orderings_sources
+    ../extern/amd/amd_1.c
+    ../extern/amd/amd_2.c
+    ../extern/amd/amd_aat.c
+    ../extern/amd/amd_control.c
+    ../extern/amd/amd_defaults.c
+    ../extern/amd/amd_info.c
+    ../extern/amd/amd_order.c
+    ../extern/amd/amd_post_tree.c
+    ../extern/amd/amd_postorder.c
+    ../extern/amd/amd_preprocess.c
+    ../extern/amd/amd_valid.c
+    ../extern/amd/SuiteSparse_config.c
+    ../extern/metis/GKlib/error.c
+    ../extern/metis/GKlib/mcore.c
+    ../extern/metis/GKlib/memory.c
+    ../extern/metis/GKlib/random.c
+    ../extern/metis/libmetis/auxapi.c
+    ../extern/metis/libmetis/balance.c
+    ../extern/metis/libmetis/bucketsort.c
+    ../extern/metis/libmetis/coarsen.c
+    ../extern/metis/libmetis/compress.c
+    ../extern/metis/libmetis/contig.c
+    ../extern/metis/libmetis/fm.c
+    ../extern/metis/libmetis/gklib.c
+    ../extern/metis/libmetis/graph.c
+    ../extern/metis/libmetis/initpart.c
+    ../extern/metis/libmetis/mcutil.c
+    ../extern/metis/libmetis/mmd.c
+    ../extern/metis/libmetis/ometis.c
+    ../extern/metis/libmetis/options.c
+    ../extern/metis/libmetis/refine.c
+    ../extern/metis/libmetis/separator.c
+    ../extern/metis/libmetis/sfm.c
+    ../extern/metis/libmetis/srefine.c
+    ../extern/metis/libmetis/util.c
+    ../extern/metis/libmetis/wspace.c
+    ../extern/rcm/rcm.cpp)
+
+set(hipo_orderings_headers
+    ../extern/amd/amd_internal.h
+    ../extern/amd/amd.h
+    ../extern/amd/SuiteSparse_config.h
+    ../extern/metis/GKlib/gk_arch.h
+    ../extern/metis/GKlib/gk_defs.h
+    ../extern/metis/GKlib/gk_macros.h
+    ../extern/metis/GKlib/gk_mkblas.h
+    ../extern/metis/GKlib/gk_mkmemory.h
+    ../extern/metis/GKlib/gk_mkpqueue.h
+    ../extern/metis/GKlib/gk_mkrandom.h
+    ../extern/metis/GKlib/gk_mksort.h
+    ../extern/metis/GKlib/gk_ms_inttypes.h
+    ../extern/metis/GKlib/gk_ms_stat.h
+    ../extern/metis/GKlib/gk_ms_stdint.h
+    ../extern/metis/GKlib/gk_proto.h
+    ../extern/metis/GKlib/gk_struct.h
+    ../extern/metis/GKlib/gk_types.h
+    ../extern/metis/GKlib/GKlib.h
+    ../extern/metis/libmetis/defs.h
+    ../extern/metis/libmetis/gklib_defs.h
+    ../extern/metis/libmetis/macros.h
+    ../extern/metis/libmetis/metislib.h
+    ../extern/metis/libmetis/proto.h
+    ../extern/metis/libmetis/stdheaders.h
+    ../extern/metis/libmetis/struct.h
+    ../extern/metis/metis.h
+    ../extern/rcm/rcm.h)
+
 # redefinition of 'kHighsInf'
-set_source_files_properties (../extern/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 set(highs_sources
-    ../extern/filereaderlp/reader.cpp
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
     io/FilereaderEms.cpp
@@ -272,6 +337,7 @@ set(highs_sources
     io/HMpsFF.cpp
     io/HMPSIO.cpp
     io/LoadOptions.cpp
+    io/filereaderlp/reader.cpp
     ipm/IpxWrapper.cpp
     lp_data/Highs.cpp
     lp_data/HighsCallback.cpp
@@ -374,10 +440,6 @@ set(highs_sources
 
 # add catch header?
 set(highs_headers
-    ../extern/filereaderlp/builder.hpp
-    ../extern/filereaderlp/def.hpp
-    ../extern/filereaderlp/model.hpp
-    ../extern/filereaderlp/reader.hpp
     ../extern/pdqsort/pdqsort.h
     ../extern/zstr/strict_fstream.hpp
     ../extern/zstr/zstr.hpp
@@ -390,6 +452,10 @@ set(highs_headers
     io/HMpsFF.h
     io/HMPSIO.h
     io/LoadOptions.h
+    io/filereaderlp/builder.hpp
+    io/filereaderlp/def.hpp
+    io/filereaderlp/model.hpp
+    io/filereaderlp/reader.hpp
     ipm/IpxSolution.h
     ipm/IpxWrapper.h
     lp_data/HConst.h

@@ -35,7 +35,6 @@ cmake -DCMAKE_INSTALL_PREFIX=${prefix} \
     -DZLIB_USE_STATIC_LIBS=${BUILD_STATIC} \
     -DHIPO=ON \
     -DBLAS_LIBRARIES="${libdir}/libopenblas.${dlext}" \
-    -DMETIS_ROOT=${prefix} \
     ..
 
 if [[ "${target}" == *-linux-* ]]; then
@@ -63,7 +62,6 @@ platforms = expand_cxxstring_abis(platforms)
 dependencies = [
     Dependency("CompilerSupportLibraries_jll"),
     Dependency("Zlib_jll"),
-    Dependency("METIS_jll"),
     Dependency("OpenBLAS32_jll"),
     HostBuildDependency(PackageSpec(; name="CMake_jll")),
 ]

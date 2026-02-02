@@ -13,8 +13,7 @@ typedef HighsInt Int;
 typedef int64_t Int64;
 
 // The matrix (AS or NE) is formed using Int, so it must have fewer than
-// kHighsIInf nonzero entries. Metis works with the same type as Int, so it must
-// be compiled accordingly.
+// kHighsIInf nonzero entries.
 //
 // The factorisation uses a combination of Int and Int64. Int64 is used only
 // where needed, i.e. when dealing with nonzeros of the factor or when checking

@@ -71,6 +71,14 @@ void printTest(const std::vector<T>& v, const std::string s) {
   out_file.close();
 }
 
+template <typename T>
+void freeVector(std::vector<T>& v) {
+  // Give up memory allocated to v.
+  // (technically shrink_to_fit does not guarantee to deallocate)
+  v.clear();
+  v.shrink_to_fit();
+}
+
 class Clock {
   std::chrono::high_resolution_clock::time_point t0;
 

@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;  // true;  //
+const bool dev_run = false;  // true;//
 const bool write_model = false;
 
 const double inf = kHighsInf;
@@ -736,5 +736,63 @@ TEST_CASE("feasible-lp-iis", "[iis]") {
   REQUIRE(iis.row_status_[0] == kIisStatusNotInConflict);
   REQUIRE(iis.row_status_[1] == kIisStatusNotInConflict);
 
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("write-iis_model-file", "[iis]") {
+  // Reproduces #2635, and adds code coverage for writing IIS model
+  // and solution at runtime
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string test_mps = test_name + ".mps";
+  const std::string test_sol = test_name + ".sol";
+  HighsLp lp;
+  lp.model_name_ = "2635";
+  lp.num_col_ = 5;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {-1, -1, 0, 0, 0};
+  lp.col_lower_ = {0, 0, 10, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 10, kHighsInf, kHighsInf};
+  lp.row_lower_ = {0, 0, 0, 20};
+  lp.row_upper_ = {0, 0, 0, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4, 5, 7, 10};
+  lp.a_matrix_.index_ = {1, 3, 2, 3, 1, 0, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {-1, 1, -1, 1, 1, 1, 1, -0.5, -1, 1};
+  lp.col_names_ = {"x0", "x1", "x2", "x3", "x4"};
+  lp.row_names_ = {"x3-.5x4=0", "x2-x4-x0=0", "x3+x4-x1=0", "x0+x1>=20"};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("log_file", "highs.log");
+  h.setOptionValue("write_iis_model_file", test_mps);
+  h.setOptionValue("solution_file", test_sol);
+  const HighsInt to_k = 2;
+  for (HighsInt k = 0; k <= to_k; k++) {
+    if (k == 0) {
+      h.setOptionValue("iis_strategy", kIisStrategyLight);
+    } else if (k == 1) {
+      h.setOptionValue("iis_strategy", kIisStrategyFromLp);
+    } else {
+      assert(k == 2);
+      h.setOptionValue("iis_strategy",
+                       kIisStrategyFromLp + kIisStrategyIrreducible);
+    }
+    if (dev_run)
+      printf(
+          "\nPass %d with iis_strategy = %d\n============================\n\n",
+          int(k), int(h.getOptions().iis_strategy));
+    h.passModel(lp);
+    h.run();
+    h.readModel(test_mps);
+    if (k == 0) {
+      REQUIRE(h.getLp().num_col_ == 0);
+      REQUIRE(h.getLp().num_row_ == 0);
+    } else {
+      // Use h.optimizeModel(); to avoid unnecessary MPS and solution
+      // file
+      h.optimizeModel();
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
+    }
+  }
+  std::remove(test_mps.c_str());
+  std::remove(test_sol.c_str());
   h.resetGlobalScheduler(true);
 }

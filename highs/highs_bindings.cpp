@@ -192,6 +192,12 @@ std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h) {
   return std::make_tuple(status, ranging);
 }
 
+std::tuple<HighsStatus, HighsIis> highs_getIis(Highs* h) {
+  HighsIis iis;
+  HighsStatus status = h->getIis(iis);
+  return std::make_tuple(status, iis);
+}
+
 std::tuple<HighsStatus, dense_array_t<HighsInt>> highs_getBasicVariables(
     Highs* h) {
   HighsInt num_row = h->getNumRow();
@@ -357,7 +363,6 @@ std::tuple<HighsStatus, dense_array_t<double>> highs_getReducedRow(
 std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
            dense_array_t<HighsInt>>
 highs_getReducedRowSparse(Highs* h, HighsInt row) {
-  HighsInt num_col = h->getNumCol();
   HighsInt num_row = h->getNumRow();
 
   HighsStatus status = HighsStatus::kOk;
@@ -1062,17 +1067,27 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kIisStrategyLight", IisStrategy::kIisStrategyLight)
       .value("kIisStrategyFromRay", IisStrategy::kIisStrategyFromRay)
       .value("kIisStrategyFromLp", IisStrategy::kIisStrategyFromLp)
+      .value("kIisStrategyIrreducible", IisStrategy::kIisStrategyIrreducible)
       .value("kIisStrategyColPriority", IisStrategy::kIisStrategyColPriority)
+      .value("kIisStrategyRelaxation", IisStrategy::kIisStrategyRelaxation)
       .value("kIisStrategyMax", IisStrategy::kIisStrategyMax)
       .export_values();
+
   py::enum_<IisBoundStatus>(m, "IisBoundStatus", py::module_local())
-      .value("kIisBoundStatusDropped", IisBoundStatus::kIisBoundStatusDropped)
-      .value("kIisBoundStatusNull", IisBoundStatus::kIisBoundStatusNull)
-      .value("kIisBoundStatusFree", IisBoundStatus::kIisBoundStatusFree)
-      .value("kIisBoundStatusLower", IisBoundStatus::kIisBoundStatusLower)
-      .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
-      .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed)
-      .export_values();
+    .value("kIisBoundStatusDropped", IisBoundStatus::kIisBoundStatusDropped)
+    .value("kIisBoundStatusNull", IisBoundStatus::kIisBoundStatusNull)
+    .value("kIisBoundStatusFree", IisBoundStatus::kIisBoundStatusFree)
+    .value("kIisBoundStatusLower", IisBoundStatus::kIisBoundStatusLower)
+    .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
+    .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed)
+    .export_values();
+
+  py::enum_<IisStatus>(m, "IisStatus", py::module_local())
+    .value("kIisStatusNotInConflict", IisStatus::kIisStatusNotInConflict)
+    .value("kIisStatusMaybeInConflict", IisStatus::kIisStatusMaybeInConflict)
+    .value("kIisStatusInConflict", IisStatus::kIisStatusInConflict)
+    .export_values();
+
   py::enum_<HighsDebugLevel>(m, "HighsDebugLevel", py::module_local())
       .value("kHighsDebugLevelNone", HighsDebugLevel::kHighsDebugLevelNone)
       .value("kHighsDebugLevelCheap", HighsDebugLevel::kHighsDebugLevelCheap)
@@ -1369,7 +1384,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
           py::arg("local_lower_penalty") = py::none(),
           py::arg("local_upper_penalty") = py::none(),
           py::arg("local_rhs_penalty") = py::none())
-      .def("getIis", &Highs::getIis)
+      .def("getIis", &highs_getIis)
       .def("presolve", &Highs::presolve,
            py::call_guard<py::gil_scoped_release>())
       .def("writeSolution", &highs_writeSolution)
@@ -1515,15 +1530,18 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
   py::class_<HighsIis>(m, "HighsIis", py::module_local())
       .def(py::init<>())
       .def("clear", &HighsIis::clear)
-      .def_readwrite("valid", &HighsIis::valid_)
-      .def_readwrite("status", &HighsIis::status_)
-      .def_readwrite("strategy", &HighsIis::strategy_)
-      .def_readwrite("col_index", &HighsIis::col_index_)
-      .def_readwrite("row_index", &HighsIis::row_index_)
-      .def_readwrite("col_bound", &HighsIis::col_bound_)
-      .def_readwrite("row_bound", &HighsIis::row_bound_)
-      .def_readwrite("info", &HighsIis::info_)
-      .def_readwrite("model", &HighsIis::model_);
+      .def_readwrite("valid_", &HighsIis::valid_)
+      .def_readwrite("status_", &HighsIis::status_)
+      .def_readwrite("strategy_", &HighsIis::strategy_)
+      .def_readwrite("col_index_", &HighsIis::col_index_)
+      .def_readwrite("row_index_", &HighsIis::row_index_)
+      .def_readwrite("col_bound_", &HighsIis::col_bound_)
+      .def_readwrite("row_bound_", &HighsIis::row_bound_)
+      .def_readwrite("col_status_", &HighsIis::col_status_)
+      .def_readwrite("row_status_", &HighsIis::row_status_)
+      .def_readwrite("info_", &HighsIis::info_)
+      .def_readwrite("model_", &HighsIis::model_);
+
   // structs
   py::class_<HighsSolution>(m, "HighsSolution", py::module_local())
       .def(py::init<>())
@@ -1726,16 +1744,6 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kDevex", EdgeWeightMode::kDevex)
       .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
       .value("kCount", EdgeWeightMode::kCount);
-  
-  /*
-  py::module_ iis = m.def_submodule("iis", "IIS interface submodule");
-  py::enum_<HighsIisStatus>(iis, "HighsIisStatus",
-			    py::module_local())
-    .value("kIisStatusInConflict", HighsIisStatus::kIisStatusInConflict)
-    .value("kIisStatusNotInConflict", HighsIisStatus::kIisStatusNotInConflict)
-    .value("kIisStatusMaybeInConflict", HighsIisStatus::kIisStatusMaybeInConflict)
-    .export_values();
-  */
   
   py::module_ callbacks = m.def_submodule("cb", "Callback interface submodule");
   // Types for interface

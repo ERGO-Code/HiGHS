@@ -29,7 +29,7 @@ The nuget package contains runtime libraries for
 * `macos-x64`
 * `macos-arm64`
 
-Details for building locally can be found in `nuget/README.md`.
+Details for building locally can be found in `nuget/README.md`. Many thanks to Markus-Ludwig Wermer and the team at MENTZ GmbH for the NuGet packaging support!
 
 #### C# API
 

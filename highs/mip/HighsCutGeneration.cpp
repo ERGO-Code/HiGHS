@@ -1351,8 +1351,20 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   if (genFlowCover && !lpRelaxation.getMipSolver().submip &&
       !lpRelaxation.getMipSolver().mipdata_->continuous_cols.empty() &&
       lpRelaxation.getMipSolver().options_mip_->mip_cut_flow_cover) {
-    flowCoverVals = vals_;
-    flowCoverInds = inds_;
+    bool hasContinuousBeforePreprocess = false;
+    for (size_t i = 0; i != inds_.size(); ++i) {
+      if (lpRelaxation.isColIntegral(inds_[i]) &&
+          std::abs(vals_[i]) > 10 * feastol) {
+        hasContinuousBeforePreprocess = true;
+        break;
+      }
+    }
+    if (!hasContinuousBeforePreprocess) {
+      genFlowCover = false;
+    } else {
+      flowCoverVals = vals_;
+      flowCoverInds = inds_;
+    }
   } else {
     genFlowCover = false;
   }
@@ -1391,64 +1403,71 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   }
 
   // try to generate a cut
-  if (!tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
-                      hasContinuous, 10 * feastol, onlyInitialCMIRScale))
-    return false;
+  bool cmirSuccess =
+      tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
+                     hasContinuous, 10 * feastol, onlyInitialCMIRScale);
 
-  // remove the complementation if exists
-  removeComplementation();
+  if (cmirSuccess) {
+    // remove the complementation if exists
+    removeComplementation();
 
-  // remove zeros in place
-  for (HighsInt i = rowlen - 1; i >= 0; --i) {
-    if (vals[i] == 0.0) {
-      --rowlen;
-      inds[i] = inds[rowlen];
-      vals[i] = vals[rowlen];
+    // remove zeros in place
+    for (HighsInt i = rowlen - 1; i >= 0; --i) {
+      if (vals[i] == 0.0) {
+        --rowlen;
+        inds[i] = inds[rowlen];
+        vals[i] = vals[rowlen];
+      }
     }
-  }
 
-  // transform the cut back into the original space, i.e. remove the bound
-  // substitution and replace implicit slack variables
-  rhs_ = (double)rhs;
-  vals_.resize(rowlen);
-  inds_.resize(rowlen);
-  if (!transLp.untransform(vals_, inds_, rhs_)) return false;
+    // transform the cut back into the original space, i.e. remove the bound
+    // substitution and replace implicit slack variables
+    rhs_ = (double)rhs;
+    vals_.resize(rowlen);
+    inds_.resize(rowlen);
+    cmirSuccess = transLp.untransform(vals_, inds_, rhs_);
+  }
 
   const auto& sol = lpRelaxation.getSolution().col_value;
 
   // Try to generate a lifted simple generalized flow cover cut
-  if (genFlowCover) {
-    bool flowCoverSuccess = tryGenerateFlowCoverCut(
-        transLp, flowCoverInds, flowCoverVals, flowCoverRhs, flowCoverEfficacy);
-    if (flowCoverSuccess) {
-      HighsInt rowlen_ = inds_.size();
-      double viol = -rhs_;
-      double sqrnorm = 0;
-      double efficacy = 0;
-      for (HighsInt i = 0; i != rowlen_; ++i) {
-        HighsInt col = inds_[i];
-        viol += vals_[i] * sol[col];
-        if (vals_[i] >= 0 &&
-            sol[col] <=
-                lpRelaxation.getMipSolver().mipdata_->domain.col_lower_[col] +
-                    lpRelaxation.getMipSolver().mipdata_->feastol)
-          continue;
-        if (vals_[i] < 0 &&
-            sol[col] >=
-                lpRelaxation.getMipSolver().mipdata_->domain.col_upper_[col] -
-                    lpRelaxation.getMipSolver().mipdata_->feastol)
-          continue;
-        sqrnorm += vals_[i] * vals_[i];
-      }
-      if (sqrnorm > 0) efficacy = viol / sqrt(sqrnorm);
-      if (flowCoverEfficacy > efficacy + feastol) {
-        rhs_ = flowCoverRhs;
-        std::swap(vals_, flowCoverVals);
-        std::swap(inds_, flowCoverInds);
-        integralSupport = false;
-        integralCoefficients = false;
-      }
+  bool flowCoverSuccess =
+      genFlowCover
+          ? tryGenerateFlowCoverCut(transLp, flowCoverInds, flowCoverVals,
+                                    flowCoverRhs, flowCoverEfficacy)
+          : false;
+  if (flowCoverSuccess && cmirSuccess) {
+    HighsInt rowlen_ = inds_.size();
+    double viol = -rhs_;
+    double sqrnorm = 0;
+    double efficacy = 0;
+    for (HighsInt i = 0; i != rowlen_; ++i) {
+      HighsInt col = inds_[i];
+      viol += vals_[i] * sol[col];
+      if (vals_[i] >= 0 &&
+          sol[col] <=
+              lpRelaxation.getMipSolver().mipdata_->domain.col_lower_[col] +
+                  lpRelaxation.getMipSolver().mipdata_->feastol)
+        continue;
+      if (vals_[i] < 0 &&
+          sol[col] >=
+              lpRelaxation.getMipSolver().mipdata_->domain.col_upper_[col] -
+                  lpRelaxation.getMipSolver().mipdata_->feastol)
+        continue;
+      sqrnorm += vals_[i] * vals_[i];
     }
+    if (sqrnorm > 0) efficacy = viol / sqrt(sqrnorm);
+    if (flowCoverEfficacy < efficacy + 10 * feastol) {
+      flowCoverSuccess = false;
+    }
+  }
+  if (!flowCoverSuccess && !cmirSuccess) return false;
+  if (flowCoverSuccess) {
+    rhs_ = flowCoverRhs;
+    std::swap(vals_, flowCoverVals);
+    std::swap(inds_, flowCoverInds);
+    integralSupport = false;
+    integralCoefficients = false;
   }
 
   rowlen = inds_.size();

@@ -14,9 +14,6 @@ class Symbolic {
   bool parallel_tree_ = false;
   bool parallel_node_ = false;
 
-  // metis options
-  bool metis_no2hop_ = false;
-
   // Size of blocks for dense factorisation
   Int block_size_;
 
@@ -58,9 +55,9 @@ class Symbolic {
   // Relative indices of original columns wrt columns of L.
   // - relind_cols_[i] contains the relative indices of entry i, with respect to
   //   the numbering of the frontal matrix of the corresponding supernode.
-  // - Given the row indices of the original matrix, rowsA:
+  // - Given the row indices of the original matrix, rowsM:
   //   relind_cols_[i] = k implies that the i-th entry of the original matrix
-  //   (which has original row index given by rowsA[i]) corresponds to the row
+  //   (which has original row index given by rowsM[i]) corresponds to the row
   //   in position k in the frontal matrix of the supernode corresponding to the
   //   column to which the i-th entry belongs.
   //   This is useful when assemblying the entries of the original matrix into
@@ -100,12 +97,13 @@ class Symbolic {
 
   Int64 max_stack_size_{};
 
+  std::string ordering;
+
   friend class Analyse;
 
  public:
   Symbolic();
   void setParallel(bool par_tree, bool par_node);
-  void setMetisNo2hop(bool metis_no2hop);
 
   // provide const access to symbolic factorisation
   Int64 nz() const;
@@ -128,7 +126,6 @@ class Symbolic {
   Int64 maxStackSize() const;
   bool parTree() const;
   bool parNode() const;
-  bool metisNo2hop() const;
   double storage() const;
   const std::vector<Int64>& ptr() const;
   const std::vector<Int>& iperm() const;

@@ -519,7 +519,7 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
 
   // Stefan's example
   std::string filename;
-  filename = std::string(HIGHS_DIR) + "/check/instances/infeasible.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/infeasible-mip1.mps";
 
   highs.readModel(filename);
   sol.col_value = {75, 0, 275, 300, 300, 0, 0, 0, 50, 0, 0,
@@ -1228,6 +1228,42 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("get-presolved-mip", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {1, 1, 1};
+  lp.col_lower_ = {0, -kHighsInf, -kHighsInf};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  lp.row_lower_ = {2, 6, 8};
+  lp.row_upper_ = {2, kHighsInf, kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 3, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, -1, 2, 1, 3, -1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  // Code coverage of highsVarTypeToString for all cases
+  HighsLogOptions log_options = h.getOptions().log_options;
+  for (HighsInt iVarType = -1;
+       iVarType < HighsInt(HighsVarType::kImplicitInteger) + 2; iVarType++)
+    highsLogUser(log_options, HighsLogType::kInfo, "Variable type %2d is %s\n",
+                 int(iVarType), highsVarTypeToString(iVarType).c_str());
+  h.passModel(lp);
+  h.presolve();
+  // Presolved MIP has an implied integer, so this tests passing such
+  HighsLp presolved_lp = h.getPresolvedModel().lp_;
+  h.run();
+  const double lp_objective_value = h.getObjectiveValue();
+  h.passModel(presolved_lp);
+  h.run();
+  const double presolved_lp_objective_value = h.getObjectiveValue();
+  REQUIRE(presolved_lp_objective_value == lp_objective_value);
+  h.resetGlobalScheduler(true);
+}
+
 TEST_CASE("get-fixed-lp-semi", "[highs_test_mip_solver]") {
   HighsLp lp;
   lp.num_col_ = 4;
@@ -1245,6 +1281,11 @@ TEST_CASE("get-fixed-lp-semi", "[highs_test_mip_solver]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("presolve", kHighsOffString);
+  // Code coverage of highsVarTypeToString for four main types
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    highsLogUser(h.getOptions().log_options, HighsLogType::kInfo,
+                 "Column %d is of type %s\n", int(iCol),
+                 highsVarTypeToString(lp.integrality_[iCol]).c_str());
   h.passModel(lp);
   h.run();
   double mip_optimal_objective = h.getInfo().objective_function_value;
@@ -1256,6 +1297,7 @@ TEST_CASE("get-fixed-lp-semi", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
 
   REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("row-fixed-lp", "[highs_test_mip_solver]") {

@@ -8,8 +8,8 @@ set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources}
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
 if(HIPO)
-  set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
-  set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers})
+  set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
+  set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
 endif()
 
 # Configure the config windows version file
@@ -121,7 +121,7 @@ if(NOT FAST_BUILD)
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
 
   # Install the targets of the highs export group, the config file so that other
-  # cmake-projects can link easily against highs, and the pkg-config flie so that
+  # cmake-projects can link easily against highs, and the pkg-config file so that
   # other projects can easily build against highs
   install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
     ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
@@ -202,6 +202,9 @@ else()
             message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
             target_link_libraries(highs PRIVATE ${OPENBLAS_LIB})
             target_include_directories(highs PRIVATE ${OPENBLAS_INCLUDE_DIR})
+        elseif(BUILD_OPENBLAS)
+            target_link_libraries(highs PRIVATE openblas)
+            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
         else()
             message(FATAL_ERROR "OpenBLAS not found on Windows.")
         endif()
@@ -213,6 +216,9 @@ else()
               target_link_libraries(highs PRIVATE "${BLAS_LIB}" cblas)
           elseif(OPENBLAS_LIB)
               target_link_libraries(highs PRIVATE "${OPENBLAS_LIB}")
+              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
+          elseif(BUILD_OPENBLAS)
+              target_link_libraries(highs PRIVATE openblas)
               target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
           else()
               message(FATAL_ERROR "No BLAS library available")
@@ -234,22 +240,7 @@ else()
           endif()
       endif()
     endif()
-
-    if(metis_FOUND)
-      target_link_libraries(highs PRIVATE metis)
-    else()
-      target_include_directories(highs PRIVATE "${METIS_PATH}")
-      target_link_libraries(highs PRIVATE "${METIS_LIB}")
-    endif()
-
-    if (NOT (GKLIB_ROOT STREQUAL ""))
-      if(GKlib_FOUND)
-        target_link_libraries(highs PRIVATE GKlib::GKlib)
-      else()
-        target_include_directories(highs PRIVATE "${GKLIB_PATH}")
-        target_link_libraries(highs PRIVATE "${GKLIB_LIB}")
-      endif()
-    endif()
+    
   endif()
 
   if(MSVC)
@@ -442,6 +433,10 @@ if(Threads_FOUND)
 endif()
 
 if(FAST_BUILD)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+      set(THREADS_PREFER_PTHREAD_FLAG ON)
+  endif()
+
   target_link_libraries(highs PRIVATE Threads::Threads)
 else()
   target_link_libraries(libhighs Threads::Threads)

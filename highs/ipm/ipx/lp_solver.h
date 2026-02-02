@@ -47,9 +47,9 @@ public:
     // @y: size num_constr array, must satisfy
     //     y[i] >= 0 if constr_type[i] == '>'
     //     y[i] <= 0 if constr_type[i] == '<'
-    // @zl: size num_var array, must satsify zl[j] >= 0 for all j and
+    // @zl: size num_var array, must satisfy zl[j] >= 0 for all j and
     //      zl[j] == 0 if lb[j] == -INFINITY
-    // @zu: size num_var array, must satsify zu[j] >= 0 for all j and
+    // @zu: size num_var array, must satisfy zu[j] >= 0 for all j and
     //      zu[j] == 0 if ub[j] == INFINITY
     // When a starting point was loading successfully (return value 0), then
     // the next call to Solve() will start the IPM from that point, except that
@@ -138,7 +138,7 @@ public:
     // Returns the current basis postsolved.
     // - If crossover terminated successfully, this is the basis returned by
     //   GetBasicSolution().
-    // - If crossover failed, this is the basis at which failure occured.
+    // - If crossover failed, this is the basis at which failure occurred.
     // - If crossover was not called, this is the basis from the IPM
     //   preconditioner.
     // - If no basis is available, the method does nothing.

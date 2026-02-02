@@ -20,7 +20,7 @@ double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
   assert(!workspace_ && !worksize_);
   reallocation = false;
 
-  if (!stack_.empty()) {
+  if (clique_size > 0) {
     // This should not trigger reallocation, because the resize in init is done
     // with the maximum possible size of the stack.
     if (top_ + clique_size > stack_.size()) {
@@ -28,15 +28,13 @@ double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
       stack_.resize(top_ + clique_size, 0.0);
     }
 
-    if (clique_size > 0) {
-      // accessing stack[top] is valid only if the clique is not empty,
-      // otherwise it may be out of bounds.
-      workspace_ = &stack_[top_];
-      worksize_ = clique_size;
+    // accessing stack[top] is valid only if the clique is not empty,
+    // otherwise it may be out of bounds.
+    workspace_ = &stack_[top_];
+    worksize_ = clique_size;
 
-      // initialize workspace to zero
-      std::memset(workspace_, 0, worksize_ * sizeof(double));
-    }
+    // initialize workspace to zero
+    std::memset(workspace_, 0, worksize_ * sizeof(double));
   }
 
   return workspace_;
@@ -67,7 +65,7 @@ void CliqueStack::popChild() {
 void CliqueStack::pushWork(Int sn) {
   // Put the content of the workspace at the top of the stack
 
-  if (!stack_.empty()) {
+  if (worksize_ > 0) {
     // stack_[top_] has lower address than workspace, so no need to resize.
     // workspace_ and stack_[top_] do not overlap, so use memcpy
     std::memcpy(&stack_[top_], workspace_, worksize_ * sizeof(double));

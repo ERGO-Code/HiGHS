@@ -3658,6 +3658,31 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
   }
 }
 
+std::string highsVarTypeToString(const HighsVarType type) {
+  switch (type) {
+    case HighsVarType::kContinuous:
+      return "continuous";
+    case HighsVarType::kInteger:
+      return "integer";
+    case HighsVarType::kSemiContinuous:
+      return "semi continuous";
+    case HighsVarType::kSemiInteger:
+      return "semi integer";
+    case HighsVarType::kImplicitInteger:
+      return "implicit integer";
+    default:
+      return "unknown";
+  }
+}
+
+std::string highsVarTypeToString(const HighsInt type) {
+  if (type < HighsInt(HighsVarType::kContinuous) ||
+      type > HighsInt(HighsVarType::kImplicitInteger))
+    return "unknown";
+  HighsVarType type_ = HighsVarType(uint8_t(type));
+  return highsVarTypeToString(type_);
+}
+
 void initialiseUserScaleData(const HighsOptions& options,
                              HighsUserScaleData& user_scale_data) {
   user_scale_data.initialise(options.user_objective_scale,

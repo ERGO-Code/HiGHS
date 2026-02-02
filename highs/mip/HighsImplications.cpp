@@ -300,9 +300,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0) &&
       mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
-    bool infeasible;
-
-    infeasible = computeImplications(col, 1);
+    bool infeasible = computeImplications(col, 1);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
     if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
@@ -650,9 +648,8 @@ void HighsImplications::separateImpliedBounds(
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
           cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
-                         mipsolver.variableType(implics[i].column) !=
-                             HighsVarType::kContinuous,
-                         false, false, false);
+                         !mipsolver.isColContinuous(implics[i].column), false,
+                         false, false);
         }
       }
     }
@@ -701,9 +698,8 @@ void HighsImplications::separateImpliedBounds(
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
           cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
-                         mipsolver.variableType(implics[i].column) !=
-                             HighsVarType::kContinuous,
-                         false, false, false);
+                         !mipsolver.isColContinuous(implics[i].column), false,
+                         false, false);
         }
       }
     }
@@ -715,8 +711,11 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   double lb = mipsolver.mipdata_->domain.col_lower_[col];
 
   if (ub == lb) {
-    numVarBounds -= vlbs.size();
-    numVarBounds -= vubs.size();
+    HighsInt numVubs = 0;
+    vubs[col].for_each([&](HighsInt vubCol, VarBound& vub) { numVubs++; });
+    HighsInt numVlbs = 0;
+    vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) { numVlbs++; });
+    numVarBounds -= numVubs + numVlbs;
     vlbs[col].clear();
     vubs[col].clear();
     return;
@@ -827,5 +826,46 @@ void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
                                            static_cast<double>(maxub),
                                            HighsDomain::Reason::unspecified());
     infeasible = mipsolver.mipdata_->domain.infeasible();
+  }
+}
+
+void HighsImplications::applyImplications(HighsDomain& domain,
+                                          const HighsInt col,
+                                          const HighsInt val) {
+  assert(domain.isFixed(col));
+
+  auto checkImplication = [&](const HighsDomainChange& domchg) -> bool {
+    assert(!domain.infeasible());
+    if (domain.isFixed(domchg.column)) return false;
+    const bool isint =
+        domain.variableType(domchg.column) != HighsVarType::kContinuous;
+    // Directly change bounds on all integer columns. Only change continuous
+    // columns that fix the column, as changing their domains risks
+    // suppressing further bound changes found in propagation, e.g.,
+    // change [0, 100] -> [0, 50], propagation could tighten to [0, 48], but
+    // such a tightening would not be applied due to min boundRange improvement.
+    if (domchg.boundtype == HighsBoundType::kLower) {
+      if ((!isint && domchg.boundval >
+                         domain.col_upper_[domchg.column] - domain.feastol()) ||
+          (isint && domchg.boundval >
+                        domain.col_lower_[domchg.column] + domain.feastol())) {
+        domain.changeBound(domchg, HighsDomain::Reason::cliqueTable(col, val));
+      }
+    } else {
+      if ((!isint && domchg.boundval <
+                         domain.col_lower_[domchg.column] + domain.feastol()) ||
+          (isint && domchg.boundval <
+                        domain.col_upper_[domchg.column] - domain.feastol())) {
+        domain.changeBound(domchg, HighsDomain::Reason::cliqueTable(col, val));
+      }
+    }
+    return domain.infeasible();
+  };
+
+  HighsInt loc = 2 * col + val;
+  if (implications[loc].computed) {
+    for (HighsDomainChange& domchg : implications[loc].implics) {
+      if (checkImplication(domchg)) break;
+    }
   }
 }

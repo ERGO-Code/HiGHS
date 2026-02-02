@@ -33,7 +33,7 @@ public:
     // 0 OK
     // 1 OK, but the factorization is numerically unstable; suggests tightening
     //   the pivot tolerance (see below) and to refactorize.
-    // 2 OK, but singularities occured and were replaced by unit columns.
+    // 2 OK, but singularities occurred and were replaced by unit columns.
     // 3 = 1 and 2
     Int Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                   const double* Bx, bool strict_abs_pivottol);

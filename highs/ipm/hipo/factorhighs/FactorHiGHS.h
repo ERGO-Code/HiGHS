@@ -10,7 +10,7 @@
 /*
 
 Direct solver for IPM matrices.
-It requires Metis and BLAS.
+It requires Metis, AMD, rcm and BLAS.
 
 Consider a sparse symmetric matrix M in CSC format.
 Only its lower triangular part is used; entries in the upper triangle are
@@ -36,6 +36,10 @@ Then, the factorization is performed as follows.
     FH.analyse(S, rows, ptr, signs);
     FH.factorise(S, rows, ptr, val);
     FH.solve(x);
+
+The argument "ordering" passed to Analyse constructor can be used to select the
+fill-reducing ordering to use. Valid values are "metis", "amd", "rcm". By
+default, metis is used.
 
 Printing to screen is achieved using the interface in auxiliary/Log.h. Pass an
 object of type Log for normal printing:
@@ -83,12 +87,11 @@ class FHsolver {
   // ptr, and store symbolic factorisation in object S.
   // See ReturnValues.h for errors.
   Int analyse(Symbolic& S, const std::vector<Int>& rows,
-              const std::vector<Int>& ptr, const std::vector<Int>& signs);
+              const std::vector<Int>& ptr, const std::vector<Int>& signs,
+              const std::string& ordering = "metis");
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
-  // numerical factorisation in object N. Matrix is moved into the object, so
-  // rows, ptr, vals are invalid afterwards.
-  // See ReturnValues.h for errors.
+  // numerical factorisation in object N. See ReturnValues.h for errors.
   Int factorise(const Symbolic& S, const std::vector<Int>& rows,
                 const std::vector<Int>& ptr, const std::vector<double>& vals);
 

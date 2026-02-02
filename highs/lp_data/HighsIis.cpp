@@ -538,7 +538,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     HighsIisInfo iis_info;
     iis_info.simplex_time = -highs.getRunTime();
     iis_info.simplex_iterations = -info.simplex_iteration_count;
-    run_status = highs.run();
+    run_status = highs.optimizeModel();
     assert(run_status == HighsStatus::kOk);
     if (run_status != HighsStatus::kOk) return run_status;
     HighsModelStatus model_status = highs.getModelStatus();
@@ -554,7 +554,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       highs.getOptionValue("simplex_strategy", simplex_strategy);
       highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
       // Solve the LP
-      run_status = highs.run();
+      run_status = highs.optimizeModel();
       if (run_status != HighsStatus::kOk) return run_status;
       highs.writeSolution("", kSolutionStylePretty);
       const HighsInt* basic_index = highs.getBasicVariablesArray();
@@ -1068,7 +1068,12 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
   h.setOptionValue("output_flag", false);
   h.passModel(iis_lp);
   h.writeModel("");
-  h.run();
+  HighsStatus status = h.optimizeModel();
+  if (status != HighsStatus::kOk) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "HighsIis: Solve failure for IIS LP\n");
+    return lpOkReturn(false);
+  }
   if (h.getModelStatus() != HighsModelStatus::kInfeasible) {
     highsLogUser(log_options, HighsLogType::kError,
                  "HighsIis: IIS LP is not infeasible\n");
@@ -1077,7 +1082,7 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
   if (!(this->status_ == kIisModelStatusIrreducible)) return lpOkReturn(true);
   auto optimal = [&]() -> bool {
     if (options.log_dev_level > 0) h.writeModel("");
-    h.run();
+    h.optimizeModel();
     return h.getModelStatus() == HighsModelStatus::kOptimal;
   };
   for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {

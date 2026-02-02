@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nuget", "nuget", "{2A18E756-48A1-E247-9A68-57B5E8CBE245}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Highs", "nuget\Highs.csproj", "{906CCF22-9F98-849C-F4C4-760DF67E239A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{906CCF22-9F98-849C-F4C4-760DF67E239A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{906CCF22-9F98-849C-F4C4-760DF67E239A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{906CCF22-9F98-849C-F4C4-760DF67E239A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{906CCF22-9F98-849C-F4C4-760DF67E239A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{906CCF22-9F98-849C-F4C4-760DF67E239A} = {2A18E756-48A1-E247-9A68-57B5E8CBE245}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {05C70795-E2D1-45F6-A7CE-1735EABD2EA4}
+	EndGlobalSection
+EndGlobal

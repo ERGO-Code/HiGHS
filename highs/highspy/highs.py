@@ -5,6 +5,7 @@ from numbers import Integral
 from itertools import product
 from threading import Thread, local, RLock, Lock
 from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast, Union, Tuple
+from weakref import proxy
 
 from ._core import (
     ObjSense,
@@ -81,7 +82,7 @@ class Highs(_Highs):
                 self.__solver_started.acquire(True)
             finally:
                 self.__solver_started.release()
-                return t
+            return t
         else:
             raise Exception("Solver is already running.")
 
@@ -1446,7 +1447,7 @@ class HighsCallback(object):
         self.callbacks: list[Callable[[HighsCallbackEvent], None]] = []
         self.user_callback_data: list[Any] = []
         self.callback_type = callback_type
-        self.highs = highs
+        self.highs = proxy(highs) # to avoid circular reference
 
     def subscribe(
         self,
@@ -1617,7 +1618,7 @@ class highs_var(object):
 
     def __init__(self, i: int, highs: Highs):
         self.index = i
-        self.highs = highs
+        self.highs = proxy(highs) # to avoid circular reference
 
     def __repr__(self):
         return f"highs_var({self.index})"
@@ -1711,7 +1712,7 @@ class highs_cons(object):
 
     def __init__(self, i: int, highs: Highs):
         self.index = i
-        self.highs = highs
+        self.highs = proxy(highs) # to avoid circular reference
 
     def __repr__(self):
         return f"highs_cons({self.index})"

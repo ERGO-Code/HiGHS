@@ -71,7 +71,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       my_fractionality = fractionality(lpSolution.row_value[row]);
     } else {
       HighsInt col = basisinds[i];
-      if (mip.variableType(col) == HighsVarType::kContinuous) continue;
+      if (mip.isColContinuous(col)) continue;
 
       my_fractionality = fractionality(lpSolution.col_value[col]);
     }
@@ -188,6 +188,9 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   HighsInt numCuts = cutpool.getNumCuts();
   const double bestScoreFac[] = {0.0025, 0.01};
+  const bool genFlowCover =
+      mip.mipdata_->num_nodes - mip.mipdata_->num_nodes_before_run == 0 &&
+      !mip.submip;
 
   for (const auto& fracvar : fractionalBasisvars) {
     if (cutpool.getNumCuts() - numCuts >= 1000) break;
@@ -229,12 +232,12 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         baseRowInds.size());
 
     double rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, false);
+    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, genFlowCover);
     if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
     rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, false);
+    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, genFlowCover);
     if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.clear();

@@ -14,7 +14,7 @@
 
 #include <cassert>
 
-#include "CLI11.hpp"
+#include "../extern/CLI11.hpp"
 #include "HConfig.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"

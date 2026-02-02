@@ -672,49 +672,50 @@ bool HighsTransformedLp::transformSNFRelaxation(
     double complorigbincoef = complement ? -origbincoef : origbincoef;
     double vbconstant = complement ? vb.constant + vb.coef : vb.constant;
     double vbcoef = complement ? -vb.coef : vb.coef;
-    double val;
+    double val1;
+    double val2;
 
     if (isVub) {
-      val = sign * (coef * vbcoef + complorigbincoef);
-      if (val > kHighsInf) return false;
-      if (val < 0) {
-        val = sign * (coef * vbcoef);
-        if (val < 0) return false;
+      val1 = sign * (coef * vbcoef + complorigbincoef);
+      if (val1 > kHighsInf) return false;
+      if (val1 < 0) {
+        val1 -= sign * complorigbincoef;
+        if (val1 < 0) return false;
         inclbincoef = false;
       }
       if (inclbincoef) {
-        val = sign * (coef * (lb - vbconstant) + complorigbincoef);
-        if (val < 0) {
-          val = sign * (coef * (lb - vbconstant));
-          if (val < 0) return false;
+        val2 = sign * (coef * (lb - vbconstant) + complorigbincoef);
+        if (val2 < 0) {
+          val2 -= sign * complorigbincoef;
+          if (val2 < 0) return false;
           inclbincoef = false;
-          val = sign * (coef * vbcoef);
-          if (val < 0) return false;
+          val1 -= sign * complorigbincoef;
+          if (val1 < 0) return false;
         }
       } else {
-        val = sign * (coef * (lb - vbconstant));
-        if (val < 0) return false;
+        val2 = sign * (coef * (lb - vbconstant));
+        if (val2 < 0) return false;
       }
     } else {
-      val = sign * (coef * vbcoef + complorigbincoef);
-      if (-val > kHighsInf) return false;
-      if (val > 0) {
-        val = sign * (coef * vbcoef);
-        if (val > 0) return false;
+      val1 = sign * (coef * vbcoef + complorigbincoef);
+      if (-val1 > kHighsInf) return false;
+      if (val1 > 0) {
+        val1 -= sign * complorigbincoef;
+        if (val1 > 0) return false;
         inclbincoef = false;
       }
       if (inclbincoef) {
-        val = sign * (coef * (ub - vbconstant) + complorigbincoef);
-        if (val > 0) {
-          val = sign * (coef * (ub - vbconstant));
-          if (val > 0) return false;
+        val2 = sign * (coef * (ub - vbconstant) + complorigbincoef);
+        if (val2 > 0) {
+          val2 -= sign * complorigbincoef;
+          if (val2 > 0) return false;
           inclbincoef = false;
-          val = sign * (coef * vbcoef);
-          if (val > 0) return false;
+          val1 -= sign * complorigbincoef;
+          if (val1 > 0) return false;
         }
       } else {
-        val = sign * (coef * (ub - vbconstant));
-        if (val > 0) return false;
+        val2 = sign * (coef * (ub - vbconstant));
+        if (val2 > 0) return false;
       }
     }
 

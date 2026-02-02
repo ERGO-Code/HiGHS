@@ -434,16 +434,16 @@
 - Type: string
 - Default: "both"
 
+## [hipo\_ordering](@id option-hipo-ordering)
+- HiPO matrix reordering: "metis", "amd", "rcm" or "choose"
+- Type: string
+- Default: "choose"
+
 ## hipo\_block\_size
 - Block size for dense linear algebra within HiPO
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 128
-
-## [hipo\_metis\_no2hop](@id option-hipo-metis-no2hop)
-- Set option no2hop in Metis when using HiPO
-- Type: boolean
-- Default: false
 
 ## pdlp\_scaling
 - Scaling option for PDLP solver: Default = true

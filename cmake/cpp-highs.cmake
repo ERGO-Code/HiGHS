@@ -50,13 +50,19 @@ install(FILES ${PROJECT_BINARY_DIR}/highs_export.h
 
 string (TOLOWER ${PROJECT_NAME} lower)
 
+# install(RUNTIME_DEPENDENCY_SET highs_runtime_deps
+#     DESTINATION ${CMAKE_INSTALL_BINDIR}
+# )
+
 install(TARGETS highs
     EXPORT ${lower}-targets
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-      
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    # RUNTIME_DEPENDENCY_SET highs_runtime_deps
+    COMPONENT libs)
+
 if (NOT HIGHS_COVERAGE)
   # Add library targets to the build-tree export set
   export(TARGETS highs
@@ -70,11 +76,29 @@ if (CUPDLP_GPU)
       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-      
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      COMPONENT libs)
+
   if (NOT HIGHS_COVERAGE)
     # Add library targets to the build-tree export set
     export(TARGETS cudalin
+      NAMESPACE ${PROJECT_NAMESPACE}::
+      APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+  endif()
+endif()
+
+if (BUILD_OPENBLAS)
+  install(TARGETS ${_openblas_target}
+      EXPORT ${lower}-targets
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      COMPONENT libs)
+
+  if (NOT HIGHS_COVERAGE)
+    # Add library targets to the build-tree export set
+    export(TARGETS ${_openblas_target}
       NAMESPACE ${PROJECT_NAMESPACE}::
       APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
   endif()
@@ -91,10 +115,10 @@ endif()
 if(ZLIB AND ZLIB_FOUND)
   set(CONF_Z "find_dependency(ZLIB)")
   set(CONF_ZLIB ${CONF_Z})
-else() 
+else()
   set(CONF_ZLIB "")
 endif()
-    
+
 
 include(CMakePackageConfigHelpers)
 string (TOUPPER "${PROJECT_NAME}" PACKAGE_PREFIX)

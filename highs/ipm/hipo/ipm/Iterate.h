@@ -31,7 +31,7 @@ struct Residuals {
 
 struct Iterate {
   // lp model
-  const Model* model;
+  const Model& model;
 
   // record of data at each iteration
   IpmData data;

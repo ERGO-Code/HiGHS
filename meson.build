@@ -163,7 +163,6 @@ endif
 _incdirs += include_directories([
   'extern/',
   'extern/pdqsort/',
-  'extern/filereaderlp/',
 ])
 
 # Optional arguments

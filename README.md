@@ -39,6 +39,8 @@
   - [Fortran](#fortran)
 - [Reference](#reference)
 
+<a id="about-highs"></a>
+
 ## About HiGHS
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
@@ -54,11 +56,17 @@ Find out more about HiGHS at https://www.highs.dev.
 
 Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
+<a id="documentation"></a>
+
 ## Documentation
 
 Documentation is available at https://ergo-code.github.io/HiGHS/.
 
+<a id="installation"></a>
+
 ## Installation
+
+<a id="build-from-source-using-cmake"></a>
 
 ### Build from source using CMake
 
@@ -77,6 +85,8 @@ To test whether the compilation was successful, change into the build directory 
 ```
 More details on building with CMake can be found in `HiGHS/cmake/README.md`.
 
+<a id="build-with-meson"></a>
+
 #### Build with Meson
 
 As an alternative, HiGHS can be installed using the `meson` build interface:
@@ -85,6 +95,8 @@ meson setup bbdir -Dwith_tests=True
 meson test -C bbdir
 ```
 _The meson build files are provided by the community and are not officially supported by the HiGHS development team._ **If you use this method and encounter issues, please consider contributing fixes or updates by checking the [HiGHS Contribution Guide](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md).**
+
+<a id="build-with-nix"></a>
 
 #### Build with Nix
 
@@ -120,14 +132,20 @@ python
 
 _The nix build files are provided by the community and are not officially supported by the HiGHS development team._
 
+<a id="precompiled-binaries"></a>
+
 ### Precompiled binaries
 
-Precompiled static executables are available for a variety of platforms at
-https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
+From v1.13.0 onwards, precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
 
-_These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
+Additionally, there is one package containing shared libraries for Windows x64.
 
-See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
+The `*-mit` binary packages contain HiGHS and are MIT-licenced.
+The `*-apache` binary packages contain HiGHS with HiPO and are Apache-licenced, due to the licensing of the dependencies of HiPO. For more information, see [THIRD_PARTY_NOTICES.md](https://github.com/ERGO-Code/HiGHS/blob/master/THIRD_PARTY_NOTICES.md).
+
+If you have any questions or requests for more platforms and binaries, please get in touch with us at hello@highs.dev.
+
+<a id="running-highs"></a>
 
 ## Running HiGHS
 
@@ -185,11 +203,15 @@ options:
 ```
 For a full list of options, see the [options page](https://ergo-code.github.io/HiGHS/stable/options/definitions/) of the documentation website.
 
+<a id="interfaces"></a>
+
 ## Interfaces
 
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in `HiGHS/highs/interfaces`, with example driver files in `HiGHS/examples/`. More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/stable/interfaces/other/.
 
 We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
+
+<a id="python"></a>
 
 ### Python
 
@@ -212,8 +234,12 @@ The installation can be tested using the small example `HiGHS/examples/call_high
 
 The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) also demonstrates how to call `highspy`.
 
+<a id="c"></a>
+
 ### C
 The C API is in `HiGHS/highs/interfaces/highs_c_api.h`. It is included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
+
+<a id="csharp"></a>
 
 ### CSharp
 
@@ -236,10 +262,14 @@ The nuget package contains runtime libraries for
 
 Details for building locally can be found in `nuget/README.md`.
 
+<a id="fortran"></a>
+
 ### Fortran
 
 The Fortran API is in `HiGHS/highs/interfaces/highs_fortran_api.f90`. It is *not* included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
 
+
+<a id="reference"></a>
 
 ## Reference
 

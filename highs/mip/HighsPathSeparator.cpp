@@ -88,7 +88,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     HighsInt col = -1;
     double val = 0.0;
     for (HighsInt j = 0; j != len; ++j) {
-      if (mip.variableType(rowinds[j]) != HighsVarType::kContinuous) continue;
+      if (mip.isColIntegral(rowinds[j])) continue;
       if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
       col = rowinds[j];
       val = rowvals[j];
@@ -96,7 +96,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     assert(col != -1);
-    assert(mip.variableType(col) == HighsVarType::kContinuous);
+    assert(mip.isColContinuous(col));
     assert(transLp.boundDistance(col) > 0.0);
 
     if (colSubstitutions[col].first != -1) continue;
@@ -164,6 +164,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     colOutArcs[col].second = outArcRows.size();
   }
 
+  const bool genFlowCover =
+      mip.mipdata_->num_nodes - mip.mipdata_->num_nodes_before_run == 0 &&
+      !mip.submip;
   HighsCutGeneration cutGen(lpRelaxation, cutpool);
   std::vector<HighsInt> baseRowInds;
   std::vector<double> baseRowVals;
@@ -351,7 +354,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         // generate cut
         double rhs = 0;
         success = cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs,
-                                     false, true);
+                                     false, genFlowCover);
 
         lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
         if (!aggregatedPath.empty() || bestOutArcCol != -1 ||
@@ -361,7 +364,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         // generate reverse cut
         rhs = 0;
         success |= cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs,
-                                      false, true);
+                                      false, genFlowCover);
 
         if (success || (bestOutArcCol == -1 && bestInArcCol == -1)) break;
 

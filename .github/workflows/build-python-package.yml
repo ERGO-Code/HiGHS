@@ -15,7 +15,7 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install build 
+          python3 -m pip install build
           python3 -m build --sdist
 
       - name: Install sdist
@@ -27,7 +27,7 @@ jobs:
         run: |
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE
-          
+
   build_sdist_mac:
     runs-on: macos-latest
     steps:
@@ -72,13 +72,14 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest 
-             
+          python -m pytest
+
   build_wheel_linux:
     runs-on: ubuntu-24.04
     strategy:
         matrix:
-          python: [3.11]
+          python: [3.14]
+
     steps:
       - uses: actions/checkout@v4
 
@@ -91,7 +92,7 @@ jobs:
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp311-manylinux_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp314-manylinux_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
@@ -136,7 +137,7 @@ jobs:
     runs-on: macos-15-intel
     strategy:
       matrix:
-        python: [3.11]    
+        python: [3.11]
     steps:
       - uses: actions/checkout@v4
 
@@ -161,12 +162,12 @@ jobs:
         run: |
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE
-            
+
   build_wheel_macos_arm:
     runs-on: macos-14  # macos-14 is arm64
     strategy:
       matrix:
-        python: [3.11]    
+        python: [3.11]
     steps:
       - uses: actions/checkout@v4
 
@@ -200,12 +201,12 @@ jobs:
       - name: Install correct python version
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.14
 
       - name: Build wheel
         run: |
           python -m pip install cibuildwheel
-          python -m cibuildwheel --only cp39-win_amd64 $GITHUB_WORKSPACE
+          python -m cibuildwheel --only cp314-win_amd64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
@@ -217,8 +218,8 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest 
-          
+          python -m pytest
+
   build_wheel_windows_313:
     runs-on: windows-2022
     steps:
@@ -244,5 +245,4 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest 
-          
+          python -m pytest

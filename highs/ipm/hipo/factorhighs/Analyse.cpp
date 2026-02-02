@@ -9,16 +9,11 @@
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "ReturnValues.h"
+#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
-
-// define correct int type for Metis before header is included
-#ifdef HIGHSINT64
-#define IDXTYPEWIDTH 64
-#else
-#define IDXTYPEWIDTH 32
-#endif
-#include "metis.h"
+#include "metis/metis.h"
+#include "rcm/rcm.h"
 
 namespace hipo {
 
@@ -27,8 +22,8 @@ const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
                  const std::vector<Int>& signs, Int nb, const Log* log,
-                 DataCollector& data)
-    : log_{log}, data_{data} {
+                 DataCollector& data, const std::string& ordering)
+    : log_{log}, data_{data}, ordering_{ordering} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
   // ptr contains the starting points of each column.
@@ -66,14 +61,14 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   ready_ = true;
 }
 
-Int Analyse::getPermutation(bool metis_no2hop) {
-  // Use Metis to compute a nested dissection permutation of the original matrix
+Int Analyse::getPermutation() {
+  // Compute fill-reducing reodering using metis, amd or rcm.
 
   perm_.resize(n_);
   iperm_.resize(n_);
 
-  // Build temporary full copy of the matrix, to be used for Metis.
-  // NB: Metis adjacency list should not contain the vertex itself, so diagonal
+  // Build temporary full copy of the matrix, to be used for reordering.
+  // NB: adjacency list should not contain the vertex itself, so diagonal
   // element is skipped.
 
   std::vector<Int> work(n_, 0);
@@ -98,7 +93,7 @@ Int Analyse::getPermutation(bool metis_no2hop) {
   }
 
   if (total_nz > kHighsIInf) {
-    if (log_) log_->printe("Integer overflow while preparing Metis\n");
+    if (log_) log_->printe("Integer overflow while computing ordering.\n");
     return kRetIntOverflow;
   }
 
@@ -122,27 +117,72 @@ Int Analyse::getPermutation(bool metis_no2hop) {
     }
   }
 
-  idx_t options[METIS_NOPTIONS];
-  METIS_SetDefaultOptions(options);
-  options[METIS_OPTION_SEED] = kMetisSeed;
+  if (ordering_ == "metis") {
+    // ----------------------------
+    // ----- METIS ----------------
+    // ----------------------------
+    idx_t options[METIS_NOPTIONS];
+    METIS_SetDefaultOptions(options);
+    options[METIS_OPTION_SEED] = kMetisSeed;
 
-  // set logging of Metis depending on debug level
-  options[METIS_OPTION_DBGLVL] = 0;
-  if (log_->debug(2))
-    options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
+    // set logging of Metis depending on debug level
+    options[METIS_OPTION_DBGLVL] = 0;
+    if (log_->debug(2))
+      options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
 
-  // set no2hop=1 if the user requested it
-  if (metis_no2hop) options[METIS_OPTION_NO2HOP] = 1;
+    // no2hop improves the quality of ordering in general
+    options[METIS_OPTION_NO2HOP] = 1;
 
-  if (log_) log_->printDevInfo("Running Metis\n");
+    if (log_) log_->printDevInfo("Running Metis\n");
 
-  Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
-                            options, perm_.data(), iperm_.data());
+    Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
+                              options, perm_.data(), iperm_.data());
 
-  if (log_) log_->printDevInfo("Metis done\n");
-  if (status != METIS_OK) {
-    if (log_) log_->printDevInfo("Error with Metis\n");
-    return kRetMetisError;
+    if (log_) log_->printDevInfo("Metis done\n");
+    if (status != METIS_OK) {
+      if (log_) log_->printDevInfo("Error with Metis\n");
+      return kRetOrderingError;
+    }
+
+  } else if (ordering_ == "amd") {
+    // ----------------------------
+    // ------ AMD -----------------
+    // ----------------------------
+    double control[AMD_CONTROL];
+    amd_defaults(control);
+    double info[AMD_INFO];
+
+    if (log_) log_->printDevInfo("Running AMD\n");
+    Int status = amd_order(n_, temp_ptr.data(), temp_rows.data(), perm_.data(),
+                           control, info);
+    if (log_) log_->printDevInfo("AMD done\n");
+
+    if (status != AMD_OK) {
+      if (log_) log_->printDevInfo("Error with AMD\n");
+      return kRetOrderingError;
+    }
+    inversePerm(perm_, iperm_);
+  }
+
+  else if (ordering_ == "rcm") {
+    // ----------------------------
+    // ------ RCM -----------------
+    // ----------------------------
+
+    if (log_) log_->printDevInfo("Running RCM\n");
+    Int status = genrcm(n_, temp_ptr.back(), temp_ptr.data(), temp_rows.data(),
+                        perm_.data());
+    if (log_) log_->printDevInfo("RCM done\n");
+
+    if (status != 0) {
+      if (log_) log_->printDevInfo("Error with RCM\n");
+      return kRetOrderingError;
+    }
+    inversePerm(perm_, iperm_);
+
+  } else {
+    if (log_) log_->printe("Invalid ordering option passed to Analyse\n");
+    return kRetOrderingError;
   }
 
   return kRetOk;
@@ -1255,70 +1295,40 @@ Int Analyse::run(Symbolic& S) {
 
   if (!ready_) return kRetGeneric;
 
-#if HIPO_TIMING_LEVEL >= 1
-  Clock clock_total;
-#endif
+  HIPO_CLOCK_CREATE;
 
-#if HIPO_TIMING_LEVEL >= 2
-  Clock clock_items;
-#endif
-  if (getPermutation(S.metisNo2hop())) return kRetMetisError;
-#if HIPO_TIMING_LEVEL >= 2
-  data_.sumTime(kTimeAnalyseMetis, clock_items.stop());
-#endif
+  HIPO_CLOCK_START(2);
+  if (getPermutation()) return kRetOrderingError;
+  HIPO_CLOCK_STOP(2, data_, kTimeAnalyseMetis);
 
-#if HIPO_TIMING_LEVEL >= 2
-  clock_items.start();
-#endif
+  HIPO_CLOCK_START(2);
   permute(iperm_);
   eTree();
   postorder();
-#if HIPO_TIMING_LEVEL >= 2
-  data_.sumTime(kTimeAnalyseTree, clock_items.stop());
-#endif
+  HIPO_CLOCK_STOP(2, data_, kTimeAnalyseTree);
 
-#if HIPO_TIMING_LEVEL >= 2
-  clock_items.start();
-#endif
+  HIPO_CLOCK_START(2);
   colCount();
-#if HIPO_TIMING_LEVEL >= 2
-  data_.sumTime(kTimeAnalyseCount, clock_items.stop());
-#endif
+  HIPO_CLOCK_STOP(2, data_, kTimeAnalyseCount);
 
-#if HIPO_TIMING_LEVEL >= 2
-  clock_items.start();
-#endif
+  HIPO_CLOCK_START(2);
   fundamentalSupernodes();
   relaxSupernodes();
   afterRelaxSn();
-#if HIPO_TIMING_LEVEL >= 2
-  data_.sumTime(kTimeAnalyseSn, clock_items.stop());
-#endif
+  HIPO_CLOCK_STOP(2, data_, kTimeAnalyseSn);
 
-#if HIPO_TIMING_LEVEL >= 2
-  clock_items.start();
-#endif
+  HIPO_CLOCK_START(2);
   reorderChildren();
-#if HIPO_TIMING_LEVEL >= 2
-  data_.sumTime(kTimeAnalyseReorder, clock_items.stop());
-#endif
+  HIPO_CLOCK_STOP(2, data_, kTimeAnalyseReorder);
 
-#if HIPO_TIMING_LEVEL >= 2
-  clock_items.start();
-#endif
+  HIPO_CLOCK_START(2);
   snPattern();
-#if HIPO_TIMING_LEVEL >= 2
-  data_.sumTime(kTimeAnalysePattern, clock_items.stop());
-#endif
+  HIPO_CLOCK_STOP(2, data_, kTimeAnalysePattern);
 
-#if HIPO_TIMING_LEVEL >= 2
-  clock_items.start();
-#endif
+  HIPO_CLOCK_START(2);
   relativeIndCols();
   relativeIndClique();
-#if HIPO_TIMING_LEVEL >= 2
-  data_.sumTime(kTimeAnalyseRelInd, clock_items.stop());
-#endif
+  HIPO_CLOCK_STOP(2, data_, kTimeAnalyseRelInd);
 
   computeBlockStart();
   computeCriticalPath();
@@ -1338,6 +1348,7 @@ Int Analyse::run(Symbolic& S) {
   S.flops_ = dense_ops_;
   S.block_size_ = nb_;
   S.max_stack_size_ = max_stack_size_;
+  S.ordering = ordering_;
 
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());
@@ -1370,11 +1381,7 @@ Int Analyse::run(Symbolic& S) {
   S.consecutive_sums_ = std::move(consecutive_sums_);
   S.clique_block_start_ = std::move(clique_block_start_);
 
-#if HIPO_TIMING_LEVEL >= 1
-  data_.sumTime(kTimeAnalyse, clock_total.stop());
-#else
-  (void)data_;  // to avoid an unused-private-field warning
-#endif
+  HIPO_CLOCK_STOP(1, data_, kTimeAnalyse);
 
   return kRetOk;
 }

@@ -321,6 +321,10 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
                             HighsInt* sub_matrix_index,
                             double* sub_matrix_value);
 
+std::string highsVarTypeToString(const HighsVarType type);
+std::string highsVarTypeToString(const HighsInt type);
+
 void initialiseUserScaleData(const HighsOptions& options,
                              HighsUserScaleData& user_scale_data);
+
 #endif  // LP_DATA_HIGHSLPUTILS_H_

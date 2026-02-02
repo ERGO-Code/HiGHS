@@ -66,6 +66,9 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    std::vector<double>& Ax, std::vector<double>& rhs,
                    std::vector<char>& constraint_type);
 
+void fillInRhsAndConstraints(const HighsLp& lp, std::vector<double>& rhs,
+                             std::vector<char>& constraint_type);
+
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,
                                  const ipx::Int solve_status,
                                  const ipx::Int error_flag);

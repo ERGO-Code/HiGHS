@@ -1,0 +1,324 @@
+name: hipo
+
+on: [push, pull_request]
+
+jobs:
+  win-vcpkg:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Release, Debug]
+        all_tests: [OFF]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout metis overlay ports
+        uses: actions/checkout@v4
+        with:
+          repository: galabovaa/metis-overlay-ports
+          ref: main
+          path: overlay-ports
+
+      - name: List overlay contents
+        shell: pwsh
+        run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/overlay-ports"
+
+      - name: Install metis with overlay port
+        shell: pwsh
+        run: |
+          vcpkg install metis gklib `
+          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/metis" `
+          --overlay-ports="$env:GITHUB_WORKSPACE/overlay-ports/ports/gklib"
+
+      - name: Install OpenBLAS
+        shell: pwsh
+        run: vcpkg install openblas[threads]
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake `
+          -S "$env:GITHUB_WORKSPACE" `
+          -B "${{ runner.workspace }}/build" `
+          -DHIPO=ON `
+          -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+          -DALL_TESTS=${{ matrix.all_tests }}
+
+      - name: Build
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel --config ${{ matrix.config }}
+
+      - name: Test executable
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
+      - name: Ctest
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Release, Debug]
+        all_tests: [ON, OFF]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  ubuntu_gh:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Release, Debug]
+        all_tests: [OFF]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout GKlib
+        uses: actions/checkout@v4
+        with:
+          repository: KarypisLab/GKlib
+          ref: master
+          path: GKlib
+
+      - name: Checkout METIS
+        uses: actions/checkout@v4
+        with:
+          repository: KarypisLab/METIS
+          ref: master
+          path: METIS
+
+      - name: Create installs dir
+        working-directory: ${{runner.workspace}}
+        run: |
+          mkdir installs
+          ls
+
+      - name: Install GKlib
+        run: |
+          cd GKlib
+          make config shared=1 prefix=${{runner.workspace}}/installs
+          make
+          make install
+
+      # - name: Check installs
+      #   working-directory: ${{runner.workspace}}
+      #   run: |
+      #     cd installs
+      #     ls
+      #     ls lib
+
+      - name: Copy GKlib shared (bug)
+        working-directory: ${{runner.workspace}}
+        run: |
+          cd installs
+          cd lib
+          ln libGKlib.so.0 libGKlib.so
+          ls
+
+      - name: Install METIS
+        run: |
+          cd METIS
+          make config shared=1 prefix=${{runner.workspace}}/installs
+          make
+          make install
+
+      # no default blas available on runner
+
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-apt-libopenblas
+
+      - name: Install OpenBLAS
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install libopenblas-dev
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }} \
+          -DMETIS_ROOT=${{runner.workspace}}/installs \
+          -DGKLIB_ROOT=${{runner.workspace}}/installs
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  ubuntu_cblas:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # config: [Release, Debug]
+        config: [Release]
+        all_tests: [OFF]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install BLAS
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install libblas-dev
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  ubuntu_debug:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        config: [Debug]
+        all_tests: [ON]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+            -DALL_TESTS=${{ matrix.all_tests }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . -j2
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  windows_debug:
+    runs-on: [windows-latest]
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug]
+        all_tests: [ON]
+        arch: ["x64"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake `
+          -S "$env:GITHUB_WORKSPACE" `
+          -B "${{ runner.workspace }}/build" `
+          -A ${{ matrix.arch }} `
+          -DHIPO=ON `
+          -DALL_TESTS=${{ matrix.all_tests }} `
+          -DBUILD_OPENBLAS=ON
+
+      - name: Build
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel --config ${{ matrix.config }}
+
+      - name: Test executable
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
+      - name: Ctest
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}

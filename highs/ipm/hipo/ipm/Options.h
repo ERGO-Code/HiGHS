@@ -40,9 +40,7 @@ struct Options {
   OptionNla nla = kOptionNlaDefault;
   OptionCrossover crossover = kOptionCrossoverDefault;
   OptionParallel parallel = kOptionParallelDefault;
-
-  // Metis options
-  bool metis_no2hop = false;
+  std::string ordering = kHighsChooseString;
 
   // Ipm parameters
   Int max_iter = kMaxIterDefault;

@@ -36,8 +36,9 @@ void FHsolver::setRegularisation(double reg_p, double reg_d) {
 
 Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
                       const std::vector<Int>& ptr,
-                      const std::vector<Int>& signs) {
-  Analyse an_obj(rows, ptr, signs, nb_, log_, data_);
+                      const std::vector<Int>& signs,
+                      const std::string& ordering) {
+  Analyse an_obj(rows, ptr, signs, nb_, log_, data_, ordering);
   return an_obj.run(S);
 }
 

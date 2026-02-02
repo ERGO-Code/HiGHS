@@ -14,10 +14,6 @@ void Symbolic::setParallel(bool par_tree, bool par_node) {
   parallel_node_ = par_node;
 }
 
-void Symbolic::setMetisNo2hop(bool metis_no2hop) {
-  metis_no2hop_ = metis_no2hop;
-}
-
 Int64 Symbolic::nz() const { return nz_; }
 double Symbolic::flops() const { return flops_; }
 double Symbolic::spops() const { return spops_; }
@@ -44,7 +40,6 @@ Int64 Symbolic::cliqueSize(Int sn) const {
 Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
 bool Symbolic::parTree() const { return parallel_tree_; }
 bool Symbolic::parNode() const { return parallel_node_; }
-bool Symbolic::metisNo2hop() const { return metis_no2hop_; }
 double Symbolic::storage() const { return serial_storage_; }
 
 const std::vector<Int64>& Symbolic::ptr() const { return ptr_; }
@@ -77,6 +72,7 @@ void Symbolic::print(const Log& log, bool verbose) const {
   log_stream << textline("Serial memory:") << memoryString(serial_storage_)
              << '\n';
   log_stream << textline("Flops:") << sci(flops_, 0, 1) << '\n';
+  log_stream << textline("Ordering:") << ordering << '\n';
   if (verbose) {
     log_stream << textline("Sparse ops:") << sci(spops_, 0, 1) << '\n';
     log_stream << textline("Critical ops:") << sci(critops_, 0, 1) << '\n';

@@ -35,6 +35,9 @@ const Int kMinNumberSn = 10;
 const double kLargeStorageGB = 20.0;
 const double kLargeFillin = 50.0;
 
+// parameters for choice of ordering
+const double kFlopsOrderingThresh = 1.2;
+
 // parameters for dense columns
 const double kDenseColThresh = 0.5;
 const Int kMinRowsForDensity = 2000;

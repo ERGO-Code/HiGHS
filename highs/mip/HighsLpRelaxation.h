@@ -211,7 +211,7 @@ class HighsLpRelaxation {
 
   bool isColIntegral(HighsInt col) const {
     return col < lpsolver.getLp().num_col_
-               ? mipsolver.variableType(col) != HighsVarType::kContinuous
+               ? mipsolver.isColIntegral(col)
                : isRowIntegral(col - lpsolver.getLp().num_col_);
   }
 

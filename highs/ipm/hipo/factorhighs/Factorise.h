@@ -14,11 +14,11 @@ namespace hipo {
 class Factorise {
  public:
   // matrix to factorise
-  std::vector<Int> rowsA_{};
-  std::vector<Int> ptrA_{};
-  std::vector<double> valA_{};
+  std::vector<Int> rowsM_{};
+  std::vector<Int> ptrM_{};
+  std::vector<double> valM_{};
   Int n_{};
-  Int nzA_{};
+  Int nzM_{};
 
   // symbolic factorisation
   const Symbolic& S_;
@@ -51,7 +51,7 @@ class Factorise {
   // largest diagonal element in the original matrix and norms of columns
   double max_diag_{};
   double min_diag_{};
-  double A_norm1_{};
+  double M_norm1_{};
 
   // regularisation
   std::vector<double> total_reg_{};
@@ -60,7 +60,7 @@ class Factorise {
   const Regul& regul_;
 
   // flag to stop computation
-  bool flag_stop_ = false;
+  std::atomic<bool> flag_stop_{false};
 
   const Log* log_;
   DataCollector& data_;
@@ -72,8 +72,8 @@ class Factorise {
   void processSupernode(Int sn);
 
  public:
-  Factorise(const Symbolic& S, const std::vector<Int>& rowsA,
-            const std::vector<Int>& ptrA, const std::vector<double>& valA,
+  Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
+            const std::vector<Int>& ptrM, const std::vector<double>& valM,
             const Regul& regul, const Log* log, DataCollector& data,
             std::vector<std::vector<double>>& sn_columns, CliqueStack* stack);
 

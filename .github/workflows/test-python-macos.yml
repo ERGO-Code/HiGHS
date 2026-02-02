@@ -8,7 +8,8 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
-        python: [3.11]
+        python: [3.12, 3.14]
+
     steps:
       - uses: actions/checkout@v4
       - name: Install correct python version
@@ -16,13 +17,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install build dependencies
-        run: python3 -m pip install numpy setuptools wheel pytest 
-  
+      - name: Install pytest
+        run: python3 -m pip install pytest
+
       - name: Test Python Interface
         run: |
           python3 -m pip install .
-          pytest -v 
+          pytest -v
 
       - name: Test Python Examples
         run: |

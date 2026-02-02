@@ -18,7 +18,11 @@
 #include "util/HighsInt.h"
 
 const std::string kHighsCopyrightStatement =
-    "Copyright (c) 2025 HiGHS under MIT licence terms";
+#ifdef HIPO
+    "Copyright (c) 2026 under Apache 2.0 license terms";
+#else
+    "Copyright (c) 2026 under MIT licence terms";
+#endif
 
 const size_t kHighsSize_tInf = (std::numeric_limits<size_t>::max)();
 const HighsInt kHighsIInf = (std::numeric_limits<HighsInt>::max)();
@@ -274,7 +278,8 @@ enum PresolveRuleType : int {
   kPresolveRuleParallelRowsAndCols,
   kPresolveRuleSparsify,
   kPresolveRuleProbing,
-  kPresolveRuleMax = kPresolveRuleProbing,
+  kPresolveRuleEnumeration,
+  kPresolveRuleMax = kPresolveRuleEnumeration,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };
@@ -293,7 +298,7 @@ enum IisStrategy : int {
                     kIisStrategyRelaxation
 };
 
-enum IisStatus {
+enum IisStatus : int {
   kIisStatusMin = -1,
   kIisStatusNotInConflict = kIisStatusMin,  // -1
   kIisStatusMaybeInConflict,                // 0
@@ -303,8 +308,10 @@ enum IisStatus {
 
 enum SubSolverIndex : int {
   kSubSolverMip = 0,
-  kSubSolverSimplexBasis,
-  kSubSolverSimplexNoBasis,
+  kSubSolverDuSimplexBasis,
+  kSubSolverDuSimplexNoBasis,
+  kSubSolverPrSimplexBasis,
+  kSubSolverPrSimplexNoBasis,
   kSubSolverHipo,
   kSubSolverIpx,
   kSubSolverHipoAc,

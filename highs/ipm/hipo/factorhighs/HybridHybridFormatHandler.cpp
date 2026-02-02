@@ -25,7 +25,9 @@ HybridHybridFormatHandler::HybridHybridFormatHandler(
 void HybridHybridFormatHandler::initFrontal() {
   const Int n_blocks = (sn_size_ - 1) / nb_ + 1;
   diag_start_.resize(n_blocks);
-  Int64 frontal_size = getDiagStart(ldf_, sn_size_, nb_, n_blocks, diag_start_);
+  Int64 frontal_size =
+      getDiagStart(ldf_, sn_size_, nb_, n_blocks, diag_start_) +
+      extra_space_frontal;
   frontal_.resize(frontal_size);
   std::memset(frontal_.data(), 0, frontal_size * sizeof(double));
 
@@ -136,7 +138,7 @@ void HybridHybridFormatHandler::assembleClique(const double* child, Int nc,
 
         // sun consecutive entries in a row.
         // consecutive need to be reduced, to account for edge of the block
-        const Int zeros_stored_row = std::max(0, jb_c - (row - row_start) - 1);
+        const Int zeros_stored_row = std::max((Int)0, jb_c - (row - row_start) - 1);
         Int consecutive = S_->consecutiveSums(child_sn, col);
         const Int left_in_child = col_end - col - zeros_stored_row;
         consecutive = std::min(consecutive, left_in_child);

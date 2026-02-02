@@ -34,3 +34,5 @@ dotnet pack -c Release /p:Version=$version
 ```
 
 At the moment version is set manually.
+
+Many thanks to Markus-Ludwig Wermer and the team at MENTZ GmbH for the NuGet packaging support!
