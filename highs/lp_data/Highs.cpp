@@ -2897,8 +2897,11 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
     return analyseSetCreateError(options_.log_options, "changeColsCost",
                                  create_error, true, num_set_entries,
                                  local_set.data(), model_.lp_.num_col_);
+  // Since we have already done the safety checks that would take place in
+  // changeCostsInterface and created local copies of cost, we can
+  // use the "unchecked" version
   HighsStatus call_status =
-      changeCostsInterface(index_collection, local_cost.data());
+      changeCostsInterfaceUnchecked(index_collection, local_cost);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "changeCosts");
