@@ -1711,9 +1711,15 @@ class Highs {
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_col_lower,
                                        const double* usr_col_upper);
+  // Interface to change row bounds in a general (and safe) way
   HighsStatus changeRowBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
+  // Interface to change row bounds without some safety checks,
+  // but with potential performance boosts
+  HighsStatus changeRowBoundsInterfaceUnchecked(
+      HighsIndexCollection& index_collection,
+      std::vector<double>& usr_row_lower, std::vector<double>& usr_row_upper);
   void changeCoefficientInterface(const HighsInt ext_row,
                                   const HighsInt ext_col,
                                   const double ext_new_value);

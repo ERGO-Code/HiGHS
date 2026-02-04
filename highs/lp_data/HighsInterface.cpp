@@ -1027,16 +1027,23 @@ HighsStatus Highs::changeRowBoundsInterface(
     sortSetData(index_collection.set_num_entries_, index_collection.set_, lower,
                 upper, NULL, local_rowLower.data(), local_rowUpper.data(),
                 NULL);
+  return changeRowBoundsInterfaceUnchecked(index_collection, local_rowLower,
+                                           local_rowUpper);
+}
+
+HighsStatus Highs::changeRowBoundsInterfaceUnchecked(
+    HighsIndexCollection& index_collection, std::vector<double>& lower,
+    std::vector<double>& upper) {
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(
-      options_.log_options,
-      assessBounds(options_, "row", 0, index_collection, local_rowLower,
-                   local_rowUpper, options_.infinite_bound),
-      return_status, "assessBounds");
+  return_status =
+      interpretCallStatus(options_.log_options,
+                          assessBounds(options_, "row", 0, index_collection,
+                                       lower, upper, options_.infinite_bound),
+                          return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
 
-  changeLpRowBounds(lp, index_collection, local_rowLower, local_rowUpper);
+  changeLpRowBounds(lp, index_collection, lower, upper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, false);
