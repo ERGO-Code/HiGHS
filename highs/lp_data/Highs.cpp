@@ -3057,8 +3057,11 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
     return analyseSetCreateError(options_.log_options, "changeRowsBounds",
                                  create_error, true, num_set_entries,
                                  local_set.data(), model_.lp_.num_row_);
-  HighsStatus call_status = changeRowBoundsInterface(
-      index_collection, local_lower.data(), local_upper.data());
+  // Since we have already done the safety checks that would take place in
+  // changeRowBoundsInterface and created local copies of lower/upper, we can
+  // use the "unchecked" version
+  HighsStatus call_status = changeRowBoundsInterfaceUnchecked(
+      index_collection, local_lower, local_upper);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "changeRowBounds");
