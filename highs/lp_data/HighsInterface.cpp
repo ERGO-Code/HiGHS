@@ -912,16 +912,21 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
     return HighsStatus::kError;
   // Take a copy of the cost that can be normalised
   std::vector<double> local_colCost{cost, cost + num_cost};
+  return changeCostsInterfaceUnchecked(index_collection, local_colCost);
+}
+
+HighsStatus Highs::changeCostsInterfaceUnchecked(
+    HighsIndexCollection& index_collection, std::vector<double>& cost) {
   HighsStatus return_status = HighsStatus::kOk;
   bool local_has_infinite_cost = false;
   return_status = interpretCallStatus(
       options_.log_options,
-      assessCosts(options_, 0, index_collection, local_colCost,
-                  local_has_infinite_cost, options_.infinite_cost),
+      assessCosts(options_, 0, index_collection, cost, local_has_infinite_cost,
+                  options_.infinite_cost),
       return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
-  changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
+  changeLpCosts(lp, index_collection, cost, options_.infinite_cost);
 
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;

@@ -1704,8 +1704,14 @@ class Highs {
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
   HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
                                          const HighsVarType* usr_inegrality);
+  // Interface to change costs in a general (and safe) way
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
+  // Interface to change costs without some safety checks,
+  // but with potential performance boosts
+  HighsStatus changeCostsInterfaceUnchecked(
+      HighsIndexCollection& index_collection,
+      std::vector<double>& usr_col_cost);
 
   bool feasibleWrtBounds(const bool columns = true) const;
   // Interface to change column bounds in a general (and safe) way
