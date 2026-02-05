@@ -809,7 +809,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   col1357_upper[2] = 0;
   col1357_upper[3] = 0;
 
-  REQUIRE(highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower,
+  // Doing it with indices out of order is fine
+  HighsInt col5713_col_set[] = {5, 7, 1, 3};
+
+  REQUIRE(highs.changeColsBounds(col1357_num_ix, col5713_col_set, col1357_lower,
                                  col1357_upper) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
@@ -859,6 +862,29 @@ TEST_CASE("LP-modification", "[highs_data]") {
   row0135789_upper[6] = local_lp.row_upper_[9];
 
   REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
+                                 row0135789_lower,
+                                 row0135789_upper) == HighsStatus::kOk);
+
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
+
+  // Change row bounds again but with indices out of order
+  HighsInt row7890135_row_set[] = {7, 8, 9, 0, 1, 3, 5};
+  row0135789_lower[0] = local_lp.row_lower_[7];
+  row0135789_lower[1] = local_lp.row_lower_[8];
+  row0135789_lower[2] = local_lp.row_lower_[9];
+  row0135789_lower[3] = local_lp.row_lower_[0];
+  row0135789_lower[4] = local_lp.row_lower_[1];
+  row0135789_lower[5] = local_lp.row_lower_[3];
+  row0135789_lower[6] = local_lp.row_lower_[5];
+  row0135789_upper[0] = local_lp.row_lower_[7];
+  row0135789_upper[1] = local_lp.row_lower_[8];
+  row0135789_upper[2] = local_lp.row_lower_[9];
+  row0135789_upper[3] = local_lp.row_lower_[0];
+  row0135789_upper[4] = local_lp.row_lower_[1];
+  row0135789_upper[5] = local_lp.row_lower_[3];
+  row0135789_upper[6] = local_lp.row_lower_[5];
+
+  REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row7890135_row_set,
                                  row0135789_lower,
                                  row0135789_upper) == HighsStatus::kOk);
 
@@ -924,6 +950,12 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.changeColsCost(col1357_num_ix, col1357_col_set, col1357_cost) ==
+          HighsStatus::kOk);
+
+  // Do it again but with indices out of order
+  double col5713_cost[] = {2.51, 2.71, 2.01, 2.31};
+
+  REQUIRE(highs.changeColsCost(col1357_num_ix, col5713_col_set, col5713_cost) ==
           HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
