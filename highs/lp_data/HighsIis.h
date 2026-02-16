@@ -27,20 +27,48 @@ enum IisBoundStatus : int {
 enum IisModelStatus {
   kIisModelStatusFeasible = -1,
   kIisModelStatusUnknown,     // 0
-  kIisModelStatusInfeasible,  // 1
+  kIisModelStatusTimeLimit,   // 1
   kIisModelStatusReducible,   // 2
   kIisModelStatusIrreducible  // 3
 };
 
 struct HighsIisInfo {
-  double simplex_time = 0;
-  HighsInt simplex_iterations = 0;
+  HighsInt num_lp_solved = 0;
+  HighsInt sum_simplex_iteration_counts = 0;
+  HighsInt min_simplex_iteration_count = kHighsIInf;
+  HighsInt max_simplex_iteration_count = 0;
+  double sum_simplex_times = 0.0;
+  double min_simplex_time = kHighsInf;
+  double max_simplex_time = 0.0;
+
+  void clear() {
+    num_lp_solved = 0;
+    sum_simplex_iteration_counts = 0;
+    min_simplex_iteration_count = kHighsIInf;
+    max_simplex_iteration_count = 0;
+    sum_simplex_times = 0.0;
+    min_simplex_time = kHighsInf;
+    max_simplex_time = 0.0;
+  }
+
+  void update(const double simplex_time, const HighsInt simplex_iterations) {
+    num_lp_solved += 1;
+    sum_simplex_times += simplex_time;
+    min_simplex_time = std::min(simplex_time, min_simplex_time);
+    max_simplex_time = std::max(simplex_time, max_simplex_time);
+    sum_simplex_iteration_counts += simplex_iterations;
+    min_simplex_iteration_count =
+        std::min(simplex_iterations, min_simplex_iteration_count);
+    max_simplex_iteration_count =
+        std::max(simplex_iterations, max_simplex_iteration_count);
+  }
 };
 
 class HighsIis {
  public:
   HighsIis() {}
 
+  void clearData();
   void clear();
   void invalid(const HighsLp& lp);
   std::string iisBoundStatusToString(HighsInt bound_status) const;
@@ -75,7 +103,7 @@ class HighsIis {
   std::vector<HighsInt> row_bound_;
   std::vector<HighsInt> col_status_;
   std::vector<HighsInt> row_status_;
-  std::vector<HighsIisInfo> info_;
+  HighsIisInfo info_;
   HighsModel model_;
 };
 

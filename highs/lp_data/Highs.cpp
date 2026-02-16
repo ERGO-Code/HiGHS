@@ -2068,7 +2068,7 @@ HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
 
 HighsStatus Highs::getIis(HighsIis& iis) {
   HighsStatus return_status = this->getIisInterface();
-  if (return_status != HighsStatus::kError) iis = this->iis_;
+  iis = this->iis_;
   return return_status;
 }
 
