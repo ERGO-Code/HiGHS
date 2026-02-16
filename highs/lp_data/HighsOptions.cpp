@@ -9,14 +9,22 @@
  * @brief
  */
 #include "lp_data/HighsOptions.h"
+#include "lp_data/DynamicHipoLoader.h"
 
 #include <algorithm>
 #include <cassert>
 #include <cctype>
 
 #include "util/stringutil.h"
-
 // void setLogOptions();
+
+bool hipoAvailable() {
+#ifndef HIPO
+  return DynamicHipoLoader::instance().isAvailable();
+#else
+    return true;
+#endif
+}
 
 void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
@@ -82,8 +90,7 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
 
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
-#ifndef HIPO
-  if (value == kHipoString) {
+  if (value == kHipoString && !hipoAvailable()) {
     highsLogUser(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option, but this build "
@@ -92,33 +99,25 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
         kSolverString.c_str());
     return false;
   }
-#endif
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
-#ifdef HIPO
-      value == kHipoString ||
-#endif
+      (value == kHipoString && hipoAvailable()) ||
       value == kIpxString || value == kPdlpString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
                "Value \"%s\" for LP solver option (\"%s\") is not one of "
-#ifdef HIPO
-               "\"%s\", "
-#endif
-               "\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kSolverString.c_str(), kHighsChooseString.c_str(),
+               "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+               value.c_str(), kSolverString.c_str(),
+               hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
+               kHighsChooseString.c_str(),
                kSimplexString.c_str(), kIpmString.c_str(),
-#ifdef HIPO
-               kHipoString.c_str(),
-#endif
                kIpxString.c_str(), kPdlpString.c_str());
   return false;
 }
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
-#ifndef HIPO
-  if (value == kHipoString) {
+  if (value == kHipoString && !hipoAvailable()) {
     highsLogUser(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option, but this build "
@@ -127,34 +126,25 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
         kMipLpSolverString.c_str());
     return false;
   }
-#endif
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
-#ifdef HIPO
-      value == kHipoString ||
-#endif
+      (value == kHipoString && hipoAvailable()) ||
       value == kIpxString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
                "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
-#ifdef HIPO
-               "\"%s\", "
-#endif
-               "\"%s\", \"%s\", \"%s\" or \"%s\"\n",
+               "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kMipLpSolverString.c_str(),
+               hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
                kHighsChooseString.c_str(), kSimplexString.c_str(),
                kIpmString.c_str(),
-#ifdef HIPO
-               kHipoString.c_str(),
-#endif
                kIpxString.c_str());
   return false;
 }
 
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
-#ifndef HIPO
-  if (value == kHipoString) {
+  if (value == kHipoString && !hipoAvailable()) {
     highsLogUser(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option, but this build "
@@ -163,24 +153,16 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
         kMipIpmSolverString.c_str());
     return false;
   }
-#endif
   if (value == kHighsChooseString || value == kIpmString ||
-#ifdef HIPO
-      value == kHipoString ||
-#endif
+      (value == kHipoString && hipoAvailable()) ||
       value == kIpxString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
                "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
-#ifdef HIPO
-               "\"%s\", "
-#endif
-               "\"%s\", \"%s\" or \"%s\"\n",
+               "%s\"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kMipIpmSolverString.c_str(),
+               hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
                kHighsChooseString.c_str(), kIpmString.c_str(),
-#ifdef HIPO
-               kHipoString.c_str(),
-#endif
                kIpxString.c_str());
   return false;
 }

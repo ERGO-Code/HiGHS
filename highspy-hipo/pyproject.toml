@@ -1,0 +1,76 @@
+[build-system]
+requires = ["scikit-build-core>=0.3.3"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "highspy-hipo"
+version = "1.12.0"
+description = "HiPO IPM solver extension for highspy"
+authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
+readme = "README.md"
+
+requires-python = ">=3.8"
+dependencies = ["highspy>=1.12.0"]
+
+classifiers = [
+  "License :: OSI Approved :: Apache License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+"Source Code" = "https://github.com/ERGO-Code/HiGHS"
+"Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
+
+[tool.scikit-build]
+cmake.args = ["-DHIPO_LIBRARY_BUILD=ON"]
+cmake.verbose = true
+wheel.expand-macos-universal-tags = true
+wheel.packages = ["highspy_hipo"]
+
+
+# Files to include in the SDist even if they are skipped by default. Supports
+# gitignore syntax.
+sdist.include = [
+  "highspy-hipo/*",
+  "Version.txt",
+  "LICENSE",
+  "README.md",
+  "highs/HConfig.h.in",
+  "highs",
+  "external",
+  "cmake",
+]
+
+sdist.exclude = [
+  ".github",
+  ".gitattributes",
+  ".gitignore",
+  ".github",
+  "app",
+  "build",
+  "check",
+  "docs",
+  "subprojects",
+  ".coin-or",
+  "build_webdemo.sh",
+  ".clang-format",
+  "__setup.py",
+  "BUILD.bazel",
+  "**meson**",
+  "MODS.md",
+  "WORKSPACE",
+  "nuget/",
+  "nuget/README.md",
+  "highs/*.bazel*",
+  "highs/*.meson*",
+  "interfaces/*csharp*",
+  "interfaces/*fortran*",
+  "flake.*",
+  "highs.pc.in"
+]

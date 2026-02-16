@@ -185,7 +185,8 @@ set(hipo_sources
     ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/Refine.cpp
-    ipm/hipo/ipm/Solver.cpp)
+    ipm/hipo/ipm/Solver.cpp
+    ipm/hipo/HipoCApi.cpp)
 
 set(hipo_headers
     ipm/hipo/ipm/CurtisReidScaling.h
@@ -200,7 +201,8 @@ set(hipo_headers
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
     ipm/hipo/ipm/Solver.h
-    ipm/hipo/ipm/Status.h)
+    ipm/hipo/ipm/Status.h
+    ipm/hipo/HipoCApi.h)
 
 set(factor_highs_sources
     ipm/hipo/factorhighs/Analyse.cpp
@@ -437,7 +439,8 @@ set(highs_sources
     util/HighsUtils.cpp
     util/HSet.cpp
     util/HVectorBase.cpp
-    util/stringutil.cpp)
+    util/stringutil.cpp
+    lp_data/DynamicHipoLoader.cpp)
 
 # add catch header?
 set(highs_headers
@@ -478,6 +481,7 @@ set(highs_headers
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HStruct.h
+    lp_data/DynamicHipoLoader.h
     mip/feasibilityjump.hh
     mip/HighsCliqueTable.h
     mip/HighsConflictPool.h

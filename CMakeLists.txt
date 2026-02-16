@@ -95,6 +95,15 @@ if (PYTHON_BUILD_SETUP)
   set(BUILD_TESTING OFF)
 endif()
 
+option(HIPO "Build HIPO" OFF)
+option(HIPO_PYTHON_BUILD "Build HiPO Python shared library" OFF)
+message(STATUS "Build HiPO Python: ${HIPO_PYTHON_BUILD}")
+if (HIPO_PYTHON_BUILD)
+  set(BUILD_CXX OFF)
+  set(BUILD_TESTING OFF)
+  set(HIPO ON)
+endif()
+
 include(CMakeDependentOption)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
@@ -151,7 +160,7 @@ endif()
   # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
 # endif()
 
-option(HIPO "Build HIPO" OFF)
+
 message(STATUS "Build HIPO: ${HIPO}")
 option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
 message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
@@ -873,6 +882,7 @@ else(FAST_BUILD)
   endif()
 
   include(python-highs)
+  include(hipo-python)
 
   option(USE_DOTNET_STD_21 "Use .Net Standard 2.1 support" ON)
   message(STATUS ".Net: Use .Net Framework 2.1 support: ${USE_DOTNET_STD_21}")

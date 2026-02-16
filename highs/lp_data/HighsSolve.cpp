@@ -10,6 +10,7 @@
  */
 
 #include "ipm/IpxWrapper.h"
+#include "lp_data/DynamicHipoLoader.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
@@ -39,11 +40,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   }
   const bool use_only_ipm = useIpm(options.solver) || options.run_centring;
   bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
-#ifndef HIPO
-  // Shouldn't be possible to choose HiPO if it's not in the build
-  assert(!use_hipo);
-  use_hipo = false;
-#endif
+
   const bool use_ipx = use_only_ipm && !use_hipo;
   // Now actually solve LPs!
   //
@@ -74,7 +71,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       // Use IPM to solve the LP
       if (use_hipo) {
 #ifdef HIPO
-        // Use HIPO to solve the LP
+        // Use HIPO to solve the LP (compiled in)
         sub_solver_call_time.num_call[kSubSolverHipo]++;
         sub_solver_call_time.run_time[kSubSolverHipo] =
             -solver_object.timer_.read();
@@ -90,9 +87,31 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
 #else
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "HiPO is not available in this build.\n");
-        return HighsStatus::kError;
+        // Use HIPO via dynamic loading
+        DynamicHipoLoader& hipo_loader = DynamicHipoLoader::instance();
+        if (hipo_loader.isAvailable()) {
+          sub_solver_call_time.num_call[kSubSolverHipo]++;
+          sub_solver_call_time.run_time[kSubSolverHipo] =
+              -solver_object.timer_.read();
+          try {
+            call_status = hipo_loader.solveLp(solver_object);
+          } catch (const std::exception& exception) {
+            highsLogDev(options.log_options, HighsLogType::kError,
+                        "Exception %s in DynamicHipoLoader::solveLp\n",
+                        exception.what());
+            call_status = HighsStatus::kError;
+          }
+          sub_solver_call_time.run_time[kSubSolverHipo] +=
+              solver_object.timer_.read();
+          return_status = interpretCallStatus(options.log_options, call_status,
+                                              return_status, "solveLpHipo");
+        } else {
+          highsLogUser(options.log_options, HighsLogType::kError,
+                       "HiPO is not available. Install with: pip install "
+                       "highspy[hipo]\nError: %s\n",
+                       hipo_loader.getLastError().c_str());
+          return HighsStatus::kError;
+        }
 #endif
       } else if (use_ipx) {
         sub_solver_call_time.num_call[kSubSolverIpx]++;
@@ -719,9 +738,11 @@ bool useHipo(const HighsOptions& options,
   } else if (specific_solver_option_value == kIpmString ||
              specific_solver_option_value == kHipoString || force_ipm) {
 #ifdef HIPO
+    // HiPO is compiled in - use it directly
     use_hipo = true;
 #else
-    use_hipo = false;
+    // HiPO not compiled in - check if dynamically loaded library is available
+    use_hipo = DynamicHipoLoader::instance().isAvailable();
 #endif
   }
   if (options.run_centring) use_hipo = false;
