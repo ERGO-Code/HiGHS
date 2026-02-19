@@ -1935,6 +1935,8 @@ HighsStatus Highs::getIisInterface() {
   // light strategy
   if (options_.iis_strategy == kIisStrategyLight)
     return this->getIisInterfaceReturn(HighsStatus::kOk, options_, callback_);
+  // Clear IIS
+  this->iis_.clear();
   // Save original options and callback
   HighsOptions original_options = this->options_;
   HighsCallback original_callback = this->callback_;
@@ -1994,11 +1996,9 @@ HighsStatus Highs::getIisInterface() {
 
   // Construct an IS from ray or lp
   bool ray_option =
-      // (kIisStrategyFromRay & options_.iis_strategy) ||
-      // (kIisStrategyIrreducible & options_.iis_strategy)
+      // kIisStrategyFromRay & options_.iis_strategy;
       false;
-  const bool lp_option = (kIisStrategyFromLp & options_.iis_strategy) ||
-                         (kIisStrategyIrreducible & options_.iis_strategy);
+  const bool lp_option = kIisStrategyFromLp & options_.iis_strategy;
   if (ray_option && !ekk_instance_.status_.has_invert) {
     // Model is known to be infeasible, and a dual ray option is
     // chosen, but it has no INVERT, presumably because infeasibility
@@ -2074,8 +2074,8 @@ HighsStatus Highs::getIisInterface() {
     return this->getIisInterfaceReturn(return_status, original_options,
                                        original_callback);
 
-  // If both ray and lp options fail to produce a valid IS, make one consisting
-  // of all constraints
+  // If neither ray and lp options were requested or if they fail to produce a
+  // valid IS, make one consisting of all constraints
   if (!this->iis_.valid_) {
     this->iis_.valid_ = true;
     this->iis_.status_ = kIisModelStatusReducible;

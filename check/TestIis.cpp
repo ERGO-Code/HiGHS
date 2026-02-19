@@ -461,9 +461,9 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
 
 TEST_CASE("lp-get-iis-avgas", "[iis]") {
   std::string model = "avgas";
-  // For the whole LP calculation the elasticity filter only
-  // identified feasibility, so the model status is not set
-  testMps(model, kIisStrategyFromLp, HighsModelStatus::kNotset);
+  // For the whole LP calculation feasibility is established prior to elasticity
+  // filter so the model status will be optimal
+  testMps(model, kIisStrategyFromLp, HighsModelStatus::kOptimal);
   // For the ray calculation the model is solved, so its status is
   // known
   //  testMps(model, kIisStrategyFromRay,
