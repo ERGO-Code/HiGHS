@@ -85,6 +85,12 @@ class HighsIis {
 
   HighsStatus compute(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis* basis = nullptr);
+  void HighsIis::processBoundRelaxation(Highs& highs, const bool row_deletion,
+                                        const bool drop_lower,
+                                        const HighsInt iX, double& lower,
+                                        double& upper,
+                                        IisModelStatus& iis_status,
+                                        HighsStatus& search_return_status);
 
   bool trivial(const HighsLp& lp, const HighsOptions& options);
   bool rowValueBounds(const HighsLp& lp, const HighsOptions& options);

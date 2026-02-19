@@ -652,7 +652,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   IisModelStatus iis_status = kIisModelStatusIrreducible;
-  bool time_limit_reached = false;
   HighsStatus search_return_status = HighsStatus::kOk;
 
   // Pass twice: rows before columns, or columns before rows, according to
@@ -672,98 +671,27 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
       // Record whether the upper bound has been dropped due to the lower bound
       // being kept
-      if (!time_limit_reached) {
-        if (lower > -kHighsInf) {
-          // Drop the lower bound temporarily
-          bool drop_lower = true;
-          run_status = row_deletion
-                           ? highs.changeRowBounds(iX, -kHighsInf, upper)
-                           : highs.changeColBounds(iX, -kHighsInf, upper);
-          assert(run_status == HighsStatus::kOk);
-          // Solve the LP
-          run_status = solveLp();
-          HighsModelStatus model_status = highs.getModelStatus();
-          if (model_status == HighsModelStatus::kOptimal) {
-            // Now feasible, so restore the lower bound
-            run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
-                                      : highs.changeColBounds(iX, lower, upper);
-            assert(run_status == HighsStatus::kOk);
-            // If the lower bound must be kept, then any finite upper bound
-            // must be dropped
-            const bool apply_reciprocal_rule = true;
-            if (apply_reciprocal_rule) {
-              if (upper < kHighsInf) {
-                // Drop the upper bound permanently
-                upper = kHighsInf;
-                run_status = row_deletion
-                                 ? highs.changeRowBounds(iX, lower, upper)
-                                 : highs.changeColBounds(iX, lower, upper);
-                assert(run_status == HighsStatus::kOk);
-              }
-              assert(upper >= kHighsInf);
-              // Since upper = kHighsInf, allow the loop to run so that
-              // bound status is set as if upper were set to kHighsInf
-              // by relaxing it and finding that the LP was still
-              // infeasible
-            }
-          } else if (model_status == HighsModelStatus::kInfeasible) {
-            // Bound can be dropped permanently
-            lower = -kHighsInf;
-          } else if (model_status == HighsModelStatus::kTimeLimit) {
-            // Time limit reached, so restore the bound and set iis status to
-            // kIisModelStatusTimeLimit
-            run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
-                                      : highs.changeColBounds(iX, lower, upper);
-            assert(run_status == HighsStatus::kOk);
-            iis_status = kIisModelStatusTimeLimit;
-            time_limit_reached = true;
-            search_return_status = HighsStatus::kWarning;
-          } else {
-            // Unknown failure, so restore the bound and set iis status to
-            // kIisModelStatusReducible
-            run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
-                                      : highs.changeColBounds(iX, lower, upper);
-            assert(run_status == HighsStatus::kOk);
-            iis_status = kIisModelStatusReducible;
-            search_return_status = HighsStatus::kWarning;
-          }
-        }
-        if (upper < kHighsInf) {
-          // Drop the upper bound temporarily
-          run_status = row_deletion
-                           ? highs.changeRowBounds(iX, lower, kHighsInf)
-                           : highs.changeColBounds(iX, lower, kHighsInf);
-          assert(run_status == HighsStatus::kOk);
-          // Solve the LP
-          run_status = solveLp();
-          HighsModelStatus model_status = highs.getModelStatus();
-          if (model_status == HighsModelStatus::kOptimal) {
-            // Now feasible, so restore the upper bound
-            run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
-                                      : highs.changeColBounds(iX, lower, upper);
-            assert(run_status == HighsStatus::kOk);
-          } else if (model_status == HighsModelStatus::kInfeasible) {
-            // Bound can be dropped permanently
-            upper = kHighsInf;
-          } else if (model_status == HighsModelStatus::kTimeLimit) {
-            // Time limit reached, so restore the bound and set iis status to
-            // kIisModelStatusTimeLimit
-            run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
-                                      : highs.changeColBounds(iX, lower, upper);
-            assert(run_status == HighsStatus::kOk);
-            iis_status = kIisModelStatusTimeLimit;
-            time_limit_reached = true;
-            search_return_status = HighsStatus::kWarning;
-          } else {
-            // Unknown failure, so restore the bound and set iis status to
-            // kIisModelStatusReducible
-            run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
-                                      : highs.changeColBounds(iX, lower, upper);
-            assert(run_status == HighsStatus::kOk);
-            iis_status = kIisModelStatusReducible;
-            search_return_status = HighsStatus::kWarning;
-          }
-        }
+      if (lower > -kHighsInf && iis_status != kIisModelStatusTimeLimit) {
+        // Drop the lower bound temporarily
+        bool drop_lower = true;
+        run_status = row_deletion
+                         ? highs.changeRowBounds(iX, -kHighsInf, upper)
+                         : highs.changeColBounds(iX, -kHighsInf, upper);
+        assert(run_status == HighsStatus::kOk);
+        // Solve the LP
+        run_status = solveLp();
+        this->processBoundRelaxation(highs, row_deletion, true, iX, lower,
+                                     upper, iis_status, search_return_status);
+      }
+      if (upper < kHighsInf && iis_status != kIisModelStatusTimeLimit) {
+        // Drop the upper bound temporarily
+        run_status = row_deletion ? highs.changeRowBounds(iX, lower, kHighsInf)
+                                  : highs.changeColBounds(iX, lower, kHighsInf);
+        assert(run_status == HighsStatus::kOk);
+        // Solve the LP
+        run_status = solveLp();
+        this->processBoundRelaxation(highs, row_deletion, false, iX, lower,
+                                     upper, iis_status, search_return_status);
       }
       const bool debug_bound_change = true;
       if (debug_bound_change) {
@@ -867,6 +795,63 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   this->row_index_.resize(iss_num_row);
   this->row_bound_.resize(iss_num_row);
   return search_return_status;
+}
+
+void HighsIis::processBoundRelaxation(Highs& highs, const bool row_deletion,
+                                      const bool drop_lower, const HighsInt iX,
+                                      double& lower, double& upper,
+                                      IisModelStatus& iis_status,
+                                      HighsStatus& search_return_status) {
+  // Declare run_status
+  HighsStatus run_status;
+  // Get model status
+  HighsModelStatus model_status = highs.getModelStatus();
+  if (model_status == HighsModelStatus::kOptimal) {
+    // Now feasible, so restore the bound
+    run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
+                              : highs.changeColBounds(iX, lower, upper);
+    assert(run_status == HighsStatus::kOk);
+    // If the lower bound must be kept, then any finite upper bound
+    // must be dropped
+    const bool apply_reciprocal_rule = drop_lower && (upper < kHighsInf);
+    if (apply_reciprocal_rule) {
+      // Drop the upper bound permanently
+      upper = kHighsInf;
+      run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
+                                : highs.changeColBounds(iX, lower, upper);
+      assert(run_status == HighsStatus::kOk);
+    }
+    if (drop_lower) {
+      assert(upper >= kHighsInf);
+    }
+    // Since upper = kHighsInf, allow the loop to run so that
+    // bound status is set as if upper were set to kHighsInf
+    // by relaxing it and finding that the LP was still
+    // infeasible
+  } else if (model_status == HighsModelStatus::kInfeasible) {
+    // Bound can be dropped permanently
+    if (drop_lower) {
+      lower = -kHighsInf;
+    } else {
+      upper = kHighsInf;
+    }
+  } else if (model_status == HighsModelStatus::kTimeLimit) {
+    // Time limit reached, so restore the bound and set iis status to
+    // kIisModelStatusTimeLimit
+    run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
+                              : highs.changeColBounds(iX, lower, upper);
+    assert(run_status == HighsStatus::kOk);
+    iis_status = kIisModelStatusTimeLimit;
+    search_return_status = HighsStatus::kWarning;
+  } else {
+    // Unknown failure, so restore the bound and set iis status to
+    // kIisModelStatusReducible
+    run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
+                              : highs.changeColBounds(iX, lower, upper);
+    assert(run_status == HighsStatus::kOk);
+    iis_status = kIisModelStatusReducible;
+    search_return_status = HighsStatus::kWarning;
+  }
 }
 
 bool indexStatusOkReturn(const bool return_value) { return return_value; }

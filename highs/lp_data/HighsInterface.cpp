@@ -1830,7 +1830,7 @@ HighsStatus Highs::getIisInterfaceReturn(
     const HighsStatus return_status, const HighsOptions& original_options,
     const HighsCallback& original_callback) {
   // Restore options and callback
-  this->passOptions(original_options);
+  this->options_ = original_options;
   this->callback_ = original_callback;
 
   // Exit early if there was an error
@@ -2094,12 +2094,12 @@ HighsStatus Highs::getIisInterface() {
   return_status = this->iis_.deduce(lp, options_, basis_);
   // Analyse the LP solution data
   const HighsInt num_lp_solved = this->iis_.info_.num_lp_solved;
-  double min_time = this->iis_.info_.min_simplex_time;
-  double sum_time = this->iis_.info_.sum_simplex_times;
-  double max_time = this->iis_.info_.max_simplex_time;
-  HighsInt min_iterations = this->iis_.info_.min_simplex_iteration_count;
-  HighsInt sum_iterations = this->iis_.info_.sum_simplex_iteration_counts;
-  HighsInt max_iterations = this->iis_.info_.max_simplex_iteration_count;
+  const double min_time = this->iis_.info_.min_simplex_time;
+  const double sum_time = this->iis_.info_.sum_simplex_times;
+  const double max_time = this->iis_.info_.max_simplex_time;
+  const HighsInt min_iterations = this->iis_.info_.min_simplex_iteration_count;
+  const HighsInt sum_iterations = this->iis_.info_.sum_simplex_iteration_counts;
+  const HighsInt max_iterations = this->iis_.info_.max_simplex_iteration_count;
 
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                " %d cols, %d rows, %d LPs solved"
@@ -2125,8 +2125,7 @@ HighsStatus Highs::elasticityFilterReturn(
   const HighsLp& lp = this->model_.lp_;
   // The model status and IIS are cleared by restoring the original
   // LP, so save them
-  HighsIis iis;
-  iis = this->iis_;
+  HighsIis iis = this->iis_;
   double objective_function_value = info_.objective_function_value;
   // Delete any additional rows and columns, and restore the original
   // column costs and bounds
@@ -2517,7 +2516,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     // Failed to establish feasibility or infeasibility due to unknown error
     // or hitting a time limit
     iis.valid_ = false;
-    iis.status_ = (this->model_status_ == HighsModelStatus::kTimeLimit)
+    iis.status_ = this->model_status_ == HighsModelStatus::kTimeLimit
                       ? kIisModelStatusTimeLimit
                       : kIisModelStatusUnknown;
     this->iis_ = iis;
@@ -2604,7 +2603,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     if (run_status != HighsStatus::kOk) {
       // Solve failed
       iis.valid_ = false;
-      iis.status_ = (this->model_status_ == HighsModelStatus::kTimeLimit)
+      iis.status_ = this->model_status_ == HighsModelStatus::kTimeLimit
                         ? kIisModelStatusTimeLimit
                         : kIisModelStatusUnknown;
       this->iis_ = iis;
