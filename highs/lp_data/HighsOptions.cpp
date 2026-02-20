@@ -20,7 +20,7 @@
 
 void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
-                      const std::string log_file) {
+                      const std::string& log_file) {
   HighsInt index;
   OptionStatus status =
       getOptionIndex(log_options, "log_file", option_records, index);
@@ -98,20 +98,20 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
 #ifdef HIPO
       value == kHipoString ||
 #endif
-      value == kIpxString || value == kPdlpString)
+      value == kIpxString || value == kPdlpString || value == kQpAsmString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
                "Value \"%s\" for LP solver option (\"%s\") is not one of "
 #ifdef HIPO
-               "\"%s\", "
+               "\"%s\","
 #endif
-               "\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+               "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kSolverString.c_str(), kHighsChooseString.c_str(),
                kSimplexString.c_str(), kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
 #endif
-               kIpxString.c_str(), kPdlpString.c_str());
+               kIpxString.c_str(), kPdlpString.c_str(), kQpAsmString.c_str());
   return false;
 }
 
@@ -439,7 +439,7 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
 
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
                               OptionRecordString& option,
-                              const std::string value) {
+                              const std::string& value) {
   // Setting a string option. For some options only particular values
   // are permitted, so check them
   if (option.name == kPresolveString) {
@@ -540,7 +540,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
                                  HighsLogOptions& log_options,
                                  std::vector<OptionRecord*>& option_records,
-                                 const std::string value_passed) {
+                                 const std::string& value_passed) {
   // Trim any leading and trailing spaces
   std::string value_trim = value_passed;
   trim(value_trim, " ");
@@ -676,7 +676,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
-                                 const std::string value) {
+                                 const std::string& value) {
   OptionStatus return_status =
       checkOptionValue(report_log_options, option, value);
   if (return_status != OptionStatus::kOk) return return_status;
@@ -920,18 +920,23 @@ void reportOptions(FILE* file, const HighsLogOptions& log_options,
                    const bool report_only_deviations,
                    const HighsFileType file_type) {
   HighsInt num_options = option_records.size();
+  const bool not_md_or_full =
+      file_type != HighsFileType::kMd && file_type != HighsFileType::kFull;
+  if (file_type == HighsFileType::kMd)
+    fprintf(file, "# [List of options](@id option-definitions)\n\n");
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
-    if (option_records[index]->name == kLogFileString) {
-      // Default HiGHS log file name is "" so that deviations from it
-      // trigger opening the log file. However, it's unnecessary to
-      // report the deviation to kLogFileString, which is the default
-      // non-empty log file name in HighsRun.cpp
-      if (*((OptionRecordString*)option_records[index])[0].value ==
-          kHighsRunLogFile)
-        continue;
+    if (not_md_or_full) {
+      if (option_records[index]->name == kLogFileString) {
+        // Default HiGHS log file name is "" so that deviations from it
+        // trigger opening the log file. However, it's unnecessary to
+        // report the deviation to kLogFileString, which is the default
+        // non-empty log file name in HighsRun.cpp
+        if (*((OptionRecordString*)option_records[index])[0].value ==
+            kHighsRunLogFile)
+          continue;
+      }
     }
-
     // Only report non-advanced options
     if (option_records[index]->advanced) {
       // Possibly skip the advanced options when creating Md file
@@ -963,8 +968,11 @@ void reportOption(FILE* file, const HighsLogOptions& log_options,
                   const HighsFileType file_type) {
   if (!report_only_deviations || option.default_value != *option.value) {
     if (file_type == HighsFileType::kMd) {
-      fprintf(file, "## %s\n- %s\n- Type: boolean\n- Default: \"%s\"\n\n",
+      fprintf(file,
+              "## [%s](@id option-%s)\n- %s\n- Type: boolean\n- Default: "
+              "\"%s\"\n\n",
               highsInsertMdEscapes(option.name).c_str(),
+              highsInsertMdId(option.name).c_str(),
               highsInsertMdEscapes(option.description).c_str(),
               highsBoolToString(option.default_value).c_str());
     } else if (file_type == HighsFileType::kFull) {
@@ -995,13 +1003,14 @@ void reportOption(FILE* file, const HighsLogOptions& log_options,
                   const HighsFileType file_type) {
   if (!report_only_deviations || option.default_value != *option.value) {
     if (file_type == HighsFileType::kMd) {
-      fprintf(
-          file,
-          "## %s\n- %s\n- Type: integer\n- Range: {%d, %d}\n- Default: %d\n\n",
-          highsInsertMdEscapes(option.name).c_str(),
-          highsInsertMdEscapes(option.description).c_str(),
-          int(option.lower_bound), int(option.upper_bound),
-          int(option.default_value));
+      fprintf(file,
+              "## [%s](@id option-%s)\n- %s\n- Type: integer\n- Range: {%d, "
+              "%d}\n- Default: %d\n\n",
+              highsInsertMdEscapes(option.name).c_str(),
+              highsInsertMdId(option.name).c_str(),
+              highsInsertMdEscapes(option.description).c_str(),
+              int(option.lower_bound), int(option.upper_bound),
+              int(option.default_value));
     } else if (file_type == HighsFileType::kFull) {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file,
@@ -1028,12 +1037,13 @@ void reportOption(FILE* file, const HighsLogOptions& log_options,
                   const HighsFileType file_type) {
   if (!report_only_deviations || option.default_value != *option.value) {
     if (file_type == HighsFileType::kMd) {
-      fprintf(
-          file,
-          "## %s\n- %s\n- Type: double\n- Range: [%g, %g]\n- Default: %g\n\n",
-          highsInsertMdEscapes(option.name).c_str(),
-          highsInsertMdEscapes(option.description).c_str(), option.lower_bound,
-          option.upper_bound, option.default_value);
+      fprintf(file,
+              "## [%s](@id option-%s)\n- %s\n- Type: double\n- Range: [%g, "
+              "%g]\n- Default: %g\n\n",
+              highsInsertMdEscapes(option.name).c_str(),
+              highsInsertMdId(option.name).c_str(),
+              highsInsertMdEscapes(option.description).c_str(),
+              option.lower_bound, option.upper_bound, option.default_value);
     } else if (file_type == HighsFileType::kFull) {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file,
@@ -1064,10 +1074,13 @@ void reportOption(FILE* file, const HighsLogOptions& log_options,
 
   if (!report_only_deviations || option.default_value != *option.value) {
     if (file_type == HighsFileType::kMd) {
-      fprintf(file, "## %s\n- %s\n- Type: string\n- Default: \"%s\"\n\n",
-              highsInsertMdEscapes(option.name).c_str(),
-              highsInsertMdEscapes(option.description).c_str(),
-              option.default_value.c_str());
+      fprintf(
+          file,
+          "## [%s](@id option-%s)\n- %s\n- Type: string\n- Default: \"%s\"\n\n",
+          highsInsertMdEscapes(option.name).c_str(),
+          highsInsertMdId(option.name).c_str(),
+          highsInsertMdEscapes(option.description).c_str(),
+          option.default_value.c_str());
     } else if (file_type == HighsFileType::kFull) {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",
@@ -1091,4 +1104,24 @@ void HighsOptions::setLogOptions() {
   this->log_options.output_flag = &this->output_flag;
   this->log_options.log_to_console = &this->log_to_console;
   this->log_options.log_dev_level = &this->log_dev_level;
+}
+
+void warnSolverInvalid(const HighsOptions& options,
+                       const std::string& problem_type) {
+  highsLogUser(options.log_options, HighsLogType::kWarning,
+               "Solver \"%s\" is not available for %s. Option \"%s\" ignored\n",
+               options.solver.c_str(), problem_type.c_str(),
+               kSolverString.c_str());
+}
+bool solverValidForLp(const std::string& solver) {
+  return solver == kHighsChooseString || solver == kSimplexString ||
+         solver == kIpmString || solver == kIpxString ||
+         solver == kHipoString || solver == kPdlpString;
+}
+bool solverValidForMip(const std::string& solver) {
+  return solver == kHighsChooseString;
+}
+bool solverValidForQp(const std::string& solver) {
+  return solver == kHighsChooseString || solver == kQpAsmString ||
+         solver == kIpmString || solver == kHipoString;
 }

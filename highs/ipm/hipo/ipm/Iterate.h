@@ -30,38 +30,25 @@ struct Residuals {
 };
 
 struct Iterate {
-  // lp model
   const Model& model;
-
-  // record of data at each iteration
   IpmData data;
-
-  // ipm point
   std::vector<double> x, xl, xu, y, zl, zu;
-
-  // residuals
   Residuals res;
-
-  // Newton direction
   NewtonDir delta;
-
-  // indicators
   double pobj, dobj, pinf, dinf, pdgap;
-
   double mu;
   std::vector<double> scaling;
-
-  // smallest value of mu seen so far
   double best_mu;
-
-  // regularisation values
-  Regularisation& regul;
+  const Regularisation& regul;
   std::vector<double> total_reg;
   double* Rp;
   double* Rd;
+  Residuals ires;  // residuals for iterative refinement
 
-  // residuals of linear system for iterative refinement
-  Residuals ires;
+  // statistics for stagnation
+  Int bad_iter_{};
+  double largest_dx_x_{}, largest_dy_y_{};
+  double best_pinf_ = kHighsInf, best_dinf_ = kHighsInf;
 
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
@@ -126,7 +113,7 @@ struct Iterate {
   //  res1 = rhs - A * x
   //  res2 = lower - x + xl
   //  res3 = upper - x - xu
-  //  res4 = c - A^T * y - zl + zu
+  //  res4 = c - A^T * y - zl + zu + Q * x
   // Components of residuals 2,3 are set to zero if the corresponding
   // upper/lower bound is not finite.
   // ===================================================================================
@@ -157,27 +144,6 @@ struct Iterate {
                                 const std::vector<double>& res7) const;
 
   // ===================================================================================
-  // Extract solution to be returned to user:
-  // - remove extra slacks from x, xl, xu, zl, zu
-  // - adjust sign of y for inequality constraints
-  // - compute and adjust sign of slacks
-  // ===================================================================================
-  void extract(std::vector<double>& x_user, std::vector<double>& xl_user,
-               std::vector<double>& xu_user, std::vector<double>& slack_user,
-               std::vector<double>& y_user, std::vector<double>& zl_user,
-               std::vector<double>& zu_user) const;
-
-  // ===================================================================================
-  // Extract complementary solution to be used for crossover with IPX:
-  // - drop variables to obtain complementary (x,y,z)
-  // - adjust y based on z-slacks
-  // - compute slacks
-  // - remove extra slacks from x, z
-  // ===================================================================================
-  void extract(std::vector<double>& x_user, std::vector<double>& slack_user,
-               std::vector<double>& y_user, std::vector<double>& z_user) const;
-
-  // ===================================================================================
   // Construct a complementary point (x,y,z), such that for each j, either xj is
   // at one of the bounds (lower or upper), or zj is zero.
   // ===================================================================================
@@ -189,14 +155,20 @@ struct Iterate {
   // Compute residuals after solution has been found, postprocessed and
   // unscaled.
   // ===================================================================================
-  void finalResiduals(Info& info) const;
+  Int finalResiduals(Info& info) const;
 
   // ===================================================================================
   // Compute residual of 6x6 linear system for iterative refinement.
   // ===================================================================================
   void residuals6x6(const NewtonDir& d);
 
-  void setReg(LinearSolver& LS, OptionNla opt);
+  void makeStep(double alpha_primal, double alpha_dual);
+
+  bool stagnation(std::stringstream& log_stream);
+
+  void getReg(LinearSolver& LS, OptionNla opt);
+
+  void assertConsistency(Int n, Int m) const;
 };
 
 }  // namespace hipo

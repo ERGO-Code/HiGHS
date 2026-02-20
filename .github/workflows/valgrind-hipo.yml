@@ -21,6 +21,7 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DBUILD_OPENBLAS=ON \
+          -DNO_AVX512=ON \
           -DCMAKE_BUILD_TYPE=Debug \
           -DALL_TESTS=ON
 

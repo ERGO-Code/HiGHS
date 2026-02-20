@@ -1,3 +1,7 @@
+#include <cmath>
+#include <iostream>
+#include <vector>
+
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
@@ -7,24 +11,10 @@
 #include "lp_data/HighsCallback.h"
 #include "parallel/HighsParallel.h"
 
-// Example for using HiPO from its C++ interface. The program solves the Netlib
-// problem afiro.
-
-// #include <unistd.h>
-
-#include <cmath>
-#include <iostream>
-#include <vector>
-
 const bool dev_run = false;
 
-TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
-  // Test that hipo runs and finds correct solution for afiro
-
-  std::string model = "afiro.mps";
-  const double expected_obj = -464.753;
-
-  Highs highs;
+void runHipoTest(Highs& highs, const std::string& model,
+                 const double expected_obj) {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("solver", kHipoString);
   highs.setOptionValue("timeless_log", kHighsOnString);
@@ -36,8 +26,12 @@ TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
   REQUIRE(status == HighsStatus::kOk);
 
   const double actual_obj = highs.getObjectiveValue();
-  REQUIRE(std::abs(actual_obj - expected_obj) < 0.001);
+  REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) < 1e-4);
+}
 
+TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
+  Highs highs;
+  runHipoTest(highs, "afiro.mps", -464.753);
   highs.resetGlobalScheduler(true);
 }
 
@@ -45,37 +39,21 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
   // Test that hipo finds the exact same solution if run twice
 
   std::string model = "80bau3b.mps";
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
+  const double expected_obj = 9.8722e5;
 
   HighsInt iter_1, iter_2;
   HighsSolution solution_1, solution_2;
 
-  {
-    Highs highs;
-    highs.setOptionValue("output_flag", dev_run);
-    highs.setOptionValue(kSolverString, kHipoString);
-    highs.setOptionValue(kParallelString, kHighsOnString);
-    highs.setOptionValue(kRunCrossoverString, kHighsOffString);
-    highs.readModel(filename);
-    HighsStatus status = highs.run();
-    REQUIRE(status == HighsStatus::kOk);
-    solution_1 = highs.getSolution();
-    iter_1 = highs.getInfo().ipm_iteration_count;
-    highs.resetGlobalScheduler(true);
-  }
-  {
-    Highs highs;
-    highs.setOptionValue("output_flag", dev_run);
-    highs.setOptionValue(kSolverString, kHipoString);
-    highs.setOptionValue(kParallelString, kHighsOnString);
-    highs.setOptionValue(kRunCrossoverString, kHighsOffString);
-    highs.readModel(filename);
-    HighsStatus status = highs.run();
-    REQUIRE(status == HighsStatus::kOk);
-    solution_2 = highs.getSolution();
-    iter_2 = highs.getInfo().ipm_iteration_count;
-    highs.resetGlobalScheduler(true);
-  }
+  Highs highs;
+  highs.setOptionValue(kRunCrossoverString, kHighsOffString);
+
+  runHipoTest(highs, model, expected_obj);
+  solution_1 = highs.getSolution();
+  iter_1 = highs.getInfo().ipm_iteration_count;
+
+  runHipoTest(highs, model, expected_obj);
+  solution_2 = highs.getSolution();
+  iter_2 = highs.getInfo().ipm_iteration_count;
 
   REQUIRE(iter_1 == iter_2);
   REQUIRE(solution_1.value_valid == solution_2.value_valid);
@@ -91,48 +69,27 @@ TEST_CASE("test-hipo-orderings", "[highs_hipo]") {
 
   std::string model = "adlittle.mps";
   const double expected_obj = 2.2549e5;
-
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("solver", kHipoString);
-  highs.setOptionValue("timeless_log", kHighsOnString);
-
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
-  highs.readModel(filename);
 
   // metis
-  {
-    highs.setOptionValue(kHipoOrderingString, kHipoMetisString);
-    HighsStatus status = highs.run();
-    REQUIRE(status == HighsStatus::kOk);
-
-    const double actual_obj = highs.getObjectiveValue();
-
-    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
-            1e-4);
-  }
+  highs.setOptionValue(kHipoOrderingString, kHipoMetisString);
+  runHipoTest(highs, model, expected_obj);
 
   // amd
-  {
-    highs.setOptionValue(kHipoOrderingString, kHipoAmdString);
-    HighsStatus status = highs.run();
-    REQUIRE(status == HighsStatus::kOk);
-
-    const double actual_obj = highs.getObjectiveValue();
-    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
-            1e-4);
-  }
+  highs.setOptionValue(kHipoOrderingString, kHipoAmdString);
+  runHipoTest(highs, model, expected_obj);
 
   // rcm
-  {
-    highs.setOptionValue(kHipoOrderingString, kHipoRcmString);
-    HighsStatus status = highs.run();
-    REQUIRE(status == HighsStatus::kOk);
+  highs.setOptionValue(kHipoOrderingString, kHipoRcmString);
+  runHipoTest(highs, model, expected_obj);
 
-    const double actual_obj = highs.getObjectiveValue();
-    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
-            1e-4);
-  }
+  highs.resetGlobalScheduler(true);
+}
 
+TEST_CASE("test-hipo-qp", "[highs_hipo]") {
+  Highs highs;
+  runHipoTest(highs, "qptestnw.lp", -6.4500);
+  runHipoTest(highs, "qjh.lp", -5.2500);
+  runHipoTest(highs, "primal1.mps", -3.501296e-2);
   highs.resetGlobalScheduler(true);
 }

@@ -406,10 +406,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
 #ifdef HIPO
 HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
-  return solveLpHipo(solver_object.options_, solver_object.timer_,
-                     solver_object.lp_, solver_object.basis_,
-                     solver_object.solution_, solver_object.model_status_,
-                     solver_object.highs_info_, solver_object.callback_);
+  return solveHipo(solver_object.options_, solver_object.timer_,
+                   solver_object.lp_, HighsHessian{}, solver_object.basis_,
+                   solver_object.solution_, solver_object.model_status_,
+                   solver_object.highs_info_, solver_object.callback_);
 }
 
 #ifdef HIPO_USES_OPENBLAS
@@ -419,11 +419,11 @@ void openblas_set_num_threads(int num_threads);
 }
 #endif
 
-HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
-                        const HighsLp& lp, HighsBasis& highs_basis,
-                        HighsSolution& highs_solution,
-                        HighsModelStatus& model_status, HighsInfo& highs_info,
-                        HighsCallback& callback) {
+HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
+                      const HighsLp& lp, const HighsHessian& Q,
+                      HighsBasis& highs_basis, HighsSolution& highs_solution,
+                      HighsModelStatus& model_status, HighsInfo& highs_info,
+                      HighsCallback& callback) {
   // Use HiPO
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -572,7 +572,7 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   hipo.setCallback(callback);
 
   // Load the problem
-  hipo::Int load_status = hipo.load(lp);
+  hipo::Int load_status = hipo.load(lp, Q);
   if (load_status) {
     model_status = HighsModelStatus::kSolveError;
     return HighsStatus::kError;
@@ -616,14 +616,14 @@ HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
   }
 
   // Report crossover status
-  const HighsStatus crossover_return_status =
-      reportHipoCrossoverStatus(options, hipo_info.ipx_info.status_crossover);
+  const HighsStatus crossover_return_status = reportHipoCrossoverStatus(
+      options, hipo_info.ipx_info.status_crossover, !Q.empty());
   if (crossover_return_status == HighsStatus::kError) {
     model_status = HighsModelStatus::kSolveError;
     return HighsStatus::kError;
   }
 
-  // Failures should have been handled. Status should be stopper or solved.
+  // Failures should have been handled. Status should be stopped or solved.
   if (ipxStatusError(!hipo.solved() && !hipo.stopped(), options, "Hipo",
                      "status should be solved or stopped but value is",
                      solve_status))
@@ -1014,7 +1014,8 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
 }
 
 bool ipxStatusError(const bool status_error, const HighsOptions& options,
-                    std::string solver, std::string message, const int value) {
+                    const std::string& solver, const std::string& message,
+                    const int value) {
   if (status_error) {
     if (value < 0) {
       highsLogUser(options.log_options, HighsLogType::kError, "%s: %s\n",
@@ -1551,7 +1552,13 @@ HighsStatus reportHipoStatus(const HighsOptions& options,
 }
 
 HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
-                                      const ipx::Int status) {
+                                      const ipx::Int status, bool is_qp) {
+  if (is_qp && options.run_crossover == kHighsOnString) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover not available for QP\n");
+    return HighsStatus::kWarning;
+  }
+
   if (status == IPX_STATUS_not_run) {
     if (options.run_crossover == kHighsOnString) {
       // Warn if crossover not run and run_crossover option is "on"

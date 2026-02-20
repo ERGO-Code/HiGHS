@@ -19,9 +19,11 @@ FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
       log_{log},
       model_{model},
       A_{model.A()},
+      Q_{model.Q()},
       mA_{A_.num_row_},
       nA_{A_.num_col_},
       nzA_{A_.numNz()},
+      nzQ_{Q_.numNz()},
       options_{options} {}
 
 void FactorHiGHSSolver::clear() {
@@ -39,19 +41,31 @@ Int FactorHiGHSSolver::buildASstructure(Int64 nz_limit) {
 
   log_.printDevInfo("Building AS structure\n");
 
+  const Int nzBlock11 = model_.qp() ? nzQ_ : nA_;
+
   // AS matrix must fit into HighsInt
-  if ((Int64)nA_ + mA_ + nzA_ > nz_limit) return kStatusOverflow;
+  if ((Int64)nzBlock11 + mA_ + nzA_ > nz_limit) return kStatusOverflow;
 
   ptrAS_.resize(nA_ + mA_ + 1);
-  rowsAS_.resize(nA_ + nzA_ + mA_);
-  valAS_.resize(nA_ + nzA_ + mA_);
+  rowsAS_.resize(nzBlock11 + nzA_ + mA_);
+  valAS_.resize(nzBlock11 + nzA_ + mA_);
 
   Int next = 0;
 
   for (Int i = 0; i < nA_; ++i) {
     // diagonal element
     rowsAS_[next] = i;
-    ++next;
+    next++;
+
+    // column of Q
+    if (model_.qp()) {
+      assert(Q_.index_[Q_.start_[i]] == i);
+      for (Int el = Q_.start_[i] + 1; el < Q_.start_[i + 1]; ++el) {
+        rowsAS_[next] = Q_.index_[el];
+        valAS_[next] = -Q_.value_[el];  // values of AS that will not change
+        ++next;
+      }
+    }
 
     // column of A
     for (Int el = A_.start_[i]; el < A_.start_[i + 1]; ++el) {
@@ -79,7 +93,8 @@ Int FactorHiGHSSolver::buildASvalues(const std::vector<double>& scaling) {
   assert(!ptrAS_.empty() && !rowsAS_.empty());
 
   for (Int i = 0; i < nA_; ++i) {
-    valAS_[ptrAS_[i]] = -scaling[i];
+    valAS_[ptrAS_[i]] = scaling.empty() ? -1.0 : -scaling[i];
+    if (model_.qp()) valAS_[ptrAS_[i]] -= model_.sense() * model_.Q().diag(i);
   }
 
   return kStatusOk;
@@ -194,10 +209,12 @@ Int FactorHiGHSSolver::buildNEvalues(const std::vector<double>& scaling) {
       Int col = idxA_rw_[el];
       Int corr = corr_A_[el];
 
-      const double theta =
-          scaling.empty() ? 1.0 : 1.0 / (scaling[col] + regul_.primal);
+      double denom = scaling.empty() ? 1.0 : scaling[col];
+      denom += regul_.primal;
+      if (model_.qp()) denom += model_.sense() * model_.Q().diag(col);
 
-      const double row_value = theta * A_.value_[corr];
+      const double mult = 1.0 / denom;
+      const double row_value = mult * A_.value_[corr];
 
       // for each nonzero in the row, go down corresponding column, starting
       // from current position
@@ -251,6 +268,9 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
   // in object S and the status. If building the matrix failed, the status is
   // set to kStatusOverflow.
 
+  if (model_.nonSeparableQp()) return kStatusErrorAnalyse;
+  if (model_.m() == 0) return kStatusErrorAnalyse;
+
   Clock clock;
   if (Int status = buildNEstructure(nz_limit)) return status;
   info_.matrix_structure_time = clock.stop();
@@ -267,8 +287,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
 // Factorise phase
 // =========================================================================
 
-Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
-                                const std::vector<double>& scaling) {
+Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
@@ -291,8 +310,7 @@ Int FactorHiGHSSolver::factorAS(const HighsSparseMatrix& A,
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::factorNE(const HighsSparseMatrix& A,
-                                const std::vector<double>& scaling) {
+Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
@@ -390,8 +408,6 @@ Int FactorHiGHSSolver::setup() {
 
 Int FactorHiGHSSolver::chooseNla() {
   // Choose whether to use augmented system or normal equations.
-
-  assert(options_.nla == kOptionNlaChoose);
 
   Symbolic symb_NE{};
   Symbolic symb_AS{};
@@ -514,7 +530,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   std::vector<bool> status(orderings_to_try.size(), 0);
   Int num_success = 0;
 
-  for (Int i = 0; i < orderings_to_try.size(); ++i) {
+  for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
     clock.start();
     status[i] =
         FH_.analyse(symbolics[i], rows, ptr, signs, orderings_to_try[i]);
@@ -588,9 +604,19 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 Int FactorHiGHSSolver::setNla() {
   std::stringstream log_stream;
 
-  switch (options_.nla) {
+  hipo::OptionNla nla = options_.nla;
+  if (nla == kOptionNlaNormEq && model_.nonSeparableQp()) {
+    log_.printw("Normal equations not available for non-separable QP\n");
+    nla = kOptionNlaChoose;
+  }
+
+  switch (nla) {
     case kOptionNlaAugmented: {
-      if (analyseAS(S_)) {
+      Int status = analyseAS(S_);
+      if (status == kStatusOverflow) {
+        log_.printe("AS requested, integer overflow\n");
+        return kStatusOverflow;
+      } else if (status) {
         log_.printe("AS requested, failed analyse phase\n");
         return kStatusErrorAnalyse;
       }
@@ -677,6 +703,9 @@ void FactorHiGHSSolver::setParallel() {
         parallel_tree = false;
       }
 
+      // switch off tree parallelism if depth of recursion is too large
+      if (S_.depth() > kMaxTreeDepth) parallel_tree = false;
+
       if (parallel_tree && parallel_node) {
         options_.parallel = kOptionParallelOn;
         log_stream << "Full preferred\n";
@@ -715,7 +744,7 @@ double FactorHiGHSSolver::flops() const { return S_.flops(); }
 double FactorHiGHSSolver::spops() const { return S_.spops(); }
 double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
 void FactorHiGHSSolver::getReg(std::vector<double>& reg) {
-  return FH_.getRegularisation(reg);
+  FH_.getRegularisation(reg);
 }
 
 void FactorHiGHSSolver::freeASmemory() {

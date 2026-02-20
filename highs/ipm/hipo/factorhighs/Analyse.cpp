@@ -122,7 +122,7 @@ Int Analyse::getPermutation() {
     // ----- METIS ----------------
     // ----------------------------
     idx_t options[METIS_NOPTIONS];
-    METIS_SetDefaultOptions(options);
+    Highs_METIS_SetDefaultOptions(options);
     options[METIS_OPTION_SEED] = kMetisSeed;
 
     // set logging of Metis depending on debug level
@@ -135,8 +135,8 @@ Int Analyse::getPermutation() {
 
     if (log_) log_->printDevInfo("Running Metis\n");
 
-    Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
-                              options, perm_.data(), iperm_.data());
+    Int status = Highs_METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(),
+                                    NULL, options, perm_.data(), iperm_.data());
 
     if (log_) log_->printDevInfo("Metis done\n");
     if (status != METIS_OK) {
@@ -149,12 +149,12 @@ Int Analyse::getPermutation() {
     // ------ AMD -----------------
     // ----------------------------
     double control[AMD_CONTROL];
-    amd_defaults(control);
+    Highs_amd_defaults(control);
     double info[AMD_INFO];
 
     if (log_) log_->printDevInfo("Running AMD\n");
-    Int status = amd_order(n_, temp_ptr.data(), temp_rows.data(), perm_.data(),
-                           control, info);
+    Int status = Highs_amd_order(n_, temp_ptr.data(), temp_rows.data(),
+                                 perm_.data(), control, info);
     if (log_) log_->printDevInfo("AMD done\n");
 
     if (status != AMD_OK) {
@@ -170,8 +170,8 @@ Int Analyse::getPermutation() {
     // ----------------------------
 
     if (log_) log_->printDevInfo("Running RCM\n");
-    Int status = genrcm(n_, temp_ptr.back(), temp_ptr.data(), temp_rows.data(),
-                        perm_.data());
+    Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
+                              temp_rows.data(), perm_.data());
     if (log_) log_->printDevInfo("RCM done\n");
 
     if (status != 0) {
@@ -801,7 +801,8 @@ void Analyse::snPattern() {
 
   // compute column pointers of L
   std::vector<Int64> work(sn_indices_.size());
-  for (Int i = 0; i < sn_indices_.size(); ++i) work[i] = sn_indices_[i];
+  for (Int i = 0; i < static_cast<Int>(sn_indices_.size()); ++i)
+    work[i] = sn_indices_[i];
   counts2Ptr(ptr_sn_, work);
 
   // consider each row
@@ -1079,7 +1080,7 @@ void Analyse::reorderChildren() {
 
     // modify linked lists with new order of children
     head[sn] = children.front().first;
-    for (Int i = 0; i < children.size() - 1; ++i) {
+    for (Int i = 0; i < static_cast<Int>(children.size()) - 1; ++i) {
       next[children[i].first] = children[i + 1].first;
     }
     next[children.back().first] = -1;
@@ -1349,6 +1350,7 @@ Int Analyse::run(Symbolic& S) {
   S.block_size_ = nb_;
   S.max_stack_size_ = max_stack_size_;
   S.ordering = ordering_;
+  S.tree_depth_ = maxDepthTree(sn_parent_);
 
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());

@@ -56,7 +56,7 @@ graph_t *CoarsenGraph(ctrl_t *ctrl, graph_t *graph)
           Match_SHEM(ctrl, graph);
         break;
       default:
-        gk_errexit("Unknown ctype: %d\n", ctrl->ctype);
+        GK_ERREXIT("Unknown ctype: %d\n", ctrl->ctype);
     }
 
     graph = graph->coarser;
@@ -116,7 +116,7 @@ graph_t *CoarsenGraphNlevels(ctrl_t *ctrl, graph_t *graph, idx_t nlevels)
           Match_SHEM(ctrl, graph);
         break;
       default:
-        gk_errexit("Unknown ctype: %d\n", ctrl->ctype);
+        GK_ERREXIT("Unknown ctype: %d\n", ctrl->ctype);
     }
 
     graph = graph->coarser;
@@ -244,8 +244,6 @@ idx_t Match_RM(ctrl_t *ctrl, graph_t *graph)
       }
     }
   }
-
-  //printf("nunmatched: %zu\n", nunmatched);
 
   /* see if a 2-hop matching is required/allowed */
   if (!ctrl->no2hop && nunmatched > UNMATCHEDFOR2HOP*nvtxs) 
@@ -390,8 +388,6 @@ idx_t Match_SHEM(ctrl_t *ctrl, graph_t *graph)
     }
   }
 
-  //printf("nunmatched: %zu\n", nunmatched);
-
   /* see if a 2-hop matching is required/allowed */
   if (!ctrl->no2hop && nunmatched > UNMATCHEDFOR2HOP*nvtxs) 
     cnvtxs = Match_2Hop(ctrl, graph, perm, match, cnvtxs, nunmatched);
@@ -461,8 +457,6 @@ idx_t Match_2HopAny(ctrl_t *ctrl, graph_t *graph, idx_t *perm, idx_t *match,
   cmap   = graph->cmap;
 
   nunmatched = *r_nunmatched;
-
-  /*IFSET(ctrl->dbglvl, METIS_DBG_COARSEN, printf("IN: nunmatched: %zu\t", nunmatched)); */
 
   /* create the inverted index */
   WCOREPUSH;
@@ -537,8 +531,6 @@ idx_t Match_2HopAll(ctrl_t *ctrl, graph_t *graph, idx_t *perm, idx_t *match,
   nunmatched = *r_nunmatched;
   mask = IDX_MAX/maxdegree;
 
-  /*IFSET(ctrl->dbglvl, METIS_DBG_COARSEN, printf("IN: nunmatched: %zu\t", nunmatched)); */
-
   WCOREPUSH;
 
   /* collapse vertices with identical adjacency lists */
@@ -602,12 +594,12 @@ void PrintCGraphStats(ctrl_t *ctrl, graph_t *graph)
 {
   idx_t i;
 
-  printf("%10"PRIDX" %10"PRIDX" %10"PRIDX" [%"PRIDX"] [", 
+  HIGHS_ORDERING_PRINT("%10"PRIDX" %10"PRIDX" %10"PRIDX" [%"PRIDX"] [", 
       graph->nvtxs, graph->nedges, isum(graph->nedges, graph->adjwgt, 1), ctrl->CoarsenTo);
 
   for (i=0; i<graph->ncon; i++)
-    printf(" %8"PRIDX":%8"PRIDX, ctrl->maxvwgt[i], graph->tvwgt[i]);
-  printf(" ]\n");
+    HIGHS_ORDERING_PRINT(" %8"PRIDX":%8"PRIDX, ctrl->maxvwgt[i], graph->tvwgt[i]);
+  HIGHS_ORDERING_PRINT(" ]\n");
 }
 
 

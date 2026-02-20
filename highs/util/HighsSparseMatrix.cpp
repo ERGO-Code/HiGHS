@@ -1151,10 +1151,10 @@ void HighsSparseMatrix::alphaProductPlusY(const double alpha,
                                           const std::vector<double>& x,
                                           std::vector<double>& y,
                                           const bool transpose) const {
-  assert(x.size() >= static_cast<size_t>(transpose) ? this->num_row_
-                                                    : this->num_col_);
-  assert(y.size() >= static_cast<size_t>(transpose) ? this->num_col_
-                                                    : this->num_row_);
+  assert(x.size() >=
+         static_cast<size_t>(transpose ? this->num_row_ : this->num_col_));
+  assert(y.size() >=
+         static_cast<size_t>(transpose ? this->num_col_ : this->num_row_));
   if (this->isColwise()) {
     if (transpose) {
       for (int iCol = 0; iCol < this->num_col_; iCol++)

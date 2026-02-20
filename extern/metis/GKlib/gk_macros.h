@@ -10,6 +10,8 @@
 #ifndef _GK_MACROS_H_
 #define _GK_MACROS_H_
 
+#include "ipm/hipo/auxiliary/OrderingPrint.h"
+
 /*-------------------------------------------------------------
  * Usefull commands 
  *-------------------------------------------------------------*/
@@ -25,7 +27,9 @@
 /*-------------------------------------------------------------
  * dbglvl handling macros
  *-------------------------------------------------------------*/
-#define IFSET(a, flag, cmd) if ((a)&(flag)) (cmd);
+#define IFSET(a, flag, cmd) if ((a)&(flag)) cmd ;
+
+#define GK_ERREXIT(...) { HIGHS_ORDERING_PRINT(__VA_ARGS__) ; abort(); }
 
 /*-------------------------------------------------------------
  * CSR conversion macros

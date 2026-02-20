@@ -375,6 +375,8 @@ class HPresolve {
                          HighsInt& numVarsSubstituted,
                          HighsInt& liftedNonZeros);
 
+  std::pair<int64_t, HighsInt> computeProbingScore(HighsInt col) const;
+
   Result runProbing(HighsPostsolveStack& postsolve_stack);
 
   Result liftingForProbing(HighsPostsolveStack& postsolve_stack);

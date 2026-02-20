@@ -17,14 +17,5 @@ This file contains functions dealing with error reporting and termination
 /*************************************************************************/
 void gk_errexit(char *f_str,...)
 {
-  va_list argp;
-
-  va_start(argp, f_str);
-  vfprintf(stderr, f_str, argp);
-  va_end(argp);
-
-  fprintf(stderr,"\n");
-  fflush(stderr);
-
   abort();
 }

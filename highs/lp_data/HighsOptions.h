@@ -126,7 +126,7 @@ class OptionRecordString : public OptionRecord {
 
 void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
-                      const std::string log_file);
+                      const std::string& log_file);
 
 bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
                          const string& name, const string& value);
@@ -161,7 +161,7 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
                               const double value);
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
                               OptionRecordString& option_records,
-                              const std::string value);
+                              const std::string& value);
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
@@ -188,7 +188,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
                                  HighsLogOptions& log_options,
                                  std::vector<OptionRecord*>& option_records,
-                                 const std::string value);
+                                 const std::string& value);
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
                                  HighsLogOptions& log_options,
@@ -203,7 +203,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const double value);
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
-                                 std::string const value);
+                                 const std::string& value);
 
 OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
                               const HighsOptions& from_options,
@@ -268,6 +268,7 @@ const string kIpmString = "ipm";
 const string kHipoString = "hipo";
 const string kIpxString = "ipx";
 const string kPdlpString = "pdlp";
+const string kQpAsmString = "qpasm";
 
 const HighsInt kKeepNRowsDeleteRows = -1;
 const HighsInt kKeepNRowsDeleteEntries = 0;
@@ -713,20 +714,20 @@ class HighsOptions : public HighsOptionsStruct {
     const bool now_advanced = true;
     // Options read from the command line
     record_string = new OptionRecordString(
-        kPresolveString, "Presolve option: \"off\", \"choose\" or \"on\"",
-        advanced, &presolve, kHighsChooseString);
-    records.push_back(record_string);
-
-    record_string =
-        new OptionRecordString(kSolverString,
-                               "LP solver option: \"choose\", \"simplex\", "
-                               "\"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
-                               advanced, &solver, kHighsChooseString);
+        kPresolveString, "Presolve: \"off\", \"choose\" or \"on\"", advanced,
+        &presolve, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
-        kParallelString, "Parallel option: \"off\", \"choose\" or \"on\"",
-        advanced, &parallel, kHighsChooseString);
+        kSolverString,
+        "LP/QP solver: \"choose\", \"simplex\", "
+        "\"ipm\", \"ipx\", \"hipo\", \"pdlp\" or \"qpasm\"",
+        advanced, &solver, kHighsChooseString);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kParallelString, "Parallel: \"off\", \"choose\" or \"on\"", advanced,
+        &parallel, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -1219,8 +1220,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "mip_allow_cut_separation_at_nodes",
-        "Whether cut separation at nodes is permitted", advanced,
-        &mip_allow_cut_separation_at_nodes, true);
+        "Whether cut separation at nodes other than the root node is permitted",
+        advanced, &mip_allow_cut_separation_at_nodes, true);
     records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(
@@ -1244,15 +1245,14 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string =
         new OptionRecordString(kMipLpSolverString,
-                               "MIP LP solver option: \"choose\", \"simplex\", "
+                               "MIP LP solver: \"choose\", \"simplex\", "
                                "\"ipm\", \"ipx\" or \"hipo\"",
                                advanced, &mip_lp_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
-        kMipIpmSolverString,
-        "MIP IPM solver option: \"choose\", \"ipx\" or \"hipo\"", advanced,
-        &mip_ipm_solver, kHighsChooseString);
+        kMipIpmSolverString, "MIP IPM solver: \"choose\", \"ipx\" or \"hipo\"",
+        advanced, &mip_ipm_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_double = new OptionRecordDouble(
@@ -1268,21 +1268,21 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kHipoSystemString,
-        "HiPO Newton system option: \"augmented\", \"normaleq\" or \"choose\".",
+        "HiPO Newton system: \"choose\", \"augmented\" or \"normaleq\"",
         advanced, &hipo_system, kHighsChooseString);
     records.push_back(record_string);
 
     record_string =
         new OptionRecordString(kHipoParallelString,
-                               "HiPO parallel option: \"tree\", "
-                               "\"node\" or \"both\".",
+                               "HiPO parallelism: \"tree\", "
+                               "\"node\" or \"both\"",
                                advanced, &hipo_parallel_type, kHipoBothString);
     records.push_back(record_string);
 
     record_string =
         new OptionRecordString(kHipoOrderingString,
-                               "HiPO matrix reordering option: \"metis\", "
-                               "\"amd\", \"rcm\" or \"choose\".",
+                               "HiPO matrix reordering: \"choose\", \"metis\", "
+                               "\"amd\" or \"rcm\"",
                                advanced, &hipo_ordering, kHighsChooseString);
     records.push_back(record_string);
 
@@ -1292,8 +1292,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
-        "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
-        advanced, &pdlp_scaling, true);
+        "pdlp_scaling", "Scaling for PDLP solver: Default = true", advanced,
+        &pdlp_scaling, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
@@ -1648,5 +1648,12 @@ class HighsOptions : public HighsOptionsStruct {
   HighsInt num_user_settable_options_;
   void setLogOptions();
 };
+
+void warnSolverInvalid(const HighsOptions& options,
+                       const std::string& problem_type);
+
+bool solverValidForLp(const std::string& solver);
+bool solverValidForMip(const std::string& solver);
+bool solverValidForQp(const std::string& solver);
 
 #endif

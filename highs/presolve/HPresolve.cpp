@@ -1576,6 +1576,18 @@ HPresolve::Result HPresolve::finaliseProbing(
   return checkLimits(postsolve_stack);
 }
 
+std::pair<int64_t, HighsInt> HPresolve::computeProbingScore(
+    HighsInt col) const {
+  HighsInt implicsUp =
+      mipsolver->mipdata_->cliquetable.getNumImplications(col, 1);
+  HighsInt implicsDown =
+      mipsolver->mipdata_->cliquetable.getNumImplications(col, 0);
+  return std::make_pair(
+      std::min(int64_t{5000}, static_cast<int64_t>(implicsUp) * implicsDown) /
+          (int64_t{1} + static_cast<int64_t>(numProbes[col])),
+      std::min(HighsInt{100}, implicsUp + implicsDown));
+}
+
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   mipsolver->analysis_.mipTimerStart(kMipClockProbingPresolve);
   probingEarlyAbort = false;
@@ -1603,13 +1615,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     HighsRandom random(options->random_seed);
     for (HighsInt i = 0; i != model->num_col_; ++i) {
       if (domain.isBinary(i)) {
-        HighsInt implicsUp = cliquetable.getNumImplications(i, 1);
-        HighsInt implicsDown = cliquetable.getNumImplications(i, 0);
-        binaries.emplace_back(
-            -std::min(int64_t{5000}, int64_t(implicsUp) * implicsDown) /
-                (int64_t{1} + static_cast<int64_t>(numProbes[i])),
-            -std::min(HighsInt{100}, implicsUp + implicsDown), random.integer(),
-            i);
+        auto probingScore = computeProbingScore(i);
+        binaries.emplace_back(-probingScore.first, -probingScore.second,
+                              random.integer(), i);
       }
     }
   }
@@ -4999,24 +5007,21 @@ HPresolve::Result HPresolve::enumerateSolutions(
   HighsDomain& domain = mipsolver->mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
+  typedef std::tuple<double, double, HighsInt, HighsInt, uint32_t> candidateRow;
+
   // maximum size of a row and maximum number of rows that will be checked
   const size_t maxRowSize = 8;
   const HighsInt maxNumRowsChecked = 400;
   const size_t maxNumSolutions = 1 << maxRowSize;
+  // maximum percentage of overlap
+  const size_t maxPercentageRowOverlap = 50;
+  // maximum number of consecutive fails
+  const HighsInt maxNumFails = 6;
 
-  // check rows
-  struct candidaterow {
-    HighsInt row;
-    size_t numnzs;
-  };
-  std::vector<candidaterow> rows;
-  rows.reserve(model->num_row_);
-  for (HighsInt row = 0; row < mipsolver->numRow(); row++) {
-    // skip redundant rows
-    if (domain.isRedundantRow(row)) continue;
-    // check row
-    bool skiprow = false;
-    size_t numnzs = 0;
+  // lambda for checking binary rows
+  auto getBinaryRow = [&](HighsInt row, std::vector<HighsInt>& binvars,
+                          size_t& numnzs) {
+    numnzs = 0;
     for (HighsInt j = mipsolver->mipdata_->ARstart_[row];
          j < mipsolver->mipdata_->ARstart_[row + 1]; j++) {
       // get index
@@ -5025,19 +5030,136 @@ HPresolve::Result HPresolve::enumerateSolutions(
       if (domain.isFixed(col)) continue;
       // skip row if there are non-binary variables or maximum number of
       // elements is reached
-      skiprow = skiprow || !domain.isBinary(col) || numnzs >= maxRowSize;
-      if (skiprow) break;
-      numnzs++;
+      if (!domain.isBinary(col) || numnzs >= maxRowSize) return false;
+      // store binary variable
+      binvars[numnzs++] = col;
     }
-    if (!skiprow) rows.push_back({row, numnzs});
-  }
+    if (numnzs == 0) return false;
+    pdqsort(binvars.begin(), binvars.begin() + numnzs);
+    return true;
+  };
 
-  // sort according to size
-  pdqsort(rows.begin(), rows.end(),
-          [&](const candidaterow& row1, const candidaterow& row2) {
-            return (row1.numnzs == row2.numnzs ? row1.row < row2.row
-                                               : row1.numnzs < row2.numnzs);
-          });
+  // lambda for computing row score
+  auto computeRowScore = [&](const std::vector<HighsInt>& binvars,
+                             size_t numnzs) {
+    int64_t score = 0;
+    HighsInt score2 = 0;
+    for (size_t i = 0; i < numnzs; i++) {
+      auto probingScore = computeProbingScore(binvars[i]);
+      score += probingScore.first;
+      score2 += probingScore.second;
+    }
+    return std::make_pair<double, double>(score / static_cast<double>(numnzs),
+                                          score2 / static_cast<double>(numnzs));
+  };
+
+  // lambda for computing row signature
+  auto computeRowSignature = [&](const std::vector<HighsInt>& binvars,
+                                 size_t numnzs) {
+    uint32_t signature = 0;
+    for (size_t i = 0; i < numnzs; i++) {
+      HighsInt colHashedPos = (HighsHashHelpers::hash(binvars[i]) >> 59);
+      assert(colHashedPos < 32);
+      signature |= 1 << colHashedPos;
+    }
+    return signature;
+  };
+
+  // lambda for computing overlap of two binary rows
+  auto computeRowOverlap = [&](const std::vector<HighsInt>& binvars,
+                               const std::vector<HighsInt>& binvars2,
+                               size_t numnzs, size_t numnzs2) {
+    size_t overlap = 0;
+    size_t ir = 0;
+    size_t ir2 = 0;
+    while (ir < numnzs && ir2 < numnzs2) {
+      if (binvars[ir] < binvars2[ir2])
+        ir++;
+      else if (binvars[ir] > binvars2[ir2])
+        ir2++;
+      else {
+        ir++;
+        ir2++;
+        overlap++;
+      }
+    }
+    return overlap;
+  };
+
+  // lambda for compiling candidate rows
+  auto compileRows = [&](std::vector<candidateRow>& rows) {
+    std::vector<HighsInt> binvars(maxRowSize);
+    size_t numnzs = 0;
+    HighsRandom random(options->random_seed);
+    for (HighsInt i = 0; i < mipsolver->numRow(); i++) {
+      // skip redundant rows
+      if (domain.isRedundantRow(i)) continue;
+      // skip non-binary rows
+      if (!getBinaryRow(i, binvars, numnzs)) continue;
+      // compute row score
+      auto score = computeRowScore(binvars, numnzs);
+      // add row to vector
+      rows.emplace_back(-score.first, -score.second, random.integer(), i,
+                        computeRowSignature(binvars, numnzs));
+    }
+  };
+
+  // lambda for removing similar rows
+  auto removeSimilarRows = [&](std::vector<candidateRow>& rows) {
+    if (rows.size() <= 1) return;
+    std::vector<HighsInt> binvars(maxRowSize);
+    std::vector<HighsInt> binvars2(maxRowSize);
+    size_t numnzs;
+    size_t numnzs2;
+    HighsInt numRowsAccepted = 0;
+    HighsInt numRowsRemoved = 0;
+    size_t numComparisons = 0;
+    for (size_t i = 0; i < rows.size() - 1; i++) {
+      // get row index and skip removed rows
+      HighsInt r = std::get<3>(rows[i]);
+      if (r == -1) continue;
+      // check if maximum number of rows is reached
+      if ((++numRowsAccepted) >= maxNumRowsChecked) break;
+      // get indices of binary variables in the row
+      getBinaryRow(r, binvars, numnzs);
+      for (size_t ii = i + 1; ii < rows.size(); ii++) {
+        // get row index and skip removed rows
+        HighsInt& r2 = std::get<3>(rows[ii]);
+        if (r2 == -1) continue;
+        // compare signatures to see if there may be overlap
+        if ((std::get<4>(rows[i]) & std::get<4>(rows[ii])) == 0) continue;
+        // get indices of binary variables in the row
+        getBinaryRow(r2, binvars2, numnzs2);
+        // check if there is too much overlap
+        numComparisons++;
+        size_t overlap = computeRowOverlap(binvars, binvars2, numnzs, numnzs2);
+        if ((200 * overlap) / (numnzs + numnzs2) > maxPercentageRowOverlap) {
+          // mark row for removal
+          numRowsRemoved++;
+          r2 = -1;
+        }
+      }
+    }
+    if (numRowsRemoved > 0)
+      rows.erase(std::remove_if(rows.begin(), rows.end(),
+                                [](const candidateRow& p) {
+                                  return std::get<3>(p) == -1;
+                                }),
+                 rows.end());
+    if (rows.size() > static_cast<size_t>(maxNumRowsChecked))
+      rows.resize(maxNumRowsChecked);
+  };
+
+  // vector of rows
+  std::vector<candidateRow> rows;
+  rows.reserve(model->num_row_);
+
+  // compile rows and sort them
+  compileRows(rows);
+  pdqsort(rows.begin(), rows.end());
+
+  // remove similar rows
+  removeSimilarRows(rows);
 
   // vectors for storing branching decisions and solutions
   struct branch {
@@ -5138,106 +5260,71 @@ HPresolve::Result HPresolve::enumerateSolutions(
     numWorstCaseBounds--;
   };
 
-  auto varsFormClique = [&](size_t numVars, size_t minNumActiveCols,
-                            size_t maxNumActiveCols) {
-    return (maxNumActiveCols == 1 || (minNumActiveCols == numVars - 1 &&
-                                      maxNumActiveCols == numVars - 1));
+  auto updateWorstCaseBounds = [&](HighsInt col) {
+    // update worst-case bounds
+    worstCaseLowerBound[col] =
+        std::min(worstCaseLowerBound[col], domain.col_lower_[col]);
+    worstCaseUpperBound[col] =
+        std::max(worstCaseUpperBound[col], domain.col_upper_[col]);
+    // check if worst-case bounds are not tighter than global bounds
+    return (worstCaseLowerBound[col] <= col_lower[col] &&
+            worstCaseUpperBound[col] >= col_upper[col]);
   };
 
-  auto handleSolution = [&](size_t numVars, size_t& numSolutions,
-                            size_t& numWorstCaseBounds,
-                            size_t& minNumActiveCols, size_t& maxNumActiveCols,
-                            bool& noReductions) {
-    // propagate
-    domain.propagate();
-    if (domain.infeasible()) return;
-    // handling of worst-case bounds
-    if (numSolutions == 0) {
-      // initialize
-      for (HighsInt col : domain.getChangedCols()) {
-        worstCaseBounds[numWorstCaseBounds++] = col;
-        worstCaseLowerBound[col] =
-            std::min(worstCaseLowerBound[col], domain.col_lower_[col]);
-        worstCaseUpperBound[col] =
-            std::max(worstCaseUpperBound[col], domain.col_upper_[col]);
-      }
-    } else {
-      size_t i = 0;
-      while (i < numWorstCaseBounds) {
-        HighsInt col = worstCaseBounds[i];
-        if (!domain.isChangedCol(col)) {
-          // no bound changes for this variable -> reset worst-case
-          // bounds and remove variable
-          removeWorstCaseBounds(i, numWorstCaseBounds);
+  auto handleSolution =
+      [&](size_t numVars, size_t& numSolutions, size_t& numWorstCaseBounds,
+          size_t& minNumActiveCols, size_t& maxNumActiveCols) {
+        // propagate
+        domain.propagate();
+        if (domain.infeasible()) return;
+        // handling of worst-case bounds
+        if (numSolutions == 0) {
+          // initialize
+          for (HighsInt col : domain.getChangedCols()) {
+            worstCaseBounds[numWorstCaseBounds++] = col;
+            updateWorstCaseBounds(col);
+          }
         } else {
-          // update worst-case bounds
-          worstCaseLowerBound[col] =
-              std::min(worstCaseLowerBound[col], domain.col_lower_[col]);
-          worstCaseUpperBound[col] =
-              std::max(worstCaseUpperBound[col], domain.col_upper_[col]);
-          // remove worst-case bounds if they are equal to the global bounds
-          if (worstCaseLowerBound[col] <= col_lower[col] &&
-              worstCaseUpperBound[col] >= col_upper[col])
-            removeWorstCaseBounds(i, numWorstCaseBounds);
-          else
-            i++;
+          size_t i = 0;
+          while (i < numWorstCaseBounds) {
+            HighsInt col = worstCaseBounds[i];
+            if (!domain.isChangedCol(col)) {
+              // no bound changes for this variable -> reset worst-case
+              // bounds and remove variable
+              removeWorstCaseBounds(i, numWorstCaseBounds);
+            } else {
+              // update worst-case bounds
+              if (updateWorstCaseBounds(col))
+                removeWorstCaseBounds(i, numWorstCaseBounds);
+              else
+                i++;
+            }
+          }
         }
-      }
-    }
-    // store solution and compute minimum and maximum number of active variables
-    // (i.e. those having solution value of 1)
-    size_t numActiveCols = 0;
-    for (size_t i = 0; i < numVars; i++) {
-      HighsInt solValue = domain.col_lower_[vars[i]] == 0.0 ? 0 : 1;
-      solutions[i][numSolutions] = solValue;
-      if (solValue != 0) numActiveCols++;
-    }
-    minNumActiveCols = std::min(minNumActiveCols, numActiveCols);
-    maxNumActiveCols = std::max(maxNumActiveCols, numActiveCols);
-    numSolutions++;
-
-    // if no reductions are possible, stop enumerating solutions
-    noReductions = numWorstCaseBounds == 0 &&
-                   !varsFormClique(numVars, minNumActiveCols, maxNumActiveCols);
-    if (noReductions) {
-      for (size_t i = 0; i < numVars - 1; i++) {
-        for (size_t ii = i + 1; ii < numVars; ii++) {
-          noReductions = noReductions && !identicalVars(numSolutions, i, ii) &&
-                         !complementaryVars(numSolutions, i, ii);
-          if (!noReductions) break;
+        // store solution and compute minimum and maximum number of active
+        // variables (i.e. those having solution value of 1)
+        size_t numActiveCols = 0;
+        for (size_t i = 0; i < numVars; i++) {
+          HighsInt solValue = domain.col_lower_[vars[i]] == 0.0 ? 0 : 1;
+          solutions[i][numSolutions] = solValue;
+          if (solValue != 0) numActiveCols++;
         }
-        if (!noReductions) break;
-      }
-    }
-  };
+        minNumActiveCols = std::min(minNumActiveCols, numActiveCols);
+        maxNumActiveCols = std::max(maxNumActiveCols, numActiveCols);
+        numSolutions++;
+      };
 
   // loop over candidate rows
-  HighsInt numRowsChecked = 0;
   HighsInt numCliquesFound = 0;
+  HighsInt numFails = 0;
   for (const auto& r : rows) {
     // get row index
-    HighsInt row = r.row;
+    HighsInt row = std::get<3>(r);
     // skip redundant rows
     if (domain.isRedundantRow(row)) continue;
-    // increment counter
-    numRowsChecked++;
-    // check if maximum is reached
-    if (numRowsChecked > maxNumRowsChecked) break;
     // check row
     size_t numVars = 0;
-    for (HighsInt j = mipsolver->mipdata_->ARstart_[row];
-         j < mipsolver->mipdata_->ARstart_[row + 1]; j++) {
-      // get index
-      HighsInt col = mipsolver->mipdata_->ARindex_[j];
-      // skip fixed variables
-      if (domain.isFixed(col)) continue;
-      // store index of binary variable
-      vars[numVars++] = col;
-    }
-    if (numVars == 0) continue;
-
-    // clear changed cols
-    domain.clearChangedCols();
+    if (!getBinaryRow(row, vars, numVars)) continue;
 
     // main loop
     HighsInt numBranches = -1;
@@ -5245,16 +5332,13 @@ HPresolve::Result HPresolve::enumerateSolutions(
     size_t numSolutions = 0;
     size_t minNumActiveCols = numVars;
     size_t maxNumActiveCols = 0;
-    bool noReductions = false;
     while (true) {
       bool backtrack = domain.infeasible();
       if (!backtrack) {
         backtrack = solutionFound(numVars);
-        if (backtrack) {
+        if (backtrack)
           handleSolution(numVars, numSolutions, numWorstCaseBounds,
-                         minNumActiveCols, maxNumActiveCols, noReductions);
-          if (noReductions) break;
-        }
+                         minNumActiveCols, maxNumActiveCols);
       }
       // branch or backtrack
       if (!backtrack)
@@ -5263,21 +5347,16 @@ HPresolve::Result HPresolve::enumerateSolutions(
         break;
     }
 
-    // no reductions for this row?
-    if (noReductions) {
-      // clang-format off
-      //
-      // clang formatting on oronsay can put the ";" on the next line!
-      while (doBacktrack(numBranches));
-      // clang-format on
-      continue;
-    }
-
     // no solutions -> infeasible
     HPRESOLVE_CHECKED_CALL(handleInfeasibility(numSolutions == 0));
 
+    // store current number of bound changes etc.
+    size_t oldNumChangedCols = domain.getChangedCols().size();
+    HighsInt oldNumCliques = cliquetable.numCliques();
+    size_t oldNumSubstitutions = cliquetable.getSubstitutions().size();
+
     // check if all variables form a clique
-    if (varsFormClique(numVars, minNumActiveCols, maxNumActiveCols)) {
+    if (maxNumActiveCols == 1 || minNumActiveCols == numVars - 1) {
       numCliquesFound++;
       std::vector<HighsCliqueTable::CliqueVar> clique(numVars);
       for (size_t i = 0; i < numVars; i++)
@@ -5294,7 +5373,6 @@ HPresolve::Result HPresolve::enumerateSolutions(
       HighsInt col = worstCaseBounds[i];
       if (worstCaseLowerBound[col] > domain.col_lower_[col]) {
         // tighten lower bound
-        col_lower[col] = worstCaseLowerBound[col];
         domain.changeBound(HighsBoundType::kLower, col,
                            worstCaseLowerBound[col],
                            HighsDomain::Reason::unspecified());
@@ -5302,7 +5380,6 @@ HPresolve::Result HPresolve::enumerateSolutions(
       }
       if (worstCaseUpperBound[col] < domain.col_upper_[col]) {
         // tighten upper bound
-        col_upper[col] = worstCaseUpperBound[col];
         domain.changeBound(HighsBoundType::kUpper, col,
                            worstCaseUpperBound[col],
                            HighsDomain::Reason::unspecified());
@@ -5341,6 +5418,26 @@ HPresolve::Result HPresolve::enumerateSolutions(
         }
       }
     }
+
+    // update bounds
+    size_t numChangedCols = domain.getChangedCols().size();
+    for (HighsInt col : domain.getChangedCols()) {
+      col_lower[col] = domain.col_lower_[col];
+      col_upper[col] = domain.col_upper_[col];
+    }
+
+    // clear changed cols
+    domain.clearChangedCols();
+
+    // check if solution enumeration failed
+    if (numChangedCols != oldNumChangedCols ||
+        cliquetable.numCliques() != oldNumCliques ||
+        cliquetable.getSubstitutions().size() != oldNumSubstitutions)
+      numFails = 0;
+    else {
+      numFails++;
+      if (numFails > maxNumFails) break;
+    }
   }
 
   // finalise probing
@@ -5355,7 +5452,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
   if (numVarsFixed > 0 || numBndsTightened > 0 || numVarsSubstituted > 0)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Enumeration presolve fixed %d columns, tightened %d bounds "
-                "and performed %d substitutions",
+                "and performed %d substitutions\n",
                 static_cast<int>(numVarsFixed),
                 static_cast<int>(numBndsTightened),
                 static_cast<int>(numVarsSubstituted));

@@ -1,7 +1,9 @@
 #include "Iterate.h"
 
 #include "Parameters.h"
+#include "ipm/IpxWrapper.h"
 #include "ipm/hipo/factorhighs/FactorHiGHSSettings.h"
+#include "model/HighsHessianUtils.h"
 
 namespace hipo {
 
@@ -138,13 +140,17 @@ void Iterate::indicators() {
   products();
 }
 
-void Iterate::primalObj() { pobj = model.offset() + dotProd(x, model.c()); }
+void Iterate::primalObj() {
+  pobj = model.offset() + dotProd(x, model.c());
+  if (model.qp()) pobj += model.sense() * model.Q().objectiveValue(x);
+}
 void Iterate::dualObj() {
   dobj = model.offset() + dotProd(y, model.b());
   for (Int i = 0; i < model.n(); ++i) {
     if (model.hasLb(i)) dobj += model.lb(i) * zl[i];
     if (model.hasUb(i)) dobj -= model.ub(i) * zu[i];
   }
+  if (model.qp()) dobj -= model.sense() * model.Q().objectiveValue(x);
 }
 void Iterate::pdGap() {
   // relative primal-dual gap
@@ -220,6 +226,7 @@ void Iterate::residual1234() {
     if (model.hasLb(i)) res.r4[i] -= zl[i];
     if (model.hasUb(i)) res.r4[i] += zu[i];
   }
+  if (model.qp()) model.Q().alphaProductPlusY(model.sense(), x, res.r4);
 }
 void Iterate::residual56(double sigma) {
   for (Int i = 0; i < model.n(); ++i) {
@@ -250,8 +257,12 @@ std::vector<double> Iterate::residual8(const Residuals& r,
   std::vector<double> res8(r.r1);
   std::vector<double> temp(res7);
 
-  // temp = (Theta^-1+Rp)^-1 * res7
-  for (Int i = 0; i < model.n(); ++i) temp[i] /= scaling[i] + regul.primal;
+  // temp = (Theta^-1+Rp+Q)^-1 * res7
+  for (Int i = 0; i < model.n(); ++i) {
+    double denom = scaling[i] + regul.primal;
+    if (model.qp()) denom += model.sense() * model.Q().diag(i);
+    temp[i] /= denom;
+  }
 
   // res8 += A * temp
   model.A().alphaProductPlusY(1.0, temp, res8);
@@ -283,126 +294,6 @@ void Iterate::clearIres() {
   ires.r4.assign(model.n(), 0.0);
   ires.r5.assign(model.n(), 0.0);
   ires.r6.assign(model.n(), 0.0);
-}
-
-void Iterate::extract(std::vector<double>& x_user, std::vector<double>& xl_user,
-                      std::vector<double>& xu_user,
-                      std::vector<double>& slack_user,
-                      std::vector<double>& y_user, std::vector<double>& zl_user,
-                      std::vector<double>& zu_user) const {
-  // Extract solution with internal format
-
-  // Copy x, xl, xu, zl, zu without slacks
-  x_user = std::vector<double>(x.begin(), x.begin() + model.n_orig());
-  xl_user = std::vector<double>(xl.begin(), xl.begin() + model.n_orig());
-  xu_user = std::vector<double>(xu.begin(), xu.begin() + model.n_orig());
-  zl_user = std::vector<double>(zl.begin(), zl.begin() + model.n_orig());
-  zu_user = std::vector<double>(zu.begin(), zu.begin() + model.n_orig());
-
-  // force unused entries to have correct value
-  for (int i = 0; i < model.n_orig(); ++i) {
-    if (!model.hasLb(i)) {
-      xl_user[i] = kHighsInf;
-      zl_user[i] = 0.0;
-    }
-    if (!model.hasUb(i)) {
-      xu_user[i] = kHighsInf;
-      zu_user[i] = 0.0;
-    }
-  }
-
-  // For the Lagrange multipliers, use slacks from zl and zu, to get correct
-  // sign. NB: there is no explicit slack stored for equality constraints.
-  y_user.resize(model.m());
-  Int slack_pos = 0;
-  for (Int i = 0; i < model.m(); ++i) {
-    switch (model.constraint(i)) {
-      case '=':
-        y_user[i] = y[i];
-        break;
-      case '>':
-        y_user[i] = zu[model.n_orig() + slack_pos];
-        ++slack_pos;
-        break;
-      case '<':
-        y_user[i] = -zl[model.n_orig() + slack_pos];
-        ++slack_pos;
-        break;
-    }
-  }
-
-  // For x-slacks, use slacks from xl and xu, to get correct sign.
-  // NB: there is no explicit slack stored for equality constraints.
-  slack_user.resize(model.m());
-  slack_pos = 0;
-  for (Int i = 0; i < model.m(); ++i) {
-    switch (model.constraint(i)) {
-      case '=':
-        slack_user[i] = 0.0;
-        break;
-      case '>':
-        slack_user[i] = -xu[model.n_orig() + slack_pos];
-        ++slack_pos;
-        break;
-      case '<':
-        slack_user[i] = xl[model.n_orig() + slack_pos];
-        ++slack_pos;
-        break;
-    }
-  }
-}
-
-void Iterate::extract(std::vector<double>& x_user,
-                      std::vector<double>& slack_user,
-                      std::vector<double>& y_user,
-                      std::vector<double>& z_user) const {
-  // Extract solution with format for crossover
-
-  // Construct complementary point (x_temp, y_temp, z_temp)
-  std::vector<double> x_temp, y_temp, z_temp;
-  dropToComplementarity(x_temp, y_temp, z_temp);
-
-  // Both x_temp and z_temp include slacks.
-  // They are removed from x and z, but they are used to compute slack and y.
-
-  // Remove slacks from x and z
-  x_user = std::vector<double>(x_temp.begin(), x_temp.begin() + model.n_orig());
-  z_user = std::vector<double>(z_temp.begin(), z_temp.begin() + model.n_orig());
-
-  // For inequality constraints, the corresponding z-slack may have been dropped
-  // to zero, so build y from z-slacks.
-  // NB: there is no explicit slack stored for equality constraints.
-  y_user.resize(model.m());
-  Int slack_pos = 0;
-  for (Int i = 0; i < model.m(); ++i) {
-    switch (model.constraint(i)) {
-      case '=':
-        y_user[i] = y_temp[i];
-        break;
-      case '>':
-      case '<':
-        y_user[i] = -z_temp[model.n_orig() + slack_pos];
-        ++slack_pos;
-        break;
-    }
-  }
-
-  // Use slacks from x_temp and add slack for equality constraints.
-  // NB: there is no explicit slack stored for equality constraints.
-  slack_user.resize(model.m());
-  slack_pos = 0;
-  for (Int i = 0; i < model.m(); ++i) {
-    switch (model.constraint(i)) {
-      case '=':
-        slack_user[i] = 0.0;
-        break;
-      case '>':
-      case '<':
-        slack_user[i] = x_temp[model.n_orig() + slack_pos];
-        ++slack_pos;
-        break;
-    }
-  }
 }
 
 void Iterate::dropToComplementarity(std::vector<double>& x_cmp,
@@ -547,7 +438,7 @@ double Iterate::infeasAfterDropping() const {
   return std::max(pinf_max, dinf_max);
 }
 
-void Iterate::finalResiduals(Info& info) const {
+Int Iterate::finalResiduals(Info& info) const {
   // If ipx has been used, the information is already available, otherwise,
   // compute it.
 
@@ -555,65 +446,94 @@ void Iterate::finalResiduals(Info& info) const {
     std::vector<double> x_local, xl_local, xu_local, y_local, zl_local,
         zu_local, slack_local;
 
-    extract(x_local, xl_local, xu_local, slack_local, y_local, zl_local,
-            zu_local);
+    model.postprocess(x_local, xl_local, xu_local, slack_local, y_local,
+                      zl_local, zu_local, *this);
 
-    const Int m = model.m();
-    const Int n_orig = model.n_orig();
+    Int m, n;
+    HighsSparseMatrix A;
+    std::vector<double> b, c, lower, upper;
+    std::vector<char> constraints;
+    double offset;
 
-    // res1 = b - slack - A*x
-    std::vector<double> res1(m);
-    model.multWithoutSlack(-1.0, x_local, res1);
-    for (Int i = 0; i < m; ++i) {
-      res1[i] = res1[i] - slack_local[i] + model.b()[i];
-      if (model.scaled()) res1[i] /= model.rowScale(i);
+    if (!model.lpOrig()) return kStatusError;
+    fillInIpxData(*model.lpOrig(), n, m, offset, c, lower, upper, A.start_,
+                  A.index_, A.value_, b, constraints);
+    A.num_col_ = n;
+    A.num_row_ = m;
+
+    if (model.qp()) {
+      if (!model.QOrig()) return kStatusError;
     }
 
+    assert(x_local.size() == c.size());
+    assert(y_local.size() == b.size());
+
+    // res1 = b - slack - A*x
+    std::vector<double> res1 = b;
+    vectorAdd(res1, slack_local, -1.0);
+    A.alphaProductPlusY(-1.0, x_local, res1);
+
     // res2 = lower - x + xl
-    std::vector<double> res2(n_orig);
-    for (Int i = 0; i < n_orig; ++i) {
-      if (model.hasLb(i)) res2[i] = model.lb(i) - x_local[i] + xl_local[i];
-      if (model.scaled()) res2[i] *= model.colScale(i);
+    std::vector<double> res2(n);
+    for (Int i = 0; i < n; ++i) {
+      if (std::isfinite(lower[i]))
+        res2[i] = lower[i] - x_local[i] + xl_local[i];
     }
 
     // res3 = upper - x - xu
-    std::vector<double> res3(n_orig);
-    for (Int i = 0; i < n_orig; ++i) {
-      if (model.hasUb(i)) res3[i] = model.ub(i) - x_local[i] - xu_local[i];
-      if (model.scaled()) res3[i] *= model.colScale(i);
+    std::vector<double> res3(n);
+    for (Int i = 0; i < n; ++i) {
+      if (std::isfinite(upper[i]))
+        res3[i] = upper[i] - x_local[i] - xu_local[i];
     }
 
-    // res4 = c - A^T * y - zl + zu
-    std::vector<double> res4(n_orig);
-    model.multWithoutSlack(-1.0, y_local, res4, true);
-    for (Int i = 0; i < n_orig; ++i) {
-      if (model.hasLb(i)) res4[i] -= zl_local[i];
-      if (model.hasUb(i)) res4[i] += zu_local[i];
-      res4[i] += model.c()[i];
-      if (model.scaled()) res4[i] /= model.colScale(i);
+    // res4 = c - A^T * y - zl + zu + Q * x
+    std::vector<double> res4(n);
+    A.alphaProductPlusY(-1.0, y_local, res4, true);
+    if (model.qp())
+      model.QOrig()->alphaProductPlusY(model.sense(), x_local, res4);
+    for (Int i = 0; i < n; ++i) {
+      if (std::isfinite(lower[i])) res4[i] -= zl_local[i];
+      if (std::isfinite(upper[i])) res4[i] += zu_local[i];
+      res4[i] += c[i];
+    }
+
+    double norm_rhs = infNorm(b);
+    for (Int i = 0; i < n; ++i) {
+      if (std::isfinite(lower[i]))
+        norm_rhs = std::max(norm_rhs, std::abs(lower[i]));
+      if (std::isfinite(upper[i]))
+        norm_rhs = std::max(norm_rhs, std::abs(upper[i]));
     }
 
     info.p_res_abs = infNorm(res1);
     info.p_res_abs = std::max(info.p_res_abs, infNorm(res2));
     info.p_res_abs = std::max(info.p_res_abs, infNorm(res3));
-    info.p_res_rel = info.p_res_abs / (1.0 + model.normUnscaledRhs());
+    info.p_res_rel = info.p_res_abs / (1.0 + norm_rhs);
 
     info.d_res_abs = infNorm(res4);
-    info.d_res_rel = info.d_res_abs / (1.0 + model.normUnscaledObj());
+    info.d_res_rel = info.d_res_abs / (1.0 + infNorm(c));
 
-    double pobj = model.offset();
-    for (Int i = 0; i < n_orig; ++i) pobj += model.c()[i] * x_local[i];
+    const double quad_term_local =
+        model.qp() ? model.sense() * model.QOrig()->objectiveValue(x_local)
+                   : 0.0;
 
-    double dobj = model.offset();
-    dobj += dotProd(y_local, model.b());
-    for (Int i = 0; i < n_orig; ++i) {
-      if (model.hasLb(i)) dobj += model.lb(i) * zl_local[i];
-      if (model.hasUb(i)) dobj -= model.ub(i) * zu_local[i];
+    double pobj = offset;
+    pobj += dotProd(c, x_local);
+    pobj += quad_term_local;
+
+    double dobj = offset;
+    dobj += dotProd(y_local, b);
+    for (Int i = 0; i < n; ++i) {
+      if (std::isfinite(lower[i])) dobj += lower[i] * zl_local[i];
+      if (std::isfinite(upper[i])) dobj -= upper[i] * zu_local[i];
     }
+    dobj -= quad_term_local;
 
     info.p_obj = pobj;
     info.d_obj = dobj;
     info.pd_gap = std::abs(pobj - dobj) / (1.0 + 0.5 * std::abs(pobj + dobj));
+
   } else {
     info.p_res_abs = info.ipx_info.abs_presidual;
     info.p_res_rel = info.ipx_info.rel_presidual;
@@ -621,11 +541,13 @@ void Iterate::finalResiduals(Info& info) const {
     info.d_res_rel = info.ipx_info.rel_dresidual;
     info.p_obj = info.ipx_info.pobjval;
     info.d_obj = info.ipx_info.dobjval;
-    info.pd_gap = info.ipx_info.rel_objgap;
+    info.pd_gap = std::abs(info.ipx_info.rel_objgap);
   }
+
+  return kStatusOk;
 }
 
-void Iterate::setReg(LinearSolver& LS, OptionNla opt) {
+void Iterate::getReg(LinearSolver& LS, OptionNla opt) {
   // extract regularisation
   LS.getReg(total_reg);
 
@@ -635,7 +557,7 @@ void Iterate::setReg(LinearSolver& LS, OptionNla opt) {
     Rd = total_reg.data();
   } else {
     Rp = total_reg.data();
-    Rd = &total_reg[model.n()];
+    Rd = model.m() > 0 ? &total_reg[model.n()] : nullptr;
   }
 }
 
@@ -648,7 +570,7 @@ void Iterate::residuals6x6(const NewtonDir& d) {
   const std::vector<double>& dzu = d.zu;
   const Int m = model.m();
   const Int n = model.n();
-  assert(Rd);
+  assert(Rd || m == 0);
 
   // res1,2,3,4,5,6 contain the rhs of the linear system
 
@@ -673,7 +595,7 @@ void Iterate::residuals6x6(const NewtonDir& d) {
     else
       ires.r3[i] = 0.0;
 
-  // ires4 = res4 - A^T * dy - dzl + dzu + Rp * dx
+  // ires4 = res4 - A^T * dy - dzl + dzu + Q * dx + Rp * dx
   ires.r4 = res.r4;
   for (Int i = 0; i < n; ++i) {
     if (model.hasLb(i)) ires.r4[i] -= dzl[i];
@@ -684,6 +606,7 @@ void Iterate::residuals6x6(const NewtonDir& d) {
     double reg_p = Rp ? Rp[i] : regul.primal;
     ires.r4[i] += reg_p * dx[i];
   }
+  if (model.qp()) model.Q().alphaProductPlusY(model.sense(), dx, ires.r4);
 
   // ires5 = res5 - zl * dxl - xl * dzl
   for (Int i = 0; i < n; ++i) {
@@ -700,6 +623,80 @@ void Iterate::residuals6x6(const NewtonDir& d) {
     else
       ires.r6[i] = 0.0;
   }
+}
+
+void Iterate::assertConsistency(Int n, Int m) const {
+  assert(static_cast<Int>(x.size()) == n);
+  assert(static_cast<Int>(xl.size()) == n);
+  assert(static_cast<Int>(xu.size()) == n);
+  assert(static_cast<Int>(y.size()) == m);
+  assert(static_cast<Int>(zl.size()) == n);
+  assert(static_cast<Int>(zu.size()) == n);
+}
+
+void Iterate::makeStep(double alpha_primal, double alpha_dual) {
+  if (std::min(alpha_primal, alpha_dual) < 0.05)
+    ++bad_iter_;
+  else
+    bad_iter_ = 0;
+
+  vectorAdd(x, delta.x, alpha_primal);
+  vectorAdd(xl, delta.xl, alpha_primal);
+  vectorAdd(xu, delta.xu, alpha_primal);
+  vectorAdd(y, delta.y, alpha_dual);
+  vectorAdd(zl, delta.zl, alpha_dual);
+  vectorAdd(zu, delta.zu, alpha_dual);
+}
+
+bool Iterate::stagnation(std::stringstream& log_stream) {
+  // too many iterations in a row with small stepsize
+  bool stagnation = (bad_iter_ >= kMaxBadIter);
+
+  // the next tests are aimed at problems where things are going
+  // catastrophically bad, which may continue iterating forever otherwise.
+
+  // dx / x or dy / y becoming way too small
+  const double thresh_dxy_xy = 1e-30;
+
+  std::vector<double> temp = delta.x;
+  vectorDivide(temp, x);
+  const double dx_x_max = infNorm(temp);
+
+  temp = delta.y;
+  vectorDivide(temp, y);
+  const double dy_y_max = infNorm(temp);
+
+  largest_dx_x_ = std::max(largest_dx_x_, dx_x_max);
+  largest_dy_y_ = std::max(largest_dy_y_, dy_y_max);
+
+  if (dx_x_max < largest_dx_x_ * thresh_dxy_xy ||
+      dy_y_max < largest_dy_y_ * thresh_dxy_xy) {
+    stagnation = true;
+    log_stream << "Bad direction ratios, dx_x " << sci(dx_x_max, 0, 1)
+               << " (max " << sci(largest_dx_x_, 0, 1) << "), dy_y "
+               << sci(dy_y_max, 0, 1) << " (max " << sci(largest_dy_y_, 0, 1)
+               << ")\n";
+  }
+
+  // infeasibilities jumping back up
+  const double thresh_inf_to_best = 1e12;
+
+  best_pinf_ = std::min(best_pinf_, pinf);
+  best_dinf_ = std::min(best_dinf_, dinf);
+
+  // if the best is zero, the test would always be triggered
+  best_pinf_ = std::max(best_pinf_, 1e-16);
+  best_dinf_ = std::max(best_dinf_, 1e-16);
+
+  if (pinf > thresh_inf_to_best * best_pinf_ ||
+      dinf > thresh_inf_to_best * best_dinf_) {
+    stagnation = true;
+    log_stream << "Bad infeasibility, pinf " << sci(pinf, 0, 1) << " (best "
+               << sci(best_pinf_, 0, 1) << "), dinf " << sci(dinf, 0, 1)
+               << " (best " << sci(best_dinf_, 0, 1) << ")\n";
+  }
+
+  return stagnation;
 }
 
 }  // namespace hipo

@@ -1,7 +1,6 @@
-name: sanitizers-bazel
+name: action-sanitizers-bazel
 
-#on: [push, pull_request]
-on: []
+on: workflow_dispatch
 
 jobs:
   asan:
@@ -17,18 +16,18 @@ jobs:
 
       - name: Bazel clean
         run: bazel clean
-      
+
       - name: Bazel build
         run: bazel build -c dbg --config=asan //...
-      
-      - name: Bazel test
-        run: bazel test -c dbg --config=asan --runs_per_test 100 //...
 
-      - name: Upload bazel-testlogs
-        uses: actions/upload-artifact@v4
-        with:
-          name: bazel-testlogs-asan
-          path: bazel-testlogs/
+      - name: Bazel test
+        run: bazel test -c dbg --config=asan --runs_per_test 3000 //...
+
+      # - name: Upload bazel-testlogs
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: bazel-testlogs-asan
+      #     path: bazel-testlogs/
 
   tsan:
     runs-on: ${{ matrix.os }}
@@ -43,19 +42,19 @@ jobs:
 
       - name: Bazel clean
         run: bazel clean
-      
+
       - name: Bazel build
         run: bazel build -c dbg --config=tsan //...
-      
-      - name: Bazel test
-        run: bazel test -c dbg --config=tsan --runs_per_test 100 //...
 
-      - name: Upload bazel-testlogs
-        uses: actions/upload-artifact@v4
-        with:
-          name: bazel-testlogs-tsan
-          path: bazel-testlogs/
-          
+      - name: Bazel test
+        run: bazel test -c dbg --config=tsan --runs_per_test 3000 //...
+
+      # - name: Upload bazel-testlogs
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: bazel-testlogs-tsan
+      #     path: bazel-testlogs/
+
   lsan:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -69,19 +68,19 @@ jobs:
 
       - name: Bazel clean
         run: bazel clean
-      
+
       - name: Bazel build
         run: bazel build -c dbg --config=lsan //...
-      
-      - name: Bazel test
-        run: bazel test -c dbg --config=lsan --runs_per_test 100 //...
 
-      - name: Upload bazel-testlogs
-        uses: actions/upload-artifact@v4
-        with:
-          name: bazel-testlogs-lsan
-          path: bazel-testlogs/
-          
+      - name: Bazel test
+        run: bazel test -c dbg --config=lsan --runs_per_test 3000 //...
+
+      # - name: Upload bazel-testlogs
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: bazel-testlogs-lsan
+      #     path: bazel-testlogs/
+
   ubsan:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -95,15 +94,15 @@ jobs:
 
       - name: Bazel clean
         run: bazel clean
-      
+
       - name: Bazel build
         run: bazel build -c dbg --config=ubsan //...
-      
-      - name: Bazel test
-        run: bazel test -c dbg --config=ubsan --runs_per_test 100 //...
 
-      - name: Upload bazel-testlogs
-        uses: actions/upload-artifact@v4
-        with:
-          name: bazel-testlogs-ubsan
-          path: bazel-testlogs/
+      - name: Bazel test
+        run: bazel test -c dbg --config=ubsan --runs_per_test 3000 //...
+
+      # - name: Upload bazel-testlogs
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: bazel-testlogs-ubsan
+      #     path: bazel-testlogs/
