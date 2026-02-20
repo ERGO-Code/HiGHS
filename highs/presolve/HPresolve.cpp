@@ -4626,11 +4626,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   };
 
   // lambda that checks column for single equation handling
-  auto checkColumn = [&](HighsInt col, double val, HighsInt colDirection,
-                         HighsInt row) {
-    // flip column direction if coefficient in equation is negative
-    // (equivalent to negating the column's coefficients)
-    colDirection *= (val > 0 ? 1 : -1);
+  auto checkColumn = [&](HighsInt col, HighsInt colDirection, HighsInt row) {
     if (colDirection * model->col_cost_[col] < 0) return false;
     for (const auto& colNz : getColumnVector(col)) {
       // skip equation we are inspecting; coefficient is positive (see flip
@@ -4678,12 +4674,15 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     sMinus.reserve(rowsize[row]);
     std::vector<HighsInt> sMark(model->num_col_, 0);
     for (const auto& rowNz : getRowVector(row)) {
-      if (checkColumn(rowNz.index(), rowNz.value(), HighsInt{1}, row)) {
-        // store in S+
+      // flip column direction if coefficient is negative
+      // (equivalent to negating the column's coefficients)
+      HighsInt colDirection = std::copysign(HighsInt{1}, rowNz.value());
+      if (checkColumn(rowNz.index(), colDirection, row)) {
+        // store in S_+
         sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMark[rowNz.index()] = 1;
-      } else if (checkColumn(rowNz.index(), rowNz.value(), HighsInt{-1}, row)) {
-        // store in S-
+      } else if (checkColumn(rowNz.index(), -colDirection, row)) {
+        // store in S_-
         sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMark[rowNz.index()] = -1;
       }
@@ -4700,18 +4699,23 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     for (const auto& rowNz : getRowVector(row)) {
       if (sMark[rowNz.index()] <= 0 ||
           model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
+        // T_+
         updateActivity(rowNz.index(), rowNz.value(), activityTPlus,
                        activityTPlusFinite, HighsInt{1});
       else
+        // S^C_+
         updateActivity(rowNz.index(), rowNz.value(), activitySCPlus,
                        activitySCPlusFinite, HighsInt{-1});
       if (sMark[rowNz.index()] >= 0 ||
           model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
+        // T_-
         updateActivity(rowNz.index(), rowNz.value(), activityTMinus,
                        activityTMinusFinite, HighsInt{-1});
       else
+        // S^C_-
         updateActivity(rowNz.index(), rowNz.value(), activitySCMinus,
                        activitySCMinusFinite, HighsInt{1});
+      // break if activities are not finite
       if ((!activityTPlusFinite || !activitySCPlusFinite) &&
           (!activityTMinusFinite || !activitySCMinusFinite))
         break;
@@ -4721,7 +4725,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         activityTPlus > model->row_lower_[row] + primal_feastol &&
         activityTPlus + activitySCPlus <=
             model->row_lower_[row] + primal_feastol) {
-      // fix all variables in S-
+      // fix all variables in S_-
       for (const auto& elm : sMinus) {
         if (elm.second > 0)
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
@@ -4733,7 +4737,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         activityTMinus < model->row_lower_[row] - primal_feastol &&
         activityTMinus + activitySCMinus >=
             model->row_lower_[row] - primal_feastol) {
-      // fix all variables in S+
+      // fix all variables in S_+
       for (const auto& elm : sPlus) {
         if (elm.second > 0)
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
