@@ -451,6 +451,71 @@ void Analyse::fundamentalSupernodes() {
   sn_parent_.back() = -1;
 }
 
+void Analyse::relaxSn() {
+  // =================================================
+  // Build information about supernodes
+  // =================================================
+  std::vector<Int> sn_size(sn_count_);
+  std::vector<Int> clique_size(sn_count_);
+  fake_nz_.assign(sn_count_, 0);
+  for (Int i = 0; i < sn_count_; ++i) {
+    sn_size[i] = sn_start_[i + 1] - sn_start_[i];
+    clique_size[i] = col_count_[sn_start_[i]] - sn_size[i];
+  }
+
+  // build linked lists of children
+  std::vector<Int> first_child, next_child;
+  childrenLinkedList(sn_parent_, first_child, next_child);
+
+  // =================================================
+  // Merge supernodes
+  // =================================================
+  merged_into_.assign(sn_count_, -1);
+  merged_sn_ = 0;
+
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    Int child = first_child[sn];
+    Int64 nz_fakenz = int64_limit;
+    Int size_fakenz = 0;
+    Int child_fakenz = -1;
+
+    while (child != -1) {
+      // how many zero rows would become nonzero
+      const Int rows_filled =
+          sn_size[sn] + clique_size[sn] - clique_size[child];
+
+      // how many zero entries would become nonzero
+      const Int64 nz_added = (Int64)rows_filled * sn_size[child];
+
+      // how many artificial nonzeros would the merged supernode have
+      const Int64 total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
+
+      const double flops_added =
+          rows_filled * rows_filled * sn_size[child] +
+          2 * rows_filled *
+              (sn_size[child] * (sn_size[child] + clique_size[child]) -
+               sn_size[child] * (sn_size[child] + 1) / 2);
+
+      const double spops_removed =
+          clique_size[child] * (clique_size[child] + 1) / 2;
+
+      const double net_ops = flops_added - 50.0 * spops_removed;
+
+      if (net_ops < 0) {
+        // merge child with parent
+
+        sn_size[sn] += sn_size[child];
+        fake_nz_[sn] = total_art_nz;
+
+        ++merged_sn_;
+        merged_into_[child] = sn;
+      }
+
+      child = next_child[child];
+    }
+  }
+}
+
 double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
   // =================================================
   // Build information about supernodes
@@ -1314,7 +1379,7 @@ Int Analyse::run(Symbolic& S) {
 
   HIPO_CLOCK_START(2);
   fundamentalSupernodes();
-  relaxSupernodes();
+  relaxSn();
   afterRelaxSn();
   HIPO_CLOCK_STOP(2, data_, kTimeAnalyseSn);
 

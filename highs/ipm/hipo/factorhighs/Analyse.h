@@ -97,6 +97,7 @@ class Analyse {
   void relaxSupernodes();
   double doRelaxSupernodes(Int64 max_artificial_nz);
   void afterRelaxSn();
+  void relaxSn();
   void snPattern();
   void relativeIndCols();
   void relativeIndClique();
