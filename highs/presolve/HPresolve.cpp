@@ -4801,7 +4801,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         // see section 6.1 "Extension of dual fixing for single equations",
         // Achterberg et al., Presolve Reductions in Mixed Integer
         // Programming, INFORMS Journal on Computing 32(2):473-506.
-        HPRESOLVE_CHECKED_CALL(handleSingleEquation(downLockRow));
+        HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
         if (colDeleted[col]) return Result::kOk;
       } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
                  model->col_upper_[col] != kHighsInf) {
