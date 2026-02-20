@@ -1,5 +1,6 @@
 #include "Analyse.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -474,12 +475,17 @@ void Analyse::relaxSn() {
   merged_sn_ = 0;
 
   for (Int sn = 0; sn < sn_count_; ++sn) {
+    // sort children by increasing size
+    std::vector<Int> children;
     Int child = first_child[sn];
-    Int64 nz_fakenz = int64_limit;
-    Int size_fakenz = 0;
-    Int child_fakenz = -1;
-
     while (child != -1) {
+      children.push_back(child);
+      child = next_child[child];
+    }
+    std::sort(children.begin(), children.end(),
+              [&](Int a, Int b) { return sn_size[a] < sn_size[b]; });
+
+    for (Int child : children) {
       // how many zero rows would become nonzero
       const Int rows_filled =
           sn_size[sn] + clique_size[sn] - clique_size[child];
@@ -503,15 +509,11 @@ void Analyse::relaxSn() {
 
       if (net_ops < 0) {
         // merge child with parent
-
         sn_size[sn] += sn_size[child];
         fake_nz_[sn] = total_art_nz;
-
         ++merged_sn_;
         merged_into_[child] = sn;
       }
-
-      child = next_child[child];
     }
   }
 }
