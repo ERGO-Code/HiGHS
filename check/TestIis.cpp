@@ -470,6 +470,50 @@ TEST_CASE("lp-get-iis-avgas", "[iis]") {
   //  HighsModelStatus::kOptimal);
 }
 
+TEST_CASE("lp-get-iis-time-limit", "[iis]") {
+  // Test that setting time limit to zero causes getIis() to return
+  // an error with an invalid and empty IIS
+  //
+  // Using forest6 model which is known to be infeasible, but with
+  // time_limit = 0, the IIS computation should fail immediately
+  //
+  // Expected behavior:
+  // - getIis() returns HighsStatus::kError
+  // - IIS is marked as invalid (valid_ = false)
+  // - IIS contains no rows or columns
+
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/forest6.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Set iis time limit to zero to force immediate timeout
+  highs.setOptionValue("iis_time_limit", 0.0);
+
+  // Use kIisStrategyFromLp strategy - this requires solving the LP
+  // which should fail due to time limit
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLp);
+
+  HighsIis iis;
+  // Should return error due to time limit being reached
+  REQUIRE(highs.getIis(iis) == HighsStatus::kError);
+
+  // IIS should be invalid since computation could not complete
+  REQUIRE(iis.valid_ == false);
+
+  // IIS status should be kIisModelStatusTimeLimit
+  REQUIRE(iis.status_ == kIisModelStatusTimeLimit);
+
+  // IIS should be empty - no rows or columns identified
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   // Using infeasible MIP from AMPL documentation
   //

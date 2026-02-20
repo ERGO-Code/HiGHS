@@ -502,14 +502,45 @@ void HighsIis::setStatus(const HighsLp& lp) {
     this->row_status_[this->row_index_[iisRow]] = in_is_status;
 }
 
+HighsInt HighsIis::determineBoundStatus(const double lower, const double upper,
+                                        const bool is_row) const {
+  HighsInt iss_bound_status = kIisBoundStatusNull;
+  if (lower <= -kHighsInf) {
+    if (upper >= kHighsInf) {
+      if (is_row) {
+        // Free rows can be dropped
+        iss_bound_status = kIisBoundStatusDropped;
+      } else {
+        // Free columns can only be dropped if they are empty
+        iss_bound_status = kIisBoundStatusFree;
+      }
+    } else {
+      iss_bound_status = kIisBoundStatusUpper;
+    }
+  } else {
+    if (upper >= kHighsInf) {
+      iss_bound_status = kIisBoundStatusLower;
+    } else {
+      // FX or BX
+      iss_bound_status = kIisBoundStatusBoxed;
+    }
+  }
+  assert(iss_bound_status != kIisBoundStatusNull);
+  return iss_bound_status;
+}
+
 HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
                               const HighsBasis* basis) {
   const HighsLogOptions& log_options = options.log_options;
   const bool col_priority = kIisStrategyColPriority & options.iis_strategy;
   const bool row_priority = !col_priority;
   // Initially all columns and rows are candidates for the IIS
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    this->addCol(iCol, this->determineBoundStatus(lp.col_lower_[iCol],
+                                                  lp.col_upper_[iCol], false));
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+    this->addRow(iRow, this->determineBoundStatus(lp.row_lower_[iRow],
+                                                  lp.row_upper_[iRow], true));
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   highs.passOptions(options);
@@ -644,8 +675,12 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   run_status = solveLp();
   // If we fail to establish infeasibility, return the initial subset
   if (run_status != HighsStatus::kOk) {
+    this->valid_ = true;
+    this->strategy_ = options.iis_strategy;
     if (highs.getModelStatus() == HighsModelStatus::kTimeLimit) {
       this->status_ = IisModelStatus::kIisModelStatusTimeLimit;
+    } else {
+      this->status_ = IisModelStatus::kIisModelStatusReducible;
     }
     return HighsStatus::kWarning;
   }
@@ -669,8 +704,8 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
         continue;
       double lower = row_deletion ? lp.row_lower_[iX] : lp.col_lower_[iX];
       double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
-      // Record whether the upper bound has been dropped due to the lower bound
-      // being kept
+      // Record whether the upper bound has been dropped due to the lower
+      // bound being kept
       if (lower > -kHighsInf && iis_status != kIisModelStatusTimeLimit) {
         // Drop the lower bound temporarily
         bool drop_lower = true;
@@ -713,28 +748,8 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
         assert(check_lower == lower);
         assert(check_upper == upper);
       }
-      HighsInt iss_bound_status = kIisBoundStatusNull;
-      if (lower <= -kHighsInf) {
-        if (upper >= kHighsInf) {
-          if (row_deletion) {
-            // Free rows can be dropped
-            iss_bound_status = kIisBoundStatusDropped;
-          } else {
-            // Free columns can only be dropped if they are empty
-            iss_bound_status = kIisBoundStatusFree;
-          }
-        } else {
-          iss_bound_status = kIisBoundStatusUpper;
-        }
-      } else {
-        if (upper >= kHighsInf) {
-          iss_bound_status = kIisBoundStatusLower;
-        } else {
-          // FX or BX
-          iss_bound_status = kIisBoundStatusBoxed;
-        }
-      }
-      assert(iss_bound_status != kIisBoundStatusNull);
+      HighsInt iss_bound_status =
+          this->determineBoundStatus(lower, upper, row_deletion);
       if (row_deletion) {
         this->row_bound_[iX] = iss_bound_status;
       } else {

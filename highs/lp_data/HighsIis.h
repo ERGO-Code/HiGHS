@@ -82,6 +82,8 @@ class HighsIis {
   void setLp(const HighsLp& lp);
   HighsInt nonIsStatus() const;
   void setStatus(const HighsLp& lp);
+  HighsInt determineBoundStatus(const double lower, const double upper,
+                                const bool is_row) const;
 
   HighsStatus compute(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis* basis = nullptr);

@@ -1976,11 +1976,13 @@ HighsStatus Highs::getIisInterface() {
     // No IIS exists, so validate the empty HighsIis instance
     this->iis_.valid_ = true;
     this->iis_.status_ = kIisModelStatusFeasible;
+    this->iis_.strategy_ = options_.iis_strategy;
     return this->getIisInterfaceReturn(HighsStatus::kOk, original_options,
                                        original_callback);
   } else if (this->model_status_ == HighsModelStatus::kTimeLimit) {
     // Time limit reached
     this->iis_.status_ = kIisModelStatusTimeLimit;
+    this->iis_.strategy_ = options_.iis_strategy;
     return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
                                        original_callback);
   } else if (this->model_status_ != HighsModelStatus::kInfeasible) {
@@ -1989,6 +1991,7 @@ HighsStatus Highs::getIisInterface() {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Can not compute IIS for a model with status %s\n",
                  this->modelStatusToString(this->model_status_).c_str());
+    this->iis_.strategy_ = options_.iis_strategy;
     return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
                                        original_callback);
   }
