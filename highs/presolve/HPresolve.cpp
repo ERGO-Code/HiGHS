@@ -4629,8 +4629,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   auto checkColumn = [&](HighsInt col, HighsInt colDirection, HighsInt row) {
     if (colDirection * model->col_cost_[col] < 0) return false;
     for (const auto& colNz : getColumnVector(col)) {
-      // skip equation we are inspecting; coefficient is positive (see flip
-      // above)
+      // skip equation we are inspecting; coefficient is positive (see sign
+      // adjustment performed by caller)
       if (colNz.index() == row) continue;
       // skip redundant rows
       if (isRedundant(colNz.index())) continue;
