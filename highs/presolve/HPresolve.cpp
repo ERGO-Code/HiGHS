@@ -5067,14 +5067,14 @@ HPresolve::Result HPresolve::enumerateSolutions(
     // find variable for branching
     for (size_t i = 0; i < numVars; i++)
       if (!domain.isFixed(vars[i])) return vars[i];
-    return -1;
+    return HighsInt{-1};
   };
 
   // lambda for branching (just performs initial lower branch)
   auto doBranch = [&](size_t numVars, HighsInt& numBranches) {
     // find variable for branching
     HighsInt branchvar = findBranchVar(numVars);
-    if (branchvar < 0) return;
+    assert(branchvar >= 0);
 
     // branch downwards
     branches[++numBranches] = {domain.getDomainChangeStack().size(),
