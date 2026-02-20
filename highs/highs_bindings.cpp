@@ -1583,8 +1583,13 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("row_bound_dn", &HighsRanging::row_bound_dn);
   py::class_<HighsIisInfo>(m, "HighsIisInfo", py::module_local())
       .def(py::init<>())
-      .def_readwrite("simplex_time", &HighsIisInfo::simplex_time)
-      .def_readwrite("simplex_iterations", &HighsIisInfo::simplex_iterations);
+      .def_readwrite("num_lp_solved", &HighsIisInfo::num_lp_solved)
+      .def_readwrite("sum_simplex_iteration_counts", &HighsIisInfo::sum_simplex_iteration_counts)
+      .def_readwrite("min_simplex_iteration_count", &HighsIisInfo::min_simplex_iteration_count)
+      .def_readwrite("max_simplex_iteration_count", &HighsIisInfo::max_simplex_iteration_count)
+      .def_readwrite("sum_simplex_times", &HighsIisInfo::sum_simplex_times)
+      .def_readwrite("min_simplex_time", &HighsIisInfo::min_simplex_time)
+      .def_readwrite("max_simplex_time", &HighsIisInfo::max_simplex_time);
   py::class_<HighsLinearObjective>(m, "HighsLinearObjective",
                                    py::module_local())
       .def(py::init<>())
