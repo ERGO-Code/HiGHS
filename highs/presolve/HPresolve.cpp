@@ -4679,9 +4679,11 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     std::vector<HighsInt> sMark(model->num_col_, 0);
     for (const auto& rowNz : getRowVector(row)) {
       if (checkColumn(rowNz.index(), rowNz.value(), HighsInt{1}, row)) {
+        // store in S+
         sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMark[rowNz.index()] = 1;
       } else if (checkColumn(rowNz.index(), rowNz.value(), HighsInt{-1}, row)) {
+        // store in S-
         sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMark[rowNz.index()] = -1;
       }
@@ -4719,7 +4721,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         activityTPlus > model->row_lower_[row] + primal_feastol &&
         activityTPlus + activitySCPlus <=
             model->row_lower_[row] + primal_feastol) {
-      // fix all variables in sMinus
+      // fix all variables in S-
       for (const auto& elm : sMinus) {
         if (elm.second > 0)
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
@@ -4731,7 +4733,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         activityTMinus < model->row_lower_[row] - primal_feastol &&
         activityTMinus + activitySCMinus >=
             model->row_lower_[row] - primal_feastol) {
-      // fix all variables in sPlus
+      // fix all variables in S+
       for (const auto& elm : sPlus) {
         if (elm.second > 0)
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
