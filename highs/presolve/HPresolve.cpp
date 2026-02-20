@@ -4626,18 +4626,29 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   };
 
   // lambda that checks column for single equation handling
-  auto checkColumn = [&](HighsInt col, HighsInt colDirection, HighsInt row) {
+  auto checkColumn = [&](HighsInt col, double val, HighsInt colDirection,
+                         HighsInt row) {
+    // flip column direction if coefficient in equation is negative
+    // (equivalent to negating the column's coefficients)
+    colDirection *= (val > 0 ? 1 : -1);
     if (colDirection * model->col_cost_[col] < 0) return false;
     for (const auto& colNz : getColumnVector(col)) {
+      // skip equation we are inspecting; coefficient is positive (see flip
+      // above)
       if (colNz.index() == row) continue;
+      // skip redundant rows
+      if (isRedundant(colNz.index())) continue;
+      // another ranged row blocks variable in both directions -> cannot be a
+      // candidate for fixing
+      if (isRanged(colNz.index())) return false;
+      // compute row direction
       HighsInt rowDirection =
-          model->row_lower_[colNz.index()] != -kHighsInf &&
-                  model->row_upper_[colNz.index()] == kHighsInf
-              ? -1
-              : 1;
-      if (isRanged(colNz.index()) ||
-          colDirection * rowDirection * colNz.value() < 0)
-        return false;
+          model->row_lower_[colNz.index()] == -kHighsInf &&
+                  model->row_upper_[colNz.index()] != kHighsInf
+              ? 1
+              : -1;
+      // coefficient must have the correct sign
+      if (colDirection * rowDirection * colNz.value() < 0) return false;
     }
     return true;
   };
@@ -4667,10 +4678,10 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     sMinus.reserve(rowsize[row]);
     std::vector<HighsInt> sMark(model->num_col_, 0);
     for (const auto& rowNz : getRowVector(row)) {
-      if (checkColumn(rowNz.index(), HighsInt{1}, row)) {
+      if (checkColumn(rowNz.index(), rowNz.value(), HighsInt{1}, row)) {
         sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMark[rowNz.index()] = 1;
-      } else if (checkColumn(rowNz.index(), HighsInt{-1}, row)) {
+      } else if (checkColumn(rowNz.index(), rowNz.value(), HighsInt{-1}, row)) {
         sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
         sMark[rowNz.index()] = -1;
       }
