@@ -5062,16 +5062,18 @@ HPresolve::Result HPresolve::enumerateSolutions(
   std::vector<double> col_lower(domain.col_lower_);
   std::vector<double> col_upper(domain.col_upper_);
 
+  // lambda for finding a variable to branch on
+  auto findBranchVar = [&](size_t numVars) {
+    // find variable for branching
+    for (size_t i = 0; i < numVars; i++)
+      if (!domain.isFixed(vars[i])) return vars[i];
+    return -1;
+  };
+
   // lambda for branching (just performs initial lower branch)
   auto doBranch = [&](size_t numVars, HighsInt& numBranches) {
     // find variable for branching
-    HighsInt branchvar = -1;
-    for (size_t i = 0; i < numVars; i++) {
-      if (!domain.isFixed(vars[i])) {
-        branchvar = vars[i];
-        break;
-      }
-    }
+    HighsInt branchvar = findBranchVar(numVars);
     if (branchvar < 0) return;
 
     // branch downwards
@@ -5103,13 +5105,6 @@ HPresolve::Result HPresolve::enumerateSolutions(
     }
     // check if enumeration is complete
     return (numBranches >= 0);
-  };
-
-  // lambda for checking if a solution was found
-  auto solutionFound = [&](size_t numVars) {
-    for (size_t i = 0; i < numVars; i++)
-      if (!domain.isFixed(vars[i])) return false;
-    return true;
   };
 
   // lambda for checking whether the values of two binary variables are
@@ -5222,7 +5217,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
     while (true) {
       bool backtrack = domain.infeasible();
       if (!backtrack) {
-        backtrack = solutionFound(numVars);
+        backtrack = findBranchVar(numVars) < 0;
         if (backtrack)
           handleSolution(numVars, numSolutions, numWorstCaseBounds,
                          minNumActiveCols, maxNumActiveCols);
