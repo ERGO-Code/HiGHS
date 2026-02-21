@@ -4665,6 +4665,18 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     }
   };
 
+  // lambda for fixing variables
+  auto fixCols = [&](const std::vector<std::pair<HighsInt, double>>& vars,
+                     HighsInt direction) {
+    for (const auto& elm : vars) {
+      if (direction * elm.second > 0)
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
+      else
+        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
+    }
+    return Result::kOk;
+  };
+
   // lambda for handling single equations
   auto handleSingleEquation = [&](HighsInt row) {
     assert(isEquation(row));
@@ -4687,6 +4699,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         sMark[rowNz.index()] = -1;
       }
     }
+    // return if both sets are empty
+    if (sPlus.empty() && sMinus.empty()) return Result::kOk;
     // compute activities
     HighsCDouble activityTPlus = 0.0;
     HighsCDouble activityTMinus = 0.0;
@@ -4721,30 +4735,18 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         break;
     }
     // fix variables
-    if (activityTPlusFinite && activitySCPlusFinite &&
+    if (!sMinus.empty() && activityTPlusFinite && activitySCPlusFinite &&
         activityTPlus > model->row_lower_[row] + primal_feastol &&
         activityTPlus + activitySCPlus <=
-            model->row_lower_[row] + primal_feastol) {
+            model->row_lower_[row] + primal_feastol)
       // fix all variables in S_-
-      for (const auto& elm : sMinus) {
-        if (elm.second > 0)
-          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
-        else
-          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
-      }
-    }
-    if (activityTMinusFinite && activitySCMinusFinite &&
+      HPRESOLVE_CHECKED_CALL(fixCols(sMinus, HighsInt{1}));
+    if (!sPlus.empty() && activityTMinusFinite && activitySCMinusFinite &&
         activityTMinus < model->row_lower_[row] - primal_feastol &&
         activityTMinus + activitySCMinus >=
-            model->row_lower_[row] - primal_feastol) {
+            model->row_lower_[row] - primal_feastol)
       // fix all variables in S_+
-      for (const auto& elm : sPlus) {
-        if (elm.second > 0)
-          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
-        else
-          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
-      }
-    }
+      HPRESOLVE_CHECKED_CALL(fixCols(sPlus, HighsInt{-1}));
     return Result::kOk;
   };
 
