@@ -648,18 +648,18 @@ void HEkkPrimal::solvePhase2() {
 
 void HEkkPrimal::initialiseIterationInfo() {
   // integers
-  this->variable_in = kHighsIllegalSimplexInterationIntValue;
-  this->move_in = kHighsIllegalSimplexInterationIntValue;
-  this->row_out = kHighsIllegalSimplexInterationIntValue;
-  this->variable_out = kHighsIllegalSimplexInterationIntValue;
-  this->move_out = kHighsIllegalSimplexInterationIntValue;
+  this->variable_in = kHighsIllegalSimplexIterationIntValue;
+  this->move_in = kHighsIllegalSimplexIterationIntValue;
+  this->row_out = kHighsIllegalSimplexIterationIntValue;
+  this->variable_out = kHighsIllegalSimplexIterationIntValue;
+  this->move_out = kHighsIllegalSimplexIterationIntValue;
   // doubles
-  this->theta_dual = kHighsIllegalSimplexInterationDoubleValue;
-  this->theta_primal = kHighsIllegalSimplexInterationDoubleValue;
-  this->value_in = kHighsIllegalSimplexInterationDoubleValue;
-  this->alpha_col = kHighsIllegalSimplexInterationDoubleValue;
-  this->alpha_row = kHighsIllegalSimplexInterationDoubleValue;
-  this->numericalTrouble = kHighsIllegalSimplexInterationDoubleValue;
+  this->theta_dual = kHighsIllegalSimplexIterationDoubleValue;
+  this->theta_primal = kHighsIllegalSimplexIterationDoubleValue;
+  this->value_in = kHighsIllegalSimplexIterationDoubleValue;
+  this->alpha_col = kHighsIllegalSimplexIterationDoubleValue;
+  this->alpha_row = kHighsIllegalSimplexIterationDoubleValue;
+  this->numericalTrouble = kHighsIllegalSimplexIterationDoubleValue;
 }
 
 void HEkkPrimal::cleanup() {
@@ -2607,10 +2607,10 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->leaving_variable = variable_out;
   analysis->entering_variable = variable_in;
   analysis->rebuild_reason = rebuild_reason;
-  analysis->reduced_rhs_value = kHighsIllegalSimplexInterationDoubleValue;
-  analysis->reduced_cost_value = kHighsIllegalSimplexInterationDoubleValue;
-  analysis->edge_weight = kHighsIllegalSimplexInterationDoubleValue;
-  analysis->primal_delta = kHighsIllegalSimplexInterationDoubleValue;
+  analysis->reduced_rhs_value = kHighsIllegalSimplexIterationDoubleValue;
+  analysis->reduced_cost_value = kHighsIllegalSimplexIterationDoubleValue;
+  analysis->edge_weight = kHighsIllegalSimplexIterationDoubleValue;
+  analysis->primal_delta = kHighsIllegalSimplexIterationDoubleValue;
   analysis->primal_step = theta_primal;
   analysis->dual_step = theta_dual;
   analysis->pivot_value_from_column = alpha_col;

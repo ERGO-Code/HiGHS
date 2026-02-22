@@ -685,19 +685,28 @@ void HighsSimplexAnalysis::iterationRecord() {
     }
   }
   AnIterPrevIt = AnIterCuIt;
-  updateValueDistribution(primal_step, cleanup_primal_step_distribution);
-  updateValueDistribution(dual_step, cleanup_dual_step_distribution);
-  updateValueDistribution(primal_step, primal_step_distribution);
-  updateValueDistribution(dual_step, dual_step_distribution);
-  updateValueDistribution(pivot_value_from_column, simplex_pivot_distribution);
-  updateValueDistribution(factor_pivot_threshold,
-                          factor_pivot_threshold_distribution);
+  if (primal_step != kHighsIllegalSimplexIterationDoubleValue)
+    updateValueDistribution(primal_step, cleanup_primal_step_distribution);
+  if (dual_step != kHighsIllegalSimplexIterationDoubleValue)
+    updateValueDistribution(dual_step, cleanup_dual_step_distribution);
+  if (primal_step != kHighsIllegalSimplexIterationDoubleValue)
+    updateValueDistribution(primal_step, primal_step_distribution);
+  if (dual_step != kHighsIllegalSimplexIterationDoubleValue)
+    updateValueDistribution(dual_step, dual_step_distribution);
+  if (pivot_value_from_column != kHighsIllegalSimplexIterationDoubleValue)
+    updateValueDistribution(pivot_value_from_column,
+                            simplex_pivot_distribution);
+  if (factor_pivot_threshold != kHighsIllegalSimplexIterationDoubleValue)
+    updateValueDistribution(factor_pivot_threshold,
+                            factor_pivot_threshold_distribution);
   // Only update the distribution of legal values for
   // numerical_trouble. Illegal values are set in PAMI since it's not
   // known in minor iterations
-  if (numerical_trouble >= 0)
+  if (numerical_trouble >= 0 &&
+      numerical_trouble != kHighsIllegalSimplexIterationDoubleValue)
     updateValueDistribution(numerical_trouble, numerical_trouble_distribution);
-  updateValueDistribution(edge_weight_error, edge_weight_error_distribution);
+  if (edge_weight_error != kHighsIllegalSimplexIterationDoubleValue)
+    updateValueDistribution(edge_weight_error, edge_weight_error_distribution);
 }
 
 void HighsSimplexAnalysis::iterationRecordMajor() {

@@ -560,11 +560,9 @@ TEST_CASE("chuzc4", "[highs_lp_solver]") {
   //    "/srv/miplib2017/irp.mps.gz";
   //    "/srv/miplib2017/nw04.mps.gz";
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.readModel(model_file);
-  h.setOptionValue("highs_analysis_level", 2 + 8);
-  h.setOptionValue("presolve", kHighsOffString);
-  h.setOptionValue("solve_relaxation", true);
+  if (dev_run) h.setOptionValue("highs_analysis_level", 2 + 8);
   for (HighsInt k = 0; k < 3; k++) {
     if (k == 0) {
       h.setOptionValue("dual_simplex_chuzc_strategy",
@@ -577,8 +575,9 @@ TEST_CASE("chuzc4", "[highs_lp_solver]") {
                        kDualSimplexChuzcStrategyHeap);
     }
     h.clearSolver();
-    h.zeroAllClocks();
+    if (dev_run) h.zeroAllClocks();
     h.run();
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   }
   h.resetGlobalScheduler(true);
 }
