@@ -425,7 +425,7 @@ struct HighsOptionsStruct {
   HighsInt max_dual_simplex_cleanup_level;
   HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
-  HighsInt simplex_dual_chuzc_strategy;
+  HighsInt dual_simplex_chuzc_strategy;
   HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_reduction_limit;
   HighsInt restart_presolve_reduction_limit;
@@ -588,7 +588,7 @@ struct HighsOptionsStruct {
         max_dual_simplex_cleanup_level(0),
         max_dual_simplex_phase1_cleanup_level(0),
         simplex_price_strategy(0),
-        simplex_dual_chuzc_strategy(0),
+        dual_simplex_chuzc_strategy(0),
         simplex_unscaled_solution_strategy(0),
         presolve_reduction_limit(0),
         restart_presolve_reduction_limit(0),
@@ -1467,9 +1467,9 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "simplex_dual_chuzc_strategy", "Strategy for CHUZC in dual simplex", advanced,
-        &simplex_dual_chuzc_strategy, kSimplexDualChuzcStrategyMin,
-        kSimplexDualChuzcStrategyQuad, kSimplexDualChuzcStrategyMax);
+        "dual_simplex_chuzc_strategy", "Strategy for CHUZC in dual simplex", advanced,
+        &dual_simplex_chuzc_strategy, kDualSimplexChuzcStrategyMin,
+        kDualSimplexChuzcStrategyQuad, kDualSimplexChuzcStrategyMax);
     records.push_back(record_int);
 
     record_int =

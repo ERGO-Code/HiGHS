@@ -202,6 +202,7 @@ void HEkk::clearEkkDataInfo() {
   info.dual_edge_weight_strategy = 0;
   info.primal_edge_weight_strategy = 0;
   info.price_strategy = 0;
+  info.dual_simplex_chuzc_strategy = kDualSimplexChuzcStrategyChoose;
   info.dual_simplex_cost_perturbation_multiplier = 1;
   info.primal_simplex_phase1_cost_perturbation_multiplier = 1;
   info.primal_simplex_bound_perturbation_multiplier = 1;
@@ -1630,6 +1631,7 @@ void HEkk::setSimplexOptions() {
   //
   info_.dual_edge_weight_strategy = options_->simplex_dual_edge_weight_strategy;
   info_.price_strategy = options_->simplex_price_strategy;
+  info_.dual_simplex_chuzc_strategy = options_->dual_simplex_chuzc_strategy;
   info_.dual_simplex_cost_perturbation_multiplier =
       options_->dual_simplex_cost_perturbation_multiplier;
   info_.primal_simplex_bound_perturbation_multiplier =

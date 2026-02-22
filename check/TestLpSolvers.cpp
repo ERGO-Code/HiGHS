@@ -565,7 +565,7 @@ TEST_CASE("chuzc4", "[highs_lp_solver]") {
   h.setOptionValue("highs_analysis_level", 8);
   h.setOptionValue("presolve", kHighsOffString);
   h.setOptionValue("solve_relaxation", true);
-  h.setOptionValue("simplex_price_strategy", kSimplexDualChuzcStrategyHeap);
+  h.setOptionValue("simplex_price_strategy", kDualSimplexChuzcStrategyHeap);
   h.run();
 
   h.resetGlobalScheduler(true);

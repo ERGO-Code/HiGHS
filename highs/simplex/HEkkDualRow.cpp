@@ -156,6 +156,11 @@ HighsInt HEkkDualRow::chooseFinal() {
   analysis->simplexTimerStop(Chuzc3Clock);
   // 2. Choose by small step BFRT
 
+  printf("HEkkDualRow::chooseFinal dual_simplex_chuzc_strategy = %d: workCount = %d / %d\n",
+	 int(ekk_instance_.info_.dual_simplex_chuzc_strategy),
+	 int(workCount),
+	 int(ekk_instance_.lp_.num_col_));
+
   bool use_quad_sort = false;
   bool use_heap_sort = false;
   // Use the quadratic cost sort for smaller values of workCount,

@@ -85,12 +85,12 @@ enum SimplexPriceStrategy {
   kSimplexPriceStrategyMax = kSimplexPriceStrategyRowSwitchColSwitch
 };
 
-enum SimplexDualChuzcStrategy {
-  kSimplexDualChuzcStrategyMin = 0,
-  kSimplexDualChuzcStrategyChoose = kSimplexDualChuzcStrategyMin,
-  kSimplexDualChuzcStrategyQuad,
-  kSimplexDualChuzcStrategyHeap,
-  kSimplexDualChuzcStrategyMax = kSimplexDualChuzcStrategyHeap
+enum DualSimplexChuzcStrategy {
+  kDualSimplexChuzcStrategyMin = 0,
+  kDualSimplexChuzcStrategyChoose = kDualSimplexChuzcStrategyMin,
+  kDualSimplexChuzcStrategyQuad,
+  kDualSimplexChuzcStrategyHeap,
+  kDualSimplexChuzcStrategyMax = kDualSimplexChuzcStrategyHeap
 };
 
 enum SimplexPivotalRowRefinementStrategy {
