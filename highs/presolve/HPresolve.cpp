@@ -4741,10 +4741,10 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
             model->row_lower_[row] + primal_feastol)
       // fix all variables in S_-
       HPRESOLVE_CHECKED_CALL(fixCols(sMinus, HighsInt{1}));
-    if (!sPlus.empty() && activityTMinusFinite && activitySCMinusFinite &&
-        activityTMinus < model->row_lower_[row] - primal_feastol &&
-        activityTMinus + activitySCMinus >=
-            model->row_lower_[row] - primal_feastol)
+    else if (!sPlus.empty() && activityTMinusFinite && activitySCMinusFinite &&
+             activityTMinus < model->row_lower_[row] - primal_feastol &&
+             activityTMinus + activitySCMinus >=
+                 model->row_lower_[row] - primal_feastol)
       // fix all variables in S_+
       HPRESOLVE_CHECKED_CALL(fixCols(sPlus, HighsInt{-1}));
     return Result::kOk;
