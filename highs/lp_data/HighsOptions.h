@@ -1467,8 +1467,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "dual_simplex_chuzc_strategy", "Strategy for CHUZC in dual simplex", advanced,
-        &dual_simplex_chuzc_strategy, kDualSimplexChuzcStrategyMin,
+        "dual_simplex_chuzc_strategy", "Strategy for CHUZC in dual simplex",
+        advanced, &dual_simplex_chuzc_strategy, kDualSimplexChuzcStrategyMin,
         kDualSimplexChuzcStrategyQuad, kDualSimplexChuzcStrategyMax);
     records.push_back(record_int);
 

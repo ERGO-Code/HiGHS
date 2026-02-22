@@ -332,6 +332,11 @@ const double kHessianRegularizationValue = 1e-7;
 const HighsInt kDefaultAllowedMatrixPow2Scale = 20;
 const HighsInt kMaxAllowedMatrixPow2Scale = 30;
 
+// Illegal values of simplex iteration information to check whether
+// they have been set
+const double kHighsIllegalSimplexInterationDoubleValue = -kHighsInf;
+const HighsInt kHighsIllegalSimplexInterationIntValue = -kHighsIInf;
+
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
 const double kHighsIllegalInfeasibilityMeasure = kHighsInf;

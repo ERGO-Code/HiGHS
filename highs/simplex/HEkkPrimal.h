@@ -43,6 +43,7 @@ class HEkkPrimal {
   void initialiseSolve();
   void solvePhase1();
   void solvePhase2();
+  void initialiseIterationInfo();
   void cleanup();
   void rebuild();
 

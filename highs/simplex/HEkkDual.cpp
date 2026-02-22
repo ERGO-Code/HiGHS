@@ -1013,6 +1013,22 @@ void HEkkDual::solvePhase2() {
   return;
 }
 
+void HEkkDual::initialiseIterationInfo() {
+  // integers
+  this->row_out = kHighsIllegalSimplexInterationIntValue;
+  this->variable_out = kHighsIllegalSimplexInterationIntValue;
+  this->move_out = kHighsIllegalSimplexInterationIntValue;
+  this->variable_in = kHighsIllegalSimplexInterationIntValue;
+  // doubles
+  this->delta_primal = kHighsIllegalSimplexInterationDoubleValue;
+  this->theta_dual = kHighsIllegalSimplexInterationDoubleValue;
+  this->theta_primal = kHighsIllegalSimplexInterationDoubleValue;
+  this->alpha_col = kHighsIllegalSimplexInterationDoubleValue;
+  this->alpha_row = kHighsIllegalSimplexInterationDoubleValue;
+  this->numericalTrouble = kHighsIllegalSimplexInterationDoubleValue;
+  this->computed_edge_weight = kHighsIllegalSimplexInterationDoubleValue;
+}
+
 void HEkkDual::rebuild() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;
@@ -1204,6 +1220,8 @@ void HEkkDual::iterate() {
     }
   }
 
+  this->initialiseIterationInfo();
+
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
@@ -1322,9 +1340,9 @@ void HEkkDual::iterationAnalysisData() {
   analysis->leaving_variable = variable_out;
   analysis->entering_variable = variable_in;
   analysis->rebuild_reason = rebuild_reason;
-  analysis->reduced_rhs_value = 0;
-  analysis->reduced_cost_value = 0;
-  analysis->edge_weight = 0;
+  analysis->reduced_rhs_value = kHighsIllegalSimplexInterationDoubleValue;
+  analysis->reduced_cost_value = kHighsIllegalSimplexInterationDoubleValue;
+  analysis->edge_weight = kHighsIllegalSimplexInterationDoubleValue;
   analysis->primal_delta = delta_primal;
   analysis->primal_step = theta_primal;
   analysis->dual_step = theta_dual * cost_scale_factor;

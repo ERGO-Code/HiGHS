@@ -553,32 +553,32 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
-/*
+
 TEST_CASE("chuzc4", "[highs_lp_solver]") {
   std::string model_file =
-        "/srv/mps_da/fit2d.mps.gz";
+      std::string(HIGHS_DIR) + "/check/instances/fit2d.mps";
   //    "/srv/miplib2017/irp.mps.gz";
   //    "/srv/miplib2017/nw04.mps.gz";
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   h.readModel(model_file);
-  h.setOptionValue("highs_analysis_level", 2+8);
+  h.setOptionValue("highs_analysis_level", 2 + 8);
   h.setOptionValue("presolve", kHighsOffString);
   h.setOptionValue("solve_relaxation", true);
   for (HighsInt k = 0; k < 3; k++) {
     if (k == 0) {
-      h.setOptionValue("dual_simplex_chuzc_strategy", kDualSimplexChuzcStrategyChoose);
+      h.setOptionValue("dual_simplex_chuzc_strategy",
+                       kDualSimplexChuzcStrategyChoose);
     } else if (k == 1) {
-      h.setOptionValue("dual_simplex_chuzc_strategy", kDualSimplexChuzcStrategyQuad);
+      h.setOptionValue("dual_simplex_chuzc_strategy",
+                       kDualSimplexChuzcStrategyQuad);
     } else {
-      h.setOptionValue("dual_simplex_chuzc_strategy", kDualSimplexChuzcStrategyHeap);
+      h.setOptionValue("dual_simplex_chuzc_strategy",
+                       kDualSimplexChuzcStrategyHeap);
     }
     h.clearSolver();
     h.zeroAllClocks();
     h.run();
   }
   h.resetGlobalScheduler(true);
-
 }
-
-*/

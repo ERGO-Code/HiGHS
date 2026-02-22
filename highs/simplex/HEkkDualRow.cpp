@@ -164,11 +164,11 @@ HighsInt HEkkDualRow::chooseFinal() {
       kDualSimplexChuzcStrategyQuad) {
     use_quad_sort = true;
   } else if (ekk_instance_.info_.dual_simplex_chuzc_strategy ==
-	     kDualSimplexChuzcStrategyHeap) {
+             kDualSimplexChuzcStrategyHeap) {
     use_heap_sort = true;
   } else {
     assert(ekk_instance_.info_.dual_simplex_chuzc_strategy ==
-	   kDualSimplexChuzcStrategyChoose);
+           kDualSimplexChuzcStrategyChoose);
     use_quad_sort = workCount < 10;
     use_heap_sort = !use_quad_sort;
   }
@@ -279,15 +279,15 @@ HighsInt HEkkDualRow::chooseFinal() {
     for (HighsInt i = workGroup[breakGroup]; i < workGroup[breakGroup + 1]; i++)
       if (report_bfrt) debugReportBfrtVar(i, workData);
   } else {
-    if (report_debug_bfrt) printf("DebugHeapSortCHUZC: Pivot = %4d; alpha = %11.4g; theta = %11.4g\n",
-           (int)workPivot, workAlpha, workTheta);
     if (report_debug_bfrt)
-      debugReportBfrtVar(-1, sorted_workData);
+      printf(
+          "DebugHeapSortCHUZC: Pivot = %4d; alpha = %11.4g; theta = %11.4g\n",
+          (int)workPivot, workAlpha, workTheta);
+    if (report_debug_bfrt) debugReportBfrtVar(-1, sorted_workData);
     for (HighsInt i = 0; i < alt_workGroup[breakGroup]; i++) {
       const HighsInt iCol = sorted_workData[i].first;
       const HighsInt move = workMove[iCol];
-      if (report_debug_bfrt)
-	debugReportBfrtVar(i, sorted_workData);
+      if (report_debug_bfrt) debugReportBfrtVar(i, sorted_workData);
       workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
     }
     // Look at all entries of final group to see what dual
@@ -298,8 +298,7 @@ HighsInt HEkkDualRow::chooseFinal() {
     //    HighsInt num_infeasibility = 0;
     const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
     for (HighsInt i = alt_workGroup[breakGroup]; i < to_i; i++) {
-      if (report_debug_bfrt)
-	debugReportBfrtVar(i, sorted_workData);
+      if (report_debug_bfrt) debugReportBfrtVar(i, sorted_workData);
       const HighsInt iCol = sorted_workData[i].first;
       const double value = sorted_workData[i].second;
       const HighsInt move = workMove[iCol];

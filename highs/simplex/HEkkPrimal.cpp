@@ -646,6 +646,22 @@ void HEkkPrimal::solvePhase2() {
   }
 }
 
+void HEkkPrimal::initialiseIterationInfo() {
+  // integers
+  this->variable_in = kHighsIllegalSimplexInterationIntValue;
+  this->move_in = kHighsIllegalSimplexInterationIntValue;
+  this->row_out = kHighsIllegalSimplexInterationIntValue;
+  this->variable_out = kHighsIllegalSimplexInterationIntValue;
+  this->move_out = kHighsIllegalSimplexInterationIntValue;
+  // doubles
+  this->theta_dual = kHighsIllegalSimplexInterationDoubleValue;
+  this->theta_primal = kHighsIllegalSimplexInterationDoubleValue;
+  this->value_in = kHighsIllegalSimplexInterationDoubleValue;
+  this->alpha_col = kHighsIllegalSimplexInterationDoubleValue;
+  this->alpha_row = kHighsIllegalSimplexInterationDoubleValue;
+  this->numericalTrouble = kHighsIllegalSimplexInterationDoubleValue;
+}
+
 void HEkkPrimal::cleanup() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   if (!info.bounds_shifted && !info.bounds_perturbed) return;
@@ -825,6 +841,9 @@ void HEkkPrimal::iterate() {
     solve_phase = kSolvePhaseError;
     return;
   }
+
+  this->initialiseIterationInfo();
+
   // Initialise row_out so that aborting iteration before CHUZR due to
   // numerical test of chosen reduced cost can be spotted - and
   // eliminates the unassigned read that can occur when the first
@@ -2588,10 +2607,10 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->leaving_variable = variable_out;
   analysis->entering_variable = variable_in;
   analysis->rebuild_reason = rebuild_reason;
-  analysis->reduced_rhs_value = 0;
-  analysis->reduced_cost_value = 0;
-  analysis->edge_weight = 0;
-  analysis->primal_delta = 0;
+  analysis->reduced_rhs_value = kHighsIllegalSimplexInterationDoubleValue;
+  analysis->reduced_cost_value = kHighsIllegalSimplexInterationDoubleValue;
+  analysis->edge_weight = kHighsIllegalSimplexInterationDoubleValue;
+  analysis->primal_delta = kHighsIllegalSimplexInterationDoubleValue;
   analysis->primal_step = theta_primal;
   analysis->dual_step = theta_dual;
   analysis->pivot_value_from_column = alpha_col;

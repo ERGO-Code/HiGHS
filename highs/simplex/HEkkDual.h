@@ -95,6 +95,11 @@ class HEkkDual {
   void solvePhase2();
 
   /**
+   * @brief Initialise iteration information
+   */
+  void initialiseIterationInfo();
+
+  /**
    * @brief Reinvert if INVERT not fresh, then recompute dual and primal values
    *
    * Also collects primal infeasibilities and computes the dual objective value

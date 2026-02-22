@@ -233,10 +233,10 @@ class SimplexTimer {
         timer_pointer->clock_time[clock[SimplexTotalClock]];
     const double tolerance_percent_report =
         tolerance_percent_report_ >= 0 ? tolerance_percent_report_ : 1e-8;
-    return timer_pointer->reportOnTolerance(
-        grepStamp, clockList, ideal_sum_time,
-	1.0); //fix-2710
-	//	tolerance_percent_report);
+    return timer_pointer->reportOnTolerance(grepStamp, clockList,
+                                            ideal_sum_time,
+                                            1.0);  // fix-2710
+    //	tolerance_percent_report);
   };
 
   void reportChuzc4ClockList(const std::vector<HighsInt> simplex_clock_list,
