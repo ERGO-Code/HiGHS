@@ -5139,11 +5139,15 @@ HPresolve::Result HPresolve::enumerateSolutions(
       if ((++numRowsAccepted) >= maxNumRowsChecked) break;
       // get indices of binary variables in the row
       getBinaryRow(r, binvars, numnzs);
+      // initialise counters
+      HighsInt numRowsActive = 0;
+      HighsInt oldNumRowsRemoved = numRowsRemoved;
       for (size_t ii = i + 1; ii < rows.size(); ii++) {
         // get row index and skip removed rows
         HighsInt& r2 = std::get<3>(rows[ii]);
         if (r2 == -1) continue;
         // compare signatures to see if there may be overlap
+        numRowsActive++;
         if ((std::get<4>(rows[i]) & std::get<4>(rows[ii])) == 0) continue;
         // get indices of binary variables in the row
         getBinaryRow(r2, binvars2, numnzs2);
@@ -5156,6 +5160,9 @@ HPresolve::Result HPresolve::enumerateSolutions(
           r2 = -1;
         }
       }
+      // stop iterating if at most one of the remaining rows is active (not
+      // deleted)
+      if (numRowsActive - numRowsRemoved + oldNumRowsRemoved <= 1) break;
     }
     if (numRowsRemoved > 0)
       rows.erase(std::remove_if(rows.begin(), rows.end(),
@@ -5192,17 +5199,19 @@ HPresolve::Result HPresolve::enumerateSolutions(
   std::vector<double> col_lower(domain.col_lower_);
   std::vector<double> col_upper(domain.col_upper_);
 
+  // lambda for finding a variable to branch on
+  auto findBranchVar = [&](size_t numVars) {
+    // find variable for branching
+    for (size_t i = 0; i < numVars; i++)
+      if (!domain.isFixed(vars[i])) return vars[i];
+    return HighsInt{-1};
+  };
+
   // lambda for branching (just performs initial lower branch)
   auto doBranch = [&](size_t numVars, HighsInt& numBranches) {
     // find variable for branching
-    HighsInt branchvar = -1;
-    for (size_t i = 0; i < numVars; i++) {
-      if (!domain.isFixed(vars[i])) {
-        branchvar = vars[i];
-        break;
-      }
-    }
-    if (branchvar < 0) return;
+    HighsInt branchvar = findBranchVar(numVars);
+    assert(branchvar >= 0);
 
     // branch downwards
     branches[++numBranches] = {domain.getDomainChangeStack().size(),
@@ -5233,13 +5242,6 @@ HPresolve::Result HPresolve::enumerateSolutions(
     }
     // check if enumeration is complete
     return (numBranches >= 0);
-  };
-
-  // lambda for checking if a solution was found
-  auto solutionFound = [&](size_t numVars) {
-    for (size_t i = 0; i < numVars; i++)
-      if (!domain.isFixed(vars[i])) return false;
-    return true;
   };
 
   // lambda for checking whether the values of two binary variables are
@@ -5352,7 +5354,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
     while (true) {
       bool backtrack = domain.infeasible();
       if (!backtrack) {
-        backtrack = solutionFound(numVars);
+        backtrack = findBranchVar(numVars) < 0;
         if (backtrack)
           handleSolution(numVars, numSolutions, numWorstCaseBounds,
                          minNumActiveCols, maxNumActiveCols);
