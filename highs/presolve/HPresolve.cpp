@@ -1683,69 +1683,73 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       };
     }
 
-    assert(mipsolver);
-    // Don't log probing for presolve before restart
+    // Set up logging for probing
     const bool silent = silentLog();
     HighsInt iBin = -1;
     HighsInt iBin_probed = -1;
     HighsInt num_binary = binaries.size();
-    double log_tt_interval = 5.0;
-    double tt0 = this->timer->read();
+    double tt = this->timer->read();
+    double tt0 = tt;
     double log_tt = tt0;
     HighsInt log_iBin_probed = iBin_probed;
-    double time_remaining = options->time_limit - tt0;
-    double probing_time_limit = 0.1 * time_remaining;
-    bool logged_probing_time_limit = false;
-    for (const auto& binvar : binaries) {
-      iBin++;
-      HighsInt i = std::get<3>(binvar);
+    auto probingLog = [&]() {
+      if (silent || options->timeless_log) return;
+      // Ensure that enough time has elapsed, and at least on binary
+      // has been probed
+      const double log_tt_interval = 5.0;
+      if (tt > log_tt + log_tt_interval && iBin_probed > log_iBin_probed) {
+        // Get the average rate from the start of probing
+        assert(iBin_probed > 0);
+        double rate0 = (tt - tt0) / double(iBin_probed);
+        // Get the average rate since last logging
+        HighsInt dl_iBin_probed = iBin_probed - log_iBin_probed;
+        assert(dl_iBin_probed > 0);
+        double rate1 = (tt - log_tt) / double(dl_iBin_probed);
+        // Assess the time for probing based on the greater rate
+        double rate = std::max(rate0, rate1);
+        std::string rate_str =
+            " (rate " + highsTimeToString(1e3 * rate) + "/ms";
+        double expected_probing_finish_time =
+            tt + rate * (num_binary - iBin_probed);
+        std::string expected_probing_finish_time_str =
+            " => expected probing finish time " +
+            highsTimeSecondToString(expected_probing_finish_time) + ")";
+        std::string time_str = highsTimeSecondToString(tt);
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "   Considered %d / %d binaries; %d probed %s%s %s\n",
+                     int(iBin), int(num_binary), int(iBin_probed),
+                     rate_str.c_str(), expected_probing_finish_time_str.c_str(),
+                     time_str.c_str());
+        log_tt = tt;
+        log_iBin_probed = iBin_probed;
+      }
+    };
 
+    for (const auto& binvar : binaries) {
+      // Count the binaries considered
+      iBin++;
+
+      HighsInt i = std::get<3>(binvar);
       if (cliquetable.getSubstitution(i) != nullptr || !domain.isBinary(i))
         continue;
 
+      // Count the binaries probed
       iBin_probed++;
-      double tt = this->timer->read();
-      if (tt > log_tt + log_tt_interval && iBin_probed > log_iBin_probed) {
-        if (!silent && !logged_probing_time_limit &&
-            probing_time_limit < kHighsInf && !options->timeless_log) {
-          highsLogUser(options->log_options, HighsLogType::kInfo,
-                       "   Probing %d binaries with a time limit of %s\n",
-                       int(num_binary),
-                       highsTimeSecondToString(probing_time_limit).c_str());
-          logged_probing_time_limit = true;
-        }
-        if (tt > probing_time_limit) {
-          if (!silent)
-            highsLogUser(
-                options->log_options, HighsLogType::kWarning,
-                "   Probing time limit reached: solver behaviour may be "
-                "non-deterministic\n");
-          return Result::kStopped;
-        }
-        if (!silent && !options->timeless_log) {
-          assert(iBin_probed > 0);
-          HighsInt dl_iBin_probed = iBin_probed - log_iBin_probed;
-          assert(dl_iBin_probed > 0);
-          double rate0 = (tt - tt0) / double(iBin_probed);
-          double rate1 = (tt - log_tt) / double(dl_iBin_probed);
-          double rate = std::max(rate0, rate1);
-          std::string rate_str =
-              " (rate " + highsTimeToString(1e3 * rate) + "/ms";
-          double expected_probing_finish_time =
-              tt + rate * (num_binary - iBin_probed);
-          std::string expected_probing_finish_time_str =
-              " => expected probing finish time " +
-              highsTimeSecondToString(expected_probing_finish_time) + ")";
-          std::string time_str = highsTimeSecondToString(tt);
-          highsLogUser(
-              options->log_options, HighsLogType::kInfo,
-              "   Considered %d / %d binaries; %d probed %s%s %s\n", int(iBin),
-              int(num_binary), int(iBin_probed), rate_str.c_str(),
-              expected_probing_finish_time_str.c_str(), time_str.c_str());
-          log_tt = tt;
-          log_iBin_probed = iBin_probed;
-        }
+
+      // Check for timeout
+      tt = this->timer->read();
+      if (tt > options->time_limit) {
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "Time limit reached in probing: "
+                     "consider not using probing by setting option "
+                     "presolve_rule_off to 2^%-d = %d\n",
+                     int(kPresolveRuleProbing),
+                     int(std::pow(int(2), int(kPresolveRuleProbing))));
+        return Result::kStopped;
       }
+
+      // Possibly log probing
+      probingLog();
 
       bool tightenLimits = (numProbed - oldNumProbed) >= 2500;
 
