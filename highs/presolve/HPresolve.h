@@ -348,6 +348,8 @@ class HPresolve {
   template <typename storageFormat>
   HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector);
 
+  bool silentLog() const;
+
  public:
   // for LP presolve
   bool okSetInput(HighsLp& model_, const HighsOptions& options_,

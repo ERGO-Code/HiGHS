@@ -1685,7 +1685,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
     assert(mipsolver);
     // Don't log probing for presolve before restart
-    const bool silent = mipsolver->mipdata_->numRestarts > 0;
+    const bool silent = silentLog();
     HighsInt iBin = -1;
     HighsInt iBin_probed = -1;
     HighsInt num_binary = binaries.size();
@@ -5523,7 +5523,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     model->sense_ = ObjSense::kMinimize;
   }
 
-  const bool silent = mipsolver && mipsolver->mipdata_->numRestarts > 0;
+  const bool silent = silentLog();
   if (options->presolve != kHighsOffString) {
     if (!silent)
       highsLogUser(options->log_options, HighsLogType::kInfo,
@@ -5549,7 +5549,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         if (options->timeless_log) time_str = "";
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
-                     " cols, %" HIGHSINT_FORMAT " nonzeros  %s\n",
+                     " cols, %" HIGHSINT_FORMAT " nonzeros %s\n",
                      numRow, numCol, numNonz, time_str.c_str());
       }
     };
@@ -6025,6 +6025,10 @@ HighsCDouble HPresolve::computeDynamism(
          static_cast<HighsCDouble>(minAbsCoef);
 }
 
+bool HPresolve::silentLog() const {
+  return mipsolver && mipsolver->mipdata_->numRestarts > 0;
+}
+
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
@@ -6224,7 +6228,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   const double time_limit =
       std::max(1.0, std::min(0.01 * options->time_limit, 1000.0));
   factor.setTimeLimit(time_limit);
-  const bool silent = mipsolver && mipsolver->mipdata_->numRestarts > 0;
+  const bool silent = silentLog();
   // Determine rank deficiency of the equations
   if (!silent)
     highsLogUser(options->log_options, HighsLogType::kInfo,
