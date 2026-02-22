@@ -234,7 +234,9 @@ class SimplexTimer {
     const double tolerance_percent_report =
         tolerance_percent_report_ >= 0 ? tolerance_percent_report_ : 1e-8;
     return timer_pointer->reportOnTolerance(
-        grepStamp, clockList, ideal_sum_time, tolerance_percent_report);
+        grepStamp, clockList, ideal_sum_time,
+	1.0); //fix-2710
+	//	tolerance_percent_report);
   };
 
   void reportChuzc4ClockList(const std::vector<HighsInt> simplex_clock_list,
@@ -248,7 +250,6 @@ class SimplexTimer {
       clockList[en] = clock[simplex_clock_list[en]];
     }
     const double ideal_sum_time = timer_pointer->read(clock[Chuzc4Clock]);
-    printf("reportChuzc4ClockList: ideal_sum_time = %g\n", ideal_sum_time);
     timer_pointer->reportOnTolerance("CHUZC4:", clockList, ideal_sum_time,
                                      1e-8);
   };

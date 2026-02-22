@@ -128,9 +128,9 @@ HighsInt HEkkDualRow::chooseFinal() {
   // 1. Reduce by large step BFRT
   analysis->simplexTimerStart(Chuzc3Clock);
   bool report_bfrt = false;
-  const bool debug_bfrt_report_on = false;
+  const bool report_debug_bfrt = false;
   if (ekk_instance_.debug_iteration_report_) {
-    report_bfrt = debug_bfrt_report_on;
+    report_bfrt = report_debug_bfrt;
     if (report_bfrt)
       printf("HEkkDualRow::chooseFinal Check iter = %d\n",
              (int)ekk_instance_.iteration_count_);
@@ -156,18 +156,23 @@ HighsInt HEkkDualRow::chooseFinal() {
   analysis->simplexTimerStop(Chuzc3Clock);
   // 2. Choose by small step BFRT
 
-  printf("HEkkDualRow::chooseFinal dual_simplex_chuzc_strategy = %d: workCount = %d / %d\n",
-	 int(ekk_instance_.info_.dual_simplex_chuzc_strategy),
-	 int(workCount),
-	 int(ekk_instance_.lp_.num_col_));
-
   bool use_quad_sort = false;
   bool use_heap_sort = false;
   // Use the quadratic cost sort for smaller values of workCount,
   // otherwise use the heap-based sort
-  use_quad_sort = true;  // workCount < 100;
-  use_heap_sort = !use_quad_sort;
-  assert(use_heap_sort || use_quad_sort);
+  if (ekk_instance_.info_.dual_simplex_chuzc_strategy ==
+      kDualSimplexChuzcStrategyQuad) {
+    use_quad_sort = true;
+  } else if (ekk_instance_.info_.dual_simplex_chuzc_strategy ==
+	     kDualSimplexChuzcStrategyHeap) {
+    use_heap_sort = true;
+  } else {
+    assert(ekk_instance_.info_.dual_simplex_chuzc_strategy ==
+	   kDualSimplexChuzcStrategyChoose);
+    use_quad_sort = workCount < 10;
+    use_heap_sort = !use_quad_sort;
+  }
+  assert(use_heap_sort != use_quad_sort);
   if (use_quad_sort) {
     analysis->num_quad_chuzc++;
     analysis->sum_quad_chuzc_size += workCount;
@@ -181,7 +186,6 @@ HighsInt HEkkDualRow::chooseFinal() {
   }
 
   if (use_heap_sort) {
-    printf("CHUZC: Using heap sort\n");
     // Take a copy of workData and workCount for the independent
     // heap-based code
     original_workData = workData;
@@ -275,13 +279,15 @@ HighsInt HEkkDualRow::chooseFinal() {
     for (HighsInt i = workGroup[breakGroup]; i < workGroup[breakGroup + 1]; i++)
       if (report_bfrt) debugReportBfrtVar(i, workData);
   } else {
-    printf("DebugHeapSortCHUZC: Pivot = %4d; alpha = %11.4g; theta = %11.4g\n",
+    if (report_debug_bfrt) printf("DebugHeapSortCHUZC: Pivot = %4d; alpha = %11.4g; theta = %11.4g\n",
            (int)workPivot, workAlpha, workTheta);
-    debugReportBfrtVar(-1, sorted_workData);
+    if (report_debug_bfrt)
+      debugReportBfrtVar(-1, sorted_workData);
     for (HighsInt i = 0; i < alt_workGroup[breakGroup]; i++) {
       const HighsInt iCol = sorted_workData[i].first;
       const HighsInt move = workMove[iCol];
-      debugReportBfrtVar(i, sorted_workData);
+      if (report_debug_bfrt)
+	debugReportBfrtVar(i, sorted_workData);
       workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
     }
     // Look at all entries of final group to see what dual
@@ -292,7 +298,8 @@ HighsInt HEkkDualRow::chooseFinal() {
     //    HighsInt num_infeasibility = 0;
     const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
     for (HighsInt i = alt_workGroup[breakGroup]; i < to_i; i++) {
-      debugReportBfrtVar(i, sorted_workData);
+      if (report_debug_bfrt)
+	debugReportBfrtVar(i, sorted_workData);
       const HighsInt iCol = sorted_workData[i].first;
       const double value = sorted_workData[i].second;
       const HighsInt move = workMove[iCol];
@@ -676,6 +683,7 @@ HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
   assert(!num_infeasibility);
   return num_infeasibility;
 }
+
 void HEkkDualRow::debugReportBfrtVar(
     const HighsInt ix,
     const std::vector<std::pair<HighsInt, double>>& pass_workData) const {

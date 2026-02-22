@@ -1166,9 +1166,12 @@ void HighsSimplexAnalysis::summaryReportFactor() const {
 void HighsSimplexAnalysis::reportSimplexTimer() const {
   assert(analyse_simplex_time);
   SimplexTimer simplex_timer;
-  simplex_timer.reportDualSimplexOuterClock(thread_simplex_clocks[0]);
+  //  simplex_timer.reportSimplexTotalClock(thread_simplex_clocks[0]);
+  //  simplex_timer.reportSimplexPhasesClock(thread_simplex_clocks[0]);
+  //  simplex_timer.reportDualSimplexIterateClock(thread_simplex_clocks[0]);
+  //  simplex_timer.reportDualSimplexOuterClock(thread_simplex_clocks[0]);
   simplex_timer.reportSimplexInnerClock(thread_simplex_clocks[0]);
-  simplex_timer.reportSimplexChuzc4Clock(thread_simplex_clocks[0]);
+  // simplex_timer.reportSimplexChuzc4Clock(thread_simplex_clocks[0]);
 }
 
 void HighsSimplexAnalysis::reportFactorTimer() {
