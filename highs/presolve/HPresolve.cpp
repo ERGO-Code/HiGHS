@@ -4736,13 +4736,11 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     }
     // fix variables
     if (!sMinus.empty() && activityTPlusFinite && activitySCPlusFinite &&
-        activityTPlus > model->row_lower_[row] + primal_feastol &&
         activityTPlus + activitySCPlus <=
             model->row_lower_[row] + primal_feastol)
       // fix all variables in S_-
       HPRESOLVE_CHECKED_CALL(fixCols(sMinus, HighsInt{1}));
     else if (!sPlus.empty() && activityTMinusFinite && activitySCMinusFinite &&
-             activityTMinus < model->row_lower_[row] - primal_feastol &&
              activityTMinus + activitySCMinus >=
                  model->row_lower_[row] - primal_feastol)
       // fix all variables in S_+
