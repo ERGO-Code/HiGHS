@@ -1167,6 +1167,7 @@ void HighsSimplexAnalysis::reportSimplexTimer() const {
   assert(analyse_simplex_time);
   SimplexTimer simplex_timer;
   simplex_timer.reportSimplexInnerClock(thread_simplex_clocks[0]);
+  simplex_timer.reportSimplexChuzc4Clock(thread_simplex_clocks[0]);
 }
 
 void HighsSimplexAnalysis::reportFactorTimer() {

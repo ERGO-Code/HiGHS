@@ -553,3 +553,22 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("chuzc4", "[highs_lp_solver]") {
+  std::string model_file =
+        "/srv/mps_da/fit2d.mps.gz";
+  //    "/srv/miplib2017/irp.mps.gz";
+  //    "/srv/miplib2017/nw04.mps.gz";
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  h.readModel(model_file);
+  h.setOptionValue("highs_analysis_level", 8);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("solve_relaxation", true);
+  h.setOptionValue("simplex_price_strategy", kSimplexDualChuzcStrategyHeap);
+  h.run();
+
+  h.resetGlobalScheduler(true);
+
+}
+
