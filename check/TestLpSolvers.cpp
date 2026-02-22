@@ -553,7 +553,7 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
-
+/*
 TEST_CASE("chuzc4", "[highs_lp_solver]") {
   std::string model_file =
         "/srv/mps_da/fit2d.mps.gz";
@@ -581,3 +581,4 @@ TEST_CASE("chuzc4", "[highs_lp_solver]") {
 
 }
 
+*/

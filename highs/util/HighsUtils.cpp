@@ -751,6 +751,8 @@ bool updateValueDistribution(const double value,
   if (value_distribution.num_count_ < 0) return false;
   value_distribution.sum_count_++;
   const double abs_value = fabs(value);
+  printf("updateValueDistribution abs_value = %g\n", abs_value);
+  printf("updateValueDistribution value_distribution.min_value_ = %g\n", value_distribution.min_value_);
   value_distribution.min_value_ =
       std::min(abs_value, value_distribution.min_value_);
   value_distribution.max_value_ =
