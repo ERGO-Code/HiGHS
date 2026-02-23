@@ -5151,10 +5151,11 @@ HPresolve::Result HPresolve::enumerateSolutions(
         if ((std::get<4>(rows[i]) & std::get<4>(rows[ii])) == 0) continue;
         // get indices of binary variables in the row
         getBinaryRow(r2, binvars2, numnzs2);
-        // check if there is too much overlap
+        // check if there is too much overlap (compute overlap coefficient)
         numComparisons++;
         size_t overlap = computeRowOverlap(binvars, binvars2, numnzs, numnzs2);
-        if ((200 * overlap) / (numnzs + numnzs2) > maxPercentageRowOverlap) {
+        if ((100 * overlap) / std::min(numnzs, numnzs2) >
+            maxPercentageRowOverlap) {
           // mark row for removal
           numRowsRemoved++;
           r2 = -1;
