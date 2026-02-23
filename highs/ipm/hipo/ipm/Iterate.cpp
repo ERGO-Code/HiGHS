@@ -443,96 +443,34 @@ Int Iterate::finalResiduals(Info& info) const {
   // compute it.
 
   if (!info.ipx_used) {
-    std::vector<double> x_local, xl_local, xu_local, y_local, zl_local,
-        zu_local, slack_local;
-
-    model.postprocess(x_local, xl_local, xu_local, slack_local, y_local,
-                      zl_local, zu_local, *this);
-
-    Int m, n;
-    HighsSparseMatrix A;
-    std::vector<double> b, c, lower, upper;
-    std::vector<char> constraints;
-    double offset;
-
-    if (!model.lpOrig()) return kStatusError;
-    fillInIpxData(*model.lpOrig(), n, m, offset, c, lower, upper, A.start_,
-                  A.index_, A.value_, b, constraints);
-    A.num_col_ = n;
-    A.num_row_ = m;
-
-    if (model.qp()) {
-      if (!model.QOrig()) return kStatusError;
-    }
-
-    assert(x_local.size() == c.size());
-    assert(y_local.size() == b.size());
-
-    // res1 = b - slack - A*x
-    std::vector<double> res1 = b;
-    vectorAdd(res1, slack_local, -1.0);
-    A.alphaProductPlusY(-1.0, x_local, res1);
-
-    // res2 = lower - x + xl
-    std::vector<double> res2(n);
-    for (Int i = 0; i < n; ++i) {
-      if (std::isfinite(lower[i]))
-        res2[i] = lower[i] - x_local[i] + xl_local[i];
-    }
-
-    // res3 = upper - x - xu
-    std::vector<double> res3(n);
-    for (Int i = 0; i < n; ++i) {
-      if (std::isfinite(upper[i]))
-        res3[i] = upper[i] - x_local[i] - xu_local[i];
-    }
-
-    // res4 = c - A^T * y - zl + zu + Q * x
-    std::vector<double> res4(n);
-    A.alphaProductPlusY(-1.0, y_local, res4, true);
-    if (model.qp())
-      model.QOrig()->alphaProductPlusY(model.sense(), x_local, res4);
-    for (Int i = 0; i < n; ++i) {
-      if (std::isfinite(lower[i])) res4[i] -= zl_local[i];
-      if (std::isfinite(upper[i])) res4[i] += zu_local[i];
-      res4[i] += c[i];
-    }
-
-    double norm_rhs = infNorm(b);
-    for (Int i = 0; i < n; ++i) {
-      if (std::isfinite(lower[i]))
-        norm_rhs = std::max(norm_rhs, std::abs(lower[i]));
-      if (std::isfinite(upper[i]))
-        norm_rhs = std::max(norm_rhs, std::abs(upper[i]));
-    }
-
-    info.p_res_abs = infNorm(res1);
-    info.p_res_abs = std::max(info.p_res_abs, infNorm(res2));
-    info.p_res_abs = std::max(info.p_res_abs, infNorm(res3));
-    info.p_res_rel = info.p_res_abs / (1.0 + norm_rhs);
-
-    info.d_res_abs = infNorm(res4);
-    info.d_res_rel = info.d_res_abs / (1.0 + infNorm(c));
-
-    const double quad_term_local =
-        model.qp() ? model.sense() * model.QOrig()->objectiveValue(x_local)
-                   : 0.0;
-
-    double pobj = offset;
-    pobj += dotProd(c, x_local);
-    pobj += quad_term_local;
-
-    double dobj = offset;
-    dobj += dotProd(y_local, b);
-    for (Int i = 0; i < n; ++i) {
-      if (std::isfinite(lower[i])) dobj += lower[i] * zl_local[i];
-      if (std::isfinite(upper[i])) dobj -= upper[i] * zu_local[i];
-    }
-    dobj -= quad_term_local;
-
     info.p_obj = pobj;
     info.d_obj = dobj;
-    info.pd_gap = std::abs(pobj - dobj) / (1.0 + 0.5 * std::abs(pobj + dobj));
+    info.pd_gap = pdgap;
+
+    double& pinf = info.p_res_abs;
+    for (Int i = 0; i < model.m(); ++i) {
+      double val = std::abs(res.r1[i]);
+      if (model.scaled()) val /= model.rowScale(i);
+      pinf = std::max(pinf, val);
+    }
+    for (Int i = 0; i < model.n(); ++i) {
+      double val = std::abs(res.r2[i]);
+      if (model.scaled()) val *= model.colScale(i);
+      pinf = std::max(pinf, val);
+
+      val = std::abs(res.r3[i]);
+      if (model.scaled()) val *= model.colScale(i);
+      pinf = std::max(pinf, val);
+    }
+    info.p_res_rel = pinf / (1.0 + model.normUnscaledRhs());
+
+    double& dinf = info.d_res_abs;
+    for (Int i = 0; i < model.n(); ++i) {
+      double val = std::abs(res.r4[i]);
+      if (model.scaled()) val /= model.colScale(i);
+      dinf = std::max(dinf, val);
+    }
+    info.d_res_rel = dinf / (1.0 + model.normUnscaledObj());
 
   } else {
     info.p_res_abs = info.ipx_info.abs_presidual;
@@ -547,12 +485,12 @@ Int Iterate::finalResiduals(Info& info) const {
   return kStatusOk;
 }
 
-void Iterate::getReg(LinearSolver& LS, OptionNla opt) {
+void Iterate::getReg(LinearSolver& LS, const std::string& nla) {
   // extract regularisation
   LS.getReg(total_reg);
 
   // easy access to primal/dual regularisation
-  if (opt == kOptionNlaNormEq) {
+  if (nla == kHipoNormalEqString) {
     Rp = nullptr;
     Rd = total_reg.data();
   } else {

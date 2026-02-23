@@ -452,10 +452,10 @@ Int FactorHiGHSSolver::chooseNla() {
 
   // Decision may be forced by failures
   if (failure_NE && !failure_AS) {
-    options_.nla = kOptionNlaAugmented;
+    options_.nla = kHipoAugmentedString;
     log_stream << textline("Newton system:") << "AS preferred (NE failed)\n";
   } else if (failure_AS && !failure_NE) {
-    options_.nla = kOptionNlaNormEq;
+    options_.nla = kHipoNormalEqString;
     log_stream << textline("Newton system:") << "NE preferred (AS failed)\n";
   } else if (failure_AS && failure_NE) {
     if (overflow_AS && overflow_NE)
@@ -483,10 +483,10 @@ Int FactorHiGHSSolver::chooseNla() {
 
     if (NE_much_more_expensive ||
         (sn_AS_larger_than_NE && AS_not_too_expensive)) {
-      options_.nla = kOptionNlaAugmented;
+      options_.nla = kHipoAugmentedString;
       log_stream << textline("Newton system:") << "AS preferred\n";
     } else {
-      options_.nla = kOptionNlaNormEq;
+      options_.nla = kHipoNormalEqString;
       log_stream << textline("Newton system:") << "NE preferred\n";
     }
   }
@@ -494,7 +494,7 @@ Int FactorHiGHSSolver::chooseNla() {
   log_.print(log_stream);
 
   if (status == kStatusOk) {
-    if (options_.nla == kOptionNlaAugmented) {
+    if (options_.nla == kHipoAugmentedString) {
       S_ = std::move(symb_AS);
       freeNEmemory();
     } else {
@@ -604,44 +604,38 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 Int FactorHiGHSSolver::setNla() {
   std::stringstream log_stream;
 
-  hipo::OptionNla nla = options_.nla;
-  if (nla == kOptionNlaNormEq && model_.nonSeparableQp()) {
+  if (options_.nla == kHipoNormalEqString && model_.nonSeparableQp()) {
     log_.printw("Normal equations not available for non-separable QP\n");
-    nla = kOptionNlaChoose;
+    options_.nla = kHighsChooseString;
   }
 
-  switch (nla) {
-    case kOptionNlaAugmented: {
-      Int status = analyseAS(S_);
-      if (status == kStatusOverflow) {
-        log_.printe("AS requested, integer overflow\n");
-        return kStatusOverflow;
-      } else if (status) {
-        log_.printe("AS requested, failed analyse phase\n");
-        return kStatusErrorAnalyse;
-      }
-      log_stream << textline("Newton system:") << "AS requested\n";
-      break;
+  if (options_.nla == kHipoAugmentedString) {
+    Int status = analyseAS(S_);
+    if (status == kStatusOverflow) {
+      log_.printe("AS requested, integer overflow\n");
+      return kStatusOverflow;
+    } else if (status) {
+      log_.printe("AS requested, failed analyse phase\n");
+      return kStatusErrorAnalyse;
     }
+    log_stream << textline("Newton system:") << "AS requested\n";
 
-    case kOptionNlaNormEq: {
-      Int status = analyseNE(S_);
-      if (status == kStatusOverflow) {
-        log_.printe("NE requested, integer overflow\n");
-        return kStatusOverflow;
-      } else if (status) {
-        log_.printe("NE requested, failed analyse phase\n");
-        return kStatusErrorAnalyse;
-      }
-      log_stream << textline("Newton system:") << "NE requested\n";
-      break;
+  } else if (options_.nla == kHipoNormalEqString) {
+    Int status = analyseNE(S_);
+    if (status == kStatusOverflow) {
+      log_.printe("NE requested, integer overflow\n");
+      return kStatusOverflow;
+    } else if (status) {
+      log_.printe("NE requested, failed analyse phase\n");
+      return kStatusErrorAnalyse;
     }
+    log_stream << textline("Newton system:") << "NE requested\n";
 
-    case kOptionNlaChoose: {
-      if (Int status = chooseNla()) return status;
-      break;
-    }
-  }
+  } else if (options_.nla == kHighsChooseString) {
+    if (Int status = chooseNla()) return status;
+
+  } else
+    assert(1 == 0);
 
   log_.print(log_stream);
 
@@ -656,81 +650,74 @@ void FactorHiGHSSolver::setParallel() {
   std::stringstream log_stream;
   log_stream << textline("Parallelism:");
 
-  switch (options_.parallel) {
-    case kOptionParallelOff:
-      log_stream << "None requested\n";
-      break;
-    case kOptionParallelOn:
+  if (options_.parallel == kHighsOffString) {
+    log_stream << "None requested\n";
+  } else if (options_.parallel == kHighsOnString) {
+    if (options_.parallel_type == kHipoBothString) {
       parallel_tree = true;
       parallel_node = true;
       log_stream << "Full requested\n";
-      break;
-    case kOptionParallelChoose: {
-#ifdef HIPO_USES_APPLE_BLAS
-      // Blas on Apple do not work well with parallel_node, but parallel_tree
-      // seems to always be beneficial.
-      parallel_node = false;
-      parallel_tree = true;
-#else
-      // Otherwise, parallel_node is active because it is triggered only if the
-      // frontal matrix is large enough anyway.
-      parallel_node = true;
-
-      // parallel_tree instead is chosen with a heuristic
-
-      double tree_speedup = S_.flops() / S_.critops();
-      double sn_size = (double)S_.size() / S_.sn();
-
-      bool enough_sn = S_.sn() > kMinNumberSn;
-      bool enough_flops = S_.flops() > kLargeFlopsThresh;
-      bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
-      bool sn_are_large = sn_size > kLargeSnThresh;
-      bool sn_are_not_small = sn_size > kSmallSnThresh;
-
-      // parallel_tree is active if the supernodes are large, or if there is a
-      // large expected speedup and the supernodes are not too small, provided
-      // that the number of flops and supernodes is not too small.
-      if (enough_sn && enough_flops &&
-          (sn_are_large || (speedup_is_large && sn_are_not_small))) {
-        parallel_tree = true;
-      }
-#endif
-
-      // If serial memory is too large, switch off tree parallelism to avoid
-      // running out of memory
-      double num_GB = S_.storage() / 1024 / 1024 / 1024;
-      if (num_GB > kLargeStorageGB) {
-        parallel_tree = false;
-      }
-
-      // switch off tree parallelism if depth of recursion is too large
-      if (S_.depth() > kMaxTreeDepth) parallel_tree = false;
-
-      if (parallel_tree && parallel_node) {
-        options_.parallel = kOptionParallelOn;
-        log_stream << "Full preferred\n";
-      } else if (parallel_tree && !parallel_node) {
-        options_.parallel = kOptionParallelTreeOnly;
-        log_stream << "Tree preferred\n";
-      } else if (!parallel_tree && parallel_node) {
-        options_.parallel = kOptionParallelNodeOnly;
-        log_stream << "Node preferred\n";
-      } else {
-        options_.parallel = kOptionParallelOff;
-        log_stream << "None preferred\n";
-      }
-
-      break;
-    }
-    case kOptionParallelTreeOnly:
+    } else if (options_.parallel_type == kHipoTreeString) {
       parallel_tree = true;
       log_stream << "Tree requested\n";
-      break;
-    case kOptionParallelNodeOnly:
+    } else if (options_.parallel_type == kHipoNodeString) {
       parallel_node = true;
       log_stream << "Node requested\n";
-      break;
-  }
+    } else
+      assert(1 == 0);
+
+  } else if (options_.parallel == kHighsChooseString) {
+#ifdef HIPO_USES_APPLE_BLAS
+    // Blas on Apple do not work well with parallel_node, but parallel_tree
+    // seems to always be beneficial.
+    parallel_node = false;
+    parallel_tree = true;
+#else
+    // Otherwise, parallel_node is active because it is triggered only if the
+    // frontal matrix is large enough anyway.
+    parallel_node = true;
+
+    // parallel_tree instead is chosen with a heuristic
+
+    double tree_speedup = S_.flops() / S_.critops();
+    double sn_size = (double)S_.size() / S_.sn();
+
+    bool enough_sn = S_.sn() > kMinNumberSn;
+    bool enough_flops = S_.flops() > kLargeFlopsThresh;
+    bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
+    bool sn_are_large = sn_size > kLargeSnThresh;
+    bool sn_are_not_small = sn_size > kSmallSnThresh;
+
+    // parallel_tree is active if the supernodes are large, or if there is a
+    // large expected speedup and the supernodes are not too small, provided
+    // that the number of flops and supernodes is not too small.
+    if (enough_sn && enough_flops &&
+        (sn_are_large || (speedup_is_large && sn_are_not_small))) {
+      parallel_tree = true;
+    }
+#endif
+
+    // If serial memory is too large, switch off tree parallelism to avoid
+    // running out of memory
+    double num_GB = S_.storage() / 1024 / 1024 / 1024;
+    if (num_GB > kLargeStorageGB) {
+      parallel_tree = false;
+    }
+
+    // switch off tree parallelism if depth of recursion is too large
+    if (S_.depth() > kMaxTreeDepth) parallel_tree = false;
+
+    if (parallel_tree && parallel_node)
+      log_stream << "Full preferred\n";
+    else if (parallel_tree && !parallel_node)
+      log_stream << "Tree preferred\n";
+    else if (!parallel_tree && parallel_node)
+      log_stream << "Node preferred\n";
+    else
+      log_stream << "None preferred\n";
+
+  } else
+    assert(1 == 0);
 
   log_.print(log_stream);
   S_.setParallel(parallel_tree, parallel_node);

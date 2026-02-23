@@ -80,16 +80,23 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
+#ifndef HIPO
+static void noHipoErrorLog(const HighsLogOptions& report_log_options,
+                           const string& option_name) {
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "The HiPO solver was requested via the \"%s\" option, but this build "
+      "was compiled without HiPO support. Reconfigure with -DFAST_BUILD=ON "
+      "and -DHIPO=ON to enable HiPO.\n",
+      option_name.c_str());
+}
+#endif
+
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
 #ifndef HIPO
   if (value == kHipoString) {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kSolverString.c_str());
+    noHipoErrorLog(report_log_options, kSolverString);
     return false;
   }
 #endif
@@ -119,12 +126,7 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
 #ifndef HIPO
   if (value == kHipoString) {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kMipLpSolverString.c_str());
+    noHipoErrorLog(report_log_options, kMipLpSolverString);
     return false;
   }
 #endif
@@ -155,12 +157,7 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
 #ifndef HIPO
   if (value == kHipoString) {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kMipIpmSolverString.c_str());
+    noHipoErrorLog(report_log_options, kMipIpmSolverString);
     return false;
   }
 #endif
@@ -182,6 +179,46 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                kHipoString.c_str(),
 #endif
                kIpxString.c_str());
+  return false;
+}
+
+bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
+                              const string& value) {
+  if (value == kHipoNodeString || value == kHipoTreeString ||
+      value == kHipoBothString)
+    return true;
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kHipoParallelString.c_str(), kHipoTreeString.c_str(),
+      kHipoNodeString.c_str(), kHipoBothString.c_str());
+  return false;
+}
+
+bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
+                        const string& value) {
+  if (value == kHipoNormalEqString || value == kHipoAugmentedString ||
+      value == kHighsChooseString)
+    return true;
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kHipoSystemString.c_str(), kHipoNormalEqString.c_str(),
+      kHipoAugmentedString.c_str(), kHighsChooseString.c_str());
+  return false;
+}
+
+bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
+                          const string& value) {
+  if (value == kHipoAmdString || value == kHipoMetisString ||
+      value == kHipoRcmString || value == kHighsChooseString)
+    return true;
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(), kHipoOrderingString.c_str(),
+               kHipoAmdString.c_str(), kHipoMetisString.c_str(),
+               kHipoRcmString.c_str(), kHighsChooseString.c_str());
   return false;
 }
 
@@ -463,6 +500,15 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
       return OptionStatus::kIllegalValue;
   } else if (option.name == kRangingString) {
     if (!optionOffOnOk(report_log_options, option.name, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHipoParallelString) {
+    if (!optionHipoParallelTypeOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHipoSystemString) {
+    if (!optionHipoSystemOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHipoOrderingString) {
+    if (!optionHipoOrderingOk(report_log_options, value))
       return OptionStatus::kIllegalValue;
   }
   return OptionStatus::kOk;

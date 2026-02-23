@@ -19,6 +19,7 @@
 #include "ipm/hipo/factorhighs/FactorHiGHS.h"
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsCallback.h"
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
 #include "util/HighsSparseMatrix.h"
 #include "util/HighsTimer.h"
@@ -57,6 +58,7 @@ class Solver {
   // Run-time options
   Options options_{};
   Options options_orig_{};
+  HighsOptions Hoptions_{};
 
   // Interface to ipx
   ipx::LpSolver ipx_lps_;
@@ -83,7 +85,7 @@ class Solver {
   // ===================================================================================
   // Specify options, callback and timer.
   // ===================================================================================
-  void setOptions(const Options& options);
+  void setOptions(const HighsOptions& highs_options);
   void setCallback(HighsCallback& callback);
   void setTimer(const HighsTimer& timer);
 
@@ -301,6 +303,7 @@ class Solver {
   //  - relative dual gap    < tolerance
   // ===================================================================================
   bool checkTermination();
+  bool checkTerminationKkt();
 
   // ===================================================================================
   // Check for user interrupt or time limit
