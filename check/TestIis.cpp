@@ -796,3 +796,40 @@ TEST_CASE("write-iis_model-file", "[iis]") {
   std::remove(test_sol.c_str());
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("iis-2867", "[iis]") {
+  std::string model = "2867";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  HighsLp lp = h.getLp();
+
+  // The LP is very close to being feasible, as it has a primal
+  // infeasibility of 4e-7
+  //
+  // The value causing infeasibility is the upper bound on row 40
+  HighsInt rogue_row = 40;
+  REQUIRE(lp.row_names_[rogue_row] == "X115");
+  REQUIRE(lp.row_upper_[rogue_row] == 1885.9734504);
+
+  // No IIS is found, as the only positive elastic variable has value
+  // 6e-09
+  h.setOptionValue("iis_strategy", kIisStrategyIrreducible);
+  HighsIis iis;
+  REQUIRE(h.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kNotset);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusFeasible);
+
+  // Tighten the upper bound on row 40
+  lp.row_upper_[rogue_row] = 1885.97;
+  h.passModel(lp);
+  REQUIRE(h.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusIrreducible);
+
+  h.resetGlobalScheduler(true);
+}

@@ -556,7 +556,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       // Solve the LP
       run_status = highs.optimizeModel();
       if (run_status != HighsStatus::kOk) return run_status;
-      highs.writeSolution("", kSolutionStylePretty);
+      if (kIisDevReport) highs.writeSolution("", kSolutionStylePretty);
       const HighsInt* basic_index = highs.getBasicVariablesArray();
       std::vector<double> rhs;
       rhs.assign(lp.num_row_, 0);
@@ -768,9 +768,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       } else {
         this->col_bound_[iX] = iss_bound_status;
       }
-      highsLogUser(log_options, HighsLogType::kInfo, "%s %d has status %s\n",
-                   type.c_str(), int(iX),
-                   iisBoundStatusToString(iss_bound_status).c_str());
+      if (kIisDevReport)
+        highsLogUser(log_options, HighsLogType::kInfo, "%s %d has status %s\n",
+                     type.c_str(), int(iX),
+                     iisBoundStatusToString(iss_bound_status).c_str());
     }
     if (k == 1) continue;
     // End of first pass: look to simplify second pass

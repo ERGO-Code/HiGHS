@@ -2022,33 +2022,35 @@ HighsStatus Highs::getIisInterface() {
   model_.lp_.a_matrix_.ensureColwise();
   return_status = this->iis_.deduce(lp, options_, basis_);
   // Analyse the LP solution data
-  const HighsInt num_lp_solved = this->iis_.info_.size();
-  double min_time = kHighsInf;
-  double sum_time = 0;
-  double max_time = 0;
-  HighsInt min_iterations = kHighsIInf;
-  HighsInt sum_iterations = 0;
-  HighsInt max_iterations = 0;
-  for (HighsInt iX = 0; iX < num_lp_solved; iX++) {
-    double time = this->iis_.info_[iX].simplex_time;
-    HighsInt iterations = this->iis_.info_[iX].simplex_iterations;
-    min_time = std::min(time, min_time);
-    sum_time += time;
-    max_time = std::max(time, max_time);
-    min_iterations = std::min(iterations, min_iterations);
-    sum_iterations += iterations;
-    max_iterations = std::max(iterations, max_iterations);
+  if (kIisDevReport) {
+    const HighsInt num_lp_solved = this->iis_.info_.size();
+    double min_time = kHighsInf;
+    double sum_time = 0;
+    double max_time = 0;
+    HighsInt min_iterations = kHighsIInf;
+    HighsInt sum_iterations = 0;
+    HighsInt max_iterations = 0;
+    for (HighsInt iX = 0; iX < num_lp_solved; iX++) {
+      double time = this->iis_.info_[iX].simplex_time;
+      HighsInt iterations = this->iis_.info_[iX].simplex_iterations;
+      min_time = std::min(time, min_time);
+      sum_time += time;
+      max_time = std::max(time, max_time);
+      min_iterations = std::min(iterations, min_iterations);
+      sum_iterations += iterations;
+      max_iterations = std::max(iterations, max_iterations);
+    }
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 " %d cols, %d rows, %d LPs solved"
+                 " (min / average / max) iteration count (%6d / %6.2g / % 6d)"
+                 " and time (%6.2f / %6.2f / % 6.2f) \n",
+                 int(this->iis_.col_index_.size()),
+                 int(this->iis_.row_index_.size()), int(num_lp_solved),
+                 int(min_iterations),
+                 num_lp_solved > 0 ? (1.0 * sum_iterations) / num_lp_solved : 0,
+                 int(max_iterations), min_time,
+                 num_lp_solved > 0 ? sum_time / num_lp_solved : 0, max_time);
   }
-  highsLogUser(options_.log_options, HighsLogType::kInfo,
-               " %d cols, %d rows, %d LPs solved"
-               " (min / average / max) iteration count (%6d / %6.2g / % 6d)"
-               " and time (%6.2f / %6.2f / % 6.2f) \n",
-               int(this->iis_.col_index_.size()),
-               int(this->iis_.row_index_.size()), int(num_lp_solved),
-               int(min_iterations),
-               num_lp_solved > 0 ? (1.0 * sum_iterations) / num_lp_solved : 0,
-               int(max_iterations), min_time,
-               num_lp_solved > 0 ? sum_time / num_lp_solved : 0, max_time);
   return this->getIisInterfaceReturn(return_status);
 }
 
@@ -2441,7 +2443,12 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     HighsIisInfo iis_info;
     iis_info.simplex_time = -this->getRunTime();
     iis_info.simplex_iterations = -info_.simplex_iteration_count;
+    // Ensure that run is silent - unless kIisDevReport is true
+    const bool output_flag = this->options_.output_flag;
+    this->options_.output_flag = kIisDevReport;
     run_status = this->optimizeModel();
+    this->options_.output_flag = output_flag;
+    // Make sure that the run was successful
     assert(run_status == HighsStatus::kOk);
     if (run_status != HighsStatus::kOk) return run_status;
     iis_info.simplex_time += this->getRunTime();
@@ -2452,7 +2459,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
 
   // Solve the elastic LP
   run_status = solveLp();
-  this->writeSolution("", 1);
+  if (kIisDevReport) this->writeSolution("", 1);
 
   if (run_status != HighsStatus::kOk)
     return elasticityFilterReturn(run_status, original_model_name,
@@ -2590,18 +2597,18 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     assert(num_enforced_col_ecol == 0 && num_enforced_row_ecol == 0);
     assert(num_iis_row == 0);
   }
-  highsLogUser(
-      options_.log_options, HighsLogType::kInfo,
-      "Elasticity filter after %d passes enforces bounds on %d cols and %d "
-      "rows\n",
-      int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
-
-  if (kIisDevReport)
-    printf(
-        "\nElasticity filter after %d passes enforces bounds on %d cols and %d "
-        "rows\n",
+  if (kIisDevReport || this->options_.output_flag) {
+    std::string logging_string = highsFormatToString(
+        "IIS detection: Elasticity filter after %d passes enforces bounds on "
+        "%d cols and %d rows\n",
         int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
-
+    if (kIisDevReport) {
+      printf("\n%s", logging_string.c_str());
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                   logging_string.c_str());
+    }
+  }
   iis.valid_ = true;
   iis.strategy_ = this->options_.iis_strategy;
   if (iis.status_ == kIisModelStatusFeasible)
