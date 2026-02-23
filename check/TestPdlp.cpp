@@ -474,7 +474,7 @@ TEST_CASE("cuda-sandbox", "[pdlp]") {
 #endif
 
 TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
-  std::string model = "neso-2005";  //"afiro";
+  std::string model = "afiro";  //"afiro";
   // shell //stair //25fv47 //fit2p //avgas //neso-2245 //neso-2005
   std::string model_file =
       // std::string(HIGHS_DIR) + "/srv/" + model + ".mps.gz";
@@ -498,13 +498,14 @@ TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
       //+ kPdlpScalingL2cm
       + kPdlpScalingPC;
   h.setOptionValue("pdlp_scaling_mode", pdlp_scaling);
-  h.setOptionValue("pdlp_step_size_strategy", 0);
+  h.setOptionValue("pdlp_step_size_strategy", 0); // 0: fixed, 1: adaptive, 2: Malitsky-Pock, 3: PID
   h.setOptionValue("pdlp_restart_strategy", kPdlpRestartStrategyHalpern); // kPdlpRestartStrategyHalpern; kPdlpRestartStrategyAdaptive kPdlpRestartStrategyOff
   //turn on log
   //h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
-  h.setOptionValue("pdlp_iteration_limit", 10000);
-  // h.setOptionValue("pdlp_time_limit", 60);
+  //h.setOptionValue("pdlp_iteration_limit", 10000);
+  //h.setOptionValue("pdlp_time_limit", 60);
   //h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+  h.setOptionValue("kkt_tolerance", 1e-4);
   auto start_hipdlp = std::chrono::high_resolution_clock::now();
   HighsStatus run_status = h.run();
   auto end_hipdlp = std::chrono::high_resolution_clock::now();

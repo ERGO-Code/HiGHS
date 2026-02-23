@@ -757,7 +757,7 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
     
     if (params_.use_halpern_restart ) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
-	updatePrimalWeightAtRestart(current_results);
+	      updatePrimalWeightAtRestart(current_results);
       }
 #ifdef CUPDLP_GPU
       if (d_pdhg_primal_ != nullptr) {
@@ -1700,6 +1700,9 @@ void PrimalDualParams::initialise() {
   this->ruiz_iterations = 10;
   this->ruiz_norm = INFINITY;
   this->pc_alpha = 1.0;
+  this->k_p = 0.99;
+  this->k_i = 0.01;
+  this->k_d = 0.0;
   this->step_size_strategy = StepSizeStrategy::FIXED;
   this->malitsky_pock_params.initialise();
   this->adaptive_linesearch_params.initialise();
@@ -1795,14 +1798,15 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   dual_dist = std::sqrt(dual_dist);
 #endif
 
-  // Compute residual ratio
-  double ratio = results.dual_feasibility / (results.primal_feasibility + 1e-30);
+  double rel_primal = results.primal_feasibility / (1.0 + unscaled_rhs_norm_);
+  double rel_dual   = results.dual_feasibility   / (1.0 + unscaled_c_norm_);
+  double ratio_infeas = (rel_primal > 0.0) ? (rel_dual / rel_primal) : 1e300;
 
-  const bool silent = true;
+  const bool silent = false;
   // cuPDLPx-style weight update (PID control)
   if (primal_dist > 1e-16 && dual_dist > 1e-16 &&
       primal_dist < 1e12 && dual_dist < 1e12 &&
-      ratio > 1e-8 && ratio < 1e8) {
+      ratio_infeas > 1e-8 && ratio_infeas < 1e8) {
     
     double error = std::log(dual_dist) - std::log(primal_dist) - std::log(primal_weight_);
     
@@ -1829,7 +1833,7 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   }
 
   // Track best weight
-  double gap = std::abs(std::log10(results.dual_feasibility / (results.primal_feasibility + 1e-30)));
+  double gap = (rel_primal > 0.0 && rel_dual > 0.0) ? std::abs(std::log10(rel_dual / rel_primal)) : best_primal_dual_residual_gap_;
   if (gap < best_primal_dual_residual_gap_) {
     best_primal_dual_residual_gap_ = gap;
     best_primal_weight_ = primal_weight_;
