@@ -128,12 +128,19 @@ HighsInt HEkkDualRow::chooseFinal() {
   // 1. Reduce by large step BFRT
   analysis->simplexTimerStart(Chuzc3Clock);
   bool report_bfrt = false;
-  const bool report_debug_bfrt = false;
+  //  const bool report_debug_bfrt = false;
+  bool report_debug_bfrt = false;
+  bool check_iter = ekk_instance_.iteration_count_ == 516;
+  if (check_iter) {
+    report_debug_bfrt = true;
+    ekk_instance_.debug_iteration_report_ = true;
+  }
+  
   if (ekk_instance_.debug_iteration_report_) {
     report_bfrt = report_debug_bfrt;
     if (report_bfrt)
       printf("HEkkDualRow::chooseFinal Check iter = %d\n",
-             (int)ekk_instance_.iteration_count_);
+             int(ekk_instance_.iteration_count_));
   }
   HighsInt fullCount = workCount;
   workCount = 0;
@@ -170,6 +177,10 @@ HighsInt HEkkDualRow::chooseFinal() {
     assert(ekk_instance_.info_.dual_simplex_chuzc_strategy ==
            kDualSimplexChuzcStrategyChoose);
     use_quad_sort = workCount < 10;
+    use_heap_sort = !use_quad_sort;
+  }
+  if (check_iter) {
+    use_quad_sort = true;//false;//
     use_heap_sort = !use_quad_sort;
   }
   assert(use_heap_sort != use_quad_sort);
