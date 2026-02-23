@@ -1599,7 +1599,7 @@ bool HighsPrimalHeuristics::localMip() {
   HighsSparseMatrix a_matrix_row;
   a_matrix_row.createRowwise(a_matrix);
 
-  // Create global objects used in lambda expressions
+  // Initialise values and reserve vectors
   HighsInt num_violated_rows_sample = 250;
   HighsInt num_satisfied_rows_sample = 20;
   HighsInt iters = 0;
@@ -1662,20 +1662,22 @@ bool HighsPrimalHeuristics::localMip() {
     return false;
   };
 
-  struct Violated {
+  struct RowStatus {
     std::vector<HighsInt> viol;
     std::vector<HighsInt> viol_index;
 
-    explicit Violated(const HighsInt n) : viol(n, -1) { viol_index.reserve(n); }
+    explicit RowStatus(const HighsInt n) : viol(n, -1) {
+      viol_index.reserve(n);
+    }
   };
 
-  auto add_entry = [&](Violated& v, HighsInt r) {
+  auto add_entry = [&](RowStatus& v, HighsInt r) {
     assert(v.viol[r] == -1);
     v.viol[r] = static_cast<HighsInt>(v.viol_index.size());
     v.viol_index.push_back(r);
   };
 
-  auto remove_entry = [&](Violated& v, HighsInt r) {
+  auto remove_entry = [&](RowStatus& v, HighsInt r) {
     assert(v.viol[r] != -1);
     v.viol_index[v.viol[r]] = v.viol_index.back();
     v.viol[v.viol_index.back()] = v.viol[r];
@@ -1688,11 +1690,11 @@ bool HighsPrimalHeuristics::localMip() {
   HighsInt momentum = 1;
   std::vector<HighsInt> allow_neg_delta(mipsolver.numCol());
   std::vector<HighsInt> allow_pos_delta(mipsolver.numCol());
-  Violated viol(mipsolver.numRow());
-  Violated satisfied(mipsolver.numRow());
+  RowStatus viol(mipsolver.numRow());
+  RowStatus satisfied(mipsolver.numRow());
   std::vector<HighsCDouble> activities(mipsolver.numRow());
 
-  auto calc_activites = [&](bool reset_violated) {
+  auto calc_activities = [&](bool reset_violated) {
     std::fill(activities.begin(), activities.end(), 0.0);
     if (reset_violated) {
       viol.viol_index.clear();
@@ -1751,8 +1753,10 @@ bool HighsPrimalHeuristics::localMip() {
     // printf("Applying move col %d with delta %g\n", c, delta);
   };
 
-  auto one_opt_calc_delta = [&](HighsInt c) -> double {
-    // Only check lower bound delta if positive column cost, likewise for neg.
+  // Calculate how much a column can be shifted while maintaining feasibility
+  // of all rows containing given column.
+  auto one_opt_calc_col_delta = [&](HighsInt c) -> double {
+    // Only check lower bound delta if positive column cost and vice versa.
     const HighsInt dir = mipsolver.colCost(c) > 0 ? -1 : 1;
     bool integral = mipsolver.isColIntegral(c);
     double delta = dir == -1 ? sol[c] - globaldom.col_lower_[c]
@@ -1785,11 +1789,14 @@ bool HighsPrimalHeuristics::localMip() {
   };
 
   std::vector<double> one_opt_deltas(mipsolver.numCol());
+
+  // Find single column shift with the best objective change that maintains
+  // feasibility of all rows containing the column
   auto one_opt = [&](bool recalc) -> bool {
     std::vector<double> one_opt_scores(mipsolver.numCol());
     if (recalc) {
       for (const HighsInt c : cols_with_obj) {
-        one_opt_deltas[c] = one_opt_calc_delta(c);
+        one_opt_deltas[c] = one_opt_calc_col_delta(c);
       }
     }
     HighsInt best_col = -1;
@@ -1803,7 +1810,7 @@ bool HighsPrimalHeuristics::localMip() {
     }
     if (best_col == -1) return false;
     apply_move(best_col, one_opt_deltas[best_col]);
-    one_opt_deltas[best_col] = one_opt_calc_delta(best_col);
+    one_opt_deltas[best_col] = one_opt_calc_col_delta(best_col);
     HighsInt start = a_matrix.start_[best_col];
     HighsInt end = a_matrix.start_[best_col + 1];
     for (HighsInt i = start; i < end; ++i) {
@@ -1813,50 +1820,56 @@ bool HighsPrimalHeuristics::localMip() {
       for (HighsInt j = rstart; j < rend; ++j) {
         HighsInt c = a_matrix_row.index_[j];
         if (mipsolver.colCost(c) != 0) {
-          one_opt_deltas[c] = one_opt_calc_delta(c);
+          one_opt_deltas[c] = one_opt_calc_col_delta(c);
         }
       }
     }
     return true;
   };
 
-  auto feas_one_opt = [&](HighsInt c, HighsInt r, double coef,
-                          std::vector<std::pair<HighsInt, double>>& moves) {
-    // Get direction column can be moved to maximise constraint feasibility
-    double row_lower = mipsolver.model_->row_lower_[r];
-    double row_upper = mipsolver.model_->row_upper_[r];
-    bool lower_inf = row_lower == -kHighsInf;
-    bool upper_inf = row_upper == kHighsInf;
-    double slack_lower = static_cast<double>(activities[r]) - row_lower;
-    double slack_upper = row_upper - static_cast<double>(activities[r]);
-    HighsInt increase_activity;
-    if (!upper_inf && activities[r] > row_upper + feastol) {
-      increase_activity = -1;
-    } else if (!lower_inf && activities[r] < row_lower - feastol) {
-      increase_activity = 1;
-    } else {
-      return;
-    }
-    double delta = increase_activity == 1 ? std::abs(slack_lower / coef)
-                                          : std::abs(slack_upper / coef);
-    HighsInt dir = coef < 0 ? -increase_activity : increase_activity;
-    if (mipsolver.isColIntegral(c)) {
-      delta = std::ceil(delta - feastol);
-    }
-    delta = dir == -1
+  // Find shift of given column that respects column bounds and maximises
+  // feasibility of given row.
+  auto calc_col_max_row_feas_delta =
+      [&](HighsInt c, HighsInt r, double coef,
+          std::vector<std::pair<HighsInt, double>>& moves) {
+        // Get direction column can be moved to maximise row feasibility
+        double row_lower = mipsolver.model_->row_lower_[r];
+        double row_upper = mipsolver.model_->row_upper_[r];
+        bool lower_inf = row_lower == -kHighsInf;
+        bool upper_inf = row_upper == kHighsInf;
+        double slack_lower = static_cast<double>(activities[r]) - row_lower;
+        double slack_upper = row_upper - static_cast<double>(activities[r]);
+        HighsInt increase_activity;
+        if (!upper_inf && activities[r] > row_upper + feastol) {
+          increase_activity = -1;
+        } else if (!lower_inf && activities[r] < row_lower - feastol) {
+          increase_activity = 1;
+        } else {
+          return;
+        }
+        double delta = increase_activity == 1 ? std::abs(slack_lower / coef)
+                                              : std::abs(slack_upper / coef);
+        HighsInt dir = coef < 0 ? -increase_activity : increase_activity;
+        if (mipsolver.isColIntegral(c)) {
+          delta = std::ceil(delta - feastol);
+        }
+        delta =
+            dir == -1
                 ? std::min(std::abs(sol[c] - globaldom.col_lower_[c]), delta)
                 : std::min(std::abs(globaldom.col_upper_[c] - sol[c]), delta);
-    if (mipsolver.isColIntegral(c)) {
-      delta = std::floor(delta + feastol);
-    }
-    if (delta < feastol) return;
-    if (!tabu(c, dir * delta)) return;
-    // TODO: Need to add some safety net for unbounded variables
-    assert(sol[c] + delta * dir > globaldom.col_lower_[c] - feastol);
-    assert(sol[c] + delta * dir < globaldom.col_upper_[c] + feastol);
-    moves.emplace_back(c, dir * delta);
-  };
+        // Don't try and shift unbounded columns
+        if (delta == kHighsInf) return;
+        if (mipsolver.isColIntegral(c)) {
+          delta = std::floor(delta + feastol);
+        }
+        if (delta < feastol) return;
+        if (!tabu(c, dir * delta)) return;
+        assert(sol[c] + delta * dir > globaldom.col_lower_[c] - feastol);
+        assert(sol[c] + delta * dir < globaldom.col_upper_[c] + feastol);
+        moves.emplace_back(c, dir * delta);
+      };
 
+  // Sample row indices
   auto sample_indices = [&](std::vector<HighsInt>& indices,
                             HighsInt max_samples,
                             HighsInt& n) -> std::vector<HighsInt>& {
@@ -1889,6 +1902,7 @@ bool HighsPrimalHeuristics::localMip() {
     return sampled_indices;
   };
 
+  // Sample operations (how much to move a column)
   auto sample_operations = [&](std::vector<std::pair<HighsInt, double>>& moves,
                                HighsInt max_samples, HighsInt& n) {
     HighsInt available = static_cast<HighsInt>(moves.size());
@@ -1903,6 +1917,7 @@ bool HighsPrimalHeuristics::localMip() {
     }
   };
 
+  // Propose column shift that improves the objective. Ignore feasibility.
   auto explore_breakthrough =
       [&](std::vector<std::pair<HighsInt, double>>& moves) {
         for (HighsInt c : cols_with_obj) {
@@ -1912,7 +1927,8 @@ bool HighsPrimalHeuristics::localMip() {
               std::max(static_cast<double>(obj - bestobj), feastol);
           HighsInt dir = obj_coef < 0 ? 1 : -1;
           double delta = obj_change / std::abs(obj_coef);
-          // TODO: THis feastol should be a negative.... Why does it work better?
+          // TODO: THis feastol should be a negative.... Why does it work
+          // better?
           if (mipsolver.isColIntegral(c)) {
             delta = std::ceil(delta - kHighsTiny);
           }
@@ -1920,7 +1936,6 @@ bool HighsPrimalHeuristics::localMip() {
               dir == -1
                   ? std::min(delta, std::abs(sol[c] - globaldom.col_lower_[c]))
                   : std::min(delta, std::abs(globaldom.col_upper_[c] - sol[c]));
-          // TODO: Need to add this in case integral variables have continuous bounds?
           if (mipsolver.isColIntegral(c)) {
             delta = std::floor(delta + feastol);
           }
@@ -1931,6 +1946,8 @@ bool HighsPrimalHeuristics::localMip() {
         }
       };
 
+  // Iterate over sample violated rows and compute candidate moves
+  // Also compute breakthrough moves
   auto explore_violated = [&](std::vector<std::pair<HighsInt, double>>& moves,
                               HighsInt& n) {
     if (!viol.viol_index.empty()) {
@@ -1943,7 +1960,7 @@ bool HighsPrimalHeuristics::localMip() {
         for (HighsInt i = start; i < end; ++i) {
           HighsInt c = a_matrix_row.index_[i];
           double val = a_matrix_row.value_[i];
-          feas_one_opt(c, r, val, moves);
+          calc_col_max_row_feas_delta(c, r, val, moves);
         }
       }
     }
@@ -1953,6 +1970,7 @@ bool HighsPrimalHeuristics::localMip() {
     sample_operations(moves, num_violated_rows_sample, n);
   };
 
+  // Iterate over sample satisfied rows and compute candidate moves
   auto explore_satisfied = [&](std::vector<std::pair<HighsInt, double>>& moves,
                                HighsInt& n) {
     if (!satisfied.viol_index.empty()) {
@@ -1965,13 +1983,24 @@ bool HighsPrimalHeuristics::localMip() {
         for (HighsInt i = start; i < end; ++i) {
           HighsInt c = a_matrix_row.index_[i];
           double val = a_matrix_row.value_[i];
-          feas_one_opt(c, r, val, moves);
+          calc_col_max_row_feas_delta(c, r, val, moves);
         }
       }
     }
     sample_operations(moves, num_satisfied_rows_sample, n);
   };
 
+  // Score candidate moves. Given a move (c, delta), the score components are:
+  // + obj_weight if objective improves, - obj_weight otherwise
+  // For each row:
+  // + momentum * weights[row] if row feasibility improves
+  // - weights[row]            if row feasibility worsens
+  // an additional multiplier of two is used if the row becomes feasible or
+  // becomes infeasible
+  // The candidate selected in order of priority:
+  // - Largest positive score
+  // - Last candidate with 0 score that improved feasibility TODO: Work on this
+  // - Either no candidate or with some small chance a random "bad" candidate
   auto score_moves = [&](std::vector<std::pair<HighsInt, double>>& moves,
                          HighsInt n) {
     HighsInt best_i = -1;
@@ -2015,10 +2044,10 @@ bool HighsPrimalHeuristics::localMip() {
         } else if (was_satisfied && !now_satisfied) {
           score -= 2 * weights[r];
         } else if (!now_satisfied && !was_satisfied) {
-          if (old_violation > new_violation) {
+          if (old_violation > new_violation - kHighsTiny) {
             score += momentum * weights[r];
             feas_improvements++;
-          } else {
+          } else if (new_violation > old_violation - kHighsTiny) {
             score -= weights[r];
           }
         }
@@ -2064,10 +2093,12 @@ bool HighsPrimalHeuristics::localMip() {
 
   auto terminate = [&]() { return iters > 5000; };
 
-  calc_activites(false);
+  calc_activities(false);
   bool last_iter_feas = false;
   std::vector<std::pair<HighsInt, double>> candidate_moves;
-  candidate_moves.reserve(5000);
+  candidate_moves.reserve(std::max(
+      static_cast<HighsInt>(cols_with_obj.size()) + num_violated_rows_sample,
+      num_satisfied_rows_sample));
   // Main solving loop
   while (!terminate()) {
     // No rows are violated, so check the solution
@@ -2079,7 +2110,7 @@ bool HighsPrimalHeuristics::localMip() {
       momentum = 1;
       recalc_objective();
       // If solution is improving then store it
-      // TODO: Should we undo the transformation here??
+      // TODO: Undo the transformation here??
       if (obj + feastol < bestobj) {
         found_feas_before = true;
         save_sol();
@@ -2103,6 +2134,7 @@ bool HighsPrimalHeuristics::localMip() {
     for (HighsInt r : viol.viol_index) {
       weights[r]++;
     }
+    // Increase or reset momentum depending if candidate is found
     if (candidate == -1) {
       momentum++;
     } else {
@@ -2113,6 +2145,7 @@ bool HighsPrimalHeuristics::localMip() {
     //      viol.viol_index.size(), found_feas_before,
     //      static_cast<double>(bestobj));
   }
+  // Try and add incumbent to storage
   if (found_feas_before) {
     recalc_objective();
     mipsolver.mipdata_->addIncumbent(intsol, static_cast<double>(obj),

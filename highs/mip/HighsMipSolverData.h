@@ -50,7 +50,7 @@ enum MipSolutionSource : int {
   kSolutionSourceShifting,            // I
   kSolutionSourceFeasibilityJump,     // J
   kSolutionSourceSubMip,              // L
-  kSolutionSourceLocalMip,            // M
+  kSolutionSourceLocalMip,            // O
   kSolutionSourceEmptyMip,            // P
   kSolutionSourceRandomizedRounding,  // R
   kSolutionSourceSolveLp,             // S

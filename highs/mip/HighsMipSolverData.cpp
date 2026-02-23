@@ -49,7 +49,7 @@ std::string HighsMipSolverData::solutionSourceToString(
     if (code) return "L";
     return "Sub-MIP";
   } else if (solution_source == kSolutionSourceLocalMip) {
-    if (code) return "M";
+    if (code) return "O";
     return "Local MIP";
   } else if (solution_source == kSolutionSourceEmptyMip) {
     if (code) return "P";
