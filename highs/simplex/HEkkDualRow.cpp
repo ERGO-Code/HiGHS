@@ -130,7 +130,9 @@ HighsInt HEkkDualRow::chooseFinal() {
   bool report_bfrt = false;
   //  const bool report_debug_bfrt = false;
   bool report_debug_bfrt = false;
-  bool check_iter = ekk_instance_.iteration_count_ == 516;
+  bool check_iter =
+    ekk_instance_.iteration_count_ == 516 ||
+    ekk_instance_.iteration_count_ == 1368;
   if (check_iter) {
     report_debug_bfrt = true;
     ekk_instance_.debug_iteration_report_ = true;
@@ -180,7 +182,7 @@ HighsInt HEkkDualRow::chooseFinal() {
     use_heap_sort = !use_quad_sort;
   }
   if (check_iter) {
-    use_quad_sort = true;//false;//
+    use_quad_sort = false;//true;//
     use_heap_sort = !use_quad_sort;
   }
   assert(use_heap_sort != use_quad_sort);
@@ -320,7 +322,16 @@ HighsInt HEkkDualRow::chooseFinal() {
       if (infeasible) {
         //	num_infeasibility++;
         workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
-        assert(workRange[iCol] < kHighsInf);
+	const bool work_range_ok = workRange[iCol] < kHighsInf;
+	if (!work_range_ok) printf("HEkkDualRow::chooseFinal Iteration %d: Illegal workRange = %g for iCol = %d with move= %d, primal [%g, %g, %g] and dual %g\n",
+				  int(ekk_instance_.iteration_count_),
+				  workRange[iCol],
+				  int(iCol),
+				  int(move),
+				  ekk_instance_.info_.workLower_[iCol], value,
+				  ekk_instance_.info_.workUpper_[iCol],
+				  dual);
+        assert(work_range_ok);
       }
     }
   }
