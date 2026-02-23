@@ -729,32 +729,6 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
   RestartInfo restart_info = restart_scheme_.Check(iter, current_results, average_results);
 
   if (restart_info.should_restart) {
-    // A. Reset current iterate to Average if needed
-    /*
-    if (restart_info.restart_to_average) {
-#ifdef CUPDLP_GPU
-      CUDA_CHECK(cudaMemcpy(d_x_current_, d_x_avg_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
-      CUDA_CHECK(cudaMemcpy(d_y_current_, d_y_avg_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
-      linalgGpuAx(d_x_current_, d_ax_current_);
-      linalgGpuATy(d_y_current_, d_aty_current_);
-#else
-      x_current_ = x_avg_;
-      y_current_ = y_avg_;
-      Ax_cache_ = Ax_avg_;
-      ATy_cache_ = ATy_avg_;
-#endif
-      // Store restart stats
-      restart_scheme_.primal_feas_last_restart_ = average_results.primal_feasibility;
-      restart_scheme_.dual_feas_last_restart_ = average_results.dual_feasibility;
-      restart_scheme_.duality_gap_last_restart_ = average_results.duality_gap;
-    } else {
-      restart_scheme_.primal_feas_last_restart_ = current_results.primal_feasibility;
-      restart_scheme_.dual_feas_last_restart_ = current_results.dual_feasibility;
-      restart_scheme_.duality_gap_last_restart_ = current_results.duality_gap;
-    }
-      */
-
-    
     if (params_.use_halpern_restart ) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
 	      updatePrimalWeightAtRestart(current_results);
@@ -800,14 +774,21 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
       restart_scheme_.duality_gap_last_restart_ = current_results.duality_gap;
     }
 
-    // B. Update Primal/Dual Weights (Beta)
-    PrimalDualParams dummy_params = params_; // Helper to calc ratios
-#ifdef CUPDLP_GPU
-    computeStepSizeRatioGpu(dummy_params);
-#else
-    computeStepSizeRatio(dummy_params);
-#endif
-    current_eta_ = dummy_params.eta; // Update global eta
+    // B. Update Primal/Dual Weights (Beta)'
+    if (params_.use_halpern_restart && 
+        params_.step_size_strategy == StepSizeStrategy::PID) {
+      current_eta_ = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
+      // Update omega for restart scheme
+      restart_scheme_.UpdateBeta(stepsize_.beta);
+    } else {
+      PrimalDualParams dummy_params = params_; // Helper to calc ratios
+  #ifdef CUPDLP_GPU
+      computeStepSizeRatioGpu(dummy_params);
+  #else
+      computeStepSizeRatio(dummy_params);
+  #endif
+      current_eta_ = dummy_params.eta; // Update global eta
+    }
 
     // C. Reset Restart Reference Point
 #ifdef CUPDLP_GPU
@@ -1750,6 +1731,20 @@ void PDLPSolver::initializeStepSizes() {
                  "Initial step sizes from power method lambda = %g: primal = "
                  "%g; dual = %g\n",
                  op_norm_sq, stepsize_.primal_step, stepsize_.dual_step);
+  } else if (params_.step_size_strategy == StepSizeStrategy::PID) {
+    const double op_norm_sq = PowerMethod();
+    stepsize_.power_method_lambda = op_norm_sq;
+    const double safety_factor = 0.998;
+    double base_step = safety_factor / std::sqrt(op_norm_sq);
+
+    primal_weight_ = 1.0;
+    best_primal_weight_ = primal_weight_;
+    best_primal_dual_residual_gap_ = INFINITY;
+    primal_weight_error_sum_ = 0.0;
+    primal_weight_last_error_ = 0.0;
+    stepsize_.beta = primal_weight_ * primal_weight_;
+    stepsize_.primal_step = base_step / primal_weight_;  // = base_step
+    stepsize_.dual_step = base_step * primal_weight_;
   } else {
     // Use matrix infinity norm for adaptive step size
     // Compute infinity norm of matrix elements
