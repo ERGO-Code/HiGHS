@@ -4649,20 +4649,15 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     return true;
   };
 
-  // lambda that updates activities for single equation handling
-  auto updateActivity = [&](HighsInt col, double val, HighsCDouble& activity,
-                            bool& activityFinite, HighsInt direction) {
-    if (direction * val > 0) {
-      // use upper bound
-      activityFinite = activityFinite && model->col_upper_[col] != kHighsInf;
-      if (activityFinite)
-        activity += static_cast<HighsCDouble>(val) * model->col_upper_[col];
-    } else {
-      // use lower bound
-      activityFinite = activityFinite && model->col_lower_[col] != -kHighsInf;
-      if (activityFinite)
-        activity += static_cast<HighsCDouble>(val) * model->col_lower_[col];
-    }
+  // lambda that computes activities for single equation handling
+  auto computeActivity = [&](HighsInt col, double val, HighsCDouble& activity,
+                             bool& activityFinite, HighsInt direction) {
+    // direction =  1 -> update upper bound on activity (supremum)
+    // direction = -1 -> update lower bound on activity (infimum)
+    double bound =
+        direction * val > 0 ? model->col_upper_[col] : model->col_lower_[col];
+    activityFinite = activityFinite && std::abs(bound) != kHighsInf;
+    if (activityFinite) activity += static_cast<HighsCDouble>(val) * bound;
   };
 
   // lambda for fixing variables
@@ -4714,21 +4709,21 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
       if (sMark[rowNz.index()] <= 0 ||
           model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
         // T_+
-        updateActivity(rowNz.index(), rowNz.value(), activityTPlus,
-                       activityTPlusFinite, HighsInt{1});
+        computeActivity(rowNz.index(), rowNz.value(), activityTPlus,
+                        activityTPlusFinite, HighsInt{1});
       else
         // S^C_+
-        updateActivity(rowNz.index(), rowNz.value(), activitySCPlus,
-                       activitySCPlusFinite, HighsInt{-1});
+        computeActivity(rowNz.index(), rowNz.value(), activitySCPlus,
+                        activitySCPlusFinite, HighsInt{-1});
       if (sMark[rowNz.index()] >= 0 ||
           model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
         // T_-
-        updateActivity(rowNz.index(), rowNz.value(), activityTMinus,
-                       activityTMinusFinite, HighsInt{-1});
+        computeActivity(rowNz.index(), rowNz.value(), activityTMinus,
+                        activityTMinusFinite, HighsInt{-1});
       else
         // S^C_-
-        updateActivity(rowNz.index(), rowNz.value(), activitySCMinus,
-                       activitySCMinusFinite, HighsInt{1});
+        computeActivity(rowNz.index(), rowNz.value(), activitySCMinus,
+                        activitySCMinusFinite, HighsInt{1});
       // break if activities are not finite
       if ((!activityTPlusFinite || !activitySCPlusFinite) &&
           (!activityTMinusFinite || !activitySCMinusFinite))
