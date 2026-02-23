@@ -148,7 +148,7 @@ class HEkkDualRow {
   HighsInt debugChooseColumnInfeasibilities() const;
   void debugReportBfrtVar(
       const HighsInt ix,
-      const std::vector<std::pair<HighsInt, double>>& pass_workData) const;
+      const std::pair<HighsInt, double>* pass_workData = nullptr) const;
   // References:
   HEkk& ekk_instance_;
 
