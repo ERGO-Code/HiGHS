@@ -38,6 +38,7 @@ const double kUpperRatioRelax = 0.02;
 const double kLowerRatioRelax = 0.01;
 const Int kMaxIterRelax = 20;
 const Int kSnSizeRelax = 16;
+const double kSpopsWeightSn = 50.0;
 
 // dense factorisation
 const double kAlphaBK = 0.01;  //(sqrt(17.0) + 1.0) / 8.0;

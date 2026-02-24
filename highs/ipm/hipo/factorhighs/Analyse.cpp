@@ -452,7 +452,33 @@ void Analyse::fundamentalSupernodes() {
   sn_parent_.back() = -1;
 }
 
-void Analyse::relaxSn() {
+void Analyse::relaxSupernodes() {
+  // Choose which strategy to use for supernode amalgamation.
+  // Relaxing supernodes is fast to run, so just run again the one that is
+  // chosen to set the correct information.
+
+  double flops_1{};
+  double spops_1{};
+  relaxSnMaxNz(flops_1, spops_1);
+  double ops_1 = flops_1 + kSpopsWeightSn * spops_1;
+
+  double flops_2{};
+  double spops_2{};
+  relaxSnNetOps(flops_2, spops_2);
+  double ops_2 = flops_2 + kSpopsWeightSn * spops_2;
+
+  bool total_ops_reduced = ops_2 < ops_1;
+  bool spops_reduced_enough = spops_2 < spops_1 * 0.6;
+  bool flops_increased_too_much = flops_2 > flops_1 * 2.0;
+
+  if (total_ops_reduced && spops_reduced_enough && !flops_increased_too_much) {
+    relaxSnNetOps(flops_2, spops_2);
+  } else {
+    relaxSnMaxNz(flops_1, spops_1);
+  }
+}
+
+void Analyse::relaxSnNetOps(double& flops, double& spops) {
   // =================================================
   // Build information about supernodes
   // =================================================
@@ -505,7 +531,7 @@ void Analyse::relaxSn() {
       const double spops_removed =
           clique_size[child] * (clique_size[child] + 1) / 2;
 
-      const double net_ops = flops_added - 50.0 * spops_removed;
+      const double net_ops = flops_added - kSpopsWeightSn * spops_removed;
 
       if (net_ops < 0) {
         // merge child with parent
@@ -516,9 +542,19 @@ void Analyse::relaxSn() {
       }
     }
   }
+
+  flops = 0.0;
+  spops = 0.0;
+  for (Int i = 0; i < sn_count_; ++i) {
+    if (merged_into_[i] == -1) {
+      spops += snSpops(clique_size[i]);
+      flops += snFlops(sn_size[i], clique_size[i]);
+    }
+  }
 }
 
-double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
+double Analyse::doRelaxSnMaxNz(double& flops, double& spops,
+                               Int64 max_artificial_nz) {
   // =================================================
   // Build information about supernodes
   // =================================================
@@ -609,6 +645,15 @@ double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
     }
   }
 
+  flops = 0.0;
+  spops = 0.0;
+  for (Int i = 0; i < sn_count_; ++i) {
+    if (merged_into_[i] == -1) {
+      spops += snSpops(clique_size[i]);
+      flops += snFlops(sn_size[i], clique_size[i]);
+    }
+  }
+
   // compute total number of artificial nonzeros and artificial ops for this
   // value of max_artificial_nz
   double temp_art_nz{};
@@ -616,11 +661,7 @@ double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
   for (Int sn = 0; sn < sn_count_; ++sn) {
     if (merged_into_[sn] == -1) {
       temp_art_nz += fake_nz_[sn];
-
-      const double nn = sn_size[sn];
-      const double cc = clique_size[sn];
-      temp_art_ops += (nn + cc) * (nn + cc) * nn - (nn + cc) * nn * (nn + 1) +
-                      nn * (nn + 1) * (2 * nn + 1) / 6;
+      temp_art_ops += snFlops(sn_size[sn], clique_size[sn]);
     }
   }
   temp_art_ops -= dense_ops_norelax_;
@@ -631,7 +672,7 @@ double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
   return ratio_fake;
 }
 
-void Analyse::relaxSupernodes() {
+void Analyse::relaxSnMaxNz(double& flops, double& spops) {
   // Child which produces smallest number of fake nonzeros is merged if
   // resulting sn has fewer than max_artificial_nz fake nonzeros.
   // Multiple values of max_artificial_nz are tried, chosen with bisection
@@ -647,7 +688,7 @@ void Analyse::relaxSupernodes() {
   for (Int iter = 0; iter < kMaxIterRelax; ++iter) {
     // relax the supernodes and obtain the ratio of how many new ops have been
     // added with the current value of max_artificial_nz
-    const double ratio_fake = doRelaxSupernodes(max_artificial_nz);
+    const double ratio_fake = doRelaxSnMaxNz(flops, spops, max_artificial_nz);
 
     // store the best ratio, in case a good ratio is never found
     double dist_ratio_fake = std::min(std::abs(ratio_fake - kLowerRatioRelax),
@@ -684,7 +725,7 @@ void Analyse::relaxSupernodes() {
   // To avoid having a catastrophically bad ratio in pathological problems,
   // choose the best ratio found
 
-  doRelaxSupernodes(best_max_art_nz);
+  doRelaxSnMaxNz(flops, spops, best_max_art_nz);
 }
 
 void Analyse::afterRelaxSn() {
@@ -970,7 +1011,7 @@ void Analyse::relativeIndClique() {
     const Int sn_clique_size = sn_column_size - sn_size;
 
     // count number of assembly operations during factorise
-    sparse_ops_ += (double)sn_clique_size * (sn_clique_size + 1) / 2;
+    sparse_ops_ += snSpops(sn_clique_size);
 
     relind_clique_[sn].resize(sn_clique_size);
 
@@ -1068,10 +1109,7 @@ void Analyse::computeCriticalPath() {
     // frontal size
     const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
 
-    // dense ops of this supernode
-    critical_ops[sn] = (double)fr * fr * sz +
-                       (double)sz * (sz + 1) * (2 * sz + 1) / 6 -
-                       (double)fr * sz * (sz + 1);
+    critical_ops[sn] = snFlops(sn, fr - sz);
   }
 
   for (Int sn = 0; sn < sn_count_; ++sn) {
@@ -1381,7 +1419,7 @@ Int Analyse::run(Symbolic& S) {
 
   HIPO_CLOCK_START(2);
   fundamentalSupernodes();
-  relaxSn();
+  relaxSupernodes();
   afterRelaxSn();
   HIPO_CLOCK_STOP(2, data_, kTimeAnalyseSn);
 
