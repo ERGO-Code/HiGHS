@@ -303,6 +303,19 @@ const std::string highsBoolToString(const bool b, const HighsInt field_width) {
   return b ? " true" : "false";
 }
 
+const std::string highsTimeToString(const double time) {
+  return
+#ifndef NDEBUG
+      std::to_string(time);
+#else
+      std::to_string(static_cast<int>(time));
+#endif
+}
+
+const std::string highsTimeSecondToString(const double time) {
+  return highsTimeToString(time) + "s";
+}
+
 const std::string highsInsertMdEscapes(const std::string& from_string) {
   std::string to_string = "";
   const char* underscore = "_";

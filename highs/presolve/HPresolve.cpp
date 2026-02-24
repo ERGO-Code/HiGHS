@@ -1683,11 +1683,73 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       };
     }
 
-    for (const auto& binvar : binaries) {
-      HighsInt i = std::get<3>(binvar);
+    // Set up logging for probing
+    const bool silent = silentLog();
+    HighsInt iBin = -1;
+    HighsInt iBin_probed = -1;
+    HighsInt num_binary = binaries.size();
+    double tt = this->timer->read();
+    double tt0 = tt;
+    double log_tt = tt0;
+    HighsInt log_iBin_probed = iBin_probed;
+    auto probingLog = [&]() {
+      if (silent || options->timeless_log) return;
+      // Ensure that enough time has elapsed, and at least on binary
+      // has been probed
+      const double log_tt_interval = 5.0;
+      if (tt > log_tt + log_tt_interval && iBin_probed > log_iBin_probed) {
+        // Get the average rate from the start of probing
+        assert(iBin_probed > 0);
+        double rate0 = (tt - tt0) / double(iBin_probed);
+        // Get the average rate since last logging
+        HighsInt dl_iBin_probed = iBin_probed - log_iBin_probed;
+        assert(dl_iBin_probed > 0);
+        double rate1 = (tt - log_tt) / double(dl_iBin_probed);
+        // Assess the time for probing based on the greater rate
+        double rate = std::max(rate0, rate1);
+        std::string rate_str =
+            " (rate " + highsTimeToString(1e3 * rate) + "/ms";
+        double expected_probing_finish_time =
+            tt + rate * (num_binary - iBin_probed);
+        std::string expected_probing_finish_time_str =
+            " => expected probing finish time " +
+            highsTimeSecondToString(expected_probing_finish_time) + ")";
+        std::string time_str = highsTimeSecondToString(tt);
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "   Considered %d / %d binaries; %d probed %s%s %s\n",
+                     int(iBin), int(num_binary), int(iBin_probed),
+                     rate_str.c_str(), expected_probing_finish_time_str.c_str(),
+                     time_str.c_str());
+        log_tt = tt;
+        log_iBin_probed = iBin_probed;
+      }
+    };
 
+    for (const auto& binvar : binaries) {
+      // Count the binaries considered
+      iBin++;
+
+      HighsInt i = std::get<3>(binvar);
       if (cliquetable.getSubstitution(i) != nullptr || !domain.isBinary(i))
         continue;
+
+      // Count the binaries probed
+      iBin_probed++;
+
+      // Check for timeout
+      tt = this->timer->read();
+      if (tt > options->time_limit) {
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "Time limit reached in probing: "
+                     "consider not using probing by setting option "
+                     "presolve_rule_off to 2^%-d = %d\n",
+                     int(kPresolveRuleProbing),
+                     int(std::pow(int(2), int(kPresolveRuleProbing))));
+        return Result::kStopped;
+      }
+
+      // Possibly log probing
+      probingLog();
 
       bool tightenLimits = (numProbed - oldNumProbed) >= 2500;
 
@@ -1761,9 +1823,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (numLiftOpps >= maxNumLiftOpps)
         implications.storeLiftingOpportunity = nullptr;
 
-      // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
-      // "\n", nprobed,
-      //       cliquetable.numCliques());
       if (domain.infeasible()) {
         mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
         return Result::kPrimalInfeasible;
@@ -5468,31 +5527,29 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     model->sense_ = ObjSense::kMinimize;
   }
 
+  const bool silent = silentLog();
+  if (options->presolve != kHighsOffString) {
+    if (!silent)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Presolving model\n");
+  }
   // Set up the logic to allow presolve rules, and logging for their
   // effectiveness
   analysis_.setup(this->model, this->options, this->numDeletedRows,
-                  this->numDeletedCols);
+                  this->numDeletedCols, silent);
 
   if (options->presolve != kHighsOffString) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
-    if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "Presolving model\n");
 
     auto report = [&]() {
-      if (!mipsolver || mipsolver->mipdata_->numRestarts == 0) {
+      if (!silent) {
         HighsInt numCol = model->num_col_ - numDeletedCols;
         HighsInt numRow = model->num_row_ - numDeletedRows;
         HighsInt numNonz =
             static_cast<HighsInt>(Avalue.size() - freeslots.size());
         // Only read the run time if it's to be printed
         const double run_time = options->output_flag ? this->timer->read() : 0;
-#ifndef NDEBUG
-        std::string time_str = " " + std::to_string(run_time) + "s";
-#else
-        std::string time_str =
-            " " + std::to_string(static_cast<int>(run_time)) + "s";
-#endif
+        std::string time_str = highsTimeSecondToString(run_time);
         if (options->timeless_log) time_str = "";
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
@@ -5972,6 +6029,10 @@ HighsCDouble HPresolve::computeDynamism(
          static_cast<HighsCDouble>(minAbsCoef);
 }
 
+bool HPresolve::silentLog() const {
+  return mipsolver && mipsolver->mipdata_->numRestarts > 0;
+}
+
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
@@ -6171,20 +6232,23 @@ HPresolve::Result HPresolve::removeDependentEquations(
   const double time_limit =
       std::max(1.0, std::min(0.01 * options->time_limit, 1000.0));
   factor.setTimeLimit(time_limit);
+  const bool silent = silentLog();
   // Determine rank deficiency of the equations
-  highsLogUser(options->log_options, HighsLogType::kInfo,
-               "Dependent equations search running on %d equations with time "
-               "limit of %.2fs\n",
-               static_cast<int>(matrix.num_col_), time_limit);
+  if (!silent)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Dependent equations search running on %d equations with time "
+                 "limit of %.2fs\n",
+                 static_cast<int>(matrix.num_col_), time_limit);
   double time_taken = -this->timer->read();
   HighsInt build_return = factor.build();
   time_taken += this->timer->read();
   if (build_return == kBuildKernelReturnTimeout) {
     // HFactor::build has timed out, so just return
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Dependent equations search terminated after %.3gs due to "
-                 "expected time exceeding limit\n",
-                 time_taken);
+    if (!silent)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Dependent equations search terminated after %.3gs due to "
+                   "expected time exceeding limit\n",
+                   time_taken);
     analysis_.logging_on_ = logging_on;
     if (logging_on)
       analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
@@ -6192,7 +6256,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   } else {
     double pct_off_timeout =
         1e2 * std::fabs(time_taken - time_limit) / time_limit;
-    if (pct_off_timeout < 1.0)
+    if (!silent && pct_off_timeout < 1.0)
       highsLogUser(options->log_options, HighsLogType::kWarning,
                    "Dependent equations search finished within %.2f%% of limit "
                    "of %.2fs: "
@@ -6217,11 +6281,12 @@ HPresolve::Result HPresolve::removeDependentEquations(
       num_fictitious_rows_skipped++;
     }
   }
-  highsLogUser(options->log_options, HighsLogType::kInfo,
-               "Dependent equations search removed %d rows and %d nonzeros "
-               "in %.2fs (limit = %.2fs)\n",
-               static_cast<int>(num_removed_row),
-               static_cast<int>(num_removed_nz), time_taken, time_limit);
+  if (!silent)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Dependent equations search removed %d rows and %d nonzeros "
+                 "in %.2fs (limit = %.2fs)\n",
+                 static_cast<int>(num_removed_row),
+                 static_cast<int>(num_removed_nz), time_taken, time_limit);
   if (num_fictitious_rows_skipped)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 ", avoiding %d fictitious rows",
