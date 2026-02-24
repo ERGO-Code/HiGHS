@@ -10,7 +10,6 @@
 /*
 
 Direct solver for IPM matrices.
-It requires Metis, AMD, rcm and BLAS.
 
 Consider a sparse symmetric matrix M in CSC format.
 Only its lower triangular part is used; entries in the upper triangle are
@@ -27,19 +26,16 @@ The direct solver uses the following objects:
 
 Define a vector signs that contains the expected sign of each pivot (1 or -1).
 Define a right-hand side rhs, which will be overwritten with the solution of
-M^{-1} * rhs.
+M^{-1} * rhs. The pre-computed fill-reducing ordering to use is stored in the
+vector perm.
 
 Then, the factorization is performed as follows.
 
     Symbolic S;
     FHsolver FH;
-    FH.analyse(S, rows, ptr, signs);
+    FH.analyse(S, rows, ptr, signs, perm);
     FH.factorise(S, rows, ptr, val);
     FH.solve(x);
-
-The argument "ordering" passed to Analyse constructor can be used to select the
-fill-reducing ordering to use. Valid values are "metis", "amd", "rcm". By
-default, metis is used.
 
 Printing to screen is achieved using the interface in auxiliary/Log.h. Pass an
 object of type Log for normal printing:
