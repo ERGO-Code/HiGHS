@@ -264,7 +264,11 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
 
   log_.printDevInfo("Performing AS analyse phase\n");
 
-  return chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S);
+  clock.start();
+  Int status = chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S);
+  info_.analyse_AS_time += clock.stop();
+
+  return status;
 }
 
 Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
@@ -284,7 +288,11 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
 
   log_.printDevInfo("Performing NE analyse phase\n");
 
-  return chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S);
+  clock.start();
+  Int status = chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S);
+  info_.analyse_NE_time += clock.stop();
+
+  return status;
 }
 
 // =========================================================================
@@ -538,11 +546,13 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   Int n = full_ptr.size() - 1;
   std::vector<Int> perm(n), iperm(n);
 
-  // compute the various orderings
   std::vector<std::vector<Int>> permutations(orderings_to_try.size(),
                                              std::vector<Int>(n));
 
-  auto run_ordering = [&](Int i) {
+  std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
+
+  auto run_analyse = [&](Int i) {
+    // compute ordering
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
       Highs_METIS_SetDefaultOptions(options);
@@ -595,33 +605,28 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     } else {
       assert(1 == 0);
     }
-  };
 
-  if (options_.parallel == kHighsOffString) {
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i)
-      run_ordering(i);
-  } else
-    highs::parallel::for_each(
-        0, orderings_to_try.size(),
-        [&](Int start, Int end) { run_ordering(start); }, 1);
-
-  std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
-  Int num_success = 0;
-
-  // run the analyse phase with the previously computed orderings
-  for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
-    if (failure[i]) continue;
-
-    clock.start();
+    // compute analyse phase
+    if (failure[i]) return;
     failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
-    info_.analyse_AS_time += clock.stop();
 
     if (failure[i] && log_.debug(2)) {
       log_.print("Failed symbolic:");
       symbolics[i].print(log_, true);
     }
+  };
 
-    if (!failure[i]) ++num_success;
+  if (options_.parallel == kHighsOffString) {
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i)
+      run_analyse(i);
+  } else
+    highs::parallel::for_each(
+        0, orderings_to_try.size(),
+        [&](Int start, Int end) { run_analyse(start); }, 1);
+
+  Int num_success = 0;
+  for (bool b : failure) {
+    if (!b) ++num_success;
   }
 
   if (orderings_to_try.size() < 2) {
