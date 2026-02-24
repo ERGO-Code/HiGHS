@@ -3,8 +3,11 @@
 #include <limits>
 
 #include "Status.h"
+#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
+#include "metis/metis.h"
+#include "rcm/rcm.h"
 
 namespace hipo {
 
@@ -526,22 +529,87 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     // rcm is much worse in general, so no point in trying for now
   }
 
+  std::vector<bool> failure(orderings_to_try.size(), 0);
+
+  // compute full-format matrix without diagonal entries
+  std::vector<Int> full_ptr, full_rows;
+  fullFromLower(ptr, rows, full_ptr, full_rows);
+  Int n = full_ptr.size() - 1;
+  std::vector<Int> perm(n), iperm(n);
+
+  // compute the various orderings
+  std::vector<std::vector<Int>> permutations(orderings_to_try.size(),
+                                             std::vector<Int>(n));
+  for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    if (orderings_to_try[i] == kHipoMetisString) {
+      idx_t options[METIS_NOPTIONS];
+      Highs_METIS_SetDefaultOptions(options);
+      options[METIS_OPTION_SEED] = kMetisSeed;
+
+      // set logging of Metis depending on debug level
+      options[METIS_OPTION_DBGLVL] = 0;
+      if (log_.debug(2))
+        options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
+
+      // no2hop improves the quality of ordering in general
+      options[METIS_OPTION_NO2HOP] = 1;
+
+      log_.printDevInfo("Running Metis\n");
+      std::vector<Int> iperm(n);
+
+      Int status =
+          Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
+                             options, permutations[i].data(), iperm.data());
+
+      log_.printDevInfo("Metis done\n");
+      if (status != METIS_OK) {
+        log_.printDevInfo("Error with Metis\n");
+        failure[i] = true;
+      }
+    } else if (orderings_to_try[i] == kHipoAmdString) {
+      double control[AMD_CONTROL];
+      Highs_amd_defaults(control);
+      double info[AMD_INFO];
+
+      log_.printDevInfo("Running AMD\n");
+      Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
+                                   permutations[i].data(), control, info);
+      log_.printDevInfo("AMD done\n");
+
+      if (status != AMD_OK) {
+        log_.printDevInfo("Error with AMD\n");
+        failure[i] = true;
+      }
+    } else if (orderings_to_try[i] == kHipoRcmString) {
+      log_.printDevInfo("Running RCM\n");
+      Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
+                                full_rows.data(), permutations[i].data());
+      log_.printDevInfo("RCM done\n");
+
+      if (status != 0) {
+        log_.printDevInfo("Error with RCM\n");
+        failure[i] = true;
+      }
+    }
+  }
+
   std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
-  std::vector<bool> status(orderings_to_try.size(), 0);
   Int num_success = 0;
 
+  // run the analyse phase with the previously computed orderings
   for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    if (failure[i]) continue;
+
     clock.start();
-    status[i] =
-        FH_.analyse(symbolics[i], rows, ptr, signs, orderings_to_try[i]);
+    failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
     info_.analyse_AS_time += clock.stop();
 
-    if (status[i] && log_.debug(2)) {
+    if (failure[i] && log_.debug(2)) {
       log_.print("Failed symbolic:");
       symbolics[i].print(log_, true);
     }
 
-    if (!status[i]) ++num_success;
+    if (!failure[i]) ++num_success;
   }
 
   if (orderings_to_try.size() < 2) {
@@ -549,9 +617,9 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
   } else if (orderings_to_try.size() == 2) {
     // if there's only one success, obvious choice
-    if (status[0] && !status[1])
+    if (failure[0] && !failure[1])
       S = std::move(symbolics[1]);
-    else if (!status[0] && status[1])
+    else if (!failure[0] && failure[1])
       S = std::move(symbolics[0]);
 
     else if (num_success > 1) {

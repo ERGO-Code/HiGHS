@@ -22,8 +22,8 @@ const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
                  const std::vector<Int>& signs, Int nb, const Log* log,
-                 DataCollector& data, const std::string& ordering)
-    : log_{log}, data_{data}, ordering_{ordering} {
+                 DataCollector& data, const std::vector<Int>& perm)
+    : log_{log}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
   // ptr contains the starting points of each column.
@@ -58,134 +58,11 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   transpose(ptr_upper_, rows_upper_, ptr_lower_, rows_lower_);
   transpose(ptr_lower_, rows_lower_, ptr_upper_, rows_upper_);
 
-  ready_ = true;
-}
-
-Int Analyse::getPermutation() {
-  // Compute fill-reducing reodering using metis, amd or rcm.
-
-  perm_.resize(n_);
+  perm_ = perm;
   iperm_.resize(n_);
+  inversePerm(perm_, iperm_);
 
-  // Build temporary full copy of the matrix, to be used for reordering.
-  // NB: adjacency list should not contain the vertex itself, so diagonal
-  // element is skipped.
-
-  std::vector<Int> work(n_, 0);
-  Int64 total_nz = 0;
-
-  // go through the columns to count nonzeros
-  for (Int j = 0; j < n_; ++j) {
-    for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
-      const Int i = rows_upper_[el];
-
-      // skip diagonal entries
-      if (i == j) continue;
-
-      // nonzero in column j
-      ++work[j];
-
-      // duplicated on the lower part of column i
-      ++work[i];
-
-      total_nz += 2;
-    }
-  }
-
-  if (total_nz > kHighsIInf) {
-    if (log_) log_->printe("Integer overflow while computing ordering.\n");
-    return kRetIntOverflow;
-  }
-
-  // compute column pointers from column counts
-  std::vector<Int> temp_ptr(n_ + 1, 0);
-  counts2Ptr(temp_ptr, work);
-
-  std::vector<Int> temp_rows(temp_ptr.back(), 0);
-
-  for (Int j = 0; j < n_; ++j) {
-    for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
-      const Int i = rows_upper_[el];
-
-      if (i == j) continue;
-
-      // insert row i in column j
-      temp_rows[work[j]++] = i;
-
-      // insert row j in column i
-      temp_rows[work[i]++] = j;
-    }
-  }
-
-  if (ordering_ == "metis") {
-    // ----------------------------
-    // ----- METIS ----------------
-    // ----------------------------
-    idx_t options[METIS_NOPTIONS];
-    Highs_METIS_SetDefaultOptions(options);
-    options[METIS_OPTION_SEED] = kMetisSeed;
-
-    // set logging of Metis depending on debug level
-    options[METIS_OPTION_DBGLVL] = 0;
-    if (log_->debug(2))
-      options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
-
-    // no2hop improves the quality of ordering in general
-    options[METIS_OPTION_NO2HOP] = 1;
-
-    if (log_) log_->printDevInfo("Running Metis\n");
-
-    Int status = Highs_METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(),
-                                    NULL, options, perm_.data(), iperm_.data());
-
-    if (log_) log_->printDevInfo("Metis done\n");
-    if (status != METIS_OK) {
-      if (log_) log_->printDevInfo("Error with Metis\n");
-      return kRetOrderingError;
-    }
-
-  } else if (ordering_ == "amd") {
-    // ----------------------------
-    // ------ AMD -----------------
-    // ----------------------------
-    double control[AMD_CONTROL];
-    Highs_amd_defaults(control);
-    double info[AMD_INFO];
-
-    if (log_) log_->printDevInfo("Running AMD\n");
-    Int status = Highs_amd_order(n_, temp_ptr.data(), temp_rows.data(),
-                                 perm_.data(), control, info);
-    if (log_) log_->printDevInfo("AMD done\n");
-
-    if (status != AMD_OK) {
-      if (log_) log_->printDevInfo("Error with AMD\n");
-      return kRetOrderingError;
-    }
-    inversePerm(perm_, iperm_);
-  }
-
-  else if (ordering_ == "rcm") {
-    // ----------------------------
-    // ------ RCM -----------------
-    // ----------------------------
-
-    if (log_) log_->printDevInfo("Running RCM\n");
-    Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
-                              temp_rows.data(), perm_.data());
-    if (log_) log_->printDevInfo("RCM done\n");
-
-    if (status != 0) {
-      if (log_) log_->printDevInfo("Error with RCM\n");
-      return kRetOrderingError;
-    }
-    inversePerm(perm_, iperm_);
-
-  } else {
-    if (log_) log_->printe("Invalid ordering option passed to Analyse\n");
-    return kRetOrderingError;
-  }
-
-  return kRetOk;
+  ready_ = true;
 }
 
 void Analyse::permute(const std::vector<Int>& iperm) {
@@ -1299,10 +1176,6 @@ Int Analyse::run(Symbolic& S) {
   HIPO_CLOCK_CREATE;
 
   HIPO_CLOCK_START(2);
-  if (getPermutation()) return kRetOrderingError;
-  HIPO_CLOCK_STOP(2, data_, kTimeAnalyseMetis);
-
-  HIPO_CLOCK_START(2);
   permute(iperm_);
   eTree();
   postorder();
@@ -1349,7 +1222,6 @@ Int Analyse::run(Symbolic& S) {
   S.flops_ = dense_ops_;
   S.block_size_ = nb_;
   S.max_stack_size_ = max_stack_size_;
-  S.ordering = ordering_;
   S.tree_depth_ = maxDepthTree(sn_parent_);
 
   // compute largest supernode

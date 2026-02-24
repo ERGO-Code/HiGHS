@@ -229,6 +229,39 @@ Int maxDepthTree(const std::vector<Int>& parent) {
   return max_depth;
 }
 
+void fullFromLower(const std::vector<Int>& ptrL, const std::vector<Int>& rowsL,
+                   std::vector<Int>& ptrF, std::vector<Int>& rowsF) {
+  // Given a sparse matrix in lower triangular format, build the same matrix in
+  // full format, without diagonal entries.
+
+  std::vector<Int> rowsU(rowsL.size());
+  std::vector<Int> ptrU(ptrL.size());
+  transpose(ptrL, rowsL, ptrU, rowsU);
+
+  const Int n = ptrL.size() - 1;
+  std::vector<Int> work(n);
+  for (Int j = 0; j < n; ++j) {
+    for (Int el = ptrU[j]; el < ptrU[j + 1]; ++el) {
+      const Int i = rowsU[el];
+      if (i == j) continue;
+      ++work[j];
+      ++work[i];
+    }
+  }
+
+  ptrF.assign(n + 1, 0);
+  counts2Ptr(ptrF, work);
+  rowsF.assign(ptrF.back(), 0);
+  for (Int j = 0; j < n; ++j) {
+    for (Int el = ptrU[j]; el < ptrU[j + 1]; ++el) {
+      const Int i = rowsU[el];
+      if (i == j) continue;
+      rowsF[work[j]++] = i;
+      rowsF[work[i]++] = j;
+    }
+  }
+}
+
 Clock::Clock() { start(); }
 void Clock::start() { t0 = std::chrono::high_resolution_clock::now(); }
 double Clock::stop() const {

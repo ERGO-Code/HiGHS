@@ -88,7 +88,7 @@ class FHsolver {
   // See ReturnValues.h for errors.
   Int analyse(Symbolic& S, const std::vector<Int>& rows,
               const std::vector<Int>& ptr, const std::vector<Int>& signs,
-              const std::string& ordering = "metis");
+              const std::vector<Int>& perm);
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
   // numerical factorisation in object N. See ReturnValues.h for errors.
