@@ -256,7 +256,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
 
   Clock clock;
   if (Int status = buildASstructure()) return status;
-  info_.matrix_structure_time = clock.stop();
+  info_.matrix_structure_time = clock.stop();  // there's a race here
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(nA_ + mA_, -1);
@@ -281,7 +281,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
 
   Clock clock;
   if (Int status = buildNEstructure(nz_limit)) return status;
-  info_.matrix_structure_time = clock.stop();
+  info_.matrix_structure_time = clock.stop();  // there's a race here
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(mA_, 1);
@@ -428,34 +428,44 @@ Int FactorHiGHSSolver::chooseNla() {
   bool overflow_NE = false;
   bool overflow_AS = false;
 
-  Clock clock;
+  auto run_analyse_NE = [&]() {
+    if (model_.m() > kMinRowsForDensity &&
+        model_.maxColDensity() > kDenseColThresh) {
+      // Normal equations would be too expensive because there are dense
+      // columns, so skip it.
+      failure_NE = true;
+    } else {
+      // If NE has more nonzeros than the factor of AS, then it's likely that AS
+      // will be preferred, so stop computation of NE.
+      Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
+      if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
 
-  // Perform analyse phase of augmented system
-  Int AS_status = analyseAS(symb_AS);
-  if (AS_status) failure_AS = true;
-  if (AS_status == kStatusOverflow) {
-    log_.printDevInfo("Integer overflow forming AS matrix\n");
-    overflow_AS = true;
-  }
-
-  // Perform analyse phase of normal equations
-  if (model_.m() > kMinRowsForDensity &&
-      model_.maxColDensity() > kDenseColThresh) {
-    // Normal equations would be too expensive because there are dense
-    // columns, so skip it.
-    failure_NE = true;
-  } else {
-    // If NE has more nonzeros than the factor of AS, then it's likely that AS
-    // will be preferred, so stop computation of NE.
-    Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
-    if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
-
-    Int NE_status = analyseNE(symb_NE, NE_nz_limit);
-    if (NE_status) failure_NE = true;
-    if (NE_status == kStatusOverflow) {
-      log_.printDevInfo("Integer overflow forming NE matrix\n");
-      overflow_NE = true;
+      Int NE_status = analyseNE(symb_NE);
+      if (NE_status) failure_NE = true;
+      if (NE_status == kStatusOverflow) {
+        log_.printDevInfo("Integer overflow forming NE matrix\n");
+        overflow_NE = true;
+      }
     }
+  };
+
+  auto run_analyse_AS = [&]() {
+    Int AS_status = analyseAS(symb_AS);
+    if (AS_status) failure_AS = true;
+    if (AS_status == kStatusOverflow) {
+      log_.printDevInfo("Integer overflow forming AS matrix\n");
+      overflow_AS = true;
+    }
+  };
+
+  if (options_.parallel == kHighsOffString) {
+    run_analyse_NE();
+    run_analyse_AS();
+  } else {
+    highs::parallel::TaskGroup tg;
+    tg.spawn([&]() { run_analyse_NE(); });
+    tg.spawn([&]() { run_analyse_AS(); });
+    tg.taskWait();
   }
 
   Int status = kStatusOk;
