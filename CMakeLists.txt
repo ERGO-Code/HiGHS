@@ -121,6 +121,9 @@ if (PYTHON_BUILD_SETUP)
   set(ZLIB OFF)
 endif()
 
+option(BUILD_EXAMPLES "Build examples" ON)
+message(STATUS "Build examples: ${BUILD_EXAMPLES}")
+
 option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 
 # Address | Thread | Leak
@@ -562,7 +565,23 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
-install(FILES README.md LICENSE.txt THIRD_PARTY_NOTICES.md DESTINATION .)
+if (PYTHON_BUILD_SETUP OR CMAKE_INSTALL_DOCDIR STREQUAL "" OR NOT BUILD_CXX)
+  install(FILES
+      README.md
+      LICENSE.txt
+      THIRD_PARTY_NOTICES.md
+      DESTINATION .)
+else()
+  install(FILES
+      README.md
+      LICENSE.txt
+      AUTHORS
+      CITATION.cff
+      CODE_OF_CONDUCT.md
+      CONTRIBUTING.md
+      FEATURES.md
+      DESTINATION ${CMAKE_INSTALL_DOCDIR})
+endif()
 
 # Set default generator based on platform
 if(WIN32)
@@ -830,8 +849,6 @@ if(NOT FAST_BUILD)
 else(FAST_BUILD)
   message(STATUS "FAST_BUILD set to on.")
 
-  option(BUILD_EXAMPLES "Build examples" ON)
-  message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
   CMAKE_DEPENDENT_OPTION(BUILD_CXX_EXAMPLE "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
   message(STATUS "Build C++ example: ${BUILD_CXX_EXAMPLE}")

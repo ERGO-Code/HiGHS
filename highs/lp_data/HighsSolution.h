@@ -93,6 +93,15 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             double& dual_infeasibility, uint8_t& at_status,
                             uint8_t& mid_status, const HighsInt index = 0);
 
+void lpNoBasisKktCheck(HighsModelStatus& model_status, HighsInfo& info,
+                       const HighsLp& lp, const HighsSolution& solution,
+                       const HighsOptions& options, const std::string& message);
+
+void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
+                const HighsLp& lp, const HighsSolution& solution,
+                const HighsBasis& basis, const HighsOptions& options,
+                const std::string& message);
+
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double>& gradient,
                                const HighsSolution& solution,

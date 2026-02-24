@@ -1,25 +1,30 @@
 ## Code changes
 
-The HiPO release exposed various issues flagged up via GitHub and email.
-- Fix some overflows when computing statistics of analyse phase.
-- Free memory used for normal equations, if augmented system is preferred.
-- Fix bug in supernode amalgamation.
-- Printing of BLAS library moved to HiGHS header, so it is printed when using HiPO without logging.
-- Recommend to install Metis branch `521-ts` due to better oredring quality on many problems. Update workflows and documentation accordingly.
-- Add option `hipo_metis_no2hop` to control option `no2hop` of Metis and add warning if the fill-in is large.
+Following PR [#2812](https://github.com/ERGO-Code/HiGHS/pull/2812),
+HiGHS can read LP files with keywords as constraint names.
 
-Added singleton column stuffing to MIP presolve - see Gamrath et al., Progress in presolving for mixed integer programming. Math. Prog. Comp. 7, 367–398 (2015).
+Following PR [#2818](https://github.com/ERGO-Code/HiGHS/pull/2818), a
+potential data race in the HiGHS multithreading system has been fixed
+
+Following PR [#2825](https://github.com/ERGO-Code/HiGHS/pull/2825),
+potential conflict with METIS symbols has been eliminated.
+
+Following PR [#2832](https://github.com/ERGO-Code/HiGHS/pull/2832),
+potential conflict with AMD and RCM symbols has been eliminated.
+
+Following PR [#2834](https://github.com/ERGO-Code/HiGHS/pull/2834),
+there is some minimal documentation of the `highspy`modelling
+language.
+
+Following PR [#2837](https://github.com/ERGO-Code/HiGHS/pull/2837),
+the use of the logging callback is independent to the settings of the
+`output_flag`, `log_to_console` and `output_flag` options.
 
 ## Build changes
 
-Added Python 3.14 support.
+Following PR [#2836](https://github.com/ERGO-Code/HiGHS/pull/2836), it is
+now possible to build a static library with HiPO, without the requirement
+for blas to be specified at compile time.
 
-Added a CMake option BUILD_OPENBLAS for Windows and Linux, when HIPO is ON and BUILD_OPENBLAS is ON, OpenBLAS is downloaded and built as a subproject. The default value is OFF.
-
-Update rules_cuda for the bazel build.
-
-Filereader is now in highs/ rather than extern/.
-
-Metis, amd and rcm are now in extern/. Metis is no longer an external dependency.
-
-Binaries are now available. Standard HiGHS binaries are MIT-licensed and HiGHS with HiPO are Apache-licensed.
+Following PR [#2839](https://github.com/ERGO-Code/HiGHS/pull/2839), files
+like README.md and LICENSE.txt are installed in the proper location.

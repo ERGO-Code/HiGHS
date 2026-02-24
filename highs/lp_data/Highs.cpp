@@ -664,8 +664,7 @@ HighsStatus Highs::readModel(const std::string& filename) {
       reader->readModelFromFile(options_, filename, model);
   delete reader;
   if (call_code != FilereaderRetcode::kOk) {
-    interpretFilereaderRetcode(options_.log_options, filename.c_str(),
-                               call_code);
+    interpretFilereaderRetcode(options_.log_options, filename, call_code);
     const HighsStatus call_status = call_code == FilereaderRetcode::kWarning
                                         ? HighsStatus::kWarning
                                         : HighsStatus::kError;
@@ -1665,7 +1664,7 @@ HighsStatus Highs::calledOptimizeModel() {
       presolve_.data_.recovered_basis_ = basis_;
 
       if (model_presolve_status_ == HighsPresolveStatus::kReduced)
-        this->lpKktCheck(presolve_.getReducedProblem(), "Before postsolve");
+        this->callLpKktCheck(presolve_.getReducedProblem(), "Before postsolve");
 
       this_postsolve_time = -timer_.read(timer_.postsolve_clock);
       timer_.start(timer_.postsolve_clock);
@@ -1823,7 +1822,7 @@ HighsStatus Highs::calledOptimizeModel() {
   // Unless the model status was determined using the strictly reduced LP, the
   // HiGHS info is valid
   if (!no_incumbent_lp_solution_or_basis) {
-    this->lpKktCheck(this->model_.lp_);
+    this->callLpKktCheck(this->model_.lp_);
     info_.valid = true;
   }
 
@@ -2772,7 +2771,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
 }
 
 static HighsStatus analyseSetCreateError(HighsLogOptions log_options,
-                                         const std::string method,
+                                         const std::string& method,
                                          const HighsInt create_error,
                                          const bool ordered,
                                          const HighsInt num_set_entries,
@@ -4010,7 +4009,11 @@ HighsStatus Highs::callSolveQp() {
   Statistics stats;
 
   settings.reportingfequency = 100;
-
+  if (options_.qp_iteration_limit <= 10) {
+    settings.reportingfequency = 1;
+  } else if (options_.qp_iteration_limit <= 100) {
+    settings.reportingfequency = 10;
+  }
   // Setting qp_update_limit = 10 leads to error with lpHighs3
   const HighsInt qp_update_limit = 1000;  // 1000; // default
   if (qp_update_limit != settings.reinvertfrequency) {
@@ -4569,11 +4572,11 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
   assert(!called_return_from_optimize_model);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   if (return_status != run_return_status) {
-    printf(
-        "Highs::returnFromOptimizeModel: return_status = %d != %d = "
-        "run_return_status "
-        "For model_status_ = %s\n",
-        int(return_status), int(run_return_status),
+    highsLogDev(
+        options_.log_options, HighsLogType::kError,
+        "Highs::returnFromOptimizeModel: run_return_status = %d != %d = "
+        "return_status = highsStatusFromHighsModelStatus(model_status_ = %s)\n",
+        int(run_return_status), int(return_status),
         modelStatusToString(model_status_).c_str());
   }
   assert(return_status == run_return_status);

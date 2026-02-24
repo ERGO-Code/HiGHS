@@ -1634,7 +1634,6 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in) {
 const char* Highs_compilationDate(void) { return "Deprecated"; }
 #pragma GCC diagnostic pop
 
-
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,
                     const double* col_lower, const double* col_upper,

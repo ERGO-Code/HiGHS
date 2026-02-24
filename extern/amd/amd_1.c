@@ -167,6 +167,6 @@ void amd_1
     /* order the matrix */
     /* --------------------------------------------------------------------- */
 
-    amd_2 (n, Pe, Iw, Len, iwlen, pfree,
+    Highs_amd_2 (n, Pe, Iw, Len, iwlen, pfree,
 	Nv, Pinv, P, Head, Elen, Degree, W, Control, Info) ;
 }

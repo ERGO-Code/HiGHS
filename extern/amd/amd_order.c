@@ -18,7 +18,7 @@
 /* === AMD_order =========================================================== */
 /* ========================================================================= */
 
-int amd_order
+int Highs_amd_order
 (
     amd_int n,
     const amd_int Ap [ ],
@@ -76,7 +76,7 @@ int amd_order
     }
 
     /* check the input matrix:	AMD_OK, AMD_INVALID, or AMD_OK_BUT_JUMBLED */
-    status = amd_valid (n, n, Ap, Ai) ;
+    status = Highs_amd_valid (n, n, Ap, Ai) ;
 
     if (status == AMD_INVALID)
     {
@@ -86,15 +86,15 @@ int amd_order
 
     /* allocate two size-n integer workspaces */
     size_t nn = (size_t) n ;
-    Len  = SuiteSparse_malloc (nn, sizeof (amd_int)) ;
-    Pinv = SuiteSparse_malloc (nn, sizeof (amd_int)) ;
+    Len  = Highs_SuiteSparse_malloc (nn, sizeof (amd_int)) ;
+    Pinv = Highs_SuiteSparse_malloc (nn, sizeof (amd_int)) ;
     mem += n ;
     mem += n ;
     if (!Len || !Pinv)
     {
 	/* :: out of memory :: */
-	SuiteSparse_free (Len) ;
-	SuiteSparse_free (Pinv) ;
+	Highs_SuiteSparse_free (Len) ;
+	Highs_SuiteSparse_free (Pinv) ;
 	if (info) Info [AMD_STATUS] = AMD_OUT_OF_MEMORY ;
 	return (AMD_OUT_OF_MEMORY) ;
     }
@@ -103,17 +103,17 @@ int amd_order
     {
 	/* sort the input matrix and remove duplicate entries */
 	
-	Rp = SuiteSparse_malloc (nn+1, sizeof (amd_int)) ;
-	Ri = SuiteSparse_malloc (nz,  sizeof (amd_int)) ;
+	Rp = Highs_SuiteSparse_malloc (nn+1, sizeof (amd_int)) ;
+	Ri = Highs_SuiteSparse_malloc (nz,  sizeof (amd_int)) ;
 	mem += (n+1) ;
 	mem += MAX (nz,1) ;
 	if (!Rp || !Ri)
 	{
 	    /* :: out of memory :: */
-	    SuiteSparse_free (Rp) ;
-	    SuiteSparse_free (Ri) ;
-	    SuiteSparse_free (Len) ;
-	    SuiteSparse_free (Pinv) ;
+	    Highs_SuiteSparse_free (Rp) ;
+	    Highs_SuiteSparse_free (Ri) ;
+	    Highs_SuiteSparse_free (Len) ;
+	    Highs_SuiteSparse_free (Pinv) ;
 	    if (info) Info [AMD_STATUS] = AMD_OUT_OF_MEMORY ;
 	    return (AMD_OUT_OF_MEMORY) ;
 	}
@@ -156,16 +156,16 @@ int amd_order
     ok = ok && (slen < SIZE_T_MAX / sizeof (amd_int)) ; /* check for overflow */
     if (ok)
     {
-	S = SuiteSparse_malloc (slen, sizeof (amd_int)) ;
+	S = Highs_SuiteSparse_malloc (slen, sizeof (amd_int)) ;
     }
     
     if (!S)
     {
 	/* :: out of memory :: (or problem too large) */
-	SuiteSparse_free (Rp) ;
-	SuiteSparse_free (Ri) ;
-	SuiteSparse_free (Len) ;
-	SuiteSparse_free (Pinv) ;
+	Highs_SuiteSparse_free (Rp) ;
+	Highs_SuiteSparse_free (Ri) ;
+	Highs_SuiteSparse_free (Len) ;
+	Highs_SuiteSparse_free (Pinv) ;
 	if (info) Info [AMD_STATUS] = AMD_OUT_OF_MEMORY ;
 	return (AMD_OUT_OF_MEMORY) ;
     }
@@ -185,11 +185,11 @@ int amd_order
     /* free the workspace */
     /* --------------------------------------------------------------------- */
 
-    SuiteSparse_free (Rp) ;
-    SuiteSparse_free (Ri) ;
-    SuiteSparse_free (Len) ;
-    SuiteSparse_free (Pinv) ;
-    SuiteSparse_free (S) ;
+    Highs_SuiteSparse_free (Rp) ;
+    Highs_SuiteSparse_free (Ri) ;
+    Highs_SuiteSparse_free (Len) ;
+    Highs_SuiteSparse_free (Pinv) ;
+    Highs_SuiteSparse_free (S) ;
     if (info) Info [AMD_STATUS] = status ;
     return (status) ;	    /* successful ordering */
 }
