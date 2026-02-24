@@ -4725,8 +4725,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         computeActivity(rowNz.index(), rowNz.value(), activitySCMinus,
                         activitySCMinusFinite, HighsInt{1});
       // break if activities are not finite
-      if ((!activityTPlusFinite || !activitySCPlusFinite) &&
-          (!activityTMinusFinite || !activitySCMinusFinite))
+      if ((sMinus.empty() || !activityTPlusFinite || !activitySCPlusFinite) &&
+          (sPlus.empty() || !activityTMinusFinite || !activitySCMinusFinite))
         break;
     }
     // fix variables
