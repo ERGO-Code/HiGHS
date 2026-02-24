@@ -1638,9 +1638,9 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     }
   }
   for (HighsInt col = 0; col != mipsolver.numCol(); ++col) {
-    if (locks[col] > 0) {
+    if (locks[col] > 0 && globaldom.col_lower_[col] != -kHighsInf) {
       sol[col] = globaldom.col_lower_[col];
-    } else if (locks[col] < 0) {
+    } else if (locks[col] < 0 && globaldom.col_upper_[col] != kHighsInf) {
       sol[col] = globaldom.col_upper_[col];
     } else {
       sol[col] = std::max(std::min(0.0, globaldom.col_upper_[col]),
@@ -1786,6 +1786,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
       if (integral && delta < 1 - feastol) return 0;
       if (delta < feastol) return 0;
     }
+    if (delta == kHighsInf) return 0;
     if (integral) delta = std::floor(delta + feastol);
     assert(sol[c] + dir * delta > globaldom.col_lower_[c] - feastol);
     assert(sol[c] + dir * delta < globaldom.col_upper_[c] + feastol);
