@@ -614,13 +614,17 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
   if (orderings_to_try.size() < 2) {
     S = std::move(symbolics[0]);
+    ordering_ = orderings_to_try[0];
 
   } else if (orderings_to_try.size() == 2) {
     // if there's only one success, obvious choice
-    if (failure[0] && !failure[1])
+    if (failure[0] && !failure[1]) {
       S = std::move(symbolics[1]);
-    else if (!failure[0] && failure[1])
+      ordering_ = orderings_to_try[1];
+    } else if (!failure[0] && failure[1]) {
       S = std::move(symbolics[0]);
+      ordering_ = orderings_to_try[0];
+    }
 
     else if (num_success > 1) {
       // need to choose the better ordering
@@ -659,6 +663,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       assert(chosen == 0 || chosen == 1);
 
       S = std::move(symbolics[chosen]);
+      ordering_ = orderings_to_try[chosen];
     }
 
   } else {
@@ -705,6 +710,7 @@ Int FactorHiGHSSolver::setNla() {
   } else
     assert(1 == 0);
 
+  if (log_.debug(1)) log_stream << textline("Ordering:") << ordering_ << '\n';
   log_.print(log_stream);
 
   return kStatusOk;

@@ -43,6 +43,7 @@ class FactorHiGHSSolver : public LinearSolver {
   const Int mA_, nA_, nzA_, nzQ_;
 
   Options& options_;
+  std::string ordering_ = "none";
 
   Int chooseNla();
   Int setNla();
