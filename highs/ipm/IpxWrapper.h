@@ -34,17 +34,17 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 #ifdef HIPO
 HighsStatus solveLpHipo(HighsLpSolverObject& solver_object);
 
-HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
-                        const HighsLp& lp, HighsBasis& highs_basis,
-                        HighsSolution& highs_solution,
-                        HighsModelStatus& model_status, HighsInfo& highs_info,
-                        HighsCallback& callback);
+HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
+                      const HighsLp& lp, const HighsHessian& H,
+                      HighsBasis& highs_basis, HighsSolution& highs_solution,
+                      HighsModelStatus& model_status, HighsInfo& highs_info,
+                      HighsCallback& callback);
 
 HighsStatus reportHipoStatus(const HighsOptions& options,
                              const hipo::Int status, const hipo::Solver& hipo);
 
 HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
-                                      const ipx::Int status);
+                                      const ipx::Int status, bool is_qp);
 
 void reportHipoNoProgress(const HighsOptions& options,
                           const hipo::Info& hipo_info);
@@ -66,6 +66,9 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    std::vector<double>& Ax, std::vector<double>& rhs,
                    std::vector<char>& constraint_type);
 
+void fillInRhsAndConstraints(const HighsLp& lp, std::vector<double>& rhs,
+                             std::vector<char>& constraint_type);
+
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,
                                  const ipx::Int solve_status,
                                  const ipx::Int error_flag);
@@ -75,7 +78,7 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
                                         const bool ipm_status);
 
 bool ipxStatusError(const bool status_error, const HighsOptions& options,
-                    std::string solver, std::string message,
+                    const std::string& solver, const std::string& message,
                     const int value = -1);
 
 bool illegalIpxSolvedStatus(const ipx::Info& ipx_info,

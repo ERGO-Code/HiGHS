@@ -193,7 +193,7 @@ _ipx_srcs = [
 ]
 
 _srcs = [
-    '../extern/filereaderlp/reader.cpp',
+    'io/filereaderlp/reader.cpp',
     'interfaces/highs_c_api.cpp',
     'io/Filereader.cpp',
     'io/FilereaderEms.cpp',

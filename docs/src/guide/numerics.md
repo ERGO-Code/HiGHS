@@ -40,8 +40,8 @@ HiGHS offers a facility to enable users to assess the consequences of
 better problem scaling, in cases where some objective coefficients or
 bounds are large, or if all objective coefficients or bounds are
 small. By setting the options [__user\_objective\_scale__](@ref
-option-user_objective_scale) and/or [__user\_bound\_scale__](@ref
-option-user_bound_scale), HiGHS will solve the given model with
+option-user-objective-scale) and/or [__user\_bound\_scale__](@ref
+option-user-bound-scale), HiGHS will solve the given model with
 uniform scaling of the objective coefficients or bounds. Note that
 these options define the exponent in power-of-two scaling factors so
 that model accuracy is not compromised. After solving the problem,

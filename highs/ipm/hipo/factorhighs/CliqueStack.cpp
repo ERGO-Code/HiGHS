@@ -23,7 +23,7 @@ double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
   if (clique_size > 0) {
     // This should not trigger reallocation, because the resize in init is done
     // with the maximum possible size of the stack.
-    if (top_ + clique_size > stack_.size()) {
+    if (top_ + clique_size > static_cast<Int64>(stack_.size())) {
       reallocation = true;
       stack_.resize(top_ + clique_size, 0.0);
     }

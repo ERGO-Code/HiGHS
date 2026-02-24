@@ -35,7 +35,7 @@
 
 #include "amd_internal.h"
 
-int amd_valid
+int Highs_amd_valid
 (
     /* inputs, not modified on output: */
     amd_int n_row,		/* A is n_row-by-n_col */

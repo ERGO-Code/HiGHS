@@ -7,42 +7,62 @@ HiGHS uses CMake as build system, and requires at least version
 
 ## HiGHS with HiPO
 
-HiGHS does not have any external dependencies, however, the new interior point solver HiPO uses BLAS. At the moment HiPO is optional and can be enabled via CMake. To build HiPO, you need to have BLAS installed on your machine. Please follow the instructions below.
+HiGHS does not have any external dependencies, however, the new interior point solver HiPO uses BLAS. At the moment HiPO is optional and can be enabled via CMake.
 
-#### BLAS
+### External ordering heuristics
 
-On Linux, libblas and libopenblas are supported. We recomment libopenblas for its better performance, and it is found by default if available on the system. Install with
+HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is already part of the HiGHS library, so there is no need to link them. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD.
+
+### BLAS
+
+On MacOS no BLAS installation is required because HiPO uses [Apple Accelerate](https://developer.apple.com/accelerate/) by default.
+
+On Windows and Linux, you can either compile OpenBLAS at configure time using the option `-DBUILD_OPENBLAS=ON` (`OFF` by default) or compile BLAS using the instructions below.
+
+#### MacOS
+
+To build HiPO on MacOS, run
+```
+cmake -S. -B build -DHIPO=ON
+```
+
+#### Linux and Windows: Compile OpenBLAS at configure time
+
+```
+cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON
+```
+
+#### Linux and Windows: Link with BLAS installatied on your machine
+
+On Linux, libblas and libopenblas are supported. We recommend libopenblas for its better performance, and it is found by default if available on the system. Install with
 
 ```
 sudo apt update
 sudo apt install libopenblas-dev
 ```
 
-On MacOS no BLAS installation is required because HiPO uses [Apple Accelerate](https://developer.apple.com/accelerate/) by default.
+To build HiPO, run
+```
+cmake -S. -B build -DHIPO=ON
+```
 
 On Windows, OpenBLAS is required. It could be installed via [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview) with
 
 ```
 vcpkg install openblas[threads]
 ```
+
 Note, that `[threads]` is required for HiPO.
+
+On Windows, you also need to specify the path to OpenBLAS. If it was installed with vcpkg as suggested above, add the path to `vcpkg.cmake` to the CMake flags, e.g.
+```
+cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+```
+
+##### Path to BLAS
 
 To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` coud be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
 
-#### External ordering heuristics
-
-HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is already part of the HiGHS library, so there is no need to link them. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD. 
-
-### HiPO
-
-To install HiPO, on Linux and MacOS, run
-```
-cmake -S. -B build -DHIPO=ON
-```
-On Windows, you also need to specify the path to OpenBLAS. If it was installed with vcpkg as suggested above, add the path to `vcpkg.cmake` to the CMake flags, e.g.
-```
--DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-```
 
 ## Bazel build
 
@@ -59,33 +79,16 @@ HiGHS can be installed using a package manager in the cases of
 
 ## Precompiled Binaries
 
-_These binaries are provided by the Julia community and are not officially
-supported by the HiGHS development team. If you have trouble using these
-libraries, please open a GitHub issue and tag `@odow` in your question._
+Precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
 
-Precompiled static executables are available for a variety of platforms at
+Additionally, there is one package containing shared libraries for Windows x64.
 
- * [https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases](https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases)
+The `*-mit` binary packages contain HiGHS and are MIT-licenced.
+The `*-apache` binary packages contain HiGHS with HiPO and are Apache-licenced, due to the licensing of the dependencies of HiPO. For more information, see [THIRD_PARTY_NOTICES.md](https://github.com/ERGO-Code/HiGHS/blob/master/THIRD_PARTY_NOTICES.md).
 
-Multiple versions are available. Each version has the form `vX.Y.Z`. In
-general, you should choose the most recent version.
+If you have any questions or requests for more platforms and binaries, please get in touch with us at hello@highs.dev.
 
-To install a precompiled binary, download the appropriate `HiGHSstatic.vX.Y.Z.[platform-string].tar.gz`
-file and extract the executable located at `/bin/highs`.
-
-Do not download the file starting with `HiGHSstatic-logs`. These files contain
-information from the automated compilation system. Click "Show all N assets"
-to see more files.
-
-### Platform strings
-
-The GitHub releases contain precompiled binaries for a number of different
-platforms. These are indicated by the platform-specific string in each
-filename.
-
- * For Windows users: choose the file ending in `x86_64-w64-mingw32-cxx11.tar.gz`
- * For M1 macOS users: choose the file ending in `aarch64-apple-darwin.tar.gz`
- * For Intel macOS users: choose the file ending in `x86_64-apple-darwin.tar.gz`
+To install a precompiled binary, download and extract the archive corresponding to your Operating System and architecture, the executable is located at `/bin/highs`.
 
 ## [Building HiGHS with NVidia GPU support](@id gpu-build)
 

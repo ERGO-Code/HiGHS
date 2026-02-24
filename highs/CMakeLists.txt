@@ -229,6 +229,12 @@ else()
       if (WIN32 AND TARGET OpenBLAS::OpenBLAS)
           target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
           target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
+      elseif (NOT BLAS_FOUND AND
+              NOT BUILD_SHARED_LIBS AND
+              NOT BUILD_CXX_EXE AND
+              NOT BUILD_EXAMPLES)
+          # Allow for static build without openblas
+          # Do nothing
       else()
           target_link_libraries(highs PRIVATE BLAS::BLAS)
 

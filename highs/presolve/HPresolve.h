@@ -348,6 +348,8 @@ class HPresolve {
   template <typename storageFormat>
   HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector);
 
+  bool silentLog() const;
+
  public:
   // for LP presolve
   bool okSetInput(HighsLp& model_, const HighsOptions& options_,
@@ -374,6 +376,8 @@ class HPresolve {
                          HighsInt& numVarsFixed, HighsInt& numBndsTightened,
                          HighsInt& numVarsSubstituted,
                          HighsInt& liftedNonZeros);
+
+  std::pair<int64_t, HighsInt> computeProbingScore(HighsInt col) const;
 
   Result runProbing(HighsPostsolveStack& postsolve_stack);
 

@@ -8,12 +8,12 @@
 
 //------------------------------------------------------------------------------
 
-/* SuiteSparse configuration : memory manager and printf functions.
+/* SuiteSparse configuration : memory manager
  */
 
 #include "SuiteSparse_config.h"
 
-void *SuiteSparse_malloc    /* pointer to allocated block of memory */
+void *Highs_SuiteSparse_malloc    /* pointer to allocated block of memory */
 (
     size_t nitems,          /* number of items to malloc */
     size_t size_of_item     /* sizeof each item */
@@ -41,7 +41,7 @@ void *SuiteSparse_malloc    /* pointer to allocated block of memory */
 /* SuiteSparse_free: free wrapper */
 /* -------------------------------------------------------------------------- */
 
-void *SuiteSparse_free      /* always returns NULL */
+void *Highs_SuiteSparse_free      /* always returns NULL */
 (
     void *p                 /* block to free */
 )

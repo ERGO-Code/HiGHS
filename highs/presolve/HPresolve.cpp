@@ -1576,6 +1576,18 @@ HPresolve::Result HPresolve::finaliseProbing(
   return checkLimits(postsolve_stack);
 }
 
+std::pair<int64_t, HighsInt> HPresolve::computeProbingScore(
+    HighsInt col) const {
+  HighsInt implicsUp =
+      mipsolver->mipdata_->cliquetable.getNumImplications(col, 1);
+  HighsInt implicsDown =
+      mipsolver->mipdata_->cliquetable.getNumImplications(col, 0);
+  return std::make_pair(
+      std::min(int64_t{5000}, static_cast<int64_t>(implicsUp) * implicsDown) /
+          (int64_t{1} + static_cast<int64_t>(numProbes[col])),
+      std::min(HighsInt{100}, implicsUp + implicsDown));
+}
+
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   mipsolver->analysis_.mipTimerStart(kMipClockProbingPresolve);
   probingEarlyAbort = false;
@@ -1603,13 +1615,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     HighsRandom random(options->random_seed);
     for (HighsInt i = 0; i != model->num_col_; ++i) {
       if (domain.isBinary(i)) {
-        HighsInt implicsUp = cliquetable.getNumImplications(i, 1);
-        HighsInt implicsDown = cliquetable.getNumImplications(i, 0);
-        binaries.emplace_back(
-            -std::min(int64_t{5000}, int64_t(implicsUp) * implicsDown) /
-                (int64_t{1} + static_cast<int64_t>(numProbes[i])),
-            -std::min(HighsInt{100}, implicsUp + implicsDown), random.integer(),
-            i);
+        auto probingScore = computeProbingScore(i);
+        binaries.emplace_back(-probingScore.first, -probingScore.second,
+                              random.integer(), i);
       }
     }
   }
@@ -1675,11 +1683,73 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       };
     }
 
-    for (const auto& binvar : binaries) {
-      HighsInt i = std::get<3>(binvar);
+    // Set up logging for probing
+    const bool silent = silentLog();
+    HighsInt iBin = -1;
+    HighsInt iBin_probed = -1;
+    HighsInt num_binary = binaries.size();
+    double tt = this->timer->read();
+    double tt0 = tt;
+    double log_tt = tt0;
+    HighsInt log_iBin_probed = iBin_probed;
+    auto probingLog = [&]() {
+      if (silent || options->timeless_log) return;
+      // Ensure that enough time has elapsed, and at least on binary
+      // has been probed
+      const double log_tt_interval = 5.0;
+      if (tt > log_tt + log_tt_interval && iBin_probed > log_iBin_probed) {
+        // Get the average rate from the start of probing
+        assert(iBin_probed > 0);
+        double rate0 = (tt - tt0) / double(iBin_probed);
+        // Get the average rate since last logging
+        HighsInt dl_iBin_probed = iBin_probed - log_iBin_probed;
+        assert(dl_iBin_probed > 0);
+        double rate1 = (tt - log_tt) / double(dl_iBin_probed);
+        // Assess the time for probing based on the greater rate
+        double rate = std::max(rate0, rate1);
+        std::string rate_str =
+            " (rate " + highsTimeToString(1e3 * rate) + "/ms";
+        double expected_probing_finish_time =
+            tt + rate * (num_binary - iBin_probed);
+        std::string expected_probing_finish_time_str =
+            " => expected probing finish time " +
+            highsTimeSecondToString(expected_probing_finish_time) + ")";
+        std::string time_str = highsTimeSecondToString(tt);
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "   Considered %d / %d binaries; %d probed %s%s %s\n",
+                     int(iBin), int(num_binary), int(iBin_probed),
+                     rate_str.c_str(), expected_probing_finish_time_str.c_str(),
+                     time_str.c_str());
+        log_tt = tt;
+        log_iBin_probed = iBin_probed;
+      }
+    };
 
+    for (const auto& binvar : binaries) {
+      // Count the binaries considered
+      iBin++;
+
+      HighsInt i = std::get<3>(binvar);
       if (cliquetable.getSubstitution(i) != nullptr || !domain.isBinary(i))
         continue;
+
+      // Count the binaries probed
+      iBin_probed++;
+
+      // Check for timeout
+      tt = this->timer->read();
+      if (tt > options->time_limit) {
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "Time limit reached in probing: "
+                     "consider not using probing by setting option "
+                     "presolve_rule_off to 2^%-d = %d\n",
+                     int(kPresolveRuleProbing),
+                     int(std::pow(int(2), int(kPresolveRuleProbing))));
+        return Result::kStopped;
+      }
+
+      // Possibly log probing
+      probingLog();
 
       bool tightenLimits = (numProbed - oldNumProbed) >= 2500;
 
@@ -1753,9 +1823,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (numLiftOpps >= maxNumLiftOpps)
         implications.storeLiftingOpportunity = nullptr;
 
-      // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
-      // "\n", nprobed,
-      //       cliquetable.numCliques());
       if (domain.infeasible()) {
         mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
         return Result::kPrimalInfeasible;
@@ -4879,24 +4946,21 @@ HPresolve::Result HPresolve::enumerateSolutions(
   HighsDomain& domain = mipsolver->mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
+  typedef std::tuple<double, double, HighsInt, HighsInt, uint32_t> candidateRow;
+
   // maximum size of a row and maximum number of rows that will be checked
   const size_t maxRowSize = 8;
   const HighsInt maxNumRowsChecked = 400;
   const size_t maxNumSolutions = 1 << maxRowSize;
+  // maximum percentage of overlap
+  const size_t maxPercentageRowOverlap = 50;
+  // maximum number of consecutive fails
+  const HighsInt maxNumFails = 6;
 
-  // check rows
-  struct candidaterow {
-    HighsInt row;
-    size_t numnzs;
-  };
-  std::vector<candidaterow> rows;
-  rows.reserve(model->num_row_);
-  for (HighsInt row = 0; row < mipsolver->numRow(); row++) {
-    // skip redundant rows
-    if (domain.isRedundantRow(row)) continue;
-    // check row
-    bool skiprow = false;
-    size_t numnzs = 0;
+  // lambda for checking binary rows
+  auto getBinaryRow = [&](HighsInt row, std::vector<HighsInt>& binvars,
+                          size_t& numnzs) {
+    numnzs = 0;
     for (HighsInt j = mipsolver->mipdata_->ARstart_[row];
          j < mipsolver->mipdata_->ARstart_[row + 1]; j++) {
       // get index
@@ -4905,19 +4969,143 @@ HPresolve::Result HPresolve::enumerateSolutions(
       if (domain.isFixed(col)) continue;
       // skip row if there are non-binary variables or maximum number of
       // elements is reached
-      skiprow = skiprow || !domain.isBinary(col) || numnzs >= maxRowSize;
-      if (skiprow) break;
-      numnzs++;
+      if (!domain.isBinary(col) || numnzs >= maxRowSize) return false;
+      // store binary variable
+      binvars[numnzs++] = col;
     }
-    if (!skiprow) rows.push_back({row, numnzs});
-  }
+    if (numnzs == 0) return false;
+    pdqsort(binvars.begin(), binvars.begin() + numnzs);
+    return true;
+  };
 
-  // sort according to size
-  pdqsort(rows.begin(), rows.end(),
-          [&](const candidaterow& row1, const candidaterow& row2) {
-            return (row1.numnzs == row2.numnzs ? row1.row < row2.row
-                                               : row1.numnzs < row2.numnzs);
-          });
+  // lambda for computing row score
+  auto computeRowScore = [&](const std::vector<HighsInt>& binvars,
+                             size_t numnzs) {
+    int64_t score = 0;
+    HighsInt score2 = 0;
+    for (size_t i = 0; i < numnzs; i++) {
+      auto probingScore = computeProbingScore(binvars[i]);
+      score += probingScore.first;
+      score2 += probingScore.second;
+    }
+    return std::make_pair<double, double>(score / static_cast<double>(numnzs),
+                                          score2 / static_cast<double>(numnzs));
+  };
+
+  // lambda for computing row signature
+  auto computeRowSignature = [&](const std::vector<HighsInt>& binvars,
+                                 size_t numnzs) {
+    uint32_t signature = 0;
+    for (size_t i = 0; i < numnzs; i++) {
+      HighsInt colHashedPos = (HighsHashHelpers::hash(binvars[i]) >> 59);
+      assert(colHashedPos < 32);
+      signature |= 1 << colHashedPos;
+    }
+    return signature;
+  };
+
+  // lambda for computing overlap of two binary rows
+  auto computeRowOverlap = [&](const std::vector<HighsInt>& binvars,
+                               const std::vector<HighsInt>& binvars2,
+                               size_t numnzs, size_t numnzs2) {
+    size_t overlap = 0;
+    size_t ir = 0;
+    size_t ir2 = 0;
+    while (ir < numnzs && ir2 < numnzs2) {
+      if (binvars[ir] < binvars2[ir2])
+        ir++;
+      else if (binvars[ir] > binvars2[ir2])
+        ir2++;
+      else {
+        ir++;
+        ir2++;
+        overlap++;
+      }
+    }
+    return overlap;
+  };
+
+  // lambda for compiling candidate rows
+  auto compileRows = [&](std::vector<candidateRow>& rows) {
+    std::vector<HighsInt> binvars(maxRowSize);
+    size_t numnzs = 0;
+    HighsRandom random(options->random_seed);
+    for (HighsInt i = 0; i < mipsolver->numRow(); i++) {
+      // skip redundant rows
+      if (domain.isRedundantRow(i)) continue;
+      // skip non-binary rows
+      if (!getBinaryRow(i, binvars, numnzs)) continue;
+      // compute row score
+      auto score = computeRowScore(binvars, numnzs);
+      // add row to vector
+      rows.emplace_back(-score.first, -score.second, random.integer(), i,
+                        computeRowSignature(binvars, numnzs));
+    }
+  };
+
+  // lambda for removing similar rows
+  auto removeSimilarRows = [&](std::vector<candidateRow>& rows) {
+    if (rows.size() <= 1) return;
+    std::vector<HighsInt> binvars(maxRowSize);
+    std::vector<HighsInt> binvars2(maxRowSize);
+    size_t numnzs;
+    size_t numnzs2;
+    HighsInt numRowsAccepted = 0;
+    HighsInt numRowsRemoved = 0;
+    size_t numComparisons = 0;
+    for (size_t i = 0; i < rows.size() - 1; i++) {
+      // get row index and skip removed rows
+      HighsInt r = std::get<3>(rows[i]);
+      if (r == -1) continue;
+      // check if maximum number of rows is reached
+      if ((++numRowsAccepted) >= maxNumRowsChecked) break;
+      // get indices of binary variables in the row
+      getBinaryRow(r, binvars, numnzs);
+      // initialise counters
+      HighsInt numRowsActive = 0;
+      HighsInt oldNumRowsRemoved = numRowsRemoved;
+      for (size_t ii = i + 1; ii < rows.size(); ii++) {
+        // get row index and skip removed rows
+        HighsInt& r2 = std::get<3>(rows[ii]);
+        if (r2 == -1) continue;
+        // compare signatures to see if there may be overlap
+        numRowsActive++;
+        if ((std::get<4>(rows[i]) & std::get<4>(rows[ii])) == 0) continue;
+        // get indices of binary variables in the row
+        getBinaryRow(r2, binvars2, numnzs2);
+        // check if there is too much overlap
+        numComparisons++;
+        size_t overlap = computeRowOverlap(binvars, binvars2, numnzs, numnzs2);
+        if ((200 * overlap) / (numnzs + numnzs2) > maxPercentageRowOverlap) {
+          // mark row for removal
+          numRowsRemoved++;
+          r2 = -1;
+        }
+      }
+      // stop iterating if at most one of the remaining rows is active (not
+      // deleted)
+      if (numRowsActive - numRowsRemoved + oldNumRowsRemoved <= 1) break;
+    }
+    if (numRowsRemoved > 0)
+      rows.erase(std::remove_if(rows.begin(), rows.end(),
+                                [](const candidateRow& p) {
+                                  return std::get<3>(p) == -1;
+                                }),
+                 rows.end());
+    if (rows.size() > static_cast<size_t>(maxNumRowsChecked))
+      rows.resize(maxNumRowsChecked);
+  };
+
+  // vector of rows
+  std::vector<candidateRow> rows;
+  rows.reserve(model->num_row_);
+
+  // compile rows and sort them
+  compileRows(rows);
+  pdqsort(rows.begin(), rows.end());
+
+  // remove similar rows
+  removeSimilarRows(rows);
 
   // vectors for storing branching decisions and solutions
   struct branch {
@@ -5018,105 +5206,85 @@ HPresolve::Result HPresolve::enumerateSolutions(
     numWorstCaseBounds--;
   };
 
-  auto handleSolution = [&](size_t numVars, size_t& numSolutions,
-                            size_t& numWorstCaseBounds, bool& noReductions) {
-    // propagate
-    domain.propagate();
-    if (domain.infeasible()) return;
-    // handling of worst-case bounds
-    if (numSolutions == 0) {
-      // initialize
-      for (HighsInt col : domain.getChangedCols()) {
-        worstCaseBounds[numWorstCaseBounds++] = col;
-        worstCaseLowerBound[col] =
-            std::min(worstCaseLowerBound[col], domain.col_lower_[col]);
-        worstCaseUpperBound[col] =
-            std::max(worstCaseUpperBound[col], domain.col_upper_[col]);
-      }
-    } else {
-      size_t i = 0;
-      while (i < numWorstCaseBounds) {
-        HighsInt col = worstCaseBounds[i];
-        if (!domain.isChangedCol(col)) {
-          // no bound changes for this variable -> reset worst-case
-          // bounds and remove variable
-          removeWorstCaseBounds(i, numWorstCaseBounds);
-        } else {
-          // update worst-case bounds
-          worstCaseLowerBound[col] =
-              std::min(worstCaseLowerBound[col], domain.col_lower_[col]);
-          worstCaseUpperBound[col] =
-              std::max(worstCaseUpperBound[col], domain.col_upper_[col]);
-          // remove worst-case bounds if they are equal to the global bounds
-          if (worstCaseLowerBound[col] <= col_lower[col] &&
-              worstCaseUpperBound[col] >= col_upper[col])
-            removeWorstCaseBounds(i, numWorstCaseBounds);
-          else
-            i++;
-        }
-      }
-    }
-    // store solution
-    for (size_t i = 0; i < numVars; i++)
-      solutions[i][numSolutions] =
-          (domain.col_lower_[vars[i]] == 0.0 ? HighsInt{0} : HighsInt{1});
-    numSolutions++;
-
-    // if no reductions are possible, stop enumerating solutions
-    noReductions = numWorstCaseBounds == 0;
-    if (noReductions) {
-      for (size_t i = 0; i < numVars - 1; i++) {
-        for (size_t ii = i + 1; ii < numVars; ii++) {
-          noReductions = noReductions && !identicalVars(numSolutions, i, ii) &&
-                         !complementaryVars(numSolutions, i, ii);
-          if (!noReductions) break;
-        }
-        if (!noReductions) break;
-      }
-    }
+  auto updateWorstCaseBounds = [&](HighsInt col) {
+    // update worst-case bounds
+    worstCaseLowerBound[col] =
+        std::min(worstCaseLowerBound[col], domain.col_lower_[col]);
+    worstCaseUpperBound[col] =
+        std::max(worstCaseUpperBound[col], domain.col_upper_[col]);
+    // check if worst-case bounds are not tighter than global bounds
+    return (worstCaseLowerBound[col] <= col_lower[col] &&
+            worstCaseUpperBound[col] >= col_upper[col]);
   };
 
+  auto handleSolution =
+      [&](size_t numVars, size_t& numSolutions, size_t& numWorstCaseBounds,
+          size_t& minNumActiveCols, size_t& maxNumActiveCols) {
+        // propagate
+        domain.propagate();
+        if (domain.infeasible()) return;
+        // handling of worst-case bounds
+        if (numSolutions == 0) {
+          // initialize
+          for (HighsInt col : domain.getChangedCols()) {
+            worstCaseBounds[numWorstCaseBounds++] = col;
+            updateWorstCaseBounds(col);
+          }
+        } else {
+          size_t i = 0;
+          while (i < numWorstCaseBounds) {
+            HighsInt col = worstCaseBounds[i];
+            if (!domain.isChangedCol(col)) {
+              // no bound changes for this variable -> reset worst-case
+              // bounds and remove variable
+              removeWorstCaseBounds(i, numWorstCaseBounds);
+            } else {
+              // update worst-case bounds
+              if (updateWorstCaseBounds(col))
+                removeWorstCaseBounds(i, numWorstCaseBounds);
+              else
+                i++;
+            }
+          }
+        }
+        // store solution and compute minimum and maximum number of active
+        // variables (i.e. those having solution value of 1)
+        size_t numActiveCols = 0;
+        for (size_t i = 0; i < numVars; i++) {
+          HighsInt solValue = domain.col_lower_[vars[i]] == 0.0 ? 0 : 1;
+          solutions[i][numSolutions] = solValue;
+          if (solValue != 0) numActiveCols++;
+        }
+        minNumActiveCols = std::min(minNumActiveCols, numActiveCols);
+        maxNumActiveCols = std::max(maxNumActiveCols, numActiveCols);
+        numSolutions++;
+      };
+
   // loop over candidate rows
-  HighsInt numRowsChecked = 0;
+  HighsInt numCliquesFound = 0;
+  HighsInt numFails = 0;
   for (const auto& r : rows) {
     // get row index
-    HighsInt row = r.row;
+    HighsInt row = std::get<3>(r);
     // skip redundant rows
     if (domain.isRedundantRow(row)) continue;
-    // increment counter
-    numRowsChecked++;
-    // check if maximum is reached
-    if (numRowsChecked > maxNumRowsChecked) break;
     // check row
     size_t numVars = 0;
-    for (HighsInt j = mipsolver->mipdata_->ARstart_[row];
-         j < mipsolver->mipdata_->ARstart_[row + 1]; j++) {
-      // get index
-      HighsInt col = mipsolver->mipdata_->ARindex_[j];
-      // skip fixed variables
-      if (domain.isFixed(col)) continue;
-      // store index of binary variable
-      vars[numVars++] = col;
-    }
-    if (numVars == 0) continue;
-
-    // clear changed cols
-    domain.clearChangedCols();
+    if (!getBinaryRow(row, vars, numVars)) continue;
 
     // main loop
     HighsInt numBranches = -1;
     size_t numWorstCaseBounds = 0;
     size_t numSolutions = 0;
-    bool noReductions = false;
+    size_t minNumActiveCols = numVars;
+    size_t maxNumActiveCols = 0;
     while (true) {
       bool backtrack = domain.infeasible();
       if (!backtrack) {
         backtrack = solutionFound(numVars);
-        if (backtrack) {
+        if (backtrack)
           handleSolution(numVars, numSolutions, numWorstCaseBounds,
-                         noReductions);
-          if (noReductions) break;
-        }
+                         minNumActiveCols, maxNumActiveCols);
       }
       // branch or backtrack
       if (!backtrack)
@@ -5125,27 +5293,32 @@ HPresolve::Result HPresolve::enumerateSolutions(
         break;
     }
 
-    // no reductions for this row?
-    if (noReductions) {
-      // clang-format off
-      //
-      // clang formatting on oronsay can put the ";" on the next line!
-      while (doBacktrack(numBranches));
-      // clang-format on
-      continue;
-    }
-
     // no solutions -> infeasible
     HPRESOLVE_CHECKED_CALL(handleInfeasibility(numSolutions == 0));
+
+    // store current number of bound changes etc.
+    size_t oldNumChangedCols = domain.getChangedCols().size();
+    HighsInt oldNumCliques = cliquetable.numCliques();
+    size_t oldNumSubstitutions = cliquetable.getSubstitutions().size();
+
+    // check if all variables form a clique
+    if (maxNumActiveCols == 1 || minNumActiveCols == numVars - 1) {
+      numCliquesFound++;
+      std::vector<HighsCliqueTable::CliqueVar> clique(numVars);
+      for (size_t i = 0; i < numVars; i++)
+        clique[i] =
+            HighsCliqueTable::CliqueVar(vars[i], maxNumActiveCols == 1 ? 1 : 0);
+      cliquetable.addClique(*mipsolver, clique.data(),
+                            static_cast<HighsInt>(numVars),
+                            minNumActiveCols == maxNumActiveCols);
+      HPRESOLVE_CHECKED_CALL(handleInfeasibility(domain.infeasible()));
+    }
 
     // analyse worst-case bounds
     for (size_t i = 0; i < numWorstCaseBounds; i++) {
       HighsInt col = worstCaseBounds[i];
-      assert(worstCaseLowerBound[col] >= domain.col_lower_[col]);
-      assert(worstCaseUpperBound[col] <= domain.col_upper_[col]);
       if (worstCaseLowerBound[col] > domain.col_lower_[col]) {
         // tighten lower bound
-        col_lower[col] = worstCaseLowerBound[col];
         domain.changeBound(HighsBoundType::kLower, col,
                            worstCaseLowerBound[col],
                            HighsDomain::Reason::unspecified());
@@ -5153,7 +5326,6 @@ HPresolve::Result HPresolve::enumerateSolutions(
       }
       if (worstCaseUpperBound[col] < domain.col_upper_[col]) {
         // tighten upper bound
-        col_upper[col] = worstCaseUpperBound[col];
         domain.changeBound(HighsBoundType::kUpper, col,
                            worstCaseUpperBound[col],
                            HighsDomain::Reason::unspecified());
@@ -5168,24 +5340,22 @@ HPresolve::Result HPresolve::enumerateSolutions(
     for (size_t i = 0; i < numVars - 1; i++) {
       // get column index
       HighsInt col = vars[i];
-      // skip already fixed columns
-      if (domain.isFixed(col)) continue;
       for (size_t ii = i + 1; ii < numVars; ii++) {
         // get column index
         HighsInt col2 = vars[ii];
-        // skip already fixed columns
-        if (domain.isFixed(col2)) continue;
         // check if two binary variables take identical or complementary
         // values in all feasible solutions
         if (identicalVars(numSolutions, i, ii)) {
-          // add clique x_1 + (1 - x_2) = 1 to clique table
+          // add clique (1 - x_1) + x_2 = 1 to clique table
+          numCliquesFound++;
           std::array<HighsCliqueTable::CliqueVar, 2> clique;
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(col2, 1);
           cliquetable.addClique(*mipsolver, clique.data(), 2, true);
           HPRESOLVE_CHECKED_CALL(handleInfeasibility(domain.infeasible()));
         } else if (complementaryVars(numSolutions, i, ii)) {
-          // add clique x_1 + x_2 = 1 to clique table
+          // add clique (1 - x_1) + (1 - x_2) = 1 to clique table
+          numCliquesFound++;
           std::array<HighsCliqueTable::CliqueVar, 2> clique;
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(col2, 0);
@@ -5193,6 +5363,26 @@ HPresolve::Result HPresolve::enumerateSolutions(
           HPRESOLVE_CHECKED_CALL(handleInfeasibility(domain.infeasible()));
         }
       }
+    }
+
+    // update bounds
+    size_t numChangedCols = domain.getChangedCols().size();
+    for (HighsInt col : domain.getChangedCols()) {
+      col_lower[col] = domain.col_lower_[col];
+      col_upper[col] = domain.col_upper_[col];
+    }
+
+    // clear changed cols
+    domain.clearChangedCols();
+
+    // check if solution enumeration failed
+    if (numChangedCols != oldNumChangedCols ||
+        cliquetable.numCliques() != oldNumCliques ||
+        cliquetable.getSubstitutions().size() != oldNumSubstitutions)
+      numFails = 0;
+    else {
+      numFails++;
+      if (numFails > maxNumFails) break;
     }
   }
 
@@ -5208,7 +5398,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
   if (numVarsFixed > 0 || numBndsTightened > 0 || numVarsSubstituted > 0)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Enumeration presolve fixed %d columns, tightened %d bounds "
-                "and performed %d substitutions",
+                "and performed %d substitutions\n",
                 static_cast<int>(numVarsFixed),
                 static_cast<int>(numBndsTightened),
                 static_cast<int>(numVarsSubstituted));
@@ -5337,31 +5527,29 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     model->sense_ = ObjSense::kMinimize;
   }
 
+  const bool silent = silentLog();
+  if (options->presolve != kHighsOffString) {
+    if (!silent)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Presolving model\n");
+  }
   // Set up the logic to allow presolve rules, and logging for their
   // effectiveness
   analysis_.setup(this->model, this->options, this->numDeletedRows,
-                  this->numDeletedCols);
+                  this->numDeletedCols, silent);
 
   if (options->presolve != kHighsOffString) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
-    if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "Presolving model\n");
 
     auto report = [&]() {
-      if (!mipsolver || mipsolver->mipdata_->numRestarts == 0) {
+      if (!silent) {
         HighsInt numCol = model->num_col_ - numDeletedCols;
         HighsInt numRow = model->num_row_ - numDeletedRows;
         HighsInt numNonz =
             static_cast<HighsInt>(Avalue.size() - freeslots.size());
         // Only read the run time if it's to be printed
         const double run_time = options->output_flag ? this->timer->read() : 0;
-#ifndef NDEBUG
-        std::string time_str = " " + std::to_string(run_time) + "s";
-#else
-        std::string time_str =
-            " " + std::to_string(static_cast<int>(run_time)) + "s";
-#endif
+        std::string time_str = highsTimeSecondToString(run_time);
         if (options->timeless_log) time_str = "";
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
@@ -5841,6 +6029,10 @@ HighsCDouble HPresolve::computeDynamism(
          static_cast<HighsCDouble>(minAbsCoef);
 }
 
+bool HPresolve::silentLog() const {
+  return mipsolver && mipsolver->mipdata_->numRestarts > 0;
+}
+
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
@@ -6040,20 +6232,23 @@ HPresolve::Result HPresolve::removeDependentEquations(
   const double time_limit =
       std::max(1.0, std::min(0.01 * options->time_limit, 1000.0));
   factor.setTimeLimit(time_limit);
+  const bool silent = silentLog();
   // Determine rank deficiency of the equations
-  highsLogUser(options->log_options, HighsLogType::kInfo,
-               "Dependent equations search running on %d equations with time "
-               "limit of %.2fs\n",
-               static_cast<int>(matrix.num_col_), time_limit);
+  if (!silent)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Dependent equations search running on %d equations with time "
+                 "limit of %.2fs\n",
+                 static_cast<int>(matrix.num_col_), time_limit);
   double time_taken = -this->timer->read();
   HighsInt build_return = factor.build();
   time_taken += this->timer->read();
   if (build_return == kBuildKernelReturnTimeout) {
     // HFactor::build has timed out, so just return
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Dependent equations search terminated after %.3gs due to "
-                 "expected time exceeding limit\n",
-                 time_taken);
+    if (!silent)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Dependent equations search terminated after %.3gs due to "
+                   "expected time exceeding limit\n",
+                   time_taken);
     analysis_.logging_on_ = logging_on;
     if (logging_on)
       analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
@@ -6061,7 +6256,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   } else {
     double pct_off_timeout =
         1e2 * std::fabs(time_taken - time_limit) / time_limit;
-    if (pct_off_timeout < 1.0)
+    if (!silent && pct_off_timeout < 1.0)
       highsLogUser(options->log_options, HighsLogType::kWarning,
                    "Dependent equations search finished within %.2f%% of limit "
                    "of %.2fs: "
@@ -6086,11 +6281,12 @@ HPresolve::Result HPresolve::removeDependentEquations(
       num_fictitious_rows_skipped++;
     }
   }
-  highsLogUser(options->log_options, HighsLogType::kInfo,
-               "Dependent equations search removed %d rows and %d nonzeros "
-               "in %.2fs (limit = %.2fs)\n",
-               static_cast<int>(num_removed_row),
-               static_cast<int>(num_removed_nz), time_taken, time_limit);
+  if (!silent)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Dependent equations search removed %d rows and %d nonzeros "
+                 "in %.2fs (limit = %.2fs)\n",
+                 static_cast<int>(num_removed_row),
+                 static_cast<int>(num_removed_nz), time_taken, time_limit);
   if (num_fictitious_rows_skipped)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 ", avoiding %d fictitious rows",

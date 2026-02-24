@@ -50,8 +50,8 @@ cuda_library(
 cc_library(
     name = "highs",
     srcs = ["highs/interfaces/highs_c_api.cpp"] + glob([
-        "extern/filereaderlp/*.cpp",
         "highs/io/*.cpp",
+        "highs/io/filereaderlp/*.cpp",
         "highs/ipm/*.cpp",
         "highs/ipm/ipx/*.cc",
         "highs/ipm/basiclu/*.c",
@@ -71,8 +71,8 @@ cc_library(
         "highs/mip/feasibilityjump.hh",
     ] + glob([
         "**/*.h",
+        "highs/io/filereaderlp/*.hpp",
         "highs/qpsolver/*.hpp",
-        "extern/filereaderlp/*.hpp",
         "extern/zstr/*.hpp",
     ]),
     copts = select({

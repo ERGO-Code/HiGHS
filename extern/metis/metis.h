@@ -191,10 +191,10 @@ typedef __int64 int64_t;
 extern "C" {
 #endif
 
-METIS_API(int) METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx_t *vwgt,
+METIS_API(int) Highs_METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx_t *vwgt,
                   idx_t *options, idx_t *perm, idx_t *iperm);
 
-METIS_API(int) METIS_SetDefaultOptions(idx_t *options);
+METIS_API(int) Highs_METIS_SetDefaultOptions(idx_t *options);
 
 #ifdef __cplusplus
 }

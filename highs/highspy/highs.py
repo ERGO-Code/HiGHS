@@ -82,7 +82,7 @@ class Highs(_Highs):
                 self.__solver_started.acquire(True)
             finally:
                 self.__solver_started.release()
-                return t
+            return t
         else:
             raise Exception("Solver is already running.")
 

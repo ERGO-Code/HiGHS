@@ -79,11 +79,6 @@ void *gk_mcoreMalloc(gk_mcore_t *mcore, size_t nbytes)
     gk_mcoreAdd(mcore, GK_MOPT_HEAP, nbytes, ptr);
   }
 
-  /*
-  printf("MCMALLOC: %zu %d %8zu\n", mcore->cmop-1, 
-      mcore->mops[mcore->cmop-1].type, mcore->mops[mcore->cmop-1].nbytes);
-  */
-
   return ptr;
 }
 
@@ -96,7 +91,6 @@ void *gk_mcoreMalloc(gk_mcore_t *mcore, size_t nbytes)
 void gk_mcorePush(gk_mcore_t *mcore)
 {
   gk_mcoreAdd(mcore, GK_MOPT_MARK, 0, NULL);
-  /* printf("MCPPUSH:   %zu\n", mcore->cmop-1); */
 }
 
 
@@ -115,7 +109,7 @@ void gk_mcorePop(gk_mcore_t *mcore)
 
       case GK_MOPT_CORE: /* core free */
         if (mcore->corecpos < mcore->mops[mcore->cmop].nbytes)
-          gk_errexit("Internal Error: wspace's core is about to be over-freed [%zu, %zu, %zd]\n",
+          GK_ERREXIT("Internal Error: wspace's core is about to be over-freed [%zu, %zu, %zd]\n",
               mcore->coresize, mcore->corecpos, mcore->mops[mcore->cmop].nbytes);
 
         mcore->corecpos    -= mcore->mops[mcore->cmop].nbytes;
@@ -126,13 +120,12 @@ void gk_mcorePop(gk_mcore_t *mcore)
         break;
 
       default:
-        gk_errexit("Unknown mop type of %d\n", mcore->mops[mcore->cmop].type);
+        GK_ERREXIT("Unknown mop type of %d\n", mcore->mops[mcore->cmop].type);
     }
   }
 
 DONE:
   ;
-  /*printf("MCPPOP:    %zu\n", mcore->cmop); */
 }
 
 
@@ -146,7 +139,7 @@ void gk_mcoreAdd(gk_mcore_t *mcore, int type, size_t nbytes, void *ptr)
     mcore->nmops *= 2;
     mcore->mops = realloc(mcore->mops, mcore->nmops*sizeof(gk_mop_t));
     if (mcore->mops == NULL) 
-      gk_errexit("***Memory allocation for gkmcore failed.\n");
+      GK_ERREXIT("***Memory allocation for gkmcore failed.\n");
   }
 
   mcore->mops[mcore->cmop].type   = type;
@@ -167,17 +160,17 @@ void gk_mcoreDel(gk_mcore_t *mcore, void *ptr)
 
   for (i=mcore->cmop-1; i>=0; i--) {
     if (mcore->mops[i].type == GK_MOPT_MARK)
-      gk_errexit("Could not find pointer %p in mcore\n", ptr);
+      GK_ERREXIT("Could not find pointer %p in mcore\n", ptr);
 
     if (mcore->mops[i].ptr == ptr) {
       if (mcore->mops[i].type != GK_MOPT_HEAP)
-        gk_errexit("Trying to delete a non-HEAP mop.\n");
+        GK_ERREXIT("Trying to delete a non-HEAP mop.\n");
 
       mcore->mops[i] = mcore->mops[--mcore->cmop];
       return;
     }
   }
 
-  gk_errexit("mcoreDel should never have been here!\n");
+  GK_ERREXIT("mcoreDel should never have been here!\n");
 }
 

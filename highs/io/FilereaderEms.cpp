@@ -195,13 +195,6 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
         std::getline(f, line);
         lp.row_names_[i] = trim(line);
       }
-    } else {
-      // OK if file just ends after the integer_columns section without
-      // end_linear
-      if (!f) lp.ensureColwise();
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "names not found in EMS file\n");
-      return FilereaderRetcode::kParserError;
     }
     f.close();
   } else {
