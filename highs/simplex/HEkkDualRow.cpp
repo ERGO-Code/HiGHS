@@ -82,6 +82,7 @@ void HEkkDualRow::choosePossible() {
    * Determine the possible variables - candidates for CHUZC
    * TODO: Check with Qi what this is doing
    */
+  check_iter = ekk_instance_.iteration_count_ == 516;
   const double Ta = ekk_instance_.info_.update_count < 10   ? 1e-9
                     : ekk_instance_.info_.update_count < 20 ? 3e-8
                                                             : 1e-6;
@@ -98,6 +99,16 @@ void HEkkDualRow::choosePossible() {
       workData[workCount++] = make_pair(iCol, alpha);
       const double relax = workDual[iCol] * move + Td;
       if (workTheta * alpha > relax) workTheta = relax / alpha;
+      if (check_iter) {
+	double lower = ekk_instance_.info_.workLower_[iCol];
+	double value = ekk_instance_.info_.workValue_[iCol];
+	double upper = ekk_instance_.info_.workUpper_[iCol];
+	double dual =  workDual[iCol];
+	if (upper == kHighsInf) {
+	  printf("choosePossible() %4d: iCol = %4d Pr [%11.4g, %11.4g, %11.4g] Du = %11.4g; relax = %11.4g; aa = %11.4g; th = %11.4g\n",
+		 int(i), int(iCol), lower, value, upper, dual, relax, alpha, workTheta);
+	}
+      }
     }
   }
 }
@@ -130,7 +141,6 @@ HighsInt HEkkDualRow::chooseFinal() {
   bool report_bfrt = false;
   //  const bool report_debug_bfrt = false;
   bool report_debug_bfrt = false;
-  bool check_iter = ekk_instance_.iteration_count_ == 516;
   if (check_iter) {
     report_debug_bfrt = true;
     ekk_instance_.debug_iteration_report_ = true;
@@ -180,10 +190,16 @@ HighsInt HEkkDualRow::chooseFinal() {
     use_heap_sort = !use_quad_sort;
   }
   if (check_iter) {
-    use_quad_sort = true;//false;//
+    use_quad_sort = false;//true;//
     use_heap_sort = !use_quad_sort;
   }
   assert(use_heap_sort != use_quad_sort);
+  const bool save_use_quad_sort = use_quad_sort;
+  const bool save_use_heap_sort = use_heap_sort;
+  if (check_iter) {
+    use_quad_sort = true;
+    use_heap_sort = true;
+  }
   if (use_quad_sort) {
     analysis->num_quad_chuzc++;
     analysis->sum_quad_chuzc_size += workCount;
@@ -208,15 +224,14 @@ HighsInt HEkkDualRow::chooseFinal() {
     // Use the O(n^2) quadratic sort for the candidates
     analysis->simplexTimerStart(Chuzc4a0Clock);
     choose_ok = chooseFinalWorkGroupQuad();
-    //    if (!choose_ok) {
-    //  choose_ok = quadChooseFinalWorkGroupQuad();
-    //    }
+    assert(choose_ok);
     analysis->simplexTimerStop(Chuzc4a0Clock);
   }
   if (use_heap_sort) {
     // Use the O(n log n) heap sort for the candidates
     analysis->simplexTimerStart(Chuzc4a1Clock);
     choose_ok = chooseFinalWorkGroupHeap();
+    assert(choose_ok);
     analysis->simplexTimerStop(Chuzc4a1Clock);
   }
   if (!choose_ok) {
@@ -224,8 +239,8 @@ HighsInt HEkkDualRow::chooseFinal() {
     return -1;
   }
   // Make sure that there is at least one group according to sorting procedure
-  if (use_quad_sort) assert((HighsInt)workGroup.size() > 1);
-  if (use_heap_sort) assert((HighsInt)alt_workGroup.size() > 1);
+  if (use_quad_sort) assert(HighsInt(workGroup.size()) > 1);
+  if (use_heap_sort) assert(HighsInt(alt_workGroup.size()) > 1);
 
   // 3. Choose large alpha
   analysis->simplexTimerStart(Chuzc4bClock);
@@ -241,6 +256,32 @@ HighsInt HEkkDualRow::chooseFinal() {
                           sorted_workData, alt_workGroup);
   analysis->simplexTimerStop(Chuzc4bClock);
 
+  // Report the workGroup indices
+  auto reportBreakGroup = [&](const std::string& type,
+			      const HighsInt breakIndex,
+			      const HighsInt breakGroup,
+			      const std::vector<HighsInt>& workGroup) {
+    HighsInt workGroup_size = workGroup.size();
+    printf("%s: breakIndex = %d; breakGroup = %d / %d workGroup: %s0",
+	   type.c_str(), int(breakIndex), int(breakGroup), int(workGroup_size-1),
+	   workGroup_size == 0 ? "[" : "");
+    for (HighsInt k = 0; k < workGroup_size; k++) {
+      if (k == breakGroup) {
+	printf(" [%d", int(workGroup[k]));
+      } else if (k == breakGroup+1) {
+	printf(" %d)", int(workGroup[k]));
+      } else {
+	printf(" %d", int(workGroup[k]));
+      }
+    }
+    printf("\n");
+  };
+  if (check_iter) {
+    use_quad_sort = save_use_quad_sort;
+    use_heap_sort = save_use_heap_sort;
+    reportBreakGroup("Quad", breakIndex, breakGroup, workGroup);
+    reportBreakGroup("Heap", alt_breakIndex, alt_breakGroup, alt_workGroup);
+  }
   if (!use_quad_sort) {
     // If the quadratic sort is not being used, revert to the heap
     // sort results
@@ -306,7 +347,7 @@ HighsInt HEkkDualRow::chooseFinal() {
     }
     // Look at all entries of final group to see what dual
     // infeasibilities might be created
-	  assert(breakGroup + 1 < int(alt_workGroup.size()));
+    assert(breakGroup + 1 < int(alt_workGroup.size()));
     const HighsInt to_i = alt_workGroup[breakGroup + 1];
     assert(to_i <= int(sorted_workData.size()));
     const double Td = ekk_instance_.options_->dual_feasibility_tolerance;

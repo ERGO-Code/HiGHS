@@ -177,6 +177,8 @@ class HEkkDualRow {
   // (Local) value of computed weight
   double computed_edge_weight = 0.;
 
+  bool check_iter = false;
+
   double workDelta = 0.;   //!< Local copy of dual.delta_primal
   double workAlpha = 0.;   //!< Original copy of pivotal computed row-wise
   double workTheta = 0.;   //!< Original copy of dual step workDual[workPivot] /
