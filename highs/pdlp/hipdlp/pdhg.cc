@@ -29,7 +29,7 @@
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
 
-#define PDHG_CHECK_INTERVAL 40
+#define PDHG_CHECK_INTERVAL 3
 static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
@@ -572,8 +572,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     }
 
     // --- A. Convergence Check & Restart Logic ---
-    bool should_check = (iter < 10) || (iter == params_.max_iterations - 1) || (iter % PDHG_CHECK_INTERVAL == 0);
-    
+    //bool should_check = (iter < 10) || (iter == params_.max_iterations - 1) || (iter % PDHG_CHECK_INTERVAL == 0);
+    bool should_check = (iter == params_.max_iterations - 1) || (iter % PDHG_CHECK_INTERVAL == 0);
     if (should_check) {
       TerminationStatus check_status;
       // Returns true if solver should terminate
@@ -731,7 +731,9 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
   if (restart_info.should_restart) {
     if (params_.use_halpern_restart ) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
+        std::cout << "[RESTART] iter= " << iter << " | old_weight= " << primal_weight_ ;
 	      updatePrimalWeightAtRestart(current_results);
+        std::cout << "  → new_weight= "<< primal_weight_ << std::endl;
       }
 #ifdef CUPDLP_GPU
       if (d_pdhg_primal_ != nullptr) {
@@ -869,11 +871,18 @@ void PDLPSolver::performHalpernPdhgStep(bool is_major) {
   // --- STEP 1: Primal projection + reflection ---
   // ATy_cache_ already holds A^T * y_current from previous iteration
   std::vector<double> reflected_primal(lp_.num_col_);
+  if (is_major) {
+    if (halpern_dual_slack_next_.size() != static_cast<size_t>(lp_.num_col_)) {
+      halpern_dual_slack_next_.resize(lp_.num_col_, 0.0);
+    }
+    halpern_dual_slack_next_valid_ = true;
+  }
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     double temp = x_current_[i] - primal_step * (lp_.col_cost_[i] - ATy_cache_[i]);
     double temp_proj = linalg::project_box(temp, lp_.col_lower_[i], lp_.col_upper_[i]);
     if (is_major) {
       x_next_[i] = temp_proj;  // pdhg_primal (for convergence check)
+      halpern_dual_slack_next_[i] = (temp_proj - temp) / primal_step;
     }
     reflected_primal[i] = 2.0 * temp_proj - x_current_[i];
   }
@@ -1068,6 +1077,8 @@ void PDLPSolver::initialize() {
   dSlackNeg_.resize(lp_.num_col_, 0.0);
   dSlackPosAvg_.resize(lp_.num_col_, 0.0);
   dSlackNegAvg_.resize(lp_.num_col_, 0.0);
+  halpern_dual_slack_next_.resize(lp_.num_col_, 0.0);
+  halpern_dual_slack_next_valid_ = false;
 }
 
 // Update primal weight
@@ -1223,20 +1234,49 @@ void PDLPSolver::computeDualSlacks(const std::vector<double>& dualResidual,
     dSlackNeg.resize(lp_.num_col_);
 
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
-    // Compute positive slack (for lower bounds)
-    // CUPDLP: max(dual_residual, 0) * hasLower
-    if (lp_.col_lower_[i] > -kHighsInf) {
-      dSlackPos[i] = std::max(0.0, dualResidual[i]);
-    } else {
-      dSlackPos[i] = 0.0;
-    }
+    if (params_.use_halpern_restart) {
+      // For Halpern current iterate checks, use major-step dual slack:
+      // dual_slack = (proj(temp) - temp) / primal_step.
+      // For other cases (e.g. average iterate), fall back to sign/bounds projection.
+      const bool use_cached_halpern_slack =
+          (&dSlackPos == &dSlackPos_) &&
+          (&dSlackNeg == &dSlackNeg_) &&
+          halpern_dual_slack_next_valid_ &&
+          (halpern_dual_slack_next_.size() == static_cast<size_t>(lp_.num_col_));
 
-    // Compute negative slack (for upper bounds)
-    // CUPDLP: -min(dual_residual, 0) * hasUpper
-    if (lp_.col_upper_[i] < kHighsInf) {
-      dSlackNeg[i] = std::max(0.0, -dualResidual[i]);
+      double dual_slack = 0.0;
+      if (use_cached_halpern_slack) {
+        dual_slack = halpern_dual_slack_next_[i];
+      } else {
+        const bool has_lower = lp_.col_lower_[i] > -kHighsInf;
+        const bool has_upper = lp_.col_upper_[i] < kHighsInf;
+        if (has_lower && has_upper) {
+          dual_slack = dualResidual[i];
+        } else if (has_lower) {
+          dual_slack = std::max(0.0, dualResidual[i]);
+        } else if (has_upper) {
+          dual_slack = std::min(0.0, dualResidual[i]);
+        }
+      }
+
+      dSlackPos[i] = std::max(0.0, dual_slack);
+      dSlackNeg[i] = std::max(0.0, -dual_slack);
     } else {
-      dSlackNeg[i] = 0.0;
+      // Compute positive slack (for lower bounds)
+      // CUPDLP: max(dual_residual, 0) * hasLower
+      if (lp_.col_lower_[i] > -kHighsInf) {
+        dSlackPos[i] = std::max(0.0, dualResidual[i]);
+      } else {
+        dSlackPos[i] = 0.0;
+      }
+
+      // Compute negative slack (for upper bounds)
+      // CUPDLP: -min(dual_residual, 0) * hasUpper
+      if (lp_.col_upper_[i] < kHighsInf) {
+        dSlackNeg[i] = std::max(0.0, -dualResidual[i]);
+      } else {
+        dSlackNeg[i] = 0.0;
+      }
     }
   }
 }
@@ -1247,7 +1287,6 @@ double PDLPSolver::computeDualFeasibility(const std::vector<double>& ATy_vector,
   std::vector<double> dualResidual(lp_.num_col_, 0.0);
   // dualResidual = c-A'y
   dualResidual = linalg::vector_subtrac(lp_.col_cost_, ATy_vector);
-  double dualResidualNorm = linalg::vector_norm(dualResidual);
 
   // Call the refactored function to populate dSlackPos and dSlackNeg
   computeDualSlacks(dualResidual, dSlackPos, dSlackNeg);
@@ -1256,6 +1295,7 @@ double PDLPSolver::computeDualFeasibility(const std::vector<double>& ATy_vector,
 
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     // Matching CUPDLP: c - A'y - dSlackPos + dSlackNeg
+    std::cout<< "dualResidual["<<i<<"]= "<<dualResidual[i]<<", dSlackPos["<<i<<"]= "<<dSlackPos[i]<<", dSlackNeg["<<i<<"]= "<<dSlackNeg[i]<<std::endl;
     dual_residual[i] = dualResidual[i] - dSlackPos[i] + dSlackNeg[i];
   }
 
@@ -1797,7 +1837,14 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   double rel_dual   = results.dual_feasibility   / (1.0 + unscaled_c_norm_);
   double ratio_infeas = (rel_primal > 0.0) ? (rel_dual / rel_primal) : 1e300;
 
-  const bool silent = false;
+  std::cout << "Restart check: primal_dist = " << primal_dist
+            << ", dual_dist = " << dual_dist
+            << ", rel_primal = " << rel_primal
+            << ", rel_dual = " << rel_dual
+            << ", ratio_infeas = " << ratio_infeas
+            << std::endl;
+
+  const bool silent = true;
   // cuPDLPx-style weight update (PID control)
   if (primal_dist > 1e-16 && dual_dist > 1e-16 &&
       primal_dist < 1e12 && dual_dist < 1e12 &&

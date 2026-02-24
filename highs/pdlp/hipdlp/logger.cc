@@ -70,11 +70,13 @@ void Logger::print_params(const PrimalDualParams& params) {
   std::map<RestartStrategy, std::string> restart_map = {
       {RestartStrategy::NO_RESTART, "None"},
       {RestartStrategy::FIXED_RESTART, "Fixed"},
-      {RestartStrategy::ADAPTIVE_RESTART, "Adaptive"}};
+      {RestartStrategy::ADAPTIVE_RESTART, "Adaptive"}
+    };
   std::map<StepSizeStrategy, std::string> step_size_map = {
       {StepSizeStrategy::FIXED, "Fixed"},
       {StepSizeStrategy::ADAPTIVE, "Adaptive"},
-      {StepSizeStrategy::MALITSKY_POCK, "Malitsky-Pock"}};
+      {StepSizeStrategy::MALITSKY_POCK, "Malitsky-Pock"},
+      {StepSizeStrategy::PID, "PID"}};
 
   ss << "  - Max Iterations: " << params.max_iterations;
   info(ss.str());
