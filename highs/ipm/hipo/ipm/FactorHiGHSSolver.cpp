@@ -7,6 +7,7 @@
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
 #include "metis/metis.h"
+#include "parallel/HighsParallel.h"
 #include "rcm/rcm.h"
 
 namespace hipo {
@@ -540,7 +541,8 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   // compute the various orderings
   std::vector<std::vector<Int>> permutations(orderings_to_try.size(),
                                              std::vector<Int>(n));
-  for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+
+  auto run_ordering = [&](Int i) {
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
       Highs_METIS_SetDefaultOptions(options);
@@ -590,8 +592,18 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
         log_.printDevInfo("Error with RCM\n");
         failure[i] = true;
       }
+    } else {
+      assert(1 == 0);
     }
-  }
+  };
+
+  if (options_.parallel == kHighsOffString) {
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i)
+      run_ordering(i);
+  } else
+    highs::parallel::for_each(
+        0, orderings_to_try.size(),
+        [&](Int start, Int end) { run_ordering(start); }, 1);
 
   std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
   Int num_success = 0;
