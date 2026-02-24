@@ -1761,8 +1761,8 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     // Only check lower bound delta if positive column cost and vice versa.
     const HighsInt dir = mipsolver.colCost(c) > 0 ? -1 : 1;
     bool integral = mipsolver.isColIntegral(c);
-    double delta = dir == -1 ? sol[c] - globaldom.col_lower_[c]
-                             : globaldom.col_upper_[c] - sol[c];
+    double delta = dir == -1 ? std::max(sol[c] - globaldom.col_lower_[c], 0.0)
+                             : std::max(globaldom.col_upper_[c] - sol[c], 0.0);
     if (std::abs(delta) < feastol) return 0;
     HighsInt start = a_matrix.start_[c];
     HighsInt end = a_matrix.start_[c + 1];
@@ -1862,10 +1862,11 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
         if (mipsolver.isColIntegral(c)) {
           delta = std::ceil(delta - feastol);
         }
-        delta =
-            dir == -1
-                ? std::min(std::abs(sol[c] - globaldom.col_lower_[c]), delta)
-                : std::min(std::abs(globaldom.col_upper_[c] - sol[c]), delta);
+        delta = dir == -1
+                    ? std::min(std::max(sol[c] - globaldom.col_lower_[c], 0.0),
+                               delta)
+                    : std::min(std::max(globaldom.col_upper_[c] - sol[c], 0.0),
+                               delta);
         // Don't try and shift unbounded columns
         if (delta == kHighsInf) return;
         if (mipsolver.isColIntegral(c)) {
@@ -2137,6 +2138,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     if (candidate != -1) {
       apply_move(candidate_moves[candidate].first,
                  candidate_moves[candidate].second);
+      last_iter_feas = false;
     }
     candidate_moves.clear();
     // Update weight of all unsatisfied constraints
