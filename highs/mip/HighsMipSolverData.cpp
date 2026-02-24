@@ -343,6 +343,27 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
   return HighsModelStatus::kNotset;
 }
 
+void HighsMipSolverData::startLocalMipComputation(
+    const highs::parallel::TaskGroup& taskGroup, const HighsDomain& globaldom,
+    std::vector<double>& localMipSol) {
+  localMipSuccess = false;
+  taskGroup.spawn([&]() {
+    HighsRandom randgen(mipsolver.options_mip_->random_seed + numRestarts);
+    if (heuristics.localMip(globaldom, randgen, localMipSol)) {
+      localMipSuccess = true;
+    }
+  });
+}
+
+void HighsMipSolverData::finishLocalMipComputation(
+    const highs::parallel::TaskGroup& taskGroup,
+    const std::vector<double>& localMipSol) {
+  taskGroup.sync();
+  if (localMipSuccess) {
+    trySolution(localMipSol, kSolutionSourceLocalMip);
+  }
+}
+
 void HighsMipSolverData::startAnalyticCenterComputation(
     const highs::parallel::TaskGroup& taskGroup) {
   taskGroup.spawn([&]() {
@@ -1927,6 +1948,14 @@ restart:
     startSymmetryDetection(tg, symData);
     analysis.mipTimerStop(kMipClockStartSymmetryDetection);
   }
+  std::vector<double> localMipSol(mipsolver.numCol());
+  HighsDomain domainSnapshot = domain;
+  if (mipsolver.options_mip_->mip_heuristic_run_local_mip &&
+      !mipsolver.submip) {
+    analysis.mipTimerStart(kMipClockStartLocalMipComputation);
+    startLocalMipComputation(tg, domainSnapshot, localMipSol);
+    analysis.mipTimerStop(kMipClockStartLocalMipComputation);
+  }
   if (compute_analytic_centre && !analyticCenterComputed) {
     if (analysis.analyse_mip_time)
       highsLogUser(
@@ -2037,8 +2066,6 @@ restart:
   analysis.mipTimerStop(kMipClockRandomizedRounding);
   if (mipsolver.options_mip_->mip_heuristic_run_shifting)
     heuristics.shifting(firstlpsol);
-
-  heuristics.localMip();
 
   heuristics.flushStatistics();
 
@@ -2414,11 +2441,6 @@ restart:
   if (lower_bound <= upper_limit) {
     if (!mipsolver.submip && mipsolver.options_mip_->mip_allow_restart &&
         mipsolver.options_mip_->presolve != kHighsOffString) {
-      if (!analyticCenterComputed && compute_analytic_centre) {
-        analysis.mipTimerStart(kMipClockFinishAnalyticCentreComputation);
-        finishAnalyticCenterComputation(tg);
-        analysis.mipTimerStop(kMipClockFinishAnalyticCentreComputation);
-      }
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
@@ -2439,6 +2461,13 @@ restart:
         }
         return clockOff(analysis);
       }
+    }
+
+    if (!mipsolver.submip &&
+        mipsolver.options_mip_->mip_heuristic_run_local_mip) {
+      analysis.mipTimerStart(kMipClockFinishLocalMipComputation);
+      finishLocalMipComputation(tg, localMipSol);
+      analysis.mipTimerStop(kMipClockFinishLocalMipComputation);
     }
 
     if (detectSymmetries) {

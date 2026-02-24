@@ -1590,9 +1590,9 @@ void HighsPrimalHeuristics::centralRounding() {
                        kSolutionSourceCentralRounding);
 }
 
-bool HighsPrimalHeuristics::localMip() {
-  const HighsDomain& globaldom = mipsolver.mipdata_->domain;
-  std::vector<double> intsol(mipsolver.numCol());
+bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
+                                     HighsRandom& randgen,
+                                     std::vector<double>& intsol) {
   bool found_feas_before = false;
   double feastol = mipsolver.mipdata_->feastol;
   const HighsSparseMatrix& a_matrix = mipsolver.model_->a_matrix_;
@@ -1602,6 +1602,8 @@ bool HighsPrimalHeuristics::localMip() {
   // Initialise values and reserve vectors
   HighsInt num_violated_rows_sample = 250;
   HighsInt num_satisfied_rows_sample = 20;
+  HighsInt max_iters =
+      std::min(250000, std::max(5000, mipsolver.numNonzero() / 2));
   HighsInt iters = 0;
   HighsCDouble bestobj = kHighsInf;
   HighsCDouble obj = 0;
@@ -1785,6 +1787,8 @@ bool HighsPrimalHeuristics::localMip() {
       if (delta < feastol) return 0;
     }
     if (integral) delta = std::floor(delta + feastol);
+    assert(sol[c] + dir * delta > globaldom.col_lower_[c] - feastol);
+    assert(sol[c] + dir * delta < globaldom.col_upper_[c] + feastol);
     return delta * dir;
   };
 
@@ -1809,6 +1813,10 @@ bool HighsPrimalHeuristics::localMip() {
       }
     }
     if (best_col == -1) return false;
+    assert(sol[best_col] + one_opt_deltas[best_col] >
+           globaldom.col_lower_[best_col] - feastol);
+    assert(sol[best_col] + one_opt_deltas[best_col] <
+           globaldom.col_upper_[best_col] + feastol);
     apply_move(best_col, one_opt_deltas[best_col]);
     one_opt_deltas[best_col] = one_opt_calc_col_delta(best_col);
     HighsInt start = a_matrix.start_[best_col];
@@ -2091,7 +2099,7 @@ bool HighsPrimalHeuristics::localMip() {
     bestobj = obj;
   };
 
-  auto terminate = [&]() { return iters > 5000; };
+  auto terminate = [&]() { return iters > max_iters; };
 
   calc_activities(false);
   bool last_iter_feas = false;
@@ -2110,7 +2118,7 @@ bool HighsPrimalHeuristics::localMip() {
       momentum = 1;
       recalc_objective();
       // If solution is improving then store it
-      // TODO: Undo the transformation here??
+      // TODO: Undo the transformation here?? (Need parallel branch changes)
       if (obj + feastol < bestobj) {
         found_feas_before = true;
         save_sol();
@@ -2145,14 +2153,7 @@ bool HighsPrimalHeuristics::localMip() {
     //      viol.viol_index.size(), found_feas_before,
     //      static_cast<double>(bestobj));
   }
-  // Try and add incumbent to storage
-  if (found_feas_before) {
-    recalc_objective();
-    mipsolver.mipdata_->addIncumbent(intsol, static_cast<double>(obj),
-                                     kSolutionSourceLocalMip);
-    return true;
-  }
-  return false;
+  return found_feas_before;
 }
 
 #if 0

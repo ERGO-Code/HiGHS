@@ -86,6 +86,7 @@ struct HighsMipSolverData {
   bool rowMatrixSet;
   bool analyticCenterComputed;
   HighsModelStatus analyticCenterStatus;
+  bool localMipSuccess;
   bool detectSymmetries;
   HighsInt numRestarts;
   HighsInt numRestartsRoot;
@@ -173,6 +174,7 @@ struct HighsMipSolverData {
         rowMatrixSet(false),
         analyticCenterComputed(false),
         analyticCenterStatus(HighsModelStatus::kNotset),
+        localMipSuccess(false),
         detectSymmetries(false),
         numRestarts(0),
         numRestartsRoot(0),
@@ -220,6 +222,12 @@ struct HighsMipSolverData {
   bool solutionRowFeasible(const std::vector<double>& solution) const;
   HighsModelStatus feasibilityJump();
   HighsModelStatus trivialHeuristics();
+
+  void startLocalMipComputation(const highs::parallel::TaskGroup& taskGroup,
+                                const HighsDomain& globaldom,
+                                std::vector<double>& localMipSol);
+  void finishLocalMipComputation(const highs::parallel::TaskGroup& taskGroup,
+                                 const std::vector<double>& localMipSol);
 
   void startAnalyticCenterComputation(
       const highs::parallel::TaskGroup& taskGroup);

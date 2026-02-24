@@ -40,12 +40,14 @@ enum iClockMip {
   // Evaluate root node
   kMipClockStartSymmetryDetection,
   kMipClockStartAnalyticCentreComputation,
+  kMipClockStartLocalMipComputation,
   kMipClockEvaluateRootLp,
   kMipClockSeparateLpCuts,
   kMipClockRandomizedRounding,
   kMipClockPerformRestart,
   kMipClockRootSeparation,
   kMipClockFinishAnalyticCentreComputation,
+  kMipClockFinishLocalMipComputation,
   kMipClockRootCentralRounding,
   kMipClockRootSeparationRound0,
   kMipClockRootHeuristicsReducedCost,
@@ -176,6 +178,8 @@ class MipTimer {
         timer_pointer->clock_def("Start symmetry detection");
     clock[kMipClockStartAnalyticCentreComputation] =
         timer_pointer->clock_def("A-centre - start");
+    clock[kMipClockStartLocalMipComputation] =
+        timer_pointer->clock_def("Local Mip - start");
     clock[kMipClockEvaluateRootLp] =
         timer_pointer->clock_def("Evaluate root LP");
     clock[kMipClockSeparateLpCuts] =
@@ -188,6 +192,8 @@ class MipTimer {
         timer_pointer->clock_def("Root separation");
     clock[kMipClockFinishAnalyticCentreComputation] =
         timer_pointer->clock_def("A-centre - finish");
+    clock[kMipClockFinishLocalMipComputation] =
+        timer_pointer->clock_def("Local Mip - finish");
     clock[kMipClockRootCentralRounding] =
         timer_pointer->clock_def("Root central rounding");
     clock[kMipClockRootSeparationRound0] =
@@ -414,12 +420,14 @@ class MipTimer {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockStartSymmetryDetection,
         kMipClockStartAnalyticCentreComputation,
+        kMipClockStartLocalMipComputation,
         kMipClockEvaluateRootLp,
         kMipClockSeparateLpCuts,
         kMipClockRandomizedRounding,
         kMipClockPerformRestart,
         kMipClockRootSeparation,
         kMipClockFinishAnalyticCentreComputation,
+        kMipClockFinishLocalMipComputation,
         kMipClockRootCentralRounding,
         kMipClockRootSeparationRound0,
         kMipClockRootHeuristicsReducedCost,
@@ -509,12 +517,14 @@ class MipTimer {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockStartSymmetryDetection,
         kMipClockStartAnalyticCentreComputation,
+        kMipClockStartLocalMipComputation,
         kMipClockEvaluateRootLp,
         kMipClockSeparateLpCuts,
         kMipClockRandomizedRounding,
         kMipClockPerformRestart,
         kMipClockRootSeparation,
         kMipClockFinishAnalyticCentreComputation,
+        kMipClockFinishLocalMipComputation,
         kMipClockRootCentralRounding,
         kMipClockRootSeparationRound0,
         kMipClockRootHeuristicsReducedCost,

@@ -480,6 +480,7 @@ struct HighsOptionsStruct {
   bool mip_heuristic_run_root_reduced_cost;
   bool mip_heuristic_run_zi_round;
   bool mip_heuristic_run_shifting;
+  bool mip_heuristic_run_local_mip;
   double mip_min_logging_interval;
   std::string mip_lp_solver;
   std::string mip_ipm_solver;
@@ -638,6 +639,7 @@ struct HighsOptionsStruct {
         mip_heuristic_run_root_reduced_cost(false),
         mip_heuristic_run_zi_round(false),
         mip_heuristic_run_shifting(false),
+        mip_heuristic_run_local_mip(false),
         mip_min_logging_interval(0.0),
         mip_lp_solver(""),
         mip_ipm_solver(""),
@@ -1215,6 +1217,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("mip_heuristic_run_shifting",
                                        "Use the Shifting heuristic", advanced,
                                        &mip_heuristic_run_shifting, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("mip_heuristic_run_local_mip",
+                                       "Use the Local MIP heuristic", advanced,
+                                       &mip_heuristic_run_local_mip, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
