@@ -1376,7 +1376,18 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
     }
 
     HighsCDouble boundVal = (Rupper - minresact) / Rvalue[i];
-    if (std::fabs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
+    // Skip propagation when the bound value is unreliable due to numerical
+    // error. The first check (unchanged) catches extremely large bounds.
+    // The second check catches error amplification: when minresact is large
+    // but Rvalue[i] is small, the division amplifies the O(eps * |minresact|)
+    // floating-point error in minresact into the propagated bound. We skip
+    // when this amplified error exceeds 1% of feastol.
+    double absMinResAct = std::fabs(double(minresact));
+    double absCoef = std::fabs(Rvalue[i]);
+    if (std::fabs(double(boundVal)) * kHighsTiny > mipsolver->mipdata_->feastol)
+      continue;
+    if (absMinResAct * kHighsTiny / absCoef >
+        mipsolver->mipdata_->feastol * 0.01)
       continue;
 
     if (Rvalue[i] > 0) {
@@ -1420,7 +1431,13 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
     }
 
     HighsCDouble boundVal = (Rlower - maxresact) / Rvalue[i];
-    if (std::fabs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
+    // See comment in propagateRowUpper for explanation of both checks
+    double absMaxResAct = std::fabs(double(maxresact));
+    double absCoef = std::fabs(Rvalue[i]);
+    if (std::fabs(double(boundVal)) * kHighsTiny > mipsolver->mipdata_->feastol)
+      continue;
+    if (absMaxResAct * kHighsTiny / absCoef >
+        mipsolver->mipdata_->feastol * 0.01)
       continue;
 
     if (Rvalue[i] < 0) {

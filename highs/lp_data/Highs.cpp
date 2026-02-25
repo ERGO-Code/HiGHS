@@ -4147,6 +4147,45 @@ HighsStatus Highs::callSolveMip() {
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.run();
+  // Guard against false infeasibility from MIP presolve or domain
+  // propagation. Both paths can accumulate numerical error in implied
+  // activity bounds — especially on models with wide coefficient ranges —
+  // leading to false infeasibility declarations. Verify by checking the LP
+  // relaxation of the original model; if feasible, retry the MIP solve
+  // without presolve and with a tighter mip_feasibility_tolerance.
+  if (solver.modelstatus_ == HighsModelStatus::kInfeasible) {
+    Highs lp_check;
+    lp_check.setOptionValue("output_flag", false);
+    lp_check.setOptionValue("presolve", kHighsOffString);
+    HighsLp lp_relaxation = lp;
+    lp_relaxation.integrality_.clear();
+    lp_check.passModel(std::move(lp_relaxation));
+    lp_check.run();
+    if (lp_check.getModelStatus() == HighsModelStatus::kOptimal ||
+        lp_check.getModelStatus() == HighsModelStatus::kUnbounded) {
+      highsLogUser(options_.log_options, HighsLogType::kWarning,
+                   "MIP declared infeasible but LP relaxation is "
+                   "feasible: retrying MIP without presolve\n");
+      // Use a copy of options so we don't modify the caller's state
+      HighsOptions retry_options = options_;
+      retry_options.presolve = kHighsOffString;
+      // A tighter tolerance reduces false positives in domain propagation
+      // (activity bound errors scale with tolerance). Use 1e-7 which is
+      // 10x tighter than the default 1e-6.
+      retry_options.mip_feasibility_tolerance = 1e-7;
+      HighsMipSolver solver2(callback_, retry_options, lp, solution_);
+      solver2.run();
+      solver.modelstatus_ = solver2.modelstatus_;
+      solver.solution_objective_ = solver2.solution_objective_;
+      solver.solution_ = std::move(solver2.solution_);
+      solver.saved_objective_and_solution_ =
+          std::move(solver2.saved_objective_and_solution_);
+      solver.dual_bound_ = solver2.dual_bound_;
+      solver.primal_bound_ = solver2.primal_bound_;
+      solver.node_count_ = solver2.node_count_;
+      solver.sub_solver_call_time_ = solver2.sub_solver_call_time_;
+    }
+  }
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
