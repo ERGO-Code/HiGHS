@@ -211,3 +211,7 @@ enable = ["cpython-freethreading"]
 test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
 build-verbosity = 1
+
+[[tool.cibuildwheel.overrides]]
+select = "*-win32"
+environment = { CMAKE_GENERATOR_PLATFORM = "Win32" }
