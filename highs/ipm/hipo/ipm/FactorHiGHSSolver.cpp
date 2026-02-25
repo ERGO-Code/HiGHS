@@ -548,7 +548,8 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     // rcm is much worse in general, so no point in trying for now
   }
 
-  std::vector<bool> failure(orderings_to_try.size(), 0);
+  // vector<bool> is not thread-safe
+  std::vector<char> failure(orderings_to_try.size(), 0);
 
   // compute full-format matrix without diagonal entries
   std::vector<Int> full_ptr, full_rows;
