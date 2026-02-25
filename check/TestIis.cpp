@@ -514,6 +514,93 @@ TEST_CASE("lp-get-iis-time-limit", "[iis]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("lp-get-iis-partial", "[iis]") {
+  // Test that IIS computation with irreducible strategy on vol1.mps
+  // returns a warning status and a reducible IS
+  //
+  // The vol1.mps model is known to be infeasible but the result found
+  // is not irreducible due to encountering kUnknown model statuses during
+  // elastic and deletion filtering
+  //
+  // Expected behavior:
+  // - getIis() returns HighsStatus::kWarning
+  // - IIS is valid but marked as reducible
+  // - IIS contains both columns and rows
+
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/vol1.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Use kIisStrategyFromLp with irreducible flag
+  // This combination may not always find an irreducible IIS for complex models
+  highs.setOptionValue("iis_strategy",
+                       kIisStrategyFromLp + kIisStrategyIrreducible);
+
+  HighsIis iis;
+  // Should return warning since the IIS found is not irreducible
+  REQUIRE(highs.getIis(iis) == HighsStatus::kWarning);
+
+  // IIS should still be valid even though it's not irreducible
+  REQUIRE(iis.valid_ == true);
+
+  // Status should indicate the IIS is reducible
+  REQUIRE(iis.status_ == kIisModelStatusReducible);
+
+  // Should have identified some conflicting columns and rows
+  REQUIRE(iis.col_index_.size() > 0);
+  REQUIRE(iis.row_index_.size() > 0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
+  // Test that IIS computation with deletion strategy respects time limits
+  // and returns partial results when time limit is reached
+  //
+  // Using vol1.mps model with a short time limit (0.5 seconds) to force
+  // the deletion strategy to terminate before completing the irreducibility
+  // check
+  //
+  // Expected behavior:
+  // - getIis() returns HighsStatus::kWarning
+  // - IS is valid but incomplete due to time limit
+  // - IIS status indicates time limit was reached
+  // - Partial IS contains some columns and rows identified before timeout
+
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/vol1.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Use deletion strategy to find irreducible IIS
+  // This is a more expensive operation that will be interrupted by time limit
+  highs.setOptionValue("iis_strategy", kIisStrategyIrreducible);
+
+  // Set a short time limit to force early termination
+  highs.setOptionValue("iis_time_limit", 0.5);
+
+  HighsIis iis;
+  // Should return warning (not error) since partial results are available
+  REQUIRE(highs.getIis(iis) == HighsStatus::kWarning);
+
+  // IIS should be valid even though computation didn't complete
+  REQUIRE(iis.valid_ == true);
+
+  // Status should indicate time limit was reached during deletion
+  REQUIRE(iis.status_ == kIisModelStatusTimeLimit);
+
+  // Should have identified some conflicting columns and rows before timeout
+  REQUIRE(iis.col_index_.size() > 0);
+  REQUIRE(iis.row_index_.size() > 0);
+
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   // Using infeasible MIP from AMPL documentation
   //
