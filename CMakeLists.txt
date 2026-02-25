@@ -139,6 +139,9 @@ message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
 message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 
+option(GPU_STUBS "Build GPU with cuda stubs" OFF)
+message(STATUS "Build GPU with cuda stubs: ${GPU_STUBS}")
+
 if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0")
     message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
 endif()
@@ -193,7 +196,7 @@ if (CUPDLP_GPU)
 
 else()
   set (CUPDLP_CPU ON)
-    set(CUDA_LIBRARY-NOTFOUND true)
+  set(CUDA_LIBRARY-NOTFOUND true)
 endif()
 
 # HiPO deps

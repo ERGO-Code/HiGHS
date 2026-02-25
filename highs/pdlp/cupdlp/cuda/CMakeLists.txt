@@ -25,14 +25,25 @@ CUDA_ARCHITECTURES "75;80;86" )
 target_include_directories(cudalin PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
 
 if (WIN32)
-  target_link_libraries(cudalin ${CUDA_LIBRARY})
+  # target_link_libraries(cudalin ${CUDA_LIBRARY})  linking happens here
+  target_link_libraries(cudalin ${CUDA_LIBRARY})  # linking happens here
+  # Link stubs instead of real libs - they satisfy the linker but aren't shipped
+  target_link_options(cudalin PRIVATE
+        -L/usr/local/cuda/lib64/stubs
+        -lcublas
+        -lcusparse
+        -lcudart
+        -Wl,--allow-shlib-undefined
+    )
 else()
   # target_compile_definitions(cudalin
   #     PUBLIC
   #     # If the debug configuration pass the DEBUG define to the compiler
   #     $<$<CONFIG:Debug>:-DCUPDLP_DEBUG=1>
   #   )
-  target_link_libraries(cudalin ${CUDA_LIBRARY} m)
+  if (NOT GPU_STUBS)
+    target_link_libraries(cudalin ${CUDA_LIBRARY} m)
+  endif()
 endif()
 
 # add a test
@@ -41,12 +52,23 @@ add_executable(testcublas test_cublas.c)
 
 set_target_properties(testcudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 #target_include_directories(cudalinalg PRIVATE ${CUPDLP_INCLUDE_DIR}/cuda)
-target_link_libraries(testcudalin PRIVATE cudalin ${CUDA_LIBRARY})
+if (NOT GPU_STUBS)
+  target_link_libraries(testcudalin PRIVATE cudalin ${CUDA_LIBRARY})
+endif()
 
 set_target_properties(testcublas PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-target_link_libraries(testcublas PRIVATE cudalin ${CUDA_LIBRARY})
+if (NOT GPU_STUBS)
+  target_link_libraries(testcublas PRIVATE cudalin ${CUDA_LIBRARY})
 
-target_include_directories(cudalin PUBLIC 
-    "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>"
+  target_include_directories(cudalin PUBLIC 
+      "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>"
+      "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../hipdlp>"  # Add this for pdhg_kernels.hpp
+  )
+endif()
+
+if (GPU_STUBS)
+  target_include_directories(cudalin PRIVATE
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../hipdlp>"  # Add this for pdhg_kernels.hpp
-)
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/cuda_stubs>"  # Add this for stubs
+  )
+endif()
