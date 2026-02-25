@@ -315,7 +315,8 @@ void Factorise::processSupernode(Int sn) {
 
           row += consecutive;
         }
-      }
+      } else
+        break;
     }
     HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleChildrenFrontal);
 
