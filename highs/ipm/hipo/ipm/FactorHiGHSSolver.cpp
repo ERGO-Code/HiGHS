@@ -462,7 +462,7 @@ Int FactorHiGHSSolver::chooseNla() {
     run_analyse_NE();
     run_analyse_AS();
   } else {
-    highs::parallel::TaskGroup tg;
+    TaskGroupSpecial tg;
     tg.spawn([&]() { run_analyse_NE(); });
     tg.spawn([&]() { run_analyse_AS(); });
     tg.taskWait();
