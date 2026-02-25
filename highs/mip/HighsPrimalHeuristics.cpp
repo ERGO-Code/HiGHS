@@ -1668,26 +1668,26 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
   };
 
   struct RowStatus {
-    std::vector<HighsInt> viol;
-    std::vector<HighsInt> viol_index;
+    std::vector<HighsInt> index_map;
+    std::vector<HighsInt> indices;
 
-    explicit RowStatus(const HighsInt n) : viol(n, -1) {
-      viol_index.reserve(n);
+    explicit RowStatus(const HighsInt n) : index_map(n, -1) {
+      indices.reserve(n);
     }
   };
 
   auto add_entry = [&](RowStatus& v, HighsInt r) {
-    assert(v.viol[r] == -1);
-    v.viol[r] = static_cast<HighsInt>(v.viol_index.size());
-    v.viol_index.push_back(r);
+    assert(v.index_map[r] == -1);
+    v.index_map[r] = static_cast<HighsInt>(v.indices.size());
+    v.indices.push_back(r);
   };
 
   auto remove_entry = [&](RowStatus& v, HighsInt r) {
-    assert(v.viol[r] != -1);
-    v.viol_index[v.viol[r]] = v.viol_index.back();
-    v.viol[v.viol_index.back()] = v.viol[r];
-    v.viol_index.pop_back();
-    v.viol[r] = -1;
+    assert(v.index_map[r] != -1);
+    v.indices[v.index_map[r]] = v.indices.back();
+    v.index_map[v.indices.back()] = v.index_map[r];
+    v.indices.pop_back();
+    v.index_map[r] = -1;
   };
 
   std::vector<HighsInt> weights(mipsolver.numRow());
@@ -1702,10 +1702,10 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
   auto calc_activities = [&](bool reset_violated) {
     std::fill(activities.begin(), activities.end(), 0.0);
     if (reset_violated) {
-      viol.viol_index.clear();
-      viol.viol.assign(mipsolver.numRow(), -1);
-      satisfied.viol_index.clear();
-      satisfied.viol.assign(mipsolver.numRow(), -1);
+      viol.indices.clear();
+      viol.index_map.assign(mipsolver.numRow(), -1);
+      satisfied.indices.clear();
+      satisfied.index_map.assign(mipsolver.numRow(), -1);
     }
     for (HighsInt row = 0; row < mipsolver.numRow(); ++row) {
       HighsInt start = a_matrix_row.start_[row];
@@ -1737,7 +1737,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     for (HighsInt i = start; i < end; ++i) {
       HighsInt r = a_matrix.index_[i];
       double val = a_matrix.value_[i];
-      bool was_violated = viol.viol[r] != -1;
+      bool was_violated = viol.index_map[r] != -1;
       activities[r] += val * delta;
       bool now_violated = is_violated(activities[r], r);
       if (was_violated && !now_violated) {
@@ -1961,10 +1961,10 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
   // Also compute breakthrough moves
   auto explore_violated = [&](std::vector<std::pair<HighsInt, double>>& moves,
                               HighsInt& n) {
-    if (!viol.viol_index.empty()) {
+    if (!viol.indices.empty()) {
       HighsInt n_samples;
       std::vector<HighsInt> samples =
-          sample_indices(viol.viol_index, num_violated_rows_sample, n_samples);
+          sample_indices(viol.indices, num_violated_rows_sample, n_samples);
       for (HighsInt r : samples) {
         HighsInt start = a_matrix_row.start_[r];
         HighsInt end = a_matrix_row.start_[r + 1];
@@ -1984,10 +1984,10 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
   // Iterate over sample satisfied rows and compute candidate moves
   auto explore_satisfied = [&](std::vector<std::pair<HighsInt, double>>& moves,
                                HighsInt& n) {
-    if (!satisfied.viol_index.empty()) {
+    if (!satisfied.indices.empty()) {
       HighsInt n_samples;
       std::vector<HighsInt> samples = sample_indices(
-          satisfied.viol_index, num_satisfied_rows_sample, n_samples);
+          satisfied.indices, num_satisfied_rows_sample, n_samples);
       for (HighsInt r : samples) {
         HighsInt start = a_matrix_row.start_[r];
         HighsInt end = a_matrix_row.start_[r + 1];
@@ -2116,9 +2116,9 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
       calc_activities(true);
     }
     // No rows are violated, so check the solution
-    if (viol.viol_index.empty()) {
+    if (viol.indices.empty()) {
       // Update object weight
-      if (viol.viol_index.empty()) {
+      if (viol.indices.empty()) {
         obj_weight++;
       }
       momentum = 1;
@@ -2146,7 +2146,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     }
     candidate_moves.clear();
     // Update weight of all unsatisfied constraints
-    for (HighsInt r : viol.viol_index) {
+    for (HighsInt r : viol.indices) {
       weights[r]++;
     }
     // Increase or reset momentum depending if candidate is found
@@ -2157,7 +2157,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     }
     iters++;
     // printf("Current viol %lu. Found feas %d. Best obj %g\n",
-    //      viol.viol_index.size(), found_feas_before,
+    //      viol.indices.size(), found_feas_before,
     //      static_cast<double>(bestobj));
   }
   return found_feas_before;
