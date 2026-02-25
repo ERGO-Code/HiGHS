@@ -256,7 +256,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
 
   Clock clock;
   if (Int status = buildASstructure()) return status;
-  info_.matrix_structure_time = clock.stop();  // there's a race here
+  info_.AS_structure_time = clock.stop();  // there's a race here
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(nA_ + mA_, -1);
@@ -281,7 +281,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
 
   Clock clock;
   if (Int status = buildNEstructure(nz_limit)) return status;
-  info_.matrix_structure_time = clock.stop();  // there's a race here
+  info_.NE_structure_time = clock.stop();  // there's a race here
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(mA_, 1);
