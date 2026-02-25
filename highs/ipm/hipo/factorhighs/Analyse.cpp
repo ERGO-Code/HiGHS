@@ -1109,7 +1109,7 @@ void Analyse::computeCriticalPath() {
     // frontal size
     const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
 
-    critical_ops[sn] = snFlops(sn, fr - sz);
+    critical_ops[sn] = snFlops(sz, fr - sz);
   }
 
   for (Int sn = 0; sn < sn_count_; ++sn) {
