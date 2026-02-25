@@ -560,7 +560,7 @@ TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
   // Test that IIS computation with deletion strategy respects time limits
   // and returns partial results when time limit is reached
   //
-  // Using vol1.mps model with a short time limit (0.1 seconds) to force
+  // Using cplex1.mps model with a short time limit (1 seconds) to force
   // the deletion strategy to terminate before completing the irreducibility
   // check
   //
@@ -570,7 +570,8 @@ TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
   // - IIS status indicates time limit was reached
   // - Partial IS contains some columns and rows identified before timeout
 
-  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/vol1.mps";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/cplex1.mps";
 
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -584,7 +585,7 @@ TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
   highs.setOptionValue("iis_strategy", kIisStrategyIrreducible);
 
   // Set a short time limit to force early termination
-  highs.setOptionValue("iis_time_limit", 0.1);
+  highs.setOptionValue("iis_time_limit", 1);
 
   HighsIis iis;
   // Should return warning (not error) since partial results are available
