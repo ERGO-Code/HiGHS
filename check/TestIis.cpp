@@ -560,7 +560,7 @@ TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
   // Test that IIS computation with deletion strategy respects time limits
   // and returns partial results when time limit is reached
   //
-  // Using vol1.mps model with a short time limit (0.5 seconds) to force
+  // Using vol1.mps model with a short time limit (0.1 seconds) to force
   // the deletion strategy to terminate before completing the irreducibility
   // check
   //
@@ -577,12 +577,14 @@ TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
+  // Run the model
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
   // Use deletion strategy to find irreducible IIS
-  // This is a more expensive operation that will be interrupted by time limit
   highs.setOptionValue("iis_strategy", kIisStrategyIrreducible);
 
   // Set a short time limit to force early termination
-  highs.setOptionValue("iis_time_limit", 0.5);
+  highs.setOptionValue("iis_time_limit", 0.1);
 
   HighsIis iis;
   // Should return warning (not error) since partial results are available

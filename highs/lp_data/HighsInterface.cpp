@@ -2001,10 +2001,8 @@ HighsStatus Highs::getIisInterface() {
   bool ray_option =
       // kIisStrategyFromRay & options_.iis_strategy;
       false;
-  // Use the LP strategy if any higher bits are set
-  const bool lp_option = options_.iis_strategy >= kIisStrategyFromLp;
-  if (this->model_status_ == HighsModelStatus::kInfeasible && ray_option &&
-      !ekk_instance_.status_.has_invert) {
+  const bool lp_option = kIisStrategyFromLp & options_.iis_strategy;
+  if (ray_option && !ekk_instance_.status_.has_invert) {
     // Model is known to be infeasible, and a dual ray option is
     // chosen, but it has no INVERT, presumably because infeasibility
     // detected in presolve, so solve without presolve
