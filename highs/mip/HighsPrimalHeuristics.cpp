@@ -1600,11 +1600,14 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
   a_matrix_row.createRowwise(a_matrix);
 
   // Initialise values and reserve vectors
-  HighsInt num_violated_rows_sample = 250;
-  HighsInt num_satisfied_rows_sample = 20;
+  HighsInt num_violated_rows_sample = 25;
+  HighsInt num_violated_moves_sample = 250;
+  HighsInt num_satisfied_rows_sample = 3;
+  HighsInt num_satisfied_moves_sample = 20;
   HighsInt max_iters =
       std::min(250000, std::max(5000, mipsolver.numNonzero() / 2));
   HighsInt iters = 0;
+  HighsInt activity_age_limit = 100000;
   HighsCDouble bestobj = kHighsInf;
   HighsCDouble obj = 0;
   std::vector<HighsInt> cols_with_obj;
@@ -1937,8 +1940,6 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
               std::max(static_cast<double>(obj - bestobj), feastol);
           HighsInt dir = obj_coef < 0 ? 1 : -1;
           double delta = obj_change / std::abs(obj_coef);
-          // TODO: THis feastol should be a negative.... Why does it work
-          // better?
           if (mipsolver.isColIntegral(c)) {
             delta = std::ceil(delta - kHighsTiny);
           }
@@ -1977,7 +1978,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     if (found_feas_before && obj > bestobj - feastol) {
       explore_breakthrough(moves);
     }
-    sample_operations(moves, num_violated_rows_sample, n);
+    sample_operations(moves, num_violated_moves_sample, n);
   };
 
   // Iterate over sample satisfied rows and compute candidate moves
@@ -1997,7 +1998,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
         }
       }
     }
-    sample_operations(moves, num_satisfied_rows_sample, n);
+    sample_operations(moves, num_satisfied_moves_sample, n);
   };
 
   // Score candidate moves. Given a move (c, delta), the score components are:
@@ -2056,7 +2057,6 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
         } else if (!now_satisfied && !was_satisfied) {
           if (old_violation > new_violation - kHighsTiny) {
             score += momentum * weights[r];
-            feas_improvements++;
           } else if (new_violation > old_violation - kHighsTiny) {
             score -= weights[r];
           }
@@ -2111,6 +2111,10 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
       num_satisfied_rows_sample));
   // Main solving loop
   while (!terminate()) {
+    // Re-calculate activities if enough iterations have passed
+    if (iters % activity_age_limit == activity_age_limit - 1) {
+      calc_activities(true);
+    }
     // No rows are violated, so check the solution
     if (viol.viol_index.empty()) {
       // Update object weight
