@@ -581,3 +581,23 @@ TEST_CASE("chuzc4", "[highs_lp_solver]") {
   }
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("2710", "[highs_lp_solver]") {
+  const std::string model = "pilotnov";
+  const std::string model_file = "/srv/mps_da/" + model + ".mps.gz";
+   Highs h;
+  HighsStatus status = h.readModel(model_file);
+  REQUIRE(status == HighsStatus::kOk);
+  const bool full_simplex_logging = false;//true;//
+  if (full_simplex_logging) {
+    h.setOptionValue("highs_analysis_level", kHighsAnalysisLevelSolverRuntimeData);
+    h.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+  }
+  h.setOptionValue("simplex_iteration_limit", 520);
+  h.setOptionValue("dual_simplex_chuzc_strategy", kDualSimplexChuzcStrategyChoose);
+  h.run();
+
+  h.resetGlobalScheduler(true);
+
+}
+

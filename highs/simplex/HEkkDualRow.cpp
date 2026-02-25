@@ -80,7 +80,6 @@ void HEkkDualRow::chooseMakepack(const HVector* row, const HighsInt offset) {
 void HEkkDualRow::choosePossible() {
   /**
    * Determine the possible variables - candidates for CHUZC
-   * TODO: Check with Qi what this is doing
    */
   check_iter = ekk_instance_.iteration_count_ == 516;
   const double Ta = ekk_instance_.info_.update_count < 10   ? 1e-9
@@ -90,25 +89,65 @@ void HEkkDualRow::choosePossible() {
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   workTheta = kHighsInf;
   workCount = 0;
-
+  // =========
+  // workDelta is the change in the (infeasible) primal variable leaving the basis
+  // =========
+  // * If below LB, delta_primal = value - LB < 0
+  //
+  // * If above UB, delta_primal = value - UB > 0
+  //
+  // Hence move_out is +1 (-1) if the primal variable is moving up (down) towards feasibility
+  //
+  // The basic dual is zero, so if moving up (down) towards LB (UB)
+  // the dual is permitted to increase (decrease) from zero to a
+  // positive (negative) value
+  //
+  // ========
+  // workMove indicates the direction in which dual will move towards infeasibility
+  // ========
+  // Fixed variables and equality constraints have workMove = 0, since their duals are always feasible.
+  //
+  // Free variables and constraints are handled using the freelist
+  //
+  // For other variables and constraints, the value of workMove depends on the primal bound that is active
+  //
+  // Nonbasic duals less than Td in magnitude have no sign requirements
+  //
+  // Otherwise, workDual * workMove is non-negative
+  //
+  // Hence,
+  //
+  // * if workMove is +1, workDual is non-negative, and the primal
+  //   variable is at its lower bound
+  //
+  // * if workMove is -1, workDual is non-positive, and the primal
+  //   variable is at its upp bound
+  //  
+  // For duals whose move direction (alpha > 0) is taking them towards zero and is sufficiently large (hat are moving towards zero and have (alpha > 0), determine the minimum step to Td beyond zero
   for (HighsInt i = 0; i < packCount; i++) {
     const HighsInt iCol = packIndex[i];
     const HighsInt move = workMove[iCol];
+    // For Debugging >>
+    double lower = ekk_instance_.info_.workLower_[iCol];
+    double value = ekk_instance_.info_.workValue_[iCol];
+    double upper = ekk_instance_.info_.workUpper_[iCol];
+    double dual =  workDual[iCol];
+    if (check_iter) {
+      bool move_dual_sign_ok = move*dual >= 0 || std::fabs(dual) < Td;
+      if (!move_dual_sign_ok
+	  //    || move == 0
+	  ) {
+	printf("choosePossible() %4d: iCol = %4d, move= %2d; Pr [%11.4g, %11.4g, %11.4g]; Du = %11.4g\n",
+	       int(i), int(iCol), int(move), lower, value, upper, dual);
+      }
+    //    assert(move_dual_sign_ok);
+    }
+    // For Debugging << 
     const double alpha = packValue[i] * move_out * move;
     if (alpha > Ta) {
       workData[workCount++] = make_pair(iCol, alpha);
       const double relax = workDual[iCol] * move + Td;
       if (workTheta * alpha > relax) workTheta = relax / alpha;
-      if (check_iter) {
-	double lower = ekk_instance_.info_.workLower_[iCol];
-	double value = ekk_instance_.info_.workValue_[iCol];
-	double upper = ekk_instance_.info_.workUpper_[iCol];
-	double dual =  workDual[iCol];
-	if (upper == kHighsInf) {
-	  printf("choosePossible() %4d: iCol = %4d Pr [%11.4g, %11.4g, %11.4g] Du = %11.4g; relax = %11.4g; aa = %11.4g; th = %11.4g\n",
-		 int(i), int(iCol), lower, value, upper, dual, relax, alpha, workTheta);
-	}
-      }
     }
   }
 }

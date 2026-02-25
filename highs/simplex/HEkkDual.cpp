@@ -1512,6 +1512,19 @@ void HEkkDual::chooseRow() {
   // Set move_out to be -1 if delta_primal<0, otherwise +1 (since
   // delta_primal>0)
   move_out = delta_primal < 0 ? -1 : 1;
+  // For debugging >>
+  bool is_col = variable_out < solver_num_col;
+  double lower = ekk_instance_.info_.baseLower_[row_out];
+  double value = ekk_instance_.info_.baseValue_[row_out];
+  double upper = ekk_instance_.info_.baseUpper_[row_out];
+  //  if (lower == upper) {
+  printf("HEkkDual::chooseRow() row_out = %4d is %s variable_out = %4d and has [%11.4g, %11.4g, %11.4g] delta_primal = %11.4g and move_out = %d\n",
+	 int(row_out),
+	 is_col ? "col" : "row",
+	 int(variable_out), lower, value, upper, delta_primal, int(move_out));
+  //  }
+  // For debugging <<
+  //
   // Update the record of average row_ep (pi_p) density. This ignores
   // any BTRANs done for skipped candidates
   const double local_row_ep_density = (double)row_ep.count * inv_solver_num_row;
