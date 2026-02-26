@@ -212,7 +212,7 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
-  ubuntu_thread_sanitizer:
+  ubuntu_sanitizer:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -221,6 +221,7 @@ jobs:
         os: [ubuntu-latest]
         config: [Debug]
         all_tests: [ON]
+        sanitizer: [Address, Thread, Leak]
 
     steps:
       - uses: actions/checkout@v4
@@ -234,7 +235,7 @@ jobs:
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
             -DALL_TESTS=${{ matrix.all_tests }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
-            -DDEBUG_MEMORY=Thread
+            -DDEBUG_MEMORY=${{ matrix.sanitizer }}
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
