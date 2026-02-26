@@ -1930,7 +1930,8 @@ static void clockOff(HighsMipAnalysis& analysis) {
   if (clock2_running) analysis.mipTimerStop(kMipClockEvaluateRootNode2);
 }
 
-static void endTasksReturnClockOff(highs::parallel::TaskGroup& taskGroup, HighsMipAnalysis& analysis) {
+static void endTasksReturnClockOff(highs::parallel::TaskGroup& taskGroup,
+                                   HighsMipAnalysis& analysis) {
   taskGroup.cancel();
   taskGroup.taskWait();
   return clockOff(analysis);
@@ -2483,6 +2484,12 @@ restart:
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
+        if (!mipsolver.submip &&
+            mipsolver.options_mip_->mip_heuristic_run_local_mip) {
+          analysis.mipTimerStart(kMipClockFinishLocalMipComputation);
+          finishLocalMipComputation(tg, localMipSol);
+          analysis.mipTimerStop(kMipClockFinishLocalMipComputation);
+        }
         tg.cancel();
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                      "\n%.1f%% inactive integer columns, restarting\n",

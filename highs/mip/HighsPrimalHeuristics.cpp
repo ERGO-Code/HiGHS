@@ -1605,7 +1605,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
   HighsInt num_satisfied_rows_sample = 3;
   HighsInt num_satisfied_moves_sample = 20;
   HighsInt max_iters =
-      std::min(250000, std::max(5000, mipsolver.numNonzero() / 2));
+      std::min(1000000, std::max(5000, 3 * mipsolver.numNonzero()));
   HighsInt iters = 0;
   HighsInt activity_age_limit = 100000;
   HighsCDouble bestobj = kHighsInf;
@@ -1751,9 +1751,9 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     }
     obj += delta * mipsolver.colCost(c);
     if (delta > 0) {
-      allow_neg_delta[c] = iters + 15;
+      allow_neg_delta[c] = iters + 5;
     } else {
-      allow_pos_delta[c] = iters + 15;
+      allow_pos_delta[c] = iters + 5;
     }
     // printf("Applying move col %d with delta %g\n", c, delta);
   };
