@@ -249,7 +249,7 @@ jobs:
       - name: Test hipo
         working-directory: ${{runner.workspace}}/build
         run: |
-          .bin/unit_tests [highs_hipo]
+          ./bin/unit_tests [highs_hipo]
 
   windows_debug:
     runs-on: [windows-latest]
