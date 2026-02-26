@@ -1592,12 +1592,11 @@ void HighsPrimalHeuristics::centralRounding() {
 
 bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
                                      HighsRandom& randgen,
-                                     std::vector<double>& intsol) {
+                                     std::vector<double>& intsol,
+                                     std::vector<double> sol) {
   bool found_feas_before = false;
   double feastol = mipsolver.mipdata_->feastol;
   const HighsSparseMatrix& a_matrix = mipsolver.model_->a_matrix_;
-  HighsSparseMatrix a_matrix_row;
-  a_matrix_row.createRowwise(a_matrix);
 
   // Initialise values and reserve vectors
   HighsInt num_violated_rows_sample = 25;
@@ -1605,7 +1604,7 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
   HighsInt num_satisfied_rows_sample = 3;
   HighsInt num_satisfied_moves_sample = 20;
   HighsInt max_iters =
-      std::min(1000000, std::max(5000, 3 * mipsolver.numNonzero()));
+      std::min(1000000, 3 * mipsolver.numNonzero());
   HighsInt iters = 0;
   HighsInt activity_age_limit = 100000;
   HighsCDouble bestobj = kHighsInf;
@@ -1616,49 +1615,11 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
   extra_sample_indices.reserve(
       std::max(num_satisfied_rows_sample, num_violated_rows_sample));
 
-  // Create initial solution
-  std::vector<double> sol(mipsolver.numCol());
-  std::vector<HighsInt> locks(mipsolver.numCol(), 0);
-  for (HighsInt row = 0; row < mipsolver.numRow(); ++row) {
-    HighsInt start = a_matrix_row.start_[row];
-    HighsInt end = a_matrix_row.start_[row + 1];
-    for (HighsInt i = start; i < end; ++i) {
-      HighsInt j = a_matrix_row.index_[i];
-      if (mipsolver.model_->row_lower_[row] != -kHighsInf) {
-        if (a_matrix_row.value_[i] > 0) {
-          locks[j] -= 1;
-        } else {
-          locks[j] += 1;
-        }
-      }
-      if (mipsolver.model_->row_upper_[row] != kHighsInf) {
-        if (a_matrix_row.value_[i] > 0) {
-          locks[j] += 1;
-        } else {
-          locks[j] -= 1;
-        }
-      }
-    }
-  }
   for (HighsInt col = 0; col != mipsolver.numCol(); ++col) {
-    if (locks[col] > 0 && globaldom.col_lower_[col] != -kHighsInf) {
-      sol[col] = globaldom.col_lower_[col];
-    } else if (locks[col] < 0 && globaldom.col_upper_[col] != kHighsInf) {
-      sol[col] = globaldom.col_upper_[col];
-    } else {
-      sol[col] = std::max(std::min(0.0, globaldom.col_upper_[col]),
-                          globaldom.col_lower_[col]);
-    }
-    if (mipsolver.isColIntegral(col)) {
-      sol[col] = std::min(std::max(globaldom.col_lower_[col], sol[col]),
-                          globaldom.col_upper_[col]);
-    }
     if (mipsolver.colCost(col) != 0) {
       cols_with_obj.push_back(col);
       obj += mipsolver.colCost(col) * sol[col];
     }
-    assert(sol[col] > globaldom.col_lower_[col] - feastol);
-    assert(sol[col] < globaldom.col_upper_[col] + feastol);
   }
 
   auto is_violated = [&](const HighsCDouble& act, HighsInt r) {
@@ -1708,10 +1669,11 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
       satisfied.index_map.assign(mipsolver.numRow(), -1);
     }
     for (HighsInt row = 0; row < mipsolver.numRow(); ++row) {
-      HighsInt start = a_matrix_row.start_[row];
-      HighsInt end = a_matrix_row.start_[row + 1];
+      HighsInt start = mipsolver.mipdata_->ARstart_[row];
+      HighsInt end = mipsolver.mipdata_->ARstart_[row + 1];
       for (HighsInt i = start; i < end; ++i) {
-        activities[row] += a_matrix_row.value_[i] * sol[a_matrix_row.index_[i]];
+        activities[row] += mipsolver.mipdata_->ARvalue_[i] *
+                           sol[mipsolver.mipdata_->ARindex_[i]];
       }
       if (is_violated(activities[row], row)) {
         add_entry(viol, row);
@@ -1827,10 +1789,10 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
     HighsInt end = a_matrix.start_[best_col + 1];
     for (HighsInt i = start; i < end; ++i) {
       HighsInt r = a_matrix.index_[i];
-      HighsInt rstart = a_matrix_row.start_[r];
-      HighsInt rend = a_matrix_row.start_[r + 1];
+      HighsInt rstart = mipsolver.mipdata_->ARstart_[r];
+      HighsInt rend = mipsolver.mipdata_->ARstart_[r + 1];
       for (HighsInt j = rstart; j < rend; ++j) {
-        HighsInt c = a_matrix_row.index_[j];
+        HighsInt c = mipsolver.mipdata_->ARindex_[j];
         if (mipsolver.colCost(c) != 0) {
           one_opt_deltas[c] = one_opt_calc_col_delta(c);
         }
@@ -1966,11 +1928,11 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
       std::vector<HighsInt> samples =
           sample_indices(viol.indices, num_violated_rows_sample, n_samples);
       for (HighsInt r : samples) {
-        HighsInt start = a_matrix_row.start_[r];
-        HighsInt end = a_matrix_row.start_[r + 1];
+        HighsInt start = mipsolver.mipdata_->ARstart_[r];
+        HighsInt end = mipsolver.mipdata_->ARstart_[r + 1];
         for (HighsInt i = start; i < end; ++i) {
-          HighsInt c = a_matrix_row.index_[i];
-          double val = a_matrix_row.value_[i];
+          HighsInt c = mipsolver.mipdata_->ARindex_[i];
+          double val = mipsolver.mipdata_->ARvalue_[i];
           calc_col_max_row_feas_delta(c, r, val, moves);
         }
       }
@@ -1989,11 +1951,11 @@ bool HighsPrimalHeuristics::localMip(const HighsDomain& globaldom,
       std::vector<HighsInt> samples = sample_indices(
           satisfied.indices, num_satisfied_rows_sample, n_samples);
       for (HighsInt r : samples) {
-        HighsInt start = a_matrix_row.start_[r];
-        HighsInt end = a_matrix_row.start_[r + 1];
+        HighsInt start = mipsolver.mipdata_->ARstart_[r];
+        HighsInt end = mipsolver.mipdata_->ARstart_[r + 1];
         for (HighsInt i = start; i < end; ++i) {
-          HighsInt c = a_matrix_row.index_[i];
-          double val = a_matrix_row.value_[i];
+          HighsInt c = mipsolver.mipdata_->ARindex_[i];
+          double val = mipsolver.mipdata_->ARvalue_[i];
           calc_col_max_row_feas_delta(c, r, val, moves);
         }
       }

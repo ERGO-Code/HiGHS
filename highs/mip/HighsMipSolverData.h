@@ -225,7 +225,8 @@ struct HighsMipSolverData {
 
   void startLocalMipComputation(const highs::parallel::TaskGroup& taskGroup,
                                 const HighsDomain& globaldom,
-                                std::vector<double>& localMipSol);
+                                std::vector<double>& localMipSol,
+                                std::vector<double>& startLocalMipSol);
   void finishLocalMipComputation(const highs::parallel::TaskGroup& taskGroup,
                                  const std::vector<double>& localMipSol);
 

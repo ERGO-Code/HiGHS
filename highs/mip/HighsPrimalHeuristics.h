@@ -58,7 +58,7 @@ class HighsPrimalHeuristics {
   void centralRounding();
 
   bool localMip(const HighsDomain& globaldom, HighsRandom& randgen,
-                std::vector<double>& intsol);
+                std::vector<double>& intsol, std::vector<double> sol);
 
   void flushStatistics();
 

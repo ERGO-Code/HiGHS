@@ -345,11 +345,75 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
 
 void HighsMipSolverData::startLocalMipComputation(
     const highs::parallel::TaskGroup& taskGroup, const HighsDomain& globaldom,
-    std::vector<double>& localMipSol) {
+    std::vector<double>& localMipSol, std::vector<double>& startLocalMipSol) {
   localMipSuccess = false;
+  bool incumbent_feasible = false;
+  if (!incumbent.empty()) {
+    // Copy incumbent solution as starting solution if bounds respected
+    startLocalMipSol = incumbent;
+    for (HighsInt col = 0; col < mipsolver.numCol(); col++) {
+      if (startLocalMipSol[col] > globaldom.col_lower_[col] - feastol ||
+          startLocalMipSol[col] < globaldom.col_upper_[col] + feastol) {
+        incumbent_feasible = false;
+        break;
+      }
+      if (mipsolver.isColIntegral(col)) {
+        if (fractionality(startLocalMipSol[col]) > feastol) {
+          incumbent_feasible = false;
+          break;
+        }
+        startLocalMipSol[col] = std::round(startLocalMipSol[col]);
+      }
+      incumbent_feasible = true;
+    }
+  }
+  if (!incumbent_feasible) {
+    // Create initial solution based on locks
+    std::vector<HighsInt> locks(mipsolver.numCol(), 0);
+    for (HighsInt row = 0; row < mipsolver.numRow(); ++row) {
+      HighsInt start = ARstart_[row];
+      HighsInt end = ARstart_[row + 1];
+      for (HighsInt i = start; i < end; ++i) {
+        HighsInt j = ARindex_[i];
+        if (mipsolver.rowLower(row) != -kHighsInf) {
+          if (ARvalue_[i] > 0) {
+            locks[j] -= 1;
+          } else {
+            locks[j] += 1;
+          }
+        }
+        if (mipsolver.rowUpper(row) != kHighsInf) {
+          if (ARvalue_[i] > 0) {
+            locks[j] += 1;
+          } else {
+            locks[j] -= 1;
+          }
+        }
+      }
+    }
+    for (HighsInt col = 0; col != mipsolver.numCol(); ++col) {
+      if (locks[col] > 0 && globaldom.col_lower_[col] != -kHighsInf) {
+        startLocalMipSol[col] = globaldom.col_lower_[col];
+      } else if (locks[col] < 0 && globaldom.col_upper_[col] != kHighsInf) {
+        startLocalMipSol[col] = globaldom.col_upper_[col];
+      } else {
+        startLocalMipSol[col] =
+            std::max(std::min(0.0, globaldom.col_upper_[col]),
+                     globaldom.col_lower_[col]);
+      }
+      if (mipsolver.isColIntegral(col)) {
+        startLocalMipSol[col] =
+            std::min(std::max(globaldom.col_lower_[col], startLocalMipSol[col]),
+                     globaldom.col_upper_[col]);
+      }
+      assert(startLocalMipSol[col] > globaldom.col_lower_[col] - feastol);
+      assert(startLocalMipSol[col] < globaldom.col_upper_[col] + feastol);
+    }
+  }
   taskGroup.spawn([&]() {
     HighsRandom randgen(mipsolver.options_mip_->random_seed + numRestarts);
-    if (heuristics.localMip(globaldom, randgen, localMipSol)) {
+    if (heuristics.localMip(globaldom, randgen, localMipSol,
+                            startLocalMipSol)) {
       localMipSuccess = true;
     }
   });
@@ -360,7 +424,13 @@ void HighsMipSolverData::finishLocalMipComputation(
     const std::vector<double>& localMipSol) {
   taskGroup.sync();
   if (localMipSuccess) {
-    trySolution(localMipSol, kSolutionSourceLocalMip);
+    double obj = 0;
+    for (HighsInt col = 0; col != mipsolver.numCol(); ++col) {
+      if (mipsolver.colCost(col) != 0) {
+        obj += mipsolver.colCost(col) * localMipSol[col];
+      }
+    }
+    addIncumbent(localMipSol, obj, kSolutionSourceLocalMip);
   }
 }
 
@@ -1956,11 +2026,12 @@ restart:
     analysis.mipTimerStop(kMipClockStartSymmetryDetection);
   }
   std::vector<double> localMipSol(mipsolver.numCol());
+  std::vector<double> startLocalMipSol(mipsolver.numCol());
   HighsDomain domainSnapshot = domain;
   if (mipsolver.options_mip_->mip_heuristic_run_local_mip &&
       !mipsolver.submip) {
     analysis.mipTimerStart(kMipClockStartLocalMipComputation);
-    startLocalMipComputation(tg, domainSnapshot, localMipSol);
+    startLocalMipComputation(tg, domainSnapshot, localMipSol, startLocalMipSol);
     analysis.mipTimerStop(kMipClockStartLocalMipComputation);
   }
   if (compute_analytic_centre && !analyticCenterComputed) {
