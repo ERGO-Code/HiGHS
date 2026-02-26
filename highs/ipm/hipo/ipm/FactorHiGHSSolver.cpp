@@ -39,7 +39,7 @@ void FactorHiGHSSolver::clear() {
 // Build structure and values of matrices
 // =========================================================================
 
-Int FactorHiGHSSolver::buildASstructure(Int64 nz_limit) {
+Int FactorHiGHSSolver::buildASstructure() {
   // Build lower triangular structure of the augmented system.
   // Build values of AS that will not change during the iterations.
 
@@ -48,7 +48,9 @@ Int FactorHiGHSSolver::buildASstructure(Int64 nz_limit) {
   const Int nzBlock11 = model_.qp() ? nzQ_ : nA_;
 
   // AS matrix must fit into HighsInt
-  if ((Int64)nzBlock11 + mA_ + nzA_ > nz_limit) return kStatusOverflow;
+  if ((Int64)nzBlock11 + mA_ + nzA_ >=
+      AS_nz_limit_.load(std::memory_order_relaxed))
+    return kStatusOverflow;
 
   ptrAS_.resize(nA_ + mA_ + 1);
   rowsAS_.resize(nzBlock11 + nzA_ + mA_);
@@ -104,7 +106,7 @@ Int FactorHiGHSSolver::buildASvalues(const std::vector<double>& scaling) {
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::buildNEstructure(Int64 nz_limit) {
+Int FactorHiGHSSolver::buildNEstructure() {
   // Build lower triangular structure of AAt.
   // This approach uses a column-wise copy of A, a partial row-wise copy and a
   // vector of corresponding indices.
@@ -179,7 +181,9 @@ Int FactorHiGHSSolver::buildNEstructure(Int64 nz_limit) {
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error.
-    if ((Int64)ptrNE_[row] + nz_in_col >= nz_limit) return kStatusOverflow;
+    if ((Int64)ptrNE_[row] + nz_in_col >=
+        NE_nz_limit_.load(std::memory_order_relaxed))
+      return kStatusOverflow;
 
     // update pointers
     ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
@@ -265,13 +269,14 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   log_.printDevInfo("Performing AS analyse phase\n");
 
   clock.start();
-  Int status = chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S, ordering_AS_);
+  Int status =
+      chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S, ordering_AS_, "AS");
   info_.analyse_AS_time += clock.stop();
 
   return status;
 }
 
-Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
+Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status. If building the matrix failed, the status is
   // set to kStatusOverflow.
@@ -280,7 +285,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
   if (model_.m() == 0) return kStatusErrorAnalyse;
 
   Clock clock;
-  if (Int status = buildNEstructure(nz_limit)) return status;
+  if (Int status = buildNEstructure()) return status;
   info_.NE_structure_time = clock.stop();  // there's a race here
 
   // create vector of signs of pivots
@@ -289,7 +294,8 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
   log_.printDevInfo("Performing NE analyse phase\n");
 
   clock.start();
-  Int status = chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S, ordering_NE_);
+  Int status =
+      chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S, ordering_NE_, "NE");
   info_.analyse_NE_time += clock.stop();
 
   return status;
@@ -447,6 +453,10 @@ Int FactorHiGHSSolver::chooseNla() {
         overflow_NE = true;
       }
     }
+
+    Int64 AS_nz_limit = symb_NE.nz() * kSymbNzMult;
+    if (failure_NE || AS_nz_limit > kHighsIInf) AS_nz_limit = kHighsIInf;
+    AS_nz_limit_.store(AS_nz_limit, std::memory_order_relaxed);
   };
 
   auto run_analyse_AS = [&]() {
@@ -456,15 +466,19 @@ Int FactorHiGHSSolver::chooseNla() {
       log_.printDevInfo("Integer overflow forming AS matrix\n");
       overflow_AS = true;
     }
+
+    Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
+    if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
+    NE_nz_limit_.store(NE_nz_limit, std::memory_order_relaxed);
   };
 
   if (options_.parallel == kHighsOffString) {
-    run_analyse_NE();
     run_analyse_AS();
+    run_analyse_NE();
   } else {
     TaskGroupSpecial tg;
-    tg.spawn([&]() { run_analyse_NE(); });
     tg.spawn([&]() { run_analyse_AS(); });
+    tg.spawn([&]() { run_analyse_NE(); });
     tg.taskWait();
   }
 
@@ -531,7 +545,8 @@ Int FactorHiGHSSolver::chooseNla() {
 Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
                                       const std::vector<Int>& ptr,
                                       const std::vector<Int>& signs,
-                                      Symbolic& S, std::string& ordering) {
+                                      Symbolic& S, std::string& ordering,
+                                      const std::string& nla) {
   // Run analyse phase.
   // - If ordering is "amd", "metis", "rcm" run only the ordering requested.
   // - If ordering is "choose", run "amd", "metis", and choose the best.
@@ -563,6 +578,20 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
 
   auto run_analyse = [&](Int i) {
+    if (nla == "NE") {
+      if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
+        failure[i] = true;
+        log_.printDevInfo("NE interrupted before ordering\n");
+        return;
+      }
+    } else {
+      if (ptr.back() >= AS_nz_limit_.load(std::memory_order_relaxed)) {
+        failure[i] = true;
+        log_.printDevInfo("AS interrupted before ordering\n");
+        return;
+      }
+    }
+
     // compute ordering
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
@@ -617,8 +646,22 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       assert(1 == 0);
     }
 
-    // compute analyse phase
     if (failure[i]) return;
+
+    if (nla == "NE") {
+      if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
+        failure[i] = true;
+        log_.printDevInfo("NE interrupted before analyse\n");
+        return;
+      }
+    } else {
+      if (ptr.back() >= AS_nz_limit_.load(std::memory_order_relaxed)) {
+        failure[i] = true;
+        log_.printDevInfo("AS interrupted before analyse\n");
+        return;
+      }
+    }
+
     failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
 
     if (failure[i] && log_.debug(2)) {
