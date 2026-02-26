@@ -4967,6 +4967,15 @@ HPresolve::Result HPresolve::singletonColStuffing(
     candidates.push_back(std::make_tuple(col, val, direction));
   };
 
+  // lambda for fixing a variable
+  auto fixCol = [&](HighsInt col, HighsInt direction) {
+    if (direction < 0)
+      HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+    else
+      HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    return Result::kOk;
+  };
+
   // lambda for actual stuffing
   auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
     // skip row if rhs is not finite
@@ -5048,17 +5057,11 @@ HPresolve::Result HPresolve::singletonColStuffing(
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
         numFixedCols++;
-        if (multiplier < 0)
-          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
-        else
-          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
+        HPRESOLVE_CHECKED_CALL(fixCol(j, multiplier));
       } else if (sumLowerFinite &&
                  direction * rhs <= sumLower + primal_feastol) {
         numFixedCols++;
-        if (multiplier < 0)
-          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
-        else
-          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
+        HPRESOLVE_CHECKED_CALL(fixCol(j, -multiplier));
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
