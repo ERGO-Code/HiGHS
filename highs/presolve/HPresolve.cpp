@@ -5071,7 +5071,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
     return Result::kOk;
   };
 
-  // consider only non-fixed singleton continuous columns
+  // consider only non-fixed singleton columns
   if (!isSingleton(col)) return Result::kOk;
 
   // get row index
