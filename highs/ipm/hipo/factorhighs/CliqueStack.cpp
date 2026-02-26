@@ -67,7 +67,6 @@ void CliqueStack::pushWork(Int sn) {
 
   if (worksize_ > 0) {
     // stack_[top_] has lower address than workspace, so no need to resize.
-    // workspace_ and stack_[top_] do not overlap, so use memcpy
     std::memmove(&stack_[top_], workspace_, worksize_ * sizeof(double));
 
     top_ += worksize_;
