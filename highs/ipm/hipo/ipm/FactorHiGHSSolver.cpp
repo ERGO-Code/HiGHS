@@ -470,7 +470,6 @@ Int FactorHiGHSSolver::chooseNla() {
     Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
     if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
     NE_nz_limit_.store(NE_nz_limit, std::memory_order_relaxed);
-    AS_finished_.store(true, std::memory_order_release);
   };
 
   if (options_.parallel == kHighsOffString) {
@@ -568,10 +567,13 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   std::vector<char> failure(orderings_to_try.size(), 0);
 
   if (nla == "NE") {
-    while (!AS_finished_.load(std::memory_order_acquire))
-      ;
     if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
       log_.printDevInfo("NE interrupted before full matrix\n");
+      return kStatusErrorAnalyse;
+    }
+  } else {
+    if (ptr.back() >= AS_nz_limit_.load(std::memory_order_relaxed)) {
+      log_.printDevInfo("AS interrupted before full matrix\n");
       return kStatusErrorAnalyse;
     }
   }
@@ -588,6 +590,20 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
 
   auto run_analyse = [&](Int i) {
+    if (nla == "NE") {
+      if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
+        failure[i] = true;
+        log_.printDevInfo("NE interrupted before ordering\n");
+        return;
+      }
+    } else {
+      if (ptr.back() >= AS_nz_limit_.load(std::memory_order_relaxed)) {
+        failure[i] = true;
+        log_.printDevInfo("AS interrupted before ordering\n");
+        return;
+      }
+    }
+
     // compute ordering
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
@@ -643,6 +659,20 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     }
 
     if (failure[i]) return;
+
+    if (nla == "NE") {
+      if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
+        failure[i] = true;
+        log_.printDevInfo("NE interrupted before analyse\n");
+        return;
+      }
+    } else {
+      if (ptr.back() >= AS_nz_limit_.load(std::memory_order_relaxed)) {
+        failure[i] = true;
+        log_.printDevInfo("AS interrupted before analyse\n");
+        return;
+      }
+    }
 
     failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
 
