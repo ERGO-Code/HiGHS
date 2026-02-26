@@ -352,17 +352,17 @@ void HighsMipSolverData::startLocalMipComputation(
     // Copy incumbent solution as starting solution if bounds respected
     startLocalMipSol = incumbent;
     for (HighsInt col = 0; col < mipsolver.numCol(); col++) {
-      if (startLocalMipSol[col] > globaldom.col_lower_[col] - feastol ||
-          startLocalMipSol[col] < globaldom.col_upper_[col] + feastol) {
-        incumbent_feasible = false;
-        break;
-      }
       if (mipsolver.isColIntegral(col)) {
         if (fractionality(startLocalMipSol[col]) > feastol) {
           incumbent_feasible = false;
           break;
         }
         startLocalMipSol[col] = std::round(startLocalMipSol[col]);
+      }
+      if (startLocalMipSol[col] > globaldom.col_lower_[col] - feastol ||
+          startLocalMipSol[col] < globaldom.col_upper_[col] + feastol) {
+        incumbent_feasible = false;
+        break;
       }
       incumbent_feasible = true;
     }
