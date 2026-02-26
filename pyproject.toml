@@ -208,7 +208,8 @@ archs = ["auto64", "auto32"]
 # Enable free-threaded support
 enable = ["cpython-freethreading"]
 
-test-command = "pytest {project}/tests --import-mode=importlib"
+# test-command = "pytest {project}/tests --import-mode=importlib"
+test-command = "python -c \"import highspy._core; print(highspy._core.__file__)\" && pytest {project}/tests --import-mode=importlib"
 test-extras = ["test", "numpy"]
 build-verbosity = 1
 
