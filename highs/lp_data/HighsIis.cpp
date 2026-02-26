@@ -1107,14 +1107,10 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
   h.passModel(iis_lp);
   h.writeModel("");
   HighsStatus status = h.optimizeModel();
-  if (status != HighsStatus::kOk) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "HighsIis: Solve failure for IIS LP\n");
-    return lpOkReturn(false);
-  }
-  if (h.getModelStatus() != HighsModelStatus::kInfeasible) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "HighsIis: IIS LP is not infeasible\n");
+  if (status != HighsStatus::kOk ||
+      h.getModelStatus() != HighsModelStatus::kInfeasible) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "HighsIis: Failed to prove infeasibility for IIS LP\n");
     return lpOkReturn(false);
   }
   if (!(this->status_ == kIisModelStatusIrreducible)) return lpOkReturn(true);
@@ -1128,7 +1124,7 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
     if (this->col_bound_[iisCol] == kIisBoundStatusLower) {
       h.changeColBounds(iisCol, -kHighsInf, iis_lp.col_upper_[iisCol]);
       if (!optimal()) {
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "HighsIis: IIS column %d (LP column %d): relaxing lower "
                      "bound of %g yield IIS LP with status %s\n",
                      int(iisCol), int(iCol), iis_lp.col_lower_[iisCol],
@@ -1141,7 +1137,7 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
     if (this->col_bound_[iisCol] == kIisBoundStatusUpper) {
       h.changeColBounds(iisCol, iis_lp.col_lower_[iisCol], kHighsInf);
       if (!optimal()) {
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "HighsIis: IIS column %d (LP column %d): relaxing upper "
                      "bound of %g yield IIS LP with status %s\n",
                      int(iisCol), int(iCol), iis_lp.col_upper_[iisCol],

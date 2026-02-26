@@ -1881,7 +1881,14 @@ HighsStatus Highs::getIisInterfaceReturn(
     // and, if a true IIS is claimed, optimal/unbounded if any bound
     // is relaxed
     bool lp_ok = this->iis_.lpOk(opts);
-    if (!lp_ok) return HighsStatus::kError;
+    if (!lp_ok) {
+      // If we fail to prove infeasibility mark candidate set as invalid and
+      // return with a warning
+      this->iis_.valid_ = false;
+      if (this->iis_.status_ != kIisModelStatusTimeLimit)
+        this->iis_.status_ = kIisModelStatusUnknown;
+      return HighsStatus::kWarning;
+    }
   } else {
     assert(this->iis_.status_ <= kIisModelStatusReducible);
     assert(!this->iis_.col_bound_.size());

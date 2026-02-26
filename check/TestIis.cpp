@@ -516,7 +516,7 @@ TEST_CASE("lp-get-iis-time-limit", "[iis]") {
 
 TEST_CASE("lp-get-iis-partial", "[iis]") {
   // Test that IIS computation with irreducible strategy on vol1.mps
-  // returns a warning status and a reducible IS
+  // returns a warning status and a candidate IS
   //
   // The vol1.mps model is known to be infeasible but the result found
   // is not irreducible due to encountering kUnknown model statuses during
@@ -524,7 +524,6 @@ TEST_CASE("lp-get-iis-partial", "[iis]") {
   //
   // Expected behavior:
   // - getIis() returns HighsStatus::kWarning
-  // - IIS is valid but marked as reducible
   // - IIS contains both columns and rows
 
   std::string model_file = std::string(HIGHS_DIR) + "/check/instances/vol1.mps";
@@ -535,7 +534,6 @@ TEST_CASE("lp-get-iis-partial", "[iis]") {
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
   // Use kIisStrategyFromLp with irreducible flag
-  // This combination may not always find an irreducible IIS for complex models
   highs.setOptionValue("iis_strategy",
                        kIisStrategyFromLp + kIisStrategyIrreducible);
 
@@ -543,13 +541,7 @@ TEST_CASE("lp-get-iis-partial", "[iis]") {
   // Should return warning since the IIS found is not irreducible
   REQUIRE(highs.getIis(iis) == HighsStatus::kWarning);
 
-  // IIS should still be valid even though it's not irreducible
-  REQUIRE(iis.valid_ == true);
-
-  // Status should indicate the IIS is reducible
-  REQUIRE(iis.status_ == kIisModelStatusReducible);
-
-  // Should have identified some conflicting columns and rows
+  // Should have identified some potentially conflicting columns and rows
   REQUIRE(iis.col_index_.size() > 0);
   REQUIRE(iis.row_index_.size() > 0);
 
