@@ -566,6 +566,18 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   // vector<bool> is not thread-safe
   std::vector<char> failure(orderings_to_try.size(), 0);
 
+  if (nla == "NE") {
+    if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
+      log_.printDevInfo("NE interrupted before full matrix\n");
+      return kStatusErrorAnalyse;
+    }
+  } else {
+    if (ptr.back() >= AS_nz_limit_.load(std::memory_order_relaxed)) {
+      log_.printDevInfo("AS interrupted before full matrix\n");
+      return kStatusErrorAnalyse;
+    }
+  }
+
   // compute full-format matrix without diagonal entries
   std::vector<Int> full_ptr, full_rows;
   fullFromLower(ptr, rows, full_ptr, full_rows);
