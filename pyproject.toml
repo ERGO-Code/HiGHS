@@ -215,4 +215,4 @@ build-verbosity = 1
 [[tool.cibuildwheel.overrides]]
 select = "*-win32"
 # environment = { CMAKE_GENERATOR_PLATFORM = "Win32" }
-config-settings = { "cmake-args" = "-A Win32" }
+config-settings = { "cmake.args" = "-A;Win32" }
