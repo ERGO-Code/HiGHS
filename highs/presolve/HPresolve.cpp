@@ -4588,30 +4588,29 @@ HPresolve::Result HPresolve::detectDominatedCol(
 
 void HPresolve::computeLocks(
     HighsInt col, bool considerObjective,
-    std::function<bool(HighsInt, bool)> lockCallback) const {
+    std::function<bool(HighsInt, bool, bool)> lockCallback) const {
   // if the callback returns true, we stop examining the locks
   if (considerObjective) {
     // consider objective function
     if (model->col_cost_[col] < 0) {
       // downlock
-      if (lockCallback(-1, false)) return;
+      if (lockCallback(-1, true, false)) return;
     } else if (model->col_cost_[col] > 0) {
       // uplock
-      if (lockCallback(-1, true)) return;
+      if (lockCallback(-1, false, true)) return;
     }
   }
 
   // check coefficients
   for (const auto& nz : getColumnVector(col)) {
     // implied lower bound -> downlock
-    if (yieldsImpliedLowerBound(nz.index(), nz.value()) &&
-        lockCallback(nz.index(), false))
-      break;
-
+    bool hasDownLock = yieldsImpliedLowerBound(nz.index(), nz.value());
     // implied upper bound -> uplock
-    if (yieldsImpliedUpperBound(nz.index(), nz.value()) &&
-        lockCallback(nz.index(), true))
-      break;
+    bool hasUpLock = yieldsImpliedUpperBound(nz.index(), nz.value());
+    // callback
+    if (hasDownLock || hasUpLock) {
+      if (lockCallback(nz.index(), hasDownLock, hasUpLock)) break;
+    }
   }
 }
 
@@ -4685,6 +4684,124 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     return Result::kOk;
   };
 
+  // lambda that checks column for single equation handling
+  auto checkColumn = [&](HighsInt col, HighsInt colDirection, HighsInt row) {
+    if (colDirection * model->col_cost_[col] < 0) return false;
+    for (const auto& colNz : getColumnVector(col)) {
+      // skip equation we are inspecting; coefficient is positive (see sign
+      // adjustment performed by caller)
+      if (colNz.index() == row) continue;
+      // skip redundant rows
+      if (isRedundant(colNz.index())) continue;
+      // another ranged row blocks variable in both directions -> cannot be a
+      // candidate for fixing
+      if (isRanged(colNz.index())) return false;
+      // compute row direction
+      HighsInt rowDirection =
+          model->row_lower_[colNz.index()] == -kHighsInf &&
+                  model->row_upper_[colNz.index()] != kHighsInf
+              ? 1
+              : -1;
+      // coefficient must have the correct sign
+      if (colDirection * rowDirection * colNz.value() < 0) return false;
+    }
+    return true;
+  };
+
+  // lambda that computes activities for single equation handling
+  auto computeActivity = [&](HighsInt col, double val, HighsCDouble& activity,
+                             bool& activityFinite, HighsInt direction) {
+    // direction =  1 -> update upper bound on activity (supremum)
+    // direction = -1 -> update lower bound on activity (infimum)
+    double bound =
+        direction * val > 0 ? model->col_upper_[col] : model->col_lower_[col];
+    activityFinite = activityFinite && std::abs(bound) != kHighsInf;
+    if (activityFinite) activity += static_cast<HighsCDouble>(val) * bound;
+  };
+
+  // lambda for fixing variables
+  auto fixCols = [&](const std::vector<std::pair<HighsInt, double>>& vars,
+                     HighsInt direction) {
+    for (const auto& elm : vars) {
+      if (direction * elm.second > 0)
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
+      else
+        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
+    }
+    return Result::kOk;
+  };
+
+  // lambda for handling single equations
+  auto handleSingleEquation = [&](HighsInt row) {
+    assert(isEquation(row));
+    std::vector<std::pair<HighsInt, double>> sPlus;
+    std::vector<std::pair<HighsInt, double>> sMinus;
+    sPlus.reserve(rowsize[row]);
+    sMinus.reserve(rowsize[row]);
+    std::vector<HighsInt> sMark(model->num_col_, 0);
+    for (const auto& rowNz : getRowVector(row)) {
+      // flip column direction if coefficient is negative
+      // (equivalent to negating the column's coefficients)
+      HighsInt colDirection = std::copysign(HighsInt{1}, rowNz.value());
+      if (checkColumn(rowNz.index(), colDirection, row)) {
+        // store in S_+
+        sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
+        sMark[rowNz.index()] = 1;
+      } else if (checkColumn(rowNz.index(), -colDirection, row)) {
+        // store in S_-
+        sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
+        sMark[rowNz.index()] = -1;
+      }
+    }
+    // return if both sets are empty
+    if (sPlus.empty() && sMinus.empty()) return Result::kOk;
+    // compute activities
+    HighsCDouble activityTPlus = 0.0;
+    HighsCDouble activityTMinus = 0.0;
+    HighsCDouble activitySCPlus = 0.0;
+    HighsCDouble activitySCMinus = 0.0;
+    bool activityTPlusFinite = true;
+    bool activityTMinusFinite = true;
+    bool activitySCPlusFinite = true;
+    bool activitySCMinusFinite = true;
+    for (const auto& rowNz : getRowVector(row)) {
+      if (sMark[rowNz.index()] <= 0 ||
+          model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
+        // T_+
+        computeActivity(rowNz.index(), rowNz.value(), activityTPlus,
+                        activityTPlusFinite, HighsInt{1});
+      else
+        // S^C_+
+        computeActivity(rowNz.index(), rowNz.value(), activitySCPlus,
+                        activitySCPlusFinite, HighsInt{-1});
+      if (sMark[rowNz.index()] >= 0 ||
+          model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
+        // T_-
+        computeActivity(rowNz.index(), rowNz.value(), activityTMinus,
+                        activityTMinusFinite, HighsInt{-1});
+      else
+        // S^C_-
+        computeActivity(rowNz.index(), rowNz.value(), activitySCMinus,
+                        activitySCMinusFinite, HighsInt{1});
+      // break if activities are not finite
+      if ((sMinus.empty() || !activityTPlusFinite || !activitySCPlusFinite) &&
+          (sPlus.empty() || !activityTMinusFinite || !activitySCMinusFinite))
+        break;
+    }
+    // fix variables
+    if (!sMinus.empty() && activityTPlusFinite && activitySCPlusFinite &&
+        activityTPlus + activitySCPlus <=
+            model->row_lower_[row] + primal_feastol)
+      // fix all variables in S_-
+      HPRESOLVE_CHECKED_CALL(fixCols(sMinus, HighsInt{1}));
+    else if (!sPlus.empty() && activityTMinusFinite && activitySCMinusFinite &&
+             activityTMinus + activitySCMinus >=
+                 model->row_lower_[row] - primal_feastol)
+      // fix all variables in S_+
+      HPRESOLVE_CHECKED_CALL(fixCols(sPlus, HighsInt{-1}));
+    return Result::kOk;
+  };
+
   // lambda for computing tighter bounds
   auto hasTighterBound = [&](HighsInt col, HighsInt direction,
                              double currentBound, double& newBound) {
@@ -4719,12 +4836,13 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   HighsInt numUpLocks = 0;
   HighsInt downLockRow = -1;
   HighsInt upLockRow = -1;
-  auto lockCallback = [&](HighsInt row, bool isUpLock) {
+  auto lockCallback = [&](HighsInt row, bool hasDownLock, bool hasUpLock) {
     // count locks and remember row index
-    if (isUpLock) {
+    if (hasUpLock) {
       numUpLocks++;
       upLockRow = row;
-    } else {
+    }
+    if (hasDownLock) {
       numDownLocks++;
       downLockRow = row;
     }
@@ -4743,20 +4861,34 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     else
       HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
   } else {
-    if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
-        model->col_upper_[col] != kHighsInf) {
-      // try substitution
-      if (numDownLocks == 1 && downLockRow != -1) {
-        HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
-                                             model->col_upper_[col],
-                                             model->col_lower_[col]));
+    bool hasSingleDownLock = numDownLocks == 1 && downLockRow != -1;
+    bool hasSingleUpLock = numUpLocks == 1 && upLockRow != -1;
+    if (hasSingleDownLock || hasSingleUpLock) {
+      HighsInt equationRow =
+          hasSingleDownLock && isEquation(downLockRow)
+              ? downLockRow
+              : (hasSingleUpLock && isEquation(upLockRow) ? upLockRow : -1);
+      if (equationRow != -1) {
+        // see section 6.1 "Extension of dual fixing for single equations",
+        // Achterberg et al., Presolve Reductions in Mixed Integer
+        // Programming, INFORMS Journal on Computing 32(2):473-506.
+        HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
         if (colDeleted[col]) return Result::kOk;
-      }
-      if (numUpLocks == 1 && upLockRow != -1) {
-        HPRESOLVE_CHECKED_CALL(substituteCol(col, upLockRow, HighsInt{-1},
-                                             model->col_lower_[col],
-                                             model->col_upper_[col]));
-        if (colDeleted[col]) return Result::kOk;
+      } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
+                 model->col_upper_[col] != kHighsInf) {
+        // try substitution
+        if (hasSingleDownLock) {
+          HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
+                                               model->col_upper_[col],
+                                               model->col_lower_[col]));
+          if (colDeleted[col]) return Result::kOk;
+        }
+        if (hasSingleUpLock) {
+          HPRESOLVE_CHECKED_CALL(substituteCol(col, upLockRow, HighsInt{-1},
+                                               model->col_lower_[col],
+                                               model->col_upper_[col]));
+          if (colDeleted[col]) return Result::kOk;
+        }
       }
     }
     // try to strengthen bounds
@@ -5101,10 +5233,11 @@ HPresolve::Result HPresolve::enumerateSolutions(
         if ((std::get<4>(rows[i]) & std::get<4>(rows[ii])) == 0) continue;
         // get indices of binary variables in the row
         getBinaryRow(r2, binvars2, numnzs2);
-        // check if there is too much overlap
+        // check if there is too much overlap (compute overlap coefficient)
         numComparisons++;
         size_t overlap = computeRowOverlap(binvars, binvars2, numnzs, numnzs2);
-        if ((200 * overlap) / (numnzs + numnzs2) > maxPercentageRowOverlap) {
+        if ((100 * overlap) / std::min(numnzs, numnzs2) >
+            maxPercentageRowOverlap) {
           // mark row for removal
           numRowsRemoved++;
           r2 = -1;
@@ -5149,17 +5282,19 @@ HPresolve::Result HPresolve::enumerateSolutions(
   std::vector<double> col_lower(domain.col_lower_);
   std::vector<double> col_upper(domain.col_upper_);
 
+  // lambda for finding a variable to branch on
+  auto findBranchVar = [&](size_t numVars) {
+    // find variable for branching
+    for (size_t i = 0; i < numVars; i++)
+      if (!domain.isFixed(vars[i])) return vars[i];
+    return HighsInt{-1};
+  };
+
   // lambda for branching (just performs initial lower branch)
   auto doBranch = [&](size_t numVars, HighsInt& numBranches) {
     // find variable for branching
-    HighsInt branchvar = -1;
-    for (size_t i = 0; i < numVars; i++) {
-      if (!domain.isFixed(vars[i])) {
-        branchvar = vars[i];
-        break;
-      }
-    }
-    if (branchvar < 0) return;
+    HighsInt branchvar = findBranchVar(numVars);
+    assert(branchvar >= 0);
 
     // branch downwards
     branches[++numBranches] = {domain.getDomainChangeStack().size(),
@@ -5190,13 +5325,6 @@ HPresolve::Result HPresolve::enumerateSolutions(
     }
     // check if enumeration is complete
     return (numBranches >= 0);
-  };
-
-  // lambda for checking if a solution was found
-  auto solutionFound = [&](size_t numVars) {
-    for (size_t i = 0; i < numVars; i++)
-      if (!domain.isFixed(vars[i])) return false;
-    return true;
   };
 
   // lambda for checking whether the values of two binary variables are
@@ -5309,7 +5437,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
     while (true) {
       bool backtrack = domain.infeasible();
       if (!backtrack) {
-        backtrack = solutionFound(numVars);
+        backtrack = findBranchVar(numVars) < 0;
         if (backtrack)
           handleSolution(numVars, numSolutions, numWorstCaseBounds,
                          minNumActiveCols, maxNumActiveCols);
