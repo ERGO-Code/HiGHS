@@ -43,13 +43,15 @@ class FactorHiGHSSolver : public LinearSolver {
   const Int mA_, nA_, nzA_, nzQ_;
 
   Options& options_;
-  std::string ordering_ = "none";
+  std::string ordering_AS_ = "none";
+  std::string ordering_NE_ = "none";
 
   Int chooseNla();
   Int setNla();
   void setParallel();
   Int chooseOrdering(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                     const std::vector<Int>& signs, Symbolic& S);
+                     const std::vector<Int>& signs, Symbolic& S,
+                     std::string& ordering);
 
   Int buildNEstructure(Int64 nz_limit = kHighsIInf);
   Int buildNEvalues(const std::vector<double>& scaling);

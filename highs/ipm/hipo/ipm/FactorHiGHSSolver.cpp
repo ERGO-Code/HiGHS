@@ -265,7 +265,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   log_.printDevInfo("Performing AS analyse phase\n");
 
   clock.start();
-  Int status = chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S);
+  Int status = chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S, ordering_AS_);
   info_.analyse_AS_time += clock.stop();
 
   return status;
@@ -289,7 +289,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
   log_.printDevInfo("Performing NE analyse phase\n");
 
   clock.start();
-  Int status = chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S);
+  Int status = chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S, ordering_NE_);
   info_.analyse_NE_time += clock.stop();
 
   return status;
@@ -531,7 +531,7 @@ Int FactorHiGHSSolver::chooseNla() {
 Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
                                       const std::vector<Int>& ptr,
                                       const std::vector<Int>& signs,
-                                      Symbolic& S) {
+                                      Symbolic& S, std::string& ordering) {
   // Run analyse phase.
   // - If ordering is "amd", "metis", "rcm" run only the ordering requested.
   // - If ordering is "choose", run "amd", "metis", and choose the best.
@@ -642,16 +642,16 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
   if (orderings_to_try.size() < 2) {
     S = std::move(symbolics[0]);
-    ordering_ = orderings_to_try[0];
+    ordering = orderings_to_try[0];
 
   } else if (orderings_to_try.size() == 2) {
     // if there's only one success, obvious choice
     if (failure[0] && !failure[1]) {
       S = std::move(symbolics[1]);
-      ordering_ = orderings_to_try[1];
+      ordering = orderings_to_try[1];
     } else if (!failure[0] && failure[1]) {
       S = std::move(symbolics[0]);
-      ordering_ = orderings_to_try[0];
+      ordering = orderings_to_try[0];
     }
 
     else if (num_success > 1) {
@@ -691,7 +691,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       assert(chosen == 0 || chosen == 1);
 
       S = std::move(symbolics[chosen]);
-      ordering_ = orderings_to_try[chosen];
+      ordering = orderings_to_try[chosen];
     }
 
   } else {
@@ -738,7 +738,11 @@ Int FactorHiGHSSolver::setNla() {
   } else
     assert(1 == 0);
 
-  if (log_.debug(1)) log_stream << textline("Ordering:") << ordering_ << '\n';
+  if (log_.debug(1))
+    log_stream << textline("Ordering:")
+               << (options_.nla == kHipoAugmentedString ? ordering_AS_
+                                                        : ordering_NE_)
+               << '\n';
   log_.print(log_stream);
 
   return kStatusOk;
