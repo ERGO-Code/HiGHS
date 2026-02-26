@@ -208,7 +208,7 @@ archs = ["auto64", "auto32"]
 # Enable free-threaded support
 enable = ["cpython-freethreading"]
 
-test-command = "pytest {project}/tests"
+test-command = "pytest {project}/tests --import-mode=importlib"
 test-extras = ["test", "numpy"]
 build-verbosity = 1
 
