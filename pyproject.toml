@@ -210,7 +210,8 @@ enable = ["cpython-freethreading"]
 
 # test-command = "pytest {project}/tests --import-mode=importlib"
 # test-command = "python -c \"0import highspy._core; print(highspy._core.__file__)\" && pytest {project}/tests --import-mode=importlib"
-test-command = "python -c \"import importlib; m = importlib.import_module('highspy._core'); print([x for x in dir(m) if 'ense' in x or 'Sense' in x or 'Obj' in x])\""
+# test-command = "python -c \"import impo0rtlib; m = importlib.import_module('highspy._core'); print([x for x in dir(m) if 'ense' in x or 'Sense' in x or 'Obj' in x])\""
+test-command = "python -c \"import importlib.util; spec = importlib.util.find_spec('highspy._core'); print(spec.origin)\" && pytest {project}/tests --import-mode=importlib"
 test-extras = ["test", "numpy"]
 build-verbosity = 1
 
