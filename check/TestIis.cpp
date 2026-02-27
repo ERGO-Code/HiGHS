@@ -520,7 +520,7 @@ TEST_CASE("lp-get-iis-partial", "[iis]") {
   //
   // The vol1.mps model is known to be infeasible but the result found
   // is not irreducible due to encountering kUnknown model statuses during
-  // elastic and deletion filtering
+  // deletion filtering
   //
   // Expected behavior:
   // - getIis() returns HighsStatus::kWarning
@@ -533,9 +533,8 @@ TEST_CASE("lp-get-iis-partial", "[iis]") {
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
-  // Use kIisStrategyFromLp with irreducible flag
-  highs.setOptionValue("iis_strategy",
-                       kIisStrategyFromLp + kIisStrategyIrreducible);
+  // Use kIisStrategyIrreducible strategy
+  highs.setOptionValue("iis_strategy", kIisStrategyIrreducible);
 
   HighsIis iis;
   // Should return warning since the IIS found is not irreducible
