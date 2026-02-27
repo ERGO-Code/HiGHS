@@ -813,6 +813,17 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
       ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
 }
 
+HighsInt Highs_addIndicatorConstraint(void* highs, const HighsInt binary_col,
+                                      const HighsInt binary_value,
+                                      const HighsInt num_nz,
+                                      const HighsInt* index,
+                                      const double* value, const double lower,
+                                      const double upper) {
+  return (HighsInt)((Highs*)highs)
+      ->addIndicatorConstraint(binary_col, binary_value, num_nz, index, value,
+                               lower, upper);
+}
+
 HighsInt Highs_ensureColwise(void* highs) {
   return (HighsInt)((Highs*)highs)->ensureColwise();
 }

@@ -472,6 +472,22 @@ std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getPrimalRay(
   return std::make_tuple(status, has_primal_ray, py::cast(value));
 }
 
+HighsStatus highs_addIndicatorConstraint(Highs* h, HighsInt binary_col,
+                                         HighsInt binary_value,
+                                         HighsInt num_nz,
+                                         dense_array_t<HighsInt> indices,
+                                         dense_array_t<double> values,
+                                         double lower, double upper) {
+  py::buffer_info indices_info = indices.request();
+  py::buffer_info values_info = values.request();
+
+  HighsInt* indices_ptr = reinterpret_cast<HighsInt*>(indices_info.ptr);
+  double* values_ptr = static_cast<double*>(values_info.ptr);
+
+  return h->addIndicatorConstraint(binary_col, binary_value, num_nz,
+                                   indices_ptr, values_ptr, lower, upper);
+}
+
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
                          HighsInt num_new_nz, dense_array_t<HighsInt> indices,
                          dense_array_t<double> values) {
@@ -1494,6 +1510,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("changeCoeff", &Highs::changeCoeff)
       .def("addRows", &highs_addRows)
       .def("addRow", &highs_addRow)
+      .def("addIndicatorConstraint", &highs_addIndicatorConstraint)
+      .def("getNumIndicatorConstraints", &Highs::getNumIndicatorConstraints)
       .def("addCol", &highs_addCol)
       .def("addCols", &highs_addCols)
       .def("addVar", &highs_addVar)

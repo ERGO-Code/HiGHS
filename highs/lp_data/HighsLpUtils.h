@@ -287,6 +287,9 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 HighsLp withoutSemiVariables(const HighsLp& lp, HighsSolution& solution,
                              const double primal_feasibility_tolerance);
 
+HighsLp withoutIndicatorConstraints(const HighsLp& lp,
+                                    const HighsLogOptions& log_options);
+
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
 
 // Get subvectors from data structure of data0, data1, data2 and

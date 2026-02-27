@@ -116,6 +116,77 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   }
   if (is_mip) lp.integrality_ = std::move(col_integrality);
 
+  // Process indicator constraints: extract row coefficients from the
+  // colwise matrix and remove those rows from the LP
+  if (!raw_indicators.empty()) {
+    // Set matrix dimensions before any matrix operations
+    lp.setMatrixDimensions();
+
+    // Ensure integrality is set for indicator binary variables
+    if (lp.integrality_.empty()) {
+      lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
+    }
+    // Build a set of indicator row indices for efficient lookup
+    std::vector<bool> is_indicator_row(lp.num_row_, false);
+    for (const auto& ri : raw_indicators) is_indicator_row[ri.row_idx] = true;
+
+    // Extract row coefficients from colwise matrix
+    // For each indicator row, gather (col, value) pairs
+    std::vector<std::vector<std::pair<HighsInt, double>>> row_entries(
+        lp.num_row_);
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsInt row = lp.a_matrix_.index_[iEl];
+        if (is_indicator_row[row]) {
+          row_entries[row].push_back({iCol, lp.a_matrix_.value_[iEl]});
+        }
+      }
+    }
+
+    // Build indicator constraints
+    for (const auto& ri : raw_indicators) {
+      HighsIndicatorConstraint ic;
+      ic.binary_col = ri.binary_col;
+      ic.binary_value = ri.binary_value;
+      ic.row_lower = lp.row_lower_[ri.row_idx];
+      ic.row_upper = lp.row_upper_[ri.row_idx];
+      if (!lp.row_names_.empty() &&
+          static_cast<size_t>(ri.row_idx) < lp.row_names_.size()) {
+        ic.name = lp.row_names_[ri.row_idx];
+      }
+      for (const auto& entry : row_entries[ri.row_idx]) {
+        ic.row_index.push_back(entry.first);
+        ic.row_value.push_back(entry.second);
+      }
+      // Ensure binary variable is integer
+      if (lp.integrality_[ri.binary_col] == HighsVarType::kContinuous) {
+        lp.integrality_[ri.binary_col] = HighsVarType::kInteger;
+      }
+      lp.indicator_constraints_.push_back(std::move(ic));
+    }
+
+    // Remove indicator rows from the LP
+    // Build a sorted list of indicator row indices
+    std::vector<HighsInt> rows_to_delete;
+    for (const auto& ri : raw_indicators) rows_to_delete.push_back(ri.row_idx);
+    std::sort(rows_to_delete.begin(), rows_to_delete.end());
+    // Remove duplicates
+    rows_to_delete.erase(
+        std::unique(rows_to_delete.begin(), rows_to_delete.end()),
+        rows_to_delete.end());
+
+    HighsIndexCollection index_collection;
+    index_collection.dimension_ = lp.num_row_;
+    index_collection.is_set_ = true;
+    index_collection.set_ = rows_to_delete;
+    index_collection.set_num_entries_ = rows_to_delete.size();
+    lp.deleteRows(index_collection);
+
+    // Update column indices in indicator constraints to account for
+    // deleted rows (column indices don't change when deleting rows)
+  }
+
   hessian.dim_ = q_dim;
   hessian.format_ = HessianFormat::kTriangular;
   hessian.start_ = std::move(q_start);
@@ -311,6 +382,9 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
         case HMpsFF::Parsekey::kSos:
           keyword = parseSos(log_options, f, keyword);
           break;
+        case HMpsFF::Parsekey::kIndicators:
+          keyword = parseIndicators(log_options, f);
+          break;
         case HMpsFF::Parsekey::kFail:
           f.close();
           return FreeFormatParserReturnCode::kParserError;
@@ -367,10 +441,6 @@ bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
     case HMpsFF::Parsekey::kUsercuts:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse USERCUTS section\n");
-      break;
-    case HMpsFF::Parsekey::kIndicators:
-      highsLogUser(log_options, HighsLogType::kError,
-                   "MPS file reader cannot parse INDICATORS section\n");
       break;
     case HMpsFF::Parsekey::kGencons:
       highsLogUser(log_options, HighsLogType::kError,
@@ -2193,4 +2263,94 @@ double HMpsFF::getValue(const std::string& word, bool& is_nan,
   //  if (str_tolower(lower_word) == "nan") return true;
   return value;
 }
+typename HMpsFF::Parsekey HMpsFF::parseIndicators(
+    const HighsLogOptions& log_options, std::istream& file) {
+  std::string strline, word;
+  bool skip;
+  while (getMpsLine(file, strline, skip)) {
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
+
+    size_t begin, end;
+    HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, word);
+
+    if (key != Parsekey::kNone) {
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read INDICATORS OK\n");
+      return key;
+    }
+
+    // Expected format: IF row_name binary_var_name value
+    if (word != "IF") {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "INDICATORS section: expected IF keyword, got \"%s\"\n",
+                   word.c_str());
+      return HMpsFF::Parsekey::kFail;
+    }
+
+    // Read row_name
+    if (is_end(strline, end)) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "INDICATORS section: missing row name\n");
+      return HMpsFF::Parsekey::kFail;
+    }
+    std::string row_name = first_word(strline, end);
+    end = first_word_end(strline, end);
+
+    // Read binary_var_name
+    if (is_end(strline, end)) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "INDICATORS section: missing binary variable name\n");
+      return HMpsFF::Parsekey::kFail;
+    }
+    std::string binary_var_name = first_word(strline, end);
+    end = first_word_end(strline, end);
+
+    // Read value (0 or 1)
+    if (is_end(strline, end)) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "INDICATORS section: missing indicator value\n");
+      return HMpsFF::Parsekey::kFail;
+    }
+    std::string value_str = first_word(strline, end);
+    HighsInt binary_value = atoi(value_str.c_str());
+    if (binary_value != 0 && binary_value != 1) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "INDICATORS section: indicator value must be 0 or 1, "
+                   "got \"%s\"\n",
+                   value_str.c_str());
+      return HMpsFF::Parsekey::kFail;
+    }
+
+    // Look up row index
+    auto row_it = rowname2idx.find(row_name);
+    if (row_it == rowname2idx.end()) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "INDICATORS section: unknown row \"%s\"\n",
+                   row_name.c_str());
+      return HMpsFF::Parsekey::kFail;
+    }
+    HighsInt row_idx = row_it->second;
+
+    // Look up column index
+    auto col_it = colname2idx.find(binary_var_name);
+    if (col_it == colname2idx.end()) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "INDICATORS section: unknown column \"%s\"\n",
+                   binary_var_name.c_str());
+      return HMpsFF::Parsekey::kFail;
+    }
+    HighsInt binary_col = col_it->second;
+
+    RawIndicator ri;
+    ri.row_idx = row_idx;
+    ri.binary_col = binary_col;
+    ri.binary_value = binary_value;
+    raw_indicators.push_back(ri);
+  }
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "readMPS: Read INDICATORS OK\n");
+  return HMpsFF::Parsekey::kEnd;
+}
+
 }  // namespace free_format_parser

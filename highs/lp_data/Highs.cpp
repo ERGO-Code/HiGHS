@@ -2723,6 +2723,54 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::addIndicatorConstraint(
+    const HighsInt binary_col, const HighsInt binary_value,
+    const HighsInt num_nz, const HighsInt* indices, const double* values,
+    const double lower, const double upper) {
+  this->logHeader();
+  HighsLp& lp = model_.lp_;
+  // Validate binary_col
+  if (binary_col < 0 || binary_col >= lp.num_col_) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addIndicatorConstraint: binary_col = %" HIGHSINT_FORMAT
+                 " is out of range [0, %" HIGHSINT_FORMAT ")\n",
+                 binary_col, lp.num_col_);
+    return HighsStatus::kError;
+  }
+  // Validate binary_value
+  if (binary_value != 0 && binary_value != 1) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addIndicatorConstraint: binary_value = %" HIGHSINT_FORMAT
+                 " is not 0 or 1\n",
+                 binary_value);
+    return HighsStatus::kError;
+  }
+  // Validate that binary_col has integer integrality
+  if (lp.integrality_.size() <= static_cast<size_t>(binary_col) ||
+      (lp.integrality_[binary_col] != HighsVarType::kInteger &&
+       lp.integrality_[binary_col] != HighsVarType::kImplicitInteger)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addIndicatorConstraint: binary_col = %" HIGHSINT_FORMAT
+                 " is not an integer variable\n",
+                 binary_col);
+    return HighsStatus::kError;
+  }
+  HighsIndicatorConstraint ic;
+  ic.binary_col = binary_col;
+  ic.binary_value = binary_value;
+  ic.row_index.assign(indices, indices + num_nz);
+  ic.row_value.assign(values, values + num_nz);
+  ic.row_lower = lower;
+  ic.row_upper = upper;
+  lp.indicator_constraints_.push_back(std::move(ic));
+  clearDerivedModelProperties();
+  return returnFromHighs(HighsStatus::kOk);
+}
+
+HighsInt Highs::getNumIndicatorConstraints() const {
+  return static_cast<HighsInt>(model_.lp_.indicator_constraints_.size());
+}
+
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
   if ((sense == ObjSense::kMinimize) !=
       (model_.lp_.sense_ == ObjSense::kMinimize)) {
@@ -4137,14 +4185,22 @@ HighsStatus Highs::callSolveMip() {
   // Check that the model isn't row-wise
   assert(model_.lp_.a_matrix_.format_ != MatrixFormat::kRowwise);
   const bool has_semi_variables = model_.lp_.hasSemiVariables();
+  const bool has_indicators = model_.lp_.hasIndicatorConstraints();
+  const bool needs_reformulation = has_semi_variables || has_indicators;
   HighsLp use_lp;
-  if (has_semi_variables) {
-    // Replace any semi-variables by a continuous/integer variable and
-    // a (temporary) binary. Any initial solution must accommodate this.
-    use_lp = withoutSemiVariables(model_.lp_, solution_,
-                                  options_.primal_feasibility_tolerance);
+  if (needs_reformulation) {
+    // First reformulate indicator constraints (only adds rows)
+    if (has_indicators) {
+      use_lp = withoutIndicatorConstraints(model_.lp_, options_.log_options);
+    }
+    // Then reformulate semi-variables (adds cols + rows)
+    if (has_semi_variables) {
+      HighsLp& base = has_indicators ? use_lp : model_.lp_;
+      use_lp = withoutSemiVariables(base, solution_,
+                                    options_.primal_feasibility_tolerance);
+    }
   }
-  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
+  HighsLp& lp = needs_reformulation ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
