@@ -178,7 +178,7 @@ else()
         target_link_directories(highs PRIVATE
           ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/lib/Windows
         )
-        target_link_libraries(highs PRIVATE cuda cublas cusparse cudart)
+        target_link_libraries(highs PRIVATE cudalin cuda cublas cusparse cudart)
 
       endif()
     else() # Linux
@@ -187,6 +187,7 @@ else()
       endif()
 
       set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    endif()
   endif()
 
   target_include_directories(highs PRIVATE ${include_dirs})
