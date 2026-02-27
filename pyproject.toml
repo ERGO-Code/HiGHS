@@ -213,7 +213,8 @@ enable = ["cpython-freethreading"]
 # test-command = "python -c \"import impo0rtlib; m = importlib.import_module('highspy._core'); print([x for x in dir(m) if 'ense' in x or 'Sense' in x or 'Obj' in x])\""
 # test-command = "python -c \"import importlib.util; spec = importlib.util.find_spec('highspy._core'); print(spec.origin)\" && pytest {project}/tests --import-mode=importlib"
 # test-command = "python -c \"import importlib.util; imcudalinport os; site = __import__('site'); pkgs = site.getsitepackages(); print(pkgs); print(os.listdir(pkgs[0] + '/highspy/'))\""
-test-command = "python -c \"import sys, os; sp = [p for p in sys.path if 'site-packages' in p][0]; print(os.listdir(sp + '/highspy/'))\""
+# test-command = "python -c \"import sys, os; sp = [p for p in sys.path if 'site-packages' in p][0]; print(os.listdir(sp + '/highspy/'))\""
+test-command = "python -c \"import sys, os; sp = [p for p in sys.path if 'site-packages' in p][0]; print(sp); print(os.listdir(sp))\""
 test-extras = ["test", "numpy"]
 build-verbosity = 1
 
