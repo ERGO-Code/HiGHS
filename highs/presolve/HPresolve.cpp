@@ -687,13 +687,12 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
     bool useImplBound = mipsolver == nullptr ||
                         mipsolver->mipdata_->postSolveStack.getOrigRowIndex(
                             row) < mipsolver->orig_model_->num_row_;
-    bool updateColBound = false;
 
     if (direction * val > 0) {
       // upper bound
       // when solving a MIP, keep (1) tighter bounds on integer variables or (2)
       // implied bound (as column bound)
-      updateColBound =
+      bool updateColBound =
           mipsolver != nullptr &&
           ((model->integrality_[col] != HighsVarType::kContinuous &&
             impliedBound < model->col_upper_[col] - primal_feastol) ||
@@ -708,7 +707,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
       // lower bound
       // when solving a MIP, keep (1) tighter bounds on integer variables or (2)
       // implied bound (as column bound)
-      updateColBound =
+      bool updateColBound =
           mipsolver != nullptr &&
           ((model->integrality_[col] != HighsVarType::kContinuous &&
             impliedBound > model->col_lower_[col] + primal_feastol) ||
