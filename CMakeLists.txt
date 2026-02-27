@@ -185,6 +185,8 @@ if (CUPDLP_GPU)
     # With FindCUDAConf.cmake
     # Need to have the CUDA_HOME environment variable set.
     include(FindCUDAConf)
+  elseif(GPU_STUBS)
+    # Stub build - no toolkit needed
   else()
     # Without FindCUDAConf.cmake
     enable_language(CUDA)

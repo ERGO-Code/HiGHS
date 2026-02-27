@@ -168,13 +168,25 @@ else()
     add_subdirectory(pdlp/cupdlp/cuda)
 
     if (WIN32)
-      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
-    else()
-      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
-    endif()
+      if (NOT GPU_STUBS)
+        target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
+      else()
+        # Stub build - no toolkit needed
+        target_include_directories(highs PRIVATE
+          ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/include
+        )
+        target_link_directories(highs PRIVATE
+          ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/lib/Windows
+        )
+        target_link_libraries(highs PRIVATE cuda cublas cusparse cudart)
 
-    set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+      endif()
+    else() # Linux
+      if (NOT GPU_STUBS)
+        target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
+      endif()
 
+      set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   endif()
 
   target_include_directories(highs PRIVATE ${include_dirs})
