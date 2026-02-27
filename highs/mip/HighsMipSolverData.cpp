@@ -359,8 +359,8 @@ void HighsMipSolverData::startLocalMipComputation(
         }
         startLocalMipSol[col] = std::round(startLocalMipSol[col]);
       }
-      if (startLocalMipSol[col] > globaldom.col_lower_[col] - feastol ||
-          startLocalMipSol[col] < globaldom.col_upper_[col] + feastol) {
+      if (startLocalMipSol[col] < globaldom.col_lower_[col] - feastol ||
+          startLocalMipSol[col] > globaldom.col_upper_[col] + feastol) {
         incumbent_feasible = false;
         break;
       }
