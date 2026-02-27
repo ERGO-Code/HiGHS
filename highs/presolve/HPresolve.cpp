@@ -4983,6 +4983,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
     // vectors for candidates and activity bounds
     std::vector<candidate> candidates;
+    candidates.reserve(rowsize[row]);
     HighsCDouble sumLower = 0.0;
     HighsCDouble sumUpper = 0.0;
     bool sumLowerFinite = true;
