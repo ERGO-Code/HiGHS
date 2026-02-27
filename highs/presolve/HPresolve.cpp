@@ -681,54 +681,44 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 
     if (std::abs(impliedBound) * kHighsTiny > primal_feastol) return;
 
+    // do not use the implied bound if this a not a model row, since the
+    // row can be removed and should not be used, e.g., to identify a
+    // column as implied free
+    bool useImplBound = mipsolver == nullptr ||
+                        mipsolver->mipdata_->postSolveStack.getOrigRowIndex(
+                            row) < mipsolver->orig_model_->num_row_;
+    bool updateColBound = false;
+
     if (direction * val > 0) {
-      // bound is an upper bound
-      if (mipsolver != nullptr) {
-        // solving a MIP; keep tighter bounds on integer variables
-        if (model->integrality_[col] != HighsVarType::kContinuous &&
-            impliedBound < model->col_upper_[col] - primal_feastol)
-          changeColUpper(col, impliedBound);
-
-        // do not use the implied bound if this a not a model row, since the
-        // row can be removed and should not be used, e.g., to identify a
-        // column as implied free
-        if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
-            mipsolver->orig_model_->num_row_) {
-          // keep implied bound (as column bound)
-          if (impliedBound < model->col_upper_[col] - threshold)
-            changeColUpper(col, impliedBound);
-          // set to +infinity, so that it is not stored as an implied bound
-          impliedBound = kHighsInf;
-        }
-      }
+      // upper bound
+      // when solving a MIP, keep (1) tighter bounds on integer variables or (2)
+      // implied bound (as column bound)
+      updateColBound =
+          mipsolver != nullptr &&
+          ((model->integrality_[col] != HighsVarType::kContinuous &&
+            impliedBound < model->col_upper_[col] - primal_feastol) ||
+           (!useImplBound &&
+            impliedBound < model->col_upper_[col] - threshold));
 
       // only tighten bound if it is tighter by a wide enough margin
-      if (impliedBound < implColUpper[col] - threshold)
+      if (useImplBound && impliedBound < implColUpper[col] - threshold)
         changeImplColUpper(col, impliedBound, row);
+      if (updateColBound) changeColUpper(col, impliedBound);
     } else {
-      // bound is a lower bound
-      if (mipsolver != nullptr) {
-        // solving a MIP; keep tighter bounds on integer variables
-        if (model->integrality_[col] != HighsVarType::kContinuous &&
-            impliedBound > model->col_lower_[col] + primal_feastol)
-          changeColLower(col, impliedBound);
-
-        // do not use the implied bound if this a not a model row, since the
-        // row can be removed and should not be used, e.g., to identify a
-        // column as implied free
-        if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
-            mipsolver->orig_model_->num_row_) {
-          // keep implied bound (as column bound)
-          if (impliedBound > model->col_lower_[col] + threshold)
-            changeColLower(col, impliedBound);
-          // set to -infinity, so that it is not stored as an implied bound
-          impliedBound = -kHighsInf;
-        }
-      }
+      // lower bound
+      // when solving a MIP, keep (1) tighter bounds on integer variables or (2)
+      // implied bound (as column bound)
+      updateColBound =
+          mipsolver != nullptr &&
+          ((model->integrality_[col] != HighsVarType::kContinuous &&
+            impliedBound > model->col_lower_[col] + primal_feastol) ||
+           (!useImplBound &&
+            impliedBound > model->col_lower_[col] + threshold));
 
       // only tighten bound if it is tighter by a wide enough margin
-      if (impliedBound > implColLower[col] + threshold)
+      if (useImplBound && impliedBound > implColLower[col] + threshold)
         changeImplColLower(col, impliedBound, row);
+      if (updateColBound) changeColLower(col, impliedBound);
     }
   };
 
