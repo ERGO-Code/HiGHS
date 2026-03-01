@@ -4040,7 +4040,7 @@ void HEkk::unapplyTabooVariableIn(vector<double>& values) {
 }
 
 bool HEkk::logicalBasis() const {
-  for (HighsInt iRow = 0; iRow < this->lp_.num_row_; iRow++) 
+  for (HighsInt iRow = 0; iRow < this->lp_.num_row_; iRow++)
     if (basis_.basicIndex_[iRow] < this->lp_.num_col_) return false;
   return true;
 }

@@ -424,6 +424,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       //
       // In #1865, phase 2 primal simplex was forced with large primal
       // infeasibilities
+      //
       if (num_unscaled_primal_infeasibilities == 0 ||
           scaled_model_status == HighsModelStatus::kObjectiveTarget) {
         // Only dual infeasibilities, or objective target reached (in
@@ -457,9 +458,8 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         // Using dual simplex, so force Devex if starting from an advanced
         // basis with no steepest edge weights
         if ((status.has_basis || basis.valid) &&
-            !status.has_dual_steepest_edge_weights) {
+            !status.has_dual_steepest_edge_weights)
           ekk_info.dual_edge_weight_strategy = kSimplexEdgeWeightStrategyDevex;
-        }
       }
       //
       // Solve the unscaled LP with scaled NLA

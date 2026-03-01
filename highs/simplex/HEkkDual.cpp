@@ -48,7 +48,8 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
 
   // Possibly use Li dual steepest edge weights by not storing squared
   // primal infeasibilities
-  possiblyUseLiDualSteepestEdge();
+  if (this->edge_weight_mode == EdgeWeightMode::kSteepestEdge)
+    possiblyUseLiDualSteepestEdge();
 
   assert(status.has_invert);
   if (!status.has_invert) {
@@ -132,6 +133,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
 
   // Consider initialising edge weights
   if (status.has_dual_steepest_edge_weights) {
+    assert(this->edge_weight_mode == EdgeWeightMode::kSteepestEdge);
     // Dual steepest edge weights are known, so possibly check
     assert((HighsInt)ekk_instance_.dual_edge_weight_.size() >= solver_num_row);
     assert((HighsInt)ekk_instance_.scattered_dual_edge_weight_.size() >=
