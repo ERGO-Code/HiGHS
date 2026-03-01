@@ -1942,6 +1942,7 @@ HighsStatus Highs::getFixedLp(HighsLp& lp) const {
   lp = this->model_.lp_;
   const std::vector<HighsVarType> integrality = this->model_.lp_.integrality_;
   lp.integrality_.clear();
+  lp.sos_constraints_.clear();
   HighsInt num_non_conts_fractional = 0;
   double max_fractional = 0;
   for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++) {
@@ -2769,6 +2770,52 @@ HighsStatus Highs::addIndicatorConstraint(
 
 HighsInt Highs::getNumIndicatorConstraints() const {
   return static_cast<HighsInt>(model_.lp_.indicator_constraints_.size());
+}
+
+HighsStatus Highs::addSosConstraint(const HighsInt type,
+                                     const HighsInt num_members,
+                                     const HighsInt* columns,
+                                     const double* weights) {
+  this->logHeader();
+  HighsLp& lp = model_.lp_;
+  // Validate type
+  if (type != 1 && type != 2) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addSosConstraint: type = %" HIGHSINT_FORMAT
+                 " is not 1 or 2\n",
+                 type);
+    return HighsStatus::kError;
+  }
+  // Validate num_members
+  if (num_members < 1) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addSosConstraint: num_members = %" HIGHSINT_FORMAT
+                 " must be at least 1\n",
+                 num_members);
+    return HighsStatus::kError;
+  }
+  // Validate column indices
+  for (HighsInt i = 0; i < num_members; i++) {
+    if (columns[i] < 0 || columns[i] >= lp.num_col_) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "addSosConstraint: columns[%" HIGHSINT_FORMAT
+                   "] = %" HIGHSINT_FORMAT
+                   " is out of range [0, %" HIGHSINT_FORMAT ")\n",
+                   i, columns[i], lp.num_col_);
+      return HighsStatus::kError;
+    }
+  }
+  HighsSosConstraint sos;
+  sos.type = type;
+  sos.columns.assign(columns, columns + num_members);
+  sos.weights.assign(weights, weights + num_members);
+  lp.sos_constraints_.push_back(std::move(sos));
+  clearDerivedModelProperties();
+  return returnFromHighs(HighsStatus::kOk);
+}
+
+HighsInt Highs::getNumSosConstraints() const {
+  return static_cast<HighsInt>(model_.lp_.sos_constraints_.size());
 }
 
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
@@ -4201,6 +4248,10 @@ HighsStatus Highs::callSolveMip() {
     }
   }
   HighsLp& lp = needs_reformulation ? use_lp : model_.lp_;
+  // Ensure integrality_ is populated for MIP solver (may be empty if
+  // model is MIP only due to SOS constraints)
+  if (lp.integrality_.empty() && lp.num_col_ > 0)
+    lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
   HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;

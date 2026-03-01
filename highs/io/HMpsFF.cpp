@@ -34,11 +34,6 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
                  "Quadratic rows not supported by HiGHS\n");
     return FreeFormatParserReturnCode::kParserError;
   }
-  if (!sos_entries.empty()) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "SOS not supported by HiGHS\n");
-    return FreeFormatParserReturnCode::kParserError;
-  }
   if (!cone_entries.empty()) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Cones not supported by HiGHS\n");
@@ -115,6 +110,18 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     }
   }
   if (is_mip) lp.integrality_ = std::move(col_integrality);
+
+  // Process SOS constraints
+  for (size_t i = 0; i < sos_entries.size(); i++) {
+    HighsSosConstraint sos;
+    sos.type = sos_type[i];
+    if (i < sos_name.size()) sos.name = sos_name[i];
+    for (const auto& entry : sos_entries[i]) {
+      sos.columns.push_back(entry.first);
+      sos.weights.push_back(entry.second);
+    }
+    lp.sos_constraints_.push_back(std::move(sos));
+  }
 
   // Process indicator constraints: extract row coefficients from the
   // colwise matrix and remove those rows from the LP
@@ -622,7 +629,7 @@ double getWallTime() {
   using namespace std::chrono;
   const double wall_time = kNoClockCalls
                                ? 0
-                               : duration_cast<duration<double> >(
+                               : duration_cast<duration<double>>(
                                      wall_clock::now().time_since_epoch())
                                      .count();
   return wall_time;
@@ -2166,7 +2173,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
 
       sos_type.push_back(word[1] == '1' ? 1 : 2);
       sos_name.push_back(sosname);
-      sos_entries.push_back(std::vector<std::pair<HighsInt, double> >());
+      sos_entries.push_back(std::vector<std::pair<HighsInt, double>>());
       continue;
     }
 

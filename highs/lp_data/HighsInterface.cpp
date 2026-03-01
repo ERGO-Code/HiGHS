@@ -97,6 +97,10 @@ void Highs::reportModelStats() const {
       highsLogDev(log_options, HighsLogType::kInfo,
                   "Indicators: %" HIGHSINT_FORMAT "\n",
                   (HighsInt)lp.indicator_constraints_.size());
+    if (lp.hasSosConstraints())
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "SOS       : %" HIGHSINT_FORMAT "\n",
+                  (HighsInt)lp.sos_constraints_.size());
   } else {
     std::stringstream stats_line;
     stats_line << problem_type;
@@ -125,6 +129,9 @@ void Highs::reportModelStats() const {
       stats_line << "; " << lp.indicator_constraints_.size()
                  << " indicator constraint"
                  << (lp.indicator_constraints_.size() == 1 ? "" : "s");
+    if (lp.hasSosConstraints())
+      stats_line << "; " << lp.sos_constraints_.size() << " SOS constraint"
+                 << (lp.sos_constraints_.size() == 1 ? "" : "s");
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                  stats_line.str().c_str());
   }

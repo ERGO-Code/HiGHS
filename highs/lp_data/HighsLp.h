@@ -48,6 +48,7 @@ class HighsLp {
   std::vector<HighsVarType> integrality_;
 
   std::vector<HighsIndicatorConstraint> indicator_constraints_;
+  std::vector<HighsSosConstraint> sos_constraints_;
 
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
@@ -67,6 +68,7 @@ class HighsLp {
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
   bool hasIndicatorConstraints() const;
+  bool hasSosConstraints() const;
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;

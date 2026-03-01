@@ -1103,13 +1103,34 @@ class Highs {
                                      const HighsInt binary_value,
                                      const HighsInt num_nz,
                                      const HighsInt* indices,
-                                     const double* values,
-                                     const double lower, const double upper);
+                                     const double* values, const double lower,
+                                     const double upper);
 
   /**
    * @brief Return the number of indicator constraints
    */
   HighsInt getNumIndicatorConstraints() const;
+
+  /**
+   * @brief Add an SOS constraint to the incumbent model.
+   *
+   * SOS1: at most one variable in the set can be nonzero.
+   * SOS2: at most two adjacent (by weight) variables can be nonzero.
+   *
+   * @param type         1 for SOS1, 2 for SOS2
+   * @param num_members  Number of variables in the set
+   * @param columns      Array of column indices
+   * @param weights      Array of weights (used for ordering)
+   */
+  HighsStatus addSosConstraint(const HighsInt type,
+                                const HighsInt num_members,
+                                const HighsInt* columns,
+                                const double* weights);
+
+  /**
+   * @brief Return the number of SOS constraints
+   */
+  HighsInt getNumSosConstraints() const;
 
   HighsStatus ensureColwise() {
     this->model_.lp_.ensureColwise();

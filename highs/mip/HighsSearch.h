@@ -87,6 +87,8 @@ class HighsSearch {
     HighsInt domgchgStackPos;
     uint8_t skipDepthCount;
     uint8_t opensubtrees;
+    // SOS branching: fixings for the other child (applied on backtrack)
+    std::vector<HighsDomainChange> sos_other_fixings;
 
     NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf,
              std::shared_ptr<const HighsBasis> parentBasis = nullptr,

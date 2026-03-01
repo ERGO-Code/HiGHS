@@ -56,6 +56,8 @@ class HighsDomain {
       return Reason{kConflictingBounds, pos};
     }
     static Reason objective() { return Reason{kObjective, 0}; }
+    enum { kSos = -8 };
+    static Reason sos(HighsInt sos_idx) { return Reason{kSos, sos_idx}; }
   };
 
   class ConflictSet {

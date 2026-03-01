@@ -28,12 +28,6 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
   try {
     Model m = readinstance(filename);
 
-    if (!m.soss.empty()) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "SOS not supported by HiGHS\n");
-      return FilereaderRetcode::kParserError;
-    }
-
     // build variable index and gather variable information
     std::map<std::string, unsigned int> varindex;
 
@@ -62,6 +56,19 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // Clear lp.integrality_ if problem is pure LP
     if (static_cast<size_t>(num_continuous) == m.variables.size())
       lp.integrality_.clear();
+
+    // Process SOS constraints
+    for (const auto& sos_ptr : m.soss) {
+      HighsSosConstraint sos;
+      sos.type = sos_ptr->type;
+      sos.name = sos_ptr->name;
+      for (const auto& entry : sos_ptr->entries) {
+        sos.columns.push_back(varindex[entry.first->name]);
+        sos.weights.push_back(entry.second);
+      }
+      lp.sos_constraints_.push_back(std::move(sos));
+    }
+
     // get objective
     lp.objective_name_ = m.objective->name;
     // ToDo: Fix m.objective->offset and then use it here

@@ -96,6 +96,29 @@ std::string HighsMipSolverData::solutionSourceToString(
   }
 }
 
+bool HighsMipSolverData::sosFeasible(
+    const std::vector<double>& solution) const {
+  for (const auto& sos : sos_constraints_) {
+    if (sos.type == 1) {
+      HighsInt num_nonzero = 0;
+      for (HighsInt j = sos.start; j < sos.end; ++j) {
+        if (std::abs(solution[sos_members_[j]]) > feastol) num_nonzero++;
+      }
+      if (num_nonzero > 1) return false;
+    } else {
+      HighsInt first_nz = -1, last_nz = -1;
+      for (HighsInt j = sos.start; j < sos.end; ++j) {
+        if (std::abs(solution[sos_members_[j]]) > feastol) {
+          if (first_nz == -1) first_nz = j;
+          last_nz = j;
+        }
+      }
+      if (last_nz - first_nz > 1) return false;
+    }
+  }
+  return true;
+}
+
 bool HighsMipSolverData::checkSolution(
     const std::vector<double>& solution) const {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -117,6 +140,8 @@ bool HighsMipSolverData::checkSolution(
     if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
     if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
+
+  if (!sosFeasible(solution)) return false;
 
   return true;
 }
@@ -174,6 +199,8 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
     if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
+
+  if (!sosFeasible(solution)) return false;
 
   return addIncumbent(solution, double(obj), solution_source);
 }
@@ -380,6 +407,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     lpmodel.integrality_.clear();
+    lpmodel.sos_constraints_.clear();
     ipm.passModel(std::move(lpmodel));
     const bool dump_ipm_lp = false;
     if (dump_ipm_lp && !mipsolver.submip) {
@@ -753,6 +781,14 @@ void HighsMipSolverData::init() {
 void HighsMipSolverData::runMipPresolve(
     const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
+  // Skip presolve for models with SOS constraints, since presolve is
+  // not SOS-aware and can make reductions that violate SOS constraints
+  if (mipsolver.orig_model_->hasSosConstraints()) {
+    presolve_status = HighsPresolveStatus::kNotPresolved;
+    presolvedModel = *mipsolver.model_;
+    mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
+    return;
+  }
   presolve::HPresolve presolve;
   if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
     mipsolver.modelstatus_ = HighsModelStatus::kMemoryLimit;
@@ -915,6 +951,60 @@ void HighsMipSolverData::runSetup() {
 
     rowintegral[i] = integral;
     maxAbsRowCoef[i] = maxabsval;
+  }
+
+  // Initialize SOS constraint data from the original model
+  // We need to map column indices through presolve
+  sos_constraints_.clear();
+  sos_members_.clear();
+  sos_weights_.clear();
+  col_sos_membership_.clear();
+  const HighsLp* orig = mipsolver.orig_model_;
+  if (orig && !orig->sos_constraints_.empty()) {
+    col_sos_membership_.resize(model.num_col_);
+    // Build a mapping from original column indices to presolved indices
+    // using the postsolve stack (if available)
+    bool has_postsolve = postSolveStack.getOrigNumCol() > 0;
+    std::vector<HighsInt> orig_to_presolved(orig->num_col_, -1);
+    if (has_postsolve) {
+      for (HighsInt i = 0; i < model.num_col_; i++) {
+        HighsInt orig_col = postSolveStack.getOrigColIndex(i);
+        if (orig_col >= 0 && orig_col < orig->num_col_)
+          orig_to_presolved[orig_col] = i;
+      }
+    } else {
+      // No presolve: identity mapping
+      for (HighsInt i = 0; i < std::min(orig->num_col_, model.num_col_); i++)
+        orig_to_presolved[i] = i;
+    }
+    for (HighsInt s = 0;
+         s < static_cast<HighsInt>(orig->sos_constraints_.size()); s++) {
+      const auto& sos = orig->sos_constraints_[s];
+      SosInfo info;
+      info.type = sos.type;
+      info.start = static_cast<HighsInt>(sos_members_.size());
+      // Sort members by weight for SOS2 adjacency
+      std::vector<std::pair<double, HighsInt>> weight_col;
+      for (size_t j = 0; j < sos.columns.size(); j++) {
+        HighsInt orig_col = sos.columns[j];
+        if (orig_col < 0 || orig_col >= orig->num_col_) continue;
+        HighsInt presolved_col = orig_to_presolved[orig_col];
+        if (presolved_col >= 0)
+          weight_col.push_back({sos.weights[j], presolved_col});
+      }
+      std::sort(weight_col.begin(), weight_col.end());
+      for (const auto& wc : weight_col) {
+        sos_members_.push_back(wc.second);
+        sos_weights_.push_back(wc.first);
+      }
+      info.end = static_cast<HighsInt>(sos_members_.size());
+      if (info.end > info.start) {
+        HighsInt sos_idx = static_cast<HighsInt>(sos_constraints_.size());
+        for (HighsInt j = info.start; j < info.end; j++)
+          col_sos_membership_[sos_members_[j]].push_back({sos_idx, j});
+        sos_constraints_.push_back(info);
+      }
+    }
   }
 
   // compute row activities and propagate all rows once
@@ -1126,6 +1216,7 @@ try_again:
     //     bound_violation_, integrality_violation_, row_violation_);
     HighsLp fixedModel = *mipsolver.orig_model_;
     fixedModel.integrality_.clear();
+    fixedModel.sos_constraints_.clear();
     for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
       if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
         double solval = std::round(solution.col_value[i]);

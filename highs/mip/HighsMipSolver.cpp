@@ -972,9 +972,40 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
     }
   }
 
-  const bool feasible = bound_violation <= mip_feasibility_tolerance &&
-                        integrality_violation <= mip_feasibility_tolerance &&
-                        row_violation <= mip_feasibility_tolerance;
+  bool feasible = bound_violation <= mip_feasibility_tolerance &&
+                  integrality_violation <= mip_feasibility_tolerance &&
+                  row_violation <= mip_feasibility_tolerance;
+
+  // Check SOS constraints
+  if (feasible && !lp->sos_constraints_.empty()) {
+    for (const auto& sos : lp->sos_constraints_) {
+      if (sos.type == 1) {
+        // SOS1: at most one member nonzero
+        HighsInt num_nonzero = 0;
+        for (HighsInt col : sos.columns) {
+          if (col >= 0 && col < lp->num_col_ &&
+              std::abs(col_value[col]) > mip_feasibility_tolerance)
+            num_nonzero++;
+        }
+        if (num_nonzero > 1) { feasible = false; break; }
+      } else {
+        // SOS2: nonzero members must be adjacent by weight order
+        // Columns in sos.columns are stored in weight order
+        HighsInt first_nz = -1, last_nz = -1;
+        for (HighsInt k = 0; k < static_cast<HighsInt>(sos.columns.size());
+             k++) {
+          HighsInt col = sos.columns[k];
+          if (col >= 0 && col < lp->num_col_ &&
+              std::abs(col_value[col]) > mip_feasibility_tolerance) {
+            if (first_nz == -1) first_nz = k;
+            last_nz = k;
+          }
+        }
+        if (last_nz - first_nz > 1) { feasible = false; break; }
+      }
+    }
+  }
+
   return feasible;
 }
 

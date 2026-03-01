@@ -17,6 +17,7 @@
 
 bool HighsLp::isMip() const {
   if (this->hasIndicatorConstraints()) return true;
+  if (this->hasSosConstraints()) return true;
   size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
     assert(static_cast<HighsInt>(integrality_size) == this->num_col_);
@@ -28,6 +29,10 @@ bool HighsLp::isMip() const {
 
 bool HighsLp::hasIndicatorConstraints() const {
   return !this->indicator_constraints_.empty();
+}
+
+bool HighsLp::hasSosConstraints() const {
+  return !this->sos_constraints_.empty();
 }
 
 bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
@@ -62,7 +67,7 @@ bool HighsLp::hasMods() const {
 bool HighsLp::needsMods(const double infinite_cost) const {
   assert(this->has_infinite_cost_ == this->hasInfiniteCost(infinite_cost));
   return this->has_infinite_cost_ || this->hasSemiVariables() ||
-         this->hasIndicatorConstraints();
+         this->hasIndicatorConstraints() || this->hasSosConstraints();
 }
 
 bool HighsLp::operator==(const HighsLp& lp) const {
@@ -98,9 +103,12 @@ bool HighsLp::equalVectors(const HighsLp& lp) const {
   equal_vectors = this->col_lower_ == lp.col_lower_ && equal_vectors;
   equal_vectors = this->row_upper_ == lp.row_upper_ && equal_vectors;
   equal_vectors = this->row_lower_ == lp.row_lower_ && equal_vectors;
-  equal_vectors = this->indicator_constraints_.size() ==
-                      lp.indicator_constraints_.size() &&
-                  equal_vectors;
+  equal_vectors =
+      this->indicator_constraints_.size() == lp.indicator_constraints_.size() &&
+      equal_vectors;
+  equal_vectors =
+      this->sos_constraints_.size() == lp.sos_constraints_.size() &&
+      equal_vectors;
 #ifndef NDEBUG
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif
@@ -227,6 +235,7 @@ void HighsLp::clear() {
   this->integrality_.clear();
 
   this->indicator_constraints_.clear();
+  this->sos_constraints_.clear();
 
   this->col_hash_.clear();
   this->row_hash_.clear();

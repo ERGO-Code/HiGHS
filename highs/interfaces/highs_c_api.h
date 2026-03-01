@@ -1490,6 +1490,22 @@ HighsInt Highs_addIndicatorConstraint(void* highs, const HighsInt binary_col,
                                       const double* value, const double lower,
                                       const double upper);
 
+/**
+ * Add an SOS (Special Ordered Set) constraint.
+ *
+ * @param highs        A pointer to the Highs instance.
+ * @param type         1 for SOS1, 2 for SOS2.
+ * @param num_members  Number of variables in the set.
+ * @param columns      Array of column indices.
+ * @param weights      Array of weights (used for ordering).
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_addSosConstraint(void* highs, const HighsInt type,
+                                const HighsInt num_members,
+                                const HighsInt* columns,
+                                const double* weights);
+
 HighsInt Highs_ensureColwise(void* highs);
 
 /**

@@ -103,6 +103,18 @@ struct HighsMipSolverData {
   std::vector<HighsInt> integral_cols;
   std::vector<HighsInt> continuous_cols;
 
+  // SOS constraint data
+  struct SosInfo {
+    HighsInt type;   // 1 or 2
+    HighsInt start;  // index into sos_members_/sos_weights_
+    HighsInt end;
+  };
+  std::vector<SosInfo> sos_constraints_;
+  std::vector<HighsInt> sos_members_;
+  std::vector<double> sos_weights_;
+  // For each column, list of {sos_idx, position_in_members} pairs
+  std::vector<std::vector<std::pair<HighsInt, HighsInt>>> col_sos_membership_;
+
   HighsSymmetries symmetries;
   std::shared_ptr<const StabilizerOrbits> globalOrbits;
 
@@ -261,6 +273,7 @@ struct HighsMipSolverData {
       const bool possibly_store_as_new_incumbent = true);
   double percentageInactiveIntegers() const;
   void performRestart();
+  bool sosFeasible(const std::vector<double>& solution) const;
   bool checkSolution(const std::vector<double>& solution) const;
   std::vector<std::tuple<HighsInt, HighsInt, double>> getInfeasibleRows(
       const std::vector<double>& solution) const;

@@ -29,7 +29,8 @@ std::function<dense_array_t<T>(const Base&)> make_readonly_ptr(
   };
 }
 
-// 'setter' wrapper around numpy array to std::vector<T> (copies the data from python)
+// 'setter' wrapper around numpy array to std::vector<T> (copies the data from
+// python)
 template <typename Base, typename T>
 std::function<void(Base&, dense_array_t<T>)> make_setter_ptr(
     std::vector<T> Base::* member) {
@@ -38,9 +39,9 @@ std::function<void(Base&, dense_array_t<T>)> make_setter_ptr(
     if (buf.ndim != 1) {
       throw std::runtime_error("Expected a 1D array");
     }
-    
-    (self.*member) = std::move(std::vector<T>(static_cast<T*>(buf.ptr),
-                                   static_cast<T*>(buf.ptr) + buf.shape[0]));
+
+    (self.*member) = std::move(std::vector<T>(
+        static_cast<T*>(buf.ptr), static_cast<T*>(buf.ptr) + buf.shape[0]));
   };
 }
 
@@ -473,8 +474,7 @@ std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getPrimalRay(
 }
 
 HighsStatus highs_addIndicatorConstraint(Highs* h, HighsInt binary_col,
-                                         HighsInt binary_value,
-                                         HighsInt num_nz,
+                                         HighsInt binary_value, HighsInt num_nz,
                                          dense_array_t<HighsInt> indices,
                                          dense_array_t<double> values,
                                          double lower, double upper) {
@@ -486,6 +486,19 @@ HighsStatus highs_addIndicatorConstraint(Highs* h, HighsInt binary_col,
 
   return h->addIndicatorConstraint(binary_col, binary_value, num_nz,
                                    indices_ptr, values_ptr, lower, upper);
+}
+
+HighsStatus highs_addSosConstraint(Highs* h, HighsInt type,
+                                    HighsInt num_members,
+                                    dense_array_t<HighsInt> columns,
+                                    dense_array_t<double> weights) {
+  py::buffer_info columns_info = columns.request();
+  py::buffer_info weights_info = weights.request();
+
+  HighsInt* columns_ptr = reinterpret_cast<HighsInt*>(columns_info.ptr);
+  double* weights_ptr = static_cast<double*>(weights_info.ptr);
+
+  return h->addSosConstraint(type, num_members, columns_ptr, weights_ptr);
 }
 
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
@@ -1090,19 +1103,19 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .export_values();
 
   py::enum_<IisBoundStatus>(m, "IisBoundStatus", py::module_local())
-    .value("kIisBoundStatusDropped", IisBoundStatus::kIisBoundStatusDropped)
-    .value("kIisBoundStatusNull", IisBoundStatus::kIisBoundStatusNull)
-    .value("kIisBoundStatusFree", IisBoundStatus::kIisBoundStatusFree)
-    .value("kIisBoundStatusLower", IisBoundStatus::kIisBoundStatusLower)
-    .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
-    .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed)
-    .export_values();
+      .value("kIisBoundStatusDropped", IisBoundStatus::kIisBoundStatusDropped)
+      .value("kIisBoundStatusNull", IisBoundStatus::kIisBoundStatusNull)
+      .value("kIisBoundStatusFree", IisBoundStatus::kIisBoundStatusFree)
+      .value("kIisBoundStatusLower", IisBoundStatus::kIisBoundStatusLower)
+      .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
+      .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed)
+      .export_values();
 
   py::enum_<IisStatus>(m, "IisStatus", py::module_local())
-    .value("kIisStatusNotInConflict", IisStatus::kIisStatusNotInConflict)
-    .value("kIisStatusMaybeInConflict", IisStatus::kIisStatusMaybeInConflict)
-    .value("kIisStatusInConflict", IisStatus::kIisStatusInConflict)
-    .export_values();
+      .value("kIisStatusNotInConflict", IisStatus::kIisStatusNotInConflict)
+      .value("kIisStatusMaybeInConflict", IisStatus::kIisStatusMaybeInConflict)
+      .value("kIisStatusInConflict", IisStatus::kIisStatusInConflict)
+      .export_values();
 
   py::enum_<HighsDebugLevel>(m, "HighsDebugLevel", py::module_local())
       .value("kHighsDebugLevelNone", HighsDebugLevel::kHighsDebugLevelNone)
@@ -1199,29 +1212,28 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("max_relative_dual_infeasibility",
                      &HighsInfo::max_relative_dual_infeasibility)
       .def_readwrite("num_primal_residual_errors",
-		     &HighsInfo::num_primal_residual_errors)
+                     &HighsInfo::num_primal_residual_errors)
       .def_readwrite("max_primal_residual_error",
-		     &HighsInfo::max_primal_residual_error)
+                     &HighsInfo::max_primal_residual_error)
       .def_readwrite("num_dual_residual_errors",
-		     &HighsInfo::num_dual_residual_errors)
+                     &HighsInfo::num_dual_residual_errors)
       .def_readwrite("max_dual_residual_error",
-		     &HighsInfo::max_dual_residual_error)
+                     &HighsInfo::max_dual_residual_error)
       .def_readwrite("num_relative_primal_residual_errors",
-		     &HighsInfo::num_relative_primal_residual_errors)
+                     &HighsInfo::num_relative_primal_residual_errors)
       .def_readwrite("max_relative_primal_residual_error",
-		     &HighsInfo::max_relative_primal_residual_error)
+                     &HighsInfo::max_relative_primal_residual_error)
       .def_readwrite("num_relative_dual_residual_errors",
-		     &HighsInfo::num_relative_dual_residual_errors)
+                     &HighsInfo::num_relative_dual_residual_errors)
       .def_readwrite("max_relative_dual_residual_error",
-		     &HighsInfo::max_relative_dual_residual_error)
+                     &HighsInfo::max_relative_dual_residual_error)
       .def_readwrite("num_complementarity_violations",
                      &HighsInfo::num_complementarity_violations)
       .def_readwrite("max_complementarity_violation",
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("primal_dual_objective_error",
-		   &HighsInfo::primal_dual_objective_error)
-      .def_readwrite("primal_dual_integral",
-                     &HighsInfo::primal_dual_integral);
+                     &HighsInfo::primal_dual_objective_error)
+      .def_readwrite("primal_dual_integral", &HighsInfo::primal_dual_integral);
   py::class_<HighsOptions>(m, "HighsOptions", py::module_local())
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
@@ -1245,13 +1257,17 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsOptions::primal_feasibility_tolerance)
       .def_readwrite("dual_feasibility_tolerance",
                      &HighsOptions::dual_feasibility_tolerance)
-      .def_readwrite("primal_residual_tolerance", &HighsOptions::primal_residual_tolerance)
-      .def_readwrite("dual_residual_tolerance", &HighsOptions::dual_residual_tolerance)
-      .def_readwrite("optimality_tolerance", &HighsOptions::optimality_tolerance)
+      .def_readwrite("primal_residual_tolerance",
+                     &HighsOptions::primal_residual_tolerance)
+      .def_readwrite("dual_residual_tolerance",
+                     &HighsOptions::dual_residual_tolerance)
+      .def_readwrite("optimality_tolerance",
+                     &HighsOptions::optimality_tolerance)
       .def_readwrite("objective_bound", &HighsOptions::objective_bound)
       .def_readwrite("objective_target", &HighsOptions::objective_target)
       .def_readwrite("threads", &HighsOptions::threads)
-      .def_readwrite("user_objective_scale", &HighsOptions::user_objective_scale)
+      .def_readwrite("user_objective_scale",
+                     &HighsOptions::user_objective_scale)
       .def_readwrite("user_bound_scale", &HighsOptions::user_bound_scale)
       .def_readwrite("highs_debug_level", &HighsOptions::highs_debug_level)
       .def_readwrite("highs_analysis_level",
@@ -1279,28 +1295,42 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsOptions::write_solution_to_file)
       .def_readwrite("write_solution_style",
                      &HighsOptions::write_solution_style)
-      .def_readwrite("glpsol_cost_row_location", &HighsOptions::glpsol_cost_row_location)
-      .def_readwrite("write_presolved_model_file", &HighsOptions::write_presolved_model_file)
+      .def_readwrite("glpsol_cost_row_location",
+                     &HighsOptions::glpsol_cost_row_location)
+      .def_readwrite("write_presolved_model_file",
+                     &HighsOptions::write_presolved_model_file)
       .def_readwrite("output_flag", &HighsOptions::output_flag)
       .def_readwrite("log_to_console", &HighsOptions::log_to_console)
       .def_readwrite("timeless_log", &HighsOptions::timeless_log)
-      .def_readwrite("ipm_optimality_tolerance", &HighsOptions::ipm_optimality_tolerance)
+      .def_readwrite("ipm_optimality_tolerance",
+                     &HighsOptions::ipm_optimality_tolerance)
       .def_readwrite("ipm_iteration_limit", &HighsOptions::ipm_iteration_limit)
       .def_readwrite("pdlp_scaling", &HighsOptions::pdlp_scaling)
-      .def_readwrite("pdlp_iteration_limit", &HighsOptions::pdlp_iteration_limit)
-      .def_readwrite("pdlp_e_restart_method", &HighsOptions::pdlp_e_restart_method)
-      .def_readwrite("pdlp_optimality_tolerance", &HighsOptions::pdlp_optimality_tolerance)
+      .def_readwrite("pdlp_iteration_limit",
+                     &HighsOptions::pdlp_iteration_limit)
+      .def_readwrite("pdlp_e_restart_method",
+                     &HighsOptions::pdlp_e_restart_method)
+      .def_readwrite("pdlp_optimality_tolerance",
+                     &HighsOptions::pdlp_optimality_tolerance)
       .def_readwrite("qp_iteration_limit", &HighsOptions::qp_iteration_limit)
       .def_readwrite("qp_nullspace_limit", &HighsOptions::qp_nullspace_limit)
-      .def_readwrite("qp_regularization_value", &HighsOptions::qp_regularization_value)
-      .def_readwrite("mip_heuristic_run_feasibility_jump", &HighsOptions::mip_heuristic_run_feasibility_jump)
-      .def_readwrite("mip_heuristic_run_rins", &HighsOptions::mip_heuristic_run_rins)
-      .def_readwrite("mip_heuristic_run_rens", &HighsOptions::mip_heuristic_run_rens)
-      .def_readwrite("mip_heuristic_run_root_reduced_cost", &HighsOptions::mip_heuristic_run_root_reduced_cost)
-      .def_readwrite("mip_heuristic_run_zi_round", &HighsOptions::mip_heuristic_run_zi_round)
-      .def_readwrite("mip_heuristic_run_shifting", &HighsOptions::mip_heuristic_run_shifting)
-      .def_readwrite("blend_multi_objectives", &HighsOptions::blend_multi_objectives)
-  // Advanced options
+      .def_readwrite("qp_regularization_value",
+                     &HighsOptions::qp_regularization_value)
+      .def_readwrite("mip_heuristic_run_feasibility_jump",
+                     &HighsOptions::mip_heuristic_run_feasibility_jump)
+      .def_readwrite("mip_heuristic_run_rins",
+                     &HighsOptions::mip_heuristic_run_rins)
+      .def_readwrite("mip_heuristic_run_rens",
+                     &HighsOptions::mip_heuristic_run_rens)
+      .def_readwrite("mip_heuristic_run_root_reduced_cost",
+                     &HighsOptions::mip_heuristic_run_root_reduced_cost)
+      .def_readwrite("mip_heuristic_run_zi_round",
+                     &HighsOptions::mip_heuristic_run_zi_round)
+      .def_readwrite("mip_heuristic_run_shifting",
+                     &HighsOptions::mip_heuristic_run_shifting)
+      .def_readwrite("blend_multi_objectives",
+                     &HighsOptions::blend_multi_objectives)
+      // Advanced options
       .def_readwrite("log_dev_level", &HighsOptions::log_dev_level)
       .def_readwrite("log_githash", &HighsOptions::log_githash)
       .def_readwrite("solve_relaxation", &HighsOptions::solve_relaxation)
@@ -1338,7 +1368,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsOptions::mip_heuristic_effort)
       .def_readwrite("mip_min_logging_interval",
                      &HighsOptions::mip_min_logging_interval);
-	py::class_<Highs>(m, "_Highs", py::module_local())
+  py::class_<Highs>(m, "_Highs", py::module_local())
       .def(py::init<>())
       .def("version", &Highs::version)
       .def("versionMajor", &Highs::versionMajor)
@@ -1512,6 +1542,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("addRow", &highs_addRow)
       .def("addIndicatorConstraint", &highs_addIndicatorConstraint)
       .def("getNumIndicatorConstraints", &Highs::getNumIndicatorConstraints)
+      .def("addSosConstraint", &highs_addSosConstraint)
+      .def("getNumSosConstraints", &Highs::getNumSosConstraints)
       .def("addCol", &highs_addCol)
       .def("addCols", &highs_addCols)
       .def("addVar", &highs_addVar)
@@ -1762,7 +1794,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kDevex", EdgeWeightMode::kDevex)
       .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
       .value("kCount", EdgeWeightMode::kCount);
-  
+
   py::module_ callbacks = m.def_submodule("cb", "Callback interface submodule");
   // Types for interface
   py::enum_<HighsCallbackType>(callbacks, "HighsCallbackType",

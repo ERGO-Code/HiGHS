@@ -1828,6 +1828,7 @@ void HighsDomain::markPropagateCut(Reason reason) {
     case Reason::kModelRowUpper:
     case Reason::kConflictingBounds:
     case Reason::kObjective:
+    case Reason::kSos:
       break;
     default:
       assert(reason.type >= 0 &&
@@ -2008,6 +2009,52 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     if (!infeasible_) {
       mipsolver->mipdata_->implications.applyImplications(
           *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
+    }
+  }
+
+  // SOS domain propagation: if a variable is fixed nonzero, propagate
+  if (!infeasible_ && mipsolver->mipdata_ &&
+      !mipsolver->mipdata_->col_sos_membership_.empty() &&
+      boundchg.column <
+          static_cast<HighsInt>(
+              mipsolver->mipdata_->col_sos_membership_.size()) &&
+      reason.type != Reason::kSos) {
+    HighsInt col = boundchg.column;
+    double feastol = mipsolver->mipdata_->feastol;
+    // Check if col is now fixed to a nonzero value
+    if (col_lower_[col] > feastol || col_upper_[col] < -feastol) {
+      for (const auto& [sos_idx, col_pos] :
+           mipsolver->mipdata_->col_sos_membership_[col]) {
+        if (infeasible_) break;
+        const auto& sos = mipsolver->mipdata_->sos_constraints_[sos_idx];
+        if (sos.type == 1) {
+          // SOS1: fix all other members to 0
+          for (HighsInt j = sos.start; j < sos.end; ++j) {
+            if (infeasible_) break;
+            HighsInt member = mipsolver->mipdata_->sos_members_[j];
+            if (member == col) continue;
+            if (col_upper_[member] > 0.0)
+              changeBound(HighsBoundType::kUpper, member, 0.0,
+                          Reason::sos(sos_idx));
+            if (!infeasible_ && col_lower_[member] < 0.0)
+              changeBound(HighsBoundType::kLower, member, 0.0,
+                          Reason::sos(sos_idx));
+          }
+        } else {
+          // SOS2: fix all non-adjacent members to 0
+          for (HighsInt j = sos.start; j < sos.end; ++j) {
+            if (infeasible_) break;
+            if (j >= col_pos - 1 && j <= col_pos + 1) continue;
+            HighsInt member = mipsolver->mipdata_->sos_members_[j];
+            if (col_upper_[member] > 0.0)
+              changeBound(HighsBoundType::kUpper, member, 0.0,
+                          Reason::sos(sos_idx));
+            if (!infeasible_ && col_lower_[member] < 0.0)
+              changeBound(HighsBoundType::kLower, member, 0.0,
+                          Reason::sos(sos_idx));
+          }
+        }
+      }
     }
   }
 }
@@ -3105,6 +3152,7 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
   switch (localdom.infeasible_reason.type) {
     case Reason::kUnknown:
     case Reason::kBranching:
+    case Reason::kSos:
       return false;
     case Reason::kConflictingBounds: {
       resolvedDomainChanges.clear();
@@ -3371,6 +3419,7 @@ bool HighsDomain::ConflictSet::explainBoundChange(
     case Reason::kUnknown:
     case Reason::kBranching:
     case Reason::kConflictingBounds:
+    case Reason::kSos:
       return false;
     case Reason::kCliqueTable: {
       HighsInt col = localdom.domchgreason_[domchg.pos].index >> 1;
@@ -3592,6 +3641,7 @@ bool HighsDomain::ConflictSet::resolvable(HighsInt domChgPos) const {
   switch (localdom.domchgreason_[domChgPos].type) {
     case Reason::kBranching:
     case Reason::kUnknown:
+    case Reason::kSos:
       return false;
     default:
       return true;

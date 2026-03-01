@@ -824,6 +824,14 @@ HighsInt Highs_addIndicatorConstraint(void* highs, const HighsInt binary_col,
                                lower, upper);
 }
 
+HighsInt Highs_addSosConstraint(void* highs, const HighsInt type,
+                                const HighsInt num_members,
+                                const HighsInt* columns,
+                                const double* weights) {
+  return (HighsInt)((Highs*)highs)
+      ->addSosConstraint(type, num_members, columns, weights);
+}
+
 HighsInt Highs_ensureColwise(void* highs) {
   return (HighsInt)((Highs*)highs)->ensureColwise();
 }

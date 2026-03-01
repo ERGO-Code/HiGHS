@@ -163,6 +163,13 @@ struct HighsIndicatorConstraint {
   std::string name;  // Optional constraint name (from MPS)
 };
 
+struct HighsSosConstraint {
+  HighsInt type;  // 1 for SOS1, 2 for SOS2
+  std::vector<HighsInt> columns;
+  std::vector<double> weights;
+  std::string name;
+};
+
 struct HighsLinearObjective {
   double weight = 0;
   double offset = 0;
