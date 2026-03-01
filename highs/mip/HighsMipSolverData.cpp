@@ -119,6 +119,7 @@ bool HighsMipSolverData::sosFeasible(
   return true;
 }
 
+
 bool HighsMipSolverData::checkSolution(
     const std::vector<double>& solution) const {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -781,8 +782,8 @@ void HighsMipSolverData::init() {
 void HighsMipSolverData::runMipPresolve(
     const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
-  // Skip presolve for models with SOS constraints, since presolve is
-  // not SOS-aware and can make reductions that violate SOS constraints
+  // Skip presolve for models with SOS constraints, since
+  // presolve is not aware of these and can make invalid reductions
   if (mipsolver.orig_model_->hasSosConstraints()) {
     presolve_status = HighsPresolveStatus::kNotPresolved;
     presolvedModel = *mipsolver.model_;
@@ -954,18 +955,16 @@ void HighsMipSolverData::runSetup() {
   }
 
   // Initialize SOS constraint data from the original model
-  // We need to map column indices through presolve
   sos_constraints_.clear();
   sos_members_.clear();
   sos_weights_.clear();
   col_sos_membership_.clear();
   const HighsLp* orig = mipsolver.orig_model_;
   if (orig && !orig->sos_constraints_.empty()) {
-    col_sos_membership_.resize(model.num_col_);
     // Build a mapping from original column indices to presolved indices
-    // using the postsolve stack (if available)
+    std::vector<HighsInt> orig_to_presolved;
+    orig_to_presolved.assign(orig->num_col_, -1);
     bool has_postsolve = postSolveStack.getOrigNumCol() > 0;
-    std::vector<HighsInt> orig_to_presolved(orig->num_col_, -1);
     if (has_postsolve) {
       for (HighsInt i = 0; i < model.num_col_; i++) {
         HighsInt orig_col = postSolveStack.getOrigColIndex(i);
@@ -977,6 +976,7 @@ void HighsMipSolverData::runSetup() {
       for (HighsInt i = 0; i < std::min(orig->num_col_, model.num_col_); i++)
         orig_to_presolved[i] = i;
     }
+    col_sos_membership_.resize(model.num_col_);
     for (HighsInt s = 0;
          s < static_cast<HighsInt>(orig->sos_constraints_.size()); s++) {
       const auto& sos = orig->sos_constraints_[s];
@@ -1019,6 +1019,48 @@ void HighsMipSolverData::runSetup() {
 
     pruned_treeweight = 1.0;
     return;
+  }
+
+  // Initial SOS propagation for members that are already fixed to nonzero.
+  // The normal SOS propagation in changeBound() only triggers on bound
+  // changes, so variables fixed from the start need explicit handling.
+  if (!sos_constraints_.empty()) {
+    for (HighsInt s = 0;
+         s < static_cast<HighsInt>(sos_constraints_.size()); s++) {
+      const auto& sos = sos_constraints_[s];
+      for (HighsInt j = sos.start; j < sos.end; ++j) {
+        HighsInt member = sos_members_[j];
+        if (!domain.isFixed(member)) continue;
+        if (domain.col_lower_[member] == 0.0) continue;
+        // Member is fixed to nonzero: fix all other SOS members to 0
+        for (HighsInt k = sos.start; k < sos.end; ++k) {
+          if (domain.infeasible()) break;
+          if (k == j) continue;
+          HighsInt other = sos_members_[k];
+          if (domain.col_upper_[other] > 0.0)
+            domain.changeBound(HighsBoundType::kUpper, other, 0.0,
+                               HighsDomain::Reason::sos(s));
+          if (!domain.infeasible() && domain.col_lower_[other] < 0.0)
+            domain.changeBound(HighsBoundType::kLower, other, 0.0,
+                               HighsDomain::Reason::sos(s));
+        }
+        break;  // only one member can be nonzero in SOS1
+      }
+      if (domain.infeasible()) break;
+    }
+    if (domain.infeasible()) {
+      mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
+      updateLowerBound(kHighsInf);
+      pruned_treeweight = 1.0;
+      return;
+    }
+    domain.propagate();
+    if (domain.infeasible()) {
+      mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
+      updateLowerBound(kHighsInf);
+      pruned_treeweight = 1.0;
+      return;
+    }
   }
 
   if (model.num_col_ == 0) {

@@ -626,7 +626,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
             if (pruned) mipsolver.mipdata_->debugSolution.nodePruned(localdom);
 
             localdom.backtrack();
-            lp->flushDomain(localdom);
+            lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
 
             if (upbranch) {
               branchDownwards(col, downval, fracval);
@@ -646,7 +647,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           bool infeas = localdom.infeasible();
           if (infeas) {
             localdom.backtrack();
-            lp->flushDomain(localdom);
+            lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
 
             if (upbranch) {
               branchDownwards(col, downval, fracval);
@@ -665,7 +667,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         addInfeasibleConflict();
         pseudocost.addCutoffObservation(col, upbranch);
         localdom.backtrack();
-        lp->flushDomain(localdom);
+        lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
 
         if (upbranch) {
           branchDownwards(col, downval, fracval);
@@ -690,7 +693,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       }
 
       localdom.backtrack();
-      lp->flushDomain(localdom);
+      lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
       return false;
     };
 
@@ -784,7 +788,8 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
     backtrack(false);
   }
 
-  lp->flushDomain(localdom);
+  lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
   if (basis) {
     if ((HighsInt)basis->row_status.size() == lp->numRows())
       lp->setStoredBasis(std::move(basis));
@@ -916,7 +921,11 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
     localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
   } else {
-    lp->flushDomain(localdom);
+    // SOS branching may change bounds on continuous variables (slack
+    // columns), so we must flush continuous changes when SOS constraints
+    // exist; otherwise flushDomain strips them via removeContinuousChangedCols
+    lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
     lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
 
 #ifndef NDEBUG
@@ -1408,6 +1417,9 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
     if (worst_sos >= 0) {
       const auto& sos = mipsolver.mipdata_->sos_constraints_[worst_sos];
+      // Ensure split point is not at the last position, otherwise the
+      // first child fixes nothing and the search loops infinitely
+      if (worst_split >= sos.end - 1) worst_split = sos.end - 2;
       currnode.opensubtrees = 1;
 
       // First child: fix members after split position to 0
@@ -1625,7 +1637,8 @@ bool HighsSearch::backtrack(bool recoverBasis) {
           lp->setStoredBasis(std::move(nodestack.back().nodeBasis));
         nodestack.pop_back();
         localdom.backtrackToGlobal();
-        lp->flushDomain(localdom);
+        lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
         if (recoverBasis) lp->recoverBasis();
         return false;
       }
@@ -1683,8 +1696,9 @@ bool HighsSearch::backtrack(bool recoverBasis) {
 
     if (!currnode.sos_other_fixings.empty()) {
       // SOS branch: apply the other child's fixings
-      for (const auto& chg : currnode.sos_other_fixings)
+      for (const auto& chg : currnode.sos_other_fixings) {
         localdom.changeBound(chg);
+      }
     } else {
       bool fallbackbranch =
           currnode.branchingdecision.boundval == currnode.branching_point;
@@ -1730,7 +1744,8 @@ bool HighsSearch::backtrack(bool recoverBasis) {
         nodelb, currnode.estimate, currnode.nodeBasis,
         passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
-    lp->flushDomain(localdom);
+    lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
     nodestack.back().domgchgStackPos = domchgPos;
     break;
   }
@@ -1761,7 +1776,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
           lp->setStoredBasis(std::move(nodestack.back().nodeBasis));
         nodestack.pop_back();
         localdom.backtrackToGlobal();
-        lp->flushDomain(localdom);
+        lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
         lp->recoverBasis();
         return false;
       }
@@ -1923,7 +1939,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
         nodelb, currnode.estimate, currnode.nodeBasis,
         passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
-    lp->flushDomain(localdom);
+    lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
     nodestack.back().domgchgStackPos = domchgPos;
     break;
   }
@@ -1950,7 +1967,8 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
 #endif
         localdom.backtrack();
     if (nodestack.empty()) {
-      lp->flushDomain(localdom);
+      lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
       return false;
     }
     if (nodestack.back().sos_other_fixings.empty()) {
@@ -2003,7 +2021,8 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
       currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
       passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
-  lp->flushDomain(localdom);
+  lp->flushDomain(localdom,
+                    !mipsolver.mipdata_->sos_constraints_.empty());
   nodestack.back().domgchgStackPos = domchgPos;
   if (nodestack.back().nodeBasis &&
       (HighsInt)nodestack.back().nodeBasis->row_status.size() ==

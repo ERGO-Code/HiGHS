@@ -222,3 +222,100 @@ TEST_CASE("indicator-mps-read", "[highs_test_indicator]") {
   REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
   REQUIRE(fabs(info.objective_function_value - 0.0) < double_equal_tolerance);
 }
+
+TEST_CASE("indicator-infinite-bounds", "[highs_test_indicator]") {
+  // Test indicator with unbounded variables (would produce incorrect
+  // results under big-M with M=1e8 for infinite bounds)
+  // min x
+  // s.t. z=1 -> x >= 5
+  //      z binary, x >= 0 (no upper bound)
+  // Optimal: z=0, x=0, obj=0
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  highs.setOptionValue("output_flag", dev_run);
+
+  highs.addVar(0.0, inf);   // x (col 0) - no upper bound
+  highs.addVar(0.0, 1.0);   // z (col 1)
+
+  highs.changeColCost(0, 1.0);
+  highs.changeColCost(1, 0.0);
+  highs.changeColIntegrality(1, HighsVarType::kInteger);
+
+  // Indicator: z=1 -> x >= 5
+  HighsInt indices[] = {0};
+  double values[] = {1.0};
+  REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
+          HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  const HighsSolution& solution = highs.getSolution();
+  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
+  REQUIRE(fabs(info.objective_function_value - 0.0) < double_equal_tolerance);
+}
+
+TEST_CASE("indicator-infinite-bounds-forced", "[highs_test_indicator]") {
+  // Forced case with unbounded variable: z fixed to 1
+  // min x
+  // s.t. z == 1 (fixed)
+  //      z=1 -> x >= 5
+  //      x >= 0 (no upper bound)
+  // Optimal: x=5, obj=5
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  highs.setOptionValue("output_flag", dev_run);
+
+  highs.addVar(0.0, inf);   // x (col 0) - no upper bound
+  highs.addVar(1.0, 1.0);   // z (col 1, fixed to 1)
+
+  highs.changeColCost(0, 1.0);
+  highs.changeColCost(1, 0.0);
+  highs.changeColIntegrality(1, HighsVarType::kInteger);
+
+  HighsInt indices[] = {0};
+  double values[] = {1.0};
+  REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
+          HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  const HighsSolution& solution = highs.getSolution();
+  REQUIRE(fabs(solution.col_value[0] - 5.0) < double_equal_tolerance);
+  REQUIRE(fabs(info.objective_function_value - 5.0) < double_equal_tolerance);
+}
+
+TEST_CASE("indicator-two-unbounded-vars", "[highs_test_indicator]") {
+  // Test with multiple unbounded variables in the indicator row
+  // min x + y
+  // s.t. z=1 -> x + y >= 10
+  //      z binary, x >= 0, y >= 0 (no upper bounds)
+  // Optimal: z=0, x=0, y=0, obj=0
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  highs.setOptionValue("output_flag", dev_run);
+
+  highs.addVar(0.0, inf);   // x (col 0)
+  highs.addVar(0.0, inf);   // y (col 1)
+  highs.addVar(0.0, 1.0);   // z (col 2)
+
+  highs.changeColCost(0, 1.0);
+  highs.changeColCost(1, 1.0);
+  highs.changeColCost(2, 0.0);
+  highs.changeColIntegrality(2, HighsVarType::kInteger);
+
+  // Indicator: z=1 -> x + y >= 10
+  HighsInt idx[] = {0, 1};
+  double val[] = {1.0, 1.0};
+  REQUIRE(highs.addIndicatorConstraint(2, 1, 2, idx, val, 10.0, inf) ==
+          HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  const HighsSolution& solution = highs.getSolution();
+  REQUIRE(fabs(solution.col_value[2] - 0.0) < double_equal_tolerance);
+  REQUIRE(fabs(info.objective_function_value - 0.0) < double_equal_tolerance);
+}

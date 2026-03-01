@@ -287,8 +287,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 HighsLp withoutSemiVariables(const HighsLp& lp, HighsSolution& solution,
                              const double primal_feasibility_tolerance);
 
-HighsLp withoutIndicatorConstraints(const HighsLp& lp,
-                                    const HighsLogOptions& log_options);
+HighsLp indicatorsToSos(const HighsLp& lp);
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
 

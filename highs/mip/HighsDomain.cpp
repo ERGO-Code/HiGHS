@@ -2057,6 +2057,7 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
       }
     }
   }
+
 }
 
 bool HighsDomain::checkChangeBound(HighsBoundType boundtype, HighsInt col,
