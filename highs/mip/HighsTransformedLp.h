@@ -49,8 +49,7 @@ class HighsTransformedLp {
 
  public:
   HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
-                     HighsImplications& implications,
-                     HighsDomain& globaldom);
+                     HighsImplications& implications, HighsDomain& globaldom);
 
   double boundDistance(HighsInt col) const { return boundDist[col]; }
 

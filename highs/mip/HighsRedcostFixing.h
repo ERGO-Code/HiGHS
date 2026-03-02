@@ -33,8 +33,7 @@ class HighsRedcostFixing {
   void propagateRootRedcost(const HighsMipSolver& mipsolver);
 
   static void propagateRedCost(const HighsMipSolver& mipsolver,
-                               HighsDomain& localdomain,
-                               HighsDomain& globaldom,
+                               HighsDomain& localdomain, HighsDomain& globaldom,
                                const HighsLpRelaxation& lp,
                                HighsConflictPool& conflictpool);
 

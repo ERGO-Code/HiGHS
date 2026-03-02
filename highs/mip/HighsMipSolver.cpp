@@ -635,8 +635,8 @@ restart:
     syncSolutions();
     // Handle case where all nodes have been pruned
     if (num_search_indices == 0) {
-      mipdata_->updateLowerBound(std::min(mipdata_->upper_bound,
-                                       mipdata_->nodequeue.getBestLowerBound()));
+      mipdata_->updateLowerBound(std::min(
+          mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound()));
     }
 
     analysis_.mipTimerStop(kMipClockNodePrunedLoop);

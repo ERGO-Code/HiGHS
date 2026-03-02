@@ -9,10 +9,10 @@
 #define MIP_HIGHS_MIP_SOLVER_H_
 
 #include "Highs.h"
-#include "parallel/HighsParallel.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
 #include "mip/HighsMipAnalysis.h"
+#include "parallel/HighsParallel.h"
 
 struct HighsMipSolverData;
 class HighsCutPool;
