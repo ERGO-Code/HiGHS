@@ -469,9 +469,8 @@ void Analyse::relaxSupernodes() {
 
   bool total_ops_reduced = ops_2 < ops_1;
   bool spops_reduced_enough = spops_2 < spops_1 * 0.6;
-  bool flops_increased_too_much = flops_2 > flops_1 * 2.0;
 
-  if (total_ops_reduced && spops_reduced_enough && !flops_increased_too_much) {
+  if (total_ops_reduced && spops_reduced_enough) {
     relaxSnNetOps(flops_2, spops_2);
   } else {
     relaxSnMaxNz(flops_1, spops_1);
