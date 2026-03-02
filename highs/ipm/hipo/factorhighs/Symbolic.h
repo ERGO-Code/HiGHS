@@ -19,13 +19,13 @@ class Symbolic {
 
   // Statistics about symbolic factorisation
   Int n_{};
-  int64_t nz_{};
+  Int64 nz_{};
   Int sn_{};
   double fillin_{};
   double flops_{};
   double spops_{};
   double critops_{};
-  int64_t artificial_nz_{};
+  Int64 artificial_nz_{};
   double artificial_ops_{};
   double serial_storage_{};
   Int largest_front_{};
@@ -39,7 +39,8 @@ class Symbolic {
 
   // Sparsity pattern of each supernode of L
   std::vector<Int> rows_{};
-  std::vector<Int> ptr_{};
+  std::vector<Int64> ptr_{};
+  // NB: difference (ptr_[sn+1] - ptr_[sn]) fits into Int
 
   // Supernodal elimination tree:
   // - sn_parent_[i] gives the parent of supernode i in the supernodal
@@ -54,9 +55,9 @@ class Symbolic {
   // Relative indices of original columns wrt columns of L.
   // - relind_cols_[i] contains the relative indices of entry i, with respect to
   //   the numbering of the frontal matrix of the corresponding supernode.
-  // - Given the row indices of the original matrix, rowsA:
+  // - Given the row indices of the original matrix, rowsM:
   //   relind_cols_[i] = k implies that the i-th entry of the original matrix
-  //   (which has original row index given by rowsA[i]) corresponds to the row
+  //   (which has original row index given by rowsM[i]) corresponds to the row
   //   in position k in the frontal matrix of the supernode corresponding to the
   //   column to which the i-th entry belongs.
   //   This is useful when assemblying the entries of the original matrix into
@@ -92,7 +93,11 @@ class Symbolic {
   std::vector<Int> pivot_sign_{};
 
   // Starting position of diagonal blocks for hybrid formats
-  std::vector<std::vector<Int>> clique_block_start_{};
+  std::vector<std::vector<Int64>> clique_block_start_{};
+
+  Int64 max_stack_size_{};
+  Int tree_depth_{};
+  std::string ordering;
 
   friend class Analyse;
 
@@ -101,25 +106,29 @@ class Symbolic {
   void setParallel(bool par_tree, bool par_node);
 
   // provide const access to symbolic factorisation
-  int64_t nz() const;
+  Int64 nz() const;
   double flops() const;
   double spops() const;
   double critops() const;
   Int blockSize() const;
   Int size() const;
   Int sn() const;
-  Int rows(Int i) const;
-  Int ptr(Int i) const;
+  double fillin() const;
+  Int rows(Int64 i) const;
+  Int64 ptr(Int i) const;
   Int snStart(Int i) const;
   Int snParent(Int i) const;
   Int relindCols(Int i) const;
   Int relindClique(Int i, Int j) const;
   Int consecutiveSums(Int i, Int j) const;
-  Int cliqueBlockStart(Int sn, Int bl) const;
-  Int cliqueSize(Int sn) const;
+  Int64 cliqueBlockStart(Int sn, Int bl) const;
+  Int64 cliqueSize(Int sn) const;
+  Int64 maxStackSize() const;
+  Int depth() const;
   bool parTree() const;
   bool parNode() const;
-  const std::vector<Int>& ptr() const;
+  double storage() const;
+  const std::vector<Int64>& ptr() const;
   const std::vector<Int>& iperm() const;
   const std::vector<Int>& snParent() const;
   const std::vector<Int>& snStart() const;

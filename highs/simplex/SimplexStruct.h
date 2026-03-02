@@ -126,6 +126,7 @@ struct HighsSimplexInfo {
   SimplexBasis backtracking_basis_;
   HighsInt backtracking_basis_costs_shifted_;
   HighsInt backtracking_basis_costs_perturbed_;
+  HighsInt backtracking_basis_bounds_shifted_;
   HighsInt backtracking_basis_bounds_perturbed_;
   std::vector<double> backtracking_basis_workShift_;
   std::vector<double> backtracking_basis_workLowerShift_;
@@ -192,6 +193,7 @@ struct HighsSimplexInfo {
   bool allow_bound_perturbation = true;
   bool costs_shifted = false;
   bool costs_perturbed = false;
+  bool bounds_shifted = false;
   bool bounds_perturbed = false;
 
   HighsInt num_primal_infeasibilities = -1;
@@ -247,7 +249,7 @@ struct HighsSimplexBadBasisChangeRecord {
   HighsInt variable_out;
   HighsInt variable_in;
   BadBasisChangeReason reason;
-  double save_value;
+  double save_value = 0.0;
 };
 
 struct HighsRayRecord {

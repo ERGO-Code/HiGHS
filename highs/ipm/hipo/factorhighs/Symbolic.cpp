@@ -14,15 +14,16 @@ void Symbolic::setParallel(bool par_tree, bool par_node) {
   parallel_node_ = par_node;
 }
 
-int64_t Symbolic::nz() const { return nz_; }
+Int64 Symbolic::nz() const { return nz_; }
 double Symbolic::flops() const { return flops_; }
 double Symbolic::spops() const { return spops_; }
 double Symbolic::critops() const { return critops_; }
 Int Symbolic::blockSize() const { return block_size_; }
 Int Symbolic::size() const { return n_; }
 Int Symbolic::sn() const { return sn_; }
-Int Symbolic::rows(Int i) const { return rows_[i]; }
-Int Symbolic::ptr(Int i) const { return ptr_[i]; }
+double Symbolic::fillin() const { return fillin_; }
+Int Symbolic::rows(Int64 i) const { return rows_[i]; }
+Int64 Symbolic::ptr(Int i) const { return ptr_[i]; }
 Int Symbolic::snStart(Int i) const { return sn_start_[i]; }
 Int Symbolic::snParent(Int i) const { return sn_parent_[i]; }
 Int Symbolic::relindCols(Int i) const { return relind_cols_[i]; }
@@ -30,16 +31,19 @@ Int Symbolic::relindClique(Int i, Int j) const { return relind_clique_[i][j]; }
 Int Symbolic::consecutiveSums(Int i, Int j) const {
   return consecutive_sums_[i][j];
 }
-Int Symbolic::cliqueBlockStart(Int sn, Int bl) const {
+Int64 Symbolic::cliqueBlockStart(Int sn, Int bl) const {
   return clique_block_start_[sn][bl];
 }
-Int Symbolic::cliqueSize(Int sn) const {
+Int64 Symbolic::cliqueSize(Int sn) const {
   return clique_block_start_[sn].back();
 }
+Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
 bool Symbolic::parTree() const { return parallel_tree_; }
 bool Symbolic::parNode() const { return parallel_node_; }
+double Symbolic::storage() const { return serial_storage_; }
+Int Symbolic::depth() const { return tree_depth_; }
 
-const std::vector<Int>& Symbolic::ptr() const { return ptr_; }
+const std::vector<Int64>& Symbolic::ptr() const { return ptr_; }
 const std::vector<Int>& Symbolic::iperm() const { return iperm_; }
 const std::vector<Int>& Symbolic::snParent() const { return sn_parent_; }
 const std::vector<Int>& Symbolic::snStart() const { return sn_start_; }
@@ -69,11 +73,13 @@ void Symbolic::print(const Log& log, bool verbose) const {
   log_stream << textline("Serial memory:") << memoryString(serial_storage_)
              << '\n';
   log_stream << textline("Flops:") << sci(flops_, 0, 1) << '\n';
+  log_stream << textline("Ordering:") << ordering << '\n';
   if (verbose) {
     log_stream << textline("Sparse ops:") << sci(spops_, 0, 1) << '\n';
     log_stream << textline("Critical ops:") << sci(critops_, 0, 1) << '\n';
     log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)
                << '\n';
+    log_stream << textline("Tree depth:") << integer(tree_depth_, 0) << '\n';
     log_stream << textline("Artificial nz:") << sci(artificial_nz_, 0, 1)
                << '\n';
     log_stream << textline("Artificial ops:") << sci(artificial_ops_, 0, 1)
@@ -90,8 +96,6 @@ void Symbolic::print(const Log& log, bool verbose) const {
     log_stream << textline("Sn avg size:") << sci((double)n_ / sn_, 0, 1)
                << '\n';
   }
-
-  log_stream << '\n';
   log.print(log_stream);
 }
 

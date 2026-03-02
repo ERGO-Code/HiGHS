@@ -1480,7 +1480,7 @@ void HighsSimplexAnalysis::reportRunTime(const bool header,
 #ifndef NDEBUG
   *analysis_log << highsFormatToString(" %15.8gs", run_time);
 #else
-  *analysis_log << highsFormatToString(" %ds", int(run_time + 0.49));
+  *analysis_log << highsFormatToString(" %.1fs", run_time);
 #endif
 }
 

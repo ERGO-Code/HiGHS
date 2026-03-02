@@ -2281,7 +2281,7 @@ void HEkkDual::initialiseDevexFramework() {
   // summing the squares of the its entries over the indices in the
   // reference set. This is achieved by summing over all indices, but
   // multiplying the entry by the value in devex_index before
-  // equaring. Thus devex_index contains 1 for indices in the
+  // equating. Thus devex_index contains 1 for indices in the
   // reference set, and 0 otherwise. This is achieved by setting the
   // values of devex_index to be 1-nonbasicFlag^2, ASSUMING
   // |nonbasicFlag|=1 iff the corresponding variable is nonbasic

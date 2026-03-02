@@ -14,6 +14,7 @@ from ._core import (
     HighsLogType,
     IisStrategy,
     IisBoundStatus,
+    IisStatus,
     HighsSparseMatrix,
     HighsLp,
     HighsHessian,

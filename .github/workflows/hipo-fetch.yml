@@ -1,0 +1,366 @@
+name: hipo-fetch
+
+on: [push, pull_request]
+
+jobs:
+  ubuntu:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        config: [Release]
+        all_tests: [ON]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+            -DALL_TESTS=${{ matrix.all_tests }}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . -j2
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  # Temporarily disable ubuntu_32 for 1.13
+  # ubuntu_32:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       config: [Release]
+  #       all_tests: [ON]
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Create Build Environment
+  #       run: cmake -E make_directory ${{runner.workspace}}/build
+
+  #     - name: Install 32-bit deps
+  #       run: |
+  #         sudo dpkg --add-architecture i386
+  #         sudo apt update
+  #         sudo apt install -y gcc-multilib g++-multilib libc6-dev-i386
+
+  #     - name: Configure CMake
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+  #           -DALL_TESTS=${{ matrix.all_tests }} \
+  #           -DCMAKE_C_FLAGS="-m32" \
+  #           -DCMAKE_CXX_FLAGS="-m32" \
+  #           -DCMAKE_SHARED_LINKER_FLAGS="-m32"
+
+  #     - name: Build
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         cmake --build . -j2
+
+  #     - name: Check
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         cd _deps/openblas-build/lib/
+  #         ar t libopenblas.a | head -1 | xargs ar p libopenblas.a | file -
+
+  #     - name: Test executable
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+  #     - name: Ctest
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         ctest --parallel --timeout 600 --output-on-failure
+
+  ubuntu_32_no_hipo:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config: [Release]
+        all_tests: [ON]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Install 32-bit deps
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt update
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DCMAKE_C_FLAGS="-m32" \
+            -DCMAKE_CXX_FLAGS="-m32" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-m32" \
+            -DALL_TESTS=${{ matrix.all_tests }}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . -j2
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  # ubuntu_32_arm:
+  #   runs-on: ubuntu-24.04-arm
+  #   strategy:
+  #     matrix:
+  #       config: [Release]
+  #       all_tests: [ON]
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Create Build Environment
+  #       run: cmake -E make_directory ${{runner.workspace}}/build
+
+  #     - name: Install 32-bit deps
+  #       run: |
+  #         sudo dpkg --add-architecture armhf
+  #         sudo apt-get update
+  #         sudo apt-get install -y \
+  #           libc6:armhf \
+  #           libstdc++6:armhf
+  #         sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+
+  #     - name: Configure CMake
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         export CC=arm-linux-gnueabihf-gcc
+  #         export CXX=arm-linux-gnueabihf-g++
+  #         cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON
+
+  #     - name: Build
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         cmake --build . --parallel
+
+  #     - name: Check
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         cd _deps/openblas-build/lib/
+  #         ar t libopenblas.a | head -1 | xargs ar p libopenblas.a | file -
+
+  #     - name: Test executable
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+  #     - name: Ctest
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: |
+  #         ctest --parallel --timeout 300 --output-on-failure
+
+  ubuntu_32_arm_no_hipo:
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        config: [Release]
+        all_tests: [ON]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Install 32-bit deps
+        run: |
+          sudo dpkg --add-architecture armhf
+          sudo apt-get update
+          sudo apt-get install -y \
+            libc6:armhf \
+            libstdc++6:armhf
+          sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          export CC=arm-linux-gnueabihf-gcc
+          export CXX=arm-linux-gnueabihf-g++
+          cmake $GITHUB_WORKSPACE \
+            -DALL_TESTS=${{ matrix.all_tests }}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel
+          ls
+
+      - name: Debug armhf execution
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          set -x
+          uname -m
+          ls -l bin/highs
+          file bin/highs
+
+          echo "Checking interpreter:"
+          readelf -l bin/highs | grep interpreter || true
+
+          echo "Checking loader existence:"
+          ls -l /lib/ld-linux-armhf.so.3 || true
+
+          echo "Running highs:"
+          ./bin/highs --version
+          ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  windows:
+    runs-on: [windows-latest]
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Release]
+        all_tests: [ON]
+        arch: ["x64", "Win32"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake `
+          -S "$env:GITHUB_WORKSPACE" `
+          -B "${{ runner.workspace }}/build" `
+          -A ${{ matrix.arch }} `
+          -DHIPO=ON `
+          -DALL_TESTS=${{ matrix.all_tests }} `
+          -DBUILD_OPENBLAS=ON
+
+      - name: Build
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel --config ${{ matrix.config }}
+
+      - name: Test executable
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
+      - name: Ctest
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
+
+  windows_arm_64:
+    runs-on: [windows-11-arm]
+    strategy:
+      matrix:
+        config: [Release]
+        all_tests: [ON]
+        # ARM32 Windows development is basically deprecated:
+        # https://learn.microsoft.com/en-us/windows/arm/arm32-to-arm64
+        arch: ["ARM64"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake `
+          -S "$env:GITHUB_WORKSPACE" `
+          -B "${{ runner.workspace }}/build" `
+          -A ${{ matrix.arch }} `
+          -DHIPO=ON `
+          -DALL_TESTS=${{ matrix.all_tests }} `
+          -DBUILD_OPENBLAS=ON
+
+      - name: Build
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel --config ${{ matrix.config }}
+
+      - name: Test executable
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
+      - name: Ctest
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
+
+  # linux shared is default, static build tested in the release artifacts
+  # windows static is default so test shared
+  windows_shared:
+    runs-on: [windows-latest]
+    strategy:
+      matrix:
+        config: [Release]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake `
+          -S "$env:GITHUB_WORKSPACE" `
+          -B "${{ runner.workspace }}/build" `
+          -DHIPO=ON `
+          -DBUILD_OPENBLAS=ON `
+          -DBUILD_SHARED_LIBS=ON
+
+      - name: Build
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --parallel --config ${{ matrix.config }}
+
+      - name: Test executable
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"

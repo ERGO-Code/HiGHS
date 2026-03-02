@@ -36,7 +36,7 @@ namespace hipo {
 const Int kStartThreshRelax = 256;
 const double kUpperRatioRelax = 0.02;
 const double kLowerRatioRelax = 0.01;
-const Int kMaxIterRelax = 10;
+const Int kMaxIterRelax = 20;
 const Int kSnSizeRelax = 16;
 
 // dense factorisation
@@ -46,10 +46,6 @@ const Int kBlockParallelThreshold = 5;
 
 // regularisation
 const double kDynamicDiagCoeff = 1e-24;
-
-// refinement
-const Int kMaxRefinementIter = 3;
-const double kRefinementTolerance = 1e-12;
 
 // metis
 const Int kMetisSeed = 42;

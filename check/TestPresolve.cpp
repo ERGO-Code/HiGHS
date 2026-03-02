@@ -863,3 +863,40 @@ TEST_CASE("dual-bound-tightening", "[highs_test_presolve]") {
   highs.passModel(lp);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
 }
+
+TEST_CASE("presolve-rule-off", "[highs_test_presolve]") {
+  std::string model = "afiro";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.readModel(model_file);
+  h.setOptionValue("log_dev_level", 1);
+  h.setOptionValue("presolve_rule_logging", true);
+  HighsInt full_presolve_num_col, full_presolve_num_row;
+  // Run presolve with and without aggregator
+  for (HighsInt k = 0; k < 2; k++) {
+    h.presolve();
+    if (k == 0) {
+      full_presolve_num_col = h.getPresolvedLp().num_col_;
+      full_presolve_num_row = h.getPresolvedLp().num_row_;
+      if (dev_run)
+        printf("Presolved %s has num_col = %d; num_row = %d\n", model.c_str(),
+               int(full_presolve_num_col), int(full_presolve_num_row));
+      HighsPresolveLog presolve_log = h.getPresolveLog();
+      REQUIRE(presolve_log.rule[kPresolveRuleAggregator].col_removed > 0);
+      HighsInt presolve_rule_off =
+          std::pow(int(2), int(kPresolveRuleAggregator));
+      h.setOptionValue("presolve_rule_off", presolve_rule_off);
+    } else if (k > 0) {
+      HighsInt presolve_num_col = h.getPresolvedLp().num_col_;
+      HighsInt presolve_num_row = h.getPresolvedLp().num_row_;
+      REQUIRE(presolve_num_col > full_presolve_num_col);
+      REQUIRE(presolve_num_row > full_presolve_num_row);
+      if (dev_run)
+        printf("Presolved %s has num_col = %d; num_row = %d\n", model.c_str(),
+               int(presolve_num_col), int(presolve_num_row));
+    }
+  }
+  h.resetGlobalScheduler(true);
+}

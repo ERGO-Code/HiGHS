@@ -18,11 +18,15 @@
 #include "util/HighsInt.h"
 
 const std::string kHighsCopyrightStatement =
-    "Copyright (c) 2025 HiGHS under MIT licence terms";
+#ifdef HIPO
+    "Copyright (c) 2026 under Apache 2.0 license terms";
+#else
+    "Copyright (c) 2026 under MIT licence terms";
+#endif
 
-const size_t kHighsSize_tInf = std::numeric_limits<size_t>::max();
-const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
-const HighsInt kHighsIInf32 = std::numeric_limits<int>::max();
+const size_t kHighsSize_tInf = (std::numeric_limits<size_t>::max)();
+const HighsInt kHighsIInf = (std::numeric_limits<HighsInt>::max)();
+const HighsInt kHighsIInf32 = (std::numeric_limits<int>::max)();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsUndefined = kHighsInf;
 const double kHighsTiny = 1e-14;
@@ -275,7 +279,8 @@ enum PresolveRuleType : int {
   kPresolveRuleParallelRowsAndCols,
   kPresolveRuleSparsify,
   kPresolveRuleProbing,
-  kPresolveRuleMax = kPresolveRuleProbing,
+  kPresolveRuleEnumeration,
+  kPresolveRuleMax = kPresolveRuleEnumeration,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };
@@ -283,25 +288,31 @@ enum PresolveRuleType : int {
 enum IisStrategy : int {
   kIisStrategyMin = 0,
   kIisStrategyLight = kIisStrategyMin,  // 0
-  kIisStrategyFromLpRowPriority,        // 1
-  kIisStrategyFromLpColPriority,        // 2
-  //  kIisStrategyFromRayRowPriority,                     // 3
-  //  kIisStrategyFromRayColPriority,                     // 4
-  kIisStrategyMax = kIisStrategyFromLpColPriority
+  kIisStrategyFromRay = 1,
+  kIisStrategyFromLp = 2,
+  kIisStrategyIrreducible = 4,
+  kIisStrategyColPriority = 8,
+  kIisStrategyRelaxation = 16,
+  kIisStrategyDefault = kIisStrategyLight,
+  kIisStrategyMax = kIisStrategyFromRay + kIisStrategyFromLp +
+                    kIisStrategyIrreducible + kIisStrategyColPriority +
+                    kIisStrategyRelaxation
 };
 
-enum IisStatus {
-  kIisStatusMin = 0,
-  kIisStatusInConflict = kIisStatusMin,  // 0
-  kIisStatusNotInConflict,               // 1
-  kIisStatusMaybeInConflict,             // 2
-  kIisStatusMax = kIisStatusMaybeInConflict
+enum IisStatus : int {
+  kIisStatusMin = -1,
+  kIisStatusNotInConflict = kIisStatusMin,  // -1
+  kIisStatusMaybeInConflict,                // 0
+  kIisStatusInConflict,                     // 1
+  kIisStatusMax = kIisStatusInConflict
 };
 
 enum SubSolverIndex : int {
   kSubSolverMip = 0,
-  kSubSolverSimplexBasis,
-  kSubSolverSimplexNoBasis,
+  kSubSolverDuSimplexBasis,
+  kSubSolverDuSimplexNoBasis,
+  kSubSolverPrSimplexBasis,
+  kSubSolverPrSimplexNoBasis,
   kSubSolverHipo,
   kSubSolverIpx,
   kSubSolverHipoAc,

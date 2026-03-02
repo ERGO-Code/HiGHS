@@ -300,9 +300,8 @@ void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
   HeuristicNeighbourhood neighbourhood(mipsolver, localdom);
 
   double currCutoff = kHighsInf;
-  double lower_bound;
-
-  lower_bound = mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol;
+  double lower_bound =
+      mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol;
 
   for (const std::pair<double, HighsDomainChange>& domchg : lurkingBounds) {
     currCutoff = domchg.first;
@@ -319,17 +318,9 @@ void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
                                   worker.getGlobalDomain(),
                                   worker.getPseudocost());
 
-        double prev_lower_bound = mipsolver.mipdata_->lower_bound;
+        mipsolver.mipdata_->updateLowerBound(
+            std::max(mipsolver.mipdata_->lower_bound, currCutoff));
 
-        mipsolver.mipdata_->lower_bound =
-            std::max(mipsolver.mipdata_->lower_bound, currCutoff);
-
-        const bool bound_change =
-            mipsolver.mipdata_->lower_bound != prev_lower_bound;
-        if (!mipsolver.submip && bound_change)
-          mipsolver.mipdata_->updatePrimalDualIntegral(
-              prev_lower_bound, mipsolver.mipdata_->lower_bound,
-              mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->upper_bound);
         localdom.backtrack();
         if (localdom.getBranchDepth() == 0) break;
         neighbourhood.backtracked();
@@ -1547,8 +1538,8 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
   std::vector<double> fracintcost;
   std::vector<HighsInt> fracintset;
 
-  std::vector<HighsInt> mask(mipsolver.model_->num_col_, 1);
-  std::vector<double> cost(mipsolver.model_->num_col_, 0.0);
+  std::vector<HighsInt> mask(mipsolver.numCol(), 1);
+  std::vector<double> cost(mipsolver.numCol(), 0.0);
 
   lprelax.getLpSolver().setOptionValue("simplex_strategy",
                                        kSimplexStrategyPrimal);
@@ -1567,7 +1558,7 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
 
     HighsDomain localdom = worker.getGlobalDomain();
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
-      assert(mipsolver.variableType(i) == HighsVarType::kInteger);
+      assert(mipsolver.isColInteger(i));
       double intval = std::floor(roundedsol[i] + randgen.real(0.4, 0.6));
       intval = std::max(intval, localdom.col_lower_[i]);
       intval = std::min(intval, localdom.col_upper_[i]);
@@ -1622,7 +1613,7 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
       break;
 
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
-      assert(mipsolver.variableType(i) == HighsVarType::kInteger);
+      assert(mipsolver.isColInteger(i));
 
       if (mipsolver.mipdata_->uplocks[i] == 0 ||
           mipsolver.mipdata_->downlocks[i] == 0)

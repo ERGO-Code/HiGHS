@@ -182,6 +182,8 @@ class HighsImplications {
   void cleanupVub(HighsInt col, HighsInt vubCol,
                   HighsImplications::VarBound& vub, double ub, bool& redundant,
                   bool& infeasible, bool allowBoundChanges = true) const;
+
+  void applyImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 };
 
 #endif

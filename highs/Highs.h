@@ -212,7 +212,8 @@ class Highs {
   HighsStatus presolve();
 
   /**
-   * @brief Run the solver, accounting for any multiple objective
+   * @brief Run the solver, applying file-based options and user
+   * scaling before optimization
    */
   HighsStatus run();
 
@@ -1290,7 +1291,16 @@ class Highs {
    */
   static void resetGlobalScheduler(bool blocking = false);
 
-  // Start of advanced methods for HiGHS MIP solver
+  // Start of advanced methods: only for internal use!
+
+  // Nested methods below Highs::run()
+  //
+  // See highs/HighsRun.md
+  HighsStatus optimizeHighs();
+  HighsStatus optimizeModel();
+  HighsStatus calledOptimizeModel();
+  // Used in MIP solver as minimal LP solve
+  HighsStatus optimizeLp();
 
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
@@ -1348,6 +1358,13 @@ class Highs {
   const std::vector<double>& getPrimalPhase1Dual() const {
     return ekk_instance_.primal_phase1_dual_;
   }
+
+  /**
+   * @brief Generalisation of getColName and getRowName. Advanced
+   * method: for HiGHS C++ and C API
+   */
+  HighsStatus getColOrRowName(const HighsLp& lp, const bool is_col,
+                              const HighsInt index, std::string& name) const;
 
   /**
    * @brief Development methods
@@ -1525,7 +1542,6 @@ class Highs {
   HighsRanging ranging_;
   HighsIis iis_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
-  HighsFiles files_;
 
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;
@@ -1554,7 +1570,6 @@ class Highs {
   bool written_log_header_ = false;
 
   void reportModelStats() const;
-  HighsStatus optimizeModel();
 
   void exactResizeModel() {
     this->model_.lp_.exactResize();
@@ -1608,7 +1623,7 @@ class Highs {
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
   // invalidateRanging(), invalidateInfo(), invalidateEkk() and
-  // invalidateIis()
+  // clearIis()
   void invalidateSolverData();
 
   // Invalidates all solver dual data in Highs class members by calling
@@ -1641,8 +1656,8 @@ class Highs {
   // Invalidates ekk_instance_
   void invalidateEkk();
 
-  // Invalidates iis_
-  void invalidateIis();
+  // Clears iis_
+  void clearIis();
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
@@ -1728,21 +1743,19 @@ class Highs {
   HighsStatus getIisInterfaceReturn(const HighsStatus return_status);
 
   HighsStatus elasticityFilterReturn(
-      const HighsStatus return_status, const bool feasible_model,
-      const std::string& original_model_name, const HighsInt original_num_col,
-      const HighsInt original_num_row,
+      const HighsStatus return_status, const std::string& original_model_name,
+      const HighsInt original_num_col, const HighsInt original_num_row,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
-      const std::vector<double> original_col_upper,
-      const std::vector<HighsVarType> original_integrality);
+      const std::vector<double>& original_col_upper,
+      const std::vector<HighsVarType>& original_integrality);
   HighsStatus elasticityFilter(const double global_lower_penalty,
                                const double global_upper_penalty,
                                const double global_rhs_penalty,
                                const double* local_lower_penalty,
                                const double* local_upper_penalty,
                                const double* local_rhs_penalty,
-                               const bool get_infeasible_row,
-                               std::vector<HighsInt>& infeasible_row_subset);
+                               const bool get_iis = false);
   HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
                          HighsInt* iis_col_index, HighsInt* iis_row_index,
                          HighsInt* iis_col_bound, HighsInt* iis_row_bound);
@@ -1755,16 +1768,19 @@ class Highs {
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   HighsStatus checkOptimality(const std::string& solver_type);
-  HighsStatus lpKktCheck(const HighsLp& lp, const std::string& message = "");
+  void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
   HighsStatus optionChangeAction();
 
+  HighsStatus userScale(HighsUserScaleData& data);
+  HighsStatus userUnscale(HighsUserScaleData& data);
   HighsStatus userScaleModel(HighsUserScaleData& data);
   HighsStatus userScaleSolution(HighsUserScaleData& data,
                                 bool update_kkt = false);
+
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
                                      const bool constraint,
                                      const HighsInt method,
@@ -1784,10 +1800,6 @@ class Highs {
 
   bool tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
                       const HighsInfo& presolved_lp_info) const;
-
-  bool optionsHasHighsFiles() const;
-  void saveHighsFiles();
-  void getHighsFiles();
 };
 
 // Start of deprecated methods not in the Highs class

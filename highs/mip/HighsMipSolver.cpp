@@ -248,13 +248,7 @@ restart:
     return;
   }
 
-  double prev_lower_bound = mipdata_->lower_bound;
-  mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
-  bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-  if (!submip && bound_change)
-    mipdata_->updatePrimalDualIntegral(prev_lower_bound, mipdata_->lower_bound,
-                                       mipdata_->upper_bound,
-                                       mipdata_->upper_bound);
+  mipdata_->updateLowerBound(mipdata_->nodequeue.getBestLowerBound());
   mipdata_->printDisplayLine();
 
   // Calculate maximum number of workers
@@ -593,16 +587,8 @@ restart:
         if (!multiple_workers) {
           mipdata_->nodequeue.clear();
           mipdata_->pruned_treeweight = 1.0;
-
-          double prev_lower_bound = mipdata_->lower_bound;
-
-          mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
-
-          bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-          if (!submip && bound_change)
-            mipdata_->updatePrimalDualIntegral(
-                prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-                mipdata_->upper_bound);
+          mipdata_->updateLowerBound(
+              std::min(kHighsInf, mipdata_->upper_bound));
         }
         return;
       }
@@ -613,16 +599,8 @@ restart:
         return;
       }
 
-      double prev_lower_bound = mipdata_->lower_bound;
-
-      mipdata_->lower_bound = std::min(mipdata_->upper_bound,
-                                       mipdata_->nodequeue.getBestLowerBound());
-
-      bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-      if (!submip && !multiple_workers && bound_change)
-        mipdata_->updatePrimalDualIntegral(
-            prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-            mipdata_->upper_bound);
+      mipdata_->updateLowerBound(std::min(
+          mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound()));
     };
     analysis_.mipTimerStart(kMipClockNodePrunedLoop);
     runTask(doHandlePrunedNodes, tg, true, false, indices);
@@ -648,16 +626,7 @@ restart:
       if (status == 1) {
         mipdata_->nodequeue.clear();
         mipdata_->pruned_treeweight = 1.0;
-
-        double prev_lower_bound = mipdata_->lower_bound;
-
-        mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
-
-        bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-        if (!submip && bound_change)
-          mipdata_->updatePrimalDualIntegral(
-              prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-              mipdata_->upper_bound);
+        mipdata_->updateLowerBound(std::min(kHighsInf, mipdata_->upper_bound));
         analysis_.mipTimerStop(kMipClockNodePrunedLoop);
         return true;
       }
@@ -666,13 +635,8 @@ restart:
     syncSolutions();
     // Handle case where all nodes have been pruned
     if (num_search_indices == 0) {
-      double prev_lower_bound = mipdata_->lower_bound;
-      mipdata_->lower_bound = std::min(mipdata_->upper_bound,
-                                       mipdata_->nodequeue.getBestLowerBound());
-      if (!submip && (mipdata_->lower_bound != prev_lower_bound))
-        mipdata_->updatePrimalDualIntegral(
-            prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-            mipdata_->upper_bound);
+      mipdata_->updateLowerBound(std::min(mipdata_->upper_bound,
+                                       mipdata_->nodequeue.getBestLowerBound()));
     }
 
     analysis_.mipTimerStop(kMipClockNodePrunedLoop);
@@ -688,9 +652,15 @@ restart:
       mipdata_->workers[i].sepa_ptr_->separate(
           mipdata_->workers[i].search_ptr_->getLocalDomain());
     };
-    analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
-    runTask(doSeparate, tg, true, false, indices);
-    analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
+    if (options_mip_->mip_allow_cut_separation_at_nodes) {
+      analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
+      runTask(doSeparate, tg, true, false, indices);
+      analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
+    } else {
+      for (HighsCutPool& cutpool : mipdata_->cutpools) {
+        cutpool.performAging();
+      }
+    }
 
     auto syncSepaStats = [&](HighsMipWorker& worker) {
       mipdata_->cliquetable.getNumNeighbourhoodQueries() +=
@@ -713,15 +683,7 @@ restart:
         mipdata_->pruned_treeweight = 1.0;
 
         analysis_.mipTimerStart(kMipClockStoreBasis);
-        double prev_lower_bound = mipdata_->lower_bound;
-
-        mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
-
-        bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-        if (!submip && bound_change)
-          mipdata_->updatePrimalDualIntegral(
-              prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-              mipdata_->upper_bound);
+        mipdata_->updateLowerBound(std::min(kHighsInf, mipdata_->upper_bound));
         return true;
       }
     }
@@ -986,16 +948,8 @@ restart:
     }
 
     if (limit_reached) {
-      double prev_lower_bound = mipdata_->lower_bound;
-
-      mipdata_->lower_bound = std::min(mipdata_->upper_bound,
-                                       mipdata_->nodequeue.getBestLowerBound());
-
-      bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-      if (!submip && bound_change)
-        mipdata_->updatePrimalDualIntegral(
-            prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-            mipdata_->upper_bound);
+      mipdata_->updateLowerBound(std::min(
+          mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound()));
       mipdata_->printDisplayLine();
       break;
     }
@@ -1021,29 +975,13 @@ restart:
     if (mipdata_->domain.infeasible()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
-
-      double prev_lower_bound = mipdata_->lower_bound;
-
-      mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
-
-      bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-      if (!submip && bound_change)
-        mipdata_->updatePrimalDualIntegral(
-            prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-            mipdata_->upper_bound);
+      mipdata_->updateLowerBound(std::min(kHighsInf, mipdata_->upper_bound));
       mipdata_->printDisplayLine();
       break;
     }
 
-    double prev_lower_bound = mipdata_->lower_bound;
-
-    mipdata_->lower_bound = std::min(mipdata_->upper_bound,
-                                     mipdata_->nodequeue.getBestLowerBound());
-    bool bound_change = mipdata_->lower_bound != prev_lower_bound;
-    if (!submip && bound_change)
-      mipdata_->updatePrimalDualIntegral(
-          prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
-          mipdata_->upper_bound);
+    mipdata_->updateLowerBound(std::min(
+        mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound()));
     mipdata_->printDisplayLine();
     if (mipdata_->nodequeue.empty()) break;
 
@@ -1400,6 +1338,7 @@ presolve::HighsPostsolveStack HighsMipSolver::getPostsolveStack() const {
 void HighsMipSolver::callbackGetCutPool() const {
   assert(callback_->user_callback);
   assert(callback_->callbackActive(kCallbackMipGetCutPool));
+  callback_->clearHighsCallbackOutput();
   HighsCallbackOutput& data_out = callback_->data_out;
 
   HighsSparseMatrix cut_matrix;
@@ -1412,9 +1351,9 @@ void HighsMipSolver::callbackGetCutPool() const {
   data_out.cutpool_index = std::move(cut_matrix.index_);
   data_out.cutpool_value = std::move(cut_matrix.value_);
 
-  callback_->user_callback(kCallbackMipGetCutPool, "MIP cut pool",
-                           &callback_->data_out, &callback_->data_in,
-                           callback_->user_callback_data);
+  const bool interrupt = mipdata_->interruptFromCallbackWithData(
+      kCallbackMipGetCutPool, solution_objective_, "MIP cut pool");
+  assert(!interrupt);
 }
 
 std::array<char, 128> getGapString(const double gap_,

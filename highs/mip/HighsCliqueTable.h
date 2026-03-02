@@ -58,6 +58,7 @@ class HighsCliqueTable {
     HighsInt origin;
     HighsInt numZeroFixed;
     bool equality;
+    HighsInt numActive() const { return end - start - numZeroFixed; }
   };
 
   struct Substitution {
@@ -109,6 +110,13 @@ class HighsCliqueTable {
 
   HighsInt runCliqueSubsumption(const HighsDomain& globaldom,
                                 std::vector<CliqueVar>& clique);
+
+  void cliqueSubsumption(const std::vector<CliqueVar>& clique, bool& redundant,
+                         HighsInt& dominatingOrigin,
+                         std::function<void(HighsInt)> removeCliqueCallback);
+
+  void collectCliques(const std::vector<CliqueVar>& clique);
+
   struct BronKerboschData {
     const std::vector<double>& sol;
     std::vector<CliqueVar> P;
@@ -185,6 +193,9 @@ class HighsCliqueTable {
   HighsInt shrinkToNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
                                  CliqueVar* q, HighsInt N);
+
+  bool fixCol(HighsDomain& globaldom, CliqueVar v,
+              bool doProcessInfeasibleVertices = false);
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 

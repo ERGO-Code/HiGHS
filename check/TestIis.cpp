@@ -5,10 +5,15 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;  // true;  //
+const bool dev_run = false;  // true;//
 const bool write_model = false;
 
 const double inf = kHighsInf;
+
+const HighsInt kIisStrategyFromRayColPriority =
+    kIisStrategyFromRay + kIisStrategyColPriority;
+const HighsInt kIisStrategyFromLpColPriority =
+    kIisStrategyFromLp + kIisStrategyColPriority;
 
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status =
@@ -46,24 +51,100 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusIrreducible);
 
   // Perform full IIS
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLp);
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusIrreducible);
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == 0);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusBoxed);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    REQUIRE(iis.col_status_[iCol] == kIisStatusNotInConflict);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (iRow == iis.row_index_[0]) {
+      REQUIRE(iis.row_status_[iRow] == kIisStatusInConflict);
+    } else {
+      REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
+    }
+  }
 
   highs.setOptionValue("iis_strategy", kIisStrategyFromLpColPriority);
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusIrreducible);
   REQUIRE(iis.col_index_.size() == 1);
   REQUIRE(iis.row_index_.size() == 0);
   REQUIRE(iis.col_index_[0] == 2);
   REQUIRE(iis.col_bound_[0] == kIisBoundStatusBoxed);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (iCol == iis.col_index_[0]) {
+      REQUIRE(iis.col_status_[iCol] == kIisStatusInConflict);
+    } else {
+      REQUIRE(iis.col_status_[iCol] == kIisStatusNotInConflict);
+    }
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+    REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
+
+  // Now give two columns and two rows incompatible bounds, and ensure
+  // that just one of each (the first encountered) is found
+  lp.col_upper_[0] = -1;
+  lp.row_upper_[1] = -1;
+  const bool two_inconsistent_rows = lp.row_upper_[0] < lp.row_lower_[0] &&
+                                     lp.row_upper_[1] < lp.row_lower_[1];
+  const bool two_inconsistent_cols = lp.col_upper_[0] < lp.col_lower_[0] &&
+                                     lp.col_upper_[2] < lp.col_lower_[2];
+  REQUIRE(two_inconsistent_cols);
+  REQUIRE(two_inconsistent_rows);
+
+  highs.passModel(lp);
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLp);
+  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusIrreducible);
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 1);
+  REQUIRE(iis.row_index_[0] == 0);
+  REQUIRE(iis.row_bound_[0] == kIisBoundStatusBoxed);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    REQUIRE(iis.col_status_[iCol] == kIisStatusNotInConflict);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (iRow == iis.row_index_[0]) {
+      REQUIRE(iis.row_status_[iRow] == kIisStatusInConflict);
+    } else {
+      REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
+    }
+  }
+
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLpColPriority);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusIrreducible);
+  REQUIRE(iis.col_index_.size() == 1);
+  REQUIRE(iis.row_index_.size() == 0);
+  REQUIRE(iis.col_index_[0] == 0);
+  REQUIRE(iis.col_bound_[0] == kIisBoundStatusBoxed);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (iCol == iis.col_index_[0]) {
+      REQUIRE(iis.col_status_[iCol] == kIisStatusInConflict);
+    } else {
+      REQUIRE(iis.col_status_[iCol] == kIisStatusNotInConflict);
+    }
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+    REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
 
   highs.resetGlobalScheduler(true);
 }
@@ -91,6 +172,8 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   // Get IIS for empty row with positive lower bound
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusIrreducible);
   if (dev_run && write_model) {
     highs.writeModel("");
     highs.writeIisModel("");
@@ -99,6 +182,15 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusLower);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    REQUIRE(iis.col_status_[iCol] == kIisStatusNotInConflict);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (iRow == iis.row_index_[0]) {
+      REQUIRE(iis.row_status_[iRow] == kIisStatusInConflict);
+    } else {
+      REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
+    }
+  }
 
   // Get IIS for empty row with negative upper bound
   double new_lower = -2;
@@ -110,10 +202,21 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   lp.row_upper_[empty_row] = new_upper;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(iis.valid_ == true);
+  REQUIRE(iis.status_ == kIisModelStatusIrreducible);
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 1);
   REQUIRE(iis.row_index_[0] == empty_row);
   REQUIRE(iis.row_bound_[0] == kIisBoundStatusUpper);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    REQUIRE(iis.col_status_[iCol] == kIisStatusNotInConflict);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (iRow == iis.row_index_[0]) {
+      REQUIRE(iis.row_status_[iRow] == kIisStatusInConflict);
+    } else {
+      REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
+    }
+  }
 
   highs.resetGlobalScheduler(true);
 }
@@ -138,11 +241,11 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
   // Each of the three constraints constitutes an IIS. Find each by
   // freeing the upper bounds in turn.
   //
-  // 1.5w + 2x + y <= 30
+  //      1.5w + 2x +   y      <= 30
   //
-  // -10 <= 4w -2x + y + 2z <= 15
+  // -10 <= 4w - 2x +   y + 2z <= 15
   //
-  // -2x -1.5y -z >= -34
+  // -34 <=    - 2x -1.5y -  z
   //
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -153,6 +256,34 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
     for (int k = 0; k < 2; k++) {
       REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+      REQUIRE(iis.valid_ == true);
+      REQUIRE(iis.status_ == kIisModelStatusIrreducible);
+      REQUIRE(iis.row_index_.size() == 1);
+      HighsInt iis_row = iis.row_index_[0];
+      if (lp.a_matrix_.isColwise()) {
+        for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+          for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+               iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+            if (lp.a_matrix_.index_[iEl] == iis_row) {
+              REQUIRE(iis.col_status_[iCol] == kIisStatusInConflict);
+              break;
+            }
+          }
+        }
+      } else {
+        for (HighsInt iEl = lp.a_matrix_.start_[iis_row];
+             iEl < lp.a_matrix_.start_[iis_row + 1]; iEl++) {
+          HighsInt iCol = lp.a_matrix_.index_[iEl];
+          REQUIRE(iis.col_status_[iCol] == kIisStatusInConflict);
+        }
+      }
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+        if (iRow == iis.row_index_[0]) {
+          REQUIRE(iis.row_status_[iRow] == kIisStatusInConflict);
+        } else {
+          REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
+        }
+      }
       if (dev_run && write_model) {
         highs.writeModel("");
         highs.writeIisModel("");
@@ -207,21 +338,62 @@ TEST_CASE("lp-get-iis", "[iis]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   HighsIis iis;
-  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-  REQUIRE(iis.col_index_.size() == 2);
-  REQUIRE(iis.row_index_.size() == 1);
-  REQUIRE(iis.col_index_[0] == 0);
-  REQUIRE(iis.col_index_[1] == 1);
-  REQUIRE(iis.row_index_[0] == 2);
+  const HighsLp& highs_lp = highs.getLp();
+  // First pass with incumbent matrix colwise; second with it
+  // rowwise
+  highs.ensureColwise();
+  REQUIRE(highs_lp.a_matrix_.isColwise());
+  for (HighsInt k = 0; k < 2; k++) {
+    REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+    REQUIRE(iis.valid_ == true);
+    REQUIRE(iis.status_ == kIisModelStatusIrreducible);
+    REQUIRE(iis.col_index_.size() == 2);
+    REQUIRE(iis.row_index_.size() == 1);
+    REQUIRE(iis.col_index_[0] == 0);
+    REQUIRE(iis.col_index_[1] == 1);
+    REQUIRE(iis.row_index_[0] == 2);
 
+    HighsInt iis_row = iis.row_index_[0];
+    if (lp.a_matrix_.isColwise()) {
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+        for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+             iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+          if (lp.a_matrix_.index_[iEl] == iis_row) {
+            REQUIRE(iis.col_status_[iCol] == kIisStatusInConflict);
+            break;
+          }
+        }
+      }
+    } else {
+      for (HighsInt iEl = lp.a_matrix_.start_[iis_row];
+           iEl < lp.a_matrix_.start_[iis_row + 1]; iEl++) {
+        HighsInt iCol = lp.a_matrix_.index_[iEl];
+        REQUIRE(iis.col_status_[iCol] == kIisStatusInConflict);
+      }
+    }
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      if (iRow == iis.row_index_[0]) {
+        REQUIRE(iis.row_status_[iRow] == kIisStatusInConflict);
+      } else {
+        REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
+      }
+    }
+    highs.clearSolver();
+    highs.ensureRowwise();
+    REQUIRE(highs_lp.a_matrix_.isRowwise());
+  }
   highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-woodinfe", "[iis]") {
   std::string model = "woodinfe";
-  testMps(model, kIisStrategyFromLpRowPriority);
-  //  testMps(model, kIisStrategyFromRayRowPriority);
+  testMps(model, kIisStrategyLight);
+  testMps(model, kIisStrategyFromLp);
+  //  testMps(model, kIisStrategyFromRay);
+  //
+  // No need for a +kIisStrategyIrreducible test, since kIisStrategyFromLp
+  // yields IIS
 }
 
 TEST_CASE("lp-get-iis-galenet", "[iis]") {
@@ -245,7 +417,7 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
   //
   // 0 <= c4 <= 30
   //
-  // This is infeasible since c4 >= 30 and c4 <= 30 fices c4 = 30,
+  // This is infeasible since c4 >= 30 and c4 <= 30 fixes c4 = 30,
   // then c0 + c1 >= c3 + c4 >= 30 cannot be satisfied due to the
   // upper bounds of 10 on these variables
   //
@@ -265,24 +437,68 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
   // r2 that makes r0 infeasible
   //
   // Hence only empty columns can be removed
+  //
+  // If the elasticity filter is used, then it identifies the
+  // following infeasibility system
+  //
+  // r4:  0 <= c2 + c3      - c6 - c7
+  //
+  // r6: 20 <=           c5 + c6
+  //
+  // r7: 30 <=                     c7
+  //
+  // This is infeasible since c7 >= 30 gives 30 <= c2 + c3, but c2 and
+  // c3 have upper bounds of 10
+  //
+  // Hence the IIS does not require r6 or c5, and consists of r4 and r7
+  // (>=0) with c2 <= 10; c3 <= 10; c6 free; c7 free
+
   std::string model = "galenet";
-  testMps(model, kIisStrategyFromLpRowPriority);
-  //  testMps(model, kIisStrategyFromRayRowPriority);
+  testMps(model, kIisStrategyLight, HighsModelStatus::kNotset);
+  testMps(model, kIisStrategyFromLp);
+  testMps(model, kIisStrategyFromLp + kIisStrategyIrreducible);
 }
 
 TEST_CASE("lp-get-iis-avgas", "[iis]") {
   std::string model = "avgas";
   // For the whole LP calculation the elasticity filter only
   // identified feasibility, so the model status is not set
-  testMps(model, kIisStrategyFromLpRowPriority, HighsModelStatus::kNotset);
+  testMps(model, kIisStrategyFromLp, HighsModelStatus::kNotset);
   // For the ray calculation the model is solved, so its status is
   // known
-  //  testMps(model, kIisStrategyFromRayRowPriority,
+  //  testMps(model, kIisStrategyFromRay,
   //  HighsModelStatus::kOptimal);
 }
 
 TEST_CASE("lp-feasibility-relaxation", "[iis]") {
-  // Using infeasible LP from AMPL documentation
+  // Using infeasible MIP from AMPL documentation
+  //
+  // https://mp.ampl.com/features-guide.html#feasibility-relaxation
+  //
+  // min x-2y
+  //
+  // 2 <= -x + 21y
+  //
+  //     -3x +  2y <= 1
+  //
+  //     20x +   y <= 20
+  //
+  //  5 <= x;    y free
+  //
+  //  Vanilla feasibility relaxation
+  //
+  // min e0 + e1 + e2 + e3
+  //
+  // 2 <= e1 - x + 21y
+  //
+  //     -3x +  2y - e2 <= 1
+  //
+  //     20x +   y - e3 <= 20
+  //
+  //  5 <= e0 + x
+  //
+  //  x, y free
+  //
   HighsLp lp;
   lp.model_name_ = "ampl_infeas";
   lp.num_col_ = 2;
@@ -302,13 +518,12 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   h.setOptionValue("output_flag", dev_run);
   const HighsSolution& solution = h.getSolution();
   h.passModel(lp);
-  //  h.run();
 
-  const bool all_tests = false;
-  const bool test0 = false || all_tests;
-  const bool test1 = false || all_tests;
-  const bool test2 = false || all_tests;
-  const bool test3 = false || all_tests;
+  const bool all_tests = true;
+  const bool test0 = true || all_tests;
+  const bool test1 = true || all_tests;
+  const bool test2 = true || all_tests;
+  const bool test3 = true || all_tests;
   if (test0) {
     // Vanilla feasibility relaxation
     if (dev_run)
@@ -343,7 +558,8 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
           "===============================\n"
           "Local penalties RHS {1, -1, 10}\n"
           "===============================\n");
-    // Now test local penalties
+    // Now test local penalties, allowing lower bounds to be violated,
+    // but not upper bounds
     //
     // constraint 0: normal weight
     //
@@ -354,11 +570,24 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
     std::vector<double> local_rhs_penalty = {1, -1, 10};
     h.feasibilityRelaxation(1, 1, 0, nullptr, nullptr,
                             local_rhs_penalty.data());
-    // Should get slacks (-3, 4, 0)
+    // AMPL says: Should get slacks (-3, 4, 0) corresponding to (x, y)
+    // = (1, 0), giving objective = 4 + 3 = 7
+    //
+    // However, (x, y) = (0, 0) gives slacks (-2, 1, 20) and also
+    // objective = 5 + 2 = 7
+    //
+    // The 64-bit integer build (11/11/25) gives (x, y) = (1, 0), and
+    // the 32-bit integer build gives (x, y) = (0, 0). Since this may
+    // vary randomly in future, the test below is dependent on whether
+    // x = 0 or x = 1
+    const bool solution0 = solution.col_value[0] == 0;
+    double r0_slack = solution0 ? -2 : -3;
+    double r1_slack = solution0 ? 1 : 4;
+    double r2_slack = solution0 ? 20 : 0;
     h.writeSolution("", 1);
-    REQUIRE(solution.row_value[0] == lp.row_lower_[0] - 3);
-    REQUIRE(solution.row_value[1] == lp.row_upper_[1] - 4);
-    REQUIRE(solution.row_value[2] == lp.row_upper_[2]);
+    REQUIRE(solution.row_value[0] == lp.row_lower_[0] + r0_slack);
+    REQUIRE(solution.row_value[1] == lp.row_upper_[1] - r1_slack);
+    REQUIRE(solution.row_value[2] == lp.row_upper_[2] - r2_slack);
   }
 
   if (test3) {
@@ -378,6 +607,7 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
     h.feasibilityRelaxation(1, 1, 0, nullptr, nullptr,
                             local_rhs_penalty.data());
     // Should get slacks (18, 2, -1)
+    h.writeSolution("", 1);
     REQUIRE(solution.row_value[0] == lp.row_lower_[0] + 18);
     REQUIRE(solution.row_value[1] == lp.row_upper_[1] - 2);
     REQUIRE(solution.row_value[2] == lp.row_upper_[2] + 1);
@@ -400,7 +630,7 @@ void testMps(std::string& model, const HighsInt iis_strategy,
   highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  //  if (iis_strategy == kIisStrategyFromRayRowPriority ||
+  //  if (iis_strategy == kIisStrategyFromRay ||
   //      iis_strategy == kIisStrategyFromRayColPriority) {
   //    // For a ray strategy, solve the LP first
   //    REQUIRE(highs.run() == HighsStatus::kOk);
@@ -422,6 +652,16 @@ void testMps(std::string& model, const HighsInt iis_strategy,
     if (dev_run)
       printf("Model %s has IIS with %d columns and %d rows\n", model.c_str(),
              int(num_iis_col), int(num_iis_row));
+    REQUIRE(iis.valid_ == true);
+    const bool find_irreducible = kIisStrategyIrreducible & iis_strategy;
+    if (find_irreducible) REQUIRE(iis.status_ == kIisModelStatusIrreducible);
+    const HighsInt in_iis_status = iis.status_ == kIisModelStatusIrreducible
+                                       ? kIisStatusInConflict
+                                       : kIisStatusMaybeInConflict;
+    for (HighsInt iX = 0; iX < num_iis_col; iX++)
+      REQUIRE(iis.col_status_[iis.col_index_[iX]] == in_iis_status);
+    for (HighsInt iX = 0; iX < num_iis_row; iX++)
+      REQUIRE(iis.row_status_[iis.row_index_[iX]] == in_iis_status);
   } else {
     REQUIRE(num_iis_col == 0);
     REQUIRE(num_iis_row == 0);
@@ -441,4 +681,118 @@ void testFeasibilityRelaxation(
           HighsStatus::kOk);
   REQUIRE(h.getInfo().objective_function_value ==
           require_feasibility_objective_function_value);
+}
+
+TEST_CASE("feasible-lp-iis", "[iis]") {
+  HighsLp lp;
+  lp.model_name_ = "chip";
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.col_names_ = {"Tables", "SetsOfChairs"};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {80, 120};
+  lp.row_names_ = {"Assembly", "Finishng"};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.passModel(lp);
+  HighsIis iis;
+  // With kIisStrategyLight, feasibility of the LP is not determined
+  // until it's been solved
+  h.getIis(iis);
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+  REQUIRE(iis.col_status_[0] == kIisStatusMaybeInConflict);
+  REQUIRE(iis.col_status_[1] == kIisStatusMaybeInConflict);
+  REQUIRE(iis.row_status_[0] == kIisStatusMaybeInConflict);
+  REQUIRE(iis.row_status_[1] == kIisStatusMaybeInConflict);
+
+  h.run();
+
+  h.getIis(iis);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+  REQUIRE(iis.col_status_[0] == kIisStatusNotInConflict);
+  REQUIRE(iis.col_status_[1] == kIisStatusNotInConflict);
+  REQUIRE(iis.row_status_[0] == kIisStatusNotInConflict);
+  REQUIRE(iis.row_status_[1] == kIisStatusNotInConflict);
+
+  h.passModel(lp);
+  // With kIisStrategyFromLp, feasibility of the LP is determined
+  h.setOptionValue("iis_strategy", kIisStrategyFromLp);
+
+  h.getIis(iis);
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+  REQUIRE(iis.col_status_[0] == kIisStatusNotInConflict);
+  REQUIRE(iis.col_status_[1] == kIisStatusNotInConflict);
+  REQUIRE(iis.row_status_[0] == kIisStatusNotInConflict);
+  REQUIRE(iis.row_status_[1] == kIisStatusNotInConflict);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("write-iis_model-file", "[iis]") {
+  // Reproduces #2635, and adds code coverage for writing IIS model
+  // and solution at runtime
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string test_mps = test_name + ".mps";
+  const std::string test_sol = test_name + ".sol";
+  HighsLp lp;
+  lp.model_name_ = "2635";
+  lp.num_col_ = 5;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {-1, -1, 0, 0, 0};
+  lp.col_lower_ = {0, 0, 10, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 10, kHighsInf, kHighsInf};
+  lp.row_lower_ = {0, 0, 0, 20};
+  lp.row_upper_ = {0, 0, 0, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4, 5, 7, 10};
+  lp.a_matrix_.index_ = {1, 3, 2, 3, 1, 0, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {-1, 1, -1, 1, 1, 1, 1, -0.5, -1, 1};
+  lp.col_names_ = {"x0", "x1", "x2", "x3", "x4"};
+  lp.row_names_ = {"x3-.5x4=0", "x2-x4-x0=0", "x3+x4-x1=0", "x0+x1>=20"};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("log_file", "highs.log");
+  h.setOptionValue("write_iis_model_file", test_mps);
+  h.setOptionValue("solution_file", test_sol);
+  const HighsInt to_k = 2;
+  for (HighsInt k = 0; k <= to_k; k++) {
+    if (k == 0) {
+      h.setOptionValue("iis_strategy", kIisStrategyLight);
+    } else if (k == 1) {
+      h.setOptionValue("iis_strategy", kIisStrategyFromLp);
+    } else {
+      assert(k == 2);
+      h.setOptionValue("iis_strategy",
+                       kIisStrategyFromLp + kIisStrategyIrreducible);
+    }
+    if (dev_run)
+      printf(
+          "\nPass %d with iis_strategy = %d\n============================\n\n",
+          int(k), int(h.getOptions().iis_strategy));
+    h.passModel(lp);
+    h.run();
+    h.readModel(test_mps);
+    if (k == 0) {
+      REQUIRE(h.getLp().num_col_ == 0);
+      REQUIRE(h.getLp().num_row_ == 0);
+    } else {
+      // Use h.optimizeModel(); to avoid unnecessary MPS and solution
+      // file
+      h.optimizeModel();
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
+    }
+  }
+  std::remove(test_mps.c_str());
+  std::remove(test_sol.c_str());
+  h.resetGlobalScheduler(true);
 }

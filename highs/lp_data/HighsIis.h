@@ -15,13 +15,21 @@
 
 const bool kIisDevReport = false;
 
-enum IisBoundStatus {
+enum IisBoundStatus : int {
   kIisBoundStatusDropped = -1,
   kIisBoundStatusNull,   // 0
   kIisBoundStatusFree,   // 1
   kIisBoundStatusLower,  // 2
   kIisBoundStatusUpper,  // 3
   kIisBoundStatusBoxed   // 4
+};
+
+enum IisModelStatus {
+  kIisModelStatusFeasible = -1,
+  kIisModelStatusUnknown,     // 0
+  kIisModelStatusInfeasible,  // 1
+  kIisModelStatusReducible,   // 2
+  kIisModelStatusIrreducible  // 3
 };
 
 struct HighsIisInfo {
@@ -33,18 +41,19 @@ class HighsIis {
  public:
   HighsIis() {}
 
-  void invalidate();
+  void clear();
+  void invalid(const HighsLp& lp);
   std::string iisBoundStatusToString(HighsInt bound_status) const;
-  void report(const std::string message, const HighsLp& lp) const;
+  void report(const std::string& message, const HighsLp& lp) const;
   void addCol(const HighsInt col, const HighsInt status = kIisBoundStatusNull);
   void addRow(const HighsInt row, const HighsInt status = kIisBoundStatusNull);
   void removeCol(const HighsInt col);
   void removeRow(const HighsInt row);
-  HighsStatus getData(const HighsLp& lp, const HighsOptions& options,
-                      const HighsBasis& basis,
-                      const std::vector<HighsInt>& infeasible_row);
-  void getLp(const HighsLp& lp);
-  void getStatus(const HighsLp& lp);
+  HighsStatus deduce(const HighsLp& lp, const HighsOptions& options,
+                     const HighsBasis& basis);
+  void setLp(const HighsLp& lp);
+  HighsInt nonIsStatus() const;
+  void setStatus(const HighsLp& lp);
 
   HighsStatus compute(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis* basis = nullptr);
@@ -52,11 +61,19 @@ class HighsIis {
   bool trivial(const HighsLp& lp, const HighsOptions& options);
   bool rowValueBounds(const HighsLp& lp, const HighsOptions& options);
 
+  bool indexStatusOkReturn(const bool return_value) const {
+    return return_value;
+  }
+  bool lpDataOkReturn(const bool return_value) const { return return_value; }
+  bool lpOkReturn(const bool return_value) const { return return_value; }
+
+  bool indexStatusOk(const HighsLp& lp) const;
   bool lpDataOk(const HighsLp& lp, const HighsOptions& options) const;
   bool lpOk(const HighsOptions& options) const;
 
   // Data members
   bool valid_ = false;
+  HighsInt status_;
   HighsInt strategy_ = kIisStrategyMin;
   std::vector<HighsInt> col_index_;
   std::vector<HighsInt> row_index_;

@@ -20,42 +20,55 @@ class FactorHiGHSSolver : public LinearSolver {
   Symbolic S_;
 
   // normal equations data
-  std::vector<Int> ptrNE_, rowsNE_;
+  std::vector<Int> ptrNE_;
+  std::vector<Int> rowsNE_;
   std::vector<double> valNE_;
-  std::vector<Int> ptrNE_rw_, idxNE_rw_;
-  std::vector<Int> corr_NE_;
+  std::vector<Int> ptrA_rw_, idxA_rw_;
+  std::vector<Int> corr_A_;
+
+  // augmented system data
+  std::vector<Int> ptrAS_;
+  std::vector<Int> rowsAS_;
+  std::vector<double> valAS_;
 
   const Regularisation& regul_;
 
-  Info* info_ = nullptr;
-  IpmData* data_ = nullptr;
+  Info& info_;
+  IpmData& data_;
   const LogHighs& log_;
 
   const Model& model_;
+  const HighsSparseMatrix& A_;
+  const HighsHessian& Q_;
+  const Int mA_, nA_, nzA_, nzQ_;
+
   Options& options_;
 
   Int chooseNla();
   Int setNla();
   void setParallel();
+  Int chooseOrdering(const std::vector<Int>& rows, const std::vector<Int>& ptr,
+                     const std::vector<Int>& signs, Symbolic& S);
 
-  Int buildNEstructure(const HighsSparseMatrix& A,
-                       int64_t nz_limit = kHighsIInf);
-  Int buildNEvalues(const HighsSparseMatrix& A,
-                    const std::vector<double>& scaling);
+  Int buildNEstructure(Int64 nz_limit = kHighsIInf);
+  Int buildNEvalues(const std::vector<double>& scaling);
+  void freeNEmemory();
+
+  Int buildASstructure(Int64 nz_limit = kHighsIInf);
+  Int buildASvalues(const std::vector<double>& scaling);
+  void freeASmemory();
 
   Int analyseAS(Symbolic& S);
-  Int analyseNE(Symbolic& S, int64_t nz_limit = kHighsIInf);
+  Int analyseNE(Symbolic& S, Int64 nz_limit = kHighsIInf);
 
  public:
   FactorHiGHSSolver(Options& options, const Model& model,
-                    const Regularisation& regul, Info* info, IpmData* record,
+                    const Regularisation& regul, Info& info, IpmData& record,
                     const LogHighs& log);
 
   // Override functions
-  Int factorAS(const HighsSparseMatrix& A,
-               const std::vector<double>& scaling) override;
-  Int factorNE(const HighsSparseMatrix& A,
-               const std::vector<double>& scaling) override;
+  Int factorAS(const std::vector<double>& scaling) override;
+  Int factorNE(const std::vector<double>& scaling) override;
   Int solveNE(const std::vector<double>& rhs,
               std::vector<double>& lhs) override;
   Int solveAS(const std::vector<double>& rhs_x,
@@ -66,6 +79,7 @@ class FactorHiGHSSolver : public LinearSolver {
   double flops() const override;
   double spops() const override;
   double nz() const override;
+  void getReg(std::vector<double>& reg) override;
 };
 
 }  // namespace hipo

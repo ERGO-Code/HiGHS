@@ -36,20 +36,22 @@ void FHsolver::setRegularisation(double reg_p, double reg_d) {
 
 Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
                       const std::vector<Int>& ptr,
-                      const std::vector<Int>& signs) {
-  Analyse an_obj(rows, ptr, signs, nb_, log_, data_);
+                      const std::vector<Int>& signs,
+                      const std::string& ordering) {
+  Analyse an_obj(rows, ptr, signs, nb_, log_, data_, ordering);
   return an_obj.run(S);
 }
 
 Int FHsolver::factorise(const Symbolic& S, const std::vector<Int>& rows,
                         const std::vector<Int>& ptr,
                         const std::vector<double>& vals) {
-  Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_, sn_columns_);
+  Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_, sn_columns_,
+                     &serial_stack_);
   return fact_obj.run(N_);
 }
 
-Int FHsolver::solve(std::vector<double>& x, Int* solve_count, double* omega) {
-  return N_.solve(x, solve_count, omega);
-}
+Int FHsolver::solve(std::vector<double>& x) { return N_.solve(x); }
+
+void FHsolver::getRegularisation(std::vector<double>& reg) { N_.getReg(reg); }
 
 }  // namespace hipo

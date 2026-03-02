@@ -4,27 +4,12 @@
 
 namespace hipo {
 
-void counts2Ptr(std::vector<Int>& ptr, std::vector<Int>& w) {
-  // Given the column counts in the vector w (of size n),
-  // compute the column pointers in the vector ptr (of size n+1),
-  // and copy the first n pointers back into w.
-
-  Int temp_nz{};
-  Int n = w.size();
-  for (Int j = 0; j < n; ++j) {
-    ptr[j] = temp_nz;
-    temp_nz += w[j];
-    w[j] = ptr[j];
-  }
-  ptr[n] = temp_nz;
-}
-
 void inversePerm(const std::vector<Int>& perm, std::vector<Int>& iperm) {
   // Given the permutation perm, produce the inverse permutation iperm.
   // perm[i] : i-th entry to use in the new order.
   // iperm[i]: where entry i is located in the new order.
 
-  for (Int i = 0; i < perm.size(); ++i) {
+  for (Int i = 0; i < static_cast<Int>(perm.size()); ++i) {
     iperm[perm[i]] = i;
   }
 }
@@ -93,48 +78,6 @@ void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
       Int pos = work[i]++;
       rowsT[pos] = j;
       valT[pos] = val[el];
-    }
-  }
-}
-
-void symProduct(const std::vector<Int>& ptr, const std::vector<Int>& rows,
-                const std::vector<double>& vals, const std::vector<double>& x,
-                std::vector<double>& y, double alpha) {
-  // Matrix-vector product in CSC format, for symmetric matrix which stores only
-  // the lower triangle.
-  // Compute y = y + alpha * M * x
-
-  const Int n = ptr.size() - 1;
-
-  for (Int col = 0; col < n; ++col) {
-    for (Int el = ptr[col]; el < ptr[col + 1]; ++el) {
-      Int row = rows[el];
-      double val = vals[el];
-
-      y[row] += alpha * val * x[col];
-      if (row != col) y[col] += alpha * val * x[row];
-    }
-  }
-}
-
-void symProductQuad(const std::vector<Int>& ptr, const std::vector<Int>& rows,
-                    const std::vector<double>& vals,
-                    const std::vector<double>& x, std::vector<HighsCDouble>& y,
-                    double alpha) {
-  // Matrix-vector product in CSC format, for symmetric matrix which stores only
-  // the lower triangle.
-  // Compute y = y + alpha * M * x
-
-  const Int n = ptr.size() - 1;
-
-  for (Int col = 0; col < n; ++col) {
-    for (Int el = ptr[col]; el < ptr[col + 1]; ++el) {
-      Int row = rows[el];
-      HighsCDouble val = vals[el];
-
-      y[row] += val * (HighsCDouble)x[col] * (HighsCDouble)alpha;
-      if (row != col)
-        y[col] += val * (HighsCDouble)x[row] * (HighsCDouble)alpha;
     }
   }
 }
@@ -250,8 +193,8 @@ void processEdge(Int j, Int i, const std::vector<Int>& first,
   prevleaf[i] = j;
 }
 
-double getDiagStart(Int n, Int k, Int nb, Int n_blocks, std::vector<Int>& start,
-                    bool triang) {
+Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
+                   std::vector<Int64>& start, bool triang) {
   // start position of diagonal blocks for blocked dense formats
   start.assign(n_blocks, 0);
   for (Int i = 1; i < n_blocks; ++i) {
@@ -260,9 +203,30 @@ double getDiagStart(Int n, Int k, Int nb, Int n_blocks, std::vector<Int>& start,
   }
 
   Int jb = std::min(nb, k - (n_blocks - 1) * nb);
-  double result = (double)start.back() + (double)(n - (n_blocks - 1) * nb) * jb;
-  if (triang) result -= (double)jb * (jb - 1) / 2;
+  Int64 result = start.back() + (Int64)(n - (n_blocks - 1) * nb) * jb;
+  if (triang) result -= jb * (jb - 1) / 2;
   return result;
+}
+
+Int maxDepthTree(const std::vector<Int>& parent) {
+  Int max_depth = 0;
+  Int n = parent.size();
+  std::vector<Int> depth(n, -1);
+  for (Int i = 0; i < n; ++i) {
+    Int node = i;
+    Int value = 1;
+    while (node != -1) {
+      if (value > depth[node]) {
+        depth[node] = value;
+      } else
+        break;
+
+      ++value;
+      node = parent[node];
+    }
+    if (parent[i] == -1) max_depth = std::max(max_depth, depth[i]);
+  }
+  return max_depth;
 }
 
 Clock::Clock() { start(); }

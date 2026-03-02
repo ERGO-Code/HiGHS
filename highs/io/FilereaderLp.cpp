@@ -16,7 +16,7 @@
 #include <exception>
 #include <map>
 
-#include "../extern/filereaderlp/reader.hpp"
+#include "io/filereaderlp/reader.hpp"
 #include "lp_data/HighsLpUtils.h"
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
@@ -290,7 +290,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                    sum_num_zero > 1 ? "s" : "");
 
   } catch (std::invalid_argument& ex) {
-    // lpassert in extern/filereaderlp/def.hpp throws
+    // lpassert in highs/io/filereaderlp/def.hpp throws
     // std::invalid_argument whatever the error. Hence, unless
     // something is done specially - here or elsewhere -
     // FilereaderRetcode::kParserError will be returned.
@@ -343,8 +343,8 @@ void FilereaderLp::writeToFileVar(FILE* file, const std::string var_name) {
 }
 
 void FilereaderLp::writeToFileMatrixRow(FILE* file, const HighsInt iRow,
-                                        const HighsSparseMatrix ar_matrix,
-                                        const std::vector<string> col_names) {
+                                        const HighsSparseMatrix& ar_matrix,
+                                        const std::vector<string>& col_names) {
   assert(ar_matrix.isRowwise());
 
   for (HighsInt iEl = ar_matrix.start_[iRow]; iEl < ar_matrix.start_[iRow + 1];

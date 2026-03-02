@@ -64,6 +64,58 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("chip-user-bound-scale", "[highs_user_scale]") {
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {82, 125};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4};
+  double chip_solution0 = 39;
+  double chip_solution1 = 21.5;
+
+  // Pass twice: once for LP; once for MIP
+  for (int k = 0; k < 2; k++) {
+    highs.passModel(lp);
+
+    highs.run();
+
+    REQUIRE(solution.col_value[0] == chip_solution0);
+    REQUIRE(solution.col_value[1] == chip_solution1);
+
+    REQUIRE(highs.setOptionValue("user_bound_scale", 3) == HighsStatus::kOk);
+
+    highs.clearSolver();
+    highs.run();
+    REQUIRE(solution.col_value[0] == chip_solution0);
+    REQUIRE(solution.col_value[1] == chip_solution1);
+
+    REQUIRE(highs.setOptionValue("user_bound_scale", -3) == HighsStatus::kOk);
+
+    highs.clearSolver();
+    highs.run();
+    REQUIRE(solution.col_value[0] == chip_solution0);
+    REQUIRE(solution.col_value[1] == chip_solution1);
+
+    // Add integrality, and change the solution
+    lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+    chip_solution0 = 40;
+    chip_solution1 = 21;
+  }
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   Highs highs;
   const HighsInfo& info = highs.getInfo();

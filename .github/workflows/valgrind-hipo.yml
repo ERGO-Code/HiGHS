@@ -8,48 +8,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Valgrind
         run: sudo apt-get update && sudo apt-get install valgrind
 
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/METIS
-          ref: 510-ts
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: |
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        run: |
-          cmake \
-          -S $GITHUB_WORKSPACE/METIS \
-          -B build \
-          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
-          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
-          cmake --build build --parallel
-          cmake --install build
-
-      # no default blas available on runner
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
 
@@ -58,10 +20,10 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DBUILD_OPENBLAS=ON \
+          -DNO_AVX512=ON \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DALL_TESTS=ON \
-          -DBLA_VENDOR=OpenBLAS \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
+          -DALL_TESTS=ON
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -104,47 +66,6 @@ jobs:
       - name: Install Valgrind
         run: sudo apt-get update && sudo apt-get install valgrind
 
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/METIS
-          ref: 510-ts
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: |
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        run: |
-          cmake \
-          -S $GITHUB_WORKSPACE/METIS \
-          -B build \
-          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
-          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
-          cmake --build build --parallel
-          cmake --install build
-
-      # no default blas available on runner
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
 
@@ -153,10 +74,9 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DBUILD_OPENBLAS=ON \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DALL_TESTS=ON \
-          -DBLA_VENDOR=OpenBLAS \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
+          -DALL_TESTS=ON
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -200,47 +120,6 @@ jobs:
 
       - name: Install Valgrind
         run: sudo apt-get update && sudo apt-get install valgrind
-      
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/METIS
-          ref: 510-ts
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: |
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        run: |
-          cmake \
-          -S $GITHUB_WORKSPACE/METIS \
-          -B build \
-          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
-          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
-          cmake --build build --parallel
-          cmake --install build
-
-      # no default blas available on runner
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -250,11 +129,8 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DALL_TESTS=ON \
-          -DBLA_VENDOR=OpenBLAS \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
-
+          -DBUILD_OPENBLAS=ON \
+          -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -286,7 +162,7 @@ jobs:
             exit 0
           fi
           exit 1
-      
+
       - name: Test C example
         working-directory: ${{runner.workspace}}/build
         shell: bash

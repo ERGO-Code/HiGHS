@@ -6,7 +6,18 @@ add_library(cudalin SHARED
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cudalinalg.cuh
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cudalinalg.cu
 )
-set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+# latest has
+# set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+set_target_properties(cudalin PROPERTIES 
+CUDA_SEPARABLE_COMPILATION ON
+#CUDA_ARCHITECTURES "60;70;75;80;86" )
+#Deleted 60;70 due to errors
+#nvcc fatal   : Unsupported gpu architecture 'compute_60'
+#nvcc fatal   : Unsupported gpu architecture 'compute_70'
+CUDA_ARCHITECTURES "75;80;86" )
+
 
 # set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
 
@@ -34,3 +45,7 @@ target_link_libraries(testcudalin PRIVATE cudalin ${CUDA_LIBRARY})
 set_target_properties(testcublas PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_link_libraries(testcublas PRIVATE cudalin ${CUDA_LIBRARY})
 
+target_include_directories(cudalin PUBLIC 
+    "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../hipdlp>"  # Add this for pdhg_kernels.hpp
+)

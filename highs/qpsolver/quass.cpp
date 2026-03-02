@@ -146,7 +146,8 @@ static double computemaxsteplength(Runtime& runtime, const QpVector& p,
 
 static QpSolverStatus reduce(Runtime& rt, Basis& basis,
                              const HighsInt newactivecon, QpVector& buffer_d,
-                             HighsInt& maxabsd, HighsInt& constrainttodrop) {
+                             HighsInt& maxabsd, HighsInt& constrainttodrop,
+                             double& log_d) {
   HighsInt idx = indexof(basis.getinactive(), newactivecon);
   if (idx != -1) {
     maxabsd = idx;
@@ -170,10 +171,7 @@ static QpSolverStatus reduce(Runtime& rt, Basis& basis,
   }
   constrainttodrop = basis.getinactive()[maxabsd];
   if (fabs(buffer_d.value[maxabsd]) < rt.settings.d_zero_threshold) {
-    printf(
-        "degeneracy? not possible to find non-active constraint to "
-        "leave basis. max: log(d[%" HIGHSINT_FORMAT "]) = %lf\n",
-        maxabsd, log10(fabs(buffer_d.value[maxabsd])));
+    log_d = log10(fabs(buffer_d.value[maxabsd]));
     return QpSolverStatus::DEGENERATE;
   }
   return QpSolverStatus::OK;
@@ -448,9 +446,23 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       if (stepres.limitingconstraint != -1) {
         HighsInt constrainttodrop;
         HighsInt maxabsd;
+        // #2734 requires addition of log_d to parameter list of reduce
+        // so that former printf can be handled with
+        // runtime.settings.degeneracy_fail_log.fire, which isn't
+        // available to reduce since it's not a member of the Quass
+        // struct
+        double log_d = -1;
         status = reduce(runtime, basis, stepres.limitingconstraint, buffer_d,
-                        maxabsd, constrainttodrop);
+                        maxabsd, constrainttodrop, log_d);
         if (status != QpSolverStatus::OK) {
+          // Possibly perform degeneracy failure logging
+          if (status == QpSolverStatus::DEGENERATE) {
+            // Ensure that log_d has been set
+            assert(log_d >= 0);
+            std::pair<HighsInt, double> degeneracy_fail_data =
+                std::make_pair(maxabsd, log_d);
+            runtime.settings.degeneracy_fail_log.fire(degeneracy_fail_data);
+          }
           runtime.status = QpModelStatus::kUndetermined;
           return;
         }

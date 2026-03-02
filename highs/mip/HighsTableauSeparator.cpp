@@ -71,7 +71,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       my_fractionality = fractionality(lpSolution.row_value[row]);
     } else {
       HighsInt col = basisinds[i];
-      if (mip.variableType(col) == HighsVarType::kContinuous) continue;
+      if (mip.isColContinuous(col)) continue;
 
       my_fractionality = fractionality(lpSolution.col_value[col]);
     }

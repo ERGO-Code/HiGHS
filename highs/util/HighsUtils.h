@@ -109,13 +109,13 @@ HighsInt dataSize(const HighsIndexCollection& index_collection);
 
 bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
                                  const HighsVarType* user_data,
-                                 const std::string name);
+                                 const std::string& name);
 bool intUserDataNotNull(const HighsLogOptions& log_options,
-                        const HighsInt* user_data, const std::string name);
+                        const HighsInt* user_data, const std::string& name);
 bool doubleUserDataNotNull(const HighsLogOptions& log_options,
-                           const double* user_data, const std::string name);
+                           const double* user_data, const std::string& name);
 
-double getNorm2(const std::vector<double> values);
+double getNorm2(const std::vector<double>& values);
 
 /**
  * @brief Logical check of double being +Infinity
@@ -136,22 +136,22 @@ double highsRelativeDifference(const double v0, const double v1);
  */
 void analyseVectorValues(
     const HighsLogOptions* log_options,
-    const std::string message,       //!< Message to be printed
+    const std::string& message,      //!< Message to be printed
     HighsInt vecDim,                 //!< Dimension of vector
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of
                                      //!< different values in the vector
-    std::string model_name =
+    const std::string& model_name =
         "Unknown"  //!< Model name to report if analysing distribution of
                    //!< different values in the vector
 );
 
 void analyseVectorValues(
     const HighsLogOptions* log_options,
-    const std::string message,         //!< Message to be printed
+    const std::string& message,        //!< Message to be printed
     HighsInt vecDim,                   //!< Dimension of vector
     const std::vector<HighsInt>& vec,  //!< Vector of values
-    std::string model_name =
+    const std::string& model_name =
         "Unknown"  //!< Model name to report if analysing distribution of
                    //!< different values in the vector
 );
@@ -165,8 +165,8 @@ void analyseMatrixSparsity(
     const std::vector<HighsInt>& Aindex   //!< Matrix row indices
 );
 
-bool initialiseValueDistribution(const std::string distribution_name,
-                                 const std::string value_name,
+bool initialiseValueDistribution(const std::string& distribution_name,
+                                 const std::string& value_name,
                                  const double min_value_limit,
                                  const double max_value_limit,
                                  const double base_value_limit,
@@ -189,8 +189,9 @@ bool regressScatterData(HighsScatterData& scatter_data);
 bool predictFromScatterData(const HighsScatterData& scatter_data,
                             const double value0, double& predicted_value1,
                             const bool log_regression = false);
-bool printScatterData(std::string name, const HighsScatterData& scatter_data);
-void printScatterDataRegressionComparison(std::string name,
+bool printScatterData(const std::string& name,
+                      const HighsScatterData& scatter_data);
+void printScatterDataRegressionComparison(const std::string& name,
                                           const HighsScatterData& scatter_data);
 bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
                                        const bool print = false);
@@ -199,11 +200,11 @@ double nearestPowerOfTwoScale(const double value);
 
 // If assert_condition is false then, if NDEBUG is defined message is
 // printed and abort() is called, otherwise assert is called
-void highsAssert(const bool assert_condition, const std::string message = "");
+void highsAssert(const bool assert_condition, const std::string& message = "");
 
 // If pause_condition is true, then keyboard input is required. Allows
 // breakpoints in VScode where optimization might prevent them.
-bool highsPause(const bool pause_condition, const std::string message = "");
+bool highsPause(const bool pause_condition, const std::string& message = "");
 
 // Utility for computing fractional part
 template <typename T>
@@ -213,5 +214,59 @@ inline T fractionality(T input, T* intval = nullptr) {
   T val = round(input);
   if (intval != nullptr) *intval = val;
   return abs(input - val);
+}
+
+inline std::pair<double, double> infeasibility(const double lower,
+                                               const double value,
+                                               const double upper,
+                                               const double tolerance) {
+  using std::fabs;
+  using std::min;
+  double residual = 0;
+  double infeasibility = 0;
+  // Determine the infeasibility exceeding the tolerance used in
+  // computing the number of infeasibilities in a basic solution -
+  // which defines its feasibility
+  //
+  // @primal_infeasibility calculation
+  if (value < lower - tolerance) infeasibility = lower - value;
+  if (value > upper + tolerance) infeasibility = value - upper;
+  // Determine the residual used in computing the sum of
+  // infeasibilities and max infeasibility - which are just for
+  // reporting
+  if (tolerance > 0) {
+    if (value < lower) residual = lower - value;
+    if (value > upper) residual = value - upper;
+  } else {
+    residual = infeasibility;
+  }
+  // Now, if the bound defining the residual is large, it's possible
+  // for the infeasibility to be zero, but the residual to exceed the
+  // tolerance due to numerical rounding
+  //
+  // Case in point is #2653 where row 1 has l = 157345 and the
+  // activity gives zero infeasibility, but a residual of
+  // 1.00000761449e-06, exceeding the tolerance of 1e-6 by delta =
+  // 7.61449e-12.
+  //
+  // Now delta / l = 4.83937e-17, which is less than machine precision
+  // (2.22045e-16), so the reliable residual value should ignore this
+  // delta.
+  //
+  // In general, it might be possible to subtract delta from the
+  // residual conditional on (something like)
+  //
+  // delta < 1e1 * max(1.0, fabs(bound_value)) * kHighsMacheps
+  //
+  // to give a reasonable value but, in practice, when infeasibility is
+  // 0, it would seem fine to set
+  //
+  // residual = min(residual, tolerance)
+  //
+  // so that values of maximum infeasibility defined by residual
+  // doesn't exceed the tolerance
+  //
+  if (infeasibility == 0) residual = min(residual, tolerance);
+  return std::make_pair(infeasibility, residual);
 }
 #endif  // UTIL_HIGHSUTILS_H_

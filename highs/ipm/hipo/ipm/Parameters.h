@@ -28,14 +28,24 @@ const double kSymbNzMult = 5.0;
 
 // parameters for choice of parallelism
 const double kLargeFlopsThresh = 1e7;
-const double kLargeSpeedupThresh = 1.5;
+const double kLargeSpeedupThresh = 1;
 const double kLargeSnThresh = 20.0;
-const double kSmallSnThresh = 5.0;
+const double kSmallSnThresh = 3.0;
 const Int kMinNumberSn = 10;
+const double kLargeStorageGB = 20.0;
+const double kLargeFillin = 50.0;
+const double kMaxTreeDepth = 1000;
+
+// parameters for choice of ordering
+const double kFlopsOrderingThresh = 1.2;
 
 // parameters for dense columns
 const double kDenseColThresh = 0.5;
 const Int kMinRowsForDensity = 2000;
+
+// parameters for iterative refinement
+const Int kMaxIterRefine = 3;
+const double kTolRefine = 1e-12;
 
 // static regularisation
 struct Regularisation {

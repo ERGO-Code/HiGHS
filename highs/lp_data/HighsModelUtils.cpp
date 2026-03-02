@@ -493,7 +493,8 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
 
 void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
                         const bool raw, const bool is_mip,
-                        const HighsInt row_id, const std::string objective_name,
+                        const HighsInt row_id,
+                        const std::string& objective_name,
                         const double objective_function_value) {
   std::stringstream ss;
   ss.str(std::string());
@@ -1455,6 +1456,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Sparsify";
   } else if (rule_type == kPresolveRuleProbing) {
     return "Probing";
+  } else if (rule_type == kPresolveRuleEnumeration) {
+    return "Enumeration";
   }
   assert(1 == 0);
   return "????";

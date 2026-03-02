@@ -11,21 +11,19 @@ that can exploit the availability of a [GPU](@ref gpu).
 
 By default, when running in parallel, HiGHS will use half the
 available threads on a machine. This number can be modified by setting
-the value of the [threads](@ref) option.
+the value of the [threads](@ref option-threads) option.
 
 ## Dual simplex
 
 By default, the HiGHS dual simplex solver runs in serial. However, it
 has a variant allowing concurrent processing. This variant is used
-when the
-[parallel](@ref)
-option is set "on", by specifying `--parallel` when running the
-[executable](@ref executable) via
-the command line, or by setting it via a library call in an
+when the [parallel](@ref option-parallel) option is set "on", by
+specifying `--parallel` when running the [executable](@ref executable)
+via the command line, or by setting it via a library call in an
 application.
 
 The concurrency used will be the value of
-[simplex\_max\_concurrency](@ref). If
+[simplex\_max\_concurrency](@ref option-simplex-max-concurrency). If
 this is fewer than the number of threads available, parallel
 performance may be less than anticipated.
 
@@ -45,7 +43,7 @@ The only parallel computation currently implemented in the MIP solver
 occurs when performing symmetry detection on the model, when querying
 clique tables, and when the interior point solver is used to compute
 the analytic centre. This parallelism is always advantageous, so is
-performed regardless of the value of the [parallel](@ref) option.
+performed regardless of the value of the [parallel](@ref option-parallel) option.
 
 ## IPM
 
@@ -54,13 +52,13 @@ elimination tree during the multifrontal factorisation (_tree level_)
 and to perform the dense factorisation of the frontal matrices 
 (_node level_).
 
-If the [parallel](@ref) option is set "on", the level of parallelism is 
-determined by the [hipo\_parallel\_type](@ref option-hipo-parallel) option, 
+If the [parallel](@ref option-parallel) option is set "on", the level of parallelism is 
+determined by the [hipo\_parallel\_type](@ref option-hipo-parallel-type) option, 
 which can be "tree" for tree level only, "node" for node level only, or 
 "both" for both levels.
 
-If the [parallel](@ref) option is set "choose", the solver selects which 
-level to use based on a heuristic. When the [parallel](@ref) option is set 
+If the [parallel](@ref option-parallel) option is set "choose", the solver selects which 
+level to use based on a heuristic. When the [parallel](@ref option-parallel) option is set 
 "choose" or "off", the value of the hipo\_parallel\_type option is ignored.
 
 

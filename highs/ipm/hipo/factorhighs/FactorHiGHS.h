@@ -1,6 +1,7 @@
 #ifndef FACTOR_HIGHS_H
 #define FACTOR_HIGHS_H
 
+#include "CliqueStack.h"
 #include "DataCollector.h"
 #include "Numeric.h"
 #include "Symbolic.h"
@@ -9,7 +10,7 @@
 /*
 
 Direct solver for IPM matrices.
-It requires Metis and BLAS.
+It requires Metis, AMD, rcm and BLAS.
 
 Consider a sparse symmetric matrix M in CSC format.
 Only its lower triangular part is used; entries in the upper triangle are
@@ -36,6 +37,10 @@ Then, the factorization is performed as follows.
     FH.factorise(S, rows, ptr, val);
     FH.solve(x);
 
+The argument "ordering" passed to Analyse constructor can be used to select the
+fill-reducing ordering to use. Valid values are "metis", "amd", "rcm". By
+default, metis is used.
+
 Printing to screen is achieved using the interface in auxiliary/Log.h. Pass an
 object of type Log for normal printing:
     ...
@@ -61,6 +66,7 @@ class FHsolver {
   DataCollector data_;
   Regul regul_;
   Numeric N_;
+  CliqueStack serial_stack_;
 
   const Int nb_;  // block size
   static const Int default_nb_ = 128;
@@ -81,23 +87,17 @@ class FHsolver {
   // ptr, and store symbolic factorisation in object S.
   // See ReturnValues.h for errors.
   Int analyse(Symbolic& S, const std::vector<Int>& rows,
-              const std::vector<Int>& ptr, const std::vector<Int>& signs);
+              const std::vector<Int>& ptr, const std::vector<Int>& signs,
+              const std::string& ordering = "metis");
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
-  // numerical factorisation in object N. Matrix is moved into the object, so
-  // rows, ptr, vals are invalid afterwards.
-  // See ReturnValues.h for errors.
+  // numerical factorisation in object N. See ReturnValues.h for errors.
   Int factorise(const Symbolic& S, const std::vector<Int>& rows,
                 const std::vector<Int>& ptr, const std::vector<double>& vals);
 
   // Perform solve phase with rhs given by x, which is overwritten with the
-  // solution. solve_count returns the number of solves performed during the
-  // phase (including refinement). omega returns the final residual after
-  // refinement.
-  // For now refinement is performed automatically as part of solve,
-  // this will change in the future.
-  Int solve(std::vector<double>& x, Int* solve_count = nullptr,
-            double* omega = nullptr);
+  // solution.
+  Int solve(std::vector<double>& x);
 
   // If multiple factorisation are performed, call newIter() before each
   // factorisation. This is used only to collect data for debugging, if
@@ -107,6 +107,8 @@ class FHsolver {
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p, double reg_d);
+
+  void getRegularisation(std::vector<double>& reg);
 };
 
 }  // namespace hipo

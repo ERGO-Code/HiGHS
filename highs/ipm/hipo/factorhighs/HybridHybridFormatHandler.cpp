@@ -1,5 +1,8 @@
 #include "HybridHybridFormatHandler.h"
 
+#include <cassert>
+#include <cstring>
+
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 #include "DenseFact.h"
@@ -9,19 +12,27 @@ namespace hipo {
 
 HybridHybridFormatHandler::HybridHybridFormatHandler(
     const Symbolic& S, Int sn, const Regul& regul, DataCollector& data,
-    std::vector<double>& frontal)
-    : FormatHandler(S, sn, regul, frontal), data_{data} {
+    std::vector<double>& frontal, double* clique_ptr)
+    : FormatHandler(S, sn, regul, frontal, clique_ptr), data_{data} {
   // initialise frontal and clique
   initFrontal();
-  initClique();
+
+  // if CliqueStack is used, clique_ptr already points to a valid region of
+  // memory for the clique. Otherwise, allocate it locally.
+  if (!clique_ptr_) initClique();
 }
 
 void HybridHybridFormatHandler::initFrontal() {
   const Int n_blocks = (sn_size_ - 1) / nb_ + 1;
   diag_start_.resize(n_blocks);
-  Int frontal_size = getDiagStart(ldf_, sn_size_, nb_, n_blocks, diag_start_);
-  frontal_.assign(frontal_size + extra_space, 0.0);
-  // NB: the plus 10 is not needed, but it avoids weird problems later on.
+  Int64 frontal_size =
+      getDiagStart(ldf_, sn_size_, nb_, n_blocks, diag_start_) +
+      extra_space_frontal;
+  frontal_.resize(frontal_size);
+  std::memset(frontal_.data(), 0, frontal_size * sizeof(double));
+
+  // NB: extra_space_frontal is not strictly needed. However, it removes some
+  // weird problem on windows in debug. Who knows what's happening...
 
   // frontal_ is actually allocated just the first time, then the memory is
   // reused from the previous factorisations and just initialised.
@@ -29,6 +40,11 @@ void HybridHybridFormatHandler::initFrontal() {
 
 void HybridHybridFormatHandler::initClique() {
   clique_.resize(S_->cliqueSize(sn_));
+
+  // If the clique size is zero, do not access the underlying pointer. This
+  // causes strange issues on windows. It's not a problem if clique_ptr_ remains
+  // null, because it will never be used in that case.
+  if (!clique_.empty()) clique_ptr_ = clique_.data();
 }
 
 void HybridHybridFormatHandler::assembleFrontal(Int i, Int j, double val) {
@@ -39,14 +55,16 @@ void HybridHybridFormatHandler::assembleFrontal(Int i, Int j, double val) {
   frontal_[diag_start_[block] + ii + ldb * jj] = val;
 }
 
-void HybridHybridFormatHandler::assembleFrontalMultiple(
-    Int num, const std::vector<double>& child, Int nc, Int child_sn, Int row,
-    Int col, Int i, Int j) {
+void HybridHybridFormatHandler::assembleFrontalMultiple(Int num,
+                                                        const double* child,
+                                                        Int nc, Int child_sn,
+                                                        Int row, Int col, Int i,
+                                                        Int j) {
   const Int jblock = col / nb_;
   const Int jb = std::min(nb_, nc - nb_ * jblock);
   const Int row_ = row - jblock * nb_;
   const Int col_ = col - jblock * nb_;
-  const Int start_block = S_->cliqueBlockStart(child_sn, jblock);
+  const Int64 start_block = S_->cliqueBlockStart(child_sn, jblock);
 
   Int block = j / nb_;
   Int ldb = ldf_ - block * nb_;
@@ -60,6 +78,9 @@ void HybridHybridFormatHandler::assembleFrontalMultiple(
 Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
   Int status;
 
+  // either clique is valid, or clique is not needed
+  assert(clique_ptr_ || ldf_ == sn_size_);
+
   status = denseFactFP2FH(frontal_.data(), ldf_, sn_size_, nb_, data_);
   if (status) return status;
 
@@ -68,15 +89,15 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
   const Int* pivot_sign = &S_->pivotSign().data()[sn_start];
 
   status = denseFactFH('H', ldf_, sn_size_, S_->blockSize(), frontal_.data(),
-                       clique_.data(), pivot_sign, reg_thresh, regul_,
+                       clique_ptr_, pivot_sign, reg_thresh, regul_,
                        local_reg_.data(), swaps_.data(), pivot_2x2_.data(),
                        S_->parNode(), data_);
 
   return status;
 }
 
-void HybridHybridFormatHandler::assembleClique(const std::vector<double>& child,
-                                               Int nc, Int child_sn) {
+void HybridHybridFormatHandler::assembleClique(const double* child, Int nc,
+                                               Int child_sn) {
   // assemble the child clique into the current clique by blocks of columns.
   // within a block, assemble by rows.
 
@@ -86,7 +107,7 @@ void HybridHybridFormatHandler::assembleClique(const std::vector<double>& child,
 
   // go through the blocks of columns of the child sn
   for (Int b = 0; b < n_blocks; ++b) {
-    const Int b_start = S_->cliqueBlockStart(child_sn, b);
+    const Int64 b_start = S_->cliqueBlockStart(child_sn, b);
 
     const Int col_start = row_start;
     const Int col_end = std::min(col_start + nb_, nc);
@@ -113,12 +134,11 @@ void HybridHybridFormatHandler::assembleClique(const std::vector<double>& child,
         const Int jb_c = std::min(nb_, nc - nb_ * jblock_c);
         const Int row_ = row - jblock_c * nb_;
         const Int col_ = col - jblock_c * nb_;
-        const Int start_block_c = b_start;
+        const Int64 start_block_c = b_start;
 
         // sun consecutive entries in a row.
         // consecutive need to be reduced, to account for edge of the block
-        const Int zeros_stored_row =
-            std::max((Int)0, jb_c - (row - row_start) - 1);
+        const Int zeros_stored_row = std::max((Int)0, jb_c - (row - row_start) - 1);
         Int consecutive = S_->consecutiveSums(child_sn, col);
         const Int left_in_child = col_end - col - zeros_stored_row;
         consecutive = std::min(consecutive, left_in_child);
@@ -137,13 +157,11 @@ void HybridHybridFormatHandler::assembleClique(const std::vector<double>& child,
         const Int jb = std::min(nb_, ldc_ - nb_ * jblock);
         const Int i_ = i - jblock * nb_;
         const Int j_ = j - jblock * nb_;
-        const Int start_block = S_->cliqueBlockStart(sn_, jblock);
+        const Int64 start_block = S_->cliqueBlockStart(sn_, jblock);
 
-        const double d_one = 1.0;
-        const Int i_one = 1;
         callAndTime_daxpy(consecutive, 1.0,
                           &child[start_block_c + col_ + jb_c * row_], 1,
-                          &clique_[start_block + j_ + jb * i_], 1, data_);
+                          &clique_ptr_[start_block + j_ + jb * i_], 1, data_);
 
         col += consecutive;
       }
@@ -164,7 +182,7 @@ void HybridHybridFormatHandler::extremeEntries() {
   const Int n_blocks = (sn_size_ - 1) / nb_ + 1;
 
   // index to access frontal
-  Int index{};
+  Int64 index{};
 
   // go through blocks of columns for this supernode
   for (Int j = 0; j < n_blocks; ++j) {
@@ -188,9 +206,9 @@ void HybridHybridFormatHandler::extremeEntries() {
       index += jb - k;
     }
 
-    const Int entries_left = (ldf_ - nb_ * j - jb) * jb;
+    const Int64 entries_left = (Int64)(ldf_ - nb_ * j - jb) * jb;
 
-    for (Int i = 0; i < entries_left; ++i) {
+    for (Int64 i = 0; i < entries_left; ++i) {
       if (frontal_[index] != 0.0) {
         minoffD = std::min(minoffD, std::abs(frontal_[index]));
         maxoffD = std::max(maxoffD, std::abs(frontal_[index]));

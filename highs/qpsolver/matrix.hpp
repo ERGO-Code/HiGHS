@@ -105,7 +105,7 @@ struct MatrixBase {
     return vec_mat(other, result);
   }
 
-  // computes this * mat, where "this" is a tranposed matrix
+  // computes this * mat, where "this" is a transposed matrix
   MatrixBase tran_mat_(const MatrixBase& other) {
     MatrixBase res;
     res.num_row = num_col;

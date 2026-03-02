@@ -88,7 +88,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     HighsInt col = -1;
     double val = 0.0;
     for (HighsInt j = 0; j != len; ++j) {
-      if (mip.variableType(rowinds[j]) != HighsVarType::kContinuous) continue;
+      if (mip.isColIntegral(rowinds[j])) continue;
       if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
       col = rowinds[j];
       val = rowvals[j];
@@ -96,7 +96,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     assert(col != -1);
-    assert(mip.variableType(col) == HighsVarType::kContinuous);
+    assert(mip.isColContinuous(col));
     assert(transLp.boundDistance(col) > 0.0);
 
     if (colSubstitutions[col].first != -1) continue;

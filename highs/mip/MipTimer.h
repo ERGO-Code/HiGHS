@@ -28,6 +28,7 @@ enum iClockMip {
   kMipClockSearch,
   // Search
   kMipClockProbingPresolve,
+  kMipClockEnumerationPresolve,
   kMipClockPerformAging1,
   kMipClockDive,
   kMipClockOpenNodesToQueue0,
@@ -96,12 +97,14 @@ enum iClockMip {
   kMipClockModKSepa,
 
   // LP solves
-  kMipClockSimplexBasisSolveLp,
-  kMipClockSimplexNoBasisSolveLp,
+  kMipClockDuSimplexBasisSolveLp,
+  kMipClockDuSimplexNoBasisSolveLp,
   kMipClockHipoSolveAnalyticCentreLp,
   kMipClockIpxSolveAnalyticCentreLp,
   kMipClockHipoSolveLp,
   kMipClockIpxSolveLp,
+  kMipClockPrSimplexBasisSolveLp,
+  kMipClockPrSimplexNoBasisSolveLp,
 
   // Sub-MIP solves
   kMipClockSubMipSolve,
@@ -136,11 +139,11 @@ class MipTimer {
     // clock[kMipClockHipoSolveAnalyticCentreLp] and
     // clock[kMipClockIpxSolveAnalyticCentreLp] aren't changed by inserting new
     // clocks
-    clock[kMipClockSimplexBasisSolveLp] =
-        timer_pointer->clock_def("Solve LP - simplex basis");
-    clock[kMipClockSimplexNoBasisSolveLp] =
-        timer_pointer->clock_def("Solve LP - simplex no basis");
-    assert(clock[kMipClockSimplexNoBasisSolveLp] == 8);
+    clock[kMipClockDuSimplexBasisSolveLp] =
+        timer_pointer->clock_def("Solve LP - du simplex basis");
+    clock[kMipClockDuSimplexNoBasisSolveLp] =
+        timer_pointer->clock_def("Solve LP - du simplex no basis");
+    assert(clock[kMipClockDuSimplexNoBasisSolveLp] == 8);
     clock[kMipClockHipoSolveAnalyticCentreLp] =
         timer_pointer->clock_def("Solve LP: HiPO analytic centre");
     clock[kMipClockIpxSolveAnalyticCentreLp] =
@@ -149,6 +152,10 @@ class MipTimer {
     assert(clock[kMipClockIpxSolveAnalyticCentreLp] == 10);
     clock[kMipClockHipoSolveLp] = timer_pointer->clock_def("Solve LP: HiPO");
     clock[kMipClockIpxSolveLp] = timer_pointer->clock_def("Solve LP: IPX");
+    clock[kMipClockPrSimplexBasisSolveLp] =
+        timer_pointer->clock_def("Solve LP - pr simplex basis");
+    clock[kMipClockPrSimplexNoBasisSolveLp] =
+        timer_pointer->clock_def("Solve LP - pr simplex no basis");
 
     // Level 1 - Should correspond to kMipClockTotal
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
@@ -230,6 +237,9 @@ class MipTimer {
     // Presolve - Should correspond to kMipClockRunPresolve
     clock[kMipClockProbingPresolve] =
         timer_pointer->clock_def("Probing - presolve");
+
+    clock[kMipClockEnumerationPresolve] =
+        timer_pointer->clock_def("Enumeration - presolve");
 
     // Search - Should correspond to kMipClockSearch
     clock[kMipClockPerformAging1] = timer_pointer->clock_def("Perform aging 1");
@@ -366,8 +376,10 @@ class MipTimer {
 
   void reportMipSolveLpClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
-        kMipClockSimplexBasisSolveLp,
-        kMipClockSimplexNoBasisSolveLp,
+        kMipClockDuSimplexBasisSolveLp,
+        kMipClockDuSimplexNoBasisSolveLp,
+        kMipClockPrSimplexBasisSolveLp,
+        kMipClockPrSimplexNoBasisSolveLp,
         kMipClockHipoSolveAnalyticCentreLp,
         kMipClockIpxSolveAnalyticCentreLp,
         kMipClockHipoSolveLp,
@@ -383,7 +395,8 @@ class MipTimer {
   };
 
   void reportMipPresolveClock(const HighsTimerClock& mip_timer_clock) {
-    const std::vector<HighsInt> mip_clock_list{kMipClockProbingPresolve};
+    const std::vector<HighsInt> mip_clock_list{kMipClockProbingPresolve,
+                                               kMipClockEnumerationPresolve};
     reportMipClockList("MipPrslv", mip_clock_list, mip_timer_clock,
                        kMipClockRunPresolve, tolerance_percent_report);
   };

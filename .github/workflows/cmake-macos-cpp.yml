@@ -1,7 +1,6 @@
 name: cmake-macos-cpp
 
-# on: [push, pull_request]
-on: []
+on: [pull_request]
 
 jobs:
   release:

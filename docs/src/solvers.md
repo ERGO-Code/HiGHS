@@ -20,7 +20,7 @@ J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142,
 10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5).
 
 * Setting the option [__solver__](@ref option-solver) to "simplex" forces the simplex solver to be used
-* The option [__simplex\_strategy__](@ref option-simplex_strategy)
+* The option [__simplex\_strategy__](@ref option-simplex-strategy)
   determines whether the primal solver or one of the parallel solvers is
   to be used.
 
@@ -36,7 +36,7 @@ HiGHS has two interior point (IPM) solvers:
 
   This solver is serial.
 
-  Setting the option [__solver__](@ref option-solver) to "ipm" forces the IPX solver to be used
+  Setting the option [__solver__](@ref option-solver) to "ipx" forces the IPX solver to be used
 
 * HiPO is based on a direct factorisation, as discussed in 
 
@@ -50,6 +50,13 @@ HiGHS has two interior point (IPM) solvers:
   The [hipo\_system](@ref option-hipo-system) option can be used to select the approach to use when solving the Newton systems 
   within the interior point solver: select "augmented" to force the solver to use the augmented system, "normaleq" for normal 
   equations, or "choose" to leave the choice to the solver.
+
+  The option [hipo\_ordering](@ref option-hipo-ordering) can be used to select the fill-reducing heuristic to use during the factorisation:
+  * Nested dissection, obtained setting the option [hipo\_ordering](@ref option-hipo-ordering) to "metis".
+  * Approximate mininum degree, obtained setting the option [hipo\_ordering](@ref option-hipo-ordering) to "amd".
+  * Reverse Cuthill-McKee, obtained setting the option [hipo\_ordering](@ref option-hipo-ordering) to "rcm".
+
+Setting the option [__solver__](@ref option-solver) to "ipm" selects the HiPO solver, if the build supports it, otherwise it selects the IPX solver.
 
 #### Primal-dual hybrid gradient method
 

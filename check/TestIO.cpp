@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 
 #include "HCheckConfig.h"
 #include "Highs.h"
@@ -33,7 +34,7 @@ TEST_CASE("run-callback", "[highs_io]") {
   // user_log_callback_data will be nullptr
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   // highs.setLogCallback(userLogCallback);
   highs.readModel(filename);
   highs.run();
@@ -87,4 +88,76 @@ TEST_CASE("log-callback", "[highs_io]") {
     REQUIRE(strstr(alt_printed_log, "HHHH") != nullptr);
     REQUIRE(strlen(alt_printed_log) <= sizeof(alt_printed_log));
   }
+}
+
+HighsCallbackFunctionType userLoggingCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      fprintf(static_cast<FILE*>(user_callback_data), "%s", message.c_str());
+    };
+
+TEST_CASE("console-file-callback-log", "[highs_io]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string test_highs_log = test_name + ".log";
+  const std::string test_user_log = test_name + "user.log";
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.readModel(filename);
+  FILE* file;
+  // Run through all 8 possibilities of console/file/callback logging
+  // on/off
+  //
+  // Console logging appearing appropriately can only be tested by eye
+  // in debug, the others are tested by the log/callback file existing
+  h.setOptionValue("output_flag", true);
+  for (HighsInt k = 0; k < 8; k++) {
+    const bool callback_log = (k & 1) != 0;
+    const bool file_log = (k & 2) != 0;
+    const bool console_log = (k & 4) != 0 && dev_run;
+    if (dev_run)
+      printf("\nCase k = %d: %7s %4s %8s\n\n", int(k),
+             console_log ? "console" : "       ", file_log ? "file" : "    ",
+             callback_log ? "callback" : "        ");
+    h.setOptionValue("log_to_console", console_log);
+    if (file_log) h.openLogFile(test_highs_log);
+    if (callback_log) {
+      file = fopen(test_user_log.c_str(), "w");
+      //  void* p_user_callback_data = file;
+      h.setCallback(userLoggingCallback, file);  // p_user_callback_data);
+      h.startCallback(kCallbackLogging);
+    }
+    h.run();
+    if (file_log) {
+      h.closeLogFile();
+      std::ifstream fin(test_highs_log.c_str());
+      const bool exists = fin.is_open();
+      REQUIRE(exists);
+      fin.close();
+      std::remove(test_highs_log.c_str());
+      h.openLogFile("");
+    } else {
+      std::ifstream fin(test_highs_log.c_str());
+      const bool exists = fin.is_open();
+      REQUIRE(!exists);
+    }
+    if (callback_log) {
+      fclose(file);
+      h.stopCallback(kCallbackLogging);
+      std::ifstream fin(test_user_log.c_str());
+      const bool exists = fin.is_open();
+      REQUIRE(exists);
+      fin.close();
+      std::remove(test_user_log.c_str());
+    } else {
+      std::ifstream fin(test_user_log.c_str());
+      const bool exists = fin.is_open();
+      REQUIRE(!exists);
+    }
+  }
+
+  //  std::remove(test_highs_log.c_str());
+  //  std::remove(test_user_log.c_str());
+  h.resetGlobalScheduler(true);
 }

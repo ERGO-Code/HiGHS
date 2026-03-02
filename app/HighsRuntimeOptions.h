@@ -14,7 +14,7 @@
 
 #include <cassert>
 
-#include "CLI11.hpp"
+#include "../extern/CLI11.hpp"
 #include "HConfig.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"
@@ -103,7 +103,9 @@ void setupCommandLineOptions(CLI::App& app,
                  "Set solver option to:\n"
                  "\"choose\" * default\n"
                  "\"simplex\"\n"
+#ifdef HIPO
                  "\"hipo\"\n"
+#endif
                  "\"ipm\"");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
