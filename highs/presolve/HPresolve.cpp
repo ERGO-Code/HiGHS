@@ -4090,7 +4090,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             // round rhs (using feasibility tolerance)
             HighsCDouble scalar = static_cast<HighsCDouble>(s);
             roundedRhs = ceil(rhs * scalar - primal_feastol);
-            assert(roundedRhs > 0.0);
+            if (roundedRhs <= primal_feastol) return false;
             HighsCDouble rhsRatio = rhs / roundedRhs;
 
             for (size_t i = 0; i < rowCoefs.size(); ++i) {
