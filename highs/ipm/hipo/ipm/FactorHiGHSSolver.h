@@ -27,7 +27,6 @@ class FactorHiGHSSolver : public LinearSolver {
   std::vector<Int> ptrA_rw_, idxA_rw_;
   std::vector<Int> corr_A_;
   std::atomic<Int64> NE_nz_limit_{kHighsIInf};
-  std::atomic<Int64> AS_nz_limit_{kHighsIInf};
 
   // augmented system data
   std::vector<Int> ptrAS_;
