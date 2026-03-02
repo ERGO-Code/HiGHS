@@ -2723,6 +2723,67 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::addPiecewiseLinearConstraint(
+    HighsInt input_col, HighsInt output_col, HighsInt num_breakpoints,
+    const double* x_breakpoints, const double* y_breakpoints) {
+  this->logHeader();
+  HighsLp& lp = model_.lp_;
+  // Validate input_col
+  if (input_col < 0 || input_col >= lp.num_col_) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addPiecewiseLinearConstraint: input_col = %" HIGHSINT_FORMAT
+                 " is out of range [0, %" HIGHSINT_FORMAT ")\n",
+                 input_col, lp.num_col_);
+    return HighsStatus::kError;
+  }
+  // Validate output_col
+  if (output_col < 0 || output_col >= lp.num_col_) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addPiecewiseLinearConstraint: output_col = %" HIGHSINT_FORMAT
+                 " is out of range [0, %" HIGHSINT_FORMAT ")\n",
+                 output_col, lp.num_col_);
+    return HighsStatus::kError;
+  }
+  // input and output must differ
+  if (input_col == output_col) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addPiecewiseLinearConstraint: input_col and output_col are "
+                 "both %" HIGHSINT_FORMAT "\n",
+                 input_col);
+    return HighsStatus::kError;
+  }
+  // Need at least 2 breakpoints (one segment)
+  if (num_breakpoints < 2) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addPiecewiseLinearConstraint: num_breakpoints = "
+                 "%" HIGHSINT_FORMAT " < 2\n",
+                 num_breakpoints);
+    return HighsStatus::kError;
+  }
+  // x_breakpoints must be strictly increasing
+  for (HighsInt k = 1; k < num_breakpoints; k++) {
+    if (x_breakpoints[k] <= x_breakpoints[k - 1]) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "addPiecewiseLinearConstraint: x_breakpoints not strictly "
+                   "increasing at index %" HIGHSINT_FORMAT "\n",
+                   k);
+      return HighsStatus::kError;
+    }
+  }
+  HighsPiecewiseLinearConstraint pwl;
+  pwl.input_col = input_col;
+  pwl.output_col = output_col;
+  pwl.x_breakpoints.assign(x_breakpoints, x_breakpoints + num_breakpoints);
+  pwl.y_breakpoints.assign(y_breakpoints, y_breakpoints + num_breakpoints);
+  lp.pwl_constraints_.push_back(std::move(pwl));
+  clearDerivedModelProperties();
+  return returnFromHighs(HighsStatus::kOk);
+}
+
+HighsInt Highs::getNumPwlConstraints() const {
+  return static_cast<HighsInt>(model_.lp_.pwl_constraints_.size());
+}
+
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
   if ((sense == ObjSense::kMinimize) !=
       (model_.lp_.sense_ == ObjSense::kMinimize)) {
@@ -4137,14 +4198,22 @@ HighsStatus Highs::callSolveMip() {
   // Check that the model isn't row-wise
   assert(model_.lp_.a_matrix_.format_ != MatrixFormat::kRowwise);
   const bool has_semi_variables = model_.lp_.hasSemiVariables();
+  const bool has_pwl = model_.lp_.hasPwlConstraints();
+  const bool needs_reformulation = has_semi_variables || has_pwl;
   HighsLp use_lp;
-  if (has_semi_variables) {
-    // Replace any semi-variables by a continuous/integer variable and
-    // a (temporary) binary. Any initial solution must accommodate this.
-    use_lp = withoutSemiVariables(model_.lp_, solution_,
-                                  options_.primal_feasibility_tolerance);
+  if (needs_reformulation) {
+    // First reformulate PWL constraints (adds cols + rows)
+    if (has_pwl) {
+      use_lp = withoutPwlConstraints(model_.lp_, options_.log_options);
+    }
+    // Then reformulate semi-variables (adds cols + rows)
+    if (has_semi_variables) {
+      HighsLp& base = has_pwl ? use_lp : model_.lp_;
+      use_lp = withoutSemiVariables(base, solution_,
+                                    options_.primal_feasibility_tolerance);
+    }
   }
-  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
+  HighsLp& lp = needs_reformulation ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;

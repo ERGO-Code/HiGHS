@@ -813,6 +813,17 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
       ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
 }
 
+HighsInt Highs_addPiecewiseLinearConstraint(void* highs,
+                                            const HighsInt input_col,
+                                            const HighsInt output_col,
+                                            const HighsInt num_breakpoints,
+                                            const double* x_breakpoints,
+                                            const double* y_breakpoints) {
+  return (HighsInt)((Highs*)highs)
+      ->addPiecewiseLinearConstraint(input_col, output_col, num_breakpoints,
+                                     x_breakpoints, y_breakpoints);
+}
+
 HighsInt Highs_ensureColwise(void* highs) {
   return (HighsInt)((Highs*)highs)->ensureColwise();
 }

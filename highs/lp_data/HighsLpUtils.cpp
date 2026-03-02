@@ -3360,6 +3360,278 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   return lp;
 }
 
+HighsLp withoutPwlConstraints(const HighsLp& lp_,
+                              const HighsLogOptions& log_options) {
+  HighsLp lp = lp_;
+  assert(lp.hasPwlConstraints());
+
+  // Ensure column-wise format
+  lp.a_matrix_.ensureColwise();
+
+  const bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
+  const bool have_row_names =
+      lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+  const bool have_integrality = !lp.integrality_.empty();
+
+  // Track where original columns end
+  const HighsInt orig_num_col = lp.num_col_;
+  const HighsInt orig_num_row = lp.num_row_;
+
+  // We will collect new columns and new rows, then append them all at once.
+  // New columns: d_k continuous [0, width_k] for k=0..n-1,
+  //              z_k binary for k=1..n-1
+  // New rows: 2 linking rows + 2*(n-1) ordering rows per PWL constraint
+
+  struct NewCol {
+    double cost;
+    double lower;
+    double upper;
+    HighsVarType type;
+  };
+
+  struct NewRow {
+    double lower;
+    double upper;
+    std::vector<std::pair<HighsInt, double>> entries;  // (col, value)
+  };
+
+  std::vector<NewCol> new_cols;
+  std::vector<NewRow> new_rows;
+
+  for (const HighsPiecewiseLinearConstraint& pwl : lp.pwl_constraints_) {
+    const HighsInt n = static_cast<HighsInt>(pwl.x_breakpoints.size()) - 1;
+    assert(n >= 1);
+
+    // Column indices for new d_k variables
+    const HighsInt d_base = orig_num_col + static_cast<HighsInt>(new_cols.size());
+
+    // Add d_k continuous variables for k=0..n-1
+    for (HighsInt k = 0; k < n; k++) {
+      NewCol col;
+      col.cost = 0.0;
+      col.lower = 0.0;
+      col.upper = pwl.x_breakpoints[k + 1] - pwl.x_breakpoints[k];
+      col.type = HighsVarType::kContinuous;
+      new_cols.push_back(col);
+    }
+
+    // Add z_k binary variables for k=1..n-1
+    const HighsInt z_base = orig_num_col + static_cast<HighsInt>(new_cols.size());
+    for (HighsInt k = 1; k < n; k++) {
+      NewCol col;
+      col.cost = 0.0;
+      col.lower = 0.0;
+      col.upper = 1.0;
+      col.type = HighsVarType::kInteger;
+      new_cols.push_back(col);
+    }
+
+    // Compute slopes
+    std::vector<double> slopes(n);
+    for (HighsInt k = 0; k < n; k++) {
+      double dx = pwl.x_breakpoints[k + 1] - pwl.x_breakpoints[k];
+      slopes[k] = (pwl.y_breakpoints[k + 1] - pwl.y_breakpoints[k]) / dx;
+    }
+
+    // Row 1: x - x_0 = d_0 + d_1 + ... + d_{n-1}
+    // => x - d_0 - d_1 - ... - d_{n-1} = x_0
+    {
+      NewRow row;
+      row.lower = pwl.x_breakpoints[0];
+      row.upper = pwl.x_breakpoints[0];
+      row.entries.push_back({pwl.input_col, 1.0});
+      for (HighsInt k = 0; k < n; k++)
+        row.entries.push_back({d_base + k, -1.0});
+      new_rows.push_back(std::move(row));
+    }
+
+    // Row 2: y - y_0 = s_0*d_0 + s_1*d_1 + ... + s_{n-1}*d_{n-1}
+    // => y - s_0*d_0 - ... - s_{n-1}*d_{n-1} = y_0
+    {
+      NewRow row;
+      row.lower = pwl.y_breakpoints[0];
+      row.upper = pwl.y_breakpoints[0];
+      row.entries.push_back({pwl.output_col, 1.0});
+      for (HighsInt k = 0; k < n; k++)
+        row.entries.push_back({d_base + k, -slopes[k]});
+      new_rows.push_back(std::move(row));
+    }
+
+    // Ordering constraints for k=1..n-1:
+    // Row 3: d_k <= width_k * z_k  =>  d_k - width_k * z_k <= 0
+    // Row 4: d_{k-1} >= width_{k-1} * z_k  =>  d_{k-1} - width_{k-1} * z_k >= 0
+    for (HighsInt k = 1; k < n; k++) {
+      double width_k = pwl.x_breakpoints[k + 1] - pwl.x_breakpoints[k];
+      double width_k_minus_1 =
+          pwl.x_breakpoints[k] - pwl.x_breakpoints[k - 1];
+      HighsInt z_col = z_base + (k - 1);
+
+      // d_k <= width_k * z_k
+      {
+        NewRow row;
+        row.lower = -kHighsInf;
+        row.upper = 0.0;
+        row.entries.push_back({d_base + k, 1.0});
+        row.entries.push_back({z_col, -width_k});
+        new_rows.push_back(std::move(row));
+      }
+
+      // d_{k-1} >= width_{k-1} * z_k
+      {
+        NewRow row;
+        row.lower = 0.0;
+        row.upper = kHighsInf;
+        row.entries.push_back({d_base + (k - 1), 1.0});
+        row.entries.push_back({z_col, -width_k_minus_1});
+        new_rows.push_back(std::move(row));
+      }
+    }
+  }
+
+  const HighsInt num_new_cols = static_cast<HighsInt>(new_cols.size());
+  const HighsInt num_new_rows = static_cast<HighsInt>(new_rows.size());
+  const HighsInt total_num_col = orig_num_col + num_new_cols;
+  const HighsInt total_num_row = orig_num_row + num_new_rows;
+
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "PWL reformulation: %" HIGHSINT_FORMAT " new columns, "
+               "%" HIGHSINT_FORMAT " new rows\n",
+               num_new_cols, num_new_rows);
+
+  // Extend column vectors
+  for (HighsInt c = 0; c < num_new_cols; c++) {
+    lp.col_cost_.push_back(new_cols[c].cost);
+    lp.col_lower_.push_back(new_cols[c].lower);
+    lp.col_upper_.push_back(new_cols[c].upper);
+    if (have_col_names) lp.col_names_.push_back("");
+  }
+
+  // Extend integrality vector
+  if (have_integrality) {
+    for (HighsInt c = 0; c < num_new_cols; c++)
+      lp.integrality_.push_back(new_cols[c].type);
+  } else {
+    // Need to create integrality vector since we have binary variables
+    lp.integrality_.assign(orig_num_col, HighsVarType::kContinuous);
+    for (HighsInt c = 0; c < num_new_cols; c++)
+      lp.integrality_.push_back(new_cols[c].type);
+  }
+
+  // Add new column start entries (no existing-row entries for new columns)
+  vector<HighsInt>& start = lp.a_matrix_.start_;
+  HighsInt current_nz = start[orig_num_col];
+  for (HighsInt c = 0; c < num_new_cols; c++)
+    start.push_back(current_nz);
+
+  // Now add new rows. New rows can reference both original and new columns.
+  // For original columns, we insert into the existing column-wise structure.
+  // For new columns, we append to the end.
+
+  // Separate entries by original vs new columns
+  std::vector<HighsInt> orig_col_new_nz(orig_num_col, 0);
+  HighsInt new_col_total_nz = 0;
+  for (HighsInt r = 0; r < num_new_rows; r++) {
+    for (const auto& entry : new_rows[r].entries) {
+      if (entry.first < orig_num_col)
+        orig_col_new_nz[entry.first]++;
+      else
+        new_col_total_nz++;
+    }
+  }
+
+  // Insert entries for original columns
+  vector<HighsInt>& index = lp.a_matrix_.index_;
+  vector<double>& value = lp.a_matrix_.value_;
+  const HighsInt old_num_nz = start[orig_num_col];
+
+  HighsInt total_orig_new_nz = 0;
+  for (HighsInt iCol = 0; iCol < orig_num_col; iCol++)
+    total_orig_new_nz += orig_col_new_nz[iCol];
+
+  const HighsInt new_orig_num_nz = old_num_nz + total_orig_new_nz;
+  index.resize(new_orig_num_nz + new_col_total_nz);
+  value.resize(new_orig_num_nz + new_col_total_nz);
+
+  // Shift existing entries for original columns to make room
+  HighsInt new_el = new_orig_num_nz;
+  for (HighsInt iCol = orig_num_col - 1; iCol >= 0; iCol--) {
+    new_el -= orig_col_new_nz[iCol];
+    HighsInt from_el = start[iCol + 1] - 1;
+    start[iCol + 1] = new_el + orig_col_new_nz[iCol];
+    for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
+      new_el--;
+      index[new_el] = index[iEl];
+      value[new_el] = value[iEl];
+    }
+  }
+  assert(new_el == 0);
+
+  // Fill entries for original columns
+  std::vector<HighsInt> col_placed(orig_num_col, 0);
+  for (HighsInt r = 0; r < num_new_rows; r++) {
+    const HighsInt row_idx = orig_num_row + r;
+    for (const auto& entry : new_rows[r].entries) {
+      if (entry.first < orig_num_col) {
+        const HighsInt col = entry.first;
+        HighsInt pos =
+            start[col + 1] - orig_col_new_nz[col] + col_placed[col];
+        index[pos] = row_idx;
+        value[pos] = entry.second;
+        col_placed[col]++;
+      }
+    }
+  }
+
+  // Fill entries for new columns
+  // Count entries per new column
+  std::vector<HighsInt> new_col_nz(num_new_cols, 0);
+  for (HighsInt r = 0; r < num_new_rows; r++) {
+    for (const auto& entry : new_rows[r].entries) {
+      if (entry.first >= orig_num_col)
+        new_col_nz[entry.first - orig_num_col]++;
+    }
+  }
+
+  // Compute starts for new columns
+  HighsInt nz_pos = new_orig_num_nz;
+  for (HighsInt c = 0; c < num_new_cols; c++) {
+    start[orig_num_col + c] = nz_pos;
+    nz_pos += new_col_nz[c];
+  }
+  start[total_num_col] = nz_pos;
+  assert(nz_pos == new_orig_num_nz + new_col_total_nz);
+
+  // Place entries for new columns
+  std::vector<HighsInt> new_col_placed(num_new_cols, 0);
+  for (HighsInt r = 0; r < num_new_rows; r++) {
+    const HighsInt row_idx = orig_num_row + r;
+    for (const auto& entry : new_rows[r].entries) {
+      if (entry.first >= orig_num_col) {
+        const HighsInt c = entry.first - orig_num_col;
+        HighsInt pos = start[orig_num_col + c] + new_col_placed[c];
+        index[pos] = row_idx;
+        value[pos] = entry.second;
+        new_col_placed[c]++;
+      }
+    }
+  }
+
+  // Add row bounds
+  for (HighsInt r = 0; r < num_new_rows; r++) {
+    lp.row_lower_.push_back(new_rows[r].lower);
+    lp.row_upper_.push_back(new_rows[r].upper);
+    if (have_row_names) lp.row_names_.push_back("");
+  }
+
+  lp.num_col_ = total_num_col;
+  lp.num_row_ = total_num_row;
+  lp.a_matrix_.num_col_ = total_num_col;
+  lp.a_matrix_.num_row_ = total_num_row;
+  lp.pwl_constraints_.clear();
+  return lp;
+}
+
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   HighsLp row_wise_lp = lp;
   vector<HighsInt>& a_start = lp.a_matrix_.start_;

@@ -472,6 +472,20 @@ std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getPrimalRay(
   return std::make_tuple(status, has_primal_ray, py::cast(value));
 }
 
+HighsStatus highs_addPiecewiseLinearConstraint(
+    Highs* h, HighsInt input_col, HighsInt output_col,
+    HighsInt num_breakpoints, dense_array_t<double> x_breakpoints,
+    dense_array_t<double> y_breakpoints) {
+  py::buffer_info x_info = x_breakpoints.request();
+  py::buffer_info y_info = y_breakpoints.request();
+
+  double* x_ptr = static_cast<double*>(x_info.ptr);
+  double* y_ptr = static_cast<double*>(y_info.ptr);
+
+  return h->addPiecewiseLinearConstraint(input_col, output_col, num_breakpoints,
+                                         x_ptr, y_ptr);
+}
+
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
                          HighsInt num_new_nz, dense_array_t<HighsInt> indices,
                          dense_array_t<double> values) {
@@ -1494,6 +1508,9 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("changeCoeff", &Highs::changeCoeff)
       .def("addRows", &highs_addRows)
       .def("addRow", &highs_addRow)
+      .def("addPiecewiseLinearConstraint",
+           &highs_addPiecewiseLinearConstraint)
+      .def("getNumPwlConstraints", &Highs::getNumPwlConstraints)
       .def("addCol", &highs_addCol)
       .def("addCols", &highs_addCols)
       .def("addVar", &highs_addVar)

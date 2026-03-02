@@ -1466,6 +1466,25 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
+/**
+ * @brief Add a piecewise linear constraint y = f(x).
+ *
+ * @param highs            A pointer to the Highs instance.
+ * @param input_col        Index of the input variable x.
+ * @param output_col       Index of the output variable y.
+ * @param num_breakpoints  Number of breakpoints (>= 2).
+ * @param x_breakpoints    Array of strictly increasing x values.
+ * @param y_breakpoints    Array of corresponding y values.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_addPiecewiseLinearConstraint(void* highs,
+                                            const HighsInt input_col,
+                                            const HighsInt output_col,
+                                            const HighsInt num_breakpoints,
+                                            const double* x_breakpoints,
+                                            const double* y_breakpoints);
+
 HighsInt Highs_ensureColwise(void* highs);
 
 /**

@@ -152,6 +152,13 @@ struct HighsIllConditioning {
   void clear();
 };
 
+struct HighsPiecewiseLinearConstraint {
+  HighsInt input_col;
+  HighsInt output_col;
+  std::vector<double> x_breakpoints;  // strictly increasing
+  std::vector<double> y_breakpoints;
+};
+
 struct HighsLinearObjective {
   double weight = 0;
   double offset = 0;

@@ -1091,6 +1091,25 @@ class Highs {
                       const HighsInt* starts, const HighsInt* indices,
                       const double* values);
 
+  /**
+   * @brief Add a piecewise linear constraint y = f(x) to the model.
+   *
+   * The function f is defined by breakpoints (x_breakpoints[i],
+   * y_breakpoints[i]) for i = 0..num_breakpoints-1, with linear
+   * interpolation between consecutive breakpoints.
+   *
+   * At solve time the constraint is reformulated into standard MILP
+   * constraints using the incremental (delta) formulation.
+   */
+  HighsStatus addPiecewiseLinearConstraint(
+      HighsInt input_col, HighsInt output_col, HighsInt num_breakpoints,
+      const double* x_breakpoints, const double* y_breakpoints);
+
+  /**
+   * @brief Return the number of piecewise linear constraints
+   */
+  HighsInt getNumPwlConstraints() const;
+
   HighsStatus ensureColwise() {
     this->model_.lp_.ensureColwise();
     return HighsStatus::kOk;

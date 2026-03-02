@@ -73,6 +73,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestRanging.cpp
       TestRays.cpp
       TestSemiVariables.cpp
+      TestPwlConstraints.cpp
       TestSetup.cpp
       TestSort.cpp
       TestSpecialLps.cpp

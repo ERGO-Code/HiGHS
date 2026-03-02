@@ -47,6 +47,8 @@ class HighsLp {
 
   std::vector<HighsVarType> integrality_;
 
+  std::vector<HighsPiecewiseLinearConstraint> pwl_constraints_;
+
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
 
@@ -64,6 +66,7 @@ class HighsLp {
   bool equalNames(const HighsLp& lp) const;
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
+  bool hasPwlConstraints() const;
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;

@@ -16,6 +16,7 @@
 #include "util/HighsMatrixUtils.h"
 
 bool HighsLp::isMip() const {
+  if (this->hasPwlConstraints()) return true;
   size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
     assert(static_cast<HighsInt>(integrality_size) == this->num_col_);
@@ -23,6 +24,10 @@ bool HighsLp::isMip() const {
       if (this->integrality_[iCol] != HighsVarType::kContinuous) return true;
   }
   return false;
+}
+
+bool HighsLp::hasPwlConstraints() const {
+  return !this->pwl_constraints_.empty();
 }
 
 bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
@@ -56,7 +61,8 @@ bool HighsLp::hasMods() const {
 
 bool HighsLp::needsMods(const double infinite_cost) const {
   assert(this->has_infinite_cost_ == this->hasInfiniteCost(infinite_cost));
-  return this->has_infinite_cost_ || this->hasSemiVariables();
+  return this->has_infinite_cost_ || this->hasSemiVariables() ||
+         this->hasPwlConstraints();
 }
 
 bool HighsLp::operator==(const HighsLp& lp) const {
@@ -92,6 +98,9 @@ bool HighsLp::equalVectors(const HighsLp& lp) const {
   equal_vectors = this->col_lower_ == lp.col_lower_ && equal_vectors;
   equal_vectors = this->row_upper_ == lp.row_upper_ && equal_vectors;
   equal_vectors = this->row_lower_ == lp.row_lower_ && equal_vectors;
+  equal_vectors = this->pwl_constraints_.size() ==
+                      lp.pwl_constraints_.size() &&
+                  equal_vectors;
 #ifndef NDEBUG
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif
@@ -216,6 +225,8 @@ void HighsLp::clear() {
   this->row_names_.clear();
 
   this->integrality_.clear();
+
+  this->pwl_constraints_.clear();
 
   this->col_hash_.clear();
   this->row_hash_.clear();
