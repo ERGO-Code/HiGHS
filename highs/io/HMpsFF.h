@@ -189,6 +189,14 @@ class HMpsFF {
   std::unordered_map<std::string, HighsInt> rowname2idx;
   std::unordered_map<std::string, HighsInt> colname2idx;
 
+  // Temporary storage from INDICATORS parsing: (row_idx, binary_col, value)
+  struct RawIndicator {
+    HighsInt row_idx;
+    HighsInt binary_col;
+    HighsInt binary_value;
+  };
+  std::vector<RawIndicator> raw_indicators;
+
   mutable std::string section_args;
 
   bool timeout();
@@ -228,6 +236,8 @@ class HMpsFF {
                               std::istream& file);
   HMpsFF::Parsekey parseSos(const HighsLogOptions& log_options,
                             std::istream& file, const HMpsFF::Parsekey keyword);
+  HMpsFF::Parsekey parseIndicators(const HighsLogOptions& log_options,
+                                   std::istream& file);
 
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);

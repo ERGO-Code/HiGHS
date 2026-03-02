@@ -3360,6 +3360,196 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   return lp;
 }
 
+HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
+                                    const HighsLogOptions& log_options) {
+  HighsLp lp = lp_;
+  assert(lp.hasIndicatorConstraints());
+  const HighsInt num_col = lp.num_col_;
+
+  // Ensure column-wise format
+  lp.a_matrix_.ensureColwise();
+
+  const double kMaxIndicatorBigM = 1e8;
+  const bool have_row_names =
+      lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+
+  // Collect all new rows from indicator constraints, stored per-column
+  // for colwise insertion
+  struct NewRow {
+    double lower;
+    double upper;
+    std::string name;
+    std::vector<std::pair<HighsInt, double>> entries;  // (col, value)
+  };
+  std::vector<NewRow> new_rows;
+
+  for (const HighsIndicatorConstraint& ic : lp.indicator_constraints_) {
+    const HighsInt nz = ic.row_index.size();
+    // Compute activity bounds: min_activity and max_activity of a^T x
+    double min_activity = 0;
+    double max_activity = 0;
+    bool finite_bounds = true;
+    for (HighsInt k = 0; k < nz; k++) {
+      const HighsInt col = ic.row_index[k];
+      const double val = ic.row_value[k];
+      const double lb = lp.col_lower_[col];
+      const double ub = lp.col_upper_[col];
+      if (val > 0) {
+        if (lb <= -kHighsInf || ub >= kHighsInf) {
+          finite_bounds = false;
+          break;
+        }
+        min_activity += val * lb;
+        max_activity += val * ub;
+      } else {
+        if (lb <= -kHighsInf || ub >= kHighsInf) {
+          finite_bounds = false;
+          break;
+        }
+        min_activity += val * ub;
+        max_activity += val * lb;
+      }
+    }
+
+    double M_upper;
+    double M_lower;
+    if (finite_bounds) {
+      M_upper = ic.row_upper < kHighsInf
+                    ? std::max(0.0, max_activity - ic.row_upper)
+                    : 0;
+      M_lower = ic.row_lower > -kHighsInf
+                    ? std::max(0.0, ic.row_lower - min_activity)
+                    : 0;
+    } else {
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "Indicator constraint has infinite variable bounds; using "
+                   "big-M = %.4g\n",
+                   kMaxIndicatorBigM);
+      M_upper = kMaxIndicatorBigM;
+      M_lower = kMaxIndicatorBigM;
+    }
+
+    // Upper bound constraint: z=v -> a^T x <= U
+    // v=1: a^T x <= U + M*(1-z) => a^T x + M*z <= U + M
+    // v=0: a^T x <= U + M*z     => a^T x - M*z <= U
+    if (ic.row_upper < kHighsInf && M_upper > 0) {
+      NewRow row;
+      row.lower = -kHighsInf;
+      for (HighsInt k = 0; k < nz; k++)
+        row.entries.push_back({ic.row_index[k], ic.row_value[k]});
+      if (ic.binary_value == 1) {
+        row.entries.push_back({ic.binary_col, M_upper});
+        row.upper = ic.row_upper + M_upper;
+      } else {
+        row.entries.push_back({ic.binary_col, -M_upper});
+        row.upper = ic.row_upper;
+      }
+      if (have_row_names) {
+        row.name = ic.name.empty()
+                       ? "indicator_upper_" +
+                             std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
+                       : ic.name + "_upper";
+      }
+      new_rows.push_back(std::move(row));
+    }
+
+    // Lower bound constraint: z=v -> a^T x >= L
+    // v=1: a^T x >= L - M*(1-z) => a^T x - M*z >= L - M
+    // v=0: a^T x >= L - M*z     => a^T x + M*z >= L
+    if (ic.row_lower > -kHighsInf && M_lower > 0) {
+      NewRow row;
+      row.upper = kHighsInf;
+      for (HighsInt k = 0; k < nz; k++)
+        row.entries.push_back({ic.row_index[k], ic.row_value[k]});
+      if (ic.binary_value == 1) {
+        row.entries.push_back({ic.binary_col, -M_lower});
+        row.lower = ic.row_lower - M_lower;
+      } else {
+        row.entries.push_back({ic.binary_col, M_lower});
+        row.lower = ic.row_lower;
+      }
+      if (have_row_names) {
+        row.name = ic.name.empty()
+                       ? "indicator_lower_" +
+                             std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
+                       : ic.name + "_lower";
+      }
+      new_rows.push_back(std::move(row));
+    }
+  }
+
+  if (new_rows.empty()) {
+    lp.indicator_constraints_.clear();
+    return lp;
+  }
+
+  const HighsInt num_new_rows = new_rows.size();
+  const HighsInt base_row = lp.num_row_;
+
+  // Add row bounds and names
+  for (HighsInt r = 0; r < num_new_rows; r++) {
+    lp.row_lower_.push_back(new_rows[r].lower);
+    lp.row_upper_.push_back(new_rows[r].upper);
+    if (have_row_names) lp.row_names_.push_back(new_rows[r].name);
+  }
+
+  // Count new nonzeros per column
+  std::vector<HighsInt> col_new_nz(num_col, 0);
+  for (HighsInt r = 0; r < num_new_rows; r++)
+    for (const auto& entry : new_rows[r].entries) col_new_nz[entry.first]++;
+
+  // Insert new entries into column-wise matrix
+  vector<HighsInt>& start = lp.a_matrix_.start_;
+  vector<HighsInt>& index = lp.a_matrix_.index_;
+  vector<double>& value = lp.a_matrix_.value_;
+  const HighsInt old_num_nz = start[num_col];
+
+  // Compute total new nonzeros
+  HighsInt total_new_nz = 0;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) total_new_nz += col_new_nz[iCol];
+
+  const HighsInt new_num_nz = old_num_nz + total_new_nz;
+  index.resize(new_num_nz);
+  value.resize(new_num_nz);
+
+  // Shift existing entries from right to left to make room
+  HighsInt new_el = new_num_nz;
+  for (HighsInt iCol = num_col - 1; iCol >= 0; iCol--) {
+    // Reserve space for new entries for this column at the end
+    new_el -= col_new_nz[iCol];
+    // Copy existing entries
+    HighsInt from_el = start[iCol + 1] - 1;
+    start[iCol + 1] = new_el + col_new_nz[iCol];
+    for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
+      new_el--;
+      index[new_el] = index[iEl];
+      value[new_el] = value[iEl];
+    }
+  }
+  assert(new_el == 0);
+
+  // Now fill in the new entries. Track how many have been placed per column
+  std::vector<HighsInt> col_placed(num_col, 0);
+  for (HighsInt r = 0; r < num_new_rows; r++) {
+    const HighsInt row_idx = base_row + r;
+    for (const auto& entry : new_rows[r].entries) {
+      const HighsInt col = entry.first;
+      // Position for new entry: end of column minus remaining slots
+      HighsInt pos =
+          start[col + 1] - col_new_nz[col] + col_placed[col];
+      index[pos] = row_idx;
+      value[pos] = entry.second;
+      col_placed[col]++;
+    }
+  }
+
+  lp.num_row_ += num_new_rows;
+  lp.indicator_constraints_.clear();
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  return lp;
+}
+
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   HighsLp row_wise_lp = lp;
   vector<HighsInt>& a_start = lp.a_matrix_.start_;

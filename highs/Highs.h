@@ -1091,6 +1091,26 @@ class Highs {
                       const HighsInt* starts, const HighsInt* indices,
                       const double* values);
 
+  /**
+   * @brief Add an indicator constraint to the incumbent model.
+   *
+   * An indicator constraint has the form:
+   *   if binary_col == binary_value then lower <= a^T x <= upper
+   *
+   * The binary variable must have integer integrality.
+   */
+  HighsStatus addIndicatorConstraint(const HighsInt binary_col,
+                                     const HighsInt binary_value,
+                                     const HighsInt num_nz,
+                                     const HighsInt* indices,
+                                     const double* values,
+                                     const double lower, const double upper);
+
+  /**
+   * @brief Return the number of indicator constraints
+   */
+  HighsInt getNumIndicatorConstraints() const;
+
   HighsStatus ensureColwise() {
     this->model_.lp_.ensureColwise();
     return HighsStatus::kOk;

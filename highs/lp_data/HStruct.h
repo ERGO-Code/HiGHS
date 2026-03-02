@@ -152,6 +152,17 @@ struct HighsIllConditioning {
   void clear();
 };
 
+struct HighsIndicatorConstraint {
+  HighsInt binary_col;    // Index of binary indicator variable
+  HighsInt binary_value;  // 0 or 1: the value that activates the constraint
+  // The linear constraint: row_lower <= a^T x <= row_upper
+  std::vector<HighsInt> row_index;
+  std::vector<double> row_value;
+  double row_lower;
+  double row_upper;
+  std::string name;  // Optional constraint name (from MPS)
+};
+
 struct HighsLinearObjective {
   double weight = 0;
   double offset = 0;

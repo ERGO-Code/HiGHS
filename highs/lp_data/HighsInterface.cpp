@@ -93,6 +93,10 @@ void Highs::reportModelStats() const {
     if (num_semi_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
                   "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
+    if (lp.hasIndicatorConstraints())
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "Indicators: %" HIGHSINT_FORMAT "\n",
+                  (HighsInt)lp.indicator_constraints_.size());
   } else {
     std::stringstream stats_line;
     stats_line << problem_type;
@@ -117,6 +121,10 @@ void Highs::reportModelStats() const {
       stats_line << "; " << num_semi_continuous << " semi-continuous variables";
     if (num_semi_integer)
       stats_line << "; " << num_semi_integer << " semi-integer variables";
+    if (lp.hasIndicatorConstraints())
+      stats_line << "; " << lp.indicator_constraints_.size()
+                 << " indicator constraint"
+                 << (lp.indicator_constraints_.size() == 1 ? "" : "s");
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                  stats_line.str().c_str());
   }

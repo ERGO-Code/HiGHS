@@ -1466,6 +1466,30 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
+/**
+ * Add an indicator constraint to the model.
+ *
+ * An indicator constraint has the form:
+ *   if binary_col == binary_value then lower <= a^T x <= upper
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param binary_col    The index of the binary indicator variable.
+ * @param binary_value  The value (0 or 1) that activates the constraint.
+ * @param num_nz        The number of nonzeros in the linear constraint.
+ * @param index         An array of size [num_nz] with variable indices.
+ * @param value         An array of size [num_nz] with variable coefficients.
+ * @param lower         The lower bound of the linear constraint.
+ * @param upper         The upper bound of the linear constraint.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_addIndicatorConstraint(void* highs, const HighsInt binary_col,
+                                      const HighsInt binary_value,
+                                      const HighsInt num_nz,
+                                      const HighsInt* index,
+                                      const double* value, const double lower,
+                                      const double upper);
+
 HighsInt Highs_ensureColwise(void* highs);
 
 /**
