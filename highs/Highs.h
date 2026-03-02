@@ -1103,8 +1103,8 @@ class Highs {
                                      const HighsInt binary_value,
                                      const HighsInt num_nz,
                                      const HighsInt* indices,
-                                     const double* values,
-                                     const double lower, const double upper);
+                                     const double* values, const double lower,
+                                     const double upper);
 
   /**
    * @brief Return the number of indicator constraints

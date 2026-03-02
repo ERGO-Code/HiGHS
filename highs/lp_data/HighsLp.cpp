@@ -98,9 +98,9 @@ bool HighsLp::equalVectors(const HighsLp& lp) const {
   equal_vectors = this->col_lower_ == lp.col_lower_ && equal_vectors;
   equal_vectors = this->row_upper_ == lp.row_upper_ && equal_vectors;
   equal_vectors = this->row_lower_ == lp.row_lower_ && equal_vectors;
-  equal_vectors = this->indicator_constraints_.size() ==
-                      lp.indicator_constraints_.size() &&
-                  equal_vectors;
+  equal_vectors =
+      this->indicator_constraints_.size() == lp.indicator_constraints_.size() &&
+      equal_vectors;
 #ifndef NDEBUG
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif

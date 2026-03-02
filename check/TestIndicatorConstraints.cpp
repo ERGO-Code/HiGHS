@@ -204,7 +204,8 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
 
 TEST_CASE("indicator-mps-read", "[highs_test_indicator]") {
   // Test reading an MPS file with INDICATORS section
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/indicator1.mps";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/indicator1.mps";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   highs.setOptionValue("output_flag", dev_run);

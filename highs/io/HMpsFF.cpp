@@ -623,7 +623,7 @@ double getWallTime() {
   using namespace std::chrono;
   const double wall_time = kNoClockCalls
                                ? 0
-                               : duration_cast<duration<double> >(
+                               : duration_cast<duration<double>>(
                                      wall_clock::now().time_since_epoch())
                                      .count();
   return wall_time;
@@ -2155,7 +2155,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
 
       sos_type.push_back(word[1] == '1' ? 1 : 2);
       sos_name.push_back(sosname);
-      sos_entries.push_back(std::vector<std::pair<HighsInt, double> >());
+      sos_entries.push_back(std::vector<std::pair<HighsInt, double>>());
       continue;
     }
 

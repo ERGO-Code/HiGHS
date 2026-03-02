@@ -3445,10 +3445,11 @@ HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
         row.upper = ic.row_upper;
       }
       if (have_row_names) {
-        row.name = ic.name.empty()
-                       ? "indicator_upper_" +
-                             std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
-                       : ic.name + "_upper";
+        row.name =
+            ic.name.empty()
+                ? "indicator_upper_" +
+                      std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
+                : ic.name + "_upper";
       }
       new_rows.push_back(std::move(row));
     }
@@ -3469,10 +3470,11 @@ HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
         row.lower = ic.row_lower;
       }
       if (have_row_names) {
-        row.name = ic.name.empty()
-                       ? "indicator_lower_" +
-                             std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
-                       : ic.name + "_lower";
+        row.name =
+            ic.name.empty()
+                ? "indicator_lower_" +
+                      std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
+                : ic.name + "_lower";
       }
       new_rows.push_back(std::move(row));
     }
@@ -3506,7 +3508,8 @@ HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
 
   // Compute total new nonzeros
   HighsInt total_new_nz = 0;
-  for (HighsInt iCol = 0; iCol < num_col; iCol++) total_new_nz += col_new_nz[iCol];
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    total_new_nz += col_new_nz[iCol];
 
   const HighsInt new_num_nz = old_num_nz + total_new_nz;
   index.resize(new_num_nz);
@@ -3535,8 +3538,7 @@ HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
     for (const auto& entry : new_rows[r].entries) {
       const HighsInt col = entry.first;
       // Position for new entry: end of column minus remaining slots
-      HighsInt pos =
-          start[col + 1] - col_new_nz[col] + col_placed[col];
+      HighsInt pos = start[col + 1] - col_new_nz[col] + col_placed[col];
       index[pos] = row_idx;
       value[pos] = entry.second;
       col_placed[col]++;
