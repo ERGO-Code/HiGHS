@@ -139,8 +139,11 @@ message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
 message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 
-option(GPU_STUBS "Build GPU with cuda stubs" OFF)
-message(STATUS "Build GPU with cuda stubs: ${GPU_STUBS}")
+option(GPU_DL "Build GPU with delayed loading" OFF)
+message(STATUS "Build GPU with delayed loading: ${GPU_DL}")
+
+option(HIGHS_GPU_LIB "Build highs GPU as a single lib" OFF)
+message(STATUS "Build GPU with delayed loading: ${HIGHS_GPU_LIB}")
 
 if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0")
     message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
@@ -185,7 +188,7 @@ if (CUPDLP_GPU)
     # With FindCUDAConf.cmake
     # Need to have the CUDA_HOME environment variable set.
     include(FindCUDAConf)
-  elseif(GPU_STUBS)
+  elseif(GPU_DL)
     # Stub build - no toolkit needed
   else()
     # Without FindCUDAConf.cmake

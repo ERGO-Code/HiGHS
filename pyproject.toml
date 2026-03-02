@@ -35,6 +35,10 @@ test = ["pytest", "numpy"]
 
 [tool.scikit-build]
 cmake.args = ["-DPYTHON_BUILD_SETUP=ON"]
+
+# WIP
+# cmake.args = ["-DPYTHON_BUILD_SETUP=ON", "-DCUPDLP_GPU=ON", "-DGPU_DL=ON"]
+
 wheel.expand-macos-universal-tags = true
 
 # A list of packages to auto-copy into the wheel. If this is not set, it will
