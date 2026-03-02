@@ -161,34 +161,66 @@ else()
 
   # Optional Cuda
   if (CUPDLP_GPU)
-
     target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
-    set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
 
-    add_subdirectory(pdlp/cupdlp/cuda)
+    if (HIGHS_GPU_LIB)
+      # like in cuda CMakeLists
+      enable_language(CXX CUDA)
 
-    if (WIN32)
-      if (NOT GPU_STUBS)
-        target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
-      else()
-        # Stub build - no toolkit needed
-        target_include_directories(highs PRIVATE
-          ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/include
-        )
-        target_link_directories(highs PRIVATE
-          ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/lib/Windows
-        )
-        target_link_libraries(highs PRIVATE cudalin cuda cublas cusparse cudart)
+      target_sources(highs PRIVATE
+        pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
+        pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
+        pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
+        pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu
+        pdlp/cupdlp/cupdlp_cs.c
+        pdlp/hipdlp/pdhg.cu)
 
+      set_target_properties(highs PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        #CUDA_ARCHITECTURES "60;70;75;80;86" )
+        #Deleted 60;70 due to errors
+        #nvcc fatal   : Unsupported gpu architecture 'compute_60'
+        #nvcc fatal   : Unsupported gpu architecture 'compute_70'
+        CUDA_ARCHITECTURES "75;80;86" )
+
+      # set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
+
+      target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
+
+      if (WIN32)
+        target_link_libraries(cudalin ${CUDA_LIBRARY})  # linking happens here
+      else() # linux
+        target_link_libraries(cudalin ${CUDA_LIBRARY} m)
       endif()
-    else() # Linux
-      if (NOT GPU_STUBS)
-        target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
-      endif()
 
-      set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    else()
+        set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
+        add_subdirectory(pdlp/cupdlp/cuda)
+
+        # classic
+        if (WIN32)
+          # if (NOT GPU_STUBS)
+            target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
+          else()
+        #     # Stub build - no toolkit needed
+        #     target_include_directories(highs PRIVATE
+        #       ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/include
+        #     )
+        #     target_link_directories(highs PRIVATE
+        #       ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/lib/Windows
+        #     )
+        #     target_link_libraries(highs PRIVATE cudalin cuda cublas cusparse cudart)
+
+        #   endif()
+        # else() # Linux
+        #   if (NOT GPU_STUBS)
+            target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
+          endif()
+
+          set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        # endif()
+      endif()
     endif()
-  endif()
 
   target_include_directories(highs PRIVATE ${include_dirs})
 

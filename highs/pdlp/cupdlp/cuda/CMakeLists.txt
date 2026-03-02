@@ -1,8 +1,5 @@
 if (HIGHS_GPU_LIB)
-
-
-
-return
+  return()
 endif()
 
 # separate libs for now
@@ -34,30 +31,28 @@ CUDA_ARCHITECTURES "75;80;86" )
 target_include_directories(cudalin PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
 
 if (WIN32)
-  # target_link_libraries(cudalin ${CUDA_LIBRARY})  linking happens here
-  if (NOT GPU_STUBS)
-    target_link_libraries(cudalin ${CUDA_LIBRARY})  # linking happens here
-  else()
-    # Stub build - no toolkit needed
-    # Link stubs instead of real libs - they satisfy the linker but aren't shipped
-    target_include_directories(cudalin PRIVATE
-        ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/include
-    )
-    target_link_directories(cudalin PRIVATE
-        ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/lib/Windows
-    )
-    target_link_libraries(cudalin PRIVATE cuda cublas cusparse cudart)
+  target_link_libraries(cudalin ${CUDA_LIBRARY})  # linking happens here
+  # else()
+  #   # Stub build - no toolkit needed
+  #   # Link stubs instead of real libs - they satisfy the linker but aren't shipped
+  #   target_include_directories(cudalin PRIVATE
+  #       ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/include
+  #   )
+  #   target_link_directories(cudalin PRIVATE
+  #       ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/lib/Windows
+  #   )
+  #   target_link_libraries(cudalin PRIVATE cuda cublas cusparse cudart)
 
-  endif()
+  # endif()
 else() # LINUX
   # target_compile_definitions(cudalin
   #     PUBLIC
   #     # If the debug configuration pass the DEBUG define to the compiler
   #     $<$<CONFIG:Debug>:-DCUPDLP_DEBUG=1>
   #   )
-  if (NOT GPU_STUBS)
+  # if (NOT GPU_STUBS)
     target_link_libraries(cudalin ${CUDA_LIBRARY} m)
-  else()
+  # else()
 
     # target_link_options(cudalin PRIVATE
     #         -L${CMAKE_SOURCE_DIR}/extern/cuda_stubs/lib/Linux
@@ -65,7 +60,7 @@ else() # LINUX
     #         -Wl,--allow-shlib-undefined
     # )
 
-  endif()
+  # endif()
 endif()
 
 if (NOT GPU_STUBS)
