@@ -1,7 +1,6 @@
 name: build-windows
 
 on: [push, pull_request]
-on: []
 
 jobs:
   fast_build_release:
