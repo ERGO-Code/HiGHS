@@ -13,7 +13,6 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
-#include "mip/HighsMipSolverData.h"
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"

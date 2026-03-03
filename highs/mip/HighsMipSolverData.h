@@ -31,8 +31,6 @@
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
-class HighsMipWorker;
-
 struct HighsPrimaDualIntegral {
   double value;
   double prev_lb;
