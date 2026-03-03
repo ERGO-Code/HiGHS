@@ -43,7 +43,7 @@ class HighsLpRelaxation {
     Origin origin;
     HighsInt index;
     HighsInt age;
-    HighsInt cutpool;
+    HighsInt cutpoolindex;
 
     void get(const HighsMipSolver& mipsolver, HighsInt& len,
              const HighsInt*& inds, const double*& vals) const;
@@ -54,8 +54,8 @@ class HighsLpRelaxation {
 
     double getMaxAbsVal(const HighsMipSolver& mipsolver) const;
 
-    static LpRow cut(HighsInt index, HighsInt cutpool) {
-      return LpRow{kCutPool, index, 0, cutpool};
+    static LpRow cut(HighsInt index, HighsInt cutpoolindex) {
+      return LpRow{kCutPool, index, 0, cutpoolindex};
     }
     static LpRow model(HighsInt index) { return LpRow{kModel, index, 0, -1}; }
   };
@@ -172,7 +172,7 @@ class HighsLpRelaxation {
     this->adjustSymBranchingCol = adjustSymBranchingCol;
   }
 
-  void resetToGlobalDomain(HighsDomain& globaldom);
+  void resetToGlobalDomain(const HighsDomain& globaldom);
 
   void computeBasicDegenerateDuals(double threshold, HighsDomain& localdom,
                                    HighsDomain& globaldom,

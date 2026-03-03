@@ -88,9 +88,9 @@ void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver,
                                    const double*& vals) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpool <=
+      assert(cutpoolindex <
              static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
-      mipsolver.mipdata_->cutpools[cutpool].getCut(index, len, inds, vals);
+      mipsolver.mipdata_->cutpools[cutpoolindex].getCut(index, len, inds, vals);
       break;
     case kModel:
       mipsolver.mipdata_->getRow(index, len, inds, vals);
@@ -101,9 +101,9 @@ HighsInt HighsLpRelaxation::LpRow::getRowLen(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpool <=
+      assert(cutpoolindex <
              static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
-      return mipsolver.mipdata_->cutpools[cutpool].getRowLength(index);
+      return mipsolver.mipdata_->cutpools[cutpoolindex].getRowLength(index);
     case kModel:
       return mipsolver.mipdata_->ARstart_[index + 1] -
              mipsolver.mipdata_->ARstart_[index];
@@ -117,9 +117,9 @@ bool HighsLpRelaxation::LpRow::isIntegral(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpool <=
+      assert(cutpoolindex <
              static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
-      return mipsolver.mipdata_->cutpools[cutpool].cutIsIntegral(index);
+      return mipsolver.mipdata_->cutpools[cutpoolindex].cutIsIntegral(index);
     case kModel:
       return (mipsolver.mipdata_->rowintegral[index] != 0);
   };
@@ -132,9 +132,9 @@ double HighsLpRelaxation::LpRow::getMaxAbsVal(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpool <=
+      assert(cutpoolindex <
              static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
-      return mipsolver.mipdata_->cutpools[cutpool].getMaxAbsCutCoef(index);
+      return mipsolver.mipdata_->cutpools[cutpoolindex].getMaxAbsCutCoef(index);
     case kModel:
       return mipsolver.mipdata_->maxAbsRowCoef[index];
   };
@@ -147,10 +147,11 @@ double HighsLpRelaxation::slackLower(HighsInt row,
                                      const HighsDomain& globaldom) const {
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
-      assert(lprows[row].cutpool <=
+      assert(lprows[row].cutpoolindex <
              static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return globaldom.getMinCutActivity(
-          mipsolver.mipdata_->cutpools[lprows[row].cutpool], lprows[row].index);
+          mipsolver.mipdata_->cutpools[lprows[row].cutpoolindex],
+          lprows[row].index);
     case LpRow::kModel:
       double rowlower = rowLower(row);
       if (rowlower != -kHighsInf) return rowlower;
@@ -261,7 +262,7 @@ void HighsLpRelaxation::loadModel() {
   colUbBuffer.resize(num_col);
 }
 
-void HighsLpRelaxation::resetToGlobalDomain(HighsDomain& globaldom) {
+void HighsLpRelaxation::resetToGlobalDomain(const HighsDomain& globaldom) {
   lpsolver.changeColsBounds(0, mipsolver.numCol() - 1,
                             globaldom.col_lower_.data(),
                             globaldom.col_upper_.data());
@@ -551,9 +552,9 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
       ++ndelcuts;
       deletemask[i] = 1;
       if (notifyPool) {
-        assert(lprows[i].cutpool <=
+        assert(lprows[i].cutpoolindex <
                static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
-        mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
+        mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
             lprows[i].index, mipsolver.mipdata_->parallelLockActive());
       }
     }
@@ -609,9 +610,9 @@ void HighsLpRelaxation::removeCuts() {
   lpsolver.deleteRows(modelrows, nlprows - 1);
   for (HighsInt i = modelrows; i != nlprows; ++i) {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
-      assert(lprows[i].cutpool <=
+      assert(lprows[i].cutpoolindex <
              static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
-      mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
+      mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
           lprows[i].index, mipsolver.mipdata_->parallelLockActive());
     }
   }
@@ -658,9 +659,9 @@ void HighsLpRelaxation::performAging(bool deleteRows) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
         deletemask[i] = 1;
-        assert(lprows[i].cutpool <=
+        assert(lprows[i].cutpoolindex <
                static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
-        mipsolver.mipdata_->cutpools[lprows[i].cutpool].lpCutRemoved(
+        mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
             lprows[i].index, mipsolver.mipdata_->parallelLockActive());
       }
     } else if (std::abs(lpsolver.getSolution().row_dual[i]) >
@@ -698,9 +699,9 @@ void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n) {
   HighsInt modelrows = mipsolver.numRow();
   for (HighsInt i = modelrows; i != nlprows; ++i) {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
-      assert(lprows[i].cutpool <=
+      assert(lprows[i].cutpoolindex <
              static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
-      mipsolver.mipdata_->cutpools[lprows[i].cutpool].increaseNumLps(
+      mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].increaseNumLps(
           lprows[i].index, n);
     }
   }
@@ -980,7 +981,7 @@ void HighsLpRelaxation::storeDualInfProof() {
     for (HighsInt j = 0; j < len; ++j) row_ap.add(inds[j], weight * vals[j]);
   }
 
-  HighsDomain& globaldomain =
+  const HighsDomain& globaldomain =
       (worker_ && mipsolver.mipdata_->parallelLockActive())
           ? worker_->getGlobalDomain()
           : mipsolver.mipdata_->domain;
@@ -1049,13 +1050,12 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofvals.clear();
 
   if (lpsolver.getSolution().dual_valid) {
+    bool use_worker_info = worker_ && mipsolver.mipdata_->parallelLockActive();
     hasdualproof =
-        computeDualProof((worker_ && mipsolver.mipdata_->parallelLockActive())
-                             ? worker_->getGlobalDomain()
-                             : mipsolver.mipdata_->domain,
-                         (worker_ && mipsolver.mipdata_->parallelLockActive())
-                             ? worker_->upper_limit
-                             : mipsolver.mipdata_->upper_limit,
+        computeDualProof(use_worker_info ? worker_->getGlobalDomain()
+                                         : mipsolver.mipdata_->domain,
+                         use_worker_info ? worker_->upper_limit
+                                         : mipsolver.mipdata_->upper_limit,
                          dualproofinds, dualproofvals, dualproofrhs);
   } else {
     hasdualproof = false;
