@@ -258,7 +258,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
 
   Clock clock;
   if (Int status = buildASstructure()) return status;
-  info_.AS_structure_time = clock.stop();  // there's a race here
+  info_.AS_structure_time = clock.stop();
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(nA_ + mA_, -1);
