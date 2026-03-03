@@ -756,7 +756,7 @@ double HighsCutGeneration::scale(double val) {
   return std::ldexp(1.0, expshift);
 }
 
-bool HighsCutGeneration::postprocessCut(HighsDomain& globaldom) {
+bool HighsCutGeneration::postprocessCut(const HighsDomain& globaldom) {
   // right hand sides slightly below zero are likely due to numerical errors and
   // can cause numerical troubles with scaling, so set them to zero
   if (rhs < 0 && rhs > -epsilon) rhs = 0;
@@ -1204,8 +1204,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   return cutindex != -1;
 }
 
-bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
-                                          HighsDomain& globaldom,
+bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
+                                          const HighsDomain& globaldom,
                                           std::vector<HighsInt>& proofinds,
                                           std::vector<double>& proofvals,
                                           double& proofrhs) {
@@ -1298,7 +1298,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   return cutindex != -1;
 }
 
-bool HighsCutGeneration::finalizeAndAddCut(HighsDomain& globaldom,
+bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
                                            std::vector<HighsInt>& inds_,
                                            std::vector<double>& vals_,
                                            double& rhs_) {

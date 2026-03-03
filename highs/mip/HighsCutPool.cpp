@@ -225,8 +225,9 @@ void HighsCutPool::performAging() {
   assert((HighsInt)propRows.size() == numPropRows);
 }
 
-void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
-                            HighsCutSet& cutset, double feastol,
+void HighsCutPool::separate(const std::vector<double>& sol,
+                            const HighsDomain& domain, HighsCutSet& cutset,
+                            double feastol,
                             const std::deque<HighsCutPool>& cutpools,
                             bool thread_safe) {
   HighsInt nrows = matrix_.getNumRows();
