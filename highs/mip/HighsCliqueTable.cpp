@@ -1704,7 +1704,6 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   localNumNeighbourhoodQueries += data.numNeighbourhoodQueries;
 
   if (runcliquesubsumption && &randgen == &this->randgen) {
-
     for (std::vector<CliqueVar>& clique : data.cliques) {
       HighsInt nremoved = runCliqueSubsumption(globaldom, clique);
 
