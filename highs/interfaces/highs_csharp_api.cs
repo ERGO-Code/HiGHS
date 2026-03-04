@@ -228,7 +228,7 @@ public class HighsLpSolver : IDisposable
     private static extern int Highs_writeSolutionPretty(IntPtr highs, string filename);
 
     [DllImport(highslibname)]
-    private static extern int Highs_getInfinity(IntPtr highs);
+    private static extern double Highs_getInfinity(IntPtr highs);
 
     [DllImport(highslibname)]
     private static extern int Highs_passLp(
@@ -685,9 +685,9 @@ public class HighsLpSolver : IDisposable
         return (HighsStatus)HighsLpSolver.Highs_writeSolutionPretty(this.highs, filename);
     }
 
-    public Double getInfinity()
+    public double getInfinity()
     {
-        return (Double)HighsLpSolver.Highs_getInfinity(this.highs);
+        return HighsLpSolver.Highs_getInfinity(this.highs);
     }
 
     public HighsStatus passLp(HighsModel model)
