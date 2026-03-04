@@ -4965,22 +4965,20 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // count number of fixed columns
   HighsInt numFixedCols = 0;
 
-  auto isContSingleton = [&](HighsInt col) {
+  typedef std::tuple<HighsInt, double, HighsInt> candidate;
+
+  auto isSingleton = [&](HighsInt col) {
     return (!colDeleted[col] && colsize[col] == 1 &&
-            model->integrality_[col] != HighsVarType::kInteger &&
             model->col_lower_[col] != model->col_upper_[col]);
   };
 
-  auto sortCols =
-      [&](std::vector<std::tuple<HighsInt, double, HighsInt>>& vec) {
-        pdqsort(
-            vec.begin(), vec.end(),
-            [&](const std::tuple<HighsInt, double, HighsInt>& col1,
-                const std::tuple<HighsInt, double, HighsInt>& col2) {
+  auto sortCols = [&](std::vector<candidate>& vec) {
+    pdqsort(vec.begin(), vec.end(),
+            [&](const candidate& col1, const candidate& col2) {
               return model->col_cost_[std::get<0>(col1)] / std::get<1>(col1) <
                      model->col_cost_[std::get<0>(col2)] / std::get<1>(col2);
             });
-      };
+  };
 
   // lambda for updating row activity bounds
   auto updateActivityBounds = [&](HighsCDouble& sumLower,
@@ -4995,17 +4993,41 @@ HPresolve::Result HPresolve::singletonColStuffing(
       sumUpper += aj * static_cast<HighsCDouble>(upperSumBound);
   };
 
+  // lambda for storing a candidate
+  auto addCandidate = [&](std::vector<candidate>& candidates, HighsInt col,
+                          double val, HighsInt direction, double& minWeight,
+                          double& maxWeight, bool& allInteger) {
+    allInteger =
+        allInteger && model->integrality_[col] == HighsVarType::kInteger;
+    minWeight = std::min(minWeight, direction * val);
+    maxWeight = std::max(maxWeight, direction * val);
+    candidates.push_back(std::make_tuple(col, val, direction));
+  };
+
+  // lambda for fixing a variable
+  auto fixCol = [&](HighsInt col, HighsInt direction) {
+    if (direction < 0)
+      HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+    else
+      HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    return Result::kOk;
+  };
+
   // lambda for actual stuffing
   auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
     // skip row if rhs is not finite
     if (direction * rhs == kHighsInf) return Result::kOk;
 
     // vectors for candidates and activity bounds
-    std::vector<std::tuple<HighsInt, double, HighsInt>> candidates;
+    std::vector<candidate> candidates;
+    candidates.reserve(rowsize[row]);
     HighsCDouble sumLower = 0.0;
     HighsCDouble sumUpper = 0.0;
     bool sumLowerFinite = true;
     bool sumUpperFinite = true;
+    bool allInteger = true;
+    double minWeight = kHighsInf;
+    double maxWeight = -kHighsInf;
 
     for (auto& nz : getRowVector(row)) {
       // get column index, coefficient, cost and bounds
@@ -5014,19 +5036,22 @@ HPresolve::Result HPresolve::singletonColStuffing(
       double cj = model->col_cost_[j];
       double sumLowerBound = model->col_lower_[j];
       double sumUpperBound = model->col_upper_[j];
-      if (isContSingleton(j)) {
+      if (isSingleton(j)) {
         // check singleton
         if (aj > 0) {
           // use lower bound
           sumUpperBound = sumLowerBound;
           // candidate for stuffing?
-          if (cj < 0) candidates.push_back(std::make_tuple(j, aj, HighsInt{1}));
+          if (cj < 0)
+            addCandidate(candidates, j, aj, HighsInt{1}, minWeight, maxWeight,
+                         allInteger);
         } else {
           // use upper bound
           sumLowerBound = sumUpperBound;
           // candidate for stuffing? multiply column with -1
           if (cj > 0)
-            candidates.push_back(std::make_tuple(j, aj, HighsInt{-1}));
+            addCandidate(candidates, j, aj, HighsInt{-1}, minWeight, maxWeight,
+                         allInteger);
         }
       } else if (aj < 0)
         std::swap(sumLowerBound, sumUpperBound);
@@ -5035,6 +5060,19 @@ HPresolve::Result HPresolve::singletonColStuffing(
                            aj, sumLowerBound, sumUpperBound);
       if (!sumLowerFinite && !sumUpperFinite) return Result::kOk;
     }
+
+    // all columns need to have same weights if we only have integer columns
+    if (allInteger && minWeight != maxWeight) return Result::kOk;
+
+    // remove integer columns if there are also continuous ones
+    if (!allInteger)
+      candidates.erase(
+          std::remove_if(candidates.begin(), candidates.end(),
+                         [&](const candidate& p) {
+                           return model->integrality_[std::get<0>(p)] ==
+                                  HighsVarType::kInteger;
+                         }),
+          candidates.end());
 
     // sort candidates
     sortCols(candidates);
@@ -5057,17 +5095,11 @@ HPresolve::Result HPresolve::singletonColStuffing(
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
         numFixedCols++;
-        if (multiplier < 0)
-          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
-        else
-          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
+        HPRESOLVE_CHECKED_CALL(fixCol(j, multiplier));
       } else if (sumLowerFinite &&
                  direction * rhs <= sumLower + primal_feastol) {
         numFixedCols++;
-        if (multiplier < 0)
-          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, j));
-        else
-          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, j));
+        HPRESOLVE_CHECKED_CALL(fixCol(j, -multiplier));
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
@@ -5077,8 +5109,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
     return Result::kOk;
   };
 
-  // consider only non-fixed singleton continuous columns
-  if (!isContSingleton(col)) return Result::kOk;
+  // consider only non-fixed singleton columns
+  if (!isSingleton(col)) return Result::kOk;
 
   // get row index
   HighsInt row = Arow[colhead[col]];
