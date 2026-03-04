@@ -62,8 +62,8 @@ level to use based on a heuristic. When the [parallel](@ref option-parallel) opt
 "choose" or "off", the value of the hipo\_parallel\_type option is ignored.
 
 If the [parallel](@ref option-parallel) option is set to "on" or "choose", HiPO uses 
-multiple threads also to try the multiple orderings and Newton system approaches in 
-parallel, in order to select the best one.
+multiple threads to run multiple orderings and Newton system approaches in parallel, in 
+order to select the best one.
 
 ## Future plans
 
