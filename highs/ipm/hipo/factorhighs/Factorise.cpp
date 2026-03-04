@@ -285,14 +285,15 @@ void Factorise::processSupernode(Int sn) {
           const Int i = S_.relindClique(child_sn, row);
 
           // how many entries to sum
-          const Int consecutive = S_.consecutiveSums(child_sn, row);
+          Int consecutive = S_.consecutiveSums(child_sn, row);
 
           FH->assembleFrontalMultiple(consecutive, child_clique, nc, child_sn,
                                       row, col, i, j);
 
           row += consecutive;
         }
-      }
+      } else
+        break;
     }
     HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleChildrenFrontal);
 

@@ -262,6 +262,15 @@ void fullFromLower(const std::vector<Int>& ptrL, const std::vector<Int>& rowsL,
   }
 }
 
+double snFlops(double size, double clique_size) {
+  return (size + clique_size) * (size + clique_size) * size -
+         (size + clique_size) * size * (size + 1) +
+         size * (size + 1) * (2 * size + 1) / 6;
+}
+double snSpops(double clique_size) {
+  return clique_size * (clique_size + 1) / 2;
+}
+
 Clock::Clock() { start(); }
 void Clock::start() { t0 = std::chrono::high_resolution_clock::now(); }
 double Clock::stop() const {

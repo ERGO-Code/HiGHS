@@ -92,8 +92,10 @@ class Analyse {
   void colCount();
   void fundamentalSupernodes();
   void relaxSupernodes();
-  double doRelaxSupernodes(Int64 max_artificial_nz);
+  void relaxSnMaxNz(double& flops, double& spops);
+  double doRelaxSnMaxNz(double& flops, double& spops, Int64 max_artificial_nz);
   void afterRelaxSn();
+  void relaxSnNetOps(double& flops, double& spops);
   void snPattern();
   void relativeIndCols();
   void relativeIndClique();
