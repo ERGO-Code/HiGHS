@@ -84,7 +84,9 @@ void DynamicDepsLoader::unloadLibrary() {
   }
   fn_get_abi_version_ = nullptr;
   fn_get_version_ = nullptr;
-  fn_solve_lp_ = nullptr;
+
+  // TODO add here
+  // fn_solve_lp_ = nullptr;
 }
 
 void* DynamicDepsLoader::resolveSymbol(const char* name) {
@@ -100,13 +102,17 @@ bool DynamicDepsLoader::resolveFunctions() {
   if (!lib_handle_) return false;
 
   fn_get_abi_version_ =
-      reinterpret_cast<hipo_get_abi_version_t>(resolveSymbol("hipo_get_abi_version"));
+      reinterpret_cast<hipo_extras_get_abi_version_t>(resolveSymbol("hipo_get_abi_version"));
   fn_get_version_ =
-      reinterpret_cast<hipo_get_version_t>(resolveSymbol("hipo_get_version"));
-  fn_solve_lp_ =
-      reinterpret_cast<hipo_solve_lp_t>(resolveSymbol("hipo_solve_lp"));
+      reinterpret_cast<hipo_extras_get_version_t>(resolveSymbol("hipo_get_version"));
 
-  if (!fn_get_abi_version_ || !fn_get_version_ || !fn_solve_lp_) {
+  // fn_solve_lp_ =
+  //     reinterpret_cast<hipo_solve_lp_t>(resolveSymbol("hipo_solve_lp"));
+
+  // todo: add functions here!
+
+  // if (!fn_get_abi_version_ || !fn_get_version_ || !fn_solve_lp_) {
+  if (!fn_get_abi_version_ || !fn_get_version_) {
     last_error_ = "Failed to resolve required HiPO functions";
     return false;
   }
@@ -128,10 +134,10 @@ bool DynamicDepsLoader::tryLoad(const std::string path) {
       if (resolveFunctions()) {
         // Check ABI compatibility
         int loaded_abi_version = fn_get_abi_version_();
-        if (loaded_abi_version != kHipoAbiVersion) {
+        if (loaded_abi_version != kHipoExtrasAbiVersion) {
           last_error_ =
               "HiPO ABI version mismatch: expected " +
-              std::to_string(kHipoAbiVersion) + ", got " +
+              std::to_string(kHipoExtrasAbiVersion) + ", got " +
               std::to_string(loaded_abi_version) +
               ". Please reinstall: pip install --force-reinstall highspy[hipo]";
           unloadLibrary();
@@ -157,21 +163,21 @@ bool DynamicDepsLoader::tryLoad(const std::string path) {
   return false;
 }
 
-HighsStatus DynamicDepsLoader::solveLp(HighsLpSolverObject& solver_object) {
-  std::cout << "Using HiPO version: " << getVersion() << std::endl;
+// HighsStatus DynamicDepsLoader::solveLp(HighsLpSolverObject& solver_object) {
+//   std::cout << "Using HiPO version: " << getVersion() << std::endl;
 
-  if (!isAvailable()) {
-    return HighsStatus::kError;
-  }
+//   if (!isAvailable()) {
+//     return HighsStatus::kError;
+//   }
 
-  // Call the dynamically loaded solve function with actual types
-  return fn_solve_lp_(
-      solver_object.options_,
-      solver_object.timer_,
-      solver_object.lp_,
-      solver_object.basis_,
-      solver_object.solution_,
-      solver_object.model_status_,
-      solver_object.highs_info_,
-      solver_object.callback_);
-}
+//   // Call the dynamically loaded solve function with actual types
+//   return fn_solve_lp_(
+//       solver_object.options_,
+//       solver_object.timer_,
+//       solver_object.lp_,
+//       solver_object.basis_,
+//       solver_object.solution_,
+//       solver_object.model_status_,
+//       solver_object.highs_info_,
+//       solver_object.callback_);
+// }

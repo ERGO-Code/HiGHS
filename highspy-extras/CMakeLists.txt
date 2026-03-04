@@ -11,7 +11,7 @@ set(VCPKG_ROOT $ENV{VCPKG_ROOT} CACHE PATH "Path to vcpkg installation")
 set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_TARGET_TRIPLET} CACHE STRING "vcpkg target triplet")
 set(VCPKG_INSTALLED "${VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
 
-if (UNIX) 
+if (UNIX)
 set(ZLIB_LIBRARY "${VCPKG_INSTALLED}/lib/libz.a" CACHE STRING "Root directory of zlib")
 set(ZLIB_INCLUDE_DIR "${VCPKG_INSTALLED}/include" CACHE STRING "Include directory for zlib")
 set(BLAS_ROOT "${VCPKG_INSTALLED}/share/openblas" CACHE STRING "Root directory of BLAS/LAPACK")

@@ -15,33 +15,33 @@
 #include <vector>
 
 // Forward declaration
-class HighsLpSolverObject;
+// class HighsLpSolverObject;
 
 // ABI version for compatibility checking
 // Increment this when the C API signature changes
-constexpr int kHipoAbiVersion = 1;
+constexpr int kHipoExtrasAbiVersion = 1;
 
 // C-style function pointer types for dynamic loading
 extern "C" {
 
 // Get the ABI version of the loaded HiPO library
-typedef int (*hipo_get_abi_version_t)();
+typedef int (*hipo_extras_get_abi_version_t)();
 
 // Get the version string of the loaded HiPO library
-typedef const char* (*hipo_get_version_t)();
+typedef const char* (*hipo_extras_get_version_t)();
 
 // Solve LP using HiPO - uses actual HiGHS types for type safety
 // Note: ABI version check ensures struct layouts match between builds
-typedef HighsStatus (*hipo_solve_lp_t)(
-    const HighsOptions& options,
-    HighsTimer& timer,
-    const HighsLp& lp,
-    HighsBasis& highs_basis,
-    HighsSolution& highs_solution,
-    HighsModelStatus& model_status,
-    HighsInfo& highs_info,
-    HighsCallback& callback
-);
+// typedef HighsStatus (*hipo_solve_lp_t)(
+//     const HighsOptions& options,
+//     HighsTimer& timer,
+//     const HighsLp& lp,
+//     HighsBasis& highs_basis,
+//     HighsSolution& highs_solution,
+//     HighsModelStatus& model_status,
+//     HighsInfo& highs_info,
+//     HighsCallback& callback
+// );
 
 }  // extern "C"
 
@@ -80,7 +80,7 @@ class DynamicDepsLoader {
    * @param solver_object The LP solver object containing problem data
    * @return HighsStatus indicating success or failure
    */
-  HighsStatus solveLp(HighsLpSolverObject& solver_object);
+  // HighsStatus solveLp(HighsLpSolverObject& solver_object);
 
   /**
    * Get the last error message if loading failed.
@@ -141,9 +141,11 @@ class DynamicDepsLoader {
   std::string version_;
 
   // Function pointers
-  hipo_get_abi_version_t fn_get_abi_version_ = nullptr;
-  hipo_get_version_t fn_get_version_ = nullptr;
-  hipo_solve_lp_t fn_solve_lp_ = nullptr;
+  hipo_extras_get_abi_version_t fn_get_abi_version_ = nullptr;
+  hipo_extras_get_version_t fn_get_version_ = nullptr;
+
+  // # todo: add function pointers here
+  // hipo_solve_lp_t fn_solve_lp_ = nullptr;
 };
 
 #endif  // LP_DATA_DYNAMIC_HIPO_LOADER_H_

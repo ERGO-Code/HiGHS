@@ -1018,12 +1018,12 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
     bool loaded = DynamicDepsLoader::instance().tryLoad(hipo_module);
 
     if (loaded) {
-        py::print("Successfully loaded hipo");
+        py::print("Successfully loaded hipo extras");
     } else {
-      py::print("Failed to load hipo; skipping optional DLL preload");
+      py::print("Failed to load hipo extras; skipping optional DLL preload");
     }
   } else {
-    py::print("hipo not available; skipping optional DLL preload");
+    py::print("hipo extras not available; skipping optional DLL preload");
   }
 
   // To keep a smaller diff, for reviewers, the declarations are not moved, but

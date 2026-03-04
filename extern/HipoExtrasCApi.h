@@ -11,7 +11,7 @@
 #ifndef HIPO_EXTRAS_C_API_H_
 #define HIPO_EXTRAS_C_API_H_
 
-#include "HConfig.h"
+// #include "HConfig.h"
 
 // Export macro for shared library
 #if defined(_WIN32) || defined(_WIN64)
@@ -25,14 +25,17 @@
 #endif
 
 // ABI version - increment when the C API signature changes
-#define HIPO_ABI_VERSION 1
+#define HIPO_EXTRAS_ABI_VERSION 1
 
 // Helper macros for stringification
-#define HIPO_STRINGIFY(x) #x
-#define HIPO_TOSTRING(x) HIPO_STRINGIFY(x)
+#define HIPO_X_STRINGIFY(x) #x
+#define HIPO_X_TOSTRING(x) HIPO_X_STRINGIFY(x)
 
-// Version string derived from HConfig.h
-#define HIPO_EXTRAS_VERSION "1.0.0"
+// Version string
+#define HIPO_EXTRAS_VERSION \
+  HIPO_X_TOSTRING(HIGHS_VERSION_MAJOR) "." \
+  HIPO_X_TOSTRING(HIGHS_VERSION_MINOR) "." \
+  HIPO_X_TOSTRING(HIGHS_VERSION_PATCH)
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,40 +64,40 @@ HIPO_EXTRAS_API const char* hipo_get_version(void);
 // These use C++ references and HiGHS types directly
 #ifdef __cplusplus
 
-#include "lp_data/HighsCallback.h"
-#include "lp_data/HighsInfo.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsSolution.h"
-#include "lp_data/HighsStatus.h"
-#include "util/HighsTimer.h"
+// #include "lp_data/HighsCallback.h"
+// #include "lp_data/HighsInfo.h"
+// #include "lp_data/HighsLp.h"
+// #include "lp_data/HighsOptions.h"
+// #include "lp_data/HighsSolution.h"
+// #include "lp_data/HighsStatus.h"
+// #include "util/HighsTimer.h"
 
-#include "ipm/hipo/ipm/Solver.h"
+// #include "ipm/hipo/ipm/Solver.h"
 
-HighsStatus solveLpHipo(HighsLpSolverObject& solver_object);
+// HighsStatus solveLpHipo(HighsLpSolverObject& solver_object);
 
-HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
-                        const HighsLp& lp, HighsBasis& highs_basis,
-                        HighsSolution& highs_solution,
-                        HighsModelStatus& model_status, HighsInfo& highs_info,
-                        HighsCallback& callback);
+// HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
+//                         const HighsLp& lp, HighsBasis& highs_basis,
+//                         HighsSolution& highs_solution,
+//                         HighsModelStatus& model_status, HighsInfo& highs_info,
+//                         HighsCallback& callback);
 
-HighsStatus reportHipoStatus(const HighsOptions& options,
-                             const hipo::Int status, const hipo::Solver& hipo);
+// HighsStatus reportHipoStatus(const HighsOptions& options,
+//                              const hipo::Int status, const hipo::Solver& hipo);
 
-HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
-                                      const ipx::Int status);
+// HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
+//                                       const ipx::Int status);
 
-void reportHipoNoProgress(const HighsOptions& options,
-                          const hipo::Info& hipo_info);
+// void reportHipoNoProgress(const HighsOptions& options,
+//                           const hipo::Info& hipo_info);
 
-void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
-                              const hipo::Int num_col, const hipo::Int num_row,
-                              const std::vector<double>& rhs,
-                              const std::vector<char>& constraint_type,
-                              const hipo::Solver& hipo,
-                              const HighsModelStatus model_status,
-                              HighsSolution& highs_solution);
+// void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
+//                               const hipo::Int num_col, const hipo::Int num_row,
+//                               const std::vector<double>& rhs,
+//                               const std::vector<char>& constraint_type,
+//                               const hipo::Solver& hipo,
+//                               const HighsModelStatus model_status,
+//                               HighsSolution& highs_solution);
 
 
 /**
@@ -113,16 +116,16 @@ void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
  * @param callback Reference to HighsCallback
  * @return HighsStatus indicating success or failure
  */
-extern "C" HIPO_EXTRAS_API HighsStatus hipo_solve_lp(
-    const HighsOptions& options,
-    HighsTimer& timer,
-    const HighsLp& lp,
-    HighsBasis& highs_basis,
-    HighsSolution& highs_solution,
-    HighsModelStatus& model_status,
-    HighsInfo& highs_info,
-    HighsCallback& callback
-);
+// extern "C" HIPO_EXTRAS_API HighsStatus hipo_solve_lp(
+//     const HighsOptions& options,
+//     HighsTimer& timer,
+//     const HighsLp& lp,
+//     HighsBasis& highs_basis,
+//     HighsSolution& highs_solution,
+//     HighsModelStatus& model_status,
+//     HighsInfo& highs_info,
+//     HighsCallback& callback
+// );
 
 #endif  // __cplusplus
 

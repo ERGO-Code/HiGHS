@@ -12,7 +12,7 @@
 #include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
-#include "metis/metis.h"
+// #include "metis/metis.h"
 #include "rcm/rcm.h"
 
 namespace hipo {
