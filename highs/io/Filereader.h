@@ -39,6 +39,7 @@ class Filereader {
                                        const HighsModel& model) = 0;
   static Filereader* getFilereader(const HighsLogOptions& log_options,
                                    const std::string filename);
+  HighsFileType getFileType(const std::string filename) const;
 
   virtual ~Filereader(){};
 };

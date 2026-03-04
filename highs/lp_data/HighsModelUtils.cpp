@@ -450,7 +450,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
           column ? kHighsUniqueColNamePrefix : kHighsUniquerowNamePrefix;
       names[ix] = name_prefix + std::to_string(name_suffix++);
     } else if (names[ix].find(" ") != std::string::npos) {
-      // Name contains a space, so return error
+      // Name contains a space, so replace it with an underscore
       highsLogUser(log_options, HighsLogType::kError,
                    "%s %d name \"%s\" contains a space character\n",
                    column ? "Column" : "Row", int(ix), names[ix].c_str());
