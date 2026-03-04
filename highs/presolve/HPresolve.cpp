@@ -4355,6 +4355,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     if (rowDeleted[row]) return Result::kOk;
   }
 
+  checkVarBounds(row);
+
   // update implied bounds of all columns in given row
   HPRESOLVE_CHECKED_CALL(updateColImpliedBounds(row));
 
@@ -7933,6 +7935,62 @@ void HPresolve::setRelaxedImpliedBounds() {
       double newUb = implColUpper[i] + boundRelax;
       if (newUb < model->col_upper_[i] - boundRelax)
         model->col_upper_[i] = newUb;
+    }
+  }
+}
+
+void HPresolve::checkVarBounds(HighsInt row) {
+  if (rowsize[row] <= 1 || rowsizeInteger[row] == 0 ||
+      (impliedRowBounds.getNumInfSumLower(row) > 1 &&
+       impliedRowBounds.getNumInfSumUpper(row) > 1))
+    return;
+
+  HighsInt bincol = -1;
+  double bincoef = 0.0;
+  HighsInt numbin = 0;
+
+  bool isRangedRow = isRanged(row);
+  bool isLessEqualRow = model->row_lower_[row] == -kHighsInf &&
+                        model->row_upper_[row] != kHighsInf;
+  bool isGreaterEqualRow = !isRangedRow && !isLessEqualRow;
+
+  for (const auto& nonzero : getRowVector(row)) {
+    if (model->integrality_[nonzero.index()] == HighsVarType::kInteger &&
+        model->col_lower_[nonzero.index()] == 0.0 &&
+        model->col_upper_[nonzero.index()] == 1.0) {
+      if (++numbin > 1) return;
+      bincol = nonzero.index();
+      bincoef = nonzero.value();
+    }
+  }
+
+  for (const auto& nonzero : getRowVector(row)) {
+    if (nonzero.index() == bincol) continue;
+    bool isVlb = isRangedRow || (isLessEqualRow && nonzero.value() < 0) ||
+                 (isGreaterEqualRow && nonzero.value() > 0);
+    bool isVub = isRangedRow || (isLessEqualRow && nonzero.value() > 0) ||
+                 (isGreaterEqualRow && nonzero.value() < 0);
+    if (!isVlb && !isVub) continue;
+
+    double lowerResidual = impliedRowBounds.getResidualSumLowerOrig(
+        row, nonzero.index(), nonzero.value(), bincol, bincoef, 0.0);
+    double upperResidual = impliedRowBounds.getResidualSumLowerOrig(
+        row, nonzero.index(), nonzero.value(), bincol, bincoef, 0.0);
+
+    double lhs = model->row_lower_[row];
+    if (lhs != -kHighsInf && lowerResidual != -kHighsInf) {
+      lhs -= lowerResidual;
+      lhs /= std::abs(nonzero.value());
+    }
+    double rhs = model->row_upper_[row];
+    if (rhs != kHighsInf && upperResidual != kHighsInf) {
+      rhs -= upperResidual;
+      rhs /= std::abs(nonzero.value());
+    }
+    if (nonzero.value() < 0) {
+      lhs *= -1;
+      rhs *= -1;
+      std::swap(lhs, rhs);
     }
   }
 }
