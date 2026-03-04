@@ -9,7 +9,7 @@
  * @brief
  */
 #include "lp_data/HighsOptions.h"
-#include "lp_data/DynamicHipoLoader.h"
+#include "DynamicDepsLoader.h"
 
 #include <algorithm>
 #include <cassert>
@@ -20,7 +20,7 @@
 
 bool hipoAvailable() {
 #ifndef HIPO
-  return DynamicHipoLoader::instance().isAvailable();
+  return DynamicDepsLoader::instance().isAvailable();
 #else
     return true;
 #endif

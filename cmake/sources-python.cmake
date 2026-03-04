@@ -134,7 +134,7 @@ set(ipx_sources_python
   highs/ipm/ipx/symbolic_invert.cc
   highs/ipm/ipx/timer.cc
   highs/ipm/ipx/utils.cc)
-  
+
   set(ipx_headers_python
   highs/ipm/ipx/basiclu_kernel.h
   highs/ipm/ipx/basiclu_wrapper.h
@@ -284,7 +284,7 @@ set(highs_sources_python
     highs/util/HSet.cpp
     highs/util/HVectorBase.cpp
     highs/util/stringutil.cpp
-    highs/lp_data/DynamicHipoLoader.cpp)
+    highs/DynamicDepsLoader.cpp)
 
 set(highs_headers_python
     extern/pdqsort/pdqsort.h
@@ -322,7 +322,7 @@ set(highs_headers_python
     highs/lp_data/HighsSolve.h
     highs/lp_data/HighsStatus.h
     highs/lp_data/HStruct.h
-    highs/lp_data/DynamicHipoLoader.h
+    highs/DynamicDepsLoader.h
     highs/mip/feasibilityjump.hh
     highs/mip/HighsCliqueTable.h
     highs/mip/HighsConflictPool.h
@@ -449,12 +449,12 @@ set(highs_headers_python
   )
 
 
-  set(hipo_sources 
-    highs/ipm/hipo/ipm/CurtisReidScaling.cpp 
-    highs/ipm/hipo/ipm/IpmData.cpp 
-    highs/ipm/hipo/ipm/FactorHiGHSSolver.cpp 
+  set(hipo_sources
+    highs/ipm/hipo/ipm/CurtisReidScaling.cpp
+    highs/ipm/hipo/ipm/IpmData.cpp
+    highs/ipm/hipo/ipm/FactorHiGHSSolver.cpp
     highs/ipm/hipo/ipm/Control.cpp
-    highs/ipm/hipo/ipm/Iterate.cpp 
+    highs/ipm/hipo/ipm/Iterate.cpp
     highs/ipm/hipo/ipm/LogHighs.cpp
     highs/ipm/hipo/ipm/Model.cpp
     highs/ipm/hipo/ipm/Refine.cpp

@@ -176,12 +176,12 @@ set(ipx_headers
   ipm/ipx/timer.h
   ipm/ipx/utils.h)
 
-set(hipo_sources 
-    ipm/hipo/ipm/CurtisReidScaling.cpp 
-    ipm/hipo/ipm/IpmData.cpp 
-    ipm/hipo/ipm/FactorHiGHSSolver.cpp 
+set(hipo_sources
+    ipm/hipo/ipm/CurtisReidScaling.cpp
+    ipm/hipo/ipm/IpmData.cpp
+    ipm/hipo/ipm/FactorHiGHSSolver.cpp
     ipm/hipo/ipm/Control.cpp
-    ipm/hipo/ipm/Iterate.cpp 
+    ipm/hipo/ipm/Iterate.cpp
     ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/PreProcess.cpp
@@ -442,7 +442,7 @@ set(highs_sources
     util/HSet.cpp
     util/HVectorBase.cpp
     util/stringutil.cpp
-    lp_data/DynamicHipoLoader.cpp)
+    DynamicDepsLoader.cpp)
 
 # add catch header?
 set(highs_headers
@@ -483,7 +483,7 @@ set(highs_headers
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HStruct.h
-    lp_data/DynamicHipoLoader.h
+    DynamicDepsLoader.h
     mip/feasibilityjump.hh
     mip/HighsCliqueTable.h
     mip/HighsConflictPool.h

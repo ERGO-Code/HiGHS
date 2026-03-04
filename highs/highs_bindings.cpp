@@ -8,7 +8,7 @@
 
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
-#include "lp_data/DynamicHipoLoader.h"
+#include "DynamicDepsLoader.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -66,7 +66,7 @@ std::function<void(Base&, dense_array_t<T>)> make_setter_ptr(
     if (buf.ndim != 1) {
       throw std::runtime_error("Expected a 1D array");
     }
-    
+
     (self.*member) = std::move(std::vector<T>(static_cast<T*>(buf.ptr),
                                    static_cast<T*>(buf.ptr) + buf.shape[0]));
   };
@@ -1002,7 +1002,7 @@ std::string highs_locatePythonPackage(const std::string module_name) {
 
   py::object find_spec =
       py::module_::import("importlib.util").attr("find_spec")(module_name);
-  
+
   if (find_spec.is_none()) {
     return "";
   }
@@ -1015,7 +1015,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
     auto hipo_module = highs_locatePythonPackage("highspy_hipo");
 
   if (!hipo_module.empty()) {
-    bool loaded = DynamicHipoLoader::instance().tryLoad(hipo_module);
+    bool loaded = DynamicDepsLoader::instance().tryLoad(hipo_module);
 
     if (loaded) {
         py::print("Successfully loaded hipo");
@@ -1800,7 +1800,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kDevex", EdgeWeightMode::kDevex)
       .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
       .value("kCount", EdgeWeightMode::kCount);
-  
+
   py::module_ callbacks = m.def_submodule("cb", "Callback interface submodule");
   // Types for interface
   py::enum_<HighsCallbackType>(callbacks, "HighsCallbackType",

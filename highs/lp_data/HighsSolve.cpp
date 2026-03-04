@@ -10,7 +10,7 @@
  */
 
 #include "ipm/IpxWrapper.h"
-#include "lp_data/DynamicHipoLoader.h"
+#include "DynamicDepsLoader.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
@@ -88,7 +88,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                             return_status, "solveLpHipo");
 #else
         // Use HIPO via dynamic loading
-        DynamicHipoLoader& hipo_loader = DynamicHipoLoader::instance();
+        DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
         if (hipo_loader.isAvailable()) {
           sub_solver_call_time.num_call[kSubSolverHipo]++;
           sub_solver_call_time.run_time[kSubSolverHipo] =
@@ -97,7 +97,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             call_status = hipo_loader.solveLp(solver_object);
           } catch (const std::exception& exception) {
             highsLogDev(options.log_options, HighsLogType::kError,
-                        "Exception %s in DynamicHipoLoader::solveLp\n",
+                        "Exception %s in DynamicDepsLoader::solveLp\n",
                         exception.what());
             call_status = HighsStatus::kError;
           }
@@ -742,7 +742,7 @@ bool useHipo(const HighsOptions& options,
     use_hipo = true;
 #else
     // HiPO not compiled in - check if dynamically loaded library is available
-    use_hipo = DynamicHipoLoader::instance().isAvailable();
+    use_hipo = DynamicDepsLoader::instance().isAvailable();
 #endif
   }
   if (options.run_centring) use_hipo = false;

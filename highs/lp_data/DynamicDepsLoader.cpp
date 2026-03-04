@@ -5,16 +5,14 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/DynamicHipoLoader.cpp
+/**@file lp_data/DynamicDepsLoader.cpp
  * @brief Dynamic loader for the optional HiPO library
  */
 
-#include "lp_data/DynamicHipoLoader.h"
+#include "DynamicDepsLoader.h"
 
 #include <cstring>
 #include <vector>
-
-#include "lp_data/HighsLpSolverObject.h"
 
 // Platform-specific includes for dynamic loading
 #if defined(_WIN32) || defined(_WIN64)
@@ -26,22 +24,22 @@
 #define PATH_SEPARATOR "/"
 #endif
 
-DynamicHipoLoader& DynamicHipoLoader::instance() {
-  static DynamicHipoLoader loader;
+DynamicDepsLoader& DynamicDepsLoader::instance() {
+  static DynamicDepsLoader loader;
   return loader;
 }
 
-DynamicHipoLoader::DynamicHipoLoader() = default;
+DynamicDepsLoader::DynamicDepsLoader() = default;
 
-DynamicHipoLoader::~DynamicHipoLoader() { unloadLibrary(); }
+DynamicDepsLoader::~DynamicDepsLoader() { unloadLibrary(); }
 
-bool DynamicHipoLoader::isAvailable() {
+bool DynamicDepsLoader::isAvailable() {
   return available_;
 }
 
-std::string DynamicHipoLoader::getVersion() const { return version_; }
+std::string DynamicDepsLoader::getVersion() const { return version_; }
 
-std::string DynamicHipoLoader::getLibraryFilename() const {
+std::string DynamicDepsLoader::getLibraryFilename() const {
 #if defined(_WIN32) || defined(_WIN64)
   return "highs_hipo.dll";
 #elif defined(__APPLE__)
@@ -51,7 +49,7 @@ std::string DynamicHipoLoader::getLibraryFilename() const {
 #endif
 }
 
-bool DynamicHipoLoader::loadLibrary(const std::string& path) {
+bool DynamicDepsLoader::loadLibrary(const std::string& path) {
 #if defined(_WIN32) || defined(_WIN64)
   lib_handle_ = static_cast<void*>(LoadLibraryA(path.c_str()));
   if (!lib_handle_) {
@@ -75,7 +73,7 @@ bool DynamicHipoLoader::loadLibrary(const std::string& path) {
   return true;
 }
 
-void DynamicHipoLoader::unloadLibrary() {
+void DynamicDepsLoader::unloadLibrary() {
   if (lib_handle_) {
 #if defined(_WIN32) || defined(_WIN64)
     FreeLibrary(static_cast<HMODULE>(lib_handle_));
@@ -89,7 +87,7 @@ void DynamicHipoLoader::unloadLibrary() {
   fn_solve_lp_ = nullptr;
 }
 
-void* DynamicHipoLoader::resolveSymbol(const char* name) {
+void* DynamicDepsLoader::resolveSymbol(const char* name) {
 #if defined(_WIN32) || defined(_WIN64)
   return reinterpret_cast<void*>(
       GetProcAddress(static_cast<HMODULE>(lib_handle_), name));
@@ -98,7 +96,7 @@ void* DynamicHipoLoader::resolveSymbol(const char* name) {
 #endif
 }
 
-bool DynamicHipoLoader::resolveFunctions() {
+bool DynamicDepsLoader::resolveFunctions() {
   if (!lib_handle_) return false;
 
   fn_get_abi_version_ =
@@ -116,7 +114,7 @@ bool DynamicHipoLoader::resolveFunctions() {
   return true;
 }
 
-bool DynamicHipoLoader::tryLoad(const std::string path) {
+bool DynamicDepsLoader::tryLoad(const std::string path) {
   if (path.empty()) {
     last_error_ = "HiPO not available. Install with: pip install highspy[hipo]";
     return false;
@@ -159,7 +157,7 @@ bool DynamicHipoLoader::tryLoad(const std::string path) {
   return false;
 }
 
-HighsStatus DynamicHipoLoader::solveLp(HighsLpSolverObject& solver_object) {
+HighsStatus DynamicDepsLoader::solveLp(HighsLpSolverObject& solver_object) {
   std::cout << "Using HiPO version: " << getVersion() << std::endl;
 
   if (!isAvailable()) {

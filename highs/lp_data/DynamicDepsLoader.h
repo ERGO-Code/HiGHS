@@ -5,22 +5,14 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/DynamicHipoLoader.h
- * @brief Dynamic loader for the optional HiPO library
+/**@file lp_data/DynamicDepsLoader.h
+ * @brief Dynamic loader for the optional HiPO library dependencies
  */
-#ifndef LP_DATA_DYNAMIC_HIPO_LOADER_H_
-#define LP_DATA_DYNAMIC_HIPO_LOADER_H_
+#ifndef DYNAMIC_DEPS_LOADER_H_
+#define DYNAMIC_DEPS_LOADER_H_
 
 #include <string>
 #include <vector>
-
-#include "lp_data/HighsCallback.h"
-#include "lp_data/HighsInfo.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsSolution.h"
-#include "lp_data/HighsStatus.h"
-#include "util/HighsTimer.h"
 
 // Forward declaration
 class HighsLpSolverObject;
@@ -60,12 +52,12 @@ typedef HighsStatus (*hipo_solve_lp_t)(
  * allowing HiGHS to optionally use HiPO when it's installed via
  * the highspy-hipo package, without requiring HiPO at compile time.
  */
-class DynamicHipoLoader {
+class DynamicDepsLoader {
  public:
   /**
    * Get the singleton instance of the loader.
    */
-  static DynamicHipoLoader& instance();
+  static DynamicDepsLoader& instance();
 
   /**
    * Check if the HiPO library is available and compatible.
@@ -96,12 +88,12 @@ class DynamicHipoLoader {
   const std::string& getLastError() const { return last_error_; }
 
  public:
-  DynamicHipoLoader();
-  ~DynamicHipoLoader();
+  DynamicDepsLoader();
+  ~DynamicDepsLoader();
 
   // Prevent copying
-  DynamicHipoLoader(const DynamicHipoLoader&) = delete;
-  DynamicHipoLoader& operator=(const DynamicHipoLoader&) = delete;
+  DynamicDepsLoader(const DynamicDepsLoader&) = delete;
+  DynamicDepsLoader& operator=(const DynamicDepsLoader&) = delete;
 
   /**
    * Attempt to load the HiPO library from various locations.
