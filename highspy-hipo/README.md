@@ -1,4 +1,4 @@
-# highspy-hipo
+# highspy-extras
 
 HiPO IPM solver extension for [highspy](https://pypi.org/project/highspy/).
 
@@ -9,7 +9,7 @@ HiPO is an advanced Interior Point Method (IPM) solver that provides enhanced pe
 Install directly:
 
 ```bash
-pip install highspy-hipo
+pip install highspy-extras
 ```
 
 Or install via the highspy optional dependency:
@@ -20,7 +20,7 @@ pip install highspy[hipo]
 
 ## Usage
 
-When `highspy-hipo` is installed, HiGHS will automatically detect and use the HiPO solver when appropriate. You can explicitly select the HiPO solver:
+When `highspy-extras` is installed, HiGHS will automatically detect and use the HiPO solver when appropriate. You can explicitly select the HiPO solver:
 
 ```python
 import highspy
@@ -41,7 +41,6 @@ h.run()
 ## Requirements
 
 - Python >= 3.8
-- highspy >= 1.12.0
 - BLAS library (bundled or system)
 
 ## License

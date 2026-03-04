@@ -29,6 +29,7 @@ class Highs(_Highs):
     """
     HiGHS solver interface
     """
+
     __handle_keyboard_interrupt: bool = False
     __handle_user_interrupt: bool = False
     __solver_should_stop: bool = False

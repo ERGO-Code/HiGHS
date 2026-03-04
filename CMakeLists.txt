@@ -104,6 +104,15 @@ if (HIPO_PYTHON_BUILD)
   set(HIPO OFF)
 endif()
 
+option(HIPO_PYTHON_EXTRAS_BUILD "Build Python shared deps library" OFF)
+message(STATUS "Build HiPO Extras Python: ${HIPO_PYTHON_EXTRAS_BUILD}")
+
+if (HIPO_PYTHON_EXTRAS_BUILD)
+  set(BUILD_CXX ON)
+  set(BUILD_TESTING OFF)
+  set(HIPO OFF)
+endif()
+
 include(CMakeDependentOption)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)

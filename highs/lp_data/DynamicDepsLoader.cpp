@@ -41,11 +41,11 @@ std::string DynamicDepsLoader::getVersion() const { return version_; }
 
 std::string DynamicDepsLoader::getLibraryFilename() const {
 #if defined(_WIN32) || defined(_WIN64)
-  return "highs_hipo.dll";
+  return "highs_extras.dll";
 #elif defined(__APPLE__)
-  return "libhighs_hipo.dylib";
+  return "libhighs_extras.dylib";
 #else
-  return "libhighs_hipo.so";
+  return "libhighs_extras.so";
 #endif
 }
 

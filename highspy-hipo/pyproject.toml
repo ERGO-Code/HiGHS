@@ -3,14 +3,14 @@ requires = ["scikit-build-core>=0.3.3"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "highspy-hipo"
-version = "1.12.0"
+name = "highspy-extras"
+version = "1.0.0"
 description = "HiPO IPM solver extension for highspy"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
 
 requires-python = ">=3.8"
-dependencies = ["highspy>=1.12.0"]
+# dependencies = ["highspy>=1.12.0"]
 
 classifiers = [
   "License :: OSI Approved :: Apache License",
@@ -31,7 +31,7 @@ classifiers = [
 cmake.args = ["-DHIPO_LIBRARY_BUILD=ON"]
 cmake.verbose = true
 wheel.expand-macos-universal-tags = true
-wheel.packages = ["highspy_hipo"]
+wheel.packages = ["highspy_extras"]
 wheel.exclude = [
  "include",
  "lib*/",
@@ -43,12 +43,12 @@ wheel.exclude = [
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.
 sdist.include = [
-  "highspy-hipo/*",
-  "Version.txt",
+  "highspy-extras/*",
   "LICENSE",
   "README.md",
-  "highs/HConfig.h.in",
-  "highs",
+  "THIRD_PARTY_NOTICES.md",
+  # "highs/HConfig.h.in",
+  # "highs",
   "external",
   "cmake",
 ]

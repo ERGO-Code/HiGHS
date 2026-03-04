@@ -12,16 +12,16 @@ __version__ = "1.12.0"
 def _get_library_name() -> str:
     """Get the platform-specific library filename."""
     if sys.platform == "win32":
-        return "highs_hipo.dll"
+        return "highs_extras.dll"
     elif sys.platform == "darwin":
-        return "libhighs_hipo.dylib"
+        return "libhighs_extras.dylib"
     else:
-        return "libhighs_hipo.so"
+        return "libhighs_extras.so"
 
 
 def get_library_path() -> Path:
     """
-    Get the path to the highs_hipo shared library.
+    Get the path to the highs_extras shared library.
     
     Returns:
         Path to the shared library file.
