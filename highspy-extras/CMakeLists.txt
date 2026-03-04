@@ -1,5 +1,5 @@
-# CMakeLists.txt for highspy-hipo wheel
-# Builds the HiPO shared library using the main HiGHS CMake infrastructure
+# CMakeLists.txt for highspy-extras wheel
+# Builds the HiPO shared library extras using the main HiGHS CMake infrastructure
 
 cmake_minimum_required(VERSION 3.15...3.27)
 
