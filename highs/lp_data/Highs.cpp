@@ -741,7 +741,6 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
 
   // Normalise names according to file type
   HighsFileType file_type = getFileType(filename);
-  printf("Highs::writeLocalModel file type is %d\n", int(file_type));
   call_status = normaliseNames(this->options_.log_options, lp, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
@@ -781,7 +780,6 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   if (filename == "") {
     // Empty file name: report model on logging stream
     reportModel(model);
-    return_status = HighsStatus::kOk;
   } else {
     Filereader* writer =
         Filereader::getFilereader(options_.log_options, filename);

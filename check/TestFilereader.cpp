@@ -474,7 +474,7 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   lp.col_names_ = {"Column", "Column"};
   lp.row_names_ = {"Row0", "Row1"};
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.writeModel("") == HighsStatus::kError);
+  REQUIRE(h.writeModel("") == HighsStatus::kWarning);
 
   lp.col_names_ = {"Column0", ""};
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
@@ -493,8 +493,8 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   lp.row_names_[1] = "Row 1";
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
-  REQUIRE(h.writeSolution("", 1) == HighsStatus::kError);
-  REQUIRE(h.writeModel("") == HighsStatus::kError);
+  REQUIRE(h.writeSolution("", 1) == HighsStatus::kWarning);
+  REQUIRE(h.writeModel("") == HighsStatus::kOk);
 
   h.resetGlobalScheduler(true);
 }

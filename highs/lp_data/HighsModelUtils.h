@@ -14,12 +14,15 @@
 #include "lp_data/HighsInfo.h"
 #include "model/HighsModel.h"
 
-const std::string kLegalLpFileColRowNameFirstChar = 
-  "abcdfghijklmnopqrstuvwxyz"
-  "ABCDFGHIJKLMNOPQRSTUVWXYZ"
-  "!\"#$%&(),.;?@_‘’{}~";
-const std::string kLegalLpFileColRowNameChar =
-  kLegalLpFileColRowNameFirstChar + "0123456789.Ee";
+const std::string kLegalLpFileColRowNameFirstChar =
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789."
+    "!\"#$%&(),.;?@_‘’{}~";
+// According to CPLEX (cf fix-2887) names in LP files cannot begin
+// with a digit or a full stop. However, HiGHS can read these, and
+// models like rgn have row names that are integers, so allow it
+const std::string kLegalLpFileColRowNameChar = kLegalLpFileColRowNameFirstChar;
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
@@ -65,14 +68,14 @@ HighsInt maxNameLength(const HighsLp& lp);
 HighsInt maxNameLength(const std::vector<std::string>& names);
 
 HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp,
-			   HighsFileType type = HighsFileType::kMps);
+                           HighsFileType type = HighsFileType::kMps);
 
 HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsInt num_name_required, std::string& name_prefix,
                            HighsInt& name_suffix,
                            std::vector<std::string>& names,
                            HighsNameHash& name_hash,
-			   HighsFileType type = HighsFileType::kMps);
+                           HighsFileType type = HighsFileType::kMps);
 
 HighsFileType getFileType(const std::string filename);
 

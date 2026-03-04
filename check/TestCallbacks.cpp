@@ -498,9 +498,6 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
 
 static void runMipUserSolutionTest(
     HighsCallbackFunctionType callback_function) {
-  //  const std::vector<std::string> model = {"rgn", "flugpl", "gt2", "egout",
-  //  "bell5", "lseu", "sp150x300d"};//, "p0548", "dcmulti"}; const
-  //  std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4, 5, 6};
   const std::vector<std::string> model = {"p0548", "flugpl", "gt2", "egout",
                                           "sp150x300d"};
   const std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4};  //, 4, 5, 6};
