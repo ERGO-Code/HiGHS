@@ -394,11 +394,14 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp,
   HighsStatus call_status =
       normaliseNames(log_options, true, lp.num_col_, lp.col_name_prefix_,
                      lp.col_name_suffix_, lp.col_names_, lp.col_hash_, type);
-  if (call_status == HighsStatus::kError) return call_status;
+  assert(call_status != HighsStatus::kError);
+  // Retain call_status in case normaliseNames for rows returns
+  // HighsStatus::kOk
   HighsStatus return_status = call_status;
   call_status =
       normaliseNames(log_options, false, lp.num_row_, lp.row_name_prefix_,
                      lp.row_name_suffix_, lp.row_names_, lp.row_hash_, type);
+  assert(call_status != HighsStatus::kError);
   if (call_status != HighsStatus::kOk) return call_status;
   return return_status;
 }
@@ -445,7 +448,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
       // Report on any modifications
       if (num_blank) {
 	highsLogUser(log_options, HighsLogType::kWarning,
-		     "Replaced %d blank %6s name%s by name%s with prefix \"%s\", "
+		     "Replaced %d blank %-6s name%s by one%s with prefix \"%s\", "
 		     "beginning with suffix %d\n",
 		     int(num_blank), column ? "column" : "row",
 		     num_blank == 1 ? "" : "s",
@@ -453,10 +456,10 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
 		     name_prefix.c_str(), int(from_name_suffix));
       }
       if (num_names_with_spaces) {
-	highsLogUser(log_options, HighsLogType::kError,
-		     "Replaced spaces in %d %6s name%s by underscores\n",
+	highsLogUser(log_options, HighsLogType::kWarning,
+		     "Replaced spaces in %d %-6s name%s by underscores\n",
 		     int(num_names_with_spaces),
-		     column ? "Column" : "Row", 
+		     column ? "column" : "row", 
 		     num_names_with_spaces == 1 ? "" : "s");
       }
       return HighsStatus::kWarning;

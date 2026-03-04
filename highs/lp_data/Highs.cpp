@@ -745,7 +745,7 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   call_status = normaliseNames(this->options_.log_options, lp, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
-  if (return_status == HighsStatus::kError) return return_status;
+  assert(call_status != HighsStatus::kError);
 
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -814,7 +814,7 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
-  if (return_status == HighsStatus::kError) return return_status;
+  assert(call_status != HighsStatus::kError);
 
   // Report to user that basis is being written
   if (filename != "")
@@ -3454,7 +3454,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
-  if (return_status == HighsStatus::kError) return return_status;
+  assert(call_status != HighsStatus::kError);
 
   // Report to user that solution is being written
   if (filename != "")

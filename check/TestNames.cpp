@@ -145,22 +145,51 @@ TEST_CASE("highs-illegal-col-row-name", "[model_names]") {
   lp.a_matrix_.start_ = {0, 1, 2};
   lp.a_matrix_.index_ = {0, 0};
   lp.a_matrix_.value_ = {1, 1};
-  lp.col_names_ = {"Col{0}", "Col1"};
-  lp.row_names_ = {"Row 0"};
-  HighsStatus status = h.passModel(lp);
-  REQUIRE(status != HighsStatus::kError);
+
+  HighsStatus mps_write_return = HighsStatus::kWarning;
+  HighsStatus lp_write_return = HighsStatus::kWarning;
+  HighsStatus status = HighsStatus::kOk;
+  for (HighsInt k = 0; k < 4; k++) {
+    if (k == 0) {
+      // Repacing space with "_" is OK, but "^" is illegal for LP
+      lp.col_names_ = {"Col 0", "Col^1"};
+      lp.row_names_ = {"Row 0"};
+    } else if (k == 1) {
+      // Replacing blank with "c_ekk0" is OK, but "^" is illegal for
+      // LP
+      lp.col_names_ = {"", "Col^1"};
+      lp.row_names_ = {"Row 0"};
+    } else if (k == 2) {
+      // E0 is OK for MPS, but illegal for LP
+      lp.col_names_ = {"E0", "C1"};
+      lp.row_names_ = {"Row 0"};
+      HighsStatus mps_write_return = HighsStatus::kOk;    
+    } else {
+      // Repacing space yields duplicate, and "^" is illegal for
+      // LP
+      lp.col_names_ = {"Col 0", "Col_0"};
+      lp.row_names_ = {"Row^0"};
+      HighsStatus mps_write_return = HighsStatus::kWarning;    
+    }
+    status = h.passModel(lp);
+    REQUIRE(status != HighsStatus::kError);
   
-  status = h.writeModel(lp_file);
-  // REQUIRE(status == HighsStatus::kWarning);
+    status = h.writeModel(mps_file);
+    REQUIRE(status == mps_write_return);
 
-  status = h.writeModel(mps_file);
-  //  REQUIRE(status == HighsStatus::kWarning);
+    status = h.writeModel(lp_file);
+    REQUIRE(status == lp_write_return);
 
+  }
   status = h.readModel(mps_file);
   REQUIRE(status == HighsStatus::kOk);
+  status = h.writeModel("");
+
   status = h.readModel(lp_file);
   REQUIRE(status == HighsStatus::kOk);
-  std::remove(mps_file.c_str());
-  std::remove(lp_file.c_str());
+  status = h.writeModel("");
+
+  //  std::remove(mps_file.c_str());
+  //  std::remove(lp_file.c_str());
 
 }
