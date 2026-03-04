@@ -304,6 +304,8 @@ class HPresolve {
 
   Result changeColLower(HighsInt col, double newLower);
 
+  Result changeColBounds(HighsInt col, double newLower, double newUpper);
+
   void changeRowDualUpper(HighsInt row, double newUpper);
 
   void changeRowDualLower(HighsInt row, double newLower);

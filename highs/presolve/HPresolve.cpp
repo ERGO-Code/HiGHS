@@ -444,12 +444,8 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
   }
 
   // round and update bounds
-  StatusResult res = StatusResult(changeColLower(col, model->col_lower_[col]));
-  if (!res) return res;
-  res = StatusResult(changeColUpper(col, model->col_upper_[col]));
-  if (!res) return res;
-
-  return StatusResult(true);
+  return StatusResult(
+      changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
 }
 
 void HPresolve::link(HighsInt pos) {
@@ -2202,6 +2198,20 @@ HPresolve::Result HPresolve::changeColLower(HighsInt col, double newLower) {
   return Result::kOk;
 }
 
+HPresolve::Result HPresolve::changeColBounds(HighsInt col, double newLower,
+                                             double newUpper) {
+  if (newLower > model->col_upper_[col]) {
+    // change upper bound first
+    HPRESOLVE_CHECKED_CALL(changeColUpper(col, newUpper));
+    HPRESOLVE_CHECKED_CALL(changeColLower(col, newLower));
+  } else {
+    // change lower bound first
+    HPRESOLVE_CHECKED_CALL(changeColLower(col, newLower));
+    HPRESOLVE_CHECKED_CALL(changeColUpper(col, newUpper));
+  }
+  return Result::kOk;
+}
+
 void HPresolve::changeRowDualUpper(HighsInt row, double newUpper) {
   double oldUpper = rowDualUpper[row];
   rowDualUpper[row] = newUpper;
@@ -2808,10 +2818,9 @@ HPresolve::Result HPresolve::transformColumn(
   // (scaling and swaps) and matrix updates. we rely on the integrality status
   // being already updated to the newly scaled column by the caller, if
   // necessary.
-  if (model->integrality_[col] != HighsVarType::kContinuous) {
-    HPRESOLVE_CHECKED_CALL(changeColLower(col, model->col_lower_[col]));
-    HPRESOLVE_CHECKED_CALL(changeColUpper(col, model->col_upper_[col]));
-  }
+  if (model->integrality_[col] != HighsVarType::kContinuous)
+    HPRESOLVE_CHECKED_CALL(
+        changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
 
   markChangedCol(col);
   return Result::kOk;
@@ -3814,19 +3823,12 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                   double fixVal = zLower * d + b;
                   assert(fixVal > model->col_lower_[x1] - primal_feastol);
                   assert(fixVal < model->col_upper_[x1] + primal_feastol);
-                  if (fixVal > model->col_lower_[x1])
-                    HPRESOLVE_CHECKED_CALL(changeColLower(x1, fixVal));
-                  if (fixVal < model->col_upper_[x1])
-                    HPRESOLVE_CHECKED_CALL(changeColUpper(x1, fixVal));
-                  // Fix variable
-                  if (std::abs(model->col_lower_[x1] - fixVal) <=
-                      primal_feastol) {
-                    HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, x1));
-                  } else {
-                    assert(std::abs(model->col_upper_[x1] - fixVal) <=
-                           primal_feastol);
-                    HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, x1));
-                  }
+                  // change bounds
+                  HPRESOLVE_CHECKED_CALL(changeColBounds(x1, fixVal, fixVal));
+                  // remove column
+                  postsolve_stack.removedFixedCol(
+                      x1, fixVal, model->col_cost_[x1], getColumnVector(x1));
+                  removeFixedCol(x1);
                   rowpositions.erase(rowpositions.begin() + x1Cand);
                 } else {
                   HPRESOLVE_CHECKED_CALL(
@@ -5622,11 +5624,10 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
   // same for the columns
   for (HighsInt col = 0; col != model->num_col_; ++col) {
     if (colDeleted[col]) continue;
-    if (model->integrality_[col] != HighsVarType::kContinuous) {
-      // round and update bounds
-      HPRESOLVE_CHECKED_CALL(changeColLower(col, model->col_lower_[col]));
-      HPRESOLVE_CHECKED_CALL(changeColUpper(col, model->col_upper_[col]));
-    }
+    // round and update bounds
+    if (model->integrality_[col] != HighsVarType::kContinuous)
+      HPRESOLVE_CHECKED_CALL(
+          changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
     changedColFlag[col] = false;
   }
@@ -7551,8 +7552,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           }
 
           // change bounds
-          HPRESOLVE_CHECKED_CALL(changeColLower(col, mergeLower));
-          HPRESOLVE_CHECKED_CALL(changeColUpper(col, mergeUpper));
+          HPRESOLVE_CHECKED_CALL(changeColBounds(col, mergeLower, mergeUpper));
 
           // mark duplicate column as deleted
           markColDeleted(duplicateCol);
