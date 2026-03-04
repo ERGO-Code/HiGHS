@@ -306,6 +306,8 @@ class HPresolve {
 
   Result changeColBounds(HighsInt col, double newLower, double newUpper);
 
+  Result checkColBounds(HighsInt col, bool* isFixed = nullptr);
+
   void changeRowDualUpper(HighsInt row, double newUpper);
 
   void changeRowDualLower(HighsInt row, double newLower);
@@ -400,8 +402,6 @@ class HPresolve {
                          HighsInt col, bool relaxRowDualBounds = false);
 
   Result rowPresolve(HighsPostsolveStack& postsolve_stack, HighsInt row);
-
-  Result checkColBounds(HighsInt col, bool* isFixed = nullptr);
 
   Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
 

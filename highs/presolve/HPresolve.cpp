@@ -2212,6 +2212,24 @@ HPresolve::Result HPresolve::changeColBounds(HighsInt col, double newLower,
   return Result::kOk;
 }
 
+HPresolve::Result HPresolve::checkColBounds(HighsInt col, bool* isFixed) {
+  assert(!colDeleted[col]);
+  double boundDiff = model->col_upper_[col] - model->col_lower_[col];
+  if (isFixed != nullptr) *isFixed = false;
+  if (boundDiff <= primal_feastol &&
+      (boundDiff <= options->small_matrix_value ||
+       getMaxAbsColVal(col) * boundDiff <= primal_feastol)) {
+    // check for primal infeasibility
+    if (boundDiff < -primal_feastol) return Result::kPrimalInfeasible;
+    // check for unboundedness
+    if (std::abs(model->col_lower_[col]) == kHighsInf)
+      return Result::kDualInfeasible;
+    // column is fixed
+    if (isFixed != nullptr) *isFixed = true;
+  }
+  return Result::kOk;
+}
+
 void HPresolve::changeRowDualUpper(HighsInt row, double newUpper) {
   double oldUpper = rowDualUpper[row];
   rowDualUpper[row] = newUpper;
@@ -4370,24 +4388,6 @@ HPresolve::Result HPresolve::emptyCol(HighsPostsolveStack& postsolve_stack,
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleEmptyCol);
   return checkLimits(postsolve_stack);
-}
-
-HPresolve::Result HPresolve::checkColBounds(HighsInt col, bool* isFixed) {
-  assert(!colDeleted[col]);
-  double boundDiff = model->col_upper_[col] - model->col_lower_[col];
-  if (isFixed != nullptr) *isFixed = false;
-  if (boundDiff <= primal_feastol &&
-      (boundDiff <= options->small_matrix_value ||
-       getMaxAbsColVal(col) * boundDiff <= primal_feastol)) {
-    // check for primal infeasibility
-    if (boundDiff < -primal_feastol) return Result::kPrimalInfeasible;
-    // check for unboundedness
-    if (std::abs(model->col_lower_[col]) == kHighsInf)
-      return Result::kDualInfeasible;
-    // column is fixed
-    if (isFixed != nullptr) *isFixed = true;
-  }
-  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
