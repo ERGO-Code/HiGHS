@@ -9,7 +9,7 @@
  * @brief C-style API implementation for the HiPO library
  */
 
-#include "ipm/hipo/HipoCApi.h"
+#include "HipoExtrasCApi.h"
 
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsLpSolverObject.h"
@@ -20,9 +20,9 @@
 
 extern "C" {
 
-HIPO_API int hipo_get_abi_version(void) { return HIPO_ABI_VERSION; }
+HIPO_EXTRAS_API int hipo_get_abi_version(void) { return HIPO_ABI_VERSION; }
 
-HIPO_API const char* hipo_get_version(void) { return HIPO_VERSION; }
+HIPO_EXTRAS_API const char* hipo_get_version(void) { return HIPO_VERSION; }
 
 }  // extern "C"
 
@@ -33,7 +33,7 @@ HIPO_API const char* hipo_get_version(void) { return HIPO_VERSION; }
 // 1. Both highspy and highspy-hipo are built with the same C++ compiler/ABI
 // 2. The ABI version check ensures struct layouts match between builds
 // 3. We only need C linkage for symbol lookup, not C type compatibility
-extern "C" HIPO_API HighsStatus hipo_solve_lp(
+extern "C" HIPO_EXTRAS_API HighsStatus hipo_solve_lp(
     const HighsOptions& options,
     HighsTimer& timer,
     const HighsLp& lp,

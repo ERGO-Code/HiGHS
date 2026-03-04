@@ -28,7 +28,7 @@ classifiers = [
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [tool.scikit-build]
-cmake.args = ["-DHIPO_LIBRARY_BUILD=ON"]
+cmake.args = ["-DHIPO_EXTRAS_LIBRARY_BUILD=ON"]
 cmake.verbose = true
 wheel.expand-macos-universal-tags = true
 wheel.packages = ["highspy_extras"]

@@ -1012,7 +1012,7 @@ std::string highs_locatePythonPackage(const std::string module_name) {
 }
 
 PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
-    auto hipo_module = highs_locatePythonPackage("highspy_hipo");
+    auto hipo_module = highs_locatePythonPackage("highspy_extras");
 
   if (!hipo_module.empty()) {
     bool loaded = DynamicDepsLoader::instance().tryLoad(hipo_module);

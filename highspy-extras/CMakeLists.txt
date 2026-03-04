@@ -23,5 +23,5 @@ set(BLAS_ROOT "${VCPKG_INSTALLED}/share/openblas" CACHE STRING "Root directory o
 set(BLAS_LIBRARIES "${VCPKG_INSTALLED}/lib/openblas.lib" CACHE STRING "BLAS/LAPACK libraries to link against")
 endif()
 
-set(HIPO_PYTHON_BUILD ON CACHE BOOL "" FORCE)
+set(HIPO_PYTHON_EXTRAS_BUILD ON CACHE BOOL "" FORCE)
 add_subdirectory(${HIGHS_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/highs)

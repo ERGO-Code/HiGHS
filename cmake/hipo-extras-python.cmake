@@ -20,7 +20,7 @@ target_include_directories(highs_extras PRIVATE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/rcm>)
 
 
-target_compile_definitions(highs_extras PRIVATE HIPO_LIBRARY_BUILD HIPO)
+target_compile_definitions(highs_extras PRIVATE HIPO_EXTRAS_LIBRARY_BUILD HIPO)
 
 # Ensure the built Python extension can find libhighs in the same directory
 # Use $ORIGIN on Linux/Unix and @loader_path on macOS. Leave Windows alone.
@@ -125,6 +125,6 @@ endif()
 
 # Install to Python package directory
 install(TARGETS highs_extras
-    LIBRARY DESTINATION highspy_hipo
-    RUNTIME DESTINATION highspy_hipo
+    LIBRARY DESTINATION highspy_extras
+    RUNTIME DESTINATION highspy_extras
 )
