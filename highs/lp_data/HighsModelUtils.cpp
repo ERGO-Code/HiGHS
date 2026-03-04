@@ -474,6 +474,17 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
   return HighsStatus::kOk;
 }
 
+HighsFileType getFileType(const std::string filename) {
+  std::string lower_case_extension = getFilenameExt(filename);
+  tolower(lower_case_extension);
+  if (lower_case_extension.compare("mps") == 0) {
+    return HighsFileType::kMps;
+  } else if (lower_case_extension.compare("lp") == 0) {
+    return HighsFileType::kLp;
+  } 
+  return HighsFileType::kMinimal;
+}
+
 void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,
                        const HighsSolution& solution, const HighsInfo& info,

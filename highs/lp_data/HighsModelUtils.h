@@ -73,6 +73,8 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            std::vector<std::string>& names,
                            HighsNameHash& name_hash);
 
+HighsFileType getFileType(const std::string filename);
+
 void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,
                        const HighsSolution& solution, const HighsInfo& info,

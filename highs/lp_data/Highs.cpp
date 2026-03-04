@@ -734,7 +734,8 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-
+  HighsFileType file_type = getFileType(filename);
+  printf("Highs::writeLocalModel file type is %d\n", int(file_type));
   HighsLp& lp = model.lp_;
 
   // Dimensions in a_matrix_ may not be set, so take them from lp
