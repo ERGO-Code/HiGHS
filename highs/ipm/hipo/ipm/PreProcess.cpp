@@ -334,7 +334,7 @@ void PreprocessScaling::apply(Model& model) {
   colscale.assign(n, 1.0);
   rowscale.assign(m, 1.0);
 
-  auto onePassNormScaling = [&]() {
+  auto normScaling = [&]() {
     // single pass of infinity-norm geo-mean row and col scaling
 
     // infinity norm of rows
@@ -350,7 +350,8 @@ void PreprocessScaling::apply(Model& model) {
     }
 
     // apply row scaling
-    for (Int i = 0; i < m; ++i) rowscale[i] *= 1.0 / std::sqrt(norm_rows[i]);
+    for (Int i = 0; i < m; ++i)
+      if (norm_rows[i] > 0.0) rowscale[i] *= 1.0 / std::sqrt(norm_rows[i]);
 
     // infinity norm of columns
     std::vector<double> norm_cols(n);
@@ -365,8 +366,10 @@ void PreprocessScaling::apply(Model& model) {
     }
 
     // apply col scaling
-    for (Int i = 0; i < n; ++i) colscale[i] *= 1.0 / std::sqrt(norm_cols[i]);
+    for (Int i = 0; i < n; ++i)
+      if (norm_cols[i] > 0.0) colscale[i] *= 1.0 / std::sqrt(norm_cols[i]);
   };
+
   auto boundScaling = [&]() {
     for (Int i = 0; i < n; ++i) {
       if (std::isfinite(lower[i]) && std::isfinite(upper[i])) {
@@ -375,17 +378,16 @@ void PreprocessScaling::apply(Model& model) {
         const double diff = std::abs(u - l);
 
         if (diff < kSmallBoundDiff)
-          colscale[i] *= diff / kSmallBoundDiff;
+          colscale[i] *= std::sqrt(diff / kSmallBoundDiff);
         else if (diff > kLargeBoundDiff) {
-          colscale[i] *= diff / kLargeBoundDiff;
+          colscale[i] *= std::sqrt(diff / kLargeBoundDiff);
         }
       }
     }
   };
-
-  const Int num_passes = 1;
+  const Int num_passes = 10;
   for (Int pass = 0; pass < num_passes; ++pass) {
-    onePassNormScaling();
+    normScaling();
     boundScaling();
   }
 
