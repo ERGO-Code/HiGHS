@@ -170,7 +170,7 @@ void HighsMipSolver::run() {
                                  &mipdata_->cutpool, &mipdata_->conflictPool,
                                  &mipdata_->pseudocost);
 
-  HighsMipWorker& master_worker = mipdata_->workers.at(0);
+  HighsMipWorker& master_worker = mipdata_->workers[0];
 
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
@@ -312,7 +312,7 @@ restart:
   auto constructAdditionalWorkerData = [&](HighsMipWorker& worker) {
     assert(mipdata_->cutpools.size() == 1 &&
            mipdata_->conflictpools.size() == 1);
-    assert(&worker == &mipdata_->workers.at(0));
+    assert(&worker == &mipdata_->workers[0]);
     mipdata_->cutpools.emplace_back(numCol(), options_mip_->mip_pool_age_limit,
                                     options_mip_->mip_pool_soft_limit, 1);
     worker.cutpool_ = &mipdata_->cutpools.back();
@@ -487,28 +487,14 @@ restart:
     return false;
   };
 
-  auto getSearchIndicesWithNoNodes = [&]() -> std::vector<HighsInt> {
-    std::vector<HighsInt> indices;
-    for (HighsInt i = 0; i != num_workers; i++) {
+  auto getSearchIndicesWithNoNodes = [&](std::vector<HighsInt>& indices) {
+    indices.clear();
+    for (HighsInt i = 0;
+         i != num_workers && i != mipdata_->nodequeue.numActiveNodes(); i++) {
       if (!mipdata_->workers[i].search_ptr_->hasNode()) {
         indices.emplace_back(i);
       }
     }
-    if (static_cast<HighsInt>(indices.size()) >
-        mipdata_->nodequeue.numActiveNodes()) {
-      indices.resize(mipdata_->nodequeue.numActiveNodes());
-    }
-    return indices;
-  };
-
-  auto getSearchIndicesWithNodes = [&]() -> std::vector<HighsInt> {
-    std::vector<HighsInt> indices;
-    for (HighsInt i = 0; i != num_workers; i++) {
-      if (mipdata_->workers[i].search_ptr_->hasNode()) {
-        indices.emplace_back(i);
-      }
-    }
-    return indices;
   };
 
   auto installNodes = [&](std::vector<HighsInt>& indices,
@@ -1095,7 +1081,7 @@ restart:
       syncGlobalPseudoCost();
 
       // Get new candidate worker search indices
-      search_indices = getSearchIndicesWithNoNodes();
+      getSearchIndicesWithNoNodes(search_indices);
       reduced_search_indices = search_indices;
 
       // Only update worker's pseudo-costs that have been assigned a node

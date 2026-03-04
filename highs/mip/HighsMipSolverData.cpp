@@ -22,7 +22,7 @@
 HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
       lps(1, HighsLpRelaxation(mipsolver)),
-      lp(lps.at(0)),
+      lp(lps[0]),
       cutpool(*cutpools.emplace(cutpools.end(), mipsolver.numCol(),
                                 mipsolver.options_mip_->mip_pool_age_limit,
                                 mipsolver.options_mip_->mip_pool_soft_limit,
@@ -30,9 +30,9 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       conflictpools(
           1, HighsConflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
                                mipsolver.options_mip_->mip_pool_soft_limit)),
-      conflictPool(conflictpools.at(0)),
+      conflictPool(conflictpools[0]),
       domains(1, HighsDomain(mipsolver)),
-      domain(domains.at(0)),
+      domain(domains[0]),
       pseudocost(),
       parallel_lock(false),
       heuristics(mipsolver),
@@ -2848,7 +2848,7 @@ bool HighsMipSolverData::terminatorTerminated() const {
 }
 
 bool HighsMipSolverData::terminatorTerminatedWorker(
-    HighsMipWorker& worker) const {
+    const HighsMipWorker& worker) const {
   return worker.heur_stats.termination_status_ != HighsModelStatus::kNotset;
 }
 
