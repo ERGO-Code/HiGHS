@@ -1014,7 +1014,8 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
 }
 
 bool ipxStatusError(const bool status_error, const HighsOptions& options,
-                    std::string solver, std::string message, const int value) {
+                    const std::string& solver, const std::string& message,
+                    const int value) {
   if (status_error) {
     if (value < 0) {
       highsLogUser(options.log_options, HighsLogType::kError, "%s: %s\n",

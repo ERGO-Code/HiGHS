@@ -78,7 +78,7 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
                                         const bool ipm_status);
 
 bool ipxStatusError(const bool status_error, const HighsOptions& options,
-                    std::string solver, std::string message,
+                    const std::string& solver, const std::string& message,
                     const int value = -1);
 
 bool illegalIpxSolvedStatus(const ipx::Info& ipx_info,

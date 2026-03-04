@@ -122,7 +122,7 @@ Int Analyse::getPermutation() {
     // ----- METIS ----------------
     // ----------------------------
     idx_t options[METIS_NOPTIONS];
-    METIS_SetDefaultOptions(options);
+    Highs_METIS_SetDefaultOptions(options);
     options[METIS_OPTION_SEED] = kMetisSeed;
 
     // set logging of Metis depending on debug level
@@ -135,8 +135,8 @@ Int Analyse::getPermutation() {
 
     if (log_) log_->printDevInfo("Running Metis\n");
 
-    Int status = METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
-                              options, perm_.data(), iperm_.data());
+    Int status = Highs_METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(),
+                                    NULL, options, perm_.data(), iperm_.data());
 
     if (log_) log_->printDevInfo("Metis done\n");
     if (status != METIS_OK) {
@@ -149,12 +149,12 @@ Int Analyse::getPermutation() {
     // ------ AMD -----------------
     // ----------------------------
     double control[AMD_CONTROL];
-    amd_defaults(control);
+    Highs_amd_defaults(control);
     double info[AMD_INFO];
 
     if (log_) log_->printDevInfo("Running AMD\n");
-    Int status = amd_order(n_, temp_ptr.data(), temp_rows.data(), perm_.data(),
-                           control, info);
+    Int status = Highs_amd_order(n_, temp_ptr.data(), temp_rows.data(),
+                                 perm_.data(), control, info);
     if (log_) log_->printDevInfo("AMD done\n");
 
     if (status != AMD_OK) {
@@ -170,8 +170,8 @@ Int Analyse::getPermutation() {
     // ----------------------------
 
     if (log_) log_->printDevInfo("Running RCM\n");
-    Int status = genrcm(n_, temp_ptr.back(), temp_ptr.data(), temp_rows.data(),
-                        perm_.data());
+    Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
+                              temp_rows.data(), perm_.data());
     if (log_) log_->printDevInfo("RCM done\n");
 
     if (status != 0) {

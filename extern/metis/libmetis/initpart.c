@@ -44,10 +44,10 @@ void InitSeparator(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
       break;
 
     default:
-      gk_errexit("Unknown iptype of %"PRIDX"\n", ctrl->iptype);
+      GK_ERREXIT("Unknown iptype of %"PRIDX"\n", ctrl->iptype);
   }
 
-  IFSET(ctrl->dbglvl, METIS_DBG_IPART, printf("Initial Sep: %"PRIDX"\n", graph->mincut));
+  IFSET(ctrl->dbglvl, METIS_DBG_IPART, HIGHS_ORDERING_PRINT("Initial Sep: %"PRIDX"\n", graph->mincut));
 
   ctrl->dbglvl = dbglvl;
 
@@ -107,13 +107,10 @@ void RandomBisection(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts,
 
     /* Do some partition refinement  */
     Compute2WayPartitionParams(ctrl, graph);
-    /* printf("IPART: %3"PRIDX" [%5"PRIDX" %5"PRIDX"] [%5"PRIDX" %5"PRIDX"] %5"PRIDX"\n", graph->nvtxs, pwgts[0], pwgts[1], graph->pwgts[0], graph->pwgts[1], graph->mincut); */
 
     Balance2Way(ctrl, graph, ntpwgts);
-    /* printf("BPART: [%5"PRIDX" %5"PRIDX"] %5"PRIDX"\n", graph->pwgts[0], graph->pwgts[1], graph->mincut); */
 
     FM_2WayRefine(ctrl, graph, ntpwgts, 4);
-    /* printf("RPART: [%5"PRIDX" %5"PRIDX"] %5"PRIDX"\n", graph->pwgts[0], graph->pwgts[1], graph->mincut); */
 
     if (inbfs==0 || bestcut > graph->mincut) {
       bestcut = graph->mincut;
@@ -235,22 +232,10 @@ void GrowBisection(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts,
     * Do some partition refinement 
     **************************************************************/
     Compute2WayPartitionParams(ctrl, graph);
-    /*
-    printf("IPART: %3"PRIDX" [%5"PRIDX" %5"PRIDX"] [%5"PRIDX" %5"PRIDX"] %5"PRIDX"\n", 
-        graph->nvtxs, pwgts[0], pwgts[1], graph->pwgts[0], graph->pwgts[1], graph->mincut); 
-    */
 
     Balance2Way(ctrl, graph, ntpwgts);
-    /*
-    printf("BPART: [%5"PRIDX" %5"PRIDX"] %5"PRIDX"\n", graph->pwgts[0],
-        graph->pwgts[1], graph->mincut); 
-    */
 
     FM_2WayRefine(ctrl, graph, ntpwgts, ctrl->niter);
-    /*
-    printf("RPART: [%5"PRIDX" %5"PRIDX"] %5"PRIDX"\n", graph->pwgts[0], 
-        graph->pwgts[1], graph->mincut);
-    */
 
     if (inbfs == 0 || bestcut > graph->mincut) {
       bestcut = graph->mincut;
@@ -386,10 +371,6 @@ void GrowBisectionNode(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts,
     FM_2WayNodeRefine2Sided(ctrl, graph, 1);
     FM_2WayNodeRefine1Sided(ctrl, graph, 4);
 
-    /*
-    printf("ISep: [%"PRIDX" %"PRIDX" %"PRIDX" %"PRIDX"] %"PRIDX"\n", 
-        inbfs, graph->pwgts[0], graph->pwgts[1], graph->pwgts[2], bestcut); 
-    */
     
     if (inbfs == 0 || bestcut > graph->mincut) {
       bestcut = graph->mincut;

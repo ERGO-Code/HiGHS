@@ -16,7 +16,7 @@ The upstream source code is available at:
 
  * https://github.com/DrTimothyAldenDavis/SuiteSparse
 
-To avoid compiling this code into HiGHS, use `-DHIPO=OFF`.
+To avoid compiling this code into HiGHS, use `-DHIPO=OFF` (the default value).
 
 ## cli
 
@@ -40,7 +40,7 @@ The upstream source code is available at:
  * https://github.com/KarypisLab/METIS
  * https://github.com/KarypisLab/GKlib
 
-To avoid compiling this code into HiGHS, use `-DHIPO=OFF`.
+To avoid compiling this code into HiGHS, use `-DHIPO=OFF` (the default value).
 
 ## pdqsort
 
@@ -63,6 +63,8 @@ It was originally developed by Alan George, Joseph Liu, and John Burkardt.
 The upstream source code is available at:
 
  * https://people.sc.fsu.edu/~jburkardt/cpp_src/rcm/rcm.html
+
+To avoid compiling this code into HiGHS, use `-DHIPO=OFF` (the default value).
 
 ## zstr
 

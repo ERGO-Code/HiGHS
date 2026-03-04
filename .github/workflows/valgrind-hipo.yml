@@ -21,6 +21,7 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DBUILD_OPENBLAS=ON \
+          -DNO_AVX512=ON \
           -DCMAKE_BUILD_TYPE=Debug \
           -DALL_TESTS=ON
 
@@ -30,65 +31,17 @@ jobs:
         run: |
           cmake --build . -j2
 
-      - name: Test AVX-512
+      - name: Test
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: |
-          # Detect if CPU supports AVX-512
-          if grep -q avx512 /proc/cpuinfo; then
-            echo "AVX-512 detected - creating Valgrind suppression file"
-            cat > blas.supp << 'EOF'
-          {
-            BLAS_AVX512_unrecognised_instruction
-            Memcheck:Cond
-            fun:cblas_dgemm
-          }
-          {
-            BLAS_AVX512_invalid_read_1
-            Memcheck:Addr1
-            fun:cblas_dgemm
-          }
-          {
-            BLAS_AVX512_invalid_read_2
-            Memcheck:Addr2
-            fun:cblas_dgemm
-          }
-          {
-            BLAS_AVX512_invalid_read_4
-            Memcheck:Addr4
-            fun:cblas_dgemm
-          }
-          {
-            BLAS_AVX512_invalid_read_8
-            Memcheck:Addr8
-            fun:cblas_dgemm
-          }
-          {
-            BLAS_AVX512_invalid_read_16
-            Memcheck:Addr16
-            fun:cblas_dgemm
-          }
-          {
-            BLAS_AVX512_value
-            Memcheck:Value8
-            fun:cblas_dgemm
-          }
-          EOF
-            SUPP_FLAG="--suppressions=blas.supp"
-          else
-            echo "No AVX-512 support detected"
-            SUPP_FLAG=""
-          fi
-
           valgrind \
           --leak-check=full \
           --show-leak-kinds=all \
           --track-origins=yes \
           -s \
-          $SUPP_FLAG \
           ./bin/unit_tests \
           2>&1 | tee logfile
-
 
       - name: Check log for Errors
         working-directory: ${{runner.workspace}}/build

@@ -55,7 +55,7 @@ class HighsBinarySemaphore {
     int spinIters = 10;
     while (true) {
       for (int i = 0; i < spinIters; ++i) {
-        if (data_->count.load(std::memory_order_relaxed) == 1) {
+        if (data_->count.load(std::memory_order_acquire) == 1) {
           if (try_acquire()) return;
         }
         HighsSpinMutex::yieldProcessor();
@@ -81,7 +81,7 @@ class HighsBinarySemaphore {
 
     do {
       data_->condvar.wait(lg);
-    } while (data_->count.load(std::memory_order_relaxed) != 1);
+    } while (data_->count.load(std::memory_order_acquire) != 1);
 
     data_->count.store(0, std::memory_order_relaxed);
   }

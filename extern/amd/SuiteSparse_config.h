@@ -36,24 +36,16 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-void *SuiteSparse_malloc    // pointer to allocated block of memory
+void *Highs_SuiteSparse_malloc    // pointer to allocated block of memory
 (
     size_t nitems,          // number of items to malloc (>=1 is enforced)
     size_t size_of_item     // sizeof each item
 ) ;
 
-void *SuiteSparse_free      // always returns NULL
+void *Highs_SuiteSparse_free      // always returns NULL
 (
     void *p                 // block to free
 ) ;
-
-// SuiteSparse printf macro
-#define SUITESPARSE_PRINTF(params)                          \
-{                                                           \
-                                                            \
-         printf params ;                                    \
-                                                            \
-}
 
 #define SUITESPARSE_DATE "Nov 4, 2025"
 #define SUITESPARSE_MAIN_VERSION    7

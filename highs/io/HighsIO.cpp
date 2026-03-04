@@ -124,23 +124,24 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       log_options_.user_log_callback ||
       (log_options_.user_callback && log_options_.user_callback_active);
 
-  if (!use_log_callback) {
-    // Write to log file stream unless it is NULL
-    if (log_options_.log_stream) {
-      if (prefix)
-        fprintf(log_options_.log_stream, "%-9s", HighsLogTypeTag[(int)type]);
-      vfprintf(log_options_.log_stream, format, argptr);
-      if (flush_streams) fflush(log_options_.log_stream);
-      va_end(argptr);
-      va_start(argptr, format);
-    }
-    // Write to stdout unless log file stream is stdout
-    if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
-      if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
-      vfprintf(stdout, format, argptr);
-      if (flush_streams) fflush(stdout);
-    }
-  } else {
+  // Write to log file stream unless it is NULL
+  if (log_options_.log_stream) {
+    if (prefix)
+      fprintf(log_options_.log_stream, "%-9s", HighsLogTypeTag[(int)type]);
+    vfprintf(log_options_.log_stream, format, argptr);
+    if (flush_streams) fflush(log_options_.log_stream);
+    va_end(argptr);
+    va_start(argptr, format);
+  }
+  // Write to stdout unless log file stream is stdout
+  if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
+    if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
+    vfprintf(stdout, format, argptr);
+    if (flush_streams) fflush(stdout);
+    va_end(argptr);
+    va_start(argptr, format);
+  }
+  if (use_log_callback) {
     size_t len = 0;
     std::array<char, kIoBufferSize> msgbuffer = {};
     if (prefix) {
@@ -198,21 +199,22 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   const bool use_log_callback =
       log_options_.user_log_callback ||
       (log_options_.user_callback && log_options_.user_callback_active);
-  if (!use_log_callback) {
-    // Write to log file stream unless it is NULL
-    if (log_options_.log_stream) {
-      // Write to log file stream
-      vfprintf(log_options_.log_stream, format, argptr);
-      if (flush_streams) fflush(log_options_.log_stream);
-      va_end(argptr);
-      va_start(argptr, format);
-    }
-    // Write to stdout unless log file stream is stdout
-    if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
-      vfprintf(stdout, format, argptr);
-      if (flush_streams) fflush(stdout);
-    }
-  } else {
+  // Write to log file stream unless it is NULL
+  if (log_options_.log_stream) {
+    // Write to log file stream
+    vfprintf(log_options_.log_stream, format, argptr);
+    if (flush_streams) fflush(log_options_.log_stream);
+    va_end(argptr);
+    va_start(argptr, format);
+  }
+  // Write to stdout unless log file stream is stdout
+  if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
+    vfprintf(stdout, format, argptr);
+    if (flush_streams) fflush(stdout);
+    va_end(argptr);
+    va_start(argptr, format);
+  }
+  if (use_log_callback) {
     std::array<char, kIoBufferSize> msgbuffer = {};
     int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
     // assert that there are no encoding errors
@@ -242,7 +244,7 @@ void highsFprintfString(FILE* file, const HighsLogOptions& log_options_,
 }
 
 void highsReportDevInfo(const HighsLogOptions* log_options,
-                        const std::string line) {
+                        const std::string& line) {
   if (log_options) {
     highsLogDev(*log_options, HighsLogType::kInfo, "%s", line.c_str());
   } else {
@@ -250,7 +252,7 @@ void highsReportDevInfo(const HighsLogOptions* log_options,
   }
 }
 
-void highsOpenLogFile(HighsOptions& options, const std::string log_file) {
+void highsOpenLogFile(HighsOptions& options, const std::string& log_file) {
   highsOpenLogFile(options.log_options, options.records, log_file);
 }
 
@@ -288,7 +290,7 @@ const std::string highsBoolToString(const bool b, const HighsInt field_width) {
   return b ? " true" : "false";
 }
 
-const std::string highsInsertMdEscapes(const std::string from_string) {
+const std::string highsInsertMdEscapes(const std::string& from_string) {
   std::string to_string = "";
   const char* underscore = "_";
   const char* backslash = "\\";
@@ -299,6 +301,22 @@ const std::string highsInsertMdEscapes(const std::string from_string) {
       to_string += backslash;
     }
     to_string += from_string[p];
+  }
+  return to_string;
+}
+
+const std::string highsInsertMdId(const std::string& from_string) {
+  std::string to_string = "";
+  const char* underscore = "_";
+  const char* hyphen = "-";
+  HighsInt from_string_length = from_string.length();
+  for (HighsInt p = 0; p < from_string_length; p++) {
+    const char string_ch = from_string[p];
+    if (string_ch == *underscore) {
+      to_string += hyphen;
+    } else {
+      to_string += from_string[p];
+    }
   }
   return to_string;
 }
