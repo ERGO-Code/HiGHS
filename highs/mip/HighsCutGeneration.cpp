@@ -1351,15 +1351,15 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   if (genFlowCover && !lpRelaxation.getMipSolver().submip &&
       !lpRelaxation.getMipSolver().mipdata_->continuous_cols.empty() &&
       lpRelaxation.getMipSolver().options_mip_->mip_cut_flow_cover) {
-    bool hasContinuousBeforePreprocess = false;
+    bool hasNonBinaryBeforePreprocess = false;
     for (size_t i = 0; i != inds_.size(); ++i) {
-      if (lpRelaxation.isColIntegral(inds_[i]) &&
+      if (!lpRelaxation.getMipSolver().mipdata_->domain.isBinary(inds_[i]) &&
           std::abs(vals_[i]) > 10 * feastol) {
-        hasContinuousBeforePreprocess = true;
+        hasNonBinaryBeforePreprocess = true;
         break;
       }
     }
-    if (!hasContinuousBeforePreprocess) {
+    if (!hasNonBinaryBeforePreprocess) {
       genFlowCover = false;
     } else {
       flowCoverVals = vals_;

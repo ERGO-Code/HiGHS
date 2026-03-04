@@ -188,9 +188,6 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   HighsInt numCuts = cutpool.getNumCuts();
   const double bestScoreFac[] = {0.0025, 0.01};
-  const bool genFlowCover =
-      mip.mipdata_->num_nodes - mip.mipdata_->num_nodes_before_run == 0 &&
-      !mip.submip;
 
   for (const auto& fracvar : fractionalBasisvars) {
     if (cutpool.getNumCuts() - numCuts >= 1000) break;
@@ -232,12 +229,14 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         baseRowInds.size());
 
     double rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, genFlowCover);
+    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false,
+                       !mip.submip);
     if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
     rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false, genFlowCover);
+    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs, false,
+                       !mip.submip);
     if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.clear();

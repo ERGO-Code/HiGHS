@@ -164,9 +164,6 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     colOutArcs[col].second = outArcRows.size();
   }
 
-  const bool genFlowCover =
-      mip.mipdata_->num_nodes - mip.mipdata_->num_nodes_before_run == 0 &&
-      !mip.submip;
   HighsCutGeneration cutGen(lpRelaxation, cutpool);
   std::vector<HighsInt> baseRowInds;
   std::vector<double> baseRowVals;
@@ -354,7 +351,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         // generate cut
         double rhs = 0;
         success = cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs,
-                                     false, genFlowCover);
+                                     false, !mip.submip);
 
         lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
         if (!aggregatedPath.empty() || bestOutArcCol != -1 ||
@@ -364,7 +361,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         // generate reverse cut
         rhs = 0;
         success |= cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs,
-                                      false, genFlowCover);
+                                      false, !mip.submip);
 
         if (success || (bestOutArcCol == -1 && bestInArcCol == -1)) break;
 
