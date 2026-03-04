@@ -13,12 +13,13 @@
 
 #include "lp_data/HighsInfo.h"
 #include "model/HighsModel.h"
-// #include "Highs.h"
-// #include "lp_data/HighsStatus.h"
-// #include "lp_data/HStruct.h"
-// #include "lp_data/HighsInfo.h"
-// #include "lp_data/HighsLp.h"
-// #include "lp_data/HighsOptions.h"
+
+const std::string kLegalLpFileColRowNameFirstChar = 
+  "abcdfghijklmnopqrstuvwxyz"
+  "ABCDFGHIJKLMNOPQRSTUVWXYZ"
+  "!\"#$%&(),.;?@_‘’{}~";
+const std::string kLegalLpFileColRowNameChar =
+  kLegalLpFileColRowNameFirstChar + "0123456789.Ee";
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
@@ -27,6 +28,8 @@ void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp);
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
                         const std::vector<std::string>& names);
+bool hasIllegalNameForLpFile(const HighsLp& lp);
+bool hasIllegalNameForLpFile(const std::vector<std::string>& names);
 
 void writeModelBoundSolution(
     FILE* file, const HighsLogOptions& log_options, const bool columns,
@@ -56,6 +59,8 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model, const HighsSolution& solution,
                         const HighsInfo& info, const bool sparse = false);
+
+bool replaceSpacesByUnderscores(std::vector<std::string>& names);
 
 HighsInt maxNameLength(const HighsLp& lp);
 HighsInt maxNameLength(const std::vector<std::string>& names);

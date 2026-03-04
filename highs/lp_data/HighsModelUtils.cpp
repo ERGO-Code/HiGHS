@@ -323,6 +323,37 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
   }
 }
 
+bool replaceSpacesByUnderscores(std::vector<std::string>& names) {
+  HighsInt num_name = names.size();
+  bool found_any_space = false;
+  for (HighsInt ix = 0; ix < num_name; ix++) {
+    // Find the first occurrence of the substring
+    const std::string replace_word = " ";
+    const std::string replace_by = "_";
+    size_t pos = names[ix].find(replace_word);
+    const bool found_space = pos != std::string::npos;
+    const std::string from_name = names[ix];
+
+    // Iterate through the string and replace all
+    // occurrences
+    while (pos != string::npos) {
+        // Replace the substring with the specified string
+        names[ix].replace(pos, replace_word.size(), replace_by);
+
+        // Find the next occurrence of the substring
+        pos = names[ix].find(replace_word,
+                         pos + replace_by.size());
+    }
+    if (found_space) {
+      printf("replaceSpacesinNamesByUnderscores: Modified %s to %s\n",
+	     from_name.c_str(), names[ix].c_str());
+      found_any_space = true;
+    }
+  }
+  return found_any_space;
+}
+
+				       
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (hasNamesWithSpaces(log_options, true, lp.col_names_)) return true;
   return hasNamesWithSpaces(log_options, false, lp.row_names_);
@@ -332,23 +363,31 @@ bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
                         const std::vector<std::string>& names) {
   HighsInt num_names_with_spaces = 0;
   HighsInt num_name = names.size();
-  for (HighsInt ix = 0; ix < num_name; ix++) {
-    size_t space_pos = names[ix].find(" ");
-    if (space_pos != std::string::npos) {
-      if (num_names_with_spaces == 0) {
-        highsLogDev(log_options, HighsLogType::kInfo,
-                    "%s name |%s| contains a space character in position "
-                    "%" HIGHSINT_FORMAT "\n",
-                    col ? "Column" : "Row", names[ix].c_str(), space_pos);
-        num_names_with_spaces++;
-      }
-    }
-  }
+  for (HighsInt ix = 0; ix < num_name; ix++) 
+    if (names[ix].find(" ") != std::string::npos) num_names_with_spaces++;
   if (num_names_with_spaces)
     highsLogDev(log_options, HighsLogType::kInfo,
                 "There are %d %s names with spaces\n",
                 HighsInt(num_names_with_spaces), col ? "column" : "row");
   return num_names_with_spaces > 0;
+}
+
+bool hasIllegalNameForLpFile(const HighsLp& lp) {
+  if (hasIllegalNameForLpFile(lp.col_names_)) return true;
+  return hasIllegalNameForLpFile(lp.row_names_);
+}
+
+bool hasIllegalNameForLpFile(const std::vector<std::string>& names) {
+  HighsInt num_name = names.size();
+  for (HighsInt ix = 0; ix < num_name; ix++) {
+    const std::string name = names[ix];
+    const std::string first_character = name.substr(0, 1);
+    printf("hasIllegalNameForLpFile: string \"%s\" has first character %s\n",
+	   name.c_str(), first_character.c_str());
+    if (name.find_first_not_of(kLegalLpFileColRowNameChar) != std::string::npos) return true;
+    if (first_character.find_first_not_of(kLegalLpFileColRowNameFirstChar) != std::string::npos) return true;
+  }
+  return false;
 }
 
 HighsInt maxNameLength(const HighsLp& lp) {
