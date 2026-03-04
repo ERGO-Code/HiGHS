@@ -69,6 +69,8 @@ class HighsCutGeneration {
 
   bool separateLiftedFlowCover();
 
+  HighsInt getMaxFlowCoverLen() const;
+
   bool preprocessSNFRelaxation();
 
   bool tryGenerateFlowCoverCut(HighsTransformedLp& transLp,
@@ -135,9 +137,18 @@ class HighsCutGeneration {
     double lambda;  // in sum_{j in C+} u_j - sum_{j in C-} u_j = b + lambda
   };
 
+  struct flowCover {
+    std::vector<HighsInt> flowCoverItems;
+    std::vector<double> flowCoverWeights;
+    std::vector<double> flowCoverProfitWeightRatios;
+    std::vector<HighsInt> flowCoverPerm;
+  };
+
  private:
   SNFRelaxation snfr;
   void initSNFRelaxation();
+  flowCover fc;
+  void initFlowCover();
 
  public:
   SNFRelaxation& getSNFRelaxation() { return snfr; }

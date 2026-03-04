@@ -788,7 +788,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     // bound constraints are tight. this assumption may not be satisfied when
     // new bound changes were derived during cut generation and, therefore, we
     // tighten the best variable upper bound.
-    if (bestVub[col].first != -1 &&
+    if (i < numNz - numBinCols && bestVub[col].first != -1 &&
         bestVub[col].second.maxValue() > ub + mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
@@ -803,7 +803,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     // bound constraints are tight. this assumption may not be satisfied when
     // new bound changes were derived during cut generation and, therefore, we
     // tighten the best variable lower bound.
-    if (bestVlb[col].first != -1 &&
+    if (i < numNz - numBinCols && bestVlb[col].first != -1 &&
         bestVlb[col].second.minValue() < lb - mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
