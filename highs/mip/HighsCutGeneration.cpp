@@ -738,62 +738,6 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
   }
 
-  if (strongcg) {
-    // try to flip complementation of integers to increase efficacy
-    double delta = bestdelta;
-    double scale = 1.0 / delta;
-    for (HighsInt i : integerinds) {
-      if (upper[i] == kHighsInf) continue;
-      if (solval[i] <= feastol) continue;
-
-      flipComplementation(i);
-
-      double scalrhs = double(rhs) * scale;
-      double downrhs = fast_floor(scalrhs);
-
-      double f0 = scalrhs - downrhs;
-      if (f0 < f0min || f0 > f0max) {
-        flipComplementation(i);
-        continue;
-      }
-
-      double oneoveroneminusf0 = 1.0 / (1.0 - f0);
-      if (oneoveroneminusf0 > maxCMirScale) {
-        flipComplementation(i);
-        continue;
-      }
-
-      if (fractionality(1 / f0) < 1e-3) {
-        flipComplementation(i);
-        continue;
-      }
-
-      double k = fast_ceil(1 / f0) - 1;
-
-      double sqrnorm = 0;
-      double viol = -downrhs;
-
-      for (HighsInt j : integerinds) {
-        double scalaj = vals[j] * scale;
-        double downaj = fast_floor(scalaj + kHighsTiny);
-        double fj = scalaj - downaj;
-        double aj = downaj;
-        if (fj - f0 >= 10 * feastol) {
-          double pj = fast_ceil(k * (fj - f0) * oneoveroneminusf0 - 1e-4);
-          aj += (pj / (k + 1));
-        }
-        updateViolationAndNorm(j, aj, viol, sqrnorm);
-      }
-
-      double efficacy = viol / sqrt(sqrnorm);
-      if (efficacy > bestefficacy) {
-        bestefficacy = efficacy;
-      } else {
-        flipComplementation(i);
-      }
-    }
-  }
-
   HighsCDouble scale = 1.0 / HighsCDouble(bestdelta);
   HighsCDouble scalrhs = rhs * scale;
   double downrhs = floor(double(scalrhs));
