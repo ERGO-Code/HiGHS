@@ -840,7 +840,6 @@ void HighsCliqueTable::extractCliques(
     std::vector<double>& vals, std::vector<int8_t>& complementation, double rhs,
     HighsInt nbin, std::vector<HighsInt>& perm, std::vector<CliqueVar>& clique,
     double feastol) {
-
   HighsImplications& implics = mipsolver.mipdata_->implications;
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
