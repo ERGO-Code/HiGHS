@@ -10,7 +10,6 @@
 
 #include <cctype>
 
-#include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
@@ -75,8 +74,6 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
     reader = new FilereaderMps();
   } else if (lower_case_extension.compare("lp") == 0) {
     reader = new FilereaderLp();
-  } else if (lower_case_extension.compare("ems") == 0) {
-    reader = new FilereaderEms();
   } else {
     reader = NULL;
   }
