@@ -7940,58 +7940,75 @@ void HPresolve::setRelaxedImpliedBounds() {
 }
 
 void HPresolve::checkVarBounds(HighsInt row) {
+  // return if row is empty or a singleton, contains no integer variables, or
+  // both implied row bounds are not finite
   if (rowsize[row] <= 1 || rowsizeInteger[row] == 0 ||
       (impliedRowBounds.getNumInfSumLower(row) > 1 &&
        impliedRowBounds.getNumInfSumUpper(row) > 1))
     return;
 
-  HighsInt bincol = -1;
-  double bincoef = 0.0;
-  HighsInt numbin = 0;
-
-  bool isRangedRow = isRanged(row);
-  bool isLessEqualRow = model->row_lower_[row] == -kHighsInf &&
-                        model->row_upper_[row] != kHighsInf;
-  bool isGreaterEqualRow = !isRangedRow && !isLessEqualRow;
-
+  // check if row contains a single binary variable
+  HighsInt binCol = -1;
+  double binCoef = 0.0;
+  HighsInt numBin = 0;
   for (const auto& nonzero : getRowVector(row)) {
     if (model->integrality_[nonzero.index()] == HighsVarType::kInteger &&
         model->col_lower_[nonzero.index()] == 0.0 &&
         model->col_upper_[nonzero.index()] == 1.0) {
-      if (++numbin > 1) return;
-      bincol = nonzero.index();
-      bincoef = nonzero.value();
+      if (++numBin > 1) return;
+      binCol = nonzero.index();
+      binCoef = nonzero.value();
     }
   }
+  if (numBin == 0) return;
 
   for (const auto& nonzero : getRowVector(row)) {
-    if (nonzero.index() == bincol) continue;
-    bool isVlb = isRangedRow || (isLessEqualRow && nonzero.value() < 0) ||
-                 (isGreaterEqualRow && nonzero.value() > 0);
-    bool isVub = isRangedRow || (isLessEqualRow && nonzero.value() > 0) ||
-                 (isGreaterEqualRow && nonzero.value() < 0);
-    if (!isVlb && !isVub) continue;
+    // skip binary variable
+    if (nonzero.index() == binCol) continue;
 
-    double lowerResidual = impliedRowBounds.getResidualSumLowerOrig(
-        row, nonzero.index(), nonzero.value(), bincol, bincoef, 0.0);
-    double upperResidual = impliedRowBounds.getResidualSumLowerOrig(
-        row, nonzero.index(), nonzero.value(), bincol, bincoef, 0.0);
+    // compute coefficient for binary variable
+    double vbCoef = -binCoef / nonzero.value();
 
-    double lhs = model->row_lower_[row];
-    if (lhs != -kHighsInf && lowerResidual != -kHighsInf) {
-      lhs -= lowerResidual;
-      lhs /= std::abs(nonzero.value());
+    // compute vlb constant
+    double vlbConstant = model->row_lower_[row];
+    if (vlbConstant != -kHighsInf) {
+      double residual = impliedRowBounds.getResidualSumUpperOrig(
+          row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
+      if (residual != kHighsInf) {
+        vlbConstant -= residual;
+        vlbConstant /= std::abs(nonzero.value());
+      } else
+        vlbConstant = -kHighsInf;
     }
-    double rhs = model->row_upper_[row];
-    if (rhs != kHighsInf && upperResidual != kHighsInf) {
-      rhs -= upperResidual;
-      rhs /= std::abs(nonzero.value());
+
+    // compute vub constant
+    double vubConstant = model->row_upper_[row];
+    if (vubConstant != kHighsInf) {
+      double residual = impliedRowBounds.getResidualSumLowerOrig(
+          row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
+      if (residual != -kHighsInf) {
+        vubConstant -= residual;
+        vubConstant /= std::abs(nonzero.value());
+      } else
+        vubConstant = kHighsInf;
     }
+
+    // switch sign if continuous variable has a negative coefficient
     if (nonzero.value() < 0) {
-      lhs *= -1;
-      rhs *= -1;
-      std::swap(lhs, rhs);
+      vlbConstant *= -1;
+      vubConstant *= -1;
+      std::swap(vlbConstant, vubConstant);
     }
+
+    // add vlb
+    if (vlbConstant != -kHighsInf)
+      mipsolver->mipdata_->implications.addVLB(nonzero.index(), binCol, vbCoef,
+                                               vlbConstant);
+
+    // add vub
+    if (vubConstant != kHighsInf)
+      mipsolver->mipdata_->implications.addVUB(nonzero.index(), binCol, vbCoef,
+                                               vubConstant);
   }
 }
 
