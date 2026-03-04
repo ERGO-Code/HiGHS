@@ -28,7 +28,6 @@ void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp);
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
                         const std::vector<std::string>& names);
-bool hasIllegalNameForLpFile(const HighsLp& lp);
 bool hasIllegalNameForLpFile(const std::vector<std::string>& names);
 
 void writeModelBoundSolution(
@@ -60,18 +59,20 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model, const HighsSolution& solution,
                         const HighsInfo& info, const bool sparse = false);
 
-bool replaceSpacesByUnderscores(std::vector<std::string>& names);
+bool replaceSpacesByUnderscores(std::string& name);
 
 HighsInt maxNameLength(const HighsLp& lp);
 HighsInt maxNameLength(const std::vector<std::string>& names);
 
-HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp);
+HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp,
+			   HighsFileType type = HighsFileType::kMps);
 
 HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsInt num_name_required, std::string& name_prefix,
                            HighsInt& name_suffix,
                            std::vector<std::string>& names,
-                           HighsNameHash& name_hash);
+                           HighsNameHash& name_hash,
+			   HighsFileType type = HighsFileType::kMps);
 
 HighsFileType getFileType(const std::string filename);
 

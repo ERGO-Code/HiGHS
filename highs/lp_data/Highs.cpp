@@ -734,16 +734,15 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-  HighsFileType file_type = getFileType(filename);
-  printf("Highs::writeLocalModel file type is %d\n", int(file_type));
   HighsLp& lp = model.lp_;
 
   // Dimensions in a_matrix_ may not be set, so take them from lp
   lp.setMatrixDimensions();
 
-  // Replace any blank names and return error if there are duplicates
-  // or names with spaces
-  call_status = normaliseNames(this->options_.log_options, lp);
+  // Normalise names according to file type
+  HighsFileType file_type = getFileType(filename);
+  printf("Highs::writeLocalModel file type is %d\n", int(file_type));
+  call_status = normaliseNames(this->options_.log_options, lp, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
   if (return_status == HighsStatus::kError) return return_status;
@@ -812,8 +811,6 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  // Replace any blank names and return error if there are duplicates
-  // or names with spaces
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
@@ -3454,8 +3451,6 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  // Replace any blank names and return error if there are duplicates
-  // or names with spaces
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
