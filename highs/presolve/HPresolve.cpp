@@ -3504,16 +3504,17 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         contColCoef = nonz.value();
       }
     }
-    if (binCol != -1 && contCol != -1) {
+    if (binCol != -1 && contCol != -1 &&
+        std::abs(contColCoef) > options->small_matrix_value) {
       if (model->row_upper_[row] != kHighsInf) {
         double vbConstant = model->row_upper_[row] / contColCoef;
         double vbCoef = -binColCoef / contColCoef;
         if (contColCoef > 0) {
           mipsolver->mipdata_->implications.addVUB(contCol, binCol, vbCoef,
-                                                 vbConstant);
+                                                   vbConstant);
         } else {
           mipsolver->mipdata_->implications.addVLB(contCol, binCol, vbCoef,
-                                                 vbConstant);
+                                                   vbConstant);
         }
       }
       if (model->row_lower_[row] != -kHighsInf) {
