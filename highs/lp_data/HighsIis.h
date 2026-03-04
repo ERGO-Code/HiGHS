@@ -44,7 +44,7 @@ class HighsIis {
   void clear();
   void invalid(const HighsLp& lp);
   std::string iisBoundStatusToString(HighsInt bound_status) const;
-  void report(const std::string message, const HighsLp& lp) const;
+  void report(const std::string& message, const HighsLp& lp) const;
   void addCol(const HighsInt col, const HighsInt status = kIisBoundStatusNull);
   void addRow(const HighsInt row, const HighsInt status = kIisBoundStatusNull);
   void removeCol(const HighsInt col);
@@ -60,6 +60,12 @@ class HighsIis {
 
   bool trivial(const HighsLp& lp, const HighsOptions& options);
   bool rowValueBounds(const HighsLp& lp, const HighsOptions& options);
+
+  bool indexStatusOkReturn(const bool return_value) const {
+    return return_value;
+  }
+  bool lpDataOkReturn(const bool return_value) const { return return_value; }
+  bool lpOkReturn(const bool return_value) const { return return_value; }
 
   bool indexStatusOk(const HighsLp& lp) const;
   bool lpDataOk(const HighsLp& lp, const HighsOptions& options) const;

@@ -143,6 +143,8 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   REQUIRE(read_status == HighsStatus::kError);
 
   model = "1451";
+  // Vanilla .lp file, but for constraint named "end" which tests code
+  // to permit keywords as constraint names
   if (dev_run) printf("\n%s.lp\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);

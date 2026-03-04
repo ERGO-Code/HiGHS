@@ -847,6 +847,7 @@ presolve::HighsPostsolveStack HighsMipSolver::getPostsolveStack() const {
 void HighsMipSolver::callbackGetCutPool() const {
   assert(callback_->user_callback);
   assert(callback_->callbackActive(kCallbackMipGetCutPool));
+  callback_->clearHighsCallbackOutput();
   HighsCallbackOutput& data_out = callback_->data_out;
 
   HighsSparseMatrix cut_matrix;
@@ -859,9 +860,9 @@ void HighsMipSolver::callbackGetCutPool() const {
   data_out.cutpool_index = std::move(cut_matrix.index_);
   data_out.cutpool_value = std::move(cut_matrix.value_);
 
-  callback_->user_callback(kCallbackMipGetCutPool, "MIP cut pool",
-                           &callback_->data_out, &callback_->data_in,
-                           callback_->user_callback_data);
+  const bool interrupt = mipdata_->interruptFromCallbackWithData(
+      kCallbackMipGetCutPool, solution_objective_, "MIP cut pool");
+  assert(!interrupt);
 }
 
 std::array<char, 128> getGapString(const double gap_,

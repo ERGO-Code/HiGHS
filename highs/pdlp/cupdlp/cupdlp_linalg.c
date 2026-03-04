@@ -391,7 +391,7 @@ static void cupdlp_init_vector(cupdlp_float *x, const cupdlp_float val,
 
 #ifndef CUPDLP_CPU
 
-void Ax_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecX,
+static void Ax_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecX,
                    cusparseDnVecDescr_t vecAx) {
   cupdlp_float begin = getTimeStamp();
   cupdlp_float alpha = 1.0;
@@ -417,12 +417,12 @@ void Ax_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecX,
   w->timers->DeviceMatVecProdTime += getTimeStamp() - begin;
 }
 
-void Ax_multi_gpu(CUPDLPdata *d, cupdlp_float *ax, const cupdlp_float *x) {
+static void Ax_multi_gpu(CUPDLPdata *d, cupdlp_float *ax, const cupdlp_float *x) {
   cupdlp_printf("Error: Ax_multi_gpu not implemented\n");
   exit(1);
 }
 
-void ATy_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecY,
+static void ATy_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecY,
                     cusparseDnVecDescr_t vecATy) {
   cupdlp_float begin = getTimeStamp();
 
@@ -450,7 +450,7 @@ void ATy_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecY,
   w->timers->DeviceMatVecProdTime += getTimeStamp() - begin;
 }
 
-void ATy_multi_gpu(CUPDLPdata *d, cupdlp_float *aty, const cupdlp_float *y) {
+static void ATy_multi_gpu(CUPDLPdata *d, cupdlp_float *aty, const cupdlp_float *y) {
   cupdlp_printf("Error: ATy_multi_gpu not implemented\n");
   exit(1);
 }

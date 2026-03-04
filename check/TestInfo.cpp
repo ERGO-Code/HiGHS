@@ -8,6 +8,16 @@
 
 const bool dev_run = false;
 
+TEST_CASE("info-md", "[highs_info]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  // Use this name so that it can be copied to docs and provides code
+  // coverage
+  const std::string info_file = "HighsInfo.md";
+  REQUIRE(h.writeInfo(info_file) == HighsStatus::kOk);
+  //  std::remove(info_file.c_str());
+}
+
 TEST_CASE("highs-info", "[highs_info]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   const std::string highs_info_file = test_name + ".info";

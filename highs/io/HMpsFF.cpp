@@ -117,7 +117,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   if (is_mip) lp.integrality_ = std::move(col_integrality);
 
   hessian.dim_ = q_dim;
-  hessian.format_ = HessianFormat::kTriangular;
+  hessian.format_ = q_format;
   hessian.start_ = std::move(q_start);
   hessian.index_ = std::move(q_index);
   hessian.value_ = std::move(q_value);
@@ -175,6 +175,7 @@ HighsInt HMpsFF::fillMatrix(const HighsLogOptions& log_options) {
 }
 
 HighsInt HMpsFF::fillHessian(const HighsLogOptions& log_options) {
+  const std::vector<Triplet>& qentries = q_entries;
   size_t num_entries = q_entries.size();
   if (!num_entries) {
     q_dim = 0;
@@ -1743,6 +1744,12 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
   } else if (keyword == HMpsFF::Parsekey::kQuadobj) {
     section_name = "QUADOBJ";
   }
+  // Store all nonzeros in the section, but QMATRIX should have all
+  // entries - so its format is HessianFormat::kSquare format -
+  // whereas every off-diagonal QUADOBJ entry also defines its entry
+  // in the opposite triangle, so its format is
+  // HessianFormat::kTriangular.
+  q_format = qmatrix ? HessianFormat::kSquare : HessianFormat::kTriangular;
   std::string strline;
   std::string col_name;
   std::string row_name;
@@ -1806,21 +1813,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
             row_name.c_str(), col_name.c_str());
         return HMpsFF::Parsekey::kFail;
       }
-      if (coeff) {
-        if (qmatrix) {
-          // QMATRIX has the whole Hessian, so store the entry if the
-          // entry is in the lower triangle
-          if (rowidx >= colidx)
-            q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
-        } else {
-          // QSECTION and QUADOBJ has the lower triangle of the
-          // Hessian
-          q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
-          //          if (rowidx != colidx)
-          //            q_entries.push_back(std::make_tuple(colidx, rowidx,
-          //            coeff));
-        }
-      }
+      if (coeff) q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
       end = end_coeff_name;
       // Don't read more if end of line reached
       if (end == strline.length()) break;
@@ -1842,6 +1835,12 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
   } else {
     section_name = "QSECTION";
   }
+  // Store all nonzeros in the section, but QCMATRIX should have all
+  // entries - so its format is HessianFormat::kSquare format -
+  // whereas every off-diagonal QSECTION entry also defines its entry
+  // in the opposite triangle, so its format is
+  // HessianFormat::kTriangular.
+  q_format = qcmatrix ? HessianFormat::kSquare : HessianFormat::kTriangular;
   std::string strline;
   std::string col_name;
   std::string row_name;
@@ -1951,17 +1950,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
             row_name.c_str(), col_name.c_str());
         return HMpsFF::Parsekey::kFail;
       }
-      if (coeff) {
-        if (qcmatrix) {
-          // QCMATRIX has the whole Hessian, so store the entry if the
-          // entry is in the lower triangle
-          if (qrowidx >= qcolidx)
-            qentries.push_back(std::make_tuple(qrowidx, qcolidx, coeff));
-        } else {
-          // QSECTION has the lower triangle of the Hessian
-          qentries.push_back(std::make_tuple(qrowidx, qcolidx, coeff));
-        }
-      }
+      if (coeff) q_entries.push_back(std::make_tuple(qrowidx, qcolidx, coeff));
       end = end_coeff_name;
       // Don't read more if end of line reached
       if (end == strline.length()) break;

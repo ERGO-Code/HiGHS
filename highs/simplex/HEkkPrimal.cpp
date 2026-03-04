@@ -289,7 +289,6 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
     // unboundedness. Time/iteration limit return is, of course,
     // possible, as are solver error
     HighsStatus return_status = HighsStatus::kOk;
-    analysis->simplexTimerStart(SimplexDualPhase2Clock);
     // Switch off any bound perturbation
     double save_dual_simplex_cost_perturbation_multiplier =
         info.dual_simplex_cost_perturbation_multiplier;
@@ -302,7 +301,6 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
     info.dual_simplex_cost_perturbation_multiplier =
         save_dual_simplex_cost_perturbation_multiplier;
     info.simplex_strategy = simplex_strategy;
-    analysis->simplexTimerStop(SimplexDualPhase2Clock);
     assert(ekk_instance_.called_return_from_solve_);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "HEkkDual::solve");

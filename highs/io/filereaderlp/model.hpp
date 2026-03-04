@@ -59,7 +59,7 @@ struct SOS {
 
 struct Model {
   std::shared_ptr<Expression> objective;
-  ObjectiveSense sense;
+  ObjectiveSense sense = ObjectiveSense::MIN;
   std::vector<std::shared_ptr<Constraint>> constraints;
   std::vector<std::shared_ptr<Variable>> variables;
   std::vector<std::shared_ptr<SOS>> soss;

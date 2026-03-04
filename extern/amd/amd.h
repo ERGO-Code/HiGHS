@@ -53,7 +53,7 @@ typedef unsigned int amd_uint;
 extern "C" {
 #endif
 
-int amd_order  /* returns AMD_OK, AMD_OK_BUT_JUMBLED,
+int Highs_amd_order  /* returns AMD_OK, AMD_OK_BUT_JUMBLED,
                                     * AMD_INVALID, or AMD_OUT_OF_MEMORY */
 (
     amd_int n,                         /* A is n-by-n.  n must be >= 0. */
@@ -232,7 +232,7 @@ int amd_order  /* returns AMD_OK, AMD_OK_BUT_JUMBLED,
  * of the matrix for AMD to destroy).  Refer to AMD/Source/amd_2.c for a
  * description of each parameter. */
 
-void amd_2
+void Highs_amd_2
 (
     amd_int n,
     amd_int Pe [ ],
@@ -263,7 +263,7 @@ void amd_2
  * of columns of the matrix.  For its use in AMD, these must both equal n.
  */
 
-int amd_valid
+int Highs_amd_valid
 (
     amd_int n_row,                 /* # of rows */
     amd_int n_col,                 /* # of columns */
@@ -276,13 +276,13 @@ int amd_valid
 /* ------------------------------------------------------------------------- */
 
 /* amd_defaults:  sets the default control settings */
-void amd_defaults   (double Control [ ]) ;
+void Highs_amd_defaults   (double Control [ ]) ;
 
 /* amd_control: prints the control settings */
-void amd_control    (double Control [ ]) ;
+void Highs_amd_control    (double Control [ ]) ;
 
 /* amd_info: prints the statistics */
-void amd_info       (double Info [ ]) ;
+void Highs_amd_info       (double Info [ ]) ;
 
 #ifdef __cplusplus
 }
@@ -341,9 +341,9 @@ void amd_info       (double Info [ ]) ;
  * This also works during compile-time:
  *
  *       #if defined(AMD_VERSION) && (AMD_VERSION >= AMD_VERSION_CODE (1,2))
- *           printf ("This is version 1.2 or later\n") ;
+ *           // This is version 1.2 or later
  *       #else
- *           printf ("This is an early version\n") ;
+ *           // This is an early version
  *       #endif
  *
  * Versions 1.1 and earlier of AMD do not include a #define'd version number.

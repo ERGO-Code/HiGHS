@@ -17,7 +17,7 @@
     \param options points to an array of size at least METIS_NOPTIONS.
 */
 /*************************************************************************/
-int METIS_SetDefaultOptions(idx_t *options)
+int Highs_METIS_SetDefaultOptions(idx_t *options)
 {
   iset(METIS_NOPTIONS, -1, options);
 

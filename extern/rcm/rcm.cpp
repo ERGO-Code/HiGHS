@@ -3,12 +3,14 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "ipm/hipo/auxiliary/OrderingPrint.h"
+
 // offset from C to Fortran numbering
 const HighsInt offset = 1;
 
 //****************************************************************************80
 
-void degree(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
+static void degree(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
             const HighsInt adj[], HighsInt mask[], HighsInt deg[],
             HighsInt* iccsze, HighsInt ls[], HighsInt node_num)
 
@@ -147,7 +149,7 @@ void degree(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
 }
 //****************************************************************************80
 
-void i4vec_reverse(HighsInt n, HighsInt a[])
+static void i4vec_reverse(HighsInt n, HighsInt a[])
 
 //****************************************************************************80
 //
@@ -202,7 +204,7 @@ void i4vec_reverse(HighsInt n, HighsInt a[])
 }
 //****************************************************************************80
 
-void level_set(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
+static void level_set(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
                const HighsInt adj[], HighsInt mask[], HighsInt* level_num,
                HighsInt level_row[], HighsInt level[], HighsInt node_num)
 
@@ -339,7 +341,7 @@ void level_set(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
 }
 //****************************************************************************80
 
-HighsInt rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
+static HighsInt rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
              const HighsInt adj[], HighsInt mask[], HighsInt perm[],
              HighsInt* iccsze, HighsInt node_num)
 
@@ -437,16 +439,16 @@ HighsInt rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
   //  If node_num out of bounds, something is wrong.
   //
   if (node_num < 1) {
-    printf("RCM(): Fatal error!\n");
-    printf("  Unacceptable input value of NODE_NUM\n");
+    HIGHS_ORDERING_PRINT("RCM(): Fatal error!\n");
+    HIGHS_ORDERING_PRINT("  Unacceptable input value of NODE_NUM\n");
     return 1;
   }
   //
   //  If the root is out of bounds, something is wrong.
   //
   if (root < 1 || node_num < root) {
-    printf("RCM(): Fatal error!\n");
-    printf("  Unacceptable input value of ROOT\n");
+    HIGHS_ORDERING_PRINT("RCM(): Fatal error!\n");
+    HIGHS_ORDERING_PRINT("  Unacceptable input value of ROOT\n");
     return 1;
   }
   //
@@ -461,8 +463,9 @@ HighsInt rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
   //  If the connected component size is less than 1, something is wrong.
   //
   if (*iccsze < 1) {
-    printf("RCM(): Fatal error!\n");
-    printf("  Unacceptable connected component size returned from DEGREE\n");
+    HIGHS_ORDERING_PRINT("RCM(): Fatal error!\n");
+    HIGHS_ORDERING_PRINT(
+        "  Unacceptable connected component size returned from DEGREE\n");
     return 1;
   }
   //
@@ -558,7 +561,7 @@ HighsInt rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
 }
 //****************************************************************************80
 
-void root_find(HighsInt* root, HighsInt adj_num, const HighsInt adj_row[],
+static void root_find(HighsInt* root, HighsInt adj_num, const HighsInt adj_row[],
                const HighsInt adj[], HighsInt mask[], HighsInt* level_num,
                HighsInt level_row[], HighsInt level[], HighsInt node_num)
 
@@ -745,8 +748,9 @@ void root_find(HighsInt* root, HighsInt adj_num, const HighsInt adj_row[],
 }
 //****************************************************************************80
 
-HighsInt genrcm(HighsInt node_num, HighsInt adj_num, const HighsInt adj_row[],
-                const HighsInt adj[], HighsInt perm[])
+HighsInt Highs_genrcm(HighsInt node_num, HighsInt adj_num,
+                      const HighsInt adj_row[], const HighsInt adj[],
+                      HighsInt perm[])
 
 //****************************************************************************80
 //

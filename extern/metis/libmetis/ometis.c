@@ -40,7 +40,7 @@
            the original and permuted matrices, then A[i] = A'[iperm[i]].
 */
 /*************************************************************************/
-int METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx_t *vwgt,
+int Highs_METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx_t *vwgt,
           idx_t *options, idx_t *perm, idx_t *iperm) 
 {
   idx_t i, ii, j, l, nnvtxs=0;
@@ -160,7 +160,7 @@ void MlevelNestedDissection(ctrl_t *ctrl, graph_t *graph, idx_t *order,
   MlevelNodeBisectionMultiple(ctrl, graph);
 
   IFSET(ctrl->dbglvl, METIS_DBG_SEPINFO, 
-      printf("Nvtxs: %6"PRIDX", [%6"PRIDX" %6"PRIDX" %6"PRIDX"]\n", 
+      HIGHS_ORDERING_PRINT("Nvtxs: %6"PRIDX", [%6"PRIDX" %6"PRIDX" %6"PRIDX"]\n", 
         graph->nvtxs, graph->pwgts[0], graph->pwgts[1], graph->pwgts[2]));
 
 
@@ -214,7 +214,7 @@ void MlevelNestedDissectionCC(ctrl_t *ctrl, graph_t *graph, idx_t *order,
   MlevelNodeBisectionMultiple(ctrl, graph);
 
   IFSET(ctrl->dbglvl, METIS_DBG_SEPINFO, 
-      printf("Nvtxs: %6"PRIDX", [%6"PRIDX" %6"PRIDX" %6"PRIDX"]\n", 
+      HIGHS_ORDERING_PRINT("Nvtxs: %6"PRIDX", [%6"PRIDX" %6"PRIDX" %6"PRIDX"]\n", 
         graph->nvtxs, graph->pwgts[0], graph->pwgts[1], graph->pwgts[2]));
 
   /* Order the nodes in the separator */
@@ -231,7 +231,7 @@ void MlevelNestedDissectionCC(ctrl_t *ctrl, graph_t *graph, idx_t *order,
 
   if (ctrl->dbglvl&METIS_DBG_INFO) {
     if (ncmps > 2)
-      printf("  Bisection resulted in %"PRIDX" connected components\n", ncmps);
+      HIGHS_ORDERING_PRINT("  Bisection resulted in %"PRIDX" connected components\n", ncmps);
   }
   
   sgraphs = SplitGraphOrderCC(ctrl, graph, ncmps, cptr, cind);

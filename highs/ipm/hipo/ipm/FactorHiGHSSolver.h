@@ -39,7 +39,8 @@ class FactorHiGHSSolver : public LinearSolver {
 
   const Model& model_;
   const HighsSparseMatrix& A_;
-  const Int mA_, nA_, nzA_;
+  const HighsHessian& Q_;
+  const Int mA_, nA_, nzA_, nzQ_;
 
   Options& options_;
 
@@ -47,7 +48,7 @@ class FactorHiGHSSolver : public LinearSolver {
   Int setNla();
   void setParallel();
   Int chooseOrdering(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                      const std::vector<Int>& signs, Symbolic& S);
+                     const std::vector<Int>& signs, Symbolic& S);
 
   Int buildNEstructure(Int64 nz_limit = kHighsIInf);
   Int buildNEvalues(const std::vector<double>& scaling);
@@ -66,10 +67,8 @@ class FactorHiGHSSolver : public LinearSolver {
                     const LogHighs& log);
 
   // Override functions
-  Int factorAS(const HighsSparseMatrix& A,
-               const std::vector<double>& scaling) override;
-  Int factorNE(const HighsSparseMatrix& A,
-               const std::vector<double>& scaling) override;
+  Int factorAS(const std::vector<double>& scaling) override;
+  Int factorNE(const std::vector<double>& scaling) override;
   Int solveNE(const std::vector<double>& rhs,
               std::vector<double>& lhs) override;
   Int solveAS(const std::vector<double>& rhs_x,

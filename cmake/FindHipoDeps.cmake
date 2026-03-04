@@ -98,9 +98,10 @@ if (BUILD_OPENBLAS)
         endif()
 
         # Crucial for static linking: Force OpenBLAS to use the static runtime
-        if (NOT BUILD_SHARED_LIBS)
-            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
-        endif()
+        # if (NOT BUILD_SHARED_LIBS)
+        #     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+        # endif()
+        # now global
 
         # list(APPEND OPENBLAS_MINIMAL_FLAGS -DUSE_THREAD=OFF)
         list(APPEND OPENBLAS_MINIMAL_FLAGS -DINTERFACE64=0)
@@ -110,6 +111,36 @@ if (BUILD_OPENBLAS)
         # list(APPEND OPENBLAS_MINIMAL_FLAGS -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL)
     endif()
 
+    if(UNIX AND NOT APPLE)
+        execute_process(
+            COMMAND bash -c "grep -m1 'model name' /proc/cpuinfo | grep -i skylake"
+            RESULT_VARIABLE SKYLAKE_CHECK
+            OUTPUT_QUIET
+            ERROR_QUIET
+        )
+
+        if(SKYLAKE_CHECK EQUAL 0)
+            message(STATUS "Skylake detected - adjusting OpenBLAS target to avoid register spills")
+            set(OPENBLAS_TARGET "HASWELL" CACHE STRING "OpenBLAS target architecture" FORCE)
+            set(NO_AVX512 ON CACHE BOOL "Disable AVX512" FORCE)
+            # set(CMAKE_C_FLAGS_OPENBLAS "-DTARGET=HASWELL -DNO_AVX512=1")
+        else()
+            message(STATUS "NOT Skylake")
+        endif()
+
+        if(NO_AVX512)
+            message(STATUS "NO_AVX512 - adjusting OpenBLAS possibly for valgrind")
+            set(NO_AVX512 ON CACHE BOOL "Disable AVX512" FORCE)
+            # set(CMAKE_C_FLAGS_OPENBLAS "-DTARGET=HASWELL -DNO_AVX512=1")
+        endif()
+    endif()
+
+    set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
+
+    # Override CMAKE_BUILD_TYPE for OpenBLAS subdirectory
+    set(CMAKE_BUILD_TYPE_BACKUP ${CMAKE_BUILD_TYPE})
+    set(CMAKE_BUILD_TYPE Release)
+
     message(CHECK_START "Fetching OpenBLAS")
     list(APPEND CMAKE_MESSAGE_INDENT "  ")
     FetchContent_Declare(
@@ -118,9 +149,25 @@ if (BUILD_OPENBLAS)
         GIT_TAG        "v0.3.30"
         GIT_SHALLOW TRUE
         UPDATE_COMMAND git reset --hard
-        CMAKE_ARGS ${OPENBLAS_MINIMAL_FLAGS}
+        CMAKE_ARGS
+            ${OPENBLAS_MINIMAL_FLAGS}
+            # Force optimization even in Debug builds to avoid register spills
+            # Force high optimization and strip debug symbols for the kernels
+            # -DCMAKE_BUILD_TYPE=Release
+            # -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS_OPENBLAS}
+            # -DCMAKE_C_FLAGS="-O3 -fomit-frame-pointer"
+            # -DCMAKE_C_FLAGS_RELEASE="-O3 -fomit-frame-pointer"
+            # -DCMAKE_C_FLAGS_DEBUG="-O2 -fomit-frame-pointer"
+            # -DCORE_OPTIMIZATION="-O3"
     )
     FetchContent_MakeAvailable(openblas)
+
+    if (ALL_TESTS)
+        set(BUILD_TESTING ON)
+    endif()
+
+    set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_BACKUP})
+
     list(POP_BACK CMAKE_MESSAGE_INDENT)
     message(CHECK_PASS "fetched")
 
@@ -277,7 +324,19 @@ else()
             message(STATUS "Specified BLA_VENDOR: ${BLA_VENDOR}")
         endif()
 
-        if (NOT BLAS_FOUND)
+        # try libblas on linux
+        if (LINUX AND NOT BLAS_FOUND)
+            find_package(BLAS QUIET)
+            if (BLAS_FOUND)
+                message(STATUS "Using BLAS library: ${BLAS_LIBRARIES}")
+                if (BLAS_INCLUDE_DIRS)
+                    message(STATUS "BLAS include dirs: ${BLAS_INCLUDE_DIRS}")
+                endif()
+            endif()
+        endif()
+
+        if (NOT BLAS_FOUND AND
+            (BUILD_SHARED_LIBS OR BUILD_CXX_EXE OR BUILD_EXAMPLES))
             find_package(BLAS REQUIRED)
             if (BLAS_FOUND)
                 message(STATUS "Using BLAS library: ${BLAS_LIBRARIES}")
