@@ -118,6 +118,7 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
                "Value \"%s\" for LP solver option (\"%s\") is not one of "
+               "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kSolverString.c_str(),
                hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
                kHighsChooseString.c_str(),
