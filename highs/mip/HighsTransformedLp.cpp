@@ -609,7 +609,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
   auto remove = [&](HighsInt position) {
     numNz--;
-    if (position < numNz - numBinCols - 1) {
+    if (position < numNz - numBinCols) {
       std::swap(vals[position], vals[numNz - numBinCols]);
       std::swap(vals[numNz - numBinCols], vals[numNz]);
       std::swap(inds[position], inds[numNz - numBinCols]);
@@ -620,7 +620,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
     }
     inds[numNz] = 0;
     vals[numNz] = 0;
-    numNz--;
   };
 
   auto checkValidityVB = [&](HighsInt bincol, HighsImplications::VarBound vb,
