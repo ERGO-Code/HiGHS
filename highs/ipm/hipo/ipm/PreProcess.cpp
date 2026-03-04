@@ -287,9 +287,20 @@ void PreprocessFixedVars::print(std::stringstream& stream) const {
     stream << "Removed " << fixed_vars << " fixed variables\n";
 }
 
-void PreprocessScaling::apply(Model& model) {
-  // Apply Curtis-Reid scaling and scale the problem accordingly
+static double roundToPowerOf2(double d) {
+  int exp;  // int, not Int
 
+  // d = x * 2^exp, d\in[0.5,1)
+  double x = std::frexp(d, &exp);
+
+  // d is already exact power of 2
+  if (x == 0.5) return d;
+
+  // return 1*2^exp
+  return std::ldexp(1.0, exp);
+}
+
+void PreprocessScaling::apply(Model& model) {
   Int& n = model.n_;
   Int& m = model.m_;
   HighsSparseMatrix& A = model.A_;
@@ -307,19 +318,6 @@ void PreprocessScaling::apply(Model& model) {
   n_post = n;
   m_post = m;
 
-  // check if scaling is needed
-  bool need_scaling = false;
-  for (Int col = 0; col < n; ++col) {
-    for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
-      if (std::abs(A.value_[el]) != 1.0) {
-        need_scaling = true;
-        break;
-      }
-    }
-  }
-
-  if (!need_scaling) return;
-
   // *********************************************************************
   // Compute scaling
   // *********************************************************************
@@ -333,17 +331,63 @@ void PreprocessScaling::apply(Model& model) {
   // Q -> C * Q * C
   // where R is row scaling, C is col scaling.
 
-  // Compute exponents for CR scaling of matrix A
-  std::vector<Int> colexp(n);
-  std::vector<Int> rowexp(m);
-  CG_iter_scaling =
-      CurtisReidScaling(A.start_, A.index_, A.value_, rowexp, colexp);
+  colscale.assign(n, 1.0);
+  rowscale.assign(m, 1.0);
 
-  // Compute scaling from exponents
-  colscale.resize(n);
-  rowscale.resize(m);
-  for (Int i = 0; i < n; ++i) colscale[i] = std::ldexp(1.0, colexp[i]);
-  for (Int i = 0; i < m; ++i) rowscale[i] = std::ldexp(1.0, rowexp[i]);
+  auto onePassNormScaling = [&]() {
+    // single pass of infinity-norm geo-mean row and col scaling
+
+    // infinity norm of rows
+    std::vector<double> norm_rows(m);
+    for (Int col = 0; col < n; ++col) {
+      for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
+        const Int row = A.index_[el];
+        double value = A.value_[el];
+        value *= colscale[col];
+        value *= rowscale[row];
+        norm_rows[row] = std::max(norm_rows[row], std::abs(value));
+      }
+    }
+
+    // apply row scaling
+    for (Int i = 0; i < m; ++i) rowscale[i] *= 1.0 / std::sqrt(norm_rows[i]);
+
+    // infinity norm of columns
+    std::vector<double> norm_cols(n);
+    for (Int col = 0; col < n; ++col) {
+      for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
+        const Int row = A.index_[el];
+        double value = A.value_[el];
+        value *= colscale[col];
+        value *= rowscale[row];
+        norm_cols[col] = std::max(norm_cols[col], std::abs(value));
+      }
+    }
+
+    // apply col scaling
+    for (Int i = 0; i < n; ++i) colscale[i] *= 1.0 / std::sqrt(norm_cols[i]);
+  };
+  auto boundScaling = [&]() {
+    for (Int i = 0; i < n; ++i) {
+      if (std::isfinite(lower[i]) && std::isfinite(upper[i])) {
+        const double l = lower[i] / colscale[i];
+        const double u = upper[i] / colscale[i];
+        const double diff = std::abs(u - l);
+
+        if (diff < kSmallBoundDiff)
+          colscale[i] *= diff / kSmallBoundDiff;
+        else if (diff > kLargeBoundDiff) {
+          colscale[i] *= diff / kLargeBoundDiff;
+        }
+      }
+    }
+  };
+
+  const Int num_passes = 1;
+  for (Int pass = 0; pass < num_passes; ++pass) {
+    onePassNormScaling();
+    boundScaling();
+  }
 
   bool scaling_failed = isInfVector(colscale) || isNanVector(colscale) ||
                         isInfVector(rowscale) || isNanVector(rowscale);
@@ -354,6 +398,21 @@ void PreprocessScaling::apply(Model& model) {
   }
 
   scaled = true;
+
+  // *********************************************************************
+  // Adjust scaling
+  // *********************************************************************
+
+  for (Int i = 0; i < n; ++i) {
+    colscale[i] = std::max(colscale[i], kSmallScalingCoeff);
+    colscale[i] = std::min(colscale[i], kLargeScalingCoeff);
+    colscale[i] = roundToPowerOf2(colscale[i]);
+  }
+  for (Int i = 0; i < m; ++i) {
+    rowscale[i] = std::max(rowscale[i], kSmallScalingCoeff);
+    rowscale[i] = std::min(rowscale[i], kLargeScalingCoeff);
+    rowscale[i] = roundToPowerOf2(rowscale[i]);
+  }
 
   // *********************************************************************
   // Apply scaling
@@ -425,10 +484,7 @@ void PreprocessScaling::undo(PreprocessorPoint& point, const Model& model,
   point.assertConsistency(n_pre, m_pre);
 }
 
-void PreprocessScaling::print(std::stringstream& stream) const {
-  if (scaled)
-    stream << "Scaling required " << CG_iter_scaling << " CG iterations\n";
-}
+void PreprocessScaling::print(std::stringstream& stream) const {}
 
 void PreprocessFormulation::apply(Model& model) {
   Int& n = model.n_;
