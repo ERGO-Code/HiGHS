@@ -8,7 +8,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = true;  // false;
+const bool dev_run = false;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -254,7 +254,9 @@ HighsCallbackFunctionType userkMipUserSetPartialSolution =
         std::vector<HighsInt> index;
         std::vector<double> value;
 
-        for (HighsInt i = 0; i < callback_data.optimal_solution.size(); i++) {
+        for (HighsInt i = 0;
+             i < static_cast<HighsInt>(callback_data.optimal_solution.size());
+             i++) {
           if (i % 2 == 0) {
             index.push_back(i);
             value.push_back(callback_data.optimal_solution[i]);

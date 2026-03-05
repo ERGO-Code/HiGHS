@@ -481,8 +481,6 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
   h.run();
 
-  const int64_t mip_node_count = h.getInfo().mip_node_count;
-
   REQUIRE(fileExists(write_model_file));
   REQUIRE(fileExists(write_solution_file));
 

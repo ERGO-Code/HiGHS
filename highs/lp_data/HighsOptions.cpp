@@ -80,16 +80,23 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
+#ifndef HIPO
+static void noHipoErrorLog(const HighsLogOptions& report_log_options,
+                           const string& option_name) {
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "The HiPO solver was requested via the \"%s\" option, but this build "
+      "was compiled without HiPO support. Reconfigure with -DFAST_BUILD=ON "
+      "and -DHIPO=ON to enable HiPO.\n",
+      option_name.c_str());
+}
+#endif
+
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
 #ifndef HIPO
   if (value == kHipoString) {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kSolverString.c_str());
+    noHipoErrorLog(report_log_options, kSolverString);
     return false;
   }
 #endif
@@ -98,20 +105,20 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
 #ifdef HIPO
       value == kHipoString ||
 #endif
-      value == kIpxString || value == kPdlpString)
+      value == kIpxString || value == kPdlpString || value == kQpAsmString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
                "Value \"%s\" for LP solver option (\"%s\") is not one of "
 #ifdef HIPO
-               "\"%s\", "
+               "\"%s\","
 #endif
-               "\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+               "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kSolverString.c_str(), kHighsChooseString.c_str(),
                kSimplexString.c_str(), kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
 #endif
-               kIpxString.c_str(), kPdlpString.c_str());
+               kIpxString.c_str(), kPdlpString.c_str(), kQpAsmString.c_str());
   return false;
 }
 
@@ -119,12 +126,7 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
 #ifndef HIPO
   if (value == kHipoString) {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kMipLpSolverString.c_str());
+    noHipoErrorLog(report_log_options, kMipLpSolverString);
     return false;
   }
 #endif
@@ -155,12 +157,7 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
 #ifndef HIPO
   if (value == kHipoString) {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kMipIpmSolverString.c_str());
+    noHipoErrorLog(report_log_options, kMipIpmSolverString);
     return false;
   }
 #endif
@@ -182,6 +179,46 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                kHipoString.c_str(),
 #endif
                kIpxString.c_str());
+  return false;
+}
+
+bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
+                              const string& value) {
+  if (value == kHipoNodeString || value == kHipoTreeString ||
+      value == kHipoBothString)
+    return true;
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kHipoParallelString.c_str(), kHipoTreeString.c_str(),
+      kHipoNodeString.c_str(), kHipoBothString.c_str());
+  return false;
+}
+
+bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
+                        const string& value) {
+  if (value == kHipoNormalEqString || value == kHipoAugmentedString ||
+      value == kHighsChooseString)
+    return true;
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kHipoSystemString.c_str(), kHipoNormalEqString.c_str(),
+      kHipoAugmentedString.c_str(), kHighsChooseString.c_str());
+  return false;
+}
+
+bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
+                          const string& value) {
+  if (value == kHipoAmdString || value == kHipoMetisString ||
+      value == kHipoRcmString || value == kHighsChooseString)
+    return true;
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(), kHipoOrderingString.c_str(),
+               kHipoAmdString.c_str(), kHipoMetisString.c_str(),
+               kHipoRcmString.c_str(), kHighsChooseString.c_str());
   return false;
 }
 
@@ -463,6 +500,15 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
       return OptionStatus::kIllegalValue;
   } else if (option.name == kRangingString) {
     if (!optionOffOnOk(report_log_options, option.name, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHipoParallelString) {
+    if (!optionHipoParallelTypeOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHipoSystemString) {
+    if (!optionHipoSystemOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHipoOrderingString) {
+    if (!optionHipoOrderingOk(report_log_options, value))
       return OptionStatus::kIllegalValue;
   }
   return OptionStatus::kOk;
@@ -1104,4 +1150,24 @@ void HighsOptions::setLogOptions() {
   this->log_options.output_flag = &this->output_flag;
   this->log_options.log_to_console = &this->log_to_console;
   this->log_options.log_dev_level = &this->log_dev_level;
+}
+
+void warnSolverInvalid(const HighsOptions& options,
+                       const std::string& problem_type) {
+  highsLogUser(options.log_options, HighsLogType::kWarning,
+               "Solver \"%s\" is not available for %s. Option \"%s\" ignored\n",
+               options.solver.c_str(), problem_type.c_str(),
+               kSolverString.c_str());
+}
+bool solverValidForLp(const std::string& solver) {
+  return solver == kHighsChooseString || solver == kSimplexString ||
+         solver == kIpmString || solver == kIpxString ||
+         solver == kHipoString || solver == kPdlpString;
+}
+bool solverValidForMip(const std::string& solver) {
+  return solver == kHighsChooseString;
+}
+bool solverValidForQp(const std::string& solver) {
+  return solver == kHighsChooseString || solver == kQpAsmString ||
+         solver == kIpmString || solver == kHipoString;
 }

@@ -184,6 +184,7 @@ set(hipo_sources
     ipm/hipo/ipm/Iterate.cpp 
     ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
+    ipm/hipo/ipm/PreProcess.cpp
     ipm/hipo/ipm/Refine.cpp
     ipm/hipo/ipm/Solver.cpp)
 
@@ -199,6 +200,7 @@ set(hipo_headers
     ipm/hipo/ipm/LogHighs.h
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
+    ipm/hipo/ipm/PreProcess.h
     ipm/hipo/ipm/Solver.h
     ipm/hipo/ipm/Status.h)
 

@@ -25,7 +25,8 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          vector<HighsInt>& matrix_index,
                          vector<double>& matrix_value,
                          const double small_matrix_value,
-                         const double large_matrix_value);
+                         const double large_matrix_value,
+                         const bool sum_duplicates = false);
 
 HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          const std::string& matrix_name, const HighsInt vec_dim,
@@ -34,14 +35,16 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          vector<HighsInt>& matrix_index,
                          vector<double>& matrix_value,
                          const double small_matrix_value,
-                         const double large_matrix_value);
+                         const double large_matrix_value,
+                         const bool sum_duplicates = false);
 
 HighsStatus assessMatrix(
     const HighsLogOptions& log_options, const std::string& matrix_name,
     const HighsInt vec_dim, const HighsInt num_vec, const bool partitioned,
     vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
-    const double small_matrix_value, const double large_matrix_value);
+    const double small_matrix_value, const double large_matrix_value,
+    const bool sum_duplicates = false);
 
 HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
                                    const HighsInt num_vec,

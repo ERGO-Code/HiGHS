@@ -97,7 +97,7 @@ double Solver::computeOmega(const NewtonDir& delta) const {
   const double tau_const = 1000.0 * (5 * n_ + m_) * 1e-16;
   double omega_1{}, omega_2{};
 
-  assert(it_->Rd);
+  assert(it_->Rd || m_ == 0);
 
   // First block
   for (Int i = 0; i < m_; ++i) {

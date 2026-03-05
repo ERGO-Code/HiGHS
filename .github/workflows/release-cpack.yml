@@ -2,8 +2,9 @@ name: release-cpack
 
 on:
   push:
-    # tags:
-    #   - 'v*'
+    tags:
+      - 'v*'
+  pull_request:
 
 jobs:
   build-linux:

@@ -138,6 +138,12 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value);
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value);
+bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
+                              const string& value);
+bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
+                        const string& value);
+bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
+                          const string& value);
 
 bool boolFromString(std::string value, bool& bool_value);
 
@@ -268,6 +274,7 @@ const string kIpmString = "ipm";
 const string kHipoString = "hipo";
 const string kIpxString = "ipx";
 const string kPdlpString = "pdlp";
+const string kQpAsmString = "qpasm";
 
 const HighsInt kKeepNRowsDeleteRows = -1;
 const HighsInt kKeepNRowsDeleteEntries = 0;
@@ -717,11 +724,11 @@ class HighsOptions : public HighsOptionsStruct {
         &presolve, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kSolverString,
-                               "LP/QP solver: \"choose\", \"simplex\", "
-                               "\"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
-                               advanced, &solver, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kSolverString,
+        "LP/QP solver: \"choose\", \"simplex\", "
+        "\"ipm\", \"ipx\", \"hipo\", \"pdlp\" or \"qpasm\"",
+        advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -1647,5 +1654,12 @@ class HighsOptions : public HighsOptionsStruct {
   HighsInt num_user_settable_options_;
   void setLogOptions();
 };
+
+void warnSolverInvalid(const HighsOptions& options,
+                       const std::string& problem_type);
+
+bool solverValidForLp(const std::string& solver);
+bool solverValidForMip(const std::string& solver);
+bool solverValidForQp(const std::string& solver);
 
 #endif
