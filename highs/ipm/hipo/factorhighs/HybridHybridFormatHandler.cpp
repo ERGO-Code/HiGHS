@@ -55,7 +55,7 @@ void HybridHybridFormatHandler::assembleFrontal(Int i, Int j, double val) {
   frontal_[diag_start_[block] + ii + ldb * jj] = val;
 }
 
-void HybridHybridFormatHandler::assembleFrontalMultiple(Int num,
+void HybridHybridFormatHandler::assembleFrontalMultiple(Int& num,
                                                         const double* child,
                                                         Int nc, Int child_sn,
                                                         Int row, Int col, Int i,
@@ -71,8 +71,14 @@ void HybridHybridFormatHandler::assembleFrontalMultiple(Int num,
   Int ii = i - block * nb_;
   Int jj = j - block * nb_;
 
-  callAndTime_daxpy(num, 1.0, &child[start_block + col_ + jb * row_], jb,
-                    &frontal_[diag_start_[block] + ii + ldb * jj], 1, data_);
+  if (num > kMinConsecutiveSums)
+    callAndTime_daxpy(num, 1.0, &child[start_block + col_ + jb * row_], jb,
+                      &frontal_[diag_start_[block] + ii + ldb * jj], 1, data_);
+  else {
+    frontal_[diag_start_[block] + ii + ldb * jj] +=
+        child[start_block + col_ + jb * row_];
+    num = 1;
+  }
 }
 
 Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
@@ -138,7 +144,8 @@ void HybridHybridFormatHandler::assembleClique(const double* child, Int nc,
 
         // sun consecutive entries in a row.
         // consecutive need to be reduced, to account for edge of the block
-        const Int zeros_stored_row = std::max((Int)0, jb_c - (row - row_start) - 1);
+        const Int zeros_stored_row =
+            std::max((Int)0, jb_c - (row - row_start) - 1);
         Int consecutive = S_->consecutiveSums(child_sn, col);
         const Int left_in_child = col_end - col - zeros_stored_row;
         consecutive = std::min(consecutive, left_in_child);
@@ -159,11 +166,18 @@ void HybridHybridFormatHandler::assembleClique(const double* child, Int nc,
         const Int j_ = j - jblock * nb_;
         const Int64 start_block = S_->cliqueBlockStart(sn_, jblock);
 
-        callAndTime_daxpy(consecutive, 1.0,
-                          &child[start_block_c + col_ + jb_c * row_], 1,
-                          &clique_ptr_[start_block + j_ + jb * i_], 1, data_);
+        if (consecutive > kMinConsecutiveSums) {
+          callAndTime_daxpy(consecutive, 1.0,
+                            &child[start_block_c + col_ + jb_c * row_], 1,
+                            &clique_ptr_[start_block + j_ + jb * i_], 1, data_);
 
-        col += consecutive;
+          col += consecutive;
+        } else {
+          clique_ptr_[start_block + j_ + jb * i_] +=
+              child[start_block_c + col_ + jb_c * row_];
+
+          col++;
+        }
       }
     }
 

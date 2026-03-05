@@ -157,29 +157,6 @@ void Factorise::permute(const std::vector<Int>& iperm) {
   valM_ = std::move(new_val);
 }
 
-class TaskGroupSpecial : public highs::parallel::TaskGroup {
-  // Using TaskGroup may throw an exception when tasks are cancelled. Not sure
-  // exactly why this happens, but for now this fix seems to work.
-
- public:
-  ~TaskGroupSpecial() {
-    // No virtual destructor in TaskGroup. Do not call this class via pointer to
-    // the base!
-
-    cancel();
-
-    // re-call taskWait if it throws, until it succeeds
-    while (true) {
-      try {
-        taskWait();
-        break;
-      } catch (HighsTask::Interrupt) {
-        continue;
-      }
-    }
-  }
-};
-
 void Factorise::processSupernode(Int sn) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
@@ -308,14 +285,15 @@ void Factorise::processSupernode(Int sn) {
           const Int i = S_.relindClique(child_sn, row);
 
           // how many entries to sum
-          const Int consecutive = S_.consecutiveSums(child_sn, row);
+          Int consecutive = S_.consecutiveSums(child_sn, row);
 
           FH->assembleFrontalMultiple(consecutive, child_clique, nc, child_sn,
                                       row, col, i, j);
 
           row += consecutive;
         }
-      }
+      } else
+        break;
     }
     HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleChildrenFrontal);
 

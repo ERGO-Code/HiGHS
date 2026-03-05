@@ -97,7 +97,6 @@ class Symbolic {
 
   Int64 max_stack_size_{};
   Int tree_depth_{};
-  std::string ordering;
 
   friend class Analyse;
 
