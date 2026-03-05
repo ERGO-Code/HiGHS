@@ -3597,51 +3597,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     return doubletonEq(postsolve_stack, row, rowType);
   }
 
-  // Check for trivial VLB / VUBs
-  if (rowsize[row] == 2 && rowsizeInteger[row] != 0) {
-    HighsInt binCol = -1;
-    double binColCoef = 0;
-    HighsInt contCol = -1;
-    double contColCoef = 0;
-    storeRow(row);
-    for (const HighsSliceNonzero& nonz : getStoredRow()) {
-      if (model->integrality_[nonz.index()] == HighsVarType::kInteger &&
-          model->col_upper_[nonz.index()] == 1.0 &&
-          model->col_lower_[nonz.index()] == 0.0) {
-        binCol = nonz.index();
-        binColCoef = nonz.value();
-      } else {
-        contCol = nonz.index();
-        contColCoef = nonz.value();
-      }
-    }
-    if (binCol != -1 && contCol != -1 &&
-        std::abs(contColCoef) > options->small_matrix_value) {
-      if (model->row_upper_[row] != kHighsInf) {
-        double vbConstant = model->row_upper_[row] / contColCoef;
-        double vbCoef = -binColCoef / contColCoef;
-        if (contColCoef > 0) {
-          mipsolver->mipdata_->implications.addVUB(contCol, binCol, vbCoef,
-                                                   vbConstant);
-        } else {
-          mipsolver->mipdata_->implications.addVLB(contCol, binCol, vbCoef,
-                                                   vbConstant);
-        }
-      }
-      if (model->row_lower_[row] != -kHighsInf) {
-        double vbConstant = model->row_lower_[row] / contColCoef;
-        double vbCoef = -binColCoef / contColCoef;
-        if (contColCoef > 0) {
-          mipsolver->mipdata_->implications.addVLB(contCol, binCol, vbCoef,
-                                                   vbConstant);
-        } else {
-          mipsolver->mipdata_->implications.addVUB(contCol, binCol, vbCoef,
-                                                   vbConstant);
-        }
-      }
-    }
-  }
-
   // todo: do additional single row presolve for mip here. It may assume a
   // non-redundant and non-infeasible row when considering variable and implied
   // bounds
