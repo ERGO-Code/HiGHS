@@ -4354,11 +4354,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                         HighsPostsolveStack::RowType::kLeq));
     if (rowDeleted[row]) return Result::kOk;
   }
-
-  checkVarBounds(row);
-
   // update implied bounds of all columns in given row
   HPRESOLVE_CHECKED_CALL(updateColImpliedBounds(row));
+
+  // extract variable bound constraints
+  extractVarBounds(row);
 
   return checkLimits(postsolve_stack);
 }
@@ -7939,7 +7939,7 @@ void HPresolve::setRelaxedImpliedBounds() {
   }
 }
 
-void HPresolve::checkVarBounds(HighsInt row) {
+void HPresolve::extractVarBounds(HighsInt row) {
   // return if row is empty or a singleton, contains no integer variables, or
   // both implied row bounds are not finite
   if (rowsize[row] <= 1 || rowsizeInteger[row] == 0 ||
@@ -7950,19 +7950,31 @@ void HPresolve::checkVarBounds(HighsInt row) {
   // check if row contains a single binary variable
   HighsInt binCol = -1;
   double binCoef = 0.0;
-  HighsInt numBin = 0;
   for (const auto& nonzero : getRowVector(row)) {
+    // skip fixed variables
+    if (model->col_lower_[nonzero.index()] ==
+        model->col_upper_[nonzero.index()])
+      continue;
+
+    // find binary variable
     if (model->integrality_[nonzero.index()] == HighsVarType::kInteger &&
         model->col_lower_[nonzero.index()] == 0.0 &&
         model->col_upper_[nonzero.index()] == 1.0) {
-      if (++numBin > 1) return;
+      // return if there is more than one binary variable
+      if (binCol != -1) return;
       binCol = nonzero.index();
       binCoef = nonzero.value();
     }
   }
-  if (numBin == 0) return;
+  // return if there is no binary variable
+  if (binCol == -1) return;
 
   for (const auto& nonzero : getRowVector(row)) {
+    // skip fixed variables
+    if (model->col_lower_[nonzero.index()] ==
+        model->col_upper_[nonzero.index()])
+      continue;
+
     // skip binary variable
     if (nonzero.index() == binCol) continue;
 
@@ -7972,7 +7984,7 @@ void HPresolve::checkVarBounds(HighsInt row) {
     // compute vlb constant
     double vlbConstant = model->row_lower_[row];
     if (vlbConstant != -kHighsInf) {
-      double residual = impliedRowBounds.getResidualSumUpperOrig(
+      double residual = impliedRowBounds.getResidualSumUpper(
           row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
       if (residual != kHighsInf) {
         vlbConstant -= residual;
@@ -7984,7 +7996,7 @@ void HPresolve::checkVarBounds(HighsInt row) {
     // compute vub constant
     double vubConstant = model->row_upper_[row];
     if (vubConstant != kHighsInf) {
-      double residual = impliedRowBounds.getResidualSumLowerOrig(
+      double residual = impliedRowBounds.getResidualSumLower(
           row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
       if (residual != -kHighsInf) {
         vubConstant -= residual;

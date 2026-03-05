@@ -480,7 +480,7 @@ class HPresolve {
                              HighsInt stayrow, HighsInt removerow, double scale,
                              const HighsMatrixSlice<RowStorageFormat>& vector);
 
-  void checkVarBounds(HighsInt row);
+  void extractVarBounds(HighsInt row);
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
