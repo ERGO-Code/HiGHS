@@ -11,9 +11,16 @@ include(FindHipoDeps)
 # Create shared library
 add_library(highs_extras SHARED
     ${hipo_orderings_sources}
-    ${hipo_orderings_headers})
+    ${hipo_orderings_headers}
+    extern/HipoExtrasCApi.h
+    extern/HipoExtrasCApi.cpp
+    highs/ipm/hipo/auxiliary/OrderingPrint.h
+    # highs/HConfig.h
+    )
 
 target_include_directories(highs_extras PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/amd>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/metis>
@@ -38,12 +45,12 @@ if (NOT WIN32)
 endif()
 
 # Dependencies
-find_package(ZLIB)
-if(ZLIB_FOUND)
-    target_link_libraries(highs_extras PRIVATE ZLIB::ZLIB)
-endif()
+# find_package(ZLIB)
+# if(ZLIB_FOUND)
+#     target_link_libraries(highs_extras PRIVATE ZLIB::ZLIB)
+# endif()
 
-target_link_libraries(highs_extras PRIVATE highs)
+# target_link_libraries(highs_extras PRIVATE highs)
 
 if (NOT USE_CMAKE_FIND_BLAS)
     if(APPLE)

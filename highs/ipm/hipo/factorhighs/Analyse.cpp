@@ -173,7 +173,7 @@ Int Analyse::getPermutation() {
       }
 
     } else {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      log_->printe(options.log_options, HighsLogType::kError,
                    "HiPO is not available. Install with: pip install "
                    "highspy[hipo]\nError: %s\n",
                    hipo_loader.getLastError().c_str());
@@ -219,8 +219,7 @@ Int Analyse::getPermutation() {
       }
       inversePerm(perm_, iperm_);
     } else {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "AMD is not available. Install with: pip install "
+      log_->printe("AMD is not available. Install with: pip install "
                    "highspy[hipo]\nError: %s\n",
                    hipo_loader.getLastError().c_str());
       return HighsStatus::kError;
@@ -262,8 +261,8 @@ Int Analyse::getPermutation() {
       inversePerm(perm_, iperm_);
 
     } else {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "RCM is not available. Install with: pip install "
+      // if (log_) log_->printe("Invalid ordering option passed to Analyse\n");
+      log_->printe( "RCM is not available. Install with: pip install "
                    "highspy[hipo]\nError: %s\n",
                    hipo_loader.getLastError().c_str());
       return HighsStatus::kError;

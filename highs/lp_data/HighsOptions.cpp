@@ -125,7 +125,20 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
                kSimplexString.c_str(), kIpmString.c_str(),
                kIpxString.c_str(), kPdlpString.c_str());
     return false;
+}
+
+bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
+                         const string& value) {
+  if (value == kHipoString && !hipoAvailable()) {
+    highsLogUser(
+        report_log_options, HighsLogType::kError,
+        "The HiPO solver was requested via the \"%s\" option, but this build "
+        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
+        "and -DHIPO=ON to enable HiPO.\n",
+        kMipLpSolverString.c_str());
+    return false;
   }
+
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
       (value == kHipoString && hipoAvailable()) ||

@@ -182,8 +182,9 @@ else()
   # Optional HIPO
   if (HIPO)
 
-  if (HIPO_EXTRAS_PYTHON_BUILD)
-    target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
+    if (HIPO_EXTRAS_PYTHON_BUILD)
+      target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
+    endif()
 
     target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>

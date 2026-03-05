@@ -5,8 +5,8 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file ipm/hipo/HipoCApi.cpp
- * @brief C-style API implementation for the HiPO library
+/**@file HipoExtrasCApi.cpp
+ * @brief C-style API implementation for the HiPO library dependencies
  */
 
 #include "HipoExtrasCApi.h"

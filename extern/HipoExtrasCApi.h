@@ -5,13 +5,11 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file ipm/hipo/HipoCApi.h
- * @brief C-style API for the HiPO library for dynamic loading
+/**@file HipoExtrasCApi.h
+ * @brief C-style API for the HiPO deps library for dynamic loading
  */
 #ifndef HIPO_EXTRAS_C_API_H_
 #define HIPO_EXTRAS_C_API_H_
-
-// #include "HConfig.h"
 
 // Export macro for shared library
 #if defined(_WIN32) || defined(_WIN64)

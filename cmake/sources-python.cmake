@@ -458,8 +458,8 @@ set(highs_headers_python
     highs/ipm/hipo/ipm/LogHighs.cpp
     highs/ipm/hipo/ipm/Model.cpp
     highs/ipm/hipo/ipm/Refine.cpp
-    highs/ipm/hipo/ipm/Solver.cpp
-    highs/ipm/hipo/HipoCApi.cpp)
+    highs/ipm/hipo/ipm/Solver.cpp)
+    # highs/ipm/hipo/HipoCApi.cpp)
 
 set(hipo_headers
     highs/ipm/hipo/ipm/CurtisReidScaling.h
@@ -474,8 +474,8 @@ set(hipo_headers
     highs/ipm/hipo/ipm/Model.h
     highs/ipm/hipo/ipm/Options.h
     highs/ipm/hipo/ipm/Solver.h
-    highs/ipm/hipo/ipm/Status.h
-    highs/ipm/hipo/HipoCApi.h)
+    highs/ipm/hipo/ipm/Status.h)
+    # highs/ipm/hipo/HipoCApi.h)
 
 set(factor_highs_sources
     highs/ipm/hipo/factorhighs/Analyse.cpp

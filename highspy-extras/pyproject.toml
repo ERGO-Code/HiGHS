@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy-extras"
-version = "1.0.0"
+version = "1.13.1"
 description = "HiPO IPM solver extension for highspy"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
@@ -21,6 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 
 [project.urls]
@@ -47,9 +48,7 @@ sdist.include = [
   "LICENSE",
   "README.md",
   "THIRD_PARTY_NOTICES.md",
-  # "highs/HConfig.h.in",
-  # "highs",
-  "external",
+  "extern",
   "cmake",
 ]
 
