@@ -1213,7 +1213,7 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("2489", "[qpsolver]") {
+TEST_CASE("issue-2489", "[qpsolver]") {
   // This QP is
   //
   // Min, x^2/2 + x
@@ -1257,7 +1257,7 @@ TEST_CASE("2489", "[qpsolver]") {
   h.resetGlobalScheduler(true);
 }
 
-TEST_CASE("2821", "[qpsolver]") {
+TEST_CASE("issue-2821", "[qpsolver]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = h.getInfo();
@@ -1305,6 +1305,28 @@ TEST_CASE("2821", "[qpsolver]") {
       REQUIRE(h.run() == HighsStatus::kOk);
       REQUIRE(okValueDifference(info.objective_function_value,
                                 optimal_objective_value));
+    }
+  }
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-2894", "[qpsolver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  const std::string dirname = std::string(HIGHS_DIR) + "/check/instances/";
+  std::string model = "2894";
+  std::string filename = dirname + model + ".mps";
+  HighsStatus read_status;
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  for (auto& solver : solvers) {
+    REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
+    if (solver == kQpAsmString) {
+      REQUIRE(h.run() == HighsStatus::kError);
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kSolveError);
+    } else {
+      REQUIRE(h.run() == HighsStatus::kOk);
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
     }
   }
   h.resetGlobalScheduler(true);
