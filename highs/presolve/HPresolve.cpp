@@ -4354,6 +4354,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                         HighsPostsolveStack::RowType::kLeq));
     if (rowDeleted[row]) return Result::kOk;
   }
+
   // update implied bounds of all columns in given row
   HPRESOLVE_CHECKED_CALL(updateColImpliedBounds(row));
 
