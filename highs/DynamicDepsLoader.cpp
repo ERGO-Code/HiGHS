@@ -102,9 +102,9 @@ bool DynamicDepsLoader::resolveFunctions() {
   if (!lib_handle_) return false;
 
   fn_get_abi_version_ =
-      reinterpret_cast<hipo_extras_get_abi_version_t>(resolveSymbol("hipo_get_abi_version"));
+      reinterpret_cast<hipo_extras_get_abi_version_t>(resolveSymbol("hipo_extras_get_abi_version"));
   fn_get_version_ =
-      reinterpret_cast<hipo_extras_get_version_t>(resolveSymbol("hipo_get_version"));
+      reinterpret_cast<hipo_extras_get_version_t>(resolveSymbol("hipo_extras_get_version"));
 
   // fn_solve_lp_ =
   //     reinterpret_cast<hipo_solve_lp_t>(resolveSymbol("hipo_solve_lp"));

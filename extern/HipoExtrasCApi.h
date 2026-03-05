@@ -45,14 +45,14 @@ extern "C" {
  * 
  * @return ABI version number
  */
-HIPO_EXTRAS_API int hipo_get_abi_version(void);
+HIPO_EXTRAS_API int hipo_extras_get_abi_version(void);
 
 /**
  * Get the version string of the HiPO library.
  * 
  * @return Version string (e.g., "1.12.0")
  */
-HIPO_EXTRAS_API const char* hipo_get_version(void);
+HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 
 #ifdef __cplusplus
 }  // extern "C"
