@@ -183,8 +183,7 @@ else()
   if (HIPO)
 
   if (HIPO_EXTRAS_PYTHON_BUILD)
-        target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
-        target_compile_definitions(highs PRIVATE k)
+    target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
 
     target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>

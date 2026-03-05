@@ -70,7 +70,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (use_only_ipm) {
       // Use IPM to solve the LP
       if (use_hipo) {
-#ifdef HIPO
+// #ifdef HIPO
         // Use HIPO to solve the LP (compiled in)
         sub_solver_call_time.num_call[kSubSolverHipo]++;
         sub_solver_call_time.run_time[kSubSolverHipo] =
@@ -86,33 +86,33 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             solver_object.timer_.read();
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
-#else
-        // Use HIPO via dynamic loading
-        DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-        if (hipo_loader.isAvailable()) {
-          sub_solver_call_time.num_call[kSubSolverHipo]++;
-          sub_solver_call_time.run_time[kSubSolverHipo] =
-              -solver_object.timer_.read();
-          try {
-            call_status = hipo_loader.solveLp(solver_object);
-          } catch (const std::exception& exception) {
-            highsLogDev(options.log_options, HighsLogType::kError,
-                        "Exception %s in DynamicDepsLoader::solveLp\n",
-                        exception.what());
-            call_status = HighsStatus::kError;
-          }
-          sub_solver_call_time.run_time[kSubSolverHipo] +=
-              solver_object.timer_.read();
-          return_status = interpretCallStatus(options.log_options, call_status,
-                                              return_status, "solveLpHipo");
-        } else {
-          highsLogUser(options.log_options, HighsLogType::kError,
-                       "HiPO is not available. Install with: pip install "
-                       "highspy[hipo]\nError: %s\n",
-                       hipo_loader.getLastError().c_str());
-          return HighsStatus::kError;
-        }
-#endif
+// #else
+//         // Use HIPO via dynamic loading
+//         DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+//         if (hipo_loader.isAvailable()) {
+//           sub_solver_call_time.num_call[kSubSolverHipo]++;
+//           sub_solver_call_time.run_time[kSubSolverHipo] =
+//               -solver_object.timer_.read();
+//           try {
+//             call_status = hipo_loader.solveLp(solver_object);
+//           } catch (const std::exception& exception) {
+//             highsLogDev(options.log_options, HighsLogType::kError,
+//                         "Exception %s in DynamicDepsLoader::solveLp\n",
+//                         exception.what());
+//             call_status = HighsStatus::kError;
+//           }
+//           sub_solver_call_time.run_time[kSubSolverHipo] +=
+//               solver_object.timer_.read();
+//           return_status = interpretCallStatus(options.log_options, call_status,
+//                                               return_status, "solveLpHipo");
+//         } else {
+//           highsLogUser(options.log_options, HighsLogType::kError,
+//                        "HiPO is not available. Install with: pip install "
+//                        "highspy[hipo]\nError: %s\n",
+//                        hipo_loader.getLastError().c_str());
+//           return HighsStatus::kError;
+//         }
+// #endif
       } else if (use_ipx) {
         sub_solver_call_time.num_call[kSubSolverIpx]++;
         sub_solver_call_time.run_time[kSubSolverIpx] =

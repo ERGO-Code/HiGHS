@@ -118,7 +118,7 @@ Int Analyse::getPermutation() {
   }
 
   if (ordering_ == "metis") {
-#ifdef
+#ifndef HIPO_EXTRAS
     // ----------------------------
     // ----- METIS ----------------
     // ----------------------------
@@ -144,11 +144,48 @@ Int Analyse::getPermutation() {
       if (log_) log_->printDevInfo("Error with Metis\n");
       return kRetOrderingError;
     }
+#else
+    // Use HIPO via dynamic loading
+    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+    if (hipo_loader.isAvailable()) {
+      idx_t options[METIS_NOPTIONS];
+      Highs_METIS_SetDefaultOptions(options);
+      options[METIS_OPTION_SEED] = kMetisSeed;
+
+      // set logging of Metis depending on debug level
+      options[METIS_OPTION_DBGLVL] = 0;
+      if (log_->debug(2))
+        options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
+
+      // no2hop improves the quality of ordering in general
+      options[METIS_OPTION_NO2HOP] = 1;
+
+      if (log_) log_->printDevInfo("Running Metis\n");
+
+      Int status =
+          Highs_METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
+                             options, perm_.data(), iperm_.data());
+
+      if (log_) log_->printDevInfo("Metis done\n");
+      if (status != METIS_OK) {
+        if (log_) log_->printDevInfo("Error with Metis\n");
+        return kRetOrderingError;
+      }
+
+    } else {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "HiPO is not available. Install with: pip install "
+                   "highspy[hipo]\nError: %s\n",
+                   hipo_loader.getLastError().c_str());
+      return HighsStatus::kError;
+    }
+#endif
 
   } else if (ordering_ == "amd") {
     // ----------------------------
     // ------ AMD -----------------
     // ----------------------------
+#ifndef HIPO_EXTRAS
     double control[AMD_CONTROL];
     Highs_amd_defaults(control);
     double info[AMD_INFO];
@@ -163,6 +200,32 @@ Int Analyse::getPermutation() {
       return kRetOrderingError;
     }
     inversePerm(perm_, iperm_);
+#else
+    // Use HIPO via dynamic loading
+    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+    if (hipo_loader.isAvailable()) {
+      double control[AMD_CONTROL];
+      Highs_amd_defaults(control);
+      double info[AMD_INFO];
+
+      if (log_) log_->printDevInfo("Running AMD\n");
+      Int status = Highs_amd_order(n_, temp_ptr.data(), temp_rows.data(),
+                                   perm_.data(), control, info);
+      if (log_) log_->printDevInfo("AMD done\n");
+
+      if (status != AMD_OK) {
+        if (log_) log_->printDevInfo("Error with AMD\n");
+        return kRetOrderingError;
+      }
+      inversePerm(perm_, iperm_);
+    } else {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "AMD is not available. Install with: pip install "
+                   "highspy[hipo]\nError: %s\n",
+                   hipo_loader.getLastError().c_str());
+      return HighsStatus::kError;
+    }
+#endif
   }
 
   else if (ordering_ == "rcm") {
@@ -170,7 +233,9 @@ Int Analyse::getPermutation() {
     // ------ RCM -----------------
     // ----------------------------
 
+#ifndef HIPO_EXTRAS
     if (log_) log_->printDevInfo("Running RCM\n");
+
     Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
                               temp_rows.data(), perm_.data());
     if (log_) log_->printDevInfo("RCM done\n");
@@ -180,6 +245,30 @@ Int Analyse::getPermutation() {
       return kRetOrderingError;
     }
     inversePerm(perm_, iperm_);
+#else
+    // Use HIPO via dynamic loading
+    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+    if (hipo_loader.isAvailable()) {
+      if (log_) log_->printDevInfo("Running RCM\n");
+
+      Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
+                                temp_rows.data(), perm_.data());
+      if (log_) log_->printDevInfo("RCM done\n");
+
+      if (status != 0) {
+        if (log_) log_->printDevInfo("Error with RCM\n");
+        return kRetOrderingError;
+      }
+      inversePerm(perm_, iperm_);
+
+    } else {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "RCM is not available. Install with: pip install "
+                   "highspy[hipo]\nError: %s\n",
+                   hipo_loader.getLastError().c_str());
+      return HighsStatus::kError;
+    }
+#endif
 
   } else {
     if (log_) log_->printe("Invalid ordering option passed to Analyse\n");
@@ -642,7 +731,7 @@ void Analyse::afterRelaxSn() {
   std::vector<Int> new_snStart(new_snCount + 1);
 
   // keep track of the children merged into a given supernode
-  std::vector<std::vector<Int>> received_from(sn_count_, std::vector<Int>());
+  std::vector<std::vector<Int> > received_from(sn_count_, std::vector<Int>());
 
   // index to write into sn_perm
   Int start_perm{};
@@ -1064,7 +1153,7 @@ void Analyse::reorderChildren() {
     }
 
     // save children and values to sort
-    std::vector<std::pair<Int, double>> children{};
+    std::vector<std::pair<Int, double> > children{};
     Int child = head[sn];
     while (child != -1) {
       double value =
