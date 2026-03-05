@@ -7949,9 +7949,9 @@ void HPresolve::extractVarBounds(HighsInt row) {
   // check if variable bounds can be derived from row
   HighsInt numInfSumLower = impliedRowBounds.getNumInfSumLower(row);
   HighsInt numInfSumUpper = impliedRowBounds.getNumInfSumUpper(row);
-  bool computeVlb = model->row_lower_[row] != -kHighsInf && numInfSumUpper <= 1;
-  bool computeVub = model->row_upper_[row] != kHighsInf && numInfSumLower <= 1;
-  if (!computeVlb && !computeVub) return;
+  bool useLhs = model->row_lower_[row] != -kHighsInf && numInfSumUpper <= 1;
+  bool useRhs = model->row_upper_[row] != kHighsInf && numInfSumLower <= 1;
+  if (!useLhs && !useRhs) return;
 
   // check if row contains a single binary variable
   HighsInt binCol = -1;
@@ -7989,26 +7989,26 @@ void HPresolve::extractVarBounds(HighsInt row) {
 
     // compute vlb constant
     double vlbConstant = model->row_lower_[row];
-    if (computeVlb) {
+    if (useLhs) {
       double residual = impliedRowBounds.getResidualSumUpper(
           row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
       if (residual != kHighsInf) {
         vlbConstant -= residual;
         vlbConstant /= std::abs(nonzero.value());
-        computeVlb = numInfSumUpper == 0;
+        useLhs = numInfSumUpper == 0;
       } else
         vlbConstant = -kHighsInf;
     }
 
     // compute vub constant
     double vubConstant = model->row_upper_[row];
-    if (computeVub) {
+    if (useRhs) {
       double residual = impliedRowBounds.getResidualSumLower(
           row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
       if (residual != -kHighsInf) {
         vubConstant -= residual;
         vubConstant /= std::abs(nonzero.value());
-        computeVub = numInfSumLower == 0;
+        useRhs = numInfSumLower == 0;
       } else
         vubConstant = kHighsInf;
     }
@@ -8030,7 +8030,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
                                                vubConstant);
 
     // stop if no additional variable bounds can be found
-    if (!computeVlb && !computeVub) break;
+    if (!useLhs && !useRhs) break;
   }
 }
 
