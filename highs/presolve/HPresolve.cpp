@@ -7942,7 +7942,7 @@ void HPresolve::setRelaxedImpliedBounds() {
 void HPresolve::extractVarBounds(HighsInt row) {
   // return if row is empty or a singleton, contains no integer variables, or
   // both implied row bounds are not finite
-  if (rowsize[row] <= 1 || rowsizeInteger[row] == 0 ||
+  if (mipsolver == nullptr || rowsize[row] <= 1 || rowsizeInteger[row] == 0 ||
       (impliedRowBounds.getNumInfSumLower(row) > 1 &&
        impliedRowBounds.getNumInfSumUpper(row) > 1))
     return;
