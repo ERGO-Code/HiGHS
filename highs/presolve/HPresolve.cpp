@@ -7940,12 +7940,18 @@ void HPresolve::setRelaxedImpliedBounds() {
 }
 
 void HPresolve::extractVarBounds(HighsInt row) {
-  // return if row is empty or a singleton, contains no integer variables, or
-  // both implied row bounds are not finite
-  if (mipsolver == nullptr || rowsize[row] <= 1 || rowsizeInteger[row] == 0 ||
-      (impliedRowBounds.getNumInfSumLower(row) > 1 &&
-       impliedRowBounds.getNumInfSumUpper(row) > 1))
+  // extract variable bound constraints from the row
+
+  // return if row is empty or a singleton or contains no integer variables
+  if (mipsolver == nullptr || rowsize[row] <= 1 || rowsizeInteger[row] == 0)
     return;
+
+  // check if variable bounds can be derived from row
+  HighsInt numInfSumLower = impliedRowBounds.getNumInfSumLower(row);
+  HighsInt numInfSumUpper = impliedRowBounds.getNumInfSumUpper(row);
+  bool computeVlb = model->row_lower_[row] != -kHighsInf && numInfSumUpper <= 1;
+  bool computeVub = model->row_upper_[row] != kHighsInf && numInfSumLower <= 1;
+  if (!computeVlb && !computeVub) return;
 
   // check if row contains a single binary variable
   HighsInt binCol = -1;
@@ -7983,24 +7989,26 @@ void HPresolve::extractVarBounds(HighsInt row) {
 
     // compute vlb constant
     double vlbConstant = model->row_lower_[row];
-    if (vlbConstant != -kHighsInf) {
+    if (computeVlb) {
       double residual = impliedRowBounds.getResidualSumUpper(
           row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
       if (residual != kHighsInf) {
         vlbConstant -= residual;
         vlbConstant /= std::abs(nonzero.value());
+        computeVlb = numInfSumUpper == 0;
       } else
         vlbConstant = -kHighsInf;
     }
 
     // compute vub constant
     double vubConstant = model->row_upper_[row];
-    if (vubConstant != kHighsInf) {
+    if (computeVub) {
       double residual = impliedRowBounds.getResidualSumLower(
           row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
       if (residual != -kHighsInf) {
         vubConstant -= residual;
         vubConstant /= std::abs(nonzero.value());
+        computeVub = numInfSumLower == 0;
       } else
         vubConstant = kHighsInf;
     }
@@ -8016,11 +8024,13 @@ void HPresolve::extractVarBounds(HighsInt row) {
     if (vlbConstant != -kHighsInf)
       mipsolver->mipdata_->implications.addVLB(nonzero.index(), binCol, vbCoef,
                                                vlbConstant);
-
     // add vub
     if (vubConstant != kHighsInf)
       mipsolver->mipdata_->implications.addVUB(nonzero.index(), binCol, vbCoef,
                                                vubConstant);
+
+    // stop if no additional variable bounds can be found
+    if (!computeVlb && !computeVub) break;
   }
 }
 
