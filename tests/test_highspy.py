@@ -2308,3 +2308,13 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         self.assertEqual(iis.col_status_[1], highspy.IisStatus.kIisStatusInConflict)
         self.assertEqual(iis.row_status_[0], highspy.IisStatus.kIisStatusNotInConflict)
         self.assertEqual(iis.row_status_[1], highspy.IisStatus.kIisStatusInConflict)
+
+    def no_spaces_in_names(self):
+        h = highspy.Highs()
+        h.setOptionValue("output_flag", False)
+        rounds = [1, 2]
+        slices = [0, 1]
+        columns = [0, 1]
+        rows = [0, 1]
+        h.addBinaries(rounds, slices, columns, rows, name_prefix = 'SB')
+        self.assertEqual(h.writeModel(""), highspy.HighsStatus.kOk)
