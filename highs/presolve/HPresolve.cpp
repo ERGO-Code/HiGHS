@@ -7989,29 +7989,29 @@ void HPresolve::extractVarBounds(HighsInt row) {
     double vbCoef = -binCoef / nonzero.value();
 
     // compute vlb constant
-    double vlbConstant = model->row_lower_[row];
+    double vlbConstant = -kHighsInf;
     if (useLhs) {
       double residual = impliedRowBounds.getResidualSumUpper(
           row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
       if (residual != kHighsInf) {
-        vlbConstant -= residual;
-        vlbConstant /= std::abs(nonzero.value());
+        vlbConstant = static_cast<double>(
+            (static_cast<HighsCDouble>(model->row_lower_[row]) - residual) /
+            std::abs(nonzero.value()));
         useLhs = numInfSumUpper == 0;
-      } else
-        vlbConstant = -kHighsInf;
+      }
     }
 
     // compute vub constant
-    double vubConstant = model->row_upper_[row];
+    double vubConstant = kHighsInf;
     if (useRhs) {
       double residual = impliedRowBounds.getResidualSumLower(
           row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
       if (residual != -kHighsInf) {
-        vubConstant -= residual;
-        vubConstant /= std::abs(nonzero.value());
+        vubConstant = static_cast<double>(
+            (static_cast<HighsCDouble>(model->row_upper_[row]) - residual) /
+            std::abs(nonzero.value()));
         useRhs = numInfSumLower == 0;
-      } else
-        vubConstant = kHighsInf;
+      }
     }
 
     // switch sign if continuous variable has a negative coefficient
