@@ -112,7 +112,6 @@ TEST_CASE("qpsolver", "[qpsolver]") {
 
   for (auto& solver : solvers) {
     highs.setOptionValue("solver", solver);
-    const HighsModel& model = highs.getModel();
     const HighsInfo& info = highs.getInfo();
     const HighsSolution& solution = highs.getSolution();
     const double& objective_function_value = info.objective_function_value;
@@ -249,7 +248,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
     hessian.value_ = {2.0};
 
     highs.setOptionValue("output_flag", dev_run);
-    const HighsModel& model = highs.getModel();
     const HighsInfo& info = highs.getInfo();
     const HighsSolution& solution = highs.getSolution();
     const double& objective_function_value = info.objective_function_value;
@@ -507,6 +505,8 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
 
   for (auto& solver : solvers) {
     // Run should fail since objective is non-convex
+    if (dev_run)
+      printf("test-min-negative-definite for solver %s\n", solver.c_str());
     REQUIRE(highs.run() == HighsStatus::kError);
   }
 
@@ -1313,11 +1313,9 @@ TEST_CASE("issue-2821", "[qpsolver]") {
 TEST_CASE("issue-2894", "[qpsolver]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
-  const HighsInfo& info = h.getInfo();
   const std::string dirname = std::string(HIGHS_DIR) + "/check/instances/";
   std::string model = "2894";
   std::string filename = dirname + model + ".mps";
-  HighsStatus read_status;
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
   for (auto& solver : solvers) {
     REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
