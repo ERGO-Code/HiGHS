@@ -890,9 +890,9 @@ class TestHighsPy(unittest.TestCase):
 
         # test prefix item with indices, not variable offset
         h = highspy.Highs()
-        x = h.addVariables("a", "b", "c", name_prefix="t_")  # ('a', 'b', 'c')
+        x = h.addVariables("a", "b", "c", name_prefix="t_")  # ('a','b','c')
         self.assertEqual(h.numVariables, 1)
-        self.assertEqual(x["a", "b", "c"].name, "t_('a', 'b', 'c')")
+        self.assertEqual(x["a", "b", "c"].name, "t_('a','b','c')")
 
         # Testing different ways of adding variables
         # Some are unlikely to be used, but this is expected behaviour
@@ -2308,13 +2308,3 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         self.assertEqual(iis.col_status_[1], highspy.IisStatus.kIisStatusInConflict)
         self.assertEqual(iis.row_status_[0], highspy.IisStatus.kIisStatusNotInConflict)
         self.assertEqual(iis.row_status_[1], highspy.IisStatus.kIisStatusInConflict)
-
-    def no_spaces_in_names(self):
-        h = highspy.Highs()
-        h.setOptionValue("output_flag", False)
-        rounds = [1, 2]
-        slices = [0, 1]
-        columns = [0, 1]
-        rows = [0, 1]
-        h.addBinaries(rounds, slices, columns, rows, name_prefix = 'SB')
-        self.assertEqual(h.writeModel(""), highspy.HighsStatus.kOk)
