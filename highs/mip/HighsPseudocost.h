@@ -442,11 +442,11 @@ class HighsPseudocost {
                        std::vector<HighsInt>& ncutoffsdown) {
     int64_t orig_nsamplestotal = this->nsamplestotal;
     int64_t orig_ninferencestotal = this->ninferencestotal;
+    assert(pseudocost.ncutoffsup.size() == ncutoffsup.size() &&
+           pseudocost.ncutoffsup.size() == this->ncutoffsup.size());
     for (HighsInt col : pseudocost.indschanged) {
       assert(col >= 0 &&
-             col < static_cast<HighsInt>(pseudocost.ncutoffsup.size()) &&
-             pseudocost.ncutoffsup.size() == ncutoffsup.size() &&
-             pseudocost.ncutoffsup.size() == this->ncutoffsup.size());
+             col < static_cast<HighsInt>(pseudocost.ncutoffsup.size()));
       flushPseudoCostObservations(this->pseudocostup[col],
                                   pseudocost.pseudocostup[col], nsamplesup[col],
                                   pseudocost.nsamplesup[col],
