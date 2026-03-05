@@ -334,25 +334,7 @@ void PreprocessScaling::apply(Model& model) {
   colscale.assign(n, 1.0);
   rowscale.assign(m, 1.0);
 
-  auto normScaling = [&]() {
-    // single pass of infinity-norm geo-mean row and col scaling
-
-    // infinity norm of rows
-    std::vector<double> norm_rows(m);
-    for (Int col = 0; col < n; ++col) {
-      for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
-        const Int row = A.index_[el];
-        double value = A.value_[el];
-        value *= colscale[col];
-        value *= rowscale[row];
-        norm_rows[row] = std::max(norm_rows[row], std::abs(value));
-      }
-    }
-
-    // apply row scaling
-    for (Int i = 0; i < m; ++i)
-      if (norm_rows[i] > 0.0) rowscale[i] *= 1.0 / std::sqrt(norm_rows[i]);
-
+  auto colScaling = [&]() {
     // infinity norm of columns
     std::vector<double> norm_cols(n);
     for (Int col = 0; col < n; ++col) {
@@ -369,7 +351,23 @@ void PreprocessScaling::apply(Model& model) {
     for (Int i = 0; i < n; ++i)
       if (norm_cols[i] > 0.0) colscale[i] *= 1.0 / std::sqrt(norm_cols[i]);
   };
+  auto rowScaling = [&]() {
+    // infinity norm of rows
+    std::vector<double> norm_rows(m);
+    for (Int col = 0; col < n; ++col) {
+      for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
+        const Int row = A.index_[el];
+        double value = A.value_[el];
+        value *= colscale[col];
+        value *= rowscale[row];
+        norm_rows[row] = std::max(norm_rows[row], std::abs(value));
+      }
+    }
 
+    // apply row scaling
+    for (Int i = 0; i < m; ++i)
+      if (norm_rows[i] > 0.0) rowscale[i] *= 1.0 / std::sqrt(norm_rows[i]);
+  };
   auto boundScaling = [&]() {
     for (Int i = 0; i < n; ++i) {
       if (std::isfinite(lower[i]) && std::isfinite(upper[i])) {
@@ -385,10 +383,13 @@ void PreprocessScaling::apply(Model& model) {
       }
     }
   };
+
   const Int num_passes = 10;
   for (Int pass = 0; pass < num_passes; ++pass) {
-    normScaling();
+    colScaling();
+    rowScaling();
     boundScaling();
+    rowScaling();
   }
 
   bool scaling_failed = isInfVector(colscale) || isNanVector(colscale) ||
