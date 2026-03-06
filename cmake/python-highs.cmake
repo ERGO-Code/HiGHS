@@ -1,4 +1,8 @@
-if (NOT PYTHON_BUILD_SETUP)
+if (NOT PYTHON_BUILD_SETUP AND NOT HIPO_PYTHON_EXTRAS_BUILD)
+  return()
+endif()
+
+if (HIPO_EXTRAS_LIBRARY_BUILD)
   return()
 endif()
 
@@ -41,6 +45,10 @@ python_add_library(_core MODULE highs/highs_bindings.cpp WITH_SOABI)
 # pybind11_add_module(highspy highspy/highs_bindings.cpp)
 
 target_link_libraries(_core PRIVATE pybind11::headers highs)
+
+target_include_directories(_core PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
+)
 
 # Ensure the built Python extension can find libhighs in the same directory
 # Use $ORIGIN on Linux/Unix and @loader_path on macOS. Leave Windows alone.

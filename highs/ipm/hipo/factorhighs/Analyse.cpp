@@ -179,11 +179,8 @@ Int Analyse::getPermutation() {
       }
 
     } else {
-      log_->printe(options.log_options, HighsLogType::kError,
-                   "HiPO is not available. Install with: pip install "
-                   "highspy[hipo]\nError: %s\n",
-                   hipo_loader.getLastError().c_str());
-      return HighsStatus::kError;
+      log_->printe("DynamicDepsLoader (Metis) is not available.");
+      return kRetOrderingError;
     }
 #endif
 
@@ -209,13 +206,14 @@ Int Analyse::getPermutation() {
 #else
     // Use HIPO via dynamic loading
     // DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
     if (hipo_loader.isAvailable()) {
       double control[AMD_CONTROL];
-      hipo_loader.hipo_extras_amd_defaults(control);
+      hipo_loader.fn_hipo_extras_amd_defaults_(control);
       double info[AMD_INFO];
 
       if (log_) log_->printDevInfo("Running AMD\n");
-      Int status = hipo_loader.hipo_extras_amd_order(n_, temp_ptr.data(), temp_rows.data(),
+      Int status = hipo_loader.fn_hipo_extras_amd_order_(n_, temp_ptr.data(), temp_rows.data(),
                                    perm_.data(), control, info);
       if (log_) log_->printDevInfo("AMD done\n");
 
@@ -225,15 +223,11 @@ Int Analyse::getPermutation() {
       }
       inversePerm(perm_, iperm_);
     } else {
-      log_->printe("AMD is not available. Install with: pip install "
-                   "highspy[hipo]\nError: %s\n",
-                   hipo_loader.getLastError().c_str());
-      return HighsStatus::kError;
+      log_->printe("DynamicDepsLoader (AMD) is not available.");
+      return kRetOrderingError;
     }
 #endif
-  }
-
-  else if (ordering_ == "rcm") {
+  } else if (ordering_ == "rcm") {
     // ----------------------------
     // ------ RCM -----------------
     // ----------------------------
@@ -253,10 +247,11 @@ Int Analyse::getPermutation() {
 #else
     // Use HIPO via dynamic loading
     // DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
     if (hipo_loader.isAvailable()) {
       if (log_) log_->printDevInfo("Running RCM\n");
 
-      Int status = hipo_loader.hipo_extras_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
+      Int status = hipo_loader.fn_hipo_extras_genrcm_(n_, temp_ptr.back(), temp_ptr.data(),
                                temp_rows.data(), perm_.data());
       if (log_) log_->printDevInfo("RCM done\n");
 
@@ -265,16 +260,12 @@ Int Analyse::getPermutation() {
         return kRetOrderingError;
       }
       inversePerm(perm_, iperm_);
-
     } else {
       // if (log_) log_->printe("Invalid ordering option passed to Analyse\n");
-      log_->printe( "RCM is not available. Install with: pip install "
-                   "highspy[hipo]\nError: %s\n",
-                   hipo_loader.getLastError().c_str());
-      return HighsStatus::kError;
+      log_->printe("DynamicDepsLoader (RCM) is not available.");
+      return kRetOrderingError;
     }
 #endif
-
   } else {
     if (log_) log_->printe("Invalid ordering option passed to Analyse\n");
     return kRetOrderingError;
