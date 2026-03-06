@@ -743,6 +743,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
   // Place the non-binary columns to the front (all general ints relaxed)
   // Use vectorsum to track original row coefficients of binary columns.
+  HighsInt numVbsUsed = 0;
   HighsInt i = 0;
   while (i < numNz - numBinCols) {
     HighsInt col = inds[i];
@@ -755,6 +756,10 @@ bool HighsTransformedLp::transformSNFRelaxation(
       std::swap(vals[i], vals[numNz - numBinCols]);
       continue;
     }
+    if (lb == -kHighsInf || ub == kHighsInf) {
+      vectorsum.clear();
+      return false;
+    }
     ++i;
   }
 
@@ -764,11 +769,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
     double lb = getLb(col);
     double ub = getUb(col);
-
-    if (lb == -kHighsInf || ub == kHighsInf) {
-      vectorsum.clear();
-      return false;
-    }
 
     if (ub - lb < mip.options_mip_->small_matrix_value) {
       rhs -= std::min(lb, ub) * vals[i];
@@ -939,6 +939,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -=
               aggrconstant + (complementvlb && inclbincolvlb ? -bincoef : 0);
           if (inclbincolvlb) vectorsum.values[vbcol] = 0;
+          numVbsUsed++;
           break;
         case BoundType::kVariableUb:
           // vub: y_j <= u'_j x_j + d_j. c_j coef of x_j in row
@@ -973,6 +974,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -=
               aggrconstant + (complementvub && inclbincolvub ? -bincoef : 0);
           if (inclbincolvub) vectorsum.values[vbcol] = 0;
+          numVbsUsed++;
           break;
       }
     }
@@ -982,7 +984,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
   vectorsum.clear();
   snfr.rhs = static_cast<double>(tmpSnfrRhs);
-  if (numNz == 0) return false;
+  if (numNz == 0 || numVbsUsed == 0) return false;
   return true;
 }
 
