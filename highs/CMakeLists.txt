@@ -193,9 +193,9 @@ else()
   # Optional HIPO
   if (HIPO)
 
-    if (HIPO_EXTRAS_PYTHON_BUILD)
-      target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
-    endif()
+    # if (HIPO_PYTHON_EXTRAS_BUILD)
+    #   target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
+    # endif()
     if (PYTHON_BUILD_SETUP)
       target_compile_definitions(highs PRIVATE PYTHON_BUILD_SETUP)
     endif()

@@ -449,7 +449,7 @@ set(highs_headers_python
   )
 
 
-  set(hipo_sources
+set(hipo_sources_python
     highs/ipm/hipo/ipm/CurtisReidScaling.cpp
     highs/ipm/hipo/ipm/IpmData.cpp
     highs/ipm/hipo/ipm/FactorHiGHSSolver.cpp
@@ -461,7 +461,7 @@ set(highs_headers_python
     highs/ipm/hipo/ipm/Solver.cpp)
     # highs/ipm/hipo/HipoCApi.cpp)
 
-set(hipo_headers
+set(hipo_headers_python
     highs/ipm/hipo/ipm/CurtisReidScaling.h
     highs/ipm/hipo/ipm/IpmData.h
     highs/ipm/hipo/ipm/FactorHiGHSSolver.h
@@ -477,7 +477,7 @@ set(hipo_headers
     highs/ipm/hipo/ipm/Status.h)
     # highs/ipm/hipo/HipoCApi.h)
 
-set(factor_highs_sources
+set(factor_highs_sources_python
     highs/ipm/hipo/factorhighs/Analyse.cpp
     highs/ipm/hipo/factorhighs/CallAndTimeBlas.cpp
     highs/ipm/hipo/factorhighs/CliqueStack.cpp
@@ -496,7 +496,7 @@ set(factor_highs_sources
     highs/ipm/hipo/factorhighs/Swaps.cpp
     highs/ipm/hipo/factorhighs/Symbolic.cpp)
 
-set(factor_highs_headers
+set(factor_highs_headers_python
     highs/ipm/hipo/factorhighs/Analyse.h
     highs/ipm/hipo/factorhighs/CallAndTimeBlas.h
     highs/ipm/hipo/factorhighs/CliqueStack.h
@@ -517,13 +517,13 @@ set(factor_highs_headers
     highs/ipm/hipo/factorhighs/Symbolic.h
     highs/ipm/hipo/factorhighs/Timing.h)
 
-set(hipo_util_sources
+set(hipo_util_sources_python
     highs/ipm/hipo/auxiliary/Auxiliary.cpp
     highs/ipm/hipo/auxiliary/KrylovMethods.cpp
     highs/ipm/hipo/auxiliary/Log.cpp
     highs/ipm/hipo/auxiliary/VectorOperations.cpp)
 
-set(hipo_util_headers
+set(hipo_util_headers_python
     highs/ipm/hipo/auxiliary/Auxiliary.h
     highs/ipm/hipo/auxiliary/IntConfig.h
     highs/ipm/hipo/auxiliary/KrylovMethods.h
@@ -531,7 +531,7 @@ set(hipo_util_headers
     highs/ipm/hipo/auxiliary/mycblas.h
     highs/ipm/hipo/auxiliary/VectorOperations.h)
 
-set(hipo_orderings_sources
+set(hipo_orderings_sources_python
     extern/amd/amd_1.c
     extern/amd/amd_2.c
     extern/amd/amd_aat.c
@@ -570,7 +570,7 @@ set(hipo_orderings_sources
     extern/metis/libmetis/wspace.c
     extern/rcm/rcm.cpp)
 
-set(hipo_orderings_headers
+set(hipo_orderings_headers_python
     extern/amd/amd_internal.h
     extern/amd/amd.h
     extern/amd/SuiteSparse_config.h

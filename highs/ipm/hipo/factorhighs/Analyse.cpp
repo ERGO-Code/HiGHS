@@ -124,7 +124,7 @@ Int Analyse::getPermutation() {
   }
 
   if (ordering_ == "metis") {
-#ifndef HIPO_EXTRAS
+#ifndef PYTHON_BUILD_SETUP
     // ----------------------------
     // ----- METIS ----------------
     // ----------------------------
@@ -191,7 +191,7 @@ Int Analyse::getPermutation() {
     // ----------------------------
     // ------ AMD -----------------
     // ----------------------------
-#ifndef HIPO_EXTRAS
+#ifndef PYTHON_BUILD_SETUP
     double control[AMD_CONTROL];
     Highs_amd_defaults(control);
     double info[AMD_INFO];
@@ -238,7 +238,7 @@ Int Analyse::getPermutation() {
     // ------ RCM -----------------
     // ----------------------------
 
-#ifndef HIPO_EXTRAS
+#ifndef PYTHON_BUILD_SETUP
     if (log_) log_->printDevInfo("Running RCM\n");
 
     Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),

@@ -42,10 +42,25 @@ extern "C" HIPO_EXTRAS_API int hipo_extras_metis_nodend(
   return Highs_METIS_NodeND(nvtxs, xadj, adjncy, vwgt, options, perm, iperm);
 }
 
-extern "C" HIPO_EXTRAS_API int hipo_extras_amd_defaults(
-extern "C" HIPO_EXTRAS_API int hipo_extras_amd_order(
+extern "C" HIPO_EXTRAS_API void hipo_extras_amd_defaults(double Control[]) {
+  Highs_amd_defaults(Control);
+}
 
-extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(
+extern "C" HIPO_EXTRAS_API int hipo_extras_amd_order(
+    amd_int n, const amd_int Ap[], const amd_int Ai[], amd_int P[],
+    double Control[], double Info[]) {
+  HighsInt status = Highs_amd_order(n, Ap, Ai, P, Control, Info);
+  return status;
+}
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(HighsInt node_num,
+                                                  HighsInt adj_num,
+                                                  const HighsInt adj_row[],
+                                                  const HighsInt adj[],
+                                                  HighsInt perm[]) {
+  HighsInt status = Highs_genrcm(node_num, adj_num, adj_row, adj, perm);
+  return status;
+}
 
 // extern "C" HIPO_EXTRAS_API HighsStatus hipo_solve_lp(
 //     const HighsOptions& options,

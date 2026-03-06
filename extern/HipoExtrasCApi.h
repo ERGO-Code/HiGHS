@@ -62,7 +62,9 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 // These use C++ references and HiGHS types directly
 #ifdef __cplusplus
 
+#include "amd/amd.h"
 #include "metis/metis.h"
+#include "rcm/rcm.h"
 
 // int Highs_METIS_SetDefaultOptions(idx_t *options);
 

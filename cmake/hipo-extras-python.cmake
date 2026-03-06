@@ -10,8 +10,8 @@ include(FindHipoDeps)
 
 # Create shared library
 add_library(highs_extras SHARED
-    ${hipo_orderings_sources}
-    ${hipo_orderings_headers}
+    ${hipo_orderings_sources_python}
+    ${hipo_orderings_headers_python}
     extern/HipoExtrasCApi.h
     extern/HipoExtrasCApi.cpp
     highs/ipm/hipo/auxiliary/OrderingPrint.h
@@ -21,6 +21,8 @@ add_library(highs_extras SHARED
 target_include_directories(highs_extras PRIVATE
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/hipo/ipm>
+    # ipm/IntConfig ?
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/amd>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/metis>
