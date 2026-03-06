@@ -166,7 +166,6 @@ TEST_CASE("highs-illegal-col-row-name", "[model_names]") {
       // LP
       lp.col_names_ = {"Col 0", "Col_0"};
       lp.row_names_ = {"Row^0"};
-      HighsStatus mps_write_return = HighsStatus::kWarning;
     }
     status = h.passModel(lp);
     REQUIRE(status != HighsStatus::kError);

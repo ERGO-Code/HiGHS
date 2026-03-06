@@ -112,7 +112,6 @@ TEST_CASE("qpsolver", "[qpsolver]") {
 
   for (auto& solver : solvers) {
     highs.setOptionValue("solver", solver);
-    const HighsModel& model = highs.getModel();
     const HighsInfo& info = highs.getInfo();
     const HighsSolution& solution = highs.getSolution();
     const double& objective_function_value = info.objective_function_value;
@@ -249,7 +248,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
     hessian.value_ = {2.0};
 
     highs.setOptionValue("output_flag", dev_run);
-    const HighsModel& model = highs.getModel();
     const HighsInfo& info = highs.getInfo();
     const HighsSolution& solution = highs.getSolution();
     const double& objective_function_value = info.objective_function_value;
@@ -506,6 +504,7 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
 
   for (auto& solver : solvers) {
+    if (dev_run) printf("Testing solver %s\n", solver.c_str());
     // Run should fail since objective is non-convex
     REQUIRE(highs.run() == HighsStatus::kError);
   }
