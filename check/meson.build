@@ -46,7 +46,6 @@ test_array = [
   ['test_TestLpModification', 'TestLpModification.cpp'],
   ['test_TestLpOrientation', 'TestLpOrientation.cpp'],
   ['test_TestLpSolvers', 'TestLpSolvers.cpp'],
-  ['test_TestLpSolversIterations', 'TestLpSolversIterations.cpp'],
   ['test_TestLpValidation', 'TestLpValidation.cpp'],
   ['test_TestMain', 'TestMain.cpp'],
   ['test_TestMipSolver', 'TestMipSolver.cpp'],

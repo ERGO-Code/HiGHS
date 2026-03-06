@@ -74,7 +74,7 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   highs.setOptionValue("run_centring", true);
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("ipm_optimality_tolerance", 1e-2);
-  HighsStatus run_status = highs.run();
+  highs.run();
   const HighsSolution& solution = highs.getSolution();
   double solution_norm = 0;
   for (HighsInt ix = 0; ix < dim; ix++) {
