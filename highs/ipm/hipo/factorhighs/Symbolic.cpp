@@ -73,7 +73,6 @@ void Symbolic::print(const Log& log, bool verbose) const {
   log_stream << textline("Serial memory:") << memoryString(serial_storage_)
              << '\n';
   log_stream << textline("Flops:") << sci(flops_, 0, 1) << '\n';
-  log_stream << textline("Ordering:") << ordering << '\n';
   if (verbose) {
     log_stream << textline("Sparse ops:") << sci(spops_, 0, 1) << '\n';
     log_stream << textline("Critical ops:") << sci(critops_, 0, 1) << '\n';

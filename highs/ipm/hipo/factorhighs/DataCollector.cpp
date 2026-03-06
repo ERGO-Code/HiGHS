@@ -104,20 +104,17 @@ void DataCollector::printTimes(const Log& log) const {
 
 #if HIPO_TIMING_LEVEL >= 2
 
-  log_stream << "\tOrdering:               "
-             << fix(times[kTimeAnalyseOrdering], 8, 4) << " ("
-             << fix(times[kTimeAnalyseOrdering] / times[kTimeAnalyse] * 100, 4, 1)
-             << "%)\n";
   log_stream << "\tTree:                   "
              << fix(times_[kTimeAnalyseTree], 8, 4) << " ("
              << fix(times_[kTimeAnalyseTree] / times_[kTimeAnalyse] * 100, 4, 1)
              << "%)\n";
   log_stream << "\tCounts:                 "
              << fix(times_[kTimeAnalyseCount], 8, 4) << " ("
-             << fix(times_[kTimeAnalyseCount] / times_[kTimeAnalyse] * 100, 4, 1)
+             << fix(times_[kTimeAnalyseCount] / times_[kTimeAnalyse] * 100, 4,
+                    1)
              << "%)\n";
-  log_stream << "\tSupernodes:             " << fix(times_[kTimeAnalyseSn], 8, 4)
-             << " ("
+  log_stream << "\tSupernodes:             "
+             << fix(times_[kTimeAnalyseSn], 8, 4) << " ("
              << fix(times_[kTimeAnalyseSn] / times_[kTimeAnalyse] * 100, 4, 1)
              << "%)\n";
   log_stream << "\tReorder:                "
@@ -132,18 +129,20 @@ void DataCollector::printTimes(const Log& log) const {
              << "%)\n";
   log_stream << "\tRelative indices:       "
              << fix(times_[kTimeAnalyseRelInd], 8, 4) << " ("
-             << fix(times_[kTimeAnalyseRelInd] / times_[kTimeAnalyse] * 100, 4, 1)
+             << fix(times_[kTimeAnalyseRelInd] / times_[kTimeAnalyse] * 100, 4,
+                    1)
              << "%)\n";
 #endif
 
   log_stream << "----------------------------------------------------\n";
-  log_stream << "Factorise time          \t" << fix(times_[kTimeFactorise], 8, 4)
-             << "\n";
+  log_stream << "Factorise time          \t"
+             << fix(times_[kTimeFactorise], 8, 4) << "\n";
 
 #if HIPO_TIMING_LEVEL >= 2
   log_stream << "\tPrepare fact:           "
              << fix(times_[kTimeFactorisePrepare], 8, 4) << " ("
-             << fix(times_[kTimeFactorisePrepare] / times_[kTimeFactorise] * 100,
+             << fix(times_[kTimeFactorisePrepare] / times_[kTimeFactorise] *
+                        100,
                     4, 1)
              << "%)\n";
   log_stream << "\tAssemble original:      "
@@ -180,8 +179,8 @@ void DataCollector::printTimes(const Log& log) const {
 
   log_stream << "\t\tmain:           " << fix(times_[kTimeDenseFact_main], 8, 4)
              << "\n";
-  log_stream << "\t\tSchur:          " << fix(times_[kTimeDenseFact_schur], 8, 4)
-             << "\n";
+  log_stream << "\t\tSchur:          "
+             << fix(times_[kTimeDenseFact_schur], 8, 4) << "\n";
   log_stream << "\t\tkernel:         "
              << fix(times_[kTimeDenseFact_kernel], 8, 4) << "\n";
   log_stream << "\t\tconvert:        "
@@ -207,8 +206,8 @@ void DataCollector::printTimes(const Log& log) const {
              << fix(times_[kTimeSolveSolve_dense], 8, 4) << "\n";
   log_stream << "\t\tsparse:         "
              << fix(times_[kTimeSolveSolve_sparse], 8, 4) << "\n";
-  log_stream << "\t\tswap:           " << fix(times_[kTimeSolveSolve_swap], 8, 4)
-             << "\n";
+  log_stream << "\t\tswap:           "
+             << fix(times_[kTimeSolveSolve_swap], 8, 4) << "\n";
 #endif
   log_stream << "----------------------------------------------------\n";
 
@@ -223,37 +222,44 @@ void DataCollector::printTimes(const Log& log) const {
   log_stream << "BLAS time               \t" << fix(total_blas_time, 8, 4)
              << '\n';
   log_stream << "\tcopy:           \t" << fix(times_[kTimeBlas_copy], 8, 4)
-             << " (" << fix(times_[kTimeBlas_copy] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_copy] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_copy - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\taxpy:           \t" << fix(times_[kTimeBlas_axpy], 8, 4)
-             << " (" << fix(times_[kTimeBlas_axpy] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_axpy] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_axpy - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\tscal:           \t" << fix(times_[kTimeBlas_scal], 8, 4)
-             << " (" << fix(times_[kTimeBlas_scal] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_scal] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_scal - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\tswap:           \t" << fix(times_[kTimeBlas_swap], 8, 4)
-             << " (" << fix(times_[kTimeBlas_swap] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_swap] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_swap - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\tgemv:           \t" << fix(times_[kTimeBlas_gemv], 8, 4)
-             << " (" << fix(times_[kTimeBlas_gemv] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_gemv] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_gemv - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\ttrsv:           \t" << fix(times_[kTimeBlas_trsv], 8, 4)
-             << " (" << fix(times_[kTimeBlas_trsv] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_trsv] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_trsv - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\ttpsv:           \t" << fix(times_[kTimeBlas_tpsv], 8, 4)
-             << " (" << fix(times_[kTimeBlas_tpsv] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_tpsv] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_tpsv - kTimeBlasStart], 10)
              << " calls\n";
@@ -263,17 +269,20 @@ void DataCollector::printTimes(const Log& log) const {
              << integer(blas_calls_[kTimeBlas_ger - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\ttrsm:           \t" << fix(times_[kTimeBlas_trsm], 8, 4)
-             << " (" << fix(times_[kTimeBlas_trsm] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_trsm] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_trsm - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\tsyrk:           \t" << fix(times_[kTimeBlas_syrk], 8, 4)
-             << " (" << fix(times_[kTimeBlas_syrk] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_syrk] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_syrk - kTimeBlasStart], 10)
              << " calls\n";
   log_stream << "\tgemm:           \t" << fix(times_[kTimeBlas_gemm], 8, 4)
-             << " (" << fix(times_[kTimeBlas_gemm] / total_blas_time * 100, 4, 1)
+             << " ("
+             << fix(times_[kTimeBlas_gemm] / total_blas_time * 100, 4, 1)
              << "%) in "
              << integer(blas_calls_[kTimeBlas_gemm - kTimeBlasStart], 10)
              << " calls\n";
