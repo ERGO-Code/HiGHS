@@ -1346,24 +1346,26 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 #endif
 
   // Copy data to later generate lifted simple generalized flow cover cut
+  const HighsMipSolver& mip = lpRelaxation.getMipSolver();
   std::vector<double> flowCoverVals;
   std::vector<HighsInt> flowCoverInds;
   double flowCoverRhs = rhs_;
   double flowCoverEfficacy = 0;
-  if (genFlowCover && !lpRelaxation.getMipSolver().submip &&
-      !lpRelaxation.getMipSolver().mipdata_->continuous_cols.empty() &&
-      lpRelaxation.getMipSolver().options_mip_->mip_cut_flow_cover &&
+  if (genFlowCover && !mip.submip && !mip.mipdata_->continuous_cols.empty() &&
+      mip.options_mip_->mip_cut_flow_cover &&
       static_cast<double>(inds_.size()) <= getMaxFlowCoverLen()) {
-    bool hasNonBinaryBeforePreprocess = false;
+    bool hasContinuousColBeforePreProcess = false;
     for (size_t i = 0; i != inds_.size(); ++i) {
-      if (inds_[i] < lpRelaxation.getMipSolver().numCol() &&
-          !lpRelaxation.getMipSolver().mipdata_->domain.isBinary(inds_[i]) &&
+      if (inds_[i] < mip.numCol() && mip.isColContinuous(inds_[i]) &&
+          mip.mipdata_->domain.col_upper_[inds_[i]] -
+                  mip.mipdata_->domain.col_lower_[inds_[i]] >
+              feastol &&
           std::abs(vals_[i]) > 10 * feastol) {
-        hasNonBinaryBeforePreprocess = true;
+        hasContinuousColBeforePreProcess = true;
         break;
       }
     }
-    if (!hasNonBinaryBeforePreprocess) {
+    if (!hasContinuousColBeforePreProcess) {
       genFlowCover = false;
     } else {
       flowCoverVals = vals_;
@@ -1448,15 +1450,11 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     for (HighsInt i = 0; i != rowlen_; ++i) {
       HighsInt col = inds_[i];
       viol += vals_[i] * sol[col];
-      if (vals_[i] >= 0 &&
-          sol[col] <=
-              lpRelaxation.getMipSolver().mipdata_->domain.col_lower_[col] +
-                  lpRelaxation.getMipSolver().mipdata_->feastol)
+      if (vals_[i] >= 0 && sol[col] <= mip.mipdata_->domain.col_lower_[col] +
+                                           mip.mipdata_->feastol)
         continue;
-      if (vals_[i] < 0 &&
-          sol[col] >=
-              lpRelaxation.getMipSolver().mipdata_->domain.col_upper_[col] -
-                  lpRelaxation.getMipSolver().mipdata_->feastol)
+      if (vals_[i] < 0 && sol[col] >= mip.mipdata_->domain.col_upper_[col] -
+                                          mip.mipdata_->feastol)
         continue;
       sqrnorm += vals_[i] * vals_[i];
     }
@@ -1479,8 +1477,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   vals = vals_.data();
   rhs = rhs_;
 
-  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(inds, vals,
-                                                               rowlen, rhs_);
+  mip.mipdata_->debugSolution.checkCut(inds, vals, rowlen, rhs_);
   // apply cut postprocessing including scaling and removal of small
   // coefficients
   if (!postprocessCut()) return false;
@@ -1488,8 +1485,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   vals_.resize(rowlen);
   inds_.resize(rowlen);
 
-  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      inds_.data(), vals_.data(), rowlen, rhs_);
+  mip.mipdata_->debugSolution.checkCut(inds_.data(), vals_.data(), rowlen,
+                                       rhs_);
 
   // finally determine the violation of the cut in the original space
   HighsCDouble violation = -rhs_;
@@ -1497,14 +1494,13 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   if (violation <= 10 * feastol) return false;
 
-  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-      inds, vals, rowlen, rhs_);
+  mip.mipdata_->domain.tightenCoefficients(inds, vals, rowlen, rhs_);
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
-  HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(), inds_.data(),
-                                     vals_.data(), inds_.size(), rhs_,
-                                     integralSupport && integralCoefficients);
+  HighsInt cutindex =
+      cutpool.addCut(mip, inds_.data(), vals_.data(), inds_.size(), rhs_,
+                     integralSupport && integralCoefficients);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
