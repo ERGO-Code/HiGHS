@@ -8022,11 +8022,15 @@ void HPresolve::extractVarBounds(HighsInt row) {
     }
 
     // add vlb
-    if (vlbConstant != -kHighsInf)
+    if (vlbConstant != -kHighsInf &&
+        std::max(0.0, vbCoef) + static_cast<HighsCDouble>(vlbConstant) >
+            model->col_lower_[nonzero.index()] + primal_feastol)
       mipsolver->mipdata_->implications.addVLB(nonzero.index(), binCol, vbCoef,
                                                vlbConstant);
     // add vub
-    if (vubConstant != kHighsInf)
+    if (vubConstant != kHighsInf &&
+        std::min(0.0, vbCoef) + static_cast<HighsCDouble>(vubConstant) <
+            model->col_upper_[nonzero.index()] - primal_feastol)
       mipsolver->mipdata_->implications.addVUB(nonzero.index(), binCol, vbCoef,
                                                vubConstant);
 
