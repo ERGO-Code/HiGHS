@@ -900,3 +900,13 @@ TEST_CASE("presolve-rule-off", "[highs_test_presolve]") {
   }
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2874-3.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
+}

@@ -3,8 +3,12 @@
 #include <limits>
 
 #include "Status.h"
+#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
+#include "metis/metis.h"
+#include "parallel/HighsParallel.h"
+#include "rcm/rcm.h"
 
 namespace hipo {
 
@@ -35,7 +39,7 @@ void FactorHiGHSSolver::clear() {
 // Build structure and values of matrices
 // =========================================================================
 
-Int FactorHiGHSSolver::buildASstructure(Int64 nz_limit) {
+Int FactorHiGHSSolver::buildASstructure() {
   // Build lower triangular structure of the augmented system.
   // Build values of AS that will not change during the iterations.
 
@@ -44,7 +48,7 @@ Int FactorHiGHSSolver::buildASstructure(Int64 nz_limit) {
   const Int nzBlock11 = model_.qp() ? nzQ_ : nA_;
 
   // AS matrix must fit into HighsInt
-  if ((Int64)nzBlock11 + mA_ + nzA_ > nz_limit) return kStatusOverflow;
+  if ((Int64)nzBlock11 + mA_ + nzA_ >= kHighsIInf) return kStatusOverflow;
 
   ptrAS_.resize(nA_ + mA_ + 1);
   rowsAS_.resize(nzBlock11 + nzA_ + mA_);
@@ -100,7 +104,7 @@ Int FactorHiGHSSolver::buildASvalues(const std::vector<double>& scaling) {
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::buildNEstructure(Int64 nz_limit) {
+Int FactorHiGHSSolver::buildNEstructure() {
   // Build lower triangular structure of AAt.
   // This approach uses a column-wise copy of A, a partial row-wise copy and a
   // vector of corresponding indices.
@@ -175,7 +179,9 @@ Int FactorHiGHSSolver::buildNEstructure(Int64 nz_limit) {
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error.
-    if ((Int64)ptrNE_[row] + nz_in_col >= nz_limit) return kStatusOverflow;
+    if ((Int64)ptrNE_[row] + nz_in_col >=
+        NE_nz_limit_.load(std::memory_order_relaxed))
+      return kStatusOverflow;
 
     // update pointers
     ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
@@ -252,7 +258,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
 
   Clock clock;
   if (Int status = buildASstructure()) return status;
-  info_.matrix_structure_time = clock.stop();
+  info_.AS_structure_time = clock.stop();
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(nA_ + mA_, -1);
@@ -260,27 +266,32 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
 
   log_.printDevInfo("Performing AS analyse phase\n");
 
-  return chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S);
+  clock.start();
+  Int status =
+      chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S, ordering_AS_, "AS");
+  info_.analyse_AS_time += clock.stop();
+
+  return status;
 }
 
-Int FactorHiGHSSolver::analyseNE(Symbolic& S, Int64 nz_limit) {
-  // Perform analyse phase of augmented system and return symbolic factorisation
-  // in object S and the status. If building the matrix failed, the status is
-  // set to kStatusOverflow.
+Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
+  // Perform analyse phase of normal equations and return symbolic factorisation
+  // in object S and the status. Structure of the matrix must be already
+  // computed.
 
-  if (model_.nonSeparableQp()) return kStatusErrorAnalyse;
-  if (model_.m() == 0) return kStatusErrorAnalyse;
-
-  Clock clock;
-  if (Int status = buildNEstructure(nz_limit)) return status;
-  info_.matrix_structure_time = clock.stop();
+  if (rowsNE_.empty() || ptrNE_.empty()) return kStatusErrorAnalyse;
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(mA_, 1);
 
   log_.printDevInfo("Performing NE analyse phase\n");
 
-  return chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S);
+  Clock clock;
+  Int status =
+      chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S, ordering_NE_, "NE");
+  info_.analyse_NE_time += clock.stop();
+
+  return status;
 }
 
 // =========================================================================
@@ -416,35 +427,60 @@ Int FactorHiGHSSolver::chooseNla() {
   bool overflow_NE = false;
   bool overflow_AS = false;
 
-  Clock clock;
+  auto run_structure_NE = [&]() {
+    if ((model_.m() > kMinRowsForDensity &&
+         model_.maxColDensity() > kDenseColThresh) ||
+        model_.nonSeparableQp() || model_.m() == 0) {
+      failure_NE = true;
+    } else {
+      Clock clock;
+      Int status = buildNEstructure();
+      info_.NE_structure_time = clock.stop();
+      if (status) {
+        failure_NE = true;
+        if (status == kStatusOverflow) {
+          log_.printDevInfo("Integer overflow forming NE matrix\n");
+          overflow_NE = true;
+        }
+        return;
+      }
+    }
+  };
 
-  // Perform analyse phase of augmented system
-  Int AS_status = analyseAS(symb_AS);
-  if (AS_status) failure_AS = true;
-  if (AS_status == kStatusOverflow) {
-    log_.printDevInfo("Integer overflow forming AS matrix\n");
-    overflow_AS = true;
-  }
+  auto run_analyse_NE = [&]() {
+    if (failure_NE) return;
+    Int NE_status = analyseNE(symb_NE);
+    if (NE_status) failure_NE = true;
+  };
 
-  // Perform analyse phase of normal equations
-  if (model_.m() > kMinRowsForDensity &&
-      model_.maxColDensity() > kDenseColThresh) {
-    // Normal equations would be too expensive because there are dense
-    // columns, so skip it.
-    failure_NE = true;
-  } else {
+  auto run_analyse_AS = [&]() {
+    Int AS_status = analyseAS(symb_AS);
+    if (AS_status) failure_AS = true;
+    if (AS_status == kStatusOverflow) {
+      log_.printDevInfo("Integer overflow forming AS matrix\n");
+      overflow_AS = true;
+    }
+
     // If NE has more nonzeros than the factor of AS, then it's likely that AS
     // will be preferred, so stop computation of NE.
     Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
     if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
+    NE_nz_limit_.store(NE_nz_limit, std::memory_order_relaxed);
+  };
 
-    Int NE_status = analyseNE(symb_NE, NE_nz_limit);
-    if (NE_status) failure_NE = true;
-    if (NE_status == kStatusOverflow) {
-      log_.printDevInfo("Integer overflow forming NE matrix\n");
-      overflow_NE = true;
-    }
+  // In parallel, run AS analyse and build NE structure. NE analyse runs only
+  // after AS analyse is finished, so that it can be skipped based on the number
+  // of nz of NE matrix and AS factor.
+  if (options_.parallel == kHighsOffString) {
+    run_analyse_AS();
+    run_structure_NE();
+  } else {
+    TaskGroupSpecial tg;
+    tg.spawn([&]() { run_analyse_AS(); });
+    tg.spawn([&]() { run_structure_NE(); });
+    tg.taskWait();
   }
+  run_analyse_NE();
 
   Int status = kStatusOk;
 
@@ -509,7 +545,8 @@ Int FactorHiGHSSolver::chooseNla() {
 Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
                                       const std::vector<Int>& ptr,
                                       const std::vector<Int>& signs,
-                                      Symbolic& S) {
+                                      Symbolic& S, std::string& ordering,
+                                      const std::string& nla) {
   // Run analyse phase.
   // - If ordering is "amd", "metis", "rcm" run only the ordering requested.
   // - If ordering is "choose", run "amd", "metis", and choose the best.
@@ -526,33 +563,118 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     // rcm is much worse in general, so no point in trying for now
   }
 
+  // vector<bool> is not thread-safe
+  std::vector<char> failure(orderings_to_try.size(), 0);
+
+  if (nla == "NE") {
+    if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
+      log_.printDevInfo("NE interrupted\n");
+      return kStatusErrorAnalyse;
+    }
+  }
+
+  // compute full-format matrix without diagonal entries
+  std::vector<Int> full_ptr, full_rows;
+  fullFromLower(ptr, rows, full_ptr, full_rows);
+  Int n = full_ptr.size() - 1;
+  std::vector<Int> perm(n), iperm(n);
+
+  std::vector<std::vector<Int>> permutations(orderings_to_try.size(),
+                                             std::vector<Int>(n));
+
   std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
-  std::vector<bool> status(orderings_to_try.size(), 0);
-  Int num_success = 0;
 
-  for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
-    clock.start();
-    status[i] =
-        FH_.analyse(symbolics[i], rows, ptr, signs, orderings_to_try[i]);
-    info_.analyse_AS_time += clock.stop();
+  auto run_ordering_and_analyse = [&](Int i) {
+    // compute ordering
+    if (orderings_to_try[i] == kHipoMetisString) {
+      idx_t options[METIS_NOPTIONS];
+      Highs_METIS_SetDefaultOptions(options);
+      options[METIS_OPTION_SEED] = kMetisSeed;
 
-    if (status[i] && log_.debug(2)) {
+      // set logging of Metis depending on debug level
+      options[METIS_OPTION_DBGLVL] = 0;
+      if (log_.debug(2))
+        options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
+
+      // no2hop improves the quality of ordering in general
+      options[METIS_OPTION_NO2HOP] = 1;
+
+      log_.printDevInfo("Running Metis\n");
+      std::vector<Int> iperm(n);
+
+      Int status =
+          Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
+                             options, permutations[i].data(), iperm.data());
+
+      log_.printDevInfo("Metis done\n");
+      if (status != METIS_OK) {
+        log_.printDevInfo("Error with Metis\n");
+        failure[i] = true;
+      }
+    } else if (orderings_to_try[i] == kHipoAmdString) {
+      double control[AMD_CONTROL];
+      Highs_amd_defaults(control);
+      double info[AMD_INFO];
+
+      log_.printDevInfo("Running AMD\n");
+      Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
+                                   permutations[i].data(), control, info);
+      log_.printDevInfo("AMD done\n");
+
+      if (status != AMD_OK) {
+        log_.printDevInfo("Error with AMD\n");
+        failure[i] = true;
+      }
+    } else if (orderings_to_try[i] == kHipoRcmString) {
+      log_.printDevInfo("Running RCM\n");
+      Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
+                                full_rows.data(), permutations[i].data());
+      log_.printDevInfo("RCM done\n");
+
+      if (status != 0) {
+        log_.printDevInfo("Error with RCM\n");
+        failure[i] = true;
+      }
+    } else {
+      assert(1 == 0);
+    }
+
+    if (failure[i]) return;
+
+    failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
+
+    if (failure[i] && log_.debug(2)) {
       log_.print("Failed symbolic:");
       symbolics[i].print(log_, true);
     }
+  };
 
-    if (!status[i]) ++num_success;
+  if (options_.parallel == kHighsOffString) {
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i)
+      run_ordering_and_analyse(i);
+  } else
+    highs::parallel::for_each(
+        0, orderings_to_try.size(),
+        [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
+
+  Int num_success = 0;
+  for (bool b : failure) {
+    if (!b) ++num_success;
   }
 
   if (orderings_to_try.size() < 2) {
     S = std::move(symbolics[0]);
+    ordering = orderings_to_try[0];
 
   } else if (orderings_to_try.size() == 2) {
     // if there's only one success, obvious choice
-    if (status[0] && !status[1])
+    if (failure[0] && !failure[1]) {
       S = std::move(symbolics[1]);
-    else if (!status[0] && status[1])
+      ordering = orderings_to_try[1];
+    } else if (!failure[0] && failure[1]) {
       S = std::move(symbolics[0]);
+      ordering = orderings_to_try[0];
+    }
 
     else if (num_success > 1) {
       // need to choose the better ordering
@@ -591,6 +713,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       assert(chosen == 0 || chosen == 1);
 
       S = std::move(symbolics[chosen]);
+      ordering = orderings_to_try[chosen];
     }
 
   } else {
@@ -637,6 +760,11 @@ Int FactorHiGHSSolver::setNla() {
   } else
     assert(1 == 0);
 
+  if (log_.debug(1))
+    log_stream << textline("Ordering:")
+               << (options_.nla == kHipoAugmentedString ? ordering_AS_
+                                                        : ordering_NE_)
+               << '\n';
   log_.print(log_stream);
 
   return kStatusOk;
