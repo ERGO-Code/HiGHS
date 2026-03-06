@@ -62,6 +62,10 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 // These use C++ references and HiGHS types directly
 #ifdef __cplusplus
 
+#include "metis/metis.h"
+
+// int Highs_METIS_SetDefaultOptions(idx_t *options);
+
 // #include "lp_data/HighsCallback.h"
 // #include "lp_data/HighsInfo.h"
 // #include "lp_data/HighsLp.h"
@@ -124,6 +128,24 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 //     HighsInfo& highs_info,
 //     HighsCallback& callback
 // );
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_metis_set_default_options(
+  idx_t *options
+);
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_metis_nodend(
+    idx_t* nvtxs, const idx_t* xadj, const idx_t* adjncy, idx_t* vwgt,
+    idx_t* options, idx_t* perm, idx_t* iperm);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_amd_defaults(double Control[]);
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_amd_order(amd_int n, const amd_int Ap[],
+                                       const amd_int Ai[], amd_int P[],
+                                       double Control[], double Info[]);
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(HighsInt node_num, HighsInt adj_num,
+                                    const HighsInt adj_row[],
+                                    const HighsInt adj[], HighsInt perm[]);
 
 #endif  // __cplusplus
 

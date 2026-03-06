@@ -8,8 +8,19 @@ set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources}
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
 if(HIPO)
-  set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
-  set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
+  if (NOT PYTHON_BUILD_SETUP)
+    set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources}
+     ${hipo_orderings_sources})
+    set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
+     ${hipo_orderings_headers})
+  else()
+    set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
+    set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
+        ../extern/amd/amd.h
+        ../extern/metis/metis.h
+        ../extern/rcm/rcm.h
+    )
+  endif()
 endif()
 
 # Configure the config windows version file
@@ -184,6 +195,9 @@ else()
 
     if (HIPO_EXTRAS_PYTHON_BUILD)
       target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
+    endif()
+    if (PYTHON_BUILD_SETUP)
+      target_compile_definitions(highs PRIVATE PYTHON_BUILD_SETUP)
     endif()
 
     target_include_directories(highs PRIVATE

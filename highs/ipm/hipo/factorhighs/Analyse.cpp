@@ -9,11 +9,17 @@
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "ReturnValues.h"
-#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
+
+#ifndef PYTHON_BUILD_SETUP
+#include "amd/amd.h"
 #include "metis/metis.h"
 #include "rcm/rcm.h"
+#else
+#include "DynamicDepsLoader.h"
+#endif
+
 
 namespace hipo {
 
@@ -149,7 +155,7 @@ Int Analyse::getPermutation() {
     DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
     if (hipo_loader.isAvailable()) {
       idx_t options[METIS_NOPTIONS];
-      Highs_METIS_SetDefaultOptions(options);
+      hipo_loader.hipo_extras_metis_set_default_options(options);
       options[METIS_OPTION_SEED] = kMetisSeed;
 
       // set logging of Metis depending on debug level
@@ -163,7 +169,7 @@ Int Analyse::getPermutation() {
       if (log_) log_->printDevInfo("Running Metis\n");
 
       Int status =
-          Highs_METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(), NULL,
+        hipo_loader.hipo_extras_metis_nodend(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                              options, perm_.data(), iperm_.data());
 
       if (log_) log_->printDevInfo("Metis done\n");
@@ -202,14 +208,14 @@ Int Analyse::getPermutation() {
     inversePerm(perm_, iperm_);
 #else
     // Use HIPO via dynamic loading
-    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+    // DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
     if (hipo_loader.isAvailable()) {
       double control[AMD_CONTROL];
-      Highs_amd_defaults(control);
+      hipo_loader.hipo_extras_amd_defaults(control);
       double info[AMD_INFO];
 
       if (log_) log_->printDevInfo("Running AMD\n");
-      Int status = Highs_amd_order(n_, temp_ptr.data(), temp_rows.data(),
+      Int status = hipo_loader.hipo_extras_amd_order(n_, temp_ptr.data(), temp_rows.data(),
                                    perm_.data(), control, info);
       if (log_) log_->printDevInfo("AMD done\n");
 
@@ -246,12 +252,12 @@ Int Analyse::getPermutation() {
     inversePerm(perm_, iperm_);
 #else
     // Use HIPO via dynamic loading
-    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+    // DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
     if (hipo_loader.isAvailable()) {
       if (log_) log_->printDevInfo("Running RCM\n");
 
-      Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
-                                temp_rows.data(), perm_.data());
+      Int status = hipo_loader.hipo_extras_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
+                               temp_rows.data(), perm_.data());
       if (log_) log_->printDevInfo("RCM done\n");
 
       if (status != 0) {

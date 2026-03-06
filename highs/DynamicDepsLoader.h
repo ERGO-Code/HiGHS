@@ -17,6 +17,13 @@
 // Forward declaration
 // class HighsLpSolverObject;
 
+// #if IDXTYPEWIDTH == 32
+// typedef int32_t idx_t;
+
+#include "amd/amd.h"
+#include "metis/metis.h"
+#include "rcm/rcm.h"
+
 // ABI version for compatibility checking
 // Increment this when the C API signature changes
 constexpr int kHipoExtrasAbiVersion = 1;
@@ -29,6 +36,24 @@ typedef int (*hipo_extras_get_abi_version_t)();
 
 // Get the version string of the loaded HiPO library
 typedef const char* (*hipo_extras_get_version_t)();
+
+// typedef HighsStatus (*hipo_solve_lp_t)(
+typedef int (*hipo_extras_metis_set_default_options_t)(idx_t* options);
+
+typedef int (*hipo_extras_metis_nodend_t)(idx_t* nvtxs, const idx_t* xadj,
+                                          const idx_t* adjncy, idx_t* vwgt,
+                                          idx_t* options, idx_t* perm,
+                                          idx_t* iperm);
+
+typedef void (*hipo_extras_amd_defaults_t)(double Control[]);
+
+typedef int (*hipo_extras_amd_order_t)(amd_int n, const amd_int Ap[],
+                                       const amd_int Ai[], amd_int P[],
+                                       double Control[], double Info[]);
+
+typedef int (*hipo_extras_genrcm_t)(HighsInt node_num, HighsInt adj_num,
+                                    const HighsInt adj_row[],
+                                    const HighsInt adj[], HighsInt perm[]);
 
 // Solve LP using HiPO - uses actual HiGHS types for type safety
 // Note: ABI version check ensures struct layouts match between builds
@@ -47,7 +72,7 @@ typedef const char* (*hipo_extras_get_version_t)();
 
 /**
  * Dynamic loader for the optional HiPO library.
- * 
+ *
  * This class handles runtime loading of the HiPO shared library,
  * allowing HiGHS to optionally use HiPO when it's installed via
  * the highspy-hipo package, without requiring HiPO at compile time.
@@ -62,21 +87,21 @@ class DynamicDepsLoader {
   /**
    * Check if the HiPO library is available and compatible.
    * This performs lazy initialization on first call.
-   * 
+   *
    * @return true if HiPO is loaded and ABI-compatible
    */
   bool isAvailable();
 
   /**
    * Get the version string of the loaded HiPO library.
-   * 
+   *
    * @return Version string, or empty string if not loaded
    */
   std::string getVersion() const;
 
   /**
    * Solve LP using the dynamically loaded HiPO solver.
-   * 
+   *
    * @param solver_object The LP solver object containing problem data
    * @return HighsStatus indicating success or failure
    */
@@ -146,6 +171,14 @@ class DynamicDepsLoader {
 
   // # todo: add function pointers here
   // hipo_solve_lp_t fn_solve_lp_ = nullptr;
+  hipo_extras_metis_set_default_options_t
+      fn_hipo_extras_metis_set_default_options_ = nullptr;
+  hipo_extras_metis_nodend_t fn_hipo_extras_metis_nodend_ = nullptr;
+
+  hipo_extras_amd_defaults_t fn_hipo_extras_amd_defaults_ = nullptr;
+  hipo_extras_amd_order_t fn_hipo_extras_amd_order_ = nullptr;
+
+  hipo_extras_genrcm_t fn_hipo_extras_genrcm_ = nullptr;
 };
 
 #endif  // LP_DATA_DYNAMIC_HIPO_LOADER_H_

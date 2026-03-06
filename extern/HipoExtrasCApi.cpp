@@ -13,9 +13,13 @@
 
 extern "C" {
 
-HIPO_EXTRAS_API int hipo_extras_get_abi_version(void) { return HIPO_EXTRAS_ABI_VERSION; }
+HIPO_EXTRAS_API int hipo_extras_get_abi_version(void) {
+  return HIPO_EXTRAS_ABI_VERSION;
+}
 
-HIPO_EXTRAS_API const char* hipo_extras_get_version(void) { return HIPO_EXTRAS_VERSION; }
+HIPO_EXTRAS_API const char* hipo_extras_get_version(void) {
+  return HIPO_EXTRAS_VERSION;
+}
 
 }  // extern "C"
 
@@ -26,6 +30,22 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void) { return HIPO_EXTRAS_V
 // 1. Both highspy and highspy-extras are built with the same C++ compiler/ABI
 // 2. The ABI version check ensures struct layouts match between builds
 // 3. We only need C linkage for symbol lookup, not C type compatibility
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_metis_set_default_options(
+    idx_t* options) {
+  return Highs_METIS_SetDefaultOptions(options);
+}
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_metis_nodend(
+    idx_t* nvtxs, const idx_t* xadj, const idx_t* adjncy, idx_t* vwgt,
+    idx_t* options, idx_t* perm, idx_t* iperm) {
+  return Highs_METIS_NodeND(nvtxs, xadj, adjncy, vwgt, options, perm, iperm);
+}
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_amd_defaults(
+extern "C" HIPO_EXTRAS_API int hipo_extras_amd_order(
+
+extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(
 
 // extern "C" HIPO_EXTRAS_API HighsStatus hipo_solve_lp(
 //     const HighsOptions& options,
@@ -41,7 +61,6 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void) { return HIPO_EXTRAS_V
 //   return solveLpHipo(options, timer, lp, highs_basis, highs_solution,
 //                      model_status, highs_info, callback);
 // }
-
 
 // HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
 //   return solveLpHipo(solver_object.options_, solver_object.timer_,
@@ -60,8 +79,8 @@ void openblas_set_num_threads(int num_threads);
 // HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
 //                         const HighsLp& lp, HighsBasis& highs_basis,
 //                         HighsSolution& highs_solution,
-//                         HighsModelStatus& model_status, HighsInfo& highs_info,
-//                         HighsCallback& callback) {
+//                         HighsModelStatus& model_status, HighsInfo&
+//                         highs_info, HighsCallback& callback) {
 //   // Use HiPO
 //   //
 //   // Can return HighsModelStatus (HighsStatus) values:
@@ -118,7 +137,8 @@ void openblas_set_num_threads(int num_threads);
 //   // hipo::LogHighs::debug
 
 //   hipo_options.timeless_log = options.timeless_log;
-//   hipo_options.feasibility_tol = std::min(options.primal_feasibility_tolerance,
+//   hipo_options.feasibility_tol =
+//   std::min(options.primal_feasibility_tolerance,
 //                                           options.dual_feasibility_tolerance);
 //   hipo_options.optimality_tol = options.ipm_optimality_tolerance;
 //   hipo_options.crossover_tol = options.start_crossover_tolerance;
@@ -163,7 +183,8 @@ void openblas_set_num_threads(int num_threads);
 //       hipo_options.parallel = hipo::kOptionParallelOn;
 //     else {
 //       highsLogUser(options.log_options, HighsLogType::kError,
-//                    "Unknown value of option %s\n", kHipoParallelString.c_str());
+//                    "Unknown value of option %s\n",
+//                    kHipoParallelString.c_str());
 //       model_status = HighsModelStatus::kSolveError;
 //       return HighsStatus::kError;
 //     }
@@ -196,7 +217,8 @@ void openblas_set_num_threads(int num_threads);
 //       options.hipo_ordering != kHipoRcmString &&
 //       options.hipo_ordering != kHighsChooseString) {
 //     highsLogUser(options.log_options, HighsLogType::kError,
-//                  "Unknown value of option %s\n", kHipoOrderingString.c_str());
+//                  "Unknown value of option %s\n",
+//                  kHipoOrderingString.c_str());
 //     model_status = HighsModelStatus::kSolveError;
 //     return HighsStatus::kError;
 //   }
@@ -241,7 +263,8 @@ void openblas_set_num_threads(int num_threads);
 //   // statuses is a bit different.
 //   // hipo.solved(), hipo.stopped(), hipo.failed() can be used to query if the
 //   // status belongs to the solved, stopped or failed group.
-//   // If primal-dual feasible solution is found (non-vertex solution), then the
+//   // If primal-dual feasible solution is found (non-vertex solution), then
+//   the
 //   // status is kStatusPDfeas.
 //   // If crossover is successful, then the status is kStatusBasic.
 //   // Otherwise, the specific crossover status can be accessed through the
@@ -252,7 +275,8 @@ void openblas_set_num_threads(int num_threads);
 //   hipo::Status solve_status = hipo_info.status;
 //   highs_info.ipm_iteration_count +=
 //       hipo_info.ipm_iter + hipo_info.ipx_info.iter;
-//   highs_info.crossover_iteration_count += hipo_info.ipx_info.updates_crossover;
+//   highs_info.crossover_iteration_count +=
+//   hipo_info.ipx_info.updates_crossover;
 
 //   // Report hipo status
 //   const HighsStatus solve_return_status =
@@ -264,7 +288,8 @@ void openblas_set_num_threads(int num_threads);
 
 //   // Report crossover status
 //   const HighsStatus crossover_return_status =
-//       reportHipoCrossoverStatus(options, hipo_info.ipx_info.status_crossover);
+//       reportHipoCrossoverStatus(options,
+//       hipo_info.ipx_info.status_crossover);
 //   if (crossover_return_status == HighsStatus::kError) {
 //     model_status = HighsModelStatus::kSolveError;
 //     return HighsStatus::kError;
@@ -371,8 +396,8 @@ void openblas_set_num_threads(int num_threads);
 //     }
 //     // Convert the IPX basic solution to a HiGHS basic solution
 //     HighsStatus status = ipxBasicSolutionToHighsBasicSolution(
-//         options.log_options, lp, rhs, constraints, hipo_solution, highs_basis,
-//         highs_solution);
+//         options.log_options, lp, rhs, constraints, hipo_solution,
+//         highs_basis, highs_solution);
 //     if (status != HighsStatus::kOk) {
 //       highsLogUser(
 //           options.log_options, HighsLogType::kError,
@@ -416,12 +441,11 @@ void openblas_set_num_threads(int num_threads);
 // }
 
 // void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
-//                               const hipo::Int num_col, const hipo::Int num_row,
-//                               const std::vector<double>& rhs,
-//                               const std::vector<char>& constraint_type,
-//                               const hipo::Solver& hipo,
-//                               const HighsModelStatus model_status,
-//                               HighsSolution& highs_solution) {
+//                               const hipo::Int num_col, const hipo::Int
+//                               num_row, const std::vector<double>& rhs, const
+//                               std::vector<char>& constraint_type, const
+//                               hipo::Solver& hipo, const HighsModelStatus
+//                               model_status, HighsSolution& highs_solution) {
 //   std::vector<double> x(num_col);
 //   std::vector<double> xl(num_col);
 //   std::vector<double> xu(num_col);
@@ -436,7 +460,8 @@ void openblas_set_num_threads(int num_threads);
 // }
 
 // HighsStatus reportHipoStatus(const HighsOptions& options,
-//                              const hipo::Int status, const hipo::Solver& hipo) {
+//                              const hipo::Int status, const hipo::Solver&
+//                              hipo) {
 //   if (hipo.solved()) {
 //     highsLogUser(options.log_options, HighsLogType::kInfo, "Hipo: Solved\n");
 //     return HighsStatus::kOk;

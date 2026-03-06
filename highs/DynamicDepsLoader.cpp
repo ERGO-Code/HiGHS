@@ -33,9 +33,7 @@ DynamicDepsLoader::DynamicDepsLoader() = default;
 
 DynamicDepsLoader::~DynamicDepsLoader() { unloadLibrary(); }
 
-bool DynamicDepsLoader::isAvailable() {
-  return available_;
-}
+bool DynamicDepsLoader::isAvailable() { return available_; }
 
 std::string DynamicDepsLoader::getVersion() const { return version_; }
 
@@ -58,7 +56,8 @@ bool DynamicDepsLoader::loadLibrary(const std::string& path) {
     FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
                    nullptr, error, 0, reinterpret_cast<LPSTR>(&msg), 0,
                    nullptr);
-    last_error_ = "Failed to load " + path + ": " + (msg ? msg : "Unknown error");
+    last_error_ =
+        "Failed to load " + path + ": " + (msg ? msg : "Unknown error");
     if (msg) LocalFree(msg);
     return false;
   }
@@ -66,7 +65,8 @@ bool DynamicDepsLoader::loadLibrary(const std::string& path) {
   lib_handle_ = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
   if (!lib_handle_) {
     const char* err = dlerror();
-    last_error_ = "Failed to load " + path + ": " + (err ? err : "Unknown error");
+    last_error_ =
+        "Failed to load " + path + ": " + (err ? err : "Unknown error");
     return false;
   }
 #endif
@@ -85,6 +85,12 @@ void DynamicDepsLoader::unloadLibrary() {
   fn_get_abi_version_ = nullptr;
   fn_get_version_ = nullptr;
 
+  fn_hipo_extras_metis_set_default_options_ = nullptr;
+  fn_hipo_extras_metis_nodend_ = nullptr;
+  fn_hipo_extras_amd_defaults_ = nullptr;
+  fn_hipo_extras_amd_order_ = nullptr;
+  fn_hipo_extras_genrcm_ = nullptr;
+
   // TODO add here
   // fn_solve_lp_ = nullptr;
 }
@@ -101,10 +107,24 @@ void* DynamicDepsLoader::resolveSymbol(const char* name) {
 bool DynamicDepsLoader::resolveFunctions() {
   if (!lib_handle_) return false;
 
-  fn_get_abi_version_ =
-      reinterpret_cast<hipo_extras_get_abi_version_t>(resolveSymbol("hipo_extras_get_abi_version"));
-  fn_get_version_ =
-      reinterpret_cast<hipo_extras_get_version_t>(resolveSymbol("hipo_extras_get_version"));
+  fn_get_abi_version_ = reinterpret_cast<hipo_extras_get_abi_version_t>(
+      resolveSymbol("hipo_extras_get_abi_version"));
+  fn_get_version_ = reinterpret_cast<hipo_extras_get_version_t>(
+      resolveSymbol("hipo_extras_get_version"));
+
+  fn_hipo_extras_metis_set_default_options_ =
+      reinterpret_cast<hipo_extras_metis_set_default_options_t>(
+          resolveSymbol("hipo_extras_metis_set_default_options"));
+  fn_hipo_extras_metis_nodend_ = reinterpret_cast<hipo_extras_metis_nodend_t>(
+      resolveSymbol("hipo_extras_metis_nodend"));
+
+  fn_hipo_extras_amd_defaults_ = reinterpret_cast<hipo_extras_amd_defaults_t>(
+      resolveSymbol("hipo_extras_amd_defaults"));
+  fn_hipo_extras_amd_order_ = reinterpret_cast<hipo_extras_amd_order_t>(
+      resolveSymbol("hipo_extras_amd_order"));
+
+  fn_hipo_extras_genrcm_ = reinterpret_cast<hipo_extras_genrcm_t>(
+      resolveSymbol("hipo_extras_genrcm"));
 
   // fn_solve_lp_ =
   //     reinterpret_cast<hipo_solve_lp_t>(resolveSymbol("hipo_solve_lp"));
@@ -112,8 +132,15 @@ bool DynamicDepsLoader::resolveFunctions() {
   // todo: add functions here!
 
   // if (!fn_get_abi_version_ || !fn_get_version_ || !fn_solve_lp_) {
-  if (!fn_get_abi_version_ || !fn_get_version_) {
+  if (!fn_get_abi_version_ || !fn_get_version_ ||
+      !fn_hipo_extras_metis_set_default_options_ ||
+      !fn_hipo_extras_metis_nodend_ ||
+      !fn_hipo_extras_amd_defaults_ ||
+      !fn_hipo_extras_amd_order_ ||
+      !fn_hipo_extras_genrcm_
+    ) {
     last_error_ = "Failed to resolve required HiPO functions";
+
     return false;
   }
 
@@ -172,12 +199,23 @@ bool DynamicDepsLoader::tryLoad(const std::string path) {
 
 //   // Call the dynamically loaded solve function with actual types
 //   return fn_solve_lp_(
-//       solver_object.options_,
-//       solver_object.timer_,
-//       solver_object.lp_,
-//       solver_object.basis_,
-//       solver_object.solution_,
-//       solver_object.model_status_,
-//       solver_object.highs_info_,
-//       solver_object.callback_);
-// }
+
+  // HighsStatus DynamicDepsLoader::solveLp(HighsLpSolverObject& solver_object)
+  // {
+  //   std::cout << "Using HiPO version: " << getVersion() << std::endl;
+
+  //   if (!isAvailable()) {
+  //     return HighsStatus::kError;
+  //   }
+
+  //   // Call the dynamically loaded solve function with actual types
+  //   return fn_solve_lp_(
+  //       solver_object.options_,
+  //       solver_object.timer_,
+  //       solver_object.lp_,
+  //       solver_object.basis_,
+  //       solver_object.solution_,
+  //       solver_object.model_status_,
+  //       solver_object.highs_info_,
+  //       solver_object.callback_);
+  // }
