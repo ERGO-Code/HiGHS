@@ -615,6 +615,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
       std::swap(inds[position], inds[numNz - numBinCols]);
       std::swap(inds[numNz - numBinCols], inds[numNz]);
     } else {
+      numBinCols--;
       inds[position] = inds[numNz];
       vals[position] = vals[numNz];
     }

@@ -1356,7 +1356,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
       static_cast<double>(inds_.size()) <= getMaxFlowCoverLen()) {
     bool hasNonBinaryBeforePreprocess = false;
     for (size_t i = 0; i != inds_.size(); ++i) {
-      if (!lpRelaxation.getMipSolver().mipdata_->domain.isBinary(inds_[i]) &&
+      if (inds_[i] < lpRelaxation.getMipSolver().numCol() &&
+          !lpRelaxation.getMipSolver().mipdata_->domain.isBinary(inds_[i]) &&
           std::abs(vals_[i]) > 10 * feastol) {
         hasNonBinaryBeforePreprocess = true;
         break;
@@ -1737,7 +1738,7 @@ bool HighsCutGeneration::computeFlowCover() {
     assert(snfr.coef[i] == 1 || snfr.coef[i] == -1);
     assert(snfr.binSolval[i] >= -feastol && snfr.binSolval[i] <= 1 + feastol);
     // if u_i = 0 put i into N+ \ C+ or N- \ C-, i.e., not the cover
-    if (abs(snfr.vubCoef[i]) < feastol) {
+    if (std::abs(snfr.vubCoef[i]) < feastol) {
       snfr.flowCoverStatus[i] = -1;
       nNonFlowCover++;
     } else if (fractionality(snfr.binSolval[i]) > feastol) {
