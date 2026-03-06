@@ -106,6 +106,7 @@ class DynamicDepsLoader {
    * @return HighsStatus indicating success or failure
    */
   // HighsStatus solveLp(HighsLpSolverObject& solver_object);
+  // int hipo_extras_metis_set_default_options( idx_t *options);
 
   /**
    * Get the last error message if loading failed.

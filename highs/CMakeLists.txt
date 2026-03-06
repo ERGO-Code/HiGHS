@@ -14,6 +14,7 @@ if(HIPO)
     set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
      ${hipo_orderings_headers})
   else()
+    message(STATUS "HEREEEEEE")
     set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
     set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
         ../extern/amd/amd.h
@@ -193,12 +194,12 @@ else()
   # Optional HIPO
   if (HIPO)
 
-    # if (HIPO_PYTHON_EXTRAS_BUILD)
-    #   target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
-    # endif()
-    if (PYTHON_BUILD_SETUP)
-      target_compile_definitions(highs PRIVATE PYTHON_BUILD_SETUP)
+    if (HIPO_PYTHON_EXTRAS_BUILD)
+      target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
     endif()
+    # if (PYTHON_BUILD_SETUP)
+    #   target_compile_definitions(highs PRIVATE PYTHON_BUILD_SETUP)
+    # endif()
 
     target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>

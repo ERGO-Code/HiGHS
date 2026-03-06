@@ -219,3 +219,28 @@ bool DynamicDepsLoader::tryLoad(const std::string path) {
   //       solver_object.highs_info_,
   //       solver_object.callback_);
   // }
+
+// int DynamicDepsLoader::hipo_extras_metis_set_default_options(
+//   idx_t *options
+// ){
+//   return fn_hipo_extras_metis_set_default_options_(options);
+// }
+  // {
+  //   std::cout << "Using HiPO version: " << getVersion() << std::endl;
+
+  //   if (!isAvailable()) {
+  //     return HighsStatus::kError;
+  //   }
+
+  //   // Call the dynamically loaded solve function with actual types
+  //   return fn_solve_lp_(
+  //       solver_object.options_,
+  //       solver_object.timer_,
+  //       solver_object.lp_,
+  //       solver_object.basis_,
+  //       solver_object.solution_,
+  //       solver_object.model_status_,
+  //       solver_object.highs_info_,
+  //       solver_object.callback_);
+  // }
+

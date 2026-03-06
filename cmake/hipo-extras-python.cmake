@@ -1,7 +1,7 @@
 # HiPO Extras Python build module
 # Similar to python-highs.cmake but builds the HiPO deps shared library
 
-if (NOT HIPO_PYTHON_EXTRAS_BUILD)
+if (NOT HIPO_EXTRAS_LIBRARY_BUILD)
   return()
 endif()
 

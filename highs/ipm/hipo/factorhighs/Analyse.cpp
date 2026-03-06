@@ -12,7 +12,7 @@
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
 
-#ifndef PYTHON_BUILD_SETUP
+#ifndef HIPO_EXTRAS
 #include "amd/amd.h"
 #include "metis/metis.h"
 #include "rcm/rcm.h"
@@ -124,7 +124,7 @@ Int Analyse::getPermutation() {
   }
 
   if (ordering_ == "metis") {
-#ifndef PYTHON_BUILD_SETUP
+#ifndef HIPO_EXTRAS
     // ----------------------------
     // ----- METIS ----------------
     // ----------------------------
@@ -153,9 +153,9 @@ Int Analyse::getPermutation() {
 #else
     // Use HIPO via dynamic loading
     DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+    idx_t options[METIS_NOPTIONS];
     if (hipo_loader.isAvailable()) {
-      idx_t options[METIS_NOPTIONS];
-      hipo_loader.hipo_extras_metis_set_default_options(options);
+      hipo_loader.fn_hipo_extras_metis_set_default_options_(options);
       options[METIS_OPTION_SEED] = kMetisSeed;
 
       // set logging of Metis depending on debug level
@@ -169,7 +169,7 @@ Int Analyse::getPermutation() {
       if (log_) log_->printDevInfo("Running Metis\n");
 
       Int status =
-        hipo_loader.hipo_extras_metis_nodend(&n_, temp_ptr.data(), temp_rows.data(), NULL,
+        hipo_loader.fn_hipo_extras_metis_nodend_(&n_, temp_ptr.data(), temp_rows.data(), NULL,
                              options, perm_.data(), iperm_.data());
 
       if (log_) log_->printDevInfo("Metis done\n");
@@ -191,7 +191,7 @@ Int Analyse::getPermutation() {
     // ----------------------------
     // ------ AMD -----------------
     // ----------------------------
-#ifndef PYTHON_BUILD_SETUP
+#ifndef HIPO_EXTRAS
     double control[AMD_CONTROL];
     Highs_amd_defaults(control);
     double info[AMD_INFO];
@@ -238,7 +238,7 @@ Int Analyse::getPermutation() {
     // ------ RCM -----------------
     // ----------------------------
 
-#ifndef PYTHON_BUILD_SETUP
+#ifndef HIPO_EXTRAS
     if (log_) log_->printDevInfo("Running RCM\n");
 
     Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
