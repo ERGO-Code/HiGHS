@@ -108,5 +108,6 @@ const std::string highsBoolToString(const bool b,
 
 const std::string highsInsertMdEscapes(const std::string& from_string);
 const std::string highsInsertMdId(const std::string& from_string);
-
+const std::string highsTimeToString(const double time);
+const std::string highsTimeSecondToString(const double time);
 #endif

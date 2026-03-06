@@ -25,5 +25,9 @@ HiPO is now capable of solving convex QP problems. Option
 solver="qpasm" selects the previous active-set QP solver, while
 solver="hipo" or solver="ipm" selects the HiPO solver.
 
+Following PR [#2865](https://github.com/ERGO-Code/HiGHS/pull/2865),
+HiGHS performs logging during probing in MIP presolve and checks for
+time-out
+
 ## Build changes
 
