@@ -75,7 +75,7 @@ class FormatHandler {
   virtual void initFrontal() = 0;
   virtual void initClique() = 0;
   virtual void assembleFrontal(Int i, Int j, double val) = 0;
-  virtual void assembleFrontalMultiple(Int num, const double* child, Int nc,
+  virtual void assembleFrontalMultiple(Int& num, const double* child, Int nc,
                                        Int child_sn, Int row, Int col, Int i,
                                        Int j) = 0;
   virtual void assembleClique(const double* child, Int nc, Int child_sn) = 0;
