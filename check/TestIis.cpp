@@ -521,6 +521,9 @@ TEST_CASE("lp-get-iis-time-limit-feasible", "[iis]") {
   // Model status should be kOptimal
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
+  // fix-2870: min/sum/max simplex iteration counts and min/sum/max
+  // simplex times are unassigned: when no LPs have been solved, they
+  // should be all zero.
   reportIisInfo(highs.getOptions().log_options, iis.info_);
 
   highs.resetGlobalScheduler(true);
@@ -547,6 +550,8 @@ TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
 
   HighsIis iis;
   // Should return error due to time limit being reached
+  //
+  // fix-2870: this results in a model write to console
   REQUIRE(highs.getIis(iis) == HighsStatus::kError);
 
   // IIS should be invalid since computation could not complete
@@ -559,7 +564,8 @@ TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 0);
 
-  // Model status should be kInfeasible
+  // fix-2870: Model status should be kInfeasible, since this is known
+  // from HiGHS::run()
   const bool ok_model_status =
       highs.getModelStatus() == HighsModelStatus::kInfeasible;
   if (!ok_model_status)
@@ -568,6 +574,7 @@ TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
            highs.modelStatusToString(HighsModelStatus::kInfeasible).c_str());
   //  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
+  // fix-2870: min/sum/max simplex times are unassigned
   reportIisInfo(highs.getOptions().log_options, iis.info_);
 
   highs.resetGlobalScheduler(true);
