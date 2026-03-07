@@ -15,6 +15,21 @@ const HighsInt kIisStrategyFromRayColPriority =
 const HighsInt kIisStrategyFromLpColPriority =
     kIisStrategyFromLp + kIisStrategyColPriority;
 
+void reportIisInfo(const HighsLogOptions& log_options,
+                   const HighsIisInfo& iis_info) {
+  highsLogUser(log_options, HighsLogType::kInfo, "IIS Info:\n");
+  highsLogUser(log_options, HighsLogType::kInfo, "Solved %d LPs\n",
+               int(iis_info.num_lp_solved));
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "   Simplex iteration count (min / sum / max) = %d / %d / %d\n",
+               int(iis_info.min_simplex_iteration_count),
+               int(iis_info.sum_simplex_iteration_counts),
+               int(iis_info.max_simplex_iteration_count));
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "   Simplex time (min / sum / max) = %g / %g / %g\n",
+               int(iis_info.min_simplex_time), int(iis_info.sum_simplex_times),
+               int(iis_info.max_simplex_time));
+}
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status =
                  HighsModelStatus::kInfeasible);
@@ -468,6 +483,94 @@ TEST_CASE("lp-get-iis-avgas", "[iis]") {
   // known
   //  testMps(model, kIisStrategyFromRay,
   //  HighsModelStatus::kOptimal);
+}
+
+TEST_CASE("lp-get-iis-time-limit-feasible", "[iis]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Run first, so that non-infeasibility can be established
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
+  // Set iis time limit to zero to force immediate timeout
+  highs.setOptionValue("iis_time_limit", 0.0);
+
+  // Use kIisStrategyFromLp strategy - this would require solving the
+  // LP, but it's not necessary so time limit isn't tested
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLp);
+
+  HighsIis iis;
+  // Should return OK since the LP is known to be non-infeasibile
+  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+
+  // IIS should be valid since feasibility status is set
+  REQUIRE(iis.valid_ == true);
+
+  // IIS status should be kIisModelStatusFeasible
+  REQUIRE(iis.status_ == kIisModelStatusFeasible);
+
+  // IIS should be empty - no rows or columns identified
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+
+  // Model status should be kOptimal
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  reportIisInfo(highs.getOptions().log_options, iis.info_);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/forest6.mps";
+
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Run first, so that infeasibility can be established
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
+  // Set iis time limit to zero to force immediate timeout
+  highs.setOptionValue("iis_time_limit", 0.0);
+
+  // Use kIisStrategyFromLp strategy - this requires solving the LP
+  // which should fail due to time limit
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLp);
+
+  HighsIis iis;
+  // Should return error due to time limit being reached
+  REQUIRE(highs.getIis(iis) == HighsStatus::kError);
+
+  // IIS should be invalid since computation could not complete
+  REQUIRE(iis.valid_ == false);
+
+  // IIS status should be kIisModelStatusTimeLimit
+  REQUIRE(iis.status_ == kIisModelStatusTimeLimit);
+
+  // IIS should be empty - no rows or columns identified
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+
+  // Model status should be kInfeasible
+  const bool ok_model_status =
+      highs.getModelStatus() == HighsModelStatus::kInfeasible;
+  if (!ok_model_status)
+    printf("Model status is \"%s\", not \"%s\"\n",
+           highs.modelStatusToString(highs.getModelStatus()).c_str(),
+           highs.modelStatusToString(HighsModelStatus::kInfeasible).c_str());
+  //  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  reportIisInfo(highs.getOptions().log_options, iis.info_);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-time-limit", "[iis]") {

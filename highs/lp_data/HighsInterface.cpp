@@ -2021,7 +2021,7 @@ HighsStatus Highs::getIisInterface() {
     HighsStatus run_status = this->optimizeModel();
     options_.presolve = presolve;
     simplex_time += this->getRunTime();
-    simplex_iterations += -info_.simplex_iteration_count;
+    simplex_iterations += info_.simplex_iteration_count;
     this->iis_.info_.update(simplex_time, simplex_iterations);
 
     // Model should remain infeasible!
