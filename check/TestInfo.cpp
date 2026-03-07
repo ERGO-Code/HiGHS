@@ -3,7 +3,6 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-#include "io/FilereaderEms.h"
 #include "io/HMPSIO.h"
 
 const bool dev_run = false;
@@ -15,7 +14,7 @@ TEST_CASE("info-md", "[highs_info]") {
   // coverage
   const std::string info_file = "HighsInfo.md";
   REQUIRE(h.writeInfo(info_file) == HighsStatus::kOk);
-  //  std::remove(info_file.c_str());
+  std::remove(info_file.c_str());
 }
 
 TEST_CASE("highs-info", "[highs_info]") {

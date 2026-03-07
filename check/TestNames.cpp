@@ -89,8 +89,9 @@ TEST_CASE("highs-names", "[highs_names]") {
   status = highs.getColByName(col0_name, iCol);
   REQUIRE(status == HighsStatus::kError);
 
-  // Model can't be written
-  REQUIRE(highs.writeModel("") == HighsStatus::kError);
+  // Model can (since duplicates lead to generic names in fix-2887) be
+  // written
+  REQUIRE(highs.writeModel("") == HighsStatus::kWarning);
   if (dev_run) highs.writeSolution("", 1);
 
   // Reinstate name and model writes OK
@@ -102,8 +103,9 @@ TEST_CASE("highs-names", "[highs_names]") {
   REQUIRE(name == row0_name);
   iRow = lp.num_row_ / 2;
   REQUIRE(highs.passRowName(iRow, row0_name) == HighsStatus::kOk);
-  // Model can't be written
-  REQUIRE(highs.writeModel("") == HighsStatus::kError);
+  // Model can (since duplicates lead to generic names in fix-2887) be
+  // written
+  REQUIRE(highs.writeModel("") == HighsStatus::kWarning);
   if (dev_run) highs.writeSolution("", 1);
 
   // Now work with a name-less model
@@ -126,4 +128,61 @@ TEST_CASE("highs-model-name", "[model_names]") {
   highs.passModelName("new_name");
   name = lp.model_name_;
   REQUIRE(name == "new_name");
+}
+
+TEST_CASE("highs-illegal-col-row-name", "[model_names]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string lp_file = test_name + ".lp";
+  const std::string mps_file = test_name + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+
+  HighsStatus mps_write_return = HighsStatus::kWarning;
+  HighsStatus lp_write_return = HighsStatus::kWarning;
+  HighsStatus status = HighsStatus::kOk;
+  for (HighsInt k = 0; k < 3; k++) {
+    if (k == 0) {
+      // Repacing space with "_" is OK, but "^" is illegal for LP
+      lp.col_names_ = {"Col 0", "Col^1"};
+      lp.row_names_ = {"Row 0"};
+    } else if (k == 1) {
+      // Replacing blank with "c_ekk0" is OK, but "^" is illegal for
+      // LP
+      lp.col_names_ = {"", "Col^1"};
+      lp.row_names_ = {"Row 0"};
+    } else {
+      // Repacing space yields duplicate, and "^" is illegal for
+      // LP
+      lp.col_names_ = {"Col 0", "Col_0"};
+      lp.row_names_ = {"Row^0"};
+      HighsStatus mps_write_return = HighsStatus::kWarning;
+    }
+    status = h.passModel(lp);
+    REQUIRE(status != HighsStatus::kError);
+
+    status = h.writeModel(mps_file);
+    REQUIRE(status == mps_write_return);
+
+    status = h.writeModel(lp_file);
+    REQUIRE(status == lp_write_return);
+  }
+  status = h.readModel(mps_file);
+  REQUIRE(status == HighsStatus::kOk);
+
+  status = h.readModel(lp_file);
+  REQUIRE(status == HighsStatus::kOk);
+
+  std::remove(mps_file.c_str());
+  std::remove(lp_file.c_str());
 }
