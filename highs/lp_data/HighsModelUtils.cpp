@@ -369,10 +369,31 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp) {
                      lp.col_name_suffix_, lp.col_names_, lp.col_hash_);
   if (call_status == HighsStatus::kError) return call_status;
   HighsStatus return_status = call_status;
+  // Names for an indicator constratints have to be consistent with
+  // the vanilla row names, so extend any lp.row_names temporarily
+  // with indicator constraint names
+  const HighsInt num_indicators = lp.indicator_constraints_.size();
+  HighsInt need_num_row_names = lp.num_row_ + num_indicators;
+  if (num_indicators && lp.row_names_.size()) {
+    // Make space for indicator constraint names, and copy them in
+    lp.row_names_.resize(need_num_row_names);
+    for (HighsInt indicator_n = 0; indicator_n < num_indicators; indicator_n++)
+      lp.row_names_[lp.num_row_ + indicator_n] = lp.indicator_constraints_[indicator_n].name;
+  }
   call_status =
-      normaliseNames(log_options, false, lp.num_row_, lp.row_name_prefix_,
+      normaliseNames(log_options, false, need_num_row_names, lp.row_name_prefix_,
                      lp.row_name_suffix_, lp.row_names_, lp.row_hash_);
-  if (call_status != HighsStatus::kOk) return call_status;
+  if (call_status != HighsStatus::kOk) {
+    // On failure still have to resize 
+    lp.row_names_.resize(lp.num_row_);
+    return call_status;
+  }
+  if (num_indicators) {
+    // Copy back the indicator constraint names
+    for (HighsInt indicator_n = 0; indicator_n < num_indicators; indicator_n++)
+      lp.indicator_constraints_[indicator_n].name = lp.row_names_[lp.num_row_ + indicator_n];
+    lp.row_names_.resize(lp.num_row_);
+  }
   return return_status;
 }
 

@@ -638,8 +638,8 @@ HighsStatus writeMps(
   bool have_rhs = false;
   bool have_ranges = false;
   bool have_bounds = false;
-  bool have_indicators = false;
   bool have_int = false;
+  const HighsInt num_indicators = indicators.size();
   r_ty.resize(num_row);
   rhs.assign(num_row, 0);
   ranges.assign(num_row, 0);
@@ -712,7 +712,6 @@ HighsStatus writeMps(
       break;
     }
   }
-  have_indicators = indicators.size();
 
   highsLogDev(log_options, HighsLogType::kInfo,
               "Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
@@ -974,7 +973,7 @@ HighsStatus writeMps(
       }
     }
   }
-  if (have_indicators) {
+  if (num_indicators > 0) {
     fprintf(file, "INDICATORS\n");
     for (HighsInt indicator_n = 0; indicator_n < static_cast<HighsInt>(indicators.size()); indicator_n++) {
       assert(0==1);

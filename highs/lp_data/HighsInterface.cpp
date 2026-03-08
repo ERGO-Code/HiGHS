@@ -63,40 +63,40 @@ void Highs::reportModelStats() const {
   }
   const HighsInt a_num_nz = lp.a_matrix_.numNz();
   const HighsInt q_num_nz = hessian.dim_ > 0 ? hessian.numNz() : 0;
+  const HighsInt num_indicator = lp.indicator_constraints_.size();
   if (*log_options.log_dev_level) {
     highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
                 problem_type.c_str(), lp.model_name_.c_str());
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Row%s      : %" HIGHSINT_FORMAT "\n",
-                lp.num_row_ == 1 ? "" : "s", lp.num_row_);
+                "Row%s      : %d\n",
+                lp.num_row_ == 1 ? "" : "s", int(lp.num_row_));
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Col%s      : %" HIGHSINT_FORMAT "\n",
-                lp.num_col_ == 1 ? "" : "s", lp.num_col_);
+                "Col%s      : %d\n",
+                lp.num_col_ == 1 ? "" : "s", int(lp.num_col_));
     if (q_num_nz) {
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
+                  "Matrix Nz : %d\n", int(a_num_nz));
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
+                  "Hessian Nz: %d\n", int(q_num_nz));
     } else {
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Nonzero%s  : %" HIGHSINT_FORMAT "\n",
-                  a_num_nz == 1 ? "" : "s", a_num_nz);
+                  "Nonzero%s  : %d\n",
+                  a_num_nz == 1 ? "" : "s", int(a_num_nz));
     }
     if (num_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Integer   : %" HIGHSINT_FORMAT " (%" HIGHSINT_FORMAT
-                  " binary)\n",
-                  num_integer, num_binary);
+                  "Integer   : %d (%d binary)\n",
+                  int(num_integer), int(num_binary));
     if (num_semi_continuous)
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "SemiConts : %" HIGHSINT_FORMAT "\n", num_semi_continuous);
+                  "SemiConts : %d\n", int(num_semi_continuous));
     if (num_semi_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
-    if (lp.hasIndicatorConstraints())
+                  "SemiInt   : %d\n", int(num_semi_integer));
+    if (num_indicator)
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Indicators: %" HIGHSINT_FORMAT "\n",
-                  (HighsInt)lp.indicator_constraints_.size());
+                  "Indicator : %d\n",
+                  int(num_indicator));
   } else {
     std::stringstream stats_line;
     stats_line << problem_type;
@@ -121,10 +121,10 @@ void Highs::reportModelStats() const {
       stats_line << "; " << num_semi_continuous << " semi-continuous variables";
     if (num_semi_integer)
       stats_line << "; " << num_semi_integer << " semi-integer variables";
-    if (lp.hasIndicatorConstraints())
-      stats_line << "; " << lp.indicator_constraints_.size()
+    if (num_indicator)
+      stats_line << "; " << num_indicator
                  << " indicator constraint"
-                 << (lp.indicator_constraints_.size() == 1 ? "" : "s");
+                 << (num_indicator == 1 ? "" : "s");
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                  stats_line.str().c_str());
   }

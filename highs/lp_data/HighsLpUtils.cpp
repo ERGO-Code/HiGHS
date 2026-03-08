@@ -3370,8 +3370,8 @@ HighsLp withoutIndicatorConstraints(
   // Ensure column-wise format
   lp.a_matrix_.ensureColwise();
 
-  const bool have_row_names =
-      lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+  const bool have_row_names = lp.num_row_ > 0 &&
+    lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
 
   // Collect all new rows from indicator constraints, stored per-column
   // for colwise insertion
