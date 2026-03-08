@@ -112,6 +112,9 @@ struct HighsLpMods {
   std::vector<HighsInt> save_tightened_semi_variable_upper_bound_index;
   std::vector<double> save_tightened_semi_variable_upper_bound_value;
 
+  // Indicator constraints with max big-M
+  std::vector<HighsInt> save_indicator_constraint_with_max_big_m;
+
   // Variables with infinite costs that are fixed during solve
   std::vector<HighsInt> save_inf_cost_variable_index;
   std::vector<double> save_inf_cost_variable_cost;

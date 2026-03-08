@@ -287,8 +287,9 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 HighsLp withoutSemiVariables(const HighsLp& lp, HighsSolution& solution,
                              const double primal_feasibility_tolerance);
 
-HighsLp withoutIndicatorConstraints(const HighsLp& lp,
-                                    const HighsLogOptions& log_options);
+HighsLp withoutIndicatorConstraints(
+    const HighsLp& lp, const HighsLogOptions& log_options,
+    std::vector<HighsInt> save_indicator_constraint_with_max_big_m);
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
 

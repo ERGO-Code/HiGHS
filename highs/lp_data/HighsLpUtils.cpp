@@ -3360,8 +3360,9 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   return lp;
 }
 
-HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
-                                    const HighsLogOptions& log_options) {
+HighsLp withoutIndicatorConstraints(
+    const HighsLp& lp_, const HighsLogOptions& log_options,
+    std::vector<HighsInt> save_indicator_constraint_with_max_big_m) {
   HighsLp lp = lp_;
   assert(lp.hasIndicatorConstraints());
   const HighsInt num_col = lp.num_col_;
@@ -3369,7 +3370,6 @@ HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
   // Ensure column-wise format
   lp.a_matrix_.ensureColwise();
 
-  const double kMaxIndicatorBigM = 1e8;
   const bool have_row_names =
       lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
 
@@ -3383,7 +3383,9 @@ HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
   };
   std::vector<NewRow> new_rows;
 
+  HighsInt iIndicatorCs = 0;
   for (const HighsIndicatorConstraint& ic : lp.indicator_constraints_) {
+    iIndicatorCs++;
     const HighsInt nz = ic.row_index.size();
     // Compute activity bounds: min_activity and max_activity of a^T x
     double min_activity = 0;
@@ -3427,6 +3429,7 @@ HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
                    kMaxIndicatorBigM);
       M_upper = kMaxIndicatorBigM;
       M_lower = kMaxIndicatorBigM;
+      save_indicator_constraint_with_max_big_m.push_back(iIndicatorCs);
     }
 
     // Upper bound constraint: z=v -> a^T x <= U
@@ -3479,7 +3482,13 @@ HighsLp withoutIndicatorConstraints(const HighsLp& lp_,
       new_rows.push_back(std::move(row));
     }
   }
-
+  HighsInt num_indicator_constraint_with_max_big_m =
+      save_indicator_constraint_with_max_big_m.size();
+  if (num_indicator_constraint_with_max_big_m) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%d indicator constraints have maximal big-M\n",
+                 int(num_indicator_constraint_with_max_big_m));
+  }
   if (new_rows.empty()) {
     lp.indicator_constraints_.clear();
     return lp;

@@ -56,6 +56,7 @@ bool HighsLp::hasMods() const {
          this->mods_.save_relaxed_semi_variable_lower_bound_index.size() > 0 ||
          this->mods_.save_tightened_semi_variable_upper_bound_index.size() >
              0 ||
+         this->mods_.save_indicator_constraint_with_max_big_m.size() > 0 ||
          this->mods_.save_inf_cost_variable_index.size() > 0;
 }
 
@@ -512,6 +513,7 @@ void HighsLpMods::clear() {
   this->save_relaxed_semi_variable_lower_bound_value.clear();
   this->save_tightened_semi_variable_upper_bound_index.clear();
   this->save_tightened_semi_variable_upper_bound_value.clear();
+  this->save_indicator_constraint_with_max_big_m.clear();
   this->save_inf_cost_variable_index.clear();
   this->save_inf_cost_variable_cost.clear();
   this->save_inf_cost_variable_lower.clear();
@@ -530,6 +532,7 @@ bool HighsLpMods::isClear() {
   if (this->save_relaxed_semi_variable_lower_bound_value.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_index.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_value.size()) return false;
+  if (this->save_indicator_constraint_with_max_big_m.size()) return false;
   return true;
 }
 

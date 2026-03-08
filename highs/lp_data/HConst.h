@@ -355,6 +355,9 @@ const HighsInt kHighsIllegalComplementarityCount = -1;
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
 
+// Maximum big-M for indicator constraints
+const double kMaxIndicatorBigM = 1e8;
+
 // Limit on primal values being realistic
 const double kExcessivePrimalValue = 1e25;
 
