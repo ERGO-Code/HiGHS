@@ -413,9 +413,10 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp,
                      lp.row_name_suffix_, lp.row_names_, lp.row_hash_, type);
   assert(call_status != HighsStatus::kError);
   if (num_indicators) {
-    // Copy back the indicator constraint names
+    // Copy back the indicator constraint names... 
     for (HighsInt indicator_n = 0; indicator_n < num_indicators; indicator_n++)
       lp.indicator_constraints_[indicator_n].name = lp.row_names_[lp.num_row_ + indicator_n];
+    // ... and resize back to size for vanilla rows
     lp.row_names_.resize(lp.num_row_);
   }
   if (call_status != HighsStatus::kOk) return call_status;
