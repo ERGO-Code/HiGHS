@@ -3423,10 +3423,6 @@ HighsLp withoutIndicatorConstraints(
                     ? std::max(0.0, ic.row_lower - min_activity)
                     : 0;
     } else {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "Indicator constraint has infinite variable bounds; using "
-                   "big-M = %.4g\n",
-                   kMaxIndicatorBigM);
       M_upper = kMaxIndicatorBigM;
       M_lower = kMaxIndicatorBigM;
       save_indicator_constraint_with_max_big_m.push_back(iIndicatorCs);
@@ -3482,12 +3478,13 @@ HighsLp withoutIndicatorConstraints(
       new_rows.push_back(std::move(row));
     }
   }
-  HighsInt num_indicator_constraint_with_max_big_m =
+  HighsInt num_with_max_big_m =
       save_indicator_constraint_with_max_big_m.size();
-  if (num_indicator_constraint_with_max_big_m) {
+  if (num_with_max_big_m) {
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "%d indicator constraints have maximal big-M\n",
-                 int(num_indicator_constraint_with_max_big_m));
+                 "%d indicator constraint%s have maximal big-M\n",
+                 int(num_with_max_big_m),
+		 num_with_max_big_m == 1 ? " has" : "s have");
   }
   if (new_rows.empty()) {
     lp.indicator_constraints_.clear();

@@ -73,6 +73,38 @@ TEST_CASE("indicator-simple-v0", "[highs_test_indicator]") {
   REQUIRE(fabs(solution.col_value[1] - 1.0) < double_equal_tolerance);
 }
 
+TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
+  // min x
+  // s.t. z=0 -> x >= 5
+  //      z binary, x in [0, inf)
+  // Optimal: z=1, x=0, obj=0
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  highs.addVar(0.0, inf);  // x (col 0)
+  highs.addVar(0.0, 1.0);  // z (col 1)
+
+  highs.changeColCost(0, 1.0);
+  highs.changeColCost(1, 0.0);
+  highs.changeColIntegrality(1, HighsVarType::kInteger);
+
+  // Indicator: z=0 -> x >= 5
+  HighsInt indices[] = {0};
+  double values[] = {1.0};
+  REQUIRE(highs.addIndicatorConstraint(1, 0, 1, indices, values, 5.0, inf) ==
+          HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  const HighsSolution& solution = highs.getSolution();
+  // z should be 1, x should be 0
+  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1] - 1.0) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("indicator-range", "[highs_test_indicator]") {
   // min x
   // s.t. z=1 -> 3 <= x <= 7
@@ -203,30 +235,6 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
   // Valid call should succeed
   REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
           HighsStatus::kOk);
-  highs.resetGlobalScheduler(true);
-}
-
-TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
-  // min x
-  // s.t. z=0 -> x >= 5
-  //      z binary, x in [0, inf)
-  // Optimal: z=1, x=0, obj=0
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-
-  highs.addVar(0.0, kHighsInf);  // x (col 0)
-  highs.addVar(0.0, 1.0);   // z (col 1)
-
-  highs.changeColCost(0, 1.0);
-  highs.changeColCost(1, 0.0);
-  highs.changeColIntegrality(1, HighsVarType::kInteger);
-
-  // Indicator: z=0 -> x >= 5
-  HighsInt indices[] = {0};
-  double values[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(1, 0, 1, indices, values, 5.0, inf) ==
-          HighsStatus::kOk);
-
   highs.resetGlobalScheduler(true);
 }
 
