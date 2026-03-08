@@ -4,7 +4,7 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = false;
+const bool dev_run = true;//false;//
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
@@ -130,6 +130,8 @@ TEST_CASE("indicator-forced", "[highs_test_indicator]") {
   const HighsSolution& solution = highs.getSolution();
   REQUIRE(fabs(solution.col_value[0] - 5.0) < double_equal_tolerance);
   REQUIRE(fabs(info.objective_function_value - 5.0) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("indicator-multiple", "[highs_test_indicator]") {
@@ -170,6 +172,7 @@ TEST_CASE("indicator-multiple", "[highs_test_indicator]") {
   REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[2] - 0.0) < double_equal_tolerance);
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("indicator-validation", "[highs_test_indicator]") {
@@ -200,10 +203,36 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
   // Valid call should succeed
   REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
           HighsStatus::kOk);
+  highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("indicator-mps-read", "[highs_test_indicator]") {
+TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
+  // min x
+  // s.t. z=0 -> x >= 5
+  //      z binary, x in [0, inf)
+  // Optimal: z=1, x=0, obj=0
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  highs.addVar(0.0, kHighsInf);  // x (col 0)
+  highs.addVar(0.0, 1.0);   // z (col 1)
+
+  highs.changeColCost(0, 1.0);
+  highs.changeColCost(1, 0.0);
+  highs.changeColIntegrality(1, HighsVarType::kInteger);
+
+  // Indicator: z=0 -> x >= 5
+  HighsInt indices[] = {0};
+  double values[] = {1.0};
+  REQUIRE(highs.addIndicatorConstraint(1, 0, 1, indices, values, 5.0, inf) ==
+          HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("indicator-mps-read-write-read", "[highs_test_indicator]") {
   // Test reading an MPS file with INDICATORS section
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/indicator1.mps";
   Highs highs;
@@ -221,4 +250,32 @@ TEST_CASE("indicator-mps-read", "[highs_test_indicator]") {
   REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
   REQUIRE(fabs(info.objective_function_value - 0.0) < double_equal_tolerance);
+
+  // Write MPS
+  std::string filename_mps = test_name + ".mps";
+  status = highs.writeModel(filename_mps);
+  REQUIRE(status == HighsStatus::kOk);
+
+  // Write lp
+  std::string filename_lp = test_name + ".lp";
+  status = highs.writeModel(filename_lp);
+  REQUIRE(status == HighsStatus::kOk);
+
+  status = highs.readModel(filename_mps);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getNumIndicatorConstraints() == 1);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  // z=1 -> x >= 5, min x, so optimal is z=0, x=0
+  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
+  REQUIRE(fabs(info.objective_function_value - 0.0) < double_equal_tolerance);
+
+  std::remove(filename_lp.c_str());
+  std::remove(filename_mps.c_str());
+
+
+  highs.resetGlobalScheduler(true);
 }
