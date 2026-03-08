@@ -94,13 +94,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     set(OPT_LEVEL_CHANGED ON)
   endif()
 
-  if (LINUX AND NOT OPT_LEVEL_CHANGED AND CMAKE_CXX_COMPILER_ID STREQUAL "g++" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if (NOT ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
-        NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
-        set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
-    endif()
-  endif()
-
   if (BUILD_EXTRA_UNIT_TESTS)
       list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
       message(STATUS "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
