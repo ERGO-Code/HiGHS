@@ -585,8 +585,10 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       hessian.dim_, lp.sense_, lp.offset_, lp.col_cost_, lp.col_lower_,
       lp.col_upper_, lp.row_lower_, lp.row_upper_, lp.a_matrix_.start_,
       lp.a_matrix_.index_, lp.a_matrix_.value_, hessian.start_, hessian.index_,
-      hessian.value_, lp.integrality_, local_objective_name, lp.col_names_,
-      lp.row_names_, use_free_format);
+      hessian.value_, lp.integrality_, lp.indicator_constraints_,
+      local_objective_name, lp.col_names_,
+      lp.row_names_, 
+      use_free_format);
   if (write_status == HighsStatus::kOk && warning_found)
     return HighsStatus::kWarning;
   return write_status;
@@ -602,7 +604,9 @@ HighsStatus writeMps(
     const vector<HighsInt>& a_start, const vector<HighsInt>& a_index,
     const vector<double>& a_value, const vector<HighsInt>& q_start,
     const vector<HighsInt>& q_index, const vector<double>& q_value,
-    const vector<HighsVarType>& integrality, const std::string& objective_name,
+    const vector<HighsVarType>& integrality,
+    const std::vector<HighsIndicatorConstraint>& indicators,
+    const std::string& objective_name,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format) {
   HighsInt num_no_cost_zero_columns = 0;
@@ -634,6 +638,7 @@ HighsStatus writeMps(
   bool have_rhs = false;
   bool have_ranges = false;
   bool have_bounds = false;
+  bool have_indicators = false;
   bool have_int = false;
   r_ty.resize(num_row);
   rhs.assign(num_row, 0);
@@ -707,6 +712,8 @@ HighsStatus writeMps(
       break;
     }
   }
+  have_indicators = indicators.size();
+
   highsLogDev(log_options, HighsLogType::kInfo,
               "Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
               highsBoolToString(have_rhs).c_str(),
@@ -965,6 +972,16 @@ HighsStatus writeMps(
           }
         }
       }
+    }
+  }
+  if (have_indicators) {
+    fprintf(file, "INDICATORS\n");
+    for (HighsInt indicator_n = 0; indicator_n < static_cast<HighsInt>(indicators.size()); indicator_n++) {
+      assert(0==1);
+      fprintf(file, " IF %-8s  %-8s  %d\n",
+	      indicators[indicator_n].name.c_str(),
+	      col_names[indicators[indicator_n].binary_col].c_str(),
+	      indicators[indicator_n].binary_value);
     }
   }
   if (q_dim) {

@@ -64,7 +64,9 @@ HighsStatus writeMps(
     const vector<HighsInt>& a_start, const vector<HighsInt>& a_index,
     const vector<double>& a_value, const vector<HighsInt>& q_start,
     const vector<HighsInt>& q_index, const vector<double>& q_value,
-    const vector<HighsVarType>& integrality, const std::string& objective_name,
+    const vector<HighsVarType>& integrality,
+    const std::vector<HighsIndicatorConstraint>& indicators,
+    const std::string& objective_name,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format = true);
 
