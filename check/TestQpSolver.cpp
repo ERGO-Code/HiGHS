@@ -504,6 +504,7 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
 
   for (auto& solver : solvers) {
+    if (dev_run) printf("Testing solver %s\n", solver.c_str());
     // Run should fail since objective is non-convex
     if (dev_run)
       printf("test-min-negative-definite for solver %s\n", solver.c_str());
