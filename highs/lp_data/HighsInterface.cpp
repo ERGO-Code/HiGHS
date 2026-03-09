@@ -1972,7 +1972,7 @@ HighsStatus Highs::getIisInterface() {
     HighsInt simplex_iterations = -info_.simplex_iteration_count;
     HighsStatus run_status = this->optimizeModel();
     simplex_time += this->getRunTime();
-    simplex_iterations += -info_.simplex_iteration_count;
+    simplex_iterations += info_.simplex_iteration_count;
     this->iis_.info_.update(simplex_time, simplex_iterations);
   }
   if (this->model_status_ == HighsModelStatus::kOptimal ||
@@ -2064,18 +2064,10 @@ HighsStatus Highs::getIisInterface() {
       if (dual_ray_value[iRow]) this->iis_.row_index_.push_back(iRow);
   } else if (lp_option) {
     // Full LP option chosen or no dual ray to use
-    //
-    // Working on the whole model so clear all solver data
-    this->invalidateSolverData();
     // Apply the elasticity filter to the whole model in order to
     // determine an infeasible subset of rows
     return_status = this->elasticityFilter(-1.0, -1.0, 1.0, nullptr, nullptr,
                                            nullptr, true);
-    // Due to the actions of Highs::elasticityFilter have to clear all
-    // solver data, retaining a copy of Highs::iis_ to restore it
-    HighsIis iis = this->iis_;
-    this->invalidateSolverData();
-    this->iis_ = iis;
   }
   // Do not continue if not using kIisStrategyIrreducible or if time limit is
   // reached
@@ -2127,14 +2119,14 @@ HighsStatus Highs::getIisInterface() {
 
 HighsStatus Highs::elasticityFilterReturn(
     const HighsStatus return_status, const std::string& original_model_name,
+    const HighsModelStatus original_model_status,
     const HighsInt original_num_col, const HighsInt original_num_row,
     const std::vector<double>& original_col_cost,
     const std::vector<double>& original_col_lower,
     const std::vector<double>& original_col_upper,
     const std::vector<HighsVarType>& original_integrality) {
   const HighsLp& lp = this->model_.lp_;
-  // The model status and IIS are cleared by restoring the original
-  // LP, so save them
+  // The IIS is cleared by restoring the original LP, so save it
   HighsIis iis = this->iis_;
   double objective_function_value = info_.objective_function_value;
   // Delete any additional rows and columns, and restore the original
@@ -2172,6 +2164,9 @@ HighsStatus Highs::elasticityFilterReturn(
   assert(lp.num_col_ == original_num_col);
   assert(lp.num_row_ == original_num_row);
 
+  // Clear solver data
+  this->invalidateSolverData();
+
   if (return_status == HighsStatus::kOk) {
     // Solution is invalidated by deleting rows and columns, but
     // primal values are correct. Have to recompute row activities,
@@ -2185,15 +2180,8 @@ HighsStatus Highs::elasticityFilterReturn(
     info_.valid = true;
   }
 
-  if (return_status == HighsStatus::kOk) {
-    // If the model is feasible, then the status of model is not known
-    if (iis.status_ == kIisModelStatusFeasible)
-      this->model_status_ = HighsModelStatus::kNotset;
-  } else {
-    // Runtime error has ocurred, so ensure that no misleading model status is
-    // set
-    this->model_status_ = HighsModelStatus::kNotset;
-  }
+  // Revert model status
+  this->model_status_ = original_model_status;
 
   // Restore IIS
   this->iis_ = iis;
@@ -2259,12 +2247,15 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   // Take copies of the original model name, dimensions and column
   // data vectors, as they will be modified in forming the e-LP
   const std::string original_model_name = lp.model_name_;
+  const HighsModelStatus original_model_status = this->getModelStatus();
   const HighsInt original_num_col = lp.num_col_;
   const HighsInt original_num_row = lp.num_row_;
   const std::vector<double> original_col_cost = lp.col_cost_;
   const std::vector<double> original_col_lower = lp.col_lower_;
   const std::vector<double> original_col_upper = lp.col_upper_;
   const std::vector<HighsVarType> original_integrality = lp.integrality_;
+  // Working on the whole model so clear all solver data
+  this->invalidateSolverData();
   // Give the model a new name to avoid confusing logging when the
   // elastic LP is solved
   this->passModelName(original_model_name + "_elastic");
@@ -2520,7 +2511,6 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
 
   // Solve the elastic LP
   run_status = solveLp();
-  this->writeSolution("", 1);
 
   if (run_status != HighsStatus::kOk) {
     // Failed to establish feasibility or infeasibility due to unknown error
@@ -2530,10 +2520,10 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
                       ? kIisModelStatusTimeLimit
                       : kIisModelStatusUnknown;
     this->iis_ = iis;
-    return elasticityFilterReturn(HighsStatus::kError, original_model_name,
-                                  original_num_col, original_num_row,
-                                  original_col_cost, original_col_lower,
-                                  original_col_upper, original_integrality);
+    return elasticityFilterReturn(
+        HighsStatus::kError, original_model_name, original_model_status,
+        original_num_col, original_num_row, original_col_cost,
+        original_col_lower, original_col_upper, original_integrality);
   }
   if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
   // Model status should be optimal, unless model is unbounded
@@ -2545,10 +2535,10 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
                     : kIisModelStatusFeasible;
   if (!get_iis) {
     this->iis_ = iis;
-    return elasticityFilterReturn(HighsStatus::kOk, original_model_name,
-                                  original_num_col, original_num_row,
-                                  original_col_cost, original_col_lower,
-                                  original_col_upper, original_integrality);
+    return elasticityFilterReturn(
+        HighsStatus::kOk, original_model_name, original_model_status,
+        original_num_col, original_num_row, original_col_cost,
+        original_col_lower, original_col_upper, original_integrality);
   }
   // If getting an (I)IS, assume no elastic columns, so no additional rows
   assert(!has_elastic_columns);
@@ -2617,10 +2607,10 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
                         ? kIisModelStatusTimeLimit
                         : kIisModelStatusUnknown;
       this->iis_ = iis;
-      return elasticityFilterReturn(HighsStatus::kError, original_model_name,
-                                    original_num_col, original_num_row,
-                                    original_col_cost, original_col_lower,
-                                    original_col_upper, original_integrality);
+      return elasticityFilterReturn(
+          HighsStatus::kError, original_model_name, original_model_status,
+          original_num_col, original_num_row, original_col_cost,
+          original_col_lower, original_col_upper, original_integrality);
     }
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
@@ -2693,10 +2683,10 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   iis.strategy_ = this->options_.iis_strategy;
   if (iis.status_ == kIisModelStatusFeasible) {
     this->iis_ = iis;
-    return elasticityFilterReturn(HighsStatus::kOk, original_model_name,
-                                  original_num_col, original_num_row,
-                                  original_col_cost, original_col_lower,
-                                  original_col_upper, original_integrality);
+    return elasticityFilterReturn(
+        HighsStatus::kOk, original_model_name, original_model_status,
+        original_num_col, original_num_row, original_col_cost,
+        original_col_lower, original_col_upper, original_integrality);
   }
 
   // Model is infeasible because there are (at least) a positive
@@ -2769,10 +2759,10 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   assert(iis.row_bound_.size() == iis.row_index_.size());
   for (HighsInt iX = 0; iX < num_iis_row; iX++) assert(iis.row_bound_[iX] >= 0);
   this->iis_ = iis;
-  return elasticityFilterReturn(HighsStatus::kOk, original_model_name,
-                                original_num_col, original_num_row,
-                                original_col_cost, original_col_lower,
-                                original_col_upper, original_integrality);
+  return elasticityFilterReturn(
+      HighsStatus::kOk, original_model_name, original_model_status,
+      original_num_col, original_num_row, original_col_cost, original_col_lower,
+      original_col_upper, original_integrality);
 }
 
 HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
