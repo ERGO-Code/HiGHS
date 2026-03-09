@@ -170,12 +170,15 @@ else()
       # Remove /MP flag from CUDA targets (nvcc doesn't support it)
       if(MSVC)
         string(REPLACE "/MP" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+        string(REPLACE "/bigobj" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+
         foreach(flag_var
           CMAKE_CUDA_FLAGS_DEBUG
           CMAKE_CUDA_FLAGS_RELEASE
           CMAKE_CUDA_FLAGS_RELWITHDEBINFO
           CMAKE_CUDA_FLAGS_MINSIZEREL)
           string(REPLACE "/MP" "" ${flag_var} "${${flag_var}}")
+          string(REPLACE "/bigobj" "" ${flag_var} "${${flag_var}}")
         endforeach()
       endif()
 
@@ -301,21 +304,24 @@ else()
   endif()
 
   if(MSVC)
-    list(APPEND highs_compile_opts
-      "/bigobj" # Allow big object
-      "/DNOMINMAX"
-      "/DWIN32_LEAN_AND_MEAN=1"
-      "/D_CRT_SECURE_NO_WARNINGS"
-      "/D_CRT_SECURE_NO_DEPRECATE"
-      # "/MP" # Build with multiple processes
-      "/Zc:preprocessor" # Enable preprocessor conformance mode
-      "/fp:precise"
-      )
+    if (NOT HIGHS_GPU_LIB)
+      list(APPEND highs_compile_opts
+        "/bigobj" # Allow big object
+        "/DNOMINMAX"
+        "/DWIN32_LEAN_AND_MEAN=1"
+        "/D_CRT_SECURE_NO_WARNINGS"
+        "/D_CRT_SECURE_NO_DEPRECATE"
+        # "/MP" # Build with multiple processes
+        "/Zc:preprocessor" # Enable preprocessor conformance mode
+        "/fp:precise"
+        )
+    endif()
     if (CMAKE_BUILD_TYPE STREQUAL Release)
       list(APPEND highs_compile_opts
         "/DNDEBUG")
     endif()
     # MSVC warning suppressions
+    if (NOT HIGHS_GPU_LIB)
     list(APPEND highs_compile_opts
       "/wd4005" # 'macro-redefinition'
       "/wd4018" # 'expression' : signed/unsigned mismatch
@@ -338,6 +344,7 @@ else()
       "/wd4800" # 'type' : forcing value to bool 'true' or 'false' (performance warning)
       "/wd4996" # The compiler encountered a deprecated declaration.
       )
+    endif()
     target_compile_options(highs PRIVATE ${highs_compile_opts})
   # else()
   #   list(APPEND highs_compile_opts "-fwrapv")
