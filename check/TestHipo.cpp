@@ -86,9 +86,9 @@ TEST_CASE("test-hipo-options", "[highs_hipo]") {
       highs.setOptionValue(kHipoSystemString, system);
       for (auto& parallel : parallels) {
         highs.setOptionValue(kParallelString, parallel);
-        for (auto& partype: partypes){
-          highs.setOptionValue(kHipoParallelString,partype);
-        runHipoTest(highs, model, expected_obj);
+        for (auto& partype : partypes) {
+          highs.setOptionValue(kHipoParallelString, partype);
+          runHipoTest(highs, model, expected_obj);
         }
       }
     }
