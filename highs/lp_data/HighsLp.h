@@ -24,6 +24,7 @@ struct HighsIndicatorConstraints {
   std::vector<double> lower;
   std::vector<double> upper;
   std::vector<std::string> name; // Optional constraint name (from MPS)
+  void clear();
 };
 
 class HighsLp {

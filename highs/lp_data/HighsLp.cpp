@@ -228,6 +228,7 @@ void HighsLp::clear() {
   this->integrality_.clear();
 
   this->indicator_constraints_.clear();
+  this->indicators_.clear();
 
   this->col_hash_.clear();
   this->row_hash_.clear();
@@ -576,3 +577,12 @@ void HighsNameHash::update(int index, const std::string& old_name,
 }
 
 void HighsNameHash::clear() { this->name2index.clear(); }
+
+void HighsIndicatorConstraints::clear() {
+  this->col.clear();
+  this->value.clear();
+  this->matrix.clear();
+  this->lower.clear();
+  this->upper.clear();
+  this->name.clear();
+}
