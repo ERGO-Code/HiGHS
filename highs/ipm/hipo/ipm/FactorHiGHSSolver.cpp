@@ -43,6 +43,7 @@ Int FactorHiGHSSolver::buildASstructure() {
   // Build lower triangular structure of the augmented system.
   // Build values of AS that will not change during the iterations.
 
+  Clock clock;
   log_.printDevInfo("Building AS structure\n");
 
   const Int nzBlock11 = model_.qp() ? nzQ_ : nA_;
@@ -88,6 +89,8 @@ Int FactorHiGHSSolver::buildASstructure() {
     ptrAS_[nA_ + i + 1] = ptrAS_[nA_ + i] + 1;
   }
 
+  info_.AS_structure_time = clock.stop();
+
   return kStatusOk;
 }
 
@@ -111,6 +114,7 @@ Int FactorHiGHSSolver::buildNEstructure() {
 
   // NB: A must have sorted columns for this to work
 
+  Clock clock;
   log_.printDevInfo("Building NE structure\n");
 
   // create partial row-wise representation without values, and array or
@@ -194,6 +198,8 @@ Int FactorHiGHSSolver::buildNEstructure() {
       is_nz[index] = false;
     }
   }
+
+  info_.NE_structure_time = clock.stop();
 
   return kStatusOk;
 }
@@ -431,9 +437,7 @@ Int FactorHiGHSSolver::chooseNla() {
         model_.nonSeparableQp() || model_.m() == 0) {
       failure_NE = true;
     } else {
-      Clock clock;
       Int status = buildNEstructure();
-      info_.NE_structure_time = clock.stop();
       if (status) {
         failure_NE = true;
         if (status == kStatusOverflow) {
