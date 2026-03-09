@@ -167,6 +167,18 @@ else()
       # like in cuda CMakeLists
       enable_language(CXX CUDA)
 
+      # Remove /MP flag from CUDA targets (nvcc doesn't support it)
+      if(MSVC)
+        string(REPLACE "/MP" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+        foreach(flag_var
+          CMAKE_CUDA_FLAGS_DEBUG
+          CMAKE_CUDA_FLAGS_RELEASE
+          CMAKE_CUDA_FLAGS_RELWITHDEBINFO
+          CMAKE_CUDA_FLAGS_MINSIZEREL)
+          string(REPLACE "/MP" "" ${flag_var} "${${flag_var}}")
+        endforeach()
+      endif()
+
       target_sources(highs PRIVATE
         pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
         pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
@@ -188,9 +200,9 @@ else()
       target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
 
       if (WIN32)
-        target_link_libraries(cudalin ${CUDA_LIBRARY})  # linking happens here
+        target_link_libraries(highs PRIVATE ${CUDA_LIBRARY})  # linking happens here
       else() # linux
-        target_link_libraries(cudalin ${CUDA_LIBRARY} m)
+        target_link_libraries(highs PRIVATE ${CUDA_LIBRARY} m)
       endif()
 
     else()
@@ -295,7 +307,7 @@ else()
       "/DWIN32_LEAN_AND_MEAN=1"
       "/D_CRT_SECURE_NO_WARNINGS"
       "/D_CRT_SECURE_NO_DEPRECATE"
-      "/MP" # Build with multiple processes
+      # "/MP" # Build with multiple processes
       "/Zc:preprocessor" # Enable preprocessor conformance mode
       "/fp:precise"
       )
