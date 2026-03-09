@@ -64,24 +64,35 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
   REQUIRE(solution_1.row_dual == solution_2.row_dual);
 }
 
-TEST_CASE("test-hipo-orderings", "[highs_hipo]") {
-  // Test that hipo orderings work correctly
+TEST_CASE("test-hipo-options", "[highs_hipo]") {
+  // test all combinations of options for hipo
 
   std::string model = "adlittle.mps";
   const double expected_obj = 2.2549e5;
   Highs highs;
 
-  // metis
-  highs.setOptionValue(kHipoOrderingString, kHipoMetisString);
-  runHipoTest(highs, model, expected_obj);
+  std::vector<std::string> orders = {kHighsChooseString, kHipoMetisString,
+                                     kHipoAmdString, kHipoRcmString};
+  std::vector<std::string> systems = {kHighsChooseString, kHipoNormalEqString,
+                                      kHipoAugmentedString};
+  std::vector<std::string> parallels = {kHighsOnString, kHighsOffString,
+                                        kHighsChooseString};
+  std::vector<std::string> partypes = {kHipoTreeString, kHipoNodeString,
+                                       kHipoBothString};
 
-  // amd
-  highs.setOptionValue(kHipoOrderingString, kHipoAmdString);
-  runHipoTest(highs, model, expected_obj);
-
-  // rcm
-  highs.setOptionValue(kHipoOrderingString, kHipoRcmString);
-  runHipoTest(highs, model, expected_obj);
+  for (auto& order : orders) {
+    highs.setOptionValue(kHipoOrderingString, order);
+    for (auto& system : systems) {
+      highs.setOptionValue(kHipoSystemString, system);
+      for (auto& parallel : parallels) {
+        highs.setOptionValue(kParallelString, parallel);
+        for (auto& partype: partypes){
+          highs.setOptionValue(kHipoParallelString,partype);
+        runHipoTest(highs, model, expected_obj);
+        }
+      }
+    }
+  }
 
   highs.resetGlobalScheduler(true);
 }
