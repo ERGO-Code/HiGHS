@@ -16,6 +16,16 @@
 #include "lp_data/HStruct.h"
 #include "util/HighsSparseMatrix.h"
 
+struct HighsIndicatorConstraints {
+  std::vector<HighsInt> col;    // Indices of binary indicator variables
+  std::vector<HighsInt> value;  // 0 or 1: the values that activate the constraints
+  // The linear constraint: lower <= i_matrix x <= upper
+  HighsSparseMatrix matrix;
+  std::vector<double> lower;
+  std::vector<double> upper;
+  std::vector<std::string> name; // Optional constraint name (from MPS)
+};
+
 class HighsLp {
  public:
   HighsLp() { clear(); }
@@ -48,6 +58,7 @@ class HighsLp {
   std::vector<HighsVarType> integrality_;
 
   std::vector<HighsIndicatorConstraint> indicator_constraints_;
+  HighsIndicatorConstraints indicators_;
 
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
