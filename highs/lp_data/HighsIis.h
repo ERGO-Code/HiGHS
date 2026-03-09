@@ -40,6 +40,9 @@ struct HighsIisInfo {
   double sum_simplex_times = 0.0;
   double min_simplex_time = kHighsInf;
   double max_simplex_time = 0.0;
+  // IIS logging state (persist across calls)
+  double iis_last_disptime = -kHighsInf;
+  HighsInt iis_num_disp_lines = 0;
 
   void clear() {
     num_lp_solved = 0;
@@ -49,6 +52,9 @@ struct HighsIisInfo {
     sum_simplex_times = 0.0;
     min_simplex_time = kHighsInf;
     max_simplex_time = 0.0;
+    // Reset IIS logging state
+    iis_last_disptime = -kHighsInf;
+    iis_num_disp_lines = 0;
   }
 
   void update(const double simplex_time, const HighsInt simplex_iterations) {
@@ -72,7 +78,12 @@ class HighsIis {
   void clear();
   void invalid(const HighsLp& lp);
   std::string iisBoundStatusToString(HighsInt bound_status) const;
+  std::string iisModelStatusToString(HighsInt model_status) const;
   void report(const std::string& message, const HighsLp& lp) const;
+  void reportIteration(const HighsOptions& options,
+                       const HighsInt num_rows_remaining,
+                       const HighsInt num_cols_remaining, const bool force);
+  void reportFinal(const HighsOptions& options) const;
   void addCol(const HighsInt col, const HighsInt status = kIisBoundStatusNull);
   void addRow(const HighsInt row, const HighsInt status = kIisBoundStatusNull);
   void removeCol(const HighsInt col);

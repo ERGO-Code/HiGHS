@@ -45,6 +45,15 @@ std::string HighsIis::iisBoundStatusToString(HighsInt bound_status) const {
   return "*****";
 }
 
+std::string HighsIis::iisModelStatusToString(HighsInt model_status) const {
+  if (model_status == kIisModelStatusFeasible) return "Feasible";
+  if (model_status == kIisModelStatusUnknown) return "Unknown";
+  if (model_status == kIisModelStatusTimeLimit) return "Time limit reached";
+  if (model_status == kIisModelStatusReducible) return "Reducible";
+  if (model_status == kIisModelStatusIrreducible) return "Irreducible";
+  return "*****";
+}
+
 void HighsIis::report(const std::string& message, const HighsLp& lp) const {
   HighsInt num_iis_col = this->col_index_.size();
   HighsInt num_iis_row = this->row_index_.size();
@@ -68,6 +77,59 @@ void HighsIis::report(const std::string& message, const HighsLp& lp) const {
            iisBoundStatusToString(this->row_bound_[iRow]).c_str(),
            lp.row_lower_[iRow], lp.row_upper_[iRow]);
   printf("\n");
+}
+
+void HighsIis::reportIteration(const HighsOptions& options,
+                               const HighsInt num_rows_remaining,
+                               const HighsInt num_cols_remaining,
+                               const bool force) {
+  const bool output_flag = *options.log_options.output_flag;
+  if (!output_flag) return;
+
+  const double min_interval = 5.0;
+  const double runtime = info_.sum_simplex_times;
+
+  if (!force && info_.iis_last_disptime > -0.5 * kHighsInf &&
+      runtime - info_.iis_last_disptime < min_interval)
+    return;
+
+  // Update last time only when we actually print a line
+  info_.iis_last_disptime = runtime;
+
+  // Print header every 20 lines (and on first line)
+  if (info_.iis_num_disp_lines % 20 == 0) {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "\n  Rows     Columns    Runtime\n");
+  }
+  ++info_.iis_num_disp_lines;
+
+  const std::string time_string = highsFormatToString("%7.2f s", runtime);
+
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               " %6" HIGHSINT_FORMAT "   %6" HIGHSINT_FORMAT "   %9s\n",
+               num_rows_remaining, num_cols_remaining, time_string.c_str());
+}
+
+void HighsIis::reportFinal(const HighsOptions& options) const {
+  const bool output_flag = *options.log_options.output_flag;
+  if (!output_flag) return;
+
+  const HighsLogOptions& log_options = options.log_options;
+
+  // Align colons by padding labels to the same width
+  const int kLabelWidth = 14;
+
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %s\n", kLabelWidth,
+               "IIS status", iisModelStatusToString(status_).c_str());
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "%-*s : %" HIGHSINT_FORMAT "\n", kLabelWidth, "Rows",
+               (HighsInt)row_index_.size());
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "%-*s : %" HIGHSINT_FORMAT "\n", kLabelWidth, "Columns",
+               (HighsInt)col_index_.size());
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %7.2f\n", kLabelWidth,
+               "HiGHS run time", info_.sum_simplex_times);
 }
 
 void HighsIis::addCol(const HighsInt col, const HighsInt status) {
@@ -541,6 +603,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
     this->addRow(iRow, this->determineBoundStatus(lp.row_lower_[iRow],
                                                   lp.row_upper_[iRow], true));
+  double num_cols = lp.num_col_;
+  double num_rows = lp.num_row_;
+
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   highs.passOptions(options);
@@ -556,6 +621,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   assert(run_status == HighsStatus::kOk);
   if (basis) highs.setBasis(*basis);
 
+  // Initial logging
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Initiating deletion filtering");
+  this->reportIteration(options, num_rows, num_cols, true);
   // Zero the objective
   std::vector<double> cost;
   cost.assign(lp.num_col_, 0);
@@ -752,12 +821,21 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
           this->determineBoundStatus(lower, upper, row_deletion);
       if (row_deletion) {
         this->row_bound_[iX] = iss_bound_status;
+        if (iss_bound_status == kIisBoundStatusDropped) {
+          num_rows--;
+        }
       } else {
         this->col_bound_[iX] = iss_bound_status;
+        if (iss_bound_status == kIisBoundStatusFree) {
+          num_cols--;
+        }
       }
-      highsLogUser(log_options, HighsLogType::kInfo, "%s %d has status %s\n",
-                   type.c_str(), int(iX),
-                   iisBoundStatusToString(iss_bound_status).c_str());
+      this->reportIteration(options, num_rows, num_cols, false);
+      if (kIisDevReport) {
+        highsLogUser(log_options, HighsLogType::kInfo, "%s %d has status %s\n",
+                     type.c_str(), int(iX),
+                     iisBoundStatusToString(iss_bound_status).c_str());
+      }
     }
     if (k == 1) continue;
     // End of first pass: look to simplify second pass
@@ -775,8 +853,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
           }
         }
         if (empty_col) {
-          highsLogUser(log_options, HighsLogType::kInfo,
-                       "Col %d has status Dropped: Empty\n", int(iCol));
+          if (kIisDevReport) {
+            highsLogUser(log_options, HighsLogType::kInfo,
+                         "Col %d has status Dropped: Empty\n", int(iCol));
+          }
           this->col_bound_[iCol] = kIisBoundStatusDropped;
           run_status = highs.changeColBounds(iCol, -kHighsInf, kHighsInf);
           assert(run_status == HighsStatus::kOk);
@@ -802,6 +882,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       iss_num_row++;
     }
   }
+  // Final report
+  this->reportIteration(options, iss_num_row, iss_num_col, true);
+  // Return final result
   this->valid_ = true;
   this->status_ = iis_status;
   this->strategy_ = options.iis_strategy;

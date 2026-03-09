@@ -1988,6 +1988,8 @@ HighsStatus Highs::getIisInterface() {
                                        original_callback);
   } else if (this->model_status_ == HighsModelStatus::kTimeLimit) {
     // Time limit reached
+          highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Time limit reached prior to establishing infeasibility\n");
     this->iis_.status_ = kIisModelStatusTimeLimit;
     this->iis_.strategy_ = options_.iis_strategy;
     return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
@@ -2102,6 +2104,9 @@ HighsStatus Highs::getIisInterface() {
   //  To do this the matrix must be column-wise
   model_.lp_.a_matrix_.ensureColwise();
   return_status = this->iis_.deduce(lp, options_, basis_);
+
+  // Report final results
+  this->iis_.reportFinal(options_);
   // Analyse the LP solution data
   const HighsInt num_lp_solved = this->iis_.info_.num_lp_solved;
   const double min_time = this->iis_.info_.min_simplex_time;
