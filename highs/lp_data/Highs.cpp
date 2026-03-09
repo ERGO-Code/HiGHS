@@ -2763,11 +2763,13 @@ HighsStatus Highs::addIndicatorConstraint(
   ic.row_value.assign(values, values + num_nz);
   ic.row_lower = lower;
   ic.row_upper = upper;
+  ic.name = "";
   lp.indicator_constraints_.push_back(std::move(ic));
 
   HighsIndicatorConstraints& indicators = lp.indicators_;
   indicators.col.push_back(binary_col);
   indicators.value.push_back(binary_value);
+  indicators.matrix.addVec(num_nz, indices, values);
   indicators.lower.push_back(lower);
   indicators.upper.push_back(upper);
   indicators.name.push_back("");

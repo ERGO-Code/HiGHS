@@ -3360,6 +3360,38 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   return lp;
 }
 
+void equalIndicatorConstraints(const HighsIndicatorConstraints& indicators ,
+			       const std::vector<HighsIndicatorConstraint>& indicator_constraints) {
+  size_t num_indicators_t = indicator_constraints.size();
+  HighsInt num_indicators = num_indicators_t;
+  assert(num_indicators_t == indicators.col.size());
+  assert(num_indicators_t == indicators.value.size());
+  assert(num_indicators_t == indicators.lower.size());
+  assert(num_indicators_t == indicators.upper.size());
+  assert(num_indicators_t == indicators.name.size());
+  HighsInt max_col = 0;
+  for (HighsInt indicator = 0; indicator < num_indicators; indicator++) {
+    assert(indicator_constraints[indicator].binary_col == indicators.col[indicator]);
+    assert(indicator_constraints[indicator].binary_value == indicators.value[indicator]);
+    assert(indicator_constraints[indicator].row_lower == indicators.lower[indicator]);
+    assert(indicator_constraints[indicator].row_upper == indicators.upper[indicator]);
+    assert(indicator_constraints[indicator].name == indicators.name[indicator]);
+    size_t nnz = indicators.matrix.start_[indicator+1] - indicators.matrix.start_[indicator];
+    assert(indicator_constraints[indicator].row_index.size() == nnz);
+    assert(indicator_constraints[indicator].row_value.size() == nnz);
+    HighsInt nz = 0;
+    for (HighsInt iEl = indicators.matrix.start_[indicator]; iEl < indicators.matrix.start_[indicator+1]; iEl++) {
+      HighsInt iCol = indicator_constraints[indicator].row_index[nz];
+      max_col = std::max(iCol, max_col);
+      assert(iCol == indicators.matrix.index_[iEl]);
+      assert(indicator_constraints[indicator].row_value[nz] == indicators.matrix.value_[iEl]);
+      nz++;
+    }
+  }
+  assert(indicators.matrix.num_row_ == num_indicators);
+  assert(indicators.matrix.num_col_ > max_col);
+}
+
 HighsLp withoutIndicatorConstraints(
     const HighsLp& lp_, const HighsLogOptions& log_options,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m) {
