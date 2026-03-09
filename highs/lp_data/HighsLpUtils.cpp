@@ -3396,7 +3396,10 @@ HighsLp withoutIndicatorConstraints(
     const HighsLp& lp_, const HighsLogOptions& log_options,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m) {
   HighsLp lp = lp_;
+  equalIndicatorConstraints(lp.indicators_, lp.indicator_constraints_);
   assert(lp.hasIndicatorConstraints());
+  // Format of HighsIndicatorConstraints matrix should be rowwise
+  assert(lp.indicators_.matrix.format_ == MatrixFormat::kRowwise);
   const HighsInt num_col = lp.num_col_;
 
   // Ensure column-wise format

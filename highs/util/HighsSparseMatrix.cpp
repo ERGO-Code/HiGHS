@@ -230,23 +230,30 @@ void HighsSparseMatrix::ensureRowwise() {
 void HighsSparseMatrix::addVec(const HighsInt num_nz, const HighsInt* index,
                                const double* value, const double multiple) {
   HighsInt num_vec = 0;
+  HighsInt num_en; 
   if (this->isColwise()) {
     num_vec = this->num_col_;
+    num_en = this->num_row_;
   } else {
     num_vec = this->num_row_;
+    num_en = this->num_col_;
   }
   assert((int)this->start_.size() == num_vec + 1);
   assert((int)this->index_.size() == this->numNz());
   assert((int)this->value_.size() == this->numNz());
   for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
-    this->index_.push_back(index[iEl]);
+    HighsInt iX = index[iEl];
+    num_en = std::max(iX+1, num_en);
+    this->index_.push_back(iX);
     this->value_.push_back(multiple * value[iEl]);
   }
   this->start_.push_back(this->start_[num_vec] + num_nz);
   if (this->isColwise()) {
     this->num_col_++;
+    this->num_row_ = num_en;
   } else {
     this->num_row_++;
+    this->num_col_ = num_en;
   }
 }
 

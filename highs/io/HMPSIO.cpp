@@ -576,16 +576,24 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   // Set a local objective name, creating one if necessary
   const std::string local_objective_name =
       findModelObjectiveName(&lp, &hessian);
-  // If there is Hessian data to write out, writeMps assumes that hessian is
+  // If there is Hessian data to write out, writeMps assumes that Hessian is
   // triangular
   if (hessian.dim_) assert(hessian.format_ == HessianFormat::kTriangular);
-
+  // If there are indicator constraints to write out, writeMps
+  // requires the HighsIndicatorConstraints matrix to be column-wise,
+  // so create an editable copy
+  HighsIndicatorConstraints indicators;
+  if (lp.hasIndicatorConstraints()) {
+    assert(lp.indicators_.matrix.format_ == MatrixFormat::kRowwise);
+    indicators = lp.indicators_;
+    indicators.matrix.ensureColwise();
+  }
   HighsStatus write_status = writeMps(
       options.log_options, filename, lp.model_name_, lp.num_row_, lp.num_col_,
       hessian.dim_, lp.sense_, lp.offset_, lp.col_cost_, lp.col_lower_,
       lp.col_upper_, lp.row_lower_, lp.row_upper_, lp.a_matrix_.start_,
       lp.a_matrix_.index_, lp.a_matrix_.value_, hessian.start_, hessian.index_,
-      hessian.value_, lp.integrality_, lp.indicator_constraints_,
+      hessian.value_, lp.integrality_, indicators,
       local_objective_name, lp.col_names_,
       lp.row_names_, 
       use_free_format);
@@ -605,7 +613,7 @@ HighsStatus writeMps(
     const vector<double>& a_value, const vector<HighsInt>& q_start,
     const vector<HighsInt>& q_index, const vector<double>& q_value,
     const vector<HighsVarType>& integrality,
-    const std::vector<HighsIndicatorConstraint>& indicators,
+    const HighsIndicatorConstraints& indicators,
     const std::string& objective_name,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format) {
@@ -639,7 +647,12 @@ HighsStatus writeMps(
   bool have_ranges = false;
   bool have_bounds = false;
   bool have_int = false;
-  const HighsInt num_indicators = indicators.size();
+  const HighsInt num_indicator = indicators.col.size();
+  // Standard format of any (non-trivial) HighsIndicatorConstraints
+  // matrix is rowwise, but they need to have been converted to
+  // column-wise for this method
+  if (num_indicator)
+    assert(indicators.matrix.format_ == MatrixFormat::kColwise);
   r_ty.resize(num_row);
   rhs.assign(num_row, 0);
   ranges.assign(num_row, 0);
@@ -769,13 +782,28 @@ HighsStatus writeMps(
       fprintf(file, " N  %-8s\n", row_names[r_n].c_str());
     }
   }
+  for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
+    if (indicators.lower[indicator_n] == indicators.upper[indicator_n]) {
+      fprintf(file, " E  %-8s\n", indicators.name[indicator_n].c_str());
+    } else if (indicators.lower[indicator_n] > -kHighsInf) {
+      fprintf(file, " G  %-8s\n", indicators.name[indicator_n].c_str());
+    } else if (indicators.upper[indicator_n] < kHighsInf) {
+      fprintf(file, " L  %-8s\n", indicators.name[indicator_n].c_str());
+    } else {
+      fprintf(file, " N  %-8s\n", indicators.name[indicator_n].c_str());
+    }
+  }
   bool integerFg = false;
   HighsInt nIntegerMk = 0;
   fprintf(file, "COLUMNS\n");
   const bool write_no_cost_zero_columns = true;
+  const std::vector<HighsInt>& i_start = indicators.matrix.start_;
+  const std::vector<HighsInt>& i_index = indicators.matrix.index_;
+  const std::vector<double>& i_value = indicators.matrix.value_;
   for (HighsInt c_n = 0; c_n < num_col; c_n++) {
     const bool no_cost_zero_column =
-        !col_cost[c_n] && a_start[c_n] == a_start[c_n + 1];
+      !col_cost[c_n] && a_start[c_n] == a_start[c_n + 1] &&
+      num_indicator && i_start[c_n] == i_start[c_n + 1];
     if (no_cost_zero_column) {
       // Possibly skip this column as it's zero and has no cost
       num_no_cost_zero_columns++;
@@ -814,6 +842,14 @@ HighsStatus writeMps(
       fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
               row_names[r_n].c_str(), v);
     }
+    if (num_indicator) {
+      for (HighsInt el_n = i_start[c_n]; el_n < i_start[c_n + 1]; el_n++) {
+	double v = i_value[el_n];
+	HighsInt r_n = i_index[el_n];
+	fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
+		indicators.name[r_n].c_str(), v);
+      }
+    }
   }
   // End any integer section
   if (integerFg)
@@ -836,12 +872,29 @@ HighsStatus writeMps(
       }
     }
   }
+  for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
+    double lower = indicators.lower[indicator_n];
+    double upper = indicators.upper[indicator_n];
+    if (lower > -kHighsInf && lower) {
+      fprintf(file, "    RHS_V     %-8s  %.15g\n", indicators.name[indicator_n].c_str(), lower);
+    } else if (upper < kHighsInf && upper) {
+      fprintf(file, "    RHS_V     %-8s  %.15g\n", indicators.name[indicator_n].c_str(), upper);
+    }
+  }
   if (have_ranges) {
     fprintf(file, "RANGES\n");
     for (HighsInt r_n = 0; r_n < num_row; r_n++) {
       double v = ranges[r_n];
       if (v) {
         fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+      }
+    }
+    for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
+      double lower = indicators.lower[indicator_n];
+      double upper = indicators.upper[indicator_n];
+      if (lower > -kHighsInf && lower < upper && upper < kHighsInf) {
+	double v = upper - lower;
+	fprintf(file, "    RANGE     %-8s  %.15g\n", indicators.name[indicator_n].c_str(), v);
       }
     }
   }
@@ -973,14 +1026,14 @@ HighsStatus writeMps(
       }
     }
   }
-  if (num_indicators > 0) {
+  if (num_indicator > 0) {
     fprintf(file, "INDICATORS\n");
-    for (HighsInt indicator_n = 0; indicator_n < static_cast<HighsInt>(indicators.size()); indicator_n++) {
-      assert(0==1);
+    for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
+      //      assert(0==1);
       fprintf(file, " IF %-8s  %-8s  %d\n",
-	      indicators[indicator_n].name.c_str(),
-	      col_names[indicators[indicator_n].binary_col].c_str(),
-	      indicators[indicator_n].binary_value);
+	      indicators.name[indicator_n].c_str(),
+	      col_names[indicators.col[indicator_n]].c_str(),
+	      indicators.value[indicator_n]);
     }
   }
   if (q_dim) {

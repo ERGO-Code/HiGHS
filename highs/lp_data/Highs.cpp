@@ -2767,6 +2767,8 @@ HighsStatus Highs::addIndicatorConstraint(
   lp.indicator_constraints_.push_back(std::move(ic));
 
   HighsIndicatorConstraints& indicators = lp.indicators_;
+  // If this is the first IC, ensure that the matrix is rowwise
+  if (!indicators.col.size()) indicators.matrix.format_ = MatrixFormat::kRowwise;
   indicators.col.push_back(binary_col);
   indicators.value.push_back(binary_value);
   indicators.matrix.addVec(num_nz, indices, values);

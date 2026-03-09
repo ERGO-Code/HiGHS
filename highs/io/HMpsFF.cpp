@@ -119,6 +119,11 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   // Process indicator constraints: extract row coefficients from the
   // colwise matrix and remove those rows from the LP
   if (!raw_indicators.empty()) {
+    // Prepare the HighsIndicatorConstraints instance
+    lp.indicators_.clear();
+    lp.indicators_.matrix.format_ = MatrixFormat::kRowwise;
+    std::vector<HighsInt> index;
+    std::vector<double> value;
     // Set matrix dimensions before any matrix operations
     lp.setMatrixDimensions();
 
@@ -135,15 +140,22 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     std::vector<std::vector<std::pair<HighsInt, double>>> row_entries(
         lp.num_row_);
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      index.clear();
+      value.clear();
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
            iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
         HighsInt row = lp.a_matrix_.index_[iEl];
         if (is_indicator_row[row]) {
+	  index.push_back(row);
+	  value.push_back(lp.a_matrix_.value_[iEl]);
           row_entries[row].push_back({iCol, lp.a_matrix_.value_[iEl]});
         }
       }
     }
-
+    // Transform the constraint matrix to be rowwise so that
+    // extraction and deletion of rows is easier
+    assert(lp.a_matrix_.format_ == MatrixFormat::kColwise);
+    lp.a_matrix_.ensureRowwise();
     // Build indicator constraints
     for (const auto& ri : raw_indicators) {
       HighsIndicatorConstraint ic;
@@ -164,8 +176,25 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
         lp.integrality_[ri.binary_col] = HighsVarType::kInteger;
       }
       lp.indicator_constraints_.push_back(std::move(ic));
+      // In the new format
+      HighsInt iRow = ri.row_idx;
+      lp.indicators_.col.push_back(ri.binary_col);
+      lp.indicators_.value.push_back(ri.binary_value);
+      HighsInt iEl = lp.a_matrix_.start_[iRow];
+      HighsInt nnz = lp.a_matrix_.start_[iRow+1] - iEl;
+      lp.indicators_.matrix.addVec(nnz,
+				  &lp.a_matrix_.index_[iEl],
+				  &lp.a_matrix_.value_[iEl]);
+      lp.indicators_.lower.push_back(lp.row_lower_[iRow]);
+      lp.indicators_.upper.push_back(lp.row_upper_[iRow]);
+      lp.indicators_.name.push_back(lp.row_names_[iRow]);
     }
-
+    // Finish with HighsIndicatorConstraints matrix rowwise so it's in
+    // the right format for adding more by calls to
+    // addIndicatorConstraint and for reformulation.
+    //
+    // However MPS write will need them converting to column-wise form
+    assert(lp.indicators_.matrix.format_ == MatrixFormat::kRowwise);
     // Remove indicator rows from the LP
     // Build a sorted list of indicator row indices
     std::vector<HighsInt> rows_to_delete;
@@ -182,9 +211,9 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     index_collection.set_ = rows_to_delete;
     index_collection.set_num_entries_ = rows_to_delete.size();
     lp.deleteRows(index_collection);
+    // Return the format to colwise
+    lp.a_matrix_.ensureColwise();
 
-    // Update column indices in indicator constraints to account for
-    // deleted rows (column indices don't change when deleting rows)
   }
 
   hessian.dim_ = q_dim;
