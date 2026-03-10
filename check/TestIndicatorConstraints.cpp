@@ -4,18 +4,16 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = true;//false;//
+const bool dev_run = true;  // false;//
 const double double_equal_tolerance = 1e-5;
 
-void solveWriteReadSolve(Highs& highs,
-			 const double objective_value,
-			 const std::vector<double> col_value,
-			 const bool have_names = false);
+void solveWriteReadSolve(Highs& highs, const double objective_value,
+                         const std::vector<double> col_value,
+                         const bool have_names = false);
 
-void solveWriteReadSolve(Highs& highs,
-			 const double objective_value,
-			 const std::vector<double> col_value,
-			 const bool have_names) {
+void solveWriteReadSolve(Highs& highs, const double objective_value,
+                         const std::vector<double> col_value,
+                         const bool have_names) {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename_mps = test_name + ".mps";
   std::string filename_lp = test_name + ".lp";
@@ -34,16 +32,22 @@ void solveWriteReadSolve(Highs& highs,
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-    if (dev_run) printf("Solution is (%g, %g) with objective %g\n",
-	   solution.col_value[0], solution.col_value[1], info.objective_function_value);
-    if (dev_run) printf("Testing  is (%g, %g) with objective %g\n",
-	   col_value[0], col_value[1], objective_value);
-    REQUIRE(fabs(solution.col_value[0] - col_value[0]) < double_equal_tolerance);
-    REQUIRE(fabs(solution.col_value[1] - col_value[1]) < double_equal_tolerance);
-    REQUIRE(fabs(info.objective_function_value - objective_value) < double_equal_tolerance);
+    if (dev_run)
+      printf("Solution is (%g, %g) with objective %g\n", solution.col_value[0],
+             solution.col_value[1], info.objective_function_value);
+    if (dev_run)
+      printf("Testing  is (%g, %g) with objective %g\n", col_value[0],
+             col_value[1], objective_value);
+    REQUIRE(fabs(solution.col_value[0] - col_value[0]) <
+            double_equal_tolerance);
+    REQUIRE(fabs(solution.col_value[1] - col_value[1]) <
+            double_equal_tolerance);
+    REQUIRE(fabs(info.objective_function_value - objective_value) <
+            double_equal_tolerance);
 
     if (k == 0) {
-      REQUIRE(highs.writeModel(filename_lp) == (have_names ? HighsStatus::kOk : HighsStatus::kWarning));
+      REQUIRE(highs.writeModel(filename_lp) ==
+              (have_names ? HighsStatus::kOk : HighsStatus::kWarning));
       REQUIRE(highs.writeModel(filename_mps) == HighsStatus::kOk);
     }
   }
@@ -80,7 +84,7 @@ TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
 
   const std::vector<double> col_value = {0, 0};
   const double objective_value = 0;
-    
+
   solveWriteReadSolve(highs, objective_value, col_value);
 
   highs.resetGlobalScheduler(true);
@@ -109,14 +113,13 @@ TEST_CASE("indicator-simple-v0", "[highs_test_indicator]") {
 
   const std::vector<double> col_value = {0, 1};
   const double objective_value = 0;
-    
+
   solveWriteReadSolve(highs, objective_value, col_value);
 
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
-}
+TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {}
 
 TEST_CASE("indicator-range", "[highs_test_indicator]") {
   // min x
@@ -141,11 +144,10 @@ TEST_CASE("indicator-range", "[highs_test_indicator]") {
 
   const std::vector<double> col_value = {0, 0};
   const double objective_value = 0;
-    
+
   solveWriteReadSolve(highs, objective_value, col_value);
 
   highs.resetGlobalScheduler(true);
-
 }
 
 TEST_CASE("indicator-forced", "[highs_test_indicator]") {
@@ -172,7 +174,7 @@ TEST_CASE("indicator-forced", "[highs_test_indicator]") {
 
   const std::vector<double> col_value = {5, 1};
   const double objective_value = 5;
-    
+
   solveWriteReadSolve(highs, objective_value, col_value);
 
   highs.resetGlobalScheduler(true);
@@ -215,7 +217,7 @@ TEST_CASE("indicator-multiple", "[highs_test_indicator]") {
 
   const std::vector<double> col_value = {0, 0, 0};
   const double objective_value = 0;
-    
+
   solveWriteReadSolve(highs, objective_value, col_value);
 
   highs.resetGlobalScheduler(true);

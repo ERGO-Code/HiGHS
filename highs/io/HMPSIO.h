@@ -66,9 +66,8 @@ HighsStatus writeMps(
     const vector<HighsInt>& q_index, const vector<double>& q_value,
     const vector<HighsVarType>& integrality,
     const HighsIndicatorConstraints& indicators,
-    const std::string& objective_name,
-    const vector<std::string>& col_names, const vector<std::string>& row_names,
-    const bool use_free_format = true);
+    const std::string& objective_name, const vector<std::string>& col_names,
+    const vector<std::string>& row_names, const bool use_free_format = true);
 
 bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
                   char* line, char* flag, double* data);

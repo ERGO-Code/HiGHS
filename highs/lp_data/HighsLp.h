@@ -17,13 +17,14 @@
 #include "util/HighsSparseMatrix.h"
 
 struct HighsIndicatorConstraints {
-  std::vector<HighsInt> col;    // Indices of binary indicator variables
-  std::vector<HighsInt> value;  // 0 or 1: the values that activate the constraints
+  std::vector<HighsInt> col;  // Indices of binary indicator variables
+  std::vector<HighsInt>
+      value;  // 0 or 1: the values that activate the constraints
   // The linear constraint: lower <= i_matrix x <= upper
   HighsSparseMatrix matrix;
   std::vector<double> lower;
   std::vector<double> upper;
-  std::vector<std::string> name; // Optional constraint name (from MPS)
+  std::vector<std::string> name;  // Optional constraint name (from MPS)
   void clear();
 };
 

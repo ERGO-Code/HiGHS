@@ -3360,8 +3360,9 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   return lp;
 }
 
-void equalIndicatorConstraints(const HighsIndicatorConstraints& indicators ,
-			       const std::vector<HighsIndicatorConstraint>& indicator_constraints) {
+void equalIndicatorConstraints(
+    const HighsIndicatorConstraints& indicators,
+    const std::vector<HighsIndicatorConstraint>& indicator_constraints) {
   size_t num_indicators_t = indicator_constraints.size();
   HighsInt num_indicators = num_indicators_t;
   assert(num_indicators_t == indicators.col.size());
@@ -3371,20 +3372,27 @@ void equalIndicatorConstraints(const HighsIndicatorConstraints& indicators ,
   assert(num_indicators_t == indicators.name.size());
   HighsInt max_col = 0;
   for (HighsInt indicator = 0; indicator < num_indicators; indicator++) {
-    assert(indicator_constraints[indicator].binary_col == indicators.col[indicator]);
-    assert(indicator_constraints[indicator].binary_value == indicators.value[indicator]);
-    assert(indicator_constraints[indicator].row_lower == indicators.lower[indicator]);
-    assert(indicator_constraints[indicator].row_upper == indicators.upper[indicator]);
+    assert(indicator_constraints[indicator].binary_col ==
+           indicators.col[indicator]);
+    assert(indicator_constraints[indicator].binary_value ==
+           indicators.value[indicator]);
+    assert(indicator_constraints[indicator].row_lower ==
+           indicators.lower[indicator]);
+    assert(indicator_constraints[indicator].row_upper ==
+           indicators.upper[indicator]);
     assert(indicator_constraints[indicator].name == indicators.name[indicator]);
-    size_t nnz = indicators.matrix.start_[indicator+1] - indicators.matrix.start_[indicator];
+    size_t nnz = indicators.matrix.start_[indicator + 1] -
+                 indicators.matrix.start_[indicator];
     assert(indicator_constraints[indicator].row_index.size() == nnz);
     assert(indicator_constraints[indicator].row_value.size() == nnz);
     HighsInt nz = 0;
-    for (HighsInt iEl = indicators.matrix.start_[indicator]; iEl < indicators.matrix.start_[indicator+1]; iEl++) {
+    for (HighsInt iEl = indicators.matrix.start_[indicator];
+         iEl < indicators.matrix.start_[indicator + 1]; iEl++) {
       HighsInt iCol = indicator_constraints[indicator].row_index[nz];
       max_col = std::max(iCol, max_col);
       assert(iCol == indicators.matrix.index_[iEl]);
-      assert(indicator_constraints[indicator].row_value[nz] == indicators.matrix.value_[iEl]);
+      assert(indicator_constraints[indicator].row_value[nz] ==
+             indicators.matrix.value_[iEl]);
       nz++;
     }
   }
@@ -3405,8 +3413,9 @@ HighsLp withoutIndicatorConstraints(
   // Ensure column-wise format
   lp.a_matrix_.ensureColwise();
 
-  const bool have_row_names = lp.num_row_ > 0 &&
-    lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+  const bool have_row_names =
+      lp.num_row_ > 0 &&
+      lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
 
   // Collect all new rows from indicator constraints, stored per-column
   // for colwise insertion
@@ -3513,13 +3522,12 @@ HighsLp withoutIndicatorConstraints(
       new_rows.push_back(std::move(row));
     }
   }
-  HighsInt num_with_max_big_m =
-      save_indicator_constraint_with_max_big_m.size();
+  HighsInt num_with_max_big_m = save_indicator_constraint_with_max_big_m.size();
   if (num_with_max_big_m) {
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%d indicator constraint%s have maximal big-M\n",
                  int(num_with_max_big_m),
-		 num_with_max_big_m == 1 ? " has" : "s have");
+                 num_with_max_big_m == 1 ? " has" : "s have");
   }
   if (new_rows.empty()) {
     lp.indicator_constraints_.clear();

@@ -146,8 +146,8 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
            iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
         HighsInt row = lp.a_matrix_.index_[iEl];
         if (is_indicator_row[row]) {
-	  index.push_back(row);
-	  value.push_back(lp.a_matrix_.value_[iEl]);
+          index.push_back(row);
+          value.push_back(lp.a_matrix_.value_[iEl]);
           row_entries[row].push_back({iCol, lp.a_matrix_.value_[iEl]});
         }
       }
@@ -181,10 +181,9 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
       lp.indicators_.col.push_back(ri.binary_col);
       lp.indicators_.value.push_back(ri.binary_value);
       HighsInt iEl = lp.a_matrix_.start_[iRow];
-      HighsInt nnz = lp.a_matrix_.start_[iRow+1] - iEl;
-      lp.indicators_.matrix.addVec(nnz,
-				  &lp.a_matrix_.index_[iEl],
-				  &lp.a_matrix_.value_[iEl]);
+      HighsInt nnz = lp.a_matrix_.start_[iRow + 1] - iEl;
+      lp.indicators_.matrix.addVec(nnz, &lp.a_matrix_.index_[iEl],
+                                   &lp.a_matrix_.value_[iEl]);
       lp.indicators_.lower.push_back(lp.row_lower_[iRow]);
       lp.indicators_.upper.push_back(lp.row_upper_[iRow]);
       lp.indicators_.name.push_back(lp.row_names_[iRow]);
@@ -220,7 +219,6 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     lp.deleteRows(index_collection);
     // Return the format to colwise
     lp.a_matrix_.ensureColwise();
-
   }
 
   hessian.dim_ = q_dim;

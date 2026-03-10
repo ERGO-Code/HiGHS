@@ -593,10 +593,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       hessian.dim_, lp.sense_, lp.offset_, lp.col_cost_, lp.col_lower_,
       lp.col_upper_, lp.row_lower_, lp.row_upper_, lp.a_matrix_.start_,
       lp.a_matrix_.index_, lp.a_matrix_.value_, hessian.start_, hessian.index_,
-      hessian.value_, lp.integrality_, indicators,
-      local_objective_name, lp.col_names_,
-      lp.row_names_, 
-      use_free_format);
+      hessian.value_, lp.integrality_, indicators, local_objective_name,
+      lp.col_names_, lp.row_names_, use_free_format);
   if (write_status == HighsStatus::kOk && warning_found)
     return HighsStatus::kWarning;
   return write_status;
@@ -614,9 +612,8 @@ HighsStatus writeMps(
     const vector<HighsInt>& q_index, const vector<double>& q_value,
     const vector<HighsVarType>& integrality,
     const HighsIndicatorConstraints& indicators,
-    const std::string& objective_name,
-    const vector<std::string>& col_names, const vector<std::string>& row_names,
-    const bool use_free_format) {
+    const std::string& objective_name, const vector<std::string>& col_names,
+    const vector<std::string>& row_names, const bool use_free_format) {
   HighsInt num_no_cost_zero_columns = 0;
   HighsInt num_no_cost_zero_columns_in_bounds_section = 0;
   highsLogDev(log_options, HighsLogType::kInfo,
@@ -687,10 +684,9 @@ HighsStatus writeMps(
     }
   }
   for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
-    if (indicators.lower[indicator_n] ||
-	indicators.upper[indicator_n]) {
+    if (indicators.lower[indicator_n] || indicators.upper[indicator_n]) {
       have_rhs = true;
-      break;      
+      break;
     }
   }
   // Check whether there is an objective offset - which will be defines as a RHS
@@ -797,8 +793,10 @@ HighsStatus writeMps(
     double range = upper - lower;
     if (range && range < kHighsInf) {
       // Ranged indicator constraint requires two rows
-      fprintf(file, " G  %-8s\n", (name+kRangedRowNameExtensionLower).c_str());
-      fprintf(file, " L  %-8s\n", (name+kRangedRowNameExtensionUpper).c_str());
+      fprintf(file, " G  %-8s\n",
+              (name + kRangedRowNameExtensionLower).c_str());
+      fprintf(file, " L  %-8s\n",
+              (name + kRangedRowNameExtensionUpper).c_str());
     } else if (lower == upper) {
       fprintf(file, " E  %-8s\n", name.c_str());
     } else if (lower > -kHighsInf) {
@@ -807,10 +805,9 @@ HighsStatus writeMps(
       fprintf(file, " L  %-8s\n", name.c_str());
     } else {
       highsLogUser(log_options, HighsLogType::kError,
-		   "Indicator constraint \"%s\" is free\n",
-		   name.c_str());
+                   "Indicator constraint \"%s\" is free\n", name.c_str());
       assert(123 == 456);
-       return HighsStatus::kError;
+      return HighsStatus::kError;
     }
   }
   bool integerFg = false;
@@ -822,8 +819,8 @@ HighsStatus writeMps(
   const std::vector<double>& i_value = indicators.matrix.value_;
   for (HighsInt c_n = 0; c_n < num_col; c_n++) {
     const bool no_cost_zero_column =
-      !col_cost[c_n] && a_start[c_n] == a_start[c_n + 1] &&
-      num_indicator && i_start[c_n] == i_start[c_n + 1];
+        !col_cost[c_n] && a_start[c_n] == a_start[c_n + 1] && num_indicator &&
+        i_start[c_n] == i_start[c_n + 1];
     if (no_cost_zero_column) {
       // Possibly skip this column as it's zero and has no cost
       num_no_cost_zero_columns++;
@@ -864,22 +861,22 @@ HighsStatus writeMps(
     }
     if (num_indicator) {
       for (HighsInt el_n = i_start[c_n]; el_n < i_start[c_n + 1]; el_n++) {
-	double v = i_value[el_n];
-	HighsInt indicator_n = i_index[el_n];
-	const std::string& name = indicators.name[indicator_n];
-	double lower = indicators.lower[indicator_n];
-	double upper = indicators.upper[indicator_n];
-	double range = upper - lower;
-	if (range && range < kHighsInf) {
-	  // Ranged indicator constraint requires two rows
-	  fprintf(file, "    %-8s  %-8s  %.15g  %-8s  %.15g\n",
-		  col_names[c_n].c_str(),
-		  (name+kRangedRowNameExtensionLower).c_str(), v,
-		  (name+kRangedRowNameExtensionUpper).c_str(), v);
-	} else {
-	  fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
-		  name.c_str(), v);
-	}
+        double v = i_value[el_n];
+        HighsInt indicator_n = i_index[el_n];
+        const std::string& name = indicators.name[indicator_n];
+        double lower = indicators.lower[indicator_n];
+        double upper = indicators.upper[indicator_n];
+        double range = upper - lower;
+        if (range && range < kHighsInf) {
+          // Ranged indicator constraint requires two rows
+          fprintf(file, "    %-8s  %-8s  %.15g  %-8s  %.15g\n",
+                  col_names[c_n].c_str(),
+                  (name + kRangedRowNameExtensionLower).c_str(), v,
+                  (name + kRangedRowNameExtensionUpper).c_str(), v);
+        } else {
+          fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
+                  name.c_str(), v);
+        }
       }
     }
   }
@@ -913,9 +910,9 @@ HighsStatus writeMps(
     if (range && range < kHighsInf) {
       // Ranged indicator constraint requires two rows
       fprintf(file, "    RHS_V     %-8s  %.15g\n",
-	      (name+kRangedRowNameExtensionLower).c_str(), lower);
+              (name + kRangedRowNameExtensionLower).c_str(), lower);
       fprintf(file, "    RHS_V     %-8s  %.15g\n",
-	      (name+kRangedRowNameExtensionUpper).c_str(), upper);
+              (name + kRangedRowNameExtensionUpper).c_str(), upper);
     } else if (lower > -kHighsInf && lower) {
       fprintf(file, "    RHS_V     %-8s  %.15g\n", name.c_str(), lower);
     } else if (upper < kHighsInf && upper) {
@@ -1070,14 +1067,14 @@ HighsStatus writeMps(
     if (range && range < kHighsInf) {
       // Ranged indicator constraint requires two rows
       fprintf(file, " IF %-8s  %-8s  %d\n",
-	      (name+kRangedRowNameExtensionLower).c_str(),
-	      col_names[col].c_str(), value);
+              (name + kRangedRowNameExtensionLower).c_str(),
+              col_names[col].c_str(), value);
       fprintf(file, " IF %-8s  %-8s  %d\n",
-	      (name+kRangedRowNameExtensionUpper).c_str(),
-	      col_names[col].c_str(), value);
+              (name + kRangedRowNameExtensionUpper).c_str(),
+              col_names[col].c_str(), value);
     } else {
-      fprintf(file, " IF %-8s  %-8s  %d\n",
-	      name.c_str(), col_names[col].c_str(), value);
+      fprintf(file, " IF %-8s  %-8s  %d\n", name.c_str(),
+              col_names[col].c_str(), value);
     }
   }
   if (q_dim) {

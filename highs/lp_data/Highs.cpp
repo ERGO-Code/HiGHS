@@ -1110,7 +1110,8 @@ HighsStatus Highs::calledOptimizeModel() {
 
   if (model_.lp_.hasIndicatorConstraints() && solution_.value_valid) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "Cannot currently use previous solution when MIP has indicator constraints\n");
+                 "Cannot currently use previous solution when MIP has "
+                 "indicator constraints\n");
     solution_.clear();
   }
   if (model_.isMip() && solution_.value_valid) {
@@ -2773,7 +2774,8 @@ HighsStatus Highs::addIndicatorConstraint(
 
   HighsIndicatorConstraints& indicators = lp.indicators_;
   // If this is the first IC, ensure that the matrix is rowwise
-  if (!indicators.col.size()) indicators.matrix.format_ = MatrixFormat::kRowwise;
+  if (!indicators.col.size())
+    indicators.matrix.format_ = MatrixFormat::kRowwise;
   indicators.col.push_back(binary_col);
   indicators.value.push_back(binary_value);
   indicators.matrix.addVec(num_nz, indices, values);
@@ -2781,8 +2783,8 @@ HighsStatus Highs::addIndicatorConstraint(
   indicators.upper.push_back(upper);
   indicators.name.push_back("");
   // Number of columns in lp.indicators_.matrix needs to be the same
-    // as lp. This is so that, when transposed, the matrix has the
-    // right number of columns.
+  // as lp. This is so that, when transposed, the matrix has the
+  // right number of columns.
   indicators.matrix.num_col_ = lp.num_col_;
 
   clearDerivedModelProperties();
