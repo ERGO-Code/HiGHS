@@ -7954,25 +7954,17 @@ void HPresolve::extractVarBounds(HighsInt row) {
   bool useRhs = model->row_upper_[row] != kHighsInf && numInfSumLower <= 1;
   if (!useLhs && !useRhs) return;
 
-  auto computeMirCut = [&](double& aj, double& rhs, bool flip) {
+  auto computeMirCut = [&](double& aj, double& rhs, HighsInt multiplier) {
     // try to strengthen variable bound constraint by computing MIR cut
     constexpr double f0min = 0.005;
     constexpr double f0max = 0.995;
-    if (flip) {
-      aj *= -1;
-      rhs *= -1;
-    }
-    double downrhs = std::floor(rhs);
-    double f0 = rhs - downrhs;
+    double downrhs = std::floor(multiplier * rhs);
+    double f0 = multiplier * rhs - downrhs;
     if (f0 < f0min || f0 > f0max) return;
-    double downaj = std::floor(aj + kHighsTiny);
-    double fj = aj - downaj;
-    rhs = downrhs;
-    aj = downaj + std::max(fj - f0, 0.0) / (1.0 - f0);
-    if (flip) {
-      aj *= -1;
-      rhs *= -1;
-    }
+    double downaj = std::floor(multiplier * aj + kHighsTiny);
+    double fj = multiplier * aj - downaj;
+    rhs = multiplier * downrhs;
+    aj = multiplier * (downaj + std::max(fj - f0, 0.0) / (1.0 - f0));
   };
 
   // check if row contains a single binary variable
@@ -8046,7 +8038,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
     if (vlbConstant != -kHighsInf) {
       double myVbCoef = vbCoef;
       if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
-        computeMirCut(myVbCoef, vlbConstant, true);
+        computeMirCut(myVbCoef, vlbConstant, HighsInt{-1});
       myVbCoef *= -1;
       if (myVbCoef != 0.0 &&
           std::max(0.0, myVbCoef) + static_cast<HighsCDouble>(vlbConstant) >
@@ -8059,7 +8051,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
     if (vubConstant != kHighsInf) {
       double myVbCoef = vbCoef;
       if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
-        computeMirCut(myVbCoef, vubConstant, false);
+        computeMirCut(myVbCoef, vubConstant, HighsInt{1});
       myVbCoef *= -1;
       if (myVbCoef != 0.0 &&
           std::min(0.0, myVbCoef) + static_cast<HighsCDouble>(vubConstant) <
