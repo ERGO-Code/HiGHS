@@ -7,6 +7,42 @@ const double inf = kHighsInf;
 const bool dev_run = true;//false;//
 const double double_equal_tolerance = 1e-5;
 
+void solveWriteReadSolve(Highs& highs, const double objective_value, const std::vector<double> col_value) {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename_mps = test_name + ".mps";
+  std::string filename_lp = test_name + ".lp";
+
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+
+  const HighsInt to_k = 2;
+  for (HighsInt k = 0; k < to_k; k++) {
+    if (dev_run) printf("\nRun with k = %d\n==============\n\n", int(k));
+    if (k == 1) {
+      REQUIRE(highs.readModel(filename_mps) == HighsStatus::kOk);
+    } else if (k == 2) {
+      REQUIRE(highs.readModel(filename_lp) == HighsStatus::kOk);
+    }
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+    if (dev_run) printf("Solution is (%g, %g) with objective %g\n",
+	   solution.col_value[0], solution.col_value[1], info.objective_function_value);
+    if (dev_run) printf("Testing  is (%g, %g) with objective %g\n",
+	   col_value[0], col_value[1], objective_value);
+    REQUIRE(fabs(solution.col_value[0] - col_value[0]) < double_equal_tolerance);
+    REQUIRE(fabs(solution.col_value[1] - col_value[1]) < double_equal_tolerance);
+    REQUIRE(fabs(info.objective_function_value - objective_value) < double_equal_tolerance);
+
+    if (k == 0) {
+      REQUIRE(highs.writeModel(filename_lp) == HighsStatus::kOk);
+      REQUIRE(highs.writeModel(filename_mps) == HighsStatus::kOk);
+    }
+  }
+  std::remove(filename_lp.c_str());
+  std::remove(filename_mps.c_str());
+}
+
 TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
   // min x
   // s.t. z=1 -> x >= 5
@@ -33,14 +69,13 @@ TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
           HighsStatus::kOk);
 
   REQUIRE(highs.getNumIndicatorConstraints() == 1);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  const HighsSolution& solution = highs.getSolution();
-  // z should be 0, x should be 0
-  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(info.objective_function_value - 0.0) < double_equal_tolerance);
+  const std::vector<double> col_value = {0, 0};
+  const double objective_value = 0;
+    
+  solveWriteReadSolve(highs, objective_value, col_value);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("indicator-simple-v0", "[highs_test_indicator]") {
@@ -64,45 +99,15 @@ TEST_CASE("indicator-simple-v0", "[highs_test_indicator]") {
   REQUIRE(highs.addIndicatorConstraint(1, 0, 1, indices, values, 5.0, inf) ==
           HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  const std::vector<double> col_value = {0, 1};
+  const double objective_value = 0;
+    
+  solveWriteReadSolve(highs, objective_value, col_value);
 
-  const HighsSolution& solution = highs.getSolution();
-  // z should be 1, x should be 0
-  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(solution.col_value[1] - 1.0) < double_equal_tolerance);
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
-  // min x
-  // s.t. z=0 -> x >= 5
-  //      z binary, x in [0, inf)
-  // Optimal: z=1, x=0, obj=0
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-
-  highs.addVar(0.0, inf);  // x (col 0)
-  highs.addVar(0.0, 1.0);  // z (col 1)
-
-  highs.changeColCost(0, 1.0);
-  highs.changeColCost(1, 0.0);
-  highs.changeColIntegrality(1, HighsVarType::kInteger);
-
-  // Indicator: z=0 -> x >= 5
-  HighsInt indices[] = {0};
-  double values[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(1, 0, 1, indices, values, 5.0, inf) ==
-          HighsStatus::kOk);
-
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-
-  const HighsSolution& solution = highs.getSolution();
-  // z should be 1, x should be 0
-  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(solution.col_value[1] - 1.0) < double_equal_tolerance);
-
-  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("indicator-range", "[highs_test_indicator]") {
@@ -126,12 +131,13 @@ TEST_CASE("indicator-range", "[highs_test_indicator]") {
   REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 3.0, 7.0) ==
           HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  const std::vector<double> col_value = {0, 0};
+  const double objective_value = 0;
+    
+  solveWriteReadSolve(highs, objective_value, col_value);
 
-  const HighsSolution& solution = highs.getSolution();
-  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
+  highs.resetGlobalScheduler(true);
+
 }
 
 TEST_CASE("indicator-forced", "[highs_test_indicator]") {
@@ -156,12 +162,10 @@ TEST_CASE("indicator-forced", "[highs_test_indicator]") {
   REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
           HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-
-  const HighsSolution& solution = highs.getSolution();
-  REQUIRE(fabs(solution.col_value[0] - 5.0) < double_equal_tolerance);
-  REQUIRE(fabs(info.objective_function_value - 5.0) < double_equal_tolerance);
+  const std::vector<double> col_value = {5, 1};
+  const double objective_value = 5;
+    
+  solveWriteReadSolve(highs, objective_value, col_value);
 
   highs.resetGlobalScheduler(true);
 }
@@ -197,13 +201,15 @@ TEST_CASE("indicator-multiple", "[highs_test_indicator]") {
           HighsStatus::kOk);
 
   REQUIRE(highs.getNumIndicatorConstraints() == 2);
+
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  const HighsSolution& solution = highs.getSolution();
-  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(solution.col_value[2] - 0.0) < double_equal_tolerance);
+  const std::vector<double> col_value = {0, 0, 0};
+  const double objective_value = 0;
+    
+  solveWriteReadSolve(highs, objective_value, col_value);
+
   highs.resetGlobalScheduler(true);
 }
 
@@ -238,7 +244,7 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("indicator-mps-read-write-read", "[highs_test_indicator]") {
+TEST_CASE("indicator-mps", "[highs_test_indicator]") {
   // Test reading an MPS file with INDICATORS section
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename =
@@ -250,40 +256,10 @@ TEST_CASE("indicator-mps-read-write-read", "[highs_test_indicator]") {
   REQUIRE(status == HighsStatus::kOk);
   REQUIRE(highs.getNumIndicatorConstraints() == 1);
 
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-
-  // z=1 -> x >= 5, min x, so optimal is z=0, x=0
-  const HighsSolution& solution = highs.getSolution();
-  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(info.objective_function_value - 0.0) < double_equal_tolerance);
-
-  // Write MPS
-  std::string filename_mps = test_name + ".mps";
-  status = highs.writeModel(filename_mps);
-  REQUIRE(status == HighsStatus::kOk);
-
-  // Write lp
-  std::string filename_lp = test_name + ".lp";
-  status = highs.writeModel(filename_lp);
-  REQUIRE(status == HighsStatus::kOk);
-
-  status = highs.readModel(filename_mps);
-  REQUIRE(status == HighsStatus::kOk);
-  REQUIRE(highs.getNumIndicatorConstraints() == 1);
-
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-
-  // z=1 -> x >= 5, min x, so optimal is z=0, x=0
-  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(solution.col_value[1] - 0.0) < double_equal_tolerance);
-  REQUIRE(fabs(info.objective_function_value - 0.0) < double_equal_tolerance);
-
-  std::remove(filename_lp.c_str());
-  std::remove(filename_mps.c_str());
-
+  const std::vector<double> col_value = {0, 0};
+  const double objective_value = 0;
+    
+  solveWriteReadSolve(highs, objective_value, col_value);
 
   highs.resetGlobalScheduler(true);
 }
