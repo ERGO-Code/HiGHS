@@ -2780,6 +2780,10 @@ HighsStatus Highs::addIndicatorConstraint(
   indicators.lower.push_back(lower);
   indicators.upper.push_back(upper);
   indicators.name.push_back("");
+  // Number of columns in lp.indicators_.matrix needs to be the same
+    // as lp. This is so that, when transposed, the matrix has the
+    // right number of columns.
+  indicators.matrix.num_col_ = lp.num_col_;
 
   clearDerivedModelProperties();
   return returnFromHighs(HighsStatus::kOk);

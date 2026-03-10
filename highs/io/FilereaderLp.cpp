@@ -428,15 +428,15 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFileValue(file, lp.row_lower_[iRow], true);
       this->writeToFileLineEnd(file);
     } else {
-      // Need to distinguish the names when writing out boxed
+      // Need to distinguish the names when writing out ranged
       // constraint row as two single-sided constraints
-      const bool boxed =
+      const bool ranged =
           lp.row_lower_[iRow] > -kHighsInf && lp.row_upper_[iRow] < kHighsInf;
       if (lp.row_lower_[iRow] > -kHighsInf) {
         // Has a lower bound
         this->writeToFileVar(file, lp.row_names_[iRow]);
-        if (boxed) {
-          this->writeToFile(file, "lo:");
+        if (ranged) {
+          this->writeToFile(file, "%s:", kRangedRowNameExtensionLower.c_str());
         } else {
           this->writeToFile(file, ":");
         }
@@ -448,8 +448,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       if (lp.row_upper_[iRow] < kHighsInf) {
         // Has an upper bound
         this->writeToFileVar(file, lp.row_names_[iRow]);
-        if (boxed) {
-          this->writeToFile(file, "up:");
+        if (ranged) {
+          this->writeToFile(file, "%s:", kRangedRowNameExtensionUpper.c_str());
         } else {
           this->writeToFile(file, ":");
         }
@@ -460,6 +460,15 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       }
     }
   }
+  assert(lp.indicators_.matrix.format_ == MatrixFormat::kRowwise);
+  for (HighsInt indicator_n = 0;
+       indicator_n < static_cast<HighsInt>(lp.indicators_.col.size());
+       indicator_n++) {
+    this->writeToFileVar(file, lp.indicators_.name[indicator_n]);
+    this->writeToFile(file, ":");
+    this->writeToFileMatrixRow(file, indicator_n, lp.indicators_.matrix, lp.col_names_);
+    this->writeToFileLineEnd(file);
+  }    
 
   // write bounds section
   this->writeToFile(file, "bounds");

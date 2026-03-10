@@ -7,7 +7,15 @@ const double inf = kHighsInf;
 const bool dev_run = true;//false;//
 const double double_equal_tolerance = 1e-5;
 
-void solveWriteReadSolve(Highs& highs, const double objective_value, const std::vector<double> col_value) {
+void solveWriteReadSolve(Highs& highs,
+			 const double objective_value,
+			 const std::vector<double> col_value,
+			 const bool have_names = false);
+
+void solveWriteReadSolve(Highs& highs,
+			 const double objective_value,
+			 const std::vector<double> col_value,
+			 const bool have_names) {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename_mps = test_name + ".mps";
   std::string filename_lp = test_name + ".lp";
@@ -35,12 +43,12 @@ void solveWriteReadSolve(Highs& highs, const double objective_value, const std::
     REQUIRE(fabs(info.objective_function_value - objective_value) < double_equal_tolerance);
 
     if (k == 0) {
-      REQUIRE(highs.writeModel(filename_lp) == HighsStatus::kOk);
+      REQUIRE(highs.writeModel(filename_lp) == (have_names ? HighsStatus::kOk : HighsStatus::kWarning));
       REQUIRE(highs.writeModel(filename_mps) == HighsStatus::kOk);
     }
   }
-  std::remove(filename_lp.c_str());
-  std::remove(filename_mps.c_str());
+  //  std::remove(filename_lp.c_str());
+  // std::remove(filename_mps.c_str());
 }
 
 TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
@@ -258,8 +266,9 @@ TEST_CASE("indicator-mps", "[highs_test_indicator]") {
 
   const std::vector<double> col_value = {0, 0};
   const double objective_value = 0;
-    
-  solveWriteReadSolve(highs, objective_value, col_value);
+
+  const bool have_names = true;
+  solveWriteReadSolve(highs, objective_value, col_value, have_names);
 
   highs.resetGlobalScheduler(true);
 }

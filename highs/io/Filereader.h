@@ -24,6 +24,9 @@ enum class FilereaderRetcode {
   kTimeout
 };
 
+const std::string kRangedRowNameExtensionLower = "_lo";
+const std::string kRangedRowNameExtensionUpper = "_up";
+
 void interpretFilereaderRetcode(const HighsLogOptions& log_options,
                                 const std::string& filename,
                                 const FilereaderRetcode code);

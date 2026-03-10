@@ -189,11 +189,18 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
       lp.indicators_.upper.push_back(lp.row_upper_[iRow]);
       lp.indicators_.name.push_back(lp.row_names_[iRow]);
     }
+    // Number of columns in lp.indicators_.matrix needs to be the same
+    // as lp. This is so that, when transposed, the matrix has the
+    // right number of columns. When formed row-wise, addVec keeps
+    // track of the maximum column index over the nonzeros, but this
+    // won't yield the same number of columns as the LP if there are
+    // empty columns after the last column with nonzeros
+    //
+    // Hence have to set the number of columns explicitly
+    lp.indicators_.matrix.num_col_ = lp.num_col_;
     // Finish with HighsIndicatorConstraints matrix rowwise so it's in
     // the right format for adding more by calls to
     // addIndicatorConstraint and for reformulation.
-    //
-    // However MPS write will need them converting to column-wise form
     assert(lp.indicators_.matrix.format_ == MatrixFormat::kRowwise);
     // Remove indicator rows from the LP
     // Build a sorted list of indicator row indices
