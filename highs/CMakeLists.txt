@@ -463,8 +463,8 @@ if(FAST_BUILD)
   endif()
 
   target_link_libraries(highs PRIVATE Threads::Threads)
+  target_link_libraries(highs PRIVATE ${CMAKE_DL_LIBS})
 else()
   target_link_libraries(libhighs Threads::Threads)
 endif()
 
-target_link_libraries(highs PRIVATE ${CMAKE_DL_LIBS})
