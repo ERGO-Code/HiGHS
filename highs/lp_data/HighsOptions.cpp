@@ -105,7 +105,8 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
 #ifdef HIPO
       value == kHipoString ||
 #endif
-      value == kIpxString || value == kPdlpString || value == kQpAsmString || value == kHiPdlpString)
+      value == kIpxString || value == kPdlpString || value == kQpAsmString ||
+      value == kHiPdlpString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kWarning,
                "Value \"%s\" for solver option is not one of \"%s\", \"%s\", "
