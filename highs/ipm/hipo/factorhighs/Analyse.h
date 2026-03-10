@@ -85,18 +85,17 @@ class Analyse {
   const Log* log_;
   DataCollector& data_;
 
-  const std::string& ordering_;
-
   // Functions to perform analyse phase
-  Int getPermutation();
   void permute(const std::vector<Int>& iperm);
   void eTree();
   void postorder();
   void colCount();
   void fundamentalSupernodes();
   void relaxSupernodes();
-  double doRelaxSupernodes(Int64 max_artificial_nz);
+  void relaxSnMaxNz(double& flops, double& spops);
+  double doRelaxSnMaxNz(double& flops, double& spops, Int64 max_artificial_nz);
   void afterRelaxSn();
+  void relaxSnNetOps(double& flops, double& spops);
   void snPattern();
   void relativeIndCols();
   void relativeIndClique();
@@ -112,7 +111,7 @@ class Analyse {
   // Constructor: matrix must be in lower triangular format
   Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
           const std::vector<Int>& signs, Int nb, const Log* log,
-          DataCollector& data, const std::string& ordering);
+          DataCollector& data, const std::vector<Int>& perm);
 
   // Run analyse phase and save the result in Symbolic object S
   Int run(Symbolic& S);

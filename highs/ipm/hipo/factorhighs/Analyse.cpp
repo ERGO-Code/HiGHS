@@ -1,5 +1,6 @@
 #include "Analyse.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -12,15 +13,6 @@
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
 
-#ifndef HIPO_EXTRAS
-#include "amd/amd.h"
-#include "metis/metis.h"
-#include "rcm/rcm.h"
-#else
-#include "DynamicDepsLoader.h"
-#endif
-
-
 namespace hipo {
 
 const Int64 int32_limit = std::numeric_limits<int32_t>::max();
@@ -28,8 +20,8 @@ const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
                  const std::vector<Int>& signs, Int nb, const Log* log,
-                 DataCollector& data, const std::string& ordering)
-    : log_{log}, data_{data}, ordering_{ordering} {
+                 DataCollector& data, const std::vector<Int>& perm)
+    : log_{log}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
   // ptr contains the starting points of each column.
@@ -64,214 +56,11 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   transpose(ptr_upper_, rows_upper_, ptr_lower_, rows_lower_);
   transpose(ptr_lower_, rows_lower_, ptr_upper_, rows_upper_);
 
-  ready_ = true;
-}
-
-Int Analyse::getPermutation() {
-  // Compute fill-reducing reodering using metis, amd or rcm.
-
-  perm_.resize(n_);
+  perm_ = perm;
   iperm_.resize(n_);
+  inversePerm(perm_, iperm_);
 
-  // Build temporary full copy of the matrix, to be used for reordering.
-  // NB: adjacency list should not contain the vertex itself, so diagonal
-  // element is skipped.
-
-  std::vector<Int> work(n_, 0);
-  Int64 total_nz = 0;
-
-  // go through the columns to count nonzeros
-  for (Int j = 0; j < n_; ++j) {
-    for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
-      const Int i = rows_upper_[el];
-
-      // skip diagonal entries
-      if (i == j) continue;
-
-      // nonzero in column j
-      ++work[j];
-
-      // duplicated on the lower part of column i
-      ++work[i];
-
-      total_nz += 2;
-    }
-  }
-
-  if (total_nz > kHighsIInf) {
-    if (log_) log_->printe("Integer overflow while computing ordering.\n");
-    return kRetIntOverflow;
-  }
-
-  // compute column pointers from column counts
-  std::vector<Int> temp_ptr(n_ + 1, 0);
-  counts2Ptr(temp_ptr, work);
-
-  std::vector<Int> temp_rows(temp_ptr.back(), 0);
-
-  for (Int j = 0; j < n_; ++j) {
-    for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
-      const Int i = rows_upper_[el];
-
-      if (i == j) continue;
-
-      // insert row i in column j
-      temp_rows[work[j]++] = i;
-
-      // insert row j in column i
-      temp_rows[work[i]++] = j;
-    }
-  }
-
-  if (ordering_ == "metis") {
-#ifndef HIPO_EXTRAS
-    // ----------------------------
-    // ----- METIS ----------------
-    // ----------------------------
-    idx_t options[METIS_NOPTIONS];
-    Highs_METIS_SetDefaultOptions(options);
-    options[METIS_OPTION_SEED] = kMetisSeed;
-
-    // set logging of Metis depending on debug level
-    options[METIS_OPTION_DBGLVL] = 0;
-    if (log_->debug(2))
-      options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
-
-    // no2hop improves the quality of ordering in general
-    options[METIS_OPTION_NO2HOP] = 1;
-
-    if (log_) log_->printDevInfo("Running Metis\n");
-
-    Int status = Highs_METIS_NodeND(&n_, temp_ptr.data(), temp_rows.data(),
-                                    NULL, options, perm_.data(), iperm_.data());
-
-    if (log_) log_->printDevInfo("Metis done\n");
-    if (status != METIS_OK) {
-      if (log_) log_->printDevInfo("Error with Metis\n");
-      return kRetOrderingError;
-    }
-#else
-    // Use HIPO via dynamic loading
-    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-    idx_t options[METIS_NOPTIONS];
-    if (hipo_loader.isAvailable()) {
-      hipo_loader.fn_hipo_extras_metis_set_default_options_(options);
-      options[METIS_OPTION_SEED] = kMetisSeed;
-
-      // set logging of Metis depending on debug level
-      options[METIS_OPTION_DBGLVL] = 0;
-      if (log_->debug(2))
-        options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
-
-      // no2hop improves the quality of ordering in general
-      options[METIS_OPTION_NO2HOP] = 1;
-
-      if (log_) log_->printDevInfo("Running Metis\n");
-
-      Int status =
-        hipo_loader.fn_hipo_extras_metis_nodend_(&n_, temp_ptr.data(), temp_rows.data(), NULL,
-                             options, perm_.data(), iperm_.data());
-
-      if (log_) log_->printDevInfo("Metis done\n");
-      if (status != METIS_OK) {
-        if (log_) log_->printDevInfo("Error with Metis\n");
-        return kRetOrderingError;
-      }
-
-    } else {
-      log_->printe("DynamicDepsLoader (Metis) is not available.");
-      return kRetOrderingError;
-    }
-#endif
-
-  } else if (ordering_ == "amd") {
-    // ----------------------------
-    // ------ AMD -----------------
-    // ----------------------------
-#ifndef HIPO_EXTRAS
-    double control[AMD_CONTROL];
-    Highs_amd_defaults(control);
-    double info[AMD_INFO];
-
-    if (log_) log_->printDevInfo("Running AMD\n");
-    Int status = Highs_amd_order(n_, temp_ptr.data(), temp_rows.data(),
-                                 perm_.data(), control, info);
-    if (log_) log_->printDevInfo("AMD done\n");
-
-    if (status != AMD_OK) {
-      if (log_) log_->printDevInfo("Error with AMD\n");
-      return kRetOrderingError;
-    }
-    inversePerm(perm_, iperm_);
-#else
-    // Use HIPO via dynamic loading
-    // DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-    if (hipo_loader.isAvailable()) {
-      double control[AMD_CONTROL];
-      hipo_loader.fn_hipo_extras_amd_defaults_(control);
-      double info[AMD_INFO];
-
-      if (log_) log_->printDevInfo("Running AMD\n");
-      Int status = hipo_loader.fn_hipo_extras_amd_order_(n_, temp_ptr.data(), temp_rows.data(),
-                                   perm_.data(), control, info);
-      if (log_) log_->printDevInfo("AMD done\n");
-
-      if (status != AMD_OK) {
-        if (log_) log_->printDevInfo("Error with AMD\n");
-        return kRetOrderingError;
-      }
-      inversePerm(perm_, iperm_);
-    } else {
-      log_->printe("DynamicDepsLoader (AMD) is not available.");
-      return kRetOrderingError;
-    }
-#endif
-  } else if (ordering_ == "rcm") {
-    // ----------------------------
-    // ------ RCM -----------------
-    // ----------------------------
-
-#ifndef HIPO_EXTRAS
-    if (log_) log_->printDevInfo("Running RCM\n");
-
-    Int status = Highs_genrcm(n_, temp_ptr.back(), temp_ptr.data(),
-                              temp_rows.data(), perm_.data());
-    if (log_) log_->printDevInfo("RCM done\n");
-
-    if (status != 0) {
-      if (log_) log_->printDevInfo("Error with RCM\n");
-      return kRetOrderingError;
-    }
-    inversePerm(perm_, iperm_);
-#else
-    // Use HIPO via dynamic loading
-    // DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-    DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-    if (hipo_loader.isAvailable()) {
-      if (log_) log_->printDevInfo("Running RCM\n");
-
-      Int status = hipo_loader.fn_hipo_extras_genrcm_(n_, temp_ptr.back(), temp_ptr.data(),
-                               temp_rows.data(), perm_.data());
-      if (log_) log_->printDevInfo("RCM done\n");
-
-      if (status != 0) {
-        if (log_) log_->printDevInfo("Error with RCM\n");
-        return kRetOrderingError;
-      }
-      inversePerm(perm_, iperm_);
-    } else {
-      // if (log_) log_->printe("Invalid ordering option passed to Analyse\n");
-      log_->printe("DynamicDepsLoader (RCM) is not available.");
-      return kRetOrderingError;
-    }
-#endif
-  } else {
-    if (log_) log_->printe("Invalid ordering option passed to Analyse\n");
-    return kRetOrderingError;
-  }
-
-  return kRetOk;
+  ready_ = true;
 }
 
 void Analyse::permute(const std::vector<Int>& iperm) {
@@ -537,7 +326,108 @@ void Analyse::fundamentalSupernodes() {
   sn_parent_.back() = -1;
 }
 
-double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
+void Analyse::relaxSupernodes() {
+  // Choose which strategy to use for supernode amalgamation.
+  // Relaxing supernodes is fast to run, so just run again the one that is
+  // chosen to set the correct information.
+
+  double flops_1{};
+  double spops_1{};
+  relaxSnMaxNz(flops_1, spops_1);
+  double ops_1 = flops_1 + kSpopsWeightSn * spops_1;
+
+  double flops_2{};
+  double spops_2{};
+  relaxSnNetOps(flops_2, spops_2);
+  double ops_2 = flops_2 + kSpopsWeightSn * spops_2;
+
+  bool total_ops_reduced = ops_2 < ops_1;
+  bool spops_reduced_enough = spops_2 < spops_1 * 0.6;
+
+  if (total_ops_reduced && spops_reduced_enough) {
+    relaxSnNetOps(flops_2, spops_2);
+  } else {
+    relaxSnMaxNz(flops_1, spops_1);
+  }
+}
+
+void Analyse::relaxSnNetOps(double& flops, double& spops) {
+  // =================================================
+  // Build information about supernodes
+  // =================================================
+  std::vector<Int> sn_size(sn_count_);
+  std::vector<Int> clique_size(sn_count_);
+  fake_nz_.assign(sn_count_, 0);
+  for (Int i = 0; i < sn_count_; ++i) {
+    sn_size[i] = sn_start_[i + 1] - sn_start_[i];
+    clique_size[i] = col_count_[sn_start_[i]] - sn_size[i];
+  }
+
+  // build linked lists of children
+  std::vector<Int> first_child, next_child;
+  childrenLinkedList(sn_parent_, first_child, next_child);
+
+  // =================================================
+  // Merge supernodes
+  // =================================================
+  merged_into_.assign(sn_count_, -1);
+  merged_sn_ = 0;
+
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    // sort children by increasing size
+    std::vector<Int> children;
+    Int child = first_child[sn];
+    while (child != -1) {
+      children.push_back(child);
+      child = next_child[child];
+    }
+    std::sort(children.begin(), children.end(),
+              [&](Int a, Int b) { return sn_size[a] < sn_size[b]; });
+
+    for (Int child : children) {
+      // how many zero rows would become nonzero
+      const Int rows_filled =
+          sn_size[sn] + clique_size[sn] - clique_size[child];
+
+      // how many zero entries would become nonzero
+      const Int64 nz_added = (Int64)rows_filled * sn_size[child];
+
+      // how many artificial nonzeros would the merged supernode have
+      const Int64 total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
+
+      const double flops_added =
+          rows_filled * rows_filled * sn_size[child] +
+          2 * rows_filled *
+              (sn_size[child] * (sn_size[child] + clique_size[child]) -
+               sn_size[child] * (sn_size[child] + 1) / 2);
+
+      const double spops_removed =
+          clique_size[child] * (clique_size[child] + 1) / 2;
+
+      const double net_ops = flops_added - kSpopsWeightSn * spops_removed;
+
+      if (net_ops < 0) {
+        // merge child with parent
+        sn_size[sn] += sn_size[child];
+        fake_nz_[sn] = total_art_nz;
+        ++merged_sn_;
+        merged_into_[child] = sn;
+      }
+    }
+  }
+
+  flops = 0.0;
+  spops = 0.0;
+  for (Int i = 0; i < sn_count_; ++i) {
+    if (merged_into_[i] == -1) {
+      spops += snSpops(clique_size[i]);
+      flops += snFlops(sn_size[i], clique_size[i]);
+    }
+  }
+}
+
+double Analyse::doRelaxSnMaxNz(double& flops, double& spops,
+                               Int64 max_artificial_nz) {
   // =================================================
   // Build information about supernodes
   // =================================================
@@ -628,6 +518,15 @@ double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
     }
   }
 
+  flops = 0.0;
+  spops = 0.0;
+  for (Int i = 0; i < sn_count_; ++i) {
+    if (merged_into_[i] == -1) {
+      spops += snSpops(clique_size[i]);
+      flops += snFlops(sn_size[i], clique_size[i]);
+    }
+  }
+
   // compute total number of artificial nonzeros and artificial ops for this
   // value of max_artificial_nz
   double temp_art_nz{};
@@ -635,11 +534,7 @@ double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
   for (Int sn = 0; sn < sn_count_; ++sn) {
     if (merged_into_[sn] == -1) {
       temp_art_nz += fake_nz_[sn];
-
-      const double nn = sn_size[sn];
-      const double cc = clique_size[sn];
-      temp_art_ops += (nn + cc) * (nn + cc) * nn - (nn + cc) * nn * (nn + 1) +
-                      nn * (nn + 1) * (2 * nn + 1) / 6;
+      temp_art_ops += snFlops(sn_size[sn], clique_size[sn]);
     }
   }
   temp_art_ops -= dense_ops_norelax_;
@@ -650,7 +545,7 @@ double Analyse::doRelaxSupernodes(Int64 max_artificial_nz) {
   return ratio_fake;
 }
 
-void Analyse::relaxSupernodes() {
+void Analyse::relaxSnMaxNz(double& flops, double& spops) {
   // Child which produces smallest number of fake nonzeros is merged if
   // resulting sn has fewer than max_artificial_nz fake nonzeros.
   // Multiple values of max_artificial_nz are tried, chosen with bisection
@@ -666,7 +561,7 @@ void Analyse::relaxSupernodes() {
   for (Int iter = 0; iter < kMaxIterRelax; ++iter) {
     // relax the supernodes and obtain the ratio of how many new ops have been
     // added with the current value of max_artificial_nz
-    const double ratio_fake = doRelaxSupernodes(max_artificial_nz);
+    const double ratio_fake = doRelaxSnMaxNz(flops, spops, max_artificial_nz);
 
     // store the best ratio, in case a good ratio is never found
     double dist_ratio_fake = std::min(std::abs(ratio_fake - kLowerRatioRelax),
@@ -703,7 +598,7 @@ void Analyse::relaxSupernodes() {
   // To avoid having a catastrophically bad ratio in pathological problems,
   // choose the best ratio found
 
-  doRelaxSupernodes(best_max_art_nz);
+  doRelaxSnMaxNz(flops, spops, best_max_art_nz);
 }
 
 void Analyse::afterRelaxSn() {
@@ -989,7 +884,7 @@ void Analyse::relativeIndClique() {
     const Int sn_clique_size = sn_column_size - sn_size;
 
     // count number of assembly operations during factorise
-    sparse_ops_ += (double)sn_clique_size * (sn_clique_size + 1) / 2;
+    sparse_ops_ += snSpops(sn_clique_size);
 
     relind_clique_[sn].resize(sn_clique_size);
 
@@ -1087,10 +982,7 @@ void Analyse::computeCriticalPath() {
     // frontal size
     const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
 
-    // dense ops of this supernode
-    critical_ops[sn] = (double)fr * fr * sz +
-                       (double)sz * (sz + 1) * (2 * sz + 1) / 6 -
-                       (double)fr * sz * (sz + 1);
+    critical_ops[sn] = snFlops(sz, fr - sz);
   }
 
   for (Int sn = 0; sn < sn_count_; ++sn) {
@@ -1385,10 +1277,6 @@ Int Analyse::run(Symbolic& S) {
   HIPO_CLOCK_CREATE;
 
   HIPO_CLOCK_START(2);
-  if (getPermutation()) return kRetOrderingError;
-  HIPO_CLOCK_STOP(2, data_, kTimeAnalyseMetis);
-
-  HIPO_CLOCK_START(2);
   permute(iperm_);
   eTree();
   postorder();
@@ -1435,7 +1323,6 @@ Int Analyse::run(Symbolic& S) {
   S.flops_ = dense_ops_;
   S.block_size_ = nb_;
   S.max_stack_size_ = max_stack_size_;
-  S.ordering = ordering_;
   S.tree_depth_ = maxDepthTree(sn_parent_);
 
   // compute largest supernode

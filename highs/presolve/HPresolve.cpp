@@ -4358,6 +4358,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   // update implied bounds of all columns in given row
   HPRESOLVE_CHECKED_CALL(updateColImpliedBounds(row));
 
+  // extract variable bound constraints
+  extractVarBounds(row);
+
   return checkLimits(postsolve_stack);
 }
 
@@ -7934,6 +7937,105 @@ void HPresolve::setRelaxedImpliedBounds() {
       if (newUb < model->col_upper_[i] - boundRelax)
         model->col_upper_[i] = newUb;
     }
+  }
+}
+
+void HPresolve::extractVarBounds(HighsInt row) {
+  // extract variable bound constraints from the row
+
+  // return if row is empty or a singleton or contains no integer variables
+  if (mipsolver == nullptr || rowsize[row] <= 1 || rowsizeInteger[row] == 0)
+    return;
+
+  // check if variable bounds can be derived from row
+  HighsInt numInfSumLower = impliedRowBounds.getNumInfSumLower(row);
+  HighsInt numInfSumUpper = impliedRowBounds.getNumInfSumUpper(row);
+  bool useLhs = model->row_lower_[row] != -kHighsInf && numInfSumUpper <= 1;
+  bool useRhs = model->row_upper_[row] != kHighsInf && numInfSumLower <= 1;
+  if (!useLhs && !useRhs) return;
+
+  // check if row contains a single binary variable
+  HighsInt binCol = -1;
+  double binCoef = 0.0;
+  for (const auto& nonzero : getRowVector(row)) {
+    // skip fixed variables
+    if (model->col_lower_[nonzero.index()] ==
+        model->col_upper_[nonzero.index()])
+      continue;
+
+    // find binary variable
+    if (model->integrality_[nonzero.index()] == HighsVarType::kInteger &&
+        model->col_lower_[nonzero.index()] == 0.0 &&
+        model->col_upper_[nonzero.index()] == 1.0) {
+      // return if there is more than one binary variable
+      if (binCol != -1) return;
+      binCol = nonzero.index();
+      binCoef = nonzero.value();
+    }
+  }
+  // return if there is no binary variable
+  if (binCol == -1) return;
+
+  for (const auto& nonzero : getRowVector(row)) {
+    // skip fixed variables
+    if (model->col_lower_[nonzero.index()] ==
+        model->col_upper_[nonzero.index()])
+      continue;
+
+    // skip binary variable
+    if (nonzero.index() == binCol) continue;
+
+    // compute coefficient for binary variable
+    double vbCoef = -binCoef / nonzero.value();
+
+    // compute vlb constant
+    double vlbConstant = -kHighsInf;
+    if (useLhs) {
+      double residual = impliedRowBounds.getResidualSumUpper(
+          row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
+      if (residual != kHighsInf) {
+        vlbConstant = static_cast<double>(
+            (static_cast<HighsCDouble>(model->row_lower_[row]) - residual) /
+            std::abs(nonzero.value()));
+        useLhs = numInfSumUpper == 0;
+      }
+    }
+
+    // compute vub constant
+    double vubConstant = kHighsInf;
+    if (useRhs) {
+      double residual = impliedRowBounds.getResidualSumLower(
+          row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
+      if (residual != -kHighsInf) {
+        vubConstant = static_cast<double>(
+            (static_cast<HighsCDouble>(model->row_upper_[row]) - residual) /
+            std::abs(nonzero.value()));
+        useRhs = numInfSumLower == 0;
+      }
+    }
+
+    // switch sign if continuous variable has a negative coefficient
+    if (nonzero.value() < 0) {
+      vlbConstant *= -1;
+      vubConstant *= -1;
+      std::swap(vlbConstant, vubConstant);
+    }
+
+    // add vlb
+    if (vlbConstant != -kHighsInf &&
+        std::max(0.0, vbCoef) + static_cast<HighsCDouble>(vlbConstant) >
+            model->col_lower_[nonzero.index()] + primal_feastol)
+      mipsolver->mipdata_->implications.addVLB(nonzero.index(), binCol, vbCoef,
+                                               vlbConstant);
+    // add vub
+    if (vubConstant != kHighsInf &&
+        std::min(0.0, vbCoef) + static_cast<HighsCDouble>(vubConstant) <
+            model->col_upper_[nonzero.index()] - primal_feastol)
+      mipsolver->mipdata_->implications.addVUB(nonzero.index(), binCol, vbCoef,
+                                               vubConstant);
+
+    // stop if no additional variable bounds can be found
+    if (!useLhs && !useRhs) break;
   }
 }
 

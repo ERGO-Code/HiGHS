@@ -335,7 +335,6 @@ set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BU
 set(highs_sources
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
-    io/FilereaderEms.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
@@ -451,7 +450,6 @@ set(highs_headers
     ../extern/zstr/zstr.hpp
     interfaces/highs_c_api.h
     io/Filereader.h
-    io/FilereaderEms.h
     io/FilereaderLp.h
     io/FilereaderMps.h
     io/HighsIO.h

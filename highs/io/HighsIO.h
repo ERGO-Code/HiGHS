@@ -83,6 +83,11 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...);
 
 /**
+ * @brief Gets filename extension
+ */
+std::string getFilenameExt(const std::string& filename);
+
+/**
  * @brief Replaces fprintf(file,... so that when file=stdout highsLogUser is
  * used
  */
