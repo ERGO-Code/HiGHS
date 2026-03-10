@@ -360,7 +360,6 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;
-
   const bool ok_names = lp.okNames();
   assert(ok_names);
   if (!ok_names) return HighsStatus::kError;
@@ -371,8 +370,10 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
 
   FILE* file = fopen(filename.c_str(), "w");
 
-  // write comment at the start of the file
-  this->writeToFile(file, "\\ %s", LP_COMMENT_FILESTART);
+  // write comments at the start of the file
+  this->writeToFile(file, "\\ %s", LP_COMMENT_FILESTART0);
+  this->writeToFileLineEnd(file);
+  this->writeToFile(file, "\\ %s", LP_COMMENT_FILESTART1);
   this->writeToFileLineEnd(file);
 
   // write objective

@@ -21,7 +21,9 @@
 #define LP_MAX_LINE_LENGTH 560
 #define LP_MAX_NAME_LENGTH 255
 
-#define LP_COMMENT_FILESTART ("File written by HiGHS .lp file handler")
+#define LP_COMMENT_FILESTART0 \
+  ("A handy human-readable file written by the HiGHS .lp file handler")
+#define LP_COMMENT_FILESTART1 ("Use MPS format to reproduce models properly")
 
 class FilereaderLp : public Filereader {
  public:

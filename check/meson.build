@@ -38,6 +38,7 @@ test_array = [
   ['test_TestICrash', 'TestICrash.cpp'],
   ['test_TestIis', 'TestIis.cpp'],
   ['test_TestInfo', 'TestInfo.cpp'],
+  ['test_TestIndicatorConstraints', 'TestIndicatorConstraints.cpp'],
   ['test_TestIO', 'TestIO.cpp'],
   ['test_TestIpm', 'TestIpm.cpp'],
   ['test_TestIpx', 'TestIpx.cpp'],

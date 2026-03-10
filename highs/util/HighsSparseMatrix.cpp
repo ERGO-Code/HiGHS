@@ -603,6 +603,8 @@ void HighsSparseMatrix::deleteCols(
   assert(this->formatOk());
   // Can't handle rowwise matrices yet
   assert(!this->isRowwise());
+  // When the need arises, use the same trick as in
+  // HighsSparseMatrix::deleteRows
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -618,6 +620,7 @@ void HighsSparseMatrix::deleteCols(
   HighsInt col_dim = this->num_col_;
   HighsInt new_num_col = 0;
   HighsInt new_num_nz = 0;
+  assert(this->isColwise());
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, delete_from_col, delete_to_col,
                      keep_from_col, keep_to_col, current_set_entry);
@@ -665,6 +668,24 @@ void HighsSparseMatrix::deleteCols(
 void HighsSparseMatrix::deleteRows(
     const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
+  if (this->isRowwise()) {
+    // Handle deleting rows from a rowwise matrix by pretending that
+    // it's a column-wise matrix and deleting columns
+    //
+    // Remember that in a column-wise matrix this->num_col_ is the
+    // number of vectors, so have to flip this->num_col_ and
+    // this->num_row_
+    this->format_ = MatrixFormat::kColwise;
+    HighsInt temp = this->num_col_;
+    this->num_col_ = this->num_row_;
+    this->num_row_ = temp;
+    this->deleteCols(index_collection);
+    this->format_ = MatrixFormat::kRowwise;
+    temp = this->num_col_;
+    this->num_col_ = this->num_row_;
+    this->num_row_ = temp;
+    return;
+  };
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
