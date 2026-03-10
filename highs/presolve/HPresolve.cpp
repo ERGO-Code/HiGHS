@@ -7956,16 +7956,19 @@ void HPresolve::extractVarBounds(HighsInt row) {
 
   auto computeMirCut = [&](double& aj, double& rhs, bool flip) {
     // try to strengthen variable bound constraint by computing MIR cut
+    constexpr double f0min = 0.005;
+    constexpr double f0max = 0.995;
     if (flip) {
       aj *= -1;
       rhs *= -1;
     }
     double downrhs = std::floor(rhs + primal_feastol);
+    double f0 = rhs - downrhs;
+    if (f0 < f0min || f0 > f0max) return;
     double downaj = std::floor(aj + kHighsTiny);
-    double f = rhs - downrhs;
     double fj = aj - downaj;
     rhs = downrhs;
-    aj = downaj + std::max(fj - f, 0.0) / (1.0 - f);
+    aj = downaj + std::max(fj - f0, 0.0) / (1.0 - f0);
     if (flip) {
       aj *= -1;
       rhs *= -1;
