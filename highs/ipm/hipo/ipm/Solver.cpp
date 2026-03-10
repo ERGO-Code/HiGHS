@@ -133,8 +133,8 @@ bool Solver::initialise() {
   start_time_ = control_.elapsed();
 
   // initialise linear solver
-  LS_.reset(
-      new FactorHiGHSSolver(options_, model_, regul_, info_, it_->data, logH_));
+  LS_.reset(new FactorHiGHSSolver(kkt_, options_, model_, regul_, info_,
+                                  it_->data, logH_));
   if (Int status = LS_->setup()) {
     info_.status = (Status)status;
     return true;

@@ -32,6 +32,8 @@ class Solver {
   // Linear solver interface
   std::unique_ptr<LinearSolver> LS_;
 
+  KktMatrix kkt_;
+
   // Iterate object interface
   std::unique_ptr<Iterate> it_;
 

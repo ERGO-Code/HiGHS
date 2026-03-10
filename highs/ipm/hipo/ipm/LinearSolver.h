@@ -76,6 +76,18 @@ class LinearSolver {
   virtual void getReg(std::vector<double>& reg){};
 };
 
+struct KktMatrix {
+  std::vector<Int> ptrNE;
+  std::vector<Int> rowsNE;
+  std::vector<double> valNE;
+
+  std::vector<Int> ptrAS;
+  std::vector<Int> rowsAS;
+  std::vector<double> valAS;
+
+  std::vector<Int> iperm;
+};
+
 }  // namespace hipo
 
 #endif
