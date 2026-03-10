@@ -513,7 +513,7 @@ TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
             << std::endl;
 
   int hipdlp_iteration_count = h.getInfo().pdlp_iteration_count;
-  int restart_strategy;
+  HighsInt restart_strategy;
   h.getOptionValue("pdlp_restart_strategy", restart_strategy);
   //REQUIRE(restart_strategy == kPdlpRestartStrategyHalpern);
 }
