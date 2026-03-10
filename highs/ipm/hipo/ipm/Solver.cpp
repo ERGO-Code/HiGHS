@@ -102,6 +102,10 @@ void Solver::solve() {
 
   // iterate object needs to be initialised before potentially interrupting
   it_.reset(new Iterate(model_, regul_));
+  if (!it_) {
+    info_.status = kStatusError;
+    return;
+  }
 
   if (checkInterrupt()) return;
 
@@ -132,8 +136,14 @@ bool Solver::initialise() {
 
   start_time_ = control_.elapsed();
 
+  kkt_.reset(new KktMatrix(model_, regul_, info_, logH_));
+  if (!kkt_) {
+    info_.status = kStatusError;
+    return true;
+  }
+
   // initialise linear solver
-  LS_.reset(new FactorHiGHSSolver(kkt_, options_, model_, regul_, info_,
+  LS_.reset(new FactorHiGHSSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->data, logH_));
   if (Int status = LS_->setup()) {
     info_.status = (Status)status;

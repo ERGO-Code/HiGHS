@@ -6,6 +6,7 @@
 
 #include "Info.h"
 #include "IpmData.h"
+#include "KktMatrix.h"
 #include "LinearSolver.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -22,23 +23,13 @@ class FactorHiGHSSolver : public LinearSolver {
 
   KktMatrix& kkt_;
 
-  // normal equations data
-  std::vector<Int> ptrA_rw_, idxA_rw_;
-  std::vector<Int> corr_A_;
-  std::atomic<Int64> NE_nz_limit_{kHighsIInf};
-
   const Regularisation& regul_;
-
   Info& info_;
   IpmData& data_;
   const LogHighs& log_;
-
   const Model& model_;
-  const HighsSparseMatrix& A_;
-  const HighsHessian& Q_;
-  const Int mA_, nA_, nzA_, nzQ_;
-
   Options& options_;
+
   std::string ordering_AS_ = "none";
   std::string ordering_NE_ = "none";
 
@@ -48,15 +39,6 @@ class FactorHiGHSSolver : public LinearSolver {
   Int chooseOrdering(const std::vector<Int>& rows, const std::vector<Int>& ptr,
                      const std::vector<Int>& signs, Symbolic& S,
                      std::string& ordering, const std::string& nla);
-
-  Int buildNEstructure();
-  Int buildNEvalues(const std::vector<double>& scaling);
-  void freeNEmemory();
-
-  Int buildASstructure();
-  Int buildASvalues(const std::vector<double>& scaling);
-  void freeASmemory();
-
   Int analyseAS(Symbolic& S);
   Int analyseNE(Symbolic& S);
 
