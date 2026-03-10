@@ -1295,7 +1295,6 @@ double PDLPSolver::computeDualFeasibility(const std::vector<double>& ATy_vector,
 
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     // Matching CUPDLP: c - A'y - dSlackPos + dSlackNeg
-    std::cout<< "dualResidual["<<i<<"]= "<<dualResidual[i]<<", dSlackPos["<<i<<"]= "<<dSlackPos[i]<<", dSlackNeg["<<i<<"]= "<<dSlackNeg[i]<<std::endl;
     dual_residual[i] = dualResidual[i] - dSlackPos[i] + dSlackNeg[i];
   }
 
