@@ -1,4 +1,8 @@
 # Fetch OpenBLAS
+if (HIPO_PYTHON_EXTRAS_BUILD)
+  return()
+endif()
+
 if (BUILD_OPENBLAS)
     include(FetchContent)
     set(FETCHCONTENT_QUIET OFF)
