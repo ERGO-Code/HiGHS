@@ -890,9 +890,9 @@ class TestHighsPy(unittest.TestCase):
 
         # test prefix item with indices, not variable offset
         h = highspy.Highs()
-        x = h.addVariables("a", "b", "c", name_prefix="t_")  # ('a', 'b', 'c')
+        x = h.addVariables("a", "b", "c", name_prefix="t_")  # ('a','b','c')
         self.assertEqual(h.numVariables, 1)
-        self.assertEqual(x["a", "b", "c"].name, "t_('a', 'b', 'c')")
+        self.assertEqual(x["a", "b", "c"].name, "t_('a','b','c')")
 
         # Testing different ways of adding variables
         # Some are unlikely to be used, but this is expected behaviour
