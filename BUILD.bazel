@@ -49,7 +49,10 @@ cuda_library(
 
 cc_library(
     name = "highs",
-    srcs = ["highs/interfaces/highs_c_api.cpp"] + glob([
+    srcs = [
+        "highs/interfaces/highs_c_api.cpp",
+        "highs/DynamicDepsLoader.cpp",
+    ] + glob([
         "highs/io/*.cpp",
         "highs/io/filereaderlp/*.cpp",
         "highs/ipm/*.cpp",
