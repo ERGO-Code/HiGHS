@@ -288,7 +288,7 @@ TEST_CASE("pdlp-restart-lp", "[pdlp]") {
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
   h.run();
   h.setOptionValue("presolve", kHighsOffString);
-  run_status = h.run();
+  HighsStatus run_status = h.run();
 }
 
 TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
