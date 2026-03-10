@@ -467,11 +467,11 @@ TEST_CASE("cuda-sandbox", "[pdlp]") {
 #endif
 
 TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
-  std::string model = "neso-2005";  //"afiro";
+  std::string model = "afiro";  //"afiro";
   // shell //stair //25fv47 //fit2p //avgas //neso-2245 //neso-2005
   std::string model_file =
-      // std::string(HIGHS_DIR) + "/srv/" + model + ".mps.gz";
-      "/srv/mps_da/" + model + ".mps.gz";
+       std::string(HIGHS_DIR) + "/srv/" + model + ".mps.gz";
+      //"/srv/mps_da/" + model + ".mps.gz";
   Highs h;
   // h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) != HighsStatus::kError);
@@ -507,7 +507,7 @@ TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
   std::cout << "Status: " << h.modelStatusToString(h.getModelStatus())
             << std::endl;
   std::cout << "Iterations: " << h.getInfo().pdlp_iteration_count << std::endl;
-  std::cout << "Wall time: " << duration_hipdlp.count() / 1000.0 << " seconds"
+  std::cout << "Wall t.ime: " << duration_hipdlp.count() / 1000.0 << " seconds"
             << std::endl;
   std::cout << "Objective: " << h.getInfo().objective_function_value
             << std::endl;
