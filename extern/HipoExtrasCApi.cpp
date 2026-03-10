@@ -84,12 +84,19 @@ extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(HighsInt node_num,
 //                      solver_object.highs_info_, solver_object.callback_);
 // }
 
-#ifdef HIPO_USES_OPENBLAS
+// #ifndef __APPLE__
+// HIPO_USES_OPENBLAS
 // function to set number of threads of openblas
 extern "C" {
-void openblas_set_num_threads(int num_threads);
+  void openblas_set_num_threads(int num_threads);
 }
-#endif
+
+// extern "C" HIPO_EXTRAS_API void hipo_extras_daxpy(const int N, const double alpha, const double *X,
+//                        const int incX, double *Y, const int incY) {
+//   return cblas_daxpy(N, alpha, X, incX, Y, incY);
+// }
+
+// #endif
 
 // HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
 //                         const HighsLp& lp, HighsBasis& highs_basis,

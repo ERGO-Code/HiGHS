@@ -23,6 +23,7 @@
 #include "amd/amd.h"
 #include "metis/metis.h"
 #include "rcm/rcm.h"
+#include "ipm/hipo/auxiliary/mycblas.h"
 
 // ABI version for compatibility checking
 // Increment this when the C API signature changes
@@ -180,6 +181,17 @@ class DynamicDepsLoader {
   hipo_extras_amd_order_t fn_hipo_extras_amd_order_ = nullptr;
 
   hipo_extras_genrcm_t fn_hipo_extras_genrcm_ = nullptr;
+
+  // hipo_extras_daxpy_t fn_hipo_extras_daxpy_=   nullptr;
+  // hipo_extras_docopy_t fn_hipo_extras_docopy_=  nullptr;
+  // hipo_extras_dscal_t fn_hipo_extras_dscal_=  nullptr;
+  // hipo_extras_dswap_t fn_hipo_extras_dswap_=  nullptr;
+  // hipo_extras_dtpsv_t fn_hipo_extras_dtpsv_=  nullptr;
+  // hipo_extras_dtrsv_t fn_hipo_extras_dtrsv_=  nullptr;
+  // hipo_extras_dger_t fn_hipo_extras_dger_= nullptr;
+  // hipo_extras_dgemm_t  fn_hipo_extras_dgemm_ = nullptr;
+  // hipo_extras_dsyrk_t fn_hipo_extras_dsyrk_=  nullptr;
+  // hipo_extras_dtrsm_t fn_hipo_extras_dtrsm_=  nullptr;
 };
 
 #endif  // LP_DATA_DYNAMIC_HIPO_LOADER_H_

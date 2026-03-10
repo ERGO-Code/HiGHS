@@ -7,6 +7,14 @@
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/mycblas.h"
 
+// #ifndef HIPO_EXTRAS
+// // #include "amd/amd.h"
+// // #include "metis/metis.h"
+// // #include "rcm/rcm.h"
+// #else
+// #include "DynamicDepsLoader.h"
+// #endif
+
 namespace hipo {
 
 // macros to interface with CBlas
@@ -20,7 +28,17 @@ namespace hipo {
 void callAndTime_daxpy(Int n, double da, const double* dx, Int incx, double* dy,
                        Int incy, DataCollector& data) {
   HIPO_CLOCK_CREATE;
+
+  // If HiPO is ON
+// #ifndef HIPO_EXTRAS
   cblas_daxpy(n, da, dx, incx, dy, incy);
+// #else
+//   DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+//   if (hipo_loader.isAvailable()) {
+//     hipo_loader.hipo_extras_daxpy(n, da, dx, incx, dy, incy);
+//     // hipo_loader.cblas_daxpy(n, da, dx, incx, dy, incy);
+//   }
+// #endif
   HIPO_CLOCK_STOP(3, data, kTimeBlas_axpy);
 }
 

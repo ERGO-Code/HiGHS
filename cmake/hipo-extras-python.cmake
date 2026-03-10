@@ -6,7 +6,7 @@ if (NOT HIPO_EXTRAS_LIBRARY_BUILD)
 endif()
 
 if (NOT APPLE)
-    set(BUILD_OPENBLAS ON)
+    set(BUILD_OPENBLAS ON) # *** for now always build openblas
 endif()
 
 include(sources-python)
@@ -51,10 +51,10 @@ if (NOT WIN32)
 endif()
 
 # Dependencies
-# find_package(ZLIB)
-# if(ZLIB_FOUND)
-#     target_link_libraries(highs_extras PRIVATE ZLIB::ZLIB)
-# endif()
+find_package(ZLIB)
+if(ZLIB_FOUND)
+    target_link_libraries(highs_extras PRIVATE ZLIB::ZLIB)
+endif()
 
 # target_link_libraries(highs_extras PRIVATE highs)
 
@@ -95,19 +95,39 @@ endif()
 #     endif(APPLE)
 # else()
 
-#     if (WIN32 AND TARGET OpenBLAS::OpenBLAS)
-#         target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#         target_link_libraries(highs_extras PRIVATE OpenBLAS::OpenBLAS)
-#     else()
-#         target_link_libraries(highs_extras PRIVATE BLAS::BLAS)
+if (BUILD_OPENBLAS)
+  message(STATUS "WE ARE HERE")
 
-#         string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
-#         if(blas_lower MATCHES "openblas")
-#             target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#         elseif(blas_lower MATCHES "accelerate")
-#             target_compile_definitions(highs_extras PRIVATE HIPO_USES_APPLE_BLAS)
-#         endif()
-#     endif()
+  set(OPENBLAS_STATIC_LIB ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/libopenblas.a)
+  if(NOT EXISTS ${OPENBLAS_STATIC_LIB})
+    message(FATAL_ERROR "OpenBLAS static lib not found at: ${OPENBLAS_STATIC_LIB}")
+  endif()
+
+  target_link_libraries(highs_extras PUBLIC ${OPENBLAS_STATIC_LIB})
+  # target_link_libraries(highs_extras PUBLIC openblas)
+
+  target_include_directories(highs_extras PUBLIC
+    ${CMAKE_BINARY_DIR}/_deps/openblas-src/include
+    # or wherever the openblas headers landed
+)
+endif()
+
+# else()
+#   if (WIN32 AND TARGET OpenBLAS::OpenBLAS)
+#       target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
+#       target_link_libraries(highs_extras PRIVATE OpenBLAS::OpenBLAS)
+#   else()
+#       target_link_libraries(highs_extras PRIVATE BLAS::BLAS)
+#       string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
+#       if(blas_lower MATCHES "openblas")
+#           target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
+#       elseif(blas_lower MATCHES "accelerate")
+#           target_compile_definitions(highs_extras PRIVATE HIPO_USES_APPLE_BLAS)
+#       endif()
+#   endif()
+
+# endif()
+
 # endif()
 
 if(MSVC)
