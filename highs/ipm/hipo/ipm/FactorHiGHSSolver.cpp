@@ -12,11 +12,13 @@
 
 namespace hipo {
 
-FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
+FactorHiGHSSolver::FactorHiGHSSolver(KktMatrix& kkt, Options& options,
+                                     const Model& model,
                                      const Regularisation& regul, Info& info,
                                      IpmData& record, const LogHighs& log)
     : FH_(&log, options.block_size),
       S_{},
+      kkt_{kkt},
       regul_{regul},
       info_{info},
       data_{record},
@@ -50,42 +52,42 @@ Int FactorHiGHSSolver::buildASstructure() {
   // AS matrix must fit into HighsInt
   if ((Int64)nzBlock11 + mA_ + nzA_ >= kHighsIInf) return kStatusOverflow;
 
-  ptrAS_.resize(nA_ + mA_ + 1);
-  rowsAS_.resize(nzBlock11 + nzA_ + mA_);
-  valAS_.resize(nzBlock11 + nzA_ + mA_);
+  kkt_.ptrAS.resize(nA_ + mA_ + 1);
+  kkt_.rowsAS.resize(nzBlock11 + nzA_ + mA_);
+  kkt_.valAS.resize(nzBlock11 + nzA_ + mA_);
 
   Int next = 0;
 
   for (Int i = 0; i < nA_; ++i) {
     // diagonal element
-    rowsAS_[next] = i;
+    kkt_.rowsAS[next] = i;
     next++;
 
     // column of Q
     if (model_.qp()) {
       assert(Q_.index_[Q_.start_[i]] == i);
       for (Int el = Q_.start_[i] + 1; el < Q_.start_[i + 1]; ++el) {
-        rowsAS_[next] = Q_.index_[el];
-        valAS_[next] = -Q_.value_[el];  // values of AS that will not change
+        kkt_.rowsAS[next] = Q_.index_[el];
+        kkt_.valAS[next] = -Q_.value_[el];  // values of AS that will not change
         ++next;
       }
     }
 
     // column of A
     for (Int el = A_.start_[i]; el < A_.start_[i + 1]; ++el) {
-      rowsAS_[next] = nA_ + A_.index_[el];
-      valAS_[next] = A_.value_[el];  // values of AS that will not change
+      kkt_.rowsAS[next] = nA_ + A_.index_[el];
+      kkt_.valAS[next] = A_.value_[el];  // values of AS that will not change
       ++next;
     }
 
-    ptrAS_[i + 1] = next;
+    kkt_.ptrAS[i + 1] = next;
   }
 
   // 2,2 block
   for (Int i = 0; i < mA_; ++i) {
-    rowsAS_[next] = nA_ + i;
+    kkt_.rowsAS[next] = nA_ + i;
     ++next;
-    ptrAS_[nA_ + i + 1] = ptrAS_[nA_ + i] + 1;
+    kkt_.ptrAS[nA_ + i + 1] = kkt_.ptrAS[nA_ + i] + 1;
   }
 
   return kStatusOk;
@@ -94,11 +96,12 @@ Int FactorHiGHSSolver::buildASstructure() {
 Int FactorHiGHSSolver::buildASvalues(const std::vector<double>& scaling) {
   // build AS values that change during iterations.
 
-  assert(!ptrAS_.empty() && !rowsAS_.empty());
+  assert(!kkt_.ptrAS.empty() && !kkt_.rowsAS.empty());
 
   for (Int i = 0; i < nA_; ++i) {
-    valAS_[ptrAS_[i]] = scaling.empty() ? -1.0 : -scaling[i];
-    if (model_.qp()) valAS_[ptrAS_[i]] -= model_.sense() * model_.Q().diag(i);
+    kkt_.valAS[kkt_.ptrAS[i]] = scaling.empty() ? -1.0 : -scaling[i];
+    if (model_.qp())
+      kkt_.valAS[kkt_.ptrAS[i]] -= model_.sense() * model_.Q().diag(i);
   }
 
   return kStatusOk;
@@ -138,11 +141,11 @@ Int FactorHiGHSSolver::buildNEstructure() {
     }
   }
 
-  ptrNE_.clear();
-  rowsNE_.clear();
+  kkt_.ptrNE.clear();
+  kkt_.rowsNE.clear();
 
   // ptr is allocated its exact size
-  ptrNE_.resize(mA_ + 1, 0);
+  kkt_.ptrNE.resize(mA_ + 1, 0);
 
   // keep track if given entry is nonzero, in column considered
   std::vector<bool> is_nz(mA_, false);
@@ -179,18 +182,18 @@ Int FactorHiGHSSolver::buildNEstructure() {
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error.
-    if ((Int64)ptrNE_[row] + nz_in_col >=
+    if ((Int64)kkt_.ptrNE[row] + nz_in_col >=
         NE_nz_limit_.load(std::memory_order_relaxed))
       return kStatusOverflow;
 
     // update pointers
-    ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
+    kkt_.ptrNE[row + 1] = kkt_.ptrNE[row] + nz_in_col;
 
     // now assign indices
     for (Int i = 0; i < nz_in_col; ++i) {
       Int index = temp_index[i];
       // push_back is better then reserve, because the final length is not known
-      rowsNE_.push_back(index);
+      kkt_.rowsNE.push_back(index);
       is_nz[index] = false;
     }
   }
@@ -201,9 +204,9 @@ Int FactorHiGHSSolver::buildNEstructure() {
 Int FactorHiGHSSolver::buildNEvalues(const std::vector<double>& scaling) {
   // given the NE structure already computed, fill in the NE values
 
-  assert(!ptrNE_.empty() && !rowsNE_.empty());
+  assert(!kkt_.ptrNE.empty() && !kkt_.rowsNE.empty());
 
-  valNE_.resize(rowsNE_.size());
+  kkt_.valNE.resize(kkt_.rowsNE.size());
 
   std::vector<double> work(mA_, 0.0);
 
@@ -238,9 +241,9 @@ Int FactorHiGHSSolver::buildNEvalues(const std::vector<double>& scaling) {
     // intersection of row with rows below finished.
 
     // read from work, using indices of column "row" of AAt
-    for (Int el = ptrNE_[row]; el < ptrNE_[row + 1]; ++el) {
-      Int index = rowsNE_[el];
-      valNE_[el] = work[index];
+    for (Int el = kkt_.ptrNE[row]; el < kkt_.ptrNE[row + 1]; ++el) {
+      Int index = kkt_.rowsNE[el];
+      kkt_.valNE[el] = work[index];
       work[index] = 0.0;
     }
   }
@@ -267,8 +270,8 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   log_.printDevInfo("Performing AS analyse phase\n");
 
   clock.start();
-  Int status =
-      chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S, ordering_AS_, "AS");
+  Int status = chooseOrdering(kkt_.rowsAS, kkt_.ptrAS, pivot_signs, S,
+                              ordering_AS_, "AS");
   info_.analyse_AS_time += clock.stop();
 
   return status;
@@ -279,7 +282,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
   // in object S and the status. Structure of the matrix must be already
   // computed.
 
-  if (rowsNE_.empty() || ptrNE_.empty()) return kStatusErrorAnalyse;
+  if (kkt_.rowsNE.empty() || kkt_.ptrNE.empty()) return kStatusErrorAnalyse;
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(mA_, 1);
@@ -287,8 +290,8 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
   log_.printDevInfo("Performing NE analyse phase\n");
 
   Clock clock;
-  Int status =
-      chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S, ordering_NE_, "NE");
+  Int status = chooseOrdering(kkt_.rowsNE, kkt_.ptrNE, pivot_signs, S,
+                              ordering_NE_, "NE");
   info_.analyse_NE_time += clock.stop();
 
   return status;
@@ -313,7 +316,8 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
 
   // factorise matrix
   clock.start();
-  if (FH_.factorise(S_, rowsAS_, ptrAS_, valAS_)) return kStatusErrorFactorise;
+  if (FH_.factorise(S_, kkt_.rowsAS, kkt_.ptrAS, kkt_.valAS))
+    return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
 
@@ -336,7 +340,8 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
 
   // factorise
   clock.start();
-  if (FH_.factorise(S_, rowsNE_, ptrNE_, valNE_)) return kStatusErrorFactorise;
+  if (FH_.factorise(S_, kkt_.rowsNE, kkt_.ptrNE, kkt_.valNE))
+    return kStatusErrorFactorise;
 
   info_.factor_time += clock.stop();
   info_.factor_number++;
@@ -767,6 +772,8 @@ Int FactorHiGHSSolver::setNla() {
                << '\n';
   log_.print(log_stream);
 
+  kkt_.iperm = S_.iperm();
+
   return kStatusOk;
 }
 
@@ -864,16 +871,16 @@ void FactorHiGHSSolver::getReg(std::vector<double>& reg) {
 
 void FactorHiGHSSolver::freeASmemory() {
   // Give up memory used for AS.
-  freeVector(ptrAS_);
-  freeVector(rowsAS_);
-  freeVector(valAS_);
+  freeVector(kkt_.ptrAS);
+  freeVector(kkt_.rowsAS);
+  freeVector(kkt_.valAS);
 }
 
 void FactorHiGHSSolver::freeNEmemory() {
   // Give up memory used for NE.
-  freeVector(ptrNE_);
-  freeVector(rowsNE_);
-  freeVector(valNE_);
+  freeVector(kkt_.ptrNE);
+  freeVector(kkt_.rowsNE);
+  freeVector(kkt_.valNE);
   freeVector(ptrA_rw_);
   freeVector(idxA_rw_);
   freeVector(corr_A_);

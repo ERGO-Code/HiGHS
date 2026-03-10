@@ -20,18 +20,12 @@ class FactorHiGHSSolver : public LinearSolver {
   // symbolic factorisation
   Symbolic S_;
 
+  KktMatrix& kkt_;
+
   // normal equations data
-  std::vector<Int> ptrNE_;
-  std::vector<Int> rowsNE_;
-  std::vector<double> valNE_;
   std::vector<Int> ptrA_rw_, idxA_rw_;
   std::vector<Int> corr_A_;
   std::atomic<Int64> NE_nz_limit_{kHighsIInf};
-
-  // augmented system data
-  std::vector<Int> ptrAS_;
-  std::vector<Int> rowsAS_;
-  std::vector<double> valAS_;
 
   const Regularisation& regul_;
 
@@ -67,7 +61,7 @@ class FactorHiGHSSolver : public LinearSolver {
   Int analyseNE(Symbolic& S);
 
  public:
-  FactorHiGHSSolver(Options& options, const Model& model,
+  FactorHiGHSSolver(KktMatrix& kkt, Options& options, const Model& model,
                     const Regularisation& regul, Info& info, IpmData& record,
                     const LogHighs& log);
 
