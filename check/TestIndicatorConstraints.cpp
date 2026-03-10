@@ -248,6 +248,10 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
   REQUIRE(highs.addIndicatorConstraint(0, 1, 1, indices, values, 0.0, inf) ==
           HighsStatus::kError);
 
+  // Free indicator constraint
+  REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, -inf, inf) ==
+          HighsStatus::kError);
+
   // Valid call should succeed
   REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
           HighsStatus::kOk);

@@ -2762,6 +2762,14 @@ HighsStatus Highs::addIndicatorConstraint(
                  binary_col);
     return HighsStatus::kError;
   }
+  // Validate that the constraint is not free
+  if (lower <= -kHighsInf && upper >= kHighsInf) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "addIndicatorConstraint: cannot have indicator constraint "
+                 "that is free\n");
+    return HighsStatus::kError;
+  }
+
   HighsIndicatorConstraint ic;
   ic.binary_col = binary_col;
   ic.binary_value = binary_value;
