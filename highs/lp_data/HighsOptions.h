@@ -1306,11 +1306,6 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool(
-        "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
-        advanced, &pdlp_scaling, true);
-    records.push_back(record_bool);
-
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,
         &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
