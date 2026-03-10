@@ -7954,6 +7954,24 @@ void HPresolve::extractVarBounds(HighsInt row) {
   bool useRhs = model->row_upper_[row] != kHighsInf && numInfSumLower <= 1;
   if (!useLhs && !useRhs) return;
 
+  auto computeMirCut = [&](double& aj, double& rhs, bool flip) {
+    // try to strengthen variable bound constraint by computing MIR cut
+    if (flip) {
+      aj *= -1;
+      rhs *= -1;
+    }
+    double downrhs = std::floor(rhs + primal_feastol);
+    double downaj = std::floor(aj + kHighsTiny);
+    double f = rhs - downrhs;
+    double fj = aj - downaj;
+    rhs = downrhs;
+    aj = downaj + std::max(fj - f, 0.0) / (1.0 - f);
+    if (flip) {
+      aj *= -1;
+      rhs *= -1;
+    }
+  };
+
   // check if row contains a single binary variable
   HighsInt binCol = -1;
   double binCoef = 0.0;
@@ -7986,7 +8004,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
     if (nonzero.index() == binCol) continue;
 
     // compute coefficient for binary variable
-    double vbCoef = -binCoef / nonzero.value();
+    double vbCoef = binCoef / nonzero.value();
 
     // compute vlb constant
     double vlbConstant = -kHighsInf;
@@ -8022,17 +8040,30 @@ void HPresolve::extractVarBounds(HighsInt row) {
     }
 
     // add vlb
-    if (vlbConstant != -kHighsInf &&
-        std::max(0.0, vbCoef) + static_cast<HighsCDouble>(vlbConstant) >
-            model->col_lower_[nonzero.index()] + primal_feastol)
-      mipsolver->mipdata_->implications.addVLB(nonzero.index(), binCol, vbCoef,
-                                               vlbConstant);
+    if (vlbConstant != -kHighsInf) {
+      double myVbCoef = vbCoef;
+      if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
+        computeMirCut(myVbCoef, vlbConstant, true);
+      myVbCoef *= -1;
+      if (myVbCoef != 0.0 &&
+          std::max(0.0, myVbCoef) + static_cast<HighsCDouble>(vlbConstant) >
+              model->col_lower_[nonzero.index()] + primal_feastol)
+        mipsolver->mipdata_->implications.addVLB(nonzero.index(), binCol,
+                                                 myVbCoef, vlbConstant);
+    }
+
     // add vub
-    if (vubConstant != kHighsInf &&
-        std::min(0.0, vbCoef) + static_cast<HighsCDouble>(vubConstant) <
-            model->col_upper_[nonzero.index()] - primal_feastol)
-      mipsolver->mipdata_->implications.addVUB(nonzero.index(), binCol, vbCoef,
-                                               vubConstant);
+    if (vubConstant != kHighsInf) {
+      double myVbCoef = vbCoef;
+      if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
+        computeMirCut(myVbCoef, vubConstant, false);
+      myVbCoef *= -1;
+      if (myVbCoef != 0.0 &&
+          std::min(0.0, myVbCoef) + static_cast<HighsCDouble>(vubConstant) <
+              model->col_upper_[nonzero.index()] - primal_feastol)
+        mipsolver->mipdata_->implications.addVUB(nonzero.index(), binCol,
+                                                 myVbCoef, vubConstant);
+    }
 
     // stop if no additional variable bounds can be found
     if (!useLhs && !useRhs) break;
