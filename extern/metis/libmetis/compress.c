@@ -80,7 +80,7 @@ graph_t *CompressGraph(ctrl_t *ctrl, idx_t nvtxs, const idx_t *xadj, const idx_t
   }
 
   IFSET(ctrl->dbglvl, METIS_DBG_INFO, 
-        printf("  Compression: reduction in # of vertices: %"PRIDX".\n", nvtxs-cnvtxs)); 
+        HIGHS_ORDERING_PRINT("  Compression: reduction in # of vertices: %"PRIDX".\n", nvtxs-cnvtxs)); 
 
 
   if (cnvtxs < COMPRESSION_FRACTION*nvtxs) {
@@ -175,7 +175,7 @@ graph_t *PruneGraph(ctrl_t *ctrl, idx_t nvtxs, const idx_t *xadj, const idx_t *a
   }
 
   IFSET(ctrl->dbglvl, METIS_DBG_INFO, 
-        printf("  Pruned %"PRIDX" of %"PRIDX" vertices.\n", nlarge, nvtxs)); 
+        HIGHS_ORDERING_PRINT("  Pruned %"PRIDX" of %"PRIDX" vertices.\n", nlarge, nvtxs)); 
 
 
   if (nlarge > 0 && nlarge < nvtxs) {  
@@ -211,7 +211,7 @@ graph_t *PruneGraph(ctrl_t *ctrl, idx_t nvtxs, const idx_t *xadj, const idx_t *a
   }
   else if (nlarge > 0 && nlarge == nvtxs) {  
     IFSET(ctrl->dbglvl, METIS_DBG_INFO, 
-          printf("  Pruning is ignored as it removes all vertices.\n"));
+          HIGHS_ORDERING_PRINT("  Pruning is ignored as it removes all vertices.\n"));
     nlarge = 0;
   }
 

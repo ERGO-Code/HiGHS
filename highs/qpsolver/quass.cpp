@@ -451,14 +451,15 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
         // runtime.settings.degeneracy_fail_log.fire, which isn't
         // available to reduce since it's not a member of the Quass
         // struct
-        double log_d = -1;
+        const double kIllegalLogDValue = kHighsInf;
+        double log_d = kIllegalLogDValue;
         status = reduce(runtime, basis, stepres.limitingconstraint, buffer_d,
                         maxabsd, constrainttodrop, log_d);
         if (status != QpSolverStatus::OK) {
           // Possibly perform degeneracy failure logging
           if (status == QpSolverStatus::DEGENERATE) {
             // Ensure that log_d has been set
-            assert(log_d >= 0);
+            assert(log_d != kIllegalLogDValue);
             std::pair<HighsInt, double> degeneracy_fail_data =
                 std::make_pair(maxabsd, log_d);
             runtime.settings.degeneracy_fail_log.fire(degeneracy_fail_data);

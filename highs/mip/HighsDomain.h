@@ -486,6 +486,9 @@ class HighsDomain {
     changeBound({boundval, col, boundtype}, reason);
   }
 
+  bool checkChangeBound(HighsBoundType boundtype, HighsInt col,
+                        HighsCDouble boundval, Reason reason);
+
   void fixCol(HighsInt col, double val, Reason reason = Reason::unspecified()) {
     if (kAllowDeveloperAssert) {
       assert(infeasible_ == 0);

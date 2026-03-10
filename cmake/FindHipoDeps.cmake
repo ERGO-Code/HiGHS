@@ -324,7 +324,19 @@ else()
             message(STATUS "Specified BLA_VENDOR: ${BLA_VENDOR}")
         endif()
 
-        if (NOT BLAS_FOUND)
+        # try libblas on linux
+        if (LINUX AND NOT BLAS_FOUND)
+            find_package(BLAS QUIET)
+            if (BLAS_FOUND)
+                message(STATUS "Using BLAS library: ${BLAS_LIBRARIES}")
+                if (BLAS_INCLUDE_DIRS)
+                    message(STATUS "BLAS include dirs: ${BLAS_INCLUDE_DIRS}")
+                endif()
+            endif()
+        endif()
+
+        if (NOT BLAS_FOUND AND
+            (BUILD_SHARED_LIBS OR BUILD_CXX_EXE OR BUILD_EXAMPLES))
             find_package(BLAS REQUIRED)
             if (BLAS_FOUND)
                 message(STATUS "Using BLAS library: ${BLAS_LIBRARIES}")

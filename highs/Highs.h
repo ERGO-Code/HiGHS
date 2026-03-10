@@ -1747,8 +1747,8 @@ class Highs {
       const HighsInt original_num_col, const HighsInt original_num_row,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
-      const std::vector<double> original_col_upper,
-      const std::vector<HighsVarType> original_integrality);
+      const std::vector<double>& original_col_upper,
+      const std::vector<HighsVarType>& original_integrality);
   HighsStatus elasticityFilter(const double global_lower_penalty,
                                const double global_upper_penalty,
                                const double global_rhs_penalty,
@@ -1768,7 +1768,7 @@ class Highs {
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   HighsStatus checkOptimality(const std::string& solver_type);
-  HighsStatus lpKktCheck(const HighsLp& lp, const std::string& message = "");
+  void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 
   HighsStatus handleInfCost();

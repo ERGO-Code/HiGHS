@@ -323,6 +323,26 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
   }
 }
 
+bool replaceSpacesByUnderscores(std::string& name) {
+  // Find the first occurrence of the substring
+  const std::string replace_word = " ";
+  const std::string replace_by = "_";
+  size_t pos = name.find(replace_word);
+  const bool found_space = pos != std::string::npos;
+  const std::string from_name = name;
+
+  // Iterate through the string and replace all
+  // occurrences
+  while (pos != string::npos) {
+    // Replace the substring with the specified string
+    name.replace(pos, replace_word.size(), replace_by);
+
+    // Find the next occurrence of the substring
+    pos = name.find(replace_word, pos + replace_by.size());
+  }
+  return found_space;
+}
+
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (hasNamesWithSpaces(log_options, true, lp.col_names_)) return true;
   return hasNamesWithSpaces(log_options, false, lp.row_names_);
@@ -332,23 +352,27 @@ bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
                         const std::vector<std::string>& names) {
   HighsInt num_names_with_spaces = 0;
   HighsInt num_name = names.size();
-  for (HighsInt ix = 0; ix < num_name; ix++) {
-    size_t space_pos = names[ix].find(" ");
-    if (space_pos != std::string::npos) {
-      if (num_names_with_spaces == 0) {
-        highsLogDev(log_options, HighsLogType::kInfo,
-                    "%s name |%s| contains a space character in position "
-                    "%" HIGHSINT_FORMAT "\n",
-                    col ? "Column" : "Row", names[ix].c_str(), space_pos);
-        num_names_with_spaces++;
-      }
-    }
-  }
+  for (HighsInt ix = 0; ix < num_name; ix++)
+    if (names[ix].find(" ") != std::string::npos) num_names_with_spaces++;
   if (num_names_with_spaces)
     highsLogDev(log_options, HighsLogType::kInfo,
                 "There are %d %s names with spaces\n",
                 HighsInt(num_names_with_spaces), col ? "column" : "row");
   return num_names_with_spaces > 0;
+}
+
+bool hasIllegalNameForLpFile(const std::vector<std::string>& names) {
+  HighsInt num_name = names.size();
+  for (HighsInt ix = 0; ix < num_name; ix++) {
+    const std::string name = names[ix];
+    const std::string first_character = name.substr(0, 1);
+    if (name.find_first_not_of(kLegalLpFileColRowNameChar) != std::string::npos)
+      return true;
+    if (first_character.find_first_not_of(kLegalLpFileColRowNameFirstChar) !=
+        std::string::npos)
+      return true;
+  }
+  return false;
 }
 
 HighsInt maxNameLength(const HighsLp& lp) {
@@ -363,15 +387,19 @@ HighsInt maxNameLength(const std::vector<std::string>& names) {
   return max_name_length;
 }
 
-HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp) {
+HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp,
+                           HighsFileType type) {
   HighsStatus call_status =
       normaliseNames(log_options, true, lp.num_col_, lp.col_name_prefix_,
-                     lp.col_name_suffix_, lp.col_names_, lp.col_hash_);
-  if (call_status == HighsStatus::kError) return call_status;
+                     lp.col_name_suffix_, lp.col_names_, lp.col_hash_, type);
+  assert(call_status != HighsStatus::kError);
+  // Retain call_status in case normaliseNames for rows returns
+  // HighsStatus::kOk
   HighsStatus return_status = call_status;
   call_status =
       normaliseNames(log_options, false, lp.num_row_, lp.row_name_prefix_,
-                     lp.row_name_suffix_, lp.row_names_, lp.row_hash_);
+                     lp.row_name_suffix_, lp.row_names_, lp.row_hash_, type);
+  assert(call_status != HighsStatus::kError);
   if (call_status != HighsStatus::kOk) return call_status;
   return return_status;
 }
@@ -380,59 +408,88 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsInt num_name_required, std::string& name_prefix,
                            HighsInt& name_suffix,
                            std::vector<std::string>& names,
-                           HighsNameHash& name_hash) {
+                           HighsNameHash& name_hash, HighsFileType type) {
   // First look for there being no names
-
   HighsInt max_name_length = maxNameLength(names);
-  if (max_name_length == 0) {
-    // No names or all blank, so use minimal prefix, and start suffix
-    // from 0
-    name_prefix =
-        column ? kHighsMinimalColNamePrefix : kHighsMinimalrowNamePrefix;
-    name_suffix = 0;
-    names.resize(num_name_required);
-    highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s names are blank or not present: using "
-                 "names with prefix \"%s\", beginning with suffix %d\n",
-                 column ? "Column" : "Row   ", name_prefix.c_str(),
-                 int(name_suffix));
-    for (HighsInt ix = 0; ix < num_name_required; ix++)
-      names[ix] = name_prefix + std::to_string(name_suffix++);
-    return HighsStatus::kWarning;
-  }
+  // Keep track of whether the names are invalid
+  bool invalid_names = max_name_length == 0;
   names.resize(num_name_required);
   HighsInt num_blank = 0;
+  HighsInt num_names_with_spaces = 0;
   const HighsInt from_name_suffix = name_suffix;
-  for (HighsInt ix = 0; ix < num_name_required; ix++) {
-    if (HighsInt(names[ix].length()) == 0) {
-      // Name is blank, so create one
-      num_blank++;
-      name_prefix =
-          column ? kHighsUniqueColNamePrefix : kHighsUniquerowNamePrefix;
-      names[ix] = name_prefix + std::to_string(name_suffix++);
-    } else if (names[ix].find(" ") != std::string::npos) {
-      // Name contains a space, so return error
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s %d name \"%s\" contains a space character\n",
-                   column ? "Column" : "Row", int(ix), names[ix].c_str());
-      return HighsStatus::kError;
+  if (!invalid_names) {
+    invalid_names =
+        type == HighsFileType::kLp && hasIllegalNameForLpFile(names);
+    if (!invalid_names) {
+      for (HighsInt ix = 0; ix < num_name_required; ix++) {
+        if (HighsInt(names[ix].length()) == 0) {
+          // Name is blank, so create one
+          num_blank++;
+          name_prefix =
+              column ? kHighsUniqueColNamePrefix : kHighsUniquerowNamePrefix;
+          names[ix] = name_prefix + std::to_string(name_suffix++);
+        } else if (type == HighsFileType::kMps) {
+          // For MPS files, replace spaces in names by an underscore
+          if (replaceSpacesByUnderscores(names[ix])) num_names_with_spaces++;
+        }
+      }
     }
   }
-  // Check for duplicates
-  if (name_hash.hasDuplicate(names)) {
-    name_hash.name2index.clear();
-    return HighsStatus::kError;
+  // Possibly check for duplicates
+  invalid_names = invalid_names || name_hash.hasDuplicate(names);
+  name_hash.name2index.clear();
+  if (!invalid_names) {
+    // Names are valid
+    if (num_blank || num_names_with_spaces) {
+      // Report on any modifications
+      if (num_blank) {
+        highsLogUser(
+            log_options, HighsLogType::kWarning,
+            "Replaced %d blank %-6s name%s by one%s with prefix \"%s\", "
+            "beginning with suffix %d\n",
+            int(num_blank), column ? "column" : "row",
+            num_blank == 1 ? "" : "s", num_blank == 1 ? "" : "s",
+            name_prefix.c_str(), int(from_name_suffix));
+      }
+      if (num_names_with_spaces) {
+        highsLogUser(log_options, HighsLogType::kWarning,
+                     "Replaced spaces in %d %-6s name%s by underscores\n",
+                     int(num_names_with_spaces), column ? "column" : "row",
+                     num_names_with_spaces == 1 ? "" : "s");
+      }
+      return HighsStatus::kWarning;
+    } else {
+      // Return OK!
+      return HighsStatus::kOk;
+    }
   }
-  if (num_blank) {
-    highsLogUser(log_options, HighsLogType::kWarning,
-                 "Replaced %d blank %6s name%s by name%s with prefix \"%s\", "
-                 "beginning with suffix %d\n",
-                 int(num_blank), column ? "column" : "row",
-                 num_blank == 1 ? "" : "s", num_blank == 1 ? "" : "s",
-                 name_prefix.c_str(), int(from_name_suffix));
-    return HighsStatus::kWarning;
+  assert(invalid_names);
+  // Names are not valid, so create them using minimal prefix, and
+  // suffix starting from zero
+  name_prefix =
+      column ? kHighsMinimalColNamePrefix : kHighsMinimalrowNamePrefix;
+  name_suffix = 0;
+  assert(names.size() == static_cast<size_t>(num_name_required));
+  highsLogUser(log_options, HighsLogType::kWarning,
+               "%s names are not present, or contain %sduplicates: using "
+               "names with prefix \"%s\", beginning with suffix %d\n",
+               column ? "Column" : "Row   ",
+               type == HighsFileType::kLp ? "invalid characters or " : "",
+               name_prefix.c_str(), int(name_suffix));
+  for (HighsInt ix = 0; ix < num_name_required; ix++)
+    names[ix] = name_prefix + std::to_string(name_suffix++);
+  return HighsStatus::kWarning;
+}
+
+HighsFileType getFileType(const std::string filename) {
+  std::string lower_case_extension = getFilenameExt(filename);
+  tolower(lower_case_extension);
+  if (lower_case_extension.compare("mps") == 0) {
+    return HighsFileType::kMps;
+  } else if (lower_case_extension.compare("lp") == 0) {
+    return HighsFileType::kLp;
   }
-  return HighsStatus::kOk;
+  return HighsFileType::kMinimal;
 }
 
 void writeSolutionFile(FILE* file, const HighsOptions& options,
@@ -493,7 +550,8 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
 
 void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
                         const bool raw, const bool is_mip,
-                        const HighsInt row_id, const std::string objective_name,
+                        const HighsInt row_id,
+                        const std::string& objective_name,
                         const double objective_function_value) {
   std::stringstream ss;
   ss.str(std::string());

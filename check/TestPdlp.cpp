@@ -27,7 +27,6 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
-  const HighsOptions& options = highs.getOptions();
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
@@ -136,7 +135,6 @@ TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
-  const HighsOptions& options = highs.getOptions();
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
@@ -256,11 +254,9 @@ void pdlpRestart(const std::string& model) {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
-  HighsStatus run_status = h.run();
-  const bool was_optimal = h.getModelStatus() == HighsModelStatus::kOptimal;
+  h.run();
   h.setOptionValue("presolve", kHighsOffString);
-  run_status = h.run();
-  h.resetGlobalScheduler(true);
+  h.run();
 }
 
 TEST_CASE("pdlp-restart", "[pdlp]") {
@@ -290,11 +286,9 @@ TEST_CASE("pdlp-restart-lp", "[pdlp]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
-  HighsStatus run_status = h.run();
-
+  h.run();
   h.setOptionValue("presolve", kHighsOffString);
   run_status = h.run();
-  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
@@ -308,7 +302,6 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = h.getInfo();
-  const HighsOptions& options = h.getOptions();
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
   h.setOptionValue("presolve", kHighsOffString);
