@@ -1792,6 +1792,7 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   double ratio = results.dual_feasibility / (results.primal_feasibility + 1e-30);
 
   // cuPDLPx-style weight update (PID control)
+  const bool slient = true;
   if (primal_dist > 1e-16 && dual_dist > 1e-16 &&
       primal_dist < 1e12 && dual_dist < 1e12 &&
       ratio > 1e-8 && ratio < 1e8) {
@@ -1809,7 +1810,9 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
     
     primal_weight_last_error_ = error;
     
-    logger_.info("Primal weight updated: " + std::to_string(primal_weight_));
+    if (!slient) {
+      logger_.info("Primal weight updated: " + std::to_string(primal_weight_));
+    }
   } else {
     // Revert to best known weight
     primal_weight_ = best_primal_weight_;
