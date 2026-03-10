@@ -7962,7 +7962,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
       aj *= -1;
       rhs *= -1;
     }
-    double downrhs = std::floor(rhs + primal_feastol);
+    double downrhs = std::floor(rhs);
     double f0 = rhs - downrhs;
     if (f0 < f0min || f0 > f0max) return;
     double downaj = std::floor(aj + kHighsTiny);
@@ -8006,9 +8006,6 @@ void HPresolve::extractVarBounds(HighsInt row) {
     // skip binary variable
     if (nonzero.index() == binCol) continue;
 
-    // compute coefficient for binary variable
-    double vbCoef = binCoef / nonzero.value();
-
     // compute vlb constant
     double vlbConstant = -kHighsInf;
     if (useLhs) {
@@ -8041,6 +8038,9 @@ void HPresolve::extractVarBounds(HighsInt row) {
       vubConstant *= -1;
       std::swap(vlbConstant, vubConstant);
     }
+
+    // compute coefficient for binary variable
+    double vbCoef = binCoef / nonzero.value();
 
     // add vlb
     if (vlbConstant != -kHighsInf) {
