@@ -8034,12 +8034,15 @@ void HPresolve::extractVarBounds(HighsInt row) {
     // compute coefficient for binary variable
     double vbCoef = binCoef / nonzero.value();
 
-    // add vlb
+    // add VLB
     if (vlbConstant != -kHighsInf) {
       double myVbCoef = vbCoef;
+      // check if MIR principle can be used to strengthen VLB
       if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
         computeMirCut(myVbCoef, vlbConstant, HighsInt{-1});
+      // negate coefficient (as expected by implication code)
       myVbCoef *= -1;
+      // check if VLB is better than standard lower bound
       if (myVbCoef != 0.0 &&
           std::max(0.0, myVbCoef) + static_cast<HighsCDouble>(vlbConstant) >
               model->col_lower_[nonzero.index()] + primal_feastol)
@@ -8047,12 +8050,15 @@ void HPresolve::extractVarBounds(HighsInt row) {
                                                  myVbCoef, vlbConstant);
     }
 
-    // add vub
+    // add VUB
     if (vubConstant != kHighsInf) {
       double myVbCoef = vbCoef;
+      // check if MIR principle can be used to strengthen VUB
       if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
         computeMirCut(myVbCoef, vubConstant, HighsInt{1});
+      // negate coefficient (as expected by implication code)
       myVbCoef *= -1;
+      // check if VLB is better than standard upper bound
       if (myVbCoef != 0.0 &&
           std::min(0.0, myVbCoef) + static_cast<HighsCDouble>(vubConstant) <
               model->col_upper_[nonzero.index()] - primal_feastol)
