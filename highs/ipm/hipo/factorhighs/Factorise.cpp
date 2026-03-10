@@ -91,70 +91,7 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
 }
 
 void Factorise::permute(const std::vector<Int>& iperm) {
-  // Symmetric permutation of the lower triangular matrix M based on inverse
-  // permutation iperm.
-  // The resulting matrix is lower triangular, regardless of the input matrix.
-
-  std::vector<Int> work(n_, 0);
-
-  // go through the columns to count the nonzeros
-  for (Int j = 0; j < n_; ++j) {
-    // get new index of column
-    const Int col = iperm[j];
-
-    // go through elements of column
-    for (Int el = ptrM_[j]; el < ptrM_[j + 1]; ++el) {
-      const Int i = rowsM_[el];
-
-      // ignore potential entries in upper triangular part
-      if (i < j) continue;
-
-      // get new index of row
-      const Int row = iperm[i];
-
-      // since only lower triangular part is used, col is smaller than row
-      Int actual_col = std::min(row, col);
-      ++work[actual_col];
-    }
-  }
-
-  std::vector<Int> new_ptr(n_ + 1);
-
-  // get column pointers by summing the count of nonzeros in each column.
-  // copy column pointers into work
-  counts2Ptr(new_ptr, work);
-
-  std::vector<Int> new_rows(new_ptr.back());
-  std::vector<double> new_val(new_ptr.back());
-
-  // go through the columns to assign row indices
-  for (Int j = 0; j < n_; ++j) {
-    // get new index of column
-    const Int col = iperm[j];
-
-    // go through elements of column
-    for (Int el = ptrM_[j]; el < ptrM_[j + 1]; ++el) {
-      const Int i = rowsM_[el];
-
-      // ignore potential entries in upper triangular part
-      if (i < j) continue;
-
-      // get new index of row
-      const Int row = iperm[i];
-
-      // since only lower triangular part is used, col is smaller than row
-      const Int actual_col = std::min(row, col);
-      const Int actual_row = std::max(row, col);
-
-      Int pos = work[actual_col]++;
-      new_rows[pos] = actual_row;
-      new_val[pos] = valM_[el];
-    }
-  }
-
-  ptrM_ = std::move(new_ptr);
-  rowsM_ = std::move(new_rows);
-  valM_ = std::move(new_val);
+  permuteSym(iperm, ptrM_, rowsM_, valM_, true);
 }
 
 void Factorise::processSupernode(Int sn) {
