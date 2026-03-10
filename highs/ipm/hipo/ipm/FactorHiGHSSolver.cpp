@@ -24,231 +24,11 @@ FactorHiGHSSolver::FactorHiGHSSolver(KktMatrix& kkt, Options& options,
       data_{record},
       log_{log},
       model_{model},
-      A_{model.A()},
-      Q_{model.Q()},
-      mA_{A_.num_row_},
-      nA_{A_.num_col_},
-      nzA_{A_.numNz()},
-      nzQ_{Q_.numNz()},
       options_{options} {}
 
 void FactorHiGHSSolver::clear() {
   valid_ = false;
   FH_.newIter();
-}
-
-// =========================================================================
-// Build structure and values of matrices
-// =========================================================================
-
-Int FactorHiGHSSolver::buildASstructure() {
-  // Build lower triangular structure of the augmented system.
-  // Build values of AS that will not change during the iterations.
-
-  log_.printDevInfo("Building AS structure\n");
-
-  const Int nzBlock11 = model_.qp() ? nzQ_ : nA_;
-
-  // AS matrix must fit into HighsInt
-  if ((Int64)nzBlock11 + mA_ + nzA_ >= kHighsIInf) return kStatusOverflow;
-
-  kkt_.ptrAS.resize(nA_ + mA_ + 1);
-  kkt_.rowsAS.resize(nzBlock11 + nzA_ + mA_);
-  kkt_.valAS.resize(nzBlock11 + nzA_ + mA_);
-
-  Int next = 0;
-
-  for (Int i = 0; i < nA_; ++i) {
-    // diagonal element
-    kkt_.rowsAS[next] = i;
-    next++;
-
-    // column of Q
-    if (model_.qp()) {
-      assert(Q_.index_[Q_.start_[i]] == i);
-      for (Int el = Q_.start_[i] + 1; el < Q_.start_[i + 1]; ++el) {
-        kkt_.rowsAS[next] = Q_.index_[el];
-        kkt_.valAS[next] = -Q_.value_[el];  // values of AS that will not change
-        ++next;
-      }
-    }
-
-    // column of A
-    for (Int el = A_.start_[i]; el < A_.start_[i + 1]; ++el) {
-      kkt_.rowsAS[next] = nA_ + A_.index_[el];
-      kkt_.valAS[next] = A_.value_[el];  // values of AS that will not change
-      ++next;
-    }
-
-    kkt_.ptrAS[i + 1] = next;
-  }
-
-  // 2,2 block
-  for (Int i = 0; i < mA_; ++i) {
-    kkt_.rowsAS[next] = nA_ + i;
-    ++next;
-    kkt_.ptrAS[nA_ + i + 1] = kkt_.ptrAS[nA_ + i] + 1;
-  }
-
-  return kStatusOk;
-}
-
-Int FactorHiGHSSolver::buildASvalues(const std::vector<double>& scaling) {
-  // build AS values that change during iterations.
-
-  assert(!kkt_.ptrAS.empty() && !kkt_.rowsAS.empty());
-
-  for (Int i = 0; i < nA_; ++i) {
-    kkt_.valAS[kkt_.ptrAS[i]] = scaling.empty() ? -1.0 : -scaling[i];
-    if (model_.qp())
-      kkt_.valAS[kkt_.ptrAS[i]] -= model_.sense() * model_.Q().diag(i);
-  }
-
-  return kStatusOk;
-}
-
-Int FactorHiGHSSolver::buildNEstructure() {
-  // Build lower triangular structure of AAt.
-  // This approach uses a column-wise copy of A, a partial row-wise copy and a
-  // vector of corresponding indices.
-
-  // NB: A must have sorted columns for this to work
-
-  log_.printDevInfo("Building NE structure\n");
-
-  // create partial row-wise representation without values, and array or
-  // corresponding indices between cw and rw representation
-  {
-    ptrA_rw_.assign(mA_ + 1, 0);
-    idxA_rw_.assign(nzA_, 0);
-
-    // pointers of row-start
-    for (Int el = 0; el < nzA_; ++el) ptrA_rw_[A_.index_[el] + 1]++;
-    for (Int i = 0; i < mA_; ++i) ptrA_rw_[i + 1] += ptrA_rw_[i];
-
-    std::vector<Int> temp = ptrA_rw_;
-    corr_A_.assign(nzA_, 0);
-
-    // rw-indices and corresponding indices created together
-    for (Int col = 0; col < nA_; ++col) {
-      for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-        Int row = A_.index_[el];
-
-        corr_A_[temp[row]] = el;
-        idxA_rw_[temp[row]] = col;
-        temp[row]++;
-      }
-    }
-  }
-
-  kkt_.ptrNE.clear();
-  kkt_.rowsNE.clear();
-
-  // ptr is allocated its exact size
-  kkt_.ptrNE.resize(mA_ + 1, 0);
-
-  // keep track if given entry is nonzero, in column considered
-  std::vector<bool> is_nz(mA_, false);
-
-  // temporary storage of indices
-  std::vector<Int> temp_index(mA_);
-
-  for (Int row = 0; row < mA_; ++row) {
-    // go along the entries of the row, and then down each column.
-    // this builds the lower triangular part of the row-th column of AAt.
-
-    Int nz_in_col = 0;
-
-    for (Int el = ptrA_rw_[row]; el < ptrA_rw_[row + 1]; ++el) {
-      Int col = idxA_rw_[el];
-      Int corr = corr_A_[el];
-
-      // for each nonzero in the row, go down corresponding column, starting
-      // from current position
-      for (Int colEl = corr; colEl < A_.start_[col + 1]; ++colEl) {
-        Int row2 = A_.index_[colEl];
-
-        // row2 is guaranteed to be larger or equal than row
-        // (provided that the columns of A are sorted)
-
-        // save information that there is nonzero in position (row2,row).
-        if (!is_nz[row2]) {
-          is_nz[row2] = true;
-          temp_index[nz_in_col] = row2;
-          ++nz_in_col;
-        }
-      }
-    }
-    // intersection of row with rows below finished.
-
-    // if the total number of nonzeros exceeds the maximum, return error.
-    if ((Int64)kkt_.ptrNE[row] + nz_in_col >=
-        NE_nz_limit_.load(std::memory_order_relaxed))
-      return kStatusOverflow;
-
-    // update pointers
-    kkt_.ptrNE[row + 1] = kkt_.ptrNE[row] + nz_in_col;
-
-    // now assign indices
-    for (Int i = 0; i < nz_in_col; ++i) {
-      Int index = temp_index[i];
-      // push_back is better then reserve, because the final length is not known
-      kkt_.rowsNE.push_back(index);
-      is_nz[index] = false;
-    }
-  }
-
-  return kStatusOk;
-}
-
-Int FactorHiGHSSolver::buildNEvalues(const std::vector<double>& scaling) {
-  // given the NE structure already computed, fill in the NE values
-
-  assert(!kkt_.ptrNE.empty() && !kkt_.rowsNE.empty());
-
-  kkt_.valNE.resize(kkt_.rowsNE.size());
-
-  std::vector<double> work(mA_, 0.0);
-
-  for (Int row = 0; row < mA_; ++row) {
-    // go along the entries of the row, and then down each column.
-    // this builds the lower triangular part of the row-th column of AAt.
-
-    for (Int el = ptrA_rw_[row]; el < ptrA_rw_[row + 1]; ++el) {
-      Int col = idxA_rw_[el];
-      Int corr = corr_A_[el];
-
-      double denom = scaling.empty() ? 1.0 : scaling[col];
-      denom += regul_.primal;
-      if (model_.qp()) denom += model_.sense() * model_.Q().diag(col);
-
-      const double mult = 1.0 / denom;
-      const double row_value = mult * A_.value_[corr];
-
-      // for each nonzero in the row, go down corresponding column, starting
-      // from current position
-      for (Int colEl = corr; colEl < A_.start_[col + 1]; ++colEl) {
-        Int row2 = A_.index_[colEl];
-
-        // row2 is guaranteed to be larger or equal than row
-        // (provided that the columns of A are sorted)
-
-        // compute and accumulate value
-        double value = row_value * A_.value_[colEl];
-        work[row2] += value;
-      }
-    }
-    // intersection of row with rows below finished.
-
-    // read from work, using indices of column "row" of AAt
-    for (Int el = kkt_.ptrNE[row]; el < kkt_.ptrNE[row + 1]; ++el) {
-      Int index = kkt_.rowsNE[el];
-      kkt_.valNE[el] = work[index];
-      work[index] = 0.0;
-    }
-  }
-
-  return kStatusOk;
 }
 
 // =========================================================================
@@ -259,13 +39,16 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
+  const Int m = model_.A().num_row_;
+  const Int n = model_.A().num_col_;
+
   Clock clock;
-  if (Int status = buildASstructure()) return status;
+  if (Int status = kkt_.buildASstructure()) return status;
   info_.AS_structure_time = clock.stop();
 
   // create vector of signs of pivots
-  std::vector<Int> pivot_signs(nA_ + mA_, -1);
-  for (Int i = 0; i < mA_; ++i) pivot_signs[nA_ + i] = 1;
+  std::vector<Int> pivot_signs(n + m, -1);
+  for (Int i = 0; i < m; ++i) pivot_signs[n + i] = 1;
 
   log_.printDevInfo("Performing AS analyse phase\n");
 
@@ -285,7 +68,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
   if (kkt_.rowsNE.empty() || kkt_.ptrNE.empty()) return kStatusErrorAnalyse;
 
   // create vector of signs of pivots
-  std::vector<Int> pivot_signs(mA_, 1);
+  std::vector<Int> pivot_signs(model_.A().num_row_, 1);
 
   log_.printDevInfo("Performing NE analyse phase\n");
 
@@ -308,7 +91,7 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   Clock clock;
 
   // build matrix
-  buildASvalues(scaling);
+  kkt_.buildASvalues(scaling);
   info_.matrix_time += clock.stop();
 
   // set static regularisation, since it may have changed
@@ -332,7 +115,7 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
   Clock clock;
 
   // build matrix
-  buildNEvalues(scaling);
+  kkt_.buildNEvalues(scaling);
   info_.matrix_time += clock.stop();
 
   // set static regularisation, since it may have changed
@@ -439,7 +222,7 @@ Int FactorHiGHSSolver::chooseNla() {
       failure_NE = true;
     } else {
       Clock clock;
-      Int status = buildNEstructure();
+      Int status = kkt_.buildNEstructure();
       info_.NE_structure_time = clock.stop();
       if (status) {
         failure_NE = true;
@@ -470,7 +253,7 @@ Int FactorHiGHSSolver::chooseNla() {
     // will be preferred, so stop computation of NE.
     Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
     if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
-    NE_nz_limit_.store(NE_nz_limit, std::memory_order_relaxed);
+    kkt_.NE_nz_limit.store(NE_nz_limit, std::memory_order_relaxed);
   };
 
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
@@ -537,10 +320,10 @@ Int FactorHiGHSSolver::chooseNla() {
   if (status == kStatusOk) {
     if (options_.nla == kHipoAugmentedString) {
       S_ = std::move(symb_AS);
-      freeNEmemory();
+      kkt_.freeNEmemory();
     } else {
       S_ = std::move(symb_NE);
-      freeASmemory();
+      kkt_.freeASmemory();
     }
   }
 
@@ -572,7 +355,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   std::vector<char> failure(orderings_to_try.size(), 0);
 
   if (nla == "NE") {
-    if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
+    if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
       log_.printDevInfo("NE interrupted\n");
       return kStatusErrorAnalyse;
     }
@@ -867,23 +650,6 @@ double FactorHiGHSSolver::spops() const { return S_.spops(); }
 double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
 void FactorHiGHSSolver::getReg(std::vector<double>& reg) {
   FH_.getRegularisation(reg);
-}
-
-void FactorHiGHSSolver::freeASmemory() {
-  // Give up memory used for AS.
-  freeVector(kkt_.ptrAS);
-  freeVector(kkt_.rowsAS);
-  freeVector(kkt_.valAS);
-}
-
-void FactorHiGHSSolver::freeNEmemory() {
-  // Give up memory used for NE.
-  freeVector(kkt_.ptrNE);
-  freeVector(kkt_.rowsNE);
-  freeVector(kkt_.valNE);
-  freeVector(ptrA_rw_);
-  freeVector(idxA_rw_);
-  freeVector(corr_A_);
 }
 
 }  // namespace hipo

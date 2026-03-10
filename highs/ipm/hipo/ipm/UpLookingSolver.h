@@ -2,6 +2,7 @@
 #define HIPO_UP_LOOKING_SOLVER_H
 
 #include "LinearSolver.h"
+#include "KktMatrix.h"
 
 // Up-looking factorisation
 // Based on Tim Davis "Direct Methods for Sparse Linear Systems", cholmod, qdldl

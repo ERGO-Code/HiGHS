@@ -182,6 +182,7 @@ set(hipo_sources
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp 
+    ipm/hipo/ipm/KktMatrix.cpp
     ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/PreProcess.cpp
@@ -197,6 +198,7 @@ set(hipo_headers
     ipm/hipo/ipm/Control.h
     ipm/hipo/ipm/Info.h
     ipm/hipo/ipm/Iterate.h
+    ipm/hipo/ipm/KktMatrix.h
     ipm/hipo/ipm/LinearSolver.h
     ipm/hipo/ipm/LogHighs.h
     ipm/hipo/ipm/Model.h
