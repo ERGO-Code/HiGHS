@@ -7998,7 +7998,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
     // skip binary variable
     if (nonzero.index() == binCol) continue;
 
-    // compute vlb constant
+    // compute VLB constant
     double vlbConstant = -kHighsInf;
     if (useLhs) {
       double residual = impliedRowBounds.getResidualSumUpper(
@@ -8011,7 +8011,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
       }
     }
 
-    // compute vub constant
+    // compute VUB constant
     double vubConstant = kHighsInf;
     if (useRhs) {
       double residual = impliedRowBounds.getResidualSumLower(
@@ -8058,7 +8058,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
         computeMirCut(myVbCoef, vubConstant, HighsInt{1});
       // negate coefficient (as expected by implication code)
       myVbCoef *= -1;
-      // check if VLB is better than standard upper bound
+      // check if VUB is better than standard upper bound
       if (myVbCoef != 0.0 &&
           std::min(0.0, myVbCoef) + static_cast<HighsCDouble>(vubConstant) <
               model->col_upper_[nonzero.index()] - primal_feastol)
