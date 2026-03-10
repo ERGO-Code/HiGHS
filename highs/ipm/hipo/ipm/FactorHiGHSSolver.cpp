@@ -641,12 +641,12 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
         Int status = hipo_loader.fn_hipo_extras_metis_nodend_(&n, full_ptr.data(), full_rows.data(), NULL,
                                options, permutations[i].data(), iperm.data());
-      }
 
-      log_.printDevInfo("Metis done\n");
-      if (status != METIS_OK) {
-        log_.printDevInfo("Error with Metis\n");
-        failure[i] = true;
+        log_.printDevInfo("Metis done\n");
+        if (status != METIS_OK) {
+          log_.printDevInfo("Error with Metis\n");
+          failure[i] = true;
+        }
       }
 
 #endif
@@ -706,7 +706,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
         log_.printDevInfo("Running RCM\n");
         Int status = hipo_loader.fn_hipo_extras_genrcm_(n, full_ptr.back(), full_ptr.data(),
-                                full_rows.data(), permutations.data());
+                                full_rows.data(), permutations[i].data());
 
         log_.printDevInfo("RCM done\n");
 
