@@ -7955,7 +7955,11 @@ void HPresolve::extractVarBounds(HighsInt row) {
   if (!useLhs && !useRhs) return;
 
   auto computeMirCut = [&](double& aj, double& rhs, HighsInt multiplier) {
-    // try to strengthen variable bound constraint by computing MIR cut
+    // try to strengthen variable bound constraint x + a * y <= b by computing
+    // MIR cut. since x is a general-integer variable (with integral bounds) and
+    // its coefficient is 1.0, it is not shifted (or complemented). similarly,
+    // since y is a binary variable (i.e., its lower bound is 0.0), it does not
+    // need to be shifted, and we also do not try to complement it.
     constexpr double f0min = 0.005;
     constexpr double f0max = 0.995;
     double downrhs = std::floor(multiplier * rhs);
