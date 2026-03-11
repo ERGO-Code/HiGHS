@@ -8041,7 +8041,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
     // add VLB
     if (vlbConstant != -kHighsInf) {
       double myVbCoef = vbCoef;
-      // check if MIR principle can be used to strengthen VLB
+      // try to strengthen VLB using MIR
       if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
         computeMirCut(myVbCoef, vlbConstant, HighsInt{-1});
       // store VLB
@@ -8054,7 +8054,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
     // add VUB
     if (vubConstant != kHighsInf) {
       double myVbCoef = vbCoef;
-      // check if MIR principle can be used to strengthen VUB
+      // try to strengthen VUB using MIR
       if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
         computeMirCut(myVbCoef, vubConstant, HighsInt{1});
       // store VUB
