@@ -429,7 +429,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   mipsolver.mipdata_->debugSolution.checkVlb(col, vlbcol, vlbcoef, vlbconstant);
 
   double maxBound = vlb.maxValue();
-  if (vlb.maxValue() <=
+  if (maxBound <=
       mipsolver.mipdata_->domain.col_lower_[col] + mipsolver.mipdata_->feastol)
     return;
 
@@ -438,8 +438,8 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   if (!insertresult.second) {
     VarBound& currentvlb = *insertresult.first;
 
-    double currentMaxNound = currentvlb.maxValue();
-    if (maxBound > currentMaxNound + mipsolver.mipdata_->feastol) {
+    double currentMaxBound = currentvlb.maxValue();
+    if (maxBound > currentMaxBound + mipsolver.mipdata_->feastol) {
       currentvlb.coef = vlbcoef;
       currentvlb.constant = vlbconstant;
     }
