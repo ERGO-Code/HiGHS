@@ -1108,12 +1108,6 @@ HighsStatus Highs::calledOptimizeModel() {
   // Ensure that all vectors in the model have exactly the right size
   exactResizeModel();
 
-  if (model_.lp_.hasIndicatorConstraints() && solution_.value_valid) {
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Cannot currently use previous solution when MIP has "
-                 "indicator constraints\n");
-    solution_.clear();
-  }
   if (model_.isMip() && solution_.value_valid) {
     // Determine whether the current (partial) solution of a MIP is
     // feasible and, if not, try to complete the assignment with
@@ -4265,6 +4259,8 @@ HighsStatus Highs::callSolveMip() {
     if (has_indicators) {
       use_lp = withoutIndicatorConstraints(
           model_.lp_, options_.log_options,
+	  options_.primal_feasibility_tolerance,
+	  solution_,
           model_.lp_.mods_.save_indicator_constraint_with_max_big_m);
     }
     // Then reformulate semi-variables (adds cols + rows)

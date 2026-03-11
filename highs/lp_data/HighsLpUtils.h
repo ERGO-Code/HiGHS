@@ -293,6 +293,8 @@ void equalIndicatorConstraints(
 
 HighsLp withoutIndicatorConstraints(
     const HighsLp& lp, const HighsLogOptions& log_options,
+    const double primal_feasibility_tolerance,
+    HighsSolution& solution,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m);
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);

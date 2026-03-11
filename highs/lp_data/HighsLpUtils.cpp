@@ -3402,6 +3402,8 @@ void equalIndicatorConstraints(
 
 HighsLp withoutIndicatorConstraints(
     const HighsLp& lp_, const HighsLogOptions& log_options,
+    const double primal_feasibility_tolerance,
+    HighsSolution& solution,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m) {
   HighsLp lp = lp_;
   equalIndicatorConstraints(lp.indicators_, lp.indicator_constraints_);
@@ -3416,6 +3418,11 @@ HighsLp withoutIndicatorConstraints(
   const bool have_row_names =
       lp.num_row_ > 0 &&
       lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+
+  const HighsInt num_indicator = lp.indicators_.col.size();
+  // If there is an existing solution, make space for the activities
+  // of the additional rows
+  if (solution.value_valid) solution.row_value.resize(lp.num_row_ + num_indicator);
 
   // Collect all new rows from indicator constraints, stored per-column
   // for colwise insertion
