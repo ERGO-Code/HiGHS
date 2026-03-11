@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 
+#include "UpLookingSolver.h"
 #include "ipm/IpxWrapper.h"
 #include "ipm/hipo/auxiliary/Log.h"
 #include "lp_data/HighsSolution.h"
@@ -149,6 +150,11 @@ bool Solver::initialise() {
     info_.status = (Status)status;
     return true;
   }
+  LS_->clear();
+
+  // switch to up-looking factorisation
+  LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
+  LS_->setup();
   LS_->clear();
 
   it_->data.append();
