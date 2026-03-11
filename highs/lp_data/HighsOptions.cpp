@@ -1164,7 +1164,7 @@ void warnSolverInvalid(const HighsOptions& options,
 bool solverValidForLp(const std::string& solver) {
   return solver == kHighsChooseString || solver == kSimplexString ||
          solver == kIpmString || solver == kIpxString ||
-         solver == kHipoString || solver == kPdlpString || 
+         solver == kHipoString || solver == kPdlpString ||
          solver == kHiPdlpString;
 }
 bool solverValidForMip(const std::string& solver) {
