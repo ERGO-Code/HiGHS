@@ -8044,14 +8044,11 @@ void HPresolve::extractVarBounds(HighsInt row) {
       // check if MIR principle can be used to strengthen VLB
       if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
         computeMirCut(myVbCoef, vlbConstant, HighsInt{-1});
-      // negate coefficient (as expected by implication code)
-      myVbCoef *= -1;
-      // check if VLB is better than standard lower bound
-      if (myVbCoef != 0.0 &&
-          HighsImplications::VarBound{myVbCoef, vlbConstant}.maxValue() >
-              model->col_lower_[nonzero.index()] + primal_feastol)
-        mipsolver->mipdata_->implications.addVLB(nonzero.index(), binCol,
-                                                 myVbCoef, vlbConstant);
+      // store VLB
+      if (myVbCoef != 0.0)
+        mipsolver->mipdata_->implications.addVLB(
+            nonzero.index(), binCol, -myVbCoef, vlbConstant,
+            model->col_lower_[nonzero.index()]);
     }
 
     // add VUB
@@ -8060,14 +8057,11 @@ void HPresolve::extractVarBounds(HighsInt row) {
       // check if MIR principle can be used to strengthen VUB
       if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
         computeMirCut(myVbCoef, vubConstant, HighsInt{1});
-      // negate coefficient (as expected by implication code)
-      myVbCoef *= -1;
-      // check if VUB is better than standard upper bound
-      if (myVbCoef != 0.0 &&
-          HighsImplications::VarBound{myVbCoef, vubConstant}.minValue() <
-              model->col_upper_[nonzero.index()] - primal_feastol)
-        mipsolver->mipdata_->implications.addVUB(nonzero.index(), binCol,
-                                                 myVbCoef, vubConstant);
+      // store VUB
+      if (myVbCoef != 0.0)
+        mipsolver->mipdata_->implications.addVUB(
+            nonzero.index(), binCol, -myVbCoef, vubConstant,
+            model->col_upper_[nonzero.index()]);
     }
 
     // stop if no additional variable bounds can be found
