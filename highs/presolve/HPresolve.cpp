@@ -8048,7 +8048,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
       myVbCoef *= -1;
       // check if VLB is better than standard lower bound
       if (myVbCoef != 0.0 &&
-          std::max(0.0, myVbCoef) + static_cast<HighsCDouble>(vlbConstant) >
+          HighsImplications::VarBound{myVbCoef, vlbConstant}.maxValue() >
               model->col_lower_[nonzero.index()] + primal_feastol)
         mipsolver->mipdata_->implications.addVLB(nonzero.index(), binCol,
                                                  myVbCoef, vlbConstant);
@@ -8064,7 +8064,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
       myVbCoef *= -1;
       // check if VUB is better than standard upper bound
       if (myVbCoef != 0.0 &&
-          std::min(0.0, myVbCoef) + static_cast<HighsCDouble>(vubConstant) <
+          HighsImplications::VarBound{myVbCoef, vubConstant}.minValue() <
               model->col_upper_[nonzero.index()] - primal_feastol)
         mipsolver->mipdata_->implications.addVUB(nonzero.index(), binCol,
                                                  myVbCoef, vubConstant);
