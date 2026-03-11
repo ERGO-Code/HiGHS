@@ -182,16 +182,7 @@
   CMakeFiles/highs.dir/ipm/basiclu/lu_solve_symbolic.c.o \
   CMakeFiles/highs.dir/ipm/basiclu/lu_solve_triangular.c.o \
   CMakeFiles/highs.dir/ipm/basiclu/lu_update.c.o \
-  ../lib/libcudalin.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcudart.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublas.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcusparse.so \
   /usr/lib/x86_64-linux-gnu/libz.so \
-  /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libdl.a \
-  /usr/lib/x86_64-linux-gnu/librt.a \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublasLt.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libculibos.a \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libnvJitLink.so \
   /usr/lib/gcc/x86_64-linux-gnu/13/libstdc++.so \
   /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libm.so \
   /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libm.so \
@@ -583,25 +574,7 @@ CMakeFiles/highs.dir/ipm/basiclu/lu_solve_triangular.c.o:
 
 CMakeFiles/highs.dir/ipm/basiclu/lu_update.c.o:
 
-../lib/libcudalin.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcudart.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublas.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcusparse.so:
-
 /usr/lib/x86_64-linux-gnu/libz.so:
-
-/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libdl.a:
-
-/usr/lib/x86_64-linux-gnu/librt.a:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublasLt.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libculibos.a:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libnvJitLink.so:
 
 /usr/lib/gcc/x86_64-linux-gnu/13/libstdc++.so:
 

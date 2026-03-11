@@ -4,7 +4,7 @@
 # compile C with /usr/bin/gcc
 C_DEFINES = -DNDEBUG
 
-C_INCLUDES = -I/include -I/home/yzhou/Github/HiGHS -I/home/yzhou/Github/HiGHS/highs -I/home/yzhou/Github/HiGHS/build_release
+C_INCLUDES = -I/home/yzhou/Github/HiGHS -I/home/yzhou/Github/HiGHS/highs -I/home/yzhou/Github/HiGHS/build_release
 
-C_FLAGS =  -Wno-implicit-function-declaration -O3 -DNDEBUG -fPIE -Wno-deprecated-declarations
+C_FLAGS =  -Wno-implicit-function-declaration -O3 -DNDEBUG -flto=auto -fno-fat-lto-objects -fPIE
 

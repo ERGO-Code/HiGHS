@@ -19,7 +19,7 @@ set(CMAKE_IMPORT_FILE_VERSION 1)
 set(_cmake_targets_defined "")
 set(_cmake_targets_not_defined "")
 set(_cmake_expected_targets "")
-foreach(_cmake_expected_target IN ITEMS highs::highs highs::cudalin)
+foreach(_cmake_expected_target IN ITEMS highs::highs)
   list(APPEND _cmake_expected_targets "${_cmake_expected_target}")
   if(TARGET "${_cmake_expected_target}")
     list(APPEND _cmake_targets_defined "${_cmake_expected_target}")
@@ -53,31 +53,15 @@ set_target_properties(highs::highs PROPERTIES
   COMPATIBLE_INTERFACE_STRING "HIGHS_MAJOR_VERSION"
   INTERFACE_COMPILE_OPTIONS "\$<\$<COMPILE_LANGUAGE:CXX>:-Wno-invalid-offsetof>"
   INTERFACE_HIGHS_MAJOR_VERSION "1"
-  INTERFACE_INCLUDE_DIRECTORIES "/include;/home/yzhou/Github/HiGHS;/home/yzhou/Github/HiGHS/highs;/home/yzhou/Github/HiGHS/build_release"
+  INTERFACE_INCLUDE_DIRECTORIES "/home/yzhou/Github/HiGHS;/home/yzhou/Github/HiGHS/highs;/home/yzhou/Github/HiGHS/build_release"
   INTERFACE_POSITION_INDEPENDENT_CODE "ON"
-)
-
-# Create imported target highs::cudalin
-add_library(highs::cudalin SHARED IMPORTED)
-
-set_target_properties(highs::cudalin PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "/include;/include;/home/yzhou/Github/HiGHS/highs/pdlp/cupdlp/cuda/../../hipdlp"
-  INTERFACE_LINK_LIBRARIES "CUDA::cudart;CUDA::cublas;CUDA::cusparse;m"
 )
 
 # Import target "highs::highs" for configuration "Release"
 set_property(TARGET highs::highs APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
 set_target_properties(highs::highs PROPERTIES
-  IMPORTED_LINK_DEPENDENT_LIBRARIES_RELEASE "highs::cudalin"
   IMPORTED_LOCATION_RELEASE "/home/yzhou/Github/HiGHS/build_release/lib/libhighs.so.1.13.1"
   IMPORTED_SONAME_RELEASE "libhighs.so.1"
-  )
-
-# Import target "highs::cudalin" for configuration "Release"
-set_property(TARGET highs::cudalin APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
-set_target_properties(highs::cudalin PROPERTIES
-  IMPORTED_LOCATION_RELEASE "/home/yzhou/Github/HiGHS/build_release/lib/libcudalin.so"
-  IMPORTED_SONAME_RELEASE "libcudalin.so"
   )
 
 # This file does not depend on other imported targets which have

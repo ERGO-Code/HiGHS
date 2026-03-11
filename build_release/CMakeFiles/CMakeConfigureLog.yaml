@@ -31544,3 +31544,127 @@ events:
         
       exitCode: 0
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/snap/cmake/1515/share/cmake-4.2/Modules/CheckIPOSupported.cmake:197 (try_compile)"
+      - "/snap/cmake/1515/share/cmake-4.2/Modules/CheckIPOSupported.cmake:320 (_ipo_run_language_check)"
+      - "CMakeLists.txt:355 (check_ipo_supported)"
+    directories:
+      source: "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    cmakeVariables:
+      CMAKE_CUDA_ARCHITECTURES: "75"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /snap/cmake/1515/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /snap/cmake/1515/bin/cmake -S/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /snap/cmake/1515/bin/cmake -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin && /snap/cmake/1515/bin/cmake -E cmake_depends "Unix Makefiles" /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/src /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/src /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake foo
+        Dependee "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/g++   -std=c++11 -g -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /snap/cmake/1515/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /snap/cmake/1515/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" qc libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin && /snap/cmake/1515/bin/cmake -E cmake_depends "Unix Makefiles" /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/src /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/src /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake boo
+        Dependee "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/g++   -std=c++11 -g -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /snap/cmake/1515/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/g++  -std=c++11 -g -flto=auto -fno-fat-lto-objects -L/home/yzhou/.local/lib CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a
+        gmake[2]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /snap/cmake/1515/bin/cmake -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/snap/cmake/1515/share/cmake-4.2/Modules/CheckIPOSupported.cmake:197 (try_compile)"
+      - "/snap/cmake/1515/share/cmake-4.2/Modules/CheckIPOSupported.cmake:320 (_ipo_run_language_check)"
+      - "CMakeLists.txt:355 (check_ipo_supported)"
+    directories:
+      source: "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin"
+    cmakeVariables:
+      CMAKE_CUDA_ARCHITECTURES: "75"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /snap/cmake/1515/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /snap/cmake/1515/bin/cmake -S/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/src -B/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /snap/cmake/1515/bin/cmake -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin && /snap/cmake/1515/bin/cmake -E cmake_depends "Unix Makefiles" /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/src /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/src /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake foo
+        Dependee "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/gcc   -g -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /snap/cmake/1515/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /snap/cmake/1515/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" qc libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin && /snap/cmake/1515/bin/cmake -E cmake_depends "Unix Makefiles" /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/src /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/src /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake boo
+        Dependee "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/gcc   -g -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /snap/cmake/1515/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/gcc -g -flto=auto -fno-fat-lto-objects -L/home/yzhou/.local/lib CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a
+        gmake[2]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin'
+        /snap/cmake/1515/bin/cmake -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        
+      exitCode: 0
+...

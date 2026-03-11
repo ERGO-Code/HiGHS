@@ -2976,15 +2976,7 @@ lib/libhighs.so.1.13.1: highs/CMakeFiles/highs.dir/ipm/basiclu/lu_solve_triangul
 lib/libhighs.so.1.13.1: highs/CMakeFiles/highs.dir/ipm/basiclu/lu_update.c.o
 lib/libhighs.so.1.13.1: highs/CMakeFiles/highs.dir/build.make
 lib/libhighs.so.1.13.1: highs/CMakeFiles/highs.dir/compiler_depend.ts
-lib/libhighs.so.1.13.1: lib/libcudalin.so
-lib/libhighs.so.1.13.1: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcudart.so
-lib/libhighs.so.1.13.1: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublas.so
-lib/libhighs.so.1.13.1: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcusparse.so
 lib/libhighs.so.1.13.1: /usr/lib/x86_64-linux-gnu/libz.so
-lib/libhighs.so.1.13.1: /usr/lib/x86_64-linux-gnu/librt.a
-lib/libhighs.so.1.13.1: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublasLt.so
-lib/libhighs.so.1.13.1: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libculibos.a
-lib/libhighs.so.1.13.1: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libnvJitLink.so
 lib/libhighs.so.1.13.1: highs/CMakeFiles/highs.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_182) "Linking CXX shared library ../lib/libhighs.so"
 	cd /home/yzhou/Github/HiGHS/build_release/highs && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/highs.dir/link.txt --verbose=$(VERBOSE)

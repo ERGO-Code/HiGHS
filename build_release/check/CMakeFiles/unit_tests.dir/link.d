@@ -55,15 +55,6 @@
   CMakeFiles/unit_tests.dir/TestUserScale.cpp.o \
   CMakeFiles/unit_tests.dir/Avgas.cpp.o \
   ../lib/libhighs.so.1.13.1 \
-  ../lib/libcudalin.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcudart.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublas.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcusparse.so \
-  /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libdl.a \
-  /usr/lib/x86_64-linux-gnu/librt.a \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublasLt.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libculibos.a \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libnvJitLink.so \
   /usr/lib/gcc/x86_64-linux-gnu/13/libstdc++.so \
   /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libm.so \
   /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libm.so \
@@ -90,14 +81,8 @@
   /usr/lib/gcc/x86_64-linux-gnu/13/libgcc.a \
   /usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o \
   /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o \
-  ../lib/libcudalin.so \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublas.so \
   /lib/x86_64-linux-gnu/libz.so.1 \
-  /lib64/ld-linux-x86-64.so.2 \
-  /lib/x86_64-linux-gnu/libdl.so.2 \
-  /lib/x86_64-linux-gnu/libpthread.so.0 \
-  /lib/x86_64-linux-gnu/librt.so.1 \
-  /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublasLt.so
+  /lib64/ld-linux-x86-64.so.2
 
 /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o:
 
@@ -211,24 +196,6 @@ CMakeFiles/unit_tests.dir/Avgas.cpp.o:
 
 ../lib/libhighs.so.1.13.1:
 
-../lib/libcudalin.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcudart.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublas.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcusparse.so:
-
-/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libdl.a:
-
-/usr/lib/x86_64-linux-gnu/librt.a:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublasLt.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libculibos.a:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libnvJitLink.so:
-
 /usr/lib/gcc/x86_64-linux-gnu/13/libstdc++.so:
 
 /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/libm.so:
@@ -281,18 +248,6 @@ CMakeFiles/unit_tests.dir/Avgas.cpp.o:
 
 /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o:
 
-../lib/libcudalin.so:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublas.so:
-
 /lib/x86_64-linux-gnu/libz.so.1:
 
 /lib64/ld-linux-x86-64.so.2:
-
-/lib/x86_64-linux-gnu/libdl.so.2:
-
-/lib/x86_64-linux-gnu/libpthread.so.0:
-
-/lib/x86_64-linux-gnu/librt.so.1:
-
-/usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublasLt.so:

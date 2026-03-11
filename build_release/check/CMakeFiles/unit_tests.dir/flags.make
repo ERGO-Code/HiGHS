@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/g++
 CXX_DEFINES = -DNDEBUG
 
-CXX_INCLUDES = -I/home/yzhou/Github/HiGHS/highs/pdlp/cupdlp/cuda -I/include -I/home/yzhou/Github/HiGHS -I/home/yzhou/Github/HiGHS/highs -I/home/yzhou/Github/HiGHS/build_release -I/home/yzhou/Github/HiGHS/extern -I/home/yzhou/Github/HiGHS/highs/pdlp/cupdlp/cuda/../../hipdlp -isystem /usr/local/cuda/targets/x86_64-linux/include -isystem /usr/local/cuda/targets/x86_64-linux/include/cccl
+CXX_INCLUDES = -I/home/yzhou/Github/HiGHS -I/home/yzhou/Github/HiGHS/highs -I/home/yzhou/Github/HiGHS/build_release -I/home/yzhou/Github/HiGHS/extern
 
-CXX_FLAGS =  -std=c++11 -O3 -DNDEBUG -std=c++11 -fPIE -mpopcnt -Wno-deprecated-declarations -Wno-unused-variable -Wno-unused-const-variable -Wno-invalid-offsetof
+CXX_FLAGS =  -std=c++11 -O3 -DNDEBUG -std=c++11 -flto=auto -fno-fat-lto-objects -fPIE -mpopcnt -Wno-unused-variable -Wno-unused-const-variable -Wno-invalid-offsetof
 

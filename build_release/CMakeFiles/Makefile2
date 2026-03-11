@@ -186,47 +186,19 @@ examples/clean: examples/CMakeFiles/call_highs_from_c_minimal.dir/clean
 
 # Recursive "all" directory target.
 highs/all: highs/CMakeFiles/highs.dir/all
-highs/all: highs/pdlp/cupdlp/cuda/all
 .PHONY : highs/all
 
 # Recursive "codegen" directory target.
 highs/codegen: highs/CMakeFiles/highs.dir/codegen
-highs/codegen: highs/pdlp/cupdlp/cuda/codegen
 .PHONY : highs/codegen
 
 # Recursive "preinstall" directory target.
-highs/preinstall: highs/pdlp/cupdlp/cuda/preinstall
+highs/preinstall:
 .PHONY : highs/preinstall
 
 # Recursive "clean" directory target.
 highs/clean: highs/CMakeFiles/highs.dir/clean
-highs/clean: highs/pdlp/cupdlp/cuda/clean
 .PHONY : highs/clean
-
-#=============================================================================
-# Directory level rules for directory highs/pdlp/cupdlp/cuda
-
-# Recursive "all" directory target.
-highs/pdlp/cupdlp/cuda/all: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/all
-highs/pdlp/cupdlp/cuda/all: highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/all
-highs/pdlp/cupdlp/cuda/all: highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/all
-.PHONY : highs/pdlp/cupdlp/cuda/all
-
-# Recursive "codegen" directory target.
-highs/pdlp/cupdlp/cuda/codegen: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/codegen
-highs/pdlp/cupdlp/cuda/codegen: highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/codegen
-highs/pdlp/cupdlp/cuda/codegen: highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/codegen
-.PHONY : highs/pdlp/cupdlp/cuda/codegen
-
-# Recursive "preinstall" directory target.
-highs/pdlp/cupdlp/cuda/preinstall:
-.PHONY : highs/pdlp/cupdlp/cuda/preinstall
-
-# Recursive "clean" directory target.
-highs/pdlp/cupdlp/cuda/clean: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/clean
-highs/pdlp/cupdlp/cuda/clean: highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/clean
-highs/pdlp/cupdlp/cuda/clean: highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/clean
-.PHONY : highs/pdlp/cupdlp/cuda/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/Experimental.dir
@@ -1128,15 +1100,15 @@ CMakeFiles/ContinuousSubmit.dir/clean:
 # Target rules for target highs/CMakeFiles/highs.dir
 
 # All Build rule for target.
-highs/CMakeFiles/highs.dir/all: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/all
+highs/CMakeFiles/highs.dir/all:
 	$(MAKE) $(MAKESILENT) -f highs/CMakeFiles/highs.dir/build.make highs/CMakeFiles/highs.dir/depend
 	$(MAKE) $(MAKESILENT) -f highs/CMakeFiles/highs.dir/build.make highs/CMakeFiles/highs.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76 "Built target highs"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77 "Built target highs"
 .PHONY : highs/CMakeFiles/highs.dir/all
 
 # Build rule for subdir invocation for target.
 highs/CMakeFiles/highs.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 74
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 75
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 highs/CMakeFiles/highs.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
 .PHONY : highs/CMakeFiles/highs.dir/rule
@@ -1148,7 +1120,7 @@ highs: highs/CMakeFiles/highs.dir/rule
 # codegen rule for target.
 highs/CMakeFiles/highs.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f highs/CMakeFiles/highs.dir/build.make highs/CMakeFiles/highs.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76 "Finished codegen for target highs"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77 "Finished codegen for target highs"
 .PHONY : highs/CMakeFiles/highs.dir/codegen
 
 # clean rule for target.
@@ -1157,114 +1129,18 @@ highs/CMakeFiles/highs.dir/clean:
 .PHONY : highs/CMakeFiles/highs.dir/clean
 
 #=============================================================================
-# Target rules for target highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir
-
-# All Build rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/all:
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/depend
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=3,4 "Built target cudalin"
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/all
-
-# Build rule for subdir invocation for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/rule
-
-# Convenience name for target.
-cudalin: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/rule
-.PHONY : cudalin
-
-# codegen rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=3,4 "Finished codegen for target cudalin"
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/codegen
-
-# clean rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/clean:
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/clean
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/clean
-
-#=============================================================================
-# Target rules for target highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir
-
-# All Build rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/all: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/all
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/depend
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num= "Built target testcudalin"
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/all
-
-# Build rule for subdir invocation for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/rule
-
-# Convenience name for target.
-testcudalin: highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/rule
-.PHONY : testcudalin
-
-# codegen rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num= "Finished codegen for target testcudalin"
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/codegen
-
-# clean rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/clean:
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/clean
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/testcudalin.dir/clean
-
-#=============================================================================
-# Target rules for target highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir
-
-# All Build rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/all: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/all
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/depend
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=78 "Built target testcublas"
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/all
-
-# Build rule for subdir invocation for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 3
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/rule
-
-# Convenience name for target.
-testcublas: highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/rule
-.PHONY : testcublas
-
-# codegen rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=78 "Finished codegen for target testcublas"
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/codegen
-
-# clean rule for target.
-highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/clean:
-	$(MAKE) $(MAKESILENT) -f highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/build.make highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/clean
-.PHONY : highs/pdlp/cupdlp/cuda/CMakeFiles/testcublas.dir/clean
-
-#=============================================================================
 # Target rules for target app/CMakeFiles/highs-bin.dir
 
 # All Build rule for target.
 app/CMakeFiles/highs-bin.dir/all: highs/CMakeFiles/highs.dir/all
 	$(MAKE) $(MAKESILENT) -f app/CMakeFiles/highs-bin.dir/build.make app/CMakeFiles/highs-bin.dir/depend
 	$(MAKE) $(MAKESILENT) -f app/CMakeFiles/highs-bin.dir/build.make app/CMakeFiles/highs-bin.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=77 "Built target highs-bin"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=78 "Built target highs-bin"
 .PHONY : app/CMakeFiles/highs-bin.dir/all
 
 # Build rule for subdir invocation for target.
 app/CMakeFiles/highs-bin.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 75
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 76
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 app/CMakeFiles/highs-bin.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
 .PHONY : app/CMakeFiles/highs-bin.dir/rule
@@ -1276,7 +1152,7 @@ highs-bin: app/CMakeFiles/highs-bin.dir/rule
 # codegen rule for target.
 app/CMakeFiles/highs-bin.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f app/CMakeFiles/highs-bin.dir/build.make app/CMakeFiles/highs-bin.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=77 "Finished codegen for target highs-bin"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=78 "Finished codegen for target highs-bin"
 .PHONY : app/CMakeFiles/highs-bin.dir/codegen
 
 # clean rule for target.
@@ -1296,7 +1172,7 @@ examples/CMakeFiles/call_highs_from_cpp.dir/all: highs/CMakeFiles/highs.dir/all
 
 # Build rule for subdir invocation for target.
 examples/CMakeFiles/call_highs_from_cpp.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 75
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 76
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 examples/CMakeFiles/call_highs_from_cpp.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
 .PHONY : examples/CMakeFiles/call_highs_from_cpp.dir/rule
@@ -1328,7 +1204,7 @@ examples/CMakeFiles/call_highs_from_c_minimal.dir/all: highs/CMakeFiles/highs.di
 
 # Build rule for subdir invocation for target.
 examples/CMakeFiles/call_highs_from_c_minimal.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 74
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 75
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 examples/CMakeFiles/call_highs_from_c_minimal.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
 .PHONY : examples/CMakeFiles/call_highs_from_c_minimal.dir/rule
@@ -1353,7 +1229,6 @@ examples/CMakeFiles/call_highs_from_c_minimal.dir/clean:
 
 # All Build rule for target.
 check/CMakeFiles/unit_tests.dir/all: highs/CMakeFiles/highs.dir/all
-check/CMakeFiles/unit_tests.dir/all: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.dir/all
 	$(MAKE) $(MAKESILENT) -f check/CMakeFiles/unit_tests.dir/build.make check/CMakeFiles/unit_tests.dir/depend
 	$(MAKE) $(MAKESILENT) -f check/CMakeFiles/unit_tests.dir/build.make check/CMakeFiles/unit_tests.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100 "Built target unit_tests"
@@ -1361,7 +1236,7 @@ check/CMakeFiles/unit_tests.dir/all: highs/pdlp/cupdlp/cuda/CMakeFiles/cudalin.d
 
 # Build rule for subdir invocation for target.
 check/CMakeFiles/unit_tests.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 96
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 97
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 check/CMakeFiles/unit_tests.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
 .PHONY : check/CMakeFiles/unit_tests.dir/rule
@@ -1393,7 +1268,7 @@ check/CMakeFiles/capi_unit_tests.dir/all: highs/CMakeFiles/highs.dir/all
 
 # Build rule for subdir invocation for target.
 check/CMakeFiles/capi_unit_tests.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 75
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 76
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 check/CMakeFiles/capi_unit_tests.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/yzhou/Github/HiGHS/build_release/CMakeFiles 0
 .PHONY : check/CMakeFiles/capi_unit_tests.dir/rule

@@ -3,7 +3,6 @@
 	[
 		"/home/yzhou/Github/HiGHS/build_release/cmake_install.cmake",
 		"/home/yzhou/Github/HiGHS/build_release/highs/cmake_install.cmake",
-		"/home/yzhou/Github/HiGHS/build_release/highs/pdlp/cupdlp/cuda/cmake_install.cmake",
 		"/home/yzhou/Github/HiGHS/build_release/app/cmake_install.cmake",
 		"/home/yzhou/Github/HiGHS/build_release/examples/cmake_install.cmake",
 		"/home/yzhou/Github/HiGHS/build_release/check/cmake_install.cmake"

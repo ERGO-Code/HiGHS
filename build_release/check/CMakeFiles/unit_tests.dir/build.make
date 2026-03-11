@@ -913,14 +913,6 @@ bin/unit_tests: check/CMakeFiles/unit_tests.dir/Avgas.cpp.o
 bin/unit_tests: check/CMakeFiles/unit_tests.dir/build.make
 bin/unit_tests: check/CMakeFiles/unit_tests.dir/compiler_depend.ts
 bin/unit_tests: lib/libhighs.so.1.13.1
-bin/unit_tests: lib/libcudalin.so
-bin/unit_tests: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcudart.so
-bin/unit_tests: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublas.so
-bin/unit_tests: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcusparse.so
-bin/unit_tests: /usr/lib/x86_64-linux-gnu/librt.a
-bin/unit_tests: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libcublasLt.so
-bin/unit_tests: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libculibos.a
-bin/unit_tests: /usr/local/cuda-13.1/targets/x86_64-linux/lib/libnvJitLink.so
 bin/unit_tests: check/CMakeFiles/unit_tests.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/yzhou/Github/HiGHS/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_53) "Linking CXX executable ../bin/unit_tests"
 	cd /home/yzhou/Github/HiGHS/build_release/check && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/unit_tests.dir/link.txt --verbose=$(VERBOSE)

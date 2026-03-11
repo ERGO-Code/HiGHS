@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/g++
 CXX_DEFINES = -DNDEBUG
 
-CXX_INCLUDES = -I/home/yzhou/Github/HiGHS/examples -I/include -I/home/yzhou/Github/HiGHS -I/home/yzhou/Github/HiGHS/highs -I/home/yzhou/Github/HiGHS/build_release
+CXX_INCLUDES = -I/home/yzhou/Github/HiGHS/examples -I/home/yzhou/Github/HiGHS -I/home/yzhou/Github/HiGHS/highs -I/home/yzhou/Github/HiGHS/build_release
 
-CXX_FLAGS =  -std=c++11 -O3 -DNDEBUG -std=c++11 -fPIE -mpopcnt -Wno-deprecated-declarations -Wno-invalid-offsetof
+CXX_FLAGS =  -std=c++11 -O3 -DNDEBUG -std=c++11 -flto=auto -fno-fat-lto-objects -fPIE -mpopcnt -Wno-invalid-offsetof
 
