@@ -1,0 +1,1 @@
+/usr/bin/g++ -fPIC -shared -L/home/yzhou/.local/lib -Wl,--dependency-file=CMakeFiles/cudalin.dir/link.d -Wl,-soname,libcudalin.so -o ../../../../lib/libcudalin.so @CMakeFiles/cudalin.dir/objects1.rsp CMakeFiles/cudalin.dir/cmake_device_link.o @CMakeFiles/cudalin.dir/linkLibs.rsp -L"/usr/local/cuda/targets/x86_64-linux/lib/stubs" -L"/usr/local/cuda/targets/x86_64-linux/lib"
