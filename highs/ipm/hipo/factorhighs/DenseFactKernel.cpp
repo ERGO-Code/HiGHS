@@ -45,9 +45,9 @@ static void staticReg(double& pivot, Int sign, const Regul& regval,
 
   double old_pivot = pivot;
   if (sign > 0)
-    pivot += regval.primal;
+    pivot += regval.dual;
   else
-    pivot -= regval.dual;
+    pivot -= regval.primal;
   totalreg = pivot - old_pivot;
 }
 
@@ -111,8 +111,8 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
     assert(r >= 0);
     res = maxInCol(j, n, r, A, lda);
     double gamma_r = res.second;
-    double Arr = sign[r] > 0 ? A[r + lda * r] + regval.primal
-                             : A[r + lda * r] - regval.dual;
+    double Arr = sign[r] > 0 ? A[r + lda * r] + regval.dual
+                             : A[r + lda * r] - regval.primal;
 
     if ((std::abs(Ajj) >= kAlphaBK * gamma_j ||
          std::abs(Ajj) * gamma_r >= kAlphaBK * gamma_j * gamma_j)) {
@@ -199,7 +199,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
         if (std::isnan(Ajj)) return kRetInvalidPivot;
 
         // add regularisation
-        staticReg(Ajj, pivot_sign[j], regval, totalreg[j]);
+        //staticReg(Ajj, pivot_sign[j], regval, totalreg[j]);
 
 #ifndef HIPO_PIVOTING
         // add static regularisation
