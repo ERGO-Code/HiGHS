@@ -1832,19 +1832,17 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
     const HMpsFF::Parsekey keyword) {
   // Parse Hessian information from QSECTION or QCMATRIX
   // section according to keyword
-  const bool qcmatrix = keyword == HMpsFF::Parsekey::kQcmatrix;
+  const bool qsection = keyword == HMpsFF::Parsekey::kQsection;
   std::string section_name;
-  if (qcmatrix) {
-    section_name = "QCMATRIX";
-  } else {
+  if (qsection) {
     section_name = "QSECTION";
+  } else {
+    section_name = "QCMATRIX";
   }
-  // Store all nonzeros in the section, but QCMATRIX should have all
-  // entries - so its format is HessianFormat::kSquare format -
-  // whereas every off-diagonal QSECTION entry also defines its entry
-  // in the opposite triangle, so its format is
-  // HessianFormat::kTriangular.
-  q_format = qcmatrix ? HessianFormat::kSquare : HessianFormat::kTriangular;
+  // Store all nonzeros in the section. QCMATRIX should have all
+  // entries whereas every off-diagonal QSECTION entry also defines its
+  // entry in the opposite triangle, so add this explicitly to unify
+  // the record regardless of section
   std::string strline;
   std::string col_name;
   std::string row_name;
@@ -1954,7 +1952,13 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
             row_name.c_str(), col_name.c_str());
         return HMpsFF::Parsekey::kFail;
       }
-      if (coeff) q_entries.push_back(std::make_tuple(qrowidx, qcolidx, coeff));
+      if (coeff) {
+	q_entries.push_back(std::make_tuple(qrowidx, qcolidx, coeff));
+	// For a QSECTION secion, make a separate record of the entry
+	// in the opposite triangle
+	if (qsection && qrowidx != qcolidx)
+	  q_entries.push_back(std::make_tuple(qcolidx, qrowidx, coeff));
+      }
       end = end_coeff_name;
       // Don't read more if end of line reached
       if (end == strline.length()) break;
