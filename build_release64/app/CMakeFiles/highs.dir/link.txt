@@ -1,1 +1,0 @@
-/usr/bin/g++  -std=c++11 -O3 -DNDEBUG -flto=auto -fno-fat-lto-objects -L/home/yzhou/.local/lib -Wl,--dependency-file=CMakeFiles/highs.dir/link.d CMakeFiles/highs.dir/RunHighs.cpp.o -o ../bin/highs  -Wl,-rpath,/home/yzhou/Github/HiGHS/build_release64/lib: ../lib/libhighs.so.1.13.1 /usr/lib/x86_64-linux-gnu/libz.so
