@@ -34,6 +34,7 @@ const double kSmallSnThresh = 3.0;
 const Int kMinNumberSn = 10;
 const double kLargeStorageGB = 20.0;
 const double kLargeFillin = 50.0;
+const double kMaxTreeDepth = 1000;
 
 // parameters for choice of ordering
 const double kFlopsOrderingThresh = 1.2;

@@ -108,9 +108,18 @@ std::array<char, 32> highsDoubleToString(const double val,
 
 void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                   const char* format, ...) {
-  if (!*log_options_.output_flag ||
-      (log_options_.log_stream == NULL && !*log_options_.log_to_console))
-    return;
+  if (!*log_options_.output_flag) return;
+
+  // Log to a file if log_stream is not NULL or stdout, and to console
+  // if log_to_console is true
+  const bool log_to_file =
+      log_options_.log_stream && log_options_.log_stream != stdout;
+  const bool log_to_console = *log_options_.log_to_console;
+  const bool log_to_callback =
+      log_options_.user_log_callback ||
+      (log_options_.user_callback && log_options_.user_callback_active);
+
+  if (!log_to_file && !log_to_console && !log_to_callback) return;
   // highsLogUser should not be passed HighsLogType::kDetailed or
   // HighsLogType::kVerbose
   assert(type != HighsLogType::kDetailed);
@@ -120,33 +129,31 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  const bool use_log_callback =
-      log_options_.user_log_callback ||
-      (log_options_.user_callback && log_options_.user_callback_active);
 
-  // Write to log file stream unless it is NULL
-  if (log_options_.log_stream) {
+  // Possibly write to log file
+  if (log_to_file) {
     if (prefix)
-      fprintf(log_options_.log_stream, "%-9s", HighsLogTypeTag[(int)type]);
+      fprintf(log_options_.log_stream, "%-9s", HighsLogTypeTag[int(type)]);
     vfprintf(log_options_.log_stream, format, argptr);
     if (flush_streams) fflush(log_options_.log_stream);
     va_end(argptr);
     va_start(argptr, format);
   }
-  // Write to stdout unless log file stream is stdout
-  if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
-    if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
+  // Possibly write to console
+  if (log_to_console) {
+    if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[int(type)]);
     vfprintf(stdout, format, argptr);
     if (flush_streams) fflush(stdout);
     va_end(argptr);
     va_start(argptr, format);
   }
-  if (use_log_callback) {
+  // Possibly write to callback
+  if (log_to_callback) {
     size_t len = 0;
     std::array<char, kIoBufferSize> msgbuffer = {};
     if (prefix) {
       int l = snprintf(msgbuffer.data(), msgbuffer.size(), "%-9s",
-                       HighsLogTypeTag[(int)type]);
+                       HighsLogTypeTag[int(type)]);
       // assert that there are no encoding errors
       assert(l >= 0);
       len = static_cast<size_t>(l);
@@ -175,10 +182,18 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
 
 void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...) {
-  if (!*log_options_.output_flag ||
-      (log_options_.log_stream == NULL && !*log_options_.log_to_console) ||
-      !*log_options_.log_dev_level)
-    return;
+  if (!*log_options_.output_flag || !*log_options_.log_dev_level) return;
+
+  // Log to a file if log_stream is not NULL or stdout, and to console
+  // if log_to_console is true
+  const bool log_to_file =
+      log_options_.log_stream && log_options_.log_stream != stdout;
+  const bool log_to_console = *log_options_.log_to_console;
+  const bool log_to_callback =
+      log_options_.user_log_callback ||
+      (log_options_.user_callback && log_options_.user_callback_active);
+
+  if (!log_to_file && !log_to_console && !log_to_callback) return;
   // Always report HighsLogType::kInfo, HighsLogType::kWarning or
   // HighsLogType::kError
   //
@@ -196,29 +211,27 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  const bool use_log_callback =
-      log_options_.user_log_callback ||
-      (log_options_.user_callback && log_options_.user_callback_active);
-  // Write to log file stream unless it is NULL
-  if (log_options_.log_stream) {
-    // Write to log file stream
+
+  // Possibly write to log file
+  if (log_to_file) {
     vfprintf(log_options_.log_stream, format, argptr);
     if (flush_streams) fflush(log_options_.log_stream);
     va_end(argptr);
     va_start(argptr, format);
   }
-  // Write to stdout unless log file stream is stdout
-  if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
+  // Possibly write to console
+  if (log_to_console) {
     vfprintf(stdout, format, argptr);
     if (flush_streams) fflush(stdout);
     va_end(argptr);
     va_start(argptr, format);
   }
-  if (use_log_callback) {
+  // Possibly write to callback
+  if (log_to_callback) {
     std::array<char, kIoBufferSize> msgbuffer = {};
-    int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
+    int l = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
     // assert that there are no encoding errors
-    assert(len >= 0);
+    assert(l >= 0);
     if (log_options_.user_log_callback) {
       log_options_.user_log_callback(type, msgbuffer.data(),
                                      log_options_.user_log_callback_data);
@@ -241,6 +254,17 @@ void highsFprintfString(FILE* file, const HighsLogOptions& log_options_,
   } else {
     fprintf(file, "%s", s.c_str());
   }
+}
+
+std::string getFilenameExt(const std::string& filename) {
+  std::string name = filename;
+  std::size_t found = name.find_last_of(".");
+  if (found < name.size()) {
+    name = name.substr(found + 1);
+  } else {
+    name = "";
+  }
+  return name;
 }
 
 void highsReportDevInfo(const HighsLogOptions* log_options,
@@ -288,6 +312,19 @@ const std::string highsBoolToString(const bool b, const HighsInt field_width) {
   if (abs_field_width <= 2) return b ? "true" : "false";
   if (field_width < 0) return b ? "true " : "false";
   return b ? " true" : "false";
+}
+
+const std::string highsTimeToString(const double time) {
+  return
+#ifndef NDEBUG
+      std::to_string(time);
+#else
+      std::to_string(static_cast<int>(time));
+#endif
+}
+
+const std::string highsTimeSecondToString(const double time) {
+  return highsTimeToString(time) + "s";
 }
 
 const std::string highsInsertMdEscapes(const std::string& from_string) {

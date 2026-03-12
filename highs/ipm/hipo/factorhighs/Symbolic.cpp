@@ -41,6 +41,7 @@ Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
 bool Symbolic::parTree() const { return parallel_tree_; }
 bool Symbolic::parNode() const { return parallel_node_; }
 double Symbolic::storage() const { return serial_storage_; }
+Int Symbolic::depth() const { return tree_depth_; }
 
 const std::vector<Int64>& Symbolic::ptr() const { return ptr_; }
 const std::vector<Int>& Symbolic::iperm() const { return iperm_; }
@@ -72,12 +73,12 @@ void Symbolic::print(const Log& log, bool verbose) const {
   log_stream << textline("Serial memory:") << memoryString(serial_storage_)
              << '\n';
   log_stream << textline("Flops:") << sci(flops_, 0, 1) << '\n';
-  log_stream << textline("Ordering:") << ordering << '\n';
   if (verbose) {
     log_stream << textline("Sparse ops:") << sci(spops_, 0, 1) << '\n';
     log_stream << textline("Critical ops:") << sci(critops_, 0, 1) << '\n';
     log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)
                << '\n';
+    log_stream << textline("Tree depth:") << integer(tree_depth_, 0) << '\n';
     log_stream << textline("Artificial nz:") << sci(artificial_nz_, 0, 1)
                << '\n';
     log_stream << textline("Artificial ops:") << sci(artificial_ops_, 0, 1)

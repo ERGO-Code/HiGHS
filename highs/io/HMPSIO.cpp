@@ -393,9 +393,9 @@ FilereaderRetcode readMps(
   // Load Hessian
   if (flag[0] == 'Q') {
     warning_issued = true;
-    highsLogUser(
-        log_options, HighsLogType::kWarning,
-        "Quadratic section: under development. Assumes QUADOBJ section\n");
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "Quadratic section: under development. Assumes "
+                 "QUADOBJ/QSECTION section\n");
     Qdim = numCol;
     HighsInt hessian_nz = 0;
     HighsInt previous_col = -1;

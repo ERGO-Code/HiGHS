@@ -10,7 +10,7 @@ const HighsInt offset = 1;
 
 //****************************************************************************80
 
-void degree(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
+static void degree(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
             const HighsInt adj[], HighsInt mask[], HighsInt deg[],
             HighsInt* iccsze, HighsInt ls[], HighsInt node_num)
 
@@ -149,7 +149,7 @@ void degree(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
 }
 //****************************************************************************80
 
-void i4vec_reverse(HighsInt n, HighsInt a[])
+static void i4vec_reverse(HighsInt n, HighsInt a[])
 
 //****************************************************************************80
 //
@@ -204,7 +204,7 @@ void i4vec_reverse(HighsInt n, HighsInt a[])
 }
 //****************************************************************************80
 
-void level_set(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
+static void level_set(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
                const HighsInt adj[], HighsInt mask[], HighsInt* level_num,
                HighsInt level_row[], HighsInt level[], HighsInt node_num)
 
@@ -341,7 +341,7 @@ void level_set(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
 }
 //****************************************************************************80
 
-HighsInt rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
+static HighsInt rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
              const HighsInt adj[], HighsInt mask[], HighsInt perm[],
              HighsInt* iccsze, HighsInt node_num)
 
@@ -561,7 +561,7 @@ HighsInt rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
 }
 //****************************************************************************80
 
-void root_find(HighsInt* root, HighsInt adj_num, const HighsInt adj_row[],
+static void root_find(HighsInt* root, HighsInt adj_num, const HighsInt adj_row[],
                const HighsInt adj[], HighsInt mask[], HighsInt* level_num,
                HighsInt level_row[], HighsInt level[], HighsInt node_num)
 

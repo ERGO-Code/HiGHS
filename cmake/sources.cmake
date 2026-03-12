@@ -184,6 +184,7 @@ set(hipo_sources
     ipm/hipo/ipm/Iterate.cpp 
     ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
+    ipm/hipo/ipm/PreProcess.cpp
     ipm/hipo/ipm/Refine.cpp
     ipm/hipo/ipm/Solver.cpp)
 
@@ -199,6 +200,7 @@ set(hipo_headers
     ipm/hipo/ipm/LogHighs.h
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
+    ipm/hipo/ipm/PreProcess.h
     ipm/hipo/ipm/Solver.h
     ipm/hipo/ipm/Status.h)
 
@@ -331,7 +333,6 @@ set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BU
 set(highs_sources
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
-    io/FilereaderEms.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
@@ -446,7 +447,6 @@ set(highs_headers
     ../extern/zstr/zstr.hpp
     interfaces/highs_c_api.h
     io/Filereader.h
-    io/FilereaderEms.h
     io/FilereaderLp.h
     io/FilereaderMps.h
     io/HighsIO.h

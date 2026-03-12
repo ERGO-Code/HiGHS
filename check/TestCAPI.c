@@ -586,7 +586,7 @@ void testNames() {
     assert(return_status == kHighsStatusOk);
   }
   return_status = Highs_writeModel(highs, "");
-  assert(return_status == kHighsStatusError);
+  assert(return_status == kHighsStatusWarning);
 
   char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
 
@@ -617,7 +617,7 @@ void testNames() {
     assert(return_status == kHighsStatusOk);
   }
   return_status = Highs_writeModel(highs, "");
-  assert(return_status == kHighsStatusError);
+  assert(return_status == kHighsStatusWarning);
 
   // Define all row names to be different
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {

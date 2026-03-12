@@ -125,8 +125,14 @@ class HighsImplications {
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
               double vubconstant);
 
+  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
+              double colupperbound);
+
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
               double vlbconstant);
+
+  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
+              double collowerbound);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
     // Update variable bounds affected by transformation
