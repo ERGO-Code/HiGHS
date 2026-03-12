@@ -724,6 +724,7 @@ bool useHipo(const HighsOptions& options,
     use_hipo = true;
 #else
     use_hipo = false;
+#endif
 #else
     // HiPO not compiled in - check if dynamically loaded library is available
     use_hipo = DynamicDepsLoader::instance().isAvailable();
