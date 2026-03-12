@@ -175,7 +175,6 @@ HighsInt HMpsFF::fillMatrix(const HighsLogOptions& log_options) {
 }
 
 HighsInt HMpsFF::fillHessian(const HighsLogOptions& log_options) {
-  const std::vector<Triplet>& qentries = q_entries;
   size_t num_entries = q_entries.size();
   if (!num_entries) {
     q_dim = 0;
@@ -212,6 +211,7 @@ HighsInt HMpsFF::fillHessian(const HighsLogOptions& log_options) {
     q_value[q_length[iCol]] = value;
     q_length[iCol]++;
   }
+  q_format = HessianFormat::kSquare;
   return 0;
 }
 
@@ -1737,19 +1737,17 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
     const HMpsFF::Parsekey keyword) {
   // Parse Hessian information from QUADOBJ or QMATRIX
   // section according to keyword
-  const bool qmatrix = keyword == HMpsFF::Parsekey::kQmatrix;
+  const bool quadobj = keyword == HMpsFF::Parsekey::kQuadobj;
   std::string section_name;
-  if (qmatrix) {
-    section_name = "QMATRIX";
-  } else if (keyword == HMpsFF::Parsekey::kQuadobj) {
+  if (quadobj) {
     section_name = "QUADOBJ";
+  } else if (keyword == HMpsFF::Parsekey::kQmatrix) {
+    section_name = "QMATRIX";
   }
-  // Store all nonzeros in the section, but QMATRIX should have all
-  // entries - so its format is HessianFormat::kSquare format -
-  // whereas every off-diagonal QUADOBJ entry also defines its entry
-  // in the opposite triangle, so its format is
-  // HessianFormat::kTriangular.
-  q_format = qmatrix ? HessianFormat::kSquare : HessianFormat::kTriangular;
+  // Store all nonzeros in the section. QMATRIX should have all
+  // entries whereas every off-diagonal QUADOBJ entry also defines its
+  // entry in the opposite triangle, so add this explicitly to unify
+  // the record regardless of section
   std::string strline;
   std::string col_name;
   std::string row_name;
@@ -1813,7 +1811,13 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
             row_name.c_str(), col_name.c_str());
         return HMpsFF::Parsekey::kFail;
       }
-      if (coeff) q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+      if (coeff) {
+	q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+	// For a QUADOBJ secion, make a separate record of the entry
+	// in the opposite triangle
+	if (quadobj && rowidx != colidx)
+	  q_entries.push_back(std::make_tuple(colidx, rowidx, coeff));
+      }
       end = end_coeff_name;
       // Don't read more if end of line reached
       if (end == strline.length()) break;
