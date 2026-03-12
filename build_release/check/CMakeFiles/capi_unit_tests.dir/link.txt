@@ -1,1 +1,0 @@
-/usr/bin/gcc  -Wno-implicit-function-declaration -O3 -DNDEBUG -flto=auto -fno-fat-lto-objects -L/home/yzhou/.local/lib -Wl,--dependency-file=CMakeFiles/capi_unit_tests.dir/link.d CMakeFiles/capi_unit_tests.dir/TestCAPI.c.o -o ../bin/capi_unit_tests  -Wl,-rpath,/home/yzhou/Github/HiGHS/build_release/lib ../lib/libhighs.so.1.13.1

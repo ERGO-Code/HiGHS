@@ -1,1 +1,0 @@
-/usr/bin/gcc  -Wno-implicit-function-declaration -O3 -DNDEBUG -flto=auto -fno-fat-lto-objects -L/home/yzhou/.local/lib -Wl,--dependency-file=CMakeFiles/call_highs_from_c_minimal.dir/link.d CMakeFiles/call_highs_from_c_minimal.dir/call_highs_from_c_minimal.c.o -o ../bin/call_highs_from_c_minimal  -Wl,-rpath,/home/yzhou/Github/HiGHS/build_release/lib ../lib/libhighs.so.1.13.1
