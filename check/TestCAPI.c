@@ -270,8 +270,6 @@ void versionApi() {
     printf("HiGHS version minor %" HIGHSINT_FORMAT "\n", Highs_versionMinor());
     printf("HiGHS version patch %" HIGHSINT_FORMAT "\n", Highs_versionPatch());
     printf("HiGHS githash: %s\n", Highs_githash());
-    // Compilation date is deprecated.
-    // printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
 }
 
@@ -564,8 +562,10 @@ void testNames() {
 
   HighsInt return_status;
 
-  HighsInt num_col = Highs_getNumCols(highs);
-  HighsInt num_row = Highs_getNumRows(highs);
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 3;
+  assert(num_col == Highs_getNumCols(highs));
+  assert(num_row == Highs_getNumRows(highs));
 
   char* col_prefix = "Col";
   char* row_prefix = "Row";
@@ -621,7 +621,7 @@ void testNames() {
 
   // Define all row names to be different
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    sprintf(name, "%s%" HIGHSINT_FORMAT "", row_prefix, iRow);
+    sprintf(name, "%s%" HIGHSINT_FORMAT, row_prefix, iRow);
     return_status = Highs_passRowName(highs, iRow, name);
     assert(return_status == kHighsStatusOk);
   }

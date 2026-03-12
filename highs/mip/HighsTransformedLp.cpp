@@ -609,18 +609,18 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
   auto remove = [&](HighsInt position) {
     numNz--;
-    if (position < numNz - numBinCols - 1) {
+    if (position < numNz - numBinCols) {
       std::swap(vals[position], vals[numNz - numBinCols]);
       std::swap(vals[numNz - numBinCols], vals[numNz]);
       std::swap(inds[position], inds[numNz - numBinCols]);
       std::swap(inds[numNz - numBinCols], inds[numNz]);
     } else {
+      numBinCols--;
       inds[position] = inds[numNz];
       vals[position] = vals[numNz];
     }
     inds[numNz] = 0;
     vals[numNz] = 0;
-    numNz--;
   };
 
   auto checkValidityVB = [&](HighsInt bincol, HighsImplications::VarBound vb,
@@ -743,6 +743,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
   // Place the non-binary columns to the front (all general ints relaxed)
   // Use vectorsum to track original row coefficients of binary columns.
+  HighsInt numVbsUsed = 0;
   HighsInt i = 0;
   while (i < numNz - numBinCols) {
     HighsInt col = inds[i];
@@ -755,6 +756,10 @@ bool HighsTransformedLp::transformSNFRelaxation(
       std::swap(vals[i], vals[numNz - numBinCols]);
       continue;
     }
+    if (lb == -kHighsInf || ub == kHighsInf) {
+      vectorsum.clear();
+      return false;
+    }
     ++i;
   }
 
@@ -764,11 +769,6 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
     double lb = getLb(col);
     double ub = getUb(col);
-
-    if (lb == -kHighsInf || ub == kHighsInf) {
-      vectorsum.clear();
-      return false;
-    }
 
     if (ub - lb < mip.options_mip_->small_matrix_value) {
       rhs -= std::min(lb, ub) * vals[i];
@@ -789,7 +789,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     // bound constraints are tight. this assumption may not be satisfied when
     // new bound changes were derived during cut generation and, therefore, we
     // tighten the best variable upper bound.
-    if (bestVub[col].first != -1 &&
+    if (i < numNz - numBinCols && bestVub[col].first != -1 &&
         bestVub[col].second.maxValue() > ub + mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
@@ -804,7 +804,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
     // bound constraints are tight. this assumption may not be satisfied when
     // new bound changes were derived during cut generation and, therefore, we
     // tighten the best variable lower bound.
-    if (bestVlb[col].first != -1 &&
+    if (i < numNz - numBinCols && bestVlb[col].first != -1 &&
         bestVlb[col].second.minValue() < lb - mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
@@ -939,6 +939,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -=
               aggrconstant + (complementvlb && inclbincolvlb ? -bincoef : 0);
           if (inclbincolvlb) vectorsum.values[vbcol] = 0;
+          numVbsUsed++;
           break;
         case BoundType::kVariableUb:
           // vub: y_j <= u'_j x_j + d_j. c_j coef of x_j in row
@@ -973,6 +974,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
           tmpSnfrRhs -=
               aggrconstant + (complementvub && inclbincolvub ? -bincoef : 0);
           if (inclbincolvub) vectorsum.values[vbcol] = 0;
+          numVbsUsed++;
           break;
       }
     }
@@ -982,7 +984,7 @@ bool HighsTransformedLp::transformSNFRelaxation(
 
   vectorsum.clear();
   snfr.rhs = static_cast<double>(tmpSnfrRhs);
-  if (numNz == 0) return false;
+  if (numNz == 0 || numVbsUsed == 0) return false;
   return true;
 }
 

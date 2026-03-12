@@ -2563,7 +2563,7 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 /**
  * Return the HiGHS compilation date.
  *
- * @returns Thse HiGHS compilation date.
+ * @returns The HiGHS compilation date.
  */
 static const char* Highs_compilationDate(void);
 

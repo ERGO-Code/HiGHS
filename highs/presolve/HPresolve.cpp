@@ -5235,7 +5235,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
   if (numVarsFixed > 0 || numBndsTightened > 0 || numVarsSubstituted > 0)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Enumeration presolve fixed %d columns, tightened %d bounds "
-                "and performed %d substitutions",
+                "and performed %d substitutions\n",
                 static_cast<int>(numVarsFixed),
                 static_cast<int>(numBndsTightened),
                 static_cast<int>(numVarsSubstituted));

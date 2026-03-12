@@ -44,7 +44,7 @@ void Refine2WayNode(ctrl_t *ctrl, graph_t *orggraph, graph_t *graph)
           FM_2WayNodeRefine1Sided(ctrl, graph, ctrl->niter); 
           break;
         default:
-          gk_errexit("Unknown rtype of %d\n", ctrl->rtype);
+          GK_ERREXIT("Unknown rtype of %d\n", ctrl->rtype);
       }
 
     } while (graph != orggraph);

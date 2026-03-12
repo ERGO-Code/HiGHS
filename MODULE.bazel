@@ -2,7 +2,7 @@
 """
 module(
     name = "highs",
-    version = "1.12.0",
+    version = "1.13.0",
 )
 
 bazel_dep(
@@ -36,7 +36,6 @@ git_override(
 cuda = use_extension("@rules_cuda//cuda:extensions.bzl", "toolchain")
 cuda.toolkit(
     name = "cuda",
-    toolkit_path = "",
 )
 
 # Use 'cuda' as the repository name

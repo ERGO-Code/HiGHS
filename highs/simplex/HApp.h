@@ -8,6 +8,7 @@
 #ifndef SIMPLEX_HAPP_H_
 #define SIMPLEX_HAPP_H_
 
+#include <cmath>
 // todo: clear includes.
 // #include <cstring>
 // #include <fstream>
@@ -44,33 +45,33 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // will generally be one after simplex, so have to deduce whether
   // there was one before
   HighsInt sub_solver_ix = -1;
-  if (solver_object.sub_solver_call_time_.run_time[kSubSolverDuSimplexBasis] <
-      0)
+  if (std::signbit(solver_object.sub_solver_call_time_
+                       .run_time[kSubSolverDuSimplexBasis]))
     sub_solver_ix = kSubSolverDuSimplexBasis;
-  if (solver_object.sub_solver_call_time_.run_time[kSubSolverDuSimplexNoBasis] <
-      0)
+  if (std::signbit(solver_object.sub_solver_call_time_
+                       .run_time[kSubSolverDuSimplexNoBasis]))
     sub_solver_ix = kSubSolverDuSimplexNoBasis;
-  if (solver_object.sub_solver_call_time_.run_time[kSubSolverPrSimplexBasis] <
-      0)
+  if (std::signbit(solver_object.sub_solver_call_time_
+                       .run_time[kSubSolverPrSimplexBasis]))
     sub_solver_ix = kSubSolverPrSimplexBasis;
-  if (solver_object.sub_solver_call_time_.run_time[kSubSolverPrSimplexNoBasis] <
-      0)
+  if (std::signbit(solver_object.sub_solver_call_time_
+                       .run_time[kSubSolverPrSimplexNoBasis]))
     sub_solver_ix = kSubSolverPrSimplexNoBasis;
   // Ensure that one clock has been identified
   assert(sub_solver_ix >= 0);
   // Check that only one clock was started
   if (sub_solver_ix != kSubSolverDuSimplexBasis)
-    assert(solver_object.sub_solver_call_time_
-               .run_time[kSubSolverDuSimplexBasis] >= 0);
+    assert(!std::signbit(solver_object.sub_solver_call_time_
+                             .run_time[kSubSolverDuSimplexBasis]));
   if (sub_solver_ix != kSubSolverDuSimplexNoBasis)
-    assert(solver_object.sub_solver_call_time_
-               .run_time[kSubSolverDuSimplexNoBasis] >= 0);
+    assert(!std::signbit(solver_object.sub_solver_call_time_
+                             .run_time[kSubSolverDuSimplexNoBasis]));
   if (sub_solver_ix != kSubSolverPrSimplexBasis)
-    assert(solver_object.sub_solver_call_time_
-               .run_time[kSubSolverPrSimplexBasis] >= 0);
+    assert(!std::signbit(solver_object.sub_solver_call_time_
+                             .run_time[kSubSolverPrSimplexBasis]));
   if (sub_solver_ix != kSubSolverPrSimplexNoBasis)
-    assert(solver_object.sub_solver_call_time_
-               .run_time[kSubSolverPrSimplexNoBasis] >= 0);
+    assert(!std::signbit(solver_object.sub_solver_call_time_
+                             .run_time[kSubSolverPrSimplexNoBasis]));
   // Update the call count and run time
   solver_object.sub_solver_call_time_.num_call[sub_solver_ix]++;
   solver_object.sub_solver_call_time_.run_time[sub_solver_ix] +=
