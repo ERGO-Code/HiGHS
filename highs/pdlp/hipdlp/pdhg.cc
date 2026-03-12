@@ -510,18 +510,21 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   initializeStepSizes();
   initialize(); // Resets vectors, caches, and sets initial x_current, y_current
 
+  if (!use_cupdlpx){
   // Calculate initial Eta/Omega based on step sizes
-  PrimalDualParams working_params = params_;
-  working_params.omega = std::sqrt(stepsize_.dual_step / stepsize_.primal_step);
-  working_params.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
-  current_eta_ = working_params.eta;
+  params_.omega = std::sqrt(stepsize_.dual_step / stepsize_.primal_step);
+  params_.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
+  current_eta_ = params_.eta;
+  } else {
+  params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
+  }
 
   highsLogUser(params_.log_options_, HighsLogType::kInfo,
                "PDHG Setup: eta = %g, omega = %g\n",
-               working_params.eta, working_params.omega);
+               params_.eta, params_.omega);
 
   // Initialize internal solver state
-  restart_scheme_.passParams(&working_params);
+  restart_scheme_.passParams(&params_);
   restart_scheme_.Initialize(results_);
   
   // Copy initial input x,y to internal state
@@ -560,7 +563,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   
   // 2. Main PDHG Loop
   TerminationStatus termination_status = TerminationStatus::OPTIMAL;
-  
+  bool should_restart = false;
   for (size_t iter = 0; iter < params_.max_iterations; ++iter) {
     
     // Check global time limit
@@ -571,9 +574,80 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       break;
     }
 
-    // --- A. Convergence Check & Restart Logic ---
     //bool should_check = (iter < 10) || (iter == params_.max_iterations - 1) || (iter % PDHG_CHECK_INTERVAL == 0);
     bool should_check = (iter == params_.max_iterations - 1) || (iter % PDHG_CHECK_INTERVAL == 0);
+
+    // --- B. Core PDHG Step (x -> x_next, y -> y_next) ---
+    //bool next_is_check = ((iter + 1) < 10)
+    //                     || ((iter + 1) == params_.max_iterations - 1)
+    //                     || (((iter + 1) % PDHG_CHECK_INTERVAL) == 0);
+    //bool is_major = next_is_check;
+    bool is_major = should_check;
+
+    if (params_.use_halpern_restart) {
+      if (iter == 0){
+        stepsize_.primal_step = 0.1856249071;
+        stepsize_.dual_step   = 0.1095036898;
+
+        x_current_ = {0.0, 0.0, 0.0};
+        x_anchor_  = {0.0, 0.0, 0.0};
+        ATy_cache_ = {0.0, 0.0, 0.0};
+        
+        lp_.col_cost_  = {1.0, 4.0, 9.0};
+        lp_.col_lower_ = {0.0, -1.0, 0.0};
+        lp_.col_upper_ = {4.0, 1.0, 1e20}; // inf
+        lp_.num_col_   = 3;
+
+        y_current_ = {0.0, 0.0, 0.0};
+        y_anchor_  = {0.0, 0.0, 0.0};
+        lp_.num_row_   = 3;  
+      }
+
+#ifdef CUPDLP_GPU
+      performHalpernPdhgStepGpu(is_major);
+#else
+      performHalpernPdhgStep(is_major);
+#endif
+
+      if (iter == 0) {
+        std::cout << "========== HIPDLP DEBUG: AFTER PRIMAL ==========\n";
+        std::cout << "x_next (pdhg_primal): ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_[i] << " ";
+        std::cout << "\n";
+        
+        std::cout << "x_current_updated: ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_current_[i] << " ";
+        std::cout << "\n";
+
+        // 注: 如果你的代码在函数内部算反射并没有保存为全局变量，可以用公式打印看对不对
+        std::cout << "x_reflected (derived): ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << (x_current_[i] + 1.0 * (x_current_[i] - 0.0)) << " ";
+        std::cout << "\n";
+
+        std::cout << "========== HIPDLP DEBUG: AFTER DUAL ==========\n";
+        std::cout << "Ax_next_: ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << Ax_next_[i] << " ";
+        std::cout << "\n";
+        std::cout << "y_next (pdhg_dual): ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << y_next_[i] << " ";
+        std::cout << "\n";
+        
+        std::cout << "y_current_updated: ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << y_current_[i] << " ";
+        std::cout << "\n";
+    }
+    } else {
+      performPdhgStep();
+      prepareNextIteration();
+    }
+
+    if (should_restart){
+      fpe_ = computeFixedPointError();
+      initial_fpe_ = fpe_;
+      should_restart = false;
+    }
+
+    // --- A. Convergence Check & Restart Logic ---
     if (should_check) {
       TerminationStatus check_status;
       // Returns true if solver should terminate
@@ -585,26 +659,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       }
       
       // If restart happened, params/step sizes might have updated
-      working_params.eta = current_eta_; 
+      params_.eta = current_eta_; 
     }
 
-    // --- B. Core PDHG Step (x -> x_next, y -> y_next) ---
-    //bool next_is_check = ((iter + 1) < 10)
-    //                     || ((iter + 1) == params_.max_iterations - 1)
-    //                     || (((iter + 1) % PDHG_CHECK_INTERVAL) == 0);
-    //bool is_major = next_is_check;
-    bool is_major = should_check;
-
-    if (params_.use_halpern_restart) {
-#ifdef CUPDLP_GPU
-      performHalpernPdhgStepGpu(is_major);
-#else
-      performHalpernPdhgStep(is_major);
-#endif
-    } else {
-      performPdhgStep();
-      prepareNextIteration();
-    }
     // --- D. Update Average Iterates ---
     accumulateAverages(iter);
   }
@@ -621,10 +678,37 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   }
 }
 
-// ----------------------------------------------------------------------------
-// Helper: Logic for checking feasibility, gap, and handling restarts
-// Returns true if the solver should STOP.
-// ----------------------------------------------------------------------------
+double PDLPSolver::computeFixedPointError(){
+  double primal_norm_sq = 0.0;
+  double dual_norm_sq = 0.0;
+  double cross_term = 0.0;
+
+  std::vector<double> delta_x(lp_.num_col_);
+  std::vector<double> delta_y(lp_.num_row_);
+
+  for (int i = 0; i < lp_.num_col_; ++i) {
+    delta_x[i] = x_next_[i] - reflected_x_[i];
+    primal_norm_sq += delta_x[i] * delta_x[i];
+  }
+
+  for (int i = 0; i < lp_.num_row_; ++i) {
+    delta_y[i] = y_next_[i] - reflected_y_[i];
+    dual_norm_sq += delta_y[i] * delta_y[i];
+  }
+
+  std::vector<double> AT_delta_y(lp_.num_col_, 0.0);
+  linalg::ATy(lp_, delta_y, AT_delta_y);
+
+  for (int i = 0; i < lp_.num_col_; ++i) {
+    cross_term += delta_x[i] * AT_delta_y[i];
+  }
+
+  double movement = primal_norm_sq * params_.omega + dual_norm_sq / params_.omega;
+  double interaction = 2.0 * params_.eta * cross_term;
+
+  return std::sqrt(std::max(0.0, movement + interaction));
+}
+
 bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter, 
                                                std::vector<double>& output_x, 
                                                std::vector<double>& output_y,
@@ -727,6 +811,18 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
 
   // 4. Restart Check
   RestartInfo restart_info = restart_scheme_.Check(iter, current_results, average_results);
+  if (params_.use_halpern_restart){
+      fpe_ = computeFixedPointError();
+      std::cout << "fpe = " << fpe_ << std::endl;
+
+      double sufficient_reduction_for_restart = 0.2;
+      if (fpe_ < sufficient_reduction_for_restart * initial_fpe_){
+        should_restart = true;
+      }
+  } else {
+    RestartInfo restart_info = restart_scheme_.Check(iter, current_results, average_results);
+    bool should_restart = restart_info.should_restart;
+  }
 
   if (restart_info.should_restart) {
     if (params_.use_halpern_restart ) {
@@ -870,7 +966,6 @@ void PDLPSolver::performHalpernPdhgStep(bool is_major) {
 
   // --- STEP 1: Primal projection + reflection ---
   // ATy_cache_ already holds A^T * y_current from previous iteration
-  std::vector<double> reflected_primal(lp_.num_col_);
   if (is_major) {
     if (halpern_dual_slack_next_.size() != static_cast<size_t>(lp_.num_col_)) {
       halpern_dual_slack_next_.resize(lp_.num_col_, 0.0);
@@ -884,14 +979,13 @@ void PDLPSolver::performHalpernPdhgStep(bool is_major) {
       x_next_[i] = temp_proj;  // pdhg_primal (for convergence check)
       halpern_dual_slack_next_[i] = (temp_proj - temp) / primal_step;
     }
-    reflected_primal[i] = 2.0 * temp_proj - x_current_[i];
+    reflected_x_[i] = 2.0 * temp_proj - x_current_[i];
   }
 
   // --- STEP 2: SpMV on reflected primal ---
-  linalg::Ax(lp_, reflected_primal, Ax_next_);  // A * reflected_primal
+  linalg::Ax(lp_, reflected_x_, Ax_next_);  // A * reflected_primal
 
   // --- STEP 3: Dual projection + reflection ---
-  std::vector<double> reflected_dual(lp_.num_row_);
   for (HighsInt j = 0; j < lp_.num_row_; j++) {
         // temp = y/step - Ax
     double temp = y_current_[j] / dual_step - Ax_next_[j];
@@ -907,16 +1001,16 @@ void PDLPSolver::performHalpernPdhgStep(bool is_major) {
     if (is_major) {
       y_next_[j] = pdhg_dual_j;
     }
-    reflected_dual[j] = 2.0 * pdhg_dual_j - y_current_[j];
+    reflected_y_[j] = 2.0 * pdhg_dual_j - y_current_[j];
   }
 
   // --- STEP 4: Halpern blend → overwrite x_current_, y_current_ ---
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
-    double blended = rho * reflected_primal[i] + (1.0 - rho) * x_current_[i];
+    double blended = rho * reflected_x_[i] + (1.0 - rho) * x_current_[i];
     x_current_[i] = w * blended + (1.0 - w) * x_anchor_[i];
   }
   for (HighsInt j = 0; j < lp_.num_row_; j++) {
-    double blended = rho * reflected_dual[j] + (1.0 - rho) * y_current_[j];
+    double blended = rho * reflected_y_[j] + (1.0 - rho) * y_current_[j];
     y_current_[j] = w * blended + (1.0 - w) * y_anchor_[j];
   }
 
@@ -1059,6 +1153,8 @@ void PDLPSolver::initialize() {
   x_avg_.resize(lp_.num_col_, 0.0);
   y_avg_.resize(lp_.num_row_, 0.0);
 
+  reflected_x_.resize(lp_.num_col_, 0.0);
+  reflected_y_.resize(lp_.num_row_, 0.0);
   x_anchor_.resize(lp_.num_col_, 0.0);
   y_anchor_.resize(lp_.num_row_, 0.0);
   halpern_iteration_ = 0;
@@ -1757,7 +1853,13 @@ void PDLPSolver::initializeStepSizes() {
   // Initialize step sizes based on strategy
   if (params_.step_size_strategy == StepSizeStrategy::FIXED) {
     // Use power method for fixed step size
-    const double op_norm_sq = PowerMethod();
+    //const double op_norm_sq = PowerMethod();
+    double op_norm_sq = PowerMethod();
+    if (temp_setting){
+    op_norm_sq = 49;
+    std::cout << "Overriding power method lambda with 49 for testing\n"; 
+    }
+
     stepsize_.power_method_lambda = op_norm_sq;
 
     const double safety_factor = 0.998;
@@ -1765,6 +1867,7 @@ void PDLPSolver::initializeStepSizes() {
 
     stepsize_.primal_step = base_step / std::sqrt(stepsize_.beta);
     stepsize_.dual_step = base_step * std::sqrt(stepsize_.beta);
+    params_.eta = base_step;
 
     highsLogUser(params_.log_options_, HighsLogType::kInfo,
                  "Initial step sizes from power method lambda = %g: primal = "

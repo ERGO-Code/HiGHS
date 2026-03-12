@@ -474,7 +474,7 @@ TEST_CASE("cuda-sandbox", "[pdlp]") {
 #endif
 
 TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
-  std::string model = "afiro";  //"afiro";
+  std::string model = "avgas";  //"afiro";
   // shell //stair //25fv47 //fit2p //avgas //neso-2245 //neso-2005
   std::string model_file =
       // std::string(HIGHS_DIR) + "/srv/" + model + ".mps.gz";
@@ -484,19 +484,19 @@ TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
   REQUIRE(h.readModel(model_file) != HighsStatus::kError);
   h.setOptionValue("solver", kHiPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
-  h.setOptionValue("presolve", "on");
+  h.setOptionValue("presolve", "off");
 
   HighsInt pdlp_features_off = 0
-      //+kPdlpScalingOff
+      +kPdlpScalingOff
       //+kPdlpRestartOff
       //+kPdlpAdaptiveStepSizeOff 
       ;
   h.setOptionValue("pdlp_features_off", pdlp_features_off);
 
-  HighsInt pdlp_scaling =  // 0;
-      kPdlpScalingRuiz
+  HighsInt pdlp_scaling =  0;
+      //kPdlpScalingRuiz
       //+ kPdlpScalingL2cm
-      + kPdlpScalingPC;
+      // + kPdlpScalingPC;
   h.setOptionValue("pdlp_scaling_mode", pdlp_scaling);
   h.setOptionValue("pdlp_step_size_strategy", 0); // 0: fixed, 1: adaptive, 2: Malitsky-Pock, 3: PID
   h.setOptionValue("pdlp_restart_strategy", kPdlpRestartStrategyHalpern); // kPdlpRestartStrategyHalpern; kPdlpRestartStrategyAdaptive kPdlpRestartStrategyOff

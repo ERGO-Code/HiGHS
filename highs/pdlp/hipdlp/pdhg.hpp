@@ -33,6 +33,9 @@
 #include "scaling.hpp"
 #include "solver_results.hpp"
 
+const bool use_cupdlpx = true;
+const bool temp_setting = true;
+
 // --- GPU Macros (Defined at file scope for visibility) ---
 #ifdef CUPDLP_GPU
 #include <cublas_v2.h>
@@ -164,6 +167,7 @@ class PDLPSolver {
   bool CheckNumericalStability(const std::vector<double>& delta_x, const std::vector<double>& delta_y);
   double computeMovement(const std::vector<double>& delta_primal, const std::vector<double>& delta_dual);
   double computeNonlinearity(const std::vector<double>& delta_primal, const std::vector<double>& delta_aty);
+  double computeFixedPointError();
 
   // --- Data Members ---
   HighsLp lp_;
@@ -195,6 +199,7 @@ class PDLPSolver {
   std::vector<double> x_avg_, y_avg_;
   std::vector<double> x_sum_, y_sum_;
   std::vector<double> x_at_last_restart_, y_at_last_restart_;
+  std::vector<double> reflected_x_, reflected_y_; // For over-relaxed Halpern
   std::vector<double> x_anchor_, y_anchor_; // For Halpern
 
   // Caches
@@ -208,6 +213,7 @@ class PDLPSolver {
   std::vector<double> dSlackPosAvg_, dSlackNegAvg_;
   std::vector<double> halpern_dual_slack_next_;
   bool halpern_dual_slack_next_valid_ = false;
+  double initial_fpe_ = 0.0; // For Halpern restart
 
   // Scalars
   int final_iter_count_ = 0;
