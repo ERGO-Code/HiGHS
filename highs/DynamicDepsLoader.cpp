@@ -90,13 +90,17 @@ void DynamicDepsLoader::unloadLibrary() {
   fn_hipo_extras_amd_defaults_ = nullptr;
   fn_hipo_extras_amd_order_ = nullptr;
   fn_hipo_extras_genrcm_ = nullptr;
+
   fn_hipo_extras_daxpy_ =   nullptr;
   fn_hipo_extras_dcopy_ =  nullptr;
   fn_hipo_extras_dscal_ =  nullptr;
   fn_hipo_extras_dswap_ =  nullptr;
+
+  fn_hipo_extras_dgemv_ =  nullptr;
   fn_hipo_extras_dtpsv_ =  nullptr;
   fn_hipo_extras_dtrsv_ =  nullptr;
   fn_hipo_extras_dger_ = nullptr;
+
   fn_hipo_extras_dgemm_ =  nullptr;
   fn_hipo_extras_dsyrk_ =  nullptr;
   fn_hipo_extras_dtrsm_ =  nullptr;
@@ -148,6 +152,9 @@ bool DynamicDepsLoader::resolveFunctions() {
   fn_hipo_extras_dswap_ = reinterpret_cast<hipo_extras_dswap_t>(
       resolveSymbol("hipo_extras_dswap"));
 
+  fn_hipo_extras_dgemv_ = reinterpret_cast<hipo_extras_dgemv_t>(
+      resolveSymbol("hipo_extras_dgemv"));
+
   fn_hipo_extras_dtpsv_ = reinterpret_cast<hipo_extras_dtpsv_t>(
       resolveSymbol("hipo_extras_dtpsv"));
 
@@ -175,11 +182,12 @@ bool DynamicDepsLoader::resolveFunctions() {
   if (!fn_get_abi_version_ || !fn_get_version_ ||
       !fn_hipo_extras_metis_set_default_options_ ||
       !fn_hipo_extras_metis_nodend_ || !fn_hipo_extras_amd_defaults_ ||
-      !fn_hipo_extras_amd_order_ || !fn_hipo_extras_genrcm_  // ||
+      !fn_hipo_extras_amd_order_ || !fn_hipo_extras_genrcm_ ||
       !fn_hipo_extras_daxpy_ ||
       !fn_hipo_extras_dcopy_ ||
       !fn_hipo_extras_dscal_ ||
       !fn_hipo_extras_dswap_ ||
+      !fn_hipo_extras_dgemv_ ||
       !fn_hipo_extras_dtpsv_ ||
       !fn_hipo_extras_dtrsv_ ||
       !fn_hipo_extras_dger_ ||

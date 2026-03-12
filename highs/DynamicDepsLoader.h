@@ -56,22 +56,22 @@ typedef int (*hipo_extras_genrcm_t)(HighsInt node_num, HighsInt adj_num,
                                     const HighsInt adj_row[],
                                     const HighsInt adj[], HighsInt perm[]);
 
-typedef void(hipo_extras_daxpy_t)(const blasint n, const double alpha,
+typedef void(*hipo_extras_daxpy_t)(const blasint n, const double alpha,
                                   const double* x, const blasint incx,
                                   double* y, const blasint incy);
 
-typedef void(hipo_extras_dcopy_t)(const blasint n, const double* x,
+typedef void(*hipo_extras_dcopy_t)(const blasint n, const double* x,
                                   const blasint incx, double* y,
                                   const blasint incy);
 
-typedef void(hipo_extras_dscal_t)(const blasint n, const double alpha,
+typedef void(*hipo_extras_dscal_t)(const blasint n, const double alpha,
                                   double* x, const blasint incx);
 
-typedef void(hipo_extras_dswap_t)(const blasint n, double* x,
+typedef void(*hipo_extras_dswap_t)(const blasint n, double* x,
                                   const blasint incx, double* y,
                                   const blasint incy);
 
-typedef void(hipo_extras_dgemv_t)(const enum CBLAS_ORDER order,
+typedef void(*hipo_extras_dgemv_t)(const enum CBLAS_ORDER order,
                                   const enum CBLAS_TRANSPOSE transa,
                                   const blasint M, const blasint n,
                                   const double alpha, const double* A,
@@ -79,34 +79,34 @@ typedef void(hipo_extras_dgemv_t)(const enum CBLAS_ORDER order,
                                   const blasint incx, const double beta,
                                   double* y, const blasint incy);
 
-typedef void(hipo_extras_dtpsv_t)(const enum CBLAS_ORDER order,
+typedef void(*hipo_extras_dtpsv_t)(const enum CBLAS_ORDER order,
                                   const enum CBLAS_UPLO uplo,
                                   const enum CBLAS_TRANSPOSE transa,
                                   const enum CBLAS_DIAG diag, const blasint n,
                                   const double* ap, double* x,
                                   const blasint incx);
 
-typedef void(hipo_extras_dtrsv_t)(const enum CBLAS_ORDER order,
+typedef void(*hipo_extras_dtrsv_t)(const enum CBLAS_ORDER order,
                                   const enum CBLAS_UPLO uplo,
                                   const enum CBLAS_TRANSPOSE transa,
                                   const enum CBLAS_DIAG diag, const blasint n,
                                   const double* a, const blasint lda, double* x,
                                   const blasint incx);
 
-typedef void(hipo_extras_dger_t)(const enum CBLAS_ORDER order, const blasint m,
+typedef void(*hipo_extras_dger_t)(const enum CBLAS_ORDER order, const blasint m,
                                  const blasint n, const double alpha,
                                  const double* x, const blasint incx,
                                  const double* y, const blasint incy, double* A,
                                  const blasint lda);
 
-typedef void(hipo_extras_dgemm_t)(
+typedef void(*hipo_extras_dgemm_t)(
     const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE transa,
     const enum CBLAS_TRANSPOSE transb, const blasint m, const blasint n,
     const blasint k, const double alpha, const double* A, const blasint lda,
     const double* B, const blasint ldb, const double beta, double* C,
     const blasint ldc);
 
-typedef void(hipo_extras_dsyrk_t)(const enum CBLAS_ORDER order,
+typedef void(*hipo_extras_dsyrk_t)(const enum CBLAS_ORDER order,
                                   const enum CBLAS_UPLO uplo,
                                   const enum CBLAS_TRANSPOSE trans,
                                   const blasint n, const blasint k,
@@ -114,7 +114,7 @@ typedef void(hipo_extras_dsyrk_t)(const enum CBLAS_ORDER order,
                                   const blasint lda, const double beta,
                                   double* C, const blasint ldc);
 
-typedef void(hipo_extras_dtrsm_t)(const enum CBLAS_ORDER order,
+typedef void(*hipo_extras_dtrsm_t)(const enum CBLAS_ORDER order,
                                   const enum CBLAS_SIDE side,
                                   const enum CBLAS_UPLO uplo,
                                   const enum CBLAS_TRANSPOSE transa,
@@ -255,6 +255,7 @@ class DynamicDepsLoader {
   hipo_extras_dcopy_t fn_hipo_extras_dcopy_ = nullptr;
   hipo_extras_dscal_t fn_hipo_extras_dscal_ = nullptr;
   hipo_extras_dswap_t fn_hipo_extras_dswap_ = nullptr;
+  hipo_extras_dtpsv_t fn_hipo_extras_dgemv_ = nullptr;
   hipo_extras_dtpsv_t fn_hipo_extras_dtpsv_ = nullptr;
   hipo_extras_dtrsv_t fn_hipo_extras_dtrsv_ = nullptr;
   hipo_extras_dger_t fn_hipo_extras_dger_ = nullptr;
