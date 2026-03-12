@@ -167,13 +167,17 @@ extern "C" HIPO_EXTRAS_API void hipo_extras_dtrsm(
 //                      solver_object.highs_info_, solver_object.callback_);
 // }
 
-// #ifndef __APPLE__
-// HIPO_USES_OPENBLAS
-// function to set number of threads of openblas
 extern "C" {
 void openblas_set_num_threads(int num_threads);
 }
 
+extern "C" HIPO_EXTRAS_API void hipo_extras_openblas_set_num_threads(int num_threads) {
+    openblas_set_num_threads(num_threads);
+}
+
+// #ifndef __APPLE__
+// HIPO_USES_OPENBLAS
+// function to set number of threads of openblas
 // #endif
 
 // HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,

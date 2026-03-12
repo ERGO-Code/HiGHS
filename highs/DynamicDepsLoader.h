@@ -123,6 +123,8 @@ typedef void(*hipo_extras_dtrsm_t)(const enum CBLAS_ORDER order,
                                   const double* a, const blasint lda, double* b,
                                   const blasint ldb);
 
+typedef void(*hipo_extras_openblas_set_num_threads_t)(int num_threads);
+
 // Solve LP using HiPO - uses actual HiGHS types for type safety
 // Note: ABI version check ensuru
 // Solve LP using HiPO - uses actual HiGHS types for type safety
@@ -262,6 +264,7 @@ class DynamicDepsLoader {
   hipo_extras_dgemm_t fn_hipo_extras_dgemm_ = nullptr;
   hipo_extras_dsyrk_t fn_hipo_extras_dsyrk_ = nullptr;
   hipo_extras_dtrsm_t fn_hipo_extras_dtrsm_ = nullptr;
+  hipo_extras_openblas_set_num_threads_t fn_hipo_extras_openblas_set_num_threads_ = nullptr;
 };
 
 #endif  // LP_DATA_DYNAMIC_HIPO_LOADER_H_

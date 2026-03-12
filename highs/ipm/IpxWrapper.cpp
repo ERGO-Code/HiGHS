@@ -16,6 +16,10 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
+#ifdef HIPO_EXTRAS
+#include "DynamicDepsLoader.h"
+#endif
+
 using std::min;
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
@@ -458,7 +462,15 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
 
 #ifdef HIPO_USES_OPENBLAS
   // force openblas to run in serial, for determinism and better performance
+  // HIPO_EXTRAS case handled in HipoExtrasCApi.cpp
+#ifndef HIPO_EXTRAS
   openblas_set_num_threads(1);
+#else
+  DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+  if (hipo_loader.isAvailable()) {
+    hipo_loader.fn_hipo_extras_openblas_set_num_threads(1);
+  }
+#endif
 #endif
 
   // Create solver instance

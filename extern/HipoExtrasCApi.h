@@ -216,6 +216,8 @@ extern "C" HIPO_EXTRAS_API void hipo_extras_dtrsm(
     const double alpha, const double* a, const blasint lda, double* b,
     const blasint ldb);
 
+extern "C" HIPO_EXTRAS_API void hipo_extras_openblas_set_num_threads(int num_threads);
+
 #endif  // __cplusplus
 
 #endif  // IPM_HIPO_C_API_H_

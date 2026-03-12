@@ -105,6 +105,8 @@ void DynamicDepsLoader::unloadLibrary() {
   fn_hipo_extras_dsyrk_ =  nullptr;
   fn_hipo_extras_dtrsm_ =  nullptr;
 
+  fn_hipo_extras_openblas_set_num_threads_ = nullptr;
+
   // TODO add here
   // fn_solve_lp_ = nullptr;
 }
@@ -173,6 +175,9 @@ bool DynamicDepsLoader::resolveFunctions() {
   fn_hipo_extras_dtrsm_ = reinterpret_cast<hipo_extras_dtrsm_t>(
       resolveSymbol("hipo_extras_dtrsm"));
 
+  fn_hipo_extras_openblas_set_num_threads_ = reinterpret_cast<hipo_extras_openblas_set_num_threads_t>(
+      resolveSymbol("hipo_extras_openblas_set_num_threads"));
+
   // fn_solve_lp_ =
   //     reinterpret_cast<hipo_solve_lp_t>(resolveSymbol("hipo_solve_lp"));
 
@@ -193,7 +198,8 @@ bool DynamicDepsLoader::resolveFunctions() {
       !fn_hipo_extras_dger_ ||
       !fn_hipo_extras_dgemm_ ||
       !fn_hipo_extras_dsyrk_ ||
-      !fn_hipo_extras_dtrsm_
+      !fn_hipo_extras_dtrsm_ ||
+      !fn_hipo_extras_openblas_set_num_threads_
   ) {
     last_error_ = "Failed to resolve required HiPO functions";
 
