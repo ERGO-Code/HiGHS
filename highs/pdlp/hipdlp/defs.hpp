@@ -185,30 +185,30 @@ struct DetailedTimings {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Total time:              %6.2f s\n", total_time);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Iterate update:          %6.2f s (%3.0f \%)\n",
+                 "Iterate update:          %6.2f s (%3.0f)\n",
                  iterate_update_time, iterate_update_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "  - Matrix multiply:     %6.2f s (%3.0f \%)\n",
+                 "  - Matrix multiply:     %6.2f s (%3.0f)\n",
                  matrix_multiply_time, matrix_multiply_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "  - Projection:          %6.2f s (%3.0f \%)\n",
+                 "  - Projection:          %6.2f s (%3.0f)\n",
                  projection_time, projection_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "  - Step size adjust:    %6.2f s (%3.0f \%)\n",
+                 "  - Step size adjust:    %6.2f s (%3.0f)\n",
                  step_size_adjustment_time,
                  step_size_adjustment_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Convergence check:       %6.2f s (%3.0f \%)\n",
+                 "Convergence check:       %6.2f s (%3.0f)\n",
                  convergence_check_time,
                  convergence_check_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Restart check:           %6.2f s (%3.0f \%)\n",
+                 "Restart check:           %6.2f s (%3.0f)\n",
                  restart_check_time, restart_check_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Average iterate comp:    %6.2f s (%3.0f \%)\n",
+                 "Average iterate comp:    %6.2f s (%3.0f)\n",
                  average_iterate_time, average_iterate_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Other:                   %6.2f s (%3.0f \%)\n", other_time,
+                 "Other:                   %6.2f s (%3.0f)\n", other_time,
                  other_time / total_time * 100);
   }
 };
