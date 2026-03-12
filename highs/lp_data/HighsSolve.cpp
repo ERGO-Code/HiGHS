@@ -10,10 +10,13 @@
  */
 
 #include "ipm/IpxWrapper.h"
-#include "DynamicDepsLoader.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
+
+#ifdef HIPO_EXTRAS
+#include "DynamicDepsLoader.h"
+#endif
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
@@ -715,9 +718,13 @@ bool useHipo(const HighsOptions& options,
     use_hipo = false;
   } else if (specific_solver_option_value == kIpmString ||
              specific_solver_option_value == kHipoString || force_ipm) {
+#ifndef HIPO_EXTRAS
 #ifdef HIPO
     // HiPO is compiled in - use it directly
     use_hipo = true;
+#else
+    use_hipo = false;
+#endif
 #else
     // HiPO not compiled in - check if dynamically loaded library is available
     use_hipo = DynamicDepsLoader::instance().isAvailable();

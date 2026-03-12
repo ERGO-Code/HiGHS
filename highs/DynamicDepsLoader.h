@@ -255,7 +255,7 @@ class DynamicDepsLoader {
   hipo_extras_dcopy_t fn_hipo_extras_dcopy_ = nullptr;
   hipo_extras_dscal_t fn_hipo_extras_dscal_ = nullptr;
   hipo_extras_dswap_t fn_hipo_extras_dswap_ = nullptr;
-  hipo_extras_dtpsv_t fn_hipo_extras_dgemv_ = nullptr;
+  hipo_extras_dgemv_t fn_hipo_extras_dgemv_ = nullptr;
   hipo_extras_dtpsv_t fn_hipo_extras_dtpsv_ = nullptr;
   hipo_extras_dtrsv_t fn_hipo_extras_dtrsv_ = nullptr;
   hipo_extras_dger_t fn_hipo_extras_dger_ = nullptr;
