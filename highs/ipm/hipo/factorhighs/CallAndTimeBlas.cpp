@@ -107,7 +107,8 @@ void callAndTime_dgemv(char trans, Int m, Int n, double alpha, const double* A,
 #else
   DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
   if (hipo_loader.isAvailable()) {
-    hipo_loader.fn_hipo_extras_dgemv_
+    hipo_loader.fn_hipo_extras_dgemv_(CblasColMajor, TRANS(trans), m, n, alpha, A, lda, x, incx, beta,
+      y, incy);
   }
 #endif
 
