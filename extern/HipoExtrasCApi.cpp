@@ -62,6 +62,89 @@ extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(HighsInt node_num,
   return status;
 }
 
+extern "C" HIPO_EXTRAS_API void hipo_extras_daxpy(const blasint n,
+                                                  const double alpha,
+                                                  const double* x,
+                                                  const blasint incx, double* y,
+                                                  const blasint incy) {
+  cblas_daxpy(n, alpha, x, incx, y, incy);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dcopy(const blasint n,
+                                                  const double* x,
+                                                  const blasint incx, double* y,
+                                                  const blasint incy) {
+  cblas_dcopy(n, x, incx, y, incy);
+}
+extern "C" HIPO_EXTRAS_API void hipo_extras_dscal(const blasint n,
+                                                  const double alpha, double* x,
+                                                  const blasint incx) {
+  cblas_dscal(n, alpha, x, incx);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dswap(const blasint n, double* x,
+                                                  const blasint incx, double* y,
+                                                  const blasint incy) {
+  cblas_dswap(n, x, incx, y, incy);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dgemv(
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE transa,
+    const blasint M, const blasint n, const double alpha, const double* A,
+    const blasint lda, const double* x, const blasint incx, const double beta,
+    double* y, const blasint incy) {
+  cblas_dgemv(order, transa, M, n, alpha, A, lda, x, incx, beta, y, incy);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dtpsv(
+    const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
+    const enum CBLAS_TRANSPOSE transa, const enum CBLAS_DIAG diag,
+    const blasint n, const double* ap, double* x, const blasint incx) {
+  cblas_dtpsv(order, uplo, transa, diag, n, ap, x, incx);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dtrsv(
+    const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
+    const enum CBLAS_TRANSPOSE transa, const enum CBLAS_DIAG diag,
+    const blasint n, const double* a, const blasint lda, double* x,
+    const blasint incx) {
+  cblas_dtrsv(order, uplo, transa, diag, n, a, lda, x, incx);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dger(
+    const enum CBLAS_ORDER order, const blasint m, const blasint n,
+    const double alpha, const double* x, const blasint incx, const double* y,
+    const blasint incy, double* A, const blasint lda) {
+  cblas_dger(order, m, n, alpha, x, incx, y, incy, A, lda);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dgemm(
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE transa,
+    const enum CBLAS_TRANSPOSE transb, const blasint m, const blasint n,
+    const blasint k, const double alpha, const double* A, const blasint lda,
+    const double* B, const blasint ldb, const double beta, double* C,
+    const blasint ldc) {
+  cblas_dgemm(order, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C,
+              ldc);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dsyrk(
+    const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
+    const enum CBLAS_TRANSPOSE trans, const blasint n, const blasint k,
+    const double alpha, const double* a, const blasint lda, const double beta,
+    double* C, const blasint ldc) {
+  cblas_dsyrk(order, uplo, trans, n, k, alpha, a, lda, beta, C, ldc);
+}
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dtrsm(
+    const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
+    const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE transa,
+    const enum CBLAS_DIAG diag, const blasint m, const blasint n,
+    const double alpha, const double* a, const blasint lda, double* b,
+    const blasint ldb) {
+  cblas_dtrsm(order, side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb);
+}
+
 // extern "C" HIPO_EXTRAS_API HighsStatus hipo_solve_lp(
 //     const HighsOptions& options,
 //     HighsTimer& timer,
@@ -88,13 +171,8 @@ extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(HighsInt node_num,
 // HIPO_USES_OPENBLAS
 // function to set number of threads of openblas
 extern "C" {
-  void openblas_set_num_threads(int num_threads);
+void openblas_set_num_threads(int num_threads);
 }
-
-// extern "C" HIPO_EXTRAS_API void hipo_extras_daxpy(const int N, const double alpha, const double *X,
-//                        const int incX, double *Y, const int incY) {
-//   return cblas_daxpy(N, alpha, X, incX, Y, incY);
-// }
 
 // #endif
 

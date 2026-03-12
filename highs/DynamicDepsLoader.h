@@ -21,9 +21,9 @@
 // typedef int32_t idx_t;
 
 #include "amd/amd.h"
+#include "ipm/hipo/auxiliary/mycblas.h"
 #include "metis/metis.h"
 #include "rcm/rcm.h"
-#include "ipm/hipo/auxiliary/mycblas.h"
 
 // ABI version for compatibility checking
 // Increment this when the C API signature changes
@@ -56,6 +56,75 @@ typedef int (*hipo_extras_genrcm_t)(HighsInt node_num, HighsInt adj_num,
                                     const HighsInt adj_row[],
                                     const HighsInt adj[], HighsInt perm[]);
 
+typedef void(hipo_extras_daxpy_t)(const blasint n, const double alpha,
+                                  const double* x, const blasint incx,
+                                  double* y, const blasint incy);
+
+typedef void(hipo_extras_dcopy_t)(const blasint n, const double* x,
+                                  const blasint incx, double* y,
+                                  const blasint incy);
+
+typedef void(hipo_extras_dscal_t)(const blasint n, const double alpha,
+                                  double* x, const blasint incx);
+
+typedef void(hipo_extras_dswap_t)(const blasint n, double* x,
+                                  const blasint incx, double* y,
+                                  const blasint incy);
+
+typedef void(hipo_extras_dgemv_t)(const enum CBLAS_ORDER order,
+                                  const enum CBLAS_TRANSPOSE transa,
+                                  const blasint M, const blasint n,
+                                  const double alpha, const double* A,
+                                  const blasint lda, const double* x,
+                                  const blasint incx, const double beta,
+                                  double* y, const blasint incy);
+
+typedef void(hipo_extras_dtpsv_t)(const enum CBLAS_ORDER order,
+                                  const enum CBLAS_UPLO uplo,
+                                  const enum CBLAS_TRANSPOSE transa,
+                                  const enum CBLAS_DIAG diag, const blasint n,
+                                  const double* ap, double* x,
+                                  const blasint incx);
+
+typedef void(hipo_extras_dtrsv_t)(const enum CBLAS_ORDER order,
+                                  const enum CBLAS_UPLO uplo,
+                                  const enum CBLAS_TRANSPOSE transa,
+                                  const enum CBLAS_DIAG diag, const blasint n,
+                                  const double* a, const blasint lda, double* x,
+                                  const blasint incx);
+
+typedef void(hipo_extras_dger_t)(const enum CBLAS_ORDER order, const blasint m,
+                                 const blasint n, const double alpha,
+                                 const double* x, const blasint incx,
+                                 const double* y, const blasint incy, double* A,
+                                 const blasint lda);
+
+typedef void(hipo_extras_dgemm_t)(
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE transa,
+    const enum CBLAS_TRANSPOSE transb, const blasint m, const blasint n,
+    const blasint k, const double alpha, const double* A, const blasint lda,
+    const double* B, const blasint ldb, const double beta, double* C,
+    const blasint ldc);
+
+typedef void(hipo_extras_dsyrk_t)(const enum CBLAS_ORDER order,
+                                  const enum CBLAS_UPLO uplo,
+                                  const enum CBLAS_TRANSPOSE trans,
+                                  const blasint n, const blasint k,
+                                  const double alpha, const double* a,
+                                  const blasint lda, const double beta,
+                                  double* C, const blasint ldc);
+
+typedef void(hipo_extras_dtrsm_t)(const enum CBLAS_ORDER order,
+                                  const enum CBLAS_SIDE side,
+                                  const enum CBLAS_UPLO uplo,
+                                  const enum CBLAS_TRANSPOSE transa,
+                                  const enum CBLAS_DIAG diag, const blasint m,
+                                  const blasint n, const double alpha,
+                                  const double* a, const blasint lda, double* b,
+                                  const blasint ldb);
+
+// Solve LP using HiPO - uses actual HiGHS types for type safety
+// Note: ABI version check ensuru
 // Solve LP using HiPO - uses actual HiGHS types for type safety
 // Note: ABI version check ensures struct layouts match between builds
 // typedef HighsStatus (*hipo_solve_lp_t)(
@@ -182,16 +251,16 @@ class DynamicDepsLoader {
 
   hipo_extras_genrcm_t fn_hipo_extras_genrcm_ = nullptr;
 
-  // hipo_extras_daxpy_t fn_hipo_extras_daxpy_=   nullptr;
-  // hipo_extras_docopy_t fn_hipo_extras_docopy_=  nullptr;
-  // hipo_extras_dscal_t fn_hipo_extras_dscal_=  nullptr;
-  // hipo_extras_dswap_t fn_hipo_extras_dswap_=  nullptr;
-  // hipo_extras_dtpsv_t fn_hipo_extras_dtpsv_=  nullptr;
-  // hipo_extras_dtrsv_t fn_hipo_extras_dtrsv_=  nullptr;
-  // hipo_extras_dger_t fn_hipo_extras_dger_= nullptr;
-  // hipo_extras_dgemm_t  fn_hipo_extras_dgemm_ = nullptr;
-  // hipo_extras_dsyrk_t fn_hipo_extras_dsyrk_=  nullptr;
-  // hipo_extras_dtrsm_t fn_hipo_extras_dtrsm_=  nullptr;
+  hipo_extras_daxpy_t fn_hipo_extras_daxpy_ = nullptr;
+  hipo_extras_dcopy_t fn_hipo_extras_dcopy_ = nullptr;
+  hipo_extras_dscal_t fn_hipo_extras_dscal_ = nullptr;
+  hipo_extras_dswap_t fn_hipo_extras_dswap_ = nullptr;
+  hipo_extras_dtpsv_t fn_hipo_extras_dtpsv_ = nullptr;
+  hipo_extras_dtrsv_t fn_hipo_extras_dtrsv_ = nullptr;
+  hipo_extras_dger_t fn_hipo_extras_dger_ = nullptr;
+  hipo_extras_dgemm_t fn_hipo_extras_dgemm_ = nullptr;
+  hipo_extras_dsyrk_t fn_hipo_extras_dsyrk_ = nullptr;
+  hipo_extras_dtrsm_t fn_hipo_extras_dtrsm_ = nullptr;
 };
 
 #endif  // LP_DATA_DYNAMIC_HIPO_LOADER_H_

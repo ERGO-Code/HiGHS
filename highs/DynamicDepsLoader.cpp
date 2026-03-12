@@ -90,16 +90,16 @@ void DynamicDepsLoader::unloadLibrary() {
   fn_hipo_extras_amd_defaults_ = nullptr;
   fn_hipo_extras_amd_order_ = nullptr;
   fn_hipo_extras_genrcm_ = nullptr;
-  // fn_hipo_extras_daxpy_ =   nullptr;
-  // fn_hipo_extras_docopy_ =  nullptr;
-  // fn_hipo_extras_dscal_ =  nullptr;
-  // fn_hipo_extras_dswap_ =  nullptr;
-  // fn_hipo_extras_dtpsv_ =  nullptr;
-  // fn_hipo_extras_dtrsv_ =  nullptr;
-  // fn_hipo_extras_dger_ = nullptr;
-  // fn_hipo_extras_dgemm_ =  nullptr;
-  // fn_hipo_extras_dsyrk_ =  nullptr;
-  // fn_hipo_extras_dtrsm_ =  nullptr;
+  fn_hipo_extras_daxpy_ =   nullptr;
+  fn_hipo_extras_dcopy_ =  nullptr;
+  fn_hipo_extras_dscal_ =  nullptr;
+  fn_hipo_extras_dswap_ =  nullptr;
+  fn_hipo_extras_dtpsv_ =  nullptr;
+  fn_hipo_extras_dtrsv_ =  nullptr;
+  fn_hipo_extras_dger_ = nullptr;
+  fn_hipo_extras_dgemm_ =  nullptr;
+  fn_hipo_extras_dsyrk_ =  nullptr;
+  fn_hipo_extras_dtrsm_ =  nullptr;
 
   // TODO add here
   // fn_solve_lp_ = nullptr;
@@ -136,35 +136,35 @@ bool DynamicDepsLoader::resolveFunctions() {
   fn_hipo_extras_genrcm_ = reinterpret_cast<hipo_extras_genrcm_t>(
       resolveSymbol("hipo_extras_genrcm"));
 
-  // fn_hipo_extras_daxpy_ = reinterpret_cast<hipo_extras_daxpy_t>(
-  //     resolveSymbol("hipo_extras_daxpy"));
+  fn_hipo_extras_daxpy_ = reinterpret_cast<hipo_extras_daxpy_t>(
+      resolveSymbol("hipo_extras_daxpy"));
 
-  // fn_hipo_extras_docopy_ = reinterpret_cast<hipo_extras_docopy_t>(
-  //     resolveSymbol("hipo_extras_docopy"));
+  fn_hipo_extras_dcopy_ = reinterpret_cast<hipo_extras_dcopy_t>(
+      resolveSymbol("hipo_extras_dcopy"));
 
-  // fn_hipo_extras_dscal_ = reinterpret_cast<hipo_extras_dscal_t>(
-  //     resolveSymbol("hipo_extras_dscal"));
+  fn_hipo_extras_dscal_ = reinterpret_cast<hipo_extras_dscal_t>(
+      resolveSymbol("hipo_extras_dscal"));
 
-  // fn_hipo_extras_dswap_ = reinterpret_cast<hipo_extras_dswap_t>(
-  //     resolveSymbol("hipo_extras_dswap"));
+  fn_hipo_extras_dswap_ = reinterpret_cast<hipo_extras_dswap_t>(
+      resolveSymbol("hipo_extras_dswap"));
 
-  // fn_hipo_extras_dtpsv_ = reinterpret_cast<hipo_extras_dtpsv_t>(
-  //     resolveSymbol("hipo_extras_dtpsv"));
+  fn_hipo_extras_dtpsv_ = reinterpret_cast<hipo_extras_dtpsv_t>(
+      resolveSymbol("hipo_extras_dtpsv"));
 
-  // fn_hipo_extras_dtrsv_ = reinterpret_cast<hipo_extras_dtrsv_t>(
-  //     resolveSymbol("hipo_extras_dtrsv"));
+  fn_hipo_extras_dtrsv_ = reinterpret_cast<hipo_extras_dtrsv_t>(
+      resolveSymbol("hipo_extras_dtrsv"));
 
-  // fn_hipo_extras_dger_ = reinterpret_cast<hipo_extras_dger_t>(
-  //     resolveSymbol("hipo_extras_dger"));
+  fn_hipo_extras_dger_ = reinterpret_cast<hipo_extras_dger_t>(
+      resolveSymbol("hipo_extras_dger"));
 
-  // fn_hipo_extras_dgemm_ = reinterpret_cast<hipo_extras_dgemm_t>(
-  //     resolveSymbol("hipo_extras_dgemm"));
+  fn_hipo_extras_dgemm_ = reinterpret_cast<hipo_extras_dgemm_t>(
+      resolveSymbol("hipo_extras_dgemm"));
 
-  // fn_hipo_extras_dsyrk_ = reinterpret_cast<hipo_extras_dsyrk_t>(
-  //     resolveSymbol("hipo_extras_dsyrk"));
+  fn_hipo_extras_dsyrk_ = reinterpret_cast<hipo_extras_dsyrk_t>(
+      resolveSymbol("hipo_extras_dsyrk"));
 
-  // fn_hipo_extras_dtrsm_ = reinterpret_cast<hipo_extras_dtrsm_t>(
-  //     resolveSymbol("hipo_extras_dtrsm"));
+  fn_hipo_extras_dtrsm_ = reinterpret_cast<hipo_extras_dtrsm_t>(
+      resolveSymbol("hipo_extras_dtrsm"));
 
   // fn_solve_lp_ =
   //     reinterpret_cast<hipo_solve_lp_t>(resolveSymbol("hipo_solve_lp"));
@@ -176,16 +176,16 @@ bool DynamicDepsLoader::resolveFunctions() {
       !fn_hipo_extras_metis_set_default_options_ ||
       !fn_hipo_extras_metis_nodend_ || !fn_hipo_extras_amd_defaults_ ||
       !fn_hipo_extras_amd_order_ || !fn_hipo_extras_genrcm_  // ||
-      // !fn_hipo_extras_daxpy_ ||
-      // !fn_hipo_extras_docopy_ ||
-      // !fn_hipo_extras_dscal_ ||
-      // !fn_hipo_extras_dswap_ ||
-      // !fn_hipo_extras_dtpsv_ ||
-      // !fn_hipo_extras_dtrsv_ ||
-      // !fn_hipo_extras_dger_ ||
-      // !fn_hipo_extras_dgemm_ ||
-      // !fn_hipo_extras_dsyrk_ ||
-      // !fn_hipo_extras_dtrsm_
+      !fn_hipo_extras_daxpy_ ||
+      !fn_hipo_extras_dcopy_ ||
+      !fn_hipo_extras_dscal_ ||
+      !fn_hipo_extras_dswap_ ||
+      !fn_hipo_extras_dtpsv_ ||
+      !fn_hipo_extras_dtrsv_ ||
+      !fn_hipo_extras_dger_ ||
+      !fn_hipo_extras_dgemm_ ||
+      !fn_hipo_extras_dsyrk_ ||
+      !fn_hipo_extras_dtrsm_
   ) {
     last_error_ = "Failed to resolve required HiPO functions";
 

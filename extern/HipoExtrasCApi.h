@@ -30,10 +30,10 @@
 #define HIPO_X_TOSTRING(x) HIPO_X_STRINGIFY(x)
 
 // Version string
-#define HIPO_EXTRAS_VERSION \
-  HIPO_X_TOSTRING(HIGHS_VERSION_MAJOR) "." \
-  HIPO_X_TOSTRING(HIGHS_VERSION_MINOR) "." \
-  HIPO_X_TOSTRING(HIGHS_VERSION_PATCH)
+#define HIPO_EXTRAS_VERSION                                     \
+  HIPO_X_TOSTRING(HIGHS_VERSION_MAJOR)                          \
+  "." HIPO_X_TOSTRING(HIGHS_VERSION_MINOR) "." HIPO_X_TOSTRING( \
+      HIGHS_VERSION_PATCH)
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,14 +42,14 @@ extern "C" {
 /**
  * Get the ABI version of the HiPO library.
  * Used for compatibility checking at runtime.
- * 
+ *
  * @return ABI version number
  */
 HIPO_EXTRAS_API int hipo_extras_get_abi_version(void);
 
 /**
  * Get the version string of the HiPO library.
- * 
+ *
  * @return Version string (e.g., "1.12.0")
  */
 HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
@@ -67,7 +67,9 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 #include "rcm/rcm.h"
 
 #ifndef __APPLE__
-#include "cblas.h"
+// #include "cblas.h"
+
+#include "ipm/hipo/auxiliary/mycblas.h"
 #endif
 
 // int Highs_METIS_SetDefaultOptions(idx_t *options);
@@ -87,11 +89,12 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 // HighsStatus solveLpHipo(const HighsOptions& options, HighsTimer& timer,
 //                         const HighsLp& lp, HighsBasis& highs_basis,
 //                         HighsSolution& highs_solution,
-//                         HighsModelStatus& model_status, HighsInfo& highs_info,
-//                         HighsCallback& callback);
+//                         HighsModelStatus& model_status, HighsInfo&
+//                         highs_info, HighsCallback& callback);
 
 // HighsStatus reportHipoStatus(const HighsOptions& options,
-//                              const hipo::Int status, const hipo::Solver& hipo);
+//                              const hipo::Int status, const hipo::Solver&
+//                              hipo);
 
 // HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
 //                                       const ipx::Int status);
@@ -100,20 +103,18 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 //                           const hipo::Info& hipo_info);
 
 // void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
-//                               const hipo::Int num_col, const hipo::Int num_row,
-//                               const std::vector<double>& rhs,
-//                               const std::vector<char>& constraint_type,
-//                               const hipo::Solver& hipo,
-//                               const HighsModelStatus model_status,
-//                               HighsSolution& highs_solution);
-
+//                               const hipo::Int num_col, const hipo::Int
+//                               num_row, const std::vector<double>& rhs, const
+//                               std::vector<char>& constraint_type, const
+//                               hipo::Solver& hipo, const HighsModelStatus
+//                               model_status, HighsSolution& highs_solution);
 
 /**
  * Solve an LP using the HiPO solver.
- * 
+ *
  * This is the main entry point for the dynamically loaded HiPO library.
  * Uses actual HiGHS types for type safety.
- * 
+ *
  * @param options Reference to HighsOptions
  * @param timer Reference to HighsTimer
  * @param lp Reference to HighsLp
@@ -136,8 +137,7 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 // );
 
 extern "C" HIPO_EXTRAS_API int hipo_extras_metis_set_default_options(
-  idx_t *options
-);
+    idx_t* options);
 
 extern "C" HIPO_EXTRAS_API int hipo_extras_metis_nodend(
     idx_t* nvtxs, const idx_t* xadj, const idx_t* adjncy, idx_t* vwgt,
@@ -145,13 +145,76 @@ extern "C" HIPO_EXTRAS_API int hipo_extras_metis_nodend(
 
 extern "C" HIPO_EXTRAS_API void hipo_extras_amd_defaults(double Control[]);
 
-extern "C" HIPO_EXTRAS_API int hipo_extras_amd_order(amd_int n, const amd_int Ap[],
-                                       const amd_int Ai[], amd_int P[],
-                                       double Control[], double Info[]);
+extern "C" HIPO_EXTRAS_API int hipo_extras_amd_order(
+    amd_int n, const amd_int Ap[], const amd_int Ai[], amd_int P[],
+    double Control[], double Info[]);
 
-extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(HighsInt node_num, HighsInt adj_num,
-                                    const HighsInt adj_row[],
-                                    const HighsInt adj[], HighsInt perm[]);
+extern "C" HIPO_EXTRAS_API int hipo_extras_genrcm(HighsInt node_num,
+                                                  HighsInt adj_num,
+                                                  const HighsInt adj_row[],
+                                                  const HighsInt adj[],
+                                                  HighsInt perm[]);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_daxpy(const blasint n,
+                                                  const double alpha,
+                                                  const double* x,
+                                                  const blasint incx, double* y,
+                                                  const blasint incy);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dcopy(const blasint n,
+                                                  const double* x,
+                                                  const blasint incx, double* y,
+                                                  const blasint incy);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dscal(const blasint n,
+                                                  const double alpha, double* x,
+                                                  const blasint incx);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dswap(const blasint n, double* x,
+                                                  const blasint incx, double* y,
+                                                  const blasint incy);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dgemv(
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE transa,
+    const blasint M, const blasint n, const double alpha, const double* A,
+    const blasint lda, const double* x, const blasint incx, const double beta,
+    double* y, const blasint incy);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dtpsv(
+    const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
+    const enum CBLAS_TRANSPOSE transa, const enum CBLAS_DIAG diag,
+    const blasint n, const double* ap, double* x, const blasint incx);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dtrsv(
+    const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
+    const enum CBLAS_TRANSPOSE transa, const enum CBLAS_DIAG diag,
+    const blasint n, const double* a, const blasint lda, double* x,
+    const blasint incx);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dger(
+    const enum CBLAS_ORDER order, const blasint m, const blasint n,
+    const double alpha, const double* x, const blasint incx, const double* y,
+    const blasint incy, double* A, const blasint lda);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dgemm(
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE transa,
+    const enum CBLAS_TRANSPOSE transb, const blasint m, const blasint n,
+    const blasint k, const double alpha, const double* A, const blasint lda,
+    const double* B, const blasint ldb, const double beta, double* C,
+    const blasint ldc);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dsyrk(
+    const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
+    const enum CBLAS_TRANSPOSE trans, const blasint n, const blasint k,
+    const double alpha, const double* a, const blasint lda, const double beta,
+    double* C, const blasint ldc);
+
+extern "C" HIPO_EXTRAS_API void hipo_extras_dtrsm(
+    const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
+    const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE transa,
+    const enum CBLAS_DIAG diag, const blasint m, const blasint n,
+    const double alpha, const double* a, const blasint lda, double* b,
+    const blasint ldb);
 
 #endif  // __cplusplus
 
