@@ -1343,9 +1343,9 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "pdlp_step_size_strategy",
         "Step size strategy for PDLP solver: 0 => fixed; "
-        "1 => adaptive; 2 => Malitsky-Pock",
+        "1 => adaptive; 2 => Malitsky-Pock; 3 => PID",
         advanced, &pdlp_step_size_strategy, kPdlpStepSizeStrategyMin,
-        kPdlpStepSizeStrategyAdaptive, kPdlpRestartStrategyMax);
+        kPdlpStepSizeStrategyAdaptive, kPdlpStepSizeStrategyMax);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(

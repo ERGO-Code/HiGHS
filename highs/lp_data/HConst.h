@@ -405,7 +405,8 @@ enum PdlpStepSizeStrategy {
   kPdlpStepSizeStrategyMin = kPdlpStepSizeStrategyFixed,
   kPdlpStepSizeStrategyAdaptive,
   kPdlpStepSizeStrategyMalitskyPock,
-  kPdlpStepSizeStrategyMax = kPdlpStepSizeStrategyMalitskyPock
+  kPdlpStepSizeStrategyPid,
+  kPdlpStepSizeStrategyMax = kPdlpStepSizeStrategyPid
 };
 
 enum PdlpRestartStrategy {

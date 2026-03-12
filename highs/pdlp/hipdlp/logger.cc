@@ -74,7 +74,8 @@ void Logger::print_params(const PrimalDualParams& params) {
   std::map<StepSizeStrategy, std::string> step_size_map = {
       {StepSizeStrategy::FIXED, "Fixed"},
       {StepSizeStrategy::ADAPTIVE, "Adaptive"},
-      {StepSizeStrategy::MALITSKY_POCK, "Malitsky-Pock"}};
+      {StepSizeStrategy::MALITSKY_POCK, "Malitsky-Pock"},
+      {StepSizeStrategy::PID, "PID"}};
 
   ss << "  - Max Iterations: " << params.max_iterations;
   info(ss.str());

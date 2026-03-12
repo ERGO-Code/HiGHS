@@ -206,6 +206,8 @@ class PDLPSolver {
   std::vector<double> K_times_x_diff_;
   std::vector<double> dSlackPos_, dSlackNeg_;
   std::vector<double> dSlackPosAvg_, dSlackNegAvg_;
+  std::vector<double> halpern_dual_slack_next_;
+  bool halpern_dual_slack_next_valid_ = false;
 
   // Scalars
   HighsInt final_iter_count_ = 0;

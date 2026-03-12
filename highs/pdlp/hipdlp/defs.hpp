@@ -22,7 +22,7 @@ enum class ScalingMethod { NONE, RUIZ, POCK_CHAMBOLLE, L2_NORM, COMBINED };
 
 enum class RestartStrategy { NO_RESTART, FIXED_RESTART, ADAPTIVE_RESTART, HALPERN_RESTART};
 
-enum class StepSizeStrategy { FIXED, ADAPTIVE, MALITSKY_POCK };
+enum class StepSizeStrategy { FIXED, ADAPTIVE, MALITSKY_POCK, PID };
 
 enum class PostSolveRetcode {
   OK = 0,

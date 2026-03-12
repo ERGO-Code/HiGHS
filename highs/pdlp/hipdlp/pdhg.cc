@@ -1316,7 +1316,7 @@ PDLPSolver::computeDualityGap(const std::vector<double>& x,
                               const std::vector<double>& y,
                               const std::vector<double>& lambda) {
   double qTy = 0.0;
-  for ( i = 0; i < lp_.num_row_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     if (lp_.row_lower_[i] > -kHighsInf) {
       qTy += lp_.row_lower_[i] * y[i];
     } else {
@@ -1820,11 +1820,11 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   dual_dist   = computeDiffNormCuBLAS(d_pdhg_dual_,   d_y_anchor_, a_num_rows_);  
 #else
   // CPU version
-  for (size_t i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     double diff = x_next_[i] - x_anchor_[i];
     primal_dist += diff * diff;
   }
-  for (size_t j = 0; j < lp_.num_row_; ++j) {
+  for (HighsInt j = 0; j < lp_.num_row_; ++j) {
     double diff = y_next_[j] - y_anchor_[j];
     dual_dist += diff * diff;
   }
