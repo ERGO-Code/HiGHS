@@ -56,9 +56,9 @@ class Logger {
   void print_header();
   void print_params(const PrimalDualParams& params);
   void print_iteration_header();
-  void print_iteration_stats(int iter, const SolverResults& current_results,
+  void print_iteration_stats(HighsInt iter, const SolverResults& current_results,
                              double current_eta);
-  void print_summary(const SolverResults& results, int total_iter,
+  void print_summary(const SolverResults& results, HighsInt total_iter,
                      double total_time);
   void passLogOptions(HighsLogOptions log_options) {
     log_options_ = log_options;

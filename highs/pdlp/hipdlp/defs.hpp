@@ -38,7 +38,7 @@ struct StepSizeConfig {
   double dual_step;
   double beta;
   double power_method_lambda;
-  int step_size_iter = 0;  // nStepSizeIter
+  HighsInt step_size_iter = 0;  // nStepSizeIter
 };
 
 struct MalitskyPockParams {
@@ -64,7 +64,7 @@ struct PrimalDualParams {
 
   // Restart parameters
   RestartStrategy restart_strategy;
-  int fixed_restart_interval;
+  HighsInt fixed_restart_interval;
 
   bool use_halpern_restart = false;
   double halpern_gamma = 1.0; // 0: standard Halpern, 1: full reflection, in between: over relaxation
@@ -75,7 +75,7 @@ struct PrimalDualParams {
   bool use_l2_scaling = false;
 
   // Ruiz scaling parameters
-  int ruiz_iterations = 10;
+  HighsInt ruiz_iterations = 10;
   double ruiz_norm = INFINITY;
 
   // Pock-Chambolle scaling parameters
@@ -107,7 +107,7 @@ struct PdlpIterate {
 
   // Constructors
   PdlpIterate() = default;
-  PdlpIterate(int num_cols, int num_rows)
+  PdlpIterate(HighsInt num_cols, HighsInt num_rows)
       : x(num_cols, 0.0),
         y(num_rows, 0.0),
         Ax(num_rows, 0.0),
@@ -149,8 +149,8 @@ struct PdlpIterate {
 
   // For block-structured problems
   struct BlockStructure {
-    std::vector<int> x_block_sizes;
-    std::vector<int> y_block_sizes;
+    std::vector<HighsInt> x_block_sizes;
+    std::vector<HighsInt> y_block_sizes;
     // std::vector<std::vector<double>> x_blocks;  // Future: for block problems
     // std::vector<std::vector<double>> y_blocks;
   };

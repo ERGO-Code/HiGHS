@@ -19,15 +19,15 @@ bool vecDiff(const std::vector<double>& x1, const std::vector<double>& x2,
     return true;
   }
 
-  int num_diffs = 0;
+  HighsInt num_diffs = 0;
   double max_diff = 0.0;
-  int max_diff_idx = -1;
+  HighsInt max_diff_idx = -1;
 
   for (size_t i = 0; i < x1.size(); ++i) {
     double diff = std::abs(x1[i] - x2[i]);
     if (diff > max_diff) {
       max_diff = diff;
-      max_diff_idx = (int)i;
+      max_diff_idx = (HighsInt)i;
     }
     if (diff > tol) {
       num_diffs++;

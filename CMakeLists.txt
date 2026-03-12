@@ -476,7 +476,7 @@ if(DEBUGSOL)
   add_definitions("-DHIGHS_DEBUGSOL")
 endif()
 
-option(HIGHSINT64 "Use 64 bit integers indexing" ON)
+option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
 
 if(NOT(${HIGHSINT64} STREQUAL "OFF"))
   message(STATUS "HIGHSINT64: " ${HIGHSINT64})

@@ -49,7 +49,7 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
       max_abs_val = std::max(max_abs_val, std::abs(lp.a_matrix_.value_[iEl]));
     }
     highsLogUser(params_->log_options_, HighsLogType::kInfo, "  Col %d: %g\n",
-                 int(iCol), max_abs_val);
+                 HighsInt(iCol), max_abs_val);
   }
 
   // --- Calculate and Log Row Norms (Infinity Norm) ---
@@ -67,7 +67,7 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
 
   for (HighsInt iRow = 0; iRow < lp.num_row_; ++iRow) {
     highsLogUser(params_->log_options_, HighsLogType::kInfo, "  Row %d: %g\n",
-                 int(iRow), row_max_abs_vals[iRow]);
+                 HighsInt(iRow), row_max_abs_vals[iRow]);
   }
   highsLogUser(params_->log_options_, HighsLogType::kInfo,
                "-------------------------\n");
@@ -102,7 +102,7 @@ void Scaling::ApplyRuizScaling() {
   std::vector<double> current_col_scaling(lp_->num_col_);
   std::vector<double> current_row_scaling(lp_->num_row_);
 
-  for (int iter = 0; iter < params_->ruiz_iterations; ++iter) {
+  for (HighsInt iter = 0; iter < params_->ruiz_iterations; ++iter) {
     // Reset current scaling factors
     std::fill(current_col_scaling.begin(), current_col_scaling.end(), 0.0);
     std::fill(current_row_scaling.begin(), current_row_scaling.end(), 0.0);
@@ -324,24 +324,24 @@ void Scaling::unscaleSolution(std::vector<double>& x,
   }
 }
 
-double Scaling::ComputeNorm(const double* values, int size,
+double Scaling::ComputeNorm(const double* values, HighsInt size,
                             double norm_type) const {
   if (norm_type == INFINITY) {
     double max_val = 0.0;
-    for (int i = 0; i < size; ++i) {
+    for (HighsInt i = 0; i < size; ++i) {
       max_val = std::max(max_val, std::abs(values[i]));
     }
     return max_val;
   } else if (norm_type == 2.0) {
     double sum_sq = 0.0;
-    for (int i = 0; i < size; ++i) {
+    for (HighsInt i = 0; i < size; ++i) {
       sum_sq += values[i] * values[i];
     }
     return std::sqrt(sum_sq);
   } else {
     // General p-norm
     double sum = 0.0;
-    for (int i = 0; i < size; ++i) {
+    for (HighsInt i = 0; i < size; ++i) {
       sum += std::pow(std::abs(values[i]), norm_type);
     }
     return std::pow(sum, 1.0 / norm_type);
