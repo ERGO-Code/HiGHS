@@ -533,7 +533,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
     if (num_hessian_nz)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "  Hessian %s[%5.0e, %5.0e]\n", gencon_spaces.c_str(),
-		   min_hessian_value, max_hessian_value);
+                   min_hessian_value, max_hessian_value);
     highsLogUser(log_options, HighsLogType::kInfo,
                  "  Bound   %s[%5.0e, %5.0e]\n", gencon_spaces.c_str(),
                  min_col_bound, max_col_bound);
