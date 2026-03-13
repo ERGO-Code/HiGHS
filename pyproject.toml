@@ -207,6 +207,7 @@ xfail_strict = true
 log_cli_level = "INFO"
 filterwarnings = ["error"]
 testpaths = ["tests"]
+norecursedirs = ["check", ".git", "build", "dist", "*.egg-info"]
 
 [tool.cibuildwheel]
 build = "*"
