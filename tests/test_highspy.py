@@ -112,10 +112,10 @@ class TestHighsPy(unittest.TestCase):
 
     def test_version(self):
         h = self.get_basic_model()
-        self.assertEqual(h.version(), "1.13.0")
+        self.assertEqual(h.version(), "1.13.1")
         self.assertEqual(h.versionMajor(), 1)
         self.assertEqual(h.versionMinor(), 13)
-        self.assertEqual(h.versionPatch(), 0)
+        self.assertEqual(h.versionPatch(), 1)
 
     def test_basics(self):
         h = self.get_basic_model()
@@ -890,9 +890,9 @@ class TestHighsPy(unittest.TestCase):
 
         # test prefix item with indices, not variable offset
         h = highspy.Highs()
-        x = h.addVariables("a", "b", "c", name_prefix="t_")  # ('a', 'b', 'c')
+        x = h.addVariables("a", "b", "c", name_prefix="t_")  # ('a','b','c')
         self.assertEqual(h.numVariables, 1)
-        self.assertEqual(x["a", "b", "c"].name, "t_('a', 'b', 'c')")
+        self.assertEqual(x["a", "b", "c"].name, "t_('a','b','c')")
 
         # Testing different ways of adding variables
         # Some are unlikely to be used, but this is expected behaviour

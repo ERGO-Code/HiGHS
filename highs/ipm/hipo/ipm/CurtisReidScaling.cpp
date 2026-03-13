@@ -82,7 +82,8 @@ class CRscalingPrec : public AbstractMatrix {
   void apply(std::vector<double>& x) const override {
     Int m = M_.size();
     for (Int i = 0; i < m; ++i) x[i] /= std::max(M_[i], 1.0);
-    for (Int j = 0; j < N_.size(); ++j) x[m + j] /= std::max(N_[j], 1.0);
+    for (Int j = 0; j < static_cast<Int>(N_.size()); ++j)
+      x[m + j] /= std::max(N_[j], 1.0);
   }
 };
 

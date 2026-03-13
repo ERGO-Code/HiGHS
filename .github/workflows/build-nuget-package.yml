@@ -1,6 +1,6 @@
 name: build-nuget-package
 
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -184,7 +184,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.13.0
+        run: dotnet pack -c Release /p:Version=1.13.1
 
       - uses: actions/upload-artifact@v4
         with:

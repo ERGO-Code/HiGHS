@@ -294,7 +294,7 @@ __global__ void kernelHalpernBlend(
     const double* __restrict__ initial,
     double weight,             // w = k/(k+1)
     double reflection_coeff,   // ρ, typically 1.0
-    int n)
+    HighsInt n)
 {
     CUDA_GRID_STRIDE_LOOP(i, n) {
         double blended = fma_rn(reflection_coeff, reflected[i],
@@ -308,7 +308,7 @@ extern "C" {
 void launchKernelUpdateX_wrapper(
     double* d_x_new, const double* d_x_old, const double* d_aty,
     const double* d_cost, const double* d_lower, const double* d_upper,
-    double primal_step, int n_cols) 
+    double primal_step, HighsInt n_cols) 
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n_cols, block_size);
@@ -325,7 +325,7 @@ void launchKernelUpdateY_wrapper(
     double* d_y_new, const double* d_y_old,
     const double* d_ax_old, const double* d_ax_new, 
     const double* d_rhs, const bool* d_is_equality,
-    double dual_step, int n_rows) 
+    double dual_step, HighsInt n_rows) 
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n_rows, block_size);
@@ -342,7 +342,7 @@ void launchKernelUpdateY_wrapper(
 void launchKernelUpdateAverages_wrapper(
     double* d_x_sum, double* d_y_sum,
     const double* d_x_next, const double* d_y_next,
-    double weight, int n_cols, int n_rows) 
+    double weight, HighsInt n_cols, HighsInt n_rows) 
 {
     const int block_size = 256;
     dim3 config_x = GetLaunchConfig(n_cols, block_size);
@@ -356,7 +356,7 @@ void launchKernelUpdateAverages_wrapper(
 
 void launchKernelScaleVector_wrapper(
     double* d_out, const double* d_in, 
-    double scale, int n)
+    double scale, HighsInt n)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
@@ -376,7 +376,7 @@ void launchCheckConvergenceKernels_wrapper(
     const double* d_col_lower, const double* d_col_upper,
     const bool* d_is_equality,
     const double* d_col_scale, const double* d_row_scale,
-    int n_cols, int n_rows)
+    HighsInt n_cols, HighsInt n_rows)
 {
     // 1. Zero out results
     cudaMemset(d_results, 0, 4 * sizeof(double));
@@ -403,7 +403,7 @@ void launchKernelHalpernPrimalMinor_wrapper(
     const double* d_current_primal, double* d_reflected_primal,
     const double* d_dual_product, const double* d_objective,
     const double* d_var_lb, const double* d_var_ub,
-    double step_size, int n)
+    double step_size, HighsInt n)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
@@ -417,7 +417,7 @@ void launchKernelHalpernPrimalMajor_wrapper(
     const double* d_current_primal, double* d_pdhg_primal,
     double* d_reflected_primal, const double* d_dual_product,
     const double* d_objective, const double* d_var_lb,
-    const double* d_var_ub, double step_size, int n,
+    const double* d_var_ub, double step_size, HighsInt n,
     double* d_dual_slack)
 {
     const int block_size = 256;
@@ -432,7 +432,7 @@ void launchKernelHalpernPrimalMajor_wrapper(
 void launchKernelHalpernDualMinor_wrapper(
     const double* d_current_dual, double* d_reflected_dual,
     const double* d_primal_product, const double* d_rhs,
-    const bool* d_is_equality, double step_size, int n)
+    const bool* d_is_equality, double step_size, HighsInt n)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
@@ -446,7 +446,7 @@ void launchKernelHalpernDualMajor_wrapper(
     const double* d_current_dual, double* d_pdhg_dual,
     double* d_reflected_dual, const double* d_primal_product,
     const double* d_rhs, const bool* d_is_equality,
-    double step_size, int n)
+    double step_size, HighsInt n)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
@@ -459,7 +459,7 @@ void launchKernelHalpernDualMajor_wrapper(
 void launchKernelHalpernBlend_wrapper(
     double* d_current, const double* d_reflected,
     const double* d_initial, double weight,
-    double reflection_coeff, int n)
+    double reflection_coeff, HighsInt n)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
