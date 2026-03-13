@@ -68,6 +68,27 @@ void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
   std::vector<HighsInt> iwork(numRow, 0);
   ARstart.resize(numRow + 1, 0);
   HighsInt AcountX = Aindex.size();
+  // Segfault #2748 occurs in highsSparseTranspose, and only oddity in
+  // highsSparseTranspose is that it uses AcountX = Aindex.size(); to
+  // determine the number of nonzeros in the matrix - and hence resize
+  // ARindex and ARvalue, rather than Astart[numCol] - although both
+  // values should be the same. So, if the size of Aindex is
+  // incorrect, the size of ARindex and ARvalue is incorrect. However,
+  // it's only conceivable that AcountX is larger than Astart[numCol]
+  // - otherwise a segfault would have been expected earlier - so size
+  // of ARindex and ARvalue would be larger than necessary, which
+  // wouldn't lead to a segfault.
+  HighsInt checkAcountX = Astart[numCol];
+  if (AcountX != checkAcountX) {
+#ifndef NDEBUG
+    printf("highsSparseTranspose: %d = AcountX != checkAcountX = %d\n",
+           int(AcountX), int(checkAcountX));
+#endif
+    assert(AcountX == checkAcountX);
+  }
+  // Use Astart[numCol] rather than Aindex.size() as number of
+  // nonzeros
+  AcountX = Astart[numCol];
   ARindex.resize(AcountX);
   ARvalue.resize(AcountX);
   for (HighsInt k = 0; k < AcountX; k++) {
