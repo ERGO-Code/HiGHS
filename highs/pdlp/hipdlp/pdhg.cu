@@ -147,7 +147,7 @@ __global__ void kernelCheckPrimal(
 // === KERNEL 5: Dual Convergence Check (Column-wise) ===
 __global__ void kernelCheckDual(
     double* d_results,          // [1]: D.Feas, [2]: P.Obj, [3]: D.Obj
-    double* d_slack_pos,        // Output
+    double* d_slack_pos,        // Input (raw halpern slack) / Output (s_pos)
     double* d_slack_neg,        // Output
     const double* d_aty,
     const double* d_x,
@@ -155,7 +155,8 @@ __global__ void kernelCheckDual(
     const double* d_col_lower,  // l
     const double* d_col_upper,  // u
     const double* d_col_scale,  // Can be nullptr
-    int n_cols)
+    int n_cols,
+    bool use_halpern_slack)     
 {
   double local_dual_feas_sq = 0.0;
   double local_primal_obj = 0.0;
@@ -174,14 +175,18 @@ __global__ void kernelCheckDual(
     double s_pos = 0.0;
     double s_neg = 0.0;
 
-    if (val_l > -GPU_INF) {
-      s_pos = fmax(0.0, dual_residual);
+    if (use_halpern_slack) {
+      // Read the raw Halpern slack previously saved in d_slack_pos by primal major step
+      double raw_slack = d_slack_pos[i]; 
+      s_pos = fmax(0.0, raw_slack);
+      s_neg = fmax(0.0, -raw_slack);
+    } else {
+      // Standard bounds-based projection (for Average iterates)
+      if (val_l > -GPU_INF) s_pos = fmax(0.0, dual_residual);
+      if (val_u < GPU_INF)  s_neg = fmax(0.0, -dual_residual);
     }
 
-    if (val_u < GPU_INF) {
-      s_neg = fmax(0.0, -dual_residual);
-    }
-
+    // Write back the clean positive/negative parts for objective calc & host copy
     d_slack_pos[i] = s_pos;
     d_slack_neg[i] = s_neg;
 
@@ -195,12 +200,12 @@ __global__ void kernelCheckDual(
 
     double obj_term = 0.0;
     if (val_l > -GPU_INF) obj_term += val_l * s_pos;
-    if (val_u < GPU_INF) obj_term -= val_u * s_neg;
+    if (val_u < GPU_INF)  obj_term -= val_u * s_neg;
 
     local_dual_obj_part += obj_term;
   }
 
-  // Atomic acculation
+  // Atomic accumulation
   atomicAdd(&d_results[IDX_DUAL_FEAS], local_dual_feas_sq);
   atomicAdd(&d_results[IDX_PRIMAL_OBJ], local_primal_obj);
   atomicAdd(&d_results[IDX_DUAL_OBJ], local_dual_obj_part);
@@ -376,7 +381,9 @@ void launchCheckConvergenceKernels_wrapper(
     const double* d_col_lower, const double* d_col_upper,
     const bool* d_is_equality,
     const double* d_col_scale, const double* d_row_scale,
-    int n_cols, int n_rows, cudaStream_t stream)
+    int n_cols, int n_rows,
+    bool use_halpern_slack,
+    cudaStream_t stream)
 {
     // 1. Zero out results
     cudaMemsetAsync(d_results, 0, 4 * sizeof(double), stream);
@@ -393,7 +400,8 @@ void launchCheckConvergenceKernels_wrapper(
     dim3 grid_cols = GetLaunchConfig(n_cols, block_size);
     kernelCheckDual<<<grid_cols, block_size, 0, stream>>>(
         d_results, d_slack_pos, d_slack_neg, d_aty, d_x, 
-        d_col_cost, d_col_lower, d_col_upper, d_col_scale, n_cols
+        d_col_cost, d_col_lower, d_col_upper, d_col_scale, n_cols,
+        use_halpern_slack
     );
 
     cudaGetLastError();

@@ -303,7 +303,8 @@ class PDLPSolver {
   bool checkConvergenceGpu(const int iter, const double* d_x, const double* d_y,
                            const double* d_ax, const double* d_aty,
                            double epsilon, SolverResults& results,
-                           const char* type, double* d_slackPos_out, double* d_slackNeg_out);
+                           const char* type, double* d_slackPos_out, double* d_slackNeg_out,
+                           bool use_halpern_slack);
   void computeStepSizeRatioGpu(PrimalDualParams& working_params);
   void updateAverageIteratesGpu(int inner_iter);
   void computeAverageIterateGpu();

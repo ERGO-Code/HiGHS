@@ -859,34 +859,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     performHalpernPdhgStep(true, 1);
 #endif
 
-    if (final_iter_count_ == 0) {
-        std::cout << "========== HIPDLP DEBUG: AFTER PRIMAL ==========\n";
-        std::cout << "x_next (pdhg_primal): ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_[i] << " ";
-        std::cout << "\n";
-        
-        std::cout << "x_current_updated: ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_current_[i] << " ";
-        std::cout << "\n";
-
-        // 注: 如果你的代码在函数内部算反射并没有保存为全局变量，可以用公式打印看对不对
-        std::cout << "x_reflected (derived): ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << (x_current_[i] + 1.0 * (x_current_[i] - 0.0)) << " ";
-        std::cout << "\n";
-
-        std::cout << "========== HIPDLP DEBUG: AFTER DUAL ==========\n";
-        std::cout << "Ax_next_: ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << Ax_next_[i] << " ";
-        std::cout << "\n";
-        std::cout << "y_next (pdhg_dual): ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << y_next_[i] << " ";
-        std::cout << "\n";
-        
-        std::cout << "y_current_updated: ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << y_current_[i] << " ";
-        std::cout << "\n";
-    }
-
     if (do_restart) {
 #ifdef CUPDLP_GPU
       fpe_ = computeFixedPointErrorGpu();
@@ -2899,11 +2871,13 @@ bool PDLPSolver::checkConvergenceGpu(const int iter, const double* d_x,
                                      const double* d_aty, double epsilon,
                                      SolverResults& results, const char* type,
                                      double* d_slackPos_out,
-                                     double* d_slackNeg_out) {
+                                     double* d_slackNeg_out,
+                                     bool use_halpern_slack) {
   launchCheckConvergenceKernels_wrapper(
       d_convergence_results_, d_slackPos_out, d_slackNeg_out, d_x, d_y, d_ax, d_aty,
       d_col_cost_, d_row_lower_, d_col_lower_, d_col_upper_, d_is_equality_row_,
-      d_col_scale_, d_row_scale_, lp_.num_col_, lp_.num_row_, gpu_stream_);
+      d_col_scale_, d_row_scale_, lp_.num_col_, lp_.num_row_, use_halpern_slack,
+      gpu_stream_);
 
   // copy 4 doubles back to CPU
 
@@ -2939,6 +2913,9 @@ bool PDLPSolver::checkConvergenceGpu(const int iter, const double* d_x,
   bool dual_feasible =
       results.dual_feasibility < epsilon * (1.0 + unscaled_c_norm_);
   bool gap_small = results.relative_obj_gap < epsilon;
+
+  std::cout << "dual feasibility: " << results.dual_feasibility
+            << std::endl;
   return primal_feasible && dual_feasible && gap_small;
 }
 

@@ -36,7 +36,9 @@ void launchCheckConvergenceKernels_wrapper(
     const double* d_col_lower, const double* d_col_upper,
     const bool* d_is_equality,
     const double* d_col_scale, const double* d_row_scale,
-    int n_cols, int n_rows, cudaStream_t stream);
+    int n_cols, int n_rows, 
+    bool use_halpern_slack,
+    cudaStream_t stream);
 
 void launchKernelHalpernPrimalMinor_wrapper(
     const double* d_current_primal, double* d_reflected_primal,
