@@ -224,6 +224,11 @@ class HMpsFF {
   HMpsFF::Parsekey parseQuadRows(const HighsLogOptions& log_options,
                                  std::istream& file,
                                  const HMpsFF::Parsekey keyword);
+  HMpsFF::Parsekey parseQuadMatrix(const HighsLogOptions& log_options,
+                                   std::istream& file,
+                                   const std::string& section_name,
+                                   std::vector<Triplet>& q_entries);
+
   HMpsFF::Parsekey parseCones(const HighsLogOptions& log_options,
                               std::istream& file);
   HMpsFF::Parsekey parseSos(const HighsLogOptions& log_options,
