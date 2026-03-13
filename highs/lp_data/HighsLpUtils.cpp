@@ -3434,19 +3434,37 @@ HighsLp withoutIndicatorConstraints(
   };
   std::vector<NewRow> new_rows;
 
-  HighsInt iIndicatorCs = 0;
-  for (const HighsIndicatorConstraint& ic : lp.indicator_constraints_) {
-    iIndicatorCs++;
+  printf("\nReformulating %d indicator constraints\n", int(num_indicator));
+  for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
+    const HighsIndicatorConstraint& ic = lp.indicator_constraints_[indicator_n];
     const HighsInt nz = ic.row_index.size();
+    HighsInt from_el = lp.indicators_.matrix.start_[indicator_n];
+    HighsInt to_el = lp.indicators_.matrix.start_[indicator_n+1];
+    const HighsInt ck_nz = to_el - from_el;
+    assert(nz == ck_nz);
     // Compute activity bounds: min_activity and max_activity of a^T x
     double min_activity = 0;
     double max_activity = 0;
     bool finite_bounds = true;
+    HighsInt iEl = from_el-1;
     for (HighsInt k = 0; k < nz; k++) {
+      iEl++;
+
+      const HighsInt ck_col = lp.indicators_.matrix.index_[iEl];
+      const double ck_val = lp.indicators_.matrix.value_[iEl];
+      const double ck_lb = lp.col_lower_[ck_col];
+      const double ck_ub = lp.col_upper_[ck_col];
+
       const HighsInt col = ic.row_index[k];
       const double val = ic.row_value[k];
       const double lb = lp.col_lower_[col];
       const double ub = lp.col_upper_[col];
+
+      assert(ck_col == col);
+      assert(ck_val == val);
+      assert(ck_lb == lb);
+      assert(ck_ub == ub);
+
       if (val > 0) {
         if (lb <= -kHighsInf || ub >= kHighsInf) {
           finite_bounds = false;
@@ -3466,33 +3484,44 @@ HighsLp withoutIndicatorConstraints(
 
     double M_upper;
     double M_lower;
+    double lower = ic.row_lower;
+    double ck_lower = lp.indicators_.lower[indicator_n];
+    assert(ck_lower == lower);
+    double upper = ic.row_upper;
+    double ck_upper = lp.indicators_.upper[indicator_n];
+    assert(ck_upper == upper);
+
+    HighsInt binary_value = ic.binary_value;
+    HighsInt ck_binary_value = lp.indicators_.value[indicator_n];
+    assert(ck_binary_value == binary_value);
     if (finite_bounds) {
-      M_upper = ic.row_upper < kHighsInf
-                    ? std::max(0.0, max_activity - ic.row_upper)
+      M_upper = upper < kHighsInf
+                    ? std::max(0.0, max_activity - upper)
                     : 0;
-      M_lower = ic.row_lower > -kHighsInf
-                    ? std::max(0.0, ic.row_lower - min_activity)
+      M_lower = lower > -kHighsInf
+                    ? std::max(0.0, lower - min_activity)
                     : 0;
     } else {
       M_upper = kMaxIndicatorBigM;
       M_lower = kMaxIndicatorBigM;
-      save_indicator_constraint_with_max_big_m.push_back(iIndicatorCs);
+      save_indicator_constraint_with_max_big_m.push_back(indicator_n);
     }
 
     // Upper bound constraint: z=v -> a^T x <= U
     // v=1: a^T x <= U + M*(1-z) => a^T x + M*z <= U + M
     // v=0: a^T x <= U + M*z     => a^T x - M*z <= U
-    if (ic.row_upper < kHighsInf && M_upper > 0) {
+    if (upper < kHighsInf && M_upper > 0) {
       NewRow row;
       row.lower = -kHighsInf;
+    HighsInt iEl = from_el-1;
       for (HighsInt k = 0; k < nz; k++)
         row.entries.push_back({ic.row_index[k], ic.row_value[k]});
-      if (ic.binary_value == 1) {
+      if (binary_value == 1) {
         row.entries.push_back({ic.binary_col, M_upper});
-        row.upper = ic.row_upper + M_upper;
+        row.upper = upper + M_upper;
       } else {
         row.entries.push_back({ic.binary_col, -M_upper});
-        row.upper = ic.row_upper;
+        row.upper = upper;
       }
       if (have_row_names) {
         row.name =
@@ -3507,17 +3536,18 @@ HighsLp withoutIndicatorConstraints(
     // Lower bound constraint: z=v -> a^T x >= L
     // v=1: a^T x >= L - M*(1-z) => a^T x - M*z >= L - M
     // v=0: a^T x >= L - M*z     => a^T x + M*z >= L
-    if (ic.row_lower > -kHighsInf && M_lower > 0) {
+    if (lower > -kHighsInf && M_lower > 0) {
       NewRow row;
       row.upper = kHighsInf;
+    HighsInt iEl = from_el-1;
       for (HighsInt k = 0; k < nz; k++)
         row.entries.push_back({ic.row_index[k], ic.row_value[k]});
-      if (ic.binary_value == 1) {
+      if (binary_value == 1) {
         row.entries.push_back({ic.binary_col, -M_lower});
-        row.lower = ic.row_lower - M_lower;
+        row.lower = lower - M_lower;
       } else {
         row.entries.push_back({ic.binary_col, M_lower});
-        row.lower = ic.row_lower;
+        row.lower = lower;
       }
       if (have_row_names) {
         row.name =
