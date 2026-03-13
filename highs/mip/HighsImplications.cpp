@@ -426,7 +426,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
   VarBound vub{vubcoef, vubconstant};
 
   if (colisintegral) {
-    // try to strengthen VUB using MIR
+    // try to strengthen VUB
     strengthenVarBound(vub, HighsInt{1});
     if (vub.coef == 0.0) return;
   }
@@ -467,7 +467,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   VarBound vlb{vlbcoef, vlbconstant};
 
   if (colisintegral) {
-    // try to strengthen VLB using MIR
+    // try to strengthen VLB
     strengthenVarBound(vlb, HighsInt{-1});
     if (vlb.coef == 0.0) return;
   }
