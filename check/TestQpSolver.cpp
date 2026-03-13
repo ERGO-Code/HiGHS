@@ -462,7 +462,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     return_status = highs.clearModel();
 
     std::string filename;
-    for (HighsInt test_k = 0; test_k < 3; test_k++) {
+    for (HighsInt test_k = 0; test_k < 4; test_k++) {
       if (test_k == 0) {
         filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
       } else if (test_k == 1) {
