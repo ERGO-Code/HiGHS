@@ -60,6 +60,11 @@ class RestartScheme {
     params_->omega = std::sqrt(beta);
   };
   void SetLastRestartIter(int iter) { last_restart_iter_ = iter; };
+  double GetSufficientDecayFactor() const { return sufficient_decay_factor_; }
+  double GetNecessaryDecayFactor() const { return necessary_decay_factor_; }
+  double GetArtificialRestartThreshold() const {
+    return artificial_restart_threshold_;
+  }
 
   // State for adaptive restart
   // dPrimalFeasLastRestart = primal_feas_last_restart_
@@ -85,6 +90,7 @@ class RestartScheme {
 
   double sufficient_decay_factor_ = 0.2;
   double necessary_decay_factor_ = 0.8;
+  double artificial_restart_threshold_ = 0.36;
 };
 
 #endif  // PDLP_HIPDLP_RESTART_HPP

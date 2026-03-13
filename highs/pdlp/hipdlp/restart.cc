@@ -171,7 +171,8 @@ RestartInfo RestartScheme::Check(int current_iter,
   bool should_restart = false;
   PDHG_restart_choice restart_choice_for_logic = PDHG_NO_RESTART;
 
-  if ((current_iter - last_restart_iter_) >= 0.36 * current_iter) {
+  if ((current_iter - last_restart_iter_) >=
+      artificial_restart_threshold_ * current_iter) {
     // Condition 1: Artificial Restart
     should_restart = true;
   } else {

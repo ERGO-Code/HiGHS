@@ -818,6 +818,40 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       break;
     }
 
+    if (final_iter_count_ == 0){
+      stepsize_.primal_step = 0.1856249071;
+      stepsize_.dual_step   = 0.1095036898;
+
+      x_current_ = {0.0, 0.0, 0.0};
+      x_anchor_  = {0.0, 0.0, 0.0};
+      ATy_cache_ = {0.0, 0.0, 0.0};
+      
+      lp_.col_cost_  = {1.0, 4.0, 9.0};
+      lp_.col_lower_ = {0.0, -1.0, 0.0};
+      lp_.col_upper_ = {4.0, 1.0, 1e20}; // inf
+      lp_.num_col_   = 3;
+
+      y_current_ = {0.0, 0.0, 0.0};
+      y_anchor_  = {0.0, 0.0, 0.0};
+      lp_.num_row_   = 3;  
+    
+#ifdef CUPDLP_GPU
+      // Push the hardcoded test problem to the GPU!
+      CUDA_CHECK(cudaMemcpy(d_col_cost_, lp_.col_cost_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
+      CUDA_CHECK(cudaMemcpy(d_col_lower_, lp_.col_lower_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
+      CUDA_CHECK(cudaMemcpy(d_col_upper_, lp_.col_upper_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
+      
+      CUDA_CHECK(cudaMemcpy(d_x_current_, x_current_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
+      CUDA_CHECK(cudaMemcpy(d_x_anchor_, x_anchor_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
+      CUDA_CHECK(cudaMemcpy(d_y_current_, y_current_.data(), lp_.num_row_ * sizeof(double), cudaMemcpyHostToDevice));
+      CUDA_CHECK(cudaMemcpy(d_y_anchor_, y_anchor_.data(), lp_.num_row_ * sizeof(double), cudaMemcpyHostToDevice));
+      
+      // Re-evaluate SpMV for the new zero anchors
+      linalgGpuAx(d_x_current_, d_ax_current_);
+      linalgGpuATy(d_y_current_, d_aty_current_);
+#endif
+    }
+
     // -- Step 1 (Major, isolated for restart-FPE check) --
 #ifdef CUPDLP_GPU
     performHalpernPdhgStepGpu(true, 1);
@@ -825,13 +859,42 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     performHalpernPdhgStep(true, 1);
 #endif
 
-if (do_restart) {
+    if (final_iter_count_ == 0) {
+        std::cout << "========== HIPDLP DEBUG: AFTER PRIMAL ==========\n";
+        std::cout << "x_next (pdhg_primal): ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_[i] << " ";
+        std::cout << "\n";
+        
+        std::cout << "x_current_updated: ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_current_[i] << " ";
+        std::cout << "\n";
+
+        // 注: 如果你的代码在函数内部算反射并没有保存为全局变量，可以用公式打印看对不对
+        std::cout << "x_reflected (derived): ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << (x_current_[i] + 1.0 * (x_current_[i] - 0.0)) << " ";
+        std::cout << "\n";
+
+        std::cout << "========== HIPDLP DEBUG: AFTER DUAL ==========\n";
+        std::cout << "Ax_next_: ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << Ax_next_[i] << " ";
+        std::cout << "\n";
+        std::cout << "y_next (pdhg_dual): ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << y_next_[i] << " ";
+        std::cout << "\n";
+        
+        std::cout << "y_current_updated: ";
+        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << y_current_[i] << " ";
+        std::cout << "\n";
+    }
+
+    if (do_restart) {
 #ifdef CUPDLP_GPU
       fpe_ = computeFixedPointErrorGpu();
 #else
       fpe_ = computeFixedPointError();
 #endif
       initial_fpe_ = fpe_;
+      std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restarted with initial_fpe_ = " << initial_fpe_ << std::endl;
       do_restart = false;
     }
 
@@ -867,6 +930,7 @@ if (do_restart) {
   #else
       fpe_ = computeFixedPointError();
   #endif
+    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE at check: " << fpe_ << std::endl;
       
     halpern_iteration_ += PDHG_CHECK_INTERVAL;
     final_iter_count_ += PDHG_CHECK_INTERVAL;
@@ -884,7 +948,17 @@ if (do_restart) {
     if (final_iter_count_ == PDHG_CHECK_INTERVAL) {
       do_restart = true;
     } else if (final_iter_count_ > PDHG_CHECK_INTERVAL) {
-      if (fpe_ <= 0.2 * initial_fpe_) {
+      if (fpe_ <= restart_scheme_.GetSufficientDecayFactor() * initial_fpe_) {
+        do_restart = true;
+      }
+      if (fpe_ <= restart_scheme_.GetNecessaryDecayFactor() * initial_fpe_) {
+        if (fpe_ > last_trial_fpe) {
+          do_restart = true;
+        }
+      }
+      if (halpern_iteration_ >=
+          restart_scheme_.GetArtificialRestartThreshold() *
+              final_iter_count_) {
         do_restart = true;
       }
     }
@@ -1096,6 +1170,7 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
     return true; // Stop
   }
 
+  results_ = current_results;
   return false;
 }
 
@@ -2019,7 +2094,8 @@ void PDLPSolver::initializeStepSizes() {
   }
 
   // Initialize step sizes based on strategy
-  if (params_.step_size_strategy == StepSizeStrategy::FIXED) {
+  if (params_.step_size_strategy == StepSizeStrategy::FIXED ||
+      params_.step_size_strategy == StepSizeStrategy::PID) {
     // Use power method for fixed step size
     //const double op_norm_sq = PowerMethod();
     double op_norm_sq = PowerMethod();
@@ -2041,20 +2117,6 @@ void PDLPSolver::initializeStepSizes() {
                  "Initial step sizes from power method lambda = %g: primal = "
                  "%g; dual = %g\n",
                  op_norm_sq, stepsize_.primal_step, stepsize_.dual_step);
-  } else if (params_.step_size_strategy == StepSizeStrategy::PID) {
-    const double op_norm_sq = PowerMethod();
-    stepsize_.power_method_lambda = op_norm_sq;
-    const double safety_factor = 0.998;
-    double base_step = safety_factor / std::sqrt(op_norm_sq);
-
-    primal_weight_ = 1.0;
-    best_primal_weight_ = primal_weight_;
-    best_primal_dual_residual_gap_ = INFINITY;
-    primal_weight_error_sum_ = 0.0;
-    primal_weight_last_error_ = 0.0;
-    stepsize_.beta = primal_weight_ * primal_weight_;
-    stepsize_.primal_step = base_step / primal_weight_;  // = base_step
-    stepsize_.dual_step = base_step * primal_weight_;
   } else {
     // Use matrix infinity norm for adaptive step size
     // Compute infinity norm of matrix elements
@@ -2103,8 +2165,8 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   dual_dist = std::sqrt(dual_dist);
 #endif
 
-  double rel_primal = results.primal_feasibility / (1.0 + unscaled_rhs_norm_);
-  double rel_dual   = results.dual_feasibility   / (1.0 + unscaled_c_norm_);
+  double rel_primal = results.primal_feasibility;
+  double rel_dual   = results.dual_feasibility;
   double ratio_infeas = (rel_primal > 0.0) ? (rel_dual / rel_primal) : 1e300;
 
   std::cout << "Restart check: primal_dist = " << primal_dist
@@ -2155,6 +2217,7 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   stepsize_.beta = primal_weight_ * primal_weight_;
   stepsize_.primal_step = eta / primal_weight_;
   stepsize_.dual_step   = eta * primal_weight_;
+  params_.omega = primal_weight_;
   restart_scheme_.UpdateBeta(stepsize_.beta);
 }
 
