@@ -237,7 +237,7 @@ else()
 endif()
 
 # HiPO deps
-if(HIPO)
+if(HIPO AND NOT HIPO_PYTHON_EXTRAS_BUILD)
   # find_package(METIS REQUIRED)
   # find_package(GKlib REQUIRED)
   # does not work with outdated CMake

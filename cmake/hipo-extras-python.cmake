@@ -6,11 +6,26 @@ if (NOT HIPO_EXTRAS_LIBRARY_BUILD)
 endif()
 
 if (NOT APPLE)
-    set(BUILD_OPENBLAS ON) # *** for now always build openblas
+  set(BUILD_OPENBLAS ON CACHE BOOL "Build OpenBLAS" FORCE)
+    # set(BUILD_OPENBLAS ON) # *** for now always build openblas
 endif()
 
 include(sources-python)
+
+if (HIPO_EXTRAS_LIBRARY_BUILD AND NOT APPLE)
+    set(BUILD_OPENBLAS ON CACHE BOOL "Build OpenBLAS" FORCE)
+endif()
+
+message(STATUS "BUILD_OPENBLAS after force: ${BUILD_OPENBLAS}")
 include(FindHipoDeps)
+message(STATUS "BUILD_OPENBLAS after FindHipoDeps: ${BUILD_OPENBLAS}")
+if(TARGET openblas_static)
+    message(STATUS "openblas_static EXISTS after FindHipoDeps")
+else()
+    message(STATUS "openblas_static MISSING after FindHipoDeps")
+endif()
+
+# include(FindHipoDeps)
 
 # Create shared library
 add_library(highs_extras SHARED
@@ -98,12 +113,43 @@ endif()
 if (BUILD_OPENBLAS)
   message(STATUS "WE ARE HERE")
 
-  set(OPENBLAS_STATIC_LIB ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/libopenblas.a)
-  if(NOT EXISTS ${OPENBLAS_STATIC_LIB})
-    message(FATAL_ERROR "OpenBLAS static lib not found at: ${OPENBLAS_STATIC_LIB}")
+  if (LINUX)
+    set(OPENBLAS_STATIC_LIB ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/libopenblas.a)
+    if(NOT EXISTS ${OPENBLAS_STATIC_LIB})
+      message(FATAL_ERROR "OpenBLAS static lib not found at: ${OPENBLAS_STATIC_LIB}")
+    endif()
+    target_link_libraries(highs_extras PUBLIC ${OPENBLAS_STATIC_LIB})
   endif()
 
-  target_link_libraries(highs_extras PUBLIC ${OPENBLAS_STATIC_LIB})
+  # let the linker fail naturally
+  # if (WIN32)
+  #   set(OPENBLAS_STATIC_LIB ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/openblas.lib)
+  #   if(NOT EXISTS ${OPENBLAS_STATIC_LIB})
+  #     message(FATAL_ERROR "OpenBLAS static lib not found at: ${OPENBLAS_STATIC_LIB}")
+  #   endif()
+  # endif()
+
+  if (WIN32)
+  get_property(all_targets DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+message(STATUS "All targets at highs_extras link time: ${all_targets}")
+
+if(TARGET openblas_static)
+    message(STATUS "openblas_static EXISTS")
+else()
+    message(STATUS "openblas_static DOES NOT EXIST")
+endif()
+
+        add_dependencies(highs_extras openblas_static)
+        # target_link_directories(highs_extras PRIVATE
+        #       ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/Release
+        #       ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/Debug
+        #       ${CMAKE_BINARY_DIR}/_deps/openblas-build/Release
+        #       ${CMAKE_BINARY_DIR}/_deps/openblas-build/Debug
+        #   )
+        target_link_libraries(highs_extras PRIVATE openblas)
+        target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
+  endif()
+
   # target_link_libraries(highs_extras PUBLIC openblas)
 
   target_include_directories(highs_extras PUBLIC

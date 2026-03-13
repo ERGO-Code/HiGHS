@@ -101,6 +101,6 @@ install(TARGETS _core
 
 # Include highs library (but ignore .lib file)
 install(TARGETS highs
-        #RUNTIME DESTINATION highspy
+        RUNTIME DESTINATION highspy
         LIBRARY DESTINATION highspy
         NAMELINK_SKIP)

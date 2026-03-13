@@ -1,7 +1,10 @@
 # Fetch OpenBLAS
-if (HIPO_PYTHON_EXTRAS_BUILD)
-  return()
-endif()
+message(STATUS "FindHipoDeps: RUNNING, BUILD_OPENBLAS=${BUILD_OPENBLAS}")
+
+message(STATUS "BUILD_OPENBLAS = ${BUILD_OPENBLAS}")
+message(STATUS "APPLE = ${APPLE}")
+message(STATUS "WIN32 = ${WIN32}")
+
 
 if (BUILD_OPENBLAS)
     include(FetchContent)
@@ -165,6 +168,8 @@ if (BUILD_OPENBLAS)
             # -DCORE_OPTIMIZATION="-O3"
     )
     FetchContent_MakeAvailable(openblas)
+    get_property(all_targets DIRECTORY ${openblas_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+    message(STATUS "OpenBLAS targets: ${all_targets}")
 
     if (ALL_TESTS)
         set(BUILD_TESTING ON)

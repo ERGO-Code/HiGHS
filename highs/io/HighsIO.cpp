@@ -17,6 +17,10 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
+#ifdef HIPO_EXTRAS
+#include "DynamicDepsLoader.h"
+#endif
+
 void highsLogHeader(const HighsLogOptions& log_options,
                     const bool log_githash) {
   const std::string githash_string(HIGHS_GITHASH);
@@ -33,7 +37,14 @@ void highsLogHeader(const HighsLogOptions& log_options,
                BLAS_LIBRARIES);
 #else
 #ifdef HIPO_USES_OPENBLAS
+#ifndef HIPO_EXTRAS
   highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: OpenBLAS \n");
+#else
+  DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
+  if (hipo_loader.isAvailable()) {
+    highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: OpenBLAS from Python\n");
+  }
+#endif
 #else
   highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: unknown \n");
 #endif
