@@ -468,7 +468,7 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
 #else
   DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
   if (hipo_loader.isAvailable()) {
-    hipo_loader.fn_hipo_extras_openblas_set_num_threads(1);
+    hipo_loader.fn_hipo_extras_openblas_set_num_threads_(1);
   }
 #endif
 #endif
