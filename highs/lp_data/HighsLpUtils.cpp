@@ -3383,16 +3383,6 @@ HighsLp withoutIndicatorConstraints(
   if (solution.value_valid)
     solution.row_value.resize(lp.num_row_ + num_indicator);
 
-  // Collect all new rows from indicator constraints, stored per-column
-  // for colwise insertion
-  struct NewRow {
-    double lower;
-    double upper;
-    std::string name;
-    std::vector<std::pair<HighsInt, double>> entries;  // (col, value)
-  };
-  std::vector<NewRow> new_rows;
-
   // New data structure generates a single row to be added to the LP
   double new_row_lower;
   double new_row_upper;
@@ -3463,36 +3453,26 @@ HighsLp withoutIndicatorConstraints(
     // v=1: a^T x <= U + M*(1-z) => a^T x + M*z <= U + M
     // v=0: a^T x <= U + M*z     => a^T x - M*z <= U
     if (upper < kHighsInf && M_upper > 0) {
-      NewRow row;
-      row.lower = -kHighsInf;
       new_row_lower = -kHighsInf;
 
       for (HighsInt iEl = from_el; iEl < to_el; iEl++) {
-        row.entries.push_back({
-	    lp.indicators_.matrix.index_[iEl],
-	    lp.indicators_.matrix.value_[iEl]});
 	new_row_index.push_back(lp.indicators_.matrix.index_[iEl]);
 	new_row_value.push_back(lp.indicators_.matrix.value_[iEl]);
       }
       if (binary_value == 1) {
-	row.entries.push_back({binary_col, M_upper});
 	new_row_index.push_back(binary_col);
 	new_row_value.push_back(M_upper);
-	row.upper = upper + M_upper;
 	new_row_upper = upper + M_upper;
       } else {
-	row.entries.push_back({binary_col, -M_upper});
 	new_row_index.push_back(binary_col);
 	new_row_value.push_back(-M_upper);
-	row.upper = upper;
 	new_row_upper = upper;
       }
       if (have_row_names) {
 	std::string local_name = name.empty()
 	  ? "indicator_upper_" +
-	  std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
+	  std::to_string(lp.num_row_ + num_new_row)
 	  : name + "_upper";
-	row.name = local_name;
 	new_row_name = local_name;
       }
       num_new_row++;
@@ -3502,56 +3482,36 @@ HighsLp withoutIndicatorConstraints(
 	lp.row_names_.push_back(new_row_name);
 	HighsInt nnz = new_row_index.size();
 	lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
-      } else {
-	assert(new_row_lower == row.lower);
-	assert(new_row_upper == row.upper);
-	assert(new_row_name == row.name);
-	HighsInt nnz = new_row_index.size();
-	for (HighsInt iEl = 0; iEl < nnz; iEl++) {
-	  assert(new_row_index[iEl] == row.entries[iEl].first);
-	  assert(new_row_value[iEl] == row.entries[iEl].second);
-	}
       }
       new_row_index.clear();
       new_row_value.clear();
-      new_rows.push_back(std::move(row));
     }
 
     // Lower bound constraint: z=v -> a^T x >= L
     // v=1: a^T x >= L - M*(1-z) => a^T x - M*z >= L - M
     // v=0: a^T x >= L - M*z     => a^T x + M*z >= L
     if (lower > -kHighsInf && M_lower > 0) {
-      NewRow row;
-      row.upper = kHighsInf;
       new_row_upper = kHighsInf;
       HighsInt iEl = from_el-1;
       for (HighsInt iEl = from_el; iEl < to_el; iEl++) {
-        row.entries.push_back({
-	    lp.indicators_.matrix.index_[iEl],
-	    lp.indicators_.matrix.value_[iEl]});
 	new_row_index.push_back(lp.indicators_.matrix.index_[iEl]);
 	new_row_value.push_back(lp.indicators_.matrix.value_[iEl]);
       }
       if (binary_value == 1) {
-        row.entries.push_back({binary_col, -M_lower});
 	new_row_index.push_back(binary_col);
 	new_row_value.push_back(-M_lower);
-        row.lower = lower - M_lower;
 	new_row_lower = lower - M_lower;
       } else {
-        row.entries.push_back({binary_col, M_lower});
 	new_row_index.push_back(binary_col);
 	new_row_value.push_back(M_lower);
-        row.lower = lower;
 	new_row_lower = lower;
       }
       if (have_row_names) {
 	std::string local_name = 
             name.empty()
                 ? "indicator_lower_" +
-                      std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
+                      std::to_string(lp.num_row_ + num_new_row)
                 : name + "_lower";
-        row.name =local_name;
 	new_row_name = local_name;
       }
       num_new_row++;
@@ -3561,19 +3521,9 @@ HighsLp withoutIndicatorConstraints(
 	lp.row_names_.push_back(new_row_name);
 	HighsInt nnz = new_row_index.size();
 	lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
-      } else {
-	assert(new_row_lower == row.lower);
-	assert(new_row_upper == row.upper);
-	assert(new_row_name == row.name);
-	HighsInt nnz = new_row_index.size();
-	for (HighsInt iEl = 0; iEl < nnz; iEl++) {
-	  assert(new_row_index[iEl] == row.entries[iEl].first);
-	  assert(new_row_value[iEl] == row.entries[iEl].second);
-	}
       }
       new_row_index.clear();
       new_row_value.clear();
-      new_rows.push_back(std::move(row));
     }
   }
   HighsInt num_with_max_big_m = save_indicator_constraint_with_max_big_m.size();
@@ -3583,16 +3533,10 @@ HighsLp withoutIndicatorConstraints(
                  int(num_with_max_big_m),
                  num_with_max_big_m == 1 ? " has" : "s have");
   }
-  assert((num_new_row == 0) == (new_rows.empty()));
   if (use_new_row) {
     if (num_new_row == 0) {
       lp.indicators_.clear();
       lp.a_matrix_.ensureColwise();
-      return lp;
-    }
-  } else {
-    if (new_rows.empty()) {
-      lp.indicators_.clear();
       return lp;
     }
   }
@@ -3600,67 +3544,6 @@ HighsLp withoutIndicatorConstraints(
   if (use_new_row) {
     lp.a_matrix_.ensureColwise();
     lp.num_row_ += num_new_row;
-  } else {   
-    const HighsInt num_new_rows = new_rows.size();
-    const HighsInt base_row = lp.num_row_;
-
-    // Add row bounds and names
-    for (HighsInt r = 0; r < num_new_rows; r++) {
-      lp.row_lower_.push_back(new_rows[r].lower);
-      lp.row_upper_.push_back(new_rows[r].upper);
-      if (have_row_names) lp.row_names_.push_back(new_rows[r].name);
-    }
-
-    // Count new nonzeros per column
-    std::vector<HighsInt> col_new_nz(num_col, 0);
-    for (HighsInt r = 0; r < num_new_rows; r++)
-      for (const auto& entry : new_rows[r].entries) col_new_nz[entry.first]++;
-
-    // Insert new entries into column-wise matrix
-    vector<HighsInt>& start = lp.a_matrix_.start_;
-    vector<HighsInt>& index = lp.a_matrix_.index_;
-    vector<double>& value = lp.a_matrix_.value_;
-    const HighsInt old_num_nz = start[num_col];
-
-    // Compute total new nonzeros
-    HighsInt total_new_nz = 0;
-    for (HighsInt iCol = 0; iCol < num_col; iCol++)
-      total_new_nz += col_new_nz[iCol];
-
-    const HighsInt new_num_nz = old_num_nz + total_new_nz;
-    index.resize(new_num_nz);
-    value.resize(new_num_nz);
-
-    // Shift existing entries from right to left to make room
-    HighsInt new_el = new_num_nz;
-    for (HighsInt iCol = num_col - 1; iCol >= 0; iCol--) {
-      // Reserve space for new entries for this column at the end
-      new_el -= col_new_nz[iCol];
-      // Copy existing entries
-      HighsInt from_el = start[iCol + 1] - 1;
-      start[iCol + 1] = new_el + col_new_nz[iCol];
-      for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
-	new_el--;
-	index[new_el] = index[iEl];
-	value[new_el] = value[iEl];
-      }
-    }
-    assert(new_el == 0);
-
-    // Now fill in the new entries. Track how many have been placed per column
-    std::vector<HighsInt> col_placed(num_col, 0);
-    for (HighsInt r = 0; r < num_new_rows; r++) {
-      const HighsInt row_idx = base_row + r;
-      for (const auto& entry : new_rows[r].entries) {
-	const HighsInt col = entry.first;
-	// Position for new entry: end of column minus remaining slots
-	HighsInt pos = start[col + 1] - col_new_nz[col] + col_placed[col];
-	index[pos] = row_idx;
-	value[pos] = entry.second;
-	col_placed[col]++;
-      }
-    }
-    lp.num_row_ += num_new_rows;
   }
   lp.indicators_.clear();
   lp.a_matrix_.num_col_ = lp.num_col_;
