@@ -59,7 +59,7 @@ class HighsLp {
 
   std::vector<HighsVarType> integrality_;
 
-  std::vector<HighsIndicatorConstraint> indicator_constraints_;
+  //  std::vector<HighsIndicatorConstraint> indicator_constraints_;
   HighsIndicatorConstraints indicators_;
 
   HighsNameHash col_hash_;

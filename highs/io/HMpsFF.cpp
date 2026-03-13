@@ -158,24 +158,10 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     lp.a_matrix_.ensureRowwise();
     // Build indicator constraints
     for (const auto& ri : raw_indicators) {
-      HighsIndicatorConstraint ic;
-      ic.binary_col = ri.binary_col;
-      ic.binary_value = ri.binary_value;
-      ic.row_lower = lp.row_lower_[ri.row_idx];
-      ic.row_upper = lp.row_upper_[ri.row_idx];
-      if (!lp.row_names_.empty() &&
-          static_cast<size_t>(ri.row_idx) < lp.row_names_.size()) {
-        ic.name = lp.row_names_[ri.row_idx];
-      }
-      for (const auto& entry : row_entries[ri.row_idx]) {
-        ic.row_index.push_back(entry.first);
-        ic.row_value.push_back(entry.second);
-      }
       // Ensure binary variable is integer
       if (lp.integrality_[ri.binary_col] == HighsVarType::kContinuous) {
         lp.integrality_[ri.binary_col] = HighsVarType::kInteger;
       }
-      lp.indicator_constraints_.push_back(std::move(ic));
       // In the new format
       HighsInt iRow = ri.row_idx;
       lp.indicators_.col.push_back(ri.binary_col);

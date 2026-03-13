@@ -295,10 +295,6 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 HighsLp withoutSemiVariables(const HighsLp& lp, HighsSolution& solution,
                              const double primal_feasibility_tolerance);
 
-void equalIndicatorConstraints(
-    const HighsIndicatorConstraints& indicators,
-    const std::vector<HighsIndicatorConstraint>& indicator_constraints);
-
 HighsLp withoutIndicatorConstraints(
     const HighsLp& lp, const HighsLogOptions& log_options,
     const double primal_feasibility_tolerance, HighsSolution& solution,

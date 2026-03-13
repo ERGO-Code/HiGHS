@@ -420,8 +420,6 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp,
          indicator_n++) {
       lp.indicators_.name[indicator_n] =
           lp.row_names_[lp.num_row_ + indicator_n];
-      lp.indicator_constraints_[indicator_n].name =
-          lp.indicators_.name[indicator_n];
     }
     // ... and resize back to size for vanilla rows
     lp.row_names_.resize(lp.num_row_);

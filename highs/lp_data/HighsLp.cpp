@@ -27,7 +27,7 @@ bool HighsLp::isMip() const {
 }
 
 bool HighsLp::hasIndicatorConstraints() const {
-  return !this->indicator_constraints_.empty();
+  return this->indicators_.col.size();
 }
 
 bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
@@ -99,9 +99,6 @@ bool HighsLp::equalVectors(const HighsLp& lp) const {
   equal_vectors = this->col_lower_ == lp.col_lower_ && equal_vectors;
   equal_vectors = this->row_upper_ == lp.row_upper_ && equal_vectors;
   equal_vectors = this->row_lower_ == lp.row_lower_ && equal_vectors;
-  equal_vectors =
-      this->indicator_constraints_.size() == lp.indicator_constraints_.size() &&
-      equal_vectors;
 #ifndef NDEBUG
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif
@@ -227,7 +224,6 @@ void HighsLp::clear() {
 
   this->integrality_.clear();
 
-  this->indicator_constraints_.clear();
   this->indicators_.clear();
 
   this->col_hash_.clear();

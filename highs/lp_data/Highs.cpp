@@ -2764,16 +2764,6 @@ HighsStatus Highs::addIndicatorConstraint(
     return HighsStatus::kError;
   }
 
-  HighsIndicatorConstraint ic;
-  ic.binary_col = binary_col;
-  ic.binary_value = binary_value;
-  ic.row_index.assign(indices, indices + num_nz);
-  ic.row_value.assign(values, values + num_nz);
-  ic.row_lower = lower;
-  ic.row_upper = upper;
-  ic.name = "";
-  lp.indicator_constraints_.push_back(std::move(ic));
-
   HighsIndicatorConstraints& indicators = lp.indicators_;
   // If this is the first IC, ensure that the matrix is rowwise
   if (!indicators.col.size())
@@ -2794,7 +2784,7 @@ HighsStatus Highs::addIndicatorConstraint(
 }
 
 HighsInt Highs::getNumIndicatorConstraints() const {
-  return static_cast<HighsInt>(model_.lp_.indicator_constraints_.size());
+  return static_cast<HighsInt>(model_.lp_.indicators_.col.size());
 }
 
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
