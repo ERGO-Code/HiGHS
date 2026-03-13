@@ -674,16 +674,6 @@ HighsStatus Highs::readModel(const std::string& filename) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
-  const bool remove_rows_of_count_1 = false;
-  if (remove_rows_of_count_1) {
-    // .lp files from PWSC (notably st-test23.lp) have bounds for
-    // semi-continuous variables in the constraints section. By default,
-    // these are interpreted as constraints, so the semi-continuous
-    // variables are not set up correctly. Fix is to remove all rows of
-    // count 1, interpreting their bounds as bounds on the corresponding
-    // variable.
-    removeRowsOfCountOne(options_.log_options, model.lp_);
-  }
   return_status =
       interpretCallStatus(options_.log_options, passModel(std::move(model)),
                           return_status, "passModel");

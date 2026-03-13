@@ -300,8 +300,6 @@ HighsLp withoutIndicatorConstraints(
     const double primal_feasibility_tolerance, HighsSolution& solution,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m);
 
-void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
-
 // Get subvectors from data structure of data0, data1, data2 and
 // matrix, where the storage of the matrix is compatible with the
 // vectors to be extracted from it
