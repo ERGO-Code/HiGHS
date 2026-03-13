@@ -3399,9 +3399,9 @@ HighsLp withoutIndicatorConstraints(
   std::vector<HighsInt> new_row_index;
   std::vector<double> new_row_value;
   std::string new_row_name;
-  const bool use_new_row = false;
+  const bool use_new_row = true;//false;
   if (use_new_row) lp.a_matrix_.ensureRowwise();
-    
+  HighsInt num_new_row = 0;
   printf("\nReformulating %d indicator constraints\n", int(num_indicator));
   for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
     HighsInt from_el = lp.indicators_.matrix.start_[indicator_n];
@@ -3495,6 +3495,7 @@ HighsLp withoutIndicatorConstraints(
 	row.name = local_name;
 	new_row_name = local_name;
       }
+      num_new_row++;
       if (use_new_row) {
 	lp.row_lower_.push_back(new_row_lower);
 	lp.row_upper_.push_back(new_row_upper);
@@ -3553,6 +3554,7 @@ HighsLp withoutIndicatorConstraints(
         row.name =local_name;
 	new_row_name = local_name;
       }
+      num_new_row++;
       if (use_new_row) {
 	lp.row_lower_.push_back(new_row_lower);
 	lp.row_upper_.push_back(new_row_upper);
@@ -3581,72 +3583,85 @@ HighsLp withoutIndicatorConstraints(
                  int(num_with_max_big_m),
                  num_with_max_big_m == 1 ? " has" : "s have");
   }
-  if (new_rows.empty()) {
-    lp.indicators_.clear();
-    return lp;
-  }
-
-  const HighsInt num_new_rows = new_rows.size();
-  const HighsInt base_row = lp.num_row_;
-
-  // Add row bounds and names
-  for (HighsInt r = 0; r < num_new_rows; r++) {
-    lp.row_lower_.push_back(new_rows[r].lower);
-    lp.row_upper_.push_back(new_rows[r].upper);
-    if (have_row_names) lp.row_names_.push_back(new_rows[r].name);
-  }
-
-  // Count new nonzeros per column
-  std::vector<HighsInt> col_new_nz(num_col, 0);
-  for (HighsInt r = 0; r < num_new_rows; r++)
-    for (const auto& entry : new_rows[r].entries) col_new_nz[entry.first]++;
-
-  // Insert new entries into column-wise matrix
-  vector<HighsInt>& start = lp.a_matrix_.start_;
-  vector<HighsInt>& index = lp.a_matrix_.index_;
-  vector<double>& value = lp.a_matrix_.value_;
-  const HighsInt old_num_nz = start[num_col];
-
-  // Compute total new nonzeros
-  HighsInt total_new_nz = 0;
-  for (HighsInt iCol = 0; iCol < num_col; iCol++)
-    total_new_nz += col_new_nz[iCol];
-
-  const HighsInt new_num_nz = old_num_nz + total_new_nz;
-  index.resize(new_num_nz);
-  value.resize(new_num_nz);
-
-  // Shift existing entries from right to left to make room
-  HighsInt new_el = new_num_nz;
-  for (HighsInt iCol = num_col - 1; iCol >= 0; iCol--) {
-    // Reserve space for new entries for this column at the end
-    new_el -= col_new_nz[iCol];
-    // Copy existing entries
-    HighsInt from_el = start[iCol + 1] - 1;
-    start[iCol + 1] = new_el + col_new_nz[iCol];
-    for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
-      new_el--;
-      index[new_el] = index[iEl];
-      value[new_el] = value[iEl];
+  assert((num_new_row == 0) == (new_rows.empty()));
+  if (use_new_row) {
+    if (num_new_row == 0) {
+      lp.indicators_.clear();
+      lp.a_matrix_.ensureColwise();
+      return lp;
     }
-  }
-  assert(new_el == 0);
-
-  // Now fill in the new entries. Track how many have been placed per column
-  std::vector<HighsInt> col_placed(num_col, 0);
-  for (HighsInt r = 0; r < num_new_rows; r++) {
-    const HighsInt row_idx = base_row + r;
-    for (const auto& entry : new_rows[r].entries) {
-      const HighsInt col = entry.first;
-      // Position for new entry: end of column minus remaining slots
-      HighsInt pos = start[col + 1] - col_new_nz[col] + col_placed[col];
-      index[pos] = row_idx;
-      value[pos] = entry.second;
-      col_placed[col]++;
+  } else {
+    if (new_rows.empty()) {
+      lp.indicators_.clear();
+      return lp;
     }
   }
 
-  lp.num_row_ += num_new_rows;
+  if (use_new_row) {
+    lp.a_matrix_.ensureColwise();
+    lp.num_row_ += num_new_row;
+  } else {   
+    const HighsInt num_new_rows = new_rows.size();
+    const HighsInt base_row = lp.num_row_;
+
+    // Add row bounds and names
+    for (HighsInt r = 0; r < num_new_rows; r++) {
+      lp.row_lower_.push_back(new_rows[r].lower);
+      lp.row_upper_.push_back(new_rows[r].upper);
+      if (have_row_names) lp.row_names_.push_back(new_rows[r].name);
+    }
+
+    // Count new nonzeros per column
+    std::vector<HighsInt> col_new_nz(num_col, 0);
+    for (HighsInt r = 0; r < num_new_rows; r++)
+      for (const auto& entry : new_rows[r].entries) col_new_nz[entry.first]++;
+
+    // Insert new entries into column-wise matrix
+    vector<HighsInt>& start = lp.a_matrix_.start_;
+    vector<HighsInt>& index = lp.a_matrix_.index_;
+    vector<double>& value = lp.a_matrix_.value_;
+    const HighsInt old_num_nz = start[num_col];
+
+    // Compute total new nonzeros
+    HighsInt total_new_nz = 0;
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      total_new_nz += col_new_nz[iCol];
+
+    const HighsInt new_num_nz = old_num_nz + total_new_nz;
+    index.resize(new_num_nz);
+    value.resize(new_num_nz);
+
+    // Shift existing entries from right to left to make room
+    HighsInt new_el = new_num_nz;
+    for (HighsInt iCol = num_col - 1; iCol >= 0; iCol--) {
+      // Reserve space for new entries for this column at the end
+      new_el -= col_new_nz[iCol];
+      // Copy existing entries
+      HighsInt from_el = start[iCol + 1] - 1;
+      start[iCol + 1] = new_el + col_new_nz[iCol];
+      for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
+	new_el--;
+	index[new_el] = index[iEl];
+	value[new_el] = value[iEl];
+      }
+    }
+    assert(new_el == 0);
+
+    // Now fill in the new entries. Track how many have been placed per column
+    std::vector<HighsInt> col_placed(num_col, 0);
+    for (HighsInt r = 0; r < num_new_rows; r++) {
+      const HighsInt row_idx = base_row + r;
+      for (const auto& entry : new_rows[r].entries) {
+	const HighsInt col = entry.first;
+	// Position for new entry: end of column minus remaining slots
+	HighsInt pos = start[col + 1] - col_new_nz[col] + col_placed[col];
+	index[pos] = row_idx;
+	value[pos] = entry.second;
+	col_placed[col]++;
+      }
+    }
+    lp.num_row_ += num_new_rows;
+  }
   lp.indicators_.clear();
   lp.a_matrix_.num_col_ = lp.num_col_;
   lp.a_matrix_.num_row_ = lp.num_row_;
