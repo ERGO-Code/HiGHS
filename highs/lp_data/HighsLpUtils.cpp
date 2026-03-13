@@ -3392,21 +3392,19 @@ HighsLp withoutIndicatorConstraints(
   lp.a_matrix_.ensureRowwise();
   HighsInt num_new_row = 0;
   printf("\nReformulating %d indicator constraints\n", int(num_indicator));
+  HighsIndicatorConstraints& indicators = lp.indicators_;
   for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
-    HighsInt from_el = lp.indicators_.matrix.start_[indicator_n];
-    HighsInt to_el = lp.indicators_.matrix.start_[indicator_n+1];
+    HighsInt from_el = indicators.matrix.start_[indicator_n];
+    HighsInt to_el = indicators.matrix.start_[indicator_n+1];
     // Compute activity bounds: min_activity and max_activity of a^T x
     double min_activity = 0;
     double max_activity = 0;
     bool finite_bounds = true;
     for (HighsInt iEl = from_el; iEl < to_el; iEl++) {
-      
-
-      const HighsInt col = lp.indicators_.matrix.index_[iEl];
-      const double val = lp.indicators_.matrix.value_[iEl];
+      const HighsInt col = indicators.matrix.index_[iEl];
+      const double val = indicators.matrix.value_[iEl];
       const double lb = lp.col_lower_[col];
       const double ub = lp.col_upper_[col];
-
       if (val > 0) {
         if (lb <= -kHighsInf || ub >= kHighsInf) {
           finite_bounds = false;
@@ -3426,14 +3424,11 @@ HighsLp withoutIndicatorConstraints(
 
     double M_upper;
     double M_lower;
-    double lower = lp.indicators_.lower[indicator_n];
-    double upper = lp.indicators_.upper[indicator_n];
-
-    HighsInt binary_value = lp.indicators_.value[indicator_n];
-
-    std::string name = lp.indicators_.name[indicator_n];
-
-    HighsInt binary_col = lp.indicators_.col[indicator_n];
+    double lower = indicators.lower[indicator_n];
+    double upper = indicators.upper[indicator_n];
+    HighsInt binary_value = indicators.value[indicator_n];
+    HighsInt binary_col = indicators.col[indicator_n];
+    std::string name = indicators.name[indicator_n];
    
     if (finite_bounds) {
       M_upper = upper < kHighsInf
@@ -3453,10 +3448,9 @@ HighsLp withoutIndicatorConstraints(
     // v=0: a^T x <= U + M*z     => a^T x - M*z <= U
     if (upper < kHighsInf && M_upper > 0) {
       new_row_lower = -kHighsInf;
-
       for (HighsInt iEl = from_el; iEl < to_el; iEl++) {
-	new_row_index.push_back(lp.indicators_.matrix.index_[iEl]);
-	new_row_value.push_back(lp.indicators_.matrix.value_[iEl]);
+	new_row_index.push_back(indicators.matrix.index_[iEl]);
+	new_row_value.push_back(indicators.matrix.value_[iEl]);
       }
       if (binary_value == 1) {
 	new_row_index.push_back(binary_col);
@@ -3467,17 +3461,16 @@ HighsLp withoutIndicatorConstraints(
 	new_row_value.push_back(-M_upper);
 	new_row_upper = upper;
       }
-      if (have_row_names) {
-	std::string local_name = name.empty()
-	  ? "indicator_upper_" +
-	  std::to_string(lp.num_row_ + num_new_row)
-	  : name + "_upper";
-	new_row_name = local_name;
-      }
+      new_row_name = name.empty()
+	? "indicator_upper_" +
+	std::to_string(lp.num_row_ + num_new_row)
+	: name + "_upper";
+      // Add the new row to the LP
       num_new_row++;
       lp.row_lower_.push_back(new_row_lower);
       lp.row_upper_.push_back(new_row_upper);
-      lp.row_names_.push_back(new_row_name);
+      if (have_row_names) 
+	lp.row_names_.push_back(new_row_name);
       HighsInt nnz = new_row_index.size();
       lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
       new_row_index.clear();
@@ -3491,8 +3484,8 @@ HighsLp withoutIndicatorConstraints(
       new_row_upper = kHighsInf;
       HighsInt iEl = from_el-1;
       for (HighsInt iEl = from_el; iEl < to_el; iEl++) {
-	new_row_index.push_back(lp.indicators_.matrix.index_[iEl]);
-	new_row_value.push_back(lp.indicators_.matrix.value_[iEl]);
+	new_row_index.push_back(indicators.matrix.index_[iEl]);
+	new_row_value.push_back(indicators.matrix.value_[iEl]);
       }
       if (binary_value == 1) {
 	new_row_index.push_back(binary_col);
@@ -3503,18 +3496,16 @@ HighsLp withoutIndicatorConstraints(
 	new_row_value.push_back(M_lower);
 	new_row_lower = lower;
       }
-      if (have_row_names) {
-	std::string local_name = 
-            name.empty()
-                ? "indicator_lower_" +
-                      std::to_string(lp.num_row_ + num_new_row)
-                : name + "_lower";
-	new_row_name = local_name;
-      }
+      new_row_name = name.empty()
+	? "indicator_lower_" +
+	std::to_string(lp.num_row_ + num_new_row)
+	: name + "_lower";
+      // Add the new row to the LP
       num_new_row++;
       lp.row_lower_.push_back(new_row_lower);
       lp.row_upper_.push_back(new_row_upper);
-      lp.row_names_.push_back(new_row_name);
+      if (have_row_names) 
+	lp.row_names_.push_back(new_row_name);
       HighsInt nnz = new_row_index.size();
       lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
       new_row_index.clear();
