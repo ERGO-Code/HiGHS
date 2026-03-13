@@ -14,6 +14,7 @@
 #include <set>
 #include <vector>
 
+#include "HighsPseudocost.h"
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolver.h"
 #include "util/HighsCDouble.h"
@@ -61,7 +62,7 @@ class HighsDomain {
   class ConflictSet {
     friend class HighsDomain;
     HighsDomain& localdom;
-    HighsDomain& globaldom;
+    const HighsDomain& globaldom;
 
    public:
     struct LocalDomChg {
@@ -71,12 +72,14 @@ class HighsDomain {
       bool operator<(const LocalDomChg& other) const { return pos < other.pos; }
     };
 
-    ConflictSet(HighsDomain& localdom);
+    ConflictSet(HighsDomain& localdom, const HighsDomain& globaldom);
 
-    void conflictAnalysis(HighsConflictPool& conflictPool);
+    void conflictAnalysis(HighsConflictPool& conflictPool,
+                          HighsPseudocost& pseudocost);
     void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
                           HighsInt prooflen, double proofrhs,
-                          HighsConflictPool& conflictPool);
+                          HighsConflictPool& conflictPool,
+                          HighsPseudocost& pseudocost);
 
    private:
     std::set<LocalDomChg> reasonSideFrontier;
@@ -166,6 +169,8 @@ class HighsDomain {
 
     CutpoolPropagation(const CutpoolPropagation& other);
 
+    CutpoolPropagation& operator=(const CutpoolPropagation& other);
+
     ~CutpoolPropagation();
 
     void recomputeCapacityThreshold(HighsInt cut);
@@ -176,9 +181,13 @@ class HighsDomain {
 
     void markPropagateCut(HighsInt cut);
 
-    void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
+    void updateActivityLbChange(HighsInt col, double oldbound, double newbound,
+                                bool threshold, bool activity,
+                                bool infeasdomain);
 
-    void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
+    void updateActivityUbChange(HighsInt col, double oldbound, double newbound,
+                                bool threshold, bool activity,
+                                bool infeasdomain);
   };
 
   struct ConflictPoolPropagation {
@@ -202,6 +211,8 @@ class HighsDomain {
                             HighsConflictPool& cutpool);
 
     ConflictPoolPropagation(const ConflictPoolPropagation& other);
+
+    ConflictPoolPropagation& operator=(const ConflictPoolPropagation& other);
 
     ~ConflictPoolPropagation();
 
@@ -284,7 +295,10 @@ class HighsDomain {
     void recomputeCapacityThreshold();
   };
 
+  //  public:
   std::vector<uint8_t> changedcolsflags_;
+
+  //  private:
   std::vector<HighsInt> changedcols_;
 
   std::vector<std::pair<HighsInt, HighsInt>> propRowNumChangedBounds_;
@@ -587,17 +601,20 @@ class HighsDomain {
 
   double getColUpperPos(HighsInt col, HighsInt stackpos, HighsInt& pos) const;
 
-  void conflictAnalysis(HighsConflictPool& conflictPool);
+  void conflictAnalysis(HighsConflictPool& conflictPool, HighsDomain& globaldom,
+                        HighsPseudocost& pseudocost);
 
   void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
                         HighsInt prooflen, double proofrhs,
-                        HighsConflictPool& conflictPool);
+                        HighsConflictPool& conflictPool, HighsDomain& globaldom,
+                        HighsPseudocost& pseudocost);
 
   void conflictAnalyzeReconvergence(const HighsDomainChange& domchg,
                                     const HighsInt* proofinds,
                                     const double* proofvals, HighsInt prooflen,
                                     double proofrhs,
-                                    HighsConflictPool& conflictPool);
+                                    HighsConflictPool& conflictPool,
+                                    HighsDomain& globaldom);
 
   void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
                            double& rhs) const;

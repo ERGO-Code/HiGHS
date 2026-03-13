@@ -19,6 +19,75 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
+HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
+    : mipsolver(mipsolver),
+      lps(1, HighsLpRelaxation(mipsolver)),
+      lp(lps[0]),
+      cutpool(*cutpools.emplace(cutpools.end(), mipsolver.numCol(),
+                                mipsolver.options_mip_->mip_pool_age_limit,
+                                mipsolver.options_mip_->mip_pool_soft_limit,
+                                0)),
+      conflictpools(
+          1, HighsConflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
+                               mipsolver.options_mip_->mip_pool_soft_limit)),
+      conflictPool(conflictpools[0]),
+      domains(1, HighsDomain(mipsolver)),
+      domain(domains[0]),
+      pseudocost(),
+      parallel_lock(false),
+      heuristics(mipsolver),
+      cliquetable(mipsolver.numCol()),
+      implications(mipsolver),
+      objectiveFunction(mipsolver),
+      presolve_status(HighsPresolveStatus::kNotSet),
+      cliquesExtracted(false),
+      rowMatrixSet(false),
+      analyticCenterComputed(false),
+      analyticCenterStatus(HighsModelStatus::kNotset),
+      detectSymmetries(false),
+      numRestarts(0),
+      numRestartsRoot(0),
+      numCliqueEntriesAfterPresolve(0),
+      numCliqueEntriesAfterFirstPresolve(0),
+      feastol(0.0),
+      epsilon(0.0),
+      heuristic_effort(0.0),
+      dispfreq(0),
+      firstlpsolobj(-kHighsInf),
+      rootlpsolobj(-kHighsInf),
+      numintegercols(0),
+      maxTreeSizeLog2(0),
+      pruned_treeweight(0),
+      avgrootlpiters(0.0),
+      disptime(0.0),
+      last_disptime(0.0),
+      firstrootlpiters(0),
+      num_nodes(0),
+      num_leaves(0),
+      num_leaves_before_run(0),
+      num_nodes_before_run(0),
+      total_repair_lp(0),
+      total_repair_lp_feasible(0),
+      total_repair_lp_iterations(0),
+      total_lp_iterations(0),
+      heuristic_lp_iterations(0),
+      sepa_lp_iterations(0),
+      sb_lp_iterations(0),
+      total_lp_iterations_before_run(0),
+      heuristic_lp_iterations_before_run(0),
+      sepa_lp_iterations_before_run(0),
+      sb_lp_iterations_before_run(0),
+      num_disp_lines(0),
+      numImprovingSols(0),
+      lower_bound(-kHighsInf),
+      upper_bound(kHighsInf),
+      upper_limit(kHighsInf),
+      optimality_limit(kHighsInf),
+      debugSolution(mipsolver) {
+  domain.addCutpool(cutpool);
+  domain.addConflictPool(conflictPool);
+}
+
 std::string HighsMipSolverData::solutionSourceToString(
     const int solution_source, const bool code) const {
   if (solution_source == kSolutionSourceNone) {
@@ -1377,8 +1446,8 @@ void HighsMipSolverData::performRestart() {
     // updatePrimalDualIntegral (unless solving a sub-MIP)
     //
     // Surely there must be a lower bound change
-    updateLowerBound(upper_bound);
-
+    updateLowerBound(upper_bound, true,
+                     mipsolver.modelstatus_ != HighsModelStatus::kOptimal);
     if (mipsolver.solution_objective_ != kHighsInf &&
         mipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
       mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
@@ -1396,6 +1465,17 @@ void HighsMipSolverData::performRestart() {
 
   // HighsNodeQueue oldNodeQueue;
   // std::swap(nodequeue, oldNodeQueue);
+
+  // Ensure master worker is pointing to the correct cut and conflict pools
+  if (mipsolver.options_mip_->mip_search_concurrency > 1) {
+    mipsolver.mipdata_->workers[0].cutpool_ = &cutpool;
+    mipsolver.mipdata_->workers[0].conflictpool_ = &conflictPool;
+    mipsolver.mipdata_->workers[0].globaldom_ = &domain;
+    mipsolver.mipdata_->workers[0].pseudocost_ = &pseudocost;
+    mipsolver.mipdata_->workers[0].upper_bound = upper_bound;
+    mipsolver.mipdata_->workers[0].upper_limit = upper_limit;
+    mipsolver.mipdata_->workers[0].optimality_limit = optimality_limit;
+  }
 
   // remove the pointer into the stack-space of this function
   if (mipsolver.rootbasis == &root_basis) mipsolver.rootbasis = nullptr;
@@ -1436,6 +1516,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, const int solution_source,
                                       const bool print_display_line,
                                       const bool is_user_solution) {
+  assert(!parallelLockActive());
   const bool execute_mip_solution_callback =
       !is_user_solution && !mipsolver.submip &&
       (mipsolver.callback_->user_callback
@@ -1481,6 +1562,9 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     double prev_upper_bound = upper_bound;
 
     upper_bound = solobj;
+    for (HighsMipWorker& worker : workers) {
+      worker.upper_bound = upper_bound;
+    }
 
     bool bound_change = upper_bound != prev_upper_bound;
     if (!mipsolver.submip && bound_change)
@@ -1500,6 +1584,10 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
           computeNewUpperLimit(solobj, mipsolver.options_mip_->mip_abs_gap,
                                mipsolver.options_mip_->mip_rel_gap);
       nodequeue.setOptimalityLimit(optimality_limit);
+      for (HighsMipWorker& worker : workers) {
+        worker.upper_limit = upper_limit;
+        worker.optimality_limit = optimality_limit;
+      }
       debugSolution.newIncumbentFound();
       domain.propagate();
       if (!domain.infeasible()) redcostfixing.propagateRootRedcost(mipsolver);
@@ -1767,7 +1855,8 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
 }
 
 bool HighsMipSolverData::rootSeparationRound(
-    HighsSeparation& sepa, HighsInt& ncuts, HighsLpRelaxation::Status& status) {
+    HighsMipWorker& worker, HighsSeparation& sepa, HighsInt& ncuts,
+    HighsLpRelaxation::Status& status) {
   int64_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
   tmpLpIters += lp.getNumLpIterations();
@@ -1775,24 +1864,25 @@ bool HighsMipSolverData::rootSeparationRound(
   total_lp_iterations += tmpLpIters;
   sepa_lp_iterations += tmpLpIters;
 
-  status = evaluateRootLp();
+  status = evaluateRootLp(worker);
   if (status == HighsLpRelaxation::Status::kInfeasible) return true;
 
   const std::vector<double>& solvals = lp.getLpSolver().getSolution().col_value;
 
   if (mipsolver.submip || incumbent.empty()) {
-    heuristics.randomizedRounding(solvals);
+    heuristics.randomizedRounding(worker, solvals);
     if (mipsolver.options_mip_->mip_heuristic_run_shifting)
-      heuristics.shifting(solvals);
-    heuristics.flushStatistics();
-    status = evaluateRootLp();
+      heuristics.shifting(worker, solvals);
+    heuristics.flushStatistics(mipsolver, worker);
+    status = evaluateRootLp(worker);
     if (status == HighsLpRelaxation::Status::kInfeasible) return true;
   }
 
   return false;
 }
 
-HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
+HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp(
+    HighsMipWorker& worker) {
   do {
     domain.propagate();
 
@@ -1851,7 +1941,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
       if (status == HighsLpRelaxation::Status::kOptimal &&
           mipsolver.options_mip_->mip_heuristic_run_zi_round)
-        heuristics.ziRound(lp.getLpSolver().getSolution().col_value);
+        heuristics.ziRound(worker, lp.getLpSolver().getSolution().col_value);
 
     } else
       status = lp.getStatus();
@@ -1906,7 +1996,7 @@ static void clockOff(HighsMipAnalysis& analysis) {
   if (clock2_running) analysis.mipTimerStop(kMipClockEvaluateRootNode2);
 }
 
-void HighsMipSolverData::evaluateRootNode() {
+void HighsMipSolverData::evaluateRootNode(HighsMipWorker& worker) {
   const bool compute_analytic_centre = true;
   if (!compute_analytic_centre) printf("NOT COMPUTING ANALYTIC CENTRE!\n");
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
@@ -1968,7 +2058,7 @@ restart:
   //  mipsolver.options_mip_->log_file);
 
   analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  HighsLpRelaxation::Status status = evaluateRootLp();
+  HighsLpRelaxation::Status status = evaluateRootLp(worker);
   analysis.mipTimerStop(kMipClockEvaluateRootLp);
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
 
@@ -2014,7 +2104,7 @@ restart:
 #endif
     lp.addCuts(cutset);
     analysis.mipTimerStart(kMipClockEvaluateRootLp);
-    status = evaluateRootLp();
+    status = evaluateRootLp(worker);
     analysis.mipTimerStop(kMipClockEvaluateRootLp);
     lp.removeObsoleteRows();
     if (status == HighsLpRelaxation::Status::kInfeasible)
@@ -2028,17 +2118,17 @@ restart:
   disptime = 0;
 
   if (mipsolver.options_mip_->mip_heuristic_run_zi_round)
-    heuristics.ziRound(firstlpsol);
+    heuristics.ziRound(worker, firstlpsol);
   analysis.mipTimerStart(kMipClockRandomizedRounding);
-  heuristics.randomizedRounding(firstlpsol);
+  heuristics.randomizedRounding(worker, firstlpsol);
   analysis.mipTimerStop(kMipClockRandomizedRounding);
   if (mipsolver.options_mip_->mip_heuristic_run_shifting)
-    heuristics.shifting(firstlpsol);
+    heuristics.shifting(worker, firstlpsol);
 
-  heuristics.flushStatistics();
+  heuristics.flushStatistics(mipsolver, worker);
 
   analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  status = evaluateRootLp();
+  status = evaluateRootLp(worker);
   analysis.mipTimerStop(kMipClockEvaluateRootLp);
   if (status == HighsLpRelaxation::Status::kInfeasible)
     return clockOff(analysis);
@@ -2083,7 +2173,7 @@ restart:
   HighsInt stall = 0;
   double smoothprogress = 0.0;
   HighsInt nseparounds = 0;
-  HighsSeparation sepa(mipsolver);
+  HighsSeparation sepa(worker);
   sepa.setLpRelaxation(&lp);
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
@@ -2114,7 +2204,7 @@ restart:
 
     analysis.mipTimerStart(kMipClockRootSeparationRound);
     const bool root_separation_round_result =
-        rootSeparationRound(sepa, ncuts, status);
+        rootSeparationRound(worker, sepa, ncuts, status);
     analysis.mipTimerStop(kMipClockRootSeparationRound);
     if (root_separation_round_result) {
       analysis.mipTimerStop(kMipClockRootSeparation);
@@ -2133,17 +2223,17 @@ restart:
           kMipClockRootSeparationFinishAnalyticCentreComputation);
 
       analysis.mipTimerStart(kMipClockRootSeparationCentralRounding);
-      heuristics.centralRounding();
+      heuristics.centralRounding(worker);
       analysis.mipTimerStop(kMipClockRootSeparationCentralRounding);
 
-      heuristics.flushStatistics();
+      heuristics.flushStatistics(mipsolver, worker);
 
       if (checkLimits()) {
         analysis.mipTimerStop(kMipClockRootSeparation);
         return clockOff(analysis);
       }
       analysis.mipTimerStart(kMipClockRootSeparationEvaluateRootLp);
-      status = evaluateRootLp();
+      status = evaluateRootLp(worker);
       analysis.mipTimerStop(kMipClockRootSeparationEvaluateRootLp);
       if (status == HighsLpRelaxation::Status::kInfeasible) {
         analysis.mipTimerStop(kMipClockRootSeparation);
@@ -2214,7 +2304,7 @@ restart:
 
   lp.setIterationLimit();
   analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  status = evaluateRootLp();
+  status = evaluateRootLp(worker);
   analysis.mipTimerStop(kMipClockEvaluateRootLp);
   if (status == HighsLpRelaxation::Status::kInfeasible)
     return clockOff(analysis);
@@ -2224,12 +2314,12 @@ restart:
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
   if (mipsolver.options_mip_->mip_heuristic_run_zi_round) {
-    heuristics.ziRound(firstlpsol);
-    heuristics.flushStatistics();
+    heuristics.ziRound(worker, firstlpsol);
+    heuristics.flushStatistics(mipsolver, worker);
   }
   if (mipsolver.options_mip_->mip_heuristic_run_shifting) {
-    heuristics.shifting(rootlpsol);
-    heuristics.flushStatistics();
+    heuristics.shifting(worker, rootlpsol);
+    heuristics.flushStatistics(mipsolver, worker);
   }
 
   if (!analyticCenterComputed && compute_analytic_centre) {
@@ -2240,17 +2330,17 @@ restart:
     analysis.mipTimerStop(kMipClockFinishAnalyticCentreComputation);
 
     analysis.mipTimerStart(kMipClockRootCentralRounding);
-    heuristics.centralRounding();
+    heuristics.centralRounding(worker);
     analysis.mipTimerStop(kMipClockRootCentralRounding);
 
-    heuristics.flushStatistics();
+    heuristics.flushStatistics(mipsolver, worker);
 
     // if there are new global bound changes we re-evaluate the LP and do one
     // more separation round
     if (checkLimits()) return clockOff(analysis);
     bool separate = !domain.getChangedCols().empty();
     analysis.mipTimerStart(kMipClockEvaluateRootLp);
-    status = evaluateRootLp();
+    status = evaluateRootLp(worker);
     analysis.mipTimerStop(kMipClockEvaluateRootLp);
     if (status == HighsLpRelaxation::Status::kInfeasible)
       return clockOff(analysis);
@@ -2258,7 +2348,7 @@ restart:
       HighsInt ncuts;
       analysis.mipTimerStart(kMipClockRootSeparationRound0);
       const bool root_separation_round_result =
-          rootSeparationRound(sepa, ncuts, status);
+          rootSeparationRound(worker, sepa, ncuts, status);
       analysis.mipTimerStop(kMipClockRootSeparationRound0);
       if (root_separation_round_result) return clockOff(analysis);
       ++nseparounds;
@@ -2287,9 +2377,9 @@ restart:
 
     if (mipsolver.options_mip_->mip_heuristic_run_root_reduced_cost) {
       analysis.mipTimerStart(kMipClockRootHeuristicsReducedCost);
-      heuristics.rootReducedCost();
+      heuristics.rootReducedCost(worker);
       analysis.mipTimerStop(kMipClockRootHeuristicsReducedCost);
-      heuristics.flushStatistics();
+      heuristics.flushStatistics(mipsolver, worker);
     }
 
     if (checkLimits()) return clockOff(analysis);
@@ -2298,7 +2388,7 @@ restart:
     // more separation round
     bool separate = !domain.getChangedCols().empty();
     analysis.mipTimerStart(kMipClockEvaluateRootLp);
-    status = evaluateRootLp();
+    status = evaluateRootLp(worker);
     analysis.mipTimerStop(kMipClockEvaluateRootLp);
     if (status == HighsLpRelaxation::Status::kInfeasible)
       return clockOff(analysis);
@@ -2306,7 +2396,7 @@ restart:
       HighsInt ncuts;
       analysis.mipTimerStart(kMipClockRootSeparationRound1);
       const bool root_separation_round_result =
-          rootSeparationRound(sepa, ncuts, status);
+          rootSeparationRound(worker, sepa, ncuts, status);
       analysis.mipTimerStop(kMipClockRootSeparationRound1);
       if (root_separation_round_result) return clockOff(analysis);
       ++nseparounds;
@@ -2318,9 +2408,9 @@ restart:
     if (checkLimits()) return clockOff(analysis);
     if (mipsolver.options_mip_->mip_heuristic_run_rens) {
       analysis.mipTimerStart(kMipClockRootHeuristicsRens);
-      heuristics.RENS(rootlpsol);
+      heuristics.RENS(worker, rootlpsol);
       analysis.mipTimerStop(kMipClockRootHeuristicsRens);
-      heuristics.flushStatistics();
+      heuristics.flushStatistics(mipsolver, worker);
     }
 
     if (checkLimits()) return clockOff(analysis);
@@ -2328,7 +2418,7 @@ restart:
     // more separation round
     separate = !domain.getChangedCols().empty();
     analysis.mipTimerStart(kMipClockEvaluateRootLp);
-    status = evaluateRootLp();
+    status = evaluateRootLp(worker);
     analysis.mipTimerStop(kMipClockEvaluateRootLp);
     if (status == HighsLpRelaxation::Status::kInfeasible)
       return clockOff(analysis);
@@ -2336,7 +2426,7 @@ restart:
       HighsInt ncuts;
       analysis.mipTimerStart(kMipClockRootSeparationRound2);
       const bool root_separation_round_result =
-          rootSeparationRound(sepa, ncuts, status);
+          rootSeparationRound(worker, sepa, ncuts, status);
       analysis.mipTimerStop(kMipClockRootSeparationRound2);
       if (root_separation_round_result) return clockOff(analysis);
       ++nseparounds;
@@ -2353,13 +2443,13 @@ restart:
 
     if (checkLimits()) return clockOff(analysis);
     analysis.mipTimerStart(kMipClockRootFeasibilityPump);
-    heuristics.feasibilityPump();
+    heuristics.feasibilityPump(worker);
     analysis.mipTimerStop(kMipClockRootFeasibilityPump);
-    heuristics.flushStatistics();
+    heuristics.flushStatistics(mipsolver, worker);
 
     if (checkLimits()) return clockOff(analysis);
     analysis.mipTimerStart(kMipClockEvaluateRootLp);
-    status = evaluateRootLp();
+    status = evaluateRootLp(worker);
     analysis.mipTimerStop(kMipClockEvaluateRootLp);
     if (status == HighsLpRelaxation::Status::kInfeasible)
       return clockOff(analysis);
@@ -2379,7 +2469,7 @@ restart:
   // more separation round
   bool separate = !domain.getChangedCols().empty();
   analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  status = evaluateRootLp();
+  status = evaluateRootLp(worker);
   analysis.mipTimerStop(kMipClockEvaluateRootLp);
   if (status == HighsLpRelaxation::Status::kInfeasible)
     return clockOff(analysis);
@@ -2387,7 +2477,7 @@ restart:
     HighsInt ncuts;
     analysis.mipTimerStart(kMipClockRootSeparationRound3);
     const bool root_separation_round_result =
-        rootSeparationRound(sepa, ncuts, status);
+        rootSeparationRound(worker, sepa, ncuts, status);
     analysis.mipTimerStop(kMipClockRootSeparationRound3);
     if (root_separation_round_result) return clockOff(analysis);
     ++nseparounds;
@@ -2439,7 +2529,7 @@ restart:
     if (detectSymmetries) {
       finishSymmetryDetection(tg, symData);
       analysis.mipTimerStart(kMipClockEvaluateRootLp);
-      status = evaluateRootLp();
+      status = evaluateRootLp(worker);
       analysis.mipTimerStop(kMipClockEvaluateRootLp);
       if (status == HighsLpRelaxation::Status::kInfeasible)
         return clockOff(analysis);
@@ -2448,7 +2538,7 @@ restart:
     // add the root node to the nodequeue to initialize the search
     nodequeue.emplaceNode(std::vector<HighsDomainChange>(),
                           std::vector<HighsInt>(), lower_bound,
-                          lp.computeBestEstimate(pseudocost), 1);
+                          lp.computeBestEstimate(worker.getPseudocost()), 1);
   }
   // End of HighsMipSolverData::evaluateRootNode()
   clockOff(analysis);
@@ -2631,13 +2721,15 @@ void HighsMipSolverData::limitsToBounds(double& dual_bound,
   }
 }
 
-void HighsMipSolverData::updateLowerBound(double new_lower_bound) {
+void HighsMipSolverData::updateLowerBound(double new_lower_bound,
+                                          const bool check_bound_change,
+                                          const bool check_prev_data) {
   // Update lower bound
   double prev_lower_bound = lower_bound;
   lower_bound = new_lower_bound;
   if (!mipsolver.submip && lower_bound != prev_lower_bound)
     updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                             upper_bound);
+                             upper_bound, check_bound_change, check_prev_data);
 }
 
 // Interface to callbackAction, with mipsolver_objective_value since
@@ -2753,6 +2845,11 @@ bool HighsMipSolverData::terminatorTerminated() const {
   if (this->terminatorActive())
     mipsolver.termination_status_ = mipsolver.terminator_.terminationStatus();
   return mipsolver.termination_status_ != HighsModelStatus::kNotset;
+}
+
+bool HighsMipSolverData::terminatorTerminatedWorker(
+    const HighsMipWorker& worker) const {
+  return worker.heur_stats.termination_status_ != HighsModelStatus::kNotset;
 }
 
 void HighsMipSolverData::terminatorReport() const {

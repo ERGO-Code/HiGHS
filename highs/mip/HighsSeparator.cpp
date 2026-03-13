@@ -31,9 +31,9 @@ void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
   ++numCalls;
   HighsInt currNumCuts = cutpool.getNumCuts();
 
-  lpRelaxation.getMipSolver().analysis_.mipTimerStart(clockIndex);
+  // lpRelaxation.getMipSolver().analysis_.mipTimerStart(clockIndex);
   separateLpSolution(lpRelaxation, lpAggregator, transLp, cutpool);
-  lpRelaxation.getMipSolver().analysis_.mipTimerStop(clockIndex);
+  // lpRelaxation.getMipSolver().analysis_.mipTimerStop(clockIndex);
 
   numCutsFound += cutpool.getNumCuts() - currNumCuts;
 }

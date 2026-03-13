@@ -13,9 +13,11 @@
 #include <vector>
 
 #include "mip/HighsConflictPool.h"
+#include "mip/HighsDebugSol.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
+#include "mip/HighsMipWorker.h"
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSeparation.h"
@@ -23,11 +25,15 @@
 #include "util/HighsHash.h"
 
 class HighsMipSolver;
+class HighsMipWorker;
 class HighsImplications;
 class HighsCliqueTable;
 
 class HighsSearch {
-  HighsMipSolver& mipsolver;
+ public:
+  HighsMipWorker& mipworker;
+
+  const HighsMipSolver& mipsolver;
   HighsLpRelaxation* lp;
   HighsDomain localdom;
   HighsPseudocost& pseudocost;
@@ -138,7 +144,7 @@ class HighsSearch {
   bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
 
  public:
-  HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost);
+  HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost);
 
   void setRINSNeighbourhood(const std::vector<double>& basesol,
                             const std::vector<double>& relaxsol);
@@ -236,6 +242,35 @@ class HighsSearch {
   const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
   void solveDepthFirst(int64_t maxbacktracks = 1);
+
+  double getFeasTol() const;
+  double getUpperLimit() const;
+  double getEpsilon() const;
+  double getOptimalityLimit() const;
+
+  const std::vector<double>& getRootLpSol() const;
+  const std::vector<HighsInt>& getIntegralCols() const;
+
+  HighsDomain& getDomain() const;
+  HighsConflictPool& getConflictPool() const;
+  HighsCutPool& getCutPool() const;
+
+  const HighsNodeQueue& getNodeQueue() const;
+
+  bool checkLimits(int64_t nodeOffset = 0) const;
+
+  HighsSymmetries& getSymmetries() const;
+
+  bool addIncumbent(const std::vector<double>& sol, double solobj,
+                    const int solution_source,
+                    const bool print_display_line = true);
+
+  int64_t& getNumNodes();
+  HighsCDouble& getPrunedTreeweight();
+  int64_t& getTotalLpIterations();
+  int64_t& getHeuristicLpIterations();
+  int64_t& getSbLpIterations();
+  int64_t& getSbLpIterations() const;
 };
 
 #endif

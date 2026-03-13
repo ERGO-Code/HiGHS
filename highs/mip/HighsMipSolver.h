@@ -12,6 +12,7 @@
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
 #include "mip/HighsMipAnalysis.h"
+#include "parallel/HighsParallel.h"
 
 struct HighsMipSolverData;
 class HighsCutPool;
@@ -118,6 +119,12 @@ class HighsMipSolver {
 
   ~HighsMipSolver();
 
+  template <class F>
+  void runTask(F&& f, highs::parallel::TaskGroup& tg, bool parallel_lock,
+               bool force_serial,
+               const std::vector<HighsInt>& indices = std::vector<HighsInt>(1,
+                                                                            0));
+
   void setModel(const HighsLp& model) {
     model_ = &model;
     solution_objective_ = kHighsInf;
@@ -151,6 +158,7 @@ class HighsMipSolver {
   HighsModelStatus terminationStatus() const {
     return this->termination_status_;
   }
+  void setParallelLock(bool lock) const;
 };
 
 std::array<char, 128> getGapString(const double gap_,

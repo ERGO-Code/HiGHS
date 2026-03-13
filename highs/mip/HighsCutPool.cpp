@@ -115,9 +115,43 @@ double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2) const {
   return dotprod * rownormalization_[row1] * rownormalization_[row2];
 }
 
-void HighsCutPool::lpCutRemoved(HighsInt cut) {
+double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2,
+                                    const HighsCutPool& pool2) const {
+  HighsInt i1 = matrix_.getRowStart(row1);
+  const HighsInt end1 = matrix_.getRowEnd(row1);
+
+  HighsInt i2 = pool2.matrix_.getRowStart(row2);
+  const HighsInt end2 = pool2.matrix_.getRowEnd(row2);
+
+  const HighsInt* ARindex1 = matrix_.getARindex();
+  const double* ARvalue1 = matrix_.getARvalue();
+  const HighsInt* ARindex2 = pool2.matrix_.getARindex();
+  const double* ARvalue2 = pool2.matrix_.getARvalue();
+
+  double dotprod = 0.0;
+  while (i1 != end1 && i2 != end2) {
+    HighsInt col1 = ARindex1[i1];
+    HighsInt col2 = ARindex2[i2];
+
+    if (col1 < col2)
+      ++i1;
+    else if (col2 < col1)
+      ++i2;
+    else {
+      dotprod += ARvalue1[i1] * ARvalue2[i2];
+      ++i1;
+      ++i2;
+    }
+  }
+
+  return dotprod * rownormalization_[row1] * pool2.rownormalization_[row2];
+}
+
+void HighsCutPool::lpCutRemoved(HighsInt cut, bool thread_safe) {
+  const HighsInt n = numLps_[cut].fetch_add(-1, std::memory_order_relaxed);
+  if (thread_safe || n > 1) return;
   if (matrix_.columnsLinked(cut)) {
-    propRows.erase(std::make_pair(-1, cut));
+    propRows.erase(std::make_pair(ages_[cut], cut));
     propRows.emplace(1, cut);
   }
   ages_[cut] = 1;
@@ -136,6 +170,31 @@ void HighsCutPool::performAging() {
   }
 
   for (HighsInt i = 0; i != cutIndexEnd; ++i) {
+    // Catch buffered changes (should only occur in parallel case)
+    // TODO MT: Misses the case where a cut is added then deleted before aging
+    // TODO MT: has been called once. We'd miss resetting the age in this case.
+    if (numLps_[i] > 0 && ages_[i] >= 0) {
+      // Cut has been added to the LP, but age changes haven't been made
+      --ageDistribution[ages_[i]];
+      if (matrix_.columnsLinked(i)) {
+        propRows.erase(std::make_pair(ages_[i], i));
+        propRows.emplace(-1, i);
+      }
+      ages_[i] = -1;
+      ++numLpCuts;
+    } else if (numLps_[i] == 0 && ages_[i] == -1 && rhs_[i] != kHighsInf) {
+      // Cut was removed from the LP, but age changes haven't been made
+      if (matrix_.columnsLinked(i)) {
+        propRows.erase(std::make_pair(ages_[i], i));
+        propRows.emplace(1, i);
+      }
+      ages_[i] = 1;
+      --numLpCuts;
+      ++ageDistribution[1];
+    } else if (ageResetWhileLocked_[i] == 1) {
+      resetAge(i);
+    }
+    ageResetWhileLocked_[i] = 0;
     if (ages_[i] < 0) continue;
 
     bool isPropagated = matrix_.columnsLinked(i);
@@ -156,6 +215,7 @@ void HighsCutPool::performAging() {
       matrix_.removeRow(i);
       ages_[i] = -1;
       rhs_[i] = kHighsInf;
+      hasSynced_[i] = false;
     } else {
       if (isPropagated) propRows.emplace(ages_[i], i);
       ageDistribution[ages_[i]] += 1;
@@ -165,13 +225,14 @@ void HighsCutPool::performAging() {
   assert((HighsInt)propRows.size() == numPropRows);
 }
 
-void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
-                            HighsCutSet& cutset, double feastol) {
+void HighsCutPool::separate(const std::vector<double>& sol,
+                            const HighsDomain& domain, HighsCutSet& cutset,
+                            double feastol,
+                            const std::deque<HighsCutPool>& cutpools,
+                            bool thread_safe) {
   HighsInt nrows = matrix_.getNumRows();
   const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
-
-  assert(cutset.empty());
 
   std::vector<std::pair<double, HighsInt>> efficacious_cuts;
 
@@ -185,6 +246,9 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   for (HighsInt i = 0; i < nrows; ++i) {
     // cuts with an age of -1 are already in the LP and are therefore skipped
+    // TODO MT: Parallel case tries to add cuts already in current LP.
+    // TODO MT: Inefficient. Not sure what happens if added twice.
+    // TODO MT: The cut shouldn't have enough violation to be added though.
     if (ages_[i] < 0) continue;
 
     HighsInt start = matrix_.getRowStart(i);
@@ -201,10 +265,15 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     // if the cut is not violated more than feasibility tolerance
     // we skip it and increase its age, otherwise we reset its age
-    ageDistribution[ages_[i]] -= 1;
     bool isPropagated = matrix_.columnsLinked(i);
-    if (isPropagated) propRows.erase(std::make_pair(ages_[i], i));
+    if (!thread_safe) {
+      ageDistribution[ages_[i]] -= 1;
+      if (isPropagated) {
+        propRows.erase(std::make_pair(ages_[i], i));
+      }
+    }
     if (double(viol) <= feastol) {
+      if (thread_safe) continue;
       ++ages_[i];
       if (ages_[i] >= agelim) {
         uint64_t h = compute_cut_hash(&ARindex[start], &ARvalue[start],
@@ -221,7 +290,9 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
         matrix_.removeRow(i);
         ages_[i] = -1;
-        rhs_[i] = 0;
+        rhs_[i] = kHighsInf;
+        ageResetWhileLocked_[i] = 0;
+        hasSynced_[i] = false;
         auto range = hashToCutMap.equal_range(h);
 
         for (auto it = range.first; it != range.second; ++it) {
@@ -262,9 +333,11 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
       }
     }
 
-    ages_[i] = 0;
-    ++ageDistribution[0];
-    if (isPropagated) propRows.emplace(ages_[i], i);
+    if (!thread_safe) {
+      ages_[i] = 0;
+      ++ageDistribution[0];
+      if (isPropagated) propRows.emplace(ages_[i], i);
+    }
     double score = viol / (numActiveNzs * sqrt(double(rownorm)));
 
     efficacious_cuts.emplace_back(score, i);
@@ -287,8 +360,13 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                        b.second);
           });
 
-  bestObservedScore = std::max(efficacious_cuts[0].first, bestObservedScore);
-  double minScore = minScoreFactor * bestObservedScore;
+  double bestObservedScoreCopy = bestObservedScore;
+  double& bestObservedScore_ =
+      thread_safe ? bestObservedScoreCopy : bestObservedScore;
+  bestObservedScore_ = std::max(efficacious_cuts[0].first, bestObservedScore);
+  double minScoreFactorCopy = minScoreFactor;
+  double& minScoreFactor_ = thread_safe ? minScoreFactorCopy : minScoreFactor;
+  double minScore = minScoreFactor_ * bestObservedScore;
 
   HighsInt numefficacious =
       std::upper_bound(efficacious_cuts.begin(), efficacious_cuts.end(),
@@ -303,38 +381,55 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   if (numefficacious <= lowerThreshold) {
     numefficacious = std::max(efficacious_cuts.size() / 2, size_t{1});
-    minScoreFactor =
+    minScoreFactor_ =
         efficacious_cuts[numefficacious - 1].first / bestObservedScore;
   } else if (numefficacious > upperThreshold) {
-    minScoreFactor = efficacious_cuts[upperThreshold].first / bestObservedScore;
+    minScoreFactor_ =
+        efficacious_cuts[upperThreshold].first / bestObservedScore;
   }
 
   efficacious_cuts.resize(numefficacious);
 
-  HighsInt selectednnz = 0;
-
-  assert(cutset.empty());
+  HighsInt orignumcuts = cutset.numCuts();
+  HighsInt origselectednnz = cutset.ARindex_.size();
+  HighsInt selectednnz = origselectednnz;
 
   for (const std::pair<double, HighsInt>& p : efficacious_cuts) {
     bool discard = false;
     double maxpar = 0.1;
-    for (HighsInt k : cutset.cutindices) {
-      if (getParallelism(k, p.second) > maxpar) {
-        discard = true;
-        break;
+    for (HighsInt i = 0; i != static_cast<HighsInt>(cutset.cutindices.size());
+         ++i) {
+      if (cutset.cutpools[i] == index_) {
+        if (getParallelism(cutset.cutindices[i], p.second) > maxpar) {
+          discard = true;
+          break;
+        }
+      } else {
+        // TODO MT: This assumes the cuts in the pool are not changing during,
+        // TODO MT: this query, i.e., the worker's pool and the global pool.
+        // TODO MT: Currently safe, but doesn't generalise to all designs.
+        if (getParallelism(p.second, cutset.cutindices[i],
+                           cutpools[cutset.cutpools[i]]) > maxpar) {
+          discard = true;
+          break;
+        }
       }
     }
 
     if (discard) continue;
 
-    --ageDistribution[ages_[p.second]];
-    ++numLpCuts;
-    if (matrix_.columnsLinked(p.second)) {
-      propRows.erase(std::make_pair(ages_[p.second], p.second));
-      propRows.emplace(-1, p.second);
+    numLps_[p.second].fetch_add(1, std::memory_order_relaxed);
+    if (!thread_safe) {
+      --ageDistribution[ages_[p.second]];
+      ++numLpCuts;
+      if (matrix_.columnsLinked(p.second)) {
+        propRows.erase(std::make_pair(ages_[p.second], p.second));
+        propRows.emplace(-1, p.second);
+      }
+      ages_[p.second] = -1;
     }
-    ages_[p.second] = -1;
     cutset.cutindices.push_back(p.second);
+    cutset.cutpools.push_back(index_);
     selectednnz += matrix_.getRowEnd(p.second) - matrix_.getRowStart(p.second);
   }
 
@@ -343,8 +438,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   assert(int(cutset.ARvalue_.size()) == selectednnz);
   assert(int(cutset.ARindex_.size()) == selectednnz);
 
-  HighsInt offset = 0;
-  for (HighsInt i = 0; i != cutset.numCuts(); ++i) {
+  HighsInt offset = origselectednnz;
+  for (HighsInt i = orignumcuts; i != cutset.numCuts(); ++i) {
     cutset.ARstart_[i] = offset;
     HighsInt cut = cutset.cutindices[i];
     HighsInt start = matrix_.getRowStart(cut);
@@ -369,6 +464,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   HighsInt numcuts = matrix_.getNumRows();
 
   cutset.cutindices.resize(numcuts);
+  cutset.cutpools.resize(numcuts, index_);
   std::iota(cutset.cutindices.begin(), cutset.cutindices.end(), 0);
   cutset.resize(matrix_.nonzeroCapacity());
 
@@ -382,6 +478,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
       propRows.erase(std::make_pair(ages_[i], i));
       propRows.emplace(-1, i);
     }
+    numLps_[i] = 1;
     ages_[i] = -1;
     cutset.ARstart_[i] = offset;
     HighsInt cut = cutset.cutindices[i];
@@ -431,6 +528,14 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   uint64_t h = compute_cut_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));
 
+  // TODO MT: This global duplicate check assumes the global pool doesn't
+  // have cuts added or deleted during time when local pools can add a cut.
+  if (this != &mipsolver.mipdata_->cutpool) {
+    if (mipsolver.mipdata_->cutpool.isDuplicate(h, normalization, Rindex,
+                                                Rvalue, Rlen, rhs)) {
+      return -1;
+    }
+  }
   if (isDuplicate(h, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
 
   // if (Rlen > 0.15 * matrix_.numCols())
@@ -495,6 +600,9 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   if (rowindex == int(rhs_.size())) {
     rhs_.resize(rowindex + 1);
     ages_.resize(rowindex + 1);
+    numLps_.resize(rowindex + 1);
+    ageResetWhileLocked_.resize(rowindex + 1);
+    hasSynced_.resize(rowindex + 1);
     rownormalization_.resize(rowindex + 1);
     maxabscoef_.resize(rowindex + 1);
     rowintegral.resize(rowindex + 1);
@@ -505,6 +613,9 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   ages_[rowindex] = std::max(HighsInt{0}, agelim_ - 5);
   ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
+  numLps_[rowindex] = 0;
+  ageResetWhileLocked_[rowindex] = 0;
+  hasSynced_[rowindex] = false;
   if (propagate) propRows.emplace(ages_[rowindex], rowindex);
   assert((HighsInt)propRows.size() == numPropRows);
 
@@ -523,4 +634,29 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   }
 
   return rowindex;
+}
+
+void HighsCutPool::syncCutPool(const HighsMipSolver& mipsolver,
+                               HighsCutPool& syncpool) {
+  HighsInt cutIndexEnd = matrix_.getNumRows();
+
+  for (HighsInt i = 0; i != cutIndexEnd; ++i) {
+    // Only sync cuts in the LP that are not already synced
+    if (numLps_[i] > 0 && !hasSynced_[i]) {
+      HighsInt Rlen;
+      const HighsInt* Rindex;
+      const double* Rvalue;
+      getCut(i, Rlen, Rindex, Rvalue);
+      // copy cut into something mutable (addCut reorders so can't take const)
+      std::vector<HighsInt> idxs(Rindex, Rindex + Rlen);
+      std::vector<double> vals(Rvalue, Rvalue + Rlen);
+      syncpool.addCut(mipsolver, idxs.data(), vals.data(), Rlen, rhs_[i],
+                      rowintegral[i]);
+      // TODO MT: Should I check whether the cut is accepted before changing
+      // hasSynced?
+      hasSynced_[i] = true;
+    }
+  }
+
+  assert((HighsInt)propRows.size() == numPropRows);
 }

@@ -15,6 +15,7 @@
 #include <map>
 #include <vector>
 
+#include "HighsConflictPool.h"
 #include "mip/HighsDomainChange.h"
 
 class HighsDomain;
@@ -27,13 +28,14 @@ class HighsRedcostFixing {
 
  public:
   std::vector<std::pair<double, HighsDomainChange>> getLurkingBounds(
-      const HighsMipSolver& mipsolver) const;
+      const HighsMipSolver& mipsolver, const HighsDomain& globaldom) const;
 
   void propagateRootRedcost(const HighsMipSolver& mipsolver);
 
   static void propagateRedCost(const HighsMipSolver& mipsolver,
-                               HighsDomain& localdomain,
-                               const HighsLpRelaxation& lp);
+                               HighsDomain& localdomain, HighsDomain& globaldom,
+                               const HighsLpRelaxation& lp,
+                               HighsConflictPool& conflictpool);
 
   void addRootRedcost(const HighsMipSolver& mipsolver,
                       const std::vector<double>& lpredcost, double lpobjective);

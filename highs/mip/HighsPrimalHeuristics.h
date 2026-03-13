@@ -15,16 +15,13 @@
 #include "util/HighsRandom.h"
 
 class HighsMipSolver;
+class HighsMipWorker;
 class HighsLpRelaxation;
 
 class HighsPrimalHeuristics {
  private:
-  HighsMipSolver& mipsolver;
-  size_t total_repair_lp;
-  size_t total_repair_lp_feasible;
-  size_t total_repair_lp_iterations;
-  size_t lp_iterations;
-
+  const HighsMipSolver& mipsolver;
+  std::vector<HighsInt> intcols;
   double successObservations;
   HighsInt numSuccessObservations;
   double infeasObservations;
@@ -32,44 +29,60 @@ class HighsPrimalHeuristics {
 
   HighsRandom randgen;
 
-  std::vector<HighsInt> intcols;
-
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
 
   void setupIntCols();
 
-  bool solveSubMip(const HighsLp& lp, const HighsBasis& basis,
-                   double fixingRate, std::vector<double> colLower,
-                   std::vector<double> colUpper, HighsInt maxleaves,
-                   HighsInt maxnodes, HighsInt stallnodes);
+  bool solveSubMip(HighsMipWorker& worker, const HighsLp& lp,
+                   const HighsBasis& basis, double fixingRate,
+                   std::vector<double> colLower, std::vector<double> colUpper,
+                   HighsInt maxleaves, HighsInt maxnodes, HighsInt stallnodes);
 
-  double determineTargetFixingRate();
+  double determineTargetFixingRate(HighsMipWorker& worker);
 
-  void rootReducedCost();
+  void rootReducedCost(HighsMipWorker& worker);
 
-  void RENS(const std::vector<double>& relaxationsol);
+  void RENS(HighsMipWorker& worker, const std::vector<double>& relaxationsol);
 
-  void RINS(const std::vector<double>& relaxationsol);
+  void RINS(HighsMipWorker& worker, const std::vector<double>& relaxationsol);
 
-  void feasibilityPump();
+  void feasibilityPump(HighsMipWorker& worker);
 
-  void centralRounding();
+  void centralRounding(HighsMipWorker& worker);
 
-  void flushStatistics();
+  void flushStatistics(HighsMipSolver& mipsolver, HighsMipWorker& worker);
 
-  bool tryRoundedPoint(const std::vector<double>& point,
+  bool tryRoundedPoint(HighsMipWorker& worker, const std::vector<double>& point,
                        const int solution_source);
 
-  bool linesearchRounding(const std::vector<double>& point1,
+  bool linesearchRounding(HighsMipWorker& worker,
+                          const std::vector<double>& point1,
                           const std::vector<double>& point2,
                           const int solution_source);
 
-  void randomizedRounding(const std::vector<double>& relaxationsol);
+  void randomizedRounding(HighsMipWorker& worker,
+                          const std::vector<double>& relaxationsol);
 
-  void shifting(const std::vector<double>& relaxationsol);
+  void shifting(HighsMipWorker& worker,
+                const std::vector<double>& relaxationsol);
 
-  void ziRound(const std::vector<double>& relaxationsol);
+  void ziRound(HighsMipWorker& worker,
+               const std::vector<double>& relaxationsol);
+
+  bool addIncumbent(const std::vector<double>& sol, double solobj,
+                    const int solution_source, HighsMipWorker& worker);
+
+  bool trySolution(const std::vector<double>& solution,
+                   const int solution_source, HighsMipWorker& worker);
+
+  HighsInt getNumSuccessObservations(HighsMipWorker& worker) const;
+
+  HighsInt getNumInfeasObservations(HighsMipWorker& worker) const;
+
+  double getSuccessObservations(HighsMipWorker& worker) const;
+
+  double getInfeasObservations(HighsMipWorker& worker) const;
 };
 
 #endif
