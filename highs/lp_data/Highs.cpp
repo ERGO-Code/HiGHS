@@ -4259,8 +4259,7 @@ HighsStatus Highs::callSolveMip() {
     if (has_indicators) {
       use_lp = withoutIndicatorConstraints(
           model_.lp_, options_.log_options,
-	  options_.primal_feasibility_tolerance,
-	  solution_,
+          options_.primal_feasibility_tolerance, solution_,
           model_.lp_.mods_.save_indicator_constraint_with_max_big_m);
     }
     // Then reformulate semi-variables (adds cols + rows)

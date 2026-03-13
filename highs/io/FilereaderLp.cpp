@@ -434,7 +434,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     double lower = lp.row_lower_[iRow];
     double upper = lp.row_upper_[iRow];
     double range = upper - lower;
-    
+
     if (lower == upper) {
       // Equality constraint
       this->writeToFileVar(file, name + ":");
@@ -442,16 +442,17 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     } else {
       // Need to distinguish the names when writing out ranged
       // constraint row as two single-sided constraints
-      const bool ranged =
-          lower > -kHighsInf && upper < kHighsInf;
+      const bool ranged = lower > -kHighsInf && upper < kHighsInf;
       if (lower > -kHighsInf) {
         // Has a lower bound
-        this->writeToFileVar(file, name + (ranged ? kRangedRowNameExtensionLower : "") + ":");
+        this->writeToFileVar(
+            file, name + (ranged ? kRangedRowNameExtensionLower : "") + ":");
         writeConstraint(iRow, ar_matrix, ">=", lower);
       }
       if (upper < kHighsInf) {
         // Has an upper bound
-        this->writeToFileVar(file, name + (ranged ? kRangedRowNameExtensionUpper : "") + ":");
+        this->writeToFileVar(
+            file, name + (ranged ? kRangedRowNameExtensionUpper : "") + ":");
         writeConstraint(iRow, ar_matrix, "<=", upper);
       }
     }
@@ -469,10 +470,12 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     double range = upper - lower;
     if (range && range < kHighsInf) {
       // Ranged indicator constraint requires two rows
-      this->writeToFileVar(file, name + kRangedRowNameExtensionLower + ":" +  lp.col_names_[col]);
+      this->writeToFileVar(
+          file, name + kRangedRowNameExtensionLower + ":" + lp.col_names_[col]);
       this->writeToFile(file, " = %s -> ", value == 0 ? "0" : "1");
       writeConstraint(indicator_n, lp.indicators_.matrix, ">=", lower);
-      this->writeToFileVar(file, name + kRangedRowNameExtensionUpper + ":" + lp.col_names_[col]);
+      this->writeToFileVar(
+          file, name + kRangedRowNameExtensionUpper + ":" + lp.col_names_[col]);
       this->writeToFile(file, " = %s -> ", value == 0 ? "0" : "1");
       writeConstraint(indicator_n, lp.indicators_.matrix, "<=", upper);
     } else {

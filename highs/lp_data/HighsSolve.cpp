@@ -390,7 +390,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
                                           const HighsModel& model,
                                           HighsUserScaleData& user_scale_data) {
   const HighsLp& lp = model.lp_;
-  if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
+  //  if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
   const bool user_cost_or_bound_scale =
       user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
   const double small_objective_coefficient =
@@ -430,10 +430,6 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   double min_noncontinuous_col_bound = kHighsInf;
   double max_continuous_col_bound = -kHighsInf;
   double max_noncontinuous_col_bound = -kHighsInf;
-  double min_continuous_matrix_value = kHighsInf;
-  double min_noncontinuous_matrix_value = kHighsInf;
-  double max_continuous_matrix_value = -kHighsInf;
-  double max_noncontinuous_matrix_value = -kHighsInf;
   const bool is_mip = lp.integrality_.size();
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (is_mip && lp.integrality_[iCol] != HighsVarType::kContinuous) {
@@ -483,6 +479,23 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
                         min_continuous_hessian_value,
                         max_continuous_hessian_value);
 
+  double min_gencon_rhs_bound = kHighsInf;
+  double max_gencon_rhs_bound = -kHighsInf;
+  double min_gencon_coeff_value = kHighsInf;
+  double max_gencon_coeff_value = -kHighsInf;
+  HighsInt num_indicator = lp.indicators_.col.size();
+  const HighsSparseMatrix& matrix = lp.indicators_.matrix;
+  for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
+    assessFiniteNonzero(lp.indicators_.lower[indicator_n], min_gencon_rhs_bound,
+                        max_gencon_rhs_bound);
+    assessFiniteNonzero(lp.indicators_.upper[indicator_n], min_gencon_rhs_bound,
+                        max_gencon_rhs_bound);
+    for (HighsInt iEl = matrix.start_[indicator_n];
+         iEl < matrix.start_[indicator_n + 1]; iEl++)
+      assessFiniteNonzero(matrix.value_[indicator_n], min_gencon_coeff_value,
+                          max_gencon_coeff_value);
+  }
+
   // Determine the minimum and maximum overall bounds that can be
   // scaled with user_bound_scale before zeroing extrema due to
   // absence of finite nonzero bounds
@@ -498,6 +511,8 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   if (max_col_bound == -kHighsInf) max_col_bound = 0;
   if (min_row_bound == kHighsInf) min_row_bound = 0;
   if (max_row_bound == -kHighsInf) max_row_bound = 0;
+  if (min_gencon_rhs_bound == kHighsInf) min_gencon_rhs_bound = 0;
+  if (max_gencon_rhs_bound == -kHighsInf) max_gencon_rhs_bound = 0;
 
   double min_hessian_value = min_continuous_hessian_value;
   double max_hessian_value = max_continuous_hessian_value;
@@ -505,23 +520,37 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   if (max_hessian_value == -kHighsInf) max_hessian_value = 0;
 
   // Report on the coefficient ranges
+  std::string gencon_spaces = num_indicator ? "     " : "";
   highsLogUser(log_options, HighsLogType::kInfo, "Coefficient ranges:\n");
   if (num_matrix_nz)
-    highsLogUser(log_options, HighsLogType::kInfo, "  Matrix  [%5.0e, %5.0e]\n",
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "  Matrix  %s[%5.0e, %5.0e]\n", gencon_spaces.c_str(),
                  min_matrix_value, max_matrix_value);
   if (lp.num_col_) {
-    highsLogUser(log_options, HighsLogType::kInfo, "  Cost    [%5.0e, %5.0e]\n",
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "  Cost    %s[%5.0e, %5.0e]\n", gencon_spaces.c_str(),
                  min_col_cost, max_col_cost);
     if (num_hessian_nz)
       highsLogUser(log_options, HighsLogType::kInfo,
-                   "  Hessian [%5.0e, %5.0e]\n", min_hessian_value,
-                   max_hessian_value);
-    highsLogUser(log_options, HighsLogType::kInfo, "  Bound   [%5.0e, %5.0e]\n",
+                   "  Hessian %s[%5.0e, %5.0e]\n", min_hessian_value,
+                   gencon_spaces.c_str(), max_hessian_value);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "  Bound   %s[%5.0e, %5.0e]\n", gencon_spaces.c_str(),
                  min_col_bound, max_col_bound);
   }
   if (lp.num_row_)
-    highsLogUser(log_options, HighsLogType::kInfo, "  RHS     [%5.0e, %5.0e]\n",
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "  RHS     %s[%5.0e, %5.0e]\n", gencon_spaces.c_str(),
                  min_row_bound, max_row_bound);
+
+  if (num_indicator) {
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "  GenCon RHS   [%5.0e, %5.0e]\n", min_gencon_rhs_bound,
+                 max_gencon_rhs_bound);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "  GenCon Coeff [%5.0e, %5.0e]\n", min_gencon_coeff_value,
+                 max_gencon_coeff_value);
+  }
 
   // LPs with no columns or no finite nonzero costs will have
   // max_col_cost = 0

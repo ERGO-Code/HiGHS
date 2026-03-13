@@ -1922,8 +1922,10 @@ void reportLp(const HighsLogOptions& log_options, const HighsLp& lp,
   if ((HighsInt)report_level >= (HighsInt)HighsLogType::kDetailed) {
     reportLpColVectors(log_options, lp);
     reportLpRowVectors(log_options, lp);
-    if ((HighsInt)report_level >= (HighsInt)HighsLogType::kVerbose)
+    if ((HighsInt)report_level >= (HighsInt)HighsLogType::kVerbose) {
       reportLpColMatrix(log_options, lp);
+      reportLpIndicatorConstraints(log_options, lp);
+    }
   }
 }
 
@@ -2082,7 +2084,7 @@ void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
                  lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
                  lp.a_matrix_.index_.data(), lp.a_matrix_.value_.data());
   } else {
-    // With no rows, can's assume that there are index and value vectors to pass
+    // With no rows, can't assume that there are index and value vectors to pass
     reportMatrix(log_options, "Column", lp.num_col_,
                  lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
                  NULL, NULL);
@@ -2095,19 +2097,45 @@ void reportMatrix(const HighsLogOptions& log_options,
                   const HighsInt* index, const double* value) {
   if (num_col <= 0) return;
   highsLogUser(log_options, HighsLogType::kInfo,
-               "%-7s Index              Value\n", message.c_str());
+               "%-6s Index              Value\n", message.c_str());
   for (HighsInt col = 0; col < num_col; col++) {
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "    %8" HIGHSINT_FORMAT " Start   %10" HIGHSINT_FORMAT "\n",
-                 col, start[col]);
+    highsLogUser(log_options, HighsLogType::kInfo, "    %8d Start   %10d\n",
+                 int(col), int(start[col]));
     HighsInt to_el = (col < num_col - 1 ? start[col + 1] : num_nz);
     for (HighsInt el = start[col]; el < to_el; el++)
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "          %8" HIGHSINT_FORMAT " %12g\n", index[el],
-                   value[el]);
+      highsLogUser(log_options, HighsLogType::kInfo, "          %8d %12g\n",
+                   int(index[el]), value[el]);
   }
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
+  highsLogUser(log_options, HighsLogType::kInfo, "             Start   %10d\n",
+               int(num_nz));
+}
+
+// Report the LP indicator constraints
+void reportLpIndicatorConstraints(const HighsLogOptions& log_options,
+                                  const HighsLp& lp) {
+  const HighsIndicatorConstraints& indicators = lp.indicators_;
+  if (!indicators.col.size()) return;
+  HighsInt num_indicator = indicators.col.size();
+  for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Indicator constraint %8d: Binary column %6d at value %1d\n",
+                 int(indicator_n), int(indicators.col[indicator_n]),
+                 int(indicators.value[indicator_n]));
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "       Index              Value\n"
+                 "             Start   %10d\n",
+                 int(indicators.matrix.start_[indicator_n]));
+
+    for (HighsInt el = indicators.matrix.start_[indicator_n];
+         el < indicators.matrix.start_[indicator_n + 1]; el++)
+      highsLogUser(log_options, HighsLogType::kInfo, "          %8d %12g\n",
+                   int(indicators.matrix.index_[el]),
+                   indicators.matrix.value_[el]);
+
+    highsLogUser(log_options, HighsLogType::kInfo, "   Bounds [%12g, %12g]\n",
+                 int(indicator_n), indicators.lower[indicator_n],
+                 indicators.upper[indicator_n]);
+  }
 }
 
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
@@ -3402,8 +3430,7 @@ void equalIndicatorConstraints(
 
 HighsLp withoutIndicatorConstraints(
     const HighsLp& lp_, const HighsLogOptions& log_options,
-    const double primal_feasibility_tolerance,
-    HighsSolution& solution,
+    const double primal_feasibility_tolerance, HighsSolution& solution,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m) {
   HighsLp lp = lp_;
   equalIndicatorConstraints(lp.indicators_, lp.indicator_constraints_);
@@ -3422,7 +3449,8 @@ HighsLp withoutIndicatorConstraints(
   const HighsInt num_indicator = lp.indicators_.col.size();
   // If there is an existing solution, make space for the activities
   // of the additional rows
-  if (solution.value_valid) solution.row_value.resize(lp.num_row_ + num_indicator);
+  if (solution.value_valid)
+    solution.row_value.resize(lp.num_row_ + num_indicator);
 
   // Collect all new rows from indicator constraints, stored per-column
   // for colwise insertion

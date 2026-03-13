@@ -200,6 +200,14 @@ void reportMatrix(const HighsLogOptions& log_options,
                   const HighsInt num_nz, const HighsInt* start,
                   const HighsInt* index, const double* value);
 
+/**
+ * @brief Report the data of an LP
+ */
+void reportLpIndicatorConstraints(
+    const HighsLogOptions& log_options,
+    const HighsLp& lp  //!< LP whose data are to be reported
+);
+
 // Get the number of integer-valued columns in the LP
 HighsInt getNumInt(const HighsLp& lp);
 
@@ -293,8 +301,7 @@ void equalIndicatorConstraints(
 
 HighsLp withoutIndicatorConstraints(
     const HighsLp& lp, const HighsLogOptions& log_options,
-    const double primal_feasibility_tolerance,
-    HighsSolution& solution,
+    const double primal_feasibility_tolerance, HighsSolution& solution,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m);
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);

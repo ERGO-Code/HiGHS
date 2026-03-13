@@ -4,7 +4,7 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = true;  // false;//
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
 void solveWriteReadSolve(Highs& highs, const double objective_value,
@@ -46,13 +46,14 @@ void solveWriteReadSolve(Highs& highs, const double objective_value,
             double_equal_tolerance);
 
     if (k == 0) {
-      REQUIRE(highs.writeModel(filename_lp) ==
+      REQUIRE(highs.writeModel("") ==
               (have_names ? HighsStatus::kOk : HighsStatus::kWarning));
+      REQUIRE(highs.writeModel(filename_lp) == HighsStatus::kOk);
       REQUIRE(highs.writeModel(filename_mps) == HighsStatus::kOk);
     }
   }
-  //  std::remove(filename_lp.c_str());
-  // std::remove(filename_mps.c_str());
+  std::remove(filename_lp.c_str());
+  std::remove(filename_mps.c_str());
 }
 
 TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
