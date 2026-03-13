@@ -280,7 +280,6 @@ HighsInt HMpsFF::fillMatrix(const HighsLogOptions& log_options) {
 }
 
 HighsInt HMpsFF::fillHessian(const HighsLogOptions& log_options) {
-  const std::vector<Triplet>& qentries = q_entries;
   size_t num_entries = q_entries.size();
   if (!num_entries) {
     q_dim = 0;
@@ -317,6 +316,7 @@ HighsInt HMpsFF::fillHessian(const HighsLogOptions& log_options) {
     q_value[q_length[iCol]] = value;
     q_length[iCol]++;
   }
+  q_format = HessianFormat::kSquare;
   return 0;
 }
 
@@ -1839,21 +1839,80 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 typename HMpsFF::Parsekey HMpsFF::parseHessian(
     const HighsLogOptions& log_options, std::istream& file,
     const HMpsFF::Parsekey keyword) {
-  // Parse Hessian information from QUADOBJ or QMATRIX
-  // section according to keyword
-  const bool qmatrix = keyword == HMpsFF::Parsekey::kQmatrix;
-  std::string section_name;
-  if (qmatrix) {
-    section_name = "QMATRIX";
-  } else if (keyword == HMpsFF::Parsekey::kQuadobj) {
-    section_name = "QUADOBJ";
+  assert(keyword == HMpsFF::Parsekey::kQuadobj ||
+         keyword == HMpsFF::Parsekey::kQmatrix);
+  const std::string section_name =
+      keyword == HMpsFF::Parsekey::kQuadobj ? "QUADOBJ" : "QMATRIX";
+  return parseQuadMatrix(log_options, file, section_name, q_entries);
+}
+
+typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
+    const HighsLogOptions& log_options, std::istream& file,
+    const HMpsFF::Parsekey keyword) {
+  assert(keyword == HMpsFF::Parsekey::kQsection ||
+         keyword == HMpsFF::Parsekey::kQcmatrix);
+  const std::string section_name =
+      keyword == HMpsFF::Parsekey::kQsection ? "QSECTION" : "QCMATRIX";
+  std::string strline;
+  std::string col_name;
+  HighsInt rowidx;  // index of quadratic row
+
+  // Get row name from section argument
+  std::string rowname = first_word(section_args, 0);
+  if (rowname.empty()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "No row name given in argument of %s\n", section_name.c_str());
+    return HMpsFF::Parsekey::kFail;
   }
-  // Store all nonzeros in the section, but QMATRIX should have all
-  // entries - so its format is HessianFormat::kSquare format -
-  // whereas every off-diagonal QUADOBJ entry also defines its entry
-  // in the opposite triangle, so its format is
-  // HessianFormat::kTriangular.
-  q_format = qmatrix ? HessianFormat::kSquare : HessianFormat::kTriangular;
+
+  auto mit = rowname2idx.find(rowname);
+  // if row of section does not exist or is free (index -2), then skip
+  if (mit == rowname2idx.end() || mit->second == HighsInt{-2}) {
+    if (mit == rowname2idx.end()) {
+      warning_issued_ = true;
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "Row name \"%s\" in %s section is not defined: ignored\n",
+                   rowname.c_str(), section_name.c_str());
+    }
+    // read lines until start of new section
+    bool skip;
+    while (getMpsLine(file, strline, skip)) {
+      if (skip) continue;
+      if (timeout()) return HMpsFF::Parsekey::kTimeout;
+
+      size_t begin = 0;
+      size_t end = 0;
+      HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, col_name);
+
+      // start of new section?
+      if (key != Parsekey::kNone) {
+        highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read %s  OK\n",
+                    section_name.c_str());
+        return key;
+      }
+    }
+    return Parsekey::kFail;  // unexpected end of file
+  }
+  rowidx = mit->second;
+  assert(rowidx >= -1);
+  assert(rowidx < num_row);
+
+  if (rowidx >= 0) qrows_entries.resize(num_row);
+  assert(rowidx == -1 || qrows_entries.size() == static_cast<size_t>(num_row));
+
+  auto& qentries = (rowidx == -1 ? q_entries : qrows_entries[rowidx]);
+  return parseQuadMatrix(log_options, file, section_name, qentries);
+}
+
+typename HMpsFF::Parsekey HMpsFF::parseQuadMatrix(
+    const HighsLogOptions& log_options, std::istream& file,
+    const std::string& section_name, std::vector<Triplet>& q_entries) {
+  // Store all nonzeros in the section. QMATRIX/QCMATRIX should have
+  // all entries, whereas every off-diagonal QUADOBJ/QSECTION entry
+  // also defines its entry in the opposite triangle, so add this
+  // explicitly to unify the record regardless of section
+  const bool triangular =
+      section_name == "QUADOBJ" || section_name == "QSECTION";
   std::string strline;
   std::string col_name;
   std::string row_name;
@@ -1917,144 +1976,13 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
             row_name.c_str(), col_name.c_str());
         return HMpsFF::Parsekey::kFail;
       }
-      if (coeff) q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
-      end = end_coeff_name;
-      // Don't read more if end of line reached
-      if (end == strline.length()) break;
-    }
-  }
-
-  return HMpsFF::Parsekey::kFail;
-}
-
-typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
-    const HighsLogOptions& log_options, std::istream& file,
-    const HMpsFF::Parsekey keyword) {
-  // Parse Hessian information from QSECTION or QCMATRIX
-  // section according to keyword
-  const bool qcmatrix = keyword == HMpsFF::Parsekey::kQcmatrix;
-  std::string section_name;
-  if (qcmatrix) {
-    section_name = "QCMATRIX";
-  } else {
-    section_name = "QSECTION";
-  }
-  // Store all nonzeros in the section, but QCMATRIX should have all
-  // entries - so its format is HessianFormat::kSquare format -
-  // whereas every off-diagonal QSECTION entry also defines its entry
-  // in the opposite triangle, so its format is
-  // HessianFormat::kTriangular.
-  q_format = qcmatrix ? HessianFormat::kSquare : HessianFormat::kTriangular;
-  std::string strline;
-  std::string col_name;
-  std::string row_name;
-  std::string coeff_name;
-  size_t end_row_name;
-  size_t end_coeff_name;
-  HighsInt rowidx;            // index of quadratic row
-  HighsInt qcolidx, qrowidx;  // indices in quadratic coefs matrix
-
-  // Get row name from section argument
-  std::string rowname = first_word(section_args, 0);
-  if (rowname.empty()) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "No row name given in argument of %s\n", section_name.c_str());
-    return HMpsFF::Parsekey::kFail;
-  }
-
-  auto mit = rowname2idx.find(rowname);
-  // if row of section does not exist or is free (index -2), then skip
-  if (mit == rowname2idx.end() || mit->second == HighsInt{-2}) {
-    if (mit == rowname2idx.end()) {
-      warning_issued_ = true;
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "Row name \"%s\" in %s section is not defined: ignored\n",
-                   rowname.c_str(), section_name.c_str());
-    }
-    // read lines until start of new section
-    bool skip;
-    while (getMpsLine(file, strline, skip)) {
-      if (skip) continue;
-      if (timeout()) return HMpsFF::Parsekey::kTimeout;
-
-      size_t begin = 0;
-      size_t end = 0;
-      HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, col_name);
-
-      // start of new section?
-      if (key != Parsekey::kNone) {
-        highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read %s  OK\n",
-                    section_name.c_str());
-        return key;
+      if (coeff) {
+        q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+        // For a triangular section (QUADOBJ/QSECTION), make a
+        // separate record of the entry in the opposite triangle
+        if (triangular && rowidx != colidx)
+          q_entries.push_back(std::make_tuple(colidx, rowidx, coeff));
       }
-    }
-    return Parsekey::kFail;  // unexpected end of file
-  }
-  rowidx = mit->second;
-  assert(rowidx >= -1);
-  assert(rowidx < num_row);
-
-  if (rowidx >= 0) qrows_entries.resize(num_row);
-  assert(rowidx == -1 || qrows_entries.size() == static_cast<size_t>(num_row));
-
-  auto& qentries = (rowidx == -1 ? q_entries : qrows_entries[rowidx]);
-
-  bool skip;
-  while (getMpsLine(file, strline, skip)) {
-    if (skip) continue;
-    if (timeout()) return HMpsFF::Parsekey::kTimeout;
-
-    size_t begin = 0;
-    size_t end = 0;
-    HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, col_name);
-
-    // start of new section?
-    if (key != Parsekey::kNone) {
-      highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read %s  OK\n",
-                  section_name.c_str());
-      return key;
-    }
-
-    // Get the column index
-    qcolidx = getColIdx(col_name);
-    assert(qcolidx >= 0 && qcolidx < num_col);
-
-    // Loop over the maximum of two entries per row of the file
-    for (int entry = 0; entry < 2; entry++) {
-      // Get the row name
-      row_name = "";
-      row_name = first_word(strline, end);
-      end_row_name = first_word_end(strline, end);
-
-      if (row_name == "") break;
-
-      coeff_name = "";
-      coeff_name = first_word(strline, end_row_name);
-      end_coeff_name = first_word_end(strline, end_row_name);
-
-      if (coeff_name == "") {
-        trim(row_name);
-        trim(col_name);
-        highsLogUser(
-            log_options, HighsLogType::kError,
-            "%s has no coefficient for entry \"%s\" in column \"%s\"\n",
-            section_name.c_str(), row_name.c_str(), col_name.c_str());
-        return HMpsFF::Parsekey::kFail;
-      }
-
-      qrowidx = getColIdx(row_name);
-      assert(qrowidx >= 0 && qrowidx < num_col);
-
-      bool is_nan = false;
-      double coeff = getValue(coeff_name, is_nan);  // atof(word.c_str());
-      if (is_nan) {
-        highsLogUser(
-            log_options, HighsLogType::kError,
-            "Hessian coefficient for entry \"%s\" in column \"%s\" is NaN\n",
-            row_name.c_str(), col_name.c_str());
-        return HMpsFF::Parsekey::kFail;
-      }
-      if (coeff) q_entries.push_back(std::make_tuple(qrowidx, qcolidx, coeff));
       end = end_coeff_name;
       // Don't read more if end of line reached
       if (end == strline.length()) break;

@@ -462,13 +462,20 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     return_status = highs.clearModel();
 
     std::string filename;
-    for (HighsInt test_k = 0; test_k < 2; test_k++) {
+    for (HighsInt test_k = 0; test_k < 4; test_k++) {
       if (test_k == 0) {
         filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
       } else if (test_k == 1) {
         filename = std::string(HIGHS_DIR) + "/check/instances/qjh_quadobj.mps";
-      } else {
+      } else if (test_k == 2) {
         filename = std::string(HIGHS_DIR) + "/check/instances/qjh_qmatrix.mps";
+      } else {
+        // This instance has both quadobj and qmatrix sections, and
+        // both correspond to identical Hessians. They are added so
+        // objective changes
+        filename =
+            std::string(HIGHS_DIR) + "/check/instances/qjh_quadobj_qmatrix.mps";
+        required_objective_function_value = -2.75;
       }
 
       return_status = highs.readModel(filename);

@@ -43,6 +43,7 @@ Int FactorHiGHSSolver::buildASstructure() {
   // Build lower triangular structure of the augmented system.
   // Build values of AS that will not change during the iterations.
 
+  Clock clock;
   log_.printDevInfo("Building AS structure\n");
 
   const Int nzBlock11 = model_.qp() ? nzQ_ : nA_;
@@ -88,6 +89,8 @@ Int FactorHiGHSSolver::buildASstructure() {
     ptrAS_[nA_ + i + 1] = ptrAS_[nA_ + i] + 1;
   }
 
+  info_.AS_structure_time = clock.stop();
+
   return kStatusOk;
 }
 
@@ -111,6 +114,7 @@ Int FactorHiGHSSolver::buildNEstructure() {
 
   // NB: A must have sorted columns for this to work
 
+  Clock clock;
   log_.printDevInfo("Building NE structure\n");
 
   // create partial row-wise representation without values, and array or
@@ -195,6 +199,8 @@ Int FactorHiGHSSolver::buildNEstructure() {
     }
   }
 
+  info_.NE_structure_time = clock.stop();
+
   return kStatusOk;
 }
 
@@ -256,9 +262,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
-  Clock clock;
-  if (Int status = buildASstructure()) return status;
-  info_.AS_structure_time = clock.stop();
+  if (rowsAS_.empty() || ptrAS_.empty()) return kStatusErrorAnalyse;
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(nA_ + mA_, -1);
@@ -266,7 +270,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
 
   log_.printDevInfo("Performing AS analyse phase\n");
 
-  clock.start();
+  Clock clock;
   Int status =
       chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S, ordering_AS_, "AS");
   info_.analyse_AS_time += clock.stop();
@@ -433,9 +437,7 @@ Int FactorHiGHSSolver::chooseNla() {
         model_.nonSeparableQp() || model_.m() == 0) {
       failure_NE = true;
     } else {
-      Clock clock;
       Int status = buildNEstructure();
-      info_.NE_structure_time = clock.stop();
       if (status) {
         failure_NE = true;
         if (status == kStatusOverflow) {
@@ -454,7 +456,8 @@ Int FactorHiGHSSolver::chooseNla() {
   };
 
   auto run_analyse_AS = [&]() {
-    Int AS_status = analyseAS(symb_AS);
+    Int AS_status = buildASstructure();
+    if (!AS_status) AS_status = analyseAS(symb_AS);
     if (AS_status) failure_AS = true;
     if (AS_status == kStatusOverflow) {
       log_.printDevInfo("Integer overflow forming AS matrix\n");
@@ -733,7 +736,8 @@ Int FactorHiGHSSolver::setNla() {
   }
 
   if (options_.nla == kHipoAugmentedString) {
-    Int status = analyseAS(S_);
+    Int status = buildASstructure();
+    if (!status) status = analyseAS(S_);
     if (status == kStatusOverflow) {
       log_.printe("AS requested, integer overflow\n");
       return kStatusOverflow;
@@ -744,7 +748,8 @@ Int FactorHiGHSSolver::setNla() {
     log_stream << textline("Newton system:") << "AS requested\n";
 
   } else if (options_.nla == kHipoNormalEqString) {
-    Int status = analyseNE(S_);
+    Int status = buildNEstructure();
+    if (!status) status = analyseNE(S_);
     if (status == kStatusOverflow) {
       log_.printe("NE requested, integer overflow\n");
       return kStatusOverflow;
