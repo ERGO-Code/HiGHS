@@ -14,7 +14,7 @@
 
 HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
                                        HighsImplications& implications,
-                                       HighsDomain& globaldom)
+                                       const HighsDomain& globaldom)
     : lprelaxation(lprelaxation), globaldom_(globaldom) {
   assert(lprelaxation.scaledOptimal(lprelaxation.getStatus()));
   const HighsMipSolver& mipsolver = implications.mipsolver;
