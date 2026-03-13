@@ -149,7 +149,7 @@ class PDLPSolver {
   void computeStepSizeRatio(PrimalDualParams& working_params);
   void applyHalpernAveraging(std::vector<double>& x, std::vector<double>& y, std::vector<double>& ax, std::vector<double>& aty);
   void updateAverageIterates(const std::vector<double>& x, const std::vector<double>& y, int inner_iter);
-  void performHalpernPdhgStep(bool is_major);
+  void performHalpernPdhgStep(bool is_major, int k_offset);
   void updatePrimalWeightAtRestart(const SolverResults& results);
 
   // Feasibility calculations
@@ -214,6 +214,7 @@ class PDLPSolver {
   std::vector<double> halpern_dual_slack_next_;
   bool halpern_dual_slack_next_valid_ = false;
   double initial_fpe_ = 0.0; // For Halpern restart
+  double fpe_ = 0.0;
 
   // Scalars
   int final_iter_count_ = 0;
@@ -245,6 +246,7 @@ class PDLPSolver {
   int a_nnz_ = 0;
   double sum_weights_gpu_ = 0.0;
   // --- GPU Specifics ---
+  cudaStream_t gpu_stream_ = nullptr;
   cusparseHandle_t cusparse_handle_ = nullptr;
   cublasHandle_t cublas_handle_ = nullptr;
   
@@ -270,6 +272,9 @@ class PDLPSolver {
   double *d_x_at_last_restart_ = nullptr, *d_y_at_last_restart_ = nullptr;
   double *d_x_anchor_ = nullptr, *d_y_anchor_ = nullptr;
   double *d_pdhg_primal_ = nullptr, *d_pdhg_dual_ = nullptr;
+  double* d_delta_x_ = nullptr;
+  double* d_delta_y_ = nullptr;
+  double* d_AT_delta_y_ = nullptr;
   
   double *d_col_cost_ = nullptr, *d_col_lower_ = nullptr, *d_col_upper_ = nullptr;
   double *d_row_lower_ = nullptr, *d_col_scale_ = nullptr, *d_row_scale_ = nullptr;
@@ -305,7 +310,8 @@ class PDLPSolver {
   double computeMovementGpu(const double* d_x_new, const double* d_x_old, const double* d_y_new, const double* d_y_old);
   double computeNonlinearityGpu(const double* d_x_new, const double* d_x_old, const double* d_aty_new, const double* d_aty_old);
   double computeDiffNormCuBLAS(const double* d_a, const double* d_b, int n);
-  void performHalpernPdhgStepGpu(bool is_major);
+  void performHalpernPdhgStepGpu(bool is_major, int k_offset);
+  double computeFixedPointErrorGpu();
 
   // Kernel Wrappers
   void launchKernelUpdateX(double primal_step);
