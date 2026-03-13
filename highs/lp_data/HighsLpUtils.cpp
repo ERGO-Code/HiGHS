@@ -3389,8 +3389,7 @@ HighsLp withoutIndicatorConstraints(
   std::vector<HighsInt> new_row_index;
   std::vector<double> new_row_value;
   std::string new_row_name;
-  const bool use_new_row = true;//false;
-  if (use_new_row) lp.a_matrix_.ensureRowwise();
+  lp.a_matrix_.ensureRowwise();
   HighsInt num_new_row = 0;
   printf("\nReformulating %d indicator constraints\n", int(num_indicator));
   for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
@@ -3476,13 +3475,11 @@ HighsLp withoutIndicatorConstraints(
 	new_row_name = local_name;
       }
       num_new_row++;
-      if (use_new_row) {
-	lp.row_lower_.push_back(new_row_lower);
-	lp.row_upper_.push_back(new_row_upper);
-	lp.row_names_.push_back(new_row_name);
-	HighsInt nnz = new_row_index.size();
-	lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
-      }
+      lp.row_lower_.push_back(new_row_lower);
+      lp.row_upper_.push_back(new_row_upper);
+      lp.row_names_.push_back(new_row_name);
+      HighsInt nnz = new_row_index.size();
+      lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
       new_row_index.clear();
       new_row_value.clear();
     }
@@ -3515,13 +3512,11 @@ HighsLp withoutIndicatorConstraints(
 	new_row_name = local_name;
       }
       num_new_row++;
-      if (use_new_row) {
-	lp.row_lower_.push_back(new_row_lower);
-	lp.row_upper_.push_back(new_row_upper);
-	lp.row_names_.push_back(new_row_name);
-	HighsInt nnz = new_row_index.size();
-	lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
-      }
+      lp.row_lower_.push_back(new_row_lower);
+      lp.row_upper_.push_back(new_row_upper);
+      lp.row_names_.push_back(new_row_name);
+      HighsInt nnz = new_row_index.size();
+      lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
       new_row_index.clear();
       new_row_value.clear();
     }
@@ -3533,19 +3528,9 @@ HighsLp withoutIndicatorConstraints(
                  int(num_with_max_big_m),
                  num_with_max_big_m == 1 ? " has" : "s have");
   }
-  if (use_new_row) {
-    if (num_new_row == 0) {
-      lp.indicators_.clear();
-      lp.a_matrix_.ensureColwise();
-      return lp;
-    }
-  }
-
-  if (use_new_row) {
-    lp.a_matrix_.ensureColwise();
-    lp.num_row_ += num_new_row;
-  }
+  lp.num_row_ += num_new_row;
   lp.indicators_.clear();
+  lp.a_matrix_.ensureColwise();
   lp.a_matrix_.num_col_ = lp.num_col_;
   lp.a_matrix_.num_row_ = lp.num_row_;
   return lp;
