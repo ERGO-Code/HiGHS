@@ -3393,6 +3393,15 @@ HighsLp withoutIndicatorConstraints(
   };
   std::vector<NewRow> new_rows;
 
+  // New data structure generates a single row to be added to the LP
+  double new_row_lower;
+  double new_row_upper;
+  std::vector<HighsInt> new_row_index;
+  std::vector<double> new_row_value;
+  std::string new_row_name;
+  const bool use_new_row = false;
+  if (use_new_row) lp.a_matrix_.ensureRowwise();
+    
   printf("\nReformulating %d indicator constraints\n", int(num_indicator));
   for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
     HighsInt from_el = lp.indicators_.matrix.start_[indicator_n];
@@ -3456,26 +3465,54 @@ HighsLp withoutIndicatorConstraints(
     if (upper < kHighsInf && M_upper > 0) {
       NewRow row;
       row.lower = -kHighsInf;
+      new_row_lower = -kHighsInf;
 
       for (HighsInt iEl = from_el; iEl < to_el; iEl++) {
         row.entries.push_back({
 	    lp.indicators_.matrix.index_[iEl],
 	    lp.indicators_.matrix.value_[iEl]});
+	new_row_index.push_back(lp.indicators_.matrix.index_[iEl]);
+	new_row_value.push_back(lp.indicators_.matrix.value_[iEl]);
       }
       if (binary_value == 1) {
 	row.entries.push_back({binary_col, M_upper});
+	new_row_index.push_back(binary_col);
+	new_row_value.push_back(M_upper);
 	row.upper = upper + M_upper;
+	new_row_upper = upper + M_upper;
       } else {
 	row.entries.push_back({binary_col, -M_upper});
+	new_row_index.push_back(binary_col);
+	new_row_value.push_back(-M_upper);
 	row.upper = upper;
+	new_row_upper = upper;
       }
       if (have_row_names) {
-	row.name =
-	  name.empty()
+	std::string local_name = name.empty()
 	  ? "indicator_upper_" +
 	  std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
 	  : name + "_upper";
+	row.name = local_name;
+	new_row_name = local_name;
       }
+      if (use_new_row) {
+	lp.row_lower_.push_back(new_row_lower);
+	lp.row_upper_.push_back(new_row_upper);
+	lp.row_names_.push_back(new_row_name);
+	HighsInt nnz = new_row_index.size();
+	lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
+      } else {
+	assert(new_row_lower == row.lower);
+	assert(new_row_upper == row.upper);
+	assert(new_row_name == row.name);
+	HighsInt nnz = new_row_index.size();
+	for (HighsInt iEl = 0; iEl < nnz; iEl++) {
+	  assert(new_row_index[iEl] == row.entries[iEl].first);
+	  assert(new_row_value[iEl] == row.entries[iEl].second);
+	}
+      }
+      new_row_index.clear();
+      new_row_value.clear();
       new_rows.push_back(std::move(row));
     }
 
@@ -3485,26 +3522,55 @@ HighsLp withoutIndicatorConstraints(
     if (lower > -kHighsInf && M_lower > 0) {
       NewRow row;
       row.upper = kHighsInf;
+      new_row_upper = kHighsInf;
       HighsInt iEl = from_el-1;
       for (HighsInt iEl = from_el; iEl < to_el; iEl++) {
         row.entries.push_back({
 	    lp.indicators_.matrix.index_[iEl],
 	    lp.indicators_.matrix.value_[iEl]});
+	new_row_index.push_back(lp.indicators_.matrix.index_[iEl]);
+	new_row_value.push_back(lp.indicators_.matrix.value_[iEl]);
       }
       if (binary_value == 1) {
         row.entries.push_back({binary_col, -M_lower});
+	new_row_index.push_back(binary_col);
+	new_row_value.push_back(-M_lower);
         row.lower = lower - M_lower;
+	new_row_lower = lower - M_lower;
       } else {
         row.entries.push_back({binary_col, M_lower});
+	new_row_index.push_back(binary_col);
+	new_row_value.push_back(M_lower);
         row.lower = lower;
+	new_row_lower = lower;
       }
       if (have_row_names) {
-        row.name =
+	std::string local_name = 
             name.empty()
                 ? "indicator_lower_" +
                       std::to_string(lp.num_row_ + (HighsInt)new_rows.size())
                 : name + "_lower";
+        row.name =local_name;
+	new_row_name = local_name;
       }
+      if (use_new_row) {
+	lp.row_lower_.push_back(new_row_lower);
+	lp.row_upper_.push_back(new_row_upper);
+	lp.row_names_.push_back(new_row_name);
+	HighsInt nnz = new_row_index.size();
+	lp.a_matrix_.addVec(nnz, new_row_index.data(), new_row_value.data());
+      } else {
+	assert(new_row_lower == row.lower);
+	assert(new_row_upper == row.upper);
+	assert(new_row_name == row.name);
+	HighsInt nnz = new_row_index.size();
+	for (HighsInt iEl = 0; iEl < nnz; iEl++) {
+	  assert(new_row_index[iEl] == row.entries[iEl].first);
+	  assert(new_row_value[iEl] == row.entries[iEl].second);
+	}
+      }
+      new_row_index.clear();
+      new_row_value.clear();
       new_rows.push_back(std::move(row));
     }
   }
