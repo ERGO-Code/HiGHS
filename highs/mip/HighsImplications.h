@@ -122,7 +122,7 @@ class HighsImplications {
 
   bool tooManyVarBounds() const { return numVarBounds >= maxVarBounds; }
 
-  void computeMirCut(VarBound& vbnd, HighsInt multiplier) const;
+  void strengthenVarBound(VarBound& vbnd, HighsInt multiplier) const;
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
               double vubconstant);

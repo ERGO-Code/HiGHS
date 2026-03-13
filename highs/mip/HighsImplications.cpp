@@ -388,8 +388,8 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   return false;
 }
 
-void HighsImplications::computeMirCut(VarBound& vbnd,
-                                      HighsInt multiplier) const {
+void HighsImplications::strengthenVarBound(VarBound& vbnd,
+                                           HighsInt multiplier) const {
   // try to strengthen variable bound constraint x + a * y <= b by computing
   // MIR cut. since x is a general-integer variable (with integral bounds) and
   // its coefficient is 1.0, it is not shifted (or complemented). similarly,
@@ -427,7 +427,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
 
   if (colisintegral) {
     // try to strengthen VUB using MIR
-    computeMirCut(vub, HighsInt{1});
+    strengthenVarBound(vub, HighsInt{1});
     if (vub.coef == 0.0) return;
   }
 
@@ -468,7 +468,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
 
   if (colisintegral) {
     // try to strengthen VLB using MIR
-    computeMirCut(vlb, HighsInt{-1});
+    strengthenVarBound(vlb, HighsInt{-1});
     if (vlb.coef == 0.0) return;
   }
 
