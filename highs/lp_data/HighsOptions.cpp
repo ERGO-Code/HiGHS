@@ -121,9 +121,10 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
 #else
     highsLogUser(
         report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this the "
-        "HiPO support is missing. Install with highspy[hipo] or install "
-        "highspy-extras.\n",
+        "The HiPO solver was requested via the \"%s\" option, but the "
+        "HiPO dependencies are missing. Install with highspy[hipo] or install "
+        "highspy-extras. Note, that using HiPO changes the HiGHS license from "
+        " MIT to Apache, due to the dependencies' licensing.\n",
         kSolverString.c_str());
 #endif
     return false;
@@ -157,9 +158,10 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
 #else
     highsLogUser(
         report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this the "
-        "HiPO support is missing. Install with highspy[hipo] or install "
-        "highspy-extras.\n",
+        "The HiPO solver was requested via the \"%s\" option, but the "
+        "HiPO dependencies are missing. Install with highspy[hipo] or install "
+        "highspy-extras. Note, that using HiPO changes the HiGHS license from "
+        "MIT to Apache, due to the dependencies' licensing.\n",
         kMipLpSolverString.c_str());
 #endif
     return false;
@@ -194,9 +196,10 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
 #else
     highsLogUser(
         report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this the "
-        "HiPO support is missing. Install with highspy[hipo] or install "
-        "highspy-extras.\n",
+        "The HiPO solver was requested via the \"%s\" option, but the "
+        "HiPO dependencies are missing. Install with highspy[hipo] or install "
+        "highspy-extras. Note, that using HiPO changes the HiGHS license from "
+        "MIT to Apache, due to the dependencies' licensing.\n",
         kMipIpmSolverString.c_str());
 #endif
     return false;
