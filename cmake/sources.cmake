@@ -485,7 +485,6 @@ set(highs_headers
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HStruct.h
-    DynamicDepsLoader.h
     mip/feasibilityjump.hh
     mip/HighsCliqueTable.h
     mip/HighsConflictPool.h
@@ -608,5 +607,6 @@ set(highs_headers
     util/HVector.h
     util/HVectorBase.h
     util/stringutil.h
+    DynamicDepsLoader.h
     Highs.h
   )

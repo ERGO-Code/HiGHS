@@ -622,7 +622,7 @@ void Analyse::afterRelaxSn() {
   std::vector<Int> new_snStart(new_snCount + 1);
 
   // keep track of the children merged into a given supernode
-  std::vector<std::vector<Int> > received_from(sn_count_, std::vector<Int>());
+  std::vector<std::vector<Int>> received_from(sn_count_, std::vector<Int>());
 
   // index to write into sn_perm
   Int start_perm{};
@@ -1041,7 +1041,7 @@ void Analyse::reorderChildren() {
     }
 
     // save children and values to sort
-    std::vector<std::pair<Int, double> > children{};
+    std::vector<std::pair<Int, double>> children{};
     Int child = head[sn];
     while (child != -1) {
       double value =

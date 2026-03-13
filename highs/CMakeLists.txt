@@ -8,19 +8,19 @@ set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources}
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
 if(HIPO)
-  # if (NOT PYTHON_BUILD_SETUP)
+  if (NOT HIPO_PYTHON_EXTRAS_BUILD)
     set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources}
      ${hipo_orderings_sources})
     set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
      ${hipo_orderings_headers})
-  # else()
-  #   set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
-  #   set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
-  #       ../extern/amd/amd.h
-  #       ../extern/metis/metis.h
-  #       ../extern/rcm/rcm.h
-  #   )
-  # endif()
+  else()
+    set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
+    set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
+        # ../extern/amd/amd.h
+        # ../extern/metis/metis.h
+        # ../extern/rcm/rcm.h
+    )
+  endif()
 endif()
 
 # Configure the config windows version file

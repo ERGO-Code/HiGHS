@@ -320,7 +320,6 @@ set(highs_headers_python
     highs/lp_data/HighsSolve.h
     highs/lp_data/HighsStatus.h
     highs/lp_data/HStruct.h
-    highs/DynamicDepsLoader.h
     highs/mip/feasibilityjump.hh
     highs/mip/HighsCliqueTable.h
     highs/mip/HighsConflictPool.h
@@ -443,9 +442,9 @@ set(highs_headers_python
     highs/util/HVector.h
     highs/util/HVectorBase.h
     highs/util/stringutil.h
+    highs/DynamicDepsLoader.h
     highs/Highs.h
   )
-
 
 set(hipo_sources_python
     highs/ipm/hipo/ipm/CurtisReidScaling.cpp

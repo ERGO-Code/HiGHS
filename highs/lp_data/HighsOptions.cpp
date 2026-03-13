@@ -9,13 +9,17 @@
  * @brief
  */
 #include "lp_data/HighsOptions.h"
-#include "DynamicDepsLoader.h"
 
 #include <algorithm>
 #include <cassert>
 #include <cctype>
 
 #include "util/stringutil.h"
+
+#ifdef HIPO_EXTRAS
+#include "DynamicDepsLoader.h"
+#endif
+
 // void setLogOptions();
 
 bool hipoAvailable() {

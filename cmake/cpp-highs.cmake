@@ -140,13 +140,14 @@ install(
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/highs"
   COMPONENT Devel)
 
+if (NOT HIPO_PYTHON_EXTRAS_BUILD)
 # Configure the pkg-config file for the install
 configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
   "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
 
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-
+endif()
 
 # highs_cxx_test()
 # CMake function to generate and build C++ test.

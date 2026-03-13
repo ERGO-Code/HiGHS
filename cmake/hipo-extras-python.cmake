@@ -180,7 +180,7 @@ if(MSVC)
   target_compile_options(highs_extras PRIVATE "/bigobj")
 endif()
 
-if (NOT MSVC) 
+if (NOT MSVC)
   target_compile_options(highs_extras PRIVATE "-ftemplate-depth=2048")
 endif()
 

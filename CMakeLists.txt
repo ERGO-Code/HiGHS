@@ -98,6 +98,8 @@ endif()
 # endif()
 
 option(HIPO "Build HIPO" OFF)
+message(STATUS "Build HIPO: ${HIPO}")
+
 # if (PYTHON_BUILD_SETUP)
 #   set(HIPO ON)
 # endif()
@@ -188,7 +190,6 @@ endif()
 # endif()
 
 
-message(STATUS "Build HIPO: ${HIPO}")
 option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
 message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
 option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
@@ -906,7 +907,7 @@ else(FAST_BUILD)
 
   include(cpp-highs)
 
-  if(BUILD_CXX)
+  if(BUILD_CXX AND NOT HIPO_PYTHON_EXTRAS_BUILD)
     add_subdirectory(app)
     add_subdirectory(examples)
   endif()
