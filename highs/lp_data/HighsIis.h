@@ -35,10 +35,10 @@ enum IisModelStatus {
 struct HighsIisInfo {
   HighsInt num_lp_solved = 0;
   HighsInt sum_simplex_iteration_counts = 0;
-  HighsInt min_simplex_iteration_count = kHighsIInf;
+  HighsInt min_simplex_iteration_count = 0;
   HighsInt max_simplex_iteration_count = 0;
   double sum_simplex_times = 0.0;
-  double min_simplex_time = kHighsInf;
+  double min_simplex_time = 0.0;
   double max_simplex_time = 0.0;
   // IIS logging state (persist across calls)
   double iis_last_disptime = -kHighsInf;
@@ -47,10 +47,10 @@ struct HighsIisInfo {
   void clear() {
     num_lp_solved = 0;
     sum_simplex_iteration_counts = 0;
-    min_simplex_iteration_count = kHighsIInf;
+    min_simplex_iteration_count = 0;
     max_simplex_iteration_count = 0;
     sum_simplex_times = 0.0;
-    min_simplex_time = kHighsInf;
+    min_simplex_time = 0.0;
     max_simplex_time = 0.0;
     // Reset IIS logging state
     iis_last_disptime = -kHighsInf;
@@ -58,6 +58,10 @@ struct HighsIisInfo {
   }
 
   void update(const double simplex_time, const HighsInt simplex_iterations) {
+    if (num_lp_solved == 0) {
+      min_simplex_iteration_count = kHighsIInf;
+      min_simplex_time = kHighsInf;
+    }
     num_lp_solved += 1;
     sum_simplex_times += simplex_time;
     min_simplex_time = std::min(simplex_time, min_simplex_time);
