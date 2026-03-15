@@ -58,7 +58,7 @@ HiGHS has two interior point (IPM) solvers:
 
 Setting the option [__solver__](@ref option-solver) to "ipm" selects the HiPO solver, if the build supports it, otherwise it selects the IPX solver.
 
-#### Primal-dual hybrid gradient method
+#### Primal-dual hybrid gradient method (PDLP)
 
 HiGHS includes the [
 cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C) primal-dual hybrid
@@ -74,26 +74,23 @@ The simplex solver always generates a [basic solution](@ref
 term-basic-solution). This is a solution at a vertex of the feasible
 region of the LP.
 
-By default, the IPM solvers also generate a basic solution. However,
-this requires a procedure known as "crossover" to be run. This can
-occasionally be very expensive so, if users require only a solution to
-the LP, and not a basic solution, crossover can be suppressed. This is
-done by setting the [run\_crossover](@ref option-run-crossover) option
-to "off". However, if the IPM solver cannot satsify the [feasibility
-and optimality](@ref kkt) conditions, HiGHS will not claim
-optimality. Hence it is better to set the `run\_crossover` option to
-"choose", in which case crossover will be run if the IPM solution does
-not satsify the [feasibility and optimality](@ref kkt) conditions.
+By default, the IPM solvers also generate a basic solution by running
+a procedure known as "crossover". This can occasionally be very
+expensive so if users require only a solution to the LP, and not a
+basic solution, crossover can be suppressed. This is done by setting
+the [run\_crossover](@ref option-run-crossover) option to
+"off". However, if the IPM solver terminates without satsifying the
+[feasibility and optimality](@ref kkt) conditions, HiGHS will not
+claim optimality. Hence it is better to set the `run\_crossover`
+option to "choose", in which case crossover will be run if the IPM
+solver terminates without determining optimality.
 
-The primal-dual hybrid gradient solver does not generate a basic
-solution. Currently it has no crossover procedure to obtain one.
+The PDLP solver does not generate a basic solution. Currently it has
+no crossover procedure to obtain one.
 
 When modifications have been made to an LP problem, the simplex solver
 (only) can solve the modified problem from the optimal basis of the
-original LP. This is known ["hot starting"](@ref hot-start) is
-generally the most efficient means of solving the modified LP, and is
-essential to the efficient solution of mixed-integer programming
-problems.
+original LP, a process known as ["hot starting"](@ref hot-start-lp).
 
 ## MIP
 

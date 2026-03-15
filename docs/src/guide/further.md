@@ -87,7 +87,7 @@ way. Note that if LP modifications are made via HiGHS methods, any
 basis stored internally will be modified to allow the best possible
 hot start.
 
-### LP
+### [LP](@id hot-start-lp)
 
 To run HiGHS from a user-defined solution or basis, this is passed to
 HiGHS using the methods [setSolution](@ref Set-solution) or
