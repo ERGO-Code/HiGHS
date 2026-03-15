@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;  // true;//
+const bool dev_run = true;  // false;  //
 const bool write_model = false;
 
 const double inf = kHighsInf;
