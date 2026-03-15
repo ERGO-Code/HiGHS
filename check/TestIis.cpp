@@ -27,8 +27,8 @@ void reportIisInfo(const HighsLogOptions& log_options,
                int(iis_info.max_simplex_iteration_count));
   highsLogUser(log_options, HighsLogType::kInfo,
                "   Simplex time (min / sum / max) = %g / %g / %g\n",
-               int(iis_info.min_simplex_time), int(iis_info.sum_simplex_times),
-               int(iis_info.max_simplex_time));
+               iis_info.min_simplex_time, iis_info.sum_simplex_times,
+               iis_info.max_simplex_time);
 }
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status =
