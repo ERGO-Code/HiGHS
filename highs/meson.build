@@ -196,7 +196,6 @@ _srcs = [
     'io/filereaderlp/reader.cpp',
     'interfaces/highs_c_api.cpp',
     'io/Filereader.cpp',
-    'io/FilereaderEms.cpp',
     'io/FilereaderLp.cpp',
     'io/FilereaderMps.cpp',
     'io/HMPSIO.cpp',

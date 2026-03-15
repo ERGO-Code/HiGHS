@@ -2,6 +2,7 @@
 #define HIPO_FACTORHIGHS_SOLVER_H
 
 #include <algorithm>
+#include <atomic>
 
 #include "Info.h"
 #include "IpmData.h"
@@ -25,6 +26,7 @@ class FactorHiGHSSolver : public LinearSolver {
   std::vector<double> valNE_;
   std::vector<Int> ptrA_rw_, idxA_rw_;
   std::vector<Int> corr_A_;
+  std::atomic<Int64> NE_nz_limit_{kHighsIInf};
 
   // augmented system data
   std::vector<Int> ptrAS_;
@@ -43,23 +45,26 @@ class FactorHiGHSSolver : public LinearSolver {
   const Int mA_, nA_, nzA_, nzQ_;
 
   Options& options_;
+  std::string ordering_AS_ = "none";
+  std::string ordering_NE_ = "none";
 
   Int chooseNla();
   Int setNla();
   void setParallel();
   Int chooseOrdering(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                     const std::vector<Int>& signs, Symbolic& S);
+                     const std::vector<Int>& signs, Symbolic& S,
+                     std::string& ordering, const std::string& nla);
 
-  Int buildNEstructure(Int64 nz_limit = kHighsIInf);
+  Int buildNEstructure();
   Int buildNEvalues(const std::vector<double>& scaling);
   void freeNEmemory();
 
-  Int buildASstructure(Int64 nz_limit = kHighsIInf);
+  Int buildASstructure();
   Int buildASvalues(const std::vector<double>& scaling);
   void freeASmemory();
 
   Int analyseAS(Symbolic& S);
-  Int analyseNE(Symbolic& S, Int64 nz_limit = kHighsIInf);
+  Int analyseNE(Symbolic& S);
 
  public:
   FactorHiGHSSolver(Options& options, const Model& model,

@@ -112,7 +112,6 @@ TEST_CASE("qpsolver", "[qpsolver]") {
 
   for (auto& solver : solvers) {
     highs.setOptionValue("solver", solver);
-    const HighsModel& model = highs.getModel();
     const HighsInfo& info = highs.getInfo();
     const HighsSolution& solution = highs.getSolution();
     const double& objective_function_value = info.objective_function_value;
@@ -249,7 +248,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
     hessian.value_ = {2.0};
 
     highs.setOptionValue("output_flag", dev_run);
-    const HighsModel& model = highs.getModel();
     const HighsInfo& info = highs.getInfo();
     const HighsSolution& solution = highs.getSolution();
     const double& objective_function_value = info.objective_function_value;
@@ -464,13 +462,20 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     return_status = highs.clearModel();
 
     std::string filename;
-    for (HighsInt test_k = 0; test_k < 2; test_k++) {
+    for (HighsInt test_k = 0; test_k < 4; test_k++) {
       if (test_k == 0) {
         filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
       } else if (test_k == 1) {
         filename = std::string(HIGHS_DIR) + "/check/instances/qjh_quadobj.mps";
-      } else {
+      } else if (test_k == 2) {
         filename = std::string(HIGHS_DIR) + "/check/instances/qjh_qmatrix.mps";
+      } else {
+        // This instance has both quadobj and qmatrix sections, and
+        // both correspond to identical Hessians. They are added so
+        // objective changes
+        filename =
+            std::string(HIGHS_DIR) + "/check/instances/qjh_quadobj_qmatrix.mps";
+        required_objective_function_value = -2.75;
       }
 
       return_status = highs.readModel(filename);
@@ -506,7 +511,10 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
 
   for (auto& solver : solvers) {
+    if (dev_run) printf("Testing solver %s\n", solver.c_str());
     // Run should fail since objective is non-convex
+    if (dev_run)
+      printf("test-min-negative-definite for solver %s\n", solver.c_str());
     REQUIRE(highs.run() == HighsStatus::kError);
   }
 
@@ -1213,7 +1221,7 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("2489", "[qpsolver]") {
+TEST_CASE("issue-2489", "[qpsolver]") {
   // This QP is
   //
   // Min, x^2/2 + x
@@ -1257,7 +1265,7 @@ TEST_CASE("2489", "[qpsolver]") {
   h.resetGlobalScheduler(true);
 }
 
-TEST_CASE("2821", "[qpsolver]") {
+TEST_CASE("issue-2821", "[qpsolver]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = h.getInfo();
@@ -1309,3 +1317,29 @@ TEST_CASE("2821", "[qpsolver]") {
   }
   h.resetGlobalScheduler(true);
 }
+
+/*
+// This case causes a segfault with the meson build, but not with
+// cmake. Might be indicative of the bug causing the degeneracy
+// failure. Hence, for now, the unite test is commented out
+//
+TEST_CASE("issue-2894", "[qpsolver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const std::string dirname = std::string(HIGHS_DIR) + "/check/instances/";
+  std::string model = "2894";
+  std::string filename = dirname + model + ".mps";
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  for (auto& solver : solvers) {
+    REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
+    if (solver == kQpAsmString) {
+      REQUIRE(h.run() == HighsStatus::kError);
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kSolveError);
+    } else {
+      REQUIRE(h.run() == HighsStatus::kOk);
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    }
+  }
+  h.resetGlobalScheduler(true);
+}
+*/

@@ -157,7 +157,7 @@ TEST_CASE("console-file-callback-log", "[highs_io]") {
     }
   }
 
-  //  std::remove(test_highs_log.c_str());
-  //  std::remove(test_user_log.c_str());
+  std::remove(test_highs_log.c_str());
+  std::remove(test_user_log.c_str());
   h.resetGlobalScheduler(true);
 }

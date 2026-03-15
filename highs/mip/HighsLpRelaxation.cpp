@@ -24,9 +24,7 @@ void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
                                    std::vector<double>& cut_lower,
                                    std::vector<double>& cut_upper,
                                    HighsSparseMatrix& cut_matrix) const {
-  // NB RESTORE reference
-  //  const HighsLp& lp = lpsolver.getLp();
-  HighsLp lp = lpsolver.getLp();
+  const HighsLp& lp = lpsolver.getLp();
   num_col = lp.num_col_;
   HighsInt num_lp_row = lp.num_row_;
   HighsInt num_model_row = mipsolver.numRow();

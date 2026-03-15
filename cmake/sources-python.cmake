@@ -178,7 +178,6 @@ set(ipx_sources_python
 set(highs_sources_python
     highs/interfaces/highs_c_api.cpp
     highs/io/Filereader.cpp
-    highs/io/FilereaderEms.cpp
     highs/io/FilereaderLp.cpp
     highs/io/FilereaderMps.cpp
     highs/io/HighsIO.cpp
@@ -290,7 +289,6 @@ set(highs_headers_python
     extern/pdqsort/pdqsort.h
     highs/interfaces/highs_c_api.h
     highs/io/Filereader.h
-    highs/io/FilereaderEms.h
     highs/io/FilereaderLp.h
     highs/io/FilereaderMps.h
     highs/io/HighsIO.h
