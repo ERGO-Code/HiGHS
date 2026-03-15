@@ -4358,6 +4358,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   // update implied bounds of all columns in given row
   HPRESOLVE_CHECKED_CALL(updateColImpliedBounds(row));
 
+  // extract variable bound constraints
+  extractVarBounds(row);
+
   return checkLimits(postsolve_stack);
 }
 
@@ -7934,6 +7937,135 @@ void HPresolve::setRelaxedImpliedBounds() {
       if (newUb < model->col_upper_[i] - boundRelax)
         model->col_upper_[i] = newUb;
     }
+  }
+}
+
+void HPresolve::extractVarBounds(HighsInt row) {
+  // extract variable bound constraints from the row
+
+  // return if row is empty or a singleton or contains no integer variables
+  if (mipsolver == nullptr || rowsize[row] <= 1 || rowsizeInteger[row] == 0)
+    return;
+
+  // check if variable bounds can be derived from row
+  HighsInt numInfSumLower = impliedRowBounds.getNumInfSumLower(row);
+  HighsInt numInfSumUpper = impliedRowBounds.getNumInfSumUpper(row);
+  bool useLhs = model->row_lower_[row] != -kHighsInf && numInfSumUpper <= 1;
+  bool useRhs = model->row_upper_[row] != kHighsInf && numInfSumLower <= 1;
+  if (!useLhs && !useRhs) return;
+
+  auto computeMirCut = [&](double& aj, double& rhs, HighsInt multiplier) {
+    // try to strengthen variable bound constraint x + a * y <= b by computing
+    // MIR cut. since x is a general-integer variable (with integral bounds) and
+    // its coefficient is 1.0, it is not shifted (or complemented). similarly,
+    // since y is a binary variable (i.e., its lower bound is 0.0), it does not
+    // need to be shifted, and we also do not try to complement it.
+    constexpr double f0min = 0.005;
+    constexpr double f0max = 0.995;
+    double downrhs = std::floor(multiplier * rhs);
+    double f0 = multiplier * rhs - downrhs;
+    if (f0 < f0min || f0 > f0max) return;
+    double downaj = std::floor(multiplier * aj + kHighsTiny);
+    double fj = multiplier * aj - downaj;
+    rhs = multiplier * downrhs;
+    aj = multiplier * (downaj + std::max(fj - f0, 0.0) / (1.0 - f0));
+  };
+
+  // check if row contains a single binary variable
+  HighsInt binCol = -1;
+  double binCoef = 0.0;
+  for (const auto& nonzero : getRowVector(row)) {
+    // skip fixed variables
+    if (model->col_lower_[nonzero.index()] ==
+        model->col_upper_[nonzero.index()])
+      continue;
+
+    // find binary variable
+    if (model->integrality_[nonzero.index()] == HighsVarType::kInteger &&
+        model->col_lower_[nonzero.index()] == 0.0 &&
+        model->col_upper_[nonzero.index()] == 1.0) {
+      // return if there is more than one binary variable
+      if (binCol != -1) return;
+      binCol = nonzero.index();
+      binCoef = nonzero.value();
+    }
+  }
+  // return if there is no binary variable
+  if (binCol == -1) return;
+
+  for (const auto& nonzero : getRowVector(row)) {
+    // skip fixed variables
+    if (model->col_lower_[nonzero.index()] ==
+        model->col_upper_[nonzero.index()])
+      continue;
+
+    // skip binary variable
+    if (nonzero.index() == binCol) continue;
+
+    // compute VLB constant
+    double vlbConstant = -kHighsInf;
+    if (useLhs) {
+      double residual = impliedRowBounds.getResidualSumUpper(
+          row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
+      if (residual != kHighsInf) {
+        vlbConstant = static_cast<double>(
+            (static_cast<HighsCDouble>(model->row_lower_[row]) - residual) /
+            std::abs(nonzero.value()));
+        useLhs = numInfSumUpper == 0;
+      }
+    }
+
+    // compute VUB constant
+    double vubConstant = kHighsInf;
+    if (useRhs) {
+      double residual = impliedRowBounds.getResidualSumLower(
+          row, nonzero.index(), nonzero.value(), binCol, binCoef, 0.0);
+      if (residual != -kHighsInf) {
+        vubConstant = static_cast<double>(
+            (static_cast<HighsCDouble>(model->row_upper_[row]) - residual) /
+            std::abs(nonzero.value()));
+        useRhs = numInfSumLower == 0;
+      }
+    }
+
+    // switch sign if continuous variable has a negative coefficient
+    if (nonzero.value() < 0) {
+      vlbConstant *= -1;
+      vubConstant *= -1;
+      std::swap(vlbConstant, vubConstant);
+    }
+
+    // compute coefficient for binary variable
+    double vbCoef = binCoef / nonzero.value();
+
+    // add VLB
+    if (vlbConstant != -kHighsInf) {
+      double myVbCoef = vbCoef;
+      // try to strengthen VLB using MIR
+      if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
+        computeMirCut(myVbCoef, vlbConstant, HighsInt{-1});
+      // store VLB
+      if (myVbCoef != 0.0)
+        mipsolver->mipdata_->implications.addVLB(
+            nonzero.index(), binCol, -myVbCoef, vlbConstant,
+            model->col_lower_[nonzero.index()]);
+    }
+
+    // add VUB
+    if (vubConstant != kHighsInf) {
+      double myVbCoef = vbCoef;
+      // try to strengthen VUB using MIR
+      if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
+        computeMirCut(myVbCoef, vubConstant, HighsInt{1});
+      // store VUB
+      if (myVbCoef != 0.0)
+        mipsolver->mipdata_->implications.addVUB(
+            nonzero.index(), binCol, -myVbCoef, vubConstant,
+            model->col_upper_[nonzero.index()]);
+    }
+
+    // stop if no additional variable bounds can be found
+    if (!useLhs && !useRhs) break;
   }
 }
 

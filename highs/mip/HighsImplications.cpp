@@ -390,6 +390,12 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
 
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
                                double vubconstant) {
+  addVUB(col, vubcol, vubcoef, vubconstant,
+         mipsolver.mipdata_->domain.col_upper_[col]);
+}
+
+void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
+                               double vubconstant, double colupperbound) {
   // assume that VUBs do not have infinite coefficients and infinite constant
   // terms since such VUBs effectively evaluate to NaN.
   assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
@@ -400,9 +406,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
   mipsolver.mipdata_->debugSolution.checkVub(col, vubcol, vubcoef, vubconstant);
 
   double minBound = vub.minValue();
-  if (minBound >=
-      mipsolver.mipdata_->domain.col_upper_[col] - mipsolver.mipdata_->feastol)
-    return;
+  if (minBound >= colupperbound - mipsolver.mipdata_->feastol) return;
 
   auto insertresult = vubs[col].insert_or_get(vubcol, vub);
 
@@ -419,6 +423,12 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
                                double vlbconstant) {
+  addVLB(col, vlbcol, vlbcoef, vlbconstant,
+         mipsolver.mipdata_->domain.col_lower_[col]);
+}
+
+void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
+                               double vlbconstant, double colllowerbound) {
   // assume that VLBs do not have infinite coefficients and infinite constant
   // terms since such VLBs effectively evaluate to NaN.
   assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
@@ -429,17 +439,15 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   mipsolver.mipdata_->debugSolution.checkVlb(col, vlbcol, vlbcoef, vlbconstant);
 
   double maxBound = vlb.maxValue();
-  if (vlb.maxValue() <=
-      mipsolver.mipdata_->domain.col_lower_[col] + mipsolver.mipdata_->feastol)
-    return;
+  if (maxBound <= colllowerbound + mipsolver.mipdata_->feastol) return;
 
   auto insertresult = vlbs[col].insert_or_get(vlbcol, vlb);
 
   if (!insertresult.second) {
     VarBound& currentvlb = *insertresult.first;
 
-    double currentMaxNound = currentvlb.maxValue();
-    if (maxBound > currentMaxNound + mipsolver.mipdata_->feastol) {
+    double currentMaxBound = currentvlb.maxValue();
+    if (maxBound > currentMaxBound + mipsolver.mipdata_->feastol) {
       currentvlb.coef = vlbcoef;
       currentvlb.constant = vlbconstant;
     }
