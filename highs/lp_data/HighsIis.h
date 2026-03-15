@@ -76,13 +76,13 @@ class HighsIis {
 
   void clearData();
   void clear();
+  void clearLogInfo();
   void invalid(const HighsLp& lp);
   std::string iisBoundStatusToString(HighsInt bound_status) const;
   std::string iisModelStatusToString(HighsInt model_status) const;
   void report(const std::string& message, const HighsLp& lp) const;
-  void reportIteration(const HighsOptions& options,
-                       const HighsInt num_rows_remaining,
-                       const HighsInt num_cols_remaining, const bool force);
+  void reportIteration(const HighsOptions& options, const HighsInt iter,
+                       const HighsInt num_rows_remaining, const bool force);
   void reportFinal(const HighsOptions& options) const;
   void addCol(const HighsInt col, const HighsInt status = kIisBoundStatusNull);
   void addRow(const HighsInt row, const HighsInt status = kIisBoundStatusNull);

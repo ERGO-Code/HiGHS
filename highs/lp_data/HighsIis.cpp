@@ -29,6 +29,11 @@ void HighsIis::clear() {
   this->info_.clear();
 }
 
+void HighsIis::clearLogInfo() {
+  this->info_.iis_last_disptime = -kHighsInf;
+  this->info_.iis_num_disp_lines = 0;
+}
+
 void HighsIis::invalid(const HighsLp& lp) {
   this->clear();
   this->col_status_.assign(lp.num_col_, kIisStatusMaybeInConflict);
@@ -79,46 +84,40 @@ void HighsIis::report(const std::string& message, const HighsLp& lp) const {
   printf("\n");
 }
 
-void HighsIis::reportIteration(const HighsOptions& options,
+void HighsIis::reportIteration(const HighsOptions& options, const HighsInt iter,
                                const HighsInt num_rows_remaining,
-                               const HighsInt num_cols_remaining,
                                const bool force) {
   const bool output_flag = *options.log_options.output_flag;
   if (!output_flag) return;
-
   const double min_interval = 5.0;
   const double runtime = info_.sum_simplex_times;
-
   if (!force && info_.iis_last_disptime > -0.5 * kHighsInf &&
       runtime - info_.iis_last_disptime < min_interval)
     return;
-
   // Update last time only when we actually print a line
   info_.iis_last_disptime = runtime;
-
+  const HighsInt gap = 13;
+  const HighsInt w_iter = (HighsInt)strlen("Iteration") + 2;
+  const HighsInt w_rows = (HighsInt)strlen("Rows") + gap;
+  const HighsInt w_time = (HighsInt)strlen("Runtime") + gap;
   // Print header every 20 lines (and on first line)
   if (info_.iis_num_disp_lines % 20 == 0) {
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "\n  Rows     Columns    Runtime\n");
+    highsLogUser(options.log_options, HighsLogType::kInfo, "%*s%*s%*s\n",
+                 w_iter, "Iteration", w_rows, "Rows", w_time, "Runtime");
   }
   ++info_.iis_num_disp_lines;
-
-  const std::string time_string = highsFormatToString("%7.2f s", runtime);
-
+  const std::string time_string = highsFormatToString("%.2fs", runtime);
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               " %6" HIGHSINT_FORMAT "   %6" HIGHSINT_FORMAT "   %9s\n",
-               num_rows_remaining, num_cols_remaining, time_string.c_str());
+               "%*" HIGHSINT_FORMAT "%*" HIGHSINT_FORMAT "%*s\n", w_iter, iter,
+               w_rows, num_rows_remaining, w_time, time_string.c_str());
 }
 
 void HighsIis::reportFinal(const HighsOptions& options) const {
   const bool output_flag = *options.log_options.output_flag;
   if (!output_flag) return;
-
   const HighsLogOptions& log_options = options.log_options;
-
   // Align colons by padding labels to the same width
-  const int kLabelWidth = 14;
-
+  const int kLabelWidth = 19;
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
   highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %s\n", kLabelWidth,
                "IIS status", iisModelStatusToString(status_).c_str());
@@ -128,7 +127,7 @@ void HighsIis::reportFinal(const HighsOptions& options) const {
   highsLogUser(log_options, HighsLogType::kInfo,
                "%-*s : %" HIGHSINT_FORMAT "\n", kLabelWidth, "Columns",
                (HighsInt)col_index_.size());
-  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %7.2f\n", kLabelWidth,
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %.2fs\n", kLabelWidth,
                "HiGHS run time", info_.sum_simplex_times);
 }
 
@@ -597,14 +596,20 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   const bool col_priority = kIisStrategyColPriority & options.iis_strategy;
   const bool row_priority = !col_priority;
   // Initially all columns and rows are candidates for the IIS
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    this->addCol(iCol, this->determineBoundStatus(lp.col_lower_[iCol],
-                                                  lp.col_upper_[iCol], false));
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-    this->addRow(iRow, this->determineBoundStatus(lp.row_lower_[iRow],
-                                                  lp.row_upper_[iRow], true));
-  double num_cols = lp.num_col_;
-  double num_rows = lp.num_row_;
+  HighsInt num_cols = 0;
+  HighsInt num_rows = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    HighsInt col_status = this->determineBoundStatus(
+        lp.col_lower_[iCol], lp.col_upper_[iCol], false);
+    this->addCol(iCol, col_status);
+    num_cols++;
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    HighsInt row_status = this->determineBoundStatus(lp.row_lower_[iRow],
+                                                     lp.row_upper_[iRow], true);
+    this->addRow(iRow, row_status);
+    if (row_status != kIisBoundStatusDropped) num_rows++;
+  }
 
   Highs highs;
   const HighsInfo& info = highs.getInfo();
@@ -622,9 +627,11 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   if (basis) highs.setBasis(*basis);
 
   // Initial logging
+  this->clearLogInfo();
+  HighsInt iter = 0;
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Initiating deletion filtering");
-  this->reportIteration(options, num_rows, num_cols, true);
+               "\nRunning deletion filter to identify an IIS\n");
+  this->reportIteration(options, iter, num_rows, true);
   // Zero the objective
   std::vector<double> cost;
   cost.assign(lp.num_col_, 0);
@@ -766,11 +773,20 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     // Perform deletion pass
     HighsInt num_index = row_deletion ? lp.num_row_ : lp.num_col_;
     for (iX = 0; iX < num_index; iX++) {
+      // Get logging info
+      iter++;
+      const bool force = row_deletion && (iX == (num_index - 1));
+      // Get status
       const HighsInt ix_status =
           row_deletion ? this->row_bound_[iX] : this->col_bound_[iX];
+      // Skip if status is already free or dropped
       if (ix_status == kIisBoundStatusDropped ||
-          ix_status == kIisBoundStatusFree)
+          ix_status == kIisBoundStatusFree) {
+        // Possibly report
+        this->reportIteration(options, iter, num_rows, force);
         continue;
+      }
+
       double lower = row_deletion ? lp.row_lower_[iX] : lp.col_lower_[iX];
       double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
       // Record whether the upper bound has been dropped due to the lower
@@ -821,16 +837,12 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
           this->determineBoundStatus(lower, upper, row_deletion);
       if (row_deletion) {
         this->row_bound_[iX] = iss_bound_status;
-        if (iss_bound_status == kIisBoundStatusDropped) {
-          num_rows--;
-        }
+        if (iss_bound_status == kIisBoundStatusDropped) num_rows--;
       } else {
         this->col_bound_[iX] = iss_bound_status;
-        if (iss_bound_status == kIisBoundStatusFree) {
-          num_cols--;
-        }
       }
-      this->reportIteration(options, num_rows, num_cols, false);
+      // Possibly report on iteration
+      this->reportIteration(options, iter, num_rows, force);
       if (kIisDevReport) {
         highsLogUser(log_options, HighsLogType::kInfo, "%s %d has status %s\n",
                      type.c_str(), int(iX),
@@ -853,6 +865,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
           }
         }
         if (empty_col) {
+          num_cols--;
           if (kIisDevReport) {
             highsLogUser(log_options, HighsLogType::kInfo,
                          "Col %d has status Dropped: Empty\n", int(iCol));
@@ -882,8 +895,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       iss_num_row++;
     }
   }
-  // Final report
-  this->reportIteration(options, iss_num_row, iss_num_col, true);
   // Return final result
   this->valid_ = true;
   this->status_ = iis_status;
