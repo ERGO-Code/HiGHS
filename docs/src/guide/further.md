@@ -5,7 +5,7 @@
 HiGHS has a sophisticated presolve procedure for LPs and MIPs that
 aims to reduce the dimension of the model that must be solved. In most
 cases, the time saved by solving the reduced model is very much
-greater than the time taken to perform presolve. Once he presolved
+greater than the time taken to perform presolve. Once the presolved
 model is solved, a postsolve procedure (of minimal computational cost)
 deduces the optimal solution to the original model. Hence presolve is
 performed by default. The only exception occus when there is a valid
