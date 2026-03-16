@@ -100,3 +100,57 @@ jobs:
          python3 ./examples/call_highs_from_python_mps.py
          python3 ./examples/call_highs_from_python.py
          python3 ./examples/minimal.py
+
+  build_hipo_local_non_default_path:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.12]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python3 -m pip install pytest
+
+      - name: Checkout CMakeHighsFetchContent
+        uses: actions/checkout@v4
+        with:
+          repository: OpenMathLib/OpenBLAS
+          ref: main
+          path: pathtoopenblas
+
+      - name: Create build dir for openblas
+        run: |
+          mkdir ${{runner.workspace}}/build-openblas
+
+      - name: Configure openblas
+        working-directory: ${{runner.workspace}}/build-openblas
+        run: |
+          cmake ${{runner.workspace}}/HiGHS/pathtoopenblas
+            -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install-openblas
+          cmake --build . --parallel
+          cmake --install .
+
+        # Can pass path with an additional
+        # --config-settings=cmake.define.BLAS_LIBRARIES=/home/ivet/installs/openblas/lib/libopenblas.a
+
+      - name: Test Python Interface
+        run: |
+          python3 -m pip install ./highspy-extras \
+              --config-settings=cmake.define.BUILD_OPENBLAS=OFF
+              --config-settings=cmake.define.BLAS_LIBRARIES=${{runner.workspace}}/install-openblas/lib/libopenblas.a
+          python3 -m pip install .[hipo]
+          pytest -v
+          pytest check/test_highspy_hipo.py
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
