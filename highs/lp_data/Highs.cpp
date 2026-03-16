@@ -815,9 +815,17 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   assert(call_status != HighsStatus::kError);
 
   // Report to user that basis is being written
-  if (filename != "")
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Writing the basis to %s\n", filename.c_str());
+  if (filename != "") {
+    if (!basis_.valid) {
+      highsLogUser(options_.log_options, HighsLogType::kWarning,
+                   "No basis to write: generated null basis file %s\n",
+                   filename.c_str());
+      return_status = HighsStatus::kWarning;
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Writing the basis to %s\n", filename.c_str());
+    }
+  }
   writeBasisFile(file, options_, model_.lp_, basis_);
   if (file != stdout) fclose(file);
   return return_status;
