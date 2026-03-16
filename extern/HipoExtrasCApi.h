@@ -66,11 +66,7 @@ HIPO_EXTRAS_API const char* hipo_extras_get_version(void);
 #include "metis/metis.h"
 #include "rcm/rcm.h"
 
-#ifndef __APPLE__
-// #include "cblas.h"
-
 #include "ipm/hipo/auxiliary/mycblas.h"
-#endif
 
 // int Highs_METIS_SetDefaultOptions(idx_t *options);
 

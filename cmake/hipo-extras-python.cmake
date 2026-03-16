@@ -110,8 +110,14 @@ endif()
 #     endif(APPLE)
 # else()
 
+if(APPLE)
+  target_link_libraries(highs_extras PRIVATE "-framework Accelerate")
+  target_compile_definitions(highs_extras PRIVATE HIPO_USES_APPLE_BLAS)
+endif()
+
 if (BUILD_OPENBLAS)
   message(STATUS "WE ARE HERE")
+  target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
 
   if (LINUX)
     add_dependencies(highs_extras openblas_static)
@@ -131,7 +137,6 @@ if (BUILD_OPENBLAS)
     add_dependencies(highs_extras openblas_static)
 
     target_link_libraries(highs_extras PRIVATE openblas)
-    target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
   endif()
 
   target_include_directories(highs_extras PUBLIC
