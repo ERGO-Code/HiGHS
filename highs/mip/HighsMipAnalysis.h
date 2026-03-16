@@ -28,32 +28,34 @@ class HighsMipAnalysis {
   void setup(const HighsLp& lp, const HighsOptions& options);
 
   void setupMipTime(const HighsOptions& options);
-  void mipTimerStart(const HighsInt mip_clock
-                     //		     , const HighsInt thread_id = 0
-  ) const;
-  void mipTimerStop(const HighsInt mip_clock
-                    //		    , const HighsInt thread_id = 0
-  ) const;
-  bool mipTimerRunning(const HighsInt mip_clock
-                       //		    , const HighsInt thread_id = 0
-  ) const;
-  double mipTimerRead(const HighsInt mip_clock
-                      //		    , const HighsInt thread_id = 0
-  ) const;
-  HighsInt mipTimerNumCall(const HighsInt mip_clock
-                           // , const HighsInt thread_id = 0
-  ) const;
+  void mipTimerStart(const HighsInt mip_clock,
+                     const HighsInt thread_id = 0) const;
+  void mipTimerStop(const HighsInt mip_clock,
+                    const HighsInt thread_id = 0) const;
+  bool mipTimerRunning(const HighsInt mip_clock,
+                       const HighsInt thread_id = 0) const;
+  double mipTimerRead(const HighsInt mip_clock,
+                      const HighsInt thread_id = 0) const;
+  HighsInt mipTimerNumCall(const HighsInt mip_clock,
+                           const HighsInt thread_id = 0) const;
   void mipTimerAdd(const HighsInt mip_clock, const HighsInt num_call,
-                   const double time
-                   // , const HighsInt thread_id = 0
-  ) const;
+                   const double time, const HighsInt thread_id = 0) const;
   void mipTimerUpdate(const HighsSubSolverCallTime& sub_solver_call_time,
                       const bool valid_basis, const bool presolve,
-                      const bool analytic_centre = false
-                      // , const HighsInt thread_id = 0
-  ) const;
+                      const bool analytic_centre = false,
+                      const HighsInt thread_id = 0) const;
   void reportMipSolveLpClock(const bool header);
   void reportMipTimer();
+
+  HighsTimerClock* getThreadMipTimerClockPointer();
+
+  const std::vector<HighsTimerClock>& getThreadMipTimerClocks() {
+    return thread_mip_clocks;
+  }
+  HighsTimerClock* getThreadMipTimerClockPtr(HighsInt i) {
+    assert(i >= 0 && i < (HighsInt)thread_mip_clocks.size());
+    return &thread_mip_clocks[i];
+  }
 
   HighsInt getSepaClockIndex(const std::string& name) const;
   void addSubSolverCallTime(const HighsSubSolverCallTime& sub_solver_call_time,
@@ -62,6 +64,9 @@ class HighsMipAnalysis {
       const HighsSubSolverCallTime& sub_solver_call_time);
   std::string model_name;
   HighsTimerClock mip_clocks;
+  std::vector<HighsTimerClock> thread_mip_clocks;
+  HighsTimerClock* pointer_serial_mip_clocks;
+
   bool analyse_mip_time;
   std::vector<double> dive_time;
   std::vector<double> node_search_time;

@@ -14,6 +14,7 @@
 
 #include "mip/HighsSeparator.h"
 #include "mip/MipTimer.h"
+#include "parallel/HighsParallel.h"
 #include "util/HighsUtils.h"
 
 const HighsInt check_mip_clock = -4;
@@ -27,11 +28,25 @@ void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
   this->sub_solver_call_time_->initialise();
   analyse_mip_time = kHighsAnalysisLevelMipTime & options.highs_analysis_level;
   if (analyse_mip_time) {
-    HighsTimerClock clock;
-    clock.timer_pointer_ = timer_;
+    // Set up the thread clocks
+    HighsInt max_threads = highs::parallel::num_threads();
+    thread_mip_clocks.clear();
+    for (HighsInt i = 0; i < max_threads; i++) {
+      HighsTimerClock clock;
+      clock.timer_pointer_ = timer_;
+      thread_mip_clocks.push_back(clock);
+    }
     MipTimer mip_timer;
-    mip_timer.initialiseMipClocks(clock);
-    mip_clocks = clock;
+    // Some sub-solver timings are extracted from the MIP clocks, and
+    // are assumed to be specific global clock IDs, but this no longer
+    // happens with mult-threaded clocks, as clock IDs for each thread
+    // have an offset due to clocks defined for earlier threads.
+    HighsInt thread_mip_clock_offset = 0;
+    for (HighsTimerClock& clock : thread_mip_clocks) {
+      mip_timer.initialiseMipClocks(clock, thread_mip_clock_offset);
+      thread_mip_clock_offset += kNumThreadMipClock;
+    }
+    mip_clocks = thread_mip_clocks[0];
     sepa_name_clock.push_back(
         std::make_pair(kImplboundSepaString, kMipClockImplboundSepa));
     sepa_name_clock.push_back(
@@ -45,9 +60,8 @@ void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
   }
 }
 
-void HighsMipAnalysis::mipTimerStart(const HighsInt mip_clock
-                                     // , const HighsInt thread_id
-) const {
+void HighsMipAnalysis::mipTimerStart(const HighsInt mip_clock,
+                                     const HighsInt thread_id) const {
   if (!analyse_mip_time) return;
   HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
   if (highs_timer_clock == check_mip_clock) {
@@ -59,9 +73,8 @@ void HighsMipAnalysis::mipTimerStart(const HighsInt mip_clock
   mip_clocks.timer_pointer_->start(highs_timer_clock);
 }
 
-void HighsMipAnalysis::mipTimerStop(const HighsInt mip_clock
-                                    // , const HighsInt thread_id
-) const {
+void HighsMipAnalysis::mipTimerStop(const HighsInt mip_clock,
+                                    const HighsInt thread_id) const {
   if (!analyse_mip_time) return;
   HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
   if (highs_timer_clock == check_mip_clock) {
@@ -73,34 +86,30 @@ void HighsMipAnalysis::mipTimerStop(const HighsInt mip_clock
   mip_clocks.timer_pointer_->stop(highs_timer_clock);
 }
 
-bool HighsMipAnalysis::mipTimerRunning(const HighsInt mip_clock
-                                       // , const HighsInt thread_id
-) const {
+bool HighsMipAnalysis::mipTimerRunning(const HighsInt mip_clock,
+                                       const HighsInt thread_id) const {
   if (!analyse_mip_time) return false;
   HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
   return mip_clocks.timer_pointer_->running(highs_timer_clock);
 }
 
-double HighsMipAnalysis::mipTimerRead(const HighsInt mip_clock
-                                      // , const HighsInt thread_id
-) const {
+double HighsMipAnalysis::mipTimerRead(const HighsInt mip_clock,
+                                      const HighsInt thread_id) const {
   if (!analyse_mip_time) return 0;
   HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
   return mip_clocks.timer_pointer_->read(highs_timer_clock);
 }
 
-HighsInt HighsMipAnalysis::mipTimerNumCall(const HighsInt mip_clock
-                                           // , const HighsInt thread_id
-) const {
+HighsInt HighsMipAnalysis::mipTimerNumCall(const HighsInt mip_clock,
+                                           const HighsInt thread_id) const {
   if (!analyse_mip_time) return 0;
   HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
   return mip_clocks.timer_pointer_->numCall(highs_timer_clock);
 }
 
 void HighsMipAnalysis::mipTimerAdd(const HighsInt mip_clock,
-                                   const HighsInt num_call, const double time
-                                   // , const HighsInt thread_id
-) const {
+                                   const HighsInt num_call, const double time,
+                                   const HighsInt thread_id) const {
   if (!analyse_mip_time) return;
   if (num_call == 0) {
     assert(time == 0);
@@ -112,9 +121,8 @@ void HighsMipAnalysis::mipTimerAdd(const HighsInt mip_clock,
 
 void HighsMipAnalysis::mipTimerUpdate(
     const HighsSubSolverCallTime& sub_solver_call_time, const bool valid_basis,
-    const bool presolve, const bool analytic_centre
-    // , const HighsInt thread_id
-) const {
+    const bool presolve, const bool analytic_centre,
+    const HighsInt thread_id) const {
   if (!analyse_mip_time) return;
   // If IPM has been run first, then there may be a valid basis for
   // simplex

@@ -114,11 +114,14 @@ enum iClockMip {
   kNumMipClock  //!< Number of MIP clocks
 };
 
+const HighsInt kNumThreadMipClock = kNumMipClock - 1;
+
 const double tolerance_percent_report = 0.1;
 
 class MipTimer {
  public:
-  void initialiseMipClocks(HighsTimerClock& mip_timer_clock) {
+  void initialiseMipClocks(HighsTimerClock& mip_timer_clock,
+                           const HighsInt thread_mip_clock_offset) {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = mip_timer_clock.clock_;
 
@@ -135,21 +138,18 @@ class MipTimer {
     // clock IDs that need to equal clock[kMipClockHipoSolveAnalyticCentreLp]
     // and clock[kMipClockIpxSolveAnalyticCentreLp]
     //
-    // Define the clocks for evaluating the LPs first, so that
-    // clock[kMipClockHipoSolveAnalyticCentreLp] and
-    // clock[kMipClockIpxSolveAnalyticCentreLp] aren't changed by inserting new
-    // clocks
+    // Define the clocks for evaluating the LPs first, so that they
+    // aren't changed by inserting new clocks
     clock[kMipClockDuSimplexBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - du simplex basis");
+    assert(clock[kMipClockDuSimplexBasisSolveLp] ==
+           thread_mip_clock_offset + 7);
     clock[kMipClockDuSimplexNoBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - du simplex no basis");
-    assert(clock[kMipClockDuSimplexNoBasisSolveLp] == 8);
     clock[kMipClockHipoSolveAnalyticCentreLp] =
         timer_pointer->clock_def("Solve LP: HiPO analytic centre");
     clock[kMipClockIpxSolveAnalyticCentreLp] =
         timer_pointer->clock_def("Solve LP: IPX analytic centre");
-    assert(clock[kMipClockHipoSolveAnalyticCentreLp] == 9);
-    assert(clock[kMipClockIpxSolveAnalyticCentreLp] == 10);
     clock[kMipClockHipoSolveLp] = timer_pointer->clock_def("Solve LP: HiPO");
     clock[kMipClockIpxSolveLp] = timer_pointer->clock_def("Solve LP: IPX");
     clock[kMipClockPrSimplexBasisSolveLp] =
