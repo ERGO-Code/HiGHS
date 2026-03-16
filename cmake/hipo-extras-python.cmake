@@ -74,7 +74,13 @@ if(ZLIB_FOUND)
     target_link_libraries(highs_extras PRIVATE ZLIB::ZLIB)
 endif()
 
+# Apple: use Accelerate.
+if(APPLE)
+  target_link_libraries(highs_extras PRIVATE "-framework Accelerate")
+  target_compile_definitions(highs_extras PRIVATE HIPO_USES_APPLE_BLAS)
+endif()
 
+# Local install: allow OpenBLAS link.
 if (NOT APPLE AND NOT BUILD_OPENBLAS)
     # Only allow openblas, exclude linux reference blas.
     target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
@@ -90,11 +96,7 @@ if (NOT APPLE AND NOT BUILD_OPENBLAS)
     endif()
 endif()
 
-if(APPLE)
-  target_link_libraries(highs_extras PRIVATE "-framework Accelerate")
-  target_compile_definitions(highs_extras PRIVATE HIPO_USES_APPLE_BLAS)
-endif()
-
+# Package build: Download OpenBLAS as a subproject.
 if (BUILD_OPENBLAS)
   message(STATUS "WE ARE HERE")
   target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
