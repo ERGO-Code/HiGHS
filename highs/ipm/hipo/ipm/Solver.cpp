@@ -152,10 +152,25 @@ bool Solver::initialise() {
   }
   LS_->clear();
 
-  // switch to up-looking factorisation
-  LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
-  LS_->setup();
-  LS_->clear();
+  // Use uplooking factorisation instead of multifrontal if
+  // - very few operations needed or
+  // - very few nz per column in L or
+  // - multifrontal is dominated by assembly operations
+  bool switch_to_uplooking =
+      LS_->flops() < kUplookFlopsThresh ||
+      LS_->nz() < kUplookNzPerColLower * LS_->n() ||
+      LS_->flops() < kUplookSpopsRatioLower * LS_->spops() ||
+      (LS_->nz() < kUplookNzPerColUpper * LS_->n() &&
+       LS_->flops() < kUplookSpopsRatioUpper * LS_->spops());
+
+  // always use for now
+  switch_to_uplooking = true;
+
+  if (switch_to_uplooking) {
+    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
+    LS_->setup();
+    LS_->clear();
+  }
 
   it_->data.append();
 

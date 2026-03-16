@@ -48,7 +48,7 @@ class UpLookingSolver : public LinearSolver {
 
  public:
   UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
-                  const Regularisation& regul,const Model& model);
+                  const Regularisation& regul, const Model& model);
 
   Int factorAS(const std::vector<double>& scaling) override;
   Int factorNE(const std::vector<double>& scaling) override;
@@ -62,6 +62,7 @@ class UpLookingSolver : public LinearSolver {
   double flops() const override { return flops_; }
   double spops() const override { return 0; }
   double nz() const override { return valL_.size(); }
+  Int n() const override { return n_; }
   void getReg(std::vector<double>& reg) override;
 };
 

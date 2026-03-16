@@ -73,6 +73,7 @@ class LinearSolver {
   virtual double flops() const { return 0; }
   virtual double spops() const { return 0; }
   virtual double nz() const { return 0; }
+  virtual Int n() const { return 0; }
   virtual void getReg(std::vector<double>& reg){};
 };
 

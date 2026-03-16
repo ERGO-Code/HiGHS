@@ -39,6 +39,13 @@ const double kMaxTreeDepth = 1000;
 // parameters for choice of ordering
 const double kFlopsOrderingThresh = 1.2;
 
+// parameters for choice of factorisation
+const double kUplookFlopsThresh = 1e6;
+const double kUplookNzPerColLower = 10;
+const double kUplookNzPerColUpper = 25;
+const double kUplookSpopsRatioLower = 20;
+const double kUplookSpopsRatioUpper = 100;
+
 // parameters for dense columns
 const double kDenseColThresh = 0.5;
 const Int kMinRowsForDensity = 2000;

@@ -647,6 +647,7 @@ void FactorHiGHSSolver::setParallel() {
 double FactorHiGHSSolver::flops() const { return S_.flops(); }
 double FactorHiGHSSolver::spops() const { return S_.spops(); }
 double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
+Int FactorHiGHSSolver::n() const { return S_.size(); }
 void FactorHiGHSSolver::getReg(std::vector<double>& reg) {
   FH_.getRegularisation(reg);
 }
