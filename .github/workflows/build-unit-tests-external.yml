@@ -2,7 +2,7 @@ name: build-unit-tests-external
 
 on: [push, pull_request]
 
-jobs: 
+jobs:
   release_extra_only:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clone extra unit tests repo 
+      - name: Clone extra unit tests repo
         shell: bash
         working-directory: ${{runner.workspace}}
         run: |
@@ -40,7 +40,7 @@ jobs:
       - name: Test Extra Only
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest --parallel --timeout 300 --output-on-failure 
+        run: ctest --parallel --timeout 300 --output-on-failure
 
   release_all_tests:
     runs-on: ${{ matrix.os }}
@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clone extra unit tests repo 
+      - name: Clone extra unit tests repo
         shell: bash
         working-directory: ${{runner.workspace}}
         run: |
@@ -61,25 +61,25 @@ jobs:
         shell: bash
         working-directory: ${{runner.workspace}}
         run: ln -s ${{runner.workspace}}/highs-unit-tests $GITHUB_WORKSPACE/check
-        
+
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Configure CMake All
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON -DBUILD_EXTRA_UNIT_TESTS=ON 
+        run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON -DBUILD_EXTRA_UNIT_TESTS=ON
 
       - name: Build All
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: |
-          cmake --build . --parallel 
+          cmake --build . --parallel
 
       - name: Test All
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest --parallel --timeout 300 --output-on-failure 
+        run: ctest --parallel --timeout 300 --output-on-failure
 
   # release__windows_extra_unit_tests:
   #   runs-on: windows-2022
@@ -90,7 +90,7 @@ jobs:
   #     - name: Create Build Environment
   #       run: cmake -E make_directory ${{runner.workspace}}/build
 
-  #     - name: Clone extra unit tests repo 
+  #     - name: Clone extra unit tests repo
   #       working-directory: ${{runner.workspace}}/build
   #       run: git clone https://github.com/galabovaa/highs-unit-tests.git
 
@@ -118,7 +118,7 @@ jobs:
   #     - name: Unit Test Extra
   #       working-directory: ${{runner.workspace}}/build
   #       shell: bash
-  #       run: ./Release/bin/unit_tests.exe highs-names-extra 
+  #       run: ./Release/bin/unit_tests.exe highs-names-extra
 
   #     - name: Test
   #       working-directory: ${{runner.workspace}}/build

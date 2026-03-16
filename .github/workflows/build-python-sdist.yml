@@ -22,7 +22,7 @@ jobs:
 
       - name: install highspy
         run: |
-          python3 -m pip install dist/*.tar.gz --user 
+          python3 -m pip install dist/*.tar.gz --user
 
       - name: Test Python Examples
         run: |
@@ -52,7 +52,7 @@ jobs:
         run: |
           python3 -m venv path/to/venv
           source path/to/venv/bin/activate
-          python3 -m pip install dist/*.tar.gz 
+          python3 -m pip install dist/*.tar.gz
 
       - name: Test Python Examples
         run: |
@@ -63,7 +63,7 @@ jobs:
          python3 ./examples/minimal.py
 
   build_sdist_win:
-    runs-on: windows-latest 
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
