@@ -167,12 +167,16 @@ extern "C" HIPO_EXTRAS_API void hipo_extras_dtrsm(
 //                      solver_object.highs_info_, solver_object.callback_);
 // }
 
+#ifndef __APPLE__
 extern "C" {
 void openblas_set_num_threads(int num_threads);
 }
+#endif
 
 extern "C" HIPO_EXTRAS_API void hipo_extras_openblas_set_num_threads(int num_threads) {
+#ifndef __APPLE__
     openblas_set_num_threads(num_threads);
+#endif
 }
 
 // #ifndef __APPLE__
