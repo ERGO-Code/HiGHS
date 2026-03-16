@@ -115,6 +115,7 @@ class HighsCutPool {
       ageDistribution[ages_[cut]] -= 1;
       ageDistribution[0] += 1;
       ages_[cut] = 0;
+      ageResetWhileLocked_[cut] = 0;
     }
   }
 

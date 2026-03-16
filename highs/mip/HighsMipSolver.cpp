@@ -540,15 +540,14 @@ restart:
     analysis_.mipTimerStart(kMipClockEvaluateNode1);
     runTask(doEvaluateNode, tg, true, false, indices);
     analysis_.mipTimerStop(kMipClockEvaluateNode1);
-    for (size_t i = 0; i != indices.size(); i++) {
-      HighsInt worker_id = indices[i];
+    analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
+    for (HighsInt worker_id : indices) {
       if (search_results[worker_id] == HighsSearch::NodeResult::kSubOptimal) {
-        analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
         mipdata_->workers[worker_id].search_ptr_->currentNodeToQueue(
             mipdata_->nodequeue);
-        analysis_.mipTimerStop(kMipClockCurrentNodeToQueue);
       }
     }
+    analysis_.mipTimerStop(kMipClockCurrentNodeToQueue);
   };
 
   auto handlePrunedNodes = [&](std::vector<HighsInt>& indices) -> bool {
@@ -641,6 +640,12 @@ restart:
     if (options_mip_->mip_allow_cut_separation_at_nodes) {
       analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
       runTask(doSeparate, tg, true, false, indices);
+      // Age cutpools
+      if (mipdata_->hasMultipleWorkers()) {
+        for (HighsInt i : indices) {
+          mipdata_->workers[i].cutpool_->performAging();
+        }
+      }
       analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
     } else {
       for (HighsCutPool& cutpool : mipdata_->cutpools) {
@@ -749,40 +754,50 @@ restart:
     std::vector<uint8_t> suboptimal(num_workers, 0);
     auto doRunHeuristics = [&](HighsInt i) -> void {
       HighsMipWorker& worker = mipdata_->workers[i];
-      // analysis_.mipTimerStart(kMipClockDiveEvaluateNode);
+      if (!mipdata_->parallelLockActive())
+        analysis_.mipTimerStart(kMipClockDiveEvaluateNode);
       const HighsSearch::NodeResult evaluate_node_result =
           worker.search_ptr_->evaluateNode();
-      // analysis_.mipTimerStop(kMipClockDiveEvaluateNode);
+      if (!mipdata_->parallelLockActive())
+        analysis_.mipTimerStop(kMipClockDiveEvaluateNode);
 
       if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
         suboptimal[i] = 1;
         return;
       }
 
-      // analysis_.mipTimerStart(kMipClockDivePrimalHeuristics);
+      if (!mipdata_->parallelLockActive())
+        analysis_.mipTimerStart(kMipClockDivePrimalHeuristics);
       if (mipdata_->incumbent.empty()) {
-        // analysis_.mipTimerStart(kMipClockDiveRandomizedRounding);
+        if (!mipdata_->parallelLockActive())
+          analysis_.mipTimerStart(kMipClockDiveRandomizedRounding);
         mipdata_->heuristics.randomizedRounding(
             worker, worker.lp_->getLpSolver().getSolution().col_value);
-        // analysis_.mipTimerStop(kMipClockDiveRandomizedRounding);
+        if (!mipdata_->parallelLockActive())
+          analysis_.mipTimerStop(kMipClockDiveRandomizedRounding);
       }
       if (mipdata_->incumbent.empty()) {
         if (options_mip_->mip_heuristic_run_rens) {
-          // analysis_.mipTimerStart(kMipClockDiveRens);
+          if (!mipdata_->parallelLockActive())
+            analysis_.mipTimerStart(kMipClockDiveRens);
           mipdata_->heuristics.RENS(
               worker, worker.lp_->getLpSolver().getSolution().col_value);
-          // analysis_.mipTimerStop(kMipClockDiveRens);
+          if (!mipdata_->parallelLockActive())
+            analysis_.mipTimerStop(kMipClockDiveRens);
         }
       } else {
         if (options_mip_->mip_heuristic_run_rins) {
-          // analysis_.mipTimerStart(kMipClockDiveRins);
+          if (!mipdata_->parallelLockActive())
+            analysis_.mipTimerStart(kMipClockDiveRins);
           mipdata_->heuristics.RINS(
               worker, worker.lp_->getLpSolver().getSolution().col_value);
-          // analysis_.mipTimerStop(kMipClockDiveRins);
+          if (!mipdata_->parallelLockActive())
+            analysis_.mipTimerStop(kMipClockDiveRins);
         }
       }
 
-      // analysis_.mipTimerStop(kMipClockDivePrimalHeuristics);
+      if (!mipdata_->parallelLockActive())
+        analysis_.mipTimerStop(kMipClockDivePrimalHeuristics);
     };
     runTask(doRunHeuristics, tg, true, false, indices);
     for (const HighsInt i : indices) {

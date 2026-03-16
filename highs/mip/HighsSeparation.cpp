@@ -83,13 +83,14 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     return numBoundChgs;
   };
 
-  // TODO MT: Look into delta implications
-  // lp->getMipSolver().analysis_.mipTimerStart(implBoundClock);
+  if (!mipdata.parallelLockActive())
+    lp->getMipSolver().analysis_.mipTimerStart(implBoundClock);
   mipdata.implications.separateImpliedBounds(
       *lp, lp->getSolution().col_value, mipworker_.getCutPool(),
       mipdata.feastol, mipworker_.getGlobalDomain(),
       mipdata.parallelLockActive());
-  // lp->getMipSolver().analysis_.mipTimerStop(implBoundClock);
+  if (!mipdata.parallelLockActive())
+    lp->getMipSolver().analysis_.mipTimerStop(implBoundClock);
 
   HighsInt ncuts = 0;
   HighsInt numboundchgs = propagateAndResolve();
@@ -98,7 +99,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
-  // lp->getMipSolver().analysis_.mipTimerStart(cliqueClock);
+  if (!mipdata.parallelLockActive())
+    lp->getMipSolver().analysis_.mipTimerStart(cliqueClock);
   mipdata.cliquetable.separateCliques(
       lp->getMipSolver(), sol.col_value, mipworker_.getCutPool(),
       mipdata.feastol,
@@ -107,7 +109,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
       mipdata.parallelLockActive()
           ? mipworker_.sepa_stats.numNeighbourhoodQueries
           : mipdata.cliquetable.getNumNeighbourhoodQueries());
-  // lp->getMipSolver().analysis_.mipTimerStop(cliqueClock);
+  if (!mipdata.parallelLockActive())
+    lp->getMipSolver().analysis_.mipTimerStop(cliqueClock);
 
   numboundchgs = propagateAndResolve();
   if (numboundchgs == -1)
@@ -213,7 +216,9 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     //        (HighsInt)status);
     lp->performAging(true);
 
-    // Warning: If LP is only copied at start this should be thread safe.
-    mipworker_.cutpool_->performAging();
+    if (!mipsolver.mipdata_->parallelLockActive())
+      // If LP is dynamically copied, then it can contain cuts from multiple
+      // cut pools. Therefore, can't age those pools in parallel.
+      mipworker_.cutpool_->performAging();
   }
 }

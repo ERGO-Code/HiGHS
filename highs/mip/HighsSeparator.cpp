@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "HighsMipSolverData.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
@@ -31,9 +32,11 @@ void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
   ++numCalls;
   HighsInt currNumCuts = cutpool.getNumCuts();
 
-  // lpRelaxation.getMipSolver().analysis_.mipTimerStart(clockIndex);
+  if (!lpRelaxation.getMipSolver().mipdata_->parallelLockActive())
+    lpRelaxation.getMipSolver().analysis_.mipTimerStart(clockIndex);
   separateLpSolution(lpRelaxation, lpAggregator, transLp, cutpool);
-  // lpRelaxation.getMipSolver().analysis_.mipTimerStop(clockIndex);
+  if (!lpRelaxation.getMipSolver().mipdata_->parallelLockActive())
+    lpRelaxation.getMipSolver().analysis_.mipTimerStop(clockIndex);
 
   numCutsFound += cutpool.getNumCuts() - currNumCuts;
 }

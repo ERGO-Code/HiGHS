@@ -182,6 +182,7 @@ void HighsCutPool::performAging() {
       }
       ages_[i] = -1;
       ++numLpCuts;
+      ageResetWhileLocked_[i] = 0;
     } else if (numLps_[i] == 0 && ages_[i] == -1 && rhs_[i] != kHighsInf) {
       // Cut was removed from the LP, but age changes haven't been made
       if (matrix_.columnsLinked(i)) {
@@ -191,6 +192,7 @@ void HighsCutPool::performAging() {
       ages_[i] = 1;
       --numLpCuts;
       ++ageDistribution[1];
+      ageResetWhileLocked_[i] = 0;
     } else if (ageResetWhileLocked_[i] == 1) {
       resetAge(i);
     }
