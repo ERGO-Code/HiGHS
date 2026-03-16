@@ -15,7 +15,7 @@ TEST_CASE("definitions-md", "[highs_options]") {
   // coverage
   const std::string definitions_file = "definitions.md";
   REQUIRE(h.writeOptions(definitions_file) == HighsStatus::kOk);
-  //  std::remove(definitions_file.c_str());
+  std::remove(definitions_file.c_str());
 }
 
 TEST_CASE("external-options", "[highs_options]") {

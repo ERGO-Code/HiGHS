@@ -256,6 +256,17 @@ void highsFprintfString(FILE* file, const HighsLogOptions& log_options_,
   }
 }
 
+std::string getFilenameExt(const std::string& filename) {
+  std::string name = filename;
+  std::size_t found = name.find_last_of(".");
+  if (found < name.size()) {
+    name = name.substr(found + 1);
+  } else {
+    name = "";
+  }
+  return name;
+}
+
 void highsReportDevInfo(const HighsLogOptions* log_options,
                         const std::string& line) {
   if (log_options) {

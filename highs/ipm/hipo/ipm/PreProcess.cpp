@@ -492,7 +492,7 @@ void PreprocessFormulation::undo(PreprocessorPoint& point, const Model& model,
   point.zu = std::vector<double>(it.zu.begin(), it.zu.begin() + n_pre);
 
   // force unused entries to have correct value
-  for (int i = 0; i < n_pre; ++i) {
+  for (Int i = 0; i < n_pre; ++i) {
     if (!model.hasLb(i)) {
       point.xl[i] = kHighsInf;
       point.zl[i] = 0.0;

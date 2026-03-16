@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "parallel/HighsParallel.h"
 
 namespace hipo {
 
@@ -29,6 +30,10 @@ void processEdge(Int j, Int i, const std::vector<Int>& first,
 Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
                    std::vector<Int64>& start, bool triang = false);
 Int maxDepthTree(const std::vector<Int>& parent);
+void fullFromLower(const std::vector<Int>& ptrL, const std::vector<Int>& rowsL,
+                   std::vector<Int>& ptrF, std::vector<Int>& rowsF);
+double snFlops(double size, double clique_size);
+double snSpops(double clique_size);
 
 template <typename T>
 void counts2Ptr(std::vector<T>& ptr, std::vector<T>& w) {
@@ -87,6 +92,11 @@ class Clock {
   Clock();
   void start();
   double stop() const;
+};
+
+class TaskGroupSpecial : public highs::parallel::TaskGroup {
+ public:
+  ~TaskGroupSpecial();
 };
 
 }  // namespace hipo

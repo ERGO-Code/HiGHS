@@ -434,9 +434,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
   mipsolver.mipdata_->debugSolution.checkVub(col, vubcol, vubcoef, vubconstant);
 
   double minBound = vub.minValue();
-  if (minBound >=
-      mipsolver.mipdata_->domain.col_upper_[col] - mipsolver.mipdata_->feastol)
-    return;
+  if (minBound >= colupperbound - mipsolver.mipdata_->feastol) return;
 
   auto insertresult = vubs[col].insert_or_get(vubcol, vub);
 
@@ -477,9 +475,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   mipsolver.mipdata_->debugSolution.checkVlb(col, vlbcol, vlbcoef, vlbconstant);
 
   double maxBound = vlb.maxValue();
-  if (vlb.maxValue() <=
-      mipsolver.mipdata_->domain.col_lower_[col] + mipsolver.mipdata_->feastol)
-    return;
+  if (maxBound <= colllowerbound + mipsolver.mipdata_->feastol) return;
 
   auto insertresult = vlbs[col].insert_or_get(vlbcol, vlb);
 
