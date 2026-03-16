@@ -101,8 +101,14 @@ void Solver::solve() {
 
   reset();
 
+  kkt_.reset(new KktMatrix(model_, info_, logH_));
+  if (!kkt_) {
+    info_.status = kStatusError;
+    return;
+  }
+
   // iterate object needs to be initialised before potentially interrupting
-  it_.reset(new Iterate(model_, regul_));
+  it_.reset(new Iterate(model_, *kkt_));
   if (!it_) {
     info_.status = kStatusError;
     return;
@@ -137,12 +143,6 @@ bool Solver::initialise() {
 
   start_time_ = control_.elapsed();
 
-  kkt_.reset(new KktMatrix(model_, regul_, info_, logH_));
-  if (!kkt_) {
-    info_.status = kStatusError;
-    return true;
-  }
-
   // initialise linear solver
   LS_.reset(new FactorHiGHSSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->data, logH_));
@@ -167,7 +167,7 @@ bool Solver::initialise() {
   switch_to_uplooking = true;
 
   if (switch_to_uplooking) {
-    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
+    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, model_));
     LS_->setup();
     LS_->clear();
   }
@@ -341,7 +341,7 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
   solve6x6(delta, it_->res);
   refine(delta);
 
-  // Check for NaN of Inf
+  // Check for NaN or Inf
   if (it_->isDirNan(delta)) {
     logH_.printDevInfo("Direction is nan\n");
     info_.status = kStatusError;
@@ -389,7 +389,7 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
 
     // Deltax = (Theta^-1+Rp+Q)^-1 * Deltax
     for (Int i = 0; i < n_; ++i) {
-      double denom = theta_inv[i] + regul_.primal;
+      double denom = theta_inv[i] + kkt_->theta_reg;
       if (model_.qp()) denom += model_.sense() * model_.Q().diag(i);
       delta.x[i] /= denom;
     }
@@ -1208,15 +1208,16 @@ void Solver::printOutput() const {
     log_stream << " " << fix(data.sigma, 6, 2);
     log_stream << " " << integer(data.correctors, 5);
     log_stream << " " << integer(data.num_solves, 5);
-    log_stream << " " << sci(regul_.primal, 8, 1);
-    log_stream << " " << sci(regul_.dual, 8, 1);
+    log_stream << " " << sci(kkt_->theta_reg, 8, 1);
+    log_stream << " " << sci(kkt_->static_reg, 8, 1);
     log_stream << " " << sci(data.min_theta, 8, 1);
     log_stream << " " << sci(data.max_theta, 8, 1);
     log_stream << " " << sci(data.min_prod, 8, 1);
     log_stream << " " << sci(data.max_prod, 8, 1);
     log_stream << " " << integer(data.num_small_prod, 4);
     log_stream << " " << integer(data.num_large_prod, 4);
-    log_stream << " " << sci(data.omega, 9, 1);
+    log_stream << " " << sci(data.worst_res, 9, 1);
+    log_stream << " " << sci(data.worst_res_rhs, 9, 1);
   }
 
   log_stream << "\n";

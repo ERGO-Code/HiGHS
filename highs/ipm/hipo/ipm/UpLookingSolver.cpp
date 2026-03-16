@@ -5,7 +5,7 @@
 namespace hipo {
 
 UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
-                                 const Regularisation& regul,
+
                                  const Model& model)
     : kkt_{kkt},
       ptr_{kkt_.ptrAS.empty() ? kkt_.ptrNE : kkt_.ptrAS},
@@ -14,7 +14,6 @@ UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
       n_{static_cast<Int>(ptr_.size() - 1)},
       info_{info},
       data_{data},
-      regul_{regul},
       model_{model} {}
 
 void UpLookingSolver::etreeAndCounts(const std::vector<Int>& ptr,
@@ -158,10 +157,7 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
 
     // diagonal entry
     double old_pivot = d;
-    if (signs_[row] > 0)
-      d += regul_.dual;
-    else
-      d -= regul_.primal;
+    d += signs_[row] * kkt_.static_reg;
 
     if (d * signs_[row] < reg_threshold_) {
       d = reg_value_ * signs_[row];

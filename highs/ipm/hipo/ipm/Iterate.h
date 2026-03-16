@@ -8,6 +8,7 @@
 #include "LinearSolver.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "KktMatrix.h"
 
 namespace hipo {
 
@@ -23,6 +24,8 @@ struct NewtonDir {
   NewtonDir(Int m, Int n);
   void clear();
   void add(const NewtonDir& d);
+  bool isNan() const;
+  bool isInf() const;
 };
 
 struct Residuals {
@@ -31,6 +34,7 @@ struct Residuals {
 
 struct Iterate {
   const Model& model;
+  const KktMatrix& kkt;
   IpmData data;
   std::vector<double> x, xl, xu, y, zl, zu;
   Residuals res;
@@ -39,10 +43,7 @@ struct Iterate {
   double mu;
   std::vector<double> scaling;
   double best_mu;
-  const Regularisation& regul;
   std::vector<double> total_reg;
-  double* Rp;
-  double* Rd;
   Residuals ires;  // residuals for iterative refinement
 
   // statistics for stagnation
@@ -53,7 +54,7 @@ struct Iterate {
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
   // ===================================================================================
-  Iterate(const Model& model_input, Regularisation& r);
+  Iterate(const Model& model_input, const KktMatrix& kkt_input);
 
   // clear existing data
   void clearIter();
@@ -156,7 +157,7 @@ struct Iterate {
   // ===================================================================================
   // Compute residual of 6x6 linear system for iterative refinement.
   // ===================================================================================
-  void residuals6x6(const NewtonDir& d);
+  double residuals6x6(const NewtonDir& d);
 
   void makeStep(double alpha_primal, double alpha_dual);
 

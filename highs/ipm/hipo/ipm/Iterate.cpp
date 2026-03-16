@@ -28,8 +28,17 @@ void NewtonDir::add(const NewtonDir& d) {
   vectorAdd(zu, d.zu);
 }
 
-Iterate::Iterate(const Model& model_input, Regularisation& r)
-    : model{model_input}, delta(model.m(), model.n()), regul{r} {
+bool NewtonDir::isNan() const {
+  return isNanVector(x) || isNanVector(xl) || isNanVector(xu) ||
+         isNanVector(y) || isNanVector(zl) || isNanVector(zu);
+}
+bool NewtonDir::isInf() const {
+  return isInfVector(x) || isInfVector(xl) || isInfVector(xu) ||
+         isInfVector(y) || isInfVector(zl) || isInfVector(zu);
+}
+
+Iterate::Iterate(const Model& model_input, const KktMatrix& kkt_input)
+    : model{model_input}, kkt{kkt_input}, delta(model.m(), model.n()) {
   clearIter();
   clearRes();
   clearIres();
@@ -52,14 +61,8 @@ bool Iterate::isResInf() const {
   return (isInfVector(res.r1) || isInfVector(res.r2) || isInfVector(res.r3) ||
           isInfVector(res.r4) || isInfVector(res.r5) || isInfVector(res.r6));
 }
-bool Iterate::isDirNan(const NewtonDir& d) const {
-  return (isNanVector(d.x) || isNanVector(d.xl) || isNanVector(d.xu) ||
-          isNanVector(d.y) || isNanVector(d.zl) || isNanVector(d.zu));
-}
-bool Iterate::isDirInf(const NewtonDir& d) const {
-  return (isInfVector(d.x) || isInfVector(d.xl) || isInfVector(d.xu) ||
-          isInfVector(d.y) || isInfVector(d.zl) || isInfVector(d.zu));
-}
+bool Iterate::isDirNan(const NewtonDir& d) const { return d.isNan(); }
+bool Iterate::isDirInf(const NewtonDir& d) const { return d.isInf(); }
 
 void Iterate::computeMu() {
   mu = 0.0;
@@ -259,7 +262,7 @@ std::vector<double> Iterate::residual8(const Residuals& r,
 
   // temp = (Theta^-1+Rp+Q)^-1 * res7
   for (Int i = 0; i < model.n(); ++i) {
-    double denom = scaling[i] + regul.primal;
+    double denom = scaling[i] + kkt.theta_reg;
     if (model.qp()) denom += model.sense() * model.Q().diag(i);
     temp[i] /= denom;
   }
@@ -488,18 +491,9 @@ Int Iterate::finalResiduals(Info& info) const {
 void Iterate::getReg(LinearSolver& LS, const std::string& nla) {
   // extract regularisation
   LS.getReg(total_reg);
-
-  // easy access to primal/dual regularisation
-  if (nla == kHipoNormalEqString) {
-    Rp = nullptr;
-    Rd = total_reg.data();
-  } else {
-    Rp = total_reg.data();
-    Rd = model.m() > 0 ? &total_reg[model.n()] : nullptr;
-  }
 }
 
-void Iterate::residuals6x6(const NewtonDir& d) {
+double Iterate::residuals6x6(const NewtonDir& d) {
   const std::vector<double>& dx = d.x;
   const std::vector<double>& dy = d.y;
   const std::vector<double>& dxl = d.xl;
@@ -508,16 +502,12 @@ void Iterate::residuals6x6(const NewtonDir& d) {
   const std::vector<double>& dzu = d.zu;
   const Int m = model.m();
   const Int n = model.n();
-  assert(Rd || m == 0);
 
   // res1,2,3,4,5,6 contain the rhs of the linear system
 
-  // ires1 = res1 - A * dx - Rd * dy
+  // ires1 = res1 - A * dx
   ires.r1 = res.r1;
   model.A().alphaProductPlusY(-1.0, dx, ires.r1);
-  for (Int i = 0; i < m; ++i) {
-    ires.r1[i] -= Rd[i] * dy[i];
-  }
 
   // ires2 = res2 - dx + dxl
   for (Int i = 0; i < n; ++i)
@@ -533,17 +523,13 @@ void Iterate::residuals6x6(const NewtonDir& d) {
     else
       ires.r3[i] = 0.0;
 
-  // ires4 = res4 - A^T * dy - dzl + dzu + Q * dx + Rp * dx
+  // ires4 = res4 - A^T * dy - dzl + dzu + Q * dx
   ires.r4 = res.r4;
   for (Int i = 0; i < n; ++i) {
     if (model.hasLb(i)) ires.r4[i] -= dzl[i];
     if (model.hasUb(i)) ires.r4[i] += dzu[i];
   }
   model.A().alphaProductPlusY(-1.0, dy, ires.r4, true);
-  for (Int i = 0; i < n; ++i) {
-    double reg_p = Rp ? Rp[i] : regul.primal;
-    ires.r4[i] += reg_p * dx[i];
-  }
   if (model.qp()) model.Q().alphaProductPlusY(model.sense(), dx, ires.r4);
 
   // ires5 = res5 - zl * dxl - xl * dzl
@@ -561,6 +547,15 @@ void Iterate::residuals6x6(const NewtonDir& d) {
     else
       ires.r6[i] = 0.0;
   }
+
+  double inf_norm_res{};
+  inf_norm_res = std::max(inf_norm_res, infNorm(ires.r1));
+  inf_norm_res = std::max(inf_norm_res, infNorm(ires.r2));
+  inf_norm_res = std::max(inf_norm_res, infNorm(ires.r3));
+  inf_norm_res = std::max(inf_norm_res, infNorm(ires.r4));
+  inf_norm_res = std::max(inf_norm_res, infNorm(ires.r5));
+  inf_norm_res = std::max(inf_norm_res, infNorm(ires.r6));
+  return inf_norm_res;
 }
 
 void Iterate::assertConsistency(Int n, Int m) const {

@@ -52,8 +52,10 @@ const Int kMinRowsForDensity = 2000;
 const double kNzBoundsRatio = 50.0;
 
 // parameters for iterative refinement
-const Int kMaxIterRefine = 3;
-const double kTolRefine = 1e-12;
+const Int kMaxIterRefine = 10;
+const double kRefinTol = 1e-12;
+const double kRefineMult = 1e-13;
+const double kRefineRatio = 5;
 
 // parameters for scaling
 const double kSmallScalingCoeff = 1e-4;

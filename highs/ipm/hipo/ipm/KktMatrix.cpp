@@ -4,9 +4,8 @@
 
 namespace hipo {
 
-KktMatrix::KktMatrix(const Model& m, const Regularisation& r, Info& i,
-                     const LogHighs& l)
-    : model{m}, regul{r}, info{i}, log{l} {}
+KktMatrix::KktMatrix(const Model& m, Info& i, const LogHighs& l)
+    : model{m}, info{i}, log{l} {}
 
 Int KktMatrix::buildASstructure() {
   // Build lower triangular structure of the augmented system.
@@ -75,6 +74,8 @@ Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
 
   assert(!ptrAS.empty() && !rowsAS.empty());
   Clock clock;
+
+  computeReg(scaling);
 
   const HighsHessian& Q = model.Q();
   const Int n = model.A().num_col_;
@@ -194,6 +195,8 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
   assert(!ptrNE.empty() && !rowsNE.empty());
   Clock clock;
 
+  computeReg(scaling);
+
   const HighsSparseMatrix& A = model.A();
   const HighsHessian& Q = model.Q();
   const Int m = A.num_row_;
@@ -211,7 +214,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
       Int corr = corr_A[el];
 
       double denom = scaling.empty() ? 1.0 : scaling[col];
-      denom += regul.primal;
+      denom += theta_reg;
       if (model.qp()) denom += model.sense() * Q.diag(col);
 
       const double mult = 1.0 / denom;
@@ -243,6 +246,19 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
   info.matrix_time += clock.stop();
 
   return kStatusOk;
+}
+
+void KktMatrix::computeReg(const std::vector<double>& scaling) {
+  const Int n = scaling.size();
+
+  double max_diag = 0.0;
+  for (Int i = 0; i < n; ++i) {
+    double diag_value = -scaling[i];
+    if (model.qp()) diag_value -= model.Q().diag(i);
+    max_diag = std::max(max_diag, std::abs(diag_value));
+  }
+
+  static_reg = static_reg_constant + static_reg_mult * max_diag;
 }
 
 void KktMatrix::freeASmemory() {

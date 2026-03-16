@@ -25,11 +25,15 @@ struct KktMatrix {
   std::vector<Int> iperm;
 
   const Model& model;
-  const Regularisation& regul;
   Info& info;
   const LogHighs& log;
 
-  KktMatrix(const Model& model, const Regularisation& regul, Info& info,
+  const double theta_reg = 1e-10;
+  const double static_reg_constant = 1e-8;
+  const double static_reg_mult = 1e-32;
+  double static_reg = 0.0;
+
+  KktMatrix(const Model& model, Info& info,
             const LogHighs& log);
 
   Int buildASstructure();
@@ -39,6 +43,8 @@ struct KktMatrix {
   Int buildNEstructure();
   Int buildNEvalues(const std::vector<double>& scaling);
   void freeNEmemory();
+
+  void computeReg(const std::vector<double>& scaling);
 };
 
 }  // namespace hipo
