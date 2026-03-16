@@ -28,6 +28,7 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
   preprocess();
 
   denseColumns();
+  nzBounds();
   computeNorms();
 
   // double transpose to sort indices of each column
@@ -39,6 +40,33 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
   ready_ = true;
 
   return 0;
+}
+
+void Model::nzBounds() {
+  // compute lower and upper bounds for the number of nonzeros in normal
+  // equations.
+  std::vector<bool> mark(m_, false);
+  NE_nz_lb_ = A_.num_row_;
+  NE_nz_ub_ = A_.num_row_;
+  for (Int col = 0; col < A_.num_col_; ++col) {
+    Int used = 0;
+    Int unused = 0;
+    for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
+      const Int row = A_.index_[el];
+      if (mark[row])
+        ++used;
+      else {
+        mark[row] = true;
+        ++unused;
+      }
+    }
+
+    NE_nz_ub_ += (used + unused) * (used + unused - 1) / 2;
+    NE_nz_lb_ += unused * (unused - 1) / 2 + used * unused;
+  }
+  NE_nz_ub_ = std::min(NE_nz_ub_, (Int64)A_.num_row_ * (A_.num_row_ + 1) / 2);
+
+  AS_nz_ = A_.numNz() + A_.num_row_ + (qp() ? Q_.numNz() : A_.num_col_);
 }
 
 Int Model::checkData() const {
