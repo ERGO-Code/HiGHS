@@ -5,20 +5,23 @@ if (NOT HIPO_EXTRAS_LIBRARY_BUILD)
   return()
 endif()
 
-if (NOT APPLE)
-  set(BUILD_OPENBLAS ON CACHE BOOL "Build OpenBLAS" FORCE)
-    # set(BUILD_OPENBLAS ON) # *** for now always build openblas
-endif()
+# if (NOT APPLE)
+#   set(BUILD_OPENBLAS ON CACHE BOOL "Build OpenBLAS" FORCE)
+#     # set(BUILD_OPENBLAS ON) # *** for now always build openblas
+# endif()
 
 include(sources-python)
 
-if (HIPO_EXTRAS_LIBRARY_BUILD AND NOT APPLE)
-    set(BUILD_OPENBLAS ON CACHE BOOL "Build OpenBLAS" FORCE)
-endif()
+# if (HIPO_EXTRAS_LIBRARY_BUILD AND NOT APPLE)
+#     set(BUILD_OPENBLAS ON CACHE BOOL "Build OpenBLAS" FORCE)
+# endif()
 
-message(STATUS "BUILD_OPENBLAS after force: ${BUILD_OPENBLAS}")
+message(STATUS "BUILD_OPENBLAS before FindHipoDeps: ${BUILD_OPENBLAS}")
+
 include(FindHipoDeps)
+
 message(STATUS "BUILD_OPENBLAS after FindHipoDeps: ${BUILD_OPENBLAS}")
+
 if(TARGET openblas_static)
     message(STATUS "openblas_static EXISTS after FindHipoDeps")
 else()
@@ -71,44 +74,21 @@ if(ZLIB_FOUND)
     target_link_libraries(highs_extras PRIVATE ZLIB::ZLIB)
 endif()
 
-# target_link_libraries(highs_extras PRIVATE highs)
 
-# if (NOT USE_CMAKE_FIND_BLAS)
-#     if(APPLE)
-#         target_link_libraries(highs_extras PRIVATE "-framework Accelerate")
-#         target_compile_definitions(highs_extras PRIVATE HIPO_USES_APPLE_BLAS)
-#     elseif(WIN32)
-#     if(TARGET OpenBLAS::OpenBLAS)
-#         target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#         target_link_libraries(highs_extras PRIVATE OpenBLAS::OpenBLAS)
-#     elseif(OPENBLAS_LIB)
-#         target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#         message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
-#         target_link_libraries(highs_extras PRIVATE ${OPENBLAS_LIB})
-#         target_include_directories(highs_extras PRIVATE ${OPENBLAS_INCLUDE_DIR})
-#     elseif(BUILD_OPENBLAS)
-#         target_link_libraries(highs_extras PRIVATE openblas)
-#         target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#     else()
-#         message(FATAL_ERROR "OpenBLAS not found on Windows.")
-#     endif()
+if (NOT APPLE AND NOT BUILD_OPENBLAS)
+    # Only allow openblas, exclude linux reference blas.
+    target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
 
-#     target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#     else()
-#         # LINUX
-#         if(BLAS_LIB)
-#             target_link_libraries(highs_extras PRIVATE "${BLAS_LIB}" cblas)
-#         elseif(OPENBLAS_LIB)
-#             target_link_libraries(highs_extras PRIVATE "${OPENBLAS_LIB}")
-#             target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#         elseif(BUILD_OPENBLAS)
-#             target_link_libraries(highs_extras PRIVATE openblas)
-#             target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#         else()
-#             message(FATAL_ERROR "No BLAS library available")
-#         endif(BLAS_LIB)
-#     endif(APPLE)
-# else()
+    if(TARGET OpenBLAS::OpenBLAS)
+        target_link_libraries(highs_extras PRIVATE OpenBLAS::OpenBLAS)
+    elseif(OPENBLAS_LIB)
+        message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
+        target_link_libraries(highs_extras PRIVATE ${OPENBLAS_LIB})
+        target_include_directories(highs_extras PRIVATE ${OPENBLAS_INCLUDE_DIR})
+    else()
+        message(FATAL_ERROR "OpenBLAS not found.")
+    endif()
+endif()
 
 if (BUILD_OPENBLAS)
   message(STATUS "WE ARE HERE")
@@ -135,8 +115,7 @@ if (BUILD_OPENBLAS)
   endif()
 
   target_include_directories(highs_extras PUBLIC
-    ${CMAKE_BINARY_DIR}/_deps/openblas-src/include
-)
+    ${CMAKE_BINARY_DIR}/_deps/openblas-src/include)
 endif()
 
 if(MSVC)
@@ -146,7 +125,6 @@ endif()
 if (NOT MSVC)
   target_compile_options(highs_extras PRIVATE "-ftemplate-depth=2048")
 endif()
-
 
 # Set library properties
 set_target_properties(highs_extras PROPERTIES
