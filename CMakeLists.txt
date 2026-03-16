@@ -238,11 +238,11 @@ else()
 endif()
 
 # HiPO deps
-if(HIPO AND NOT HIPO_PYTHON_EXTRAS_BUILD)
-  # find_package(METIS REQUIRED)
-  # find_package(GKlib REQUIRED)
-  # does not work with outdated CMake
-  include(FindHipoDeps)
+if(HIPO)
+  if ((NOT HIPO_PYTHON_EXTRAS_BUILD) OR
+       (NOT (APPLE OR BUILD_OPENBLAS)))
+    include(FindHipoDeps)
+  endif()
 endif()
 
 # Option to build static

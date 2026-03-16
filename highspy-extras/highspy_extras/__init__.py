@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Version is kept in sync with HiGHS version in Version.txt
 # This is updated during the build/release process
-__version__ = "1.13.1.dev5"
+__version__ = "1.13.1.dev6"
 
 
 def _get_library_name() -> str:
