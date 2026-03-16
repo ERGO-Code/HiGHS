@@ -29,7 +29,7 @@ classifiers = [
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [tool.scikit-build]
-cmake.verbose = true
+build.verbose = true
 wheel.expand-macos-universal-tags = true
 wheel.packages = ["highspy_extras"]
 wheel.exclude = [
@@ -85,27 +85,3 @@ BUILD_OPENBLAS="ON"
 
 [tool.cibuildwheel]
 repair-wheel-command = ""
-
-[tool.cibuildwheel.linux]
-before-build = '''
-bash -lc '
-set -e
-# Install zip/unzip (works for manylinux images using yum; falls back to apt)
-if command -v yum >/dev/null 2>&1; then
-  yum -y install zip unzip
-elif command -v apt-get >/dev/null 2>&1; then
-  apt-get update && apt-get install -y zip unzip
-elif command -v apk >/dev/null 2>&1; then
-  apk add --no-cache zip unzip
-fi
-
-# idempotent vcpkg bootstrap + install
-if [ ! -d /opt/vcpkg ]; then
-  git clone https://github.com/microsoft/vcpkg.git /opt/vcpkg
-  /opt/vcpkg/bootstrap-vcpkg.sh
-fi
-/opt/vcpkg/vcpkg install zlib openblas --triplet x64-linux
-'
-'''
-environment = { VCPKG_ROOT = "/opt/vcpkg", VCPKG_TARGET_TRIPLET = "x64-linux" }
-

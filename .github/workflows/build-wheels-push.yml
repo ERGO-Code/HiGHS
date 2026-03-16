@@ -1,4 +1,4 @@
-name: build-wheels
+name: build-wheels-push
 
 on:
   pull_request:
@@ -96,11 +96,11 @@ jobs:
         shell: bash
         run: pipx run build --sdist highspy-extras/
       - name: check metadata
-        run: pipx run twine check dist/*
+        run: pipx run twine check highspy-extras/dist/*
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-extras-sdist
-          path: dist/*.tar.gz
+          path: highspy-extras/dist/*.tar.gz
 
   upload_testpypi:
     name: Publish highspy to TestPyPI
