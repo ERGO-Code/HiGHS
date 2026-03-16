@@ -32,13 +32,7 @@ classifiers = [
 build.verbose = true
 wheel.expand-macos-universal-tags = true
 wheel.packages = ["highspy_extras"]
-wheel.exclude = [
- "include",
- "lib*/",
- "bin",
- "LICENSE.txt",
- "README.md"
-]
+wheel.exclude = ["include", "lib*/", "bin", "LICENSE.txt", "README.md"]
 
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.
@@ -76,12 +70,17 @@ sdist.exclude = [
   "interfaces/*csharp*",
   "interfaces/*fortran*",
   "flake.*",
-  "highs.pc.in"
+  "highs.pc.in",
 ]
 
 [tool.scikit-build.cmake.define]
-HIPO_EXTRAS_LIBRARY_BUILD="ON"
-BUILD_OPENBLAS="ON"
+HIPO_EXTRAS_LIBRARY_BUILD = "ON"
+BUILD_OPENBLAS = "ON"
+
+
+[[tool.scikit-build.overrides]]
+if.platform-system = "darwin"
+cmake.define.BUILD_OPENBLAS = "OFF"
 
 [tool.cibuildwheel]
 build = "*"

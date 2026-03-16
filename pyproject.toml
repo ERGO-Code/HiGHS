@@ -85,23 +85,17 @@ sdist.exclude = [
   "interfaces/*csharp*",
   "interfaces/*fortran*",
   "flake.*",
-  "highs.pc.in"
+  "highs.pc.in",
 ]
 
 # # A set of patterns to exclude from the wheel. This is additive to the SDist
 # # exclude patterns. This applies to the final paths in the wheel, and can
 # # exclude files from CMake output as well.  Editable installs may not respect
 # # this exclusion.
-wheel.exclude = [
- "include",
- "lib*/",
- "bin",
- "LICENSE.txt",
- "README.md"
-]
+wheel.exclude = ["include", "lib*/", "bin", "LICENSE.txt", "README.md"]
 
 [tool.scikit-build.cmake.define]
-HIPO_PYTHON_EXTRAS_BUILD="ON"
+HIPO_PYTHON_EXTRAS_BUILD = "ON"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
