@@ -28,29 +28,29 @@ class HighsMipAnalysis {
   void setup(const HighsLp& lp, const HighsOptions& options);
 
   void setupMipTime(const HighsOptions& options);
-  void mipTimerStart(const HighsInt mip_clock = 0
+  void mipTimerStart(const HighsInt mip_clock
                      //		     , const HighsInt thread_id = 0
   ) const;
-  void mipTimerStop(const HighsInt mip_clock = 0
+  void mipTimerStop(const HighsInt mip_clock
                     //		    , const HighsInt thread_id = 0
   ) const;
-  bool mipTimerRunning(const HighsInt mip_clock = 0
+  bool mipTimerRunning(const HighsInt mip_clock
                        //		    , const HighsInt thread_id = 0
   ) const;
-  double mipTimerRead(const HighsInt mip_clock = 0
+  double mipTimerRead(const HighsInt mip_clock
                       //		    , const HighsInt thread_id = 0
   ) const;
-  HighsInt mipTimerNumCall(const HighsInt mip_clock = 0
-                           // , const HighsInt thread_id
+  HighsInt mipTimerNumCall(const HighsInt mip_clock
+                           // , const HighsInt thread_id = 0
   ) const;
   void mipTimerAdd(const HighsInt mip_clock, const HighsInt num_call,
                    const double time
-                   // , const HighsInt thread_id
+                   // , const HighsInt thread_id = 0
   ) const;
   void mipTimerUpdate(const HighsSubSolverCallTime& sub_solver_call_time,
                       const bool valid_basis, const bool presolve,
                       const bool analytic_centre = false
-                      // , const HighsInt thread_id
+                      // , const HighsInt thread_id = 0
   ) const;
   void reportMipSolveLpClock(const bool header);
   void reportMipTimer();
