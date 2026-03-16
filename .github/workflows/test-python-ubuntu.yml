@@ -117,11 +117,11 @@ jobs:
       - name: Install test dependencies
         run: python3 -m pip install pytest
 
-      - name: Checkout CMakeHighsFetchContent
+      - name: Checkout OpenBLAS
         uses: actions/checkout@v4
         with:
           repository: OpenMathLib/OpenBLAS
-          ref: main
+          ref: master
           path: pathtoopenblas
 
       - name: Create build dir for openblas
