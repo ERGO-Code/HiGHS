@@ -593,8 +593,9 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
       // Go through sub_solver_call_time to update any MIP clocks
       const bool valid_basis = true;
       const bool use_presolve = false;
+      const bool analytic_centre = false;
       mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                         use_presolve);
+                                         use_presolve, analytic_centre);
     }
   }
 }
@@ -1215,8 +1216,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     std::string presolve;
     lpsolver.getOptionValue("presolve", presolve);
     const bool use_presolve = presolve != kHighsOffString;
+    const bool analytic_centre = false;
     mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                       use_presolve);
+                                       use_presolve, analytic_centre);
   }
   if (mipsolver.analysis_.analyse_mip_time && !mipsolver.submip &&
       !this->solved_first_lp) {
@@ -1429,8 +1431,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
         // Go through sub_solver_call_time to update any MIP clocks
         const bool valid_basis = false;
+	const bool analytic_centre = false;
         // mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-        //                                    use_presolve);
+        //                                    use_presolve, analytic_centre);
 
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);

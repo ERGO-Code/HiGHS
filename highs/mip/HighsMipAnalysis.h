@@ -42,7 +42,7 @@ class HighsMipAnalysis {
                    const double time, const HighsInt thread_id = 0) const;
   void mipTimerUpdate(const HighsSubSolverCallTime& sub_solver_call_time,
                       const bool valid_basis, const bool presolve,
-                      const bool analytic_centre = false,
+                      const bool analytic_centre,
                       const HighsInt thread_id = 0) const;
   void reportMipSolveLpClock(const bool header);
   void reportMipTimer();
