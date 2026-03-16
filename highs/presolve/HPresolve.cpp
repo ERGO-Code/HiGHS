@@ -7954,23 +7954,6 @@ void HPresolve::extractVarBounds(HighsInt row) {
   bool useRhs = model->row_upper_[row] != kHighsInf && numInfSumLower <= 1;
   if (!useLhs && !useRhs) return;
 
-  auto computeMirCut = [&](double& aj, double& rhs, HighsInt multiplier) {
-    // try to strengthen variable bound constraint x + a * y <= b by computing
-    // MIR cut. since x is a general-integer variable (with integral bounds) and
-    // its coefficient is 1.0, it is not shifted (or complemented). similarly,
-    // since y is a binary variable (i.e., its lower bound is 0.0), it does not
-    // need to be shifted, and we also do not try to complement it.
-    constexpr double f0min = 0.005;
-    constexpr double f0max = 0.995;
-    double downrhs = std::floor(multiplier * rhs);
-    double f0 = multiplier * rhs - downrhs;
-    if (f0 < f0min || f0 > f0max) return;
-    double downaj = std::floor(multiplier * aj + kHighsTiny);
-    double fj = multiplier * aj - downaj;
-    rhs = multiplier * downrhs;
-    aj = multiplier * (downaj + std::max(fj - f0, 0.0) / (1.0 - f0));
-  };
-
   // check if row contains a single binary variable
   HighsInt binCol = -1;
   double binCoef = 0.0;
@@ -8036,33 +8019,21 @@ void HPresolve::extractVarBounds(HighsInt row) {
     }
 
     // compute coefficient for binary variable
-    double vbCoef = binCoef / nonzero.value();
+    double vbCoef = -binCoef / nonzero.value();
 
     // add VLB
-    if (vlbConstant != -kHighsInf) {
-      double myVbCoef = vbCoef;
-      // try to strengthen VLB using MIR
-      if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
-        computeMirCut(myVbCoef, vlbConstant, HighsInt{-1});
-      // store VLB
-      if (myVbCoef != 0.0)
-        mipsolver->mipdata_->implications.addVLB(
-            nonzero.index(), binCol, -myVbCoef, vlbConstant,
-            model->col_lower_[nonzero.index()]);
-    }
+    if (vlbConstant != -kHighsInf)
+      mipsolver->mipdata_->implications.addVLB(
+          nonzero.index(), binCol, vbCoef, vlbConstant,
+          model->col_lower_[nonzero.index()],
+          model->integrality_[nonzero.index()] != HighsVarType::kContinuous);
 
     // add VUB
-    if (vubConstant != kHighsInf) {
-      double myVbCoef = vbCoef;
-      // try to strengthen VUB using MIR
-      if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous)
-        computeMirCut(myVbCoef, vubConstant, HighsInt{1});
-      // store VUB
-      if (myVbCoef != 0.0)
-        mipsolver->mipdata_->implications.addVUB(
-            nonzero.index(), binCol, -myVbCoef, vubConstant,
-            model->col_upper_[nonzero.index()]);
-    }
+    if (vubConstant != kHighsInf)
+      mipsolver->mipdata_->implications.addVUB(
+          nonzero.index(), binCol, vbCoef, vubConstant,
+          model->col_upper_[nonzero.index()],
+          model->integrality_[nonzero.index()] != HighsVarType::kContinuous);
 
     // stop if no additional variable bounds can be found
     if (!useLhs && !useRhs) break;
