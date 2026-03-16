@@ -114,67 +114,30 @@ if (BUILD_OPENBLAS)
   message(STATUS "WE ARE HERE")
 
   if (LINUX)
-    set(OPENBLAS_STATIC_LIB ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/libopenblas.a)
-    if(NOT EXISTS ${OPENBLAS_STATIC_LIB})
-      message(FATAL_ERROR "OpenBLAS static lib not found at: ${OPENBLAS_STATIC_LIB}")
-    endif()
-    target_link_libraries(highs_extras PUBLIC ${OPENBLAS_STATIC_LIB})
+    add_dependencies(highs_extras openblas_static)
+    target_link_libraries(highs_extras PUBLIC openblas_static)
   endif()
-
-  # let the linker fail naturally
-  # if (WIN32)
-  #   set(OPENBLAS_STATIC_LIB ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/openblas.lib)
-  #   if(NOT EXISTS ${OPENBLAS_STATIC_LIB})
-  #     message(FATAL_ERROR "OpenBLAS static lib not found at: ${OPENBLAS_STATIC_LIB}")
-  #   endif()
-  # endif()
 
   if (WIN32)
-  get_property(all_targets DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
-message(STATUS "All targets at highs_extras link time: ${all_targets}")
+    get_property(all_targets DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+    message(STATUS "All targets at highs_extras link time: ${all_targets}")
 
-if(TARGET openblas_static)
-    message(STATUS "openblas_static EXISTS")
-else()
-    message(STATUS "openblas_static DOES NOT EXIST")
-endif()
+    if(TARGET openblas_static)
+        message(STATUS "openblas_static EXISTS")
+    else()
+        message(STATUS "openblas_static DOES NOT EXIST")
+    endif()
 
-        add_dependencies(highs_extras openblas_static)
-        # target_link_directories(highs_extras PRIVATE
-        #       ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/Release
-        #       ${CMAKE_BINARY_DIR}/_deps/openblas-build/lib/Debug
-        #       ${CMAKE_BINARY_DIR}/_deps/openblas-build/Release
-        #       ${CMAKE_BINARY_DIR}/_deps/openblas-build/Debug
-        #   )
-        target_link_libraries(highs_extras PRIVATE openblas)
-        target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
+    add_dependencies(highs_extras openblas_static)
+
+    target_link_libraries(highs_extras PRIVATE openblas)
+    target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
   endif()
-
-  # target_link_libraries(highs_extras PUBLIC openblas)
 
   target_include_directories(highs_extras PUBLIC
     ${CMAKE_BINARY_DIR}/_deps/openblas-src/include
-    # or wherever the openblas headers landed
 )
 endif()
-
-# else()
-#   if (WIN32 AND TARGET OpenBLAS::OpenBLAS)
-#       target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#       target_link_libraries(highs_extras PRIVATE OpenBLAS::OpenBLAS)
-#   else()
-#       target_link_libraries(highs_extras PRIVATE BLAS::BLAS)
-#       string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
-#       if(blas_lower MATCHES "openblas")
-#           target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
-#       elseif(blas_lower MATCHES "accelerate")
-#           target_compile_definitions(highs_extras PRIVATE HIPO_USES_APPLE_BLAS)
-#       endif()
-#   endif()
-
-# endif()
-
-# endif()
 
 if(MSVC)
   target_compile_options(highs_extras PRIVATE "/bigobj")
