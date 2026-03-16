@@ -111,7 +111,7 @@ if (NOT APPLE AND NOT BUILD_OPENBLAS)
 endif()
 
 # Package build: Download OpenBLAS as a subproject.
-if (BUILD_OPENBLAS)
+if (NOT APPLE AND BUILD_OPENBLAS)
   message(STATUS "WE ARE HERE")
   target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
 

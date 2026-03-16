@@ -35,7 +35,6 @@ test = ["pytest", "numpy"]
 hipo = ["highspy-extras>=1.12.0"]
 
 [tool.scikit-build]
-cmake.args = ["-DHIPO_PYTHON_EXTRAS_BUILD=ON"]
 wheel.expand-macos-universal-tags = true
 
 # A list of packages to auto-copy into the wheel. If this is not set, it will
@@ -199,6 +198,8 @@ wheel.exclude = [
 # # The build directory. Defaults to a temporary directory, but can be set.
 # # build-dir = ""
 
+[tool.scikit-build.cmake.define]
+HIPO_PYTHON_EXTRAS_BUILD="ON"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

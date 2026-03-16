@@ -50,8 +50,47 @@ jobs:
 
       - name: Test Python Interface
         run: |
-          python3 -m pip install  ./highspy-extras
-          python3 -m pip install  .
+          python3 -m pip install ./highspy-extras
+          python3 -m pip install .
+          pytest -v
+          pytest check/test_highspy_hipo.py
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_hipo_local:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.12]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python3 -m pip install pytest
+
+      - name: Install OpenBLAS
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install libopenblas-dev
+
+        # Can pass path with an additional
+        # --config-settings=cmake.define.BLAS_LIBRARIES=/home/ivet/installs/openblas/lib/libopenblas.a
+
+      - name: Test Python Interface
+        run: |
+          python3 -m pip install ./highspy-extras --config-settings=cmake.define.BUILD_OPENBLAS=OFF
+          python3 -m pip install .[hipo]
           pytest -v
           pytest check/test_highspy_hipo.py
 

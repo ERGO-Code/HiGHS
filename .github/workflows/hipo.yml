@@ -82,7 +82,7 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
-  ubuntu_gh:
+  ubuntu_openblas:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
