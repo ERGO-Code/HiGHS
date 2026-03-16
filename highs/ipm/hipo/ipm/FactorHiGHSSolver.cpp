@@ -203,9 +203,13 @@ Int FactorHiGHSSolver::chooseNla() {
   bool overflow_AS = false;
 
   auto run_structure_NE = [&]() {
-    if ((model_.m() > kMinRowsForDensity &&
-         model_.maxColDensity() > kDenseColThresh) ||
-        model_.nonSeparableQp() || model_.m() == 0) {
+    bool has_dense_cols = model_.m() > kMinRowsForDensity &&
+                          model_.maxColDensity() > kDenseColThresh;
+    bool expect_AS_much_cheaper =
+        model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
+
+    if (has_dense_cols || expect_AS_much_cheaper || model_.nonSeparableQp() ||
+        model_.m() == 0) {
       failure_NE = true;
     } else {
       Int status = kkt_.buildNEstructure();
@@ -227,19 +231,26 @@ Int FactorHiGHSSolver::chooseNla() {
   };
 
   auto run_analyse_AS = [&]() {
-    Int AS_status = kkt_.buildASstructure();
-    if (!AS_status) AS_status = analyseAS(symb_AS);
-    if (AS_status) failure_AS = true;
-    if (AS_status == kStatusOverflow) {
-      log_.printDevInfo("Integer overflow forming AS matrix\n");
-      overflow_AS = true;
-    }
+    bool expect_NE_much_cheaper =
+        model_.nzAS() > model_.nzNEub() * kNzBoundsRatio;
 
-    // If NE has more nonzeros than the factor of AS, then it's likely that AS
-    // will be preferred, so stop computation of NE.
-    Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
-    if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
-    kkt_.NE_nz_limit.store(NE_nz_limit, std::memory_order_relaxed);
+    if (expect_NE_much_cheaper)
+      failure_AS = true;
+    else {
+      Int AS_status = kkt_.buildASstructure();
+      if (!AS_status) AS_status = analyseAS(symb_AS);
+      if (AS_status) failure_AS = true;
+      if (AS_status == kStatusOverflow) {
+        log_.printDevInfo("Integer overflow forming AS matrix\n");
+        overflow_AS = true;
+      }
+
+      // If NE has more nonzeros than the factor of AS, then it's likely that AS
+      // will be preferred, so stop computation of NE.
+      Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
+      if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
+      kkt_.NE_nz_limit.store(NE_nz_limit, std::memory_order_relaxed);
+    }
   };
 
   // In parallel, run AS analyse and build NE structure. NE analyse runs only

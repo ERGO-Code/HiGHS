@@ -42,6 +42,7 @@ const double kFlopsOrderingThresh = 1.2;
 // parameters for dense columns
 const double kDenseColThresh = 0.5;
 const Int kMinRowsForDensity = 2000;
+const double kNzBoundsRatio = 50.0;
 
 // parameters for iterative refinement
 const Int kMaxIterRefine = 3;

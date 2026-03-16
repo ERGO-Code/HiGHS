@@ -343,7 +343,14 @@ void Model::print(const LogHighs& log) const {
   log_stream << textline("Scaling coefficients:") << "[" << sci(scalemin, 5, 1)
              << ", " << sci(scalemax, 5, 1) << "]\n";
 
-  if (log.debug(1)) preprocessor_.print(log_stream);
+  if (log.debug(1)) {
+    preprocessor_.print(log_stream);
+
+    log_stream << "Expected nnz: ";
+    log_stream << "AS " << sci(AS_nz_, 0, 1) << "; ";
+    log_stream << "NE [" << sci(NE_nz_lb_, 0, 1) << ", " << sci(NE_nz_ub_, 0, 1)
+               << "]\n";
+  }
 
   log.print(log_stream);
 }
