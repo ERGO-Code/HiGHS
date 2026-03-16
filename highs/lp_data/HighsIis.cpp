@@ -596,13 +596,11 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   const bool col_priority = kIisStrategyColPriority & options.iis_strategy;
   const bool row_priority = !col_priority;
   // Initially all columns and rows are candidates for the IIS
-  HighsInt num_cols = 0;
   HighsInt num_rows = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     HighsInt col_status = this->determineBoundStatus(
         lp.col_lower_[iCol], lp.col_upper_[iCol], false);
     this->addCol(iCol, col_status);
-    num_cols++;
   }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     HighsInt row_status = this->determineBoundStatus(lp.row_lower_[iRow],
@@ -865,7 +863,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
           }
         }
         if (empty_col) {
-          num_cols--;
           if (kIisDevReport) {
             highsLogUser(log_options, HighsLogType::kInfo,
                          "Col %d has status Dropped: Empty\n", int(iCol));
