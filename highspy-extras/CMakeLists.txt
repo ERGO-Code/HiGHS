@@ -1,15 +1,16 @@
 # CMakeLists.txt for highspy-extras wheel
-# Builds the HiPO shared library extras using the main HiGHS CMake infrastructure
+# Builds the HiPO deps shared library extras using the main HiGHS CMake infrastructure
 
 cmake_minimum_required(VERSION 3.15...3.27)
 
 # Use parent directory as source - forward to main CMakeLists with HIPO_PYTHON_BUILD enabled
 set(HIGHS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
-# # Use VCPKG_ROOT environment variable for dependencies
-# set(VCPKG_ROOT $ENV{VCPKG_ROOT} CACHE PATH "Path to vcpkg installation")
-# set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_TARGET_TRIPLET} CACHE STRING "vcpkg target triplet")
-# set(VCPKG_INSTALLED "${VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
+# if (NOT (APPLE OR BUILD_OPENBLAS))
+    # # Use VCPKG_ROOT environment variable for dependencies
+    # set(VCPKG_ROOT $ENV{VCPKG_ROOT} CACHE PATH "Path to vcpkg installation")
+    # set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_TARGET_TRIPLET} CACHE STRING "vcpkg target triplet")
+    # set(VCPKG_INSTALLED "${VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
 
 # if (UNIX)
 # set(ZLIB_LIBRARY "${VCPKG_INSTALLED}/lib/libz.a" CACHE STRING "Root directory of zlib")
@@ -23,5 +24,7 @@ set(HIGHS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 # set(BLAS_LIBRARIES "${VCPKG_INSTALLED}/lib/openblas.lib" CACHE STRING "BLAS/LAPACK libraries to link against")
 # endif()
 
-set(HIPO_PYTHON_EXTRAS_BUILD ON CACHE BOOL "" FORCE)
-add_subdirectory(${HIGHS_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/highs)
+
+
+# set(HIPO_PYTHON_EXTRAS_BUILD ON CACHE BOOL "" FORCE)
+# add_subdirectory(${HIGHS_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/highs)

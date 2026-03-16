@@ -239,8 +239,8 @@ endif()
 
 # HiPO deps
 if(HIPO)
-  if ((NOT HIPO_PYTHON_EXTRAS_BUILD) OR
-       (NOT (APPLE OR BUILD_OPENBLAS)))
+  if ((NOT HIPO_PYTHON_EXTRAS_BUILD)) # OR
+        # (NOT (APPLE OR BUILD_OPENBLAS)))
     include(FindHipoDeps)
   endif()
 endif()
