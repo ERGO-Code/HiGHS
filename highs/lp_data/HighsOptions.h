@@ -402,6 +402,7 @@ struct HighsOptionsStruct {
 
   // Options for IIS calculation
   HighsInt iis_strategy;
+  double iis_time_limit;
 
   // Option for multi-objective optimization
   bool blend_multi_objectives;
@@ -568,6 +569,7 @@ struct HighsOptionsStruct {
         qp_nullspace_limit(0),
         qp_regularization_value(0),
         iis_strategy(0),
+        iis_time_limit(0.0),
         blend_multi_objectives(false),
         log_dev_level(0),
         log_githash(false),
@@ -1343,6 +1345,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &iis_strategy, kIisStrategyMin, kIisStrategyDefault,
         kIisStrategyMax);
     records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "iis_time_limit", "Time limit for computing IIS (seconds)", advanced,
+        &iis_time_limit, 0, kHighsInf, kHighsInf);
+    records.push_back(record_double);
 
     record_bool = new OptionRecordBool(
         "blend_multi_objectives",

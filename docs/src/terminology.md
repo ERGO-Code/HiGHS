@@ -84,13 +84,34 @@ associated with variables are often referred to as __reduced
 costs__, and the dual values associated with constraints are
 often referred to as __Lagrange multipliers__.
 
-## Basic solution
+## [Basic solution](@id term-basic-solution)
 
-An LP model that is neither infeasible, nor unbounded, has an
-optimal solution at a vertex. At a vertex, the decision variables can
+An LP model that is neither infeasible, nor unbounded, has an optimal
+solution at a vertex of the feasible region. At a vertex, the decision
+variables (original variables and slack variables for constraints) can
 be partitioned into as many __basic variables__ as there are
 constraints, and __nonbasic variables__. Such a solution is known as a
 __basic solution__, and the partition referred to as a __basis__.
+
+The value of a nonbasic variable is equal to its lower or upper
+bound. The values of the basic variables are obtained by solving a
+linear system of equations. Their values lie between the lower and
+upper bounds (to within the [primal feasibility tolerance](@ref
+option-primal-feasibility-tolerance)), but may be equal to a lower or
+upper bound, a situation known as __degeneracy__.
+
+When a basic solution is known, the values of the dual variables yield
+sensitivity information for the solution, a property that can be very
+valuable both to users and when the LP is solved as a sub-problem when
+solving mixed-integer programming problems.
+
+When modifications have been made to an LP problem, the simplex solver
+(only) can solve the modified LP from the optimal basis of the
+original LP. Such "hot starting" is typically the most efficient means
+of solving the modified LP, and is essential to the efficient solution
+of mixed-integer programming problems. However, if the modifications
+are too great, it may be more efficient to solve the LP from scratch
+using the IPM solver.
 
 ## Sensitivity
 
