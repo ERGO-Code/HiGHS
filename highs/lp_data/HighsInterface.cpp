@@ -1830,6 +1830,8 @@ HighsStatus Highs::getRangingInterface() {
 HighsStatus Highs::getIisInterfaceReturn(
     const HighsStatus return_status, const HighsOptions& original_options,
     const HighsCallback& original_callback) {
+  // Report final results
+  this->iis_.reportFinal(original_options);
   // Restore options and callback
   this->options_ = original_options;
   this->callback_ = original_callback;
@@ -2099,8 +2101,6 @@ HighsStatus Highs::getIisInterface() {
   model_.lp_.a_matrix_.ensureColwise();
   return_status = this->iis_.deduce(lp, options_, basis_);
 
-  // Report final results
-  this->iis_.reportFinal(options_);
   // Analyse the LP solution data
   const HighsInt num_lp_solved = this->iis_.info_.num_lp_solved;
   const double min_time = this->iis_.info_.min_simplex_time;
@@ -2504,6 +2504,11 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   }
 
   if (write_model) this->writeModel("elastic.mps");
+  // Initial logging
+  if (get_iis)
+    highsLogUser(
+        options_.log_options, HighsLogType::kInfo,
+        "Running elasticity filter to identify an infeasible subset of rows\n");
 
   // Working with a copy of the IIS so clear this->iis_
   this->iis_.clear();
@@ -2526,10 +2531,20 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   if (run_status != HighsStatus::kOk) {
     // Failed to establish feasibility or infeasibility due to unknown error
     // or hitting a time limit
+    if (this->model_status_ == HighsModelStatus::kTimeLimit) {
+      iis.status_ = kIisModelStatusTimeLimit;
+      if (get_iis)
+        highsLogUser(
+            options_.log_options, HighsLogType::kError,
+            "Elasticity filter failed because time limit was reached\n");
+    } else {
+      iis.status_ = kIisModelStatusUnknown;
+      if (get_iis)
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Elasticity filter failed because it encountered an "
+                     "unknown model status\n");
+    }
     iis.valid_ = false;
-    iis.status_ = this->model_status_ == HighsModelStatus::kTimeLimit
-                      ? kIisModelStatusTimeLimit
-                      : kIisModelStatusUnknown;
     this->iis_ = iis;
     return elasticityFilterReturn(
         HighsStatus::kError, original_model_name, original_model_status,
@@ -2555,10 +2570,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   assert(!has_elastic_columns);
   assert(has_elastic_rows);
   assert(original_num_row == lp.num_row_);
-  // Initial logging
-  highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Running elasticity filter to identify an infeasible subset of rows\n");
- 
+
   // Get solution
   const HighsSolution& solution = this->getSolution();
   // Now fix e-variables that are positive and re-solve until e-LP is
@@ -2625,10 +2637,20 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     HighsStatus run_status = solveLp();
     if (run_status != HighsStatus::kOk) {
       // Solve failed
+      if (this->model_status_ == HighsModelStatus::kTimeLimit) {
+        iis.status_ = kIisModelStatusTimeLimit;
+
+        highsLogUser(
+            options_.log_options, HighsLogType::kError,
+            "Elasticity filter failed because time limit was reached\n");
+      } else {
+        iis.status_ = kIisModelStatusUnknown;
+
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Elasticity filter failed because it encountered an "
+                     "unknown model status\n");
+      }
       iis.valid_ = false;
-      iis.status_ = this->model_status_ == HighsModelStatus::kTimeLimit
-                        ? kIisModelStatusTimeLimit
-                        : kIisModelStatusUnknown;
       this->iis_ = iis;
       return elasticityFilterReturn(
           HighsStatus::kError, original_model_name, original_model_status,
@@ -2694,9 +2716,10 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     assert(num_enforced_col_ecol == 0 && num_enforced_row_ecol == 0);
     assert(num_iis_row == 0);
   }
-  
+
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Elasticity filter after %d passes found an infeasible subset of %d rows\n",
+               "Elasticity filter after %d passes found an infeasible subset "
+               "of %d rows\n",
                int(loop_k + 1), row_set.size());
 
   iis.valid_ = true;

@@ -96,7 +96,7 @@ void HighsIis::reportIteration(const HighsOptions& options, const HighsInt iter,
     return;
   // Update last time only when we actually print a line
   info_.iis_last_disptime = runtime;
-  const HighsInt gap = 13;
+  const HighsInt gap = 17;
   const HighsInt w_iter = (HighsInt)strlen("Iteration") + 2;
   const HighsInt w_rows = (HighsInt)strlen("Rows") + gap;
   const HighsInt w_time = (HighsInt)strlen("Runtime") + gap;
