@@ -460,8 +460,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   assert(!lp.hasIndicatorConstraints() ||
          lp.indicators_.matrix.format_ == MatrixFormat::kRowwise);
   for (HighsInt indicator_n = 0;
-       indicator_n < static_cast<HighsInt>(lp.indicators_.col.size());
-       indicator_n++) {
+       indicator_n < lp.indicators_.numIndicatorConstraints(); indicator_n++) {
     const std::string& name = lp.indicators_.name[indicator_n];
     HighsInt col = lp.indicators_.col[indicator_n];
     HighsInt value = lp.indicators_.value[indicator_n];

@@ -400,7 +400,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp,
   // Names for an indicator constratints have to be consistent with
   // the vanilla row names, so extend any lp.row_names temporarily
   // with indicator constraint names
-  const HighsInt num_indicators = lp.indicators_.col.size();
+  const HighsInt num_indicators = lp.indicators_.numIndicatorConstraints();
   HighsInt need_num_row_names = lp.num_row_ + num_indicators;
   if (num_indicators &&
       lp.row_names_.size() >= static_cast<size_t>(lp.num_row_)) {

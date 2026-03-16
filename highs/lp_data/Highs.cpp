@@ -2756,7 +2756,7 @@ HighsStatus Highs::addIndicatorConstraint(
 
   HighsIndicatorConstraints& indicators = lp.indicators_;
   // If this is the first IC, ensure that the matrix is rowwise
-  if (!indicators.col.size())
+  if (!indicators.numIndicatorConstraints())
     indicators.matrix.format_ = MatrixFormat::kRowwise;
   indicators.col.push_back(binary_col);
   indicators.value.push_back(binary_value);
@@ -2771,10 +2771,6 @@ HighsStatus Highs::addIndicatorConstraint(
 
   clearDerivedModelProperties();
   return returnFromHighs(HighsStatus::kOk);
-}
-
-HighsInt Highs::getNumIndicatorConstraints() const {
-  return static_cast<HighsInt>(model_.lp_.indicators_.col.size());
 }
 
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {

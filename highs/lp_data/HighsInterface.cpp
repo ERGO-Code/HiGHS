@@ -63,7 +63,7 @@ void Highs::reportModelStats() const {
   }
   const HighsInt a_num_nz = lp.a_matrix_.numNz();
   const HighsInt q_num_nz = hessian.dim_ > 0 ? hessian.numNz() : 0;
-  const HighsInt num_indicator = lp.indicators_.col.size();
+  const HighsInt num_indicator = lp.indicators_.numIndicatorConstraints();
   if (*log_options.log_dev_level) {
     highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
                 problem_type.c_str(), lp.model_name_.c_str());

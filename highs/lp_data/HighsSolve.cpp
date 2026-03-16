@@ -483,7 +483,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   double max_gencon_rhs_bound = -kHighsInf;
   double min_gencon_coeff_value = kHighsInf;
   double max_gencon_coeff_value = -kHighsInf;
-  HighsInt num_indicator = lp.indicators_.col.size();
+  HighsInt num_indicator = lp.indicators_.numIndicatorConstraints();
   const HighsSparseMatrix& matrix = lp.indicators_.matrix;
   for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
     assessFiniteNonzero(lp.indicators_.lower[indicator_n], min_gencon_rhs_bound,

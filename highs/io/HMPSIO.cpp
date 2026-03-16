@@ -644,7 +644,7 @@ HighsStatus writeMps(
   bool have_ranges = false;
   bool have_bounds = false;
   bool have_int = false;
-  const HighsInt num_indicator = indicators.col.size();
+  const HighsInt num_indicator = indicators.numIndicatorConstraints();
   // Standard format of any (non-trivial) HighsIndicatorConstraints
   // matrix is rowwise, but they need to have been converted to
   // column-wise for this method

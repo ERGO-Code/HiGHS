@@ -1109,7 +1109,9 @@ class Highs {
   /**
    * @brief Return the number of indicator constraints
    */
-  HighsInt getNumIndicatorConstraints() const;
+  HighsInt getNumIndicatorConstraints() const {
+    return this->model_.lp_.indicators_.numIndicatorConstraints();
+  }
 
   HighsStatus ensureColwise() {
     this->model_.lp_.ensureColwise();

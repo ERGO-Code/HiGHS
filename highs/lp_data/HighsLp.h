@@ -26,6 +26,9 @@ struct HighsIndicatorConstraints {
   std::vector<double> upper;
   std::vector<std::string> name;  // Optional constraint name (from MPS)
   void clear();
+  HighsInt numIndicatorConstraints() const {
+    return static_cast<HighsInt>(this->col.size());
+  }
 };
 
 class HighsLp {
@@ -78,7 +81,9 @@ class HighsLp {
   bool equalNames(const HighsLp& lp) const;
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
-  bool hasIndicatorConstraints() const;
+  bool hasIndicatorConstraints() const {
+    return this->indicators_.numIndicatorConstraints() > 0;
+  };
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;

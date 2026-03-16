@@ -2114,8 +2114,8 @@ void reportMatrix(const HighsLogOptions& log_options,
 void reportLpIndicatorConstraints(const HighsLogOptions& log_options,
                                   const HighsLp& lp) {
   const HighsIndicatorConstraints& indicators = lp.indicators_;
-  if (!indicators.col.size()) return;
-  HighsInt num_indicator = indicators.col.size();
+  if (!indicators.numIndicatorConstraints()) return;
+  HighsInt num_indicator = indicators.numIndicatorConstraints();
   for (HighsInt indicator_n = 0; indicator_n < num_indicator; indicator_n++) {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Indicator constraint %8d: Binary column %6d at value %1d\n",
@@ -3381,7 +3381,7 @@ HighsLp withoutIndicatorConstraints(
       lp.num_row_ > 0 &&
       lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
 
-  const HighsInt num_indicator = lp.indicators_.col.size();
+  const HighsInt num_indicator = lp.indicators_.numIndicatorConstraints();
   double new_lower;
   double new_upper;
   std::vector<HighsInt> new_index;
