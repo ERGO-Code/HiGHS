@@ -29,7 +29,8 @@ bool hipoAvailable() {
 #endif
 
 #ifdef HIPO_EXTRAS
-  std::cout << "DEPS LOADER! " << DynamicDepsLoader::instance().isAvailable() << std::endl;
+  std::cout << "DEPS LOADER! " << DynamicDepsLoader::instance().isAvailable()
+            << std::endl;
   return DynamicDepsLoader::instance().isAvailable();
 #else
   // HiPO is defined, since we have checked above and Python is off.
@@ -134,8 +135,7 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
     return false;
   }
   if (value == kHighsChooseString || value == kSimplexString ||
-      value == kIpmString ||
-      (value == kHipoString && hipoAvailable()) ||
+      value == kIpmString || (value == kHipoString && hipoAvailable()) ||
       value == kIpxString || value == kPdlpString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
@@ -143,10 +143,9 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
                "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kSolverString.c_str(),
                hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
-               kHighsChooseString.c_str(),
-               kSimplexString.c_str(), kIpmString.c_str(),
-               kIpxString.c_str(), kPdlpString.c_str());
-    return false;
+               kHighsChooseString.c_str(), kSimplexString.c_str(),
+               kIpmString.c_str(), kIpxString.c_str(), kPdlpString.c_str());
+  return false;
 }
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
@@ -172,8 +171,7 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
   }
 
   if (value == kHighsChooseString || value == kSimplexString ||
-      value == kIpmString ||
-      (value == kHipoString && hipoAvailable()) ||
+      value == kIpmString || (value == kHipoString && hipoAvailable()) ||
       value == kIpxString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
@@ -182,8 +180,7 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                value.c_str(), kMipLpSolverString.c_str(),
                hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
                kHighsChooseString.c_str(), kSimplexString.c_str(),
-               kIpmString.c_str(),
-               kIpxString.c_str());
+               kIpmString.c_str(), kIpxString.c_str());
   return false;
 }
 
@@ -209,8 +206,7 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
     return false;
   }
   if (value == kHighsChooseString || value == kIpmString ||
-      (value == kHipoString && hipoAvailable()) ||
-      value == kIpxString)
+      (value == kHipoString && hipoAvailable()) || value == kIpxString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
                "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
