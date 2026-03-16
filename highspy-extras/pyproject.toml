@@ -84,4 +84,6 @@ HIPO_EXTRAS_LIBRARY_BUILD="ON"
 BUILD_OPENBLAS="ON"
 
 [tool.cibuildwheel]
+build = "*"
+archs = ["auto64", "auto32"]
 repair-wheel-command = ""
