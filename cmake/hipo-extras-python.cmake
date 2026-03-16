@@ -1,25 +1,12 @@
-# HiPO Extras Python build module
-# Similar to python-highs.cmake but builds the HiPO deps shared library
-
+# HiPO Extras Python build module: highspy-extras
 if (NOT HIPO_EXTRAS_LIBRARY_BUILD)
   return()
 endif()
 
-# if (NOT APPLE)
-#   set(BUILD_OPENBLAS ON CACHE BOOL "Build OpenBLAS" FORCE)
-#     # set(BUILD_OPENBLAS ON) # *** for now always build openblas
-# endif()
-
 include(sources-python)
 
-# if (HIPO_EXTRAS_LIBRARY_BUILD AND NOT APPLE)
-#     set(BUILD_OPENBLAS ON CACHE BOOL "Build OpenBLAS" FORCE)
-# endif()
-
 message(STATUS "BUILD_OPENBLAS before FindHipoDeps: ${BUILD_OPENBLAS}")
-
 include(FindHipoDeps)
-
 message(STATUS "BUILD_OPENBLAS after FindHipoDeps: ${BUILD_OPENBLAS}")
 
 if(TARGET openblas_static)
@@ -82,17 +69,44 @@ endif()
 
 # Local install: allow OpenBLAS link.
 if (NOT APPLE AND NOT BUILD_OPENBLAS)
-    # Only allow openblas, exclude linux reference blas.
+    # Only allow openblas, exclude linux reference blas and mkl for now.
     target_compile_definitions(highs_extras PRIVATE HIPO_USES_OPENBLAS)
 
-    if(TARGET OpenBLAS::OpenBLAS)
-        target_link_libraries(highs_extras PRIVATE OpenBLAS::OpenBLAS)
-    elseif(OPENBLAS_LIB)
-        message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
-        target_link_libraries(highs_extras PRIVATE ${OPENBLAS_LIB})
-        target_include_directories(highs_extras PRIVATE ${OPENBLAS_INCLUDE_DIR})
+    if (WIN32)
+      if(TARGET OpenBLAS::OpenBLAS)
+          target_link_libraries(highs_extras PRIVATE OpenBLAS::OpenBLAS)
+      elseif(OPENBLAS_LIB)
+          message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
+          target_link_libraries(highs_extras PRIVATE ${OPENBLAS_LIB})
+          target_include_directories(highs_extras PRIVATE ${OPENBLAS_INCLUDE_DIR})
+      elseif(TARGET BLAS::BLAS)
+          string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
+          message(STATUS "BLAS::BLAS string: ${blas_lower}")
+          if (NOT (blas_lower MATCHES "openblas"))
+            message(FATAL_ERROR "OpenBLAS is required at the moment.")
+          endif()
+          target_link_libraries(highs_extras PRIVATE BLAS::BLAS)
+      else()
+          message(FATAL_ERROR "OpenBLAS not found.")
+      endif()
     else()
-        message(FATAL_ERROR "OpenBLAS not found.")
+      #Linux
+      if(TARGET OpenBLAS::OpenBLAS)
+          target_link_libraries(highs_extras PRIVATE OpenBLAS::OpenBLAS)
+      elseif(OPENBLAS_LIB)
+          message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
+          target_link_libraries(highs_extras PRIVATE ${OPENBLAS_LIB})
+          target_include_directories(highs_extras PRIVATE ${OPENBLAS_INCLUDE_DIR})
+      elseif(TARGET BLAS::BLAS)
+          string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
+          message(STATUS "BLAS::BLAS string: ${blas_lower}")
+          if (NOT (blas_lower MATCHES "openblas"))
+            message(FATAL_ERROR "OpenBLAS is required at the moment.")
+          endif()
+          target_link_libraries(highs_extras PRIVATE BLAS::BLAS)
+      else()
+          message(FATAL_ERROR "OpenBLAS not found.")
+      endif()
     endif()
 endif()
 

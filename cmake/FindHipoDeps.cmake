@@ -1,10 +1,5 @@
 # Fetch OpenBLAS
-message(STATUS "FindHipoDeps: RUNNING, BUILD_OPENBLAS=${BUILD_OPENBLAS}")
-
-message(STATUS "BUILD_OPENBLAS = ${BUILD_OPENBLAS}")
-message(STATUS "APPLE = ${APPLE}")
-message(STATUS "WIN32 = ${WIN32}")
-
+message(STATUS "Running FindHipoDeps, BUILD_OPENBLAS=${BUILD_OPENBLAS}")
 
 if (BUILD_OPENBLAS)
     include(FetchContent)
