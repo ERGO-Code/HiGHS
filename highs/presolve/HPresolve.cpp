@@ -4665,6 +4665,13 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // return if variable is already fixed
   if (model->col_lower_[col] == model->col_upper_[col]) return Result::kOk;
 
+  // struct for single equation handling
+  struct equationNonZero {
+    HighsInt col;
+    double val;
+    HighsInt mark;
+  };
+
   // lambda for variable substitution
   auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
                            double colBound, double otherColBound) {
@@ -4760,13 +4767,14 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   };
 
   // lambda for fixing variables
-  auto fixCols = [&](const std::vector<std::pair<HighsInt, double>>& vars,
+  auto fixCols = [&](const std::vector<equationNonZero>& equationRowVector,
                      HighsInt direction) {
-    for (const auto& elm : vars) {
-      if (direction * elm.second > 0)
-        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, elm.first));
+    for (const auto& rowNz : equationRowVector) {
+      if (direction * rowNz.mark >= 0) continue;
+      if (direction * rowNz.val > 0)
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, rowNz.col));
       else
-        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, elm.first));
+        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, rowNz.col));
     }
     return Result::kOk;
   };
@@ -4774,27 +4782,30 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // lambda for handling single equations
   auto handleSingleEquation = [&](HighsInt row) {
     assert(isEquation(row));
-    std::vector<std::pair<HighsInt, double>> sPlus;
-    std::vector<std::pair<HighsInt, double>> sMinus;
-    sPlus.reserve(rowsize[row]);
-    sMinus.reserve(rowsize[row]);
-    std::vector<HighsInt> sMark(model->num_col_, 0);
+    std::vector<equationNonZero> equationRowVector;
+    equationRowVector.reserve(rowsize[row]);
+    HighsInt numSPlus = 0;
+    HighsInt numSMinus = 0;
     for (const auto& rowNz : getRowVector(row)) {
       // flip column direction if coefficient is negative
       // (equivalent to negating the column's coefficients)
       HighsInt colDirection = std::copysign(HighsInt{1}, rowNz.value());
+      HighsInt mark = 0;
       if (checkColumn(rowNz.index(), colDirection, row)) {
         // store in S_+
-        sPlus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
-        sMark[rowNz.index()] = 1;
+        numSPlus++;
+        mark = 1;
       } else if (checkColumn(rowNz.index(), -colDirection, row)) {
         // store in S_-
-        sMinus.push_back(std::make_pair(rowNz.index(), rowNz.value()));
-        sMark[rowNz.index()] = -1;
+        numSMinus++;
+        mark = -1;
       }
+      // store non-zero
+      equationRowVector.emplace_back(
+          equationNonZero{rowNz.index(), rowNz.value(), mark});
     }
     // return if both sets are empty
-    if (sPlus.empty() && sMinus.empty()) return Result::kOk;
+    if (numSPlus == 0 && numSMinus == 0) return Result::kOk;
     // compute activities
     HighsCDouble activityTPlus = 0.0;
     HighsCDouble activityTMinus = 0.0;
@@ -4804,41 +4815,41 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     bool activityTMinusFinite = true;
     bool activitySCPlusFinite = true;
     bool activitySCMinusFinite = true;
-    for (const auto& rowNz : getRowVector(row)) {
-      if (sMark[rowNz.index()] <= 0 ||
-          model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
+    for (const auto& rowNz : equationRowVector) {
+      if (rowNz.mark <= 0 ||
+          model->integrality_[rowNz.col] != HighsVarType::kContinuous)
         // T_+
-        computeActivity(rowNz.index(), rowNz.value(), activityTPlus,
+        computeActivity(rowNz.col, rowNz.val, activityTPlus,
                         activityTPlusFinite, HighsInt{1});
       else
         // S^C_+
-        computeActivity(rowNz.index(), rowNz.value(), activitySCPlus,
+        computeActivity(rowNz.col, rowNz.val, activitySCPlus,
                         activitySCPlusFinite, HighsInt{-1});
-      if (sMark[rowNz.index()] >= 0 ||
-          model->integrality_[rowNz.index()] != HighsVarType::kContinuous)
+      if (rowNz.mark >= 0 ||
+          model->integrality_[rowNz.col] != HighsVarType::kContinuous)
         // T_-
-        computeActivity(rowNz.index(), rowNz.value(), activityTMinus,
+        computeActivity(rowNz.col, rowNz.val, activityTMinus,
                         activityTMinusFinite, HighsInt{-1});
       else
         // S^C_-
-        computeActivity(rowNz.index(), rowNz.value(), activitySCMinus,
+        computeActivity(rowNz.col, rowNz.val, activitySCMinus,
                         activitySCMinusFinite, HighsInt{1});
       // break if activities are not finite
-      if ((sMinus.empty() || !activityTPlusFinite || !activitySCPlusFinite) &&
-          (sPlus.empty() || !activityTMinusFinite || !activitySCMinusFinite))
+      if ((numSMinus == 0 || !activityTPlusFinite || !activitySCPlusFinite) &&
+          (numSPlus == 0 || !activityTMinusFinite || !activitySCMinusFinite))
         break;
     }
     // fix variables
-    if (!sMinus.empty() && activityTPlusFinite && activitySCPlusFinite &&
+    if (numSMinus > 0 && activityTPlusFinite && activitySCPlusFinite &&
         activityTPlus + activitySCPlus <=
             model->row_lower_[row] + primal_feastol)
       // fix all variables in S_-
-      HPRESOLVE_CHECKED_CALL(fixCols(sMinus, HighsInt{1}));
-    else if (!sPlus.empty() && activityTMinusFinite && activitySCMinusFinite &&
+      HPRESOLVE_CHECKED_CALL(fixCols(equationRowVector, HighsInt{1}));
+    else if (numSPlus > 0 && activityTMinusFinite && activitySCMinusFinite &&
              activityTMinus + activitySCMinus >=
                  model->row_lower_[row] - primal_feastol)
       // fix all variables in S_+
-      HPRESOLVE_CHECKED_CALL(fixCols(sPlus, HighsInt{-1}));
+      HPRESOLVE_CHECKED_CALL(fixCols(equationRowVector, HighsInt{-1}));
     return Result::kOk;
   };
 
