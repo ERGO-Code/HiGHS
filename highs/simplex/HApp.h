@@ -74,12 +74,11 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
                              .run_time[kSubSolverPrSimplexNoBasis]));
   // Update the call count and run time
   solver_object.sub_solver_call_time_.num_call[sub_solver_ix]++;
-  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] +=
-      solver_object.timer_.read();
-  /*
-  HighsInt local_thread_num = highs::parallel::thread_num();
   double tt = solver_object.sub_solver_call_time_.run_time[sub_solver_ix];
   tt += solver_object.timer_.read();
+  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] +=
+    solver_object.timer_.read();
+  /*
   solver_object.sub_solver_call_time_.update(sub_solver_ix, tt);
   */
   // Ensure that the incumbent LP is neither moved, nor scaled
@@ -158,12 +157,10 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   }
   assert(sub_solver_ix >= 0);
   assert(solver_object.sub_solver_call_time_.run_time.size() > 0);
-  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] =
-      -solver_object.timer_.read();
-  /*
   double tt = solver_object.timer_.read();
-  HighsInt local_thread_num = highs::parallel::thread_num();
   solver_object.sub_solver_call_time_.run_time[sub_solver_ix] = -tt;
+  HighsInt local_thread_num = highs::parallel::thread_num();
+  /*
   solver_object.sub_solver_call_time_.record[local_thread_num].run_time[sub_solver_ix] = -tt;
   */
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
