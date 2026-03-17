@@ -270,6 +270,11 @@ struct HighsMipSolverData {
   HighsCutPool& getCutPool() { return cutpools[0]; };
   HighsLpRelaxation& getLp() { return lps[0]; };
   HighsPseudocost& getPseudoCost() { return pseudocosts[0]; };
+  const HighsDomain& getDomain() const { return domains[0]; };
+  const HighsConflictPool& getConflictPool() const { return conflictpools[0]; };
+  const HighsCutPool& getCutPool() const { return cutpools[0]; };
+  const HighsLpRelaxation& getLp() const { return lps[0]; };
+  const HighsPseudocost& getPseudoCost() const { return pseudocosts[0]; };
 };
 
 #endif
