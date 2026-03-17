@@ -56,8 +56,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     }
 
     // only modify cliquetable for master worker.
-    if (&propdomain == &mipdata.domain)
-      mipdata.cliquetable.cleanupFixed(mipdata.domain);
+    if (&propdomain == &mipdata.getDomain())
+      mipdata.cliquetable.cleanupFixed(mipdata.getDomain());
 
     if (mipworker_.getGlobalDomain().infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
@@ -72,7 +72,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
       status = lp->resolveLp(&propdomain);
       if (!lp->scaledOptimal(status)) return -1;
 
-      if (&propdomain == &mipdata.domain && lp->unscaledDualFeasible(status)) {
+      if (&propdomain == &mipdata.getDomain() && lp->unscaledDualFeasible(status)) {
         mipdata.redcostfixing.addRootRedcost(
             mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
         if (mipdata.upper_limit != kHighsInf)
@@ -148,8 +148,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   mipworker_.cutpool_->separate(sol.col_value, propdomain, cutset,
                                 mipdata.feastol, mipdata.cutpools);
   // Also separate the global cut pool
-  if (mipworker_.cutpool_ != &mipdata.cutpool) {
-    mipdata.cutpool.separate(sol.col_value, propdomain, cutset, mipdata.feastol,
+  if (mipworker_.cutpool_ != &mipdata.getCutPool()) {
+    mipdata.getCutPool().separate(sol.col_value, propdomain, cutset, mipdata.feastol,
                              mipdata.cutpools, true);
   }
 
@@ -160,7 +160,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     lp->performAging(true);
 
     // only for the master domain.
-    if (&propdomain == &mipdata.domain && lp->unscaledDualFeasible(status)) {
+    if (&propdomain == &mipdata.getDomain() && lp->unscaledDualFeasible(status)) {
       mipdata.redcostfixing.addRootRedcost(
           mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
       if (mipdata.upper_limit != kHighsInf)

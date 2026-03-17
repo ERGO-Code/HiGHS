@@ -532,8 +532,8 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
   // TODO MT: This global duplicate check assumes the global pool doesn't
   // have cuts added or deleted during time when local pools can add a cut.
-  if (this != &mipsolver.mipdata_->cutpool) {
-    if (mipsolver.mipdata_->cutpool.isDuplicate(h, normalization, Rindex,
+  if (this != &mipsolver.mipdata_->getCutPool()) {
+    if (mipsolver.mipdata_->getCutPool().isDuplicate(h, normalization, Rindex,
                                                 Rvalue, Rlen, rhs)) {
       return -1;
     }
@@ -628,7 +628,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   for (HighsDomain::CutpoolPropagation* propagationdomain : propagationDomains)
     propagationdomain->cutAdded(rowindex, propagate);
 
-  if (extractCliques && this == &mipsolver.mipdata_->cutpool) {
+  if (extractCliques && this == &mipsolver.mipdata_->getCutPool()) {
     // if this is the global cutpool extract cliques from the cut
     if (Rlen <= 100)
       mipsolver.mipdata_->cliquetable.extractCliquesFromCut(mipsolver, Rindex,

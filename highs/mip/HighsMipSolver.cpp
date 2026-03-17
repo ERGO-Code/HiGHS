@@ -161,14 +161,14 @@ void HighsMipSolver::run() {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 
-  if (mipdata_->domain.infeasible()) {
+  if (mipdata_->getDomain().infeasible()) {
     cleanupSolve();
     return;
   }
   // Initialise master worker.
-  mipdata_->workers.emplace_back(*this, &mipdata_->lp, &mipdata_->domain,
-                                 &mipdata_->cutpool, &mipdata_->conflictPool,
-                                 &mipdata_->pseudocost);
+  mipdata_->workers.emplace_back(*this, &mipdata_->getLp(), &mipdata_->getDomain(),
+                                 &mipdata_->getCutPool(), &mipdata_->getConflictPool(),
+                                 &mipdata_->getPseudoCost());
 
   HighsMipWorker& master_worker = mipdata_->workers[0];
 
@@ -236,11 +236,11 @@ restart:
     // age 5 times to remove stored but never violated cuts after root
     // separation
     analysis_.mipTimerStart(kMipClockPerformAging0);
-    mipdata_->cutpool.performAging();
-    mipdata_->cutpool.performAging();
-    mipdata_->cutpool.performAging();
-    mipdata_->cutpool.performAging();
-    mipdata_->cutpool.performAging();
+    mipdata_->getCutPool().performAging();
+    mipdata_->getCutPool().performAging();
+    mipdata_->getCutPool().performAging();
+    mipdata_->getCutPool().performAging();
+    mipdata_->getCutPool().performAging();
     analysis_.mipTimerStop(kMipClockPerformAging0);
   }
   if (mipdata_->nodequeue.empty() || mipdata_->checkLimits()) {
@@ -285,8 +285,8 @@ restart:
   };
 
   auto createNewWorker = [&](HighsInt i) {
-    mipdata_->domains.emplace_back(mipdata_->domain);
-    mipdata_->lps.emplace_back(mipdata_->lp);
+    mipdata_->domains.emplace_back(mipdata_->getDomain());
+    mipdata_->lps.emplace_back(mipdata_->getLp());
     mipdata_->cutpools.emplace_back(numCol(), options_mip_->mip_pool_age_limit,
                                     options_mip_->mip_pool_soft_limit, i + 1);
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
@@ -300,7 +300,7 @@ restart:
         &mipdata_->cutpools.back(), &mipdata_->conflictpools.back(),
         &mipdata_->pseudocosts.back());
     mipdata_->lps.back().setMipWorker(mipdata_->workers.back());
-    mipdata_->lp.notifyCutPoolsLpCopied(1);
+    mipdata_->getLp().notifyCutPoolsLpCopied(1);
     mipdata_->workers.back().randgen.initialise(options_mip_->random_seed +
                                                 mipdata_->workers.size() - 1);
     mipdata_->workers.back().nodequeue.setNumCol(numCol());
@@ -319,7 +319,7 @@ restart:
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
                                          options_mip_->mip_pool_soft_limit);
     worker.conflictpool_ = &mipdata_->conflictpools.back();
-    mipdata_->domains.emplace_back(mipdata_->domain);
+    mipdata_->domains.emplace_back(mipdata_->getDomain());
     worker.globaldom_ = &mipdata_->domains.back();
     worker.globaldom_->addCutpool(*worker.cutpool_);
     assert(worker.globaldom_->getDomainChangeStack().empty());
@@ -349,11 +349,11 @@ restart:
       return;
     for (const HighsInt i : indices) {
       mipdata_->workers[i].conflictpool_->syncConflictPool(
-          mipdata_->conflictPool);
-      mipdata_->workers[i].cutpool_->syncCutPool(*this, mipdata_->cutpool);
+          mipdata_->getConflictPool());
+      mipdata_->workers[i].cutpool_->syncCutPool(*this, mipdata_->getCutPool());
     }
-    mipdata_->cutpool.performAging();
-    mipdata_->conflictPool.performAging();
+    mipdata_->getCutPool().performAging();
+    mipdata_->getConflictPool().performAging();
   };
 
   auto syncGlobalDomain = [&](std::vector<HighsInt>& indices) -> void {
@@ -363,10 +363,10 @@ restart:
       const auto& domchgstack = worker.getGlobalDomain().getDomainChangeStack();
       for (const HighsDomainChange& domchg : domchgstack) {
         if ((domchg.boundtype == HighsBoundType::kLower &&
-             domchg.boundval > mipdata_->domain.col_lower_[domchg.column]) ||
+             domchg.boundval > mipdata_->getDomain().col_lower_[domchg.column]) ||
             (domchg.boundtype == HighsBoundType::kUpper &&
-             domchg.boundval < mipdata_->domain.col_upper_[domchg.column])) {
-          mipdata_->domain.changeBound(domchg,
+             domchg.boundval < mipdata_->getDomain().col_upper_[domchg.column])) {
+          mipdata_->getDomain().changeBound(domchg,
                                        HighsDomain::Reason::unspecified());
         }
       }
@@ -376,15 +376,15 @@ restart:
   auto doResetWorkerDomain = [&](HighsInt i) {
     HighsMipWorker& worker = mipdata_->workers[i];
     for (const HighsDomainChange& domchg :
-         mipdata_->domain.getDomainChangeStack()) {
+         mipdata_->getDomain().getDomainChangeStack()) {
       worker.getGlobalDomain().changeBound(domchg,
                                            HighsDomain::Reason::unspecified());
     }
 #ifndef NDEBUG
     for (HighsInt col = 0; col < numCol(); ++col) {
-      assert(mipdata_->domain.col_lower_[col] ==
+      assert(mipdata_->getDomain().col_lower_[col] ==
              worker.globaldom_->col_lower_[col]);
-      assert(mipdata_->domain.col_upper_[col] ==
+      assert(mipdata_->getDomain().col_upper_[col] ==
              worker.globaldom_->col_upper_[col]);
     }
 #endif
@@ -398,25 +398,25 @@ restart:
 
   auto resetGlobalDomain = [&](bool force, bool resetWorkers) -> void {
     // if global propagation found bound changes, we update the domain
-    if (!mipdata_->domain.getChangedCols().empty() || force) {
+    if (!mipdata_->getDomain().getChangedCols().empty() || force) {
       analysis_.mipTimerStart(kMipClockUpdateLocalDomain);
       highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
                   "added %" HIGHSINT_FORMAT " global bound changes\n",
-                  (HighsInt)mipdata_->domain.getChangedCols().size());
-      mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
+                  (HighsInt)mipdata_->getDomain().getChangedCols().size());
+      mipdata_->cliquetable.cleanupFixed(mipdata_->getDomain());
       if (mipdata_->hasMultipleWorkers() && resetWorkers) {
         // Sync worker domains here. cleanupFixed might have found extra changes
         std::vector<HighsInt> indices(num_workers);
         std::iota(indices.begin(), indices.end(), 0);
         runTask(doResetWorkerDomain, tg, false, true, indices);
       }
-      for (const HighsInt col : mipdata_->domain.getChangedCols())
+      for (const HighsInt col : mipdata_->getDomain().getChangedCols())
         mipdata_->implications.cleanupVarbounds(col);
 
-      mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
+      mipdata_->getDomain().setDomainChangeStack(std::vector<HighsDomainChange>());
       if (!mipdata_->hasMultipleWorkers())
         master_worker.search_ptr_->resetLocalDomain();
-      mipdata_->domain.clearChangedCols();
+      mipdata_->getDomain().clearChangedCols();
       mipdata_->removeFixedIndices();
       analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
     }
@@ -424,16 +424,16 @@ restart:
 
   auto syncGlobalPseudoCost = [&]() -> void {
     if (!mipdata_->hasMultipleWorkers()) return;
-    std::vector<HighsInt> nsamplesup = mipdata_->pseudocost.getNSamplesUp();
-    std::vector<HighsInt> nsamplesdown = mipdata_->pseudocost.getNSamplesDown();
+    std::vector<HighsInt> nsamplesup = mipdata_->getPseudoCost().getNSamplesUp();
+    std::vector<HighsInt> nsamplesdown = mipdata_->getPseudoCost().getNSamplesDown();
     std::vector<HighsInt> ninferencesup =
-        mipdata_->pseudocost.getNInferencesUp();
+        mipdata_->getPseudoCost().getNInferencesUp();
     std::vector<HighsInt> ninferencesdown =
-        mipdata_->pseudocost.getNInferencesDown();
-    std::vector<HighsInt> ncutoffsup = mipdata_->pseudocost.getNCutoffsUp();
-    std::vector<HighsInt> ncutoffsdown = mipdata_->pseudocost.getNCutoffsDown();
+        mipdata_->getPseudoCost().getNInferencesDown();
+    std::vector<HighsInt> ncutoffsup = mipdata_->getPseudoCost().getNCutoffsUp();
+    std::vector<HighsInt> ncutoffsdown = mipdata_->getPseudoCost().getNCutoffsDown();
     for (HighsMipWorker& worker : mipdata_->workers) {
-      mipdata_->pseudocost.flushPseudoCost(
+      mipdata_->getPseudoCost().flushPseudoCost(
           worker.getPseudocost(), nsamplesup, nsamplesdown, ninferencesup,
           ninferencesdown, ncutoffsup, ncutoffsdown);
     }
@@ -442,7 +442,7 @@ restart:
   auto resetWorkerPseudoCosts = [&](std::vector<HighsInt>& indices) {
     if (!mipdata_->hasMultipleWorkers()) return;
     auto doResetWorkerPseudoCost = [&](HighsInt i) -> void {
-      mipdata_->pseudocost.syncPseudoCost(mipdata_->workers[i].getPseudocost());
+      mipdata_->getPseudoCost().syncPseudoCost(mipdata_->workers[i].getPseudocost());
     };
     runTask(doResetWorkerPseudoCost, tg, false, false, indices);
   };
@@ -564,7 +564,7 @@ restart:
       globaldom.propagate();
       if (!multiple_workers) {
         mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
-            mipdata_->domain, mipdata_->feastol);
+            mipdata_->getDomain(), mipdata_->feastol);
       }
 
       if (globaldom.infeasible()) {
@@ -880,7 +880,7 @@ restart:
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    HighsInt iterlimit = 10 * std::max(mipdata_->lp.getAvgSolveIters(),
+    HighsInt iterlimit = 10 * std::max(mipdata_->getLp().getAvgSolveIters(),
                                        mipdata_->avgrootlpiters);
     iterlimit = std::max({HighsInt{10000}, iterlimit,
                           HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
@@ -963,16 +963,16 @@ restart:
     syncPools(search_indices);
     syncGlobalDomain(search_indices);
     syncSolutions();
-    mipdata_->domain.propagate();
+    mipdata_->getDomain().propagate();
     analysis_.mipTimerStop(kMipClockDomainPropgate);
 
     analysis_.mipTimerStart(kMipClockPruneInfeasibleNodes);
     mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
-        mipdata_->domain, mipdata_->feastol);
+        mipdata_->getDomain(), mipdata_->feastol);
     analysis_.mipTimerStop(kMipClockPruneInfeasibleNodes);
 
     // if global propagation detected infeasibility, stop here
-    if (mipdata_->domain.infeasible()) {
+    if (mipdata_->getDomain().infeasible()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
       mipdata_->updateLowerBound(std::min(kHighsInf, mipdata_->upper_bound));
@@ -1076,7 +1076,7 @@ restart:
       HighsInt new_max_num_workers =
           std::min(static_cast<HighsInt>(mipdata_->nodequeue.numNodes()),
                    max_num_workers);
-      mipdata_->pseudocost.removeChanged();
+      mipdata_->getPseudoCost().removeChanged();
       if (num_workers == 1) {
         constructAdditionalWorkerData(master_worker);
       }
@@ -1342,7 +1342,7 @@ void HighsMipSolver::callbackGetCutPool() const {
   HighsCallbackOutput& data_out = callback_->data_out;
 
   HighsSparseMatrix cut_matrix;
-  mipdata_->lp.getCutPool(data_out.cutpool_num_col, data_out.cutpool_num_cut,
+  mipdata_->getLp().getCutPool(data_out.cutpool_num_col, data_out.cutpool_num_cut,
                           data_out.cutpool_lower, data_out.cutpool_upper,
                           cut_matrix);
 

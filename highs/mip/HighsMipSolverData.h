@@ -71,15 +71,10 @@ struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
 
   std::deque<HighsLpRelaxation> lps;
-  HighsLpRelaxation& lp;
   std::deque<HighsCutPool> cutpools;
-  HighsCutPool& cutpool;
   std::deque<HighsConflictPool> conflictpools;
-  HighsConflictPool& conflictPool;
   std::deque<HighsDomain> domains;
-  HighsDomain& domain;
   std::deque<HighsPseudocost> pseudocosts;
-  HighsPseudocost pseudocost;
   std::deque<HighsMipWorker> workers;
   bool parallel_lock;
 
@@ -269,6 +264,12 @@ struct HighsMipSolverData {
   }
 
   bool hasMultipleWorkers() const { return workers.size() > 1; }
+
+  HighsDomain& getDomain() { return domains[0]; };
+  HighsConflictPool& getConflictPool() { return conflictpools[0]; };
+  HighsCutPool& getCutPool() { return cutpools[0]; };
+  HighsLpRelaxation& getLp() { return lps[0]; };
+  HighsPseudocost& getPseudoCost() { return pseudocosts[0]; };
 };
 
 #endif
