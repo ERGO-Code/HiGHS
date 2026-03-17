@@ -1494,7 +1494,7 @@ void HighsMipSolver::initialiseTerminator(const HighsMipSolver& mip_solver) {
 
 void HighsMipSolver::setParallelLock(bool lock) const {
   if (!mipdata_->hasMultipleWorkers()) return;
-  mipdata_->parallel_lock.store(lock, std::memory_order_relaxed);
+  mipdata_->parallel_lock = lock;
   for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
     conflictpool.setAgeLock(lock);
   }

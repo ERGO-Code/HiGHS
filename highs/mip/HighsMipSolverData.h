@@ -81,7 +81,7 @@ struct HighsMipSolverData {
   std::deque<HighsPseudocost> pseudocosts;
   HighsPseudocost pseudocost;
   std::deque<HighsMipWorker> workers;
-  std::atomic<bool> parallel_lock;
+  bool parallel_lock;
 
   HighsPrimalHeuristics heuristics;
   HighsCliqueTable cliquetable;
@@ -265,8 +265,7 @@ struct HighsMipSolverData {
   void terminatorReport() const;
 
   bool parallelLockActive() const {
-    return (parallel_lock.load(std::memory_order_relaxed) &&
-            hasMultipleWorkers());
+    return (parallel_lock && hasMultipleWorkers());
   }
 
   bool hasMultipleWorkers() const { return workers.size() > 1; }
