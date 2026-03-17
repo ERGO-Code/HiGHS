@@ -534,7 +534,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   // have cuts added or deleted during time when local pools can add a cut.
   if (this != &mipsolver.mipdata_->getCutPool()) {
     if (mipsolver.mipdata_->getCutPool().isDuplicate(h, normalization, Rindex,
-                                                Rvalue, Rlen, rhs)) {
+                                                     Rvalue, Rlen, rhs)) {
       return -1;
     }
   }

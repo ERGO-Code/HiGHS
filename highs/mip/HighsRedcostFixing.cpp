@@ -200,7 +200,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   // Provided domains won't be used (only used for dual proof)
   mipsolver.mipdata_->getLp().computeBasicDegenerateDuals(
       mipsolver.mipdata_->feastol, mipsolver.mipdata_->getDomain(),
-      mipsolver.mipdata_->getDomain(), mipsolver.mipdata_->getConflictPool(), false);
+      mipsolver.mipdata_->getDomain(), mipsolver.mipdata_->getConflictPool(),
+      false);
 
   // Compute maximum number of steps per column with large domain
   // max_steps = 2 ** k, k = max(5, min(10 ,round(log(|D| / 10)))),
@@ -295,11 +296,13 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       //  cutoffbound = (lurkub - lb) * redcost + lpobj
       findLurkingBounds(
           col, HighsInt{1},
-          static_cast<HighsInt>(mipsolver.mipdata_->getDomain().col_lower_[col]),
-          static_cast<HighsInt>(mipsolver.mipdata_->getDomain().col_upper_[col]),
-          mipsolver.mipdata_->getDomain().col_upper_[col] != kHighsInf, lpobjective,
-          lpredcost[col], maxNumSteps, maxNumStepsExp, lurkingColUpper[col],
-          lurkingColLower[col]);
+          static_cast<HighsInt>(
+              mipsolver.mipdata_->getDomain().col_lower_[col]),
+          static_cast<HighsInt>(
+              mipsolver.mipdata_->getDomain().col_upper_[col]),
+          mipsolver.mipdata_->getDomain().col_upper_[col] != kHighsInf,
+          lpobjective, lpredcost[col], maxNumSteps, maxNumStepsExp,
+          lurkingColUpper[col], lurkingColLower[col]);
     } else if (lpredcost[col] < -mipsolver.mipdata_->feastol) {
       // col >= (cutoffbound - lpobj)/redcost + ub
       // so for lurklb = lb + 1 to ub we can compute the necessary cutoff
@@ -308,11 +311,13 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       //  cutoffbound = (lurklb - ub) * redcost + lpobj
       findLurkingBounds(
           col, HighsInt{-1},
-          static_cast<HighsInt>(mipsolver.mipdata_->getDomain().col_upper_[col]),
-          static_cast<HighsInt>(mipsolver.mipdata_->getDomain().col_lower_[col]),
-          mipsolver.mipdata_->getDomain().col_lower_[col] != -kHighsInf, lpobjective,
-          lpredcost[col], maxNumSteps, maxNumStepsExp, lurkingColLower[col],
-          lurkingColUpper[col]);
+          static_cast<HighsInt>(
+              mipsolver.mipdata_->getDomain().col_upper_[col]),
+          static_cast<HighsInt>(
+              mipsolver.mipdata_->getDomain().col_lower_[col]),
+          mipsolver.mipdata_->getDomain().col_lower_[col] != -kHighsInf,
+          lpobjective, lpredcost[col], maxNumSteps, maxNumStepsExp,
+          lurkingColLower[col], lurkingColUpper[col]);
     }
   }
 }

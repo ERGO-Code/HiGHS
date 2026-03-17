@@ -67,8 +67,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;
-  mipsolver.mipdata_->getPseudoCost().addInferenceObservation(col, numImplications,
-                                                         val);
+  mipsolver.mipdata_->getPseudoCost().addInferenceObservation(
+      col, numImplications, val);
 
   std::vector<HighsDomainChange> implics;
   implics.reserve(numImplications);
@@ -790,9 +790,9 @@ void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
     mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
                                                vlb.constant);
   } else if (allowBoundChanges && minlb > lb + mipsolver.mipdata_->epsilon) {
-    mipsolver.mipdata_->getDomain().changeBound(HighsBoundType::kLower, col,
-                                           static_cast<double>(minlb),
-                                           HighsDomain::Reason::unspecified());
+    mipsolver.mipdata_->getDomain().changeBound(
+        HighsBoundType::kLower, col, static_cast<double>(minlb),
+        HighsDomain::Reason::unspecified());
     infeasible = mipsolver.mipdata_->getDomain().infeasible();
   }
 }
@@ -831,9 +831,9 @@ void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
     mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
                                                vub.constant);
   } else if (allowBoundChanges && maxub < ub - mipsolver.mipdata_->epsilon) {
-    mipsolver.mipdata_->getDomain().changeBound(HighsBoundType::kUpper, col,
-                                           static_cast<double>(maxub),
-                                           HighsDomain::Reason::unspecified());
+    mipsolver.mipdata_->getDomain().changeBound(
+        HighsBoundType::kUpper, col, static_cast<double>(maxub),
+        HighsDomain::Reason::unspecified());
     infeasible = mipsolver.mipdata_->getDomain().infeasible();
   }
 }

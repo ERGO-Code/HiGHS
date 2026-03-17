@@ -21,15 +21,12 @@
 
 HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
-    lps(1, HighsLpRelaxation(mipsolver)),
-    cutpools(1, HighsCutPool(mipsolver.numCol(),
-        mipsolver.options_mip_->mip_pool_age_limit,
-        mipsolver.options_mip_->mip_pool_soft_limit,
-        0)),
+      lps(1, HighsLpRelaxation(mipsolver)),
       conflictpools(
           1, HighsConflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
                                mipsolver.options_mip_->mip_pool_soft_limit)),
       domains(1, HighsDomain(mipsolver)),
+      pseudocosts(1),
       parallel_lock(false),
       heuristics(mipsolver),
       cliquetable(mipsolver.numCol()),
@@ -80,6 +77,9 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       upper_limit(kHighsInf),
       optimality_limit(kHighsInf),
       debugSolution(mipsolver) {
+  cutpools.emplace_back(mipsolver.numCol(),
+                        mipsolver.options_mip_->mip_pool_age_limit,
+                        mipsolver.options_mip_->mip_pool_soft_limit, 0);
   getDomain().addCutpool(getCutPool());
   getDomain().addConflictPool(getConflictPool());
 }
@@ -1011,7 +1011,8 @@ void HighsMipSolverData::runSetup() {
   getLp().getLpSolver().setOptionValue("presolve", kHighsOffString);
   // lp.getLpSolver().setOptionValue("dual_simplex_cost_perturbation_multiplier",
   // 0.0); lp.getLpSolver().setOptionValue("parallel", kHighsOnString);
-  getLp().getLpSolver().setOptionValue("simplex_initial_condition_check", false);
+  getLp().getLpSolver().setOptionValue("simplex_initial_condition_check",
+                                       false);
 
   checkObjIntegrality();
   rootlpsol.clear();
@@ -1586,7 +1587,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       }
       debugSolution.newIncumbentFound();
       getDomain().propagate();
-      if (!getDomain().infeasible()) redcostfixing.propagateRootRedcost(mipsolver);
+      if (!getDomain().infeasible())
+        redcostfixing.propagateRootRedcost(mipsolver);
 
       // Two calls to printDisplayLine added for completeness,
       // ensuring that when the root node has an integer solution, a
@@ -1827,9 +1829,9 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
         // clang-format on
         solutionSourceToString(solution_source).c_str(), print_nodes.data(),
         queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
-        ub_string.data(), gap, getCutPool().getNumCuts(), dynamic_constraints_in_lp,
-        getConflictPool().getNumConflicts(), print_lp_iters.data(),
-        time_string.c_str());
+        ub_string.data(), gap, getCutPool().getNumCuts(),
+        dynamic_constraints_in_lp, getConflictPool().getNumConflicts(),
+        print_lp_iters.data(), time_string.c_str());
   }
   // Check that limitsToBounds yields the same values for the
   // dual_bound, primal_bound (modulo optimization sense) and
@@ -1863,7 +1865,8 @@ bool HighsMipSolverData::rootSeparationRound(
   status = evaluateRootLp(worker);
   if (status == HighsLpRelaxation::Status::kInfeasible) return true;
 
-  const std::vector<double>& solvals = getLp().getLpSolver().getSolution().col_value;
+  const std::vector<double>& solvals =
+      getLp().getLpSolver().getSolution().col_value;
 
   if (mipsolver.submip || incumbent.empty()) {
     heuristics.randomizedRounding(worker, solvals);
@@ -1937,7 +1940,8 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp(
 
       if (status == HighsLpRelaxation::Status::kOptimal &&
           mipsolver.options_mip_->mip_heuristic_run_zi_round)
-        heuristics.ziRound(worker, getLp().getLpSolver().getSolution().col_value);
+        heuristics.ziRound(worker,
+                           getLp().getLpSolver().getSolution().col_value);
 
     } else
       status = getLp().getStatus();
@@ -1954,9 +1958,9 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp(
       updateLowerBound(std::max(getLp().getObjective(), lower_bound));
 
       if (lpWasSolved) {
-        redcostfixing.addRootRedcost(mipsolver,
-                                     getLp().getLpSolver().getSolution().col_dual,
-                                     getLp().getObjective());
+        redcostfixing.addRootRedcost(
+            mipsolver, getLp().getLpSolver().getSolution().col_dual,
+            getLp().getObjective());
         if (upper_limit != kHighsInf)
           redcostfixing.propagateRootRedcost(mipsolver);
       }
@@ -2041,14 +2045,14 @@ restart:
   // check if only root presolve is allowed
   if (firstrootbasis.valid)
     getLp().getLpSolver().setBasis(firstrootbasis,
-                              "HighsMipSolverData::evaluateRootNode");
+                                   "HighsMipSolverData::evaluateRootNode");
   else if (mipsolver.options_mip_->mip_root_presolve_only)
     getLp().getLpSolver().setOptionValue("presolve", kHighsOffString);
   else
     getLp().getLpSolver().setOptionValue("presolve", kHighsOnString);
   if (mipsolver.options_mip_->highs_debug_level)
     getLp().getLpSolver().setOptionValue("output_flag",
-                                    mipsolver.options_mip_->output_flag);
+                                         mipsolver.options_mip_->output_flag);
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
@@ -2070,7 +2074,8 @@ restart:
   firstlpsolobj = getLp().getObjective();
   rootlpsolobj = firstlpsolobj;
 
-  if (getLp().getLpSolver().getBasis().valid && getLp().numRows() == mipsolver.numRow())
+  if (getLp().getLpSolver().getBasis().valid &&
+      getLp().numRows() == mipsolver.numRow())
     firstrootbasis = getLp().getLpSolver().getBasis();
   else {
     // the root basis is later expected to be consistent for the model without
@@ -2172,8 +2177,8 @@ restart:
   HighsSeparation sepa(worker);
   sepa.setLpRelaxation(&getLp());
 
-  while (getLp().scaledOptimal(status) && !getLp().getFractionalIntegers().empty() &&
-         stall < 3) {
+  while (getLp().scaledOptimal(status) &&
+         !getLp().getFractionalIntegers().empty() && stall < 3) {
     printDisplayLine();
 
     if (checkLimits()) {
@@ -2532,9 +2537,9 @@ restart:
     }
 
     // add the root node to the nodequeue to initialize the search
-    nodequeue.emplaceNode(std::vector<HighsDomainChange>(),
-                          std::vector<HighsInt>(), lower_bound,
-                          getLp().computeBestEstimate(worker.getPseudocost()), 1);
+    nodequeue.emplaceNode(
+        std::vector<HighsDomainChange>(), std::vector<HighsInt>(), lower_bound,
+        getLp().computeBestEstimate(worker.getPseudocost()), 1);
   }
   // End of HighsMipSolverData::evaluateRootNode()
   clockOff(analysis);

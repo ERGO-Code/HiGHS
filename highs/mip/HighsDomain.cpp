@@ -3755,11 +3755,11 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
         if (increaseConflictScore &&
             !localdom.mipsolver->mipdata_->parallelLockActive()) {
           if (localdom.domchgstack_[i.pos].boundtype == HighsBoundType::kLower)
-            localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictScoreUp(
-                localdom.domchgstack_[i.pos].column);
+            localdom.mipsolver->mipdata_->getPseudoCost()
+                .increaseConflictScoreUp(localdom.domchgstack_[i.pos].column);
           else
-            localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictScoreDown(
-                localdom.domchgstack_[i.pos].column);
+            localdom.mipsolver->mipdata_->getPseudoCost()
+                .increaseConflictScoreDown(localdom.domchgstack_[i.pos].column);
         }
         if (i.pos >= startPos.pos && resolvable(i.pos))
           pushQueue(insertResult.first);

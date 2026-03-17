@@ -72,7 +72,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
       status = lp->resolveLp(&propdomain);
       if (!lp->scaledOptimal(status)) return -1;
 
-      if (&propdomain == &mipdata.getDomain() && lp->unscaledDualFeasible(status)) {
+      if (&propdomain == &mipdata.getDomain() &&
+          lp->unscaledDualFeasible(status)) {
         mipdata.redcostfixing.addRootRedcost(
             mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
         if (mipdata.upper_limit != kHighsInf)
@@ -149,8 +150,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
                                 mipdata.feastol, mipdata.cutpools);
   // Also separate the global cut pool
   if (mipworker_.cutpool_ != &mipdata.getCutPool()) {
-    mipdata.getCutPool().separate(sol.col_value, propdomain, cutset, mipdata.feastol,
-                             mipdata.cutpools, true);
+    mipdata.getCutPool().separate(sol.col_value, propdomain, cutset,
+                                  mipdata.feastol, mipdata.cutpools, true);
   }
 
   if (cutset.numCuts() > 0) {
@@ -160,7 +161,8 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     lp->performAging(true);
 
     // only for the master domain.
-    if (&propdomain == &mipdata.getDomain() && lp->unscaledDualFeasible(status)) {
+    if (&propdomain == &mipdata.getDomain() &&
+        lp->unscaledDualFeasible(status)) {
       mipdata.redcostfixing.addRootRedcost(
           mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
       if (mipdata.upper_limit != kHighsInf)

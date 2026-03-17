@@ -166,9 +166,10 @@ void HighsMipSolver::run() {
     return;
   }
   // Initialise master worker.
-  mipdata_->workers.emplace_back(*this, &mipdata_->getLp(), &mipdata_->getDomain(),
-                                 &mipdata_->getCutPool(), &mipdata_->getConflictPool(),
-                                 &mipdata_->getPseudoCost());
+  mipdata_->workers.emplace_back(
+      *this, &mipdata_->getLp(), &mipdata_->getDomain(),
+      &mipdata_->getCutPool(), &mipdata_->getConflictPool(),
+      &mipdata_->getPseudoCost());
 
   HighsMipWorker& master_worker = mipdata_->workers[0];
 
@@ -275,8 +276,7 @@ restart:
     while (mipdata_->lps.size() > 1) {
       mipdata_->lps.pop_back();
     }
-    // Global pseudo-cost not stored in pseudo-costs!
-    while (!mipdata_->pseudocosts.empty()) {
+    while (mipdata_->pseudocosts.size() > 1) {
       mipdata_->pseudocosts.pop_back();
     }
     while (mipdata_->workers.size() > 1) {
@@ -363,11 +363,13 @@ restart:
       const auto& domchgstack = worker.getGlobalDomain().getDomainChangeStack();
       for (const HighsDomainChange& domchg : domchgstack) {
         if ((domchg.boundtype == HighsBoundType::kLower &&
-             domchg.boundval > mipdata_->getDomain().col_lower_[domchg.column]) ||
+             domchg.boundval >
+                 mipdata_->getDomain().col_lower_[domchg.column]) ||
             (domchg.boundtype == HighsBoundType::kUpper &&
-             domchg.boundval < mipdata_->getDomain().col_upper_[domchg.column])) {
+             domchg.boundval <
+                 mipdata_->getDomain().col_upper_[domchg.column])) {
           mipdata_->getDomain().changeBound(domchg,
-                                       HighsDomain::Reason::unspecified());
+                                            HighsDomain::Reason::unspecified());
         }
       }
     }
@@ -413,7 +415,8 @@ restart:
       for (const HighsInt col : mipdata_->getDomain().getChangedCols())
         mipdata_->implications.cleanupVarbounds(col);
 
-      mipdata_->getDomain().setDomainChangeStack(std::vector<HighsDomainChange>());
+      mipdata_->getDomain().setDomainChangeStack(
+          std::vector<HighsDomainChange>());
       if (!mipdata_->hasMultipleWorkers())
         master_worker.search_ptr_->resetLocalDomain();
       mipdata_->getDomain().clearChangedCols();
@@ -424,14 +427,18 @@ restart:
 
   auto syncGlobalPseudoCost = [&]() -> void {
     if (!mipdata_->hasMultipleWorkers()) return;
-    std::vector<HighsInt> nsamplesup = mipdata_->getPseudoCost().getNSamplesUp();
-    std::vector<HighsInt> nsamplesdown = mipdata_->getPseudoCost().getNSamplesDown();
+    std::vector<HighsInt> nsamplesup =
+        mipdata_->getPseudoCost().getNSamplesUp();
+    std::vector<HighsInt> nsamplesdown =
+        mipdata_->getPseudoCost().getNSamplesDown();
     std::vector<HighsInt> ninferencesup =
         mipdata_->getPseudoCost().getNInferencesUp();
     std::vector<HighsInt> ninferencesdown =
         mipdata_->getPseudoCost().getNInferencesDown();
-    std::vector<HighsInt> ncutoffsup = mipdata_->getPseudoCost().getNCutoffsUp();
-    std::vector<HighsInt> ncutoffsdown = mipdata_->getPseudoCost().getNCutoffsDown();
+    std::vector<HighsInt> ncutoffsup =
+        mipdata_->getPseudoCost().getNCutoffsUp();
+    std::vector<HighsInt> ncutoffsdown =
+        mipdata_->getPseudoCost().getNCutoffsDown();
     for (HighsMipWorker& worker : mipdata_->workers) {
       mipdata_->getPseudoCost().flushPseudoCost(
           worker.getPseudocost(), nsamplesup, nsamplesdown, ninferencesup,
@@ -442,7 +449,8 @@ restart:
   auto resetWorkerPseudoCosts = [&](std::vector<HighsInt>& indices) {
     if (!mipdata_->hasMultipleWorkers()) return;
     auto doResetWorkerPseudoCost = [&](HighsInt i) -> void {
-      mipdata_->getPseudoCost().syncPseudoCost(mipdata_->workers[i].getPseudocost());
+      mipdata_->getPseudoCost().syncPseudoCost(
+          mipdata_->workers[i].getPseudocost());
     };
     runTask(doResetWorkerPseudoCost, tg, false, false, indices);
   };
@@ -1342,9 +1350,9 @@ void HighsMipSolver::callbackGetCutPool() const {
   HighsCallbackOutput& data_out = callback_->data_out;
 
   HighsSparseMatrix cut_matrix;
-  mipdata_->getLp().getCutPool(data_out.cutpool_num_col, data_out.cutpool_num_cut,
-                          data_out.cutpool_lower, data_out.cutpool_upper,
-                          cut_matrix);
+  mipdata_->getLp().getCutPool(data_out.cutpool_num_col,
+                               data_out.cutpool_num_cut, data_out.cutpool_lower,
+                               data_out.cutpool_upper, cut_matrix);
 
   // take ownership
   data_out.cutpool_start = std::move(cut_matrix.start_);
