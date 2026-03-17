@@ -4236,6 +4236,17 @@ void HighsSubSolverCallTime::add(
   }
 }
 
+void HighsSubSolverCallTime::update(const HighsInt sub_solver_clock,
+				    const double time) {
+  assert(0 <= sub_solver_clock && sub_solver_clock < kSubSolverCount);
+  assert(time >= 0);
+  this->num_call[sub_solver_clock]++;
+  this->run_time[sub_solver_clock] += time;
+  HighsInt local_thread_num = highs::parallel::thread_num();
+  this->record[local_thread_num].num_call[sub_solver_clock]++;
+  this->record[local_thread_num].run_time[sub_solver_clock] += time;
+}
+
 void Highs::reportSubSolverCallTime() const {
   double mip_time = this->sub_solver_call_time_.run_time[kSubSolverMip];
   std::stringstream ss;

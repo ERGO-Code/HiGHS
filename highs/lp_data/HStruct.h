@@ -175,6 +175,8 @@ struct HighsSubSolverCallTime {
   void initialise();
   void add(const HighsSubSolverCallTime& sub_solver_call_time,
            const bool analytic_centre = false);
+  void update(const HighsInt sub_solver_clock,
+	      const double time);
 };
 
 struct HighsSimplexStats {
