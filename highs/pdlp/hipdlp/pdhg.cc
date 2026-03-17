@@ -805,8 +805,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 #ifdef CUPDLP_GPU
   bool graph_created = false;
   cudaGraphExec_t graphExec = nullptr;
-  cudaStream_t stream;
-  CUDA_CHECK(cudaStreamCreate(&stream));
+  cudaStream_t gpu_stream_;
+  CUDA_CHECK(cudaStreamCreate(&gpu_stream_));
 #endif
 
   // 2. Main cuPDLPx-style Loop
@@ -854,6 +854,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     // -- Step 1 (Major, isolated for restart-FPE check) --
 #ifdef CUPDLP_GPU
+    CUDA_CHECK(cudaMemcpyAsync(d_halpern_iteration_, &halpern_iteration_, sizeof(int), cudaMemcpyHostToDevice, gpu_stream_));
     performHalpernPdhgStepGpu(true, 1);
 #else
     performHalpernPdhgStep(true, 1);
@@ -870,10 +871,21 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       do_restart = false;
     }
 
+    // copy back x from gpu and print out
+#ifdef CUPDLP_GPU
+if(final_iter_count_ == 9) {
+    std::vector<double> x_next_host(lp_.num_col_);
+    CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
+    std::cout << "x_next (before 9): ";
+    for(int i=0; i<lp_.num_col_; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
+    std::cout << "\n";
+}
+#endif
+
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #ifdef CUPDLP_GPU
     if (!graph_created) {
-      CUDA_CHECK(cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal));
+      CUDA_CHECK(cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
       
       for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
         performHalpernPdhgStepGpu(false, i);
@@ -881,19 +893,35 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       performHalpernPdhgStepGpu(true, PDHG_CHECK_INTERVAL);
       
       cudaGraph_t graph;
-      CUDA_CHECK(cudaStreamEndCapture(stream, &graph));
+      CUDA_CHECK(cudaStreamEndCapture(gpu_stream_, &graph));
       CUDA_CHECK(cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0));
+      CUDA_CHECK(cudaGraphDestroy(graph));
       graph_created = true;
     }
     
     // Launch the captured graph
-    CUDA_CHECK(cudaGraphLaunch(graphExec, stream));
-    CUDA_CHECK(cudaStreamSynchronize(stream));
+    CUDA_CHECK(cudaGraphLaunch(graphExec, gpu_stream_));
+    CUDA_CHECK(cudaStreamSynchronize(gpu_stream_));
 #else
     for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
       performHalpernPdhgStep(false, i);
     }
     performHalpernPdhgStep(true, PDHG_CHECK_INTERVAL);
+#endif
+
+#ifdef CUPDLP_GPU
+if(final_iter_count_ == 9) {
+    std::vector<double> x_next_host(lp_.num_col_);
+    std::vector<double> x_current_host(lp_.num_col_);
+    CUDA_CHECK(cudaMemcpy(x_current_host.data(), d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
+    std::cout << "x_next (after 9): ";
+    for(int i=0; i<lp_.num_col_; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
+    std::cout << "\n";
+    std::cout << "x_current (after 9): ";
+    for(int i=0; i<lp_.num_col_; i++) std::cout << std::fixed << std::setprecision(10) << x_current_host[i] << " ";
+    std::cout << "\n";
+}
 #endif
 
   // Compute Error for Restart Check
@@ -940,8 +968,13 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     if (do_restart) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
         updatePrimalWeightAtRestart(results_);
+        std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Updated primal_weight_ to " << primal_weight_ << std::endl;
       }
-      
+      if (graphExec) { 
+            CUDA_CHECK(cudaGraphExecDestroy(graphExec)); 
+            graphExec = nullptr; 
+        } 
+      graph_created = false;
 #ifdef CUPDLP_GPU
       CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
       CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_pdhg_dual_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
@@ -965,7 +998,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   if (graphExec) {
     CUDA_CHECK(cudaGraphExecDestroy(graphExec));
   }
-  CUDA_CHECK(cudaStreamDestroy(stream));
+  CUDA_CHECK(cudaStreamDestroy(gpu_stream_));
 #endif
 
   // 3. Loop Finished
@@ -1069,18 +1102,22 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
         iter, d_pdhg_primal_, d_pdhg_dual_,
         d_ax_next_, d_aty_next_,
         params_.tolerance, current_results, "[L-GPU]",
-        d_dSlackPos_, d_dSlackNeg_);
+        d_dSlackPos_, d_dSlackNeg_,
+        true); // <-- TRUE: Use the Halpern slack saved in d_dSlackPos_
   } else {
     current_converged = checkConvergenceGpu(
         iter, d_x_current_, d_y_current_,
         d_ax_current_, d_aty_current_,
         params_.tolerance, current_results, "[L-GPU]",
-        d_dSlackPos_, d_dSlackNeg_);
-  }
-  average_converged = checkConvergenceGpu(
+        d_dSlackPos_, d_dSlackNeg_,
+        false); // <-- FALSE: Recompute standard slack
+    average_converged = checkConvergenceGpu(
       iter, d_x_avg_, d_y_avg_, d_ax_avg_, d_aty_avg_,
       params_.tolerance, average_results, "[A-GPU]",
-      d_dSlackPosAvg_, d_dSlackNegAvg_);
+      d_dSlackPosAvg_, d_dSlackNegAvg_,
+      false); // <-- FALSE: Recompute standard slack
+  }
+
 #else
   if (params_.use_halpern_restart && iter > 0) {
     std::vector<double> Ax_pdhg(lp_.num_row_);
@@ -2137,8 +2174,8 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   dual_dist = std::sqrt(dual_dist);
 #endif
 
-  double rel_primal = results.primal_feasibility;
-  double rel_dual   = results.dual_feasibility;
+  double rel_primal = results.primal_feasibility / (1.0 + unscaled_rhs_norm_);
+  double rel_dual   = results.dual_feasibility / (1.0 + unscaled_c_norm_);
   double ratio_infeas = (rel_primal > 0.0) ? (rel_dual / rel_primal) : 1e300;
 
   std::cout << "Restart check: primal_dist = " << primal_dist
@@ -2593,6 +2630,10 @@ void PDLPSolver::setupGpu() {
                         a_nnz_ * sizeof(int), cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_at_val_, h_at_val.data(), a_nnz_ * sizeof(double),
                         cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMalloc(&d_halpern_iteration_, sizeof(int))); 
+  CUDA_CHECK(cudaMemset(d_halpern_iteration_,0, sizeof(int)));  
+  CUDA_CHECK(cudaMalloc(&d_primal_step_size_, sizeof(double)));
+  CUDA_CHECK(cudaMalloc(&d_dual_step_size_, sizeof(double)));                   
 
   // Create AT descriptor with swapped dimensions
   CUSPARSE_CHECK(cusparseCreateCsr(
@@ -2760,6 +2801,9 @@ void PDLPSolver::cleanupGpu() {
   CUDA_CHECK(cudaFree(d_is_equality_row_));
   CUDA_CHECK(cudaFree(d_x_at_last_restart_));
   CUDA_CHECK(cudaFree(d_y_at_last_restart_));
+  CUDA_CHECK(cudaFree(d_halpern_iteration_));
+  CUDA_CHECK(cudaFree(d_primal_step_size_));
+  CUDA_CHECK(cudaFree(d_dual_step_size_));
   if (d_x_anchor_) CUDA_CHECK(cudaFree(d_x_anchor_));
   if (d_y_anchor_) CUDA_CHECK(cudaFree(d_y_anchor_));
   if (d_pdhg_primal_) CUDA_CHECK(cudaFree(d_pdhg_primal_));
@@ -2914,8 +2958,6 @@ bool PDLPSolver::checkConvergenceGpu(const int iter, const double* d_x,
       results.dual_feasibility < epsilon * (1.0 + unscaled_c_norm_);
   bool gap_small = results.relative_obj_gap < epsilon;
 
-  std::cout << "dual feasibility: " << results.dual_feasibility
-            << std::endl;
   return primal_feasible && dual_feasible && gap_small;
 }
 

@@ -259,6 +259,9 @@ class PDLPSolver {
   double *d_a_val_ = nullptr;
   int *d_at_row_ptr_ = nullptr, *d_at_col_ind_ = nullptr;
   double *d_at_val_ = nullptr;
+  int* d_halpern_iteration_ = nullptr;
+  double* d_primal_step_size_ = nullptr;
+  double* d_dual_step_size_ = nullptr;
 
   // GPU Vectors (Device memory)
   double *d_x_current_ = nullptr, *d_y_current_ = nullptr;
