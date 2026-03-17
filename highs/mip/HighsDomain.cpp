@@ -144,7 +144,7 @@ HighsDomain::ConflictPoolPropagation::ConflictPoolPropagation(
       propagateConflictInds_(other.propagateConflictInds_),
       watchedLiterals_(other.watchedLiterals_) {
   if (!domain->mipsolver->mipdata_->parallelLockActive() ||
-      conflictpool_ != &domain->mipsolver->mipdata_->conflictPool)
+      conflictpool_ != &domain->mipsolver->mipdata_->getConflictPool())
     conflictpool_->addPropagationDomain(this);
 }
 
@@ -392,7 +392,7 @@ HighsDomain::CutpoolPropagation::CutpoolPropagation(
       propagatecutinds_(other.propagatecutinds_),
       capacityThreshold_(other.capacityThreshold_) {
   if (!domain->mipsolver->mipdata_->parallelLockActive() ||
-      cutpool != &domain->mipsolver->mipdata_->cutpool)
+      cutpool != &domain->mipsolver->mipdata_->getCutPool())
     cutpool->addPropagationDomain(this);
 }
 
@@ -452,7 +452,7 @@ void HighsDomain::CutpoolPropagation::recomputeCapacityThreshold(HighsInt cut) {
 
 void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
   if (!propagate) {
-    if (domain != &domain->mipsolver->mipdata_->domain) return;
+    if (domain != &domain->mipsolver->mipdata_->getDomain()) return;
     HighsInt start = cutpool->getMatrix().getRowStart(cut);
     HighsInt end = cutpool->getMatrix().getRowEnd(cut);
     const HighsInt* arindex = cutpool->getMatrix().getARindex();
@@ -493,7 +493,7 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
 void HighsDomain::CutpoolPropagation::cutDeleted(
     HighsInt cut, bool deletedOnlyForPropagation) {
   if (deletedOnlyForPropagation &&
-      domain == &domain->mipsolver->mipdata_->domain) {
+      domain == &domain->mipsolver->mipdata_->getDomain()) {
     assert(domain->branchPos_.empty());
     return;
   }
@@ -3755,11 +3755,11 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
         if (increaseConflictScore &&
             !localdom.mipsolver->mipdata_->parallelLockActive()) {
           if (localdom.domchgstack_[i.pos].boundtype == HighsBoundType::kLower)
-            localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreUp(
-                localdom.domchgstack_[i.pos].column);
+            localdom.mipsolver->mipdata_->getPseudoCost()
+                .increaseConflictScoreUp(localdom.domchgstack_[i.pos].column);
           else
-            localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreDown(
-                localdom.domchgstack_[i.pos].column);
+            localdom.mipsolver->mipdata_->getPseudoCost()
+                .increaseConflictScoreDown(localdom.domchgstack_[i.pos].column);
         }
         if (i.pos >= startPos.pos && resolvable(i.pos))
           pushQueue(insertResult.first);
@@ -3840,21 +3840,21 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
   // TODO: Only updating global pseudo cost so solution path is identical to
   // original code. This should always actually use the given pseudocost?
   if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-    localdom.mipsolver->mipdata_->pseudocost.increaseConflictWeight();
+    localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictWeight();
   } else {
     pseudocost.increaseConflictWeight();
   }
   for (const LocalDomChg& locdomchg : resolvedDomainChanges) {
     if (locdomchg.domchg.boundtype == HighsBoundType::kLower) {
       if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-        localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreUp(
+        localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictScoreUp(
             locdomchg.domchg.column);
       } else {
         pseudocost.increaseConflictScoreUp(locdomchg.domchg.column);
       }
     } else {
       if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-        localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreDown(
+        localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictScoreDown(
             locdomchg.domchg.column);
       } else {
         pseudocost.increaseConflictScoreDown(locdomchg.domchg.column);
@@ -3931,7 +3931,7 @@ void HighsDomain::ConflictSet::conflictAnalysis(const HighsInt* proofinds,
 
   HighsPseudocost& ps = localdom.mipsolver->mipdata_->parallelLockActive()
                             ? pseudocost
-                            : localdom.mipsolver->mipdata_->pseudocost;
+                            : localdom.mipsolver->mipdata_->getPseudoCost();
   ps.increaseConflictWeight();
   for (const LocalDomChg& locdomchg : resolvedDomainChanges) {
     if (locdomchg.domchg.boundtype == HighsBoundType::kLower)

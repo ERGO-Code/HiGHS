@@ -243,9 +243,9 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
 void HighsLpRelaxation::loadModel() {
   HighsLp lpmodel = *mipsolver.model_;
   lpmodel.col_lower_ = worker_ ? worker_->globaldom_->col_lower_
-                               : mipsolver.mipdata_->domain.col_lower_;
+                               : mipsolver.mipdata_->getDomain().col_lower_;
   lpmodel.col_upper_ = worker_ ? worker_->globaldom_->col_upper_
-                               : mipsolver.mipdata_->domain.col_upper_;
+                               : mipsolver.mipdata_->getDomain().col_upper_;
   lpmodel.offset_ = 0;
   lprows.clear();
   lprows.reserve(lpmodel.num_row_);
@@ -707,7 +707,7 @@ void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n) {
 
 void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
   if (!domain.getChangedCols().empty()) {
-    if (&domain == &mipsolver.mipdata_->domain) continuous = true;
+    if (&domain == &mipsolver.mipdata_->getDomain()) continuous = true;
     currentbasisstored = false;
     if (!continuous) domain.removeContinuousChangedCols();
     HighsInt numChgCols = domain.getChangedCols().size();
@@ -982,7 +982,7 @@ void HighsLpRelaxation::storeDualInfProof() {
   const HighsDomain& globaldomain =
       (worker_ && mipsolver.mipdata_->parallelLockActive())
           ? worker_->getGlobalDomain()
-          : mipsolver.mipdata_->domain;
+          : mipsolver.mipdata_->getDomain();
 
   for (HighsInt i : row_ap.getNonzeros()) {
     double val = row_ap.getValue(i);
@@ -1051,7 +1051,7 @@ void HighsLpRelaxation::storeDualUBProof() {
     bool use_worker_info = worker_ && mipsolver.mipdata_->parallelLockActive();
     hasdualproof =
         computeDualProof(use_worker_info ? worker_->getGlobalDomain()
-                                         : mipsolver.mipdata_->domain,
+                                         : mipsolver.mipdata_->getDomain(),
                          use_worker_info ? worker_->upper_limit
                                          : mipsolver.mipdata_->upper_limit,
                          dualproofinds, dualproofvals, dualproofrhs);
@@ -1475,7 +1475,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
         const HighsDomain& globaldom =
             (worker_ && mipsolver.mipdata_->parallelLockActive())
                 ? worker_->getGlobalDomain()
-                : mipsolver.mipdata_->domain;
+                : mipsolver.mipdata_->getDomain();
 
         for (HighsInt i : mipsolver.mipdata_->integral_cols) {
           // for the fractionality we assume that LP bounds are not violated

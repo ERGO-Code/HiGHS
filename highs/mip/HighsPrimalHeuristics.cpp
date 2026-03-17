@@ -1422,7 +1422,7 @@ void HighsPrimalHeuristics::ziRound(HighsMipWorker& worker,
                     x - std::floor(x + mipsolver.mipdata_->feastol));
   };
 
-  // auto localdom = mipsolver.mipdata_->domain;
+  // auto localdom = mipsolver.mipdata_->getDomain();
 
   HighsCDouble zi_total = 0.0;
   for (HighsInt i : intcols) {
@@ -1664,7 +1664,7 @@ void HighsPrimalHeuristics::clique() {
   HighsHashTable<HighsInt, double> entries;
   double offset = 0.0;
 
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
   for (HighsInt j = 0; j != mipsolver.numCol(); ++j) {
     HighsInt col = j;
     double val = mipsolver.colCost(col);
@@ -1705,7 +1705,7 @@ void HighsPrimalHeuristics::clique() {
   HighsInt numcliques;
 
   cliques = mipsolver.mipdata_->cliquetable.separateCliques(
-      solution, mipsolver.mipdata_->domain, mipsolver.mipdata_->feastol);
+      solution, mipsolver.mipdata_->getDomain(), mipsolver.mipdata_->feastol);
   numcliques = cliques.size();
   while (numcliques != 0) {
     bestviol = 0.5;
@@ -1723,7 +1723,7 @@ void HighsPrimalHeuristics::clique() {
     }
 
     cliques = mipsolver.mipdata_->cliquetable.separateCliques(
-        solution, mipsolver.mipdata_->domain, mipsolver.mipdata_->feastol);
+        solution, mipsolver.mipdata_->getDomain(), mipsolver.mipdata_->feastol);
     numcliques = cliques.size();
   }
 }
