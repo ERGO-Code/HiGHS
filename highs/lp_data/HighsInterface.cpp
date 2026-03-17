@@ -2627,7 +2627,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     }
     // Report on iteration
     bool force = loop_k == 0;
-    iis.reportIteration(options_, loop_k + 1, row_set.size(), force);
+    iis.reportIteration(options_, loop_k + 1, HighsInt(row_set.size()), force);
 
     if (num_fixed == 0) {
       // No elastic variables were positive, so problem is feasible
@@ -2664,7 +2664,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   }
 
   // Final report
-  iis.reportIteration(options_, loop_k + 1, row_set.size(), true);
+  iis.reportIteration(options_, loop_k + 1, HighsInt(row_set.size()), true);
 
   HighsInt num_enforced_col_ecol = 0;
   HighsInt num_enforced_row_ecol = 0;

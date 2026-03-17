@@ -96,10 +96,11 @@ void HighsIis::reportIteration(const HighsOptions& options, const HighsInt iter,
     return;
   // Update last time only when we actually print a line
   info_.iis_last_disptime = runtime;
-  const HighsInt gap = 17;
-  const HighsInt w_iter = (HighsInt)strlen("Iteration") + 2;
-  const HighsInt w_rows = (HighsInt)strlen("Rows") + gap;
-  const HighsInt w_time = (HighsInt)strlen("Runtime") + gap;
+  const int gap = 17;
+  const int w_iter = int(strlen("Iteration")) + 2;
+  const int w_rows = int(strlen("Rows")) + gap;
+  const int w_time = int(strlen("Runtime")) + gap;
+
   // Print header every 20 lines (and on first line)
   if (info_.iis_num_disp_lines % 20 == 0) {
     highsLogUser(options.log_options, HighsLogType::kInfo, "%*s%*s%*s\n",
@@ -107,9 +108,9 @@ void HighsIis::reportIteration(const HighsOptions& options, const HighsInt iter,
   }
   ++info_.iis_num_disp_lines;
   const std::string time_string = highsFormatToString("%.2fs", runtime);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "%*" HIGHSINT_FORMAT "%*" HIGHSINT_FORMAT "%*s\n", w_iter, iter,
-               w_rows, num_rows_remaining, w_time, time_string.c_str());
+  highsLogUser(options.log_options, HighsLogType::kInfo, "%*d%*d%*s\n", w_iter,
+               int(iter), w_rows, int(num_rows_remaining), w_time,
+               time_string.c_str());
 }
 
 void HighsIis::reportFinal(const HighsOptions& options) const {
@@ -121,12 +122,10 @@ void HighsIis::reportFinal(const HighsOptions& options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
   highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %s\n", kLabelWidth,
                "IIS status", iisModelStatusToString(status_).c_str());
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "%-*s : %" HIGHSINT_FORMAT "\n", kLabelWidth, "Rows",
-               (HighsInt)row_index_.size());
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "%-*s : %" HIGHSINT_FORMAT "\n", kLabelWidth, "Columns",
-               (HighsInt)col_index_.size());
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %d\n", kLabelWidth,
+               "Rows", int(row_index_.size()));
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %d\n", kLabelWidth,
+               "Columns", int(col_index_.size()));
   highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %.2fs\n", kLabelWidth,
                "HiGHS run time", info_.sum_simplex_times);
 }
