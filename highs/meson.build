@@ -235,6 +235,7 @@ _srcs = [
     'mip/HighsMipAnalysis.cpp',
     'mip/HighsMipSolver.cpp',
     'mip/HighsMipSolverData.cpp',
+    'mip/HighsMipWorker.cpp',
     'mip/HighsModkSeparator.cpp',
     'mip/HighsNodeQueue.cpp',
     'mip/HighsObjectiveFunction.cpp',
