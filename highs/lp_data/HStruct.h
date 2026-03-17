@@ -162,6 +162,15 @@ struct HighsLinearObjective {
   void clear();
 };
 
+struct HighsSubSolverCallTime {
+  std::vector<std::string> name;
+  std::vector<HighsInt> num_call;
+  std::vector<double> run_time;
+  void initialise();
+  void add(const HighsSubSolverCallTime& sub_solver_call_time,
+           const bool analytic_centre = false);
+};
+
 struct HighsThreadSubSolverCallTimeRecord {
   std::vector<HighsInt> num_call;
   std::vector<double> run_time;
@@ -170,15 +179,6 @@ struct HighsThreadSubSolverCallTimeRecord {
 struct HighsThreadSubSolverCallTime {
   std::vector<std::string> name;
   std::vector<HighsThreadSubSolverCallTimeRecord> record;
-  void initialise();
-  void add(const HighsSubSolverCallTime& sub_solver_call_time,
-           const bool analytic_centre = false);
-};
-
-struct HighsSubSolverCallTime {
-  std::vector<std::string> name;
-  std::vector<HighsInt> num_call;
-  std::vector<double> run_time;
   void initialise();
   void add(const HighsSubSolverCallTime& sub_solver_call_time,
            const bool analytic_centre = false);

@@ -990,7 +990,7 @@ HighsStatus Highs::optimizeModel() {
   // Level 2a of Highs::run()
   //
   if (!options_.use_warm_start) this->clearSolver();
-  this->sub_solver_call_time_.initialise();
+  this->initialiseSubSolverCallTime();
   HighsStatus status = this->calledOptimizeModel();
   if (this->options_.log_dev_level > 0) this->reportSubSolverCallTime();
   return status;
@@ -4434,7 +4434,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         ekk_instance_.lp_name_ = "Postsolve LP";
         // Set up the timing record so that adding the corresponding
         // values after callSolveLp gives difference
-        this->sub_solver_call_time_.initialise();
+        this->initialiseSubSolverCallTime();
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(
             incumbent_lp,
