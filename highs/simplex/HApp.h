@@ -73,14 +73,15 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
     assert(!std::signbit(solver_object.sub_solver_call_time_
                              .run_time[kSubSolverPrSimplexNoBasis]));
   // Update the call count and run time
-  solver_object.sub_solver_call_time_.num_call[sub_solver_ix]++;
-  double tt = solver_object.sub_solver_call_time_.run_time[sub_solver_ix];
-  tt += solver_object.timer_.read();
-  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] +=
-    solver_object.timer_.read();
-  /*
+  //
+  // Bit of a hack so that HighsSubSolverCallTime::update can be used
+  // to update both serial and multi-threaded timers. Eventually when
+  // only the multi-threaded timer is used,
+  // HighsSubSolverCallTime::update won't be used, and the more
+  // natural local update will be used
+  const double tt = solver_object.sub_solver_call_time_.run_time[sub_solver_ix] + solver_object.timer_.read();
+  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] = 0;
   solver_object.sub_solver_call_time_.update(sub_solver_ix, tt);
-  */
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);
@@ -157,11 +158,11 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   }
   assert(sub_solver_ix >= 0);
   assert(solver_object.sub_solver_call_time_.run_time.size() > 0);
-  double tt = solver_object.timer_.read();
-  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] = -tt;
-  HighsInt local_thread_num = highs::parallel::thread_num();
+  // Eventually use what's currently commented out
+  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] = -solver_object.timer_.read();
   /*
-  solver_object.sub_solver_call_time_.record[local_thread_num].run_time[sub_solver_ix] = -tt;
+  HighsInt local_thread_num = highs::parallel::thread_num();
+  solver_object.sub_solver_call_time_.record[local_thread_num].run_time[sub_solver_ix] = -solver_object.timer_.read();
   */
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
