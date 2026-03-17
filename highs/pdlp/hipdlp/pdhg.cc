@@ -29,7 +29,8 @@
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
 
-#define PDHG_CHECK_INTERVAL 3
+#define PDHG_CHECK_INTERVAL 40
+#define DEBUG_MODE (false)
 static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
@@ -498,7 +499,6 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   return PostSolveRetcode::OK;
 }
 
-/*
 void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockSolve);
@@ -510,252 +510,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 #endif
   initializeStepSizes();
   initialize(); // Resets vectors, caches, and sets initial x_current, y_current
-
-  if (!use_cupdlpx){
-  // Calculate initial Eta/Omega based on step sizes
-  params_.omega = std::sqrt(stepsize_.dual_step / stepsize_.primal_step);
-  params_.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
-  current_eta_ = params_.eta;
-  } else {
-  params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
-  }
-
-  highsLogUser(params_.log_options_, HighsLogType::kInfo,
-               "PDHG Setup: eta = %g, omega = %g\n",
-               params_.eta, params_.omega);
-
-  // Initialize internal solver state
-  restart_scheme_.passParams(&params_);
-  restart_scheme_.Initialize(results_);
-  
-  // Copy initial input x,y to internal state
-  x_current_ = x;
-  y_current_ = y;
-
-  // Initialize Halpern Anchors
-  if (params_.use_halpern_restart) {
-    x_anchor_ = x_current_;
-    y_anchor_ = y_current_;
-    halpern_iteration_ = 0;
-#ifdef CUPDLP_GPU
-    CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
-    CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_y_current_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
-#endif
-  }
-
-  // Pre-calculate Ax and ATy for current iterate
-#ifdef CUPDLP_GPU
-  CUDA_CHECK(cudaMemset(d_x_sum_, 0, lp_.num_col_ * sizeof(double)));
-  CUDA_CHECK(cudaMemset(d_y_sum_, 0, lp_.num_row_ * sizeof(double)));
-  CUDA_CHECK(cudaMemset(d_x_avg_, 0, lp_.num_col_ * sizeof(double)));
-  CUDA_CHECK(cudaMemset(d_y_avg_, 0, lp_.num_row_ * sizeof(double)));
-  sum_weights_gpu_ = 0.0;
-  CUDA_CHECK(cudaMemcpy(d_x_current_, x.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(d_y_current_, y.data(), lp_.num_row_ * sizeof(double), cudaMemcpyHostToDevice));
-  linalgGpuAx(d_x_current_, d_ax_current_);
-  linalgGpuATy(d_y_current_, d_aty_current_);
-#else
-  linalg::project_bounds(lp_, x_current_);
-  linalg::Ax(lp_, x_current_, Ax_cache_);
-  linalg::ATy(lp_, y_current_, ATy_cache_);
-#endif
-
-  logger_.print_iteration_header();
-  
-  // 2. Main PDHG Loop
-  TerminationStatus termination_status = TerminationStatus::OPTIMAL;
-  bool should_restart = false;
-  for (size_t iter = 0; iter < params_.max_iterations; ++iter) {
-    
-    // Check global time limit
-    if (total_timer.read() > params_.time_limit) {
-      logger_.info("Time limit reached.");
-      final_iter_count_ = iter;
-      termination_status = TerminationStatus::TIMEOUT;
-      break;
-    }
-
-    bool is_first_of_batch = (iter % PDHG_CHECK_INTERVAL == 0);
-    bool is_last_of_batch  = ((iter + 1) % PDHG_CHECK_INTERVAL == 0) || (iter == params_.max_iterations - 1);
-
-    // --- B. Core PDHG Step (x -> x_next, y -> y_next) ---
-    //bool next_is_check = ((iter + 1) < 10)
-    //                     || ((iter + 1) == params_.max_iterations - 1)
-    //                     || (((iter + 1) % PDHG_CHECK_INTERVAL) == 0);
-    //bool is_major = next_is_check;
-    bool is_major = is_first_of_batch || is_last_of_batch;
-
-    if (params_.use_halpern_restart) {
-      if (iter == 0){
-        stepsize_.primal_step = 0.1856249071;
-        stepsize_.dual_step   = 0.1095036898;
-
-        x_current_ = {0.0, 0.0, 0.0};
-        x_anchor_  = {0.0, 0.0, 0.0};
-        ATy_cache_ = {0.0, 0.0, 0.0};
-        
-        lp_.col_cost_  = {1.0, 4.0, 9.0};
-        lp_.col_lower_ = {0.0, -1.0, 0.0};
-        lp_.col_upper_ = {4.0, 1.0, 1e20}; // inf
-        lp_.num_col_   = 3;
-
-        y_current_ = {0.0, 0.0, 0.0};
-        y_anchor_  = {0.0, 0.0, 0.0};
-        lp_.num_row_   = 3;  
-      }
-
-#ifdef CUPDLP_GPU
-      performHalpernPdhgStepGpu(is_major);
-#else
-      performHalpernPdhgStep(is_major);
-#endif
-
-      if (iter == 0) {
-        std::cout << "========== HIPDLP DEBUG: AFTER PRIMAL ==========\n";
-        std::cout << "x_next (pdhg_primal): ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_[i] << " ";
-        std::cout << "\n";
-        
-        std::cout << "x_current_updated: ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_current_[i] << " ";
-        std::cout << "\n";
-
-        // 注: 如果你的代码在函数内部算反射并没有保存为全局变量，可以用公式打印看对不对
-        std::cout << "x_reflected (derived): ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << (x_current_[i] + 1.0 * (x_current_[i] - 0.0)) << " ";
-        std::cout << "\n";
-
-        std::cout << "========== HIPDLP DEBUG: AFTER DUAL ==========\n";
-        std::cout << "Ax_next_: ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << Ax_next_[i] << " ";
-        std::cout << "\n";
-        std::cout << "y_next (pdhg_dual): ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << y_next_[i] << " ";
-        std::cout << "\n";
-        
-        std::cout << "y_current_updated: ";
-        for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << y_current_[i] << " ";
-        std::cout << "\n";
-    }
-    } else {
-      performPdhgStep();
-      prepareNextIteration();
-    }
-
-    if (params_.use_halpern_restart && is_first_of_batch) {
-      if (iter == 0 || should_restart) {
-        initial_fpe_ = computeFixedPointError();
-        std::cout << "[DEBUG] iter=" << iter << " | Setting initial_fpe_ = " << initial_fpe_ << std::endl;
-        should_restart = false; // Successfully established new baseline
-      }
-    }
-
-    // --- A. Convergence Check & Restart Logic ---
-    if (is_last_of_batch) {
-      TerminationStatus check_status;
-    
-      // Phase 1: are we optimal?
-      if (checkTermination(iter, output_x, output_y, status)){
-        solveReturn(status);
-        return;
-      }
-
-      // Phase 2: should we restart?
-      if (shouldTriggerRestart(iter)){
-        executeRestart(iter);
-        should_restart = true;
-      }
-      bool should_terminate = runConvergenceCheckAndRestart(iter, x, y, check_status);
-      
-      if (should_terminate) {
-        solveReturn(check_status);
-        return; 
-      }
-
-      if (params_.use_halpern_restart){
-        fpe_ = computeFixedPointError();
-
-        std::cout << "[DEBUG] iter=" << iter << " | current_fpe = " << fpe_ << std::endl;
-
-        double sufficient_reduction_for_restart = 0.2; // cuPDLPx typically uses e^-1
-        if (fpe_ < sufficient_reduction_for_restart * initial_fpe_) {
-          should_restart = true;
-          std::cout << "[RESTART TRIGGERED] FPE dropped sufficiently." << std::endl;
-        }
-      }
-
-      if (should_restart){
-        if (params_.use_halpern_restart && params_.step_size_strategy == StepSizeStrategy::PID) {
-          updatePrimalWeightAtRestart(results_); // Use latest results
-          current_eta_ = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
-          restart_scheme_.UpdateBeta(stepsize_.beta);
-      }
-
-  #ifdef CUPDLP_GPU
-      CUDA_CHECK(cudaMemcpy(d_x_at_last_restart_, d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
-      CUDA_CHECK(cudaMemcpy(d_y_at_last_restart_, d_y_current_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
-      
-      // Reset Sums
-      CUDA_CHECK(cudaMemset(d_x_sum_, 0, lp_.num_col_ * sizeof(double)));
-      CUDA_CHECK(cudaMemset(d_y_sum_, 0, lp_.num_row_ * sizeof(double)));
-      sum_weights_gpu_ = 0.0;
-      
-      // Reset Halpern Anchors
-      if (params_.use_halpern_restart) {
-        CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
-        CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_y_current_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
-        halpern_iteration_ = 0; 
-      }
-  #else
-      x_at_last_restart_ = x_current_;
-      y_at_last_restart_ = y_current_;
-      std::fill(x_sum_.begin(), x_sum_.end(), 0.0);
-      std::fill(y_sum_.begin(), y_sum_.end(), 0.0);
-      sum_weights_ = 0.0;
-      
-      if (params_.use_halpern_restart) {
-        x_anchor_ = x_current_;
-        y_anchor_ = y_current_;
-        halpern_iteration_ = 0; 
-      }
-  #endif
-      
-      // If restart happened, params/step sizes might have updated
-      params_.eta = current_eta_; 
-    }
-
-    // --- D. Update Average Iterates ---
-    accumulateAverages(iter);
-  }
-
-  // 3. Loop Finished (Max Iterations)
-  if (termination_status != TerminationStatus::OPTIMAL) {
-      logger_.info("Max iterations reached without convergence.");
-      final_iter_count_ = params_.max_iterations;
-      
-      // Return average solution on timeout
-      x = x_avg_;
-      y = y_avg_;
-      solveReturn(TerminationStatus::TIMEOUT);
-  }
-}
-*/
-
-void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
-#if PDLP_PROFILE
-  hipdlpTimerStart(kHipdlpClockSolve);
-#endif
-  
-  // 1. Initialization and Setup
-#ifdef CUPDLP_GPU
-  setupGpu(); 
-#endif
-  initializeStepSizes();
-  initialize(); // Resets vectors, caches, and sets initial x_current, y_current
-
-  // Match initial primal weight calculation from cuPDLPx
-  params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
-  primal_weight_ = params_.omega;
   best_primal_weight_ = primal_weight_;
   best_primal_dual_residual_gap_ = std::numeric_limits<double>::infinity();
 
@@ -816,37 +570,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     }
 
     if (final_iter_count_ == 0){
-      stepsize_.primal_step = 0.1856249071;
-      stepsize_.dual_step   = 0.1095036898;
-
-      x_current_ = {0.0, 0.0, 0.0};
-      x_anchor_  = {0.0, 0.0, 0.0};
-      ATy_cache_ = {0.0, 0.0, 0.0};
-      
-      lp_.col_cost_  = {1.0, 4.0, 9.0};
-      lp_.col_lower_ = {0.0, -1.0, 0.0};
-      lp_.col_upper_ = {4.0, 1.0, 1e20}; // inf
-      lp_.num_col_   = 3;
-
-      y_current_ = {0.0, 0.0, 0.0};
-      y_anchor_  = {0.0, 0.0, 0.0};
-      lp_.num_row_   = 3;  
-    
-#ifdef CUPDLP_GPU
-      // Push the hardcoded test problem to the GPU!
-      CUDA_CHECK(cudaMemcpy(d_col_cost_, lp_.col_cost_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
-      CUDA_CHECK(cudaMemcpy(d_col_lower_, lp_.col_lower_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
-      CUDA_CHECK(cudaMemcpy(d_col_upper_, lp_.col_upper_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
-      
-      CUDA_CHECK(cudaMemcpy(d_x_current_, x_current_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
-      CUDA_CHECK(cudaMemcpy(d_x_anchor_, x_anchor_.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
-      CUDA_CHECK(cudaMemcpy(d_y_current_, y_current_.data(), lp_.num_row_ * sizeof(double), cudaMemcpyHostToDevice));
-      CUDA_CHECK(cudaMemcpy(d_y_anchor_, y_anchor_.data(), lp_.num_row_ * sizeof(double), cudaMemcpyHostToDevice));
-      
-      // Re-evaluate SpMV for the new zero anchors
-      linalgGpuAx(d_x_current_, d_ax_current_);
-      linalgGpuATy(d_y_current_, d_aty_current_);
-#endif
+      //stepsize_.primal_step = 10.8215584736;
+      //stepsize_.dual_step   = 0.0018783443;
     }
 
     // -- Step 1 (Major, isolated for restart-FPE check) --
@@ -864,7 +589,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       fpe_ = computeFixedPointError();
 #endif
       initial_fpe_ = fpe_;
-      std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restarted with initial_fpe_ = " << initial_fpe_ << std::endl;
+if (DEBUG_MODE) std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restarted with initial_fpe_ = " << std::setprecision(10) << initial_fpe_ << std::endl;
       do_restart = false;
     }
 
@@ -874,7 +599,7 @@ if(final_iter_count_ == 9) {
     std::vector<double> x_next_host(lp_.num_col_);
     CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
     std::cout << "x_next (before 9): ";
-    for(int i=0; i<lp_.num_col_; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
+    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
     std::cout << "\n";
 }
 #endif
@@ -914,10 +639,10 @@ if(final_iter_count_ == 9) {
     CUDA_CHECK(cudaMemcpy(x_current_host.data(), d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
     std::cout << "x_next (after 9): ";
-    for(int i=0; i<lp_.num_col_; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
+    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
     std::cout << "\n";
     std::cout << "x_current (after 9): ";
-    for(int i=0; i<lp_.num_col_; i++) std::cout << std::fixed << std::setprecision(10) << x_current_host[i] << " ";
+    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_current_host[i] << " ";
     std::cout << "\n";
 }
 #endif
@@ -928,7 +653,7 @@ if(final_iter_count_ == 9) {
   #else
       fpe_ = computeFixedPointError();
   #endif
-    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE at check: " << fpe_ << std::endl;
+if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE at check: " << std::setprecision(10) << fpe_ << std::endl;
       
     halpern_iteration_ += PDHG_CHECK_INTERVAL;
     final_iter_count_ += PDHG_CHECK_INTERVAL;
@@ -966,7 +691,7 @@ if(final_iter_count_ == 9) {
     if (do_restart) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
         updatePrimalWeightAtRestart(results_);
-        std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Updated primal_weight_ to " << primal_weight_ << std::endl;
+if (DEBUG_MODE)        std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Updated primal_weight_ to " << primal_weight_ << std::endl;
       }
 #ifdef CUPDLP_GPU
       CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
@@ -2094,30 +1819,30 @@ void PDLPSolver::initializeStepSizes() {
     stepsize_.beta = 1.0;
   }
 
+  // Match initial primal weight calculation from cuPDLPx
+  params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
+  primal_weight_ = params_.omega;
+
   // Initialize step sizes based on strategy
   if (params_.step_size_strategy == StepSizeStrategy::FIXED ||
       params_.step_size_strategy == StepSizeStrategy::PID) {
     // Use power method for fixed step size
     //const double op_norm_sq = PowerMethod();
     double op_norm_sq = PowerMethod();
-    if (temp_setting){
-    op_norm_sq = 49;
-    std::cout << "Overriding power method lambda with 49 for testing\n"; 
-    }
 
     stepsize_.power_method_lambda = op_norm_sq;
 
     const double safety_factor = 0.998;
     double base_step = safety_factor / std::sqrt(op_norm_sq);
 
-    stepsize_.primal_step = base_step / std::sqrt(stepsize_.beta);
-    stepsize_.dual_step = base_step * std::sqrt(stepsize_.beta);
     params_.eta = base_step;
+    stepsize_.primal_step = base_step / params_.omega;
+    stepsize_.dual_step = base_step * params_.omega;
 
     highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                 "Initial step sizes from power method lambda = %g: primal = "
-                 "%g; dual = %g\n",
-                 op_norm_sq, stepsize_.primal_step, stepsize_.dual_step);
+                 "Initial step sizes from power method lambda = %g: primal step= "
+                 "%g; dual step = %g, eta = %g, omega = %g\n",
+                 op_norm_sq, stepsize_.primal_step, stepsize_.dual_step, params_.eta, params_.omega);
   } else {
     // Use matrix infinity norm for adaptive step size
     // Compute infinity norm of matrix elements
@@ -2169,13 +1894,6 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   double rel_primal = results.primal_feasibility / (1.0 + unscaled_rhs_norm_);
   double rel_dual   = results.dual_feasibility / (1.0 + unscaled_c_norm_);
   double ratio_infeas = (rel_primal > 0.0) ? (rel_dual / rel_primal) : 1e300;
-
-  std::cout << "Restart check: primal_dist = " << primal_dist
-            << ", dual_dist = " << dual_dist
-            << ", rel_primal = " << rel_primal
-            << ", rel_dual = " << rel_dual
-            << ", ratio_infeas = " << ratio_infeas
-            << std::endl;
 
   const bool silent = true;
   // cuPDLPx-style weight update (PID control)
