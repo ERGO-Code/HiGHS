@@ -4115,29 +4115,6 @@ void HighsLinearObjective::clear() {
   this->priority = 0;
 }
 
-void HighsThreadSubSolverCallTime::initialise() {
-  this->name.assign(kSubSolverCount, "");
-  this->name[kSubSolverDuSimplexBasis] = "Du simplex (basis)";
-  this->name[kSubSolverDuSimplexNoBasis] = "Du simplex (no basis)";
-  this->name[kSubSolverPrSimplexBasis] = "Pr simplex (basis)";
-  this->name[kSubSolverPrSimplexNoBasis] = "Pr simplex (no basis)";
-  this->name[kSubSolverHipo] = "HiPO";
-  this->name[kSubSolverIpx] = "IPX";
-  this->name[kSubSolverHipoAc] = "HiPO (AC)";
-  this->name[kSubSolverIpxAc] = "IPX (AC)";
-  this->name[kSubSolverPdlp] = "PDLP";
-  this->name[kSubSolverQpAsm] = "QP ASM";
-  this->name[kSubSolverMip] = "MIP";
-  this->name[kSubSolverSubMip] = "Sub-MIP";
-  HighsThreadSubSolverCallTimeRecord thread_record;
-  thread_record.num_call.assign(kSubSolverCount, 0);
-  thread_record.run_time.assign(kSubSolverCount, 0);
-  HighsInt num_thread = highs::parallel::num_threads();
-  assert(num_thread > 0);
-  this->record.assign(num_thread, thread_record);
-}
- 
-
 void HighsSubSolverCallTime::initialise() {
   this->num_call.assign(kSubSolverCount, 0);
   this->run_time.assign(kSubSolverCount, 0);
@@ -4154,6 +4131,12 @@ void HighsSubSolverCallTime::initialise() {
   this->name[kSubSolverQpAsm] = "QP ASM";
   this->name[kSubSolverMip] = "MIP";
   this->name[kSubSolverSubMip] = "Sub-MIP";
+  HighsSubSolverCallTimeRecord thread_record;
+  thread_record.num_call.assign(kSubSolverCount, 0);
+  thread_record.run_time.assign(kSubSolverCount, 0);
+  HighsInt num_thread = highs::parallel::num_threads();
+  assert(num_thread > 0);
+  this->record.assign(num_thread, thread_record);
 }
 
 void HighsSubSolverCallTime::add(

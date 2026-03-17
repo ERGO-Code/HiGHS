@@ -1237,14 +1237,6 @@ class Highs {
   }
 
   /**
-   * @brief Return a const reference to the internal multi-thread
-   * sub-solver call and time instance
-   */
-  const HighsThreadSubSolverCallTime& getThreadSubSolverCallTime() const {
-    return thread_sub_solver_call_time_;
-  }
-
-  /**
    * @brief Report internal sub-solver call and time instance
    */
   void reportSubSolverCallTime() const;
@@ -1254,7 +1246,6 @@ class Highs {
    */
   void initialiseSubSolverCallTime() {
     this->sub_solver_call_time_.initialise();
-    this->thread_sub_solver_call_time_.initialise();
   }
 
   /**
@@ -1567,7 +1558,6 @@ class Highs {
   HighsPresolveLog presolve_log_;
 
   HighsSubSolverCallTime sub_solver_call_time_;
-  HighsThreadSubSolverCallTime thread_sub_solver_call_time_;
 
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether
