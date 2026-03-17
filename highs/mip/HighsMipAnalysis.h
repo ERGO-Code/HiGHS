@@ -65,7 +65,7 @@ class HighsMipAnalysis {
   std::string model_name;
   HighsTimerClock mip_clocks;
   std::vector<HighsTimerClock> thread_mip_clocks;
-  HighsTimerClock* pointer_serial_mip_clocks;
+  HighsTimerClock* pointer_serial_mip_clocks; // No longer used
 
   bool analyse_mip_time;
   std::vector<double> dive_time;
