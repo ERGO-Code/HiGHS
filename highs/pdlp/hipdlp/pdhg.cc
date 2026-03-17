@@ -805,8 +805,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 #ifdef CUPDLP_GPU
   bool graph_created = false;
   cudaGraphExec_t graphExec = nullptr;
-  cudaStream_t gpu_stream_;
-  CUDA_CHECK(cudaStreamCreate(&gpu_stream_));
 #endif
 
   // 2. Main cuPDLPx-style Loop
@@ -901,7 +899,6 @@ if(final_iter_count_ == 9) {
     
     // Launch the captured graph
     CUDA_CHECK(cudaGraphLaunch(graphExec, gpu_stream_));
-    CUDA_CHECK(cudaStreamSynchronize(gpu_stream_));
 #else
     for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
       performHalpernPdhgStep(false, i);
@@ -970,11 +967,6 @@ if(final_iter_count_ == 9) {
         updatePrimalWeightAtRestart(results_);
         std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Updated primal_weight_ to " << primal_weight_ << std::endl;
       }
-      if (graphExec) { 
-            CUDA_CHECK(cudaGraphExecDestroy(graphExec)); 
-            graphExec = nullptr; 
-        } 
-      graph_created = false;
 #ifdef CUPDLP_GPU
       CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
       CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_pdhg_dual_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
@@ -998,7 +990,6 @@ if(final_iter_count_ == 9) {
   if (graphExec) {
     CUDA_CHECK(cudaGraphExecDestroy(graphExec));
   }
-  CUDA_CHECK(cudaStreamDestroy(gpu_stream_));
 #endif
 
   // 3. Loop Finished
