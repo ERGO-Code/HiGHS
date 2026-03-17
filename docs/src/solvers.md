@@ -7,7 +7,7 @@ LP. HiGHS will choose the most appropriate technique for a given
 problem, but this can be over-ridden by setting the option
 [__solver__](@ref option-solver).
 
-#### Simplex
+#### [Simplex](@id solvers-simplex)
 
 HiGHS has efficient implementations of both the primal and dual
 simplex methods, although the dual simplex solver is likely to be
@@ -58,7 +58,7 @@ HiGHS has two interior point (IPM) solvers:
 
 Setting the option [__solver__](@ref option-solver) to "ipm" selects the HiPO solver, if the build supports it, otherwise it selects the IPX solver.
 
-#### Primal-dual hybrid gradient method
+#### Primal-dual hybrid gradient method (PDLP)
 
 HiGHS includes the [
 cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C) primal-dual hybrid
@@ -67,6 +67,30 @@ on an NVIDIA [GPU](@ref gpu). On a CPU, it is unlikely to be
 competitive with the HiGHS interior point or simplex solvers.
 
 Setting the option [__solver__](@ref option-solver) to "pdlp" forces the PDLP solver to be used
+
+### Basic solution
+
+The simplex solver always generates a [basic solution](@ref
+term-basic-solution). This is a solution at a vertex of the feasible
+region of the LP.
+
+By default, the IPM solvers also generate a basic solution by running
+a procedure known as "crossover". This can occasionally be very
+expensive so if users require only a solution to the LP, and not a
+basic solution, crossover can be suppressed. This is done by setting
+the [run\_crossover](@ref option-run-crossover) option to
+"off". However, if the IPM solver terminates without satsifying the
+[feasibility and optimality](@ref kkt) conditions, HiGHS will not
+claim optimality. Hence it is better to set the `run\_crossover`
+option to "choose", in which case crossover will be run if the IPM
+solver terminates without determining optimality.
+
+The PDLP solver does not generate a basic solution. Currently it has
+no crossover procedure to obtain one.
+
+When modifications have been made to an LP problem, the simplex solver
+(only) can solve the modified problem from the optimal basis of the
+original LP, a process known as ["hot starting"](@ref hot-start-lp).
 
 ## MIP
 
