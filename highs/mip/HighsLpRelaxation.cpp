@@ -1208,7 +1208,16 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
-  if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
+  HighsInt local_thread_id = highs::parallel::thread_num();
+  bool override_parallel_lock = false;
+  if (local_thread_id > 0) {
+    printf("HighsLpRelaxation::run using thread %2d: parallel lock active = %s\n", int(local_thread_id),
+	   mipsolver.mipdata_->parallelLockActive() ? "T" : "F");
+    //    override_parallel_lock = true;
+  }
+  if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()
+      && override_parallel_lock
+      ) {
     const HighsSubSolverCallTime& sub_solver_call_time =
         lpsolver.getSubSolverCallTime();
     mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);

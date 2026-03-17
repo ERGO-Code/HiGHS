@@ -753,13 +753,18 @@ restart:
   auto runHeuristics = [&](std::vector<HighsInt>& indices) -> void {
     std::vector<uint8_t> suboptimal(num_workers, 0);
     auto doRunHeuristics = [&](HighsInt i) -> void {
+      HighsInt local_thread_id = highs::parallel::thread_num();
+      if (local_thread_id > 0) {
+	printf("doRunHeuristics task %2d using thread %2d: parallel lock active = %s\n", int(i), int(local_thread_id),
+	       mipdata_->parallelLockActive() ? "T" : "F");
+      }
       HighsMipWorker& worker = mipdata_->workers[i];
       if (!mipdata_->parallelLockActive())
-        analysis_.mipTimerStart(kMipClockDiveEvaluateNode, i);
+        analysis_.mipTimerStart(kMipClockDiveEvaluateNode);
       const HighsSearch::NodeResult evaluate_node_result =
           worker.search_ptr_->evaluateNode();
       if (!mipdata_->parallelLockActive())
-        analysis_.mipTimerStop(kMipClockDiveEvaluateNode, i);
+        analysis_.mipTimerStop(kMipClockDiveEvaluateNode);
 
       if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
         suboptimal[i] = 1;
@@ -767,37 +772,37 @@ restart:
       }
 
       if (!mipdata_->parallelLockActive())
-        analysis_.mipTimerStart(kMipClockDivePrimalHeuristics, i);
+        analysis_.mipTimerStart(kMipClockDivePrimalHeuristics);
       if (mipdata_->incumbent.empty()) {
         if (!mipdata_->parallelLockActive())
-          analysis_.mipTimerStart(kMipClockDiveRandomizedRounding, i);
+          analysis_.mipTimerStart(kMipClockDiveRandomizedRounding);
         mipdata_->heuristics.randomizedRounding(
             worker, worker.lp_->getLpSolver().getSolution().col_value);
         if (!mipdata_->parallelLockActive())
-          analysis_.mipTimerStop(kMipClockDiveRandomizedRounding, i);
+          analysis_.mipTimerStop(kMipClockDiveRandomizedRounding);
       }
       if (mipdata_->incumbent.empty()) {
         if (options_mip_->mip_heuristic_run_rens) {
           if (!mipdata_->parallelLockActive())
-            analysis_.mipTimerStart(kMipClockDiveRens, i);
+            analysis_.mipTimerStart(kMipClockDiveRens);
           mipdata_->heuristics.RENS(
               worker, worker.lp_->getLpSolver().getSolution().col_value);
           if (!mipdata_->parallelLockActive())
-            analysis_.mipTimerStop(kMipClockDiveRens, i);
+            analysis_.mipTimerStop(kMipClockDiveRens);
         }
       } else {
         if (options_mip_->mip_heuristic_run_rins) {
           if (!mipdata_->parallelLockActive())
-            analysis_.mipTimerStart(kMipClockDiveRins, i);
+            analysis_.mipTimerStart(kMipClockDiveRins);
           mipdata_->heuristics.RINS(
               worker, worker.lp_->getLpSolver().getSolution().col_value);
           if (!mipdata_->parallelLockActive())
-            analysis_.mipTimerStop(kMipClockDiveRins, i);
+            analysis_.mipTimerStop(kMipClockDiveRins);
         }
       }
 
       if (!mipdata_->parallelLockActive())
-        analysis_.mipTimerStop(kMipClockDivePrimalHeuristics, i);
+        analysis_.mipTimerStop(kMipClockDivePrimalHeuristics);
     };
     runTask(doRunHeuristics, tg, true, false, indices);
     for (const HighsInt i : indices) {
@@ -839,6 +844,11 @@ restart:
       if (!worker.search_ptr_->hasNode() ||
           worker.search_ptr_->currentNodePruned())
         return;
+      HighsInt local_thread_id = highs::parallel::thread_num();
+      if (local_thread_id > 0) {
+	printf("doDiveSearch task %2d using thread %2d: parallel lock active = %s\n", int(i), int(local_thread_id),
+	       mipdata_->parallelLockActive() ? "T" : "F");
+      }
       dive_results[i] = worker.search_ptr_->dive();
     };
     runTask(doDiveSearch, tg, true, false, non_pruned_indices);

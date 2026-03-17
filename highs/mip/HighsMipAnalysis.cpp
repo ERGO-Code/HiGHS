@@ -63,7 +63,16 @@ void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
 void HighsMipAnalysis::mipTimerStart(const HighsInt mip_clock,
                                      const HighsInt thread_id) const {
   if (!analyse_mip_time) return;
-  HighsInt highs_timer_clock = thread_mip_clocks[thread_id].clock_[mip_clock];
+  HighsInt local_thread_id = highs::parallel::thread_num();
+  HighsInt highs_timer_clock = thread_mip_clocks[local_thread_id].clock_[mip_clock];
+  if (local_thread_id > 0) {
+    printf("mipTimerStart with MIP clock %2d and thread %2d for HiGHS clock %4d (%s)\n",
+	   int(mip_clock),
+	   int(local_thread_id),
+	   int(highs_timer_clock),
+	   thread_mip_clocks[local_thread_id].timer_pointer_->clock_names[highs_timer_clock].c_str());
+  }
+  
   thread_mip_clocks[thread_id].timer_pointer_->start(highs_timer_clock);
 }
 
@@ -280,6 +289,10 @@ HighsInt HighsMipAnalysis::getSepaClockIndex(const std::string& name) const {
 void HighsMipAnalysis::addSubSolverCallTime(
     const HighsSubSolverCallTime& sub_solver_call_time,
     const bool analytic_centre) const {
+  HighsInt local_thread_id = highs::parallel::thread_num();
+  if (local_thread_id > 0) {
+    printf("addSubSolverCallTime thread %2d\n", int(local_thread_id));
+  }
   this->sub_solver_call_time_->add(sub_solver_call_time, analytic_centre);
 }
 
