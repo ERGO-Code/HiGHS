@@ -803,7 +803,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   final_iter_count_ = 0;
 
 #ifdef CUPDLP_GPU
-  bool graph_created = false;
   cudaGraphExec_t graphExec = nullptr;
 #endif
 
@@ -882,22 +881,24 @@ if(final_iter_count_ == 9) {
 
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #ifdef CUPDLP_GPU
-    if (!graph_created) {
-      CUDA_CHECK(cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
-      
-      for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
-        performHalpernPdhgStepGpu(false, i);
-      }
-      performHalpernPdhgStepGpu(true, PDHG_CHECK_INTERVAL);
-      
-      cudaGraph_t graph;
-      CUDA_CHECK(cudaStreamEndCapture(gpu_stream_, &graph));
-      CUDA_CHECK(cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0));
-      CUDA_CHECK(cudaGraphDestroy(graph));
-      graph_created = true;
+    if (graphExec) {
+      CUDA_CHECK(cudaGraphExecDestroy(graphExec));
+      graphExec = nullptr;
     }
-    
-    // Launch the captured graph
+
+    CUDA_CHECK(cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
+
+    for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
+      performHalpernPdhgStepGpu(false, i);
+    }
+    performHalpernPdhgStepGpu(true, PDHG_CHECK_INTERVAL);
+
+    cudaGraph_t graph;
+    CUDA_CHECK(cudaStreamEndCapture(gpu_stream_, &graph));
+    CUDA_CHECK(cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0));
+    CUDA_CHECK(cudaGraphDestroy(graph));
+
+    // Launch freshly captured graph so dynamic step-size/weight parameters are current.
     CUDA_CHECK(cudaGraphLaunch(graphExec, gpu_stream_));
 #else
     for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
