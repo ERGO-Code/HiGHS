@@ -15,6 +15,7 @@
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsMipSolver.h"  // For getGapString
 #include "model/HighsHessianUtils.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
@@ -4212,6 +4213,12 @@ void HighsSubSolverCallTime::initialise() {
   this->name[kSubSolverQpAsm] = "QP ASM";
   this->name[kSubSolverMip] = "MIP";
   this->name[kSubSolverSubMip] = "Sub-MIP";
+  HighsSubSolverCallTimeRecord thread_record;
+  thread_record.num_call.assign(kSubSolverCount, 0);
+  thread_record.run_time.assign(kSubSolverCount, 0);
+  HighsInt num_thread = highs::parallel::num_threads();
+  assert(num_thread > 0);
+  this->record.assign(num_thread, thread_record);
 }
 
 void HighsSubSolverCallTime::add(

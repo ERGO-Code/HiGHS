@@ -62,6 +62,8 @@ class HighsMipAnalysis {
       const HighsSubSolverCallTime& sub_solver_call_time);
   std::string model_name;
   HighsTimerClock mip_clocks;
+  std::vector<HighsTimerClock> thread_mip_clocks;
+
   bool analyse_mip_time;
   std::vector<double> dive_time;
   std::vector<double> node_search_time;

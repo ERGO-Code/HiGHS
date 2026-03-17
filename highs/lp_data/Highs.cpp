@@ -997,8 +997,28 @@ HighsStatus Highs::optimizeLp() {
 HighsStatus Highs::optimizeModel() {
   // Level 2a of Highs::run()
   //
+  highs::parallel::initialize_scheduler(options_.threads);
+
+  max_threads = highs::parallel::num_threads();
+  if (options_.threads != 0 && max_threads != options_.threads) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Option 'threads' is set to %d but global scheduler has already been "
+        "initialized to use %d threads. The previous scheduler instance can "
+        "be destroyed by calling Highs::resetGlobalScheduler().\n",
+        (int)options_.threads, max_threads);
+    return HighsStatus::kError;
+  }
+  assert(max_threads > 0);
+  if (max_threads <= 0)
+    highsLogDev(options_.log_options, HighsLogType::kWarning,
+                "WARNING: max_threads() returns %" HIGHSINT_FORMAT "\n",
+                max_threads);
+  highsLogDev(options_.log_options, HighsLogType::kDetailed,
+              "Running with %" HIGHSINT_FORMAT " thread(s)\n", max_threads);
+
   if (!options_.use_warm_start) this->clearSolver();
-  this->sub_solver_call_time_.initialise();
+  this->initialiseSubSolverCallTime();
   HighsStatus status = this->calledOptimizeModel();
   if (this->options_.log_dev_level > 0) this->reportSubSolverCallTime();
   return status;
@@ -1042,26 +1062,6 @@ HighsStatus Highs::calledOptimizeModel() {
 
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
-
-  highs::parallel::initialize_scheduler(options_.threads);
-
-  max_threads = highs::parallel::num_threads();
-  if (options_.threads != 0 && max_threads != options_.threads) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Option 'threads' is set to %d but global scheduler has already been "
-        "initialized to use %d threads. The previous scheduler instance can "
-        "be destroyed by calling Highs::resetGlobalScheduler().\n",
-        (int)options_.threads, max_threads);
-    return HighsStatus::kError;
-  }
-  assert(max_threads > 0);
-  if (max_threads <= 0)
-    highsLogDev(options_.log_options, HighsLogType::kWarning,
-                "WARNING: max_threads() returns %" HIGHSINT_FORMAT "\n",
-                max_threads);
-  highsLogDev(options_.log_options, HighsLogType::kDetailed,
-              "Running with %" HIGHSINT_FORMAT " thread(s)\n", max_threads);
 
   // returnFromOptimizeModel() is a common exit method to ensure
   // consistency of values set by optimizeModel() and many other
@@ -4442,7 +4442,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         ekk_instance_.lp_name_ = "Postsolve LP";
         // Set up the timing record so that adding the corresponding
         // values after callSolveLp gives difference
-        this->sub_solver_call_time_.initialise();
+        this->initialiseSubSolverCallTime();
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(
             incumbent_lp,
