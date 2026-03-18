@@ -557,6 +557,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   final_iter_count_ = 0;
 
 #ifdef CUPDLP_GPU
+  bool graph_created = false;
   cudaGraphExec_t graphExec = nullptr;
 #endif
 
@@ -576,6 +577,12 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
     // -- Step 1 (Major, isolated for restart-FPE check) --
 #ifdef CUPDLP_GPU
+  CUDA_CHECK(cudaMemcpyAsync(d_primal_step_size_, &stepsize_.primal_step,
+                 sizeof(double), cudaMemcpyHostToDevice,
+                 gpu_stream_));
+  CUDA_CHECK(cudaMemcpyAsync(d_dual_step_size_, &stepsize_.dual_step,
+                 sizeof(double), cudaMemcpyHostToDevice,
+                 gpu_stream_));
     CUDA_CHECK(cudaMemcpyAsync(d_halpern_iteration_, &halpern_iteration_, sizeof(int), cudaMemcpyHostToDevice, gpu_stream_));
     performHalpernPdhgStepGpu(true, 1);
 #else
@@ -606,24 +613,22 @@ if(final_iter_count_ == 9) {
 
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #ifdef CUPDLP_GPU
-    if (graphExec) {
-      CUDA_CHECK(cudaGraphExecDestroy(graphExec));
-      graphExec = nullptr;
+    if (!graph_created) {
+      CUDA_CHECK(
+          cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
+
+      for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
+        performHalpernPdhgStepGpu(false, i);
+      }
+      performHalpernPdhgStepGpu(true, PDHG_CHECK_INTERVAL);
+
+      cudaGraph_t graph;
+      CUDA_CHECK(cudaStreamEndCapture(gpu_stream_, &graph));
+      CUDA_CHECK(cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0));
+      CUDA_CHECK(cudaGraphDestroy(graph));
+      graph_created = true;
     }
 
-    CUDA_CHECK(cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
-
-    for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
-      performHalpernPdhgStepGpu(false, i);
-    }
-    performHalpernPdhgStepGpu(true, PDHG_CHECK_INTERVAL);
-
-    cudaGraph_t graph;
-    CUDA_CHECK(cudaStreamEndCapture(gpu_stream_, &graph));
-    CUDA_CHECK(cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0));
-    CUDA_CHECK(cudaGraphDestroy(graph));
-
-    // Launch freshly captured graph so dynamic step-size/weight parameters are current.
     CUDA_CHECK(cudaGraphLaunch(graphExec, gpu_stream_));
 #else
     for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
@@ -1050,22 +1055,20 @@ void PDLPSolver::prepareNextIteration() {
 }
 #ifdef CUPDLP_GPU
 void PDLPSolver::performHalpernPdhgStepGpu(bool is_major, int k_offset) {
-  double primal_step = stepsize_.primal_step;
-  double dual_step = stepsize_.dual_step;
-
   linalgGpuATy(d_y_current_, d_aty_current_);
 
   if (is_major) {
     launchKernelHalpernPrimalMajor_wrapper(
         d_x_current_, d_pdhg_primal_, d_x_next_ /*reflected*/,
         d_aty_current_ /*dual_product*/, d_col_cost_,
-      d_col_lower_, d_col_upper_, primal_step, a_num_cols_,
+      d_col_lower_, d_col_upper_, d_primal_step_size_, a_num_cols_,
       d_dSlackPos_ /*dual_slack*/, gpu_stream_);
   } else {
     launchKernelHalpernPrimalMinor_wrapper(
         d_x_current_, d_x_next_ /*reflected*/,
         d_aty_current_ /*dual_product*/, d_col_cost_,
-      d_col_lower_, d_col_upper_, primal_step, a_num_cols_, gpu_stream_);
+      d_col_lower_, d_col_upper_, d_primal_step_size_, a_num_cols_,
+      gpu_stream_);
   }
 
   linalgGpuAx(d_x_next_, d_ax_next_);
@@ -1074,24 +1077,22 @@ void PDLPSolver::performHalpernPdhgStepGpu(bool is_major, int k_offset) {
     launchKernelHalpernDualMajor_wrapper(
         d_y_current_, d_pdhg_dual_, d_y_next_ /*reflected*/,
         d_ax_next_ /*primal_product*/, d_row_lower_, d_is_equality_row_,
-      dual_step, a_num_rows_, gpu_stream_);
+      d_dual_step_size_, a_num_rows_, gpu_stream_);
   } else {
     launchKernelHalpernDualMinor_wrapper(
         d_y_current_, d_y_next_ /*reflected*/,
         d_ax_next_ /*primal_product*/, d_row_lower_, d_is_equality_row_,
-      dual_step, a_num_rows_, gpu_stream_);
+      d_dual_step_size_, a_num_rows_, gpu_stream_);
   }
 
-  int current_k = halpern_iteration_ + k_offset;
-  double w = static_cast<double>(current_k) / (current_k + 1.0);
   double rho = params_.halpern_gamma;
 
   launchKernelHalpernBlend_wrapper(
       d_x_current_, d_x_next_ /*reflected*/, d_x_anchor_,
-      w, rho, a_num_cols_, gpu_stream_);
+      d_halpern_iteration_, k_offset, rho, a_num_cols_, gpu_stream_);
   launchKernelHalpernBlend_wrapper(
       d_y_current_, d_y_next_ /*reflected*/, d_y_anchor_,
-      w, rho, a_num_rows_, gpu_stream_);
+      d_halpern_iteration_, k_offset, rho, a_num_rows_, gpu_stream_);
 }
 #endif
 

@@ -221,10 +221,11 @@ __global__ void kernelHalpernPrimalMinor(
     double* __restrict__ reflected_primal,
     const double* __restrict__ dual_product,     // A^T * current_dual
     const double* __restrict__ objective,
-    const double* __restrict__ var_lb,
-    const double* __restrict__ var_ub,
-    double step_size, int n)
+        const double* __restrict__ var_lb,
+        const double* __restrict__ var_ub,
+        const double* __restrict__ step_size_ptr, int n)
 {
+        const double step_size = *step_size_ptr;
     CUDA_GRID_STRIDE_LOOP(i, n) {
         double temp = fma_rn(-step_size, objective[i] - dual_product[i],
                              current_primal[i]);
@@ -241,11 +242,12 @@ __global__ void kernelHalpernPrimalMajor(
     double* __restrict__ reflected_primal,
     const double* __restrict__ dual_product,
     const double* __restrict__ objective,
-    const double* __restrict__ var_lb,
-    const double* __restrict__ var_ub,
-    double step_size, int n,
+        const double* __restrict__ var_lb,
+        const double* __restrict__ var_ub,
+        const double* __restrict__ step_size_ptr, int n,
     double* __restrict__ dual_slack)
 {
+        const double step_size = *step_size_ptr;
     CUDA_GRID_STRIDE_LOOP(i, n) {
         double temp = fma_rn(-step_size, objective[i] - dual_product[i],
                              current_primal[i]);
@@ -262,8 +264,9 @@ __global__ void kernelHalpernDualMinor(
     const double* __restrict__ primal_product,   // A * reflected_primal
     const double* __restrict__ rhs,              // row_lower (b)
     const bool* __restrict__ is_equality,
-    double step_size, int n)
+        const double* __restrict__ step_size_ptr, int n)
 {
+        const double step_size = *step_size_ptr;
     CUDA_GRID_STRIDE_LOOP(i, n) {
         double dual_update = fma_rn(step_size, rhs[i] - primal_product[i],
                                     current_dual[i]);
@@ -280,8 +283,9 @@ __global__ void kernelHalpernDualMajor(
     const double* __restrict__ primal_product,
     const double* __restrict__ rhs,
     const bool* __restrict__ is_equality,
-    double step_size, int n)
+        const double* __restrict__ step_size_ptr, int n)
 {
+        const double step_size = *step_size_ptr;
     CUDA_GRID_STRIDE_LOOP(i, n) {
         double dual_update = fma_rn(step_size, rhs[i] - primal_product[i],
                                     current_dual[i]);
@@ -297,10 +301,13 @@ __global__ void kernelHalpernBlend(
     double* __restrict__ current,
     const double* __restrict__ reflected,
     const double* __restrict__ initial,
-    double weight,             // w = k/(k+1)
+    const int* __restrict__ halpern_iteration,
+    int k_offset,
     double reflection_coeff,   // ρ, typically 1.0
     int n)
 {
+    const int current_k = (*halpern_iteration) + k_offset;
+    const double weight = static_cast<double>(current_k) / (current_k + 1.0);
     CUDA_GRID_STRIDE_LOOP(i, n) {
         double blended = fma_rn(reflection_coeff, reflected[i],
                                 (1.0 - reflection_coeff) * current[i]);
@@ -411,13 +418,13 @@ void launchKernelHalpernPrimalMinor_wrapper(
     const double* d_current_primal, double* d_reflected_primal,
     const double* d_dual_product, const double* d_objective,
     const double* d_var_lb, const double* d_var_ub,
-    double step_size, int n, cudaStream_t stream)
+    const double* d_step_size, int n, cudaStream_t stream)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
     kernelHalpernPrimalMinor<<<config.x, block_size, 0, stream>>>(
         d_current_primal, d_reflected_primal, d_dual_product,
-        d_objective, d_var_lb, d_var_ub, step_size, n);
+        d_objective, d_var_lb, d_var_ub, d_step_size, n);
     cudaGetLastError();
 }
 
@@ -425,7 +432,7 @@ void launchKernelHalpernPrimalMajor_wrapper(
     const double* d_current_primal, double* d_pdhg_primal,
     double* d_reflected_primal, const double* d_dual_product,
     const double* d_objective, const double* d_var_lb,
-    const double* d_var_ub, double step_size, int n,
+    const double* d_var_ub, const double* d_step_size, int n,
     double* d_dual_slack, cudaStream_t stream)
 {
     const int block_size = 256;
@@ -433,20 +440,21 @@ void launchKernelHalpernPrimalMajor_wrapper(
     kernelHalpernPrimalMajor<<<config.x, block_size, 0, stream>>>(
         d_current_primal, d_pdhg_primal, d_reflected_primal,
         d_dual_product, d_objective, d_var_lb, d_var_ub,
-        step_size, n, d_dual_slack);
+        d_step_size, n, d_dual_slack);
     cudaGetLastError();
 }
 
 void launchKernelHalpernDualMinor_wrapper(
     const double* d_current_dual, double* d_reflected_dual,
     const double* d_primal_product, const double* d_rhs,
-    const bool* d_is_equality, double step_size, int n, cudaStream_t stream)
+    const bool* d_is_equality, const double* d_step_size, int n,
+    cudaStream_t stream)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
     kernelHalpernDualMinor<<<config.x, block_size, 0, stream>>>(
         d_current_dual, d_reflected_dual, d_primal_product,
-        d_rhs, d_is_equality, step_size, n);
+        d_rhs, d_is_equality, d_step_size, n);
     cudaGetLastError();
 }
 
@@ -454,26 +462,26 @@ void launchKernelHalpernDualMajor_wrapper(
     const double* d_current_dual, double* d_pdhg_dual,
     double* d_reflected_dual, const double* d_primal_product,
     const double* d_rhs, const bool* d_is_equality,
-    double step_size, int n, cudaStream_t stream)
+    const double* d_step_size, int n, cudaStream_t stream)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
     kernelHalpernDualMajor<<<config.x, block_size, 0, stream>>>(
         d_current_dual, d_pdhg_dual, d_reflected_dual,
-        d_primal_product, d_rhs, d_is_equality, step_size, n);
+        d_primal_product, d_rhs, d_is_equality, d_step_size, n);
     cudaGetLastError();
 }
 
 void launchKernelHalpernBlend_wrapper(
     double* d_current, const double* d_reflected,
-    const double* d_initial, double weight,
+    const double* d_initial, const int* d_halpern_iteration, int k_offset,
     double reflection_coeff, int n, cudaStream_t stream)
 {
     const int block_size = 256;
     dim3 config = GetLaunchConfig(n, block_size);
     kernelHalpernBlend<<<config.x, block_size, 0, stream>>>(
         d_current, d_reflected, d_initial,
-        weight, reflection_coeff, n);
+        d_halpern_iteration, k_offset, reflection_coeff, n);
     cudaGetLastError();
 }
 } // extern "C"
