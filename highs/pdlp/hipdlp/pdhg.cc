@@ -2438,6 +2438,11 @@ void PDLPSolver::setupGpu() {
       &spmv_buffer_size_ax_));
   CUDA_CHECK(cudaMalloc(&d_spmv_buffer_ax_, spmv_buffer_size_ax_));
 
+    CUSPARSE_CHECK(cusparseSpMV_preprocess(
+      cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_a_csr_,
+      vec_x_desc_, &beta, vec_ax_desc_, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
+      d_spmv_buffer_ax_));
+
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_x));
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_ax));
 
@@ -2452,6 +2457,12 @@ void PDLPSolver::setupGpu() {
       vec_y, &beta, vec_aty, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
       &spmv_buffer_size_aty_));
   CUDA_CHECK(cudaMalloc(&d_spmv_buffer_aty_, spmv_buffer_size_aty_));
+
+    CUSPARSE_CHECK(cusparseSpMV_preprocess(
+      cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha,
+      mat_a_T_csr_, vec_y_desc_, &beta, vec_aty_desc_, CUDA_R_64F,
+      CUSPARSE_SPMV_CSR_ALG2, d_spmv_buffer_aty_));
+
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_y));
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_aty));
 
