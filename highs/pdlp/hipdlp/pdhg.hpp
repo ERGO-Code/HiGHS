@@ -148,7 +148,7 @@ class PDLPSolver {
   // Restart helpers
   void computeStepSizeRatio(PrimalDualParams& working_params);
   void applyHalpernAveraging(std::vector<double>& x, std::vector<double>& y, std::vector<double>& ax, std::vector<double>& aty);
-  void updateAverageIterates(const std::vector<double>& x, const std::vector<double>& y, int inner_iter);
+  void updateAverageIterates(const std::vector<double>& x, const std::vector<double>& y, HighsInt inner_iter);
   void performHalpernPdhgStep(bool is_major, int k_offset);
   void updatePrimalWeightAtRestart(const SolverResults& results);
 
