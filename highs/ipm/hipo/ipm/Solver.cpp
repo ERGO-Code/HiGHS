@@ -1176,9 +1176,9 @@ void Solver::printHeader() const {
     if (!options_.timeless_log) log_stream << "    time";
 
     if (logH_.debug(1)) {
-      log_stream << "     alpha p/d   sigma af/co   cor  solv"
-                 << "    static reg p/d     minT     maxT"
-                 << "  (xj * zj / mu)_range_&_num   max_res";
+      log_stream << "    alpha p/d   sigma a/c   cor  solv"
+                 << "     Treg     Sreg     minT     maxT"
+                 << "  (xj * zj / mu)_range_&_num   max_res  exp_res";
     }
 
     log_stream << "\n";
@@ -1203,9 +1203,9 @@ void Solver::printOutput() const {
     const IpmIterData& data = it_->data.back();
 
     log_stream << " " << fix(alpha_primal_, 6, 2);
-    log_stream << " " << fix(alpha_dual_, 6, 2);
-    log_stream << " " << fix(data.sigma_aff, 6, 2);
-    log_stream << " " << fix(data.sigma, 6, 2);
+    log_stream << " " << fix(alpha_dual_, 5, 2);
+    log_stream << " " << fix(data.sigma_aff, 5, 2);
+    log_stream << " " << fix(data.sigma, 5, 2);
     log_stream << " " << integer(data.correctors, 5);
     log_stream << " " << integer(data.num_solves, 5);
     log_stream << " " << sci(kkt_->theta_reg, 8, 1);
@@ -1217,7 +1217,7 @@ void Solver::printOutput() const {
     log_stream << " " << integer(data.num_small_prod, 4);
     log_stream << " " << integer(data.num_large_prod, 4);
     log_stream << " " << sci(data.worst_res, 9, 1);
-    log_stream << " " << sci(data.worst_res_rhs, 9, 1);
+    log_stream << " " << sci(data.worst_res_rhs, 8, 1);
   }
 
   log_stream << "\n";
