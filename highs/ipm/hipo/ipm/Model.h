@@ -5,17 +5,18 @@
 #include <string>
 #include <vector>
 
-#include "CurtisReidScaling.h"
 #include "LogHighs.h"
+#include "PreProcess.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsLp.h"
+#include "model/HighsHessian.h"
 #include "util/HighsSparseMatrix.h"
 
 namespace hipo {
 
 // Optimization problem:
-// min  c^T * x
+// min  c^T * x + 1/2 x^T * Q * x
 // s.t. A * x = b
 //      x - xl = lower
 //      x + xu = upper
@@ -34,6 +35,9 @@ class Model {
   Int m_orig_{};
   const HighsLp* lp_orig_ = nullptr;
   double offset_;
+  ObjSense sense_ = ObjSense::kMinimize;
+  std::vector<double> rhs_orig_;
+  std::vector<char> constraints_orig_;
 
   // data of reformulated problem
   Int n_{};
@@ -43,66 +47,47 @@ class Model {
   std::vector<double> lower_{};
   std::vector<double> upper_{};
   HighsSparseMatrix A_{};
+  HighsHessian Q_{};
   std::vector<char> constraints_{};
   Int num_dense_cols_{};
   double max_col_density_{};
+
+  std::vector<double> colscale_, rowscale_;
 
   double norm_unscaled_rhs_, norm_scaled_rhs_, norm_unscaled_obj_,
       norm_scaled_obj_;
 
   bool ready_ = false;
 
-  // coefficients for scaling
-  std::vector<double> colscale_{};
-  std::vector<double> rowscale_{};
-  Int CG_iter_scaling_{};
-
-  // information about empty rows, for postprocessing
-  std::vector<Int> rows_shift_{};
-  Int empty_rows_{};
+  Preprocessor preprocessor_;
 
   // norms of rows and cols of A
   std::vector<double> one_norm_cols_, one_norm_rows_, inf_norm_cols_,
       inf_norm_rows_;
 
-  void reformulate();
-  void scale();
   void preprocess();
   void denseColumns();
-  Int checkData(const Int num_var, const Int num_con,
-                const std::vector<double>& obj, const std::vector<double>& rhs,
-                const std::vector<double>& lower,
-                const std::vector<double>& upper, const std::vector<Int>& A_ptr,
-                const std::vector<Int>& A_rows,
-                const std::vector<double>& A_vals,
-                const std::vector<char>& constraints) const;
+  Int checkData() const;
   void computeNorms();
 
  public:
   // Initialise the model
-  Int init(const HighsLp& lp);
+  Int init(const HighsLp& lp, const HighsHessian& Q);
 
   // Print information of model
   void print(const LogHighs& log) const;
 
-  void postprocess(std::vector<double>& slack, std::vector<double>& y) const;
+  void printDense() const;
 
-  // Unscale a given solution
-  void unscale(std::vector<double>& x, std::vector<double>& xl,
-               std::vector<double>& xu, std::vector<double>& slack,
-               std::vector<double>& y, std::vector<double>& zl,
-               std::vector<double>& zu) const;
-  void unscale(std::vector<double>& x, std::vector<double>& slack,
-               std::vector<double>& y, std::vector<double>& z) const;
+  void postprocess(std::vector<double>& x, std::vector<double>& xl,
+                   std::vector<double>& xu, std::vector<double>& slack,
+                   std::vector<double>& y, std::vector<double>& zl,
+                   std::vector<double>& zu, const Iterate& it) const;
 
   double normScaledRhs() const { return norm_scaled_rhs_; }
   double normScaledObj() const { return norm_scaled_obj_; }
   double normUnscaledObj() const { return norm_unscaled_obj_; }
   double normUnscaledRhs() const { return norm_unscaled_rhs_; }
-
-  // multiply by A or A^T without slacks
-  void multWithoutSlack(double alpha, const std::vector<double>& x,
-                        std::vector<double>& y, bool trans = false) const;
 
   // Check if variable has finite lower/upper bound
   bool hasLb(Int j) const { return std::isfinite(lower_[j]); }
@@ -112,16 +97,23 @@ class Model {
   Int n() const { return n_; }
   Int n_orig() const { return n_orig_; }
   Int m_orig() const { return m_orig_; }
+  const HighsLp* lpOrig() const { return lp_orig_; }
+  const std::vector<double>& rhsOrig() const { return rhs_orig_; }
+  const std::vector<char>& constraintsOrig() const { return constraints_orig_; }
+  bool qp() const { return !Q_.empty(); }
+  bool nonSeparableQp() const { return qp() && !Q_.isDiagonal(); }
+  double sense() const { return (double)sense_; }
   const HighsSparseMatrix& A() const { return A_; }
+  const HighsHessian& Q() const { return Q_; }
   const std::vector<double>& b() const { return b_; }
   const std::vector<double>& c() const { return c_; }
   double lb(Int i) const { return lower_[i]; }
   double ub(Int i) const { return upper_[i]; }
   char constraint(Int i) const { return constraints_[i]; }
-  double colScale(Int i) const { return colscale_[i]; }
-  double rowScale(Int i) const { return rowscale_[i]; }
+  double colScale(Int i) const { return scaled() ? colscale_[i] : 1.0; }
+  double rowScale(Int i) const { return scaled() ? rowscale_[i] : 1.0; }
   bool ready() const { return ready_; }
-  bool scaled() const { return colscale_.size() > 0; }
+  bool scaled() const { return !colscale_.empty(); }
   double offset() const { return offset_; }
   double maxColDensity() const { return max_col_density_; }
   Int numDenseCols() const { return num_dense_cols_; }
@@ -131,6 +123,12 @@ class Model {
   double infNormCols(Int i) const { return inf_norm_cols_[i]; }
 
   Int loadIntoIpx(ipx::LpSolver& lps) const;
+
+  // classes for preprocessing
+  friend struct PreprocessEmptyRows;
+  friend struct PreprocessFixedVars;
+  friend struct PreprocessScaling;
+  friend struct PreprocessFormulation;
 };
 
 }  // namespace hipo

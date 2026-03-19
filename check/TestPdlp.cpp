@@ -15,6 +15,7 @@
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-3;
 const double kkt_tolerance = 1e-4;
+
 #ifdef CUPDLP_CPU
 TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   SpecialLps special_lps;
@@ -27,7 +28,6 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
-  const HighsOptions& options = highs.getOptions();
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
@@ -136,7 +136,6 @@ TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
-  const HighsOptions& options = highs.getOptions();
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
@@ -256,11 +255,9 @@ void pdlpRestart(const std::string& model) {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
-  HighsStatus run_status = h.run();
-  const bool was_optimal = h.getModelStatus() == HighsModelStatus::kOptimal;
+  h.run();
   h.setOptionValue("presolve", kHighsOffString);
-  run_status = h.run();
-  h.resetGlobalScheduler(true);
+  h.run();
 }
 
 TEST_CASE("pdlp-restart", "[pdlp]") {
@@ -290,11 +287,9 @@ TEST_CASE("pdlp-restart-lp", "[pdlp]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
   h.setOptionValue("kkt_tolerance", kkt_tolerance);
-  HighsStatus run_status = h.run();
-
+  h.run();
   h.setOptionValue("presolve", kHighsOffString);
-  run_status = h.run();
-  h.resetGlobalScheduler(true);
+  HighsStatus run_status = h.run();
 }
 
 TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
@@ -308,7 +303,6 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = h.getInfo();
-  const HighsOptions& options = h.getOptions();
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("solver", kPdlpString);
   h.setOptionValue("presolve", kHighsOffString);
@@ -344,9 +338,11 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
 TEST_CASE("hi-pdlp", "[pdlp]") {
   std::string model = "afiro";  //"afiro";
   // shell //stair //25fv47 //fit2p //avgas //neso-2245 //neso-2005
+  // std::string model_file =
+  //     // std::string(HIGHS_DIR) + "/srv/" + model + ".mps.gz";
+  //     "/srv/mps_da/" + model + ".mps.gz";
   std::string model_file =
-      // std::string(HIGHS_DIR) + "/srv/" + model + ".mps.gz";
-      "/srv/mps_da/" + model + ".mps.gz";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   // h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) != HighsStatus::kError);
@@ -474,11 +470,15 @@ TEST_CASE("cuda-sandbox", "[pdlp]") {
 #endif
 
 TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
+<<<<<<< HEAD
   std::string model = "avgas";  //"afiro";
+=======
+  std::string model = "afiro";  //"afiro";
+>>>>>>> origin/hipdlp
   // shell //stair //25fv47 //fit2p //avgas //neso-2245 //neso-2005
   std::string model_file =
-      // std::string(HIGHS_DIR) + "/srv/" + model + ".mps.gz";
-      "/srv/mps_da/" + model + ".mps.gz";
+      //"/srv/mps_da/" + model + ".mps.gz";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   // h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) != HighsStatus::kError);
@@ -515,13 +515,14 @@ TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
   std::cout << "Status: " << h.modelStatusToString(h.getModelStatus())
             << std::endl;
   std::cout << "Iterations: " << h.getInfo().pdlp_iteration_count << std::endl;
-  std::cout << "Wall time: " << duration_hipdlp.count() / 1000.0 << " seconds"
+  std::cout << "Wall t.ime: " << duration_hipdlp.count() / 1000.0 << " seconds"
             << std::endl;
   std::cout << "Objective: " << h.getInfo().objective_function_value
             << std::endl;
 
   int hipdlp_iteration_count = h.getInfo().pdlp_iteration_count;
-  int restart_strategy;
+  HighsInt restart_strategy;
   h.getOptionValue("pdlp_restart_strategy", restart_strategy);
   //REQUIRE(restart_strategy == kPdlpRestartStrategyHalpern);
 }
+

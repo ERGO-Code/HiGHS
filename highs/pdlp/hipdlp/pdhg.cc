@@ -29,8 +29,7 @@
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
 
-#define PDHG_CHECK_INTERVAL 40
-#define DEBUG_MODE (false)
+#define PDHG_CHECK_INTERVAL 3
 static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
@@ -49,14 +48,14 @@ void vecPrint(const std::vector<double>& vec, const char* name) {
 void PDLPSolver::printConstraintInfo() {
   if (original_lp_ == nullptr) return;
 
-  int nRows = original_lp_->num_row_;
-  int nCols = original_lp_->num_col_;
+  HighsInt nRows = original_lp_->num_row_;
+  HighsInt nCols = original_lp_->num_col_;
 
   // Count constraint types BEFORE preprocessing
-  int eq_count = 0, leq_count = 0, geq_count = 0, bound_count = 0,
+  HighsInt eq_count = 0, leq_count = 0, geq_count = 0, bound_count = 0,
       free_count = 0;
 
-  for (int i = 0; i < nRows; ++i) {
+  for (HighsInt i = 0; i < nRows; ++i) {
     bool has_lower = original_lp_->row_lower_[i] > -kHighsInf;
     bool has_upper = original_lp_->row_upper_[i] < kHighsInf;
 
@@ -76,10 +75,10 @@ void PDLPSolver::printConstraintInfo() {
   }
 
   // Count variable bound types
-  int var_fixed = 0, var_lower_only = 0, var_upper_only = 0;
-  int var_boxed = 0, var_free = 0;
+  HighsInt var_fixed = 0, var_lower_only = 0, var_upper_only = 0;
+  HighsInt var_boxed = 0, var_free = 0;
 
-  for (int i = 0; i < nCols; ++i) {
+  for (HighsInt i = 0; i < nCols; ++i) {
     bool has_lower = original_lp_->col_lower_[i] > -kHighsInf;
     bool has_upper = original_lp_->col_upper_[i] < kHighsInf;
 
@@ -128,10 +127,10 @@ void PDLPSolver::printConstraintInfo() {
                std::to_string(lp_.num_col_ - nCols));
 
   // Count variable bounds in processed LP
-  int proc_var_fixed = 0, proc_var_lower_only = 0, proc_var_upper_only = 0;
-  int proc_var_boxed = 0, proc_var_free = 0;
+  HighsInt proc_var_fixed = 0, proc_var_lower_only = 0, proc_var_upper_only = 0;
+  HighsInt proc_var_boxed = 0, proc_var_free = 0;
 
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     bool has_lower = lp_.col_lower_[i] > -kHighsInf;
     bool has_upper = lp_.col_upper_[i] < kHighsInf;
 
@@ -166,8 +165,8 @@ void PDLPSolver::preprocessLp() {
       "Preprocessing LP using cupdlp formulation (slack variables for "
       "bounds)...");
 
-  int nRows_orig = original_lp_->num_row_;
-  int nCols_orig = original_lp_->num_col_;
+  HighsInt nRows_orig = original_lp_->num_row_;
+  HighsInt nCols_orig = original_lp_->num_col_;
 
   if (original_lp_->a_matrix_.isRowwise()) {
     logger_.info("Original LP matrix must be in column-wise format,");
@@ -175,13 +174,13 @@ void PDLPSolver::preprocessLp() {
 
   lp_.offset_ = original_lp_->offset_;
 
-  int num_new_cols = 0;
-  int nEqs = 0;
+  HighsInt num_new_cols = 0;
+  HighsInt nEqs = 0;
   sense_origin_ = (original_lp_->sense_ == ObjSense::kMinimize) ? 1 : -1;
   constraint_types_.resize(nRows_orig);
 
   // 1. First pass: Classify constraints and count slack variables needed
-  for (int i = 0; i < nRows_orig; ++i) {
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
     bool has_lower = original_lp_->row_lower_[i] > -kHighsInf;
     bool has_upper = original_lp_->row_upper_[i] < kHighsInf;
 
@@ -219,9 +218,9 @@ void PDLPSolver::preprocessLp() {
   processed_lp.row_upper_.resize(processed_lp.num_row_);
 
   // 3. Determine row permutation: EQ/BOUND/FREE first, then LEQ/GEQ
-  int eq_idx = 0;
-  int ineq_idx = nEqs;
-  for (int i = 0; i < nRows_orig; ++i) {
+  HighsInt eq_idx = 0;
+  HighsInt ineq_idx = nEqs;
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
     if (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
         constraint_types_[i] == FREE) {
       constraint_new_idx_[i] = eq_idx++;
@@ -232,22 +231,22 @@ void PDLPSolver::preprocessLp() {
 
   // 4. Create is_equality_row_ vector based on NEW ordering
   is_equality_row_.resize(nRows_orig, false);
-  for (int i = 0; i < nRows_orig; ++i) {
-    int new_row_idx = constraint_new_idx_[i];
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
+    HighsInt new_row_idx = constraint_new_idx_[i];
     is_equality_row_[new_row_idx] =
         (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
          constraint_types_[i] == FREE);
   }
 
   // 5. Populate costs and bounds for original and new slack variables
-  for (int i = 0; i < nCols_orig; ++i) {
+  for (HighsInt i = 0; i < nCols_orig; ++i) {
     processed_lp.col_cost_[i] = original_lp_->col_cost_[i];
     processed_lp.col_lower_[i] = original_lp_->col_lower_[i];
     processed_lp.col_upper_[i] = original_lp_->col_upper_[i];
   }
 
-  int current_slack_col = nCols_orig;
-  for (int i = 0; i < nRows_orig; ++i) {
+  HighsInt current_slack_col = nCols_orig;
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
     if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
       processed_lp.col_cost_[current_slack_col] = 0.0;
       processed_lp.col_lower_[current_slack_col] = original_lp_->row_lower_[i];
@@ -257,8 +256,8 @@ void PDLPSolver::preprocessLp() {
   }
 
   // 6. Set the new RHS (row bounds) in PERMUTED order
-  for (int i = 0; i < nRows_orig; ++i) {
-    int new_row_idx = constraint_new_idx_[i];
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
+    HighsInt new_row_idx = constraint_new_idx_[i];
     switch (constraint_types_[i]) {
       case EQ:
         processed_lp.row_lower_[new_row_idx] = original_lp_->row_lower_[i];
@@ -301,14 +300,14 @@ void PDLPSolver::preprocessLp() {
 
   // Build column by column
   processed_matrix.start_[0] = 0;
-  for (int col = 0; col < nCols_orig; ++col) {
+  for (HighsInt col = 0; col < nCols_orig; ++col) {
     // For each column, add entries in the new row order
-    std::vector<std::pair<int, double>> col_entries;
+    std::vector<std::pair<HighsInt, double>> col_entries;
 
-    for (int el = original_matrix.start_[col];
+    for (HighsInt el = original_matrix.start_[col];
          el < original_matrix.start_[col + 1]; ++el) {
-      int old_row = original_matrix.index_[el];
-      int new_row = constraint_new_idx_[old_row];
+      HighsInt old_row = original_matrix.index_[el];
+      HighsInt new_row = constraint_new_idx_[old_row];
       double val = original_matrix.value_[el];
 
       // Apply scaling for LEQ constraints
@@ -333,9 +332,9 @@ void PDLPSolver::preprocessLp() {
 
   // Add slack variable columns
   current_slack_col = nCols_orig;
-  for (int i = 0; i < nRows_orig; ++i) {
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
     if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
-      int row_idx = constraint_new_idx_[i];
+      HighsInt row_idx = constraint_new_idx_[i];
       processed_matrix.index_.push_back(row_idx);
       processed_matrix.value_.push_back(-1.0);
       processed_matrix.start_[current_slack_col + 1] =
@@ -395,8 +394,8 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   solution.row_dual.resize(original_lp_->num_row_);
 
   // 3. Recover Primal Column Values (x)
-  for (int i = 0; i < original_lp_->num_col_; ++i) {
-    if (i >= (int)x_current_.size()) {
+  for (HighsInt i = 0; i < original_lp_->num_col_; ++i) {
+    if (i >= (HighsInt)x_current_.size()) {
       logger_.info("Index " + std::to_string(i) +
                    " out of bounds for x_current_ of size " +
                    std::to_string(x_current_.size()));
@@ -414,7 +413,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   }
 
   double final_primal_objective = original_lp_->offset_;
-  for (int i = 0; i < original_num_col_; ++i) {
+  for (HighsInt i = 0; i < original_num_col_; ++i) {
     final_primal_objective +=
         original_lp_->col_cost_[i] * solution.col_value[i];
   }
@@ -422,8 +421,8 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
   // 4. Recover Dual Row Values (y)
   std::vector<double> y_reordered = y_current_;
-  for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
-    int reordered_row = constraint_new_idx_[orig_row];
+  for (HighsInt orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
+    HighsInt reordered_row = constraint_new_idx_[orig_row];
 
     // Get the dual value from the reordered position
     double dual_value = y_reordered[reordered_row];
@@ -441,11 +440,11 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   const std::vector<double>& col_scale = scaling_.GetColScaling();
   if (scaling_.IsScaled()) {
     // Unscale matrix, costs, and rhs
-    for (int iCol = 0; iCol < unscaled_processed_lp_.num_col_; ++iCol) {
+    for (HighsInt iCol = 0; iCol < unscaled_processed_lp_.num_col_; ++iCol) {
       unscaled_processed_lp_.col_cost_[iCol] /= col_scale[iCol];
-      for (int iEl = unscaled_processed_lp_.a_matrix_.start_[iCol];
+      for (HighsInt iEl = unscaled_processed_lp_.a_matrix_.start_[iCol];
            iEl < unscaled_processed_lp_.a_matrix_.start_[iCol + 1]; ++iEl) {
-        int iRow = unscaled_processed_lp_.a_matrix_.index_[iEl];
+        HighsInt iRow = unscaled_processed_lp_.a_matrix_.index_[iEl];
         unscaled_processed_lp_.a_matrix_.value_[iEl] /=
             (row_scale[iRow] * col_scale[iCol]);
       }
@@ -459,27 +458,27 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   orig_matrix.ensureColwise();
 
   // Compute Ax using only the original columns (not slack variables)
-  for (int col = 0; col < original_num_col_; ++col) {
+  for (HighsInt col = 0; col < original_num_col_; ++col) {
     double x_val = x_current_[col];  // Use unscaled x values
 
-    for (int el = orig_matrix.start_[col]; el < orig_matrix.start_[col + 1];
+    for (HighsInt el = orig_matrix.start_[col]; el < orig_matrix.start_[col + 1];
          ++el) {
-      int row = orig_matrix.index_[el];
+      HighsInt row = orig_matrix.index_[el];
       double a_val = orig_matrix.value_[el];
       ax_original[row] += a_val * x_val;
     }
   }
 
   // Now ax_original contains the correct row activity values
-  for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
+  for (HighsInt orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
     solution.row_value[orig_row] = ax_original[orig_row];
   }
 
   // 6. Recover Dual Column Values (Reduced Costs)
   // The duals on the variable bounds l <= x <= u are the reduced costs.
   // In the PDLP framework, these are given by dSlackPos - dSlackNeg.
-  for (int i = 0; i < original_num_col_; ++i) {
-    if (i >= (int)dSlackPos_.size() || i >= (int)dSlackNeg_.size()) {
+  for (HighsInt i = 0; i < original_num_col_; ++i) {
+    if (i >= (HighsInt)dSlackPos_.size() || i >= (HighsInt)dSlackNeg_.size()) {
       logger_.info("Index " + std::to_string(i) +
                    " out of bounds for dSlackPos/Neg of size " +
                    std::to_string(dSlackPos_.size()));
@@ -568,11 +567,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       logger_.info("Time limit reached.");
       termination_status = TerminationStatus::TIMEOUT;
       break;
-    }
-
-    if (final_iter_count_ == 0){
-      //stepsize_.primal_step = 10.8215584736;
-      //stepsize_.dual_step   = 0.0018783443;
     }
 
     // -- Step 1 (Major, isolated for restart-FPE check) --
@@ -1002,7 +996,7 @@ void PDLPSolver::accumulateAverages(size_t iter) {
   hipdlpTimerStart(kHipdlpClockAverageIterate);
 #endif
 
-  int inner_iter = iter - restart_scheme_.GetLastRestartIter();
+  HighsInt inner_iter = iter - restart_scheme_.GetLastRestartIter();
   double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
 #ifdef CUPDLP_GPU
@@ -1175,7 +1169,7 @@ void PDLPSolver::computeStepSizeRatio(PrimalDualParams& working_params) {
 
 void PDLPSolver::updateAverageIterates(const std::vector<double>& x,
                                        const std::vector<double>& y,
-                                       int inner_iter) {
+                                       HighsInt inner_iter) {
   double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
 #if PDLP_PROFILE
@@ -1382,7 +1376,7 @@ PDLPSolver::computeDualityGap(const std::vector<double>& x,
                               const std::vector<double>& y,
                               const std::vector<double>& lambda) {
   double qTy = 0.0;
-  for (int i = 0; i < lp_.num_row_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     if (lp_.row_lower_[i] > -kHighsInf) {
       qTy += lp_.row_lower_[i] * y[i];
     } else {
@@ -1393,7 +1387,7 @@ PDLPSolver::computeDualityGap(const std::vector<double>& x,
   double lT_lambda_plus = 0.0;
   double uT_lambda_minus = 0.0;
 
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     if (lp_.col_lower_[i] > -kHighsInf) {
       lT_lambda_plus +=
           lp_.col_lower_[i] * std::max(0.0, lambda[i]); 
@@ -1407,7 +1401,7 @@ PDLPSolver::computeDualityGap(const std::vector<double>& x,
   double dual_objective = qTy + lT_lambda_plus - uT_lambda_minus;
 
   double cTx = 0.0;
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     cTx += lp_.col_cost_[i] * x[i];
   }
 
@@ -1421,19 +1415,19 @@ double PDLPSolver::computeDualObjective(const std::vector<double>& y,
   double dual_obj = lp_.offset_;
 
   // Compute b'y (or rhs'y in cuPDLP notation)
-  for (int i = 0; i < lp_.num_row_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     dual_obj += lp_.row_lower_[i] * y[i];
   }
 
   // Add contribution from lower bounds: l'*slackPos
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     if (lp_.col_lower_[i] > -kHighsInf) {
       dual_obj += lp_.col_lower_[i] * dSlackPos[i];
     }
   }
 
   // Subtract contribution from upper bounds: u'*slackNeg
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     if (lp_.col_upper_[i] < kHighsInf) {
       dual_obj -= lp_.col_upper_[i] * dSlackNeg[i];
     }
@@ -1443,7 +1437,7 @@ double PDLPSolver::computeDualObjective(const std::vector<double>& y,
 }
 
 bool PDLPSolver::checkConvergence(
-    const int iter, const std::vector<double>& x, const std::vector<double>& y,
+    const HighsInt iter, const std::vector<double>& x, const std::vector<double>& y,
     const std::vector<double>& ax_vector, const std::vector<double>& aty_vector,
     double epsilon, SolverResults& results, const char* type,
     // Add slack vectors as non-const references
@@ -1462,7 +1456,7 @@ bool PDLPSolver::checkConvergence(
 
   // Compute objectives
   double primal_obj = lp_.offset_;
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     primal_obj += lp_.col_cost_[i] * x[i];
   }
   results.primal_obj = primal_obj;
@@ -1502,7 +1496,7 @@ double PDLPSolver::PowerMethod() {
   if (lp.num_col_ == 0 || lp.num_row_ == 0) return op_norm_sq;
 
   // Parameters for the power method
-  const int max_iter = 20;
+  const HighsInt max_iter = 20;
   const double tol = 1e-6;
 
   // Initialize a random vector x
@@ -1548,7 +1542,7 @@ double PDLPSolver::PowerMethod() {
 
   double op_norm_sq_old = 0.0;
   LogLevel log_level = logger_.getLogLevel();
-  int log_iters =
+  HighsInt log_iters =
       log_level == LogLevel::kVerbose || log_level == LogLevel::kDebug;
 
   if (log_iters)
@@ -1564,7 +1558,7 @@ double PDLPSolver::PowerMethod() {
   const HighsSparseMatrix& matrix = lp.a_matrix_;
   double lambda = 0.0;
   double previous_lambda = lambda;
-  for (int iter = 0; iter < max_iter; ++iter) {
+  for (HighsInt iter = 0; iter < max_iter; ++iter) {
     if (power_method == kYanyuPowerMethod) {
       // Original Yanyu power method
       //
@@ -1588,7 +1582,7 @@ double PDLPSolver::PowerMethod() {
       x_vec = z_vec;
       if (log_iters)
         highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                     "%2d %12.6g %11.4g\n", int(iter), op_norm_sq,
+                     "%2d %12.6g %11.4g\n", HighsInt(iter), op_norm_sq,
                      dl_op_norm_sq);
     } else {
       if (power_method == kYanyuPowerMethodDev) {
@@ -1631,7 +1625,7 @@ double PDLPSolver::PowerMethod() {
       previous_lambda = lambda;
       if (log_iters)
         highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                     "%2d %12.6g %11.4g\n", int(iter), lambda, dl_lambda);
+                     "%2d %12.6g %11.4g\n", HighsInt(iter), lambda, dl_lambda);
     }
   }
   if (power_method != kYanyuPowerMethod) op_norm_sq = lambda;
@@ -1645,7 +1639,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.print_header();
 
 #ifdef CUPDLP_GPU
-  int n_devices = 0;
+  HighsInt n_devices = 0;
   cudaGetDeviceCount(&n_devices);
   if (n_devices != 1)
     highsLogUser(
@@ -1849,7 +1843,7 @@ void PDLPSolver::initializeStepSizes() {
     // Compute infinity norm of matrix elements
     double mat_elem_norm_inf = 0.0;
     const HighsSparseMatrix& matrix = lp_.a_matrix_;
-    for (int i = 0; i < matrix.numNz(); ++i) {
+    for (HighsInt i = 0; i < matrix.numNz(); ++i) {
       mat_elem_norm_inf =
           std::max(mat_elem_norm_inf, std::abs(matrix.value_[i]));
     }
@@ -1880,11 +1874,11 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   dual_dist   = computeDiffNormCuBLAS(d_pdhg_dual_,   d_y_anchor_, a_num_rows_);  
 #else
   // CPU version
-  for (size_t i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     double diff = x_next_[i] - x_anchor_[i];
     primal_dist += diff * diff;
   }
-  for (size_t j = 0; j < lp_.num_row_; ++j) {
+  for (HighsInt j = 0; j < lp_.num_row_; ++j) {
     double diff = y_next_[j] - y_anchor_[j];
     dual_dist += diff * diff;
   }
@@ -2034,8 +2028,8 @@ void PDLPSolver::updateIteratesAdaptive() {
   const double MAX_ETA = 1.0;
 
   bool accepted_step = false;
-  int inner_iterations = 0;
-  int num_rejected_steps = 0;
+  HighsInt inner_iterations = 0;
+  HighsInt num_rejected_steps = 0;
 
   double dStepSizeUpdate =
       std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
@@ -2155,7 +2149,7 @@ void PDLPSolver::updateIteratesAdaptive() {
     /*
     highsLogUser(*log_options_, HighsLogType::kInfo,
                  "Iteration %d: eta = %g, movement = %g nonlinearity = %g, limit
-    = %g\n", int(inner_iterations), current_eta, movement, nonlinearity.
+    = %g\n", HighsInt(inner_iterations), current_eta, movement, nonlinearity.
     step_size_limit);
     */
     if (dStepSizeUpdate <= step_size_limit) {
@@ -2302,19 +2296,19 @@ void PDLPSolver::setupGpu() {
   HighsSparseMatrix lp_csr = lp_.a_matrix_;
   lp_csr.ensureRowwise();
 
-  const std::vector<int>& h_a_row_ptr = lp_csr.start_;
-  const std::vector<int>& h_a_col_ind = lp_csr.index_;
+  const std::vector<HighsInt>& h_a_row_ptr = lp_csr.start_;
+  const std::vector<HighsInt>& h_a_col_ind = lp_csr.index_;
   const std::vector<double>& h_a_val = lp_csr.value_;
 
   // 3. Allocate and copy A's CSR data to GPU
   CUDA_CHECK(
-      cudaMalloc((void**)&d_a_row_ptr_, (a_num_rows_ + 1) * sizeof(int)));
-  CUDA_CHECK(cudaMalloc((void**)&d_a_col_ind_, a_nnz_ * sizeof(int)));
+      cudaMalloc((void**)&d_a_row_ptr_, (a_num_rows_ + 1) * sizeof(HighsInt)));
+  CUDA_CHECK(cudaMalloc((void**)&d_a_col_ind_, a_nnz_ * sizeof(HighsInt)));
   CUDA_CHECK(cudaMalloc((void**)&d_a_val_, a_nnz_ * sizeof(double)));
   CUDA_CHECK(cudaMemcpy(d_a_row_ptr_, h_a_row_ptr.data(),
-                        (a_num_rows_ + 1) * sizeof(int),
+                        (a_num_rows_ + 1) * sizeof(HighsInt),
                         cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(d_a_col_ind_, h_a_col_ind.data(), a_nnz_ * sizeof(int),
+  CUDA_CHECK(cudaMemcpy(d_a_col_ind_, h_a_col_ind.data(), a_nnz_ * sizeof(HighsInt),
                         cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_a_val_, h_a_val.data(), a_nnz_ * sizeof(double),
                         cudaMemcpyHostToDevice));
@@ -2325,20 +2319,20 @@ void PDLPSolver::setupGpu() {
                                    CUSPARSE_INDEX_BASE_ZERO, CUDA_R_64F));
 
   // 4. Create matrix AT in CSR format = A in CSC
-  const std::vector<int>& h_at_row_ptr = lp_.a_matrix_.start_;
-  const std::vector<int>& h_at_col_ind = lp_.a_matrix_.index_;
+  const std::vector<HighsInt>& h_at_row_ptr = lp_.a_matrix_.start_;
+  const std::vector<HighsInt>& h_at_col_ind = lp_.a_matrix_.index_;
   const std::vector<double>& h_at_val = lp_.a_matrix_.value_;
 
   CUDA_CHECK(cudaMalloc((void**)&d_at_row_ptr_,
-                        (a_num_cols_ + 1) * sizeof(int)));  // Fixed!
-  CUDA_CHECK(cudaMalloc((void**)&d_at_col_ind_, a_nnz_ * sizeof(int)));
+                        (a_num_cols_ + 1) * sizeof(HighsInt)));  // Fixed!
+  CUDA_CHECK(cudaMalloc((void**)&d_at_col_ind_, a_nnz_ * sizeof(HighsInt)));
   CUDA_CHECK(cudaMalloc((void**)&d_at_val_, a_nnz_ * sizeof(double)));
 
   CUDA_CHECK(cudaMemcpy(d_at_row_ptr_, h_at_row_ptr.data(),
-                        (a_num_cols_ + 1) * sizeof(int),
+                        (a_num_cols_ + 1) * sizeof(HighsInt),
                         cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_at_col_ind_, h_at_col_ind.data(),
-                        a_nnz_ * sizeof(int), cudaMemcpyHostToDevice));
+                        a_nnz_ * sizeof(HighsInt), cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_at_val_, h_at_val.data(), a_nnz_ * sizeof(double),
                         cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMalloc(&d_halpern_iteration_, sizeof(int))); 
@@ -2414,7 +2408,7 @@ void PDLPSolver::setupGpu() {
   CUDA_CHECK(cudaMemcpy(d_row_lower_, lp_.row_lower_.data(),
                         a_num_rows_ * sizeof(double), cudaMemcpyHostToDevice));
   std::vector<uint8_t> temp_equality(a_num_rows_);
-  for (int i = 0; i < a_num_rows_; ++i) {
+  for (HighsInt i = 0; i < a_num_rows_; ++i) {
     temp_equality[i] = is_equality_row_[i] ? 1 : 0;
   }
 
@@ -2632,7 +2626,7 @@ void PDLPSolver::launchKernelScaleVector(double* d_out, const double* d_in,
   CUDA_CHECK(cudaGetLastError());
 }
 
-bool PDLPSolver::checkConvergenceGpu(const int iter, const double* d_x,
+bool PDLPSolver::checkConvergenceGpu(const HighsInt iter, const double* d_x,
                                      const double* d_y, const double* d_ax,
                                      const double* d_aty, double epsilon,
                                      SolverResults& results, const char* type,
@@ -2711,7 +2705,7 @@ void PDLPSolver::computeStepSizeRatioGpu(PrimalDualParams& working_params) {
   restart_scheme_.UpdateBeta(stepsize_.beta);
 }
 
-void PDLPSolver::updateAverageIteratesGpu(int inner_iter) {
+void PDLPSolver::updateAverageIteratesGpu(HighsInt inner_iter) {
   double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
   launchKernelUpdateAverages(dMeanStepSize);
@@ -2786,7 +2780,7 @@ double PDLPSolver::computeNonlinearityGpu(const double* d_x_new,
 }
 
 double PDLPSolver::computeDiffNormCuBLAS(const double* d_a, const double* d_b,
-                                         int n) {
+                                         HighsInt n) {
   // 1. Copy a to buffer: buffer = a
   CUDA_CHECK(
       cudaMemcpy(d_buffer_, d_a, n * sizeof(double), cudaMemcpyDeviceToDevice));

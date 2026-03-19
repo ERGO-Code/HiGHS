@@ -136,7 +136,7 @@ _The nix build files are provided by the community and are not officially suppor
 
 ### Precompiled binaries
 
-From v1.13.0 onwards, precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
+Precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
 
 Additionally, there is one package containing shared libraries for Windows x64.
 
@@ -248,7 +248,7 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.13.0
+dotnet add package Highs.Native --version 1.13.1
 ```
 
 The nuget package contains runtime libraries for

@@ -10,7 +10,6 @@
 
 #include <cctype>
 
-#include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
@@ -19,18 +18,6 @@
 static inline void tolower(std::string& s) {
   std::transform(s.begin(), s.end(), s.begin(),
                  [](unsigned char c) { return std::tolower(c); });
-}
-
-static const std::string getFilenameExt(const std::string filename) {
-  // Extract file name extension
-  std::string name = filename;
-  std::size_t found = name.find_last_of(".");
-  if (found < name.size()) {
-    name = name.substr(found + 1);
-  } else {
-    name = "";
-  }
-  return name;
 }
 
 Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
@@ -46,15 +33,6 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
                  filename.c_str());
     reader = NULL;
 #endif
-    //  } else if (extension == "zip") {
-    // #ifdef ZLIB_FOUND
-    //    extension = getFilenameExt(filename.substr(0, filename.size() - 4));
-    // #else
-    //    highsLogUser(log_options, HighsLogType::kError,
-    //                 "HiGHS build without zlib support. Cannot read .zip
-    //                 file.\n", filename.c_str());
-    //    reader = NULL;
-    // #endif
   }
   std::string lower_case_extension = extension;
   tolower(lower_case_extension);
@@ -62,8 +40,6 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
     reader = new FilereaderMps();
   } else if (lower_case_extension.compare("lp") == 0) {
     reader = new FilereaderLp();
-  } else if (lower_case_extension.compare("ems") == 0) {
-    reader = new FilereaderEms();
   } else {
     reader = NULL;
   }
@@ -71,7 +47,7 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
 }
 
 void interpretFilereaderRetcode(const HighsLogOptions& log_options,
-                                const std::string filename,
+                                const std::string& filename,
                                 const FilereaderRetcode code) {
   switch (code) {
     case FilereaderRetcode::kOk:
@@ -96,15 +72,13 @@ void interpretFilereaderRetcode(const HighsLogOptions& log_options,
   }
 }
 
-std::string extractModelName(const std::string filename) {
+std::string extractModelName(const std::string& filename) {
   // Extract model name
   std::string name = filename;
   std::size_t found = name.find_last_of("/\\");
   if (found < name.size()) name = name.substr(found + 1);
   found = name.find_last_of(".");
-  if (name.substr(found + 1) == "gz"
-      //      || name.substr(found + 1) == "zip"
-  ) {
+  if (name.substr(found + 1) == "gz") {
     name.erase(found, name.size() - found);
     found = name.find_last_of(".");
   }

@@ -124,7 +124,7 @@ RestartInfo RestartScheme::Check(int current_iter,
 }
 */
 
-RestartInfo RestartScheme::Check(int current_iter,
+RestartInfo RestartScheme::Check(HighsInt current_iter,
                                  const SolverResults& current_results,
                                  const SolverResults& average_results) {
   if (strategy_ != RestartStrategy::ADAPTIVE_RESTART) {

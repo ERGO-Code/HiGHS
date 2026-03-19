@@ -23,7 +23,7 @@ double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
   if (clique_size > 0) {
     // This should not trigger reallocation, because the resize in init is done
     // with the maximum possible size of the stack.
-    if (top_ + clique_size > stack_.size()) {
+    if (top_ + clique_size > static_cast<Int64>(stack_.size())) {
       reallocation = true;
       stack_.resize(top_ + clique_size, 0.0);
     }
@@ -67,8 +67,7 @@ void CliqueStack::pushWork(Int sn) {
 
   if (worksize_ > 0) {
     // stack_[top_] has lower address than workspace, so no need to resize.
-    // workspace_ and stack_[top_] do not overlap, so use memcpy
-    std::memcpy(&stack_[top_], workspace_, worksize_ * sizeof(double));
+    std::memmove(&stack_[top_], workspace_, worksize_ * sizeof(double));
 
     top_ += worksize_;
 

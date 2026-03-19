@@ -214,8 +214,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   // Moved this from LP_SolvePDHG so w->debug_pdlp_log_file_ can
   // still be used
   //
-  PDHG_Destroy(&w);
 #endif
+  PDHG_Destroy(&w);
+
 
   model_status = HighsModelStatus::kUnknown;
   highs_solution.value_valid = value_valid;

@@ -2,6 +2,10 @@ name: valgrind
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit_tests:
     runs-on: ${{ matrix.os }}

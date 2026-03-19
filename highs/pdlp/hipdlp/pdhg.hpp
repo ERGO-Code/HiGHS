@@ -93,9 +93,9 @@ class PDLPSolver {
 
   // --- Getters ---
   TerminationStatus getTerminationCode() const { return results_.term_code; }
-  int getIterationCount() const { return final_iter_count_; }
-  int getnCol() const { return lp_.num_col_; }
-  int getnRow() const { return lp_.num_row_; }
+  HighsInt getIterationCount() const { return final_iter_count_; }
+  HighsInt getnCol() const { return lp_.num_col_; }
+  HighsInt getnRow() const { return lp_.num_row_; }
 
 #if PDLP_DEBUG_LOG
   FILE* debug_pdlp_log_file_ = nullptr;
@@ -128,7 +128,7 @@ class PDLPSolver {
   void initializeStepSizes();
   
   // Convergence checks
-  bool checkConvergence(const int iter, const std::vector<double>& x,
+  bool checkConvergence(const HighsInt iter, const std::vector<double>& x,
                         const std::vector<double>& y,
                         const std::vector<double>& ax_vector,
                         const std::vector<double>& aty_vector, double epsilon,
@@ -184,13 +184,13 @@ class PDLPSolver {
   RestartScheme restart_scheme_;
   
   // Problem dimensions & metadata
-  int original_num_col_ = 0;
-  int num_eq_rows_ = 0;
-  int sense_origin_ = 1;
+  HighsInt original_num_col_ = 0;
+  HighsInt num_eq_rows_ = 0;
+  HighsInt sense_origin_ = 1;
   double unscaled_rhs_norm_ = 0.0;
   double unscaled_c_norm_ = 0.0;
   std::vector<bool> is_equality_row_;
-  std::vector<int> constraint_new_idx_;
+  std::vector<HighsInt> constraint_new_idx_;
   std::vector<ConstraintType> constraint_types_;
 
   // Iteration State Vectors
@@ -217,9 +217,9 @@ class PDLPSolver {
   double fpe_ = 0.0;
 
   // Scalars
-  int final_iter_count_ = 0;
-  int num_rejected_steps_ = 0;
-  int halpern_iteration_ = 0;
+  HighsInt final_iter_count_ = 0;
+  HighsInt num_rejected_steps_ = 0;
+  HighsInt halpern_iteration_ = 0;
   double sum_weights_ = 0.0;
   double current_eta_ = 0.0;
   double ratio_last_two_step_sizes_ = 1.0;
@@ -241,9 +241,9 @@ class PDLPSolver {
 #endif
 
 #ifdef CUPDLP_GPU
-  int a_num_rows_ = 0;
-  int a_num_cols_ = 0;
-  int a_nnz_ = 0;
+  HighsInt a_num_rows_ = 0;
+  HighsInt a_num_cols_ = 0;
+  HighsInt a_nnz_ = 0;
   double sum_weights_gpu_ = 0.0;
   // --- GPU Specifics ---
   cudaStream_t gpu_stream_ = nullptr;
@@ -255,9 +255,9 @@ class PDLPSolver {
   cusparseSpMatDescr_t mat_a_T_csr_ = nullptr;
   
   // Device Pointers
-  int *d_a_row_ptr_ = nullptr, *d_a_col_ind_ = nullptr;
+  HighsInt *d_a_row_ptr_ = nullptr, *d_a_col_ind_ = nullptr;
   double *d_a_val_ = nullptr;
-  int *d_at_row_ptr_ = nullptr, *d_at_col_ind_ = nullptr;
+  HighsInt *d_at_row_ptr_ = nullptr, *d_at_col_ind_ = nullptr;
   double *d_at_val_ = nullptr;
   int* d_halpern_iteration_ = nullptr;
   double* d_primal_step_size_ = nullptr;
@@ -303,13 +303,13 @@ class PDLPSolver {
   void cleanupGpu();
   void linalgGpuAx(const double* d_x_in, double* d_ax_out);
   void linalgGpuATy(const double* d_y_in, double* d_aty_out);
-  bool checkConvergenceGpu(const int iter, const double* d_x, const double* d_y,
+  bool checkConvergenceGpu(const HighsInt iter, const double* d_x, const double* d_y,
                            const double* d_ax, const double* d_aty,
                            double epsilon, SolverResults& results,
                            const char* type, double* d_slackPos_out, double* d_slackNeg_out,
                            bool use_halpern_slack);
   void computeStepSizeRatioGpu(PrimalDualParams& working_params);
-  void updateAverageIteratesGpu(int inner_iter);
+  void updateAverageIteratesGpu(HighsInt inner_iter);
   void computeAverageIterateGpu();
   double computeMovementGpu(const double* d_x_new, const double* d_x_old, const double* d_y_new, const double* d_y_old);
   double computeNonlinearityGpu(const double* d_x_new, const double* d_x_old, const double* d_aty_new, const double* d_aty_old);
@@ -321,7 +321,7 @@ class PDLPSolver {
   void launchKernelUpdateX(double primal_step);
   void launchKernelUpdateY(double dual_step);
   void launchKernelUpdateAverages(double weight);
-  void launchKernelScaleVector(double* d_out, const double* d_in, double scale, int n);
+  void launchKernelScaleVector(double* d_out, const double* d_in, double scale, HighsInt n);
 #endif
 };
 

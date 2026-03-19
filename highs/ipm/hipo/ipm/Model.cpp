@@ -4,27 +4,29 @@
 #include "Status.h"
 #include "ipm/IpxWrapper.h"
 #include "ipm/hipo/auxiliary/Log.h"
+#include "model/HighsHessianUtils.h"
 
 namespace hipo {
 
-Int Model::init(const HighsLp& lp) {
-  fillInIpxData(lp, n_orig_, m_orig_, offset_, c_, lower_, upper_, A_.start_,
-                A_.index_, A_.value_, b_, constraints_);
+Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
+  fillInIpxData(lp, n_, m_, offset_, c_, lower_, upper_, A_.start_, A_.index_,
+                A_.value_, b_, constraints_);
+  rhs_orig_ = b_;
+  constraints_orig_ = constraints_;
+  Q_ = Q;
+  if (qp()) completeHessian(n_, Q_);
+  sense_ = lp.sense_;
 
-  if (checkData(n_orig_, m_orig_, c_, b_, lower_, upper_, A_.start_, A_.index_,
-                A_.value_, constraints_))
-    return kStatusBadModel;
+  if (checkData()) return kStatusBadModel;
 
   lp_orig_ = &lp;
-
-  n_ = n_orig_;
-  m_ = m_orig_;
+  n_orig_ = n_;
+  m_orig_ = m_;
   A_.num_col_ = n_;
   A_.num_row_ = m_;
 
   preprocess();
-  scale();
-  reformulate();
+
   denseColumns();
   computeNorms();
 
@@ -32,169 +34,66 @@ Int Model::init(const HighsLp& lp) {
   A_.ensureRowwise();
   A_.ensureColwise();
 
+  if (checkData()) return kStatusBadModel;
+
   ready_ = true;
 
   return 0;
 }
 
-Int Model::checkData(
-    const Int num_var, const Int num_con, const std::vector<double>& obj,
-    const std::vector<double>& rhs, const std::vector<double>& lower,
-    const std::vector<double>& upper, const std::vector<Int>& A_ptr,
-    const std::vector<Int>& A_rows, const std::vector<double>& A_vals,
-    const std::vector<char>& constraints) const {
+Int Model::checkData() const {
   // Check if model provided by the user is ok.
   // Return kStatusBadModel if something is wrong.
 
   // Dimensions are valid
-  if (num_var <= 0 || num_con < 0) return kStatusBadModel;
+  if (n_ <= 0 || m_ < 0) return kStatusBadModel;
 
   // Vectors are of correct size
-  if (obj.size() != num_var || rhs.size() != num_con ||
-      lower.size() != num_var || upper.size() != num_var ||
-      constraints.size() != num_con || A_ptr.size() != num_var + 1 ||
-      A_rows.size() != A_ptr.back() || A_vals.size() != A_ptr.back())
+  if (static_cast<Int>(c_.size()) != n_ || static_cast<Int>(b_.size()) != m_ ||
+      static_cast<Int>(lower_.size()) != n_ ||
+      static_cast<Int>(upper_.size()) != n_ ||
+      static_cast<Int>(constraints_.size()) != m_ ||
+      static_cast<Int>(A_.start_.size()) != n_ + 1 ||
+      static_cast<Int>(A_.index_.size()) != A_.start_.back() ||
+      static_cast<Int>(A_.value_.size()) != A_.start_.back())
+    return kStatusBadModel;
+
+  // Hessian is ok, for QPs only
+  if (qp() && (Q_.dim_ != n_ || Q_.format_ != HessianFormat::kTriangular))
     return kStatusBadModel;
 
   // Vectors are valid
-  for (Int i = 0; i < num_var; ++i)
-    if (!std::isfinite(obj[i])) return kStatusBadModel;
-  for (Int i = 0; i < num_con; ++i)
-    if (!std::isfinite(rhs[i])) return kStatusBadModel;
-  for (Int i = 0; i < num_var; ++i) {
-    if (!std::isfinite(lower[i]) && lower[i] != -INFINITY)
+  for (Int i = 0; i < n_; ++i)
+    if (!std::isfinite(c_[i])) return kStatusBadModel;
+  for (Int i = 0; i < m_; ++i)
+    if (!std::isfinite(b_[i])) return kStatusBadModel;
+  for (Int i = 0; i < n_; ++i) {
+    if (!std::isfinite(lower_[i]) && lower_[i] != -INFINITY)
       return kStatusBadModel;
-    if (!std::isfinite(upper[i]) && upper[i] != INFINITY)
+    if (!std::isfinite(upper_[i]) && upper_[i] != INFINITY)
       return kStatusBadModel;
-    if (lower[i] > upper[i]) return kStatusBadModel;
+    if (lower_[i] > upper_[i]) return kStatusBadModel;
   }
-  for (Int i = 0; i < num_con; ++i)
-    if (constraints[i] != '<' && constraints[i] != '=' && constraints[i] != '>')
+  for (Int i = 0; i < m_; ++i)
+    if (constraints_[i] != '<' && constraints_[i] != '=' &&
+        constraints_[i] != '>')
       return kStatusBadModel;
 
   // Matrix is valid
-  for (Int i = 0; i < A_ptr[num_var]; ++i)
-    if (!std::isfinite(A_vals[i])) return kStatusBadModel;
+  for (Int i = 0; i < A_.start_[n_]; ++i)
+    if (!std::isfinite(A_.value_[i])) return kStatusBadModel;
 
   return 0;
 }
 
-void Model::preprocess() {
-  // Perform some basic preprocessing, in case the problem is run without
-  // presolve
+void Model::preprocess() { preprocessor_.apply(*this); }
 
-  // ==========================================
-  // Remove empty rows
-  // ==========================================
-
-  // find empty rows
-  std::vector<Int> entries_per_row(m_, 0);
-  for (Int col = 0; col < n_; ++col) {
-    for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-      const Int row = A_.index_[el];
-      ++entries_per_row[row];
-    }
-  }
-
-  rows_shift_.assign(m_, 0);
-  empty_rows_ = 0;
-  for (Int i = 0; i < m_; ++i) {
-    if (entries_per_row[i] == 0) {
-      // count number of empty rows
-      ++empty_rows_;
-
-      // count how many empty rows there are before a given row
-      for (Int j = i + 1; j < m_; ++j) ++rows_shift_[j];
-
-      rows_shift_[i] = -1;
-    }
-  }
-
-  if (empty_rows_ > 0) {
-    // shift each row index by the number of empty rows before it
-    for (Int col = 0; col < n_; ++col) {
-      for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-        const Int row = A_.index_[el];
-        A_.index_[el] -= rows_shift_[row];
-      }
-    }
-    A_.num_row_ -= empty_rows_;
-
-    // shift entries in b and constraints
-    for (Int i = 0; i < m_; ++i) {
-      // ignore entries to be removed
-      if (rows_shift_[i] == -1) continue;
-
-      Int shifted_pos = i - rows_shift_[i];
-      b_[shifted_pos] = b_[i];
-      constraints_[shifted_pos] = constraints_[i];
-    }
-    b_.resize(A_.num_row_);
-    constraints_.resize(A_.num_row_);
-
-    m_ = A_.num_row_;
-  }
-}
-
-void Model::postprocess(std::vector<double>& slack,
-                        std::vector<double>& y) const {
-  // Add Lagrange multiplier for empty rows that were removed
-  // Add slack for constraints that were removed
-
-  if (empty_rows_ == 0) return;
-
-  std::vector<double> new_y(rows_shift_.size(), 0.0);
-  std::vector<double> new_slack(rows_shift_.size(), 0.0);
-
-  // position to read from y and slack
-  Int pos{};
-
-  for (Int i = 0; i < rows_shift_.size(); ++i) {
-    // ignore shift of empty rows, they will receive a value of 0
-    if (rows_shift_[i] == -1) continue;
-
-    // re-align value of y and slack, considering empty rows
-    new_y[pos + rows_shift_[i]] = y[pos];
-    new_slack[pos + rows_shift_[i]] = slack[pos];
-    ++pos;
-  }
-
-  y = std::move(new_y);
-  slack = std::move(new_slack);
-}
-
-void Model::reformulate() {
-  // put the model into correct formulation
-
-  Int Annz = A_.numNz();
-
-  for (Int i = 0; i < m_; ++i) {
-    if (constraints_[i] != '=') {
-      // inequality constraint, add slack variable
-
-      ++n_;
-
-      // lower/upper bound for new slack
-      if (constraints_[i] == '>') {
-        lower_.push_back(-kHighsInf);
-        upper_.push_back(0.0);
-      } else {
-        lower_.push_back(0.0);
-        upper_.push_back(kHighsInf);
-      }
-
-      // cost for new slack
-      c_.push_back(0.0);
-
-      // add column of identity to A_
-      std::vector<Int> temp_ind{i};
-      std::vector<double> temp_val{1.0};
-      A_.addVec(1, temp_ind.data(), temp_val.data());
-
-      // set scaling to 1
-      if (scaled()) colscale_.push_back(1.0);
-    }
-  }
+void Model::postprocess(std::vector<double>& x, std::vector<double>& xl,
+                        std::vector<double>& xu, std::vector<double>& slack,
+                        std::vector<double>& y, std::vector<double>& zl,
+                        std::vector<double>& zu, const Iterate& it) const {
+  PreprocessorPoint point{x, xl, xu, slack, y, zl, zu};
+  preprocessor_.undo(point, *this, it);
 }
 
 void Model::computeNorms() {
@@ -203,7 +102,7 @@ void Model::computeNorms() {
   norm_unscaled_obj_ = 0.0;
   for (Int i = 0; i < n_; ++i) {
     double val = std::abs(c_[i]);
-    if (scaled()) val /= colscale_[i];
+    if (scaled()) val /= colScale(i);
     norm_unscaled_obj_ = std::max(norm_unscaled_obj_, val);
   }
 
@@ -218,18 +117,18 @@ void Model::computeNorms() {
   norm_unscaled_rhs_ = 0.0;
   for (Int i = 0; i < m_; ++i) {
     double val = std::abs(b_[i]);
-    if (scaled()) val /= rowscale_[i];
+    if (scaled()) val /= rowScale(i);
     norm_unscaled_rhs_ = std::max(norm_unscaled_rhs_, val);
   }
   for (Int i = 0; i < n_; ++i) {
     if (std::isfinite(lower_[i])) {
       double val = std::abs(lower_[i]);
-      if (scaled()) val *= colscale_[i];
+      if (scaled()) val *= colScale(i);
       norm_unscaled_rhs_ = std::max(norm_unscaled_rhs_, val);
     }
     if (std::isfinite(upper_[i])) {
       double val = std::abs(upper_[i]);
-      if (scaled()) val *= colscale_[i];
+      if (scaled()) val *= colScale(i);
       norm_unscaled_rhs_ = std::max(norm_unscaled_rhs_, val);
     }
   }
@@ -256,23 +155,25 @@ void Model::print(const LogHighs& log) const {
 
   log_stream << textline("Rows:") << sci(m_, 0, 1) << '\n';
   log_stream << textline("Cols:") << sci(n_, 0, 1) << '\n';
-  log_stream << textline("Nnz:") << sci(A_.numNz(), 0, 1) << '\n';
+  log_stream << textline("Nnz A:") << sci(A_.numNz(), 0, 1) << '\n';
   if (num_dense_cols_ > 0)
     log_stream << textline("Dense cols:") << integer(num_dense_cols_, 0)
                << '\n';
-  if (empty_rows_ > 0)
-    log_stream << "Removed " << empty_rows_ << " empty rows\n";
+  if (qp()) {
+    log_stream << textline("Nnz Q:") << sci(Q_.numNz(), 0, 1);
+    if (nonSeparableQp())
+      log_stream << ", non-separable\n";
+    else
+      log_stream << ", separable\n";
+  }
 
   // compute max and min entry of A in absolute value
   double Amin = kHighsInf;
   double Amax = 0.0;
-  for (Int col = 0; col < A_.num_col_; ++col) {
-    for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-      double val = std::abs(A_.value_[el]);
-      if (val != 0.0) {
-        Amin = std::min(Amin, val);
-        Amax = std::max(Amax, val);
-      }
+  for (double val : A_.value_) {
+    if (val != 0.0) {
+      Amin = std::min(Amin, std::abs(val));
+      Amax = std::max(Amax, std::abs(val));
     }
   }
   if (std::isinf(Amin)) Amin = 0.0;
@@ -299,6 +200,17 @@ void Model::print(const LogHighs& log) const {
   }
   if (std::isinf(bmin)) bmin = 0.0;
 
+  // compute max and min entry of Q in absolute value
+  double Qmin = kHighsInf;
+  double Qmax = 0.0;
+  for (double val : Q_.value_) {
+    if (val != 0.0) {
+      Qmin = std::min(Qmin, std::abs(val));
+      Qmax = std::max(Qmax, std::abs(val));
+    }
+  }
+  if (std::isinf(Qmin)) Qmin = 0.0;
+
   // compute max and min for bounds
   double boundmin = kHighsInf;
   double boundmax = 0.0;
@@ -319,12 +231,12 @@ void Model::print(const LogHighs& log) const {
   double scalemax = 0.0;
   if (scaled()) {
     for (Int i = 0; i < n_; ++i) {
-      scalemin = std::min(scalemin, colscale_[i]);
-      scalemax = std::max(scalemax, colscale_[i]);
+      scalemin = std::min(scalemin, colScale(i));
+      scalemax = std::max(scalemax, colScale(i));
     }
     for (Int i = 0; i < m_; ++i) {
-      scalemin = std::min(scalemin, rowscale_[i]);
-      scalemax = std::max(scalemax, rowscale_[i]);
+      scalemin = std::min(scalemin, rowScale(i));
+      scalemax = std::max(scalemax, rowScale(i));
     }
   }
   if (std::isinf(scalemin)) scalemin = 0.0;
@@ -351,6 +263,15 @@ void Model::print(const LogHighs& log) const {
   else
     log_stream << "-\n";
 
+  if (qp()) {
+    log_stream << textline("Range of Q:") << "[" << sci(Qmin, 5, 1) << ", "
+               << sci(Qmax, 5, 1) << "], ratio ";
+    if (Qmin != 0.0)
+      log_stream << sci(Qmax / Qmin, 0, 1) << '\n';
+    else
+      log_stream << "-\n";
+  }
+
   log_stream << textline("Range of bounds:") << "[" << sci(boundmin, 5, 1)
              << ", " << sci(boundmax, 5, 1) << "], ratio ";
   if (boundmin != 0.0)
@@ -366,8 +287,6 @@ void Model::print(const LogHighs& log) const {
     log_stream << "-\n";
 
   if (log.debug(1)) {
-    log_stream << textline("Scaling CG iterations:")
-               << integer(CG_iter_scaling_) << '\n';
     log_stream << textline("Norm b unscaled") << sci(norm_unscaled_rhs_, 0, 1)
                << '\n';
     log_stream << textline("Norm b scaled") << sci(norm_scaled_rhs_, 0, 1)
@@ -378,122 +297,9 @@ void Model::print(const LogHighs& log) const {
                << '\n';
   }
 
+  if (log.debug(1)) preprocessor_.print(log_stream);
+
   log.print(log_stream);
-}
-
-void Model::scale() {
-  // Apply Curtis-Reid scaling and scale the problem accordingly
-
-  // check if scaling is needed
-  bool need_scaling = false;
-  for (Int col = 0; col < n_; ++col) {
-    for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-      if (std::abs(A_.value_[el]) != 1.0) {
-        need_scaling = true;
-        break;
-      }
-    }
-  }
-
-  if (!need_scaling) return;
-
-  // *********************************************************************
-  // Compute scaling
-  // *********************************************************************
-  // Transformation:
-  // A -> R * A * C
-  // b -> R * b
-  // c -> C * c
-  // x -> C^-1 * x
-  // y -> R^-1 * y
-  // z -> C * z
-  // where R is row scaling, C is col scaling.
-
-  // Compute exponents for CR scaling of matrix A
-  std::vector<Int> colexp(n_);
-  std::vector<Int> rowexp(m_);
-  CG_iter_scaling_ =
-      CurtisReidScaling(A_.start_, A_.index_, A_.value_, rowexp, colexp);
-
-  // Compute scaling from exponents
-  colscale_.resize(n_);
-  rowscale_.resize(m_);
-  for (Int i = 0; i < n_; ++i) colscale_[i] = std::ldexp(1.0, colexp[i]);
-  for (Int i = 0; i < m_; ++i) rowscale_[i] = std::ldexp(1.0, rowexp[i]);
-
-  // *********************************************************************
-  // Apply scaling
-  // *********************************************************************
-
-  // Column has been scaled up by colscale_[col], so cost is scaled up and
-  // bounds are scaled down
-  for (Int col = 0; col < n_; ++col) {
-    c_[col] *= colscale_[col];
-    lower_[col] /= colscale_[col];
-    upper_[col] /= colscale_[col];
-  }
-
-  // Row has been scaled up by rowscale_[row], so b is scaled up
-  for (Int row = 0; row < m_; ++row) b_[row] *= rowscale_[row];
-
-  // Each entry of the matrix is scaled by the corresponding row and col
-  // factor
-  for (Int col = 0; col < n_; ++col) {
-    for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-      Int row = A_.index_[el];
-      A_.value_[el] *= rowscale_[row];
-      A_.value_[el] *= colscale_[col];
-    }
-  }
-}
-
-void Model::unscale(std::vector<double>& x, std::vector<double>& xl,
-                    std::vector<double>& xu, std::vector<double>& slack,
-                    std::vector<double>& y, std::vector<double>& zl,
-                    std::vector<double>& zu) const {
-  // Undo the scaling with internal format
-
-  if (scaled()) {
-    for (Int i = 0; i < n_orig_; ++i) {
-      x[i] *= colscale_[i];
-      xl[i] *= colscale_[i];
-      xu[i] *= colscale_[i];
-      zl[i] /= colscale_[i];
-      zu[i] /= colscale_[i];
-    }
-    for (Int i = 0; i < m_; ++i) {
-      y[i] *= rowscale_[i];
-      slack[i] /= rowscale_[i];
-    }
-  }
-
-  // set variables that were ignored
-  for (Int i = 0; i < n_orig_; ++i) {
-    if (!hasLb(i)) {
-      xl[i] = kHighsInf;
-      zl[i] = 0.0;
-    }
-    if (!hasUb(i)) {
-      xu[i] = kHighsInf;
-      zu[i] = 0.0;
-    }
-  }
-}
-
-void Model::unscale(std::vector<double>& x, std::vector<double>& slack,
-                    std::vector<double>& y, std::vector<double>& z) const {
-  // Undo the scaling with format for crossover
-
-  if (scaled()) {
-    for (Int i = 0; i < n_orig_; ++i) {
-      x[i] *= colscale_[i];
-      z[i] /= colscale_[i];
-    }
-    for (Int i = 0; i < m_; ++i) {
-      y[i] *= rowscale_[i];
-      slack[i] /= rowscale_[i];
-    }
-  }
 }
 
 void Model::denseColumns() {
@@ -532,24 +338,48 @@ Int Model::loadIntoIpx(ipx::LpSolver& lps) const {
   return load_status;
 }
 
-void Model::multWithoutSlack(double alpha, const std::vector<double>& x,
-                             std::vector<double>& y, bool trans) const {
-  assert(x.size() == (trans ? m_ : n_orig_));
-  assert(y.size() == (trans ? n_orig_ : m_));
+void Model::printDense() const {
+  std::vector<std::vector<double>> Adense(m_, std::vector<double>(n_, 0.0));
+  std::vector<std::vector<double>> Qdense(n_, std::vector<double>(n_, 0.0));
 
-  if (trans) {
-    for (Int col = 0; col < n_orig_; ++col) {
-      for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-        y[col] += alpha * A_.value_[el] * x[A_.index_[el]];
-      }
-    }
-  } else {
-    for (Int col = 0; col < n_orig_; ++col) {
-      for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-        y[A_.index_[el]] += alpha * A_.value_[el] * x[col];
-      }
+  for (Int col = 0; col < n_; ++col) {
+    for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
+      const Int row = A_.index_[el];
+      const double val = A_.value_[el];
+      Adense[row][col] = val;
     }
   }
+  for (Int col = 0; col < n_; ++col) {
+    for (Int el = Q_.start_[col]; el < Q_.start_[col + 1]; ++el) {
+      const Int row = Q_.index_[el];
+      const double val = Q_.value_[el];
+      Qdense[row][col] = val;
+    }
+  }
+
+  printf("\nA\n");
+  for (Int i = 0; i < m_; ++i) {
+    for (Int j = 0; j < n_; ++j) printf("%6.2f ", Adense[i][j]);
+    printf("\n");
+  }
+  printf("b\n");
+  for (Int i = 0; i < m_; ++i) printf("%6.2f ", b_[i]);
+  printf("\n");
+  printf("c\n");
+  for (Int i = 0; i < n_; ++i) printf("%6.2f ", c_[i]);
+  printf("\n");
+  printf("lb\n");
+  for (Int i = 0; i < n_; ++i) printf("%6.2f ", lower_[i]);
+  printf("\n");
+  printf("ub\n");
+  for (Int i = 0; i < n_; ++i) printf("%6.2f ", upper_[i]);
+  printf("\n");
+  printf("Q\n");
+  for (Int i = 0; i < n_; ++i) {
+    for (Int j = 0; j < n_; ++j) printf("%6.2f ", Qdense[i][j]);
+    printf("\n");
+  }
+  printf("offset %6.2f\n", offset_);
 }
 
 }  // namespace hipo

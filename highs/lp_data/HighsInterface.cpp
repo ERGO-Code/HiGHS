@@ -1826,8 +1826,17 @@ HighsStatus Highs::getRangingInterface() {
   return getRangingData(this->ranging_, solver_object);
 }
 
-HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status) {
+HighsStatus Highs::getIisInterfaceReturn(
+    const HighsStatus return_status, const HighsOptions& original_options,
+    const HighsCallback& original_callback) {
+  // Restore options and callback
+  this->options_ = original_options;
+  this->callback_ = original_callback;
+
+  // Exit early if there was an error
   if (return_status == HighsStatus::kError) return return_status;
+  assert(this->iis_.valid_);
+
   // A valid HighsIis instance is one for which the information is
   // known to be correct
   //
@@ -1843,9 +1852,9 @@ HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status) {
   // The columns and rows not in HighsIis::col_index_ and
   // HighsIis::row_index_ have HighsIis::col_bound_ and
   // HighsIis::row_bound_ values set to kIisStatusNotInConflict
-  assert(this->iis_.valid_);
+
   // If the IIS process has identified infeasibility, then set
-  if (this->iis_.status_ >= kIisModelStatusInfeasible)
+  if (this->iis_.status_ >= kIisModelStatusTimeLimit)
     this->model_status_ = HighsModelStatus::kInfeasible;
 
   HighsLp& lp = this->model_.lp_;
@@ -1853,20 +1862,33 @@ HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status) {
   const bool has_is =
       this->iis_.col_index_.size() || this->iis_.row_index_.size();
   const bool has_iis = this->iis_.status_ == kIisModelStatusIrreducible;
+
+  HighsOptions opts = this->options_;
+  opts.time_limit = kHighsInf;
+  opts.simplex_iteration_limit = kHighsIInf;
+  opts.objective_bound = kHighsInf;
+
   if (has_iis) assert(has_is);
   if (has_is) {
     // Construct the HighsIis LP
     this->iis_.setLp(lp);
     // Check that the LP data are OK (correspond to original model
     // reduced to HighsIis col/row and bound data).
-    bool lp_data_ok = this->iis_.lpDataOk(lp, this->options_);
+    bool lp_data_ok = this->iis_.lpDataOk(lp, opts);
     assert(lp_data_ok);
     if (!lp_data_ok) return HighsStatus::kError;
     // Check that the HighsIis LP has the property of being infeasible
     // and, if a true IIS is claimed, optimal/unbounded if any bound
     // is relaxed
-    bool lp_ok = this->iis_.lpOk(this->options_);
-    if (!lp_ok) return HighsStatus::kError;
+    bool lp_ok = this->iis_.lpOk(opts);
+    if (!lp_ok) {
+      // If we fail to prove infeasibility mark candidate set as invalid and
+      // return with a warning
+      this->iis_.valid_ = false;
+      if (this->iis_.status_ != kIisModelStatusTimeLimit)
+        this->iis_.status_ = kIisModelStatusUnknown;
+      return HighsStatus::kWarning;
+    }
   } else {
     assert(this->iis_.status_ <= kIisModelStatusReducible);
     assert(!this->iis_.col_bound_.size());
@@ -1884,7 +1906,6 @@ HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status) {
 }
 
 HighsStatus Highs::getIisInterface() {
-  const HighsLp& lp = model_.lp_;
   if (this->model_status_ == HighsModelStatus::kOptimal ||
       this->model_status_ == HighsModelStatus::kUnbounded) {
     // Strange to call getIis for a model that's known to be feasible
@@ -1895,68 +1916,129 @@ HighsStatus Highs::getIisInterface() {
     // No IIS exists, so validate the empty HighsIis instance
     this->iis_.valid_ = true;
     this->iis_.status_ = kIisModelStatusFeasible;
-    return this->getIisInterfaceReturn(HighsStatus::kOk);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_, callback_);
   }
-  HighsStatus return_status = HighsStatus::kOk;
-  if (this->model_status_ != HighsModelStatus::kNotset &&
-      this->model_status_ != HighsModelStatus::kInfeasible) {
-    return_status = HighsStatus::kWarning;
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "Calling Highs::getIis for a model with status %s\n",
-                 this->modelStatusToString(this->model_status_).c_str());
-  }
-  if (this->iis_.valid_) return this->getIisInterfaceReturn(HighsStatus::kOk);
+  // Early exit for existing valid IIS
+  if (this->iis_.valid_)
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_, callback_);
+  // Clear IIS
   this->iis_.clear();
   // Check for trivial IIS: empty infeasible row or inconsistent bounds
+  const HighsLp& lp = model_.lp_;
   if (this->iis_.trivial(lp, options_))
-    return this->getIisInterfaceReturn(HighsStatus::kOk);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_, callback_);
   HighsInt num_row = lp.num_row_;
   if (num_row == 0) {
     // For an LP with no rows, the only scope for infeasibility is
     // inconsistent columns bounds - which has already been assessed,
     // so validate the empty HighsIis instance
     this->iis_.valid_ = true;
-    return this->getIisInterfaceReturn(HighsStatus::kOk);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_, callback_);
   }
   // Look for infeasible rows based on row value bounds
   if (this->iis_.rowValueBounds(lp, options_))
-    return this->getIisInterfaceReturn(HighsStatus::kOk);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_, callback_);
   // Don't continue with more expensive techniques if using the IIS
   // light strategy
   if (options_.iis_strategy == kIisStrategyLight)
-    return this->getIisInterfaceReturn(HighsStatus::kOk);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_, callback_);
+  // Clear IIS
+  this->iis_.clear();
+  // Save original options and callback
+  HighsOptions original_options = this->options_;
+  HighsCallback original_callback = this->callback_;
+  // Zero out all clocks and set time_limit to iis_time_limit
+  this->zeroAllClocks();
+  this->setOptionValue("time_limit", options_.iis_time_limit);
+  // Disallow kIterationLimit and kObjectiveBound model statuses
+  this->setOptionValue("simplex_iteration_limit", kHighsIInf);
+  this->setOptionValue("objective_bound", kHighsInf);
+  // Disallow kUnboundedOrInfeasible model status
+  this->setOptionValue("allow_unbounded_or_infeasible", false);
+  // Disallow kInterrupt model status
+  this->callback_.clear();
+  // Run model with new options if needed
+  if (this->model_status_ == HighsModelStatus::kNotset ||
+      this->model_status_ == HighsModelStatus::kIterationLimit ||
+      this->model_status_ == HighsModelStatus::kObjectiveBound ||
+      this->model_status_ == HighsModelStatus::kInterrupt ||
+      this->model_status_ == HighsModelStatus::kTimeLimit ||
+      this->model_status_ == HighsModelStatus::kUnboundedOrInfeasible) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Model status is %s. Resolving to establish infeasibility "
+                 "before computing IIS\n",
+                 this->modelStatusToString(this->model_status_).c_str());
+    double simplex_time = -this->getRunTime();
+    HighsInt simplex_iterations = -info_.simplex_iteration_count;
+    HighsStatus run_status = this->optimizeModel();
+    simplex_time += this->getRunTime();
+    simplex_iterations += info_.simplex_iteration_count;
+    this->iis_.info_.update(simplex_time, simplex_iterations);
+  }
+  if (this->model_status_ == HighsModelStatus::kOptimal ||
+      this->model_status_ == HighsModelStatus::kUnbounded) {
+    // Model became feasible
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Model became feasible\n");
+    // No IIS exists, so validate the empty HighsIis instance
+    this->iis_.valid_ = true;
+    this->iis_.status_ = kIisModelStatusFeasible;
+    this->iis_.strategy_ = options_.iis_strategy;
+    return this->getIisInterfaceReturn(HighsStatus::kOk, original_options,
+                                       original_callback);
+  } else if (this->model_status_ == HighsModelStatus::kTimeLimit) {
+    // Time limit reached
+    this->iis_.status_ = kIisModelStatusTimeLimit;
+    this->iis_.strategy_ = options_.iis_strategy;
+    return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
+                                       original_callback);
+  } else if (this->model_status_ != HighsModelStatus::kInfeasible) {
+    // kModelEmpty, kModelError, kSolveError, kMemoryLimit, kUnknown model
+    // status
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Can not compute IIS for a model with status %s\n",
+                 this->modelStatusToString(this->model_status_).c_str());
+    this->iis_.strategy_ = options_.iis_strategy;
+    return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
+                                       original_callback);
+  }
+  assert(this->model_status_ == HighsModelStatus::kInfeasible);
+
+  // Construct an IS from ray or lp
   bool ray_option =
-      // kIisStrategyFromRay & options.iis_strategy;
+      // kIisStrategyFromRay & options_.iis_strategy;
       false;
-  // Use the LP strategy if any higher bits are set
-  const bool lp_option = options_.iis_strategy >= kIisStrategyFromLp;
-  if (this->model_status_ == HighsModelStatus::kInfeasible && ray_option &&
-      !ekk_instance_.status_.has_invert) {
+  const bool lp_option = kIisStrategyFromLp & options_.iis_strategy;
+  if (ray_option && !ekk_instance_.status_.has_invert) {
     // Model is known to be infeasible, and a dual ray option is
     // chosen, but it has no INVERT, presumably because infeasibility
     // detected in presolve, so solve without presolve
     std::string presolve = options_.presolve;
     options_.presolve = kHighsOffString;
 
-    HighsIisInfo iis_info;
-    iis_info.simplex_time = -this->getRunTime();
-    iis_info.simplex_iterations = -info_.simplex_iteration_count;
+    double simplex_time = -this->getRunTime();
+    HighsInt simplex_iterations = -info_.simplex_iteration_count;
     HighsStatus run_status = this->optimizeModel();
     options_.presolve = presolve;
-    if (run_status != HighsStatus::kOk) return run_status;
-    iis_info.simplex_time += this->getRunTime();
-    iis_info.simplex_iterations += -info_.simplex_iteration_count;
-    this->iis_.info_.push_back(iis_info);
+    simplex_time += this->getRunTime();
+    simplex_iterations += info_.simplex_iteration_count;
+    this->iis_.info_.update(simplex_time, simplex_iterations);
 
     // Model should remain infeasible!
-    if (this->model_status_ != HighsModelStatus::kInfeasible) {
+    if (this->model_status_ == HighsModelStatus::kTimeLimit) {
+      // Time limit reached
+      this->iis_.status_ = kIisModelStatusTimeLimit;
+      return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
+                                         original_callback);
+    } else if (this->model_status_ != HighsModelStatus::kInfeasible) {
       highsLogUser(
           options_.log_options, HighsLogType::kError,
           "Model status has switched from %s to %s when solving without "
           "presolve\n",
           this->modelStatusToString(HighsModelStatus::kInfeasible).c_str(),
           this->modelStatusToString(this->model_status_).c_str());
-      return HighsStatus::kError;
+      return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
+                                         original_callback);
     }
   }
   const bool has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
@@ -1964,6 +2046,7 @@ HighsStatus Highs::getIisInterface() {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "No known dual ray from which to compute IIS\n");
   ray_option = ray_option && has_dual_ray;
+  HighsStatus return_status = HighsStatus::kOk;
   if (ray_option) {
     assert(has_dual_ray);
     // Compute the dual ray to identify an infeasible subset of rows
@@ -1981,64 +2064,45 @@ HighsStatus Highs::getIisInterface() {
       if (dual_ray_value[iRow]) this->iis_.row_index_.push_back(iRow);
   } else if (lp_option) {
     // Full LP option chosen or no dual ray to use
-    //
-    // Working on the whole model so clear all solver data
-    this->invalidateSolverData();
-    // 1789 Remove this check!
-    HighsLp check_lp_before = this->model_.lp_;
     // Apply the elasticity filter to the whole model in order to
     // determine an infeasible subset of rows
-    HighsStatus return_status = this->elasticityFilter(-1.0, -1.0, 1.0, nullptr,
-                                                       nullptr, nullptr, true);
-    HighsLp check_lp_after = this->model_.lp_;
-    assert(check_lp_before.equalVectors(check_lp_after));
-    assert(check_lp_before.a_matrix_.equivalent(check_lp_after.a_matrix_));
-    if (return_status != HighsStatus::kOk) return return_status;
+    return_status = this->elasticityFilter(-1.0, -1.0, 1.0, nullptr, nullptr,
+                                           nullptr, true);
   }
-  // Don't continue if not using the ray or elasticity LP strategies
-  if (!ray_option && !lp_option)
-    return this->getIisInterfaceReturn(HighsStatus::kOk);
-  // Due to the actions of Highs::elasticityFilter have to clear all
-  // solver data, retaining a copy of Highs::iis_ to restore it
-  HighsIis iis = this->iis_;
-  this->invalidateSolverData();
-  this->iis_ = iis;
-  return_status = HighsStatus::kOk;
-  if (this->iis_.row_index_.size() == 0) {
-    // No subset of infeasible rows, so model is feasible
-    assert(this->iis_.valid_);
-    assert(this->iis_.status_ == kIisModelStatusFeasible);
-    return this->getIisInterfaceReturn(return_status);
+  // Do not continue if not using kIisStrategyIrreducible or if time limit is
+  // reached
+  if (!(kIisStrategyIrreducible & this->options_.iis_strategy) ||
+      (this->iis_.status_ == kIisModelStatusTimeLimit))
+    return this->getIisInterfaceReturn(return_status, original_options,
+                                       original_callback);
+
+  // If neither ray and lp options were requested or if they fail to produce a
+  // valid IS, make one consisting of all constraints
+  if (!this->iis_.valid_) {
+    this->iis_.valid_ = true;
+    this->iis_.status_ = kIisModelStatusReducible;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      this->iis_.row_index_.push_back(iRow);
   }
+
   assert(this->iis_.row_index_.size());
   // A subset of infeasible rows, so at least have a reducible
   // infeasibility set
-  this->iis_.status_ = kIisModelStatusReducible;
-  if (!(kIisStrategyIrreducible & this->options_.iis_strategy))
-    return this->getIisInterfaceReturn(return_status);
-  // Attempt to compute a true IIS
+
+  //  Attempt to compute a true IIS
   //
-  // To do this the matrix must be column-wise
+  //  To do this the matrix must be column-wise
   model_.lp_.a_matrix_.ensureColwise();
   return_status = this->iis_.deduce(lp, options_, basis_);
   // Analyse the LP solution data
-  const HighsInt num_lp_solved = this->iis_.info_.size();
-  double min_time = kHighsInf;
-  double sum_time = 0;
-  double max_time = 0;
-  HighsInt min_iterations = kHighsIInf;
-  HighsInt sum_iterations = 0;
-  HighsInt max_iterations = 0;
-  for (HighsInt iX = 0; iX < num_lp_solved; iX++) {
-    double time = this->iis_.info_[iX].simplex_time;
-    HighsInt iterations = this->iis_.info_[iX].simplex_iterations;
-    min_time = std::min(time, min_time);
-    sum_time += time;
-    max_time = std::max(time, max_time);
-    min_iterations = std::min(iterations, min_iterations);
-    sum_iterations += iterations;
-    max_iterations = std::max(iterations, max_iterations);
-  }
+  const HighsInt num_lp_solved = this->iis_.info_.num_lp_solved;
+  const double min_time = this->iis_.info_.min_simplex_time;
+  const double sum_time = this->iis_.info_.sum_simplex_times;
+  const double max_time = this->iis_.info_.max_simplex_time;
+  const HighsInt min_iterations = this->iis_.info_.min_simplex_iteration_count;
+  const HighsInt sum_iterations = this->iis_.info_.sum_simplex_iteration_counts;
+  const HighsInt max_iterations = this->iis_.info_.max_simplex_iteration_count;
+
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                " %d cols, %d rows, %d LPs solved"
                " (min / average / max) iteration count (%6d / %6.2g / % 6d)"
@@ -2049,26 +2113,21 @@ HighsStatus Highs::getIisInterface() {
                num_lp_solved > 0 ? (1.0 * sum_iterations) / num_lp_solved : 0,
                int(max_iterations), min_time,
                num_lp_solved > 0 ? sum_time / num_lp_solved : 0, max_time);
-  return this->getIisInterfaceReturn(return_status);
+  return this->getIisInterfaceReturn(return_status, original_options,
+                                     original_callback);
 }
 
 HighsStatus Highs::elasticityFilterReturn(
     const HighsStatus return_status, const std::string& original_model_name,
+    const HighsModelStatus original_model_status,
     const HighsInt original_num_col, const HighsInt original_num_row,
     const std::vector<double>& original_col_cost,
     const std::vector<double>& original_col_lower,
-    const std::vector<double> original_col_upper,
-    const std::vector<HighsVarType> original_integrality) {
+    const std::vector<double>& original_col_upper,
+    const std::vector<HighsVarType>& original_integrality) {
   const HighsLp& lp = this->model_.lp_;
-  // The model status and IIS are cleared by restoring the original
-  // LP, so save them
-  const bool iis_valid = this->iis_.valid_;
-  HighsIis iis;
-  if (iis_valid) {
-    iis = this->iis_;
-  } else {
-    assert(return_status != HighsStatus::kOk);
-  }
+  // The IIS is cleared by restoring the original LP, so save it
+  HighsIis iis = this->iis_;
   double objective_function_value = info_.objective_function_value;
   // Delete any additional rows and columns, and restore the original
   // column costs and bounds
@@ -2105,6 +2164,9 @@ HighsStatus Highs::elasticityFilterReturn(
   assert(lp.num_col_ == original_num_col);
   assert(lp.num_row_ == original_num_row);
 
+  // Clear solver data
+  this->invalidateSolverData();
+
   if (return_status == HighsStatus::kOk) {
     // Solution is invalidated by deleting rows and columns, but
     // primal values are correct. Have to recompute row activities,
@@ -2117,17 +2179,13 @@ HighsStatus Highs::elasticityFilterReturn(
     getKktFailures(options_, model_, solution_, basis_, info_);
     info_.valid = true;
   }
-  // If there was valid HighsIis data, then restore it
-  if (iis_valid) {
-    // If the model is feasible, then the status of model is not known
-    if (iis.status_ == kIisModelStatusFeasible)
-      this->model_status_ = HighsModelStatus::kNotset;
-    this->iis_ = iis;
-  } else {
-    // No valid HighsIis should imply a runtime error, so ensure that
-    // no misleading model status is set
-    this->model_status_ = HighsModelStatus::kNotset;
-  }
+
+  // Revert model status
+  this->model_status_ = original_model_status;
+
+  // Restore IIS
+  this->iis_ = iis;
+
   return return_status;
 }
 
@@ -2189,12 +2247,15 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   // Take copies of the original model name, dimensions and column
   // data vectors, as they will be modified in forming the e-LP
   const std::string original_model_name = lp.model_name_;
+  const HighsModelStatus original_model_status = this->getModelStatus();
   const HighsInt original_num_col = lp.num_col_;
   const HighsInt original_num_row = lp.num_row_;
   const std::vector<double> original_col_cost = lp.col_cost_;
   const std::vector<double> original_col_lower = lp.col_lower_;
   const std::vector<double> original_col_upper = lp.col_upper_;
   const std::vector<HighsVarType> original_integrality = lp.integrality_;
+  // Working on the whole model so clear all solver data
+  this->invalidateSolverData();
   // Give the model a new name to avoid confusing logging when the
   // elastic LP is solved
   this->passModelName(original_model_name + "_elastic");
@@ -2434,50 +2495,58 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
 
   if (write_model) this->writeModel("elastic.mps");
 
-  HighsIis& iis = this->iis_;
-  iis.clear();
+  // Work with a copy of the IIS as it will be cleared when solving the e-LP
+  this->iis_.clear();
+  HighsIis iis = this->iis_;
   // Lambda for gathering data when solving an LP
   auto solveLp = [&]() -> HighsStatus {
-    HighsIisInfo iis_info;
-    iis_info.simplex_time = -this->getRunTime();
-    iis_info.simplex_iterations = -info_.simplex_iteration_count;
+    double simplex_time = -this->getRunTime();
+    HighsInt simplex_iterations = -info_.simplex_iteration_count;
     run_status = this->optimizeModel();
-    assert(run_status == HighsStatus::kOk);
-    if (run_status != HighsStatus::kOk) return run_status;
-    iis_info.simplex_time += this->getRunTime();
-    iis_info.simplex_iterations += info_.simplex_iteration_count;
-    iis.info_.push_back(iis_info);
+    simplex_time += this->getRunTime();
+    simplex_iterations += info_.simplex_iteration_count;
+    iis.info_.update(simplex_time, simplex_iterations);
     return run_status;
   };
 
   // Solve the elastic LP
   run_status = solveLp();
-  this->writeSolution("", 1);
 
-  if (run_status != HighsStatus::kOk)
-    return elasticityFilterReturn(run_status, original_model_name,
-                                  original_num_col, original_num_row,
-                                  original_col_cost, original_col_lower,
-                                  original_col_upper, original_integrality);
+  if (run_status != HighsStatus::kOk) {
+    // Failed to establish feasibility or infeasibility due to unknown error
+    // or hitting a time limit
+    iis.valid_ = false;
+    iis.status_ = this->model_status_ == HighsModelStatus::kTimeLimit
+                      ? kIisModelStatusTimeLimit
+                      : kIisModelStatusUnknown;
+    this->iis_ = iis;
+    return elasticityFilterReturn(
+        HighsStatus::kError, original_model_name, original_model_status,
+        original_num_col, original_num_row, original_col_cost,
+        original_col_lower, original_col_upper, original_integrality);
+  }
   if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
   // Model status should be optimal, unless model is unbounded
   assert(this->model_status_ == HighsModelStatus::kOptimal ||
          this->model_status_ == HighsModelStatus::kUnbounded);
-  this->iis_.valid_ = true;
-  this->iis_.status_ = this->info_.objective_function_value > 0
-                           ? kIisModelStatusInfeasible
-                           : kIisModelStatusFeasible;
-  if (!get_iis)
-    return elasticityFilterReturn(HighsStatus::kOk, original_model_name,
-                                  original_num_col, original_num_row,
-                                  original_col_cost, original_col_lower,
-                                  original_col_upper, original_integrality);
+  iis.valid_ = true;
+  iis.status_ = this->info_.objective_function_value > 0
+                    ? kIisModelStatusReducible
+                    : kIisModelStatusFeasible;
+  if (!get_iis) {
+    this->iis_ = iis;
+    return elasticityFilterReturn(
+        HighsStatus::kOk, original_model_name, original_model_status,
+        original_num_col, original_num_row, original_col_cost,
+        original_col_lower, original_col_upper, original_integrality);
+  }
   // If getting an (I)IS, assume no elastic columns, so no additional rows
   assert(!has_elastic_columns);
   assert(has_elastic_rows);
   assert(original_num_row == lp.num_row_);
   const HighsSolution& solution = this->getSolution();
-  // Now fix e-variables that are positive and re-solve until e-LP is infeasible
+  // Now fix e-variables that are positive and re-solve until e-LP is
+  // infeasible
   HighsInt loop_k = 0;
   for (;;) {
     if (kIisDevReport)
@@ -2527,15 +2596,22 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     }
     if (num_fixed == 0) {
       // No elastic variables were positive, so problem is feasible
-      this->iis_.status_ = kIisModelStatusFeasible;
+      iis.status_ = kIisModelStatusFeasible;
       break;
     }
     HighsStatus run_status = solveLp();
-    if (run_status != HighsStatus::kOk)
-      return elasticityFilterReturn(run_status, original_model_name,
-                                    original_num_col, original_num_row,
-                                    original_col_cost, original_col_lower,
-                                    original_col_upper, original_integrality);
+    if (run_status != HighsStatus::kOk) {
+      // Solve failed
+      iis.valid_ = false;
+      iis.status_ = this->model_status_ == HighsModelStatus::kTimeLimit
+                        ? kIisModelStatusTimeLimit
+                        : kIisModelStatusUnknown;
+      this->iis_ = iis;
+      return elasticityFilterReturn(
+          HighsStatus::kError, original_model_name, original_model_status,
+          original_num_col, original_num_row, original_col_cost,
+          original_col_lower, original_col_upper, original_integrality);
+    }
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
     if (model_status == HighsModelStatus::kInfeasible) break;
@@ -2598,23 +2674,26 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
 
   if (kIisDevReport)
     printf(
-        "\nElasticity filter after %d passes enforces bounds on %d cols and %d "
+        "\nElasticity filter after %d passes enforces bounds on %d cols and "
+        "%d "
         "rows\n",
         int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
 
   iis.valid_ = true;
   iis.strategy_ = this->options_.iis_strategy;
-  if (iis.status_ == kIisModelStatusFeasible)
-    return elasticityFilterReturn(HighsStatus::kOk, original_model_name,
-                                  original_num_col, original_num_row,
-                                  original_col_cost, original_col_lower,
-                                  original_col_upper, original_integrality);
+  if (iis.status_ == kIisModelStatusFeasible) {
+    this->iis_ = iis;
+    return elasticityFilterReturn(
+        HighsStatus::kOk, original_model_name, original_model_status,
+        original_num_col, original_num_row, original_col_cost,
+        original_col_lower, original_col_upper, original_integrality);
+  }
+
   // Model is infeasible because there are (at least) a positive
   // number of rows in the infeasibility set. Hence the IIS status is
   // reducible
-  assert(this->iis_.status_ > kIisModelStatusFeasible);
+  assert(iis.status_ == kIisModelStatusReducible);
   assert(num_iis_row > 0);
-  iis.status_ = kIisModelStatusReducible;
 
   // Have to be able to map from original row indices to position in
   // iis.row_index_
@@ -2679,10 +2758,11 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   }
   assert(iis.row_bound_.size() == iis.row_index_.size());
   for (HighsInt iX = 0; iX < num_iis_row; iX++) assert(iis.row_bound_[iX] >= 0);
-  return elasticityFilterReturn(HighsStatus::kOk, original_model_name,
-                                original_num_col, original_num_row,
-                                original_col_cost, original_col_lower,
-                                original_col_upper, original_integrality);
+  this->iis_ = iis;
+  return elasticityFilterReturn(
+      HighsStatus::kOk, original_model_name, original_model_status,
+      original_num_col, original_num_row, original_col_cost, original_col_lower,
+      original_col_upper, original_integrality);
 }
 
 HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
@@ -2777,291 +2857,9 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::lpKktCheck(const HighsLp& lp, const std::string& message) {
-  if (!this->solution_.value_valid) return HighsStatus::kOk;
-  // Must have dual values for an LP if there are primal values
-  assert(this->solution_.dual_valid);
-  HighsInfo& info = this->info_;
-  const HighsOptions& options = this->options_;
-  const HighsSolution& solution = this->solution_;
-  const HighsLogOptions& log_options = options.log_options;
-  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  double primal_residual_tolerance = options.primal_residual_tolerance;
-  double dual_residual_tolerance = options.dual_residual_tolerance;
-  double optimality_tolerance = options.optimality_tolerance;
-  if (options.kkt_tolerance != kDefaultKktTolerance) {
-    primal_feasibility_tolerance = options.kkt_tolerance;
-    dual_feasibility_tolerance = options.kkt_tolerance;
-    primal_residual_tolerance = options.kkt_tolerance;
-    dual_residual_tolerance = options.kkt_tolerance;
-    optimality_tolerance = options.kkt_tolerance;
-  }
-  info.objective_function_value = lp.objectiveValue(solution_.col_value);
-  HighsPrimalDualErrors primal_dual_errors;
-  const bool get_residuals = !basis_.valid;
-  getLpKktFailures(options, lp, solution, basis_, info, primal_dual_errors,
-                   get_residuals);
-  if (this->model_status_ == HighsModelStatus::kOptimal)
-    reportKktFailures(lp, options, info, message);
-  // get_residuals is false when there is a valid basis, since
-  // residual errors are assumed to be small, so
-  // info.num_primal_residual_errors = -1, since they aren't
-  // known. Hence don't consider this in identifying unboundedness
-  // from HighsModelStatus::kUnboundedOrInfeasible
-  if (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
-      info.num_primal_infeasibilities == 0 &&
-      (!get_residuals || info.num_primal_residual_errors == 0))
-    model_status_ = HighsModelStatus::kUnbounded;
-  bool was_optimal = model_status_ == HighsModelStatus::kOptimal;
-  bool kkt_ok = true;
-  bool written_optimality_error_header = false;
-
-  auto foundOptimalityError = [&]() {
-    kkt_ok = false;
-    if (!was_optimal || written_optimality_error_header) return;
-    highsLogUser(log_options, HighsLogType::kWarning,
-                 "LP solver claims optimality, but with\n");
-    written_optimality_error_header = true;
-  };
-
-  double max_primal_tolerance_relative_violation = 0;
-  double max_dual_tolerance_relative_violation = 0;
-  double primal_dual_objective_tolerance_relative_violation = 0;
-  const double max_allowed_tolerance_relative_violation = 1e2;
-  if (basis_.valid) {
-    if (info.num_primal_infeasibilities > 0) {
-      max_primal_tolerance_relative_violation =
-          std::max(info.max_primal_infeasibility / primal_feasibility_tolerance,
-                   max_primal_tolerance_relative_violation);
-      foundOptimalityError();
-      if (was_optimal)
-        highsLogUser(
-            log_options, HighsLogType::kWarning,
-            "   num/max/sum %6d / %8.3g / %8.3g primal "
-            "infeasibilities       (tolerance = %4.0e)\n",
-            int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
-            info.sum_primal_infeasibilities, primal_feasibility_tolerance);
-    }
-    if (info.num_dual_infeasibilities > 0) {
-      max_dual_tolerance_relative_violation =
-          std::max(info.max_dual_infeasibility / dual_feasibility_tolerance,
-                   max_dual_tolerance_relative_violation);
-      foundOptimalityError();
-      if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "   num/max/sum %6d / %8.3g / %8.3g   dual "
-                     "infeasibilities       (tolerance = %4.0e)\n",
-                     int(info.num_dual_infeasibilities),
-                     info.max_dual_infeasibility, info.sum_dual_infeasibilities,
-                     dual_feasibility_tolerance);
-    }
-    // An optimal basic solution has no complementarity violations
-    // by construction, and can be assumed to have no relative
-    // primal or dual residual errors or meaningful primal dual
-    // objective error
-    bool unexpected_error_if_optimal = info.num_complementarity_violations != 0;
-    double local_dual_objective = 0;
-    if (info.primal_dual_objective_error > optimality_tolerance) {
-      // Ignore primal-dual objective errors if both objectives are small
-      const bool ok_dual_objective = computeDualObjectiveValue(
-          nullptr, lp, this->solution_, local_dual_objective);
-      assert(ok_dual_objective);
-      if (info.objective_function_value * info.objective_function_value >
-              optimality_tolerance &&
-          local_dual_objective * local_dual_objective > optimality_tolerance)
-        unexpected_error_if_optimal = true;
-    }
-    const bool have_residual_errors =
-        info.num_primal_residual_errors != kHighsIllegalResidualCount;
-    if (have_residual_errors) {
-      unexpected_error_if_optimal =
-          unexpected_error_if_optimal ||
-          info.num_relative_primal_residual_errors != 0 ||
-          info.num_relative_dual_residual_errors != 0;
-      max_primal_tolerance_relative_violation = std::max(
-          info.max_relative_primal_residual_error / primal_residual_tolerance,
-          max_primal_tolerance_relative_violation);
-      max_dual_tolerance_relative_violation = std::max(
-          info.max_relative_dual_residual_error / dual_residual_tolerance,
-          max_dual_tolerance_relative_violation);
-    }
-    primal_dual_objective_tolerance_relative_violation =
-        info.primal_dual_objective_error / optimality_tolerance;
-
-    if (was_optimal && unexpected_error_if_optimal) {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "Optimal basic solution has %d complementarity violations and %g "
-          "primal dual objective error from primal (dual) objective = %g "
-          "(%g)\n",
-          int(info.num_complementarity_violations),
-          info.primal_dual_objective_error, info.objective_function_value,
-          local_dual_objective);
-      if (have_residual_errors) {
-        highsLogUser(
-            log_options, HighsLogType::kWarning,
-            "   num/max %6d / %8.3g  relative primal residual errors         "
-            "(tolerance = %4.0e)\n",
-            int(info.num_relative_primal_residual_errors),
-            info.max_relative_primal_residual_error, primal_residual_tolerance);
-        highsLogUser(
-            log_options, HighsLogType::kWarning,
-            "   num/max %6d / %8.3g  relative   dual residual errors         "
-            "(tolerance = %4.0e)\n",
-            int(info.num_relative_dual_residual_errors),
-            info.max_relative_dual_residual_error, dual_residual_tolerance);
-      }
-      assert(info.num_complementarity_violations == 0);
-      assert(info.primal_dual_objective_error <= optimality_tolerance);
-      if (have_residual_errors) {
-        assert(info.num_relative_primal_residual_errors == 0);
-        assert(info.num_relative_dual_residual_errors == 0);
-      }
-    }
-    // Infeasibility of the primal and dual solutions based on number
-    // of primal/dual infeasibilities should have been set in
-    // getKktFailures, but qualify this if the residuals are
-    // meaningful
-    if (info.num_primal_infeasibilities) {
-      assert(info.primal_solution_status == kSolutionStatusInfeasible);
-    } else {
-      info.primal_solution_status = kSolutionStatusFeasible;
-    }
-    if (info.num_dual_infeasibilities) {
-      assert(info.dual_solution_status == kSolutionStatusInfeasible);
-    } else {
-      info.dual_solution_status = kSolutionStatusFeasible;
-    }
-    // Overrule feasibility if large relative tolerance failures have
-    // occurred - pretty inconceivable since absolute residuals should
-    // be small with a basis
-    if (max_primal_tolerance_relative_violation >
-        max_allowed_tolerance_relative_violation)
-      info.primal_solution_status = kSolutionStatusInfeasible;
-    if (max_dual_tolerance_relative_violation >
-        max_allowed_tolerance_relative_violation)
-      info.dual_solution_status = kSolutionStatusInfeasible;
-  } else {
-    // A solution without a basis may have primal or dual residual
-    // errors, and complementarity errors - due to the convergence
-    // being based on relative primal-dual objective error, so test
-    // the latter
-    double tolerance_relative_violation =
-        info.max_relative_primal_infeasibility / primal_feasibility_tolerance;
-    max_primal_tolerance_relative_violation = std::max(
-        tolerance_relative_violation, max_primal_tolerance_relative_violation);
-    if (info.num_relative_primal_infeasibilities > 0) {
-      foundOptimalityError();
-      if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "   num/max %6d / %8.3g relative primal infeasibilities "
-                     "(tolerance = %4.0e)\n",
-                     int(info.num_relative_primal_infeasibilities),
-                     info.max_relative_primal_infeasibility,
-                     primal_feasibility_tolerance);
-    }
-    tolerance_relative_violation =
-        info.max_relative_dual_infeasibility / dual_feasibility_tolerance;
-    max_dual_tolerance_relative_violation = std::max(
-        tolerance_relative_violation, max_dual_tolerance_relative_violation);
-    if (info.num_relative_dual_infeasibilities > 0) {
-      foundOptimalityError();
-      if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "   num/max %6d / %8.3g relative   dual infeasibilities "
-                     "(tolerance = %4.0e)\n",
-                     int(info.num_relative_dual_infeasibilities),
-                     info.max_relative_dual_infeasibility,
-                     dual_feasibility_tolerance);
-    }
-    tolerance_relative_violation =
-        info.max_relative_primal_residual_error / primal_residual_tolerance;
-    max_primal_tolerance_relative_violation = std::max(
-        tolerance_relative_violation, max_primal_tolerance_relative_violation);
-    if (info.num_relative_primal_residual_errors > 0) {
-      foundOptimalityError();
-      if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "   num/max %6d / %8.3g relative primal residual errors "
-                     "(tolerance = %4.0e)\n",
-                     int(info.num_relative_primal_residual_errors),
-                     info.max_relative_primal_residual_error,
-                     primal_residual_tolerance);
-    }
-    tolerance_relative_violation =
-        info.max_relative_dual_residual_error / dual_residual_tolerance;
-    max_dual_tolerance_relative_violation = std::max(
-        tolerance_relative_violation, max_dual_tolerance_relative_violation);
-    if (info.num_relative_dual_residual_errors > 0) {
-      foundOptimalityError();
-      if (was_optimal)
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "   num/max %6d / %8.3g relative   dual residual errors "
-                     "(tolerance = %4.0e)\n",
-                     int(info.num_relative_dual_residual_errors),
-                     info.max_relative_dual_residual_error,
-                     dual_residual_tolerance);
-    }
-    if (info.primal_dual_objective_error > optimality_tolerance) {
-      primal_dual_objective_tolerance_relative_violation =
-          info.primal_dual_objective_error / optimality_tolerance;
-      foundOptimalityError();
-      if (was_optimal)
-        highsLogUser(
-            log_options, HighsLogType::kWarning,
-            "                    %8.3g relative P-D objective error    "
-            "(tolerance = %4.0e)\n",
-            info.primal_dual_objective_error, optimality_tolerance);
-    }
-    // Set the primal and dual solution status according to tolerance failure
-    if (max_primal_tolerance_relative_violation >
-        max_allowed_tolerance_relative_violation) {
-      info.primal_solution_status = kSolutionStatusInfeasible;
-    } else {
-      info.primal_solution_status = kSolutionStatusFeasible;
-    }
-    if (max_dual_tolerance_relative_violation >
-        max_allowed_tolerance_relative_violation) {
-      info.dual_solution_status = kSolutionStatusInfeasible;
-    } else {
-      info.dual_solution_status = kSolutionStatusFeasible;
-    }
-  }
-  double max_tolerance_relative_violation =
-      primal_dual_objective_tolerance_relative_violation;
-  max_tolerance_relative_violation =
-      std::max(max_primal_tolerance_relative_violation,
-               max_tolerance_relative_violation);
-  max_tolerance_relative_violation = std::max(
-      max_dual_tolerance_relative_violation, max_tolerance_relative_violation);
-  //
-  // Now see whether optimality is compromised or permitted given the tolerance
-  // failures
-  if (model_status_ == HighsModelStatus::kOptimal) {
-    if (max_tolerance_relative_violation >
-        max_allowed_tolerance_relative_violation) {
-      model_status_ = HighsModelStatus::kUnknown;
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "Model status changed from \"Optimal\" to \"Unknown\""
-                   " since relative violation of tolerances is %8.3g\n",
-                   max_tolerance_relative_violation);
-    } else if (max_allowed_tolerance_relative_violation > 1 &&
-               max_tolerance_relative_violation > 1) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Model status is \"Optimal\" since relative violation of "
-                   "tolerances is no more than %8.3g\n",
-                   max_tolerance_relative_violation);
-    }
-  } else if (model_status_ == HighsModelStatus::kUnknown &&
-             max_tolerance_relative_violation <=
-                 max_allowed_tolerance_relative_violation) {
-    model_status_ = HighsModelStatus::kOptimal;
-    highsLogUser(log_options, HighsLogType::kWarning,
-                 "Model status changed from \"Unknown\" to \"Optimal\"\n");
-  }
-  highsLogUser(log_options, HighsLogType::kInfo, "\n");
-  return HighsStatus::kOk;
+void Highs::callLpKktCheck(const HighsLp& lp, const std::string& message) {
+  lpKktCheck(this->model_status_, this->info_, lp, this->solution_,
+             this->basis_, this->options_, message);
 }
 
 HighsStatus Highs::invertRequirementError(std::string method_name) const {
@@ -3867,7 +3665,7 @@ bool Highs::infeasibleBoundsOk() {
   const bool has_integrality = lp.integrality_.size() > 0;
   bool performed_inward_integer_rounding = false;
   // Lambda for assessing infeasible bounds
-  auto infeasibleBoundOk = [&](const std::string type, const HighsInt iX,
+  auto infeasibleBoundOk = [&](const std::string& type, const HighsInt iX,
                                double& lower, double& upper) {
     double range = upper - lower;
     // Should only be called if lower > upper, so range < 0
@@ -4343,7 +4141,8 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
     double relative_violation = kkt_error / use_kkt_tolerance;
     if (relative_violation > tolerance_margin)
       printf(
-          "KKT measure (%11.4g, %11.4g) gives relative violation of %11.4g for "
+          "KKT measure (%11.4g, %11.4g) gives relative violation of %11.4g "
+          "for "
           "%s\n",
           kkt_error, use_kkt_tolerance, relative_violation, kkt_name.c_str());
     max_relative_violation =

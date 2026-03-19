@@ -139,7 +139,7 @@ void Logger::print_iteration_header() {
       "-------------------------");
 }
 
-void Logger::print_iteration_stats(int iter, const SolverResults& results,
+void Logger::print_iteration_stats(HighsInt iter, const SolverResults& results,
                                    double step_size) {
   std::stringstream ss;
   ss << std::fixed << std::setprecision(4) << " " << std::setw(6) << iter
@@ -151,7 +151,7 @@ void Logger::print_iteration_stats(int iter, const SolverResults& results,
   verbose(ss.str());
 }
 
-void Logger::print_summary(const SolverResults& results, int total_iter,
+void Logger::print_summary(const SolverResults& results, HighsInt total_iter,
                            double total_time) {
   info("\n-------------------- Solver Summary --------------------");
   std::stringstream ss;

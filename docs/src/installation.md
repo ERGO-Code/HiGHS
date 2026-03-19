@@ -79,7 +79,7 @@ HiGHS can be installed using a package manager in the cases of
 
 ## Precompiled Binaries
 
-From v1.13.0 onwards, precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
+Precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
 
 Additionally, there is one package containing shared libraries for Windows x64.
 

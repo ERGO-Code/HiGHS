@@ -39,11 +39,11 @@ class RestartScheme {
   void Initialize(const SolverResults& results);
 
   // Checks if a restart should be performed based on the chosen strategy
-  RestartInfo Check(int current_iter, const SolverResults& current_results,
+  RestartInfo Check(HighsInt current_iter, const SolverResults& current_results,
                     const SolverResults& average_results);
 
-  int GetLastRestartIter() const { return last_restart_iter_; }
-  int last_restart_iter_ = 0;
+  HighsInt GetLastRestartIter() const { return last_restart_iter_; }
+  HighsInt last_restart_iter_ = 0;
   void passParams(PrimalDualParams* params) { params_ = params; };
   void passLogOptions(const HighsLogOptions* log_options) {
     log_options_ = log_options;
@@ -81,7 +81,7 @@ class RestartScheme {
   DebugPdlpData* debug_pdlp_data_;
 
   RestartStrategy strategy_ = RestartStrategy::NO_RESTART;
-  int fixed_restart_interval_ = 100;
+  HighsInt fixed_restart_interval_ = 100;
   double beta_;
 
   double primal_feas_last_candidate_ = 0.0;

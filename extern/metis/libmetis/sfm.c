@@ -57,7 +57,7 @@ void FM_2WayNodeRefine2Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
   badmaxpwgt = (idx_t)(mult*(pwgts[0]+pwgts[1]+pwgts[2]));
 
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE,
-    printf("Partitions-N2: [%6"PRIDX" %6"PRIDX"] Nv-Nb[%6"PRIDX" %6"PRIDX"]. ISep: %6"PRIDX"\n", pwgts[0], pwgts[1], graph->nvtxs, graph->nbnd, graph->mincut));
+    HIGHS_ORDERING_PRINT("Partitions-N2: [%6"PRIDX" %6"PRIDX"] Nv-Nb[%6"PRIDX" %6"PRIDX"]. ISep: %6"PRIDX"\n", pwgts[0], pwgts[1], graph->nvtxs, graph->nbnd, graph->mincut));
 
   for (pass=0; pass<niter; pass++) {
     iset(nvtxs, -1, moved);
@@ -186,7 +186,7 @@ void FM_2WayNodeRefine2Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
       mptr[nswaps+1] = nmind;
 
       IFSET(ctrl->dbglvl, METIS_DBG_MOVEINFO,
-            printf("Moved %6"PRIDX" to %3"PRIDX", Gain: %5"PRIDX" [%5"PRIDX"] [%4"PRIDX" %4"PRIDX"] \t[%5"PRIDX" %5"PRIDX" %5"PRIDX"]\n", higain, to, g[to], g[other], vwgt[u[to]], vwgt[u[other]], pwgts[0], pwgts[1], pwgts[2]));
+            HIGHS_ORDERING_PRINT("Moved %6"PRIDX" to %3"PRIDX", Gain: %5"PRIDX" [%5"PRIDX"] [%4"PRIDX" %4"PRIDX"] \t[%5"PRIDX" %5"PRIDX" %5"PRIDX"]\n", higain, to, g[to], g[other], vwgt[u[to]], vwgt[u[other]], pwgts[0], pwgts[1], pwgts[2]));
 
     }
 
@@ -229,7 +229,7 @@ void FM_2WayNodeRefine2Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
     }
 
     IFSET(ctrl->dbglvl, METIS_DBG_REFINE,
-      printf("\tMinimum sep: %6"PRIDX" at %5"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", mincut, mincutorder, pwgts[0], pwgts[1], nbnd));
+      HIGHS_ORDERING_PRINT("\tMinimum sep: %6"PRIDX" at %5"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", mincut, mincutorder, pwgts[0], pwgts[1], nbnd));
 
     graph->mincut = mincut;
     graph->nbnd = nbnd;
@@ -288,7 +288,7 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
   badmaxpwgt = (idx_t)(mult*(pwgts[0]+pwgts[1]+pwgts[2]));
 
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE,
-    printf("Partitions-N1: [%6"PRIDX" %6"PRIDX"] Nv-Nb[%6"PRIDX" %6"PRIDX"]. ISep: %6"PRIDX"\n", pwgts[0], pwgts[1], graph->nvtxs, graph->nbnd, graph->mincut));
+    HIGHS_ORDERING_PRINT("Partitions-N1: [%6"PRIDX" %6"PRIDX"] Nv-Nb[%6"PRIDX" %6"PRIDX"]. ISep: %6"PRIDX"\n", pwgts[0], pwgts[1], graph->nvtxs, graph->nbnd, graph->mincut));
 
   to = (pwgts[0] < pwgts[1] ? 1 : 0);
   for (pass=0; pass<2*niter; pass++) {  /* the 2*niter is for the two sides */
@@ -388,7 +388,7 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
 
 
       IFSET(ctrl->dbglvl, METIS_DBG_MOVEINFO,
-            printf("Moved %6"PRIDX" to %3"PRIDX", Gain: %5"PRIDX" [%5"PRIDX"] \t[%5"PRIDX" %5"PRIDX" %5"PRIDX"] [%3"PRIDX" %2"PRIDX"]\n", 
+            HIGHS_ORDERING_PRINT("Moved %6"PRIDX" to %3"PRIDX", Gain: %5"PRIDX" [%5"PRIDX"] \t[%5"PRIDX" %5"PRIDX" %5"PRIDX"] [%3"PRIDX" %2"PRIDX"]\n", 
                 higain, to, (vwgt[higain]-rinfo[higain].edegrees[other]), vwgt[higain], 
                 pwgts[0], pwgts[1], pwgts[2], nswaps, limit));
     }
@@ -429,7 +429,7 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
     }
 
     IFSET(ctrl->dbglvl, METIS_DBG_REFINE,
-      printf("\tMinimum sep: %6"PRIDX" at %5"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", mincut, mincutorder, pwgts[0], pwgts[1], nbnd));
+      HIGHS_ORDERING_PRINT("\tMinimum sep: %6"PRIDX" at %5"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", mincut, mincutorder, pwgts[0], pwgts[1], nbnd));
 
     graph->mincut = mincut;
     graph->nbnd   = nbnd;
@@ -489,7 +489,7 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
   moved = iset(nvtxs, -1, iwspacemalloc(ctrl, nvtxs));
 
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE,
-    printf("Partitions: [%6"PRIDX" %6"PRIDX"] Nv-Nb[%6"PRIDX" %6"PRIDX"]. ISep: %6"PRIDX" [B]\n", pwgts[0], pwgts[1], graph->nvtxs, graph->nbnd, graph->mincut));
+    HIGHS_ORDERING_PRINT("Partitions: [%6"PRIDX" %6"PRIDX"] Nv-Nb[%6"PRIDX" %6"PRIDX"]. ISep: %6"PRIDX" [B]\n", pwgts[0], pwgts[1], graph->nvtxs, graph->nbnd, graph->mincut));
 
   nbnd = graph->nbnd;
   irandArrayPermute(nbnd, perm, nbnd, 1, &ctrl->rng_state);
@@ -530,7 +530,7 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
     where[higain] = to;
 
     IFSET(ctrl->dbglvl, METIS_DBG_MOVEINFO,
-          printf("Moved %6"PRIDX" to %3"PRIDX", Gain: %3"PRIDX", \t[%5"PRIDX" %5"PRIDX" %5"PRIDX"]\n", higain, to, vwgt[higain]-rinfo[higain].edegrees[other], pwgts[0], pwgts[1], pwgts[2]));
+          HIGHS_ORDERING_PRINT("Moved %6"PRIDX" to %3"PRIDX", Gain: %3"PRIDX", \t[%5"PRIDX" %5"PRIDX" %5"PRIDX"]\n", higain, to, vwgt[higain]-rinfo[higain].edegrees[other], pwgts[0], pwgts[1], pwgts[2]));
 
 
     /**********************************************************
@@ -569,7 +569,7 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
   }
 
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE,
-    printf("\tBalanced sep: %6"PRIDX" at %4"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", pwgts[2], nswaps, pwgts[0], pwgts[1], nbnd));
+    HIGHS_ORDERING_PRINT("\tBalanced sep: %6"PRIDX" at %4"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", pwgts[2], nswaps, pwgts[0], pwgts[1], nbnd));
 
   graph->mincut = pwgts[2];
   graph->nbnd   = nbnd;

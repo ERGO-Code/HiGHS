@@ -73,7 +73,7 @@ void Bnd2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
   to        = (from+1)%2;
 
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE, 
-     printf("Partitions: [%6"PRIDX" %6"PRIDX"] T[%6"PRIDX" %6"PRIDX"], Nv-Nb[%6"PRIDX" %6"PRIDX"]. ICut: %6"PRIDX" [B]\n",
+     HIGHS_ORDERING_PRINT("Partitions: [%6"PRIDX" %6"PRIDX"] T[%6"PRIDX" %6"PRIDX"], Nv-Nb[%6"PRIDX" %6"PRIDX"]. ICut: %6"PRIDX" [B]\n",
              pwgts[0], pwgts[1], tpwgts[0], tpwgts[1], graph->nvtxs, graph->nbnd, 
              graph->mincut));
 
@@ -106,7 +106,7 @@ void Bnd2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
     moved[higain] = nswaps;
 
     IFSET(ctrl->dbglvl, METIS_DBG_MOVEINFO, 
-      printf("Moved %6"PRIDX" from %"PRIDX". [%3"PRIDX" %3"PRIDX"] %5"PRIDX" [%4"PRIDX" %4"PRIDX"]\n", higain, from, ed[higain]-id[higain], vwgt[higain], mincut, pwgts[0], pwgts[1]));
+      HIGHS_ORDERING_PRINT("Moved %6"PRIDX" from %"PRIDX". [%3"PRIDX" %3"PRIDX"] %5"PRIDX" [%4"PRIDX" %4"PRIDX"]\n", higain, from, ed[higain]-id[higain], vwgt[higain], mincut, pwgts[0], pwgts[1]));
 
     /**************************************************************
     * Update the id[i]/ed[i] values of the affected nodes
@@ -143,7 +143,7 @@ void Bnd2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
   }
 
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE, 
-    printf("\tMinimum cut: %6"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", mincut, pwgts[0], pwgts[1], nbnd));
+    HIGHS_ORDERING_PRINT("\tMinimum cut: %6"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", mincut, pwgts[0], pwgts[1], nbnd));
 
   graph->mincut = mincut;
   graph->nbnd   = nbnd;
@@ -197,7 +197,7 @@ void General2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
   to        = (from+1)%2;
 
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE, 
-     printf("Partitions: [%6"PRIDX" %6"PRIDX"] T[%6"PRIDX" %6"PRIDX"], Nv-Nb[%6"PRIDX" %6"PRIDX"]. ICut: %6"PRIDX" [B]\n",
+     HIGHS_ORDERING_PRINT("Partitions: [%6"PRIDX" %6"PRIDX"] T[%6"PRIDX" %6"PRIDX"], Nv-Nb[%6"PRIDX" %6"PRIDX"]. ICut: %6"PRIDX" [B]\n",
              pwgts[0], pwgts[1], tpwgts[0], tpwgts[1], graph->nvtxs, graph->nbnd, graph->mincut));
 
   queue = rpqCreate(nvtxs);
@@ -229,7 +229,7 @@ void General2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
     moved[higain] = nswaps;
 
     IFSET(ctrl->dbglvl, METIS_DBG_MOVEINFO, 
-      printf("Moved %6"PRIDX" from %"PRIDX". [%3"PRIDX" %3"PRIDX"] %5"PRIDX" [%4"PRIDX" %4"PRIDX"]\n", higain, from, ed[higain]-id[higain], vwgt[higain], mincut, pwgts[0], pwgts[1]));
+      HIGHS_ORDERING_PRINT("Moved %6"PRIDX" from %"PRIDX". [%3"PRIDX" %3"PRIDX"] %5"PRIDX" [%4"PRIDX" %4"PRIDX"]\n", higain, from, ed[higain]-id[higain], vwgt[higain], mincut, pwgts[0], pwgts[1]));
 
     /**************************************************************
     * Update the id[i]/ed[i] values of the affected nodes
@@ -259,7 +259,7 @@ void General2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
   }
 
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE, 
-    printf("\tMinimum cut: %6"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", mincut, pwgts[0], pwgts[1], nbnd));
+    HIGHS_ORDERING_PRINT("\tMinimum cut: %6"PRIDX", PWGTS: [%6"PRIDX" %6"PRIDX"], NBND: %6"PRIDX"\n", mincut, pwgts[0], pwgts[1], nbnd));
 
   graph->mincut = mincut;
   graph->nbnd   = nbnd;
@@ -351,11 +351,11 @@ void McGeneral2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
   mincutorder = -1;
 
   if (ctrl->dbglvl&METIS_DBG_REFINE) {
-    printf("Parts: [");
+    HIGHS_ORDERING_PRINT("Parts: [");
     for (l=0; l<ncon; l++)
-      printf("(%6"PRIDX" %6"PRIDX" %.3"PRREAL" %.3"PRREAL") ", 
+      HIGHS_ORDERING_PRINT("(%6"PRIDX" %6"PRIDX" %.3"PRREAL" %.3"PRREAL") ", 
           pwgts[l], pwgts[ncon+l], ntpwgts[l], ntpwgts[ncon+l]);
-    printf("] Nv-Nb[%5"PRIDX", %5"PRIDX"]. ICut: %6"PRIDX", LB: %+.3"PRREAL" [B]\n", 
+    HIGHS_ORDERING_PRINT("] Nv-Nb[%5"PRIDX", %5"PRIDX"]. ICut: %6"PRIDX", LB: %+.3"PRREAL" [B]\n", 
            graph->nvtxs, graph->nbnd, graph->mincut, minbal);
   }
 
@@ -406,11 +406,11 @@ void McGeneral2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
     swaps[nswaps] = higain;
 
     if (ctrl->dbglvl&METIS_DBG_MOVEINFO) {
-      printf("Moved %6"PRIDX" from %"PRIDX"(%"PRIDX"). Gain: %5"PRIDX", "
+      HIGHS_ORDERING_PRINT("Moved %6"PRIDX" from %"PRIDX"(%"PRIDX"). Gain: %5"PRIDX", "
              "Cut: %5"PRIDX", NPwgts: ", higain, from, cnum, ed[higain]-id[higain], newcut);
       for (l=0; l<ncon; l++) 
-        printf("(%6"PRIDX", %6"PRIDX") ", pwgts[l], pwgts[ncon+l]);
-      printf(", %+.3"PRREAL" LB: %+.3"PRREAL"\n", minbal, newbal);
+        HIGHS_ORDERING_PRINT("(%6"PRIDX", %6"PRIDX") ", pwgts[l], pwgts[ncon+l]);
+      HIGHS_ORDERING_PRINT(", %+.3"PRREAL" LB: %+.3"PRREAL"\n", minbal, newbal);
     }
 
 
@@ -472,11 +472,11 @@ void McGeneral2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
   }
 
   if (ctrl->dbglvl&METIS_DBG_REFINE) {
-    printf("\tMincut: %6"PRIDX" at %5"PRIDX", NBND: %6"PRIDX", NPwgts: [", 
+    HIGHS_ORDERING_PRINT("\tMincut: %6"PRIDX" at %5"PRIDX", NBND: %6"PRIDX", NPwgts: [", 
         mincut, mincutorder, nbnd);
     for (l=0; l<ncon; l++)
-      printf("(%6"PRIDX", %6"PRIDX") ", pwgts[l], pwgts[ncon+l]);
-    printf("], LB: %.3"PRREAL"\n", ComputeLoadImbalance(graph, 2, ctrl->pijbm));
+      HIGHS_ORDERING_PRINT("(%6"PRIDX", %6"PRIDX") ", pwgts[l], pwgts[ncon+l]);
+    HIGHS_ORDERING_PRINT("], LB: %.3"PRREAL"\n", ComputeLoadImbalance(graph, 2, ctrl->pijbm));
   }
 
   graph->mincut = mincut;

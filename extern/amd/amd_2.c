@@ -39,7 +39,7 @@ static amd_int clear_flag (amd_int wflg, amd_int wbig, amd_int W [ ], amd_int n)
 /* === AMD_2 =============================================================== */
 /* ========================================================================= */
 
-void amd_2
+void Highs_amd_2
 (
     amd_int n,		/* A is n-by-n, where n > 0 */
     amd_int Pe [ ],		/* Pe [0..n-1]: index in Iw of row i on input */
