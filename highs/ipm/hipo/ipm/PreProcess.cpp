@@ -348,8 +348,31 @@ void PreprocessScaling::apply(Model& model) {
     }
 
     // apply col scaling
-    for (Int i = 0; i < n; ++i)
-      if (norm_cols[i] > 0.0) colscale[i] *= 1.0 / std::sqrt(norm_cols[i]);
+    for (Int i = 0; i < n; ++i) {
+      double coeff = 1.0 / std::sqrt(norm_cols[i]);
+
+      // use geomean of norm scaling and scaling that makes diagonal of Q equal
+      // to 1
+      if (model.qp()) {
+        const double Qii = Q.diag(i) * colscale[i] * colscale[i];
+        coeff = std::sqrt(coeff * 1.0 / std::sqrt(std::abs(Qii)));
+      }
+
+      // if bounds interval is too small or large, use geomean of norm scaling
+      // and maximum scaling allowed by bounds
+      if (std::isfinite(lower[i]) && std::isfinite(upper[i])) {
+        const double l = lower[i] / colscale[i];
+        const double u = upper[i] / colscale[i];
+        const double diff = std::abs(u - l);
+
+        if (diff / coeff < kSmallBoundDiff)
+          coeff = std::sqrt(coeff * diff / kSmallBoundDiff);
+        else if (diff / coeff > kLargeBoundDiff)
+          coeff = std::sqrt(coeff * diff / kLargeBoundDiff);
+      }
+
+      if (!std::isinf(coeff) && !std::isnan(coeff)) colscale[i] *= coeff;
+    }
   };
   auto rowScaling = [&]() {
     // infinity norm of rows
@@ -368,28 +391,11 @@ void PreprocessScaling::apply(Model& model) {
     for (Int i = 0; i < m; ++i)
       if (norm_rows[i] > 0.0) rowscale[i] *= 1.0 / std::sqrt(norm_rows[i]);
   };
-  auto boundScaling = [&]() {
-    for (Int i = 0; i < n; ++i) {
-      if (std::isfinite(lower[i]) && std::isfinite(upper[i])) {
-        const double l = lower[i] / colscale[i];
-        const double u = upper[i] / colscale[i];
-        const double diff = std::abs(u - l);
-
-        if (diff < kSmallBoundDiff)
-          colscale[i] *= std::sqrt(diff / kSmallBoundDiff);
-        else if (diff > kLargeBoundDiff) {
-          colscale[i] *= std::sqrt(diff / kLargeBoundDiff);
-        }
-      }
-    }
-  };
 
   const Int num_passes = 10;
   for (Int pass = 0; pass < num_passes; ++pass) {
+    rowScaling();
     colScaling();
-    rowScaling();
-    boundScaling();
-    rowScaling();
   }
 
   bool scaling_failed = isInfVector(colscale) || isNanVector(colscale) ||
