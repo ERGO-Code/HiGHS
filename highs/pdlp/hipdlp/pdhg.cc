@@ -30,7 +30,7 @@
 #include "restart.hpp"
 
 #define PDHG_CHECK_INTERVAL 40
-#define DEBUG_MODE (true)
+#define DEBUG_MODE (false)
 static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
