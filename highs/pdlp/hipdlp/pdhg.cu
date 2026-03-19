@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <cublas_v2.h>
 
+typedef int HighsInt;
+
 // Define Infinity for GPU 
 #define GPU_INF 1e20 
 
