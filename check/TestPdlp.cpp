@@ -470,11 +470,7 @@ TEST_CASE("cuda-sandbox", "[pdlp]") {
 #endif
 
 TEST_CASE("hi-pdlp-halpern", "[pdlp]") {
-<<<<<<< HEAD
   std::string model = "avgas";  //"afiro";
-=======
-  std::string model = "afiro";  //"afiro";
->>>>>>> origin/hipdlp
   // shell //stair //25fv47 //fit2p //avgas //neso-2245 //neso-2005
   std::string model_file =
       //"/srv/mps_da/" + model + ".mps.gz";
