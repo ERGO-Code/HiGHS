@@ -142,9 +142,6 @@ message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
 message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 
-option(GPU_DL "Build GPU with delayed loading" OFF)
-message(STATUS "Build GPU with delayed loading: ${GPU_DL}")
-
 option(HIGHS_GPU_LIB "Build highs GPU as a single lib" OFF)
 message(STATUS "Build GPU with delayed loading: ${HIGHS_GPU_LIB}")
 
@@ -196,8 +193,6 @@ if (CUPDLP_GPU)
     # With FindCUDAConf.cmake
     # Need to have the CUDA_HOME environment variable set.
     include(FindCUDAConf)
-  elseif(GPU_DL)
-    # Stub build - no toolkit needed?
   else()
     # Without FindCUDAConf.cmake
     enable_language(CUDA)
@@ -209,7 +204,7 @@ if (CUPDLP_GPU)
 
 else()
   set (CUPDLP_CPU ON)
-  set(CUDA_LIBRARY-NOTFOUND true)
+    set(CUDA_LIBRARY-NOTFOUND true)
 endif()
 
 # HiPO deps

@@ -161,6 +161,7 @@ else()
 
   # Optional Cuda
   if (CUPDLP_GPU)
+
     target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
 
     if (HIGHS_GPU_LIB)
@@ -212,28 +213,13 @@ else()
         set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
         add_subdirectory(pdlp/cupdlp/cuda)
 
-        # classic
         if (WIN32)
-          # if (NOT GPU_STUBS)
             target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
           else()
-        #     # Stub build - no toolkit needed
-        #     target_include_directories(highs PRIVATE
-        #       ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/include
-        #     )
-        #     target_link_directories(highs PRIVATE
-        #       ${CMAKE_SOURCE_DIR}/extern/cuda_stubs/lib/Windows
-        #     )
-        #     target_link_libraries(highs PRIVATE cudalin cuda cublas cusparse cudart)
-
-        #   endif()
-        # else() # Linux
-        #   if (NOT GPU_STUBS)
             target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
           endif()
 
           set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-        # endif()
       endif()
     endif()
 
@@ -317,7 +303,7 @@ else()
         "/DWIN32_LEAN_AND_MEAN=1"
         "/D_CRT_SECURE_NO_WARNINGS"
         "/D_CRT_SECURE_NO_DEPRECATE"
-        # "/MP" # Build with multiple processes
+        "/MP" # Build with multiple processes
         "/Zc:preprocessor" # Enable preprocessor conformance mode
         "/fp:precise"
         )
