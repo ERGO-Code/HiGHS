@@ -16,8 +16,6 @@ const bool dev_run = false;
 const double double_equal_tolerance = 1e-3;
 const double kkt_tolerance = 1e-4;
 
-#ifdef CUPDLP_CPU
-
 TEST_CASE("hi-pdlp", "[pdlp]") {
   std::string model = "afiro";  //"afiro";
   // shell //stair //25fv47 //fit2p //avgas //neso-2245 //neso-2005
