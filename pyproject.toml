@@ -13,13 +13,14 @@ description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
 
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 dependencies = ["numpy"]
 
 classifiers = [
   # "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -211,3 +212,11 @@ enable = ["cpython-freethreading"]
 test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
 build-verbosity = 1
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = """
+  delocate-wheel --require-archs {delocate_archs} \
+    --ignore-missing-dependencies \
+    -e libunwind \
+    -w {dest_dir} -v {wheel}
+"""
