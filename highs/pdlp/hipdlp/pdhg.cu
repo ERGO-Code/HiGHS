@@ -4,7 +4,15 @@
 #include <cstdio>
 #include <cublas_v2.h>
 
+#ifdef HIGHSINT64
+typedef int64_t HighsInt;
+typedef uint64_t HighsUInt;
+#define HIGHSINT_FORMAT PRId64
+#else
 typedef int HighsInt;
+typedef unsigned int HighsUInt;
+#define HIGHSINT_FORMAT "d"
+#endif
 
 // Define Infinity for GPU 
 #define GPU_INF 1e20 
