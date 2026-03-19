@@ -590,7 +590,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       fpe_ = computeFixedPointError();
 #endif
       initial_fpe_ = fpe_;
-if (DEBUG_MODE) std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restarted with initial_fpe_ = " << std::setprecision(10) << initial_fpe_ << std::endl;
+//if (DEBUG_MODE) std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restarted with initial_fpe_ = " << std::setprecision(10) << initial_fpe_ << std::endl;
       do_restart = false;
     }
 
@@ -652,7 +652,7 @@ if(final_iter_count_ == 9) {
   #else
       fpe_ = computeFixedPointError();
   #endif
-if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE at check: " << std::setprecision(10) << fpe_ << std::endl;
+//if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE at check: " << std::setprecision(10) << fpe_ << std::endl;
       
     halpern_iteration_ += PDHG_CHECK_INTERVAL;
     final_iter_count_ += PDHG_CHECK_INTERVAL;
@@ -690,7 +690,7 @@ if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE 
     if (do_restart) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
         updatePrimalWeightAtRestart(results_);
-if (DEBUG_MODE)        std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Updated primal_weight_ to " << primal_weight_ << std::endl;
+//if (DEBUG_MODE)        std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Updated primal_weight_ to " << primal_weight_ << std::endl;
       }
 #ifdef CUPDLP_GPU
       CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));

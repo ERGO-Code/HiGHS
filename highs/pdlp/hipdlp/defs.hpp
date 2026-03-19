@@ -58,7 +58,7 @@ struct PrimalDualParams {
   double eta;
   double omega;
   double tolerance;
-  size_t max_iterations;
+  HighsInt max_iterations;
   Device device_type;
   double time_limit = 3600.0;
 
