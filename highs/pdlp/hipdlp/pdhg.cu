@@ -23,6 +23,8 @@ typedef unsigned int HighsUInt;
 #define IDX_PRIMAL_OBJ  2
 #define IDX_DUAL_OBJ    3
 
+typedef int HighsInt;
+
 // Add to pdhg.cu
 #define FULL_WARP_REDUCE(val) { \
   val += __shfl_down_sync(0xFFFFFFFF, val, 16); \
