@@ -280,12 +280,15 @@ void Model::print(const LogHighs& log) const {
   // compute max and min for bounds intervals
   double boundmin = kHighsInf;
   double boundmax = 0.0;
+  Int free_vars = 0;
   for (Int i = 0; i < n_; ++i) {
     if (std::isfinite(lower_[i]) && std::isfinite(upper_[i])) {
       const double diff = std::abs(upper_[i] - lower_[i]);
       boundmin = std::min(boundmin, diff);
       boundmax = std::max(boundmax, diff);
     }
+
+    if (!std::isfinite(lower_[i]) && !std::isfinite(upper_[i])) free_vars++;
   }
   if (std::isinf(boundmin)) boundmin = 0.0;
 
@@ -345,6 +348,7 @@ void Model::print(const LogHighs& log) const {
 
   if (log.debug(1)) {
     preprocessor_.print(log_stream);
+    log_stream << textline("Free variables:") << integer(free_vars) << '\n';
 
     log_stream << "Expected nnz: ";
     log_stream << "AS " << sci(AS_nz_, 0, 1) << "; ";
