@@ -202,7 +202,6 @@ filterwarnings = ["error"]
 testpaths = ["tests"]
 
 [tool.cibuildwheel]
-skip = "cp38-*"
 build = "*"
 archs = ["auto64", "auto32"]
 
