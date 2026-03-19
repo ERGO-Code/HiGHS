@@ -68,6 +68,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestNames.cpp
       TestOptions.cpp
       TestPdlp.cpp
+      TestPdlpHi.cpp
       TestPresolve.cpp
       TestQpSolver.cpp
       TestRanging.cpp
