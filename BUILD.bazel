@@ -51,7 +51,7 @@ cc_library(
     name = "highs",
     srcs = [
         "highs/interfaces/highs_c_api.cpp",
-        "highs/DynamicDepsLoader.cpp",
+        "highs/HighsExternalDeps.cpp",
     ] + glob([
         "highs/io/*.cpp",
         "highs/io/filereaderlp/*.cpp",

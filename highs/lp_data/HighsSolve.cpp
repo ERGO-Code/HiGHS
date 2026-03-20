@@ -13,10 +13,7 @@
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
-
-#ifdef HIPO_EXTRAS
-#include "DynamicDepsLoader.h"
-#endif
+#include "HighsExternalDeps.h"
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
@@ -73,7 +70,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (use_only_ipm) {
       // Use IPM to solve the LP
       if (use_hipo) {
-#ifdef HIPO
         // Use HIPO to solve the LP
         sub_solver_call_time.num_call[kSubSolverHipo]++;
         sub_solver_call_time.run_time[kSubSolverHipo] =
@@ -89,11 +85,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             solver_object.timer_.read();
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
-#else
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "HiPO is not available in this build.\n");
-        return HighsStatus::kError;
-#endif
       } else if (use_ipx) {
         sub_solver_call_time.num_call[kSubSolverIpx]++;
         sub_solver_call_time.run_time[kSubSolverIpx] =
@@ -718,17 +709,7 @@ bool useHipo(const HighsOptions& options,
     use_hipo = false;
   } else if (specific_solver_option_value == kIpmString ||
              specific_solver_option_value == kHipoString || force_ipm) {
-#ifndef HIPO_EXTRAS
-#ifdef HIPO
-    // HiPO is compiled in - use it directly
-    use_hipo = true;
-#else
-    use_hipo = false;
-#endif
-#else
-    // HiPO not compiled in - check if dynamically loaded library is available
-    use_hipo = DynamicDepsLoader::instance().isAvailable();
-#endif
+    use_hipo = HighsExternalDeps::isAvailable();
   }
   if (options.run_centring) use_hipo = false;
   // Later decide between HiPO and IPX based on LP properties

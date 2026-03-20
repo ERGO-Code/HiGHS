@@ -1,8 +1,8 @@
 # highspy-extras
 
-HiPO IPM solver extension for [highspy](https://pypi.org/project/highspy/).
+Extension package for [highspy](https://pypi.org/project/highspy/) that enables access to external dependencies with licensing terms different from HiGHS, such as Apache 2.0.
 
-HiPO is an advanced Interior Point Method (IPM) solver that provides enhanced performance for linear programming problems.
+The HiPO Interior Point Method (IPM) solver currently uses these external dependencies to provide enhanced performance for linear programming problems. Other algorithms may also rely on `highspy-extras` in the future.
 
 ## Installation
 
@@ -15,12 +15,14 @@ pip install highspy-extras
 Or install via the highspy optional dependency:
 
 ```bash
-pip install highspy[hipo]
+pip install highspy[extras]
 ```
+
+At present, the optional dependency installs support needed for HiPO.
 
 ## Usage
 
-When `highspy-extras` is installed, HiGHS will automatically detect and use the HiPO solver when appropriate. You can explicitly select the HiPO solver:
+When `highspy-extras` is installed, HiGHS can use algorithms that depend on these external libraries. At present this primarily means the HiPO solver. You can explicitly select HiPO:
 
 ```python
 import highspy
@@ -36,6 +38,15 @@ h.setOptionValue("solver", "hipo")
 
 # Solve
 h.run()
+```
+
+For debugging library packaging issues, you can also query the ABI version reported directly by the shared library:
+
+```python
+import highspy_extras
+
+print(highspy_extras.__version__)
+print(highspy_extras.get_library_version())
 ```
 
 ## Requirements

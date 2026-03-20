@@ -14,9 +14,9 @@
 #ifndef _LIBMETIS_METISLIB_H_
 #define _LIBMETIS_METISLIB_H_
 
-#include "../extern/metis/GKlib/GKlib.h"
+#include "metis/GKlib/GKlib.h"
 
-#include "../extern/metis/metis.h"
+#include "metis/metis.h"
 #include "gklib_defs.h"
 
 #include "defs.h"

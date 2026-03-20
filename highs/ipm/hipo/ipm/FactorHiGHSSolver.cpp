@@ -3,17 +3,10 @@
 #include <limits>
 
 #include "Status.h"
-#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
 
-#ifndef HIPO_EXTRAS
-#include "amd/amd.h"
-#include "metis/metis.h"
-#include "rcm/rcm.h"
-#else
-#include "DynamicDepsLoader.h"
-#endif
+#include "HighsExternalDeps.h"
 
 namespace hipo {
 
@@ -595,10 +588,8 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   auto run_ordering_and_analyse = [&](Int i) {
     // compute ordering
     if (orderings_to_try[i] == kHipoMetisString) {
-
-#ifndef HIPO_EXTRAS
       idx_t options[METIS_NOPTIONS];
-      Highs_METIS_SetDefaultOptions(options);
+      HighsExternalDeps::metis::set_default_options(options);
       options[METIS_OPTION_SEED] = kMetisSeed;
 
       // set logging of Metis depending on debug level
@@ -613,56 +604,21 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       std::vector<Int> iperm(n);
 
       Int status =
-          Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
-                             options, permutations[i].data(), iperm.data());
+          HighsExternalDeps::metis::nodeND(&n, full_ptr.data(), full_rows.data(), NULL,
+                      options, permutations[i].data(), iperm.data());
 
       log_.printDevInfo("Metis done\n");
       if (status != METIS_OK) {
         log_.printDevInfo("Error with Metis\n");
         failure[i] = true;
       }
-#else
-      // Use HIPO via dynamic loading
-      DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-      idx_t options[METIS_NOPTIONS];
-
-      if (hipo_loader.isAvailable()) {
-        hipo_loader.fn_hipo_extras_metis_set_default_options_(options);
-
-        options[METIS_OPTION_SEED] = kMetisSeed;
-
-        // set logging of Metis depending on debug level
-        options[METIS_OPTION_DBGLVL] = 0;
-        if (log_.debug(2))
-          options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
-
-        // no2hop improves the quality of ordering in general
-        options[METIS_OPTION_NO2HOP] = 1;
-
-        log_.printDevInfo("Running Metis\n");
-        std::vector<Int> iperm(n);
-
-        Int status = hipo_loader.fn_hipo_extras_metis_nodend_(&n, full_ptr.data(), full_rows.data(), NULL,
-                               options, permutations[i].data(), iperm.data());
-
-        log_.printDevInfo("Metis done\n");
-        if (status != METIS_OK) {
-          log_.printDevInfo("Error with Metis\n");
-          failure[i] = true;
-        }
-      }
-
-#endif
-
     } else if (orderings_to_try[i] == kHipoAmdString) {
-
-#ifndef HIPO_EXTRAS
       double control[AMD_CONTROL];
-      Highs_amd_defaults(control);
+      HighsExternalDeps::amd::set_defaults(control);
       double info[AMD_INFO];
 
       log_.printDevInfo("Running AMD\n");
-      Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
+      Int status = HighsExternalDeps::amd::order(n, full_ptr.data(), full_rows.data(),
                                    permutations[i].data(), control, info);
       log_.printDevInfo("AMD done\n");
 
@@ -670,32 +626,9 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
         log_.printDevInfo("Error with AMD\n");
         failure[i] = true;
       }
-#else
-      // Use HIPO via dynamic loading
-      DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-      if (hipo_loader.isAvailable()) {
-        double control[AMD_CONTROL];
-        hipo_loader.fn_hipo_extras_amd_defaults_(control);
-        double info[AMD_INFO];
-
-        log_.printDevInfo("Running AMD\n");
-        Int status = hipo_loader.fn_hipo_extras_amd_order_(n, full_ptr.data(), full_rows.data(),
-                                  permutations[i].data(), control, info);
-
-        log_.printDevInfo("AMD done\n");
-
-        if (status != AMD_OK) {
-          log_.printDevInfo("Error with AMD\n");
-          failure[i] = true;
-        }
-      }
-#endif
-
     } else if (orderings_to_try[i] == kHipoRcmString) {
-
-#ifndef HIPO_EXTRAS
       log_.printDevInfo("Running RCM\n");
-      Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
+      Int status = HighsExternalDeps::rcm::genrcm(n, full_ptr.back(), full_ptr.data(),
                                 full_rows.data(), permutations[i].data());
       log_.printDevInfo("RCM done\n");
 
@@ -703,29 +636,11 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
         log_.printDevInfo("Error with RCM\n");
         failure[i] = true;
       }
-#else
-      DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-      if (hipo_loader.isAvailable()) {
+    } else {
+      assert(1 == 0);
+    }
 
-        log_.printDevInfo("Running RCM\n");
-        Int status = hipo_loader.fn_hipo_extras_genrcm_(n, full_ptr.back(), full_ptr.data(),
-                                full_rows.data(), permutations[i].data());
-
-        log_.printDevInfo("RCM done\n");
-
-        if (status != 0) {
-          log_.printDevInfo("Error with RCM\n");
-          failure[i] = true;
-        }
-      }
-
-#endif
-
-      } else {
-        assert(1 == 0);
-      }
-
-      if (failure[i]) return;
+    if (failure[i]) return;
 
     failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
 

@@ -28,6 +28,7 @@ add_library(highs_extras SHARED
     )
 
 target_include_directories(highs_extras PRIVATE
+  $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/hipo/ipm>

@@ -1,30 +1,17 @@
 # CMakeLists.txt for highspy-extras wheel
-# Builds the HiPO deps shared library extras using the main HiGHS CMake infrastructure
+# The wheel only wraps the standalone highs_extras shared library.
+# Use the dedicated extras-library mode so the top-level build adds the
+# highs_extras target and installs it into the highspy_extras package.
 
 cmake_minimum_required(VERSION 3.15...3.27)
 
-# Use parent directory as source - forward to main CMakeLists with HIPO_PYTHON_BUILD enabled
-set(HIGHS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+project(highs_extras LANGUAGES C CXX)
 
-# if (NOT (APPLE OR BUILD_OPENBLAS))
-    # # Use VCPKG_ROOT environment variable for dependencies
-    # set(VCPKG_ROOT $ENV{VCPKG_ROOT} CACHE PATH "Path to vcpkg installation")
-    # set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_TARGET_TRIPLET} CACHE STRING "vcpkg target triplet")
-    # set(VCPKG_INSTALLED "${VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
+add_subdirectory(
+    "${CMAKE_CURRENT_LIST_DIR}/../extern"
+    "${CMAKE_CURRENT_BINARY_DIR}/extern")
 
-# if (UNIX)
-# set(ZLIB_LIBRARY "${VCPKG_INSTALLED}/lib/libz.a" CACHE STRING "Root directory of zlib")
-# set(ZLIB_INCLUDE_DIR "${VCPKG_INSTALLED}/include" CACHE STRING "Include directory for zlib")
-# set(BLAS_ROOT "${VCPKG_INSTALLED}/share/openblas" CACHE STRING "Root directory of BLAS/LAPACK")
-# set(BLAS_LIBRARIES "${VCPKG_INSTALLED}/lib/libopenblas.a" CACHE STRING "BLAS/LAPACK libraries to link against")
-# else()
-# set(ZLIB_LIBRARY "${VCPKG_INSTALLED}/lib/zlib.lib" CACHE STRING "Root directory of zlib")
-# set(ZLIB_INCLUDE_DIR "${VCPKG_INSTALLED}/include" CACHE STRING "Include directory for zlib")
-# set(BLAS_ROOT "${VCPKG_INSTALLED}/share/openblas" CACHE STRING "Root directory of BLAS/LAPACK")
-# set(BLAS_LIBRARIES "${VCPKG_INSTALLED}/lib/openblas.lib" CACHE STRING "BLAS/LAPACK libraries to link against")
-# endif()
-
-
-
-set(HIPO_PYTHON_EXTRAS_BUILD ON CACHE BOOL "" FORCE)
-add_subdirectory(${HIGHS_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/highs)
+install(TARGETS highs_extras
+    RUNTIME DESTINATION highspy_extras
+    LIBRARY DESTINATION highspy_extras
+)

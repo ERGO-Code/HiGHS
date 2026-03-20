@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "highspy-extras"
 version = "1.13.1.dev6"
-description = "HiPO IPM solver extension for highspy"
+description = "HiGHS external dependencies extension for highspy"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
 
@@ -74,9 +74,7 @@ sdist.exclude = [
 ]
 
 [tool.scikit-build.cmake.define]
-HIPO_EXTRAS_LIBRARY_BUILD = "ON"
-BUILD_OPENBLAS = "ON"
-
+BUILD_OPENBLAS = "OFF"
 
 [[tool.scikit-build.overrides]]
 if.platform-system = "darwin"
@@ -86,3 +84,5 @@ cmake.define.BUILD_OPENBLAS = "OFF"
 build = "*"
 archs = ["auto64", "auto32"]
 repair-wheel-command = ""
+
+build-verbosity = 1

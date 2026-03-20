@@ -16,10 +16,7 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-
-#ifdef HIPO_EXTRAS
-#include "DynamicDepsLoader.h"
-#endif
+#include "HighsExternalDeps.h"
 
 void highsLogHeader(const HighsLogOptions& log_options,
                     const bool log_githash) {
@@ -31,25 +28,12 @@ void highsLogHeader(const HighsLogOptions& log_options,
                (int)HIGHS_VERSION_MINOR, (int)HIGHS_VERSION_PATCH,
                githash_text.c_str(), kHighsCopyrightStatement.c_str());
 
-#ifdef HIPO
-#ifdef BLAS_LIBRARIES
-  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s \n",
-               BLAS_LIBRARIES);
-#else
-#ifdef HIPO_USES_OPENBLAS
-#ifndef HIPO_EXTRAS
-  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: OpenBLAS \n");
-#else
-  DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-  if (hipo_loader.isAvailable()) {
-    highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: OpenBLAS from Python\n");
+  if (HighsExternalDeps::isAvailable()) {    
+    highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+                 HighsExternalDeps::getCopyrightInfo().c_str());
+    highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s \n",
+                 HighsExternalDeps::blas::blas_library().c_str());
   }
-#endif
-#else
-  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: unknown \n");
-#endif
-#endif
-#endif
 }
 
 std::array<char, 32> highsDoubleToString(const double val,

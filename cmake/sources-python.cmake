@@ -283,7 +283,7 @@ set(highs_sources_python
     highs/util/HSet.cpp
     highs/util/HVectorBase.cpp
     highs/util/stringutil.cpp
-    highs/DynamicDepsLoader.cpp)
+    highs/HighsExternalDeps.cpp)
 
 set(highs_headers_python
     extern/pdqsort/pdqsort.h
@@ -442,7 +442,7 @@ set(highs_headers_python
     highs/util/HVector.h
     highs/util/HVectorBase.h
     highs/util/stringutil.h
-    highs/DynamicDepsLoader.h
+    highs/HighsExternalDeps.h
     highs/Highs.h
   )
 

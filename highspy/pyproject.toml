@@ -11,7 +11,7 @@ name = "highspy"
 version = "1.13.1.dev6"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
-readme = "README.md"
+readme = "../README.md"
 
 requires-python = ">=3.8"
 dependencies = ["numpy"]
@@ -32,7 +32,7 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest", "numpy"]
-hipo = ["highspy-extras>=1.12.0"]
+extras = ["highspy-extras>=1.12.0"]
 
 [tool.scikit-build]
 wheel.expand-macos-universal-tags = true
@@ -41,15 +41,15 @@ wheel.expand-macos-universal-tags = true
 # default to the first of ``src/<package>``, ``python/<package>``, or
 # ``<package>`` if they exist.  The prefix(s) will be stripped from the package
 # name inside the wheel.
-wheel.packages = ["highs/highspy"]
+wheel.packages = ["highspy"]
 
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.
 sdist.include = [
-  "highs/highspy/highs.py",
-  "highs/highspy/__init__.py",
-  "highs/highspy/__init__.pyi",
-  "highs/highspy/_core/*.pyi",
+  "highspy/highs.py",
+  "highspy/__init__.py",
+  "highspy/__init__.pyi",
+  "highspy/_core/*.pyi",
   "tests/test_highspy.py",
   "Version.txt",
   "LICENSE",
@@ -92,10 +92,10 @@ sdist.exclude = [
 # # exclude patterns. This applies to the final paths in the wheel, and can
 # # exclude files from CMake output as well.  Editable installs may not respect
 # # this exclusion.
-wheel.exclude = ["include", "lib*/", "bin", "LICENSE.txt", "README.md"]
+wheel.exclude = ["include", "share", "lib*/", "bin", "LICENSE.txt", "README.md"]
 
 [tool.scikit-build.cmake.define]
-HIPO_PYTHON_EXTRAS_BUILD = "ON"
+#HIPO_PYTHON_EXTRAS_BUILD = "ON"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -113,6 +113,6 @@ archs = ["auto64", "auto32"]
 # Enable free-threaded support
 enable = ["cpython-freethreading"]
 
-test-command = "pytest {project}/tests"
+test-command = "pytest {project}/highspy/tests"
 test-extras = ["test", "numpy"]
 build-verbosity = 1

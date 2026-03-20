@@ -15,9 +15,16 @@ if(FAST_BUILD)
 
     target_include_directories(highs-bin PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/app>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
     )
 
     set_target_properties(highs-bin PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+    if (${BUILD_SHARED_EXTRAS_LIB})
+      target_compile_definitions(highs-bin PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
+  else()
+    target_link_libraries(highs-bin PRIVATE highs_extras)
+  endif()
 
     if(UNIX)
       target_compile_options(highs-bin PUBLIC "-Wno-unused-variable")

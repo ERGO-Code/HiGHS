@@ -1,11 +1,5 @@
 set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/amd>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/filereader>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/metis>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/pdqsort>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/rcm>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/interfaces>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io>
@@ -259,7 +253,6 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
     ipm/hipo/auxiliary/Log.h
-    ipm/hipo/auxiliary/mycblas.h
     ipm/hipo/auxiliary/OrderingPrint.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
@@ -335,6 +328,7 @@ set(hipo_orderings_headers
 set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 set(highs_sources
+    ../extern/rcm/rcm.cpp
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
@@ -443,13 +437,14 @@ set(highs_sources
     util/HSet.cpp
     util/HVectorBase.cpp
     util/stringutil.cpp
-    DynamicDepsLoader.cpp)
+    HighsExternalDeps.cpp)
 
 # add catch header?
 set(highs_headers
     ../extern/pdqsort/pdqsort.h
     ../extern/zstr/strict_fstream.hpp
     ../extern/zstr/zstr.hpp
+    ../extern/rcm/rcm.h
     interfaces/highs_c_api.h
     io/Filereader.h
     io/FilereaderLp.h
@@ -605,6 +600,6 @@ set(highs_headers
     util/HVector.h
     util/HVectorBase.h
     util/stringutil.h
-    DynamicDepsLoader.h
+    HighsExternalDeps.h
     Highs.h
   )

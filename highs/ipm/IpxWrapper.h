@@ -18,10 +18,7 @@
 #include "ipm/ipx/ipx_status.h"
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsSolution.h"
-
-#ifdef HIPO
 #include "ipm/hipo/ipm/Solver.h"
-#endif
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
 
@@ -31,7 +28,6 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsModelStatus& model_status, HighsInfo& highs_info,
                        HighsCallback& callback);
 
-#ifdef HIPO
 HighsStatus solveLpHipo(HighsLpSolverObject& solver_object);
 
 HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
@@ -56,8 +52,6 @@ void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                               const hipo::Solver& hipo,
                               const HighsModelStatus model_status,
                               HighsSolution& highs_solution);
-
-#endif
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    double& offset, std::vector<double>& obj,

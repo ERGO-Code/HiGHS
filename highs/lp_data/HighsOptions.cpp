@@ -15,28 +15,19 @@
 #include <cctype>
 
 #include "util/stringutil.h"
-
-#ifdef HIPO_EXTRAS
-#include "DynamicDepsLoader.h"
-#endif
+#include "HighsExternalDeps.h"
 
 // void setLogOptions();
 
 bool hipoAvailable() {
-#ifndef HIPO
-  return false;
-  std::cout << "false!" << std::endl;
-#endif
+//#ifndef HIPO
+//  std::cout << "false!" << std::endl;
+//  return false;
+//#endif
+  if (HighsExternalDeps::tryLoad(".") == false)
+    std::cout << HighsExternalDeps::getLastError() << std::endl;
 
-#ifdef HIPO_EXTRAS
-  std::cout << "DEPS LOADER! " << DynamicDepsLoader::instance().isAvailable()
-            << std::endl;
-  return DynamicDepsLoader::instance().isAvailable();
-#else
-  // HiPO is defined, since we have checked above and Python is off.
-  std::cout << "true!" << std::endl;
-  return true;
-#endif
+  return HighsExternalDeps::isAvailable();
 }
 
 void highsOpenLogFile(HighsLogOptions& log_options,
@@ -101,37 +92,37 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
-#ifndef HIPO
-static void noHipoErrorLog(const HighsLogOptions& report_log_options,
-                           const string& option_name) {
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "The HiPO solver was requested via the \"%s\" option, but this build "
-      "was compiled without HiPO support. Reconfigure with -DFAST_BUILD=ON "
-      "and -DHIPO=ON to enable HiPO.\n",
-      option_name.c_str());
-}
-#endif
+//#ifndef HIPO
+//static void noHipoErrorLog(const HighsLogOptions& report_log_options,
+//                           const string& option_name) {
+//  highsLogUser(
+//      report_log_options, HighsLogType::kError,
+//      "The HiPO solver was requested via the \"%s\" option, but this build "
+//      "was compiled without HiPO support. Reconfigure with -DFAST_BUILD=ON "
+//      "and -DHIPO=ON to enable HiPO.\n",
+//      option_name.c_str());
+//}
+//#endif
 
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
   if (value == kHipoString && !hipoAvailable()) {
-#ifndef HIPO_EXTRAS
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kSolverString.c_str());
-#else
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but the "
-        "HiPO dependencies are missing. Install with highspy[hipo] or install "
-        "highspy-extras. Note, that using HiPO changes the HiGHS license from "
-        " MIT to Apache, due to the dependencies' licensing.\n",
-        kSolverString.c_str());
-#endif
+    if (HighsExternalDeps::isAvailableAtCompile()) {
+      highsLogUser(
+          report_log_options, HighsLogType::kError,
+          "The HiPO solver was requested via the \"%s\" option, but this build "
+          "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
+          "and -DHIPO=ON to enable HiPO.\n",
+          kSolverString.c_str());
+    } else {
+      highsLogUser(
+          report_log_options, HighsLogType::kError,
+          "The HiPO solver was requested via the \"%s\" option, but the "
+          "HiPO dependencies are missing. Install with highspy[hipo] or install "
+          "highspy-extras. Note, that using HiPO changes the HiGHS license from "
+          " MIT to Apache, due to the dependencies' licensing.\n",
+          kSolverString.c_str());
+    }
     return false;
   }
   if (value == kHighsChooseString || value == kSimplexString ||
@@ -151,22 +142,22 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
   if (value == kHipoString && !hipoAvailable()) {
-#ifndef HIPO_EXTRAS
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kMipLpSolverString.c_str());
-#else
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but the "
-        "HiPO dependencies are missing. Install with highspy[hipo] or install "
-        "highspy-extras. Note, that using HiPO changes the HiGHS license from "
-        "MIT to Apache, due to the dependencies' licensing.\n",
-        kMipLpSolverString.c_str());
-#endif
+    if (HighsExternalDeps::isAvailableAtCompile()) {
+      highsLogUser(
+          report_log_options, HighsLogType::kError,
+          "The HiPO solver was requested via the \"%s\" option, but this build "
+          "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
+          "and -DHIPO=ON to enable HiPO.\n",
+          kMipLpSolverString.c_str());
+    } else {
+      highsLogUser(
+          report_log_options, HighsLogType::kError,
+          "The HiPO solver was requested via the \"%s\" option, but the "
+          "HiPO dependencies are missing. Install with highspy[hipo] or install "
+          "highspy-extras. Note, that using HiPO changes the HiGHS license from "
+          "MIT to Apache, due to the dependencies' licensing.\n",
+          kMipLpSolverString.c_str());
+    }
     return false;
   }
 
@@ -187,14 +178,14 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
   if (value == kHipoString && !hipoAvailable()) {
-#ifndef HIPO_EXTRAS
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but this build "
-        "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-        "and -DHIPO=ON to enable HiPO.\n",
-        kMipIpmSolverString.c_str());
-#else
+    if (HighsExternalDeps::isAvailableAtCompile()) {
+      highsLogUser(
+          report_log_options, HighsLogType::kError,
+          "The HiPO solver was requested via the \"%s\" option, but this build "
+          "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
+          "and -DHIPO=ON to enable HiPO.\n",
+          kMipIpmSolverString.c_str());
+    } else {
     highsLogUser(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option, but the "
@@ -202,7 +193,7 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
         "highspy-extras. Note, that using HiPO changes the HiGHS license from "
         "MIT to Apache, due to the dependencies' licensing.\n",
         kMipIpmSolverString.c_str());
-#endif
+    }
     return false;
   }
   if (value == kHighsChooseString || value == kIpmString ||

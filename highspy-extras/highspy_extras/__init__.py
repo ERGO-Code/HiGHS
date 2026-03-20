@@ -1,88 +1,53 @@
-"""HiPO IPM solver deps extension for highspy."""
+"""External dependencies extension for highspy."""
 
-import os
+from __future__ import annotations
+
+import ctypes
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
-# Version is kept in sync with HiGHS version in Version.txt
-# This is updated during the build/release process
-__version__ = "1.13.1.dev6"
+__all__ = ["__version__", "get_library_version"]
+
+__version__ = version("highspy-extras")
+
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_library_handle: ctypes.CDLL | None = None
 
 
-def _get_library_name() -> str:
-    """Get the platform-specific library filename."""
+def _load_library() -> ctypes.CDLL:
+    global _library_handle
+
+    if _library_handle is not None:
+        return _library_handle
+
     if sys.platform == "win32":
-        return "highs_extras.dll"
+        library_name = "highs_extras.dll"
     elif sys.platform == "darwin":
-        return "libhighs_extras.dylib"
+        library_name = "libhighs_extras.dylib"
     else:
-        return "libhighs_extras.so"
+        library_name = "libhighs_extras.so"
+
+    library_path = _PACKAGE_DIR / library_name
+    if not library_path.is_file():
+        raise FileNotFoundError(
+            f"Could not find the highs_extras shared library at {library_path}"
+        )
+
+    _library_handle = ctypes.CDLL(str(library_path))
+    return _library_handle
 
 
-def get_library_path() -> Path:
-    """
-    Get the path to the highs_extras shared library.
+def get_library_version() -> str:
+    """Return the ABI version string exported by the highs_extras library."""
 
-    Returns:
-        Path to the shared library file.
+    get_version = _load_library().highs_extras_get_version
+    get_version.argtypes = []
+    get_version.restype = ctypes.c_char_p
 
-    Raises:
-        FileNotFoundError: If the library is not found.
-    """
-    package_dir = Path(__file__).parent
-    lib_name = _get_library_name()
-    lib_path = package_dir / lib_name
+    version_bytes = get_version()
+    if version_bytes is None:
+        raise RuntimeError("highs_extras_get_version() returned NULL")
 
-    if not lib_path.exists():
-        raise FileNotFoundError(f"HiPO extras library not found at {lib_path}")
+    return version_bytes.decode("utf-8")
 
-    return lib_path
-
-
-def is_available() -> bool:
-    """
-    Check if the HiPO library is available.
-
-    Returns:
-        True if the library file exists.
-    """
-    try:
-        get_library_path()
-        return True
-    except FileNotFoundError:
-        return False
-
-
-def _setup_environment():
-    """
-    Set up environment variables for the HiGHS loader to find the library.
-
-    This is called when the package is imported to ensure the dynamic
-    loader in HiGHS can find the HiPO library.
-    """
-    try:
-        lib_path = get_library_path()
-        lib_dir = str(lib_path.parent)
-
-        # Set environment variable for HiGHS dynamic loader
-        os.environ["HIGHSPY_HIPO_LIBRARY_PATH"] = lib_dir
-
-        # Also add to system library path for completeness
-        if sys.platform == "win32":
-            path = os.environ.get("PATH", "")
-            if lib_dir not in path:
-                os.environ["PATH"] = lib_dir + os.pathsep + path
-        elif sys.platform == "darwin":
-            path = os.environ.get("DYLD_LIBRARY_PATH", "")
-            if lib_dir not in path:
-                os.environ["DYLD_LIBRARY_PATH"] = lib_dir + (os.pathsep + path if path else "")
-        else:
-            path = os.environ.get("LD_LIBRARY_PATH", "")
-            if lib_dir not in path:
-                os.environ["LD_LIBRARY_PATH"] = lib_dir + (os.pathsep + path if path else "")
-    except FileNotFoundError:
-        pass  # Library not found, will be handled later
-
-
-# Set up environment on import
-_setup_environment()

@@ -67,7 +67,7 @@ if (NOT HIGHS_COVERAGE)
   # Add library targets to the build-tree export set
   export(TARGETS highs
     NAMESPACE ${PROJECT_NAMESPACE}::
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+    APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 endif()
 
 if (CUPDLP_GPU)

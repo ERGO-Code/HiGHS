@@ -1,8 +1,6 @@
 #ifndef FACTORHIGHS_MY_CBLAS_H
 #define FACTORHIGHS_MY_CBLAS_H
 
-#include "IntConfig.h"
-
 // Provide definition for cblas functions
 // Based on Netlib implementation
 

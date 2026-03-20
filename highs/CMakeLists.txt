@@ -4,24 +4,10 @@ endif()
 
 # Define library.
 include(sources)
-set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
-set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
-if(HIPO)
-  if (NOT HIPO_PYTHON_EXTRAS_BUILD)
-    set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources}
-     ${hipo_orderings_sources})
-    set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
-     ${hipo_orderings_headers})
-  else()
-    set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
-    set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers}
-        # ../extern/amd/amd.h
-        # ../extern/metis/metis.h
-        # ../extern/rcm/rcm.h
-    )
-  endif()
-endif()
+set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
+set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers})
+
 
 # Configure the config windows version file
 if(MSVC)
@@ -167,6 +153,11 @@ else()
       set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
   endif()
 
+  if (${BUILD_SHARED_EXTRAS_LIB})
+    target_compile_definitions(highs PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
+  else()
+    target_link_libraries(highs PRIVATE highs_extras)
+  endif()
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
 
@@ -190,85 +181,12 @@ else()
 
   target_include_directories(highs PRIVATE ${include_dirs})
 
-  # Optional HIPO
-  if (HIPO)
-
-    if (HIPO_PYTHON_EXTRAS_BUILD)
-      target_compile_definitions(highs PRIVATE HIPO_EXTRAS)
-    endif()
-    # if (PYTHON_BUILD_SETUP)
-    #   target_compile_definitions(highs PRIVATE PYTHON_BUILD_SETUP)
-    # endif()
-
-    target_include_directories(highs PRIVATE
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
-    )
-
-    if (NOT USE_CMAKE_FIND_BLAS)
-      if(APPLE)
-          target_link_libraries(highs PRIVATE "-framework Accelerate")
-          target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-      elseif(WIN32)
-        if(TARGET OpenBLAS::OpenBLAS)
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-            target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
-        elseif(OPENBLAS_LIB)
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-            message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
-            target_link_libraries(highs PRIVATE ${OPENBLAS_LIB})
-            target_include_directories(highs PRIVATE ${OPENBLAS_INCLUDE_DIR})
-        elseif(BUILD_OPENBLAS)
-            target_link_libraries(highs PRIVATE openblas)
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-        else()
-          if (NOT HIPO_PYTHON_EXTRAS_BUILD)
-            message(FATAL_ERROR "OpenBLAS not found on Windows.")
-          endif()
-        endif()
-
-        target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-      else()
-          # LINUX
-          if(BLAS_LIB)
-              target_link_libraries(highs PRIVATE "${BLAS_LIB}" cblas)
-          elseif(OPENBLAS_LIB)
-              target_link_libraries(highs PRIVATE "${OPENBLAS_LIB}")
-              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          elseif(BUILD_OPENBLAS)
-              target_link_libraries(highs PRIVATE openblas)
-              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          else()
-            if (NOT HIPO_PYTHON_EXTRAS_BUILD)
-              message(FATAL_ERROR "No BLAS library available")
-            endif()
-          endif(BLAS_LIB)
-      endif(APPLE)
-    else()
-
-      if (WIN32 AND TARGET OpenBLAS::OpenBLAS)
-          target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
-      elseif (NOT BLAS_FOUND AND
-              NOT BUILD_SHARED_LIBS AND
-              NOT BUILD_CXX_EXE AND
-              NOT BUILD_EXAMPLES)
-          # Allow for static build without openblas
-          # Do nothing
-      else()
-          target_link_libraries(highs PRIVATE BLAS::BLAS)
-
-          string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
-          if(blas_lower MATCHES "openblas")
-              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          elseif(blas_lower MATCHES "accelerate")
-              target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-          endif()
-      endif()
-    endif()
-  endif()
+  target_include_directories(highs PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
+  )
 
   if(MSVC)
     list(APPEND highs_compile_opts

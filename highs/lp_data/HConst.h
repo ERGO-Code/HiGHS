@@ -17,12 +17,8 @@
 
 #include "util/HighsInt.h"
 
-const std::string kHighsCopyrightStatement =
-#ifdef HIPO
-    "Copyright (c) 2026 under Apache 2.0 license terms";
-#else
+const std::string kHighsCopyrightStatement = 
     "Copyright (c) 2026 under MIT licence terms";
-#endif
 
 const size_t kHighsSize_tInf = (std::numeric_limits<size_t>::max)();
 const HighsInt kHighsIInf = (std::numeric_limits<HighsInt>::max)();

@@ -8,7 +8,7 @@
 
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
-#include "DynamicDepsLoader.h"
+#include "HighsExternalDeps.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -1012,18 +1012,20 @@ std::string highs_locatePythonPackage(const std::string module_name) {
 }
 
 PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
-    auto hipo_module = highs_locatePythonPackage("highspy_extras");
+    auto extras_module = highs_locatePythonPackage("highspy_extras");
 
-  if (!hipo_module.empty()) {
-    bool loaded = DynamicDepsLoader::instance().tryLoad(hipo_module);
+  if (!extras_module.empty()) {
+    bool loaded = HighsExternalDeps::tryLoad(extras_module);
 
+    /// TODO: Remove DEBUG prints
     if (loaded) {
-        py::print("Successfully loaded hipo extras");
+        py::print("Successfully loaded highs extras");
     } else {
-      py::print("Failed to load hipo extras; skipping optional DLL preload");
+      py::print("Failed to load highs extras; skipping optional DLL preload");
+      py::print(HighsExternalDeps::getLastError());
     }
   } else {
-    py::print("hipo extras not available; skipping optional DLL preload");
+    py::print("highs extras not available; skipping optional DLL preload");
   }
 
   // To keep a smaller diff, for reviewers, the declarations are not moved, but

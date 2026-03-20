@@ -15,10 +15,7 @@
 
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
-
-#ifdef HIPO_EXTRAS
-#include "DynamicDepsLoader.h"
-#endif
+#include "HighsExternalDeps.h"
 
 using std::min;
 
@@ -408,20 +405,12 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   return return_status;
 }
 
-#ifdef HIPO
 HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
   return solveHipo(solver_object.options_, solver_object.timer_,
                    solver_object.lp_, HighsHessian{}, solver_object.basis_,
                    solver_object.solution_, solver_object.model_status_,
                    solver_object.highs_info_, solver_object.callback_);
 }
-
-#ifdef HIPO_USES_OPENBLAS
-// function to set number of threads of openblas
-extern "C" {
-void openblas_set_num_threads(int num_threads);
-}
-#endif
 
 HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
                       const HighsLp& lp, const HighsHessian& Q,
@@ -460,18 +449,9 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-#ifdef HIPO_USES_OPENBLAS
   // force openblas to run in serial, for determinism and better performance
-  // HIPO_EXTRAS case handled in HipoExtrasCApi.cpp
-#ifndef HIPO_EXTRAS
-  openblas_set_num_threads(1);
-#else
-  DynamicDepsLoader& hipo_loader = DynamicDepsLoader::instance();
-  if (hipo_loader.isAvailable()) {
-    hipo_loader.fn_hipo_extras_openblas_set_num_threads_(1);
-  }
-#endif
-#endif
+  // no-op if openblas is not used
+  HighsExternalDeps::blas::openblas_set_num_threads(1);
 
   // Create solver instance
   hipo::Solver hipo{};
@@ -675,7 +655,6 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
   }
   return return_status;
 }
-#endif
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    double& offset, std::vector<double>& obj,
@@ -1149,7 +1128,6 @@ void reportIpmNoProgress(const HighsOptions& options,
                ipx_info.abs_dresidual);
 }
 
-#ifdef HIPO
 void reportHipoNoProgress(const HighsOptions& options,
                           const hipo::Info& hipo_info) {
   highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -1162,7 +1140,6 @@ void reportHipoNoProgress(const HighsOptions& options,
                "No progress: max absolute   dual residual = %11.4g\n",
                hipo_info.d_res_abs);
 }
-#endif
 
 void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                                const ipx::Int num_col, const ipx::Int num_row,
@@ -1190,7 +1167,6 @@ void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                              num_row, x, slack, y, zl, zu, highs_solution);
 }
 
-#ifdef HIPO
 void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                               const hipo::Int num_col, const hipo::Int num_row,
                               const std::vector<double>& rhs,
@@ -1210,7 +1186,6 @@ void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
   ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
                              num_row, x, slack, y, zl, zu, highs_solution);
 }
-#endif
 
 void reportSolveData(const HighsLogOptions& log_options,
                      const ipx::Info& ipx_info) {
@@ -1415,7 +1390,6 @@ void reportSolveData(const HighsLogOptions& log_options,
               ipx_info.volume_increase);
 }
 
-#ifdef HIPO
 HighsStatus reportHipoStatus(const HighsOptions& options,
                              const hipo::Int status, const hipo::Solver& hipo) {
   if (hipo.solved()) {
@@ -1535,4 +1509,3 @@ HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
   }
   return HighsStatus::kError;
 }
-#endif

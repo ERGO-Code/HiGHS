@@ -15,7 +15,11 @@
 #ifndef _LIBMETIS_PROTO_H_
 #define _LIBMETIS_PROTO_H_
 
-#include "ipm/hipo/auxiliary/OrderingPrint.h"
+#ifndef NDEBUG
+#define HIGHS_ORDERING_PRINT(...) printf(__VA_ARGS__)
+#else
+#define HIGHS_ORDERING_PRINT(...)
+#endif
 
 /* auxapi.c */
 

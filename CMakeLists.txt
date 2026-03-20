@@ -18,7 +18,7 @@ set(CMAKE_CXX_COMPILER_NAMES clang++ g++ icpx c++ ${CMAKE_CXX_COMPILER_NAMES})
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(set-version)
-set_version(VERSION)
+set_version(VERSION ${CMAKE_CURRENT_SOURCE_DIR})
 
 project(HIGHS VERSION ${VERSION} LANGUAGES CXX C)
 
@@ -78,6 +78,8 @@ option(BUILD_CXX_EXE "Build C++ executable" ON)
 message(STATUS "Build C++ executable: ${BUILD_CXX_EXE}")
 
 option(BUILD_TESTING "Build Tests" ON)
+option(BUILD_SHARED_EXTRAS_LIB "Build shared extras library" ON)
+message(STATUS "Build shared extras library: ${BUILD_SHARED_EXTRAS_LIB}")
 
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
@@ -88,51 +90,6 @@ if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)
 endif()
 
-# option(PYTHON_BUILD_SETUP "Build Python interface from setup.py" OFF)
-# message(STATUS "Build Python: ${PYTHON_BUILD_SETUP}")
-# if (PYTHON_BUILD_SETUP)
-#   set(BUILD_CXX ON)
-#   set(BUILD_TESTING OFF)
-#   set(BUILD_SAMPLES OFF)
-#   set(BUILD_EXAMPLES OFF)
-# endif()
-
-option(HIPO "Build HIPO" OFF)
-message(STATUS "Build HIPO: ${HIPO}")
-
-# if (PYTHON_BUILD_SETUP)
-#   set(HIPO ON)
-# endif()
-
-# option(HIPO_PYTHON_BUILD "Build HiPO Python shared library" OFF)
-# message(STATUS "Build HiPO Python: ${HIPO_PYTHON_BUILD}")
-# if (HIPO_PYTHON_BUILD)
-#   set(BUILD_CXX ON)
-#   set(BUILD_TESTING OFF)
-#   set(HIPO OFF)
-# endif()
-
-option(HIPO_PYTHON_EXTRAS_BUILD "Build Python shared deps mode wip" OFF)
-message(STATUS "Build Python HiPO Runtime: ${HIPO_PYTHON_EXTRAS_BUILD}")
-
-if (HIPO_PYTHON_EXTRAS_BUILD)
-  set(BUILD_CXX ON)
-  set(BUILD_TESTING OFF)
-  set(HIPO ON)
-  set(BUILD_SAMPLES OFF)
-  set(BUILD_EXAMPLES OFF)
-endif()
-
-option(HIPO_EXTRAS_LIBRARY_BUILD "Build Python HiPO shared deps library package" OFF)
-message(STATUS "Build Python HiPO shared deps library package ${HIPO_EXTRAS_LIBRARY_BUILD}")
-
-if (HIPO_EXTRAS_LIBRARY_BUILD)
-  set(BUILD_CXX OFF)
-  set(BUILD_TESTING OFF)
-  set(HIPO OFF)
-  set(BUILD_SAMPLES OFF)
-  set(BUILD_EXAMPLES OFF)
-endif()
 include(CMakeDependentOption)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
@@ -155,9 +112,6 @@ endif()
 
 option(ZLIB "ZLIB" ON)
 message(STATUS "ZLIB: ${ZLIB}")
-if (HIPO_PYTHON_EXTRAS_BUILD)
-  set(ZLIB OFF)
-endif()
 
 option(BUILD_EXAMPLES "Build examples" ON)
 message(STATUS "Build examples: ${BUILD_EXAMPLES}")
@@ -190,12 +144,12 @@ endif()
 # endif()
 
 
-option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
-message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
-option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
-if (NO_AVX512)
-  message(STATUS "Build OpenBLAS without AVX512: ON")
-endif()
+# option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
+# message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
+# option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
+# if (NO_AVX512)
+#   message(STATUS "Build OpenBLAS without AVX512: ON")
+# endif()
 
 if (HIPO AND CSHARP)
   message(ERROR "HIPO is only available in C++. Not yet supported in C#.")
@@ -203,10 +157,6 @@ endif()
 if (HIPO AND FORTRAN)
   message(ERROR "HIPO is only available in C++. Not yet supported in FORTRAN")
 endif()
-# if (HIPO AND PYTHON_BUILD_SETUP)
-#   # message(ERROR "HIPO is only available in C++. Not yet supported in Python.")
-#   message(STATUS "HIPO in Python is WIP.")
-# endif()
 if (HIPO AND NOT FAST_BUILD)
   message(ERROR "HIPO is only available with FAST_BUILD=ON.")
 endif()
@@ -235,14 +185,6 @@ if (CUPDLP_GPU)
 else()
   set (CUPDLP_CPU ON)
     set(CUDA_LIBRARY-NOTFOUND true)
-endif()
-
-# HiPO deps
-if(HIPO)
-  if ((NOT HIPO_PYTHON_EXTRAS_BUILD)) # OR
-        # (NOT (APPLE OR BUILD_OPENBLAS)))
-    include(FindHipoDeps)
-  endif()
 endif()
 
 # Option to build static
@@ -316,12 +258,6 @@ if (BUILD_CXX)
       set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OutputConfig}/${CMAKE_INSTALL_BINDIR})
       set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OutputConfig}/${CMAKE_INSTALL_BINDIR})
     endforeach()
-  endif()
-
-  # if(PYTHON_BUILD_SETUP OR HIPO_PYTHON_EXTRAS_BUILD)
-  if(HIPO_PYTHON_EXTRAS_BUILD)
-    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries when building the Python bindings" FORCE)
-    set(BUILD_CXX_EXE OFF)
   endif()
 
   if(BUILD_SHARED_LIBS AND MSVC)
@@ -610,7 +546,6 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
 endif()
 
 if (CMAKE_INSTALL_DOCDIR STREQUAL "" OR NOT BUILD_CXX)
-# if (PYTHON_BUILD_SETUP OR CMAKE_INSTALL_DOCDIR STREQUAL "" OR NOT BUILD_CXX)
   install(FILES
       README.md
       LICENSE.txt
@@ -778,6 +713,8 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
 
 endif()
 
+add_subdirectory(extern)
+
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
   option(CI "CI extended tests" ON)
@@ -907,7 +844,7 @@ else(FAST_BUILD)
 
   include(cpp-highs)
 
-  if(BUILD_CXX AND NOT HIPO_PYTHON_EXTRAS_BUILD)
+  if(BUILD_CXX)
     add_subdirectory(app)
     add_subdirectory(examples)
   endif()
@@ -916,9 +853,6 @@ else(FAST_BUILD)
     enable_testing()
     add_subdirectory(check)
   endif()
-
-  include(python-highs)
-  include(hipo-extras-python)
 
   option(USE_DOTNET_STD_21 "Use .Net Standard 2.1 support" ON)
   message(STATUS ".Net: Use .Net Framework 2.1 support: ${USE_DOTNET_STD_21}")

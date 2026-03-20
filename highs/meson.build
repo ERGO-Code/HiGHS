@@ -193,7 +193,7 @@ _ipx_srcs = [
 ]
 
 _srcs = [
-    'DynamicDepsLoader.cpp',
+    'HighsExternalDeps.cpp',
     'io/filereaderlp/reader.cpp',
     'interfaces/highs_c_api.cpp',
     'io/Filereader.cpp',
