@@ -424,26 +424,6 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
       delta.zu[i] = 0.0;
     }
   }
-
-  // not sure if this has any effect, but IPX uses it
-  if (!model_.qp()) {
-    std::vector<double> Atdy(n_);
-    model_.A().alphaProductPlusY(1.0, delta.y, Atdy, true);
-    for (Int i = 0; i < n_; ++i) {
-      if (model_.hasLb(i) || model_.hasUb(i)) {
-        if (std::isfinite(xl[i]) && std::isfinite(xu[i])) {
-          if (zl[i] * xu[i] >= zu[i] * xl[i])
-            delta.zl[i] = res4[i] + delta.zu[i] - Atdy[i];
-          else
-            delta.zu[i] = -res4[i] + delta.zl[i] + Atdy[i];
-        } else if (std::isfinite(xl[i])) {
-          delta.zl[i] = res4[i] + delta.zu[i] - Atdy[i];
-        } else {
-          delta.zu[i] = -res4[i] + delta.zl[i] + Atdy[i];
-        }
-      }
-    }
-  }
 }
 
 double Solver::stepToBoundary(const std::vector<double>& x,
