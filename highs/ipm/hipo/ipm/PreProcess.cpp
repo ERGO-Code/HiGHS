@@ -358,7 +358,7 @@ void PreprocessScaling::apply(Model& model) {
         coeff = std::sqrt(coeff * 1.0 / std::sqrt(std::abs(Qii)));
       }
 
-      // if bounds interval is too small or large, use geomean of norm scaling
+      // if bounds interval is too small, use geomean of norm scaling
       // and maximum scaling allowed by bounds
       if (std::isfinite(lower[i]) && std::isfinite(upper[i])) {
         const double l = lower[i] / colscale[i];
@@ -367,8 +367,6 @@ void PreprocessScaling::apply(Model& model) {
 
         if (diff / coeff < kSmallBoundDiff)
           coeff = std::sqrt(coeff * diff / kSmallBoundDiff);
-        else if (diff / coeff > kLargeBoundDiff)
-          coeff = std::sqrt(coeff * diff / kLargeBoundDiff);
       }
 
       if (!std::isinf(coeff) && !std::isnan(coeff)) colscale[i] *= coeff;
