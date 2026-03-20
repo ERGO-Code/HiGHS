@@ -1003,9 +1003,6 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                 const std::string& message) {
   if (!solution.value_valid) return;
   const bool has_dual_values = solution.dual_valid;
-  if (!has_dual_values) {
-    printf("No duals in lpKktCheck\n");
-  }
   const HighsLogOptions& log_options = options.log_options;
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
