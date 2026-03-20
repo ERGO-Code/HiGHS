@@ -370,6 +370,9 @@ void PreprocessScaling::apply(Model& model) {
       }
 
       if (!std::isinf(coeff) && !std::isnan(coeff)) colscale[i] *= coeff;
+
+      colscale[i] = std::max(colscale[i], kSmallScalingCoeff);
+      colscale[i] = std::min(colscale[i], kLargeScalingCoeff);
     }
   };
   auto rowScaling = [&]() {
@@ -386,8 +389,11 @@ void PreprocessScaling::apply(Model& model) {
     }
 
     // apply row scaling
-    for (Int i = 0; i < m; ++i)
+    for (Int i = 0; i < m; ++i) {
       if (norm_rows[i] > 0.0) rowscale[i] *= 1.0 / std::sqrt(norm_rows[i]);
+      rowscale[i] = std::max(rowscale[i], kSmallScalingCoeff);
+      rowscale[i] = std::min(rowscale[i], kLargeScalingCoeff);
+    }
   };
 
   const Int num_passes = 10;
