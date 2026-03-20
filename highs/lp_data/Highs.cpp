@@ -4468,6 +4468,18 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         }
       } else {
         this->basis_.clear();
+	// callLpKktCheck will set LPs with model status
+	// HighsModelStatus::kUnknown; to HighsModelStatus::kOptimal
+	// if relative primal and dual infeasibilities are acceptable
+	//
+	// To prevent this from being done with MIPs, set their model
+	// status to HighsModelStatus::kNotset
+	this->model_status_ = this->model_.lp_.isMip() ?
+	  HighsModelStatus::kNotset :
+	  HighsModelStatus::kUnknown;
+	this->callLpKktCheck(this->model_.lp_);
+	info_.valid = true;
+    /*
         info_.objective_function_value =
             model_.lp_.objectiveValue(solution_.col_value);
         const bool is_qp = this->model_.isQp();
@@ -4482,12 +4494,12 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         } else {
           model_status_ = HighsModelStatus::kUnknown;
         }
-        highsLogUser(
-            options_.log_options, HighsLogType::kInfo,
-            "\nPure postsolve yields primal %ssolution, but no basis: model "
-            "status is %s\n",
-            solution_.dual_valid ? "and dual " : "",
-            modelStatusToString(model_status_).c_str());
+    */
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+		     "\nPure postsolve yields primal %ssolution, but no basis: model "
+		     "status is %s\n",
+		     solution_.dual_valid ? "and dual " : "",
+		     modelStatusToString(model_status_).c_str());
       }
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
