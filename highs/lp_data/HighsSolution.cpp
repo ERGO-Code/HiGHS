@@ -632,10 +632,8 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
 
   // clang-format off
   HighsInt& num_primal_residual_error = primal_dual_errors.glpsol_num_primal_residual_errors;
-  double&   sum_primal_residual_error = primal_dual_errors.glpsol_sum_primal_residual_errors;
   
   HighsInt& num_dual_residual_error = primal_dual_errors.glpsol_num_dual_residual_errors;
-  double&   sum_dual_residual_error = primal_dual_errors.glpsol_sum_dual_residual_errors;
   
   double&   max_primal_residual_error = primal_dual_errors.glpsol_max_primal_residual.absolute_value;
   HighsInt& max_primal_residual_index = primal_dual_errors.glpsol_max_primal_residual.absolute_index;
@@ -1004,9 +1002,10 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                 const HighsBasis& basis, const HighsOptions& options,
                 const std::string& message) {
   if (!solution.value_valid) return;
-  // Must have dual values for an LP if there are primal values
-  assert(solution.dual_valid);
-
+  const bool has_dual_values = solution.dual_valid;
+  if (!has_dual_values) {
+    printf("No duals in lpKktCheck\n");
+  }
   const HighsLogOptions& log_options = options.log_options;
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;

@@ -20,7 +20,7 @@ TEST_CASE("presolve-solve-postsolve-lp", "[highs_test_presolve]") {
 
 TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
   highs.readModel(model_file);
