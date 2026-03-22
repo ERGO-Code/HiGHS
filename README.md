@@ -14,6 +14,7 @@
 \
 [![NuGet version](https://img.shields.io/nuget/v/Highs.Native.svg)](https://www.nuget.org/packages/Highs.Native)
 [![NuGet download](https://img.shields.io/nuget/dt/Highs.Native.svg)](https://www.nuget.org/packages/Highs.Native)
+[![gitcgr](https://gitcgr.com/badge/ERGO-Code/HiGHS.svg)](https://gitcgr.com/ERGO-Code/HiGHS)
 
 [fast_build_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/build-fast.yml/badge.svg
 [fast_build_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/build-fast.yml
