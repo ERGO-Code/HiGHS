@@ -593,17 +593,6 @@ if (DEBUG_MODE) std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restart
       do_restart = false;
     }
 
-    // copy back x from gpu and print out
-#ifdef CUPDLP_GPU
-if(final_iter_count_ == 9) {
-    std::vector<double> x_next_host(lp_.num_col_);
-    CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
-    std::cout << "x_next (before 9): ";
-    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
-    std::cout << "\n";
-}
-#endif
-
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #ifdef CUPDLP_GPU
     if (graphExec) {
@@ -630,21 +619,6 @@ if(final_iter_count_ == 9) {
       performHalpernPdhgStep(false, i);
     }
     performHalpernPdhgStep(true, PDHG_CHECK_INTERVAL);
-#endif
-
-#ifdef CUPDLP_GPU
-if(final_iter_count_ == 9) {
-    std::vector<double> x_next_host(lp_.num_col_);
-    std::vector<double> x_current_host(lp_.num_col_);
-    CUDA_CHECK(cudaMemcpy(x_current_host.data(), d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
-    std::cout << "x_next (after 9): ";
-    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
-    std::cout << "\n";
-    std::cout << "x_current (after 9): ";
-    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_current_host[i] << " ";
-    std::cout << "\n";
-}
 #endif
 
   // Compute Error for Restart Check
