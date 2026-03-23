@@ -29,7 +29,7 @@
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
 
-#define PDHG_CHECK_INTERVAL 3
+#define PDHG_CHECK_INTERVAL 40
 static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
