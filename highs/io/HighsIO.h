@@ -83,6 +83,11 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...);
 
 /**
+ * @brief Gets filename extension
+ */
+std::string getFilenameExt(const std::string& filename);
+
+/**
  * @brief Replaces fprintf(file,... so that when file=stdout highsLogUser is
  * used
  */
@@ -108,5 +113,6 @@ const std::string highsBoolToString(const bool b,
 
 const std::string highsInsertMdEscapes(const std::string& from_string);
 const std::string highsInsertMdId(const std::string& from_string);
-
+const std::string highsTimeToString(const double time);
+const std::string highsTimeSecondToString(const double time);
 #endif

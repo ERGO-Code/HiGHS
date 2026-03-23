@@ -151,10 +151,6 @@ struct Iterate {
                              std::vector<double>& y_cmp,
                              std::vector<double>& z_cmp) const;
 
-  // ===================================================================================
-  // Compute residuals after solution has been found, postprocessed and
-  // unscaled.
-  // ===================================================================================
   Int finalResiduals(Info& info) const;
 
   // ===================================================================================
@@ -166,7 +162,7 @@ struct Iterate {
 
   bool stagnation(std::stringstream& log_stream);
 
-  void getReg(LinearSolver& LS, OptionNla opt);
+  void getReg(LinearSolver& LS, const std::string& nla);
 
   void assertConsistency(Int n, Int m) const;
 };

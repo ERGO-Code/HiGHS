@@ -177,9 +177,9 @@ class HPresolve {
   bool checkUpdateColImpliedBounds(HighsInt row, double* rowLower = nullptr,
                                    double* rowUpper = nullptr) const;
 
-  void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
+  Result updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
-  void updateColImpliedBounds(HighsInt row);
+  Result updateColImpliedBounds(HighsInt row);
 
   bool checkUpdateRowDualImpliedBounds(HighsInt col,
                                        double* dualRowLower = nullptr,
@@ -291,8 +291,8 @@ class HPresolve {
 
   void fixColToZero(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  void transformColumn(HighsPostsolveStack& postsolve_stack, HighsInt col,
-                       double scale, double constant);
+  Result transformColumn(HighsPostsolveStack& postsolve_stack, HighsInt col,
+                         double scale, double constant);
 
   void scaleRow(HighsInt row, double scale, bool integral = false);
 
@@ -300,9 +300,13 @@ class HPresolve {
 
   void substitute(HighsInt row, HighsInt col, double rhs);
 
-  void changeColUpper(HighsInt col, double newUpper);
+  Result changeColUpper(HighsInt col, double newUpper);
 
-  void changeColLower(HighsInt col, double newLower);
+  Result changeColLower(HighsInt col, double newLower);
+
+  Result changeColBounds(HighsInt col, double newLower, double newUpper);
+
+  Result checkColBounds(HighsInt col, bool* isFixed = nullptr);
 
   void changeRowDualUpper(HighsInt row, double newUpper);
 
@@ -318,7 +322,7 @@ class HPresolve {
   void changeImplRowDualLower(HighsInt row, double newLower,
                               HighsInt originCol);
 
-  void scaleMIP(HighsPostsolveStack& postsolve_stack);
+  Result scaleMIP(HighsPostsolveStack& postsolve_stack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postsolve_stack,
                                          HighsInt& numDelCol);
@@ -348,6 +352,8 @@ class HPresolve {
   template <typename storageFormat>
   HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector);
 
+  bool silentLog() const;
+
  public:
   // for LP presolve
   bool okSetInput(HighsLp& model_, const HighsOptions& options_,
@@ -375,6 +381,8 @@ class HPresolve {
                          HighsInt& numVarsSubstituted,
                          HighsInt& liftedNonZeros);
 
+  std::pair<int64_t, HighsInt> computeProbingScore(HighsInt col) const;
+
   Result runProbing(HighsPostsolveStack& postsolve_stack);
 
   Result liftingForProbing(HighsPostsolveStack& postsolve_stack);
@@ -400,8 +408,9 @@ class HPresolve {
   Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                             bool handleSingletonRows = true);
 
-  void computeLocks(HighsInt col, bool considerObjective,
-                    std::function<bool(HighsInt, bool)> lockCallback) const;
+  void computeLocks(
+      HighsInt col, bool considerObjective,
+      std::function<bool(HighsInt, bool, bool)> lockCallback) const;
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
@@ -470,6 +479,8 @@ class HPresolve {
   Result equalityRowAddition(HighsPostsolveStack& postsolve_stack,
                              HighsInt stayrow, HighsInt removerow, double scale,
                              const HighsMatrixSlice<RowStorageFormat>& vector);
+
+  void extractVarBounds(HighsInt row);
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 

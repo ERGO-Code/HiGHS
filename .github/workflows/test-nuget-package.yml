@@ -22,7 +22,10 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+        run: |
+         cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON \
+            -DCMAKE_C_COMPILER=/usr/bin/clang \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -65,7 +68,11 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+        run: |
+          cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON \
+            -DCMAKE_C_COMPILER=/usr/bin/clang \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+
 
       - name: Build
         working-directory: ${{runner.workspace}}/build

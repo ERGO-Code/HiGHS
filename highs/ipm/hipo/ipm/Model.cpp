@@ -11,6 +11,8 @@ namespace hipo {
 Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
   fillInIpxData(lp, n_, m_, offset_, c_, lower_, upper_, A_.start_, A_.index_,
                 A_.value_, b_, constraints_);
+  rhs_orig_ = b_;
+  constraints_orig_ = constraints_;
   Q_ = Q;
   if (qp()) completeHessian(n_, Q_);
   sense_ = lp.sense_;
@@ -18,7 +20,6 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
   if (checkData()) return kStatusBadModel;
 
   lp_orig_ = &lp;
-  Q_orig_ = &Q;
   n_orig_ = n_;
   m_orig_ = m_;
   A_.num_col_ = n_;
@@ -48,10 +49,13 @@ Int Model::checkData() const {
   if (n_ <= 0 || m_ < 0) return kStatusBadModel;
 
   // Vectors are of correct size
-  if (c_.size() != n_ || b_.size() != m_ || lower_.size() != n_ ||
-      upper_.size() != n_ || constraints_.size() != m_ ||
-      A_.start_.size() != n_ + 1 || A_.index_.size() != A_.start_.back() ||
-      A_.value_.size() != A_.start_.back())
+  if (static_cast<Int>(c_.size()) != n_ || static_cast<Int>(b_.size()) != m_ ||
+      static_cast<Int>(lower_.size()) != n_ ||
+      static_cast<Int>(upper_.size()) != n_ ||
+      static_cast<Int>(constraints_.size()) != m_ ||
+      static_cast<Int>(A_.start_.size()) != n_ + 1 ||
+      static_cast<Int>(A_.index_.size()) != A_.start_.back() ||
+      static_cast<Int>(A_.value_.size()) != A_.start_.back())
     return kStatusBadModel;
 
   // Hessian is ok, for QPs only

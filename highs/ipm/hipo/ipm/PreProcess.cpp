@@ -8,13 +8,13 @@
 namespace hipo {
 
 void PreprocessorPoint::assertConsistency(Int n, Int m) const {
-  assert(x.size() == n);
-  assert(xl.size() == n);
-  assert(xu.size() == n);
-  assert(slack.size() == m);
-  assert(y.size() == m);
-  assert(zl.size() == n);
-  assert(zu.size() == n);
+  assert(static_cast<Int>(x.size()) == n);
+  assert(static_cast<Int>(xl.size()) == n);
+  assert(static_cast<Int>(xu.size()) == n);
+  assert(static_cast<Int>(slack.size()) == m);
+  assert(static_cast<Int>(y.size()) == m);
+  assert(static_cast<Int>(zl.size()) == n);
+  assert(static_cast<Int>(zu.size()) == n);
 }
 
 void PreprocessEmptyRows::apply(Model& model) {
@@ -189,7 +189,8 @@ void PreprocessFixedVars::apply(Model& model) {
     Int next = 0;
     Int copy_to = 0;
     for (Int i = 0; i < n; ++i) {
-      if (next < index_to_remove.size() && i == index_to_remove[next]) {
+      if (next < static_cast<Int>(index_to_remove.size()) &&
+          i == index_to_remove[next]) {
         ++next;
         continue;
       } else {
@@ -248,13 +249,13 @@ void PreprocessFixedVars::undo(PreprocessorPoint& point, const Model& model,
         // need to do this after all x have been computed, due to Q*x term
         const auto& dataj = data.at(j);
         double z = dataj.c;
-        for (Int i = 0; i < dataj.indA.size(); ++i) {
+        for (Int i = 0; i < static_cast<Int>(dataj.indA.size()); ++i) {
           const Int row = dataj.indA[i];
           const double val = dataj.valA[i];
           z -= val * point.y[row];
         }
         if (model.qp()) {
-          for (Int i = 0; i < dataj.indQ.size(); ++i) {
+          for (Int i = 0; i < static_cast<Int>(dataj.indQ.size()); ++i) {
             const Int row = dataj.indQ[i];
             const double val = dataj.valQ[i];
             z += val * new_x[row];
@@ -491,7 +492,7 @@ void PreprocessFormulation::undo(PreprocessorPoint& point, const Model& model,
   point.zu = std::vector<double>(it.zu.begin(), it.zu.begin() + n_pre);
 
   // force unused entries to have correct value
-  for (int i = 0; i < n_pre; ++i) {
+  for (Int i = 0; i < n_pre; ++i) {
     if (!model.hasLb(i)) {
       point.xl[i] = kHighsInf;
       point.zl[i] = 0.0;
@@ -548,7 +549,7 @@ void PreprocessFormulation::print(std::stringstream& stream) const {
   stream << "Added " << n_post - n_pre << " slacks\n";
 }
 
-#define APPLY_ACTION(T)                                       \
+#define APPLY_ACTION(T)                                      \
   stack.push_back(std::unique_ptr<PreprocessAction>(new T)); \
   stack.back()->apply(model);
 

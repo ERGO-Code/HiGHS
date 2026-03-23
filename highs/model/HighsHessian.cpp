@@ -145,8 +145,9 @@ HighsInt HighsHessian::numNz() const {
 
 void HighsHessian::print() const {
   HighsInt num_nz = this->numNz();
-  printf("Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
+  printf("%s Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
          " entries\n",
+         this->format_ == HessianFormat::kTriangular ? "Triangular" : "Square",
          dim_, num_nz);
   printf("Start; Index; Value of sizes %d; %d; %d\n", (int)this->start_.size(),
          (int)this->index_.size(), (int)this->value_.size());
@@ -157,16 +158,16 @@ void HighsHessian::print() const {
   printf("-----");
   for (int iCol = 0; iCol < dim_; iCol++) printf("-----");
   printf("\n");
-  std::vector<double> col;
-  col.assign(dim_, 0);
+  std::vector<std::string> col;
+  col.assign(dim_, "");
   for (HighsInt iCol = 0; iCol < dim_; iCol++) {
     for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
-      col[this->index_[iEl]] = this->value_[iEl];
+      col[this->index_[iEl]] = highsFormatToString("%4g", this->value_[iEl]);
     printf("%4d|", (int)iCol);
-    for (int iRow = 0; iRow < dim_; iRow++) printf(" %4g", col[iRow]);
+    for (int iRow = 0; iRow < dim_; iRow++) printf(" %4s", col[iRow].c_str());
     printf("\n");
     for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
-      col[this->index_[iEl]] = 0;
+      col[this->index_[iEl]] = "";
   }
 }
 bool HighsHessian::operator==(const HighsHessian& hessian) const {

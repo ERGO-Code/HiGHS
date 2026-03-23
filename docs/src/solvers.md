@@ -17,7 +17,7 @@ problem type, are then [summarised](@ref solver-option).
 
 ## LP
 
-#### Simplex
+#### [Simplex](@id solvers-simplex)
 
 HiGHS has efficient implementations of both the primal and dual
 simplex methods, although the dual simplex solver is likely to be
@@ -80,12 +80,45 @@ For small LPs, IPX is often faster than HiPO. However, as problem size
 grows, HiPO becomes more efficient, and its advantage can be more
 than an order of magnitude.
 
-#### Primal-dual hybrid gradient method
+#### Primal-dual hybrid gradient method (PDLP)
 
-HiGHS has a primal-dual hybrid gradient implementation for LP (PDLP)
-that is run on an NVIDIA [GPU](@ref gpu) if CUDA is installed. If this
-is not possible, the PDLP solver is run on a CPU, but it is unlikely
-to be competitive with the HiGHS interior point or simplex solvers.
+HiGHS includes the [
+cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C) primal-dual hybrid
+gradient method for LP (PDLP). On Linux and Windows, this can be run
+on an NVIDIA [GPU](@ref gpu). On a CPU, it is unlikely to be
+competitive with the HiGHS interior point or simplex solvers.
+
+Setting the option [__solver__](@ref option-solver) to "pdlp" forces the PDLP solver to be used
+
+### Basic solution
+
+The simplex solver always generates a [basic solution](@ref
+term-basic-solution). This is a solution at a vertex of the feasible
+region of the LP.
+
+By default, the IPM solvers also generate a basic solution by running
+a procedure known as "crossover". This can occasionally be very
+expensive so if users require only a solution to the LP, and not a
+basic solution, crossover can be suppressed. This is done by setting
+the [run\_crossover](@ref option-run-crossover) option to
+"off". However, if the IPM solver terminates without satsifying the
+[feasibility and optimality](@ref kkt) conditions, HiGHS will not
+claim optimality. Hence it is better to set the `run\_crossover`
+option to "choose", in which case crossover will be run if the IPM
+solver terminates without determining optimality.
+
+The PDLP solver does not generate a basic solution. Currently it has
+no crossover procedure to obtain one.
+
+When modifications have been made to an LP problem, the simplex solver
+(only) can solve the modified problem from the optimal basis of the
+original LP, a process known as ["hot starting"](@ref hot-start-lp).
+
+## MIP
+
+The HiGHS MIP solver uses established branch-and-cut techniques. It is
+largely single-threaded, although implementing a multi-threaded tree
+search is work in progress.
 
 ## QP
 

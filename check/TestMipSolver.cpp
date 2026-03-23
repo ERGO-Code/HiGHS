@@ -1211,8 +1211,8 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   h.setOptionValue("presolve", kHighsOffString);
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  REQUIRE(std::abs(h.getInfo().objective_function_value - mip_optimal_objective)
-	  < double_equal_tolerance);
+  REQUIRE(std::abs(h.getInfo().objective_function_value -
+                   mip_optimal_objective) < double_equal_tolerance);
   // In calling changeColsBounds, the incumbent solution was always
   // cleared, so there was no information from which to construct an
   // advanced basis. Hence simplex starts from a logical basis and
@@ -1231,8 +1231,8 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   h.setSolution(solution);
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  REQUIRE(std::abs(h.getInfo().objective_function_value - mip_optimal_objective)
-	  < double_equal_tolerance);
+  REQUIRE(std::abs(h.getInfo().objective_function_value -
+                   mip_optimal_objective) < double_equal_tolerance);
   REQUIRE(h.getInfo().simplex_iteration_count == 0);
 
   // Now re-load the MIP, re-solve, and get the fixed LP
@@ -1248,16 +1248,16 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.passModel(fixed_lp) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  REQUIRE(std::abs(h.getInfo().objective_function_value - mip_optimal_objective)
-	  < double_equal_tolerance);
+  REQUIRE(std::abs(h.getInfo().objective_function_value -
+                   mip_optimal_objective) < double_equal_tolerance);
 
   // Now run from saved solution (without presolve)
   h.clearSolver();
   h.setSolution(solution);
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  REQUIRE(std::abs(h.getInfo().objective_function_value - mip_optimal_objective)
-	  < double_equal_tolerance);
+  REQUIRE(std::abs(h.getInfo().objective_function_value -
+                   mip_optimal_objective) < double_equal_tolerance);
   REQUIRE(h.getInfo().simplex_iteration_count == 0);
 
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
@@ -1373,8 +1373,8 @@ TEST_CASE("row-fixed-lp", "[highs_test_mip_solver]") {
                      solution.row_value.data());
   h.setOptionValue("presolve", kHighsOffString);
   REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getInfo().objective_function_value
-	  <= mip_optimal_objective + double_equal_tolerance);
+  REQUIRE(h.getInfo().objective_function_value <=
+          mip_optimal_objective + double_equal_tolerance);
 
   h.resetGlobalScheduler(true);
 }

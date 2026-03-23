@@ -734,18 +734,17 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-
   HighsLp& lp = model.lp_;
 
   // Dimensions in a_matrix_ may not be set, so take them from lp
   lp.setMatrixDimensions();
 
-  // Replace any blank names and return error if there are duplicates
-  // or names with spaces
-  call_status = normaliseNames(this->options_.log_options, lp);
+  // Normalise names according to file type
+  HighsFileType file_type = getFileType(filename);
+  call_status = normaliseNames(this->options_.log_options, lp, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
-  if (return_status == HighsStatus::kError) return return_status;
+  assert(call_status != HighsStatus::kError);
 
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -781,7 +780,6 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   if (filename == "") {
     // Empty file name: report model on logging stream
     reportModel(model);
-    return_status = HighsStatus::kOk;
   } else {
     Filereader* writer =
         Filereader::getFilereader(options_.log_options, filename);
@@ -811,17 +809,23 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  // Replace any blank names and return error if there are duplicates
-  // or names with spaces
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
-  if (return_status == HighsStatus::kError) return return_status;
+  assert(call_status != HighsStatus::kError);
 
   // Report to user that basis is being written
-  if (filename != "")
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Writing the basis to %s\n", filename.c_str());
+  if (filename != "") {
+    if (!basis_.valid) {
+      highsLogUser(options_.log_options, HighsLogType::kWarning,
+                   "No basis to write: generated null basis file %s\n",
+                   filename.c_str());
+      return_status = HighsStatus::kWarning;
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Writing the basis to %s\n", filename.c_str());
+    }
+  }
   writeBasisFile(file, options_, model_.lp_, basis_);
   if (file != stdout) fclose(file);
   return return_status;
@@ -2072,7 +2076,7 @@ HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
 
 HighsStatus Highs::getIis(HighsIis& iis) {
   HighsStatus return_status = this->getIisInterface();
-  if (return_status != HighsStatus::kError) iis = this->iis_;
+  iis = this->iis_;
   return return_status;
 }
 
@@ -3453,12 +3457,10 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  // Replace any blank names and return error if there are duplicates
-  // or names with spaces
   call_status = normaliseNames(this->options_.log_options, this->model_.lp_);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "normaliseNames");
-  if (return_status == HighsStatus::kError) return return_status;
+  assert(call_status != HighsStatus::kError);
 
   // Report to user that solution is being written
   if (filename != "")

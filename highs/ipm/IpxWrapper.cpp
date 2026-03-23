@@ -468,106 +468,15 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
   // ipx_lps.control_ elapsed time
   hipo.setIpxTimerOffset(timer.read());
 
-  hipo::Options hipo_options{};
-
-  hipo_options.display = true;
-  if (!options.output_flag | !options.log_to_console)
-    hipo_options.display = false;
-
-  hipo_options.log_options = &options.log_options;
-
-  // Debug option is already considered through log_options.log_dev_level in
-  // hipo::LogHighs::debug
-
-  hipo_options.timeless_log = options.timeless_log;
-  hipo_options.feasibility_tol = std::min(options.primal_feasibility_tolerance,
-                                          options.dual_feasibility_tolerance);
-  hipo_options.optimality_tol = options.ipm_optimality_tolerance;
-  hipo_options.crossover_tol = options.start_crossover_tolerance;
-
   if (options.kkt_tolerance != kDefaultKktTolerance) {
-    hipo_options.feasibility_tol = options.kkt_tolerance;
-    hipo_options.optimality_tol = 1e-1 * options.kkt_tolerance;
-    hipo_options.crossover_tol = 1e-1 * options.kkt_tolerance;
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "IpxWrapper: feasibility_tol = %g; optimality_tol = %g; "
                  "crossover_tol = %g\n",
-                 hipo_options.feasibility_tol, hipo_options.optimality_tol,
-                 hipo_options.crossover_tol);
+                 options.kkt_tolerance, 1e-1 * options.kkt_tolerance,
+                 1e-1 * options.kkt_tolerance);
   }
 
-  // hipo uses same timer as highs, so it is fine to pass the same time limit
-  hipo_options.time_limit = options.time_limit;
-
-  hipo_options.max_iter =
-      options.ipm_iteration_limit - highs_info.ipm_iteration_count;
-
-  if (options.run_crossover == kHighsOnString)
-    hipo_options.crossover = hipo::kOptionCrossoverOn;
-  else if (options.run_crossover == kHighsOffString)
-    hipo_options.crossover = hipo::kOptionCrossoverOff;
-  else {
-    assert(options.run_crossover == kHighsChooseString);
-    hipo_options.crossover = hipo::kOptionCrossoverChoose;
-  }
-
-  // Potentially control if ipx is used for refinement and if it is displayed
-  // hipo_options.refine_with_ipx = true;
-  hipo_options.display_ipx = true;
-
-  // if option parallel is on, it can be refined by option hipo_parallel_type
-  if (options.parallel == kHighsOnString) {
-    if (options.hipo_parallel_type == kHipoTreeString)
-      hipo_options.parallel = hipo::kOptionParallelTreeOnly;
-    else if (options.hipo_parallel_type == kHipoNodeString)
-      hipo_options.parallel = hipo::kOptionParallelNodeOnly;
-    else if (options.hipo_parallel_type == kHipoBothString)
-      hipo_options.parallel = hipo::kOptionParallelOn;
-    else {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Unknown value of option %s\n", kHipoParallelString.c_str());
-      model_status = HighsModelStatus::kSolveError;
-      return HighsStatus::kError;
-    }
-  }
-  // otherwise, option hipo_parallel_type is ignored
-  else if (options.parallel == kHighsOffString)
-    hipo_options.parallel = hipo::kOptionParallelOff;
-  else {
-    assert(options.parallel == kHighsChooseString);
-    hipo_options.parallel = hipo::kOptionParallelChoose;
-  }
-
-  // Parse hipo_system option
-  if (options.hipo_system == kHipoAugmentedString) {
-    hipo_options.nla = hipo::kOptionNlaAugmented;
-  } else if (options.hipo_system == kHipoNormalEqString) {
-    hipo_options.nla = hipo::kOptionNlaNormEq;
-  } else if (options.hipo_system == kHighsChooseString) {
-    hipo_options.nla = hipo::kOptionNlaChoose;
-  } else {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Unknown value of option %s\n", kHipoSystemString.c_str());
-    model_status = HighsModelStatus::kSolveError;
-    return HighsStatus::kError;
-  }
-
-  // Reordering heuristic
-  if (options.hipo_ordering != kHipoMetisString &&
-      options.hipo_ordering != kHipoAmdString &&
-      options.hipo_ordering != kHipoRcmString &&
-      options.hipo_ordering != kHighsChooseString) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Unknown value of option %s\n", kHipoOrderingString.c_str());
-    model_status = HighsModelStatus::kSolveError;
-    return HighsStatus::kError;
-  }
-  hipo_options.ordering = options.hipo_ordering;
-
-  // block size option
-  hipo_options.block_size = options.hipo_block_size;
-
-  hipo.setOptions(hipo_options);
+  hipo.setOptions(options);
   hipo.setTimer(timer);
   hipo.setCallback(callback);
 
