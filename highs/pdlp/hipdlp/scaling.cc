@@ -28,6 +28,7 @@ void Scaling::Initialize(const HighsLp& lp) {
   norm_rhs_ = linalg::compute_rhs_norm(lp, 2.0);
 }
 
+/*
 void Scaling::LogMatrixNorms(const std::string& stage) {
   const HighsLp& lp = *lp_;
   highsLogUser(params_->log_options_, HighsLogType::kInfo,
@@ -72,26 +73,26 @@ void Scaling::LogMatrixNorms(const std::string& stage) {
   highsLogUser(params_->log_options_, HighsLogType::kInfo,
                "-------------------------\n");
 }
-
+*/
 void Scaling::scaleProblem() {
   is_scaled_ = false;
 
   if (params_->use_ruiz_scaling) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
+    highsLogDev(params_->log_options_, HighsLogType::kInfo,
                  "Applying Ruiz scaling...\n");
     ApplyRuizScaling();
     is_scaled_ = true;
   }
 
   if (params_->use_pc_scaling) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
+    highsLogDev(params_->log_options_, HighsLogType::kInfo,
                  "Applying Pock-Chambolle scaling...\n");
     ApplyPockChambolleScaling();
     is_scaled_ = true;
   }
 
   if (params_->use_l2_scaling) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
+    highsLogDev(params_->log_options_, HighsLogType::kInfo,
                  "Applying L2 norm scaling...\n");
     ApplyL2Scaling();
     is_scaled_ = true;
@@ -126,6 +127,12 @@ void Scaling::ApplyRuizScaling() {
     }
 
     // Compute row norms (infinity norm for rows)
+    const bool ruiz_norm_ok = params_->ruiz_norm == INFINITY;
+    if (!ruiz_norm_ok) {
+      highsLogUser(params_->log_options_, HighsLogType::kError,
+                   "Currently only support infinity norm for Ruiz scaling\n");
+      assert(ruiz_norm_ok);
+    }      
     if (params_->ruiz_norm == INFINITY) {
       // For infinity norm, find max absolute value in each row
       for (HighsInt col = 0; col < lp_->num_col_; ++col) {
@@ -145,10 +152,6 @@ void Scaling::ApplyRuizScaling() {
           current_row_scaling[row] = std::sqrt(current_row_scaling[row]);
         }
       }
-    } else {
-      highsLogUser(params_->log_options_, HighsLogType::kError,
-                   "Currently only support infinity norm for Ruiz scaling\n");
-      exit(1);
     }
 
     // Apply the scaling
@@ -165,10 +168,13 @@ void Scaling::ApplyRuizScaling() {
 }
 
 void Scaling::ApplyPockChambolleScaling() {
-  if (params_->pc_alpha < 0.0 || params_->pc_alpha > 2.0) {
+  const bool pc_alpha_ok =
+    0.0 <= params_->pc_alpha &&
+    params_->pc_alpha <= 2.0;
+  if (!pc_alpha_ok) {
     highsLogUser(params_->log_options_, HighsLogType::kError,
-                 "PC alpha should be in [0, 2]\n");
-    exit(1);
+                 "PC alpha must be in [0, 2]\n");
+    assert(pc_alpha_ok);
   }
 
   std::vector<double> current_col_scaling(lp_->num_col_, 0.0);
