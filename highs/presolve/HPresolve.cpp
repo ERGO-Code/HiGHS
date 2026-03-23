@@ -4138,6 +4138,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           auto setScalars = [&](double minAbsCoef, double maxAbsCoef) {
             scalars.clear();
             scalars.emplace(1.0);
+            if (static_cast<HighsCDouble>(maxAbsCoef) >=
+                1e5 * static_cast<HighsCDouble>(minAbsCoef))
+              return;
             for (HighsInt t = 1; t <= 5; t++) {
               scalars.emplace(t / maxAbsCoef);
               scalars.emplace(t / minAbsCoef);
