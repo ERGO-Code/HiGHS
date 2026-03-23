@@ -1519,7 +1519,7 @@ double PDLPSolver::PowerMethod() {
       // kYanyuPowerMethod;
       // kYanyuPowerMethodDev;
       kCuPdlpAATPowerMethod;
-  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n",
+  highsLogDev(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n",
                power_method == kYanyuPowerMethod      ? "Yanyu"
                : power_method == kYanyuPowerMethodDev ? "Yanyu dev"
                                                       : "CuPdlp-C");
@@ -1836,7 +1836,7 @@ void PDLPSolver::initializeStepSizes() {
     stepsize_.primal_step = base_step / params_.omega;
     stepsize_.dual_step = base_step * params_.omega;
 
-    highsLogUser(params_.log_options_, HighsLogType::kInfo,
+    highsLogDev(params_.log_options_, HighsLogType::kInfo,
                  "Initial step sizes from power method lambda = %g: primal step= "
                  "%g; dual step = %g, eta = %g, omega = %g\n",
                  op_norm_sq, stepsize_.primal_step, stepsize_.dual_step, params_.eta, params_.omega);
@@ -1859,7 +1859,7 @@ void PDLPSolver::initializeStepSizes() {
         (1.0 / mat_elem_norm_inf) / std::sqrt(stepsize_.beta);
     stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
 
-    highsLogUser(params_.log_options_, HighsLogType::kInfo,
+    highsLogDev(params_.log_options_, HighsLogType::kInfo,
                  "Initial step sizes from matrix inf-norm = %g: primal = %g; "
                  "dual = %g\n",
                  mat_elem_norm_inf, stepsize_.primal_step, stepsize_.dual_step);
@@ -2149,7 +2149,7 @@ void PDLPSolver::updateIteratesAdaptive() {
                                  : std::numeric_limits<double>::infinity();
 
     /*
-    highsLogUser(*log_options_, HighsLogType::kInfo,
+    highsLogDev(*log_options_, HighsLogType::kInfo,
                  "Iteration %d: eta = %g, movement = %g nonlinearity = %g, limit
     = %g\n", HighsInt(inner_iterations), current_eta, movement, nonlinearity.
     step_size_limit);
@@ -2495,7 +2495,7 @@ void PDLPSolver::setupGpu() {
   CUDA_CHECK(cudaMalloc(&d_buffer_, max_size * sizeof(double)));
   CUDA_CHECK(cudaMalloc(&d_buffer2_, max_size * sizeof(double)));
 
-  highsLogUser(params_.log_options_, HighsLogType::kInfo,
+  highsLogDev(params_.log_options_, HighsLogType::kInfo,
                "GPU setup complete. Matrix A (CSR) and A^T (CSR) transferred "
                "to device.\n");
 }
