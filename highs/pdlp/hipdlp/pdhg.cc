@@ -897,7 +897,7 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
     
     final_iter_count_ = iter;
     results_ = prefer_avg ? average_results : current_results;
-    logger_.info((prefer_avg ? "Average" : "Current") + std::string(" solution converged."));
+    logger_.info((prefer_avg ? "Average" : "Current") + std::string(" solution converged"));
     
     status = TerminationStatus::OPTIMAL;
     return true; // Stop
@@ -1786,7 +1786,7 @@ void PrimalDualParams::initialise() {
   this->tolerance = 0;
   this->max_iterations = 0;
   this->device_type = Device::CPU;
-  this->time_limit = 3600.0;
+  this->time_limit = kHighsInf;
   this->restart_strategy = RestartStrategy::NO_RESTART;
   this->fixed_restart_interval = 0;
   this->use_halpern_restart = false;
