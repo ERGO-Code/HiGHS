@@ -549,7 +549,10 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   logger_.print_iteration_header();
   
-  TerminationStatus termination_status = TerminationStatus::OPTIMAL;
+  // termination_status is not known. Setting it to NOTSET rather than
+  // OPTIMAL means that if it's not set elsewhere then optimality is
+  // not returned in error
+  TerminationStatus termination_status = TerminationStatus::NOTSET;
   bool do_restart = false;
   double last_trial_fpe = std::numeric_limits<double>::infinity();
   
@@ -718,10 +721,9 @@ if(final_iter_count_ == 9) {
 #endif
 
   // 3. Loop Finished
-  if (termination_status != TerminationStatus::OPTIMAL) {
-      logger_.info("Max iterations reached without convergence.");
-      final_iter_count_ = params_.max_iterations;
-      termination_status = TerminationStatus::TIMEOUT;
+  if (termination_status == TerminationStatus::NOTSET) {
+    logger_.info("Iteration limit reached without convergence");
+    termination_status = TerminationStatus::MAXITER;
   }
   
   solveReturn(termination_status);

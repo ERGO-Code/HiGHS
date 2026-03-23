@@ -157,9 +157,13 @@ void Logger::print_summary(const SolverResults& results, HighsInt total_iter,
   std::stringstream ss;
 
   std::map<TerminationStatus, std::string> term_map = {
+      {TerminationStatus::NOTSET, "Not set"},
       {TerminationStatus::OPTIMAL, "Optimal"},
+      {TerminationStatus::INFEASIBLE, "Infeasible"},
+      {TerminationStatus::UNBOUNDED, "Unbounded"},
+      {TerminationStatus::MAXITER, "Maxiter"},
       {TerminationStatus::TIMEOUT, "Timeout"},
-      {TerminationStatus::FEASIBLE, "Feasible"}};
+      {TerminationStatus::ERROR, "Error"}};
 
   ss << "  - Termination Status: "
      << enum_to_string(results.term_code, term_map);
