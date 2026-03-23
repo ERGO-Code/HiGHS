@@ -170,8 +170,10 @@ void Model::print(const LogHighs& log) const {
   // compute max and min entry of A in absolute value
   double Amin = kHighsInf;
   double Amax = 0.0;
-  std::vector<double> norm_cols(n_);
-  std::vector<double> norm_rows(m_);
+  std::vector<double> norm_inf_cols(n_);
+  std::vector<double> norm_inf_rows(m_);
+  std::vector<double> norm_one_cols(n_);
+  std::vector<double> norm_one_rows(m_);
   for (Int col = 0; col < n_; ++col) {
     for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
       const Int row = A_.index_[el];
@@ -179,24 +181,39 @@ void Model::print(const LogHighs& log) const {
       if (value != 0.0) {
         Amin = std::min(Amin, std::abs(value));
         Amax = std::max(Amax, std::abs(value));
-        norm_cols[col] = std::max(norm_cols[col], std::abs(value));
-        norm_rows[row] = std::max(norm_rows[row], std::abs(value));
+        norm_inf_cols[col] = std::max(norm_inf_cols[col], std::abs(value));
+        norm_inf_rows[row] = std::max(norm_inf_rows[row], std::abs(value));
+        norm_one_cols[col] += std::abs(value);
+        norm_one_rows[row] += std::abs(value);
       }
     }
   }
   if (std::isinf(Amin)) Amin = 0.0;
 
-  double norm_col_min = kHighsInf;
-  double norm_col_max = 0.0;
-  double norm_row_min = kHighsInf;
-  double norm_row_max = 0.0;
-  for (double d : norm_cols) {
-    norm_col_min = std::min(norm_col_min, d);
-    norm_col_max = std::max(norm_col_max, d);
+  double norm_inf_col_min = kHighsInf;
+  double norm_inf_col_max = 0.0;
+  double norm_inf_row_min = kHighsInf;
+  double norm_inf_row_max = 0.0;
+  for (double d : norm_inf_cols) {
+    norm_inf_col_min = std::min(norm_inf_col_min, d);
+    norm_inf_col_max = std::max(norm_inf_col_max, d);
   }
-  for (double d : norm_rows) {
-    norm_row_min = std::min(norm_row_min, d);
-    norm_row_max = std::max(norm_row_max, d);
+  for (double d : norm_inf_rows) {
+    norm_inf_row_min = std::min(norm_inf_row_min, d);
+    norm_inf_row_max = std::max(norm_inf_row_max, d);
+  }
+
+  double norm_one_col_min = kHighsInf;
+  double norm_one_col_max = 0.0;
+  double norm_one_row_min = kHighsInf;
+  double norm_one_row_max = 0.0;
+  for (double d : norm_one_cols) {
+    norm_one_col_min = std::min(norm_one_col_min, d);
+    norm_one_col_max = std::max(norm_one_col_max, d);
+  }
+  for (double d : norm_one_rows) {
+    norm_one_row_min = std::min(norm_one_row_min, d);
+    norm_one_row_max = std::max(norm_one_row_max, d);
   }
 
   // compute max and min entry of c
@@ -264,11 +281,21 @@ void Model::print(const LogHighs& log) const {
              << sci(Amax, 5, 1) << "]\n";
 
   if (log.debug(1)) {
-    log_stream << textline("Range of rows:") << "[" << sci(norm_row_min, 5, 1)
-               << ", " << sci(norm_row_max, 5, 1) << "]\n";
+    log_stream << textline("Inf-norm rows:") << "["
+               << sci(norm_inf_row_min, 5, 1) << ", "
+               << sci(norm_inf_row_max, 5, 1) << "]\n";
 
-    log_stream << textline("Range of cols:") << "[" << sci(norm_col_min, 5, 1)
-               << ", " << sci(norm_col_max, 5, 1) << "]\n";
+    log_stream << textline("Inf-norm cols:") << "["
+               << sci(norm_inf_col_min, 5, 1) << ", "
+               << sci(norm_inf_col_max, 5, 1) << "]\n";
+
+    log_stream << textline("One-norm rows:") << "["
+               << sci(norm_one_row_min, 5, 1) << ", "
+               << sci(norm_one_row_max, 5, 1) << "]\n";
+
+    log_stream << textline("One-norm cols:") << "["
+               << sci(norm_one_col_min, 5, 1) << ", "
+               << sci(norm_one_col_max, 5, 1) << "]\n";
   }
 
   log_stream << textline("Range of b:") << "[" << sci(bmin, 5, 1) << ", "
