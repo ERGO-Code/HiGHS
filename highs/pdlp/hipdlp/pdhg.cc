@@ -34,17 +34,6 @@ static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
 
-/*
-void vecPrint(const std::vector<double>& vec, const char* name) {
-  std::cout << name << ": [";
-  for (size_t i = 0; i < vec.size(); ++i) {
-    std::cout << vec[i];
-    if (i < vec.size() - 1) std::cout << ", ";
-  }
-  std::cout << "]" << std::endl;
-}
-*/
-
 void PDLPSolver::printConstraintInfo() {
   if (original_lp_ == nullptr) return;
 
@@ -1750,6 +1739,17 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
       params_.step_size_strategy = StepSizeStrategy::PID;
     }
   }
+
+  // Halpern updates currently rely on PID-style restarts for robust
+  // step-size/weight adaptation. Prevent unsupported combinations.
+  if (params_.use_halpern_restart &&
+      params_.step_size_strategy == StepSizeStrategy::ADAPTIVE) {
+    logger_.info(
+        "PDLP: Halpern restart is incompatible with adaptive step size; "
+        "switching to PID step size strategy.");
+    params_.step_size_strategy = StepSizeStrategy::PID;
+  }
+
   //  params_.malitsky_pock_params.initialise(); Not set in parse_options_file
   //  params_.adaptive_linesearch_params.initialise(); Not set in
   //  parse_options_file
