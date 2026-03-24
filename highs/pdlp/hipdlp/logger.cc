@@ -21,15 +21,6 @@ std::string enum_to_string(T e, const std::map<T, std::string>& map) {
   return it != map.end() ? it->second : "UNKNOWN";
 }
 
-// Timer implementation
-Timer::Timer() { reset(); }
-void Timer::reset() { start_time_ = std::chrono::high_resolution_clock::now(); }
-double Timer::read() {
-  auto end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed = end_time - start_time_;
-  return elapsed.count();
-}
-
 // Logger implementation
 void Logger::setLevel(const HighsInt log_dev_level) {
   if (log_dev_level == kHighsLogDevLevelVerbose) {

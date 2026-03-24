@@ -566,7 +566,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   // 2. Main cuPDLPx-style Loop
   while (final_iter_count_ < params_.max_iterations) {
     // Check global time limit
-    if (total_timer.read() > params_.time_limit) {
+    if (highs_timer_p->read() > params_.time_limit) {
       logger_.info("Time limit reached.");
       termination_status = TerminationStatus::TIMEOUT;
       break;
@@ -857,7 +857,7 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
 
   // Determine whether to log iterations
   bool iteration_log = logger_.getConsoleLevel() >= LogLevel::kDetailed;
-  double time_now = total_timer.read();
+  double time_now = highs_timer_p->read();
   iteration_log = time_now > last_logger_time + kHipdlpLoggerFrequency;
   if (iteration_log) {
     logger_.print_iteration_stats(iter, average_results, current_eta_, time_now);
@@ -1645,7 +1645,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.setLevel(options.log_dev_level);
   logger_.passHighsLogOptions(options.log_options);
   logger_.print_header();
-
+  highs_timer_p = &timer;
   highsLogUser(
         options.log_options, HighsLogType::kInfo,
         "Using HiPDLP first order PDLP solver on a %s\n",
@@ -1685,20 +1685,11 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   //  params.eta = 0; Not set in parse_options_file
   //  params.omega = 0; Not set in parse_options_file
   params_.tolerance = options.pdlp_optimality_tolerance;
-  if (options.kkt_tolerance != kDefaultKktTolerance) {
+  if (options.kkt_tolerance != kDefaultKktTolerance) 
     params_.tolerance = options.kkt_tolerance;
-  }
   params_.max_iterations = options.pdlp_iteration_limit;
   params_.device_type = Device::CPU;
-  // HiPDLP has its own timer, so set its time limit according to
-  // the time remaining with respect to the HiGHS time limit (if
-  // finite)s
-  double time_limit = options.time_limit;
-  if (time_limit < kHighsInf) {
-    time_limit -= timer.read();
-    time_limit = std::max(0.0, time_limit);
-  }
-  params_.time_limit = time_limit;
+  params_.time_limit = options.time_limit;
 
   params_.use_ruiz_scaling = false;
   params_.use_pc_scaling = false;
@@ -1777,7 +1768,7 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
 }
 
 void PDLPSolver::logSummary() {
-  logger_.print_summary(results_, final_iter_count_, total_timer.read());
+  logger_.print_summary(results_, final_iter_count_, highs_timer_p->read());
 }
 
 void PrimalDualParams::initialise() {

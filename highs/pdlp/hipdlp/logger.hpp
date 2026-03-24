@@ -30,16 +30,6 @@ enum class LogLevel {
   kDebug     // Verbose + debug info for developers
 };
 
-class Timer {
- public:
-  Timer();
-  void reset();
-  double read();
-
- private:
-  std::chrono::high_resolution_clock::time_point start_time_;
-};
-
 class Logger {
  public:
   void setLevel(const HighsInt log_dev_level);
