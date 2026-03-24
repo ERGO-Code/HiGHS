@@ -124,7 +124,7 @@ void Logger::printParams(const PrimalDualParams& params) const {
 
 void Logger::printIterationHeader() const {
   info(
-      "     Iter    Primal Feas   Dual Feas     P-D Gap   Step Size       "
+      "     Iter    Primal Feas   Dual Feas     P-D Gap   Primal Weight       "
       "Time");
 }
 
@@ -137,11 +137,11 @@ void Logger::printIterationStats(HighsInt iter, const SolverResults& results,
      << std::scientific << std::setprecision(2)
      << std::setw(11) << results.primal_feasibility << " "
      << std::setw(11) << results.dual_feasibility << " "
-     << std::setw(11) << results.duality_gap << "   "
+     << std::setw(12) << results.duality_gap << "   "
      << std::fixed << std::setprecision(4)
      << std::setw(9) << step_size << "   "
      << std::setprecision(1)
-     << std::setw(8) << time;
+     << std::setw(11) << time;
   // clang-format on
   info(ss.str());
 }

@@ -850,7 +850,7 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
   double time_now = highs_timer_p->read();
   iteration_log = time_now > last_logger_time_ + kHipdlpLoggerFrequency;
   if (iteration_log) {
-    logger_.printIterationStats(iter, average_results, current_eta_, time_now);
+    logger_.printIterationStats(iter, current_results, primal_weight_, time_now);
     last_logger_time_ = time_now;
   }
   // 3. Handle Convergence Success
