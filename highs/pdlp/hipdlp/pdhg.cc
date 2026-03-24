@@ -895,6 +895,10 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
 
     final_iter_count_ = iter;
     results_ = prefer_avg ? average_results : current_results;
+    // Final logging on optimality
+    time_now = highs_timer_p->read();
+    logger_.printIterationStats(iter, results_, primal_weight_, time_now);
+
     logger_.info((prefer_avg ? "Average" : "Current") +
                  std::string(" solution converged"));
 
