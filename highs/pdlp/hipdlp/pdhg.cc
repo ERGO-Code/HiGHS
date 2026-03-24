@@ -97,33 +97,33 @@ void PDLPSolver::printConstraintInfo() {
     }
   }
 
-  logger_.info("=== BEFORE PREPROCESSING ===");
-  logger_.info("Rows: " + std::to_string(nRows) +
+  logger_.detailed("=== BEFORE PREPROCESSING ===");
+  logger_.detailed("Rows: " + std::to_string(nRows) +
                ", Cols: " + std::to_string(nCols));
-  logger_.info("\nConstraint types:");
-  logger_.info("  Equality constraints (=): " + std::to_string(eq_count));
-  logger_.info("  One-sided inequality (>=): " + std::to_string(geq_count));
-  logger_.info("  One-sided inequality (<=): " + std::to_string(leq_count));
-  logger_.info("  Two-sided inequality: " + std::to_string(bound_count));
-  logger_.info("  Free constraints: " + std::to_string(free_count));
+  logger_.detailed("\nConstraint types:");
+  logger_.detailed("  Equality constraints (=): " + std::to_string(eq_count));
+  logger_.detailed("  One-sided inequality (>=): " + std::to_string(geq_count));
+  logger_.detailed("  One-sided inequality (<=): " + std::to_string(leq_count));
+  logger_.detailed("  Two-sided inequality: " + std::to_string(bound_count));
+  logger_.detailed("  Free constraints: " + std::to_string(free_count));
 
-  logger_.info("\nVariable bound types:");
-  logger_.info("  Fixed variables (l = u): " + std::to_string(var_fixed));
-  logger_.info("  Boxed variables (l <= x <= u): " + std::to_string(var_boxed));
-  logger_.info("  Lower bounded only (l <= x): " +
+  logger_.detailed("\nVariable bound types:");
+  logger_.detailed("  Fixed variables (l = u): " + std::to_string(var_fixed));
+  logger_.detailed("  Boxed variables (l <= x <= u): " + std::to_string(var_boxed));
+  logger_.detailed("  Lower bounded only (l <= x): " +
                std::to_string(var_lower_only));
-  logger_.info("  Upper bounded only (x <= u): " +
+  logger_.detailed("  Upper bounded only (x <= u): " +
                std::to_string(var_upper_only));
-  logger_.info("  Free variables: " + std::to_string(var_free));
+  logger_.detailed("  Free variables: " + std::to_string(var_free));
 
-  logger_.info("\n=== AFTER PREPROCESSING ===");
-  logger_.info("Rows: " + std::to_string(lp_.num_row_) +
+  logger_.detailed("\n=== AFTER PREPROCESSING ===");
+  logger_.detailed("Rows: " + std::to_string(lp_.num_row_) +
                ", Cols: " + std::to_string(lp_.num_col_));
-  logger_.info("Equality rows (first " + std::to_string(num_eq_rows_) +
+  logger_.detailed("Equality rows (first " + std::to_string(num_eq_rows_) +
                " rows)");
-  logger_.info("Inequality rows (remaining " +
+  logger_.detailed("Inequality rows (remaining " +
                std::to_string(lp_.num_row_ - num_eq_rows_) + " rows)");
-  logger_.info("Slack variables added: " +
+  logger_.detailed("Slack variables added: " +
                std::to_string(lp_.num_col_ - nCols));
 
   // Count variable bounds in processed LP
@@ -149,19 +149,19 @@ void PDLPSolver::printConstraintInfo() {
     }
   }
 
-  logger_.info("\nProcessed variable bound types:");
-  logger_.info("  Fixed variables: " + std::to_string(proc_var_fixed));
-  logger_.info("  Boxed variables: " + std::to_string(proc_var_boxed));
-  logger_.info("  Lower bounded only: " + std::to_string(proc_var_lower_only));
-  logger_.info("  Upper bounded only: " + std::to_string(proc_var_upper_only));
-  logger_.info("  Free variables: " + std::to_string(proc_var_free));
+  logger_.detailed("\nProcessed variable bound types:");
+  logger_.detailed("  Fixed variables: " + std::to_string(proc_var_fixed));
+  logger_.detailed("  Boxed variables: " + std::to_string(proc_var_boxed));
+  logger_.detailed("  Lower bounded only: " + std::to_string(proc_var_lower_only));
+  logger_.detailed("  Upper bounded only: " + std::to_string(proc_var_upper_only));
+  logger_.detailed("  Free variables: " + std::to_string(proc_var_free));
 }
 
 void PDLPSolver::preprocessLp() {
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockPreprocess);
 #endif
-  logger_.info(
+  logger_.detailed(
       "Preprocessing LP using cupdlp formulation (slack variables for "
       "bounds)...");
 
@@ -351,10 +351,10 @@ void PDLPSolver::preprocessLp() {
   unscaled_c_norm_ = linalg::vector_norm(processed_lp.col_cost_);
   unscaled_rhs_norm_ = linalg::vector_norm(processed_lp.row_lower_);
 
-  logger_.info("Preprocessing complete. New dimensions: " +
+  logger_.detailed("Preprocessing complete. New dimensions: " +
                std::to_string(processed_lp.num_row_) + " rows, " +
                std::to_string(processed_lp.num_col_) + " cols.");
-  logger_.info("Unscaled norms: ||c|| = " + std::to_string(unscaled_c_norm_) +
+  logger_.detailed("Unscaled norms: ||c|| = " + std::to_string(unscaled_c_norm_) +
                ", ||b|| = " + std::to_string(unscaled_rhs_norm_));
 
   printConstraintInfo();
@@ -364,7 +364,7 @@ void PDLPSolver::preprocessLp() {
 }
 
 PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
-  logger_.info("Post-solving the solution...");
+  logger_.detailed("Post-solving the solution...");
 
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockPostprocess);
@@ -490,7 +490,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
   solution.value_valid = true;  // to do
   solution.dual_valid = true;
-  logger_.info("Post-solve complete.");
+  logger_.detailed("Post-solve complete.");
 
 #if PDLP_PROFILE
   hipdlpTimerStop(kHipdlpClockPostprocess);
@@ -549,7 +549,10 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   logger_.print_iteration_header();
   
-  TerminationStatus termination_status = TerminationStatus::OPTIMAL;
+  // termination_status is not known. Setting it to NOTSET rather than
+  // OPTIMAL means that if it's not set elsewhere then optimality is
+  // not returned in error
+  TerminationStatus termination_status = TerminationStatus::NOTSET;
   bool do_restart = false;
   double last_trial_fpe = std::numeric_limits<double>::infinity();
   
@@ -563,7 +566,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   // 2. Main cuPDLPx-style Loop
   while (final_iter_count_ < params_.max_iterations) {
     // Check global time limit
-    if (total_timer.read() > params_.time_limit) {
+    if (highs_timer_p->read() > params_.time_limit) {
       logger_.info("Time limit reached.");
       termination_status = TerminationStatus::TIMEOUT;
       break;
@@ -590,19 +593,19 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       fpe_ = computeFixedPointError();
 #endif
       initial_fpe_ = fpe_;
-//if (DEBUG_MODE) std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restarted with initial_fpe_ = " << std::setprecision(10) << initial_fpe_ << std::endl;
+      // if (DEBUG_MODE) std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restarted with initial_fpe_ = " << std::setprecision(10) << initial_fpe_ << std::endl;
       do_restart = false;
     }
 
     // copy back x from gpu and print out
 #ifdef CUPDLP_GPU
-if(final_iter_count_ == 9) {
-    std::vector<double> x_next_host(lp_.num_col_);
-    CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
-    std::cout << "x_next (before 9): ";
-    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
-    std::cout << "\n";
-}
+    if(final_iter_count_ == 9) {
+      std::vector<double> x_next_host(lp_.num_col_);
+      CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
+      std::cout << "x_next (before 9): ";
+      for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
+      std::cout << "\n";
+    }
 #endif
 
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
@@ -632,18 +635,18 @@ if(final_iter_count_ == 9) {
 #endif
 
 #ifdef CUPDLP_GPU
-if(final_iter_count_ == 9) {
-    std::vector<double> x_next_host(lp_.num_col_);
-    std::vector<double> x_current_host(lp_.num_col_);
-    CUDA_CHECK(cudaMemcpy(x_current_host.data(), d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
-    std::cout << "x_next (after 9): ";
-    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
-    std::cout << "\n";
-    std::cout << "x_current (after 9): ";
-    for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_current_host[i] << " ";
-    std::cout << "\n";
-}
+    if(final_iter_count_ == 9) {
+      std::vector<double> x_next_host(lp_.num_col_);
+      std::vector<double> x_current_host(lp_.num_col_);
+      CUDA_CHECK(cudaMemcpy(x_current_host.data(), d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
+      CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
+      std::cout << "x_next (after 9): ";
+      for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_next_host[i] << " ";
+      std::cout << "\n";
+      std::cout << "x_current (after 9): ";
+      for(int i=0; i<3; i++) std::cout << std::fixed << std::setprecision(10) << x_current_host[i] << " ";
+      std::cout << "\n";
+    }
 #endif
 
   // Compute Error for Restart Check
@@ -718,10 +721,9 @@ if(final_iter_count_ == 9) {
 #endif
 
   // 3. Loop Finished
-  if (termination_status != TerminationStatus::OPTIMAL) {
-      logger_.info("Max iterations reached without convergence.");
-      final_iter_count_ = params_.max_iterations;
-      termination_status = TerminationStatus::TIMEOUT;
+  if (termination_status == TerminationStatus::NOTSET) {
+    logger_.info("Iteration limit reached without convergence");
+    termination_status = TerminationStatus::MAXITER;
   }
   
   solveReturn(termination_status);
@@ -853,8 +855,14 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
                                        dSlackPosAvg_, dSlackNegAvg_);
 #endif
 
-  logger_.print_iteration_stats(iter, average_results, current_eta_);
-
+  // Determine whether to log iterations
+  bool iteration_log = logger_.getConsoleLevel() >= LogLevel::kDetailed;
+  double time_now = highs_timer_p->read();
+  iteration_log = time_now > last_logger_time + kHipdlpLoggerFrequency;
+  if (iteration_log) {
+    logger_.print_iteration_stats(iter, average_results, current_eta_, time_now);
+    last_logger_time = time_now;
+  }
   // 3. Handle Convergence Success
   if (current_converged || average_converged) {
     bool prefer_avg = average_converged;
@@ -889,7 +897,7 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
     
     final_iter_count_ = iter;
     results_ = prefer_avg ? average_results : current_results;
-    logger_.info((prefer_avg ? "Average" : "Current") + std::string(" solution converged."));
+    logger_.info((prefer_avg ? "Average" : "Current") + std::string(" solution converged"));
     
     status = TerminationStatus::OPTIMAL;
     return true; // Stop
@@ -1517,7 +1525,7 @@ double PDLPSolver::PowerMethod() {
       // kYanyuPowerMethod;
       // kYanyuPowerMethodDev;
       kCuPdlpAATPowerMethod;
-  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n",
+  highsLogDev(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n",
                power_method == kYanyuPowerMethod      ? "Yanyu"
                : power_method == kYanyuPowerMethodDev ? "Yanyu dev"
                                                       : "CuPdlp-C");
@@ -1637,7 +1645,16 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.setLevel(options.log_dev_level);
   logger_.passHighsLogOptions(options.log_options);
   logger_.print_header();
-
+  highs_timer_p = &timer;
+  highsLogUser(
+        options.log_options, HighsLogType::kInfo,
+        "Using HiPDLP first order PDLP solver on a %s\n",
+#ifdef CUPDLP_GPU
+	"GPU"
+#else
+	"CPU: performance may be disappointing!"
+#endif
+	       );
 #ifdef CUPDLP_GPU
   HighsInt n_devices = 0;
   cudaGetDeviceCount(&n_devices);
@@ -1668,20 +1685,11 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   //  params.eta = 0; Not set in parse_options_file
   //  params.omega = 0; Not set in parse_options_file
   params_.tolerance = options.pdlp_optimality_tolerance;
-  if (options.kkt_tolerance != kDefaultKktTolerance) {
+  if (options.kkt_tolerance != kDefaultKktTolerance) 
     params_.tolerance = options.kkt_tolerance;
-  }
   params_.max_iterations = options.pdlp_iteration_limit;
   params_.device_type = Device::CPU;
-  // HiPDLP has its own timer, so set its time limit according to
-  // the time remaining with respect to the HiGHS time limit (if
-  // finite)s
-  double time_limit = options.time_limit;
-  if (time_limit < kHighsInf) {
-    time_limit -= timer.read();
-    time_limit = std::max(0.0, time_limit);
-  }
-  params_.time_limit = time_limit;
+  params_.time_limit = options.time_limit;
 
   params_.use_ruiz_scaling = false;
   params_.use_pc_scaling = false;
@@ -1760,7 +1768,7 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
 }
 
 void PDLPSolver::logSummary() {
-  logger_.print_summary(results_, final_iter_count_, total_timer.read());
+  logger_.print_summary(results_, final_iter_count_, highs_timer_p->read());
 }
 
 void PrimalDualParams::initialise() {
@@ -1769,7 +1777,7 @@ void PrimalDualParams::initialise() {
   this->tolerance = 0;
   this->max_iterations = 0;
   this->device_type = Device::CPU;
-  this->time_limit = 3600.0;
+  this->time_limit = kHighsInf;
   this->restart_strategy = RestartStrategy::NO_RESTART;
   this->fixed_restart_interval = 0;
   this->use_halpern_restart = false;
@@ -1834,7 +1842,7 @@ void PDLPSolver::initializeStepSizes() {
     stepsize_.primal_step = base_step / params_.omega;
     stepsize_.dual_step = base_step * params_.omega;
 
-    highsLogUser(params_.log_options_, HighsLogType::kInfo,
+    highsLogDev(params_.log_options_, HighsLogType::kInfo,
                  "Initial step sizes from power method lambda = %g: primal step= "
                  "%g; dual step = %g, eta = %g, omega = %g\n",
                  op_norm_sq, stepsize_.primal_step, stepsize_.dual_step, params_.eta, params_.omega);
@@ -1857,7 +1865,7 @@ void PDLPSolver::initializeStepSizes() {
         (1.0 / mat_elem_norm_inf) / std::sqrt(stepsize_.beta);
     stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
 
-    highsLogUser(params_.log_options_, HighsLogType::kInfo,
+    highsLogDev(params_.log_options_, HighsLogType::kInfo,
                  "Initial step sizes from matrix inf-norm = %g: primal = %g; "
                  "dual = %g\n",
                  mat_elem_norm_inf, stepsize_.primal_step, stepsize_.dual_step);
@@ -2147,7 +2155,7 @@ void PDLPSolver::updateIteratesAdaptive() {
                                  : std::numeric_limits<double>::infinity();
 
     /*
-    highsLogUser(*log_options_, HighsLogType::kInfo,
+    highsLogDev(*log_options_, HighsLogType::kInfo,
                  "Iteration %d: eta = %g, movement = %g nonlinearity = %g, limit
     = %g\n", HighsInt(inner_iterations), current_eta, movement, nonlinearity.
     step_size_limit);
@@ -2238,7 +2246,7 @@ double PDLPSolver::computeMovement(const std::vector<double>& delta_primal,
 
 double PDLPSolver::computeNonlinearity(const std::vector<double>& delta_primal,
                                        const std::vector<double>& delta_aty) {
-  // Nonlinearity = |Δx' * Δ(A'y)|
+  // Nonlinearity = |Dx' * D(A'y)|
   double nonlinearity = 0.0;
   for (size_t i = 0; i < delta_primal.size(); ++i) {
     nonlinearity += delta_primal[i] * delta_aty[i];
@@ -2493,7 +2501,7 @@ void PDLPSolver::setupGpu() {
   CUDA_CHECK(cudaMalloc(&d_buffer_, max_size * sizeof(double)));
   CUDA_CHECK(cudaMalloc(&d_buffer2_, max_size * sizeof(double)));
 
-  highsLogUser(params_.log_options_, HighsLogType::kInfo,
+  highsLogDev(params_.log_options_, HighsLogType::kInfo,
                "GPU setup complete. Matrix A (CSR) and A^T (CSR) transferred "
                "to device.\n");
 }

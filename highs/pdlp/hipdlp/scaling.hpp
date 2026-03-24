@@ -34,7 +34,9 @@ class Scaling {
   void passDebugPdlpData(DebugPdlpData* debug_pdlp_data) {
     debug_pdlp_data_ = debug_pdlp_data;
   };
-  void LogMatrixNorms(const std::string& stage);
+  // Not used
+  //  void LogMatrixNorms(const std::string& stage); 
+  //
   // Get scaling vectors (for unscaling solution later)
   bool IsScaled() const { return is_scaled_; }
   const std::vector<double>& GetColScaling() const { return col_scale_; }

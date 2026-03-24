@@ -111,25 +111,20 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
       return HighsStatus::kOk;
       break;
     }
-    case TerminationStatus::TIMEOUT: {
-      // ToDo IterationLimit termination needs to be handled separately
-      model_status =
-          highs_info.pdlp_iteration_count >= options.pdlp_iteration_limit
-              ? HighsModelStatus::kIterationLimit
-              : HighsModelStatus::kTimeLimit;
+    case TerminationStatus::MAXITER: {
+      model_status = HighsModelStatus::kIterationLimit;
       break;
     }
-    case TerminationStatus::WARNING:
-    case TerminationStatus::FEASIBLE: {
-      assert(111 == 555);
-      model_status = HighsModelStatus::kUnknown;
-      return HighsStatus::kError;
+    case TerminationStatus::TIMEOUT: {
+      model_status = HighsModelStatus::kTimeLimit;
+      break;
     }
     default:
       assert(termination_status == TerminationStatus::ERROR);
       return HighsStatus::kError;
   }
   assert(termination_status == TerminationStatus::OPTIMAL ||
+         termination_status == TerminationStatus::MAXITER ||
          termination_status == TerminationStatus::TIMEOUT);
   // highs_solution.col_value = x;
   // highs_solution.col_value.resize(lp.num_col_);

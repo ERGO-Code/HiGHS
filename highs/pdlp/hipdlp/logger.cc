@@ -21,15 +21,6 @@ std::string enum_to_string(T e, const std::map<T, std::string>& map) {
   return it != map.end() ? it->second : "UNKNOWN";
 }
 
-// Timer implementation
-Timer::Timer() { reset(); }
-void Timer::reset() { start_time_ = std::chrono::high_resolution_clock::now(); }
-double Timer::read() {
-  auto end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed = end_time - start_time_;
-  return elapsed.count();
-}
-
 // Logger implementation
 void Logger::setLevel(const HighsInt log_dev_level) {
   if (log_dev_level == kHighsLogDevLevelVerbose) {
@@ -37,34 +28,33 @@ void Logger::setLevel(const HighsInt log_dev_level) {
   } else if (log_dev_level == kHighsLogDevLevelDetailed) {
     console_level_ = LogLevel::kVerbose;
   } else if (log_dev_level == kHighsLogDevLevelInfo) {
-    console_level_ = LogLevel::kInfo;
+    console_level_ = LogLevel::kDetailed;
   } else {
     console_level_ = LogLevel::kInfo;  // None;
   }
 }
 
-void Logger::log(LogLevel level, const std::string& message) {
+void Logger::log(LogLevel level, const std::string& message) const {
   // Now using HiGHS IO
   if (level <= console_level_)
     highsLogUser(log_options_, HighsLogType::kInfo, "%s\n", message.c_str());
 }
 
-void Logger::info(const std::string& message) { log(LogLevel::kInfo, message); }
-void Logger::verbose(const std::string& message) {
+void Logger::info(const std::string& message) const { log(LogLevel::kInfo, message); }
+void Logger::detailed(const std::string& message) const { log(LogLevel::kDetailed, message); }
+void Logger::verbose(const std::string& message) const {
   log(LogLevel::kVerbose, message);
 }
-void Logger::debug(const std::string& message) {
+void Logger::debug(const std::string& message) const {
   log(LogLevel::kDebug, message);
 }
 
-void Logger::print_header() {
-  info("------------------------------------------------------------");
-  info("          PDLP Solver - C++ Implementation          ");
-  info("------------------------------------------------------------");
+void Logger::print_header() const {
+  detailed("Using HiPDLP with developer logging");
 }
 
-void Logger::print_params(const PrimalDualParams& params) {
-  info("\nSolver Parameters:");
+void Logger::print_params(const PrimalDualParams& params) const {
+  detailed("\nSolver Parameters:");
   std::stringstream ss;
 
   std::map<RestartStrategy, std::string> restart_map = {
@@ -79,14 +69,14 @@ void Logger::print_params(const PrimalDualParams& params) {
       {StepSizeStrategy::PID, "PID"}};
 
   ss << "  - Max Iterations: " << params.max_iterations;
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
   ss << "  - Tolerance: " << params.tolerance;
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
   ss << "  - Restart Strategy: "
      << enum_to_string(params.restart_strategy, restart_map);
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
 
   std::string scaling_method = "None";
@@ -108,7 +98,7 @@ void Logger::print_params(const PrimalDualParams& params) {
   }
 
   ss << "  - Scaling Method: " << scaling_method;
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
 
   // Optionally, add more details about scaling parameters if any scaling is
@@ -116,76 +106,80 @@ void Logger::print_params(const PrimalDualParams& params) {
   if (params.use_ruiz_scaling) {
     ss.str("");
     ss << "   * Ruiz iterations: " << params.ruiz_iterations;
-    info(ss.str());
+    detailed(ss.str());
   }
   if (params.use_pc_scaling) {
     ss.str("");
     ss << "   * PC alpha: " << params.pc_alpha;
-    info(ss.str());
+    detailed(ss.str());
   }
   ss << "  - Step Size Strategy: "
      << enum_to_string(params.step_size_strategy, step_size_map);
-  info(ss.str());
-  info("------------------------------------------------------------");
+  detailed(ss.str());
+  detailed("------------------------------------------------------------");
 }
 
-void Logger::print_iteration_header() {
-  verbose(
-      "\n----------------------------------------------------------------------"
-      "---------------------------");
-  verbose(" Iter   | Primal Feas | Dual Feas  | Duality Gap  | Step Size");
-  verbose(
-      "------------------------------------------------------------------------"
-      "-------------------------");
+void Logger::print_iteration_header() const {
+  info("     Iter    Primal Feas   Dual Feas     P-D Gap   Step Size       Time");
 }
 
 void Logger::print_iteration_stats(HighsInt iter, const SolverResults& results,
-                                   double step_size) {
+                                   const double step_size,
+				   const double time) const {
   std::stringstream ss;
-  ss << std::fixed << std::setprecision(4) << " " << std::setw(6) << iter
-     << " | " << std::scientific << std::setprecision(2) << std::setw(11)
-     << results.primal_feasibility << " | " << std::setw(10)
-     << results.dual_feasibility << " | " << std::setw(11)
-     << results.duality_gap << " | " << std::fixed << std::setprecision(4)
-     << std::setw(9) << step_size;
-  verbose(ss.str());
+// clang-format off
+  ss << std::fixed << std::setprecision(9) << std::setw(9) << iter << "    "
+     << std::scientific << std::setprecision(2)
+     << std::setw(11) << results.primal_feasibility << " "
+     << std::setw(11) << results.dual_feasibility << " "
+     << std::setw(11) << results.duality_gap << "   "
+     << std::fixed << std::setprecision(4)
+     << std::setw(9) << step_size << "   "
+     << std::setprecision(1)
+     << std::setw(8) << time;
+// clang-format on
+  info(ss.str());
 }
 
 void Logger::print_summary(const SolverResults& results, HighsInt total_iter,
-                           double total_time) {
-  info("\n-------------------- Solver Summary --------------------");
+                           double total_time) const {
+  detailed("\n-------------------- Solver Summary --------------------");
   std::stringstream ss;
 
   std::map<TerminationStatus, std::string> term_map = {
+      {TerminationStatus::NOTSET, "Not set"},
       {TerminationStatus::OPTIMAL, "Optimal"},
+      {TerminationStatus::INFEASIBLE, "Infeasible"},
+      {TerminationStatus::UNBOUNDED, "Unbounded"},
+      {TerminationStatus::MAXITER, "Maxiter"},
       {TerminationStatus::TIMEOUT, "Timeout"},
-      {TerminationStatus::FEASIBLE, "Feasible"}};
+      {TerminationStatus::ERROR, "Error"}};
 
   ss << "  - Termination Status: "
      << enum_to_string(results.term_code, term_map);
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
   ss << "  - Total Iterations: " << total_iter;
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
   ss << "  - Total Time: " << std::fixed << std::setprecision(3) << total_time
      << " seconds";
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
   ss << "  - Final Primal Objective: " << std::scientific
      << std::setprecision(6) << results.primal_obj;
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
   ss << "  - Final Duality Gap: " << std::scientific << std::setprecision(6)
      << results.duality_gap;
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
   ss << "  - Final Primal Feasibility: " << std::scientific
      << std::setprecision(6) << results.primal_feasibility;
-  info(ss.str());
+  detailed(ss.str());
   ss.str("");
   ss << "  - Final Dual Feasibility: " << std::scientific
      << std::setprecision(6) << results.dual_feasibility;
-  info(ss.str());
-  info("------------------------------------------------------------");
+  detailed(ss.str());
+  detailed("------------------------------------------------------------");
 }

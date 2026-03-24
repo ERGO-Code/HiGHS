@@ -25,18 +25,9 @@
 enum class LogLevel {
   kNone,     // No output
   kInfo,     // Standard output: summary, termination, major events
+  kDetailed, // Developer output
   kVerbose,  // Detailed output: iteration-level info
   kDebug     // Verbose + debug info for developers
-};
-
-class Timer {
- public:
-  Timer();
-  void reset();
-  double read();
-
- private:
-  std::chrono::high_resolution_clock::time_point start_time_;
 };
 
 class Logger {
@@ -48,24 +39,25 @@ class Logger {
   void set_log_file(const std::string& filename);
   LogLevel getLogLevel() const { return console_level_; }
   // Logging methods for different levels
-  void info(const std::string& message);
-  void verbose(const std::string& message);
-  void debug(const std::string& message);
+  void info(const std::string& message) const;
+  void detailed(const std::string& message) const;
+  void verbose(const std::string& message) const;
+  void debug(const std::string& message) const;
 
   // Formatted printing functions
-  void print_header();
-  void print_params(const PrimalDualParams& params);
-  void print_iteration_header();
+  void print_header() const;
+  void print_params(const PrimalDualParams& params) const;
+  void print_iteration_header() const;
   void print_iteration_stats(HighsInt iter, const SolverResults& current_results,
-                             double current_eta);
+                             const double current_eta, const double time) const;
   void print_summary(const SolverResults& results, HighsInt total_iter,
-                     double total_time);
+                     double total_time) const;
   void passLogOptions(HighsLogOptions log_options) {
     log_options_ = log_options;
   }
-
+  LogLevel getConsoleLevel() const { return console_level_; }
  private:
-  void log(LogLevel level, const std::string& message);
+  void log(LogLevel level, const std::string& message) const;
   LogLevel console_level_;
   HighsLogOptions log_options_;
 };
