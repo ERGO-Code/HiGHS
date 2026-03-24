@@ -32,34 +32,32 @@ enum class LogLevel {
 
 class Logger {
  public:
-  void setLevel(const HighsInt log_dev_level);
-  void passHighsLogOptions(const HighsLogOptions log_options) {
+  void SetLevel(const HighsInt log_dev_level);
+  void SetHighsLogOptions(const HighsLogOptions log_options) {
     log_options_ = log_options;
   }
-  void set_log_file(const std::string& filename);
-  LogLevel getLogLevel() const { return console_level_; }
+  LogLevel GetLogLevel() const { return console_level_; }
   // Logging methods for different levels
-  void info(const std::string& message) const;
-  void detailed(const std::string& message) const;
-  void verbose(const std::string& message) const;
-  void debug(const std::string& message) const;
+  void Info(const std::string& message) const;
+  void Detailed(const std::string& message) const;
+  void Verbose(const std::string& message) const;
+  void Debug(const std::string& message) const;
 
   // Formatted printing functions
-  void print_header() const;
-  void print_params(const PrimalDualParams& params) const;
-  void print_iteration_header() const;
-  void print_iteration_stats(HighsInt iter,
-                             const SolverResults& current_results,
-                             const double current_eta, const double time) const;
-  void print_summary(const SolverResults& results, HighsInt total_iter,
-                     double total_time) const;
-  void passLogOptions(HighsLogOptions log_options) {
+  void PrintHeader() const;
+  void PrintParams(const PrimalDualParams& params) const;
+  void PrintIterationHeader() const;
+  void PrintIterationStats(HighsInt iter, const SolverResults& current_results,
+                           const double current_eta, const double time) const;
+  void PrintSummary(const SolverResults& results, HighsInt total_iter,
+                    double total_time) const;
+  void SetLogOptions(HighsLogOptions log_options) {
     log_options_ = log_options;
   }
-  LogLevel getConsoleLevel() const { return console_level_; }
+  LogLevel GetConsoleLevel() const { return console_level_; }
 
  private:
-  void log(LogLevel level, const std::string& message) const;
+  void Log(LogLevel level, const std::string& message) const;
   LogLevel console_level_;
   HighsLogOptions log_options_;
 };

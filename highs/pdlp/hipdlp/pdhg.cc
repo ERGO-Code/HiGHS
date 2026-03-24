@@ -97,34 +97,34 @@ void PDLPSolver::printConstraintInfo() {
     }
   }
 
-  logger_.detailed("=== BEFORE PREPROCESSING ===");
-  logger_.detailed("Rows: " + std::to_string(nRows) +
+  logger_.Detailed("=== BEFORE PREPROCESSING ===");
+  logger_.Detailed("Rows: " + std::to_string(nRows) +
                    ", Cols: " + std::to_string(nCols));
-  logger_.detailed("\nConstraint types:");
-  logger_.detailed("  Equality constraints (=): " + std::to_string(eq_count));
-  logger_.detailed("  One-sided inequality (>=): " + std::to_string(geq_count));
-  logger_.detailed("  One-sided inequality (<=): " + std::to_string(leq_count));
-  logger_.detailed("  Two-sided inequality: " + std::to_string(bound_count));
-  logger_.detailed("  Free constraints: " + std::to_string(free_count));
+  logger_.Detailed("\nConstraint types:");
+  logger_.Detailed("  Equality constraints (=): " + std::to_string(eq_count));
+  logger_.Detailed("  One-sided inequality (>=): " + std::to_string(geq_count));
+  logger_.Detailed("  One-sided inequality (<=): " + std::to_string(leq_count));
+  logger_.Detailed("  Two-sided inequality: " + std::to_string(bound_count));
+  logger_.Detailed("  Free constraints: " + std::to_string(free_count));
 
-  logger_.detailed("\nVariable bound types:");
-  logger_.detailed("  Fixed variables (l = u): " + std::to_string(var_fixed));
-  logger_.detailed("  Boxed variables (l <= x <= u): " +
+  logger_.Detailed("\nVariable bound types:");
+  logger_.Detailed("  Fixed variables (l = u): " + std::to_string(var_fixed));
+  logger_.Detailed("  Boxed variables (l <= x <= u): " +
                    std::to_string(var_boxed));
-  logger_.detailed("  Lower bounded only (l <= x): " +
+  logger_.Detailed("  Lower bounded only (l <= x): " +
                    std::to_string(var_lower_only));
-  logger_.detailed("  Upper bounded only (x <= u): " +
+  logger_.Detailed("  Upper bounded only (x <= u): " +
                    std::to_string(var_upper_only));
-  logger_.detailed("  Free variables: " + std::to_string(var_free));
+  logger_.Detailed("  Free variables: " + std::to_string(var_free));
 
-  logger_.detailed("\n=== AFTER PREPROCESSING ===");
-  logger_.detailed("Rows: " + std::to_string(lp_.num_row_) +
+  logger_.Detailed("\n=== AFTER PREPROCESSING ===");
+  logger_.Detailed("Rows: " + std::to_string(lp_.num_row_) +
                    ", Cols: " + std::to_string(lp_.num_col_));
-  logger_.detailed("Equality rows (first " + std::to_string(num_eq_rows_) +
+  logger_.Detailed("Equality rows (first " + std::to_string(num_eq_rows_) +
                    " rows)");
-  logger_.detailed("Inequality rows (remaining " +
+  logger_.Detailed("Inequality rows (remaining " +
                    std::to_string(lp_.num_row_ - num_eq_rows_) + " rows)");
-  logger_.detailed("Slack variables added: " +
+  logger_.Detailed("Slack variables added: " +
                    std::to_string(lp_.num_col_ - nCols));
 
   // Count variable bounds in processed LP
@@ -150,21 +150,21 @@ void PDLPSolver::printConstraintInfo() {
     }
   }
 
-  logger_.detailed("\nProcessed variable bound types:");
-  logger_.detailed("  Fixed variables: " + std::to_string(proc_var_fixed));
-  logger_.detailed("  Boxed variables: " + std::to_string(proc_var_boxed));
-  logger_.detailed("  Lower bounded only: " +
+  logger_.Detailed("\nProcessed variable bound types:");
+  logger_.Detailed("  Fixed variables: " + std::to_string(proc_var_fixed));
+  logger_.Detailed("  Boxed variables: " + std::to_string(proc_var_boxed));
+  logger_.Detailed("  Lower bounded only: " +
                    std::to_string(proc_var_lower_only));
-  logger_.detailed("  Upper bounded only: " +
+  logger_.Detailed("  Upper bounded only: " +
                    std::to_string(proc_var_upper_only));
-  logger_.detailed("  Free variables: " + std::to_string(proc_var_free));
+  logger_.Detailed("  Free variables: " + std::to_string(proc_var_free));
 }
 
 void PDLPSolver::preprocessLp() {
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockPreprocess);
 #endif
-  logger_.detailed(
+  logger_.Detailed(
       "Preprocessing LP using cupdlp formulation (slack variables for "
       "bounds)...");
 
@@ -172,7 +172,7 @@ void PDLPSolver::preprocessLp() {
   HighsInt nCols_orig = original_lp_->num_col_;
 
   if (original_lp_->a_matrix_.isRowwise()) {
-    logger_.info("Original LP matrix must be in column-wise format,");
+    logger_.Info("Original LP matrix must be in column-wise format,");
   }
 
   lp_.offset_ = original_lp_->offset_;
@@ -354,10 +354,10 @@ void PDLPSolver::preprocessLp() {
   unscaled_c_norm_ = linalg::vector_norm(processed_lp.col_cost_);
   unscaled_rhs_norm_ = linalg::vector_norm(processed_lp.row_lower_);
 
-  logger_.detailed("Preprocessing complete. New dimensions: " +
+  logger_.Detailed("Preprocessing complete. New dimensions: " +
                    std::to_string(processed_lp.num_row_) + " rows, " +
                    std::to_string(processed_lp.num_col_) + " cols.");
-  logger_.detailed(
+  logger_.Detailed(
       "Unscaled norms: ||c|| = " + std::to_string(unscaled_c_norm_) +
       ", ||b|| = " + std::to_string(unscaled_rhs_norm_));
 
@@ -368,7 +368,7 @@ void PDLPSolver::preprocessLp() {
 }
 
 PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
-  logger_.detailed("Post-solving the solution...");
+  logger_.Detailed("Post-solving the solution...");
 
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockPostprocess);
@@ -383,7 +383,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
   if (x_current_.size() != static_cast<size_t>(lp_.num_col_) ||
       y_current_.size() != static_cast<size_t>(lp_.num_row_)) {
-    logger_.info("Solution dimension mismatch: x_current size=" +
+    logger_.Info("Solution dimension mismatch: x_current size=" +
                  std::to_string(x_current_.size()) +
                  " vs expected=" + std::to_string(lp_.num_col_) +
                  ", y_current size=" + std::to_string(y_current_.size()) +
@@ -400,7 +400,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   // 3. Recover Primal Column Values (x)
   for (HighsInt i = 0; i < original_lp_->num_col_; ++i) {
     if (i >= (HighsInt)x_current_.size()) {
-      logger_.info("Index " + std::to_string(i) +
+      logger_.Info("Index " + std::to_string(i) +
                    " out of bounds for x_current_ of size " +
                    std::to_string(x_current_.size()));
       return PostSolveRetcode::DIMENSION_MISMATCH;
@@ -409,7 +409,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
     solution.col_value[i] = x_current_[i];
 
     if (!std::isfinite(solution.col_value[i])) {
-      logger_.info("Non-finite primal variable value at index " +
+      logger_.Info("Non-finite primal variable value at index " +
                    std::to_string(i) + ": " +
                    std::to_string(solution.col_value[i]));
       return PostSolveRetcode::NUMERICAL_ERROR;
@@ -483,7 +483,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   // In the PDLP framework, these are given by dSlackPos - dSlackNeg.
   for (HighsInt i = 0; i < original_num_col_; ++i) {
     if (i >= (HighsInt)dSlackPos_.size() || i >= (HighsInt)dSlackNeg_.size()) {
-      logger_.info("Index " + std::to_string(i) +
+      logger_.Info("Index " + std::to_string(i) +
                    " out of bounds for dSlackPos/Neg of size " +
                    std::to_string(dSlackPos_.size()));
       return PostSolveRetcode::DIMENSION_MISMATCH;
@@ -494,7 +494,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
   solution.value_valid = true;  // to do
   solution.dual_valid = true;
-  logger_.detailed("Post-solve complete.");
+  logger_.Detailed("Post-solve complete.");
 
 #if PDLP_PROFILE
   hipdlpTimerStop(kHipdlpClockPostprocess);
@@ -558,7 +558,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   linalg::ATy(lp_, y_current_, ATy_cache_);
 #endif
 
-  logger_.print_iteration_header();
+  logger_.PrintIterationHeader();
 
   // termination_status is not known. Setting it to NOTSET rather than
   // OPTIMAL means that if it's not set elsewhere then optimality is
@@ -578,7 +578,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   while (final_iter_count_ < params_.max_iterations) {
     // Check global time limit
     if (highs_timer_p->read() > params_.time_limit) {
-      logger_.info("Time limit reached.");
+      logger_.Info("Time limit reached.");
       termination_status = TerminationStatus::TIMEOUT;
       break;
     }
@@ -715,7 +715,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   // 3. Loop Finished
   if (termination_status == TerminationStatus::NOTSET) {
-    logger_.info("Iteration limit reached without convergence");
+    logger_.Info("Iteration limit reached without convergence");
     termination_status = TerminationStatus::MAXITER;
   }
 
@@ -857,12 +857,11 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
 #endif
 
   // Determine whether to log iterations
-  bool iteration_log = logger_.getConsoleLevel() >= LogLevel::kDetailed;
+  bool iteration_log = logger_.GetConsoleLevel() >= LogLevel::kDetailed;
   double time_now = highs_timer_p->read();
   iteration_log = time_now > last_logger_time + kHipdlpLoggerFrequency;
   if (iteration_log) {
-    logger_.print_iteration_stats(iter, average_results, current_eta_,
-                                  time_now);
+    logger_.PrintIterationStats(iter, average_results, current_eta_, time_now);
     last_logger_time = time_now;
   }
   // 3. Handle Convergence Success
@@ -907,7 +906,7 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
 
     final_iter_count_ = iter;
     results_ = prefer_avg ? average_results : current_results;
-    logger_.info((prefer_avg ? "Average" : "Current") +
+    logger_.Info((prefer_avg ? "Average" : "Current") +
                  std::string(" solution converged"));
 
     status = TerminationStatus::OPTIMAL;
@@ -1569,7 +1568,7 @@ double PDLPSolver::PowerMethod() {
   }
 
   double op_norm_sq_old = 0.0;
-  LogLevel log_level = logger_.getLogLevel();
+  LogLevel log_level = logger_.GetLogLevel();
   HighsInt log_iters =
       log_level == LogLevel::kVerbose || log_level == LogLevel::kDebug;
 
@@ -1662,9 +1661,9 @@ double PDLPSolver::PowerMethod() {
 }
 
 void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
-  logger_.setLevel(options.log_dev_level);
-  logger_.passHighsLogOptions(options.log_options);
-  logger_.print_header();
+  logger_.SetLevel(options.log_dev_level);
+  logger_.SetHighsLogOptions(options.log_options);
+  logger_.PrintHeader();
   highs_timer_p = &timer;
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Using HiPDLP first order PDLP solver on a %s\n",
@@ -1759,7 +1758,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   // Copy what's needed to use HiGHS logging
   params_.log_options_ = options.log_options;
   // log the options
-  logger_.print_params(params_);
+  logger_.PrintParams(params_);
 }
 
 void PDLPSolver::scaleProblem() {
@@ -1786,7 +1785,7 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
 }
 
 void PDLPSolver::logSummary() {
-  logger_.print_summary(results_, final_iter_count_, highs_timer_p->read());
+  logger_.PrintSummary(results_, final_iter_count_, highs_timer_p->read());
 }
 
 void PrimalDualParams::initialise() {
@@ -1935,14 +1934,14 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
 
     primal_weight_last_error_ = error;
     if (!silent)
-      logger_.info("Primal weight updated: " + std::to_string(primal_weight_));
+      logger_.Info("Primal weight updated: " + std::to_string(primal_weight_));
   } else {
     // Revert to best known weight
     primal_weight_ = best_primal_weight_;
     primal_weight_error_sum_ = 0.0;
     primal_weight_last_error_ = 0.0;
     if (!silent)
-      logger_.info(
+      logger_.Info(
           "Weight update failed (bad norms/ratio), reverted to best: " +
           std::to_string(primal_weight_));
   }
