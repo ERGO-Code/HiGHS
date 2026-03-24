@@ -15,6 +15,7 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
@@ -390,6 +391,12 @@ set(highs_sources
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
     pdlp/CupdlpWrapper.cpp
+    pdlp/HiPdlpWrapper.cpp
+    pdlp/hipdlp/linalg.cc
+    pdlp/hipdlp/logger.cc
+    pdlp/hipdlp/pdhg.cc
+    pdlp/hipdlp/restart.cc
+    pdlp/hipdlp/scaling.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
@@ -522,6 +529,15 @@ set(highs_headers
     parallel/HighsTask.h
     parallel/HighsTaskExecutor.h
     pdlp/CupdlpWrapper.h
+    pdlp/HiPdlpTimer.h
+    pdlp/HiPdlpWrapper.h
+    pdlp/hipdlp/defs.hpp
+    pdlp/hipdlp/linalg.hpp
+    pdlp/hipdlp/logger.hpp
+    pdlp/hipdlp/pdhg.hpp
+    pdlp/hipdlp/restart.hpp
+    pdlp/hipdlp/scaling.hpp
+    pdlp/hipdlp/solver_results.hpp
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h

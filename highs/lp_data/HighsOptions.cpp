@@ -105,20 +105,22 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
 #ifdef HIPO
       value == kHipoString ||
 #endif
-      value == kIpxString || value == kPdlpString || value == kQpAsmString)
+      value == kIpxString || value == kPdlpString || value == kQpAsmString ||
+      value == kHiPdlpString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for LP solver option (\"%s\") is not one of "
+  highsLogUser(report_log_options, HighsLogType::kWarning,
+               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", "
+               "\"%s\", \"%s\", \"%s\""
 #ifdef HIPO
-               "\"%s\","
+               "\"%s\", "
 #endif
-               "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+               "\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kSolverString.c_str(), kHighsChooseString.c_str(),
                kSimplexString.c_str(), kIpmString.c_str(),
 #ifdef HIPO
                kHipoString.c_str(),
 #endif
-               kIpxString.c_str(), kPdlpString.c_str(), kQpAsmString.c_str());
+               kIpxString.c_str(), kPdlpString.c_str());
   return false;
 }
 
@@ -1162,7 +1164,8 @@ void warnSolverInvalid(const HighsOptions& options,
 bool solverValidForLp(const std::string& solver) {
   return solver == kHighsChooseString || solver == kSimplexString ||
          solver == kIpmString || solver == kIpxString ||
-         solver == kHipoString || solver == kPdlpString;
+         solver == kHipoString || solver == kPdlpString ||
+         solver == kHiPdlpString;
 }
 bool solverValidForMip(const std::string& solver) {
   return solver == kHighsChooseString;
