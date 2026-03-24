@@ -24,39 +24,27 @@
 #include "defs.hpp"
 #include "linalg.hpp"
 #include "lp_data/HConst.h"
-#include "pdhg_kernels.h"
+#include "pdhg_kernels.hpp"
 #include "pdlp/cupdlp/cupdlp.h"  // For pdlpLogging
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
 
 #define PDHG_CHECK_INTERVAL 40
-#define DEBUG_MODE (false)
 static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
 
-/*
-void vecPrint(const std::vector<double>& vec, const char* name) {
-  std::cout << name << ": [";
-  for (size_t i = 0; i < vec.size(); ++i) {
-    std::cout << vec[i];
-    if (i < vec.size() - 1) std::cout << ", ";
-  }
-  std::cout << "]" << std::endl;
-}
-*/
-
 void PDLPSolver::printConstraintInfo() {
   if (original_lp_ == nullptr) return;
 
-  int nRows = original_lp_->num_row_;
-  int nCols = original_lp_->num_col_;
+  HighsInt nRows = original_lp_->num_row_;
+  HighsInt nCols = original_lp_->num_col_;
 
   // Count constraint types BEFORE preprocessing
-  int eq_count = 0, leq_count = 0, geq_count = 0, bound_count = 0,
-      free_count = 0;
+  HighsInt eq_count = 0, leq_count = 0, geq_count = 0, bound_count = 0,
+           free_count = 0;
 
-  for (int i = 0; i < nRows; ++i) {
+  for (HighsInt i = 0; i < nRows; ++i) {
     bool has_lower = original_lp_->row_lower_[i] > -kHighsInf;
     bool has_upper = original_lp_->row_upper_[i] < kHighsInf;
 
@@ -76,10 +64,10 @@ void PDLPSolver::printConstraintInfo() {
   }
 
   // Count variable bound types
-  int var_fixed = 0, var_lower_only = 0, var_upper_only = 0;
-  int var_boxed = 0, var_free = 0;
+  HighsInt var_fixed = 0, var_lower_only = 0, var_upper_only = 0;
+  HighsInt var_boxed = 0, var_free = 0;
 
-  for (int i = 0; i < nCols; ++i) {
+  for (HighsInt i = 0; i < nCols; ++i) {
     bool has_lower = original_lp_->col_lower_[i] > -kHighsInf;
     bool has_upper = original_lp_->col_upper_[i] < kHighsInf;
 
@@ -98,40 +86,41 @@ void PDLPSolver::printConstraintInfo() {
     }
   }
 
-  logger_.info("=== BEFORE PREPROCESSING ===");
-  logger_.info("Rows: " + std::to_string(nRows) +
-               ", Cols: " + std::to_string(nCols));
-  logger_.info("\nConstraint types:");
-  logger_.info("  Equality constraints (=): " + std::to_string(eq_count));
-  logger_.info("  One-sided inequality (>=): " + std::to_string(geq_count));
-  logger_.info("  One-sided inequality (<=): " + std::to_string(leq_count));
-  logger_.info("  Two-sided inequality: " + std::to_string(bound_count));
-  logger_.info("  Free constraints: " + std::to_string(free_count));
+  logger_.detailed("=== BEFORE PREPROCESSING ===");
+  logger_.detailed("Rows: " + std::to_string(nRows) +
+                   ", Cols: " + std::to_string(nCols));
+  logger_.detailed("\nConstraint types:");
+  logger_.detailed("  Equality constraints (=): " + std::to_string(eq_count));
+  logger_.detailed("  One-sided inequality (>=): " + std::to_string(geq_count));
+  logger_.detailed("  One-sided inequality (<=): " + std::to_string(leq_count));
+  logger_.detailed("  Two-sided inequality: " + std::to_string(bound_count));
+  logger_.detailed("  Free constraints: " + std::to_string(free_count));
 
-  logger_.info("\nVariable bound types:");
-  logger_.info("  Fixed variables (l = u): " + std::to_string(var_fixed));
-  logger_.info("  Boxed variables (l <= x <= u): " + std::to_string(var_boxed));
-  logger_.info("  Lower bounded only (l <= x): " +
-               std::to_string(var_lower_only));
-  logger_.info("  Upper bounded only (x <= u): " +
-               std::to_string(var_upper_only));
-  logger_.info("  Free variables: " + std::to_string(var_free));
+  logger_.detailed("\nVariable bound types:");
+  logger_.detailed("  Fixed variables (l = u): " + std::to_string(var_fixed));
+  logger_.detailed("  Boxed variables (l <= x <= u): " +
+                   std::to_string(var_boxed));
+  logger_.detailed("  Lower bounded only (l <= x): " +
+                   std::to_string(var_lower_only));
+  logger_.detailed("  Upper bounded only (x <= u): " +
+                   std::to_string(var_upper_only));
+  logger_.detailed("  Free variables: " + std::to_string(var_free));
 
-  logger_.info("\n=== AFTER PREPROCESSING ===");
-  logger_.info("Rows: " + std::to_string(lp_.num_row_) +
-               ", Cols: " + std::to_string(lp_.num_col_));
-  logger_.info("Equality rows (first " + std::to_string(num_eq_rows_) +
-               " rows)");
-  logger_.info("Inequality rows (remaining " +
-               std::to_string(lp_.num_row_ - num_eq_rows_) + " rows)");
-  logger_.info("Slack variables added: " +
-               std::to_string(lp_.num_col_ - nCols));
+  logger_.detailed("\n=== AFTER PREPROCESSING ===");
+  logger_.detailed("Rows: " + std::to_string(lp_.num_row_) +
+                   ", Cols: " + std::to_string(lp_.num_col_));
+  logger_.detailed("Equality rows (first " + std::to_string(num_eq_rows_) +
+                   " rows)");
+  logger_.detailed("Inequality rows (remaining " +
+                   std::to_string(lp_.num_row_ - num_eq_rows_) + " rows)");
+  logger_.detailed("Slack variables added: " +
+                   std::to_string(lp_.num_col_ - nCols));
 
   // Count variable bounds in processed LP
-  int proc_var_fixed = 0, proc_var_lower_only = 0, proc_var_upper_only = 0;
-  int proc_var_boxed = 0, proc_var_free = 0;
+  HighsInt proc_var_fixed = 0, proc_var_lower_only = 0, proc_var_upper_only = 0;
+  HighsInt proc_var_boxed = 0, proc_var_free = 0;
 
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     bool has_lower = lp_.col_lower_[i] > -kHighsInf;
     bool has_upper = lp_.col_upper_[i] < kHighsInf;
 
@@ -150,24 +139,26 @@ void PDLPSolver::printConstraintInfo() {
     }
   }
 
-  logger_.info("\nProcessed variable bound types:");
-  logger_.info("  Fixed variables: " + std::to_string(proc_var_fixed));
-  logger_.info("  Boxed variables: " + std::to_string(proc_var_boxed));
-  logger_.info("  Lower bounded only: " + std::to_string(proc_var_lower_only));
-  logger_.info("  Upper bounded only: " + std::to_string(proc_var_upper_only));
-  logger_.info("  Free variables: " + std::to_string(proc_var_free));
+  logger_.detailed("\nProcessed variable bound types:");
+  logger_.detailed("  Fixed variables: " + std::to_string(proc_var_fixed));
+  logger_.detailed("  Boxed variables: " + std::to_string(proc_var_boxed));
+  logger_.detailed("  Lower bounded only: " +
+                   std::to_string(proc_var_lower_only));
+  logger_.detailed("  Upper bounded only: " +
+                   std::to_string(proc_var_upper_only));
+  logger_.detailed("  Free variables: " + std::to_string(proc_var_free));
 }
 
 void PDLPSolver::preprocessLp() {
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockPreprocess);
 #endif
-  logger_.info(
+  logger_.detailed(
       "Preprocessing LP using cupdlp formulation (slack variables for "
       "bounds)...");
 
-  int nRows_orig = original_lp_->num_row_;
-  int nCols_orig = original_lp_->num_col_;
+  HighsInt nRows_orig = original_lp_->num_row_;
+  HighsInt nCols_orig = original_lp_->num_col_;
 
   if (original_lp_->a_matrix_.isRowwise()) {
     logger_.info("Original LP matrix must be in column-wise format,");
@@ -175,13 +166,13 @@ void PDLPSolver::preprocessLp() {
 
   lp_.offset_ = original_lp_->offset_;
 
-  int num_new_cols = 0;
-  int nEqs = 0;
+  HighsInt num_new_cols = 0;
+  HighsInt nEqs = 0;
   sense_origin_ = (original_lp_->sense_ == ObjSense::kMinimize) ? 1 : -1;
   constraint_types_.resize(nRows_orig);
 
   // 1. First pass: Classify constraints and count slack variables needed
-  for (int i = 0; i < nRows_orig; ++i) {
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
     bool has_lower = original_lp_->row_lower_[i] > -kHighsInf;
     bool has_upper = original_lp_->row_upper_[i] < kHighsInf;
 
@@ -219,9 +210,9 @@ void PDLPSolver::preprocessLp() {
   processed_lp.row_upper_.resize(processed_lp.num_row_);
 
   // 3. Determine row permutation: EQ/BOUND/FREE first, then LEQ/GEQ
-  int eq_idx = 0;
-  int ineq_idx = nEqs;
-  for (int i = 0; i < nRows_orig; ++i) {
+  HighsInt eq_idx = 0;
+  HighsInt ineq_idx = nEqs;
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
     if (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
         constraint_types_[i] == FREE) {
       constraint_new_idx_[i] = eq_idx++;
@@ -232,22 +223,22 @@ void PDLPSolver::preprocessLp() {
 
   // 4. Create is_equality_row_ vector based on NEW ordering
   is_equality_row_.resize(nRows_orig, false);
-  for (int i = 0; i < nRows_orig; ++i) {
-    int new_row_idx = constraint_new_idx_[i];
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
+    HighsInt new_row_idx = constraint_new_idx_[i];
     is_equality_row_[new_row_idx] =
         (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
          constraint_types_[i] == FREE);
   }
 
   // 5. Populate costs and bounds for original and new slack variables
-  for (int i = 0; i < nCols_orig; ++i) {
+  for (HighsInt i = 0; i < nCols_orig; ++i) {
     processed_lp.col_cost_[i] = original_lp_->col_cost_[i];
     processed_lp.col_lower_[i] = original_lp_->col_lower_[i];
     processed_lp.col_upper_[i] = original_lp_->col_upper_[i];
   }
 
-  int current_slack_col = nCols_orig;
-  for (int i = 0; i < nRows_orig; ++i) {
+  HighsInt current_slack_col = nCols_orig;
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
     if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
       processed_lp.col_cost_[current_slack_col] = 0.0;
       processed_lp.col_lower_[current_slack_col] = original_lp_->row_lower_[i];
@@ -257,8 +248,8 @@ void PDLPSolver::preprocessLp() {
   }
 
   // 6. Set the new RHS (row bounds) in PERMUTED order
-  for (int i = 0; i < nRows_orig; ++i) {
-    int new_row_idx = constraint_new_idx_[i];
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
+    HighsInt new_row_idx = constraint_new_idx_[i];
     switch (constraint_types_[i]) {
       case EQ:
         processed_lp.row_lower_[new_row_idx] = original_lp_->row_lower_[i];
@@ -269,13 +260,13 @@ void PDLPSolver::preprocessLp() {
         processed_lp.row_upper_[new_row_idx] = kHighsInf;
         break;
       case LEQ:
-        // Becomes -Ax >= -b
+        // Becomes -ax >= -b
         processed_lp.row_lower_[new_row_idx] = -original_lp_->row_upper_[i];
         processed_lp.row_upper_[new_row_idx] = kHighsInf;
         break;
       case BOUND:
       case FREE:
-        // Becomes Ax - z = 0
+        // Becomes ax - z = 0
         processed_lp.row_lower_[new_row_idx] = 0.0;
         processed_lp.row_upper_[new_row_idx] = 0.0;
         break;
@@ -301,14 +292,14 @@ void PDLPSolver::preprocessLp() {
 
   // Build column by column
   processed_matrix.start_[0] = 0;
-  for (int col = 0; col < nCols_orig; ++col) {
+  for (HighsInt col = 0; col < nCols_orig; ++col) {
     // For each column, add entries in the new row order
-    std::vector<std::pair<int, double>> col_entries;
+    std::vector<std::pair<HighsInt, double>> col_entries;
 
-    for (int el = original_matrix.start_[col];
+    for (HighsInt el = original_matrix.start_[col];
          el < original_matrix.start_[col + 1]; ++el) {
-      int old_row = original_matrix.index_[el];
-      int new_row = constraint_new_idx_[old_row];
+      HighsInt old_row = original_matrix.index_[el];
+      HighsInt new_row = constraint_new_idx_[old_row];
       double val = original_matrix.value_[el];
 
       // Apply scaling for LEQ constraints
@@ -333,9 +324,9 @@ void PDLPSolver::preprocessLp() {
 
   // Add slack variable columns
   current_slack_col = nCols_orig;
-  for (int i = 0; i < nRows_orig; ++i) {
+  for (HighsInt i = 0; i < nRows_orig; ++i) {
     if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
-      int row_idx = constraint_new_idx_[i];
+      HighsInt row_idx = constraint_new_idx_[i];
       processed_matrix.index_.push_back(row_idx);
       processed_matrix.value_.push_back(-1.0);
       processed_matrix.start_[current_slack_col + 1] =
@@ -349,14 +340,15 @@ void PDLPSolver::preprocessLp() {
   unscaled_processed_lp_ = processed_lp;
 
   // 8. Compute and store norms of unscaled cost and rhs
-  unscaled_c_norm_ = linalg::vector_norm(processed_lp.col_cost_);
-  unscaled_rhs_norm_ = linalg::vector_norm(processed_lp.row_lower_);
+  unscaled_c_norm_ = linalg::vectorNorm(processed_lp.col_cost_);
+  unscaled_rhs_norm_ = linalg::vectorNorm(processed_lp.row_lower_);
 
-  logger_.info("Preprocessing complete. New dimensions: " +
-               std::to_string(processed_lp.num_row_) + " rows, " +
-               std::to_string(processed_lp.num_col_) + " cols.");
-  logger_.info("Unscaled norms: ||c|| = " + std::to_string(unscaled_c_norm_) +
-               ", ||b|| = " + std::to_string(unscaled_rhs_norm_));
+  logger_.detailed("Preprocessing complete. New dimensions: " +
+                   std::to_string(processed_lp.num_row_) + " rows, " +
+                   std::to_string(processed_lp.num_col_) + " cols.");
+  logger_.detailed(
+      "Unscaled norms: ||c|| = " + std::to_string(unscaled_c_norm_) +
+      ", ||b|| = " + std::to_string(unscaled_rhs_norm_));
 
   printConstraintInfo();
 #if PDLP_PROFILE
@@ -365,7 +357,7 @@ void PDLPSolver::preprocessLp() {
 }
 
 PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
-  logger_.info("Post-solving the solution...");
+  logger_.detailed("Post-solving the solution...");
 
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockPostprocess);
@@ -395,8 +387,8 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   solution.row_dual.resize(original_lp_->num_row_);
 
   // 3. Recover Primal Column Values (x)
-  for (int i = 0; i < original_lp_->num_col_; ++i) {
-    if (i >= (int)x_current_.size()) {
+  for (HighsInt i = 0; i < original_lp_->num_col_; ++i) {
+    if (i >= (HighsInt)x_current_.size()) {
       logger_.info("Index " + std::to_string(i) +
                    " out of bounds for x_current_ of size " +
                    std::to_string(x_current_.size()));
@@ -414,7 +406,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   }
 
   double final_primal_objective = original_lp_->offset_;
-  for (int i = 0; i < original_num_col_; ++i) {
+  for (HighsInt i = 0; i < original_num_col_; ++i) {
     final_primal_objective +=
         original_lp_->col_cost_[i] * solution.col_value[i];
   }
@@ -422,8 +414,8 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
   // 4. Recover Dual Row Values (y)
   std::vector<double> y_reordered = y_current_;
-  for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
-    int reordered_row = constraint_new_idx_[orig_row];
+  for (HighsInt orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
+    HighsInt reordered_row = constraint_new_idx_[orig_row];
 
     // Get the dual value from the reordered position
     double dual_value = y_reordered[reordered_row];
@@ -436,16 +428,16 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
     }
   }
 
-  // 5. Recover Primal Row Values (Ax)
-  const std::vector<double>& row_scale = scaling_.GetRowScaling();
-  const std::vector<double>& col_scale = scaling_.GetColScaling();
-  if (scaling_.IsScaled()) {
+  // 5. Recover Primal Row Values (ax)
+  const std::vector<double>& row_scale = scaling_.getRowScaling();
+  const std::vector<double>& col_scale = scaling_.getColScaling();
+  if (scaling_.isScaled()) {
     // Unscale matrix, costs, and rhs
-    for (int iCol = 0; iCol < unscaled_processed_lp_.num_col_; ++iCol) {
+    for (HighsInt iCol = 0; iCol < unscaled_processed_lp_.num_col_; ++iCol) {
       unscaled_processed_lp_.col_cost_[iCol] /= col_scale[iCol];
-      for (int iEl = unscaled_processed_lp_.a_matrix_.start_[iCol];
+      for (HighsInt iEl = unscaled_processed_lp_.a_matrix_.start_[iCol];
            iEl < unscaled_processed_lp_.a_matrix_.start_[iCol + 1]; ++iEl) {
-        int iRow = unscaled_processed_lp_.a_matrix_.index_[iEl];
+        HighsInt iRow = unscaled_processed_lp_.a_matrix_.index_[iEl];
         unscaled_processed_lp_.a_matrix_.value_[iEl] /=
             (row_scale[iRow] * col_scale[iCol]);
       }
@@ -458,28 +450,28 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   HighsSparseMatrix orig_matrix = original_lp_->a_matrix_;
   orig_matrix.ensureColwise();
 
-  // Compute Ax using only the original columns (not slack variables)
-  for (int col = 0; col < original_num_col_; ++col) {
+  // Compute ax using only the original columns (not slack variables)
+  for (HighsInt col = 0; col < original_num_col_; ++col) {
     double x_val = x_current_[col];  // Use unscaled x values
 
-    for (int el = orig_matrix.start_[col]; el < orig_matrix.start_[col + 1];
-         ++el) {
-      int row = orig_matrix.index_[el];
+    for (HighsInt el = orig_matrix.start_[col];
+         el < orig_matrix.start_[col + 1]; ++el) {
+      HighsInt row = orig_matrix.index_[el];
       double a_val = orig_matrix.value_[el];
       ax_original[row] += a_val * x_val;
     }
   }
 
   // Now ax_original contains the correct row activity values
-  for (int orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
+  for (HighsInt orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
     solution.row_value[orig_row] = ax_original[orig_row];
   }
 
   // 6. Recover Dual Column Values (Reduced Costs)
   // The duals on the variable bounds l <= x <= u are the reduced costs.
   // In the PDLP framework, these are given by dSlackPos - dSlackNeg.
-  for (int i = 0; i < original_num_col_; ++i) {
-    if (i >= (int)dSlackPos_.size() || i >= (int)dSlackNeg_.size()) {
+  for (HighsInt i = 0; i < original_num_col_; ++i) {
+    if (i >= (HighsInt)dSlackPos_.size() || i >= (HighsInt)dSlackNeg_.size()) {
       logger_.info("Index " + std::to_string(i) +
                    " out of bounds for dSlackPos/Neg of size " +
                    std::to_string(dSlackPos_.size()));
@@ -491,7 +483,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
   solution.value_valid = true;  // to do
   solution.dual_valid = true;
-  logger_.info("Post-solve complete.");
+  logger_.detailed("Post-solve complete.");
 
 #if PDLP_PROFILE
   hipdlpTimerStop(kHipdlpClockPostprocess);
@@ -503,20 +495,21 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockSolve);
 #endif
-  
-  // 1. Initialization and Setup
+
+  // 1. Initialization and setup
 #ifdef CUPDLP_GPU
-  setupGpu(); 
+  setupGpu();
 #endif
   initializeStepSizes();
-  initialize(); // Resets vectors, caches, and sets initial x_current, y_current
+  initialize();  // Resets vectors, caches, and sets initial x_current,
+                 // y_current
   best_primal_weight_ = primal_weight_;
   best_primal_dual_residual_gap_ = std::numeric_limits<double>::infinity();
 
-  // Initialize internal solver state
+  // initialize internal solver state
   restart_scheme_.passParams(&params_);
-  restart_scheme_.Initialize(results_);
-  
+  restart_scheme_.initialize(results_);
+
   // Copy initial input x,y to internal state
   x_current_ = x;
   y_current_ = y;
@@ -526,34 +519,43 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     y_anchor_ = y_current_;
     halpern_iteration_ = 0;
 #ifdef CUPDLP_GPU
-    CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_x_current_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
-    CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_y_current_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
+    CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_x_current_,
+                          lp_.num_col_ * sizeof(double),
+                          cudaMemcpyDeviceToDevice));
+    CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_y_current_,
+                          lp_.num_row_ * sizeof(double),
+                          cudaMemcpyDeviceToDevice));
 #endif
   }
 
-  // Pre-calculate Ax and ATy for current iterate
+  // Pre-calculate ax and aTy for current iterate
 #ifdef CUPDLP_GPU
   CUDA_CHECK(cudaMemset(d_x_sum_, 0, lp_.num_col_ * sizeof(double)));
   CUDA_CHECK(cudaMemset(d_y_sum_, 0, lp_.num_row_ * sizeof(double)));
   CUDA_CHECK(cudaMemset(d_x_avg_, 0, lp_.num_col_ * sizeof(double)));
   CUDA_CHECK(cudaMemset(d_y_avg_, 0, lp_.num_row_ * sizeof(double)));
   sum_weights_gpu_ = 0.0;
-  CUDA_CHECK(cudaMemcpy(d_x_current_, x.data(), lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(d_y_current_, y.data(), lp_.num_row_ * sizeof(double), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(d_x_current_, x.data(), lp_.num_col_ * sizeof(double),
+                        cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(d_y_current_, y.data(), lp_.num_row_ * sizeof(double),
+                        cudaMemcpyHostToDevice));
   linalgGpuAx(d_x_current_, d_ax_current_);
   linalgGpuATy(d_y_current_, d_aty_current_);
 #else
-  linalg::project_bounds(lp_, x_current_);
-  linalg::Ax(lp_, x_current_, Ax_cache_);
-  linalg::ATy(lp_, y_current_, ATy_cache_);
+  linalg::projectBounds(lp_, x_current_);
+  linalg::ax(lp_, x_current_, Ax_cache_);
+  linalg::aTy(lp_, y_current_, ATy_cache_);
 #endif
 
-  logger_.print_iteration_header();
-  
-  TerminationStatus termination_status = TerminationStatus::OPTIMAL;
+  logger_.printIterationHeader();
+
+  // termination_status is not known. Setting it to NOTSET rather than
+  // OPTIMAL means that if it's not set elsewhere then optimality is
+  // not returned in error
+  TerminationStatus termination_status = TerminationStatus::NOTSET;
   bool do_restart = false;
   double last_trial_fpe = std::numeric_limits<double>::infinity();
-  
+
   final_iter_count_ = 0;
 
 #ifdef CUPDLP_GPU
@@ -563,27 +565,24 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   // 2. Main cuPDLPx-style Loop
   while (final_iter_count_ < params_.max_iterations) {
-    // Check global time limit
-    if (total_timer.read() > params_.time_limit) {
+    // check global time limit
+    if (highs_timer_p->read() > params_.time_limit) {
       logger_.info("Time limit reached.");
       termination_status = TerminationStatus::TIMEOUT;
       break;
     }
 
-    if (final_iter_count_ == 0){
-      //stepsize_.primal_step = 10.8215584736;
-      //stepsize_.dual_step   = 0.0018783443;
-    }
-
     // -- Step 1 (Major, isolated for restart-FPE check) --
 #ifdef CUPDLP_GPU
-  CUDA_CHECK(cudaMemcpyAsync(d_primal_step_size_, &stepsize_.primal_step,
-                 sizeof(double), cudaMemcpyHostToDevice,
-                 gpu_stream_));
-  CUDA_CHECK(cudaMemcpyAsync(d_dual_step_size_, &stepsize_.dual_step,
-                 sizeof(double), cudaMemcpyHostToDevice,
-                 gpu_stream_));
-    CUDA_CHECK(cudaMemcpyAsync(d_halpern_iteration_, &halpern_iteration_, sizeof(int), cudaMemcpyHostToDevice, gpu_stream_));
+    CUDA_CHECK(cudaMemcpyAsync(d_primal_step_size_, &stepsize_.primal_step,
+                               sizeof(double), cudaMemcpyHostToDevice,
+                               gpu_stream_));
+    CUDA_CHECK(cudaMemcpyAsync(d_dual_step_size_, &stepsize_.dual_step,
+                               sizeof(double), cudaMemcpyHostToDevice,
+                               gpu_stream_));
+    CUDA_CHECK(cudaMemcpyAsync(d_halpern_iteration_, &halpern_iteration_,
+                               sizeof(int), cudaMemcpyHostToDevice,
+                               gpu_stream_));
     performHalpernPdhgStepGpu(true, 1);
 #else
     performHalpernPdhgStep(true, 1);
@@ -596,7 +595,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       fpe_ = computeFixedPointError();
 #endif
       initial_fpe_ = fpe_;
-if (DEBUG_MODE) std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Restarted with initial_fpe_ = " << std::setprecision(10) << initial_fpe_ << std::endl;
       do_restart = false;
     }
 
@@ -637,30 +635,31 @@ if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE 
     halpern_iteration_ += PDHG_CHECK_INTERVAL;
     final_iter_count_ += PDHG_CHECK_INTERVAL;
 
-    // -- Convergence Check --
+    // -- Convergence check --
     TerminationStatus check_status;
-    bool should_terminate = runConvergenceCheckAndRestart(final_iter_count_, x, y, check_status);
-    
+    bool should_terminate =
+        runConvergenceCheckAndRestart(final_iter_count_, x, y, check_status);
+
     if (should_terminate) {
       termination_status = check_status;
-      break; 
+      break;
     }
 
-    // -- Check Adaptive Restart (Mimicking `should_do_adaptive_restart` in solver.cu) --
+    // -- check Adaptive Restart (Mimicking `should_do_adaptive_restart` in
+    // solver.cu) --
     if (final_iter_count_ == PDHG_CHECK_INTERVAL) {
       do_restart = true;
     } else if (final_iter_count_ > PDHG_CHECK_INTERVAL) {
-      if (fpe_ <= restart_scheme_.GetSufficientDecayFactor() * initial_fpe_) {
+      if (fpe_ <= restart_scheme_.getSufficientDecayFactor() * initial_fpe_) {
         do_restart = true;
       }
-      if (fpe_ <= restart_scheme_.GetNecessaryDecayFactor() * initial_fpe_) {
+      if (fpe_ <= restart_scheme_.getNecessaryDecayFactor() * initial_fpe_) {
         if (fpe_ > last_trial_fpe) {
           do_restart = true;
         }
       }
       if (halpern_iteration_ >=
-          restart_scheme_.GetArtificialRestartThreshold() *
-              final_iter_count_) {
+          restart_scheme_.getArtificialRestartThreshold() * final_iter_count_) {
         do_restart = true;
       }
     }
@@ -670,22 +669,29 @@ if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE 
     if (do_restart) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
         updatePrimalWeightAtRestart(results_);
-if (DEBUG_MODE)        std::cout << "[DEBUG] iter=" << final_iter_count_ << " | Updated primal_weight_ to " << primal_weight_ << std::endl;
       }
 #ifdef CUPDLP_GPU
-      CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
-      CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_pdhg_dual_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
-      CUDA_CHECK(cudaMemcpy(d_x_current_, d_pdhg_primal_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
-      CUDA_CHECK(cudaMemcpy(d_y_current_, d_pdhg_dual_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
+      CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_pdhg_primal_,
+                            lp_.num_col_ * sizeof(double),
+                            cudaMemcpyDeviceToDevice));
+      CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_pdhg_dual_,
+                            lp_.num_row_ * sizeof(double),
+                            cudaMemcpyDeviceToDevice));
+      CUDA_CHECK(cudaMemcpy(d_x_current_, d_pdhg_primal_,
+                            lp_.num_col_ * sizeof(double),
+                            cudaMemcpyDeviceToDevice));
+      CUDA_CHECK(cudaMemcpy(d_y_current_, d_pdhg_dual_,
+                            lp_.num_row_ * sizeof(double),
+                            cudaMemcpyDeviceToDevice));
 #else
       x_anchor_ = x_next_;
       y_anchor_ = y_next_;
       x_current_ = x_next_;
       y_current_ = y_next_;
-      linalg::Ax(lp_, x_current_, Ax_cache_);
-      linalg::ATy(lp_, y_current_, ATy_cache_);
+      linalg::ax(lp_, x_current_, Ax_cache_);
+      linalg::aTy(lp_, y_current_, ATy_cache_);
 #endif
-      
+
       halpern_iteration_ = 0;
       last_trial_fpe = std::numeric_limits<double>::infinity();
     }
@@ -698,16 +704,15 @@ if (DEBUG_MODE)        std::cout << "[DEBUG] iter=" << final_iter_count_ << " | 
 #endif
 
   // 3. Loop Finished
-  if (termination_status != TerminationStatus::OPTIMAL) {
-      logger_.info("Max iterations reached without convergence.");
-      final_iter_count_ = params_.max_iterations;
-      termination_status = TerminationStatus::TIMEOUT;
+  if (termination_status == TerminationStatus::NOTSET) {
+    logger_.info("Iteration limit reached without convergence");
+    termination_status = TerminationStatus::MAXITER;
   }
-  
+
   solveReturn(termination_status);
 }
 
-double PDLPSolver::computeFixedPointError(){
+double PDLPSolver::computeFixedPointError() {
   double primal_norm_sq = 0.0;
   double dual_norm_sq = 0.0;
   double cross_term = 0.0;
@@ -726,13 +731,14 @@ double PDLPSolver::computeFixedPointError(){
   }
 
   std::vector<double> AT_delta_y(lp_.num_col_, 0.0);
-  linalg::ATy(lp_, delta_y, AT_delta_y);
+  linalg::aTy(lp_, delta_y, AT_delta_y);
 
   for (int i = 0; i < lp_.num_col_; ++i) {
     cross_term += delta_x[i] * AT_delta_y[i];
   }
 
-  double movement = primal_norm_sq * params_.omega + dual_norm_sq / params_.omega;
+  double movement =
+      primal_norm_sq * params_.omega + dual_norm_sq / params_.omega;
   double interaction = 2.0 * params_.eta * cross_term;
 
   return std::sqrt(std::max(0.0, movement + interaction));
@@ -741,45 +747,55 @@ double PDLPSolver::computeFixedPointError(){
 #ifdef CUPDLP_GPU
 double PDLPSolver::computeFixedPointErrorGpu() {
   double alpha_minus_one = -1.0;
-  
-  // 1. delta_x = x_next_ - reflected_x_ 
-  // (Assuming d_pdhg_primal_ maps to x_next_ and d_x_next_ is used as reflected_x_ in your minor/major steps)
-  CUDA_CHECK(cudaMemcpy(d_delta_x_, d_pdhg_primal_, a_num_cols_ * sizeof(double), cudaMemcpyDeviceToDevice));
-  CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_cols_, &alpha_minus_one, d_x_next_, 1, d_delta_x_, 1));
+
+  // 1. delta_x = x_next_ - reflected_x_
+  // (Assuming d_pdhg_primal_ maps to x_next_ and d_x_next_ is used as
+  // reflected_x_ in your minor/major steps)
+  CUDA_CHECK(cudaMemcpy(d_delta_x_, d_pdhg_primal_,
+                        a_num_cols_ * sizeof(double),
+                        cudaMemcpyDeviceToDevice));
+  CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_cols_, &alpha_minus_one,
+                           d_x_next_, 1, d_delta_x_, 1));
 
   // 2. delta_y = y_next_ - reflected_y_
-  CUDA_CHECK(cudaMemcpy(d_delta_y_, d_pdhg_dual_, a_num_rows_ * sizeof(double), cudaMemcpyDeviceToDevice));
-  CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_rows_, &alpha_minus_one, d_y_next_, 1, d_delta_y_, 1));
+  CUDA_CHECK(cudaMemcpy(d_delta_y_, d_pdhg_dual_, a_num_rows_ * sizeof(double),
+                        cudaMemcpyDeviceToDevice));
+  CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_rows_, &alpha_minus_one,
+                           d_y_next_, 1, d_delta_y_, 1));
 
   // 3. AT_delta_y = A^T * delta_y
   linalgGpuATy(d_delta_y_, d_AT_delta_y_);
 
   // 4. Compute norms and cross term
   double primal_norm = 0.0, dual_norm = 0.0, cross_term = 0.0;
-  
-  CUBLAS_CHECK(cublasDnrm2(cublas_handle_, a_num_cols_, d_delta_x_, 1, &primal_norm));
-  CUBLAS_CHECK(cublasDnrm2(cublas_handle_, a_num_rows_, d_delta_y_, 1, &dual_norm));
-  CUBLAS_CHECK(cublasDdot(cublas_handle_, a_num_cols_, d_delta_x_, 1, d_AT_delta_y_, 1, &cross_term));
+
+  CUBLAS_CHECK(
+      cublasDnrm2(cublas_handle_, a_num_cols_, d_delta_x_, 1, &primal_norm));
+  CUBLAS_CHECK(
+      cublasDnrm2(cublas_handle_, a_num_rows_, d_delta_y_, 1, &dual_norm));
+  CUBLAS_CHECK(cublasDdot(cublas_handle_, a_num_cols_, d_delta_x_, 1,
+                          d_AT_delta_y_, 1, &cross_term));
 
   double primal_norm_sq = primal_norm * primal_norm;
   double dual_norm_sq = dual_norm * dual_norm;
 
-  double movement = primal_norm_sq * params_.omega + dual_norm_sq / params_.omega;
+  double movement =
+      primal_norm_sq * params_.omega + dual_norm_sq / params_.omega;
   double interaction = 2.0 * params_.eta * cross_term;
 
   return std::sqrt(std::max(0.0, movement + interaction));
 }
 #endif
 
-bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter, 
-                                               std::vector<double>& output_x, 
+bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
+                                               std::vector<double>& output_x,
                                                std::vector<double>& output_y,
                                                TerminationStatus& status) {
   // 1. Compute Average Iterate (GPU or CPU)
 #ifdef CUPDLP_GPU
   computeAverageIterateGpu();
 #else
-  computeAverageIterate(Ax_avg_, ATy_avg_); 
+  computeAverageIterate(Ax_avg_, ATy_avg_);
 #endif
 
   SolverResults current_results;
@@ -787,92 +803,104 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
   bool current_converged = false;
   bool average_converged = false;
 
-  // 2. Check Convergence (GPU or CPU)
+  // 2. check Convergence (GPU or CPU)
 #ifdef CUPDLP_GPU
   if (params_.use_halpern_restart && d_pdhg_primal_ != nullptr) {
-    // For Halpern, "current iterate" convergence uses the PDHG projected iterates
-    // Need Ax and ATy of pdhg iterates:
-    linalgGpuAx(d_pdhg_primal_, d_ax_next_);    // reuse d_ax_next_ as scratch
-    linalgGpuATy(d_pdhg_dual_, d_aty_next_);     // reuse d_aty_next_ as scratch
+    // For Halpern, "current iterate" convergence uses the PDHG projected
+    // iterates Need ax and aTy of pdhg iterates:
+    linalgGpuAx(d_pdhg_primal_, d_ax_next_);  // reuse d_ax_next_ as scratch
+    linalgGpuATy(d_pdhg_dual_, d_aty_next_);  // reuse d_aty_next_ as scratch
     current_converged = checkConvergenceGpu(
-        iter, d_pdhg_primal_, d_pdhg_dual_,
-        d_ax_next_, d_aty_next_,
-        params_.tolerance, current_results, "[L-GPU]",
-        d_dSlackPos_, d_dSlackNeg_,
-        true); // <-- TRUE: Use the Halpern slack saved in d_dSlackPos_
+        iter, d_pdhg_primal_, d_pdhg_dual_, d_ax_next_, d_aty_next_,
+        params_.tolerance, current_results, "[L-GPU]", d_dSlackPos_,
+        d_dSlackNeg_,
+        true);  // <-- TRUE: Use the Halpern slack saved in d_dSlackPos_
   } else {
-    current_converged = checkConvergenceGpu(
-        iter, d_x_current_, d_y_current_,
-        d_ax_current_, d_aty_current_,
-        params_.tolerance, current_results, "[L-GPU]",
-        d_dSlackPos_, d_dSlackNeg_,
-        false); // <-- FALSE: Recompute standard slack
+    current_converged =
+        checkConvergenceGpu(iter, d_x_current_, d_y_current_, d_ax_current_,
+                            d_aty_current_, params_.tolerance, current_results,
+                            "[L-GPU]", d_dSlackPos_, d_dSlackNeg_,
+                            false);  // <-- FALSE: Recompute standard slack
     average_converged = checkConvergenceGpu(
-      iter, d_x_avg_, d_y_avg_, d_ax_avg_, d_aty_avg_,
-      params_.tolerance, average_results, "[A-GPU]",
-      d_dSlackPosAvg_, d_dSlackNegAvg_,
-      false); // <-- FALSE: Recompute standard slack
+        iter, d_x_avg_, d_y_avg_, d_ax_avg_, d_aty_avg_, params_.tolerance,
+        average_results, "[A-GPU]", d_dSlackPosAvg_, d_dSlackNegAvg_,
+        false);  // <-- FALSE: Recompute standard slack
   }
 
 #else
   if (params_.use_halpern_restart && iter > 0) {
     std::vector<double> Ax_pdhg(lp_.num_row_);
     std::vector<double> ATy_pdhg(lp_.num_col_);
-    linalg::Ax(lp_, x_next_, Ax_pdhg);
-    linalg::ATy(lp_, y_next_, ATy_pdhg);
-    current_converged = checkConvergence(iter, x_next_, y_next_, Ax_pdhg, ATy_pdhg,
-                                         params_.tolerance, current_results, "[L]", 
-                                         dSlackPos_, dSlackNeg_);
+    linalg::ax(lp_, x_next_, Ax_pdhg);
+    linalg::aTy(lp_, y_next_, ATy_pdhg);
+    current_converged = checkConvergence(
+        iter, x_next_, y_next_, Ax_pdhg, ATy_pdhg, params_.tolerance,
+        current_results, "[L]", dSlackPos_, dSlackNeg_);
   } else {
-    current_converged = checkConvergence(iter, x_current_, y_current_, Ax_cache_, ATy_cache_,
-                                         params_.tolerance, current_results, "[L]", 
-                                         dSlackPos_, dSlackNeg_);
+    current_converged = checkConvergence(
+        iter, x_current_, y_current_, Ax_cache_, ATy_cache_, params_.tolerance,
+        current_results, "[L]", dSlackPos_, dSlackNeg_);
   }
   average_converged = checkConvergence(iter, x_avg_, y_avg_, Ax_avg_, ATy_avg_,
-                                       params_.tolerance, average_results, "[A]", 
-                                       dSlackPosAvg_, dSlackNegAvg_);
+                                       params_.tolerance, average_results,
+                                       "[A]", dSlackPosAvg_, dSlackNegAvg_);
 #endif
 
-  logger_.print_iteration_stats(iter, average_results, current_eta_);
-
+  // Determine whether to log iterations
+  bool iteration_log = logger_.getConsoleLevel() >= LogLevel::kDetailed;
+  double time_now = highs_timer_p->read();
+  iteration_log = time_now > last_logger_time_ + kHipdlpLoggerFrequency;
+  if (iteration_log) {
+    logger_.printIterationStats(iter, current_results, primal_weight_, time_now);
+    last_logger_time_ = time_now;
+  }
   // 3. Handle Convergence Success
   if (current_converged || average_converged) {
     bool prefer_avg = average_converged;
-    
+
     // Copy result to output vectors
 #ifdef CUPDLP_GPU
     double* src_x = prefer_avg ? d_x_avg_
-                   : (params_.use_halpern_restart ? d_pdhg_primal_ : d_x_current_);
+                               : (params_.use_halpern_restart ? d_pdhg_primal_
+                                                              : d_x_current_);
     double* src_y = prefer_avg ? d_y_avg_
-                   : (params_.use_halpern_restart ? d_pdhg_dual_ : d_y_current_);
+                               : (params_.use_halpern_restart ? d_pdhg_dual_
+                                                              : d_y_current_);
     double* src_sp = prefer_avg ? d_dSlackPosAvg_ : d_dSlackPos_;
     double* src_sn = prefer_avg ? d_dSlackNegAvg_ : d_dSlackNeg_;
-    
-    CUDA_CHECK(cudaMemcpy(output_x.data(), src_x, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(output_y.data(), src_y, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(dSlackPos_.data(), src_sp, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(dSlackNeg_.data(), src_sn, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaMemcpy(output_x.data(), src_x, lp_.num_col_ * sizeof(double),
+                          cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(output_y.data(), src_y, lp_.num_row_ * sizeof(double),
+                          cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(dSlackPos_.data(), src_sp,
+                          lp_.num_col_ * sizeof(double),
+                          cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(dSlackNeg_.data(), src_sn,
+                          lp_.num_col_ * sizeof(double),
+                          cudaMemcpyDeviceToHost));
 #else
     if (prefer_avg) {
-        output_x = x_avg_;
-        output_y = y_avg_;
-        dSlackPos_ = dSlackPosAvg_;
-        dSlackNeg_ = dSlackNegAvg_;
+      output_x = x_avg_;
+      output_y = y_avg_;
+      dSlackPos_ = dSlackPosAvg_;
+      dSlackNeg_ = dSlackNegAvg_;
     } else if (params_.use_halpern_restart) {
-        output_x = x_next_;  
-        output_y = y_next_;  
+      output_x = x_next_;
+      output_y = y_next_;
     } else {
-        output_x = x_current_;
-        output_y = y_current_;
+      output_x = x_current_;
+      output_y = y_current_;
     }
 #endif
-    
+
     final_iter_count_ = iter;
     results_ = prefer_avg ? average_results : current_results;
-    logger_.info((prefer_avg ? "Average" : "Current") + std::string(" solution converged."));
-    
+    logger_.info((prefer_avg ? "Average" : "Current") +
+                 std::string(" solution converged"));
+
     status = TerminationStatus::OPTIMAL;
-    return true; // Stop
+    return true;  // Stop
   }
 
   results_ = current_results;
@@ -897,12 +925,12 @@ void PDLPSolver::performPdhgStep() {
       break;
     case StepSizeStrategy::MALITSKY_POCK:
       // Note: Error handling for MP failure simplified for brevity
-      updateIteratesMalitskyPock(false); 
+      updateIteratesMalitskyPock(false);
       break;
     case StepSizeStrategy::PID:
-      assert(111==999);
+      assert(111 == 999);
   }
-  
+
 #if PDLP_PROFILE
   hipdlpTimerStop(kHipdlpClockIterateUpdate);
 #endif
@@ -915,7 +943,7 @@ void PDLPSolver::performHalpernPdhgStep(bool is_major, int k_offset) {
   double primal_step = stepsize_.primal_step;
   double dual_step = stepsize_.dual_step;
   double rho = params_.halpern_gamma;
-  
+
   int current_k = halpern_iteration_ + k_offset;
   double w = static_cast<double>(current_k) / (current_k + 1.0);
 
@@ -927,8 +955,10 @@ void PDLPSolver::performHalpernPdhgStep(bool is_major, int k_offset) {
     halpern_dual_slack_next_valid_ = true;
   }
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
-    double temp = x_current_[i] - primal_step * (lp_.col_cost_[i] - ATy_cache_[i]);
-    double temp_proj = linalg::project_box(temp, lp_.col_lower_[i], lp_.col_upper_[i]);
+    double temp =
+        x_current_[i] - primal_step * (lp_.col_cost_[i] - ATy_cache_[i]);
+    double temp_proj =
+        linalg::projectBox(temp, lp_.col_lower_[i], lp_.col_upper_[i]);
     if (is_major) {
       x_next_[i] = temp_proj;  // pdhg_primal (for convergence check)
       halpern_dual_slack_next_[i] = (temp_proj - temp) / primal_step;
@@ -937,7 +967,7 @@ void PDLPSolver::performHalpernPdhgStep(bool is_major, int k_offset) {
   }
 
   // --- STEP 2: SpMV on reflected primal ---
-  linalg::Ax(lp_, reflected_x_, Ax_next_);
+  linalg::ax(lp_, reflected_x_, Ax_next_);
 
   // --- STEP 3: Dual projection + reflection ---
   for (HighsInt j = 0; j < lp_.num_row_; j++) {
@@ -964,8 +994,8 @@ void PDLPSolver::performHalpernPdhgStep(bool is_major, int k_offset) {
     y_current_[j] = w * blended + (1.0 - w) * y_anchor_[j];
   }
 
-  // --- STEP 5: Recompute ATy ---
-  linalg::ATy(lp_, y_current_, ATy_cache_);
+  // --- STEP 5: Recompute aTy ---
+  linalg::aTy(lp_, y_current_, ATy_cache_);
 }
 
 // ----------------------------------------------------------------------------
@@ -976,7 +1006,7 @@ void PDLPSolver::accumulateAverages(size_t iter) {
   hipdlpTimerStart(kHipdlpClockAverageIterate);
 #endif
 
-  int inner_iter = iter - restart_scheme_.GetLastRestartIter();
+  HighsInt inner_iter = iter - restart_scheme_.getLastRestartIter();
   double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
 #ifdef CUPDLP_GPU
@@ -984,12 +1014,11 @@ void PDLPSolver::accumulateAverages(size_t iter) {
     // If Halpern, we average the 'current' blended iterate
     launchKernelUpdateAverages_wrapper(d_x_sum_, d_y_sum_, d_x_current_,
                                        d_y_current_, dMeanStepSize,
-                                       lp_.num_col_, lp_.num_row_,
-                                       gpu_stream_);
+                                       lp_.num_col_, lp_.num_row_, gpu_stream_);
     sum_weights_gpu_ += dMeanStepSize;
   } else {
     // If standard, we average the 'next' iterate computed by PDHG
-    updateAverageIteratesGpu(inner_iter); 
+    updateAverageIteratesGpu(inner_iter);
   }
 #else
   if (params_.use_halpern_restart) {
@@ -1015,10 +1044,18 @@ void PDLPSolver::prepareNextIteration() {
   } else {
     // Standard PDHG: x_current becomes x_next
 #ifdef CUPDLP_GPU
-    CUDA_CHECK(cudaMemcpy(d_x_current_, d_x_next_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
-    CUDA_CHECK(cudaMemcpy(d_y_current_, d_y_next_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
-    CUDA_CHECK(cudaMemcpy(d_ax_current_, d_ax_next_, lp_.num_row_ * sizeof(double), cudaMemcpyDeviceToDevice));
-    CUDA_CHECK(cudaMemcpy(d_aty_current_, d_aty_next_, lp_.num_col_ * sizeof(double), cudaMemcpyDeviceToDevice));
+    CUDA_CHECK(cudaMemcpy(d_x_current_, d_x_next_,
+                          lp_.num_col_ * sizeof(double),
+                          cudaMemcpyDeviceToDevice));
+    CUDA_CHECK(cudaMemcpy(d_y_current_, d_y_next_,
+                          lp_.num_row_ * sizeof(double),
+                          cudaMemcpyDeviceToDevice));
+    CUDA_CHECK(cudaMemcpy(d_ax_current_, d_ax_next_,
+                          lp_.num_row_ * sizeof(double),
+                          cudaMemcpyDeviceToDevice));
+    CUDA_CHECK(cudaMemcpy(d_aty_current_, d_aty_next_,
+                          lp_.num_col_ * sizeof(double),
+                          cudaMemcpyDeviceToDevice));
 #else
     x_current_ = x_next_;
     y_current_ = y_next_;
@@ -1034,15 +1071,14 @@ void PDLPSolver::performHalpernPdhgStepGpu(bool is_major, int k_offset) {
   if (is_major) {
     launchKernelHalpernPrimalMajor_wrapper(
         d_x_current_, d_pdhg_primal_, d_x_next_ /*reflected*/,
-        d_aty_current_ /*dual_product*/, d_col_cost_,
-      d_col_lower_, d_col_upper_, d_primal_step_size_, a_num_cols_,
-      d_dSlackPos_ /*dual_slack*/, gpu_stream_);
+        d_aty_current_ /*dual_product*/, d_col_cost_, d_col_lower_,
+        d_col_upper_, d_primal_step_size_, a_num_cols_,
+        d_dSlackPos_ /*dual_slack*/, gpu_stream_);
   } else {
     launchKernelHalpernPrimalMinor_wrapper(
-        d_x_current_, d_x_next_ /*reflected*/,
-        d_aty_current_ /*dual_product*/, d_col_cost_,
-      d_col_lower_, d_col_upper_, d_primal_step_size_, a_num_cols_,
-      gpu_stream_);
+        d_x_current_, d_x_next_ /*reflected*/, d_aty_current_ /*dual_product*/,
+        d_col_cost_, d_col_lower_, d_col_upper_, d_primal_step_size_,
+        a_num_cols_, gpu_stream_);
   }
 
   linalgGpuAx(d_x_next_, d_ax_next_);
@@ -1051,22 +1087,22 @@ void PDLPSolver::performHalpernPdhgStepGpu(bool is_major, int k_offset) {
     launchKernelHalpernDualMajor_wrapper(
         d_y_current_, d_pdhg_dual_, d_y_next_ /*reflected*/,
         d_ax_next_ /*primal_product*/, d_row_lower_, d_is_equality_row_,
-      d_dual_step_size_, a_num_rows_, gpu_stream_);
+        d_dual_step_size_, a_num_rows_, gpu_stream_);
   } else {
     launchKernelHalpernDualMinor_wrapper(
-        d_y_current_, d_y_next_ /*reflected*/,
-        d_ax_next_ /*primal_product*/, d_row_lower_, d_is_equality_row_,
-      d_dual_step_size_, a_num_rows_, gpu_stream_);
+        d_y_current_, d_y_next_ /*reflected*/, d_ax_next_ /*primal_product*/,
+        d_row_lower_, d_is_equality_row_, d_dual_step_size_, a_num_rows_,
+        gpu_stream_);
   }
 
   double rho = params_.halpern_gamma;
 
-  launchKernelHalpernBlend_wrapper(
-      d_x_current_, d_x_next_ /*reflected*/, d_x_anchor_,
-      d_halpern_iteration_, k_offset, rho, a_num_cols_, gpu_stream_);
-  launchKernelHalpernBlend_wrapper(
-      d_y_current_, d_y_next_ /*reflected*/, d_y_anchor_,
-      d_halpern_iteration_, k_offset, rho, a_num_rows_, gpu_stream_);
+  launchKernelHalpernBlend_wrapper(d_x_current_, d_x_next_ /*reflected*/,
+                                   d_x_anchor_, d_halpern_iteration_, k_offset,
+                                   rho, a_num_cols_, gpu_stream_);
+  launchKernelHalpernBlend_wrapper(d_y_current_, d_y_next_ /*reflected*/,
+                                   d_y_anchor_, d_halpern_iteration_, k_offset,
+                                   rho, a_num_rows_, gpu_stream_);
 }
 #endif
 
@@ -1081,7 +1117,7 @@ void PDLPSolver::solveReturn(const TerminationStatus term_code) {
 }
 
 void PDLPSolver::initialize() {
-  // Initialize x and y based on the LP problem
+  // initialize x and y based on the LP problem
   x_current_.resize(lp_.num_col_, 0.0);
   y_current_.resize(lp_.num_row_, 0.0);
   x_next_.resize(lp_.num_col_, 0.0);
@@ -1107,12 +1143,12 @@ void PDLPSolver::initialize() {
   ATy_cache_.resize(lp_.num_col_, 0.0);
   Ax_next_.resize(lp_.num_row_, 0.0);
   ATy_next_.resize(lp_.num_col_, 0.0);
-  
+
   // Member variables added back in HPP:
   Ax_avg_.resize(lp_.num_row_, 0.0);
   ATy_avg_.resize(lp_.num_col_, 0.0);
   K_times_x_diff_.resize(lp_.num_row_, 0.0);
-  
+
   dSlackPos_.resize(lp_.num_col_, 0.0);
   dSlackNeg_.resize(lp_.num_col_, 0.0);
   dSlackPosAvg_.resize(lp_.num_col_, 0.0);
@@ -1144,12 +1180,12 @@ void PDLPSolver::computeStepSizeRatio(PrimalDualParams& working_params) {
   stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
   working_params.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
   working_params.omega = std::sqrt(stepsize_.beta);
-  restart_scheme_.UpdateBeta(stepsize_.beta);
+  restart_scheme_.updateBeta(stepsize_.beta);
 }
 
 void PDLPSolver::updateAverageIterates(const std::vector<double>& x,
                                        const std::vector<double>& y,
-                                       int inner_iter) {
+                                       HighsInt inner_iter) {
   double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
 #if PDLP_PROFILE
@@ -1194,13 +1230,13 @@ void PDLPSolver::computeAverageIterate(std::vector<double>& ax_avg,
 #endif
 
 #if PDLP_DEBUG_LOG
-  debug_pdlp_data_.x_average_norm = linalg::vector_norm_squared(x_avg_);
+  debug_pdlp_data_.x_average_norm = linalg::vectorNormSquared(x_avg_);
 #endif
 
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockAverageIterateMatrixMultiply);
 #endif
-  linalg::Ax(lp_, x_avg_, ax_avg);
+  linalg::ax(lp_, x_avg_, ax_avg);
 #if PDLP_PROFILE
   hipdlpTimerStop(kHipdlpClockAverageIterateMatrixMultiply);
 #endif
@@ -1208,14 +1244,14 @@ void PDLPSolver::computeAverageIterate(std::vector<double>& ax_avg,
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockAverageIterateMatrixTransposeMultiply);
 #endif
-  linalg::ATy(lp_, y_avg_, aty_avg);
+  linalg::aTy(lp_, y_avg_, aty_avg);
 #if PDLP_PROFILE
   hipdlpTimerStop(kHipdlpClockAverageIterateMatrixTransposeMultiply);
 #endif
 
 #if PDLP_DEBUG_LOG
-  debug_pdlp_data_.ax_average_norm = linalg::vector_norm_squared(ax_avg);
-  debug_pdlp_data_.aty_average_norm = linalg::vector_norm_squared(aty_avg);
+  debug_pdlp_data_.ax_average_norm = linalg::vectorNormSquared(ax_avg);
+  debug_pdlp_data_.aty_average_norm = linalg::vectorNormSquared(aty_avg);
 #endif
 }
 
@@ -1243,7 +1279,7 @@ double PDLPSolver::computePrimalFeasibility(
     const std::vector<double>& Ax_vector) {
   std::vector<double> primal_residual(lp_.num_row_, 0.0);
 
-  // Compute Ax - rhs
+  // Compute ax - rhs
   for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     primal_residual[i] = Ax_vector[i] - lp_.row_lower_[i];
 
@@ -1254,14 +1290,14 @@ double PDLPSolver::computePrimalFeasibility(
   }
 
   // Apply scaling if needed
-  if (scaling_.IsScaled()) {
-    const auto& row_scale = scaling_.GetRowScaling();
+  if (scaling_.isScaled()) {
+    const auto& row_scale = scaling_.getRowScaling();
     for (HighsInt i = 0; i < lp_.num_row_; ++i) {
       primal_residual[i] *= row_scale[i];
     }
   }
 
-  return linalg::vector_norm(primal_residual);
+  return linalg::vectorNorm(primal_residual);
 }
 
 void PDLPSolver::computeDualSlacks(const std::vector<double>& dualResidual,
@@ -1277,12 +1313,13 @@ void PDLPSolver::computeDualSlacks(const std::vector<double>& dualResidual,
     if (params_.use_halpern_restart) {
       // For Halpern current iterate checks, use major-step dual slack:
       // dual_slack = (proj(temp) - temp) / primal_step.
-      // For other cases (e.g. average iterate), fall back to sign/bounds projection.
-      const bool use_cached_halpern_slack =
-          (&dSlackPos == &dSlackPos_) &&
-          (&dSlackNeg == &dSlackNeg_) &&
-          halpern_dual_slack_next_valid_ &&
-          (halpern_dual_slack_next_.size() == static_cast<size_t>(lp_.num_col_));
+      // For other cases (e.g. average iterate), fall back to sign/bounds
+      // projection.
+      const bool use_cached_halpern_slack = (&dSlackPos == &dSlackPos_) &&
+                                            (&dSlackNeg == &dSlackNeg_) &&
+                                            halpern_dual_slack_next_valid_ &&
+                                            (halpern_dual_slack_next_.size() ==
+                                             static_cast<size_t>(lp_.num_col_));
 
       double dual_slack = 0.0;
       if (use_cached_halpern_slack) {
@@ -1326,7 +1363,7 @@ double PDLPSolver::computeDualFeasibility(const std::vector<double>& ATy_vector,
                                           std::vector<double>& dSlackNeg) {
   std::vector<double> dualResidual(lp_.num_col_, 0.0);
   // dualResidual = c-A'y
-  dualResidual = linalg::vector_subtrac(lp_.col_cost_, ATy_vector);
+  dualResidual = linalg::vectorSubtract(lp_.col_cost_, ATy_vector);
 
   // Call the refactored function to populate dSlackPos and dSlackNeg
   computeDualSlacks(dualResidual, dSlackPos, dSlackNeg);
@@ -1339,14 +1376,14 @@ double PDLPSolver::computeDualFeasibility(const std::vector<double>& ATy_vector,
   }
 
   // Apply scaling if needed
-  if (scaling_.IsScaled()) {
-    const auto& col_scale = scaling_.GetColScaling();
+  if (scaling_.isScaled()) {
+    const auto& col_scale = scaling_.getColScaling();
     for (HighsInt i = 0; i < lp_.num_col_; ++i) {
       dual_residual[i] *= col_scale[i];
     }
   }
 
-  double dual_feasibility = linalg::vector_norm(dual_residual);
+  double dual_feasibility = linalg::vectorNorm(dual_residual);
 
   return dual_feasibility;
 }
@@ -1356,7 +1393,7 @@ PDLPSolver::computeDualityGap(const std::vector<double>& x,
                               const std::vector<double>& y,
                               const std::vector<double>& lambda) {
   double qTy = 0.0;
-  for (int i = 0; i < lp_.num_row_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     if (lp_.row_lower_[i] > -kHighsInf) {
       qTy += lp_.row_lower_[i] * y[i];
     } else {
@@ -1367,26 +1404,25 @@ PDLPSolver::computeDualityGap(const std::vector<double>& x,
   double lT_lambda_plus = 0.0;
   double uT_lambda_minus = 0.0;
 
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     if (lp_.col_lower_[i] > -kHighsInf) {
-      lT_lambda_plus +=
-          lp_.col_lower_[i] * std::max(0.0, lambda[i]); 
+      lT_lambda_plus += lp_.col_lower_[i] * std::max(0.0, lambda[i]);
     }
     if (lp_.col_upper_[i] < kHighsInf) {
-      uT_lambda_minus +=
-          lp_.col_upper_[i] * std::max(0.0, -lambda[i]); 
+      uT_lambda_minus += lp_.col_upper_[i] * std::max(0.0, -lambda[i]);
     }
   }
 
   double dual_objective = qTy + lT_lambda_plus - uT_lambda_minus;
 
   double cTx = 0.0;
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     cTx += lp_.col_cost_[i] * x[i];
   }
 
   double duality_gap = abs(dual_objective - cTx);
-  return std::make_tuple(duality_gap, qTy, lT_lambda_plus, uT_lambda_minus, cTx);
+  return std::make_tuple(duality_gap, qTy, lT_lambda_plus, uT_lambda_minus,
+                         cTx);
 }
 
 double PDLPSolver::computeDualObjective(const std::vector<double>& y,
@@ -1395,19 +1431,19 @@ double PDLPSolver::computeDualObjective(const std::vector<double>& y,
   double dual_obj = lp_.offset_;
 
   // Compute b'y (or rhs'y in cuPDLP notation)
-  for (int i = 0; i < lp_.num_row_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_row_; ++i) {
     dual_obj += lp_.row_lower_[i] * y[i];
   }
 
   // Add contribution from lower bounds: l'*slackPos
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     if (lp_.col_lower_[i] > -kHighsInf) {
       dual_obj += lp_.col_lower_[i] * dSlackPos[i];
     }
   }
 
   // Subtract contribution from upper bounds: u'*slackNeg
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     if (lp_.col_upper_[i] < kHighsInf) {
       dual_obj -= lp_.col_upper_[i] * dSlackNeg[i];
     }
@@ -1417,9 +1453,10 @@ double PDLPSolver::computeDualObjective(const std::vector<double>& y,
 }
 
 bool PDLPSolver::checkConvergence(
-    const int iter, const std::vector<double>& x, const std::vector<double>& y,
-    const std::vector<double>& ax_vector, const std::vector<double>& aty_vector,
-    double epsilon, SolverResults& results, const char* type,
+    const HighsInt iter, const std::vector<double>& x,
+    const std::vector<double>& y, const std::vector<double>& ax_vector,
+    const std::vector<double>& aty_vector, double epsilon,
+    SolverResults& results, const char* type,
     // Add slack vectors as non-const references
     std::vector<double>& dSlackPos, std::vector<double>& dSlackNeg) {
   // computeDualSlacks is now called inside computeDualFeasibility
@@ -1436,7 +1473,7 @@ bool PDLPSolver::checkConvergence(
 
   // Compute objectives
   double primal_obj = lp_.offset_;
-  for (int i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     primal_obj += lp_.col_cost_[i] * x[i];
   }
   results.primal_obj = primal_obj;
@@ -1461,7 +1498,7 @@ bool PDLPSolver::checkConvergence(
                       dual_feasibility / (1.0 + unscaled_c_norm_), type);
 #endif
 
-  // Check convergence criteria (matching cuPDLP)
+  // check convergence criteria (matching cuPDLP)
   bool primal_feasible =
       primal_feasibility < epsilon * (1.0 + unscaled_rhs_norm_);
   bool dual_feasible = dual_feasibility < epsilon * (1.0 + unscaled_c_norm_);
@@ -1470,16 +1507,16 @@ bool PDLPSolver::checkConvergence(
   return primal_feasible && dual_feasible && gap_small;
 }
 
-double PDLPSolver::PowerMethod() {
+double PDLPSolver::powerMethod() {
   const HighsLp& lp = lp_;
   double op_norm_sq = 1.0;
   if (lp.num_col_ == 0 || lp.num_row_ == 0) return op_norm_sq;
 
   // Parameters for the power method
-  const int max_iter = 20;
+  const HighsInt max_iter = 20;
   const double tol = 1e-6;
 
-  // Initialize a random vector x
+  // initialize a random vector x
   std::vector<double> x_vec(lp.num_col_);
   std::random_device rd;
   std::mt19937 engine_fixed_seed(12345);  // gen(rd());
@@ -1487,7 +1524,7 @@ double PDLPSolver::PowerMethod() {
   for (HighsInt i = 0; i < lp.num_col_; ++i) {
     x_vec[i] = dis(engine_fixed_seed);
   }
-  linalg::normalize(x_vec);  // Assumes a normalize function in linalg
+  linalg::normalize(x_vec);  // Assumes a Normalize function in linalg
 
   const HighsInt kYanyuPowerMethod = 0;
   const HighsInt kYanyuPowerMethodDev = 1;
@@ -1497,10 +1534,10 @@ double PDLPSolver::PowerMethod() {
       // kYanyuPowerMethod;
       // kYanyuPowerMethodDev;
       kCuPdlpAATPowerMethod;
-  highsLogUser(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n",
-               power_method == kYanyuPowerMethod      ? "Yanyu"
-               : power_method == kYanyuPowerMethodDev ? "Yanyu dev"
-                                                      : "CuPdlp-C");
+  highsLogDev(params_.log_options_, HighsLogType::kInfo, "Power method: %s\n",
+              power_method == kYanyuPowerMethod      ? "Yanyu"
+              : power_method == kYanyuPowerMethodDev ? "Yanyu dev"
+                                                     : "CuPdlp-C");
   // Dev version of Yanyu power method (based on A'A) has
   //
   // * First iterate as vector of ones
@@ -1522,7 +1559,7 @@ double PDLPSolver::PowerMethod() {
 
   double op_norm_sq_old = 0.0;
   LogLevel log_level = logger_.getLogLevel();
-  int log_iters =
+  HighsInt log_iters =
       log_level == LogLevel::kVerbose || log_level == LogLevel::kDebug;
 
   if (log_iters)
@@ -1538,19 +1575,19 @@ double PDLPSolver::PowerMethod() {
   const HighsSparseMatrix& matrix = lp.a_matrix_;
   double lambda = 0.0;
   double previous_lambda = lambda;
-  for (int iter = 0; iter < max_iter; ++iter) {
+  for (HighsInt iter = 0; iter < max_iter; ++iter) {
     if (power_method == kYanyuPowerMethod) {
       // Original Yanyu power method
       //
-      // Compute A'Ax = A'(Ax)
-      linalg::Ax(lp, x_vec, y_vec);
-      linalg::ATy(lp, y_vec, z_vec);  // Note: ATy computes A' * vector
+      // Compute A'ax = A'(ax)
+      linalg::ax(lp, x_vec, y_vec);
+      linalg::aTy(lp, y_vec, z_vec);  // Note: aTy computes A' * vector
 
       // Estimate the squared operator norm (largest eigenvalue of A'A)
       op_norm_sq = linalg::dot(
-          x_vec, z_vec);  // Assumes a dot product function in linalg
+          x_vec, z_vec);  // Assumes a Dot product function in linalg
 
-      // Check for convergence
+      // check for convergence
       if (std::abs(op_norm_sq - op_norm_sq_old) < tol * op_norm_sq) {
         return op_norm_sq;
       }
@@ -1562,18 +1599,18 @@ double PDLPSolver::PowerMethod() {
       x_vec = z_vec;
       if (log_iters)
         highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                     "%2d %12.6g %11.4g\n", int(iter), op_norm_sq,
+                     "%2d %12.6g %11.4g\n", HighsInt(iter), op_norm_sq,
                      dl_op_norm_sq);
     } else {
       if (power_method == kYanyuPowerMethodDev) {
         // Yanyu power method without "convergence" check
         //
-        // Compute z = A'Ax = A'(Ax)
+        // Compute z = A'ax = A'(ax)
         matrix.product(y_vec, x_vec);
         matrix.productTranspose(z_vec, y_vec);
         // Compute the Rayleigh quotient of x which, since x'x=1, is
         //
-        // lambda = x'A'Ax = x'(A'Ax) = x'z
+        // lambda = x'A'ax = x'(A'ax) = x'z
         lambda = linalg::dot(x_vec, z_vec);
         // x = z / norm(z)
         double z_norm = std::sqrt(linalg::dot(z_vec, z_vec));
@@ -1605,7 +1642,7 @@ double PDLPSolver::PowerMethod() {
       previous_lambda = lambda;
       if (log_iters)
         highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                     "%2d %12.6g %11.4g\n", int(iter), lambda, dl_lambda);
+                     "%2d %12.6g %11.4g\n", HighsInt(iter), lambda, dl_lambda);
     }
   }
   if (power_method != kYanyuPowerMethod) op_norm_sq = lambda;
@@ -1615,11 +1652,19 @@ double PDLPSolver::PowerMethod() {
 
 void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.setLevel(options.log_dev_level);
-  logger_.passHighsLogOptions(options.log_options);
-  logger_.print_header();
-
+  logger_.setHighsLogOptions(options.log_options);
+  logger_.printHeader();
+  highs_timer_p = &timer;
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Using HiPDLP first order PDLP solver on a %s\n",
 #ifdef CUPDLP_GPU
-  int n_devices = 0;
+               "GPU"
+#else
+               "CPU: performance may be disappointing!"
+#endif
+  );
+#ifdef CUPDLP_GPU
+  HighsInt n_devices = 0;
   cudaGetDeviceCount(&n_devices);
   if (n_devices != 1)
     highsLogUser(
@@ -1648,20 +1693,11 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   //  params.eta = 0; Not set in parse_options_file
   //  params.omega = 0; Not set in parse_options_file
   params_.tolerance = options.pdlp_optimality_tolerance;
-  if (options.kkt_tolerance != kDefaultKktTolerance) {
+  if (options.kkt_tolerance != kDefaultKktTolerance)
     params_.tolerance = options.kkt_tolerance;
-  }
   params_.max_iterations = options.pdlp_iteration_limit;
   params_.device_type = Device::CPU;
-  // HiPDLP has its own timer, so set its time limit according to
-  // the time remaining with respect to the HiGHS time limit (if
-  // finite)s
-  double time_limit = options.time_limit;
-  if (time_limit < kHighsInf) {
-    time_limit -= timer.read();
-    time_limit = std::max(0.0, time_limit);
-  }
-  params_.time_limit = time_limit;
+  params_.time_limit = options.time_limit;
 
   params_.use_ruiz_scaling = false;
   params_.use_pc_scaling = false;
@@ -1676,35 +1712,28 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   //  params_.ruiz_norm = INFINITY; Not set in parse_options_file
   //  params_.pc_alpha = 1.0; Not set in parse_options_file
 
-  // Restart strategy maps 0/1/2 to RestartStrategy
-  params_.restart_strategy = RestartStrategy::NO_RESTART;
-  params_.use_halpern_restart = false;
-  if ((options.pdlp_features_off & kPdlpRestartOff) == 0) {
-    // Use restart: now see which
-    if (options.pdlp_restart_strategy == kPdlpRestartStrategyFixed) {
-      params_.restart_strategy = RestartStrategy::FIXED_RESTART;
-    } else if (options.pdlp_restart_strategy == kPdlpRestartStrategyAdaptive) {
-      params_.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
-    } else if (options.pdlp_restart_strategy == kPdlpRestartStrategyHalpern) {
-      params_.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
-      params_.use_halpern_restart = true;
-    }
+  // HiPDLP solve loop is Halpern-only.
+  params_.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
+  params_.use_halpern_restart = true;
+  if ((options.pdlp_features_off & kPdlpRestartOff) != 0 ||
+      options.pdlp_restart_strategy != kPdlpRestartStrategyHalpern) {
+    logger_.info(
+        "HiPDLP uses Halpern restart only; ignoring pdlp_restart_strategy "
+        "and restart-off feature flag.");
   }
   //  params_.fixed_restart_interval = 0; Not set in parse_options_file
 
   params_.step_size_strategy = StepSizeStrategy::FIXED;
-  if ((options.pdlp_features_off & kPdlpAdaptiveStepSizeOff) == 0) {
-    // Use adaptive step size: now see which
-    if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyAdaptive) {
-      params_.step_size_strategy = StepSizeStrategy::ADAPTIVE;
-    } else if (options.pdlp_step_size_strategy ==
-               kPdlpStepSizeStrategyMalitskyPock) {
-      params_.step_size_strategy = StepSizeStrategy::MALITSKY_POCK;
-    } else if (options.pdlp_step_size_strategy ==
-               kPdlpStepSizeStrategyPid) {
-      params_.step_size_strategy = StepSizeStrategy::PID;
-    }
+  if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyPid) {
+    params_.step_size_strategy = StepSizeStrategy::PID;
+  } else if (options.pdlp_step_size_strategy !=
+             kPdlpStepSizeStrategyFixed) {
+    logger_.info(
+        "HiPDLP only supports pdlp_step_size_strategy in {0: fixed, "
+        "3: PID}; using PID for unsupported values.");
+    params_.step_size_strategy = StepSizeStrategy::PID;
   }
+
   //  params_.malitsky_pock_params.initialise(); Not set in parse_options_file
   //  params_.adaptive_linesearch_params.initialise(); Not set in
   //  parse_options_file
@@ -1713,13 +1742,13 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   // Copy what's needed to use HiGHS logging
   params_.log_options_ = options.log_options;
   // log the options
-  logger_.print_params(params_);
+  logger_.printParams(params_);
 }
 
 void PDLPSolver::scaleProblem() {
   scaling_.passLp(&lp_);
   scaling_.passParams(&params_);
-  scaling_.Initialize(lp_);
+  scaling_.initialize(lp_);
   scaling_.scaleProblem();
 }
 
@@ -1730,7 +1759,7 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
   x_current_ = x;
   y_current_ = y;
 
-  const std::vector<double>& col_scale = scaling_.GetColScaling();
+  const std::vector<double>& col_scale = scaling_.getColScaling();
   if (!dSlackPos_.empty() && col_scale.size() == dSlackPos_.size()) {
     for (size_t i = 0; i < dSlackPos_.size(); ++i) {
       dSlackPos_[i] *= col_scale[i];
@@ -1740,7 +1769,7 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
 }
 
 void PDLPSolver::logSummary() {
-  logger_.print_summary(results_, final_iter_count_, total_timer.read());
+  logger_.printSummary(results_, final_iter_count_, highs_timer_p->read());
 }
 
 void PrimalDualParams::initialise() {
@@ -1749,7 +1778,7 @@ void PrimalDualParams::initialise() {
   this->tolerance = 0;
   this->max_iterations = 0;
   this->device_type = Device::CPU;
-  this->time_limit = 3600.0;
+  this->time_limit = kHighsInf;
   this->restart_strategy = RestartStrategy::NO_RESTART;
   this->fixed_restart_interval = 0;
   this->use_halpern_restart = false;
@@ -1785,8 +1814,8 @@ void AdaptiveLinesearchParams::initialise() {
 // =============================================================================
 
 void PDLPSolver::initializeStepSizes() {
-  double cost_norm_sq = linalg::vector_norm_squared(lp_.col_cost_);
-  double rhs_norm_sq = linalg::vector_norm_squared(lp_.row_lower_);
+  double cost_norm_sq = linalg::vectorNormSquared(lp_.col_cost_);
+  double rhs_norm_sq = linalg::vectorNormSquared(lp_.row_lower_);
 
   if (std::min(cost_norm_sq, rhs_norm_sq) > 1e-6) {
     stepsize_.beta = cost_norm_sq / rhs_norm_sq;
@@ -1798,67 +1827,48 @@ void PDLPSolver::initializeStepSizes() {
   params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
   primal_weight_ = params_.omega;
 
-  // Initialize step sizes based on strategy
-  if (params_.step_size_strategy == StepSizeStrategy::FIXED ||
-      params_.step_size_strategy == StepSizeStrategy::PID) {
-    // Use power method for fixed step size
-    //const double op_norm_sq = PowerMethod();
-    double op_norm_sq = PowerMethod();
-
-    stepsize_.power_method_lambda = op_norm_sq;
-
-    const double safety_factor = 0.998;
-    double base_step = safety_factor / std::sqrt(op_norm_sq);
-
-    params_.eta = base_step;
-    stepsize_.primal_step = base_step / params_.omega;
-    stepsize_.dual_step = base_step * params_.omega;
-
-    highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                 "Initial step sizes from power method lambda = %g: primal step= "
-                 "%g; dual step = %g, eta = %g, omega = %g\n",
-                 op_norm_sq, stepsize_.primal_step, stepsize_.dual_step, params_.eta, params_.omega);
-  } else {
-    // Use matrix infinity norm for adaptive step size
-    // Compute infinity norm of matrix elements
-    double mat_elem_norm_inf = 0.0;
-    const HighsSparseMatrix& matrix = lp_.a_matrix_;
-    for (int i = 0; i < matrix.numNz(); ++i) {
-      mat_elem_norm_inf =
-          std::max(mat_elem_norm_inf, std::abs(matrix.value_[i]));
-    }
-
-    if (mat_elem_norm_inf < 1e-10) {
-      mat_elem_norm_inf = 1.0;  // Avoid division by zero
-    }
-
-    // Initialize step sizes using infinity norm
-    stepsize_.primal_step =
-        (1.0 / mat_elem_norm_inf) / std::sqrt(stepsize_.beta);
-    stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
-
-    highsLogUser(params_.log_options_, HighsLogType::kInfo,
-                 "Initial step sizes from matrix inf-norm = %g: primal = %g; "
-                 "dual = %g\n",
-                 mat_elem_norm_inf, stepsize_.primal_step, stepsize_.dual_step);
+  if (params_.step_size_strategy != StepSizeStrategy::FIXED &&
+      params_.step_size_strategy != StepSizeStrategy::PID) {
+    logger_.info(
+        "HiPDLP only supports fixed/PID step size; falling back to fixed.");
+    params_.step_size_strategy = StepSizeStrategy::FIXED;
   }
+
+  // Use power method for fixed/PID step size initialization.
+  double op_norm_sq = powerMethod();
+
+  stepsize_.power_method_lambda = op_norm_sq;
+
+  const double safety_factor = 0.998;
+  double base_step = safety_factor / std::sqrt(op_norm_sq);
+
+  params_.eta = base_step;
+  stepsize_.primal_step = base_step / params_.omega;
+  stepsize_.dual_step = base_step * params_.omega;
+
+  highsLogDev(
+      params_.log_options_, HighsLogType::kInfo,
+      "Initial step sizes from power method lambda = %g: primal step= "
+      "%g; dual step = %g, eta = %g, omega = %g\n",
+      op_norm_sq, stepsize_.primal_step, stepsize_.dual_step, params_.eta,
+      params_.omega);
 }
 
 void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   // Compute delta = pdhg_iterate - anchor
   double primal_dist = 0.0;
   double dual_dist = 0.0;
-  
+
 #ifdef CUPDLP_GPU
   primal_dist = computeDiffNormCuBLAS(d_pdhg_primal_, d_x_anchor_, a_num_cols_);
-  dual_dist   = computeDiffNormCuBLAS(d_pdhg_dual_,   d_y_anchor_, a_num_rows_);  
+  dual_dist = computeDiffNormCuBLAS(d_pdhg_dual_, d_y_anchor_, a_num_rows_);
 #else
   // CPU version
-  for (size_t i = 0; i < lp_.num_col_; ++i) {
+  for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     double diff = x_next_[i] - x_anchor_[i];
     primal_dist += diff * diff;
   }
-  for (size_t j = 0; j < lp_.num_row_; ++j) {
+  for (HighsInt j = 0; j < lp_.num_row_; ++j) {
     double diff = y_next_[j] - y_anchor_[j];
     dual_dist += diff * diff;
   }
@@ -1867,26 +1877,24 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
 #endif
 
   double rel_primal = results.primal_feasibility / (1.0 + unscaled_rhs_norm_);
-  double rel_dual   = results.dual_feasibility / (1.0 + unscaled_c_norm_);
+  double rel_dual = results.dual_feasibility / (1.0 + unscaled_c_norm_);
   double ratio_infeas = (rel_primal > 0.0) ? (rel_dual / rel_primal) : 1e300;
 
   const bool silent = true;
   // cuPDLPx-style weight update (PID control)
-  if (primal_dist > 1e-16 && dual_dist > 1e-16 &&
-      primal_dist < 1e12 && dual_dist < 1e12 &&
-      ratio_infeas > 1e-8 && ratio_infeas < 1e8) {
-    
-    double error = std::log(dual_dist) - std::log(primal_dist) - std::log(primal_weight_);
-    
-    primal_weight_error_sum_ = params_.i_smooth * primal_weight_error_sum_ + error;
+  if (primal_dist > 1e-16 && dual_dist > 1e-16 && primal_dist < 1e12 &&
+      dual_dist < 1e12 && ratio_infeas > 1e-8 && ratio_infeas < 1e8) {
+    double error =
+        std::log(dual_dist) - std::log(primal_dist) - std::log(primal_weight_);
+
+    primal_weight_error_sum_ =
+        params_.i_smooth * primal_weight_error_sum_ + error;
     double delta_error = error - primal_weight_last_error_;
-    
-    primal_weight_ *= std::exp(
-        params_.k_p * error +
-        params_.k_i * primal_weight_error_sum_ +
-        params_.k_d * delta_error
-    );
-    
+
+    primal_weight_ *=
+        std::exp(params_.k_p * error + params_.k_i * primal_weight_error_sum_ +
+                 params_.k_d * delta_error);
+
     primal_weight_last_error_ = error;
     if (!silent)
       logger_.info("Primal weight updated: " + std::to_string(primal_weight_));
@@ -1896,23 +1904,27 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
     primal_weight_error_sum_ = 0.0;
     primal_weight_last_error_ = 0.0;
     if (!silent)
-      logger_.info("Weight update failed (bad norms/ratio), reverted to best: " + 
-                 std::to_string(primal_weight_));
+      logger_.info(
+          "Weight update failed (bad norms/ratio), reverted to best: " +
+          std::to_string(primal_weight_));
   }
 
   // Track best weight
-  double gap = (rel_primal > 0.0 && rel_dual > 0.0) ? std::abs(std::log10(rel_dual / rel_primal)) : best_primal_dual_residual_gap_;
+  double gap = (rel_primal > 0.0 && rel_dual > 0.0)
+                   ? std::abs(std::log10(rel_dual / rel_primal))
+                   : best_primal_dual_residual_gap_;
   if (gap < best_primal_dual_residual_gap_) {
     best_primal_dual_residual_gap_ = gap;
     best_primal_weight_ = primal_weight_;
   }
 
-  double eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step); // invariant
+  double eta =
+      std::sqrt(stepsize_.primal_step * stepsize_.dual_step);  // invariant
   stepsize_.beta = primal_weight_ * primal_weight_;
   stepsize_.primal_step = eta / primal_weight_;
-  stepsize_.dual_step   = eta * primal_weight_;
+  stepsize_.dual_step = eta * primal_weight_;
   params_.omega = primal_weight_;
-  restart_scheme_.UpdateBeta(stepsize_.beta);
+  restart_scheme_.updateBeta(stepsize_.beta);
 }
 
 std::vector<double> PDLPSolver::updateX(const std::vector<double>& x,
@@ -1921,8 +1933,8 @@ std::vector<double> PDLPSolver::updateX(const std::vector<double>& x,
   std::vector<double> x_new(lp_.num_col_);
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     double gradient = lp_.col_cost_[i] - aty[i];
-    x_new[i] = linalg::project_box(x[i] - primal_step * gradient,
-                                   lp_.col_lower_[i], lp_.col_upper_[i]);
+    x_new[i] = linalg::projectBox(x[i] - primal_step * gradient,
+                                  lp_.col_lower_[i], lp_.col_upper_[i]);
   }
   return x_new;
 }
@@ -1938,7 +1950,7 @@ std::vector<double> PDLPSolver::updateY(const std::vector<double>& y,
     double q = lp_.row_lower_[j];
     double dual_update = y[j] + dual_step * (q - extr_ax);
     y_new[j] =
-        is_equality ? dual_update : linalg::project_non_negative(dual_update);
+        is_equality ? dual_update : linalg::projectNonNegative(dual_update);
   }
   return y_new;
 }
@@ -1955,7 +1967,7 @@ void PDLPSolver::updateIteratesFixed() {
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockMatrixMultiply);
 #endif
-  linalg::Ax(lp_, x_next_, Ax_next_);
+  linalg::ax(lp_, x_next_, Ax_next_);
 #if PDLP_PROFILE
   hipdlpTimerStop(kHipdlpClockMatrixMultiply);
 #endif
@@ -1971,7 +1983,7 @@ void PDLPSolver::updateIteratesFixed() {
 #if PDLP_PROFILE
   hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
 #endif
-  linalg::ATy(lp_, y_next_, ATy_next_);
+  linalg::aTy(lp_, y_next_, ATy_next_);
 #if PDLP_PROFILE
   hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
 #endif
@@ -2008,8 +2020,8 @@ void PDLPSolver::updateIteratesAdaptive() {
   const double MAX_ETA = 1.0;
 
   bool accepted_step = false;
-  int inner_iterations = 0;
-  int num_rejected_steps = 0;
+  HighsInt inner_iterations = 0;
+  HighsInt num_rejected_steps = 0;
 
   double dStepSizeUpdate =
       std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
@@ -2017,8 +2029,8 @@ void PDLPSolver::updateIteratesAdaptive() {
   // Compute candidate solution
   std::vector<double> x_candidate = x_current_;    // Start from current x
   std::vector<double> y_candidate = y_current_;    // Start from current y
-  std::vector<double> ax_candidate = Ax_cache_;    // Start from current Ax
-  std::vector<double> aty_candidate = ATy_cache_;  // Start from current ATy
+  std::vector<double> ax_candidate = Ax_cache_;    // Start from current ax
+  std::vector<double> aty_candidate = ATy_cache_;  // Start from current aTy
   std::vector<double> xupdate = x_next_;
   std::vector<double> yupdate = y_next_;
   std::vector<double> axupdate = Ax_next_;
@@ -2041,18 +2053,16 @@ void PDLPSolver::updateIteratesAdaptive() {
 #ifdef CUPDLP_GPU
     launchKernelUpdateX_wrapper(d_x_next_,       // Output (Trial)
                                 d_x_current_,    // Input (Base)
-                                d_aty_current_,  // Input (Base ATy)
+                                d_aty_current_,  // Input (Base aTy)
                                 d_col_cost_, d_col_lower_, d_col_upper_,
-                                primal_step_update, a_num_cols_,
-                                gpu_stream_);
+                                primal_step_update, a_num_cols_, gpu_stream_);
     linalgGpuAx(d_x_next_, d_ax_next_);
     launchKernelUpdateY_wrapper(d_y_next_,      // Output (Trial)
                                 d_y_current_,   // Input (Base)
-                                d_ax_current_,  // Input (Base Ax)
-                                d_ax_next_,     // Input (Trial Ax)
+                                d_ax_current_,  // Input (Base ax)
+                                d_ax_next_,     // Input (Trial ax)
                                 d_row_lower_, d_is_equality_row_,
-                                dual_step_update, a_num_rows_,
-                                gpu_stream_);
+                                dual_step_update, a_num_rows_, gpu_stream_);
     linalgGpuATy(d_y_next_, d_aty_next_);
     double movement =
         computeMovementGpu(d_x_next_, d_x_current_, d_y_next_, d_y_current_);
@@ -2071,7 +2081,7 @@ void PDLPSolver::updateIteratesAdaptive() {
 #if PDLP_PROFILE
     hipdlpTimerStart(kHipdlpClockMatrixMultiply);
 #endif
-    linalg::Ax(lp_, xupdate, axupdate);
+    linalg::ax(lp_, xupdate, axupdate);
 #if PDLP_PROFILE
     hipdlpTimerStop(kHipdlpClockMatrixMultiply);
 #endif
@@ -2088,7 +2098,7 @@ void PDLPSolver::updateIteratesAdaptive() {
 #if PDLP_PROFILE
     hipdlpTimerStart(kHipdlpClockMatrixTransposeMultiply);
 #endif
-    linalg::ATy(lp_, yupdate, atyupdate);
+    linalg::aTy(lp_, yupdate, atyupdate);
 #if PDLP_PROFILE
     hipdlpTimerStop(kHipdlpClockMatrixTransposeMultiply);
 #endif
@@ -2108,9 +2118,9 @@ void PDLPSolver::updateIteratesAdaptive() {
       delta_aty[i] = atyupdate[i] - aty_candidate[i];
     }
 
-    // Check numerical stability
+    // check numerical stability
     /*
-    if (!CheckNumericalStability(delta_x, delta_y)) {
+    if (!checkNumericalStability(delta_x, delta_y)) {
       std::cerr << "Numerical instability detected" << std::endl;
       dStepSizeUpdate *= 0.5;  // Drastically reduce step size
       continue;
@@ -2127,9 +2137,9 @@ void PDLPSolver::updateIteratesAdaptive() {
                                  : std::numeric_limits<double>::infinity();
 
     /*
-    highsLogUser(*log_options_, HighsLogType::kInfo,
+    highsLogDev(*log_options_, HighsLogType::kInfo,
                  "Iteration %d: eta = %g, movement = %g nonlinearity = %g, limit
-    = %g\n", int(inner_iterations), current_eta, movement, nonlinearity.
+    = %g\n", HighsInt(inner_iterations), current_eta, movement, nonlinearity.
     step_size_limit);
     */
     if (dStepSizeUpdate <= step_size_limit) {
@@ -2181,7 +2191,7 @@ bool PDLPSolver::updateIteratesMalitskyPock(bool first_iteration) {
 //  SECTION 5: Step Helper Methods (from step.cc)
 // =============================================================================
 
-bool PDLPSolver::CheckNumericalStability(const std::vector<double>& delta_x,
+bool PDLPSolver::checkNumericalStability(const std::vector<double>& delta_x,
                                          const std::vector<double>& delta_y) {
   double movement = computeMovement(delta_x, delta_y);
 
@@ -2218,7 +2228,7 @@ double PDLPSolver::computeMovement(const std::vector<double>& delta_primal,
 
 double PDLPSolver::computeNonlinearity(const std::vector<double>& delta_primal,
                                        const std::vector<double>& delta_aty) {
-  // Nonlinearity = |Δx' * Δ(A'y)|
+  // Nonlinearity = |Dx' * D(A'y)|
   double nonlinearity = 0.0;
   for (size_t i = 0; i < delta_primal.size(); ++i) {
     nonlinearity += delta_primal[i] * delta_aty[i];
@@ -2263,7 +2273,7 @@ void PDLPSolver::closeDebugLog() {
 void PDLPSolver::setupGpu() {
   CUDA_CHECK(cudaStreamCreate(&gpu_stream_));
 
-  // 1. Initialize cuSPARSE
+  // 1. initialize cuSPARSE
   CUSPARSE_CHECK(cusparseCreate(&cusparse_handle_));
   CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   CUSPARSE_CHECK(cusparseSetStream(cusparse_handle_, gpu_stream_));
@@ -2276,20 +2286,20 @@ void PDLPSolver::setupGpu() {
   HighsSparseMatrix lp_csr = lp_.a_matrix_;
   lp_csr.ensureRowwise();
 
-  const std::vector<int>& h_a_row_ptr = lp_csr.start_;
-  const std::vector<int>& h_a_col_ind = lp_csr.index_;
+  const std::vector<HighsInt>& h_a_row_ptr = lp_csr.start_;
+  const std::vector<HighsInt>& h_a_col_ind = lp_csr.index_;
   const std::vector<double>& h_a_val = lp_csr.value_;
 
   // 3. Allocate and copy A's CSR data to GPU
   CUDA_CHECK(
-      cudaMalloc((void**)&d_a_row_ptr_, (a_num_rows_ + 1) * sizeof(int)));
-  CUDA_CHECK(cudaMalloc((void**)&d_a_col_ind_, a_nnz_ * sizeof(int)));
+      cudaMalloc((void**)&d_a_row_ptr_, (a_num_rows_ + 1) * sizeof(HighsInt)));
+  CUDA_CHECK(cudaMalloc((void**)&d_a_col_ind_, a_nnz_ * sizeof(HighsInt)));
   CUDA_CHECK(cudaMalloc((void**)&d_a_val_, a_nnz_ * sizeof(double)));
   CUDA_CHECK(cudaMemcpy(d_a_row_ptr_, h_a_row_ptr.data(),
-                        (a_num_rows_ + 1) * sizeof(int),
+                        (a_num_rows_ + 1) * sizeof(HighsInt),
                         cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(d_a_col_ind_, h_a_col_ind.data(), a_nnz_ * sizeof(int),
-                        cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(d_a_col_ind_, h_a_col_ind.data(),
+                        a_nnz_ * sizeof(HighsInt), cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_a_val_, h_a_val.data(), a_nnz_ * sizeof(double),
                         cudaMemcpyHostToDevice));
 
@@ -2299,26 +2309,26 @@ void PDLPSolver::setupGpu() {
                                    CUSPARSE_INDEX_BASE_ZERO, CUDA_R_64F));
 
   // 4. Create matrix AT in CSR format = A in CSC
-  const std::vector<int>& h_at_row_ptr = lp_.a_matrix_.start_;
-  const std::vector<int>& h_at_col_ind = lp_.a_matrix_.index_;
+  const std::vector<HighsInt>& h_at_row_ptr = lp_.a_matrix_.start_;
+  const std::vector<HighsInt>& h_at_col_ind = lp_.a_matrix_.index_;
   const std::vector<double>& h_at_val = lp_.a_matrix_.value_;
 
   CUDA_CHECK(cudaMalloc((void**)&d_at_row_ptr_,
-                        (a_num_cols_ + 1) * sizeof(int)));  // Fixed!
-  CUDA_CHECK(cudaMalloc((void**)&d_at_col_ind_, a_nnz_ * sizeof(int)));
+                        (a_num_cols_ + 1) * sizeof(HighsInt)));  // Fixed!
+  CUDA_CHECK(cudaMalloc((void**)&d_at_col_ind_, a_nnz_ * sizeof(HighsInt)));
   CUDA_CHECK(cudaMalloc((void**)&d_at_val_, a_nnz_ * sizeof(double)));
 
   CUDA_CHECK(cudaMemcpy(d_at_row_ptr_, h_at_row_ptr.data(),
-                        (a_num_cols_ + 1) * sizeof(int),
+                        (a_num_cols_ + 1) * sizeof(HighsInt),
                         cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_at_col_ind_, h_at_col_ind.data(),
-                        a_nnz_ * sizeof(int), cudaMemcpyHostToDevice));
+                        a_nnz_ * sizeof(HighsInt), cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_at_val_, h_at_val.data(), a_nnz_ * sizeof(double),
                         cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMalloc(&d_halpern_iteration_, sizeof(int))); 
-  CUDA_CHECK(cudaMemset(d_halpern_iteration_,0, sizeof(int)));  
+  CUDA_CHECK(cudaMalloc(&d_halpern_iteration_, sizeof(int)));
+  CUDA_CHECK(cudaMemset(d_halpern_iteration_, 0, sizeof(int)));
   CUDA_CHECK(cudaMalloc(&d_primal_step_size_, sizeof(double)));
-  CUDA_CHECK(cudaMalloc(&d_dual_step_size_, sizeof(double)));                   
+  CUDA_CHECK(cudaMalloc(&d_dual_step_size_, sizeof(double)));
 
   // Create AT descriptor with swapped dimensions
   CUSPARSE_CHECK(cusparseCreateCsr(
@@ -2388,7 +2398,7 @@ void PDLPSolver::setupGpu() {
   CUDA_CHECK(cudaMemcpy(d_row_lower_, lp_.row_lower_.data(),
                         a_num_rows_ * sizeof(double), cudaMemcpyHostToDevice));
   std::vector<uint8_t> temp_equality(a_num_rows_);
-  for (int i = 0; i < a_num_rows_; ++i) {
+  for (HighsInt i = 0; i < a_num_rows_; ++i) {
     temp_equality[i] = is_equality_row_[i] ? 1 : 0;
   }
 
@@ -2397,7 +2407,7 @@ void PDLPSolver::setupGpu() {
                         a_num_rows_ * sizeof(uint8_t), cudaMemcpyHostToDevice));
 
   // 6. Preallocate buffer for cuSPARSE SpMV
-  // Buffer for Ax
+  // Buffer for ax
   double alpha = 1.0;
   double beta = 0.0;
   cusparseDnVecDescr_t vec_x, vec_ax;
@@ -2412,7 +2422,7 @@ void PDLPSolver::setupGpu() {
       &spmv_buffer_size_ax_));
   CUDA_CHECK(cudaMalloc(&d_spmv_buffer_ax_, spmv_buffer_size_ax_));
 
-    CUSPARSE_CHECK(cusparseSpMV_preprocess(
+  CUSPARSE_CHECK(cusparseSpMV_preprocess(
       cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_a_csr_,
       vec_x_desc_, &beta, vec_ax_desc_, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
       d_spmv_buffer_ax_));
@@ -2420,7 +2430,7 @@ void PDLPSolver::setupGpu() {
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_x));
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_ax));
 
-  // Buffer for ATy
+  // Buffer for aTy
   cusparseDnVecDescr_t vec_y, vec_aty;
   CUSPARSE_CHECK(
       cusparseCreateDnVec(&vec_y, a_num_rows_, d_y_current_, CUDA_R_64F));
@@ -2432,10 +2442,10 @@ void PDLPSolver::setupGpu() {
       &spmv_buffer_size_aty_));
   CUDA_CHECK(cudaMalloc(&d_spmv_buffer_aty_, spmv_buffer_size_aty_));
 
-    CUSPARSE_CHECK(cusparseSpMV_preprocess(
-      cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha,
-      mat_a_T_csr_, vec_y_desc_, &beta, vec_aty_desc_, CUDA_R_64F,
-      CUSPARSE_SPMV_CSR_ALG2, d_spmv_buffer_aty_));
+  CUSPARSE_CHECK(cusparseSpMV_preprocess(
+      cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_a_T_csr_,
+      vec_y_desc_, &beta, vec_aty_desc_, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
+      d_spmv_buffer_aty_));
 
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_y));
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_aty));
@@ -2455,11 +2465,11 @@ void PDLPSolver::setupGpu() {
   CUDA_CHECK(cudaMemset(d_aty_current_, 0, a_num_cols_ * sizeof(double)));
   sum_weights_gpu_ = 0.0;
 
-  if (scaling_.IsScaled()) {
-    CUDA_CHECK(cudaMemcpy(d_col_scale_, scaling_.GetColScaling().data(),
+  if (scaling_.isScaled()) {
+    CUDA_CHECK(cudaMemcpy(d_col_scale_, scaling_.getColScaling().data(),
                           a_num_cols_ * sizeof(double),
                           cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_row_scale_, scaling_.GetRowScaling().data(),
+    CUDA_CHECK(cudaMemcpy(d_row_scale_, scaling_.getRowScaling().data(),
                           a_num_rows_ * sizeof(double),
                           cudaMemcpyHostToDevice));
   } else {
@@ -2473,9 +2483,9 @@ void PDLPSolver::setupGpu() {
   CUDA_CHECK(cudaMalloc(&d_buffer_, max_size * sizeof(double)));
   CUDA_CHECK(cudaMalloc(&d_buffer2_, max_size * sizeof(double)));
 
-  highsLogUser(params_.log_options_, HighsLogType::kInfo,
-               "GPU setup complete. Matrix A (CSR) and A^T (CSR) transferred "
-               "to device.\n");
+  highsLogDev(params_.log_options_, HighsLogType::kInfo,
+              "GPU setup complete. Matrix A (CSR) and A^T (CSR) transferred "
+              "to device.\n");
 }
 
 void PDLPSolver::cleanupGpu() {
@@ -2539,7 +2549,7 @@ void PDLPSolver::cleanupGpu() {
 }
 
 void PDLPSolver::linalgGpuAx(const double* d_x_in, double* d_ax_out) {
-  // Ax = 1.0 * A * x + 0.0 * ax
+  // ax = 1.0 * A * x + 0.0 * ax
   double alpha = 1.0;
   double beta = 0.0;
 
@@ -2560,7 +2570,7 @@ void PDLPSolver::linalgGpuAx(const double* d_x_in, double* d_ax_out) {
 }
 
 void PDLPSolver::linalgGpuATy(const double* d_y_in, double* d_aty_out) {
-  // ATy = 1.0 * A^T * y + 0.0 * aty
+  // aTy = 1.0 * A^T * y + 0.0 * aty
   double alpha = 1.0;
   double beta = 0.0;
 
@@ -2601,12 +2611,12 @@ void PDLPSolver::launchKernelUpdateAverages(double weight) {
 }
 
 void PDLPSolver::launchKernelScaleVector(double* d_out, const double* d_in,
-                                         double scale, int n) {
-  launchKernelScaleVector_wrapper(d_out, d_in, scale, n, gpu_stream_);
+                                         double Scale, int n) {
+  launchKernelScaleVector_wrapper(d_out, d_in, Scale, n, gpu_stream_);
   CUDA_CHECK(cudaGetLastError());
 }
 
-bool PDLPSolver::checkConvergenceGpu(const int iter, const double* d_x,
+bool PDLPSolver::checkConvergenceGpu(const HighsInt iter, const double* d_x,
                                      const double* d_y, const double* d_ax,
                                      const double* d_aty, double epsilon,
                                      SolverResults& results, const char* type,
@@ -2614,10 +2624,10 @@ bool PDLPSolver::checkConvergenceGpu(const int iter, const double* d_x,
                                      double* d_slackNeg_out,
                                      bool use_halpern_slack) {
   launchCheckConvergenceKernels_wrapper(
-      d_convergence_results_, d_slackPos_out, d_slackNeg_out, d_x, d_y, d_ax, d_aty,
-      d_col_cost_, d_row_lower_, d_col_lower_, d_col_upper_, d_is_equality_row_,
-      d_col_scale_, d_row_scale_, lp_.num_col_, lp_.num_row_, use_halpern_slack,
-      gpu_stream_);
+      d_convergence_results_, d_slackPos_out, d_slackNeg_out, d_x, d_y, d_ax,
+      d_aty, d_col_cost_, d_row_lower_, d_col_lower_, d_col_upper_,
+      d_is_equality_row_, d_col_scale_, d_row_scale_, lp_.num_col_,
+      lp_.num_row_, use_halpern_slack, gpu_stream_);
 
   // copy 4 doubles back to CPU
 
@@ -2682,10 +2692,10 @@ void PDLPSolver::computeStepSizeRatioGpu(PrimalDualParams& working_params) {
   stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
   working_params.eta = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
   working_params.omega = std::sqrt(stepsize_.beta);
-  restart_scheme_.UpdateBeta(stepsize_.beta);
+  restart_scheme_.updateBeta(stepsize_.beta);
 }
 
-void PDLPSolver::updateAverageIteratesGpu(int inner_iter) {
+void PDLPSolver::updateAverageIteratesGpu(HighsInt inner_iter) {
   double dMeanStepSize = std::sqrt(stepsize_.primal_step * stepsize_.dual_step);
 
   launchKernelUpdateAverages(dMeanStepSize);
@@ -2696,10 +2706,10 @@ void PDLPSolver::updateAverageIteratesGpu(int inner_iter) {
 void PDLPSolver::computeAverageIterateGpu() {
   double dScale = sum_weights_gpu_ > 1e-10 ? 1.0 / sum_weights_gpu_ : 1.0;
 
-  // x_avg = x_sum * scale
+  // x_avg = x_sum * Scale
   launchKernelScaleVector(d_x_avg_, d_x_sum_, dScale, a_num_cols_);
 
-  // y_avg = y_sum * scale
+  // y_avg = y_sum * Scale
   launchKernelScaleVector(d_y_avg_, d_y_sum_, dScale, a_num_rows_);
 
   // Recompute Ax_avg and ATy_avg on GPU
@@ -2710,7 +2720,7 @@ void PDLPSolver::computeAverageIterateGpu() {
   // copy x_avg to host
   CUDA_CHECK(cudaMemcpy(x_avg_.data(), d_x_avg_, a_num_cols_ * sizeof(double),
                         cudaMemcpyDeviceToHost));
-  debug_pdlp_data_.x_average_norm = linalg::vector_norm_squared(x_avg_);
+  debug_pdlp_data_.x_average_norm = linalg::vectorNormSquared(x_avg_);
 #endif
 }
 
@@ -2751,7 +2761,7 @@ double PDLPSolver::computeNonlinearityGpu(const double* d_x_new,
   CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_cols_, &alpha, d_aty_old, 1,
                            d_buffer2_, 1));
 
-  // 3. Compute dot product: delta_x' * delta_aty
+  // 3. Compute Dot product: delta_x' * delta_aty
   double result;
   CUBLAS_CHECK(cublasDdot(cublas_handle_, a_num_cols_, d_buffer_, 1, d_buffer2_,
                           1, &result));
@@ -2760,7 +2770,7 @@ double PDLPSolver::computeNonlinearityGpu(const double* d_x_new,
 }
 
 double PDLPSolver::computeDiffNormCuBLAS(const double* d_a, const double* d_b,
-                                         int n) {
+                                         HighsInt n) {
   // 1. Copy a to buffer: buffer = a
   CUDA_CHECK(
       cudaMemcpy(d_buffer_, d_a, n * sizeof(double), cudaMemcpyDeviceToDevice));
@@ -2769,7 +2779,7 @@ double PDLPSolver::computeDiffNormCuBLAS(const double* d_a, const double* d_b,
   double alpha = -1.0;
   CUBLAS_CHECK(cublasDaxpy(cublas_handle_, n, &alpha, d_b, 1, d_buffer_, 1));
 
-  // 3. result = ||buffer||_2  (using cuBLAS nrm2)
+  // 3. result = ||buffer||_2  (using cuBLAS Norm2)
   double norm;
   CUBLAS_CHECK(cublasDnrm2(cublas_handle_, n, d_buffer_, 1, &norm));
 

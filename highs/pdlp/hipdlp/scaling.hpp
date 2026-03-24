@@ -23,7 +23,7 @@ class Scaling {
  public:
   Scaling() = default;
 
-  void Initialize(const HighsLp& lp);
+  void initialize(const HighsLp& lp);
   void scaleProblem();
   void unscaleSolution(std::vector<double>& x, std::vector<double>& y) const;
   void passLp(HighsLp* lp) { lp_ = lp; };
@@ -34,14 +34,16 @@ class Scaling {
   void passDebugPdlpData(DebugPdlpData* debug_pdlp_data) {
     debug_pdlp_data_ = debug_pdlp_data;
   };
-  void LogMatrixNorms(const std::string& stage);
+  // Not used
+  //  void LogMatrixNorms(const std::string& stage);
+  //
   // Get scaling vectors (for unscaling solution later)
-  bool IsScaled() const { return is_scaled_; }
-  const std::vector<double>& GetColScaling() const { return col_scale_; }
-  const std::vector<double>& GetRowScaling() const { return row_scale_; }
+  bool isScaled() const { return is_scaled_; }
+  const std::vector<double>& getColScaling() const { return col_scale_; }
+  const std::vector<double>& getRowScaling() const { return row_scale_; }
 
-  double GetNormCost() const { return norm_cost_; }
-  double GetNormRhs() const { return norm_rhs_; }
+  double getNormCost() const { return norm_cost_; }
+  double getNormRhs() const { return norm_rhs_; }
 
  private:
   HighsLp* lp_;
@@ -54,16 +56,17 @@ class Scaling {
   double norm_rhs_;
 
   // Individual scaling methods
-  void ApplyRuizScaling();
-  void ApplyPockChambolleScaling();
-  void ApplyL2Scaling();
+  void applyRuizScaling();
+  void applyPockChambolleScaling();
+  void applyL2Scaling();
 
   // Helper function to apply scaling factors to the problem
-  void ApplyScaling(const std::vector<double>& col_scaling,
+  void applyScaling(const std::vector<double>& col_scaling,
                     const std::vector<double>& row_scaling);
 
   // Compute norm of a vector based on norm type
-  double ComputeNorm(const double* values, int size, double norm_type) const;
+  double computeNorm(const double* values, HighsInt size,
+                     double norm_type) const;
   FILE* debug_pdlp_log_file_;
   DebugPdlpData* debug_pdlp_data_;
 };

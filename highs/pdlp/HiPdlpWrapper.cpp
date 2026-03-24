@@ -34,9 +34,9 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   /*** Order of operations
    * Preprocess with HiPdlp
    * Scale with HiPdlp
-   * Solve with HiPdlp
+   * solve with HiPdlp
    * Unscale with HiPdlp
-   * Postprocess with HiPDLP
+   * postprocess with HiPDLP
    * ***/
   PDLPSolver pdlp;
 
@@ -52,17 +52,17 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   // 3. Scale with HiPdlp
   pdlp.scaleProblem();
 
-  // 4. Solve with HiPdlp
+  // 4. solve with HiPdlp
   std::vector<double> x, y;
-  x.resize(pdlp.getnCol(), 0.0);
-  y.resize(pdlp.getnRow(), 0.0);
+  x.resize(pdlp.getNumCol(), 0.0);
+  y.resize(pdlp.getNumRow(), 0.0);
 
   pdlp.solve(x, y);
 
   // 5. Unscale with HiPdlp
   pdlp.unscaleSolution(x, y);
 
-  // 6. Postprocess with HiPDLP
+  // 6. postprocess with HiPDLP
   HighsSolution pdlp_solution;
   PostSolveRetcode retcode = pdlp.postprocess(pdlp_solution);
   if (retcode != PostSolveRetcode::OK) {
@@ -111,25 +111,20 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
       return HighsStatus::kOk;
       break;
     }
-    case TerminationStatus::TIMEOUT: {
-      // ToDo IterationLimit termination needs to be handled separately
-      model_status =
-          highs_info.pdlp_iteration_count >= options.pdlp_iteration_limit
-              ? HighsModelStatus::kIterationLimit
-              : HighsModelStatus::kTimeLimit;
+    case TerminationStatus::MAXITER: {
+      model_status = HighsModelStatus::kIterationLimit;
       break;
     }
-    case TerminationStatus::WARNING:
-    case TerminationStatus::FEASIBLE: {
-      assert(111 == 555);
-      model_status = HighsModelStatus::kUnknown;
-      return HighsStatus::kError;
+    case TerminationStatus::TIMEOUT: {
+      model_status = HighsModelStatus::kTimeLimit;
+      break;
     }
     default:
       assert(termination_status == TerminationStatus::ERROR);
       return HighsStatus::kError;
   }
   assert(termination_status == TerminationStatus::OPTIMAL ||
+         termination_status == TerminationStatus::MAXITER ||
          termination_status == TerminationStatus::TIMEOUT);
   // highs_solution.col_value = x;
   // highs_solution.col_value.resize(lp.num_col_);

@@ -36,14 +36,14 @@ struct RestartInfo {
 class RestartScheme {
  public:
   RestartScheme() = default;
-  void Initialize(const SolverResults& results);
+  void initialize(const SolverResults& results);
 
   // Checks if a restart should be performed based on the chosen strategy
-  RestartInfo Check(int current_iter, const SolverResults& current_results,
+  RestartInfo check(HighsInt current_iter, const SolverResults& current_results,
                     const SolverResults& average_results);
 
-  int GetLastRestartIter() const { return last_restart_iter_; }
-  int last_restart_iter_ = 0;
+  HighsInt getLastRestartIter() const { return last_restart_iter_; }
+  HighsInt last_restart_iter_ = 0;
   void passParams(PrimalDualParams* params) { params_ = params; };
   void passLogOptions(const HighsLogOptions* log_options) {
     log_options_ = log_options;
@@ -55,14 +55,14 @@ class RestartScheme {
     debug_pdlp_data_ = debug_pdlp_data;
   };
   double getBeta() const { return beta_; };
-  void UpdateBeta(double beta) {
+  void updateBeta(double beta) {
     beta_ = beta;
     params_->omega = std::sqrt(beta);
   };
-  void SetLastRestartIter(int iter) { last_restart_iter_ = iter; };
-  double GetSufficientDecayFactor() const { return sufficient_decay_factor_; }
-  double GetNecessaryDecayFactor() const { return necessary_decay_factor_; }
-  double GetArtificialRestartThreshold() const {
+  void setLastRestartIter(int iter) { last_restart_iter_ = iter; };
+  double getSufficientDecayFactor() const { return sufficient_decay_factor_; }
+  double getNecessaryDecayFactor() const { return necessary_decay_factor_; }
+  double getArtificialRestartThreshold() const {
     return artificial_restart_threshold_;
   }
 
@@ -81,7 +81,7 @@ class RestartScheme {
   DebugPdlpData* debug_pdlp_data_;
 
   RestartStrategy strategy_ = RestartStrategy::NO_RESTART;
-  int fixed_restart_interval_ = 100;
+  HighsInt fixed_restart_interval_ = 100;
   double beta_;
 
   double primal_feas_last_candidate_ = 0.0;

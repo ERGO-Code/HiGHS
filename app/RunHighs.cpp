@@ -110,10 +110,6 @@ int main(int argc, char** argv) {
   // Log changes from the default option settings
   highs.writeOptions("", true);
 
-  // Lines to write out documentation of HighsOptions and HighsInfo
-  // highs.writeOptions("Options.md");
-  // highs.writeInfo("Info.md");
-
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(cmd_options.model_file);
   if (read_status == HighsStatus::kError) {

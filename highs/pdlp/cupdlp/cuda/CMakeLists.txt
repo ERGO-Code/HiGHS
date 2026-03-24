@@ -1,3 +1,9 @@
+if (HIGHS_GPU_LIB)
+  return()
+endif()
+
+# separate libs for now
+
 enable_language(CXX CUDA)
 
 add_library(cudalin SHARED

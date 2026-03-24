@@ -2,13 +2,17 @@ name: test-python-macos
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest]
-        python: [3.12, 3.14]
+        python: [3.14]
 
     steps:
       - uses: actions/checkout@v4

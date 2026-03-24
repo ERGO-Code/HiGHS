@@ -615,3 +615,55 @@ TEST_CASE("Kappa", "[highs_basis_solves]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("2913", "[highs_basis_solves]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string basis_file = test_name + ".bas";
+
+  HighsStatus return_status;
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  h.readModel(model_file);
+  h.setOptionValue("solver", kIpmString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+  h.run();
+  const HighsBasis& basis = h.getBasis();
+  REQUIRE(!basis.valid);
+  REQUIRE(h.writeBasis(basis_file) == HighsStatus::kWarning);
+
+  h.setOptionValue("solver", kSimplexString);
+  h.setOptionValue("simplex_strategy", 1);
+  h.run();
+  REQUIRE(basis.valid);
+  REQUIRE(h.writeBasis(basis_file) == HighsStatus::kOk);
+
+  HighsInt simplex_iteration_count0 = h.getInfo().simplex_iteration_count;
+
+  // Change constraint 1 to force simplex iteration(s) when starting
+  // from saved basis
+  double row1_value = h.getSolution().row_value[1];
+  double row1_lower = h.getLp().row_lower_[1];
+  double row1_upper = h.getLp().row_upper_[1];
+  REQUIRE(row1_value == 52.6);
+  REQUIRE(row1_upper == 52.6);
+  h.changeRowBounds(1, row1_lower - 1, row1_upper - 1);
+
+  for (HighsInt simplex_strategy = kSimplexStrategyMin;
+       simplex_strategy <= kSimplexStrategyMax; simplex_strategy++) {
+    h.setOptionValue("simplex_strategy", simplex_strategy);
+    h.clearSolver();
+    REQUIRE(h.readBasis(basis_file) == HighsStatus::kOk);
+    h.run();
+    REQUIRE(h.getInfo().simplex_iteration_count < simplex_iteration_count0);
+    if (dev_run)
+      printf("Simplex strategy %d requires %d simplex iterations\n",
+             int(simplex_strategy), int(h.getInfo().simplex_iteration_count));
+  }
+
+  std::remove(basis_file.c_str());
+  h.resetGlobalScheduler(true);
+}

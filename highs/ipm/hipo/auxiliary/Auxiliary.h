@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "parallel/HighsParallel.h"
 
 namespace hipo {
 
@@ -28,6 +29,11 @@ void processEdge(Int j, Int i, const std::vector<Int>& first,
                  std::vector<Int>& prevleaf, std::vector<Int>& ancestor);
 Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
                    std::vector<Int64>& start, bool triang = false);
+Int maxDepthTree(const std::vector<Int>& parent);
+void fullFromLower(const std::vector<Int>& ptrL, const std::vector<Int>& rowsL,
+                   std::vector<Int>& ptrF, std::vector<Int>& rowsF);
+double snFlops(double size, double clique_size);
+double snSpops(double clique_size);
 
 template <typename T>
 void counts2Ptr(std::vector<T>& ptr, std::vector<T>& w) {
@@ -49,14 +55,14 @@ template <typename T>
 void permuteVector(std::vector<T>& v, const std::vector<Int>& perm) {
   // Permute vector v according to permutation perm.
   std::vector<T> temp_v(v);
-  for (Int i = 0; i < v.size(); ++i) v[i] = temp_v[perm[i]];
+  for (Int i = 0; i < static_cast<Int>(v.size()); ++i) v[i] = temp_v[perm[i]];
 }
 
 template <typename T>
 void permuteVectorInverse(std::vector<T>& v, const std::vector<Int>& iperm) {
   // Permute vector v according to inverse permutation iperm.
   std::vector<T> temp_v(v);
-  for (Int i = 0; i < v.size(); ++i) v[iperm[i]] = temp_v[i];
+  for (Int i = 0; i < static_cast<Int>(v.size()); ++i) v[iperm[i]] = temp_v[i];
 }
 
 template <typename T>
@@ -86,6 +92,11 @@ class Clock {
   Clock();
   void start();
   double stop() const;
+};
+
+class TaskGroupSpecial : public highs::parallel::TaskGroup {
+ public:
+  ~TaskGroupSpecial();
 };
 
 }  // namespace hipo

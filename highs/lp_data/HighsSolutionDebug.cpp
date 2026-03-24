@@ -27,7 +27,7 @@ const double excessive_residual_error = sqrt(large_residual_error);
 
 // Called from HighsSolve - solveLp
 HighsDebugStatus debugHighsLpSolution(
-    const std::string message, const HighsLpSolverObject& solver_object) {
+    const std::string& message, const HighsLpSolverObject& solver_object) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to check the unscaled model status and solution params
@@ -85,7 +85,7 @@ HighsDebugStatus debugHighsSolution(
 }
 
 HighsDebugStatus debugHighsSolution(
-    const std::string message, const HighsOptions& options, const HighsLp& lp,
+    const std::string& message, const HighsOptions& options, const HighsLp& lp,
     const HighsHessian& hessian, const HighsSolution& solution,
     const HighsBasis& basis, const HighsModelStatus model_status,
     const HighsInfo& highs_info, const bool check_model_status_and_highs_info) {

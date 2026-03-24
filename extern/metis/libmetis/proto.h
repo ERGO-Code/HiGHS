@@ -15,6 +15,8 @@
 #ifndef _LIBMETIS_PROTO_H_
 #define _LIBMETIS_PROTO_H_
 
+#include "ipm/hipo/auxiliary/OrderingPrint.h"
+
 /* auxapi.c */
 
 /* balance.c */

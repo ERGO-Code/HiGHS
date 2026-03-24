@@ -23,49 +23,41 @@
 
 // Log verbosity level
 enum class LogLevel {
-  kNone,     // No output
-  kInfo,     // Standard output: summary, termination, major events
-  kVerbose,  // Detailed output: iteration-level info
-  kDebug     // Verbose + debug info for developers
-};
-
-class Timer {
- public:
-  Timer();
-  void reset();
-  double read();
-
- private:
-  std::chrono::high_resolution_clock::time_point start_time_;
+  kNone,      // No output
+  kInfo,      // Standard output: summary, termination, major events
+  kDetailed,  // Developer output
+  kVerbose,   // Detailed output: iteration-level info
+  kDebug      // Verbose + debug info for developers
 };
 
 class Logger {
  public:
   void setLevel(const HighsInt log_dev_level);
-  void passHighsLogOptions(const HighsLogOptions log_options) {
+  void setHighsLogOptions(const HighsLogOptions log_options) {
     log_options_ = log_options;
   }
-  void set_log_file(const std::string& filename);
   LogLevel getLogLevel() const { return console_level_; }
   // Logging methods for different levels
-  void info(const std::string& message);
-  void verbose(const std::string& message);
-  void debug(const std::string& message);
+  void info(const std::string& message) const;
+  void detailed(const std::string& message) const;
+  void verbose(const std::string& message) const;
+  void debug(const std::string& message) const;
 
   // Formatted printing functions
-  void print_header();
-  void print_params(const PrimalDualParams& params);
-  void print_iteration_header();
-  void print_iteration_stats(int iter, const SolverResults& current_results,
-                             double current_eta);
-  void print_summary(const SolverResults& results, int total_iter,
-                     double total_time);
-  void passLogOptions(HighsLogOptions log_options) {
+  void printHeader() const;
+  void printParams(const PrimalDualParams& params) const;
+  void printIterationHeader() const;
+  void printIterationStats(HighsInt iter, const SolverResults& current_results,
+                           const double current_eta, const double time) const;
+  void printSummary(const SolverResults& results, HighsInt total_iter,
+                    double total_time) const;
+  void setLogOptions(HighsLogOptions log_options) {
     log_options_ = log_options;
   }
+  LogLevel getConsoleLevel() const { return console_level_; }
 
  private:
-  void log(LogLevel level, const std::string& message);
+  void log(LogLevel level, const std::string& message) const;
   LogLevel console_level_;
   HighsLogOptions log_options_;
 };

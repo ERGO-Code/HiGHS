@@ -18,91 +18,46 @@
 #include "io/HighsIO.h"  // For pdlpLogging
 #include "linalg.hpp"
 
-void Scaling::Initialize(const HighsLp& lp) {
+void Scaling::initialize(const HighsLp& lp) {
   col_scale_.assign(lp.num_col_, 1.0);
   row_scale_.assign(lp.num_row_, 1.0);
   is_scaled_ = false;
 
   // use linalg to compute norms
-  norm_cost_ = linalg::compute_cost_norm(lp, 2.0);
-  norm_rhs_ = linalg::compute_rhs_norm(lp, 2.0);
-}
-
-void Scaling::LogMatrixNorms(const std::string& stage) {
-  const HighsLp& lp = *lp_;
-  highsLogUser(params_->log_options_, HighsLogType::kInfo,
-               "\n--- Matrix Norms %s ---\n", stage.c_str());
-
-  if (lp.num_col_ == 0 || lp.num_row_ == 0) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
-                 "Matrix is empty\n");
-    return;
-  }
-
-  // --- Calculate and Log Column Norms (Infinity Norm) ---
-  highsLogUser(params_->log_options_, HighsLogType::kInfo,
-               "Column Infinity Norms:\n");
-  for (HighsInt iCol = 0; iCol < lp.num_col_; ++iCol) {
-    double max_abs_val = 0.0;
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; ++iEl) {
-      max_abs_val = std::max(max_abs_val, std::abs(lp.a_matrix_.value_[iEl]));
-    }
-    highsLogUser(params_->log_options_, HighsLogType::kInfo, "  Col %d: %g\n",
-                 int(iCol), max_abs_val);
-  }
-
-  // --- Calculate and Log Row Norms (Infinity Norm) ---
-  highsLogUser(params_->log_options_, HighsLogType::kInfo,
-               "Row Infinity Norms:\n");
-  std::vector<double> row_max_abs_vals(lp.num_row_, 0.0);
-  for (HighsInt iCol = 0; iCol < lp.num_col_; ++iCol) {
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; ++iEl) {
-      HighsInt iRow = lp.a_matrix_.index_[iEl];
-      row_max_abs_vals[iRow] =
-          std::max(row_max_abs_vals[iRow], std::abs(lp.a_matrix_.value_[iEl]));
-    }
-  }
-
-  for (HighsInt iRow = 0; iRow < lp.num_row_; ++iRow) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo, "  Row %d: %g\n",
-                 int(iRow), row_max_abs_vals[iRow]);
-  }
-  highsLogUser(params_->log_options_, HighsLogType::kInfo,
-               "-------------------------\n");
+  norm_cost_ = linalg::computeCostNorm(lp, 2.0);
+  norm_rhs_ = linalg::computeRhsNorm(lp, 2.0);
 }
 
 void Scaling::scaleProblem() {
   is_scaled_ = false;
 
   if (params_->use_ruiz_scaling) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
-                 "Applying Ruiz scaling...\n");
-    ApplyRuizScaling();
+    highsLogDev(params_->log_options_, HighsLogType::kInfo,
+                "Applying Ruiz scaling...\n");
+    applyRuizScaling();
     is_scaled_ = true;
   }
 
   if (params_->use_pc_scaling) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
-                 "Applying Pock-Chambolle scaling...\n");
-    ApplyPockChambolleScaling();
+    highsLogDev(params_->log_options_, HighsLogType::kInfo,
+                "Applying Pock-Chambolle scaling...\n");
+    applyPockChambolleScaling();
     is_scaled_ = true;
   }
 
   if (params_->use_l2_scaling) {
-    highsLogUser(params_->log_options_, HighsLogType::kInfo,
-                 "Applying L2 norm scaling...\n");
-    ApplyL2Scaling();
+    highsLogDev(params_->log_options_, HighsLogType::kInfo,
+                "Applying L2 norm scaling...\n");
+    applyL2Scaling();
     is_scaled_ = true;
   }
 }
 
-void Scaling::ApplyRuizScaling() {
+void Scaling::applyRuizScaling() {
   std::vector<double> current_col_scaling(lp_->num_col_);
   std::vector<double> current_row_scaling(lp_->num_row_);
 
-  for (int iter = 0; iter < params_->ruiz_iterations; ++iter) {
+  for (HighsInt iter = 0; iter < params_->ruiz_iterations; ++iter) {
     // Reset current scaling factors
     std::fill(current_col_scaling.begin(), current_col_scaling.end(), 0.0);
     std::fill(current_row_scaling.begin(), current_row_scaling.end(), 0.0);
@@ -116,7 +71,7 @@ void Scaling::ApplyRuizScaling() {
       }
 
       if (!col_values.empty()) {
-        current_col_scaling[col] = std::sqrt(ComputeNorm(
+        current_col_scaling[col] = std::sqrt(computeNorm(
             col_values.data(), col_values.size(), params_->ruiz_norm));
       }
 
@@ -126,6 +81,12 @@ void Scaling::ApplyRuizScaling() {
     }
 
     // Compute row norms (infinity norm for rows)
+    const bool ruiz_norm_ok = params_->ruiz_norm == INFINITY;
+    if (!ruiz_norm_ok) {
+      highsLogUser(params_->log_options_, HighsLogType::kError,
+                   "Currently only support infinity norm for Ruiz scaling\n");
+      assert(ruiz_norm_ok);
+    }
     if (params_->ruiz_norm == INFINITY) {
       // For infinity norm, find max absolute value in each row
       for (HighsInt col = 0; col < lp_->num_col_; ++col) {
@@ -145,14 +106,10 @@ void Scaling::ApplyRuizScaling() {
           current_row_scaling[row] = std::sqrt(current_row_scaling[row]);
         }
       }
-    } else {
-      highsLogUser(params_->log_options_, HighsLogType::kError,
-                   "Currently only support infinity norm for Ruiz scaling\n");
-      exit(1);
     }
 
     // Apply the scaling
-    ApplyScaling(current_col_scaling, current_row_scaling);
+    applyScaling(current_col_scaling, current_row_scaling);
 
     // Update cumulative scaling factors
     for (HighsInt i = 0; i < lp_->num_col_; ++i) {
@@ -164,11 +121,12 @@ void Scaling::ApplyRuizScaling() {
   }
 }
 
-void Scaling::ApplyPockChambolleScaling() {
-  if (params_->pc_alpha < 0.0 || params_->pc_alpha > 2.0) {
+void Scaling::applyPockChambolleScaling() {
+  const bool pc_alpha_ok = 0.0 <= params_->pc_alpha && params_->pc_alpha <= 2.0;
+  if (!pc_alpha_ok) {
     highsLogUser(params_->log_options_, HighsLogType::kError,
-                 "PC alpha should be in [0, 2]\n");
-    exit(1);
+                 "PC alpha must be in [0, 2]\n");
+    assert(pc_alpha_ok);
   }
 
   std::vector<double> current_col_scaling(lp_->num_col_, 0.0);
@@ -210,7 +168,7 @@ void Scaling::ApplyPockChambolleScaling() {
   }
 
   // Apply the scaling
-  ApplyScaling(current_col_scaling, current_row_scaling);
+  applyScaling(current_col_scaling, current_row_scaling);
 
   // Update cumulative scaling factors
   for (HighsInt i = 0; i < lp_->num_col_; ++i) {
@@ -221,7 +179,7 @@ void Scaling::ApplyPockChambolleScaling() {
   }
 }
 
-void Scaling::ApplyL2Scaling() {
+void Scaling::applyL2Scaling() {
   std::vector<double> current_col_scaling(lp_->num_col_, 1.0);
   std::vector<double> current_row_scaling(lp_->num_row_, 0.0);
 
@@ -259,7 +217,7 @@ void Scaling::ApplyL2Scaling() {
   }
 
   // Apply the scaling
-  ApplyScaling(current_col_scaling, current_row_scaling);
+  applyScaling(current_col_scaling, current_row_scaling);
 
   // Update cumulative scaling factors
   for (HighsInt i = 0; i < lp_->num_col_; ++i) {
@@ -270,7 +228,7 @@ void Scaling::ApplyL2Scaling() {
   }
 }
 
-void Scaling::ApplyScaling(const std::vector<double>& col_scaling,
+void Scaling::applyScaling(const std::vector<double>& col_scaling,
                            const std::vector<double>& row_scaling) {
   // Scale cost vector: c_scaled = c / col_scaling
   for (HighsInt i = 0; i < lp_->num_col_; ++i) {
@@ -306,7 +264,7 @@ void Scaling::ApplyScaling(const std::vector<double>& col_scaling,
     }
   }
 
-  // TO DO: scale offset
+  // TO DO: Scale offset
 }
 
 void Scaling::unscaleSolution(std::vector<double>& x,
@@ -324,24 +282,24 @@ void Scaling::unscaleSolution(std::vector<double>& x,
   }
 }
 
-double Scaling::ComputeNorm(const double* values, int size,
+double Scaling::computeNorm(const double* values, HighsInt size,
                             double norm_type) const {
   if (norm_type == INFINITY) {
     double max_val = 0.0;
-    for (int i = 0; i < size; ++i) {
+    for (HighsInt i = 0; i < size; ++i) {
       max_val = std::max(max_val, std::abs(values[i]));
     }
     return max_val;
   } else if (norm_type == 2.0) {
     double sum_sq = 0.0;
-    for (int i = 0; i < size; ++i) {
+    for (HighsInt i = 0; i < size; ++i) {
       sum_sq += values[i] * values[i];
     }
     return std::sqrt(sum_sq);
   } else {
     // General p-norm
     double sum = 0.0;
-    for (int i = 0; i < size; ++i) {
+    for (HighsInt i = 0; i < size; ++i) {
       sum += std::pow(std::abs(values[i]), norm_type);
     }
     return std::pow(sum, 1.0 / norm_type);

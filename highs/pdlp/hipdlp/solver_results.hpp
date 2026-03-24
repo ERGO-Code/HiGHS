@@ -14,12 +14,12 @@
 #include <vector>
 
 enum class TerminationStatus {
+  NOTSET,
   OPTIMAL,
   INFEASIBLE,
   UNBOUNDED,
+  MAXITER,
   TIMEOUT,
-  FEASIBLE,
-  WARNING,
   ERROR
 };
 
@@ -51,8 +51,6 @@ struct SolverResults {
   std::vector<double> dual_residual_average;
 
   // --- Infeasibility Detection Metrics ---
-  TerminationStatus primal_term_code = TerminationStatus::FEASIBLE;
-  TerminationStatus dual_term_code = TerminationStatus::FEASIBLE;
   double primal_infeasibility_obj = 0.0;
   double dual_infeasibility_obj = 0.0;
   double primal_infeasibility_res = 0.0;

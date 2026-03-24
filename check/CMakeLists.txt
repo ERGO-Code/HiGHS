@@ -68,6 +68,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestNames.cpp
       TestOptions.cpp
       TestPdlp.cpp
+      TestPdlpHi.cpp
       TestPresolve.cpp
       TestQpSolver.cpp
       TestRanging.cpp
@@ -93,13 +94,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     set(OPT_LEVEL_CHANGED ON)
   endif()
 
-  if (LINUX AND NOT OPT_LEVEL_CHANGED AND CMAKE_CXX_COMPILER_ID STREQUAL "g++" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if (NOT ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
-        NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
-        set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
-    endif()
-  endif()
-
   if (BUILD_EXTRA_UNIT_TESTS)
       list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
       message(STATUS "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
@@ -122,13 +116,19 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     target_link_libraries(unit_tests highs Catch)
 
     if (CUPDLP_GPU)
-        if (WIN32)
-            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY})
-        else()
-            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY} m)
-        endif()
+        # Link unit tests to cuda too!
         target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/cuda)
         set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        if (WIN32)
+            target_link_libraries(unit_tests ${CUDA_LIBRARY})
+        else()
+            target_link_libraries(unit_tests ${CUDA_LIBRARY} m)
+        endif()
+
+        # If cudalin is used, link to cudalin too.
+        if (NOT HIGHS_GPU_LIB)
+            target_link_libraries(unit_tests cudalin)
+        endif()
     endif()
   else()
     target_link_libraries(unit_tests libhighs Catch)

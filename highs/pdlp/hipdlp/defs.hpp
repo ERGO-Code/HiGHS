@@ -20,7 +20,12 @@ enum class Device { CPU, GPU };
 
 enum class ScalingMethod { NONE, RUIZ, POCK_CHAMBOLLE, L2_NORM, COMBINED };
 
-enum class RestartStrategy { NO_RESTART, FIXED_RESTART, ADAPTIVE_RESTART, HALPERN_RESTART};
+enum class RestartStrategy {
+  NO_RESTART,
+  FIXED_RESTART,
+  ADAPTIVE_RESTART,
+  HALPERN_RESTART
+};
 
 enum class StepSizeStrategy { FIXED, ADAPTIVE, MALITSKY_POCK, PID };
 
@@ -38,7 +43,7 @@ struct StepSizeConfig {
   double dual_step;
   double beta;
   double power_method_lambda;
-  int step_size_iter = 0;  // nStepSizeIter
+  HighsInt step_size_iter = 0;  // nStepSizeIter
 };
 
 struct MalitskyPockParams {
@@ -58,16 +63,17 @@ struct PrimalDualParams {
   double eta;
   double omega;
   double tolerance;
-  size_t max_iterations;
+  HighsInt max_iterations;
   Device device_type;
   double time_limit = 3600.0;
 
   // Restart parameters
   RestartStrategy restart_strategy;
-  int fixed_restart_interval;
+  HighsInt fixed_restart_interval;
 
   bool use_halpern_restart = false;
-  double halpern_gamma = 1.0; // 0: standard Halpern, 1: full reflection, in between: over relaxation
+  double halpern_gamma = 1.0;  // 0: standard Halpern, 1: full reflection, in
+                               // between: over relaxation
 
   // Scaling parameters
   bool use_ruiz_scaling = false;
@@ -75,7 +81,7 @@ struct PrimalDualParams {
   bool use_l2_scaling = false;
 
   // Ruiz scaling parameters
-  int ruiz_iterations = 10;
+  HighsInt ruiz_iterations = 10;
   double ruiz_norm = INFINITY;
 
   // Pock-Chambolle scaling parameters
@@ -107,7 +113,7 @@ struct PdlpIterate {
 
   // Constructors
   PdlpIterate() = default;
-  PdlpIterate(int num_cols, int num_rows)
+  PdlpIterate(HighsInt num_cols, HighsInt num_rows)
       : x(num_cols, 0.0),
         y(num_rows, 0.0),
         Ax(num_rows, 0.0),
@@ -149,8 +155,8 @@ struct PdlpIterate {
 
   // For block-structured problems
   struct BlockStructure {
-    std::vector<int> x_block_sizes;
-    std::vector<int> y_block_sizes;
+    std::vector<HighsInt> x_block_sizes;
+    std::vector<HighsInt> y_block_sizes;
     // std::vector<std::vector<double>> x_blocks;  // Future: for block problems
     // std::vector<std::vector<double>> y_blocks;
   };
@@ -185,30 +191,30 @@ struct DetailedTimings {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Total time:              %6.2f s\n", total_time);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Iterate update:          %6.2f s (%3.0f \%)\n",
+                 "Iterate update:          %6.2f s (%3.0f)\n",
                  iterate_update_time, iterate_update_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "  - Matrix multiply:     %6.2f s (%3.0f \%)\n",
+                 "  - Matrix multiply:     %6.2f s (%3.0f)\n",
                  matrix_multiply_time, matrix_multiply_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "  - Projection:          %6.2f s (%3.0f \%)\n",
-                 projection_time, projection_time / total_time * 100);
+                 "  - Projection:          %6.2f s (%3.0f)\n", projection_time,
+                 projection_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "  - Step size adjust:    %6.2f s (%3.0f \%)\n",
+                 "  - Step size adjust:    %6.2f s (%3.0f)\n",
                  step_size_adjustment_time,
                  step_size_adjustment_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Convergence check:       %6.2f s (%3.0f \%)\n",
+                 "Convergence check:       %6.2f s (%3.0f)\n",
                  convergence_check_time,
                  convergence_check_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Restart check:           %6.2f s (%3.0f \%)\n",
+                 "Restart check:           %6.2f s (%3.0f)\n",
                  restart_check_time, restart_check_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Average iterate comp:    %6.2f s (%3.0f \%)\n",
+                 "Average iterate comp:    %6.2f s (%3.0f)\n",
                  average_iterate_time, average_iterate_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Other:                   %6.2f s (%3.0f \%)\n", other_time,
+                 "Other:                   %6.2f s (%3.0f)\n", other_time,
                  other_time / total_time * 100);
   }
 };

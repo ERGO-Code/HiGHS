@@ -4,6 +4,16 @@
 #include <cstdio>
 #include <cublas_v2.h>
 
+#ifdef HIGHSINT64
+typedef int64_t HighsInt;
+typedef uint64_t HighsUInt;
+#define HIGHSINT_FORMAT PRId64
+#else
+typedef int HighsInt;
+typedef unsigned int HighsUInt;
+#define HIGHSINT_FORMAT "d"
+#endif
+
 // Define Infinity for GPU 
 #define GPU_INF 1e20 
 
@@ -304,7 +314,7 @@ __global__ void kernelHalpernBlend(
     const int* __restrict__ halpern_iteration,
     int k_offset,
     double reflection_coeff,   // ρ, typically 1.0
-    int n)
+    HighsInt n)
 {
     const int current_k = (*halpern_iteration) + k_offset;
     const double weight = static_cast<double>(current_k) / (current_k + 1.0);

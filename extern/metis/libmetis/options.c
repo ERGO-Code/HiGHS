@@ -39,7 +39,7 @@ ctrl_t *SetupCtrl(moptype_et optype, idx_t *options, idx_t ncon, idx_t nparts,
       break;
 
     default:
-      gk_errexit("Unknown optype of %d\n", optype);
+      GK_ERREXIT("Unknown optype of %d\n", optype);
   }
 
   /* common options */
@@ -102,65 +102,65 @@ void PrintCtrl(ctrl_t *ctrl)
 {
   idx_t i, j, modnum;
 
-  printf(" Runtime parameters:\n");
+  HIGHS_ORDERING_PRINT(" Runtime parameters:\n");
 
-  printf("   Coarsening type: ");
+  HIGHS_ORDERING_PRINT("   Coarsening type: ");
   switch (ctrl->ctype) {
     case METIS_CTYPE_RM:
-      printf("METIS_CTYPE_RM\n");
+      HIGHS_ORDERING_PRINT("METIS_CTYPE_RM\n");
       break;
     case METIS_CTYPE_SHEM:
-      printf("METIS_CTYPE_SHEM\n");
+      HIGHS_ORDERING_PRINT("METIS_CTYPE_SHEM\n");
       break;
     default:
-      printf("Unknown!\n");
+      HIGHS_ORDERING_PRINT("Unknown!\n");
   }
 
-  printf("   Initial partitioning type: ");
+  HIGHS_ORDERING_PRINT("   Initial partitioning type: ");
   switch (ctrl->iptype) {
     case METIS_IPTYPE_EDGE:
-      printf("METIS_IPTYPE_EDGE\n");
+      HIGHS_ORDERING_PRINT("METIS_IPTYPE_EDGE\n");
       break;
     case METIS_IPTYPE_NODE:
-      printf("METIS_IPTYPE_NODE\n");
+      HIGHS_ORDERING_PRINT("METIS_IPTYPE_NODE\n");
       break;
     default:
-      printf("Unknown!\n");
+      HIGHS_ORDERING_PRINT("Unknown!\n");
   }
 
-  printf("   Refinement type: ");
+  HIGHS_ORDERING_PRINT("   Refinement type: ");
   switch (ctrl->rtype) {
     case METIS_RTYPE_SEP2SIDED:
-      printf("METIS_RTYPE_SEP2SIDED\n");
+      HIGHS_ORDERING_PRINT("METIS_RTYPE_SEP2SIDED\n");
       break;
     case METIS_RTYPE_SEP1SIDED:
-      printf("METIS_RTYPE_SEP1SIDED\n");
+      HIGHS_ORDERING_PRINT("METIS_RTYPE_SEP1SIDED\n");
       break;
     default:
-      printf("Unknown!\n");
+      HIGHS_ORDERING_PRINT("Unknown!\n");
   }
 
-  printf("   Perform a 2-hop matching: %s\n", (ctrl->no2hop ? "No" : "Yes"));
+  HIGHS_ORDERING_PRINT("   Perform a 2-hop matching: %s\n", (ctrl->no2hop ? "No" : "Yes"));
 
-  printf("   Drop edges: %s\n", (ctrl->dropedges ? "Yes" : "No"));
+  HIGHS_ORDERING_PRINT("   Drop edges: %s\n", (ctrl->dropedges ? "Yes" : "No"));
 
-  printf("   Number of balancing constraints: %"PRIDX"\n", ctrl->ncon);
-  printf("   Number of refinement iterations: %"PRIDX"\n", ctrl->niter);
-  printf("   Random number seed: %"PRIDX"\n", ctrl->seed);
+  HIGHS_ORDERING_PRINT("   Number of balancing constraints: %"PRIDX"\n", ctrl->ncon);
+  HIGHS_ORDERING_PRINT("   Number of refinement iterations: %"PRIDX"\n", ctrl->niter);
+  HIGHS_ORDERING_PRINT("   Random number seed: %"PRIDX"\n", ctrl->seed);
 
   if (ctrl->optype == METIS_OP_OMETIS) {
-    printf("   Number of separators: %"PRIDX"\n", ctrl->nseps);
-    printf("   Compress graph prior to ordering: %s\n", (ctrl->compress ? "Yes" : "No"));
-    printf("   Detect & order connected components separately: %s\n", (ctrl->ccorder ? "Yes" : "No"));
-    printf("   Prunning factor for high degree vertices: %"PRREAL"\n", ctrl->pfactor);
+    HIGHS_ORDERING_PRINT("   Number of separators: %"PRIDX"\n", ctrl->nseps);
+    HIGHS_ORDERING_PRINT("   Compress graph prior to ordering: %s\n", (ctrl->compress ? "Yes" : "No"));
+    HIGHS_ORDERING_PRINT("   Detect & order connected components separately: %s\n", (ctrl->ccorder ? "Yes" : "No"));
+    HIGHS_ORDERING_PRINT("   Prunning factor for high degree vertices: %"PRREAL"\n", ctrl->pfactor);
   }
 
-  printf("   Allowed maximum load imbalance: ");
+  HIGHS_ORDERING_PRINT("   Allowed maximum load imbalance: ");
   for (i=0; i<ctrl->ncon; i++) 
-    printf("%.3"PRREAL" ", ctrl->ubfactors[i]);
-  printf("\n");
+    HIGHS_ORDERING_PRINT("%.3"PRREAL" ", ctrl->ubfactors[i]);
+  HIGHS_ORDERING_PRINT("\n");
 
-  printf("\n");
+  HIGHS_ORDERING_PRINT("\n");
 }
 
 
@@ -176,54 +176,54 @@ int CheckParams(ctrl_t *ctrl)
   switch (ctrl->optype) {
     case METIS_OP_OMETIS:
       if (ctrl->ctype != METIS_CTYPE_RM && ctrl->ctype != METIS_CTYPE_SHEM) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect coarsening scheme.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect coarsening scheme.\n"));
         return 0;
       }
       if (ctrl->iptype != METIS_IPTYPE_EDGE && ctrl->iptype != METIS_IPTYPE_NODE) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect initial partitioning scheme.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect initial partitioning scheme.\n"));
         return 0;
       }
       if (ctrl->rtype != METIS_RTYPE_SEP1SIDED && ctrl->rtype != METIS_RTYPE_SEP2SIDED) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect refinement scheme.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect refinement scheme.\n"));
         return 0;
       }
       if (ctrl->nseps <= 0) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect nseps.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect nseps.\n"));
         return 0;
       }
       if (ctrl->niter <= 0) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect niter.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect niter.\n"));
         return 0;
       }
       if (ctrl->ufactor <= 0) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect ufactor.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect ufactor.\n"));
         return 0;
       }
       if (ctrl->nparts != 3) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect nparts.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect nparts.\n"));
         return 0;
       }
       if (ctrl->ncon != 1) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect ncon.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect ncon.\n"));
         return 0;
       }
       if (ctrl->compress != 0 && ctrl->compress != 1) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect compress.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect compress.\n"));
         return 0;
       }
       if (ctrl->ccorder != 0 && ctrl->ccorder != 1) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect ccorder.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect ccorder.\n"));
         return 0;
       }
       if (ctrl->pfactor < 0.0 ) {
-        IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect pfactor.\n"));
+        IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect pfactor.\n"));
         return 0;
       }
 
       for (i=0; i<ctrl->ncon; i++) {
         if (ctrl->ubfactors[i] <= 1.0) {
           IFSET(dbglvl, METIS_DBG_INFO, 
-              printf("Input Error: Incorrect ubfactor for constraint %"PRIDX".\n", i));
+              HIGHS_ORDERING_PRINT("Input Error: Incorrect ubfactor for constraint %"PRIDX".\n", i));
           return 0;
         }
       }
@@ -231,7 +231,7 @@ int CheckParams(ctrl_t *ctrl)
       break;
 
     default:
-      IFSET(dbglvl, METIS_DBG_INFO, printf("Input Error: Incorrect optype\n"));
+      IFSET(dbglvl, METIS_DBG_INFO, HIGHS_ORDERING_PRINT("Input Error: Incorrect optype\n"));
       return 0;
   }
 

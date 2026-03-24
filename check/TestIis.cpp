@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;  // true;//
+const bool dev_run = false;  // true;  //
 const bool write_model = false;
 
 const double inf = kHighsInf;
@@ -15,6 +15,21 @@ const HighsInt kIisStrategyFromRayColPriority =
 const HighsInt kIisStrategyFromLpColPriority =
     kIisStrategyFromLp + kIisStrategyColPriority;
 
+void reportIisInfo(const HighsLogOptions& log_options,
+                   const HighsIisInfo& iis_info) {
+  highsLogUser(log_options, HighsLogType::kInfo, "IIS Info:\n");
+  highsLogUser(log_options, HighsLogType::kInfo, "Solved %d LPs\n",
+               int(iis_info.num_lp_solved));
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "   Simplex iteration count (min / sum / max) = %d / %d / %d\n",
+               int(iis_info.min_simplex_iteration_count),
+               int(iis_info.sum_simplex_iteration_counts),
+               int(iis_info.max_simplex_iteration_count));
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "   Simplex time (min / sum / max) = %g / %g / %g\n",
+               iis_info.min_simplex_time, iis_info.sum_simplex_times,
+               iis_info.max_simplex_time);
+}
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status =
                  HighsModelStatus::kInfeasible);
@@ -461,13 +476,224 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
 
 TEST_CASE("lp-get-iis-avgas", "[iis]") {
   std::string model = "avgas";
-  // For the whole LP calculation the elasticity filter only
-  // identified feasibility, so the model status is not set
-  testMps(model, kIisStrategyFromLp, HighsModelStatus::kNotset);
+  // For the whole LP calculation feasibility is established prior to elasticity
+  // filter so the model status will be optimal
+  testMps(model, kIisStrategyFromLp, HighsModelStatus::kOptimal);
   // For the ray calculation the model is solved, so its status is
   // known
   //  testMps(model, kIisStrategyFromRay,
   //  HighsModelStatus::kOptimal);
+}
+
+TEST_CASE("lp-get-iis-time-limit-feasible", "[iis]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Run first, so that non-infeasibility can be established
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
+  // Set iis time limit to zero to force immediate timeout
+  highs.setOptionValue("iis_time_limit", 0.0);
+
+  // Use kIisStrategyFromLp strategy - this would require solving the
+  // LP, but it's not necessary so time limit isn't tested
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLp);
+
+  HighsIis iis;
+  // Should return OK since the LP is known to be non-infeasibile
+  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+
+  // IIS should be valid since feasibility status is set
+  REQUIRE(iis.valid_ == true);
+
+  // IIS status should be kIisModelStatusFeasible
+  REQUIRE(iis.status_ == kIisModelStatusFeasible);
+
+  // IIS should be empty - no rows or columns identified
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+
+  // Model status should be kOptimal
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  // no LPs solved: min/sum/max simplex iteration counts and min/sum/max
+  // simplex times are all zero
+  reportIisInfo(highs.getOptions().log_options, iis.info_);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/forest6.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Run first, so that infeasibility can be established
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
+  // Set iis time limit to zero to force immediate timeout
+  highs.setOptionValue("iis_time_limit", 0.0);
+
+  // Use kIisStrategyFromLp strategy - this requires solving the LP
+  // which should fail due to time limit
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLp);
+
+  HighsIis iis;
+  // Should return error due to time limit being reached
+  REQUIRE(highs.getIis(iis) == HighsStatus::kError);
+
+  // IIS should be invalid since computation could not complete
+  REQUIRE(iis.valid_ == false);
+
+  // IIS status should be kIisModelStatusTimeLimit
+  REQUIRE(iis.status_ == kIisModelStatusTimeLimit);
+
+  // IIS should be empty - no rows or columns identified
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+
+  // Model status should be kInfeasible, since this is known from HiGHS::run()
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  // 1 LP solved during elastic filtering: see min/sum/max
+  // simplex iteration counts and min/sum/max simplex times
+  reportIisInfo(highs.getOptions().log_options, iis.info_);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("lp-get-iis-time-limit", "[iis]") {
+  // Test that setting time limit to zero causes getIis() to return
+  // an error with an invalid and empty IIS
+  //
+  // Using forest6 model which is known to be infeasible, but with
+  // time_limit = 0, the IIS computation should fail immediately
+  //
+  // Expected behavior:
+  // - getIis() returns HighsStatus::kError
+  // - IIS is marked as invalid (valid_ = false)
+  // - IIS contains no rows or columns
+
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/forest6.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Set iis time limit to zero to force immediate timeout
+  highs.setOptionValue("iis_time_limit", 0.0);
+
+  // Use kIisStrategyFromLp strategy - this requires solving the LP
+  // which should fail due to time limit
+  highs.setOptionValue("iis_strategy", kIisStrategyFromLp);
+
+  HighsIis iis;
+  // Should return error due to time limit being reached
+  REQUIRE(highs.getIis(iis) == HighsStatus::kError);
+
+  // IIS should be invalid since computation could not complete
+  REQUIRE(iis.valid_ == false);
+
+  // IIS status should be kIisModelStatusTimeLimit
+  REQUIRE(iis.status_ == kIisModelStatusTimeLimit);
+
+  // IIS should be empty - no rows or columns identified
+  REQUIRE(iis.col_index_.size() == 0);
+  REQUIRE(iis.row_index_.size() == 0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("lp-get-iis-partial", "[iis]") {
+  // Test that IIS computation with irreducible strategy on vol1.mps
+  // returns a warning status and a candidate IS
+  //
+  // The vol1.mps model is known to be infeasible but the result found
+  // is not irreducible due to encountering kUnknown model statuses during
+  // deletion filtering
+  //
+  // Expected behavior:
+  // - getIis() returns HighsStatus::kWarning
+  // - IIS contains both columns and rows
+
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/vol1.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Use kIisStrategyIrreducible strategy
+  highs.setOptionValue("iis_strategy", kIisStrategyIrreducible);
+
+  HighsIis iis;
+  // Should return warning since the IIS found is not irreducible
+  REQUIRE(highs.getIis(iis) == HighsStatus::kWarning);
+
+  // Should have identified some potentially conflicting columns and rows
+  REQUIRE(iis.col_index_.size() > 0);
+  REQUIRE(iis.row_index_.size() > 0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
+  // Test that IIS computation with deletion strategy respects time limits
+  // and returns partial results when time limit is reached
+  //
+  // Using cplex1.mps model with a short time limit (1 seconds) to force
+  // the deletion strategy to terminate before completing the irreducibility
+  // check
+  //
+  // Expected behavior:
+  // - getIis() returns HighsStatus::kWarning
+  // - IS is valid but incomplete due to time limit
+  // - IIS status indicates time limit was reached
+  // - Partial IS contains some columns and rows identified before timeout
+
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/cplex1.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  // Run the model
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
+  // Use deletion strategy to find irreducible IIS
+  highs.setOptionValue("iis_strategy", kIisStrategyIrreducible);
+
+  // Set a short time limit to force early termination
+  highs.setOptionValue("iis_time_limit", 1);
+
+  HighsIis iis;
+  // Should return warning (not error) since partial results are available
+  REQUIRE(highs.getIis(iis) == HighsStatus::kWarning);
+
+  // IIS should be valid even though computation didn't complete
+  REQUIRE(iis.valid_ == true);
+
+  // Status should indicate time limit was reached during deletion
+  REQUIRE(iis.status_ == kIisModelStatusTimeLimit);
+
+  // Should have identified some conflicting columns and rows before timeout
+  REQUIRE(iis.col_index_.size() > 0);
+  REQUIRE(iis.row_index_.size() > 0);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("lp-feasibility-relaxation", "[iis]") {

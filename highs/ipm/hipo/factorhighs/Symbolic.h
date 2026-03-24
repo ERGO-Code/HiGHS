@@ -96,8 +96,7 @@ class Symbolic {
   std::vector<std::vector<Int64>> clique_block_start_{};
 
   Int64 max_stack_size_{};
-
-  std::string ordering;
+  Int tree_depth_{};
 
   friend class Analyse;
 
@@ -124,6 +123,7 @@ class Symbolic {
   Int64 cliqueBlockStart(Int sn, Int bl) const;
   Int64 cliqueSize(Int sn) const;
   Int64 maxStackSize() const;
+  Int depth() const;
   bool parTree() const;
   bool parNode() const;
   double storage() const;

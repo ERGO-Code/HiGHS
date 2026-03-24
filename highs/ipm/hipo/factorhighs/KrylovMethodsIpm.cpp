@@ -72,11 +72,12 @@ void NeDiagPrec::reset(const HighsSparseMatrix& A,
   }
 
   // compute inverse of diagonal entries
-  for (Int i = 0; i < diag.size(); ++i) diag[i] = 1.0 / diag[i];
+  for (Int i = 0; i < static_cast<Int>(diag.size()); ++i)
+    diag[i] = 1.0 / diag[i];
 }
 void NeDiagPrec::apply(std::vector<double>& x) const {
   // apply diagonal preconditioner
-  for (Int i = 0; i < diag.size(); ++i) x[i] *= diag[i];
+  for (Int i = 0; i < static_cast<Int>(diag.size()); ++i) x[i] *= diag[i];
 }
 
 }  // namespace hipo
