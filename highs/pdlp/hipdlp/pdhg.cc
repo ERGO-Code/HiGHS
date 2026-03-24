@@ -24,7 +24,7 @@
 #include "defs.hpp"
 #include "linalg.hpp"
 #include "lp_data/HConst.h"
-#include "pdhg_kernels.h"
+#include "pdhg_kernels.hpp"
 #include "pdlp/cupdlp/cupdlp.h"  // For pdlpLogging
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
