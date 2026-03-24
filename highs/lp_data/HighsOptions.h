@@ -1330,7 +1330,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "pdlp_restart_strategy",
         "Restart strategy for PDLP solver: 0 => off; "
-        "1 => fixed; 2 => adaptive; 3 => Halpern",
+        "1 => fixed; 2 => adaptive; 3 => Halpern. "
+        "HiPDLP currently uses Halpern only.",
         advanced, &pdlp_restart_strategy, kPdlpRestartStrategyMin,
         kPdlpRestartStrategyHalpern, kPdlpRestartStrategyMax);
     records.push_back(record_int);
@@ -1345,7 +1346,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "pdlp_step_size_strategy",
         "Step size strategy for PDLP solver: 0 => fixed; "
-        "1 => adaptive; 2 => Malitsky-Pock; 3 => PID",
+        "1 => adaptive; 2 => Malitsky-Pock; 3 => PID. "
+        "HiPDLP currently supports fixed or PID.",
         advanced, &pdlp_step_size_strategy, kPdlpStepSizeStrategyMin,
         kPdlpStepSizeStrategyPid, kPdlpStepSizeStrategyMax);
     records.push_back(record_int);

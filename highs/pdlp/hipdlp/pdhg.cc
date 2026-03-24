@@ -1711,42 +1711,25 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   //  params_.ruiz_norm = INFINITY; Not set in parse_options_file
   //  params_.pc_alpha = 1.0; Not set in parse_options_file
 
-  // Restart strategy maps 0/1/2 to RestartStrategy
-  params_.restart_strategy = RestartStrategy::NO_RESTART;
-  params_.use_halpern_restart = false;
-  if ((options.pdlp_features_off & kPdlpRestartOff) == 0) {
-    // Use restart: now see which
-    if (options.pdlp_restart_strategy == kPdlpRestartStrategyFixed) {
-      params_.restart_strategy = RestartStrategy::FIXED_RESTART;
-    } else if (options.pdlp_restart_strategy == kPdlpRestartStrategyAdaptive) {
-      params_.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
-    } else if (options.pdlp_restart_strategy == kPdlpRestartStrategyHalpern) {
-      params_.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
-      params_.use_halpern_restart = true;
-    }
+  // HiPDLP solve loop is Halpern-only.
+  params_.restart_strategy = RestartStrategy::ADAPTIVE_RESTART;
+  params_.use_halpern_restart = true;
+  if ((options.pdlp_features_off & kPdlpRestartOff) != 0 ||
+      options.pdlp_restart_strategy != kPdlpRestartStrategyHalpern) {
+    logger_.info(
+        "HiPDLP uses Halpern restart only; ignoring pdlp_restart_strategy "
+        "and restart-off feature flag.");
   }
   //  params_.fixed_restart_interval = 0; Not set in parse_options_file
 
   params_.step_size_strategy = StepSizeStrategy::FIXED;
-  if ((options.pdlp_features_off & kPdlpAdaptiveStepSizeOff) == 0) {
-    // Use adaptive step size: now see which
-    if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyAdaptive) {
-      params_.step_size_strategy = StepSizeStrategy::ADAPTIVE;
-    } else if (options.pdlp_step_size_strategy ==
-               kPdlpStepSizeStrategyMalitskyPock) {
-      params_.step_size_strategy = StepSizeStrategy::MALITSKY_POCK;
-    } else if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyPid) {
-      params_.step_size_strategy = StepSizeStrategy::PID;
-    }
-  }
-
-  // Halpern updates currently rely on PID-style restarts for robust
-  // step-size/weight adaptation. Prevent unsupported combinations.
-  if (params_.use_halpern_restart &&
-      params_.step_size_strategy == StepSizeStrategy::ADAPTIVE) {
+  if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyPid) {
+    params_.step_size_strategy = StepSizeStrategy::PID;
+  } else if (options.pdlp_step_size_strategy !=
+             kPdlpStepSizeStrategyFixed) {
     logger_.info(
-        "PDLP: Halpern restart is incompatible with adaptive step size; "
-        "switching to PID step size strategy.");
+        "HiPDLP only supports pdlp_step_size_strategy in {0: fixed, "
+        "3: PID}; using PID for unsupported values.");
     params_.step_size_strategy = StepSizeStrategy::PID;
   }
 
@@ -1843,52 +1826,31 @@ void PDLPSolver::initializeStepSizes() {
   params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
   primal_weight_ = params_.omega;
 
-  // initialize step sizes based on strategy
-  if (params_.step_size_strategy == StepSizeStrategy::FIXED ||
-      params_.step_size_strategy == StepSizeStrategy::PID) {
-    // Use power method for fixed step size
-    // const double op_norm_sq = powerMethod();
-    double op_norm_sq = powerMethod();
-
-    stepsize_.power_method_lambda = op_norm_sq;
-
-    const double safety_factor = 0.998;
-    double base_step = safety_factor / std::sqrt(op_norm_sq);
-
-    params_.eta = base_step;
-    stepsize_.primal_step = base_step / params_.omega;
-    stepsize_.dual_step = base_step * params_.omega;
-
-    highsLogDev(
-        params_.log_options_, HighsLogType::kInfo,
-        "Initial step sizes from power method lambda = %g: primal step= "
-        "%g; dual step = %g, eta = %g, omega = %g\n",
-        op_norm_sq, stepsize_.primal_step, stepsize_.dual_step, params_.eta,
-        params_.omega);
-  } else {
-    // Use matrix infinity norm for adaptive step size
-    // Compute infinity norm of matrix elements
-    double mat_elem_norm_inf = 0.0;
-    const HighsSparseMatrix& matrix = lp_.a_matrix_;
-    for (HighsInt i = 0; i < matrix.numNz(); ++i) {
-      mat_elem_norm_inf =
-          std::max(mat_elem_norm_inf, std::abs(matrix.value_[i]));
-    }
-
-    if (mat_elem_norm_inf < 1e-10) {
-      mat_elem_norm_inf = 1.0;  // Avoid division by zero
-    }
-
-    // initialize step sizes using infinity norm
-    stepsize_.primal_step =
-        (1.0 / mat_elem_norm_inf) / std::sqrt(stepsize_.beta);
-    stepsize_.dual_step = stepsize_.primal_step * stepsize_.beta;
-
-    highsLogDev(params_.log_options_, HighsLogType::kInfo,
-                "Initial step sizes from matrix inf-norm = %g: primal = %g; "
-                "dual = %g\n",
-                mat_elem_norm_inf, stepsize_.primal_step, stepsize_.dual_step);
+  if (params_.step_size_strategy != StepSizeStrategy::FIXED &&
+      params_.step_size_strategy != StepSizeStrategy::PID) {
+    logger_.info(
+        "HiPDLP only supports fixed/PID step size; falling back to fixed.");
+    params_.step_size_strategy = StepSizeStrategy::FIXED;
   }
+
+  // Use power method for fixed/PID step size initialization.
+  double op_norm_sq = powerMethod();
+
+  stepsize_.power_method_lambda = op_norm_sq;
+
+  const double safety_factor = 0.998;
+  double base_step = safety_factor / std::sqrt(op_norm_sq);
+
+  params_.eta = base_step;
+  stepsize_.primal_step = base_step / params_.omega;
+  stepsize_.dual_step = base_step * params_.omega;
+
+  highsLogDev(
+      params_.log_options_, HighsLogType::kInfo,
+      "Initial step sizes from power method lambda = %g: primal step= "
+      "%g; dual step = %g, eta = %g, omega = %g\n",
+      op_norm_sq, stepsize_.primal_step, stepsize_.dual_step, params_.eta,
+      params_.omega);
 }
 
 void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
