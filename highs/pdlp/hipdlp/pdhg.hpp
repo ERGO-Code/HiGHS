@@ -33,8 +33,8 @@
 #include "scaling.hpp"
 #include "solver_results.hpp"
 
-const bool use_cupdlpx = true;
-const bool temp_setting = true;
+const bool kUseCupdlpx = true;
+const bool kTempSetting = true;
 
 // --- GPU Macros (Defined at file scope for visibility) ---
 #ifdef CUPDLP_GPU
@@ -78,7 +78,7 @@ struct StepSizeConfig;
 
 class PDLPSolver {
  public:
-  // --- Setup & Main Interface ---
+  // --- setup & Main Interface ---
   void setup(const HighsOptions& options, HighsTimer& timer);
   void passLp(const HighsLp* lp) { original_lp_ = lp; }
   void preprocessLp();
@@ -94,8 +94,8 @@ class PDLPSolver {
   // --- Getters ---
   TerminationStatus getTerminationCode() const { return results_.term_code; }
   HighsInt getIterationCount() const { return final_iter_count_; }
-  HighsInt getnCol() const { return lp_.num_col_; }
-  HighsInt getnRow() const { return lp_.num_row_; }
+  HighsInt getNumCol() const { return lp_.num_col_; }
+  HighsInt getNumRow() const { return lp_.num_row_; }
 
 #if PDLP_DEBUG_LOG
   FILE* debug_pdlp_log_file_ = nullptr;
@@ -123,7 +123,7 @@ class PDLPSolver {
   void prepareNextIteration();  // Swaps pointers/vectors
 
   // --- Convergence & Math Helpers ---
-  double PowerMethod();
+  double powerMethod();
   void initializeStepSizes();
 
   // Convergence checks
@@ -178,7 +178,7 @@ class PDLPSolver {
 
   // Other utilities
   void printConstraintInfo();
-  bool CheckNumericalStability(const std::vector<double>& delta_x,
+  bool checkNumericalStability(const std::vector<double>& delta_x,
                                const std::vector<double>& delta_y);
   double computeMovement(const std::vector<double>& delta_primal,
                          const std::vector<double>& delta_dual);
@@ -250,7 +250,7 @@ class PDLPSolver {
       std::numeric_limits<double>::infinity();
 
   HighsTimer* highs_timer_p;
-  double last_logger_time = -kHighsInf;
+  double last_logger_time_ = -kHighsInf;
   const double kHipdlpLoggerFrequency = 5.0;
 
 #if PDLP_PROFILE

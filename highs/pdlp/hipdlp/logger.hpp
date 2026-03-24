@@ -32,32 +32,32 @@ enum class LogLevel {
 
 class Logger {
  public:
-  void SetLevel(const HighsInt log_dev_level);
-  void SetHighsLogOptions(const HighsLogOptions log_options) {
+  void setLevel(const HighsInt log_dev_level);
+  void setHighsLogOptions(const HighsLogOptions log_options) {
     log_options_ = log_options;
   }
-  LogLevel GetLogLevel() const { return console_level_; }
+  LogLevel getLogLevel() const { return console_level_; }
   // Logging methods for different levels
-  void Info(const std::string& message) const;
-  void Detailed(const std::string& message) const;
-  void Verbose(const std::string& message) const;
-  void Debug(const std::string& message) const;
+  void info(const std::string& message) const;
+  void detailed(const std::string& message) const;
+  void verbose(const std::string& message) const;
+  void debug(const std::string& message) const;
 
   // Formatted printing functions
-  void PrintHeader() const;
-  void PrintParams(const PrimalDualParams& params) const;
-  void PrintIterationHeader() const;
-  void PrintIterationStats(HighsInt iter, const SolverResults& current_results,
+  void printHeader() const;
+  void printParams(const PrimalDualParams& params) const;
+  void printIterationHeader() const;
+  void printIterationStats(HighsInt iter, const SolverResults& current_results,
                            const double current_eta, const double time) const;
-  void PrintSummary(const SolverResults& results, HighsInt total_iter,
+  void printSummary(const SolverResults& results, HighsInt total_iter,
                     double total_time) const;
-  void SetLogOptions(HighsLogOptions log_options) {
+  void setLogOptions(HighsLogOptions log_options) {
     log_options_ = log_options;
   }
-  LogLevel GetConsoleLevel() const { return console_level_; }
+  LogLevel getConsoleLevel() const { return console_level_; }
 
  private:
-  void Log(LogLevel level, const std::string& message) const;
+  void log(LogLevel level, const std::string& message) const;
   LogLevel console_level_;
   HighsLogOptions log_options_;
 };
