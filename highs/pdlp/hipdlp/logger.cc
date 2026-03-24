@@ -22,7 +22,9 @@ std::string EnumToString(T e, const std::map<T, std::string>& map) {
 }
 
 // Logger implementation
-void Logger::setLevel(const HighsInt log_dev_level) {
+void Logger::initialise(const HighsInt log_dev_level,
+                        const HighsLogOptions log_options,
+                        HighsTimer* highs_timer_p) {
   if (log_dev_level == kHighsLogDevLevelVerbose) {
     console_level_ = LogLevel::kDebug;
   } else if (log_dev_level == kHighsLogDevLevelDetailed) {
@@ -32,6 +34,10 @@ void Logger::setLevel(const HighsInt log_dev_level) {
   } else {
     console_level_ = LogLevel::kInfo;  // None;
   }
+  log_options_ = log_options;
+  highs_timer_p_ = highs_timer_p;
+  iteration_stats_count_ = kHighsIInf;
+  iteration_stats_time_ = -kHighsInf;
 }
 
 void Logger::log(LogLevel level, const std::string& message) const {
@@ -122,14 +128,29 @@ void Logger::printParams(const PrimalDualParams& params) const {
   detailed("------------------------------------------------------------");
 }
 
-void Logger::printIterationHeader() const {
+void Logger::printIterationHeader() {
   info("     Iter     Pr Feas     Du Feas     P-D Gap       Pr Wt     Time");
+  this->iteration_stats_count_ = 0;
 }
 
-void Logger::printIterationStats(HighsInt iter, const SolverResults& results,
-                                 const double step_size,
-                                 const double time) const {
+void Logger::printIterationStats(const HighsInt iter,
+                                 const SolverResults& results,
+                                 const double step_size, const bool forced) {
+  // Repeat the header if sufficient iterations have been performed
+  if (this->iteration_stats_count_ > kHipdlpIterationStatsHeaderFrequency)
+    this->printIterationHeader();
+  // Determine whether to log iterations
+  bool iteration_log = console_level_ >= LogLevel::kDetailed || forced;
+  double time_now = highs_timer_p_->read();
+  iteration_log =
+      iteration_log ||
+      time_now > this->iteration_stats_time_ + kHipdlpIterationStatsFrequency;
+  if (!iteration_log) return;
+
   std::stringstream ss;
+  // Switch off clang-format temporarily so neat arrangement of
+  // stringstream commands is perserved
+  //
   // clang-format off
   ss << std::fixed << std::setprecision(9) << std::setw(9) << iter << " "
      << std::scientific << std::setprecision(2)
@@ -138,9 +159,11 @@ void Logger::printIterationStats(HighsInt iter, const SolverResults& results,
      << std::setw(11) << results.duality_gap << " "
      << std::setw(11) << step_size << " "
      << std::fixed << std::setprecision(1)
-     << std::setw(8) << time;
+     << std::setw(8) << time_now;
   // clang-format on
   info(ss.str());
+  this->iteration_stats_time_ = time_now;
+  this->iteration_stats_count_++;
 }
 
 void Logger::printSummary(const SolverResults& results, HighsInt total_iter,

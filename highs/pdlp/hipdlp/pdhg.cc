@@ -547,8 +547,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   linalg::aTy(lp_, y_current_, ATy_cache_);
 #endif
 
-  logger_.printIterationHeader();
-
   // termination_status is not known. Setting it to NOTSET rather than
   // OPTIMAL means that if it's not set elsewhere then optimality is
   // not returned in error
@@ -563,10 +561,13 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   cudaGraphExec_t graphExec = nullptr;
 #endif
 
+  // Initial iteration log header
+  logger_.printIterationHeader();
+
   // 2. Main cuPDLPx-style Loop
   while (final_iter_count_ < params_.max_iterations) {
     // check global time limit
-    if (highs_timer_p->read() > params_.time_limit) {
+    if (highs_timer_p_->read() > params_.time_limit) {
       logger_.info("Time limit reached.");
       termination_status = TerminationStatus::TIMEOUT;
       break;
@@ -845,14 +846,6 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
                                        "[A]", dSlackPosAvg_, dSlackNegAvg_);
 #endif
 
-  // Determine whether to log iterations
-  bool iteration_log = logger_.getConsoleLevel() >= LogLevel::kDetailed;
-  double time_now = highs_timer_p->read();
-  iteration_log = time_now > last_logger_time_ + kHipdlpLoggerFrequency;
-  if (iteration_log) {
-    logger_.printIterationStats(iter, current_results, primal_weight_, time_now);
-    last_logger_time_ = time_now;
-  }
   // 3. Handle Convergence Success
   if (current_converged || average_converged) {
     bool prefer_avg = average_converged;
@@ -896,14 +889,20 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
     final_iter_count_ = iter;
     results_ = prefer_avg ? average_results : current_results;
     // Final logging on optimality
-    time_now = highs_timer_p->read();
-    logger_.printIterationStats(iter, results_, primal_weight_, time_now);
+    const bool forced = true;
+    logger_.printIterationStats(final_iter_count_, results_, primal_weight_,
+                                forced);
 
     logger_.info((prefer_avg ? "Average" : "Current") +
                  std::string(" solution converged"));
 
     status = TerminationStatus::OPTIMAL;
     return true;  // Stop
+  } else {
+    // Possibly log the iteration
+    HighsInt current_iter_count = iter;
+    logger_.printIterationStats(current_iter_count, current_results,
+                                primal_weight_);
   }
 
   results_ = current_results;
@@ -1654,10 +1653,9 @@ double PDLPSolver::powerMethod() {
 }
 
 void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
-  logger_.setLevel(options.log_dev_level);
-  logger_.setHighsLogOptions(options.log_options);
+  logger_.initialise(options.log_dev_level, options.log_options, &timer);
   logger_.printHeader();
-  highs_timer_p = &timer;
+  highs_timer_p_ = &timer;
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Using HiPDLP first order PDLP solver on a %s\n",
 #ifdef CUPDLP_GPU
@@ -1729,8 +1727,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   params_.step_size_strategy = StepSizeStrategy::FIXED;
   if (options.pdlp_step_size_strategy == kPdlpStepSizeStrategyPid) {
     params_.step_size_strategy = StepSizeStrategy::PID;
-  } else if (options.pdlp_step_size_strategy !=
-             kPdlpStepSizeStrategyFixed) {
+  } else if (options.pdlp_step_size_strategy != kPdlpStepSizeStrategyFixed) {
     logger_.info(
         "HiPDLP only supports pdlp_step_size_strategy in {0: fixed, "
         "3: PID}; using PID for unsupported values.");
@@ -1772,7 +1769,7 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
 }
 
 void PDLPSolver::logSummary() {
-  logger_.printSummary(results_, final_iter_count_, highs_timer_p->read());
+  logger_.printSummary(results_, final_iter_count_, highs_timer_p_->read());
 }
 
 void PrimalDualParams::initialise() {
@@ -1849,12 +1846,11 @@ void PDLPSolver::initializeStepSizes() {
   stepsize_.primal_step = base_step / params_.omega;
   stepsize_.dual_step = base_step * params_.omega;
 
-  highsLogDev(
-      params_.log_options_, HighsLogType::kInfo,
-      "Initial step sizes from power method lambda = %g: primal step= "
-      "%g; dual step = %g, eta = %g, omega = %g\n",
-      op_norm_sq, stepsize_.primal_step, stepsize_.dual_step, params_.eta,
-      params_.omega);
+  highsLogDev(params_.log_options_, HighsLogType::kInfo,
+              "Initial step sizes from power method lambda = %g: primal step= "
+              "%g; dual step = %g, eta = %g, omega = %g\n",
+              op_norm_sq, stepsize_.primal_step, stepsize_.dual_step,
+              params_.eta, params_.omega);
 }
 
 void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {

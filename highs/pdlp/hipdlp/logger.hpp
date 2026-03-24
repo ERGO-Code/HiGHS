@@ -32,10 +32,8 @@ enum class LogLevel {
 
 class Logger {
  public:
-  void setLevel(const HighsInt log_dev_level);
-  void setHighsLogOptions(const HighsLogOptions log_options) {
-    log_options_ = log_options;
-  }
+  void initialise(const HighsInt log_dev_level,
+                  const HighsLogOptions log_options, HighsTimer* highs_timer_p);
   LogLevel getLogLevel() const { return console_level_; }
   // Logging methods for different levels
   void info(const std::string& message) const;
@@ -46,20 +44,25 @@ class Logger {
   // Formatted printing functions
   void printHeader() const;
   void printParams(const PrimalDualParams& params) const;
-  void printIterationHeader() const;
-  void printIterationStats(HighsInt iter, const SolverResults& current_results,
-                           const double current_eta, const double time) const;
+  void printIterationHeader();
+  void printIterationStats(const HighsInt iter,
+                           const SolverResults& current_results,
+                           const double current_eta, const bool forced = false);
   void printSummary(const SolverResults& results, HighsInt total_iter,
                     double total_time) const;
   void setLogOptions(HighsLogOptions log_options) {
     log_options_ = log_options;
   }
-  LogLevel getConsoleLevel() const { return console_level_; }
 
  private:
   void log(LogLevel level, const std::string& message) const;
   LogLevel console_level_;
   HighsLogOptions log_options_;
+  HighsTimer* highs_timer_p_;
+  HighsInt iteration_stats_count_;
+  double iteration_stats_time_;
+  const HighsInt kHipdlpIterationStatsHeaderFrequency = 50;
+  const double kHipdlpIterationStatsFrequency = 5.0;
 };
 
 #endif  // PDLP_HIPDLP_LOGGER_HPP
