@@ -606,26 +606,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       fpe_ = computeFixedPointError();
 #endif
       initial_fpe_ = fpe_;
-      // if (DEBUG_MODE) std::cout << "[DEBUG] iter=" << final_iter_count_ << "
-      // | Restarted with initial_fpe_ = " << std::setprecision(10) <<
-      // initial_fpe_ << std::endl;
       do_restart = false;
     }
-
-    // copy back x from gpu and print out
-#ifdef CUPDLP_GPU
-    if (final_iter_count_ == 9) {
-      std::vector<double> x_next_host(lp_.num_col_);
-      CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_,
-                            lp_.num_col_ * sizeof(double),
-                            cudaMemcpyDeviceToHost));
-      std::cout << "x_next (before 9): ";
-      for (int i = 0; i < 3; i++)
-        std::cout << std::fixed << std::setprecision(10) << x_next_host[i]
-                  << " ";
-      std::cout << "\n";
-    }
-#endif
 
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #ifdef CUPDLP_GPU
@@ -653,37 +635,12 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     performHalpernPdhgStep(true, PDHG_CHECK_INTERVAL);
 #endif
 
-#ifdef CUPDLP_GPU
-    if (final_iter_count_ == 9) {
-      std::vector<double> x_next_host(lp_.num_col_);
-      std::vector<double> x_current_host(lp_.num_col_);
-      CUDA_CHECK(cudaMemcpy(x_current_host.data(), d_x_current_,
-                            lp_.num_col_ * sizeof(double),
-                            cudaMemcpyDeviceToHost));
-      CUDA_CHECK(cudaMemcpy(x_next_host.data(), d_pdhg_primal_,
-                            lp_.num_col_ * sizeof(double),
-                            cudaMemcpyDeviceToHost));
-      std::cout << "x_next (after 9): ";
-      for (int i = 0; i < 3; i++)
-        std::cout << std::fixed << std::setprecision(10) << x_next_host[i]
-                  << " ";
-      std::cout << "\n";
-      std::cout << "x_current (after 9): ";
-      for (int i = 0; i < 3; i++)
-        std::cout << std::fixed << std::setprecision(10) << x_current_host[i]
-                  << " ";
-      std::cout << "\n";
-    }
-#endif
-
 // Compute Error for Restart Check
 #ifdef CUPDLP_GPU
     fpe_ = computeFixedPointErrorGpu();
 #else
     fpe_ = computeFixedPointError();
 #endif
-    // if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << "
-    // | FPE at check: " << std::setprecision(10) << fpe_ << std::endl;
 
     halpern_iteration_ += PDHG_CHECK_INTERVAL;
     final_iter_count_ += PDHG_CHECK_INTERVAL;
@@ -722,9 +679,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     if (do_restart) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
         updatePrimalWeightAtRestart(results_);
-        // if (DEBUG_MODE)        std::cout << "[DEBUG] iter=" <<
-        // final_iter_count_ << " | Updated primal_weight_ to " <<
-        // primal_weight_ << std::endl;
       }
 #ifdef CUPDLP_GPU
       CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_pdhg_primal_,
