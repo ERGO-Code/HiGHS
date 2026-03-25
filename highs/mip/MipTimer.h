@@ -442,8 +442,9 @@ class MipTimer {
         kMipClockRootSeparationFinishAnalyticCentreComputation,
         kMipClockRootSeparationCentralRounding,
         kMipClockRootSeparationEvaluateRootLp};
-    reportMipClockList("MipRootSeparation", mip_clock_list, mip_timer_clock,
-                       kMipClockRootSeparation);  //, kMipClockTolerancePercentReport);
+    reportMipClockList(
+        "MipRootSeparation", mip_clock_list, mip_timer_clock,
+        kMipClockRootSeparation);  //, kMipClockTolerancePercentReport);
   };
 
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
@@ -481,8 +482,9 @@ class MipTimer {
         //      kMipClockSearchBacktrack,
         kMipClockOpenNodesToQueue1, kMipClockEvaluateNode1,
         kMipClockNodeSearchSeparation};  //, kMipClockStoreBasis};
-    reportMipClockList("MipNodeSearch", mip_clock_list, mip_timer_clock,
-                       kMipClockNodeSearch);  //, kMipClockTolerancePercentReport);
+    reportMipClockList(
+        "MipNodeSearch", mip_clock_list, mip_timer_clock,
+        kMipClockNodeSearch);  //, kMipClockTolerancePercentReport);
   };
 
   void reportMipSeparationClock(const HighsTimerClock& mip_timer_clock) {

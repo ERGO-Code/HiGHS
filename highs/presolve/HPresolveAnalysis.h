@@ -15,10 +15,8 @@
 
 class HPresolveAnalysis {
  public:
-  HPresolveAnalysis()
-      : timer_(nullptr),
-        analyse_presolve_time_(false) {}
-  
+  HPresolveAnalysis() : timer_(nullptr), analyse_presolve_time_(false) {}
+
   HighsTimer* timer_;
   const HighsLp* model;
   const HighsOptions* options;
@@ -40,7 +38,7 @@ class HPresolveAnalysis {
   HighsInt num_deleted_rows0_;
   HighsInt num_deleted_cols0_;
   HighsPresolveLog presolve_log_;
-  
+
   HighsTimerClock presolve_clocks_;
   bool analyse_presolve_time_;
 

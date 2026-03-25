@@ -35,7 +35,7 @@ class Scaling {
     debug_pdlp_data_ = debug_pdlp_data;
   };
   // Not used
-  //  void LogMatrixNorms(const std::string& stage); 
+  //  void LogMatrixNorms(const std::string& stage);
   //
   // Get scaling vectors (for unscaling solution later)
   bool IsScaled() const { return is_scaled_; }
@@ -65,7 +65,8 @@ class Scaling {
                     const std::vector<double>& row_scaling);
 
   // Compute norm of a vector based on norm type
-  double ComputeNorm(const double* values, HighsInt size, double norm_type) const;
+  double ComputeNorm(const double* values, HighsInt size,
+                     double norm_type) const;
   FILE* debug_pdlp_log_file_;
   DebugPdlpData* debug_pdlp_data_;
 };

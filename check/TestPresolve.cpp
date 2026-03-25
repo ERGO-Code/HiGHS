@@ -912,7 +912,7 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-time", "[highs_test_presolve]") {
-   std::string model_file =
+  std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/shell.mps";
   Highs highs;
   //  highs.setOptionValue("output_flag", dev_run);

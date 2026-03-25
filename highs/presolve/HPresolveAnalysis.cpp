@@ -13,15 +13,15 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
                               const HighsOptions* options_,
                               const HighsInt& numDeletedRows_,
                               const HighsInt& numDeletedCols_,
-                              const bool silent,
-			      HighsTimer* timer) {
+                              const bool silent, HighsTimer* timer) {
   model = model_;
   options = options_;
   numDeletedRows = &numDeletedRows_;
   numDeletedCols = &numDeletedCols_;
 
   timer_ = timer;
-  analyse_presolve_time_ = kHighsAnalysisLevelPresolveTime & options->highs_analysis_level;
+  analyse_presolve_time_ =
+      kHighsAnalysisLevelPresolveTime & options->highs_analysis_level;
   if (analyse_presolve_time_) {
     HighsTimerClock clock;
     clock.timer_pointer_ = timer_;
@@ -250,7 +250,8 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
   return true;
 }
 
-void HPresolveAnalysis::presolveTimerStart(const HighsInt presolve_clock) const {
+void HPresolveAnalysis::presolveTimerStart(
+    const HighsInt presolve_clock) const {
   if (!analyse_presolve_time_) return;
   HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
   presolve_clocks_.timer_pointer_->start(highs_timer_clock);
@@ -265,6 +266,5 @@ void HPresolveAnalysis::presolveTimerStop(const HighsInt presolve_clock) const {
 void HPresolveAnalysis::reportPresolveTimer() {
   if (!analyse_presolve_time_) return;
   PresolveTimer presolve_timer;
-  presolve_timer.reportPresolveCoreClock(presolve_clocks_);
+  presolve_timer.reportPresolveCoreClock(model->model_name_, presolve_clocks_);
 }
-
