@@ -6433,11 +6433,19 @@ HPresolve::Result HPresolve::removeDependentEquations(
   const bool logging_on = analysis_.logging_on_;
   if (equations.empty()) return Result::kOk;
 
+  auto returnOk = [&]() {
+    analysis_.logging_on_ = logging_on;
+    if (logging_on)
+      analysis_.stopPresolveRuleLog(kPresolveRuleDependentEquations);
+    return Result::kOk;
+  };
+
   if (logging_on)
     analysis_.startPresolveRuleLog(kPresolveRuleDependentEquations);
 
   HighsSparseMatrix matrix;
-  matrix.num_col_ = equations.size();
+  HighsInt num_equations = equations.size();
+  matrix.num_col_ = num_equations;
   matrix.num_row_ = model->num_col_ + 1;
   matrix.start_.resize(matrix.num_col_ + 1);
   matrix.start_[0] = 0;
@@ -6473,6 +6481,17 @@ HPresolve::Result HPresolve::removeDependentEquations(
   HighsInt num_nonzero_columns = 0;
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++)
     if (row_count[iCol]) num_nonzero_columns++;
+  HighsInt num_variables = num_nonzero_columns;
+  //
+  // Although two duplicated equations in any number of variables lead
+  // to dependency, it's not worth looking for dependent equations if
+  // there are few relative to the number of variables
+  //
+  // The following heuristic picks up all Mittelmann problems with
+  // meaningful reductions
+  if (num_equations < 0.5 * num_variables) return returnOk();
+  //
+  // Identify any dependent equations
   std::vector<HighsInt> colSet(matrix.num_col_);
   std::iota(colSet.begin(), colSet.end(), 0);
   HFactor factor;
@@ -6539,18 +6558,6 @@ HPresolve::Result HPresolve::removeDependentEquations(
     }
   }
   if (!silent) {
-    highsLogUser(
-        options->log_options, HighsLogType::kInfo,
-        "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
-        "removed %d dependent equation%s and %d nonzero%s "
-        "in %.2fs (limit = %.2fs)\n",
-        static_cast<int>(matrix.num_col_), matrix.num_col_ == 1 ? "" : "s",
-        static_cast<int>(num_nonzero_columns),
-        static_cast<int>(model->num_col_), num_nonzero_columns == 1 ? "" : "s",
-        static_cast<int>(matrix.numNz()), matrix.numNz() == 1 ? "" : "s",
-        static_cast<int>(num_removed_row), num_removed_row == 1 ? "" : "s",
-        static_cast<int>(num_removed_nz), num_removed_nz == 1 ? "" : "s",
-        time_taken, time_limit);
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g\n",
                  model->model_name_.c_str(), static_cast<int>(matrix.num_col_),
@@ -6559,17 +6566,27 @@ HPresolve::Result HPresolve::removeDependentEquations(
                  static_cast<int>(matrix.numNz()),
                  static_cast<int>(num_removed_row),
                  static_cast<int>(num_removed_nz), time_taken);
+    highsLogUser(
+        options->log_options, HighsLogType::kInfo,
+        "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
+        "removed %d dependent equation%s and %d nonzero%s "
+        "in %.2fs (limit = %.2fs)",
+        static_cast<int>(matrix.num_col_), matrix.num_col_ == 1 ? "" : "s",
+        static_cast<int>(num_nonzero_columns),
+        static_cast<int>(model->num_col_), num_nonzero_columns == 1 ? "" : "s",
+        static_cast<int>(matrix.numNz()), matrix.numNz() == 1 ? "" : "s",
+        static_cast<int>(num_removed_row), num_removed_row == 1 ? "" : "s",
+        static_cast<int>(num_removed_nz), num_removed_nz == 1 ? "" : "s",
+        time_taken, time_limit);
   }
   if (num_fictitious_rows_skipped)
     highsLogDev(options->log_options, HighsLogType::kInfo,
-                ", avoiding %d fictitious rows",
-                static_cast<int>(num_fictitious_rows_skipped));
+                ", avoiding %d fictitious row%s",
+                static_cast<int>(num_fictitious_rows_skipped),
+                num_fictitious_rows_skipped == 1 ? "" : "s");
   highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
-  analysis_.logging_on_ = logging_on;
-  if (logging_on)
-    analysis_.stopPresolveRuleLog(kPresolveRuleDependentEquations);
-  return Result::kOk;
+  return returnOk();
 }
 
 HPresolve::Result HPresolve::removeDependentFreeCols(

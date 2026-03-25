@@ -17,7 +17,6 @@ enum iClockPresolve {
   kPresolveClockPresolve,
   kPresolveClockInitial,
   kPresolveClockInitialRow,
-  kPresolveClockInitialChangeColBounds,
   kPresolveClockInitialCol,
   kPresolveClockFastLoop,
   kPresolveClockFastLoopRowSingletons,
@@ -48,8 +47,6 @@ class PresolveTimer {
     clock[kPresolveClockPresolve] = timer_pointer->clock_def("Presolve");
     clock[kPresolveClockInitial] = timer_pointer->clock_def("Initial");
     clock[kPresolveClockInitialRow] = timer_pointer->clock_def("Initial row");
-    clock[kPresolveClockInitialChangeColBounds] =
-        timer_pointer->clock_def("Initial change col bounds");
     clock[kPresolveClockInitialCol] = timer_pointer->clock_def("Initial col");
     clock[kPresolveClockFastLoop] = timer_pointer->clock_def("Fast loop");
     clock[kPresolveClockFastLoopRowSingletons] =
@@ -137,8 +134,7 @@ class PresolveTimer {
                                const HighsTimerClock& presolve_timer_clock) {
     const std::vector<HighsInt> presolve_clock_list{
         //      kPresolveClockInitial,
-        kPresolveClockInitialRow, kPresolveClockInitialChangeColBounds,
-        kPresolveClockInitialCol,
+        kPresolveClockInitialRow, kPresolveClockInitialCol,
         //	kPresolveClockFastLoop,
         kPresolveClockFastLoopRowSingletons,
         kPresolveClockFastLoopColSingletons,
