@@ -58,6 +58,9 @@ class HPresolveAnalysis {
   void startPresolveRuleLog(const HighsInt rule_type);
   void stopPresolveRuleLog(const HighsInt rule_type);
   bool analysePresolveRuleLog(const bool report = false);
+  void presolveTimerStart(const HighsInt presolve_clock = 0) const;
+  void presolveTimerStop(const HighsInt presolve_clock = 0) const;
+  void reportPresolveTimer();
   friend class HPresolve;
 };
 

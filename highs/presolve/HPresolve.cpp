@@ -25,6 +25,7 @@
 #include "mip/HighsObjectiveFunction.h"
 #include "mip/MipTimer.h"
 #include "presolve/HighsPostsolveStack.h"
+#include "presolve/PresolveTimer.h"
 #include "test_kkt/DevKkt.h"
 #include "util/HFactor.h"
 #include "util/HighsCDouble.h"
@@ -5747,7 +5748,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   // effectiveness
   analysis_.setup(this->model, this->options, this->numDeletedRows,
                   this->numDeletedCols, silent, this->timer);
-
+  analysis_.presolveTimerStart(kPresolveClockPresolve);
   if (options->presolve != kHighsOffString) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
 
@@ -5953,6 +5954,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
   if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
 
+  analysis_.presolveTimerStop(kPresolveClockPresolve);
+  analysis_.reportPresolveTimer();
   // analysePresolveRuleLog() should return true - no errors
   assert(analysis_.analysePresolveRuleLog());
   // Possibly report presolve log

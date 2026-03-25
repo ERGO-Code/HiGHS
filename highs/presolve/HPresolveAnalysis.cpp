@@ -249,3 +249,22 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
   }
   return true;
 }
+
+void HPresolveAnalysis::presolveTimerStart(const HighsInt presolve_clock) const {
+  if (!analyse_presolve_time_) return;
+  HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
+  presolve_clocks_.timer_pointer_->start(highs_timer_clock);
+}
+
+void HPresolveAnalysis::presolveTimerStop(const HighsInt presolve_clock) const {
+  if (!analyse_presolve_time_) return;
+  HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
+  presolve_clocks_.timer_pointer_->stop(highs_timer_clock);
+}
+
+void HPresolveAnalysis::reportPresolveTimer() {
+  if (!analyse_presolve_time_) return;
+  PresolveTimer presolve_timer;
+  presolve_timer.reportPresolveCoreClock(presolve_clocks_);
+}
+
