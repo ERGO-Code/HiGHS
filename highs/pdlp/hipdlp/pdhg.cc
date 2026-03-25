@@ -29,7 +29,7 @@
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
 
-#define PDHG_CHECK_INTERVAL 3
+#define PDHG_CHECK_INTERVAL 40
 #define DEBUG_MODE true
 static constexpr double kDivergentMovement = 1e10;
 
@@ -665,18 +665,18 @@ if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE 
         updatePrimalWeightAtRestart(results_);
       }
 #ifdef CUPDLP_GPU
-      CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_pdhg_primal_,
-                            lp_.num_col_ * sizeof(double),
-                            cudaMemcpyDeviceToDevice));
-      CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_pdhg_dual_,
-                            lp_.num_row_ * sizeof(double),
-                            cudaMemcpyDeviceToDevice));
-      CUDA_CHECK(cudaMemcpy(d_x_current_, d_pdhg_primal_,
-                            lp_.num_col_ * sizeof(double),
-                            cudaMemcpyDeviceToDevice));
-      CUDA_CHECK(cudaMemcpy(d_y_current_, d_pdhg_dual_,
-                            lp_.num_row_ * sizeof(double),
-                            cudaMemcpyDeviceToDevice));
+      CUDA_CHECK(cudaMemcpyAsync(d_x_anchor_, d_pdhg_primal_,
+                                 lp_.num_col_ * sizeof(double),
+                                 cudaMemcpyDeviceToDevice, gpu_stream_));
+      CUDA_CHECK(cudaMemcpyAsync(d_y_anchor_, d_pdhg_dual_,
+                                 lp_.num_row_ * sizeof(double),
+                                 cudaMemcpyDeviceToDevice, gpu_stream_));
+      CUDA_CHECK(cudaMemcpyAsync(d_x_current_, d_pdhg_primal_,
+                                 lp_.num_col_ * sizeof(double),
+                                 cudaMemcpyDeviceToDevice, gpu_stream_));
+      CUDA_CHECK(cudaMemcpyAsync(d_y_current_, d_pdhg_dual_,
+                                 lp_.num_row_ * sizeof(double),
+                                 cudaMemcpyDeviceToDevice, gpu_stream_));
 #else
       x_anchor_ = x_next_;
       y_anchor_ = y_next_;
@@ -745,15 +745,16 @@ double PDLPSolver::computeFixedPointErrorGpu() {
   // 1. delta_x = x_next_ - reflected_x_
   // (Assuming d_pdhg_primal_ maps to x_next_ and d_x_next_ is used as
   // reflected_x_ in your minor/major steps)
-  CUDA_CHECK(cudaMemcpy(d_delta_x_, d_pdhg_primal_,
-                        a_num_cols_ * sizeof(double),
-                        cudaMemcpyDeviceToDevice));
+  CUDA_CHECK(cudaMemcpyAsync(d_delta_x_, d_pdhg_primal_,
+                             a_num_cols_ * sizeof(double),
+                             cudaMemcpyDeviceToDevice, gpu_stream_));
   CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_cols_, &alpha_minus_one,
                            d_x_next_, 1, d_delta_x_, 1));
 
   // 2. delta_y = y_next_ - reflected_y_
-  CUDA_CHECK(cudaMemcpy(d_delta_y_, d_pdhg_dual_, a_num_rows_ * sizeof(double),
-                        cudaMemcpyDeviceToDevice));
+  CUDA_CHECK(cudaMemcpyAsync(d_delta_y_, d_pdhg_dual_, 
+                             a_num_rows_ * sizeof(double),
+                             cudaMemcpyDeviceToDevice, gpu_stream_));
   CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_rows_, &alpha_minus_one,
                            d_y_next_, 1, d_delta_y_, 1));
 
@@ -2640,8 +2641,9 @@ bool PDLPSolver::checkConvergenceGpu(const HighsInt iter, const double* d_x,
   // copy 4 doubles back to CPU
 
   double h_results[4];
-  CUDA_CHECK(cudaMemcpy(h_results, d_convergence_results_, 4 * sizeof(double),
-                        cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpyAsync(h_results, d_convergence_results_, 4 * sizeof(double),
+                             cudaMemcpyDeviceToHost, gpu_stream_));
+  CUDA_CHECK(cudaStreamSynchronize(gpu_stream_));
 
   double primal_feas_sq = h_results[0];
   double dual_feas_sq = h_results[1];
@@ -2780,8 +2782,8 @@ double PDLPSolver::computeNonlinearityGpu(const double* d_x_new,
 double PDLPSolver::computeDiffNormCuBLAS(const double* d_a, const double* d_b,
                                          HighsInt n) {
   // 1. Copy a to buffer: buffer = a
-  CUDA_CHECK(
-      cudaMemcpy(d_buffer_, d_a, n * sizeof(double), cudaMemcpyDeviceToDevice));
+  CUDA_CHECK(cudaMemcpyAsync(d_buffer_, d_a, n * sizeof(double), 
+                             cudaMemcpyDeviceToDevice, gpu_stream_));
 
   // 2. buffer = buffer - b  (using cuBLAS axpy)
   double alpha = -1.0;
