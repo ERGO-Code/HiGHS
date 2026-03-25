@@ -39,6 +39,7 @@ class HighsSearch {
   HighsPseudocost& pseudocost;
   HighsRandom random;
   int64_t nnodes;
+  int64_t nleaves;
   int64_t lpiterations;
   int64_t heurlpiterations;
   int64_t sblpiterations;
@@ -182,7 +183,9 @@ class HighsSearch {
 
   int64_t getLocalLpIterations() const;
 
-  int64_t getLocalNodes() const;
+  int64_t& getLocalNodes();
+
+  int64_t& getLocalLeaves();
 
   int64_t getStrongBranchingLpIterations() const;
 
@@ -231,7 +234,7 @@ class HighsSearch {
 
   void printDisplayLine(char first, bool header = false);
 
-  NodeResult dive();
+  NodeResult dive(const bool ramp = false);
 
   HighsDomain& getLocalDomain() { return localdom; }
 
@@ -266,6 +269,7 @@ class HighsSearch {
                     const bool print_display_line = true);
 
   int64_t& getNumNodes();
+  int64_t& getNumLeaves();
   HighsCDouble& getPrunedTreeweight();
   int64_t& getTotalLpIterations();
   int64_t& getHeuristicLpIterations();

@@ -796,6 +796,9 @@ void HighsSearch::flushStatistics() {
   getNumNodes() += nnodes;
   nnodes = 0;
 
+  getNumLeaves() += nleaves;
+  nleaves = 0;
+
   getPrunedTreeweight() += treeweight;
   treeweight = 0;
 
@@ -819,7 +822,9 @@ int64_t HighsSearch::getTotalLpIterations() const {
 
 int64_t HighsSearch::getLocalLpIterations() const { return lpiterations; }
 
-int64_t HighsSearch::getLocalNodes() const { return nnodes; }
+int64_t& HighsSearch::getLocalNodes() { return nnodes; }
+
+int64_t& HighsSearch::getLocalLeaves() { return nleaves; }
 
 int64_t HighsSearch::getStrongBranchingLpIterations() const {
   return sblpiterations + getSbLpIterations();
@@ -1857,7 +1862,7 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-HighsSearch::NodeResult HighsSearch::dive() {
+HighsSearch::NodeResult HighsSearch::dive(bool ramp) {
   reliableatnode.clear();
 
   do {
@@ -1870,6 +1875,7 @@ HighsSearch::NodeResult HighsSearch::dive() {
 
     result = branch();
     if (result != NodeResult::kBranched) return result;
+    if (ramp) return result;
   } while (true);
 }
 
@@ -1949,6 +1955,8 @@ bool HighsSearch::addIncumbent(const std::vector<double>& sol, double solobj,
 }
 
 int64_t& HighsSearch::getNumNodes() { return mipsolver.mipdata_->num_nodes; }
+
+int64_t& HighsSearch::getNumLeaves() { return mipsolver.mipdata_->num_leaves; }
 
 HighsCDouble& HighsSearch::getPrunedTreeweight() {
   return mipsolver.mipdata_->pruned_treeweight;
