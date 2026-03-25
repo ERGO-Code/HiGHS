@@ -218,9 +218,6 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     //        (HighsInt)status);
     lp->performAging(true);
 
-    if (!mipsolver.mipdata_->parallelLockActive())
-      // If LP is dynamically copied, then it can contain cuts from multiple
-      // cut pools. Therefore, can't age those pools in parallel.
-      mipworker_.cutpool_->performAging();
+    mipworker_.cutpool_->performAging();
   }
 }

@@ -322,6 +322,8 @@ class HighsLpRelaxation {
 
   void removeObsoleteRows(bool notifyPool = true);
 
+  void removeWorkerSpecificRows();
+
   void removeCuts(HighsInt ndelcuts, std::vector<HighsInt>& deletemask);
 
   void removeCuts();

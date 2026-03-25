@@ -561,6 +561,24 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
   removeCuts(ndelcuts, deletemask);
 }
 
+void HighsLpRelaxation::removeWorkerSpecificRows() {
+  HighsInt nlprows = numRows();
+  HighsInt nummodelrows = getNumModelRows();
+  std::vector<HighsInt> deletemask;
+
+  HighsInt ndelcuts = 0;
+  for (HighsInt i = nummodelrows; i != nlprows; ++i) {
+    assert(lprows[i].origin == LpRow::Origin::kCutPool);
+    if (lprows[i].cutpoolindex > 0) {
+      if (ndelcuts == 0) deletemask.resize(nlprows);
+      ++ndelcuts;
+      deletemask[i] = 1;
+    }
+  }
+
+  removeCuts(ndelcuts, deletemask);
+}
+
 void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
                                    std::vector<HighsInt>& deletemask) {
   assert(lpsolver.getLp().num_row_ ==

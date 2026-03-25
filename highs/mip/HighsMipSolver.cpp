@@ -284,28 +284,41 @@ restart:
     }
   };
 
-  auto createNewWorker = [&](HighsInt i) {
-    mipdata_->domains.emplace_back(mipdata_->getDomain());
+  auto createNewWorkers = [&](HighsInt num_new_workers) {
+    if (num_new_workers <= 0) return;
+    // Remove all cuts from non-global pool for copied LP
     mipdata_->lps.emplace_back(mipdata_->getLp());
-    mipdata_->cutpools.emplace_back(numCol(), options_mip_->mip_pool_age_limit,
-                                    options_mip_->mip_pool_soft_limit, i + 1);
-    mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
-                                         options_mip_->mip_pool_soft_limit);
-    mipdata_->domains.back().addCutpool(mipdata_->cutpools.back());
-    assert(mipdata_->domains.back().getDomainChangeStack().empty());
-    mipdata_->domains.back().addConflictPool(mipdata_->conflictpools.back());
-    mipdata_->pseudocosts.emplace_back(*this);
-    mipdata_->workers.emplace_back(
-        *this, &mipdata_->lps.back(), &mipdata_->domains.back(),
-        &mipdata_->cutpools.back(), &mipdata_->conflictpools.back(),
-        &mipdata_->pseudocosts.back());
-    mipdata_->lps.back().setMipWorker(mipdata_->workers.back());
-    mipdata_->getLp().notifyCutPoolsLpCopied(1);
-    mipdata_->workers.back().randgen.initialise(options_mip_->random_seed +
-                                                mipdata_->workers.size() - 1);
-    mipdata_->workers.back().nodequeue.setNumCol(numCol());
-    mipdata_->debugSolution.registerDomain(
-        mipdata_->workers.back().search_ptr_->getLocalDomain());
+    HighsBasis root_basis = mipdata_->firstrootbasis;
+    root_basis.row_status.resize(mipdata_->lps.back().numRows(),
+                               HighsBasisStatus::kBasic);
+    mipdata_->lps.back().getLpSolver().setBasis(root_basis);
+    mipdata_->lps.back().removeWorkerSpecificRows();
+    for (HighsInt i = 0; i != num_new_workers; ++i) {
+      if (i != 0) {
+        mipdata_->lps.emplace_back(mipdata_->lps.back());
+      }
+      mipdata_->domains.emplace_back(mipdata_->getDomain());
+      mipdata_->cutpools.emplace_back(
+          numCol(), options_mip_->mip_pool_age_limit,
+          options_mip_->mip_pool_soft_limit, mipdata_->cutpools.size());
+      mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
+                                           options_mip_->mip_pool_soft_limit);
+      mipdata_->domains.back().addCutpool(mipdata_->cutpools.back());
+      assert(mipdata_->domains.back().getDomainChangeStack().empty());
+      mipdata_->domains.back().addConflictPool(mipdata_->conflictpools.back());
+      mipdata_->pseudocosts.emplace_back(*this);
+      mipdata_->workers.emplace_back(
+          *this, &mipdata_->lps.back(), &mipdata_->domains.back(),
+          &mipdata_->cutpools.back(), &mipdata_->conflictpools.back(),
+          &mipdata_->pseudocosts.back());
+      mipdata_->lps.back().setMipWorker(mipdata_->workers.back());
+      mipdata_->getLp().notifyCutPoolsLpCopied(1);
+      mipdata_->workers.back().randgen.initialise(options_mip_->random_seed +
+                                                  mipdata_->workers.size() - 1);
+      mipdata_->workers.back().nodequeue.setNumCol(numCol());
+      mipdata_->debugSolution.registerDomain(
+          mipdata_->workers.back().search_ptr_->getLocalDomain());
+    }
   };
 
   // Use case: Change pointers in master worker to local copies of global info
@@ -566,14 +579,10 @@ restart:
       if (!mipdata_->parallelLockActive())
         analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
       worker.sepa_ptr_->separate(worker.search_ptr_->getLocalDomain());
-      if (!mipdata_->parallelLockActive()) {
-        worker.getCutPool().performAging();
+      if (!mipdata_->parallelLockActive())
         analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
-      }
-    } else if (!mipdata_->parallelLockActive()) {
-      for (HighsCutPool& cutpool : mipdata_->cutpools) {
-        cutpool.performAging();
-      }
+    } else {
+      worker.cutpool_->performAging();
     }
 
     if (worker.getGlobalDomain().infeasible()) {
@@ -947,10 +956,8 @@ restart:
       if (num_workers == 1) {
         constructAdditionalWorkerData(master_worker);
       }
-      for (HighsInt i = num_workers; i != new_max_num_workers; i++) {
-        createNewWorker(i);
-        num_workers++;
-      }
+      createNewWorkers(new_max_num_workers - num_workers);
+      num_workers = new_max_num_workers;
     }
   }
   syncSolutions();
