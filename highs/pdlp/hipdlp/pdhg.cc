@@ -501,8 +501,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   setupGpu();
 #endif
   initializeStepSizes();
-  initialize();  // Resets vectors, caches, and sets initial x_current,
-                 // y_current
+  initialize();  // Resets vectors, caches, and sets initial x_current, y_current
+  
   best_primal_weight_ = primal_weight_;
   best_primal_dual_residual_gap_ = std::numeric_limits<double>::infinity();
 
@@ -547,22 +547,27 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   linalg::aTy(lp_, y_current_, ATy_cache_);
 #endif
 
-  // termination_status is not known. Setting it to NOTSET rather than
-  // OPTIMAL means that if it's not set elsewhere then optimality is
-  // not returned in error
   TerminationStatus termination_status = TerminationStatus::NOTSET;
   bool do_restart = false;
   double last_trial_fpe = std::numeric_limits<double>::infinity();
-
   final_iter_count_ = 0;
+
+  logger_.printIterationHeader();
+
+  // =========================================================================
+  // INITIAL CONVERGENCE CHECK (ITERATION 0)
+  // =========================================================================
+  bool should_terminate = runConvergenceCheck(final_iter_count_, x, y, termination_status);
+  
+  if (should_terminate) {
+    solveReturn(termination_status);
+    return;
+  }
 
 #ifdef CUPDLP_GPU
   bool graph_created = false;
   cudaGraphExec_t graphExec = nullptr;
 #endif
-
-  // Initial iteration log header
-  logger_.printIterationHeader();
 
   // 2. Main cuPDLPx-style Loop
   while (final_iter_count_ < params_.max_iterations) {
@@ -602,8 +607,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #ifdef CUPDLP_GPU
     if (!graph_created) {
-      CUDA_CHECK(
-          cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
+      CUDA_CHECK(cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
 
       for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
         performHalpernPdhgStepGpu(false, i);
@@ -625,44 +629,32 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     performHalpernPdhgStep(true, PDHG_CHECK_INTERVAL);
 #endif
 
-// Compute Error for Restart check
+    // Compute Error for Restart Check
 #ifdef CUPDLP_GPU
     fpe_ = computeFixedPointErrorGpu();
 #else
     fpe_ = computeFixedPointError();
 #endif
-
+      
     halpern_iteration_ += PDHG_CHECK_INTERVAL;
     final_iter_count_ += PDHG_CHECK_INTERVAL;
 
-    // -- Convergence check --
+    // =======================================================================
+    // CONVERGENCE CHECK
+    // =======================================================================
     TerminationStatus check_status;
-    bool should_terminate =
-        runConvergenceCheckAndRestart(final_iter_count_, x, y, check_status);
+    should_terminate = runConvergenceCheck(final_iter_count_, x, y, check_status);
 
     if (should_terminate) {
       termination_status = check_status;
       break;
     }
 
-    // -- check Adaptive Restart (Mimicking `should_do_adaptive_restart` in
-    // solver.cu) --
-    if (final_iter_count_ == PDHG_CHECK_INTERVAL) {
-      do_restart = true;
-    } else if (final_iter_count_ > PDHG_CHECK_INTERVAL) {
-      if (fpe_ <= restart_scheme_.getSufficientDecayFactor() * initial_fpe_) {
-        do_restart = true;
-      }
-      if (fpe_ <= restart_scheme_.getNecessaryDecayFactor() * initial_fpe_) {
-        if (fpe_ > last_trial_fpe) {
-          do_restart = true;
-        }
-      }
-      if (halpern_iteration_ >=
-          restart_scheme_.getArtificialRestartThreshold() * final_iter_count_) {
-        do_restart = true;
-      }
-    }
+    // =======================================================================
+    // RESTART CHECK 
+    // =======================================================================
+    do_restart = checkRestartCriteria(fpe_, initial_fpe_, last_trial_fpe, 
+                                      halpern_iteration_, final_iter_count_);
     last_trial_fpe = fpe_;
 
     // -- Perform Restart --
@@ -787,10 +779,10 @@ double PDLPSolver::computeFixedPointErrorGpu() {
 }
 #endif
 
-bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
-                                               std::vector<double>& output_x,
-                                               std::vector<double>& output_y,
-                                               TerminationStatus& status) {
+bool PDLPSolver::runConvergenceCheck(size_t iter,
+                                     std::vector<double>& output_x,
+                                     std::vector<double>& output_y,
+                                     TerminationStatus& status) {
   // 1. Compute Average Iterate (GPU or CPU)
 #ifdef CUPDLP_GPU
   computeAverageIterateGpu();
@@ -803,28 +795,24 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
   bool current_converged = false;
   bool average_converged = false;
 
-  // 2. check Convergence (GPU or CPU)
+  // 2. Check Convergence (GPU or CPU)
 #ifdef CUPDLP_GPU
-  if (params_.use_halpern_restart && d_pdhg_primal_ != nullptr) {
-    // For Halpern, "current iterate" convergence uses the PDHG projected
-    // iterates Need ax and aTy of pdhg iterates:
-    linalgGpuAx(d_pdhg_primal_, d_ax_next_);  // reuse d_ax_next_ as scratch
-    linalgGpuATy(d_pdhg_dual_, d_aty_next_);  // reuse d_aty_next_ as scratch
+  // Only use Halpern PDHG slack/iterates if we have performed at least one iteration
+  if (params_.use_halpern_restart && d_pdhg_primal_ != nullptr && iter > 0) {
+    linalgGpuAx(d_pdhg_primal_, d_ax_next_);
+    linalgGpuATy(d_pdhg_dual_, d_aty_next_);
     current_converged = checkConvergenceGpu(
         iter, d_pdhg_primal_, d_pdhg_dual_, d_ax_next_, d_aty_next_,
         params_.tolerance, current_results, "[L-GPU]", d_dSlackPos_,
-        d_dSlackNeg_,
-        true);  // <-- TRUE: Use the Halpern slack saved in d_dSlackPos_
+        d_dSlackNeg_, true);
   } else {
-    current_converged =
-        checkConvergenceGpu(iter, d_x_current_, d_y_current_, d_ax_current_,
-                            d_aty_current_, params_.tolerance, current_results,
-                            "[L-GPU]", d_dSlackPos_, d_dSlackNeg_,
-                            false);  // <-- FALSE: Recompute standard slack
+    current_converged = checkConvergenceGpu(
+        iter, d_x_current_, d_y_current_, d_ax_current_,
+        d_aty_current_, params_.tolerance, current_results,
+        "[L-GPU]", d_dSlackPos_, d_dSlackNeg_, false);
     average_converged = checkConvergenceGpu(
         iter, d_x_avg_, d_y_avg_, d_ax_avg_, d_aty_avg_, params_.tolerance,
-        average_results, "[A-GPU]", d_dSlackPosAvg_, d_dSlackNegAvg_,
-        false);  // <-- FALSE: Recompute standard slack
+        average_results, "[A-GPU]", d_dSlackPosAvg_, d_dSlackNegAvg_, false);
   }
 
 #else
@@ -877,7 +865,7 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
       output_y = y_avg_;
       dSlackPos_ = dSlackPosAvg_;
       dSlackNeg_ = dSlackNegAvg_;
-    } else if (params_.use_halpern_restart) {
+    } else if (params_.use_halpern_restart && iter > 0) {
       output_x = x_next_;
       output_y = y_next_;
     } else {
@@ -890,22 +878,41 @@ bool PDLPSolver::runConvergenceCheckAndRestart(size_t iter,
     results_ = prefer_avg ? average_results : current_results;
     // Final logging on optimality
     const bool forced = true;
-    logger_.printIterationStats(final_iter_count_, results_, primal_weight_,
-                                forced);
-
-    logger_.info((prefer_avg ? "Average" : "Current") +
-                 std::string(" solution converged"));
+    logger_.printIterationStats(final_iter_count_, results_, primal_weight_, forced);
+    logger_.info((prefer_avg ? "Average" : "Current") + std::string(" solution converged"));
 
     status = TerminationStatus::OPTIMAL;
     return true;  // Stop
   } else {
-    // Possibly log the iteration
-    HighsInt current_iter_count = iter;
-    logger_.printIterationStats(current_iter_count, current_results,
-                                primal_weight_);
+    // Log the iteration if not converged
+    logger_.printIterationStats(iter, current_results, primal_weight_);
   }
 
   results_ = current_results;
+  return false;
+}
+
+bool PDLPSolver::checkRestartCriteria(double current_fpe, double initial_fpe, 
+                                      double last_trial_fpe, int halpern_iteration, 
+                                      int final_iter_count) {
+  if (final_iter_count == PDHG_CHECK_INTERVAL) {
+    return true;
+  }
+  
+  if (final_iter_count > PDHG_CHECK_INTERVAL) {
+    if (current_fpe <= restart_scheme_.getSufficientDecayFactor() * initial_fpe) {
+      return true;
+    }
+    if (current_fpe <= restart_scheme_.getNecessaryDecayFactor() * initial_fpe) {
+      if (current_fpe > last_trial_fpe) {
+        return true;
+      }
+    }
+    if (halpern_iteration >= restart_scheme_.getArtificialRestartThreshold() * final_iter_count) {
+      return true;
+    }
+  }
+  
   return false;
 }
 
