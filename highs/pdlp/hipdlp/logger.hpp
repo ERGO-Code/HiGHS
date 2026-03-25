@@ -65,4 +65,16 @@ class Logger {
   const double kHipdlpIterationStatsFrequency = 5.0;
 };
 
+// Functions to print using streams, taken from HiPO (and originally
+// IPX)
+std::string format(const double d, HighsInt width, HighsInt prec,
+                   std::ios_base::fmtflags floatfield);
+std::string integer(const HighsInt i, HighsInt width = 0);
+inline std::string sci(const double d, HighsInt width, HighsInt prec) {
+  return format(d, width, prec, std::ios_base::scientific);
+}
+inline std::string fix(const double d, HighsInt width, HighsInt prec) {
+  return format(d, width, prec, std::ios_base::fixed);
+}
+
 #endif  // PDLP_HIPDLP_LOGGER_HPP

@@ -129,7 +129,9 @@ void Logger::printParams(const PrimalDualParams& params) const {
 }
 
 void Logger::printIterationHeader() {
-  info("     Iter     Pr Feas     Du Feas     P-D Gap       Pr Wt     Time");
+  info(
+      "     Iter       primal obj         dual obj       pinf       dinf       "
+      "gap     pr wt    time");
   this->iteration_stats_count_ = 0;
 }
 
@@ -148,19 +150,16 @@ void Logger::printIterationStats(const HighsInt iter,
   if (!iteration_log) return;
 
   std::stringstream ss;
-  // Switch off clang-format temporarily so neat arrangement of
-  // stringstream commands is perserved
-  //
-  // clang-format off
-  ss << std::fixed << std::setprecision(9) << std::setw(9) << iter << " "
-     << std::scientific << std::setprecision(2)
-     << std::setw(11) << results.primal_feasibility << " "
-     << std::setw(11) << results.dual_feasibility << " "
-     << std::setw(11) << results.duality_gap << " "
-     << std::setw(11) << step_size << " "
-     << std::fixed << std::setprecision(1)
-     << std::setw(8) << time_now;
-  // clang-format on
+  // Using functions to print using streams, taken from HiPO (and
+  // originally IPX)
+  ss << integer(iter, 9);
+  ss << " " << sci(results.primal_obj, 16, 8);
+  ss << " " << sci(results.dual_obj, 16, 8);
+  ss << " " << sci(results.primal_feasibility, 10, 2);
+  ss << " " << sci(results.dual_feasibility, 10, 2);
+  ss << " " << sci(results.duality_gap, 9, 2);
+  ss << " " << sci(step_size, 9, 2);
+  ss << " " << fix(time_now, 7, 1);
   info(ss.str());
   this->iteration_stats_time_ = time_now;
   this->iteration_stats_count_++;
@@ -206,4 +205,21 @@ void Logger::printSummary(const SolverResults& results, HighsInt total_iter,
      << std::setprecision(6) << results.dual_feasibility;
   detailed(ss.str());
   detailed("------------------------------------------------------------");
+}
+
+std::string format(const double d, HighsInt width, HighsInt prec,
+                   std::ios_base::fmtflags floatfield) {
+  std::ostringstream s;
+  s.precision(prec);
+  s.width(width);
+  s.setf(floatfield, std::ios_base::floatfield);
+  s << d;
+  return s.str();
+}
+
+std::string integer(const HighsInt i, HighsInt width) {
+  std::ostringstream s;
+  s.width(width);
+  s << i;
+  return s.str();
 }
