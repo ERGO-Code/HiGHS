@@ -290,7 +290,7 @@ restart:
     mipdata_->lps.emplace_back(mipdata_->getLp());
     HighsBasis root_basis = mipdata_->firstrootbasis;
     root_basis.row_status.resize(mipdata_->lps.back().numRows(),
-                               HighsBasisStatus::kBasic);
+                                 HighsBasisStatus::kBasic);
     mipdata_->lps.back().getLpSolver().setBasis(root_basis);
     mipdata_->lps.back().removeWorkerSpecificRows();
     for (HighsInt i = 0; i != num_new_workers; ++i) {
