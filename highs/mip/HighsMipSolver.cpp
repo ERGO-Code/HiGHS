@@ -537,6 +537,8 @@ restart:
                                         ? mipdata_->workers[i].nodequeue
                                         : mipdata_->nodequeue;
       mipdata_->workers[i].search_ptr_->currentNodeToQueue(globalqueue);
+      if (!mipdata_->parallelLockActive())
+        analysis_.mipTimerStop(kMipClockEvaluateNode1);
       return true;
     }
     if (!mipdata_->parallelLockActive())
@@ -552,9 +554,9 @@ restart:
       mipdata_->workers[i].search_ptr_->backtrack();
       mipdata_->workers[i].getGlobalDomain().propagate();
       pruned = true;
+      ++mipdata_->workers[i].search_ptr_->getLocalNodes();
+      ++mipdata_->workers[i].search_ptr_->getLocalLeaves();
     }
-    ++mipdata_->workers[i].search_ptr_->getLocalNodes();
-    ++mipdata_->workers[i].search_ptr_->getLocalLeaves();
     return mipdata_->workers[i].getGlobalDomain().infeasible() || pruned;
   };
 

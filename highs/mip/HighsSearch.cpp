@@ -21,6 +21,7 @@ HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
       localdom(mipworker.getGlobalDomain()),
       pseudocost(pseudocost) {
   nnodes = 0;
+  nleaves = 0;
   treeweight = 0.0;
   depthoffset = 0;
   lpiterations = 0;
