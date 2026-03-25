@@ -249,9 +249,7 @@ class PDLPSolver {
   double best_primal_dual_residual_gap_ =
       std::numeric_limits<double>::infinity();
 
-  HighsTimer* highs_timer_p;
-  double last_logger_time_ = -kHighsInf;
-  const double kHipdlpLoggerFrequency = 5.0;
+  HighsTimer* highs_timer_p_;
 
 #if PDLP_PROFILE
   HipdlpTimer hipdlp_timer_;

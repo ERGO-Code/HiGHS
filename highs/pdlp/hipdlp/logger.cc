@@ -22,7 +22,9 @@ std::string EnumToString(T e, const std::map<T, std::string>& map) {
 }
 
 // Logger implementation
-void Logger::setLevel(const HighsInt log_dev_level) {
+void Logger::initialise(const HighsInt log_dev_level,
+                        const HighsLogOptions log_options,
+                        HighsTimer* highs_timer_p) {
   if (log_dev_level == kHighsLogDevLevelVerbose) {
     console_level_ = LogLevel::kDebug;
   } else if (log_dev_level == kHighsLogDevLevelDetailed) {
@@ -32,6 +34,10 @@ void Logger::setLevel(const HighsInt log_dev_level) {
   } else {
     console_level_ = LogLevel::kInfo;  // None;
   }
+  log_options_ = log_options;
+  highs_timer_p_ = highs_timer_p;
+  iteration_stats_count_ = kHighsIInf;
+  iteration_stats_time_ = -kHighsInf;
 }
 
 void Logger::log(LogLevel level, const std::string& message) const {
@@ -122,28 +128,41 @@ void Logger::printParams(const PrimalDualParams& params) const {
   detailed("------------------------------------------------------------");
 }
 
-void Logger::printIterationHeader() const {
+void Logger::printIterationHeader() {
   info(
-      "     Iter    Primal Feas   Dual Feas     P-D Gap   Primal Weight       "
-      "Time");
+      "     Iter       primal obj         dual obj       pinf       dinf       "
+      "gap     pr wt    time");
+  this->iteration_stats_count_ = 0;
 }
 
-void Logger::printIterationStats(HighsInt iter, const SolverResults& results,
-                                 const double step_size,
-                                 const double time) const {
+void Logger::printIterationStats(const HighsInt iter,
+                                 const SolverResults& results,
+                                 const double step_size, const bool forced) {
+  // Repeat the header if sufficient iterations have been performed
+  if (this->iteration_stats_count_ > kHipdlpIterationStatsHeaderFrequency)
+    this->printIterationHeader();
+  // Determine whether to log iterations
+  bool iteration_log = console_level_ >= LogLevel::kDetailed || forced;
+  double time_now = highs_timer_p_->read();
+  iteration_log =
+      iteration_log ||
+      time_now > this->iteration_stats_time_ + kHipdlpIterationStatsFrequency;
+  if (!iteration_log) return;
+
   std::stringstream ss;
-  // clang-format off
-  ss << std::fixed << std::setprecision(9) << std::setw(9) << iter << "    "
-     << std::scientific << std::setprecision(2)
-     << std::setw(11) << results.primal_feasibility << " "
-     << std::setw(11) << results.dual_feasibility << " "
-     << std::setw(12) << results.duality_gap << "   "
-     << std::fixed << std::setprecision(4)
-     << std::setw(9) << step_size << "   "
-     << std::setprecision(1)
-     << std::setw(11) << time;
-  // clang-format on
+  // Using functions to print using streams, taken from HiPO (and
+  // originally IPX)
+  ss << integer(iter, 9);
+  ss << " " << sci(results.primal_obj, 16, 8);
+  ss << " " << sci(results.dual_obj, 16, 8);
+  ss << " " << sci(results.primal_feasibility, 10, 2);
+  ss << " " << sci(results.dual_feasibility, 10, 2);
+  ss << " " << sci(results.duality_gap, 9, 2);
+  ss << " " << sci(step_size, 9, 2);
+  ss << " " << fix(time_now, 7, 1);
   info(ss.str());
+  this->iteration_stats_time_ = time_now;
+  this->iteration_stats_count_++;
 }
 
 void Logger::printSummary(const SolverResults& results, HighsInt total_iter,
@@ -186,4 +205,21 @@ void Logger::printSummary(const SolverResults& results, HighsInt total_iter,
      << std::setprecision(6) << results.dual_feasibility;
   detailed(ss.str());
   detailed("------------------------------------------------------------");
+}
+
+std::string format(const double d, HighsInt width, HighsInt prec,
+                   std::ios_base::fmtflags floatfield) {
+  std::ostringstream s;
+  s.precision(prec);
+  s.width(width);
+  s.setf(floatfield, std::ios_base::floatfield);
+  s << d;
+  return s.str();
+}
+
+std::string integer(const HighsInt i, HighsInt width) {
+  std::ostringstream s;
+  s.width(width);
+  s << i;
+  return s.str();
 }
