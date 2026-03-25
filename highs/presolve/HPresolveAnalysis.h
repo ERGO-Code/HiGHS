@@ -8,10 +8,18 @@
 /**@file presolve/HPresolveAnalysis.h
  * @brief
  */
-#ifndef PRESOLVE_HIGHS_PRESOLVE_ANALYSIS_H_
-#define PRESOLVE_HIGHS_PRESOLVE_ANALYSIS_H_
+#ifndef PRESOLVE_HPRESOLVEANALYSIS_H_
+#define PRESOLVE_HPRESOLVEANALYSIS_H_
+
+#include "util/HighsTimer.h"
 
 class HPresolveAnalysis {
+ public:
+  HPresolveAnalysis()
+      : timer_(nullptr),
+        analyse_presolve_time_(false) {}
+  
+  HighsTimer* timer_;
   const HighsLp* model;
   const HighsOptions* options;
   const bool* allow_rule;
@@ -32,6 +40,9 @@ class HPresolveAnalysis {
   HighsInt num_deleted_rows0_;
   HighsInt num_deleted_cols0_;
   HighsPresolveLog presolve_log_;
+  
+  HighsTimerClock presolve_clocks_;
+  bool analyse_presolve_time_;
 
   // for LP presolve
   //
@@ -39,7 +50,8 @@ class HPresolveAnalysis {
   // allow_rule_[*], commenting on the rules switched off
   void setup(const HighsLp* model_, const HighsOptions* options_,
              const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_,
-             const bool silent);
+             const bool silent, HighsTimer* timer);
+  void setupPresolveTime(const HighsOptions& options);
   void resetNumDeleted();
 
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
@@ -49,4 +61,4 @@ class HPresolveAnalysis {
   friend class HPresolve;
 };
 
-#endif
+#endif /* PRESOLVE_HPRESOLVEANALYSIS_H_ */

@@ -5746,7 +5746,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   // Set up the logic to allow presolve rules, and logging for their
   // effectiveness
   analysis_.setup(this->model, this->options, this->numDeletedRows,
-                  this->numDeletedCols, silent);
+                  this->numDeletedCols, silent, this->timer);
 
   if (options->presolve != kHighsOffString) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);

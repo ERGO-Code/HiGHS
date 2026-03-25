@@ -7,16 +7,28 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "lp_data/HighsModelUtils.h"
 #include "presolve/HPresolve.h"
+#include "presolve/PresolveTimer.h"
 
 void HPresolveAnalysis::setup(const HighsLp* model_,
                               const HighsOptions* options_,
                               const HighsInt& numDeletedRows_,
                               const HighsInt& numDeletedCols_,
-                              const bool silent) {
+                              const bool silent,
+			      HighsTimer* timer) {
   model = model_;
   options = options_;
   numDeletedRows = &numDeletedRows_;
   numDeletedCols = &numDeletedCols_;
+
+  timer_ = timer;
+  analyse_presolve_time_ = kHighsAnalysisLevelPresolveTime & options->highs_analysis_level;
+  if (analyse_presolve_time_) {
+    HighsTimerClock clock;
+    clock.timer_pointer_ = timer_;
+    PresolveTimer presolve_timer;
+    presolve_timer.initialisePresolveClocks(clock);
+    presolve_clocks_ = clock;
+  }
 
   this->allow_rule_.assign(kPresolveRuleCount, true);
 

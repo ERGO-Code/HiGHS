@@ -11,7 +11,7 @@
 #ifndef MIP_MIPTIMER_H_
 #define MIP_MIPTIMER_H_
 
-// Clocks for profiling the MIP dual mip solver
+// Clocks for profiling the MIP solver
 enum iClockMip {
   kMipClockTotal = 0,
   kMipClockPresolve,
