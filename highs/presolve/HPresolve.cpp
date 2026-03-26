@@ -6448,13 +6448,13 @@ HPresolve::Result HPresolve::removeDependentEquations(
   HighsInt num_equations = equations.size();
   matrix.num_col_ = num_equations;
   matrix.num_row_ = model->num_col_ + 1;
-  matrix.start_.resize(matrix.num_col_ + 1);
+  matrix.start_.resize(num_equations + 1);
   matrix.start_[0] = 0;
-  const HighsInt maxCapacity = numNonzeros() + matrix.num_col_;
+  const HighsInt maxCapacity = numNonzeros() + num_equations;
   matrix.value_.reserve(maxCapacity);
   matrix.index_.reserve(maxCapacity);
 
-  std::vector<HighsInt> eqSet(matrix.num_col_);
+  std::vector<HighsInt> eqSet(num_equations);
   std::vector<HighsInt> row_count;
   row_count.assign(model->num_col_, 0);
 
@@ -6479,10 +6479,12 @@ HPresolve::Result HPresolve::removeDependentEquations(
 
     matrix.start_[i] = matrix.value_.size();
   }
-  HighsInt num_nonzero_columns = 0;
+  // Find the number of (true) variables in the system of equations as
+  // the number of columns with entries in at least one equation
+  HighsInt num_variables = 0;
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++)
-    if (row_count[iCol]) num_nonzero_columns++;
-  HighsInt num_variables = num_nonzero_columns;
+    if (row_count[iCol]) num_variables++;
+  HighsInt num_nz = matrix.numNz();
   //
   // Although two duplicated equations in any number of variables lead
   // to dependency, it's not worth looking for dependent equations if
@@ -6490,10 +6492,21 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // The following heuristic picks up all Mittelmann problems with
   // meaningful reductions
-  if (num_equations < 0.5 * num_variables) return returnOk();
+  const bool not_consider_dependent_equations =
+      num_equations < 0.5 * num_variables;
+  const bool silent = silentLog();
+  if (!silent)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "%sonsidering dependency of %d equation%s in %d variable%s "
+                 "with %d nonzero%s\n",
+                 not_consider_dependent_equations ? "Not c" : "C",
+                 int(num_equations), highsIntToPlural(num_equations).c_str(),
+                 int(num_variables), highsIntToPlural(num_variables).c_str(),
+                 int(num_nz), highsIntToPlural(num_nz).c_str());
+  if (not_consider_dependent_equations) return returnOk();
   //
   // Identify any dependent equations
-  std::vector<HighsInt> colSet(matrix.num_col_);
+  std::vector<HighsInt> colSet(num_equations);
   std::iota(colSet.begin(), colSet.end(), 0);
   HFactor factor;
   factor.setup(matrix, colSet);
@@ -6506,30 +6519,42 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
-  const double time_limit =
-      std::max(1.0, std::min(0.01 * options->time_limit, 1000.0));
+  const double kMaxDependentEquationsTime = 10;
+  const double time_limit = std::max(
+      1.0, std::min(0.01 * options->time_limit, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
-  const bool silent = silentLog();
   // Determine rank deficiency of the equations
   if (!silent)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Dependent equations search running on %d equations with time "
+                 "Dependent equations search running with time "
                  "limit of %.2fs\n",
-                 static_cast<int>(matrix.num_col_), time_limit);
+                 time_limit);
   double time_taken = -this->timer->read();
   HighsInt build_return = factor.build();
   time_taken += this->timer->read();
+  // Analyse what's been removed
+  HighsInt num_removed_row = 0;
+  HighsInt num_removed_nz = 0;
+  HighsInt num_fictitious_rows_skipped = 0;
   if (build_return == kBuildKernelReturnTimeout) {
     // HFactor::build has timed out, so just return
-    if (!silent)
+    if (!silent) {
+      /*
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g,Terminated\n",
+                   model->model_name_.c_str(), static_cast<int>(num_equations),
+                   static_cast<int>(num_variables),
+                   static_cast<int>(model->num_col_),
+                   static_cast<int>(num_nz),
+                   static_cast<int>(num_removed_row),
+                   static_cast<int>(num_removed_nz), time_taken);
+      */
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "Dependent equations search terminated after %.3gs due to "
                    "expected time exceeding limit\n",
                    time_taken);
-    analysis_.logging_on_ = logging_on;
-    if (logging_on)
-      analysis_.stopPresolveRuleLog(kPresolveRuleDependentEquations);
-    return Result::kOk;
+    }
+    return returnOk();
   } else {
     double pct_off_timeout =
         1e2 * std::fabs(time_taken - time_limit) / time_limit;
@@ -6543,10 +6568,6 @@ HPresolve::Result HPresolve::removeDependentEquations(
   // build_return as rank_deficiency must be valid
   assert(build_return >= 0);
   const HighsInt rank_deficiency = build_return;
-  // Analyse what's been removed
-  HighsInt num_removed_row = 0;
-  HighsInt num_removed_nz = 0;
-  HighsInt num_fictitious_rows_skipped = 0;
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     if (factor.var_with_no_pivot[k] >= 0) {
       HighsInt redundant_row = eqSet[factor.var_with_no_pivot[k]];
@@ -6559,32 +6580,35 @@ HPresolve::Result HPresolve::removeDependentEquations(
     }
   }
   if (!silent) {
+    /*
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g\n",
-                 model->model_name_.c_str(), static_cast<int>(matrix.num_col_),
-                 static_cast<int>(num_nonzero_columns),
+                 model->model_name_.c_str(), static_cast<int>(num_equations),
+                 static_cast<int>(num_variables),
                  static_cast<int>(model->num_col_),
-                 static_cast<int>(matrix.numNz()),
+                 static_cast<int>(num_nz),
                  static_cast<int>(num_removed_row),
                  static_cast<int>(num_removed_nz), time_taken);
+    */
     highsLogUser(
         options->log_options, HighsLogType::kInfo,
         "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
         "removed %d dependent equation%s and %d nonzero%s "
         "in %.2fs (limit = %.2fs)",
-        static_cast<int>(matrix.num_col_), matrix.num_col_ == 1 ? "" : "s",
-        static_cast<int>(num_nonzero_columns),
-        static_cast<int>(model->num_col_), num_nonzero_columns == 1 ? "" : "s",
-        static_cast<int>(matrix.numNz()), matrix.numNz() == 1 ? "" : "s",
-        static_cast<int>(num_removed_row), num_removed_row == 1 ? "" : "s",
-        static_cast<int>(num_removed_nz), num_removed_nz == 1 ? "" : "s",
-        time_taken, time_limit);
+        static_cast<int>(num_equations),
+        highsIntToPlural(num_equations).c_str(),
+        static_cast<int>(num_variables), static_cast<int>(model->num_col_),
+        highsIntToPlural(num_variables).c_str(), static_cast<int>(num_nz),
+        num_nz == 1 ? "" : "s", static_cast<int>(num_removed_row),
+        highsIntToPlural(num_removed_row).c_str(),
+        static_cast<int>(num_removed_nz),
+        highsIntToPlural(num_removed_nz).c_str(), time_taken, time_limit);
   }
   if (num_fictitious_rows_skipped)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 ", avoiding %d fictitious row%s",
                 static_cast<int>(num_fictitious_rows_skipped),
-                num_fictitious_rows_skipped == 1 ? "" : "s");
+                highsIntToPlural(num_fictitious_rows_skipped).c_str());
   highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
   return returnOk();
