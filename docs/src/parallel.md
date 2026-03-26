@@ -67,9 +67,8 @@ order to select the best one.
 
 ## Future plans
 
-The MIP solver has been written with parallel tree search in mind. Some
-work has started (Feb 2025), and it is hoped that a prototype solver
-will be available during 2026.
+The MIP solver has been written with parallel tree search in mind. A prototype solver
+was completed in February 2026, and is expected to be released before June 2026.
 
 Multi-threading within HiPO will be extended to other phases of the solver,
 including the solve phase of the factorisation and the process of assembling 
