@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo" or "pdlp"
+- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", or "qpasm"
 - Type: string
 - Default: "choose"
 
@@ -464,7 +464,7 @@
 ## [pdlp\_e\_restart\_method](@id option-pdlp-e-restart-method)
 - Restart mode for PDLP solver: 0 => none; 1 => GPU (default); 2 => CPU 
 - Type: integer
-- Range: {0, 2}
+- Range: {0, 3}
 - Default: 1
 
 ## [pdlp\_optimality\_tolerance](@id option-pdlp-optimality-tolerance)
@@ -473,20 +473,20 @@
 - Range: [1e-12, inf]
 - Default: 1e-07
 
-## [qp\_iteration\_limit](@id option-qp-iteration-limit)
-- Iteration limit for QP solver
+## qp\_iteration\_limit
+- Iteration limit for the active set QP solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
 
 ## [qp\_nullspace\_limit](@id option-qp-nullspace-limit)
-- Nullspace limit for QP solver
+- Nullspace limit for the active set QP solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 4000
 
 ## [qp\_regularization\_value](@id option-qp-regularization-value)
-- Regularization value added to the Hessian
+- Regularization value added to the Hessian in the active set QP solver
 - Type: double
 - Range: [0, inf]
 - Default: 1e-07

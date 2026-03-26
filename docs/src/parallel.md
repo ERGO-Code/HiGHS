@@ -1,4 +1,4 @@
-# Parallelism
+# [Parallelism](@id parallelism)
 
 ## Generally
 
@@ -69,10 +69,10 @@ order to select the best one.
 
 The MIP solver has been written with parallel tree search in mind. Some
 work has started (Feb 2025), and it is hoped that a prototype solver
-will be available during 2025.
+will be available during 2026.
 
 Multi-threading within HiPO will be extended to other phases of the solver,
-including the solve phase of the factorisation and the process of assemblying 
+including the solve phase of the factorisation and the process of assembling 
 the matrices.
 
 First-order solvers for LP are still very much in their infancy, and
@@ -80,6 +80,9 @@ are not robust. Hence the availability of a PDLP solver for LP is
 unlikely to be used to enhance other solvers in HiGHS in the short or
 medium term.
 
+## Alternative
 
-
-
+Given the limited scope for parallelisation in HiGHS, if you have
+multiple independent instances to solve, then assign one instance per
+worker (cpu core, thread or machine) so that multiple instances are
+solved concurrently.
