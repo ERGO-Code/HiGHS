@@ -38,7 +38,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Permitted suppression of presolve rules via "
                  "presolve_rule_off option:\n");
-    HighsInt bit = pow(2, kPresolveRuleFirstAllowOff);
+    HighsInt bit = pow(int(2), int(kPresolveRuleFirstAllowOff));
     for (HighsInt rule_type = kPresolveRuleFirstAllowOff;
          rule_type < kPresolveRuleCount; rule_type++) {
       // This is a rule that can be switched off

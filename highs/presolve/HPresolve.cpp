@@ -1740,12 +1740,13 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       // Check for timeout
       tt = this->timer->read();
       if (tt > options->time_limit) {
-        highsLogUser(options->log_options, HighsLogType::kInfo,
-                     "Time limit reached in probing: "
-                     "consider not using probing by setting option "
-                     "presolve_rule_off to 2^%-d = %d\n",
-                     int(kPresolveRuleProbing),
-                     int(std::pow(int(2), int(kPresolveRuleProbing))));
+        highsLogUser(
+            options->log_options, HighsLogType::kInfo,
+            "Time limit reached in probing: "
+            "consider not using probing by setting option "
+            "presolve_rule_off to 2^%-d = %d\n",
+            int(kPresolveRuleProbing),
+            int(std::pow(int(2), static_cast<int>(kPresolveRuleProbing))));
         return Result::kStopped;
       }
 
