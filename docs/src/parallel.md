@@ -37,14 +37,6 @@ years have not been propagated to the parallel solver.
 Unless an LP has significantly more variables than constraints, the
 parallel dual simplex solver is unlikely to be worth using.
 
-## MIP
-
-The only parallel computation currently implemented in the MIP solver
-occurs when performing symmetry detection on the model, when querying
-clique tables, and when the interior point solver is used to compute
-the analytic centre. This parallelism is always advantageous, so is
-performed regardless of the value of the [parallel](@ref option-parallel) option.
-
 ## IPM
 
 The interior point solver HiPO uses multiple threads to process the 
@@ -65,10 +57,19 @@ If the [parallel](@ref option-parallel) option is set to "on" or "choose", HiPO 
 multiple threads to run multiple orderings and Newton system approaches in parallel, in 
 order to select the best one.
 
+## MIP
+
+The only parallel computation currently implemented in the MIP solver
+occurs when performing symmetry detection on the model, when querying
+clique tables, and when the interior point solver is used to compute
+the analytic centre. This parallelism is always advantageous, so is
+performed regardless of the value of the [parallel](@ref option-parallel) option.
+
 ## Future plans
 
-The MIP solver has been written with parallel tree search in mind. A prototype solver
-was completed in February 2026, and is expected to be released before June 2026.
+The MIP solver has been written with parallel tree search in mind. A
+prototype multithreaded solver was completed in February 2026, and is
+expected to be released by June.
 
 Multi-threading within HiPO will be extended to other phases of the solver,
 including the solve phase of the factorisation and the process of assembling 
