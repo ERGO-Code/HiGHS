@@ -6519,7 +6519,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
-  const double kMaxDependentEquationsTime = 100;
+  const double kMaxDependentEquationsTime = 1000;
   const double time_limit = std::max(
       1.0, std::min(0.01 * options->time_limit, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
@@ -6539,16 +6539,14 @@ HPresolve::Result HPresolve::removeDependentEquations(
   if (build_return == kBuildKernelReturnTimeout) {
     // HFactor::build has timed out, so just return
     if (!silent) {
-      /*
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g,Terminated\n",
-                   model->model_name_.c_str(), static_cast<int>(num_equations),
-                   static_cast<int>(num_variables),
-                   static_cast<int>(model->num_col_),
-                   static_cast<int>(num_nz),
-                   static_cast<int>(num_removed_row),
-                   static_cast<int>(num_removed_nz), time_taken);
-      */
+      if (options->log_dev_level > 0)
+        highsLogUser(
+            options->log_options, HighsLogType::kInfo,
+            "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g,Terminated\n",
+            model->model_name_.c_str(), static_cast<int>(num_equations),
+            static_cast<int>(num_variables), static_cast<int>(model->num_col_),
+            static_cast<int>(num_nz), static_cast<int>(num_removed_row),
+            static_cast<int>(num_removed_nz), time_taken);
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "Dependent equations search terminated after %.3gs due to "
                    "expected time exceeding limit\n",
@@ -6580,16 +6578,14 @@ HPresolve::Result HPresolve::removeDependentEquations(
     }
   }
   if (!silent) {
-    /*
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g\n",
-                 model->model_name_.c_str(), static_cast<int>(num_equations),
-                 static_cast<int>(num_variables),
-                 static_cast<int>(model->num_col_),
-                 static_cast<int>(num_nz),
-                 static_cast<int>(num_removed_row),
-                 static_cast<int>(num_removed_nz), time_taken);
-    */
+    if (options->log_dev_level > 0)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g\n",
+                   model->model_name_.c_str(), static_cast<int>(num_equations),
+                   static_cast<int>(num_variables),
+                   static_cast<int>(model->num_col_), static_cast<int>(num_nz),
+                   static_cast<int>(num_removed_row),
+                   static_cast<int>(num_removed_nz), time_taken);
     highsLogUser(
         options->log_options, HighsLogType::kInfo,
         "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
