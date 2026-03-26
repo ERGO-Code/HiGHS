@@ -90,6 +90,12 @@ competitive with the HiGHS interior point or simplex solvers.
 
 Setting the option [__solver__](@ref option-solver) to "pdlp" forces the PDLP solver to be used
 
+HiGHS also has a native PDLP solver, HiPDLP. On Linux and Windows, this can be run
+on an NVIDIA [GPU](@ref gpu). On a CPU, it is unlikely to be
+competitive with the HiGHS interior point or simplex solvers.
+
+Setting the option [__solver__](@ref option-solver) to "hipdlp" forces the HiPDLP solver to be used
+
 ### Basic solution
 
 The simplex solver always generates a [basic solution](@ref

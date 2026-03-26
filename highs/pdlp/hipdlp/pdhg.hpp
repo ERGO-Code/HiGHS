@@ -113,13 +113,12 @@ class PDLPSolver {
 
   // Returns true if solver should terminate, false if it should continue
   // Updates 'status' if returning true.
-  bool runConvergenceCheck(size_t iter,
-                                     std::vector<double>& output_x,
-                                     std::vector<double>& output_y,
-                                     TerminationStatus& status);
-  bool checkRestartCriteria(double current_fpe, double initial_fpe, 
-                                      double last_trial_fpe, int halpern_iteration, 
-                                      int final_iter_count);
+  bool runConvergenceCheck(size_t iter, std::vector<double>& output_x,
+                           std::vector<double>& output_y,
+                           TerminationStatus& status);
+  bool checkRestartCriteria(double current_fpe, double initial_fpe,
+                            double last_trial_fpe, int halpern_iteration,
+                            int final_iter_count);
 
   void performPdhgStep();
   void performHalpernStep();
