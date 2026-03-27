@@ -896,6 +896,7 @@ HighsInt HFactor::buildKernel() {
   double previous_iteration_time = build_timer_->read();
   double average_iteration_time = 0;
   HighsInt previous_num_active_nz = num_active_nz_;
+  HighsInt previous_search_k = search_k;
   double average_num_active_nz_change_rate = 0;
   const bool check_for_timeout = this->time_limit_ < kHighsInf;
 
@@ -920,74 +921,6 @@ HighsInt HFactor::buildKernel() {
     if (nwork == check_nwork) {
       reportAsm();
     }
-    // Determine whether to return due to exceeding the time limit
-    if (check_for_timeout && search_k > 0 && search_k % timer_frequency == 0) {
-      checkNumActiveNz();
-      double current_time = build_timer_->read();
-      double time_difference = current_time - previous_iteration_time;
-      previous_iteration_time = current_time;
-      double iteration_time = time_difference / (1.0 * timer_frequency);
-      average_iteration_time =
-          0.9 * average_iteration_time + 0.1 * iteration_time;
-
-      // Determine whether to reduce the timer frequency
-      /*
-      if (time_difference > this->time_limit_ / 1e1) {
-	HighsInt prev_timer_frequency = timer_frequency;
-        timer_frequency = std::max(HighsInt(1), timer_frequency / 10);
-	if (timer_frequency != prev_timer_frequency) {
-	  printf("Timer frequency change from %d to %d since time_difference = %g > %g = time_limit_ / 1e3\n",
-		 int(prev_timer_frequency), int(timer_frequency),
-		 time_difference, this->time_limit_ / 1e3);
-	}
-      }
-      */
-      double num_active_nz_change_rate =
-	static_cast<double>(num_active_nz_ - previous_num_active_nz) /
-	static_cast<double>(timer_frequency);
-      previous_num_active_nz = num_active_nz_;
-      average_num_active_nz_change_rate =
-	0.9 * average_num_active_nz_change_rate + 0.1 * num_active_nz_change_rate;
-      // Get an estimate of the number of iterations left, based on
-      // the bound and the average rate of change of the number of
-      // active nonzeros (if negative)
-      
-      HighsInt iterations_left = kernel_dim - search_k + num_defer_pivot + 1;
-      HighsInt iterations_left0 = iterations_left;
-      HighsInt iterations_left1 = 0;
-      if (average_num_active_nz_change_rate < 0) {
-	HighsInt active_nz_iterations_left = -num_active_nz_ / average_num_active_nz_change_rate;
-	iterations_left1 = active_nz_iterations_left;
-	iterations_left = std::min(active_nz_iterations_left, iterations_left);
-      }
-      double remaining_time_bound = average_iteration_time * iterations_left;
-      double total_time_bound = current_time + remaining_time_bound;
-      const bool stop = current_time > this->time_limit_ ||
-	total_time_bound > this->time_limit_;
-      if (search_k % log_frequency == 0) {
-	printf("HFactor::buildKernel k = %7d; Kdim = %7d; Defer =%4d; left(%7d, %7d, %7d); num_active_nz_ = %7d;"
-	       " ActiveNzRate(%6d, Av = %6d);"
-	       " Time (Cu = %6.2f; IterMs(%.6f; Av = %.6f); Bd = %6.2f Lim = %6.2f) Fq = %4d%s\n",
-	       int(search_k), int(kernel_dim),
-	       int(num_defer_pivot),
-	       int(iterations_left0),
-	       int(iterations_left1),
-	       int(iterations_left),
-	       int(num_active_nz_),
-	       int(num_active_nz_change_rate),
-	       int(average_num_active_nz_change_rate),
-	       current_time, 1000*iteration_time, 1000*average_iteration_time,
-	       total_time_bound, this->time_limit_,
-	       int(timer_frequency),
-	       stop ? " - Stop" : "");
-      }
-      /*
-      if (current_time > this->time_limit_ ||
-          total_time_bound > this->time_limit_)
-        return kBuildKernelReturnTimeout;
-      */
-    }
-
     /**
      * 1. Search for the pivot
      */
@@ -1115,6 +1048,76 @@ HighsInt HFactor::buildKernel() {
         fake_search += count;
       }
     }
+    // Determine whether to return due to exceeding the time limit
+    if (check_for_timeout && search_k > 0 && (search_k % timer_frequency == 0 ||iRowPivot < 0)) {
+      HighsInt dl_search_k = search_k - previous_search_k;
+      previous_search_k = search_k;
+      checkNumActiveNz();
+      double current_time = build_timer_->read();
+      double time_difference = current_time - previous_iteration_time;
+      previous_iteration_time = current_time;
+      double iteration_time = time_difference / (1.0 * dl_search_k);
+      average_iteration_time =
+          0.9 * average_iteration_time + 0.1 * iteration_time;
+
+      // Determine whether to reduce the timer frequency
+      /*
+      if (time_difference > this->time_limit_ / 1e1) {
+	HighsInt prev_timer_frequency = timer_frequency;
+        timer_frequency = std::max(HighsInt(1), timer_frequency / 10);
+	if (timer_frequency != prev_timer_frequency) {
+	  printf("Timer frequency change from %d to %d since time_difference = %g > %g = time_limit_ / 1e3\n",
+		 int(prev_timer_frequency), int(timer_frequency),
+		 time_difference, this->time_limit_ / 1e3);
+	}
+      }
+      */
+      double num_active_nz_change_rate =
+	static_cast<double>(num_active_nz_ - previous_num_active_nz) /
+	static_cast<double>(dl_search_k);
+      previous_num_active_nz = num_active_nz_;
+      average_num_active_nz_change_rate =
+	0.9 * average_num_active_nz_change_rate + 0.1 * num_active_nz_change_rate;
+      // Get an estimate of the number of iterations left, based on
+      // the bound and the average rate of change of the number of
+      // active nonzeros (if negative)
+      
+      HighsInt iterations_left = kernel_dim - search_k + num_defer_pivot + 1;
+      HighsInt iterations_left0 = iterations_left;
+      HighsInt iterations_left1 = 0;
+      if (average_num_active_nz_change_rate < 0) {
+	HighsInt active_nz_iterations_left = -num_active_nz_ / average_num_active_nz_change_rate;
+	iterations_left1 = active_nz_iterations_left;
+	iterations_left = std::min(active_nz_iterations_left, iterations_left);
+      }
+      double remaining_time_bound = average_iteration_time * iterations_left;
+      double total_time_bound = current_time + remaining_time_bound;
+      const bool stop = current_time > this->time_limit_ ||
+	total_time_bound > this->time_limit_;
+      if (search_k % log_frequency == 0) {
+	printf("HFactor::buildKernel k = %7d; Kdim = %7d; Defer =%4d; left(%7d, %7d, %7d); num_active_nz_ = %7d;"
+	       " ActiveNzRate(%6d, Av = %6d);"
+	       " Time (Cu = %6.2f; IterMs(%.6f; Av = %.6f); Bd = %6.2f Lim = %6.2f) Fq = %4d%s\n",
+	       int(search_k), int(kernel_dim),
+	       int(num_defer_pivot),
+	       int(iterations_left0),
+	       int(iterations_left1),
+	       int(iterations_left),
+	       int(num_active_nz_),
+	       int(num_active_nz_change_rate),
+	       int(average_num_active_nz_change_rate),
+	       current_time, 1000*iteration_time, 1000*average_iteration_time,
+	       total_time_bound, this->time_limit_,
+	       int(timer_frequency),
+	       stop ? " - Stop" : "");
+      }
+      /*
+      if (current_time > this->time_limit_ ||
+          total_time_bound > this->time_limit_)
+        return kBuildKernelReturnTimeout;
+      */
+    }
+
     // 1.4. If we found nothing: tell singular
     if (iRowPivot < 0) {
       // To detect the absence of a pivot, it should be sufficient
