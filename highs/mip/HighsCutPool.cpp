@@ -171,8 +171,6 @@ void HighsCutPool::performAging() {
 
   for (HighsInt i = 0; i != cutIndexEnd; ++i) {
     // Catch buffered changes (should only occur in parallel case)
-    // TODO MT: Misses the case where a cut is added then deleted before aging
-    // TODO MT: has been called once. We'd miss resetting the age in this case.
     if (numLps_[i] > 0 && ages_[i] >= 0) {
       // Cut has been added to the LP, but age changes haven't been made
       --ageDistribution[ages_[i]];
@@ -182,7 +180,7 @@ void HighsCutPool::performAging() {
       }
       ages_[i] = -1;
       ++numLpCuts;
-      ageResetWhileLocked_[i] = 0;
+      ageResetWhileLocked_[i].store(0, std::memory_order_relaxed);
     } else if (numLps_[i] == 0 && ages_[i] == -1 && rhs_[i] != kHighsInf) {
       // Cut was removed from the LP, but age changes haven't been made
       if (matrix_.columnsLinked(i)) {
@@ -192,11 +190,11 @@ void HighsCutPool::performAging() {
       ages_[i] = 1;
       --numLpCuts;
       ++ageDistribution[1];
-      ageResetWhileLocked_[i] = 0;
-    } else if (ageResetWhileLocked_[i] == 1) {
+      ageResetWhileLocked_[i].store(0, std::memory_order_relaxed);
+    } else if (ageResetWhileLocked_[i].load(std::memory_order_relaxed) == 1) {
       resetAge(i);
     }
-    ageResetWhileLocked_[i] = 0;
+    ageResetWhileLocked_[i].store(0, std::memory_order_relaxed);
     if (ages_[i] < 0) continue;
 
     bool isPropagated = matrix_.columnsLinked(i);
@@ -293,7 +291,7 @@ void HighsCutPool::separate(const std::vector<double>& sol,
         matrix_.removeRow(i);
         ages_[i] = -1;
         rhs_[i] = kHighsInf;
-        ageResetWhileLocked_[i] = 0;
+        ageResetWhileLocked_[i].store(0, std::memory_order_relaxed);
         hasSynced_[i] = false;
         auto range = hashToCutMap.equal_range(h);
 
@@ -616,7 +614,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
   numLps_[rowindex] = 0;
-  ageResetWhileLocked_[rowindex] = 0;
+  ageResetWhileLocked_[rowindex].store(0, std::memory_order_relaxed);
   hasSynced_[rowindex] = false;
   if (propagate) propRows.emplace(ages_[rowindex], rowindex);
   assert((HighsInt)propRows.size() == numPropRows);
@@ -644,7 +642,9 @@ void HighsCutPool::syncCutPool(const HighsMipSolver& mipsolver,
 
   for (HighsInt i = 0; i != cutIndexEnd; ++i) {
     // Only sync cuts in the LP that are not already synced
-    if (numLps_[i] > 0 && !hasSynced_[i]) {
+    if ((numLps_[i] > 0 ||
+         ageResetWhileLocked_[i].load(std::memory_order_relaxed) == 1) &&
+        !hasSynced_[i]) {
       HighsInt Rlen;
       const HighsInt* Rindex;
       const double* Rvalue;
@@ -654,8 +654,6 @@ void HighsCutPool::syncCutPool(const HighsMipSolver& mipsolver,
       std::vector<double> vals(Rvalue, Rvalue + Rlen);
       syncpool.addCut(mipsolver, idxs.data(), vals.data(), Rlen, rhs_[i],
                       rowintegral[i]);
-      // TODO MT: Should I check whether the cut is accepted before changing
-      // hasSynced?
       hasSynced_[i] = true;
     }
   }

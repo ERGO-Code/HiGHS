@@ -288,10 +288,6 @@ restart:
     if (num_new_workers <= 0) return;
     // Remove all cuts from non-global pool for copied LP
     mipdata_->lps.emplace_back(mipdata_->getLp());
-    HighsBasis root_basis = mipdata_->firstrootbasis;
-    root_basis.row_status.resize(mipdata_->lps.back().numRows(),
-                                 HighsBasisStatus::kBasic);
-    mipdata_->lps.back().getLpSolver().setBasis(root_basis);
     mipdata_->lps.back().removeWorkerSpecificRows();
     for (HighsInt i = 0; i != num_new_workers; ++i) {
       if (i != 0) {
@@ -723,7 +719,8 @@ restart:
       worker.getLpRelaxation().setIterationLimit(iterlimit);
       bool considerHeuristics = true;
       while (true) {
-        if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
+        if (considerHeuristics && !ramp_up &&
+            mipdata_->moreHeuristicsAllowed()) {
           if (runHeuristics(i)) break;
         }
         considerHeuristics = false;
