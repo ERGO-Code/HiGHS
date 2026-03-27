@@ -464,7 +464,6 @@ restart:
     runTask(doResetWorkerPseudoCost, tg, false, false, indices);
   };
 
-  destroyOldWorkers();
   master_worker.resetSearch();
   master_worker.resetSepa();
   master_worker.nodequeue.clear();
@@ -472,6 +471,7 @@ restart:
   master_worker.upper_bound = mipdata_->upper_bound;
   master_worker.upper_limit = mipdata_->upper_limit;
   master_worker.optimality_limit = mipdata_->optimality_limit;
+  destroyOldWorkers();
   mipdata_->debugSolution.registerDomain(
       master_worker.search_ptr_->getLocalDomain());
 
