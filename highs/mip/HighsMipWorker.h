@@ -76,6 +76,8 @@ class HighsMipWorker {
 
   std::vector<std::tuple<std::vector<double>, double, int>> solutions_;
 
+  bool heuristics_allowed;
+
   HeurStatistics heur_stats;
   SepaStatistics sepa_stats;
 
@@ -115,11 +117,9 @@ class HighsMipWorker {
   bool trySolution(const std::vector<double>& solution,
                    const int solution_source);
 
-  // todo:
-  // timer_
-  // sync too
-  // or name times differently for workers in the same timer instance in
-  // mipsolver.
+  void setAllowHeuristics(const bool allowed) { heuristics_allowed = allowed; }
+
+  bool getAllowHeuristics() const { return heuristics_allowed; }
 };
 
 #endif

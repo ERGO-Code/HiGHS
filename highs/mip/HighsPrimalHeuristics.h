@@ -83,6 +83,10 @@ class HighsPrimalHeuristics {
   double getSuccessObservations(HighsMipWorker& worker) const;
 
   double getInfeasObservations(HighsMipWorker& worker) const;
+
+  HighsInt getHeuristicRandom(const HighsInt sup) {
+    return randgen.integer(sup);
+  }
 };
 
 #endif

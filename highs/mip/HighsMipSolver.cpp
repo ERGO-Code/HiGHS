@@ -495,10 +495,16 @@ restart:
 
   auto getSearchIndicesWithNoNodes = [&](std::vector<HighsInt>& indices) {
     indices.clear();
+    const HighsInt heuristic_allowance_mod = 4;
+    HighsInt heuristic_random_mod_index =
+        mipdata_->heuristics.getHeuristicRandom(mipdata_->workers.size()) %
+        heuristic_allowance_mod;
     for (HighsInt i = 0;
          i != num_workers && i != mipdata_->nodequeue.numActiveNodes(); i++) {
       if (!mipdata_->workers[i].search_ptr_->hasNode()) {
         indices.emplace_back(i);
+        mipdata_->workers[i].setAllowHeuristics(i % heuristic_allowance_mod ==
+                                                heuristic_random_mod_index);
       }
     }
   };
@@ -719,7 +725,7 @@ restart:
       worker.getLpRelaxation().setIterationLimit(iterlimit);
       bool considerHeuristics = true;
       while (true) {
-        if (considerHeuristics && !ramp_up &&
+        if (considerHeuristics && !ramp_up && worker.getAllowHeuristics() &&
             mipdata_->moreHeuristicsAllowed()) {
           if (runHeuristics(i)) break;
         }
