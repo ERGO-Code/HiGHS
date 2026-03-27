@@ -6503,7 +6503,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
                  int(num_equations), highsIntToPlural(num_equations).c_str(),
                  int(num_variables), highsIntToPlural(num_variables).c_str(),
                  int(num_nz), highsIntToPlural(num_nz).c_str());
-  if (not_consider_dependent_equations) return returnOk();
+  //  if (not_consider_dependent_equations) return returnOk();
   //
   // Identify any dependent equations
   std::vector<HighsInt> colSet(num_equations);
@@ -6519,7 +6519,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
-  const double kMaxDependentEquationsTime = 1000;
+  const double kMaxDependentEquationsTime = 100;
   const double time_limit = std::max(
       1.0, std::min(0.01 * options->time_limit, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
