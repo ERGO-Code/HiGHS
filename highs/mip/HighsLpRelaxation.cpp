@@ -558,11 +558,6 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
     }
   }
 
-  if (ndelcuts > 0) {
-    HighsBasis root_basis = mipsolver.mipdata_->firstrootbasis;
-    root_basis.row_status.resize(numRows(), HighsBasisStatus::kBasic);
-    getLpSolver().setBasis(root_basis);
-  }
   removeCuts(ndelcuts, deletemask);
 }
 
@@ -579,6 +574,12 @@ void HighsLpRelaxation::removeWorkerSpecificRows() {
       ++ndelcuts;
       deletemask[i] = 1;
     }
+  }
+
+  if (ndelcuts > 0) {
+    HighsBasis root_basis = mipsolver.mipdata_->firstrootbasis;
+    root_basis.row_status.resize(numRows(), HighsBasisStatus::kBasic);
+    getLpSolver().setBasis(root_basis);
   }
 
   removeCuts(ndelcuts, deletemask);
