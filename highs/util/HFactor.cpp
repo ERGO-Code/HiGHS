@@ -824,7 +824,7 @@ void HFactor::buildSimple() {
   mr_count.assign(num_row, 0);
   HighsInt mr_countX = 0;
   // Determine the number of entries in the kernel
-  kernel_num_el = 0;
+  num_active_nz_ = 0;
   HighsInt check_nwork = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt count = mr_count_before[iRow];
@@ -834,7 +834,7 @@ void HFactor::buildSimple() {
       mr_space[iRow] = count * 2;
       mr_countX += count * 2;
       rlinkAdd(iRow, count);
-      kernel_num_el += count + 1;
+      num_active_nz_ += count;
       check_nwork++;
     }
   }
@@ -848,7 +848,6 @@ void HFactor::buildSimple() {
   mc_count_a.assign(mc_dim, 0);
   mc_count_n.assign(mc_dim, 0);
   HighsInt MCcountX = 0;
-  num_active_nz_ = 0;
   for (HighsInt i = 0; i < nwork; i++) {
     HighsInt iCol = iwork[i];
     mc_var[iCol] = b_var[iCol];
@@ -864,7 +863,6 @@ void HFactor::buildSimple() {
 	// In the active part of the kernel
         colInsert(iCol, iRow, value);
         rowInsert(iCol, iRow);
-	num_active_nz_++;
       } else {
 	// Above the active part of the kernel
         colStoreN(iCol, iRow, value);
@@ -874,12 +872,9 @@ void HFactor::buildSimple() {
     clinkAdd(iCol, mc_count_a[iCol]);
   }
   build_synthetic_tick += (num_row + nwork + MCcountX) * 40 + mr_countX * 20;
-  // Record the kernel dimension
+  // Record the dimension and number of entries in the kernel
   kernel_dim = nwork;
-  if (num_row == num_basic) {
-    assert(kernel_dim == check_nwork);
-    assert(kernel_num_el == num_active_nz_ + kernel_dim);
-  }
+  kernel_num_el = num_active_nz_;
   assert((HighsInt)this->refactor_info_.pivot_row.size() == num_basic - nwork);
 }
 
@@ -892,46 +887,42 @@ HighsInt HFactor::buildKernel() {
 
   const bool progress_report = false;  // num_basic != num_row;
   const HighsInt progress_frequency = 10000;
-  // Initial timer frequency: may be reduced if iterations get slow
-  HighsInt timer_frequency = 100;
-  double previous_iteration_time = 0;
-  double average_iteration_time = 0;
-  const bool check_for_timeout = this->time_limit_ < kHighsInf;
-  HighsInt search_k = 0;
 
-  auto numActiveNz = [&]() {
+  HighsInt search_k = 0;
+  HighsInt num_defer_pivot = 0;
+  // Initial timer frequency: may be reduced if iterations get slow
+  HighsInt timer_frequency = 10;
+  HighsInt log_frequency = 1000;
+  double previous_iteration_time = build_timer_->read();
+  double average_iteration_time = 0;
+  HighsInt previous_num_active_nz = num_active_nz_;
+  double average_num_active_nz_change_rate = 0;
+  const bool check_for_timeout = this->time_limit_ < kHighsInf;
+
+  auto checkNumActiveNz = [&]() {
     // Determine the number of indices in the active submatrix
-    HighsInt num_active_nz = 0;
-    const HighsInt max_count = max(num_row, num_basic);
-    for (HighsInt count = 2; count <= max_count; count++) {
-      // Column count cannot exceed the number of rows
-      if (count <= num_row) {
-	for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) 
-	  num_active_nz += mc_count_a[j];
-      }
+    HighsInt check_num_active_nz = 0;
+    for (HighsInt count = 1; count <= num_row; count++) {
+      for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) 
+	check_num_active_nz += count;
     }
-    return num_active_nz;
+    if (num_active_nz_ != check_num_active_nz) {
+      printf("nwork = %d: search_k = %d, num_active_nz_ = %d != %d = check_num_active_nz\n",
+	     int(nwork), int(search_k), int(num_active_nz_), int(check_num_active_nz));
+      assert(num_active_nz_ == check_num_active_nz);
+      num_active_nz_ = check_num_active_nz;
+    }
   };
 
-  HighsInt num_active_nz = numActiveNz();
-  
-  printf("HFactor::buildKernel Initial num_active_nz = %d\n", int(num_active_nz));
   const HighsInt check_nwork = -11;
   while (nwork-- > 0) {
     //    printf("\nnwork = %d\n", (int)nwork);
     if (nwork == check_nwork) {
       reportAsm();
     }
-    HighsInt check_num_active_nz = numActiveNz();
-    /*
-    if (num_active_nz != check_num_active_nz) {
-      printf("nwork = %d: search_k = %d, num_active_nz = %d != %d = check_num_active_nz\n",
-	     int(nwork), int(search_k), int(num_active_nz), int(check_num_active_nz));
-      exit(1);
-    }
-    */
     // Determine whether to return due to exceeding the time limit
-    if (check_for_timeout && search_k % timer_frequency == 0) {
+    if (check_for_timeout && search_k > 0 && search_k % timer_frequency == 0) {
+      checkNumActiveNz();
       double current_time = build_timer_->read();
       double time_difference = current_time - previous_iteration_time;
       previous_iteration_time = current_time;
@@ -939,7 +930,9 @@ HighsInt HFactor::buildKernel() {
       average_iteration_time =
           0.9 * average_iteration_time + 0.1 * iteration_time;
 
-      if (search_k > 0 && time_difference > this->time_limit_ / 1e3) {
+      // Determine whether to reduce the timer frequency
+      /*
+      if (time_difference > this->time_limit_ / 1e1) {
 	HighsInt prev_timer_frequency = timer_frequency;
         timer_frequency = std::max(HighsInt(1), timer_frequency / 10);
 	if (timer_frequency != prev_timer_frequency) {
@@ -948,21 +941,46 @@ HighsInt HFactor::buildKernel() {
 		 time_difference, this->time_limit_ / 1e3);
 	}
       }
-      check_num_active_nz = numActiveNz();
-      assert(num_active_nz == check_num_active_nz);
-
-      HighsInt iterations_left = kernel_dim - search_k + 1;
+      */
+      double num_active_nz_change_rate =
+	static_cast<double>(num_active_nz_ - previous_num_active_nz) /
+	static_cast<double>(timer_frequency);
+      previous_num_active_nz = num_active_nz_;
+      average_num_active_nz_change_rate =
+	0.9 * average_num_active_nz_change_rate + 0.1 * num_active_nz_change_rate;
+      // Get an estimate of the number of iterations left, based on
+      // the bound and the average rate of change of the number of
+      // active nonzeros (if negative)
+      
+      HighsInt iterations_left = kernel_dim - search_k + num_defer_pivot + 1;
+      HighsInt iterations_left0 = iterations_left;
+      HighsInt iterations_left1 = 0;
+      if (average_num_active_nz_change_rate < 0) {
+	HighsInt active_nz_iterations_left = -num_active_nz_ / average_num_active_nz_change_rate;
+	iterations_left1 = active_nz_iterations_left;
+	iterations_left = std::min(active_nz_iterations_left, iterations_left);
+      }
       double remaining_time_bound = average_iteration_time * iterations_left;
       double total_time_bound = current_time + remaining_time_bound;
       const bool stop = current_time > this->time_limit_ ||
 	total_time_bound > this->time_limit_;
-      printf("HFactor::buildKernel search_k = %7d; kernel_dim = %7d; num_active_nz = %7d;"
-	     " Time (Cu = %6.2f; Iter = %6.4f; AvIter = %.6f; Bd = %.6f Lim = %6.2f) Fq = %4d - %s\n",
-	     int(search_k), int(kernel_dim), int(num_active_nz),
-	     current_time, iteration_time, average_iteration_time,
-	     total_time_bound, this->time_limit_,
-	     int(timer_frequency),
-	     stop ? "Stop" : "");
+      if (search_k % log_frequency == 0) {
+	printf("HFactor::buildKernel k = %7d; Kdim = %7d; Defer =%4d; left(%7d, %7d, %7d); num_active_nz_ = %7d;"
+	       " ActiveNzRate(%6d, Av = %6d);"
+	       " Time (Cu = %6.2f; IterMs(%.6f; Av = %.6f); Bd = %6.2f Lim = %6.2f) Fq = %4d%s\n",
+	       int(search_k), int(kernel_dim),
+	       int(num_defer_pivot),
+	       int(iterations_left0),
+	       int(iterations_left1),
+	       int(iterations_left),
+	       int(num_active_nz_),
+	       int(num_active_nz_change_rate),
+	       int(average_num_active_nz_change_rate),
+	       current_time, 1000*iteration_time, 1000*average_iteration_time,
+	       total_time_bound, this->time_limit_,
+	       int(timer_frequency),
+	       stop ? " - Stop" : "");
+      }
       /*
       if (current_time > this->time_limit_ ||
           total_time_bound > this->time_limit_)
@@ -1123,7 +1141,7 @@ HighsInt HFactor::buildKernel() {
     //
     // Remove the pivot row index from the pivotal column of the
     // col-wise matrix. Also decreases the column count
-    num_active_nz--;
+    num_active_nz_--;
     double pivot_multiplier = colDelete(jColPivot, iRowPivot);
     // Remove the pivot column index from the pivotal row of the
     // row-wise matrix. Also decreases the row count
@@ -1141,6 +1159,7 @@ HighsInt HFactor::buildKernel() {
                   "Defer singular pivot = %11.4g\n", pivot_multiplier);
       // Matrix is singular, but defer return since other valid pivots
       // may exist.
+      num_defer_pivot++;
       assert(mr_count[iRowPivot] == original_pivotal_row_count - 1);
       if (mr_count[iRowPivot] == 0) {
         // The pivot corresponds to a singleton row. Entry is zeroed,
@@ -1185,7 +1204,7 @@ HighsInt HFactor::buildKernel() {
       l_value.push_back(value);
       mr_count_before[iRow] = mr_count[iRow];
       rowDelete(jColPivot, (int)iRow);
-      num_active_nz--;
+      num_active_nz_--;
     }
     l_start.push_back(l_index.size());
     fake_fill += 2 * mc_count_a[jColPivot];
@@ -1213,7 +1232,7 @@ HighsInt HFactor::buildKernel() {
       const HighsInt my_end = my_start + my_count - 1;
       double my_pivot = colDelete(iCol, iRowPivot);
       colStoreN(iCol, iRowPivot, my_pivot);
-      num_active_nz--;
+      num_active_nz_--;
 
       // 2.4.2. Elimination on the overlapping part
       HighsInt nFillin = mwz_column_count;
@@ -1232,7 +1251,7 @@ HighsInt HFactor::buildKernel() {
           mc_value[my_k] = value;
         }
       }
-      num_active_nz -= nCancel;
+      num_active_nz_ -= nCancel;
       fake_eliminate += mwz_column_count;
       fake_eliminate += nFillin * 2;
 
@@ -1275,7 +1294,7 @@ HighsInt HFactor::buildKernel() {
           HighsInt iRow = mwz_column_index[i];
           if (mwz_column_mark[iRow]) {
             colInsert(iCol, iRow, -my_pivot * mwz_column_array[iRow]);
-	    num_active_nz++;
+	    num_active_nz_++;
 	  }
         }
 
