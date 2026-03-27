@@ -735,11 +735,11 @@ class HighsOptions : public HighsOptionsStruct {
         &presolve, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kSolverString,
-                               "LP solver option: \"choose\", \"simplex\", "
-                               "\"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
-                               advanced, &solver, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kSolverString,
+        "LP/QP solver: \"choose\", \"simplex\", "
+        "\"ipm\", \"ipx\", \"hipo\", \"pdlp\", \"qpasm\" or \"hipdlp\", ",
+        advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -1330,10 +1330,9 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "pdlp_restart_strategy",
         "Restart strategy for PDLP solver: 0 => off; "
-        "1 => fixed; 2 => adaptive; 3 => Halpern. "
-        "HiPDLP currently uses Halpern only.",
+        "1 => fixed; 2 => adaptive; 3 => Halpern",
         advanced, &pdlp_restart_strategy, kPdlpRestartStrategyMin,
-        kPdlpRestartStrategyHalpern, kPdlpRestartStrategyMax);
+        kPdlpRestartStrategyAdaptive, kPdlpRestartStrategyMax);
     records.push_back(record_int);
 
     record_int =
@@ -1346,10 +1345,9 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "pdlp_step_size_strategy",
         "Step size strategy for PDLP solver: 0 => fixed; "
-        "1 => adaptive; 2 => Malitsky-Pock; 3 => PID. "
-        "HiPDLP currently supports fixed or PID.",
+        "1 => adaptive; 2 => Malitsky-Pock; 3 => PID",
         advanced, &pdlp_step_size_strategy, kPdlpStepSizeStrategyMin,
-        kPdlpStepSizeStrategyPid, kPdlpStepSizeStrategyMax);
+        kPdlpStepSizeStrategyAdaptive, kPdlpStepSizeStrategyMax);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
@@ -1358,17 +1356,18 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
-        "qp_iteration_limit", "Iteration limit for QP solver", advanced,
-        &qp_iteration_limit, 0, kHighsIInf, kHighsIInf);
+        "qp_iteration_limit", "Iteration limit for the active set QP solver",
+        advanced, &qp_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("qp_nullspace_limit",
-                                     "Nullspace limit for QP solver", advanced,
-                                     &qp_nullspace_limit, 0, 4000, kHighsIInf);
+    record_int = new OptionRecordInt(
+        "qp_nullspace_limit", "Nullspace limit for the active set QP solver",
+        advanced, &qp_nullspace_limit, 0, 4000, kHighsIInf);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "qp_regularization_value", "Regularization value added to the Hessian",
+        "qp_regularization_value",
+        "Regularization value added to the Hessian in the active set QP solver",
         advanced, &qp_regularization_value, 0, kHessianRegularizationValue,
         kHighsInf);
     records.push_back(record_double);

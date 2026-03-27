@@ -501,8 +501,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   setupGpu();
 #endif
   initializeStepSizes();
-  initialize();  // Resets vectors, caches, and sets initial x_current, y_current
-  
+  initialize();  // Resets vectors, caches, and sets initial x_current,
+                 // y_current
+
   best_primal_weight_ = primal_weight_;
   best_primal_dual_residual_gap_ = std::numeric_limits<double>::infinity();
 
@@ -557,8 +558,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   // =========================================================================
   // INITIAL CONVERGENCE CHECK (ITERATION 0)
   // =========================================================================
-  bool should_terminate = runConvergenceCheck(final_iter_count_, x, y, termination_status);
-  
+  bool should_terminate =
+      runConvergenceCheck(final_iter_count_, x, y, termination_status);
+
   if (should_terminate) {
     solveReturn(termination_status);
     return;
@@ -607,7 +609,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #ifdef CUPDLP_GPU
     if (!graph_created) {
-      CUDA_CHECK(cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
+      CUDA_CHECK(
+          cudaStreamBeginCapture(gpu_stream_, cudaStreamCaptureModeGlobal));
 
       for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
         performHalpernPdhgStepGpu(false, i);
@@ -635,7 +638,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 #else
     fpe_ = computeFixedPointError();
 #endif
-      
+
     halpern_iteration_ += PDHG_CHECK_INTERVAL;
     final_iter_count_ += PDHG_CHECK_INTERVAL;
 
@@ -643,7 +646,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     // CONVERGENCE CHECK
     // =======================================================================
     TerminationStatus check_status;
-    should_terminate = runConvergenceCheck(final_iter_count_, x, y, check_status);
+    should_terminate =
+        runConvergenceCheck(final_iter_count_, x, y, check_status);
 
     if (should_terminate) {
       termination_status = check_status;
@@ -651,9 +655,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     }
 
     // =======================================================================
-    // RESTART CHECK 
+    // RESTART CHECK
     // =======================================================================
-    do_restart = checkRestartCriteria(fpe_, initial_fpe_, last_trial_fpe, 
+    do_restart = checkRestartCriteria(fpe_, initial_fpe_, last_trial_fpe,
                                       halpern_iteration_, final_iter_count_);
     last_trial_fpe = fpe_;
 
@@ -779,8 +783,7 @@ double PDLPSolver::computeFixedPointErrorGpu() {
 }
 #endif
 
-bool PDLPSolver::runConvergenceCheck(size_t iter,
-                                     std::vector<double>& output_x,
+bool PDLPSolver::runConvergenceCheck(size_t iter, std::vector<double>& output_x,
                                      std::vector<double>& output_y,
                                      TerminationStatus& status) {
   // 1. Compute Average Iterate (GPU or CPU)
@@ -797,19 +800,20 @@ bool PDLPSolver::runConvergenceCheck(size_t iter,
 
   // 2. Check Convergence (GPU or CPU)
 #ifdef CUPDLP_GPU
-  // Only use Halpern PDHG slack/iterates if we have performed at least one iteration
+  // Only use Halpern PDHG slack/iterates if we have performed at least one
+  // iteration
   if (params_.use_halpern_restart && d_pdhg_primal_ != nullptr && iter > 0) {
     linalgGpuAx(d_pdhg_primal_, d_ax_next_);
     linalgGpuATy(d_pdhg_dual_, d_aty_next_);
-    current_converged = checkConvergenceGpu(
-        iter, d_pdhg_primal_, d_pdhg_dual_, d_ax_next_, d_aty_next_,
-        params_.tolerance, current_results, "[L-GPU]", d_dSlackPos_,
-        d_dSlackNeg_, true);
+    current_converged =
+        checkConvergenceGpu(iter, d_pdhg_primal_, d_pdhg_dual_, d_ax_next_,
+                            d_aty_next_, params_.tolerance, current_results,
+                            "[L-GPU]", d_dSlackPos_, d_dSlackNeg_, true);
   } else {
-    current_converged = checkConvergenceGpu(
-        iter, d_x_current_, d_y_current_, d_ax_current_,
-        d_aty_current_, params_.tolerance, current_results,
-        "[L-GPU]", d_dSlackPos_, d_dSlackNeg_, false);
+    current_converged =
+        checkConvergenceGpu(iter, d_x_current_, d_y_current_, d_ax_current_,
+                            d_aty_current_, params_.tolerance, current_results,
+                            "[L-GPU]", d_dSlackPos_, d_dSlackNeg_, false);
     average_converged = checkConvergenceGpu(
         iter, d_x_avg_, d_y_avg_, d_ax_avg_, d_aty_avg_, params_.tolerance,
         average_results, "[A-GPU]", d_dSlackPosAvg_, d_dSlackNegAvg_, false);
@@ -878,8 +882,10 @@ bool PDLPSolver::runConvergenceCheck(size_t iter,
     results_ = prefer_avg ? average_results : current_results;
     // Final logging on optimality
     const bool forced = true;
-    logger_.printIterationStats(final_iter_count_, results_, primal_weight_, forced);
-    logger_.info((prefer_avg ? "Average" : "Current") + std::string(" solution converged"));
+    logger_.printIterationStats(final_iter_count_, results_, primal_weight_,
+                                forced);
+    logger_.info((prefer_avg ? "Average" : "Current") +
+                 std::string(" solution converged"));
 
     status = TerminationStatus::OPTIMAL;
     return true;  // Stop
@@ -892,27 +898,31 @@ bool PDLPSolver::runConvergenceCheck(size_t iter,
   return false;
 }
 
-bool PDLPSolver::checkRestartCriteria(double current_fpe, double initial_fpe, 
-                                      double last_trial_fpe, int halpern_iteration, 
+bool PDLPSolver::checkRestartCriteria(double current_fpe, double initial_fpe,
+                                      double last_trial_fpe,
+                                      int halpern_iteration,
                                       int final_iter_count) {
   if (final_iter_count == PDHG_CHECK_INTERVAL) {
     return true;
   }
-  
+
   if (final_iter_count > PDHG_CHECK_INTERVAL) {
-    if (current_fpe <= restart_scheme_.getSufficientDecayFactor() * initial_fpe) {
+    if (current_fpe <=
+        restart_scheme_.getSufficientDecayFactor() * initial_fpe) {
       return true;
     }
-    if (current_fpe <= restart_scheme_.getNecessaryDecayFactor() * initial_fpe) {
+    if (current_fpe <=
+        restart_scheme_.getNecessaryDecayFactor() * initial_fpe) {
       if (current_fpe > last_trial_fpe) {
         return true;
       }
     }
-    if (halpern_iteration >= restart_scheme_.getArtificialRestartThreshold() * final_iter_count) {
+    if (halpern_iteration >=
+        restart_scheme_.getArtificialRestartThreshold() * final_iter_count) {
       return true;
     }
   }
-  
+
   return false;
 }
 
