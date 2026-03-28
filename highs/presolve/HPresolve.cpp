@@ -6519,7 +6519,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
-  const double kMaxDependentEquationsTime = 100;
+  const double kMaxDependentEquationsTime = 1000;
   const double time_limit = std::max(
       1.0, std::min(0.01 * options->time_limit, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
