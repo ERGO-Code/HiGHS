@@ -1,6 +1,5 @@
 #include "PreProcess.h"
 
-#include "CurtisReidScaling.h"
 #include "Iterate.h"
 #include "Model.h"
 #include "model/HighsHessianUtils.h"

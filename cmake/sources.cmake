@@ -177,7 +177,6 @@ set(ipx_headers
   ipm/ipx/utils.h)
 
 set(hipo_sources 
-    ipm/hipo/ipm/CurtisReidScaling.cpp 
     ipm/hipo/ipm/IpmData.cpp 
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
     ipm/hipo/ipm/Control.cpp
@@ -189,7 +188,6 @@ set(hipo_sources
     ipm/hipo/ipm/Solver.cpp)
 
 set(hipo_headers
-    ipm/hipo/ipm/CurtisReidScaling.h
     ipm/hipo/ipm/IpmData.h
     ipm/hipo/ipm/FactorHiGHSSolver.h
     ipm/hipo/ipm/Parameters.h
