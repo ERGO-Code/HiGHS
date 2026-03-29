@@ -875,6 +875,8 @@ void HFactor::buildSimple() {
   // Record the dimension and number of entries in the kernel
   kernel_dim = nwork;
   kernel_num_el = num_active_nz_;
+  min_time_bound_ = kHighsInf;
+  max_time_bound_ = 0;
   assert((HighsInt)this->refactor_info_.pivot_row.size() == num_basic - nwork);
 }
 
@@ -892,7 +894,7 @@ HighsInt HFactor::buildKernel() {
   HighsInt num_defer_pivot = 0;
   // Initial timer frequency: may be reduced if iterations get slow
   const HighsInt max_timer_frequency = 1000;
-  HighsInt timer_frequency = 10;
+  HighsInt timer_frequency = 100;
   HighsInt log_frequency = 1000;
   double previous_iteration_time = build_timer_->read();
   double average_iteration_time = 0;
@@ -901,10 +903,20 @@ HighsInt HFactor::buildKernel() {
   bool resize_data_shift = false;
   const bool check_for_timeout = this->time_limit_ < kHighsInf;
 
-  auto resizeIntDataShift = [&](std::vector<HighsInt> i_vector, const HighsInt to_size) {
+  auto resizeHighsInt = [&](std::vector<HighsInt>& i_vector,
+			    const HighsInt to_size) {
     HighsInt* from_p = i_vector.data();
     i_vector.resize(to_size);
-    if (i_vector.data() != from_p) resize_data_shift = true;
+    if (i_vector.data() != from_p)
+      resize_data_shift = true;
+  };
+  
+  auto resizeDouble = [&](std::vector<double>& d_vector,
+			  const HighsInt to_size) {
+    double* from_p = d_vector.data();
+    d_vector.resize(to_size);
+    if (d_vector.data() != from_p)
+      resize_data_shift = true;
   };
   
   const HighsInt check_nwork = -11;
@@ -943,16 +955,18 @@ HighsInt HFactor::buildKernel() {
       HighsInt iterations_left = kernel_dim - search_k + num_defer_pivot + 1;
       HighsInt iterations_left0 = iterations_left;
       HighsInt iterations_left1 = 0;
-      if (average_num_active_nz_change_rate < 0) {
+      if (average_num_active_nz_change_rate < -1) {
 	HighsInt active_nz_iterations_left = -num_active_nz_ / average_num_active_nz_change_rate;
 	iterations_left1 = active_nz_iterations_left;
 	iterations_left = std::min(active_nz_iterations_left, iterations_left);
       }
       double remaining_time_bound = average_iteration_time * iterations_left;
       double total_time_bound = current_time + remaining_time_bound;
+      min_time_bound_ = std::min(total_time_bound, min_time_bound_);
+      max_time_bound_ = std::max(total_time_bound, max_time_bound_);
       const bool stop = current_time > this->time_limit_ ||
 	total_time_bound > this->time_limit_;
-      if (search_k % log_frequency == 0 || stop || resize_data_shift) {
+      if (search_k % log_frequency == 0 || stop || resize_data_shift || total_time_bound < 0) {
 	printf("HFactor::buildKernel k = %7d; Kdim = %7d; Defer =%4d; left(%7d, %7d, %7d); num_active_nz_ = %7d;"
 	       " ActiveNzRate(%6d, Av = %6d);"
 	       " Time (Cu = %6.2f; IterMs(%.6f; Av = %.6f); Bd = %6.2f Lim = %6.2f) Fq = %4d%s%s\n",
@@ -1268,8 +1282,8 @@ HighsInt HFactor::buildKernel() {
           mc_space[iCol] += max(mc_space[iCol], nFillin);
           HighsInt p5 = mc_start[iCol] = mc_index.size();
           HighsInt p7 = p5 + mc_space[iCol] - mc_count_n[iCol];
-          mc_index.resize(p5 + mc_space[iCol]);
-          mc_value.resize(p5 + mc_space[iCol]);
+          resizeHighsInt(mc_index, p5 + mc_space[iCol]);
+          resizeDouble(mc_value, p5 + mc_space[iCol]);
           copy(&mc_index[p1], &mc_index[p2], &mc_index[p5]);
           copy(&mc_value[p1], &mc_value[p2], &mc_value[p5]);
           copy(&mc_index[p3], &mc_index[p4], &mc_index[p7]);
@@ -1295,18 +1309,7 @@ HighsInt HFactor::buildKernel() {
               HighsInt p2 = p1 + mr_count[iRow];
               HighsInt p3 = mr_start[iRow] = mr_index.size();
               mr_space[iRow] *= 2;
-
-	      HighsInt* mr_index_from_p = mr_index.data();
-
-              mr_index.resize(p3 + mr_space[iRow]);
-
-	      HighsInt* mr_index_to_p = mr_index.data();
-	      if (mr_index_to_p != mr_index_from_p) {
-		printf("Resize data shift from %p to %p\n",
-		       (void*)mr_index_from_p, (void*)mr_index_to_p);
-		resize_data_shift = true;
-	      }
-
+              resizeHighsInt(mr_index, p3 + mr_space[iRow]);
               copy(&mr_index[p1], &mr_index[p2], &mr_index[p3]);
             }
             rowInsert(iCol, iRow);

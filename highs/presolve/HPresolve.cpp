@@ -6519,7 +6519,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
-  const double kMaxDependentEquationsTime = 1000;
+  const double kMaxDependentEquationsTime = 100;
   const double time_limit = std::max(
       1.0, std::min(0.01 * options->time_limit, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
@@ -6585,11 +6585,14 @@ HPresolve::Result HPresolve::removeDependentEquations(
 		static_cast<int>(model->num_col_), static_cast<int>(num_nz),
 		static_cast<int>(num_removed_row),
 		static_cast<int>(num_removed_nz), time_taken);
+  double min_time_bound = kHighsInf;
+  double max_time_bound = -kHighsInf;
+  
     highsLogUser(
         options->log_options, HighsLogType::kInfo,
         "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
         "removed %d dependent equation%s and %d nonzero%s "
-        "in %.2fs (limit = %.2fs)",
+        "in %.2fs with bounds in (%.2fs, %.2fs) and limit = %.2fs)",
         static_cast<int>(num_equations),
         highsIntToPlural(num_equations).c_str(),
         static_cast<int>(num_variables), static_cast<int>(model->num_col_),
@@ -6597,7 +6600,10 @@ HPresolve::Result HPresolve::removeDependentEquations(
         num_nz == 1 ? "" : "s", static_cast<int>(num_removed_row),
         highsIntToPlural(num_removed_row).c_str(),
         static_cast<int>(num_removed_nz),
-        highsIntToPlural(num_removed_nz).c_str(), time_taken, time_limit);
+        highsIntToPlural(num_removed_nz).c_str(), time_taken,
+	factor.min_time_bound_, 
+	factor.max_time_bound_, 
+	time_limit);
     if (num_fictitious_rows_skipped)
       highsLogDev(options->log_options, HighsLogType::kInfo,
 		  ", avoiding %d fictitious row%s",

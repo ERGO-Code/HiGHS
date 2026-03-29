@@ -337,6 +337,8 @@ class HFactor {
   HighsInt kernel_dim;
   HighsInt kernel_num_el;
   HighsInt num_active_nz_;
+  double min_time_bound_;
+  double max_time_bound_;
   
   /**
    * Data of the factor
