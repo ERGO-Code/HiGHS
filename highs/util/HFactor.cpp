@@ -896,6 +896,9 @@ HighsInt HFactor::buildKernel() {
   // time limit, it implies that buildKernel can bail out. This is
   // (currently) used only with the dependent equations rule in
   // presolve
+  //
+  // ToDo This bail-out is non-deterministic, but the pseudo-clock
+  // model for INVERT can be used to make it deterministic
   const bool check_for_timeout = this->time_limit_ < kHighsInf;
   // To know when to bail out of buildKernel a model of how long
   // buildKernel will take is needed

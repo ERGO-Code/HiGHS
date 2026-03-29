@@ -6485,26 +6485,14 @@ HPresolve::Result HPresolve::removeDependentEquations(
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++)
     if (row_count[iCol]) num_variables++;
   HighsInt num_nz = matrix.numNz();
-  //
-  // Although two duplicated equations in any number of variables lead
-  // to dependency, it's not worth looking for dependent equations if
-  // there are few relative to the number of variables
-  //
-  // The following heuristic picks up all Mittelmann problems with
-  // meaningful reductions
-  const bool not_consider_dependent_equations =
-      num_equations < 0.5 * num_variables;
   const bool silent = silentLog();
   if (!silent)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "%sonsidering dependency of %d equation%s in %d variable%s "
+                 "Considering dependency of %d equation%s in %d variable%s "
                  "with %d nonzero%s\n",
-                 not_consider_dependent_equations ? "Not c" : "C",
                  int(num_equations), highsIntToPlural(num_equations).c_str(),
                  int(num_variables), highsIntToPlural(num_variables).c_str(),
                  int(num_nz), highsIntToPlural(num_nz).c_str());
-  //  if (not_consider_dependent_equations) return returnOk();
-  //
   // Identify any dependent equations
   std::vector<HighsInt> colSet(num_equations);
   std::iota(colSet.begin(), colSet.end(), 0);
@@ -6578,30 +6566,20 @@ HPresolve::Result HPresolve::removeDependentEquations(
     }
   }
   if (!silent) {
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g\n",
-                model->model_name_.c_str(), static_cast<int>(num_equations),
-                static_cast<int>(num_variables),
-                static_cast<int>(model->num_col_), static_cast<int>(num_nz),
-                static_cast<int>(num_removed_row),
-                static_cast<int>(num_removed_nz), time_taken);
-    double min_time_bound = kHighsInf;
-    double max_time_bound = -kHighsInf;
-
     highsLogUser(
         options->log_options, HighsLogType::kInfo,
         "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
         "removed %d dependent equation%s and %d nonzero%s "
         "in %.2fs with bounds in (%.2fs, %.2fs) and limit = %.2fs)",
-        static_cast<int>(num_equations),
-        highsIntToPlural(num_equations).c_str(),
-        static_cast<int>(num_variables), static_cast<int>(model->num_col_),
-        highsIntToPlural(num_variables).c_str(), static_cast<int>(num_nz),
-        num_nz == 1 ? "" : "s", static_cast<int>(num_removed_row),
-        highsIntToPlural(num_removed_row).c_str(),
-        static_cast<int>(num_removed_nz),
-        highsIntToPlural(num_removed_nz).c_str(), time_taken,
-        factor.min_time_bound_, factor.max_time_bound_, time_limit);
+        // clang-format off
+        static_cast<int>(num_equations), highsIntToPlural(num_equations).c_str(),
+        static_cast<int>(num_variables),
+	static_cast<int>(model->num_col_), highsIntToPlural(num_variables).c_str(),
+	static_cast<int>(num_nz), highsIntToPlural(num_nz).c_str(),
+	static_cast<int>(num_removed_row), highsIntToPlural(num_removed_row).c_str(),
+        static_cast<int>(num_removed_nz), highsIntToPlural(num_removed_nz).c_str(),
+        // clang-format on
+        time_taken, factor.min_time_bound_, factor.max_time_bound_, time_limit);
     if (num_fictitious_rows_skipped)
       highsLogDev(options->log_options, HighsLogType::kInfo,
                   ", avoiding %d fictitious row%s",
