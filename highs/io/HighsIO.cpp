@@ -314,6 +314,11 @@ const std::string highsBoolToString(const bool b, const HighsInt field_width) {
   return b ? " true" : "false";
 }
 
+const std::string highsIntToPlural(const HighsInt i, const bool y) {
+  if (y) return i == 1 ? "y" : "ies";
+  return i == 1 ? "" : "s";
+}
+
 const std::string highsTimeToString(const double time) {
   return
 #ifndef NDEBUG
