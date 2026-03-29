@@ -1229,8 +1229,8 @@ void HighsSimplexAnalysis::updateInvertFormData(const HFactor& factor) {
         factor.invert_num_el -
         (factor.basis_matrix_num_el - factor.kernel_num_el) - factor.kernel_dim;
     assert(factor.kernel_num_el);
-    double kernel_fill_factor =
-      (1.0 * kernel_invert_num_el) / (factor.kernel_num_el + factor.kernel_dim);
+    double kernel_fill_factor = (1.0 * kernel_invert_num_el) /
+                                (factor.kernel_num_el + factor.kernel_dim);
     sum_kernel_fill_factor += kernel_fill_factor;
     running_average_kernel_fill_factor =
         0.95 * running_average_kernel_fill_factor + 0.05 * kernel_fill_factor;

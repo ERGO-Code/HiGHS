@@ -6579,15 +6579,15 @@ HPresolve::Result HPresolve::removeDependentEquations(
   }
   if (!silent) {
     highsLogDev(options->log_options, HighsLogType::kInfo,
-		"GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g\n",
-		model->model_name_.c_str(), static_cast<int>(num_equations),
-		static_cast<int>(num_variables),
-		static_cast<int>(model->num_col_), static_cast<int>(num_nz),
-		static_cast<int>(num_removed_row),
-		static_cast<int>(num_removed_nz), time_taken);
-  double min_time_bound = kHighsInf;
-  double max_time_bound = -kHighsInf;
-  
+                "GrepDependentEq,%s,%d,%d,%d,%d,%d,%d,%g\n",
+                model->model_name_.c_str(), static_cast<int>(num_equations),
+                static_cast<int>(num_variables),
+                static_cast<int>(model->num_col_), static_cast<int>(num_nz),
+                static_cast<int>(num_removed_row),
+                static_cast<int>(num_removed_nz), time_taken);
+    double min_time_bound = kHighsInf;
+    double max_time_bound = -kHighsInf;
+
     highsLogUser(
         options->log_options, HighsLogType::kInfo,
         "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
@@ -6601,14 +6601,12 @@ HPresolve::Result HPresolve::removeDependentEquations(
         highsIntToPlural(num_removed_row).c_str(),
         static_cast<int>(num_removed_nz),
         highsIntToPlural(num_removed_nz).c_str(), time_taken,
-	factor.min_time_bound_, 
-	factor.max_time_bound_, 
-	time_limit);
+        factor.min_time_bound_, factor.max_time_bound_, time_limit);
     if (num_fictitious_rows_skipped)
       highsLogDev(options->log_options, HighsLogType::kInfo,
-		  ", avoiding %d fictitious row%s",
-		  static_cast<int>(num_fictitious_rows_skipped),
-		  highsIntToPlural(num_fictitious_rows_skipped).c_str());
+                  ", avoiding %d fictitious row%s",
+                  static_cast<int>(num_fictitious_rows_skipped),
+                  highsIntToPlural(num_fictitious_rows_skipped).c_str());
     highsLogUser(options->log_options, HighsLogType::kInfo, "\n");
   }
   return returnOk();
