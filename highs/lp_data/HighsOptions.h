@@ -275,6 +275,7 @@ const string kHipoString = "hipo";
 const string kIpxString = "ipx";
 const string kPdlpString = "pdlp";
 const string kQpAsmString = "qpasm";
+const string kHiPdlpString = "hipdlp";
 
 const HighsInt kKeepNRowsDeleteRows = -1;
 const HighsInt kKeepNRowsDeleteEntries = 0;
@@ -390,9 +391,13 @@ struct HighsOptionsStruct {
   HighsInt hipo_block_size;
 
   // Options for PDLP solver
-  bool pdlp_scaling;
+  HighsInt pdlp_features_off;
   HighsInt pdlp_iteration_limit;
-  HighsInt pdlp_e_restart_method;
+  HighsInt pdlp_scaling_mode;
+  HighsInt pdlp_ruiz_iterations;
+  HighsInt pdlp_restart_strategy;
+  HighsInt pdlp_cupdlpc_restart_method;
+  HighsInt pdlp_step_size_strategy;
   double pdlp_optimality_tolerance;
 
   // Options for QP solver
@@ -561,9 +566,13 @@ struct HighsOptionsStruct {
         hipo_parallel_type(""),
         hipo_ordering(""),
         hipo_block_size(0),
-        pdlp_scaling(false),
+        pdlp_features_off(0),
         pdlp_iteration_limit(0),
-        pdlp_e_restart_method(0),
+        pdlp_scaling_mode(0),
+        pdlp_ruiz_iterations(0),
+        pdlp_restart_strategy(0),
+        pdlp_cupdlpc_restart_method(0),
+        pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
@@ -726,11 +735,11 @@ class HighsOptions : public HighsOptionsStruct {
         &presolve, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string = new OptionRecordString(
-        kSolverString,
-        "LP/QP solver: \"choose\", \"simplex\", "
-        "\"ipm\", \"ipx\", \"hipo\", \"pdlp\" or \"qpasm\"",
-        advanced, &solver, kHighsChooseString);
+    record_string =
+        new OptionRecordString(kSolverString,
+                               "LP solver option: \"choose\", \"simplex\", "
+                               "\"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
+                               advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -1299,20 +1308,46 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool(
-        "pdlp_scaling", "Scaling for PDLP solver: Default = true", advanced,
-        &pdlp_scaling, true);
-    records.push_back(record_bool);
-
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,
         &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("pdlp_e_restart_method",
-                                     "Restart mode for PDLP solver: 0 => none; "
-                                     "1 => GPU (default); 2 => CPU ",
-                                     advanced, &pdlp_e_restart_method, 0, 1, 2);
+    record_int =
+        new OptionRecordInt("pdlp_scaling_mode",
+                            "Scaling mode for PDLP solver (default = "
+                            "5): 1 => Ruiz; 2 => L2; 4 => PC",
+                            advanced, &pdlp_scaling_mode, kPdlpScalingMin,
+                            kPdlpScalingRuiz + kPdlpScalingPC, kPdlpScalingMax);
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("pdlp_ruiz_iterations",
+                            "Number of Ruiz scaling iteraitons for PDLP solver",
+                            advanced, &pdlp_ruiz_iterations, 0, 10, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "pdlp_restart_strategy",
+        "Restart strategy for PDLP solver: 0 => off; "
+        "1 => fixed; 2 => adaptive; 3 => Halpern",
+        advanced, &pdlp_restart_strategy, kPdlpRestartStrategyMin,
+        kPdlpRestartStrategyHalpern, kPdlpRestartStrategyMax);
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("pdlp_cupdlpc_restart_method",
+                            "Restart mode for cuPDLP-C solver: 0 => none; "
+                            "1 => GPU (default); 2 => CPU ",
+                            advanced, &pdlp_cupdlpc_restart_method, 0, 1, 2);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "pdlp_step_size_strategy",
+        "Step size strategy for PDLP solver: 0 => fixed; "
+        "1 => adaptive; 2 => Malitsky-Pock; 3 => PID",
+        advanced, &pdlp_step_size_strategy, kPdlpStepSizeStrategyMin,
+        kPdlpStepSizeStrategyPid, kPdlpStepSizeStrategyMax);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
