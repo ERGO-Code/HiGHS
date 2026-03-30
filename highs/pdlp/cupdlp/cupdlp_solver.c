@@ -548,8 +548,6 @@ void PDHG_Init_Variables(const cupdlp_int* has_variables, CUPDLPwork *work) {
   PDHG_Project_Bounds(work, x->data);
   double x_norm;
   cupdlp_twoNorm(work, lp->nCols, x->data, &x_norm);
-  if (work->settings->nLogLevel>0)
-    cupdlp_printf("||x0||_2 = %e\n", x_norm);
   
   // cupdlp_zero(iterates->y, cupdlp_float, lp->nRows);
   if (!*has_variables)

@@ -1839,7 +1839,15 @@ void PDLPSolver::initializeStepSizes() {
   } else {
     stepsize_.beta = 1.0;
   }
-
+  highsLogUser(params_.log_options_, HighsLogType::kInfo,
+	       "HiPDLP uses ||b|| = %8.3g ||c|| = %8.3g\n",
+	       unscaled_rhs_norm_,
+	       unscaled_c_norm_);
+  highsLogUser(params_.log_options_, HighsLogType::kInfo,
+	       "        but ||b|| = %8.3g ||c|| = %8.3g for stepsize_.beta = %8.3g\n",
+	       std::sqrt(rhs_norm_sq),
+	       std::sqrt(cost_norm_sq));
+  
   // Match initial primal weight calculation from cuPDLPx
   params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
   primal_weight_ = params_.omega;

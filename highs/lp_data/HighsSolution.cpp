@@ -479,8 +479,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   if (printf_kkt || options.log_dev_level > 0) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
-                "getKktFailures:: cost norm = %8.3g; bound norm = %8.3g\n",
-                highs_norm_costs, highs_norm_bounds);
+                "getKktFailures:: bound norm = %8.3g; cost norm = %8.3g\n",
+                highs_norm_bounds, highs_norm_costs);
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "getKktFailures:                      LP  (abs / rel)    "
                 "     Col (abs / rel)         Row (abs / rel)\n");
@@ -515,7 +515,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     }
     if (!is_qp && have_dual_solution)
       highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "getKktFailures: objective gap        %8.3g\n",
+                  "getKktFailures: objective gap                   %8.3g\n",
                   highs_info.primal_dual_objective_error);
   }
   // Assign primal (and possibly dual) solution status according to
