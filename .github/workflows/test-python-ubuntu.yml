@@ -23,7 +23,7 @@ jobs:
       - name: Test Python Interface
         run: |
           python3 -m pip install ./highspy
-          pytest -v
+          pytest -v ./highspy
 
       - name: Test Python Examples
         run: |
