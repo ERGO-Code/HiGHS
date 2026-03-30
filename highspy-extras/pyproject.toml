@@ -74,7 +74,7 @@ sdist.exclude = [
 ]
 
 [tool.scikit-build.cmake.define]
-BUILD_OPENBLAS = "OFF"
+BUILD_OPENBLAS = "ON"
 
 [[tool.scikit-build.overrides]]
 if.platform-system = "darwin"
