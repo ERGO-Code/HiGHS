@@ -90,6 +90,8 @@ if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)
 endif()
 
+option(HIPO "Build HIPO" OFF)
+message(STATUS "Build HIPO: ${HIPO}")
 include(CMakeDependentOption)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
@@ -144,12 +146,12 @@ endif()
 # endif()
 
 
-# option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
-# message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
-# option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
-# if (NO_AVX512)
-#   message(STATUS "Build OpenBLAS without AVX512: ON")
-# endif()
+option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
+message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
+option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
+if (NO_AVX512)
+  message(STATUS "Build OpenBLAS without AVX512: ON")
+endif()
 
 if (HIPO AND CSHARP)
   message(ERROR "HIPO is only available in C++. Not yet supported in C#.")
@@ -713,7 +715,9 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
 
 endif()
 
-add_subdirectory(extern)
+if (HIPO)
+  add_subdirectory(extern)
+endif()
 
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
