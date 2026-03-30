@@ -19,13 +19,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build sdist
         shell: bash
-        run: pipx run build --sdist
+        run: pipx run build --sdist highspy/
       - name: check metadata
-        run: pipx run twine check dist/*
+        run: pipx run twine check highspy/dist/*
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-sdist
-          path: dist/*.tar.gz
+          path: highspy/dist/*.tar.gz
 
   build_wheels:
     name: Build wheel for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
@@ -49,6 +49,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.3.1
+        with:
+          package-dir: ./highspy
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
       - uses: actions/upload-artifact@v4
