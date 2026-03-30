@@ -4048,14 +4048,16 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           // See section 3.4 "Chvatal-Gomory strengthening of inequalities",
           // Achterberg et al., Presolve Reductions in Mixed Integer
           // Programming, INFORMS Journal on Computing 32(2):473-506.
+          constexpr double maxDynamism = 1e5;
           std::vector<double> roundedRowCoefs;
           roundedRowCoefs.resize(rowsize[row]);
-          std::set<double> scalars;
+          std::set<double> scalars = {1.0};
 
           // lambda for reformulating row to only contain variables with lower
           // bounds of zero (if possible)
           auto complementOrShift = [&](HighsInt direction, HighsCDouble& rhs,
-                                       double& minAbsCoef, double& maxAbsCoef) {
+                                       double& minAbsCoef, double& maxAbsCoef,
+                                       double& dynamism) {
             minAbsCoef = kHighsInf;
             maxAbsCoef = 0.0;
             for (size_t i = 0; i < rowCoefs.size(); ++i) {
@@ -4077,6 +4079,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 return false;
               }
             }
+            dynamism = maxAbsCoef / minAbsCoef;
             return true;
           };
 
@@ -4136,11 +4139,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
           // set up scalars suggested by Achterberg et al.
           auto setScalars = [&](double minAbsCoef, double maxAbsCoef) {
-            scalars.clear();
-            scalars.emplace(1.0);
-            if (static_cast<HighsCDouble>(maxAbsCoef) >=
-                1e5 * static_cast<HighsCDouble>(minAbsCoef))
-              return;
             for (HighsInt t = 1; t <= 5; t++) {
               scalars.emplace(t / maxAbsCoef);
               scalars.emplace(t / minAbsCoef);
@@ -4184,11 +4182,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           HighsCDouble roundedRhs = 0.0;
           double minAbsCoef = 0.0;
           double maxAbsCoef = 0.0;
+          double dynamism = 0.0;
 
           // complement or shift variables to have lower bounds of zero
-          if (complementOrShift(direction, rhs, minAbsCoef, maxAbsCoef)) {
+          if (complementOrShift(direction, rhs, minAbsCoef, maxAbsCoef,
+                                dynamism)) {
             // identify scalars for row
-            setScalars(minAbsCoef, maxAbsCoef);
+            if (dynamism <= maxDynamism) setScalars(minAbsCoef, maxAbsCoef);
             // find a scalar that produces improved coefficients
             if (rowCanBeTightened(rhs, roundedRhs)) {
               // undo complementation and shifting
