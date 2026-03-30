@@ -1834,27 +1834,23 @@ void PDLPSolver::initializeStepSizes() {
   double cost_norm_sq = linalg::vectorNormSquared(lp_.col_cost_);
   double rhs_norm_sq = linalg::vectorNormSquared(lp_.row_lower_);
 
-  double alt_beta = 1.0;
   if (std::min(cost_norm_sq, rhs_norm_sq) > 1e-6) {
     stepsize_.beta = cost_norm_sq / rhs_norm_sq;
-    alt_beta = unscaled_c_norm_ * unscaled_c_norm_ / (unscaled_rhs_norm_ * unscaled_rhs_norm_);
   } else {
     stepsize_.beta = 1.0;
   }
-  highsLogUser(params_.log_options_, HighsLogType::kInfo,
-	       "HiPDLP uses ||b|| = %8.3g ||c|| = %8.3g for       alt_beta = %8.3g\n",
-	       unscaled_rhs_norm_,
-	       unscaled_c_norm_,
-	       alt_beta);
-  highsLogUser(params_.log_options_, HighsLogType::kInfo,
-	       "        but ||b|| = %8.3g ||c|| = %8.3g for stepsize_.beta = %8.3g\n",
-	       std::sqrt(rhs_norm_sq),
-	       std::sqrt(cost_norm_sq),
-	       stepsize_.beta);
-  
   // Match initial primal weight calculation from cuPDLPx
   params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
   primal_weight_ = params_.omega;
+
+  highsLogUser(
+      params_.log_options_, HighsLogType::kInfo,
+      "HiPDLP uses ||b|| = %8.3g ||c|| = %8.3g for primal_weight_ = %8.3g\n",
+      unscaled_rhs_norm_, unscaled_c_norm_, primal_weight_);
+  highsLogUser(
+      params_.log_options_, HighsLogType::kInfo,
+      "        but ||b|| = %8.3g ||c|| = %8.3g for stepsize_.beta = %8.3g\n",
+      std::sqrt(rhs_norm_sq), std::sqrt(cost_norm_sq), stepsize_.beta);
 
   if (params_.step_size_strategy != StepSizeStrategy::FIXED &&
       params_.step_size_strategy != StepSizeStrategy::PID) {
