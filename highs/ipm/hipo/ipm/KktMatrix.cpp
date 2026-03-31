@@ -11,6 +11,7 @@ KktMatrix::KktMatrix(const Model& m, const Regularisation& r, Info& i,
 Int KktMatrix::buildASstructure() {
   // Build lower triangular structure of the augmented system.
   // Build values of AS that will not change during the iterations.
+  Clock clock;
 
   const HighsSparseMatrix& A = model.A();
   const HighsHessian& Q = model.Q();
@@ -64,6 +65,8 @@ Int KktMatrix::buildASstructure() {
     ptrAS[n + i + 1] = ptrAS[n + i] + 1;
   }
 
+  info.AS_structure_time = clock.stop();
+
   return kStatusOk;
 }
 
@@ -71,6 +74,7 @@ Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
   // build AS values that change during iterations.
 
   assert(!ptrAS.empty() && !rowsAS.empty());
+  Clock clock;
 
   const HighsHessian& Q = model.Q();
   const Int n = model.A().num_col_;
@@ -80,6 +84,8 @@ Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
     if (model.qp()) valAS[ptrAS[i]] -= model.sense() * model.Q().diag(i);
   }
 
+  info.matrix_time += clock.stop();
+
   return kStatusOk;
 }
 
@@ -88,6 +94,7 @@ Int KktMatrix::buildNEstructure() {
   // This approach uses a column-wise copy of A, a partial row-wise copy and a
   // vector of corresponding indices.
   // NB: A must have sorted columns for this to work
+  Clock clock;
 
   const HighsSparseMatrix& A = model.A();
   const Int n = A.num_col_;
@@ -177,6 +184,7 @@ Int KktMatrix::buildNEstructure() {
     }
   }
 
+  info.NE_structure_time = clock.stop();
   return kStatusOk;
 }
 
@@ -184,6 +192,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
   // given the NE structure already computed, fill in the NE values
 
   assert(!ptrNE.empty() && !rowsNE.empty());
+  Clock clock;
 
   const HighsSparseMatrix& A = model.A();
   const HighsHessian& Q = model.Q();
@@ -230,6 +239,8 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
       work[index] = 0.0;
     }
   }
+
+  info.matrix_time += clock.stop();
 
   return kStatusOk;
 }

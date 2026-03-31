@@ -86,17 +86,12 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
-  Clock clock;
-
-  // build matrix
   kkt_.buildASvalues(scaling);
-  info_.matrix_time += clock.stop();
 
   // set static regularisation, since it may have changed
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
-  // factorise matrix
-  clock.start();
+  Clock clock;
   if (FH_.factorise(S_, kkt_.rowsAS, kkt_.ptrAS, kkt_.valAS))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
@@ -110,20 +105,14 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
-  Clock clock;
-
-  // build matrix
   kkt_.buildNEvalues(scaling);
-  info_.matrix_time += clock.stop();
 
   // set static regularisation, since it may have changed
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
-  // factorise
-  clock.start();
+  Clock clock;
   if (FH_.factorise(S_, kkt_.rowsNE, kkt_.ptrNE, kkt_.valNE))
     return kStatusErrorFactorise;
-
   info_.factor_time += clock.stop();
   info_.factor_number++;
 
@@ -219,9 +208,7 @@ Int FactorHiGHSSolver::chooseNla() {
         model_.nonSeparableQp() || model_.m() == 0) {
       failure_NE = true;
     } else {
-      Clock clock;
       Int status = kkt_.buildNEstructure();
-      info_.NE_structure_time = clock.stop();
       if (status) {
         failure_NE = true;
         if (status == kStatusOverflow) {
@@ -337,8 +324,6 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   // Run analyse phase.
   // - If ordering is "amd", "metis", "rcm" run only the ordering requested.
   // - If ordering is "choose", run "amd", "metis", and choose the best.
-
-  Clock clock;
 
   // select which fill-reducing orderings should be tried
   std::vector<std::string> orderings_to_try;
