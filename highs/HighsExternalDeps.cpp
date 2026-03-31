@@ -55,6 +55,7 @@ HighsExternalDeps& HighsExternalDeps::instance() {
   return _instance;
 }
 
+#ifdef HIPO
 #ifdef HIGHS_SHARED_EXTRAS_LIBRARY
 void HighsExternalDeps::clear() {
   amd_ = amd{};
@@ -176,4 +177,5 @@ bool HighsExternalDeps::tryLoad(const std::string& path) {
   inst.available_ = true;
   return true;
 }
+#endif
 #endif
