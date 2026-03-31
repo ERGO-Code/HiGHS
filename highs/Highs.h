@@ -1741,8 +1741,7 @@ class Highs {
 
   HighsStatus getIisInterface();
   HighsStatus getIisInterfaceReturn(const HighsStatus return_status,
-                                    const HighsOptions& original_options,
-                                    const HighsCallback& original_callback);
+                                    const HighsOptions& original_options);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const std::string& original_model_name,
