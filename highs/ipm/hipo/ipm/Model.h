@@ -50,8 +50,6 @@ class Model {
   HighsHessian Q_{};
   std::vector<char> constraints_{};
 
-  Int num_dense_cols_{};
-  double max_col_density_{};
   Int64 AS_nz_, NE_nz_lb_, NE_nz_ub_;
 
   std::vector<double> colscale_, rowscale_;
@@ -68,7 +66,6 @@ class Model {
       inf_norm_rows_;
 
   void preprocess();
-  void denseColumns();
   Int checkData() const;
   void computeNorms();
 
@@ -119,8 +116,6 @@ class Model {
   bool ready() const { return ready_; }
   bool scaled() const { return !colscale_.empty(); }
   double offset() const { return offset_; }
-  double maxColDensity() const { return max_col_density_; }
-  Int numDenseCols() const { return num_dense_cols_; }
   double oneNormRows(Int i) const { return one_norm_rows_[i]; }
   double oneNormCols(Int i) const { return one_norm_cols_[i]; }
   double infNormRows(Int i) const { return inf_norm_rows_[i]; }

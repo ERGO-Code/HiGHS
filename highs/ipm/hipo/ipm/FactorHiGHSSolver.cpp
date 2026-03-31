@@ -203,12 +203,10 @@ Int FactorHiGHSSolver::chooseNla() {
   bool overflow_AS = false;
 
   auto run_structure_NE = [&]() {
-    bool has_dense_cols = model_.m() > kMinRowsForDensity &&
-                          model_.maxColDensity() > kDenseColThresh;
     bool expect_AS_much_cheaper =
         model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
 
-    if (has_dense_cols || expect_AS_much_cheaper || model_.nonSeparableQp() ||
+    if ( expect_AS_much_cheaper || model_.nonSeparableQp() ||
         model_.m() == 0) {
       failure_NE = true;
       log_.printDevInfo("NE skipped\n");

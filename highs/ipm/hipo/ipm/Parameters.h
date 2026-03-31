@@ -39,9 +39,7 @@ const double kMaxTreeDepth = 1000;
 // parameters for choice of ordering
 const double kFlopsOrderingThresh = 1.2;
 
-// parameters for dense columns
-const double kDenseColThresh = 0.5;
-const Int kMinRowsForDensity = 2000;
+// parameters for skipping AS or NE
 const double kNzBoundsRatio = 50.0;
 
 // parameters for iterative refinement

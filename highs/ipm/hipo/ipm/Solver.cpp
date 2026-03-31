@@ -174,9 +174,6 @@ bool Solver::initialise() {
 void Solver::terminate() {
   info_.ipm_iter = iter_;
   if (info_.status == kStatusNotRun) info_.status = kStatusMaxIter;
-
-  info_.num_dense_cols = model_.numDenseCols();
-  info_.max_col_density = model_.maxColDensity();
 }
 
 bool Solver::prepareIter() {

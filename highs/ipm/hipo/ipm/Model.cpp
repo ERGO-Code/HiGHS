@@ -27,7 +27,6 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
 
   preprocess();
 
-  denseColumns();
   nzBounds();
   computeNorms();
 
@@ -184,9 +183,7 @@ void Model::print(const LogHighs& log) const {
   log_stream << textline("Rows:") << sci(m_, 0, 1) << '\n';
   log_stream << textline("Cols:") << sci(n_, 0, 1) << '\n';
   log_stream << textline("Nnz A:") << sci(A_.numNz(), 0, 1) << '\n';
-  if (num_dense_cols_ > 0)
-    log_stream << textline("Dense cols:") << integer(num_dense_cols_, 0)
-               << '\n';
+
   if (qp()) {
     log_stream << textline("Nnz Q:") << sci(Q_.numNz(), 0, 1);
     if (nonSeparableQp())
@@ -357,21 +354,6 @@ void Model::print(const LogHighs& log) const {
   }
 
   log.print(log_stream);
-}
-
-void Model::denseColumns() {
-  // Compute the maximum density of any column of A and count the number of
-  // dense columns.
-
-  max_col_density_ = 0.0;
-  num_dense_cols_ = 0;
-  for (Int col = 0; col < n_; ++col) {
-    Int col_nz = A_.start_[col + 1] - A_.start_[col];
-    double col_density = (double)col_nz / m_;
-    max_col_density_ = std::max(max_col_density_, col_density);
-    if (A_.num_row_ > kMinRowsForDensity && col_density > kDenseColThresh)
-      ++num_dense_cols_;
-  }
 }
 
 Int Model::loadIntoIpx(ipx::LpSolver& lps) const {
