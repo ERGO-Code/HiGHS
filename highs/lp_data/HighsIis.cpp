@@ -367,8 +367,7 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
 
 HighsStatus HighsIis::deduce(const HighsLp& lp, const HighsOptions& options,
                              const HighsCallback& callback,
-                             const HighsBasis& basis
-                             ) {
+                             const HighsBasis& basis) {
   // The number of infeasible rows must be positive
   assert(this->row_index_.size() > 0);
   // Identify the LP corresponding to the set of infeasible rows
@@ -593,8 +592,7 @@ HighsInt HighsIis::determineBoundStatus(const double lower, const double upper,
 
 HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
                               const HighsCallback& callback,
-                              const HighsBasis* basis
-                              ) {
+                              const HighsBasis* basis) {
   const HighsLogOptions& log_options = options.log_options;
   const bool col_priority = kIisStrategyColPriority & options.iis_strategy;
   const bool row_priority = !col_priority;

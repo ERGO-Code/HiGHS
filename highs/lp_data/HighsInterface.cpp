@@ -1827,8 +1827,8 @@ HighsStatus Highs::getRangingInterface() {
   return getRangingData(this->ranging_, solver_object);
 }
 
-HighsStatus Highs::getIisInterfaceReturn(
-    const HighsStatus return_status, const HighsOptions& original_options) {
+HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status,
+                                         const HighsOptions& original_options) {
   // Restore options
   this->options_ = original_options;
 
