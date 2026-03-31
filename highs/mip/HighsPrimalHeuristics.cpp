@@ -588,12 +588,18 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  const bool solve_sub_mip_return =
-      solveSubMip(worker, heurlp.getLp(), heurlp.getLpSolver().getBasis(),
-                  fixingrate, localdom.col_lower_, localdom.col_upper_,
-                  500,  // std::max(50, int(0.05 *
-                  // (mipsolver.mipdata_->num_leaves))),
-                  200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  HighsInt node_reduction_factor =
+      mipsolver.mipdata_->parallelLockActive()
+          ? std::max(
+                HighsInt{1},
+                static_cast<HighsInt>(mipsolver.mipdata_->workers.size()) / 4)
+          : 1;
+  const bool solve_sub_mip_return = solveSubMip(
+      worker, heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
+      localdom.col_lower_, localdom.col_upper_,
+      500,  // std::max(50, int(0.05 *
+      // (mipsolver.mipdata_->num_leaves))),
+      200 + mipsolver.mipdata_->num_nodes / (node_reduction_factor * 20), 12);
   if (mipsolver.mipdata_->terminatorTerminatedWorker(worker)) return;
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations =
@@ -890,17 +896,18 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
+  HighsInt node_reduction_factor =
+      mipsolver.mipdata_->parallelLockActive()
+          ? std::max(
+                HighsInt{1},
+                static_cast<HighsInt>(mipsolver.mipdata_->workers.size()) / 4)
+          : 1;
   const bool solve_sub_mip_return = solveSubMip(
       worker, heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
       localdom.col_lower_, localdom.col_upper_,
       500,  // std::max(50, int(0.05 *
       // (mipsolver.mipdata_->num_leaves))),
-      200 + mipsolver.mipdata_->num_nodes /
-                (std::max(1, static_cast<HighsInt>(
-                                 mipsolver.mipdata_->workers.size()) /
-                                 4) *
-                 20),
-      12);
+      200 + mipsolver.mipdata_->num_nodes / (node_reduction_factor * 20), 12);
   if (mipsolver.mipdata_->terminatorTerminatedWorker(worker)) return;
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations =
