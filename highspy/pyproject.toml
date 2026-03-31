@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
-version = "1.13.1.dev6"
+version = "1.13.1.dev7"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "../README.md"
@@ -96,6 +96,8 @@ wheel.exclude = ["include", "share", "lib*/", "bin", "LICENSE.txt", "README.md"]
 
 [tool.scikit-build.cmake.define]
 #HIPO_PYTHON_EXTRAS_BUILD = "ON"
+# Allows the HiPO IpxWrapper link to be compiled
+HIPO = "ON"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

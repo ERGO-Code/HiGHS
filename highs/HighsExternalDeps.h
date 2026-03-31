@@ -203,7 +203,15 @@ struct HighsExternalDeps {
   HighsExternalDeps(const HighsExternalDeps&) = delete;
   HighsExternalDeps& operator=(const HighsExternalDeps&) = delete;
 
-#ifdef HIGHS_SHARED_EXTRAS_LIBRARY
+#ifndef HIPO
+  static inline bool isAvailable() { return false; }
+  static constexpr bool isAvailableAtCompile() { return false; }
+
+  static bool tryLoad(const std::string& path) {return false; }
+  static void unload() {};
+  static const std::string getLastError() { return ""; }
+
+#elif defined(HIGHS_SHARED_EXTRAS_LIBRARY)
   static inline bool isAvailable() { return instance().available_; }
   static constexpr bool isAvailableAtCompile() { return false; }
 

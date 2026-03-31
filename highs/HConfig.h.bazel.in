@@ -21,6 +21,5 @@
 #define HIGHS_VERSION_MAJOR 1
 #define HIGHS_VERSION_MINOR 13
 #define HIGHS_VERSION_PATCH 1
-/* #undef HIGHS_DIR */
 
 #endif /* HCONFIG_H_ */

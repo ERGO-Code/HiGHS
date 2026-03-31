@@ -405,6 +405,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   return return_status;
 }
 
+#ifdef HIPO
 HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
   return solveHipo(solver_object.options_, solver_object.timer_,
                    solver_object.lp_, HighsHessian{}, solver_object.basis_,
@@ -655,6 +656,7 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
   }
   return return_status;
 }
+#endif
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    double& offset, std::vector<double>& obj,
@@ -1128,6 +1130,7 @@ void reportIpmNoProgress(const HighsOptions& options,
                ipx_info.abs_dresidual);
 }
 
+#ifdef HIPO
 void reportHipoNoProgress(const HighsOptions& options,
                           const hipo::Info& hipo_info) {
   highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -1140,6 +1143,7 @@ void reportHipoNoProgress(const HighsOptions& options,
                "No progress: max absolute   dual residual = %11.4g\n",
                hipo_info.d_res_abs);
 }
+#endif
 
 void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                                const ipx::Int num_col, const ipx::Int num_row,
@@ -1167,6 +1171,7 @@ void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                              num_row, x, slack, y, zl, zu, highs_solution);
 }
 
+#ifdef HIPO
 void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                               const hipo::Int num_col, const hipo::Int num_row,
                               const std::vector<double>& rhs,
@@ -1186,6 +1191,7 @@ void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
   ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
                              num_row, x, slack, y, zl, zu, highs_solution);
 }
+#endif
 
 void reportSolveData(const HighsLogOptions& log_options,
                      const ipx::Info& ipx_info) {
@@ -1390,6 +1396,7 @@ void reportSolveData(const HighsLogOptions& log_options,
               ipx_info.volume_increase);
 }
 
+#ifdef HIPO
 HighsStatus reportHipoStatus(const HighsOptions& options,
                              const hipo::Int status, const hipo::Solver& hipo) {
   if (hipo.solved()) {
@@ -1509,3 +1516,4 @@ HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
   }
   return HighsStatus::kError;
 }
+#endif
