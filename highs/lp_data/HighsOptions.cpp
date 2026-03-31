@@ -17,15 +17,38 @@
 #include "util/stringutil.h"
 #include "HighsExternalDeps.h"
 
-// void setLogOptions();
+#ifdef __linux__
+#include <climits>
+#include <unistd.h>
+
+static std::string getExecutableDir() {
+  char buf[PATH_MAX];
+  ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+  if (len == -1) return ".";
+  buf[len] = '\0';
+  std::string path(buf);
+  size_t pos = path.find_last_of('/');
+  return path.substr(0, pos);
+}
+#endif
 
 bool hipoAvailable() {
-//#ifndef HIPO
-//  std::cout << "false!" << std::endl;
-//  return false;
-//#endif
-  if (HighsExternalDeps::tryLoad(".") == false)
+
+  if (HighsExternalDeps::tryLoad(".") == false) {
+
+#ifdef __linux__
+    const std::string exeDir = getExecutableDir();
+    const std::string libDir = exeDir + "/../lib";
+    const std::string lib64Dir = exeDir + "/../lib64";
+
+    if (HighsExternalDeps::tryLoad(exeDir) == false &&
+        HighsExternalDeps::tryLoad(libDir) == false &&
+        HighsExternalDeps::tryLoad(lib64Dir) == false)
+      std::cout << HighsExternalDeps::getLastError() << std::endl;
+#else
     std::cout << HighsExternalDeps::getLastError() << std::endl;
+#endif
+  }
 
   return HighsExternalDeps::isAvailable();
 }

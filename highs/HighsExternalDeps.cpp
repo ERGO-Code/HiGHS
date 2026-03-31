@@ -84,12 +84,11 @@ void HighsExternalDeps::unload() {
 bool HighsExternalDeps::tryLoad(const std::string& path) {
   HighsExternalDeps& inst = instance();
 
-  // Already attempted
-  if (inst.initialized_) 
-      return inst.available_;
+  // Allow multiple attempts.
+  if (inst.available_)
+      return true;
 
-  printf("Attempting to load HiGHS Extras from: %s\n", path.c_str());
-
+  // printf("Attempting to load HiGHS Extras from: %s\n", path.c_str());
   inst.initialized_ = true;
   inst.available_ = false;
 
