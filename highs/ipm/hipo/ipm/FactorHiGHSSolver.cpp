@@ -211,7 +211,7 @@ Int FactorHiGHSSolver::chooseNla() {
     if (has_dense_cols || expect_AS_much_cheaper || model_.nonSeparableQp() ||
         model_.m() == 0) {
       failure_NE = true;
-      log_.printDevInfo("NE skipped due to nz bounds\n");
+      log_.printDevInfo("NE skipped\n");
     } else {
       Int status = kkt_.buildNEstructure();
       if (status) {
@@ -235,9 +235,11 @@ Int FactorHiGHSSolver::chooseNla() {
     bool expect_NE_much_cheaper =
         model_.nzAS() > model_.nzNEub() * kNzBoundsRatio;
 
-    if (expect_NE_much_cheaper) {
+    bool can_skip_AS = !(model_.nonSeparableQp() || model_.m() == 0);
+
+    if (expect_NE_much_cheaper && can_skip_AS) {
       failure_AS = true;
-      log_.printDevInfo("AS skipped due to nz bounds\n");
+      log_.printDevInfo("AS skipped\n");
     } else {
       Int AS_status = kkt_.buildASstructure();
       if (!AS_status) AS_status = analyseAS(symb_AS);
