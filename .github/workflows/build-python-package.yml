@@ -126,7 +126,6 @@ jobs:
 
       - name: Install wheel
         run: |
-          ls wheelhouse
           python3 -m pip install highspy/wheelhouse/*.whl
 
       - name: Test highspy
@@ -154,7 +153,6 @@ jobs:
 
       - name: Install wheel
         run: |
-          ls wheelhouse
           python3 --version
           python3 -m pip install highspy/wheelhouse/*.whl
           python3 -c "import highspy; print(dir(highspy))"
@@ -184,7 +182,6 @@ jobs:
 
       - name: Install wheel
         run: |
-          ls wheelhouse
           python3 --version
           python3 -m pip install highspy/wheelhouse/*.whl
           python3 -c "import highspy; print(dir(highspy))"
