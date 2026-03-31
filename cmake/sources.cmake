@@ -187,7 +187,8 @@ set(hipo_sources
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/PreProcess.cpp
     ipm/hipo/ipm/Refine.cpp
-    ipm/hipo/ipm/Solver.cpp)
+    ipm/hipo/ipm/Solver.cpp
+    ipm/hipo/ipm/UpLookingSolver.cpp)
 
 set(hipo_headers
     ipm/hipo/ipm/IpmData.h
@@ -203,7 +204,8 @@ set(hipo_headers
     ipm/hipo/ipm/Options.h
     ipm/hipo/ipm/PreProcess.h
     ipm/hipo/ipm/Solver.h
-    ipm/hipo/ipm/Status.h)
+    ipm/hipo/ipm/Status.h
+    ipm/hipo/ipm/UpLookingSolver.h)
 
 set(factor_highs_sources
     ipm/hipo/factorhighs/Analyse.cpp
