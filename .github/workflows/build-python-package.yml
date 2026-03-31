@@ -16,17 +16,17 @@ jobs:
       - name: Build sdist
         run: |
           python3 -m pip install build
-          python3 -m build --sdist
+          python3 -m build --sdist ./highspy
 
       - name: Install sdist
         run: |
-          ls dist
-          python3 -m pip install dist/*.tar.gz
+          ls highspy/dist
+          python3 -m pip install highspy/dist/*.tar.gz
 
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_sdist_mac:
     runs-on: macos-latest
@@ -36,17 +36,17 @@ jobs:
       - name: Build sdist
         run: |
           python3 -m pip install build --break-system-packages
-          python3 -m build --sdist
+          python3 -m build --sdist ./highspy
 
       - name: Install sdist
         run: |
-          ls dist
-          python3 -m pip install dist/*.tar.gz --break-system-packages
+          ls highspy/dist
+          python3 -m pip install highspy/dist/*.tar.gz --break-system-packages
 
       - name: Test highspy
         run: |
           python3 -m pip install pytest --break-system-packages
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_sdist_win:
     runs-on: windows-2022
@@ -61,10 +61,11 @@ jobs:
       - name: Build sdist
         run: |
           python -m pip install build
-          python -m build --sdist
+          python -m build --sdist ./highspy
 
       - name: Install sdist
         run: |
+          cd highspy
           $item = Get-ChildItem dist
           python -m pip install "$item"
           python -c "import highspy; print(dir(highspy))"
@@ -72,7 +73,7 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest
+          python -m pytest ./highspy
 
   build_wheel_linux:
     runs-on: ubuntu-24.04
@@ -92,18 +93,16 @@ jobs:
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          cd highspy
-          python3 -m cibuildwheel --only cp314-manylinux_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp314-manylinux_x86_64 ./highspy
 
       - name: Install wheel
         run: |
-          ls wheelhouse
-          python3 -m pip install wheelhouse/*.whl
+          python3 -m pip install highspy/wheelhouse/*.whl
 
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_wheel_linux_arm:
     runs-on: ubuntu-24.04-arm
@@ -123,17 +122,17 @@ jobs:
           python3 --version
           python3 -m pip install cibuildwheel
           cd highspy
-          python3 -m cibuildwheel --only cp311-manylinux_aarch64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp311-manylinux_aarch64 .
 
       - name: Install wheel
         run: |
           ls wheelhouse
-          python3 -m pip install wheelhouse/*.whl
+          python3 -m pip install highspy/wheelhouse/*.whl
 
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_wheel_macos_intel:
     runs-on: macos-15-intel
@@ -151,20 +150,19 @@ jobs:
       - name: Build wheel
         run: |
           python3 -m pip install cibuildwheel
-          cd highspy
-          python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp311-macosx_x86_64 ./highspy
 
       - name: Install wheel
         run: |
           ls wheelhouse
           python3 --version
-          python3 -m pip install wheelhouse/*.whl
+          python3 -m pip install highspy/wheelhouse/*.whl
           python3 -c "import highspy; print(dir(highspy))"
 
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_wheel_macos_arm:
     runs-on: macos-14  # macos-14 is arm64
@@ -182,20 +180,19 @@ jobs:
       - name: Build wheel
         run: |
           python3 -m pip install cibuildwheel
-          cd highspy
-          python3 -m cibuildwheel --only cp311-macosx_arm64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp311-macosx_arm64 ./highspy
 
       - name: Install wheel
         run: |
           ls wheelhouse
           python3 --version
-          python3 -m pip install wheelhouse/*.whl
+          python3 -m pip install highspy/wheelhouse/*.whl
           python3 -c "import highspy; print(dir(highspy))"
 
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_wheel_windows:
     runs-on: windows-2022
@@ -211,10 +208,11 @@ jobs:
         run: |
           python -m pip install cibuildwheel
           cd highspy
-          python -m cibuildwheel --only cp314-win_amd64 $GITHUB_WORKSPACE
+          python -m cibuildwheel --only cp314-win_amd64 .
 
       - name: Install wheel
         run: |
+          cd highspy
           ls wheelhouse
           $item = Get-ChildItem wheelhouse
           python -m pip install "$item"
@@ -223,7 +221,7 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest
+          python -m pytest ./highspy
 
   build_wheel_windows_313:
     runs-on: windows-2022
@@ -238,11 +236,11 @@ jobs:
       - name: Build wheel
         run: |
           python -m pip install cibuildwheel
-          cd highspy
-          python -m cibuildwheel --only cp313-win_amd64 $GITHUB_WORKSPACE
+          python -m cibuildwheel --only cp313-win_amd64 ./highspy
 
       - name: Install wheel
         run: |
+          cd highspy
           ls wheelhouse
           $item = Get-ChildItem wheelhouse
           python -m pip install "$item"
@@ -251,4 +249,4 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest
+          python -m pytest ./highspy
