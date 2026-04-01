@@ -132,7 +132,7 @@ jobs:
       - name: Configure openblas
         working-directory: ${{runner.workspace}}/build-openblas
         run: |
-          cmake ${{runner.workspace}}/HiGHS/pathtoopenblas
+          cmake ${{runner.workspace}}/HiGHS/pathtoopenblas \
             -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install-openblas
           cmake --build . --parallel
           cmake --install .
