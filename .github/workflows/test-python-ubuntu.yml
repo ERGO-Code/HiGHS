@@ -127,6 +127,7 @@ jobs:
       - name: Create build dir for openblas
         run: |
           mkdir ${{runner.workspace}}/build-openblas
+          mkdir ${{runner.workspace}}/install-openblas
 
       - name: Configure openblas
         working-directory: ${{runner.workspace}}/build-openblas

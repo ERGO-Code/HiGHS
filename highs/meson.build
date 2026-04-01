@@ -373,7 +373,7 @@ if get_option('with_csharp')
 endif
 
 highspy_cpp = files([
-  'highs_bindings.cpp'
+  'highspy/highs_bindings.cpp'
 ])
 
 if get_option('with_pybind11')
