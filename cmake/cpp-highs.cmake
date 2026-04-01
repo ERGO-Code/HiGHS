@@ -140,7 +140,7 @@ install(
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/highs"
   COMPONENT Devel)
 
-if (NOT HIPO_PYTHON_EXTRAS_BUILD)
+if (NOT HIPO_PYTHON)
 # Configure the pkg-config file for the install
 configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
   "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)

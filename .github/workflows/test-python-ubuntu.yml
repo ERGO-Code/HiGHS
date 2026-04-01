@@ -52,7 +52,7 @@ jobs:
         run: |
           python3 -m pip install ./highspy-extras
           python3 -m pip install .
-          pytest -v
+          pytest -v ./highspy
           pytest check/test_highspy_hipo.py
 
       - name: Test Python Examples
@@ -91,7 +91,7 @@ jobs:
         run: |
           python3 -m pip install ./highspy-extras --config-settings=cmake.define.BUILD_OPENBLAS=OFF
           python3 -m pip install .
-          pytest -v
+          pytest -v ./highspy
           pytest check/test_highspy_hipo.py
 
       - name: Test Python Examples
@@ -146,7 +146,7 @@ jobs:
               --config-settings=cmake.define.BUILD_OPENBLAS=OFF
               --config-settings=cmake.define.BLAS_LIBRARIES=${{runner.workspace}}/install-openblas/lib/libopenblas.a
           python3 -m pip install .
-          pytest -v
+          pytest -v ./highspy
           pytest check/test_highspy_hipo.py
 
       - name: Test Python Examples

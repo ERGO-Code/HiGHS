@@ -52,7 +52,7 @@ jobs:
         run: |
           python3 -m pip install ./highspy-extras
           python3 -m pip install .
-          pytest -v
+          pytest -v ./highspy
           pytest check/test_highspy_hipo.py
 
       - name: Test Python Examples

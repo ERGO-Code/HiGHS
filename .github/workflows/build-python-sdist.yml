@@ -87,7 +87,6 @@ jobs:
          python ./examples/call_highs_from_python.py
          python ./examples/minimal.py
 
-jobs:
   build_sdist_ubuntu_hipo:
     runs-on: ${{ matrix.os }}
     strategy:

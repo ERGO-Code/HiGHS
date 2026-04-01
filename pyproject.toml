@@ -95,8 +95,6 @@ sdist.exclude = [
 wheel.exclude = ["include", "share", "lib*/", "bin", "LICENSE.txt", "README.md"]
 
 [tool.scikit-build.cmake.define]
-#HIPO_PYTHON_EXTRAS_BUILD = "ON"
-# Allows the HiPO IpxWrapper link to be compiled
 HIPO = "ON"
 HIPO_PYTHON = "ON"
 

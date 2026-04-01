@@ -86,7 +86,6 @@ jobs:
           python -m pip install ./highspy-extras `
               --config-settings=cmake.define.BUILD_OPENBLAS=OFF `
               --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-          python -c "import highspy-extras; print(dir(highspy-extras))"
 
       - name: Install highspy
         run: |

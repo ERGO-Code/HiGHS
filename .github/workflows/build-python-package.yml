@@ -46,7 +46,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest --break-system-packages
-          python3 -m pytest
+          python3 -m pytest ./highspy
 
   build_sdist_win:
     runs-on: windows-2022
@@ -72,7 +72,7 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest
+          python -m pytest ./highspy
 
   build_wheel_linux:
     runs-on: ubuntu-24.04
@@ -129,7 +129,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest
+          python3 -m pytest ./highspy
 
   build_wheel_macos_intel:
     runs-on: macos-15-intel
@@ -158,7 +158,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest
+          python3 -m pytest ./highspy
 
   build_wheel_macos_arm:
     runs-on: macos-14  # macos-14 is arm64
@@ -187,7 +187,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest
+          python3 -m pytest ./highspy
 
   build_wheel_windows:
     runs-on: windows-2022
@@ -214,7 +214,7 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest
+          python -m pytest ./highspy
 
   build_wheel_windows_313:
     runs-on: windows-2022
@@ -241,4 +241,4 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest
+          python -m pytest ./highspy
