@@ -16,10 +16,10 @@
 
 #include "../extern/CLI11.hpp"
 #include "HConfig.h"
+#include "HighsExternalDeps.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"
 #include "util/stringutil.h"
-#include "HighsExternalDeps.h"
 
 struct HighsCommandLineOptions {
   bool cmd_version = false;

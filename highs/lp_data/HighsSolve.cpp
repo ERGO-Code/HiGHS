@@ -9,11 +9,11 @@
  * @brief Class-independent utilities for HiGHS
  */
 
+#include "HighsExternalDeps.h"
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
-#include "HighsExternalDeps.h"
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {

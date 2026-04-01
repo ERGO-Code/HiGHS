@@ -715,7 +715,9 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
 
 endif()
 
-if (HIPO)
+option(HIPO_PYTHON OFF)
+
+if (HIPO AND NOT HIPO_PYTHON)
   add_subdirectory(extern)
 endif()
 

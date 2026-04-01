@@ -17,7 +17,7 @@
 
 #include "util/HighsInt.h"
 
-const std::string kHighsCopyrightStatement = 
+const std::string kHighsCopyrightStatement =
     "Copyright (c) 2026 under MIT licence terms";
 
 const size_t kHighsSize_tInf = (std::numeric_limits<size_t>::max)();

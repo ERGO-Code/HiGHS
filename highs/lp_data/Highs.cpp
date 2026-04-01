@@ -18,6 +18,7 @@
 #include <memory>
 #include <sstream>
 
+#include "HighsExternalDeps.h"
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
 #include "ipm/IpxWrapper.h"
@@ -35,7 +36,6 @@
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
-#include "HighsExternalDeps.h"
 
 #define STRINGFY(s) STRINGFY0(s)
 #define STRINGFY0(s) #s

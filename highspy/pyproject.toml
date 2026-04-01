@@ -98,6 +98,7 @@ wheel.exclude = ["include", "share", "lib*/", "bin", "LICENSE.txt", "README.md"]
 #HIPO_PYTHON_EXTRAS_BUILD = "ON"
 # Allows the HiPO IpxWrapper link to be compiled
 HIPO = "ON"
+HIPO_PYTHON = "ON"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

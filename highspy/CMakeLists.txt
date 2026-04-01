@@ -45,7 +45,7 @@ if(MSVC)
   target_compile_options(_core PRIVATE "/bigobj")
 endif()
 
-if (NOT MSVC) 
+if (NOT MSVC)
   target_compile_options(_core PRIVATE "-ftemplate-depth=2048")
 endif()
 

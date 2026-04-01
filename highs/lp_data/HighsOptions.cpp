@@ -14,12 +14,13 @@
 #include <cassert>
 #include <cctype>
 
-#include "util/stringutil.h"
 #include "HighsExternalDeps.h"
+#include "util/stringutil.h"
 
 #ifdef __linux__
-#include <climits>
 #include <unistd.h>
+
+#include <climits>
 
 static std::string getExecutableDir() {
   char buf[PATH_MAX];
@@ -33,9 +34,7 @@ static std::string getExecutableDir() {
 #endif
 
 bool hipoAvailable() {
-
   if (HighsExternalDeps::tryLoad(".") == false) {
-
 #ifdef __linux__
     const std::string exeDir = getExecutableDir();
     const std::string libDir = exeDir + "/../lib";
@@ -115,17 +114,17 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
-//#ifndef HIPO
-//static void noHipoErrorLog(const HighsLogOptions& report_log_options,
-//                           const string& option_name) {
-//  highsLogUser(
-//      report_log_options, HighsLogType::kError,
-//      "The HiPO solver was requested via the \"%s\" option, but this build "
-//      "was compiled without HiPO support. Reconfigure with -DFAST_BUILD=ON "
-//      "and -DHIPO=ON to enable HiPO.\n",
-//      option_name.c_str());
-//}
-//#endif
+// #ifndef HIPO
+// static void noHipoErrorLog(const HighsLogOptions& report_log_options,
+//                            const string& option_name) {
+//   highsLogUser(
+//       report_log_options, HighsLogType::kError,
+//       "The HiPO solver was requested via the \"%s\" option, but this build "
+//       "was compiled without HiPO support. Reconfigure with -DFAST_BUILD=ON "
+//       "and -DHIPO=ON to enable HiPO.\n",
+//       option_name.c_str());
+// }
+// #endif
 
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
@@ -141,8 +140,10 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
       highsLogUser(
           report_log_options, HighsLogType::kError,
           "The HiPO solver was requested via the \"%s\" option, but the "
-          "HiPO dependencies are missing. Install with highspy[hipo] or install "
-          "highspy-extras. Note, that using HiPO changes the HiGHS license from "
+          "HiPO dependencies are missing. Install with highspy[hipo] or "
+          "install "
+          "highspy-extras. Note, that using HiPO changes the HiGHS license "
+          "from "
           " MIT to Apache, due to the dependencies' licensing.\n",
           kSolverString.c_str());
     }
@@ -176,8 +177,10 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
       highsLogUser(
           report_log_options, HighsLogType::kError,
           "The HiPO solver was requested via the \"%s\" option, but the "
-          "HiPO dependencies are missing. Install with highspy[hipo] or install "
-          "highspy-extras. Note, that using HiPO changes the HiGHS license from "
+          "HiPO dependencies are missing. Install with highspy[hipo] or "
+          "install "
+          "highspy-extras. Note, that using HiPO changes the HiGHS license "
+          "from "
           "MIT to Apache, due to the dependencies' licensing.\n",
           kMipLpSolverString.c_str());
     }
@@ -209,13 +212,15 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
           "and -DHIPO=ON to enable HiPO.\n",
           kMipIpmSolverString.c_str());
     } else {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option, but the "
-        "HiPO dependencies are missing. Install with highspy[hipo] or install "
-        "highspy-extras. Note, that using HiPO changes the HiGHS license from "
-        "MIT to Apache, due to the dependencies' licensing.\n",
-        kMipIpmSolverString.c_str());
+      highsLogUser(
+          report_log_options, HighsLogType::kError,
+          "The HiPO solver was requested via the \"%s\" option, but the "
+          "HiPO dependencies are missing. Install with highspy[hipo] or "
+          "install "
+          "highspy-extras. Note, that using HiPO changes the HiGHS license "
+          "from "
+          "MIT to Apache, due to the dependencies' licensing.\n",
+          kMipIpmSolverString.c_str());
     }
     return false;
   }
