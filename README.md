@@ -224,7 +224,7 @@ $ pip install highspy
 Alternatively, `highspy` can be built from source.  Download the HiGHS source code and run
 
 ```shell
-pip install ./highspy
+pip install .
 ```
 from the root directory.
 

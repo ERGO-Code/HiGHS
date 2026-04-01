@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
-version = "1.13.1.dev7"
+version = "1.13.1.dev8"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
@@ -32,7 +32,7 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest", "numpy"]
-extras = ["highspy-extras>=1.12.0"]
+extras = ["highspy-extras==1.13.1.dev8"]
 
 [tool.scikit-build]
 wheel.expand-macos-universal-tags = true
@@ -41,7 +41,7 @@ wheel.expand-macos-universal-tags = true
 # default to the first of ``src/<package>``, ``python/<package>``, or
 # ``<package>`` if they exist.  The prefix(s) will be stripped from the package
 # name inside the wheel.
-wheel.packages = ["highspy"]
+wheel.packages = ["highspy/highspy"]
 
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.

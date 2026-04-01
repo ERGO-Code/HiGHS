@@ -22,12 +22,17 @@ set(BUILD_EXAMPLES OFF)
 set(BUILD_CXX_EXE OFF)
 
 # build highs library with output into build/highs directory
-add_subdirectory(
-    "${CMAKE_CURRENT_LIST_DIR}/../"
-    "${CMAKE_CURRENT_BINARY_DIR}/highs")
+# add_subdirectory(
+#     "${CMAKE_CURRENT_LIST_DIR}/../"
+#     "${CMAKE_CURRENT_BINARY_DIR}/highs")
 
 python_add_library(_core MODULE highs_bindings.cpp WITH_SOABI)
 target_link_libraries(_core PRIVATE pybind11::headers highs ${CMAKE_DL_LIBS})
+
+set_target_properties(_core PROPERTIES
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_WITH_INSTALL_RPATH TRUE
+)
 
 target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
 

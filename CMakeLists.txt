@@ -717,10 +717,6 @@ endif()
 
 option(HIPO_PYTHON OFF)
 
-if (HIPO AND NOT HIPO_PYTHON)
-  add_subdirectory(extern)
-endif()
-
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
   option(CI "CI extended tests" ON)
@@ -880,6 +876,14 @@ else(FAST_BUILD)
     target_link_libraries(doctest highs)
   endif()
 
+endif()
+
+if (HIPO)
+  if (HIPO_PYTHON)
+    add_subdirectory(highspy)
+  else()
+    add_subdirectory(extern)
+  endif()
 endif()
 
 # Prevent nested directory structure in the archive
