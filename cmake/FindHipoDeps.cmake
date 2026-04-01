@@ -140,8 +140,8 @@ if (BUILD_OPENBLAS)
     set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
 
     # Override CMAKE_BUILD_TYPE for OpenBLAS subdirectory
-    set(CMAKE_BUILD_TYPE_BACKUP ${CMAKE_BUILD_TYPE})
-    set(CMAKE_BUILD_TYPE Release)
+    # set(CMAKE_BUILD_TYPE_BACKUP ${CMAKE_BUILD_TYPE})
+    # set(CMAKE_BUILD_TYPE Release)
 
     message(CHECK_START "Fetching OpenBLAS")
     list(APPEND CMAKE_MESSAGE_INDENT "  ")
@@ -170,7 +170,7 @@ if (BUILD_OPENBLAS)
         set(BUILD_TESTING ON)
     endif()
 
-    set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_BACKUP})
+    # set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_BACKUP})
 
     list(POP_BACK CMAKE_MESSAGE_INDENT)
     message(CHECK_PASS "fetched")
