@@ -134,6 +134,14 @@ message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
 message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 
+option(HIGHS_GPU_LIB "Build highs GPU as a single lib" OFF)
+message(STATUS "Build GPU with delayed loading: ${HIGHS_GPU_LIB}")
+
+# For now
+if (HIGHS_GPU_LIB)
+  set(CUPDLP_GPU ON)
+endif()
+
 if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0")
     message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
 endif()
@@ -798,6 +806,7 @@ if(NOT FAST_BUILD)
     ${PROJECT_SOURCE_DIR}/highs
     ${PROJECT_SOURCE_DIR}/highs/io
     ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp
+    ${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp
     ${PROJECT_SOURCE_DIR}/highs/ipm/ipx
     ${PROJECT_SOURCE_DIR}/highs/ipm/basiclu
     ${PROJECT_SOURCE_DIR}/highs/lp_data

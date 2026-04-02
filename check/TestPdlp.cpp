@@ -323,4 +323,5 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   h.setSolution(solution);
   run_status = h.run();
   if (dev_run) h.writeSolution("", 1);
+  h.resetGlobalScheduler(true);
 }

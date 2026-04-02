@@ -15,6 +15,7 @@ set(include_dirs_python
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
@@ -234,6 +235,12 @@ set(highs_sources_python
     highs/model/HighsModel.cpp
     highs/parallel/HighsTaskExecutor.cpp
     highs/pdlp/CupdlpWrapper.cpp
+    highs/pdlp/HiPdlpWrapper.cpp
+    highs/pdlp/hipdlp/linalg.cc
+    highs/pdlp/hipdlp/logger.cc
+    highs/pdlp/hipdlp/pdhg.cc
+    highs/pdlp/hipdlp/restart.cc
+    highs/pdlp/hipdlp/scaling.cc
     highs/presolve/HighsPostsolveStack.cpp
     highs/presolve/HighsSymmetry.cpp
     highs/presolve/HPresolve.cpp
@@ -364,6 +371,15 @@ set(highs_headers_python
     highs/parallel/HighsTask.h
     highs/parallel/HighsTaskExecutor.h
     highs/pdlp/CupdlpWrapper.h
+    highs/pdlp/HiPdlpTimer.h
+    highs/pdlp/HiPdlpWrapper.h
+    highs/pdlp/hipdlp/defs.hpp
+    highs/pdlp/hipdlp/linalg.hpp
+    highs/pdlp/hipdlp/logger.hpp
+    highs/pdlp/hipdlp/pdhg.hpp
+    highs/pdlp/hipdlp/restart.hpp
+    highs/pdlp/hipdlp/scaling.hpp
+    highs/pdlp/hipdlp/solver_results.hpp
     highs/presolve/HighsPostsolveStack.h
     highs/presolve/HighsSymmetry.h
     highs/presolve/HPresolve.h
@@ -445,6 +461,7 @@ set(highs_headers_python
     highs/HighsExternalDeps.h
     highs/Highs.h
   )
+<<<<<<< HEAD
 
 set(hipo_sources_python
     highs/ipm/hipo/ipm/CurtisReidScaling.cpp
@@ -595,3 +612,5 @@ set(hipo_orderings_headers_python
     extern/metis/libmetis/struct.h
     extern/metis/metis.h
     extern/rcm/rcm.h)
+=======
+>>>>>>> latest

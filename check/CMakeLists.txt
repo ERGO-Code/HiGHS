@@ -68,6 +68,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestNames.cpp
       TestOptions.cpp
       TestPdlp.cpp
+      TestPdlpHi.cpp
       TestPresolve.cpp
       TestQpSolver.cpp
       TestRanging.cpp
@@ -115,13 +116,19 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     target_link_libraries(unit_tests highs Catch)
 
     if (CUPDLP_GPU)
-        if (WIN32)
-            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY})
-        else()
-            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY} m)
-        endif()
+        # Link unit tests to cuda too!
         target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/cuda)
         set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        if (WIN32)
+            target_link_libraries(unit_tests ${CUDA_LIBRARY})
+        else()
+            target_link_libraries(unit_tests ${CUDA_LIBRARY} m)
+        endif()
+
+        # If cudalin is used, link to cudalin too.
+        if (NOT HIGHS_GPU_LIB)
+            target_link_libraries(unit_tests cudalin)
+        endif()
     endif()
   else()
     target_link_libraries(unit_tests libhighs Catch)

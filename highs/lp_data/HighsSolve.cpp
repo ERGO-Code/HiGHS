@@ -12,6 +12,7 @@
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
+#include "pdlp/HiPdlpWrapper.h"
 #include "simplex/HApp.h"
 #include "HighsExternalDeps.h"
 
@@ -65,7 +66,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-  } else if (use_only_ipm || options.solver == kPdlpString) {
+  } else if (use_only_ipm || usePdlp(options.solver)) {
     // Use IPM or PDLP
     if (use_only_ipm) {
       // Use IPM to solve the LP
@@ -102,21 +103,31 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                             return_status, "solveLpIpx");
       }
     } else {
-      // Use cuPDLP-C to solve the LP
+      // Use cuPDLP-C or HiPDLP to solve the LP
       sub_solver_call_time.num_call[kSubSolverPdlp]++;
       sub_solver_call_time.run_time[kSubSolverPdlp] =
           -solver_object.timer_.read();
-      try {
-        call_status = solveLpCupdlp(solver_object);
-      } catch (const std::exception& exception) {
-        highsLogDev(options.log_options, HighsLogType::kError,
-                    "Exception %s in solveLpCupdlp\n", exception.what());
-        call_status = HighsStatus::kError;
+      if (options.solver == kPdlpString) {
+        try {
+          call_status = solveLpCupdlp(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpCupdlp\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+      } else {
+        try {
+          call_status = solveLpHiPdlp(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveHiPdlp\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
       }
       sub_solver_call_time.run_time[kSubSolverPdlp] +=
           solver_object.timer_.read();
       return_status = interpretCallStatus(options.log_options, call_status,
-                                          return_status, "solveLpCupdlp");
+                                          return_status, "solveLp-Pdlp");
     }
     // Check for error return
     if (return_status == HighsStatus::kError) return return_status;
@@ -684,6 +695,10 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
 
 bool useIpm(const std::string& solver) {
   return solver == kIpmString || solver == kHipoString || solver == kIpxString;
+}
+
+bool usePdlp(const std::string& solver) {
+  return solver == kPdlpString || solver == kHiPdlpString;
 }
 
 // Decide whether to use the HiPO IPM solver
