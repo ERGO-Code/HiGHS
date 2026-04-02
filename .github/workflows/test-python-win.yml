@@ -89,7 +89,8 @@ jobs:
 
       - name: Install highspy
         run: |
-          python -m pip install .
+          python -m pip install . `
+              --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
           python -c "import highspy; print(dir(highspy))"
 
       - name: Test python install
