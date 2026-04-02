@@ -461,7 +461,6 @@ set(highs_headers_python
     highs/HighsExternalDeps.h
     highs/Highs.h
   )
-<<<<<<< HEAD
 
 set(hipo_sources_python
     highs/ipm/hipo/ipm/CurtisReidScaling.cpp
@@ -612,5 +611,3 @@ set(hipo_orderings_headers_python
     extern/metis/libmetis/struct.h
     extern/metis/metis.h
     extern/rcm/rcm.h)
-=======
->>>>>>> latest

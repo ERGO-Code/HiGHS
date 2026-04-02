@@ -175,16 +175,9 @@ set(ipx_headers
   ipm/ipx/timer.h
   ipm/ipx/utils.h)
 
-<<<<<<< HEAD
-set(hipo_sources
-    ipm/hipo/ipm/CurtisReidScaling.cpp
-    ipm/hipo/ipm/IpmData.cpp
-    ipm/hipo/ipm/FactorHiGHSSolver.cpp
-=======
 set(hipo_sources 
     ipm/hipo/ipm/IpmData.cpp 
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
->>>>>>> latest
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp
     ipm/hipo/ipm/LogHighs.cpp
