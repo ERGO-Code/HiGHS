@@ -1827,10 +1827,15 @@ HighsStatus Highs::getRangingInterface() {
   return getRangingData(this->ranging_, solver_object);
 }
 
-HighsStatus Highs::getIisInterfaceReturn(const HighsStatus return_status,
-                                         const HighsOptions& original_options) {
-  // Restore options
+HighsStatus Highs::getIisInterfaceReturn(
+    const HighsStatus return_status, const HighsOptions& original_options,
+    const std::vector<bool>& original_callbacks) {
+  // Restore options and callbacks
   this->options_ = original_options;
+  for (int i = kCallbackMin; i <= kCallbackMax; i++) {
+    if (i != kCallbackSimplexInterrupt && original_callbacks[i])
+      this->startCallback(i);
+  }
 
   // Exit early if there was an error
   if (return_status == HighsStatus::kError) {
@@ -1930,36 +1935,49 @@ HighsStatus Highs::getIisInterface() {
     // No IIS exists, so validate the empty HighsIis instance
     this->iis_.valid_ = true;
     this->iis_.status_ = kIisModelStatusFeasible;
-    return this->getIisInterfaceReturn(HighsStatus::kOk, options_);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_,
+                                       callback_.active);
   }
   // Early exit for existing valid IIS
   if (this->iis_.valid_)
-    return this->getIisInterfaceReturn(HighsStatus::kOk, options_);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_,
+                                       callback_.active);
   // Clear IIS
   this->iis_.clear();
   // Check for trivial IIS: empty infeasible row or inconsistent bounds
   const HighsLp& lp = model_.lp_;
   if (this->iis_.trivial(lp, options_))
-    return this->getIisInterfaceReturn(HighsStatus::kOk, options_);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_,
+                                       callback_.active);
   HighsInt num_row = lp.num_row_;
   if (num_row == 0) {
     // For an LP with no rows, the only scope for infeasibility is
     // inconsistent columns bounds - which has already been assessed,
     // so validate the empty HighsIis instance
     this->iis_.valid_ = true;
-    return this->getIisInterfaceReturn(HighsStatus::kOk, options_);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_,
+                                       callback_.active);
   }
   // Look for infeasible rows based on row value bounds
   if (this->iis_.rowValueBounds(lp, options_))
-    return this->getIisInterfaceReturn(HighsStatus::kOk, options_);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_,
+                                       callback_.active);
   // Don't continue with more expensive techniques if using the IIS
   // light strategy
   if (options_.iis_strategy == kIisStrategyLight)
-    return this->getIisInterfaceReturn(HighsStatus::kOk, options_);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, options_,
+                                       callback_.active);
   // Clear IIS
   this->iis_.clear();
   // Save original options
   HighsOptions original_options = this->options_;
+  // Save original active callbacks and disable all except for
+  // kCallbackSimplexInterrupt
+  std::vector<bool> original_callbacks = callback_.active;
+  for (int i = kCallbackMin; i <= kCallbackMax; i++) {
+    if (i != kCallbackSimplexInterrupt && callback_.active[i])
+      this->stopCallback(i);
+  }
   // Zero out all clocks and set time_limit to iis_time_limit
   this->zeroAllClocks();
   this->setOptionValue("time_limit", options_.iis_time_limit);
@@ -1996,14 +2014,16 @@ HighsStatus Highs::getIisInterface() {
     this->iis_.valid_ = true;
     this->iis_.status_ = kIisModelStatusFeasible;
     this->iis_.strategy_ = options_.iis_strategy;
-    return this->getIisInterfaceReturn(HighsStatus::kOk, original_options);
+    return this->getIisInterfaceReturn(HighsStatus::kOk, original_options,
+                                       original_callbacks);
   } else if (this->model_status_ == HighsModelStatus::kTimeLimit) {
     // Time limit reached
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Time limit reached prior to establishing infeasibility\n");
     this->iis_.status_ = kIisModelStatusTimeLimit;
     this->iis_.strategy_ = options_.iis_strategy;
-    return this->getIisInterfaceReturn(HighsStatus::kError, original_options);
+    return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
+                                       original_callbacks);
   } else if (this->model_status_ != HighsModelStatus::kInfeasible) {
     // kModelEmpty, kModelError, kSolveError, kMemoryLimit, kUnknown model
     // status
@@ -2011,7 +2031,8 @@ HighsStatus Highs::getIisInterface() {
                  "Can not compute IIS for a model with status %s\n",
                  this->modelStatusToString(this->model_status_).c_str());
     this->iis_.strategy_ = options_.iis_strategy;
-    return this->getIisInterfaceReturn(HighsStatus::kError, original_options);
+    return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
+                                       original_callbacks);
   }
   assert(this->model_status_ == HighsModelStatus::kInfeasible);
 
@@ -2039,7 +2060,8 @@ HighsStatus Highs::getIisInterface() {
     if (this->model_status_ == HighsModelStatus::kTimeLimit) {
       // Time limit reached
       this->iis_.status_ = kIisModelStatusTimeLimit;
-      return this->getIisInterfaceReturn(HighsStatus::kError, original_options);
+      return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
+                                         original_callbacks);
     } else if (this->model_status_ != HighsModelStatus::kInfeasible) {
       highsLogUser(
           options_.log_options, HighsLogType::kError,
@@ -2047,7 +2069,8 @@ HighsStatus Highs::getIisInterface() {
           "presolve\n",
           this->modelStatusToString(HighsModelStatus::kInfeasible).c_str(),
           this->modelStatusToString(this->model_status_).c_str());
-      return this->getIisInterfaceReturn(HighsStatus::kError, original_options);
+      return this->getIisInterfaceReturn(HighsStatus::kError, original_options,
+                                         original_callbacks);
     }
   }
   const bool has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
@@ -2082,7 +2105,8 @@ HighsStatus Highs::getIisInterface() {
   // reached
   if (!(kIisStrategyIrreducible & this->options_.iis_strategy) ||
       (this->iis_.status_ == kIisModelStatusTimeLimit))
-    return this->getIisInterfaceReturn(return_status, original_options);
+    return this->getIisInterfaceReturn(return_status, original_options,
+                                       original_callbacks);
 
   // If neither ray and lp options were requested or if they fail to produce a
   // valid IS, make one consisting of all constraints
@@ -2124,7 +2148,8 @@ HighsStatus Highs::getIisInterface() {
                  int(max_iterations), min_time,
                  num_lp_solved > 0 ? sum_time / num_lp_solved : 0, max_time);
   }
-  return this->getIisInterfaceReturn(return_status, original_options);
+  return this->getIisInterfaceReturn(return_status, original_options,
+                                     original_callbacks);
 }
 
 HighsStatus Highs::elasticityFilterReturn(

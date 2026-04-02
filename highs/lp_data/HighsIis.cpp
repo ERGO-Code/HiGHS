@@ -612,11 +612,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  highs.setCallback(callback.user_callback, callback.user_callback_data);
-  for (int i = kCallbackMin; i <= kCallbackMax; i++) {
-    if (callback.active[i]) {
-      highs.startCallback(i);
-    }
+  if (callback.active[kCallbackSimplexInterrupt]) {
+    highs.setCallback(callback.user_callback, callback.user_callback_data);
+    highs.startCallback(kCallbackSimplexInterrupt);
   }
   highs.passOptions(options);
   highs.setOptionValue("output_flag", kIisDevReport);
