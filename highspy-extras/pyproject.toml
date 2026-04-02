@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy-extras"
-version = "1.13.1.dev8"
+version = "1.13.1.dev9"
 description = "HiGHS external dependencies extension for highspy"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
