@@ -128,7 +128,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: OpenMathLib/OpenBLAS
-          ref: master
+          ref: v0.3.30
           path: pathtoopenblas
 
       - name: Configure openblas
