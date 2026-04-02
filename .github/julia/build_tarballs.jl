@@ -54,6 +54,7 @@ install_license ../LICENSE.txt
 
 products = [
     LibraryProduct("libhighs", :libhighs),
+    LibraryProduct("libhighs_extras", :libhighs_extras),
     ExecutableProduct("highs", :highs),
 ]
 
