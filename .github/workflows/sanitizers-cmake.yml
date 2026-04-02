@@ -128,7 +128,8 @@ jobs:
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
             -DALL_TESTS=${{ matrix.all_tests }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
-            -DDEBUG_MEMORY=${{ matrix.sanitizer }}
+            -DDEBUG_MEMORY=${{ matrix.sanitizer }} \
+            -DCMAKE_CXX_FLAGS="-fexhaustive-register-search"
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
