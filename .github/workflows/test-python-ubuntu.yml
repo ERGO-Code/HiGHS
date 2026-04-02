@@ -127,10 +127,6 @@ jobs:
           ref: master
           path: pathtoopenblas
 
-      - name: Create build dir for openblas
-        run: |
-          mkdir ${{runner.workspace}}/install-openblas
-
       - name: Configure openblas
         working-directory: ${{runner.workspace}}/HiGHS/pathtoopenblas
         run: |
