@@ -85,6 +85,10 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
       - name: Verify wheels
         run: |
           python - <<'PY'
