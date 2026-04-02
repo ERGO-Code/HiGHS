@@ -134,6 +134,7 @@ jobs:
             -DALL_TESTS=${{ matrix.all_tests }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
             -DDEBUG_MEMORY=${{ matrix.sanitizer }} \
+            -DNO_AVX512=ON \
             -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
 
