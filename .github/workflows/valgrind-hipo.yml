@@ -82,7 +82,7 @@ jobs:
           -DBUILD_OPENBLAS=ON \
           -DCMAKE_BUILD_TYPE=Debug \
           -DALL_TESTS=ON \
-          -DCMAKE_CXX_FLAGS="-fexhaustive-register-search"
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
