@@ -120,23 +120,35 @@ jobs:
       - name: Create install dir for openblas
         run: mkdir ${{runner.workspace}}/install-openblas
 
-      - name: Install Openblas in a custom path
+      - name: Checkout OpenBLAS
+        uses: actions/checkout@v4
+        with:
+          repository: OpenMathLib/OpenBLAS
+          ref: master
+          path: pathtoopenblas
+
+      - name: Create build dir for openblas
         run: |
-          apt-get download libopenblas-dev libopenblas0
-          dpkg -x libopenblas-dev_*.deb ${{runner.workspace}}/install-openblas
-          dpkg -x libopenblas0_*.deb    ${{runner.workspace}}/install-openblas
-          echo ""
+          mkdir ${{runner.workspace}}/install-openblas
+
+      - name: Configure openblas
+        working-directory: ${{runner.workspace}}/HiGHS/pathtoopenblas
+        run: |
+          make -j2 PREFIX=${{runner.workspace}}/install-openblas
+          make install PREFIX=${{runner.workspace}}/install-openblas
           ls ${{runner.workspace}}/install-openblas
           echo ""
-          ls ${{runner.workspace}}/install-openblas/usr/
+          ls ${{runner.workspace}}/install-openblas/lib
           echo ""
-          ls ${{runner.workspace}}/install-openblas/usr/lib
+
+        # Can pass path with an additional
+        # --config-settings=cmake.define.BLAS_LIBRARIES=/home/ivet/installs/openblas/lib/libopenblas.a
 
       - name: Test Python Interface
         run: |
           python3 -m pip install ./highspy-extras \
               --config-settings=cmake.define.BUILD_OPENBLAS=OFF \
-              --config-settings=cmake.define.BLAS_LIBRARIES=${{runner.workspace}}/install-openblas/usr/lib/libopenblas.a
+              --config-settings=cmake.define.BLAS_LIBRARIES=${{runner.workspace}}/install-openblas/lib/libopenblas.a
           python3 -m pip install .
           pytest -v ./highspy
           pytest check/test_highspy_hipo.py
