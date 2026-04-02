@@ -128,7 +128,7 @@ jobs:
          python3 ./examples/call_highs_from_python.py
          python3 ./examples/minimal.py
 
-  build_sdist_mac:
+  build_sdist_mac_hipo:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -168,7 +168,7 @@ jobs:
          python3 ./examples/call_highs_from_python.py
          python3 ./examples/minimal.py
 
-  build_sdist_win:
+  build_sdist_win_hipo:
     runs-on: windows-latest
 
     steps:
