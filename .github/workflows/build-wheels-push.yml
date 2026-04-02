@@ -86,16 +86,23 @@ jobs:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
 
       - name: Verify wheels
-        run: python -c "
+        run: |
+          python - <<'PY'
           import zipfile, glob, sys
+
           bad = []
           for w in glob.glob('wheelhouse/*.whl'):
-              try: zipfile.ZipFile(w).testzip()
-              except Exception as e: bad.append(f'{w}: {e}')
+              try:
+                  zipfile.ZipFile(w).testzip()
+              except Exception as e:
+                  bad.append(f"{w}: {e}")
+
           if bad:
-              print('CORRUPT:', *bad, sep='\n'); sys.exit(1)
-          print('All wheels OK:', glob.glob('wheelhouse/*.whl'))
-          "
+              print("CORRUPT:", *bad, sep="\n")
+              sys.exit(1)
+
+          print("All wheels OK:", glob.glob('wheelhouse/*.whl'))
+          PY
 
       - uses: actions/upload-artifact@v4
         with:
