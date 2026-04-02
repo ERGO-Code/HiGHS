@@ -95,7 +95,6 @@ sdist.exclude = [
 wheel.exclude = ["include", "share", "lib*/", "bin", "LICENSE.txt", "README.md"]
 
 [tool.scikit-build.cmake.define]
-HIPO = "ON"
 HIPO_PYTHON = "ON"
 
 [tool.pytest.ini_options]

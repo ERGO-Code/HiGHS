@@ -92,6 +92,13 @@ endif()
 
 option(HIPO "Build HIPO" OFF)
 message(STATUS "Build HIPO: ${HIPO}")
+
+option(HIPO_PYTHON OFF)
+if (HIPO_PYTHON)
+  set(HIPO ON)
+  message(STATUS "Build HIPO in Python: ON, setting HIPO=ON")
+endif()
+
 include(CMakeDependentOption)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
@@ -715,7 +722,6 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
 
 endif()
 
-option(HIPO_PYTHON OFF)
 
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
@@ -846,12 +852,12 @@ else(FAST_BUILD)
 
   include(cpp-highs)
 
-  if(BUILD_CXX)
+  if(BUILD_CXX AND NOT HIPO_PYTHON)
     add_subdirectory(app)
     add_subdirectory(examples)
   endif()
 
-  if(BUILD_TESTING)
+  if(BUILD_TESTING AND NOT HIPO_PYTHON)
     enable_testing()
     add_subdirectory(check)
   endif()

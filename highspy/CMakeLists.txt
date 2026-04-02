@@ -30,7 +30,7 @@ python_add_library(_core MODULE highs_bindings.cpp WITH_SOABI)
 target_link_libraries(_core PRIVATE pybind11::headers highs ${CMAKE_DL_LIBS})
 
 if (APPLE)
-  set_target_properties(highs PROPERTIES INSTALL_RPATH "@loader_path")
+  set_target_properties(_core PROPERTIES INSTALL_RPATH "@loader_path")
 else()
   set_target_properties(_core PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
