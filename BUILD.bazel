@@ -35,6 +35,7 @@ cuda_library(
     name = "cupdlp",
     srcs = glob([
         "highs/pdlp/cupdlp/cuda/*.cu",
+        "highs/pdlp/hipdlp/*.cu",
     ]),
     hdrs = glob([
         "highs/pdlp/cupdlp/cuda/*.cuh",
@@ -64,6 +65,7 @@ cc_library(
         "highs/parallel/*.cpp",
         "highs/pdlp/*.cpp",
         "highs/pdlp/cupdlp/*.c",
+        "highs/pdlp/hipdlp/*.cc",
         "highs/presolve/*.cpp",
         "highs/qpsolver/*.cpp",
         "highs/simplex/*.cpp",
@@ -74,6 +76,7 @@ cc_library(
         "highs/mip/feasibilityjump.hh",
     ] + glob([
         "**/*.h",
+        "highs/pdlp/hipdlp/*.hpp",
         "highs/io/filereaderlp/*.hpp",
         "highs/qpsolver/*.hpp",
         "extern/zstr/*.hpp",

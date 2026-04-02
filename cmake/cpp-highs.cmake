@@ -70,7 +70,7 @@ if (NOT HIGHS_COVERAGE)
     APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 endif()
 
-if (CUPDLP_GPU)
+if (CUPDLP_GPU AND NOT HIGHS_GPU_LIB)
   install(TARGETS cudalin
       EXPORT ${lower}-targets
       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

@@ -153,7 +153,7 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
       value == kIpmString || (value == kHipoString && hipoAvailable()) ||
       value == kIpxString || value == kPdlpString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kError,
+  highsLogUser(report_log_options, HighsLogType::kWarning,
                "Value \"%s\" for LP solver option (\"%s\") is not one of "
                "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kSolverString.c_str(),
@@ -1217,7 +1217,8 @@ void warnSolverInvalid(const HighsOptions& options,
 bool solverValidForLp(const std::string& solver) {
   return solver == kHighsChooseString || solver == kSimplexString ||
          solver == kIpmString || solver == kIpxString ||
-         solver == kHipoString || solver == kPdlpString;
+         solver == kHipoString || solver == kPdlpString ||
+         solver == kHiPdlpString;
 }
 bool solverValidForMip(const std::string& solver) {
   return solver == kHighsChooseString;

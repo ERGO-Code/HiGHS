@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;  // false;  //
+const bool dev_run = false;  // true;  //
 const bool write_model = false;
 
 const double inf = kHighsInf;
@@ -490,7 +490,7 @@ TEST_CASE("lp-get-iis-time-limit-feasible", "[iis]") {
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
@@ -533,7 +533,7 @@ TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
       std::string(HIGHS_DIR) + "/check/instances/forest6.mps";
 
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
