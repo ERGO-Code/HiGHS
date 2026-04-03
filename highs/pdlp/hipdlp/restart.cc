@@ -48,7 +48,7 @@ RestartInfo RestartScheme::check(HighsInt current_iter,
     return RestartInfo(false, false);  // ✨ Corrected return
   }
 
-  // Base Case: First check after a restart. initialize state and exit.
+  // Base Case: First check after a restart. Initialize state and exit.
   if (current_iter == last_restart_iter_) {
     primal_feas_last_restart_ = current_results.primal_feasibility;
     dual_feas_last_restart_ = current_results.dual_feasibility;
@@ -80,7 +80,7 @@ RestartInfo RestartScheme::check(HighsInt current_iter,
     restart_to_average = true;
   }
 
-  // 2. check the three restart conditions in order
+  // 2. Check the three restart conditions in order
   bool should_restart = false;
   PDHG_restart_choice restart_choice_for_logic = PDHG_NO_RESTART;
 
