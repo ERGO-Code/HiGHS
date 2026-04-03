@@ -552,8 +552,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   double last_trial_fpe = std::numeric_limits<double>::infinity();
   final_iter_count_ = 0;
 
-  logger_.printIterationHeader();
-
   // =========================================================================
   // INITIAL CONVERGENCE CHECK (ITERATION 0)
   // =========================================================================
