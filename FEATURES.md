@@ -1,9 +1,5 @@
-The highlight of v1.14 is the introduction of two new solvers. The
-HiPO interior point LP solver has been extended to handle convex
-QPs. An "in-house" first-order GPU-accelerated PDLP solver for LP,
-knwon as HiPDLP, has been added. Whilst its performance does not yet
-dominate that of the existing PDLP solver (cuPDLP-C) it is faster on
-some problem classes.
+The highlight of v1.14 is the extension of the HiPO interior point LP
+solver to handle convex QPs.
 
 ## Code changes
 
