@@ -23,11 +23,11 @@
 
 // Log verbosity level
 enum class LogLevel {
-  kNone,     // No output
-  kInfo,     // Standard output: summary, termination, major events
-  kDetailed, // Developer output
-  kVerbose,  // Detailed output: iteration-level info
-  kDebug     // Verbose + debug info for developers
+  kNone,      // No output
+  kInfo,      // Standard output: summary, termination, major events
+  kDetailed,  // Developer output
+  kVerbose,   // Detailed output: iteration-level info
+  kDebug      // Verbose + debug info for developers
 };
 
 class Logger {
@@ -48,7 +48,8 @@ class Logger {
   void print_header() const;
   void print_params(const PrimalDualParams& params) const;
   void print_iteration_header() const;
-  void print_iteration_stats(HighsInt iter, const SolverResults& current_results,
+  void print_iteration_stats(HighsInt iter,
+                             const SolverResults& current_results,
                              const double current_eta, const double time) const;
   void print_summary(const SolverResults& results, HighsInt total_iter,
                      double total_time) const;
@@ -56,6 +57,7 @@ class Logger {
     log_options_ = log_options;
   }
   LogLevel getConsoleLevel() const { return console_level_; }
+
  private:
   void log(LogLevel level, const std::string& message) const;
   LogLevel console_level_;

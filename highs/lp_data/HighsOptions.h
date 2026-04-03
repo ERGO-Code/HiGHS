@@ -798,33 +798,38 @@ class HighsOptions : public HighsOptionsStruct {
         "kkt_tolerance",
         "If changed from its default value, this tolerance is used for all "
         "feasibility and optimality (KKT) measures",
-        advanced, &kkt_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "primal_feasibility_tolerance", "Primal feasibility tolerance",
-        advanced, &primal_feasibility_tolerance, 1e-10, kDefaultKktTolerance,
+        advanced, &kkt_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
+        "primal_feasibility_tolerance", "Primal feasibility tolerance",
+        advanced, &primal_feasibility_tolerance, kMinimumKktTolerance,
+        kDefaultKktTolerance, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
         "dual_feasibility_tolerance", "Dual feasibility tolerance", advanced,
-        &dual_feasibility_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        &dual_feasibility_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "primal_residual_tolerance", "Primal residual tolerance", advanced,
-        &primal_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        &primal_residual_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "dual_residual_tolerance", "Dual residual tolerance", advanced,
-        &dual_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        &dual_residual_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "optimality_tolerance", "Optimality tolerance", advanced,
-        &optimality_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        &optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1195,7 +1200,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "mip_feasibility_tolerance", "MIP integrality tolerance", advanced,
-        &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
+        &mip_feasibility_tolerance, kMinimumMipTolerance, kDefaultMipTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1274,7 +1280,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
-        &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        &ipm_optimality_tolerance, kMinimumIpmTolerance, kDefaultIpmTolerance,
         kHighsInf);
     records.push_back(record_double);
 
@@ -1352,7 +1358,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "pdlp_optimality_tolerance", "PDLP optimality tolerance", advanced,
-        &pdlp_optimality_tolerance, 1e-12, kDefaultKktTolerance, kHighsInf);
+        &pdlp_optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
@@ -1630,7 +1637,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "start_crossover_tolerance",
         "Tolerance to be satisfied before IPM crossover will start", advanced,
-        &start_crossover_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        &start_crossover_tolerance, kMinimumIpmTolerance, kDefaultIpmTolerance,
         kHighsInf);
     records.push_back(record_double);
 
