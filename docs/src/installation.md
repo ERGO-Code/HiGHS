@@ -122,3 +122,9 @@ Alternatively, for Bazel run
 ```
 bazel build //... --//:cupdlp_gpu
 ```
+
+It may be necessary to also specify the architecture, e.g.
+
+```
+bazel build //... --//:cupdlp_gpu --@rules_cuda//cuda:archs=sm_89
+```

@@ -366,6 +366,7 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
 }
 
 HighsStatus HighsIis::deduce(const HighsLp& lp, const HighsOptions& options,
+                             const HighsCallback& callback,
                              const HighsBasis& basis) {
   // The number of infeasible rows must be positive
   assert(this->row_index_.size() > 0);
@@ -425,7 +426,7 @@ HighsStatus HighsIis::deduce(const HighsLp& lp, const HighsOptions& options,
     if (has_row_names)
       to_lp.row_names_.push_back(lp.row_names_[from_row[iRow]]);
   }
-  HighsStatus return_status = this->compute(to_lp, options);
+  HighsStatus return_status = this->compute(to_lp, options, callback);
   // Indirect the values into the original LP
   for (HighsInt& colindex : this->col_index_) colindex = from_col[colindex];
   for (HighsInt& rowindex : this->row_index_) rowindex = from_row[rowindex];
@@ -590,6 +591,7 @@ HighsInt HighsIis::determineBoundStatus(const double lower, const double upper,
 }
 
 HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
+                              const HighsCallback& callback,
                               const HighsBasis* basis) {
   const HighsLogOptions& log_options = options.log_options;
   const bool col_priority = kIisStrategyColPriority & options.iis_strategy;
@@ -610,6 +612,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 
   Highs highs;
   const HighsInfo& info = highs.getInfo();
+  if (callback.active[kCallbackSimplexInterrupt]) {
+    highs.setCallback(callback.user_callback, callback.user_callback_data);
+    highs.startCallback(kCallbackSimplexInterrupt);
+  }
   highs.passOptions(options);
   highs.setOptionValue("output_flag", kIisDevReport);
   highs.setOptionValue("presolve", kHighsOffString);

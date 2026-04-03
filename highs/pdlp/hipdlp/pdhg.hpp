@@ -119,7 +119,6 @@ class PDLPSolver {
   bool checkRestartCriteria(double current_fpe, double initial_fpe,
                             double last_trial_fpe, int halpern_iteration,
                             int final_iter_count);
-
   void performPdhgStep();
   void performHalpernStep();
   void accumulateAverages(size_t iter);

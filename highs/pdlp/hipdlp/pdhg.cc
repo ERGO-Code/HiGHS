@@ -503,7 +503,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   initializeStepSizes();
   initialize();  // Resets vectors, caches, and sets initial x_current,
                  // y_current
-
   best_primal_weight_ = primal_weight_;
   best_primal_dual_residual_gap_ = std::numeric_limits<double>::infinity();
 
@@ -605,7 +604,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       initial_fpe_ = fpe_;
       do_restart = false;
     }
-
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #ifdef CUPDLP_GPU
     if (!graph_created) {
@@ -638,7 +636,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 #else
     fpe_ = computeFixedPointError();
 #endif
-
     halpern_iteration_ += PDHG_CHECK_INTERVAL;
     final_iter_count_ += PDHG_CHECK_INTERVAL;
 
@@ -648,7 +645,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     TerminationStatus check_status;
     should_terminate =
         runConvergenceCheck(final_iter_count_, x, y, check_status);
-
     if (should_terminate) {
       termination_status = check_status;
       break;
