@@ -470,7 +470,7 @@
 ## [pdlp\_optimality\_tolerance](@id option-pdlp-optimality-tolerance)
 - PDLP optimality tolerance
 - Type: double
-- Range: [1e-12, inf]
+- Range: [1e-10, inf]
 - Default: 1e-07
 
 ## [qp\_iteration\_limit](@id option-qp-iteration-limit)
