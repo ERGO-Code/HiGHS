@@ -612,10 +612,14 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  if (callback.active[kCallbackSimplexInterrupt]) {
+  if (callback.active[kCallbackLogging] ||
+      callback.active[kCallbackSimplexInterrupt]) {
     highs.setCallback(callback.user_callback, callback.user_callback_data);
-    highs.startCallback(kCallbackSimplexInterrupt);
   }
+  if (callback.active[kCallbackLogging]) highs.startCallback(kCallbackLogging);
+  if (callback.active[kCallbackSimplexInterrupt])
+    highs.startCallback(kCallbackSimplexInterrupt);
+
   highs.passOptions(options);
   highs.setOptionValue("output_flag", kIisDevReport);
   highs.setOptionValue("presolve", kHighsOffString);
