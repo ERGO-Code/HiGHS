@@ -324,8 +324,17 @@ enum SubSolverIndex : int {
   kSubSolverCount
 };
 
-// Default KKT tolerance
+// Minimum and default KKT tolerance
+const double kMinimumKktTolerance = 1e-10;
 const double kDefaultKktTolerance = 1e-7;
+
+// Minimum and default MIP tolerance
+const double kMinimumMipTolerance = 1e-10;
+const double kDefaultMipTolerance = 1e-6;
+
+// Minimum and default IPM optimality tolerance
+const double kMinimumIpmTolerance = 1e-12;
+const double kDefaultIpmTolerance = 1e-1 * kDefaultKktTolerance;
 
 // Default QP Hessian regularization value
 const double kHessianRegularizationValue = 1e-7;
