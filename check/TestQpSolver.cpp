@@ -1352,6 +1352,13 @@ TEST_CASE("pass-square-hessian", "[qpsolver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(okValueDifference(info.objective_function_value,
                             optimal_objective_value));
+  model.hessian_ = square_hessian;
+  REQUIRE(h.passModel(model) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(okValueDifference(info.objective_function_value,
+                            optimal_objective_value));
+  
   h.resetGlobalScheduler(true);
 }
 
