@@ -1022,3 +1022,38 @@ TEST_CASE("write-iis_model-file", "[iis]") {
   std::remove(test_sol.c_str());
   h.resetGlobalScheduler(true);
 }
+
+char iis_printed_log[kIoBufferSize];
+
+static void iisLogCallback0(HighsLogType type, const char* message,
+                            void* user_log_callback_data) {
+  printf("iisLogCallback0: %s", message);
+}
+
+HighsCallbackFunctionType iisLogCallback1 =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      printf("iisLogCallback1: %s", message.c_str());
+    };
+
+TEST_CASE("iis-logging-callback", "[highs-callback]") {
+  std::string model = "galenet";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs highs;
+  highs.setOptionValue("log_to_console", dev_run);
+  HighsInt iis_strategy = kIisStrategyFromLp;
+  highs.setOptionValue("iis_strategy", iis_strategy);
+  REQUIRE(highs.setLogCallback(iisLogCallback0) == HighsStatus::kOk);
+  REQUIRE(highs.setCallback(iisLogCallback1) == HighsStatus::kOk);
+
+  REQUIRE(highs.startCallback(kCallbackLogging) == HighsStatus::kOk);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  HighsIis iis;
+  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
+}

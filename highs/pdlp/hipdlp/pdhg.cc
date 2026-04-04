@@ -1717,7 +1717,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
 #ifdef CUPDLP_GPU
                "GPU"
 #else
-                "CPU: performance may be disappointing!"
+               "CPU: performance may be disappointing!"
 #endif
   );
 #ifdef CUPDLP_GPU
