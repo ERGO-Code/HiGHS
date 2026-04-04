@@ -48,7 +48,7 @@ class HighsHessian {
   bool isDiagonal() const;
   double diag(HighsInt i) const;
 
-  void print() const;
+  void print(const std::string& message = "") const;
 };
 
 #endif

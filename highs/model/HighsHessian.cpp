@@ -143,12 +143,12 @@ HighsInt HighsHessian::numNz() const {
   return this->start_[this->dim_];
 }
 
-void HighsHessian::print() const {
+void HighsHessian::print(const std::string& message) const {
   HighsInt num_nz = this->numNz();
   printf("%s Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
-         " entries\n",
+         " entries: %s\n",
          this->format_ == HessianFormat::kTriangular ? "Triangular" : "Square",
-         dim_, num_nz);
+         dim_, num_nz, message.c_str());
   printf("Start; Index; Value of sizes %d; %d; %d\n", (int)this->start_.size(),
          (int)this->index_.size(), (int)this->value_.size());
   if (dim_ <= 0) return;

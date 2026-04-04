@@ -1314,6 +1314,58 @@ TEST_CASE("issue-2821", "[qpsolver]") {
       REQUIRE(okValueDifference(info.objective_function_value,
                                 optimal_objective_value));
     }
+    HighsModel model = h.getModel();
+    HighsHessian& hessian = model.hessian_;
+    hessian.print("Triangular");
+    REQUIRE(hessian.format_ == HessianFormat::kTriangular);
+    std::vector<HighsInt>hessian_row_count(hessian.dim_, 0);
+    for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) {
+      HighsInt iEl = hessian.start_[iCol]; 
+      HighsInt iRow = hessian.index_[iEl];
+      REQUIRE(iRow == iCol);
+      iEl++;
+      for (; iEl < hessian.start_[iCol+1]; iEl++) {
+	HighsInt iRow = hessian.index_[iEl];
+	REQUIRE(iRow > iCol);
+	hessian_row_count[iRow]++;
+      }
+    }
+    HighsInt triangular_hessian_off_diagonal = hessian.numNz() - hessian.dim_;
+    HighsHessian square_hessian;
+    square_hessian.format_ = HessianFormat::kSquare;
+    square_hessian.dim_ = hessian.dim_;
+    square_hessian.start_[0] = 0;
+    for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) {
+      HighsInt square_hessian_col_nnz = hessian_row_count[iCol] + hessian.start_[iCol+1] - hessian.start_[iCol];
+      square_hessian.start_.push_back(square_hessian.start_[iCol] + square_hessian_col_nnz);
+      hessian_row_count[iCol] = square_hessian.start_[iCol];
+    }
+    HighsInt square_hessian_nnz = square_hessian.numNz();
+    REQUIRE(square_hessian_nnz == hessian.dim_ + 2*triangular_hessian_off_diagonal);
+    square_hessian.index_.resize(square_hessian_nnz);
+    square_hessian.value_.resize(square_hessian_nnz);
+    for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) {
+      HighsInt iEl = hessian.start_[iCol]; 
+      HighsInt iRow = hessian.index_[iEl];
+      HighsInt square_iEl = hessian_row_count[iCol];
+      square_hessian.index_[square_iEl] = iCol;
+      square_hessian.value_[square_iEl] = hessian.value_[iEl];
+      hessian_row_count[iCol]++;
+      iEl++;
+      for (; iEl < hessian.start_[iCol+1]; iEl++) {
+	HighsInt iRow = hessian.index_[iEl];
+	HighsInt square_iEl = hessian_row_count[iCol];
+	square_hessian.index_[square_iEl] = iCol;
+	square_hessian.value_[square_iEl] = hessian.value_[iEl];
+	hessian_row_count[iCol]++;
+	square_iEl = hessian_row_count[iRow];
+	square_hessian.index_[square_iEl] = iCol;
+	square_hessian.value_[square_iEl] = hessian.value_[iEl];
+	hessian_row_count[iRow]++;
+      }
+    }
+        square_hessian.print("Square");
+
   }
   h.resetGlobalScheduler(true);
 }
