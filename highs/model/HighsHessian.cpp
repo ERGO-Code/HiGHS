@@ -256,8 +256,64 @@ bool HighsHessian::isDiagonal() const {
   }
   return true;
 }
+
 double HighsHessian::diag(HighsInt i) const {
   assert(i < dim_);
   assert(index_[start_[i]] == i);
   return value_[start_[i]];
+}
+
+HighsHessian HighsHessian::toSquare() const {
+  if (this->format_ == HessianFormat::kSquare) return *this;
+  assert(this->format_ == HessianFormat::kTriangular);
+  std::vector<HighsInt> iwork(this->dim_, 0);
+  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
+    HighsInt iEl = this->start_[iCol];
+    HighsInt iRow = this->index_[iEl];
+    assert(iRow == iCol);
+    iEl++;
+    for (; iEl < this->start_[iCol + 1]; iEl++) {
+      HighsInt iRow = this->index_[iEl];
+      assert(iRow > iCol);
+      iwork[iRow]++;
+    }
+  }
+  HighsInt triangular_hessian_off_diagonal = this->numNz() - this->dim_;
+  HighsHessian square_hessian;
+  square_hessian.format_ = HessianFormat::kSquare;
+  square_hessian.dim_ = this->dim_;
+  square_hessian.start_[0] = 0;
+  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
+    HighsInt square_hessian_col_nnz =
+        iwork[iCol] + this->start_[iCol + 1] - this->start_[iCol];
+    square_hessian.start_.push_back(square_hessian.start_[iCol] +
+                                    square_hessian_col_nnz);
+    iwork[iCol] = square_hessian.start_[iCol] + 1;
+  }
+  HighsInt square_hessian_nnz = square_hessian.numNz();
+  assert(square_hessian_nnz ==
+         this->dim_ + 2 * triangular_hessian_off_diagonal);
+  square_hessian.index_.resize(square_hessian_nnz);
+  square_hessian.value_.resize(square_hessian_nnz);
+  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
+    HighsInt iEl = this->start_[iCol];
+    HighsInt iRow = this->index_[iEl];
+    HighsInt square_iEl = square_hessian.start_[iCol];
+    square_hessian.index_[square_iEl] = iCol;
+    square_hessian.value_[square_iEl] = this->value_[iEl];
+    iEl++;
+    for (; iEl < this->start_[iCol + 1]; iEl++) {
+      HighsInt iRow = this->index_[iEl];
+      double value = this->value_[iEl];
+      HighsInt square_iEl = iwork[iCol];
+      square_hessian.index_[square_iEl] = iRow;
+      square_hessian.value_[square_iEl] = value;
+      iwork[iCol]++;
+      square_iEl = iwork[iRow];
+      square_hessian.index_[square_iEl] = iCol;
+      square_hessian.value_[square_iEl] = value;
+      iwork[iRow]++;
+    }
+  }
+  return square_hessian;
 }

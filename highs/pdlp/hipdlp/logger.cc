@@ -40,8 +40,12 @@ void Logger::log(LogLevel level, const std::string& message) const {
     highsLogUser(log_options_, HighsLogType::kInfo, "%s\n", message.c_str());
 }
 
-void Logger::info(const std::string& message) const { log(LogLevel::kInfo, message); }
-void Logger::detailed(const std::string& message) const { log(LogLevel::kDetailed, message); }
+void Logger::info(const std::string& message) const {
+  log(LogLevel::kInfo, message);
+}
+void Logger::detailed(const std::string& message) const {
+  log(LogLevel::kDetailed, message);
+}
 void Logger::verbose(const std::string& message) const {
   log(LogLevel::kVerbose, message);
 }
@@ -60,8 +64,7 @@ void Logger::print_params(const PrimalDualParams& params) const {
   std::map<RestartStrategy, std::string> restart_map = {
       {RestartStrategy::NO_RESTART, "None"},
       {RestartStrategy::FIXED_RESTART, "Fixed"},
-      {RestartStrategy::ADAPTIVE_RESTART, "Adaptive"}
-    };
+      {RestartStrategy::ADAPTIVE_RESTART, "Adaptive"}};
   std::map<StepSizeStrategy, std::string> step_size_map = {
       {StepSizeStrategy::FIXED, "Fixed"},
       {StepSizeStrategy::ADAPTIVE, "Adaptive"},
@@ -120,14 +123,16 @@ void Logger::print_params(const PrimalDualParams& params) const {
 }
 
 void Logger::print_iteration_header() const {
-  info("     Iter    Primal Feas   Dual Feas     P-D Gap   Step Size       Time");
+  info(
+      "     Iter    Primal Feas   Dual Feas     P-D Gap   Step Size       "
+      "Time");
 }
 
 void Logger::print_iteration_stats(HighsInt iter, const SolverResults& results,
                                    const double step_size,
-				   const double time) const {
+                                   const double time) const {
   std::stringstream ss;
-// clang-format off
+  // clang-format off
   ss << std::fixed << std::setprecision(9) << std::setw(9) << iter << "    "
      << std::scientific << std::setprecision(2)
      << std::setw(11) << results.primal_feasibility << " "
@@ -137,7 +142,7 @@ void Logger::print_iteration_stats(HighsInt iter, const SolverResults& results,
      << std::setw(9) << step_size << "   "
      << std::setprecision(1)
      << std::setw(8) << time;
-// clang-format on
+  // clang-format on
   info(ss.str());
 }
 

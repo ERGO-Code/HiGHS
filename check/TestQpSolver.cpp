@@ -1314,59 +1314,44 @@ TEST_CASE("issue-2821", "[qpsolver]") {
       REQUIRE(okValueDifference(info.objective_function_value,
                                 optimal_objective_value));
     }
-    HighsModel model = h.getModel();
-    HighsHessian& hessian = model.hessian_;
-    hessian.print("Triangular");
-    REQUIRE(hessian.format_ == HessianFormat::kTriangular);
-    std::vector<HighsInt>hessian_row_count(hessian.dim_, 0);
-    for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) {
-      HighsInt iEl = hessian.start_[iCol]; 
-      HighsInt iRow = hessian.index_[iEl];
-      REQUIRE(iRow == iCol);
-      iEl++;
-      for (; iEl < hessian.start_[iCol+1]; iEl++) {
-	HighsInt iRow = hessian.index_[iEl];
-	REQUIRE(iRow > iCol);
-	hessian_row_count[iRow]++;
-      }
-    }
-    HighsInt triangular_hessian_off_diagonal = hessian.numNz() - hessian.dim_;
-    HighsHessian square_hessian;
-    square_hessian.format_ = HessianFormat::kSquare;
-    square_hessian.dim_ = hessian.dim_;
-    square_hessian.start_[0] = 0;
-    for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) {
-      HighsInt square_hessian_col_nnz = hessian_row_count[iCol] + hessian.start_[iCol+1] - hessian.start_[iCol];
-      square_hessian.start_.push_back(square_hessian.start_[iCol] + square_hessian_col_nnz);
-      hessian_row_count[iCol] = square_hessian.start_[iCol];
-    }
-    HighsInt square_hessian_nnz = square_hessian.numNz();
-    REQUIRE(square_hessian_nnz == hessian.dim_ + 2*triangular_hessian_off_diagonal);
-    square_hessian.index_.resize(square_hessian_nnz);
-    square_hessian.value_.resize(square_hessian_nnz);
-    for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) {
-      HighsInt iEl = hessian.start_[iCol]; 
-      HighsInt iRow = hessian.index_[iEl];
-      HighsInt square_iEl = hessian_row_count[iCol];
-      square_hessian.index_[square_iEl] = iCol;
-      square_hessian.value_[square_iEl] = hessian.value_[iEl];
-      hessian_row_count[iCol]++;
-      iEl++;
-      for (; iEl < hessian.start_[iCol+1]; iEl++) {
-	HighsInt iRow = hessian.index_[iEl];
-	HighsInt square_iEl = hessian_row_count[iCol];
-	square_hessian.index_[square_iEl] = iCol;
-	square_hessian.value_[square_iEl] = hessian.value_[iEl];
-	hessian_row_count[iCol]++;
-	square_iEl = hessian_row_count[iRow];
-	square_hessian.index_[square_iEl] = iCol;
-	square_hessian.value_[square_iEl] = hessian.value_[iEl];
-	hessian_row_count[iRow]++;
-      }
-    }
-        square_hessian.print("Square");
-
   }
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("pass-square-hessian", "[qpsolver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  // Set up the same constraints as 2821, but use a Hessian with more
+  // entries and varied values
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+  lp.num_col_ = 5;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, -4, -4, -2, -2};
+  lp.col_lower_ = {0, 0, 0, 0, 0};
+  lp.col_upper_ = {inf, inf, inf, inf, inf};
+  lp.row_lower_ = {4, 0, 0};
+  lp.row_upper_ = {4, 0, 0};
+  lp.a_matrix_.start_ = {0, 1, 3, 4, 5, 7};
+  lp.a_matrix_.index_ = {0, 0, 2, 1, 1, 1, 2};
+  lp.a_matrix_.value_ = {1, 3, 1, 1, 1, -2, -1};
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {0, 3, 6, 9, 11, 12};
+  hessian.index_ = {0, 1, 3, 1, 2, 3, 2, 3, 4, 3, 4, 4};
+  hessian.value_ = {4, -1, 1, 8, -2, 3, 9, -3, 2, 6, -4, 5};
+  const double optimal_objective_value = -1.9875776398e-01;
+  REQUIRE(h.passModel(model) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(okValueDifference(info.objective_function_value,
+                            optimal_objective_value));
+  HighsHessian square_hessian = h.getModel().hessian_.toSquare();
+  REQUIRE(h.passHessian(square_hessian) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(okValueDifference(info.objective_function_value,
+                            optimal_objective_value));
   h.resetGlobalScheduler(true);
 }
 
