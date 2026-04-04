@@ -1037,7 +1037,7 @@ HighsCallbackFunctionType iisLogCallback1 =
       if (dev_run) printf("iisLogCallback1: %s", message.c_str());
     };
 
-TEST_CASE("iis-logging-callback", "[highs-callback]") {
+TEST_CASE("iis-callback", "[highs-callback]") {
   std::string model = "galenet";
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -1050,6 +1050,7 @@ TEST_CASE("iis-logging-callback", "[highs-callback]") {
   REQUIRE(highs.setCallback(iisLogCallback1) == HighsStatus::kOk);
 
   REQUIRE(highs.startCallback(kCallbackLogging) == HighsStatus::kOk);
+  REQUIRE(highs.startCallback(kCallbackSimplexInterrupt) == HighsStatus::kOk);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
