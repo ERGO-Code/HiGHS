@@ -624,8 +624,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     // Setting the logging callbacks currently serves no purpose since
     // output_flag is set to kIisDevReport which is false (unless
     // developing) so that solves with this Highs instance are silent
+    /*
     if (log_options.user_log_callback)
       highs.setLogCallback(log_options.user_log_callback);
+    */
     highs.setCallback(callback.user_callback, callback.user_callback_data);
     if (callback.active[kCallbackLogging])
       highs.startCallback(kCallbackLogging);
