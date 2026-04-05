@@ -1971,10 +1971,11 @@ HighsStatus Highs::getIisInterface() {
   // Save original options
   HighsOptions original_options = this->options_;
   // Save original active callbacks and disable all except for
-  // kCallbackSimplexInterrupt
+  // kCallbackLogging and kCallbackSimplexInterrupt
   std::vector<bool> original_callback_active = callback_.active;
   for (int i = kCallbackMin; i <= kCallbackMax; i++) {
-    if (i != kCallbackSimplexInterrupt && callback_.active[i])
+    if (i != kCallbackLogging && i != kCallbackSimplexInterrupt &&
+        callback_.active[i])
       this->stopCallback(i);
   }
   // Zero out all clocks and set time_limit to iis_time_limit

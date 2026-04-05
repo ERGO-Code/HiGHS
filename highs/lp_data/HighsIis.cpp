@@ -611,20 +611,33 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   }
 
   Highs highs;
-  const HighsInfo& info = highs.getInfo();
-  if (callback.active[kCallbackSimplexInterrupt]) {
-    highs.setCallback(callback.user_callback, callback.user_callback_data);
-    highs.startCallback(kCallbackSimplexInterrupt);
-  }
   highs.passOptions(options);
   highs.setOptionValue("output_flag", kIisDevReport);
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue(
       "time_limit",
       std::max(options.iis_time_limit - this->info_.sum_simplex_times, 0.0));
+  // Handle the callback propagation after setting output_flag false,
+  // otherwise deprecation message for setLogCallback is echoed
+  if (log_options.user_log_callback || callback.active[kCallbackLogging] ||
+      callback.active[kCallbackSimplexInterrupt]) {
+    // Setting the logging callbacks currently serves no purpose since
+    // output_flag is set to kIisDevReport which is false (unless
+    // developing) so that solves with this Highs instance are silent
+    /*
+    if (log_options.user_log_callback)
+      highs.setLogCallback(log_options.user_log_callback);
+    */
+    highs.setCallback(callback.user_callback, callback.user_callback_data);
+    if (callback.active[kCallbackLogging])
+      highs.startCallback(kCallbackLogging);
+    if (callback.active[kCallbackSimplexInterrupt])
+      highs.startCallback(kCallbackSimplexInterrupt);
+  }
   const HighsLp& incumbent_lp = highs.getLp();
   const HighsBasis& incumbent_basis = highs.getBasis();
   const HighsSolution& solution = highs.getSolution();
+  const HighsInfo& info = highs.getInfo();
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
   if (basis) highs.setBasis(*basis);
