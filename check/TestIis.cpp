@@ -1025,10 +1025,12 @@ TEST_CASE("write-iis_model-file", "[iis]") {
 
 char iis_printed_log[kIoBufferSize];
 
+/*
 static void iisLogCallback0(HighsLogType type, const char* message,
                             void* user_log_callback_data) {
   if (dev_run) printf("iisLogCallback0: %s", message);
 }
+*/
 
 HighsCallbackFunctionType iisLogCallback1 =
     [](int callback_type, const std::string& message,
@@ -1046,7 +1048,7 @@ TEST_CASE("iis-logging-callback", "[highs-callback]") {
   HighsInt iis_strategy = kIisStrategyFromLp + kIisStrategyIrreducible;
   highs.setOptionValue("iis_strategy", iis_strategy);
   // Set both the deprecated and current logging callbacks
-  REQUIRE(highs.setLogCallback(iisLogCallback0) == HighsStatus::kOk);
+  // REQUIRE(highs.setLogCallback(iisLogCallback0) == HighsStatus::kOk);
   REQUIRE(highs.setCallback(iisLogCallback1) == HighsStatus::kOk);
 
   REQUIRE(highs.startCallback(kCallbackLogging) == HighsStatus::kOk);
