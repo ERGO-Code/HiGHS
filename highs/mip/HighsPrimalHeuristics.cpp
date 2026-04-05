@@ -149,6 +149,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   // Initialise termination_status_ and propagate any terminator to
   // the sub-MIP
   submipsolver.initialiseTerminator(mipsolver);
+  printf("HighsPrimalHeuristics::solveSubMip!\n");
+  submipsolver.initialiseAnalysis(&mipsolver.analysis_);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;

@@ -4195,6 +4195,9 @@ HighsStatus Highs::callSolveMip() {
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
+  // Set up the analysis (profiling) here, so that it's only done
+  // for the root MIP
+  solver.initialiseAnalysis();
   solver.run();
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled

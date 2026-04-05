@@ -35,6 +35,8 @@ void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
       HighsTimerClock clock;
       clock.timer_pointer_ = timer_;
       thread_mip_clocks.push_back(clock);
+      thread_mip_clocks_.push_back(clock);
+      thread_submip_clocks_.push_back(clock);
     }
     MipTimer mip_timer;
     // Some sub-solver timings are extracted from the MIP clocks, and
@@ -43,6 +45,14 @@ void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
     // have an offset due to clocks defined for earlier threads.
     HighsInt thread_mip_clock_offset = 0;
     for (HighsTimerClock& clock : thread_mip_clocks) {
+      mip_timer.initialiseMipClocks(clock, thread_mip_clock_offset);
+      thread_mip_clock_offset += kNumThreadMipClock;
+    }
+    for (HighsTimerClock& clock : thread_mip_clocks_) {
+      mip_timer.initialiseMipClocks(clock, thread_mip_clock_offset);
+      thread_mip_clock_offset += kNumThreadMipClock;
+    }
+    for (HighsTimerClock& clock : thread_submip_clocks_) {
       mip_timer.initialiseMipClocks(clock, thread_mip_clock_offset);
       thread_mip_clock_offset += kNumThreadMipClock;
     }

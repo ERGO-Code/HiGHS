@@ -73,15 +73,6 @@ HighsMipSolver::~HighsMipSolver() = default;
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
 
-  if (submip) {
-    analysis_.analyse_mip_time = false;
-  } else {
-    analysis_.timer_ = &this->timer_;
-    analysis_.sub_solver_call_time_ = &this->sub_solver_call_time_;
-    analysis_.setup(*orig_model_, *options_mip_);
-  }
-  timer_.start();
-
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
     improving_solution_file_ =
@@ -999,4 +990,18 @@ void HighsMipSolver::initialiseTerminator(const HighsMipSolver& mip_solver) {
   this->initialiseTerminator(mip_solver.mipdata_->terminatorConcurrency(),
                              mip_solver.mipdata_->terminatorMyInstance(),
                              mip_solver.terminator_.record);
+}
+
+void HighsMipSolver::initialiseAnalysis(const HighsMipAnalysis* from_analysis) {
+  if (from_analysis) {
+    assert(this->submip);
+    this->analysis_ = *from_analysis;
+  } else {
+    this->analysis_.model_name = orig_model_->model_name_;
+    this->analysis_.timer_ = &this->timer_;
+    this->analysis_.sub_solver_call_time_ = &this->sub_solver_call_time_;
+    this->analysis_.setupMipTime(*options_mip_);
+    this->timer_.start();
+  }
+  this->analysis_.submip_ = this->submip;
 }

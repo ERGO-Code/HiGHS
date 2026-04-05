@@ -151,6 +151,7 @@ class HighsMipSolver {
   HighsModelStatus terminationStatus() const {
     return this->termination_status_;
   }
+  void initialiseAnalysis(const HighsMipAnalysis* from_analysis = nullptr);
 };
 
 std::array<char, 128> getGapString(const double gap_,
