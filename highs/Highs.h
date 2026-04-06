@@ -1740,10 +1740,13 @@ class Highs {
   HighsStatus getRangingInterface();
 
   HighsStatus getIisInterface();
-  HighsStatus getIisInterfaceReturn(const HighsStatus return_status);
+  HighsStatus getIisInterfaceReturn(
+      const HighsStatus return_status, const HighsOptions& original_options,
+      const std::vector<bool>& original_callbacks);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const std::string& original_model_name,
+      const HighsModelStatus original_model_status,
       const HighsInt original_num_col, const HighsInt original_num_row,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,

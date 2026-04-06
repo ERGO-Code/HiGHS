@@ -33,17 +33,12 @@ struct Info {
   // Number of correctors used
   Int correctors;
 
-  // Nla option used
-  OptionNla option_nla;
-
-  // Parallel option used
-  OptionParallel option_par;
-
   // Total times to form matrix, factorise and solve linear systems
   double analyse_NE_time{};
   double analyse_AS_time{};
   double matrix_time{};
-  double matrix_structure_time{};
+  double AS_structure_time{};
+  double NE_structure_time{};
   double factor_time{};
   double solve_time{};
   double residual_time{};

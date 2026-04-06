@@ -4,28 +4,62 @@
 #include <cmath>
 #include <iostream>
 
+#include "ipm/IpxWrapper.h"
 #include "ipm/hipo/auxiliary/Log.h"
+#include "lp_data/HighsSolution.h"
 #include "parallel/HighsParallel.h"
 
 namespace hipo {
 
-Int Solver::load(const HighsLp& lp) {
-  if (model_.init(lp)) return kStatusBadModel;
-
-  m_ = model_.m();
-  n_ = model_.n();
-
-  info_.ipx_used = false;
-  info_.m_solver = m_;
-  info_.n_solver = n_;
-  info_.m_original = model_.m_orig();
-  info_.n_original = model_.n_orig();
-
+Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
+  if (model_.init(lp, Q)) {
+    logH_.printDevInfo("Error with model\n");
+    return kStatusBadModel;
+  }
   return kStatusOk;
 }
 
-void Solver::setOptions(const Options& options) {
-  options_ = options;
+void Solver::setOptions(const HighsOptions& highs_options) {
+  options_.display = true;
+  if (!highs_options.output_flag | !highs_options.log_to_console)
+    options_.display = false;
+
+  options_.log_options = &highs_options.log_options;
+
+  // Debug option is already considered through log_options.log_dev_level in
+  // hipo::LogHighs::debug
+
+  options_.timeless_log = highs_options.timeless_log;
+  options_.feasibility_tol =
+      std::min(highs_options.primal_feasibility_tolerance,
+               highs_options.dual_feasibility_tolerance);
+  options_.optimality_tol = highs_options.ipm_optimality_tolerance;
+  options_.crossover_tol = highs_options.start_crossover_tolerance;
+
+  if (highs_options.kkt_tolerance != kDefaultKktTolerance) {
+    options_.feasibility_tol = highs_options.kkt_tolerance;
+    options_.optimality_tol = 1e-1 * highs_options.kkt_tolerance;
+    options_.crossover_tol = 1e-1 * highs_options.kkt_tolerance;
+  }
+
+  // hipo uses same timer as highs, so it is fine to pass the same time limit
+  options_.time_limit = highs_options.time_limit;
+
+  options_.max_iter = highs_options.ipm_iteration_limit;
+  options_.crossover = highs_options.run_crossover;
+  options_.parallel = highs_options.parallel;
+  options_.parallel_type = highs_options.hipo_parallel_type;
+  options_.nla = highs_options.hipo_system;
+  options_.ordering = highs_options.hipo_ordering;
+  options_.block_size = highs_options.hipo_block_size;
+
+  options_orig_ = options_;
+  Hoptions_ = highs_options;
+  resetOptions();
+}
+
+void Solver::resetOptions() {
+  options_ = options_orig_;
   if (options_.display) logH_.setOptions(options_.log_options);
   control_.setOptions(options_);
 }
@@ -34,11 +68,37 @@ void Solver::setCallback(HighsCallback& callback) {
 }
 void Solver::setTimer(const HighsTimer& timer) { control_.setTimer(timer); }
 
+void Solver::reset() {
+  m_ = model_.m();
+  n_ = model_.n();
+
+  info_ = Info{};
+
+  info_.ipx_used = false;
+  info_.m_solver = m_;
+  info_.n_solver = n_;
+  info_.m_original = model_.m_orig();
+  info_.n_original = model_.n_orig();
+
+  resetOptions();
+
+  iter_ = 0;
+  alpha_primal_ = 0.0;
+  alpha_dual_ = 0.0;
+  sigma_ = 0.0;
+  regul_ = Regularisation{};
+
+  LS_.reset();
+  it_.reset();
+}
+
 void Solver::solve() {
   if (!model_.ready()) {
     info_.status = kStatusBadModel;
     return;
   }
+
+  reset();
 
   // iterate object needs to be initialised before potentially interrupting
   it_.reset(new Iterate(model_, regul_));
@@ -105,8 +165,6 @@ void Solver::terminate() {
   info_.ipm_iter = iter_;
   if (info_.status == kStatusNotRun) info_.status = kStatusMaxIter;
 
-  info_.option_nla = options_.nla;
-  info_.option_par = options_.parallel;
   info_.num_dense_cols = model_.numDenseCols();
   info_.max_col_density = model_.maxColDensity();
 }
@@ -166,18 +224,20 @@ bool Solver::correctors() {
 bool Solver::prepareIpx() {
   // Return true if an error occurred;
 
+  assert(!model_.qp());
+
   ipx::Parameters ipx_param;
-  ipx_param.display = options_.display_ipx;
+  ipx_param.display = options_.display;
+  ipx_param.highs_logging = true;
+  ipx_param.log_options = options_.log_options;
   ipx_param.dualize = 0;
 
-  if (options_.crossover == kOptionCrossoverOn)
+  if (options_.crossover == kHighsOnString)
     ipx_param.run_crossover = 1;
-  else if (options_.crossover == kOptionCrossoverOff)
+  else if (options_.crossover == kHighsOffString)
     ipx_param.run_crossover = 0;
-  else {
-    assert(options_.crossover == kOptionCrossoverChoose);
+  else
     ipx_param.run_crossover = -1;
-  }
 
   ipx_param.ipm_feasibility_tol = options_.feasibility_tol;
   ipx_param.ipm_optimality_tol = options_.optimality_tol;
@@ -214,7 +274,7 @@ bool Solver::prepareIpx() {
 void Solver::refineWithIpx() {
   if (checkInterrupt()) return;
 
-  if (statusNeedsRefinement() && options_.refine_with_ipx) {
+  if (statusNeedsRefinement() && refinementIsOn()) {
     logH_.print("\nRestarting with IPX\n");
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
     logH_.print("\nRunning crossover with IPX\n");
@@ -246,22 +306,6 @@ void Solver::refineWithIpx() {
   }
 }
 
-void Solver::runCrossover() {
-  // run crossover directly, without refining with ipx.
-  // not used for now.
-
-  prepareIpx();
-
-  std::vector<double> x, slack, y, z;
-  getSolution(x, slack, y, z);
-
-  ipx_lps_.CrossoverFromStartingPoint(x.data(), slack.data(), y.data(),
-                                      z.data());
-
-  info_.ipx_info = ipx_lps_.GetInfo();
-  info_.ipx_used = true;
-}
-
 bool Solver::solveNewtonSystem(NewtonDir& delta) {
   solve6x6(delta, it_->res);
   refine(delta);
@@ -286,17 +330,17 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
   std::vector<double> res7 = it_->residual7(rhs);
 
   // NORMAL EQUATIONS
-  if (options_.nla == kOptionNlaNormEq) {
+  if (options_.nla == kHipoNormalEqString) {
     std::vector<double> res8 = it_->residual8(rhs, res7);
 
     // factorise normal equations, if not yet done
     if (!LS_->valid_) {
-      if (Int status = LS_->factorNE(model_.A(), theta_inv)) {
+      if (Int status = LS_->factorNE(theta_inv)) {
         logH_.printe("Error while factorising normal equations\n");
         info_.status = (Status)status;
         return true;
       }
-      it_->setReg(*LS_, options_.nla);
+      it_->getReg(*LS_, options_.nla);
     }
 
     // solve with normal equations
@@ -312,8 +356,12 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
     model_.A().alphaProductPlusY(-1.0, delta.y, delta.x, true);
     vectorScale(delta.x, -1.0);
 
-    // Deltax = (Theta^-1+Rp)^-1 * Deltax
-    for (Int i = 0; i < n_; ++i) delta.x[i] /= theta_inv[i] + regul_.primal;
+    // Deltax = (Theta^-1+Rp+Q)^-1 * Deltax
+    for (Int i = 0; i < n_; ++i) {
+      double denom = theta_inv[i] + regul_.primal;
+      if (model_.qp()) denom += model_.sense() * model_.Q().diag(i);
+      delta.x[i] /= denom;
+    }
 
   }
 
@@ -321,12 +369,12 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
   else {
     // factorise augmented system, if not yet done
     if (!LS_->valid_) {
-      if (Int status = LS_->factorAS(model_.A(), theta_inv)) {
+      if (Int status = LS_->factorAS(theta_inv)) {
         logH_.printe("Error while factorising augmented system\n");
         info_.status = (Status)status;
         return true;
       }
-      it_->setReg(*LS_, options_.nla);
+      it_->getReg(*LS_, options_.nla);
     }
 
     // solve with augmented system
@@ -376,24 +424,6 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
       delta.zu[i] = 0.0;
     }
   }
-
-  // not sure if this has any effect, but IPX uses it
-  std::vector<double> Atdy(n_);
-  model_.A().alphaProductPlusY(1.0, delta.y, Atdy, true);
-  for (Int i = 0; i < n_; ++i) {
-    if (model_.hasLb(i) || model_.hasUb(i)) {
-      if (std::isfinite(xl[i]) && std::isfinite(xu[i])) {
-        if (zl[i] * xu[i] >= zu[i] * xl[i])
-          delta.zl[i] = res4[i] + delta.zu[i] - Atdy[i];
-        else
-          delta.zu[i] = -res4[i] + delta.zl[i] + Atdy[i];
-      } else if (std::isfinite(xl[i])) {
-        delta.zl[i] = res4[i] + delta.zu[i] - Atdy[i];
-      } else {
-        delta.zu[i] = -res4[i] + delta.zl[i] + Atdy[i];
-      }
-    }
-  }
 }
 
 double Solver::stepToBoundary(const std::vector<double>& x,
@@ -405,12 +435,12 @@ double Solver::stepToBoundary(const std::vector<double>& x,
   // Use lo=1 for xl and zl, lo=0 for xu and zu.
   // Return the blocking index in block.
 
-  const double damp = 1.0 - 100.0 * std::numeric_limits<double>::epsilon();
+  const double damp = 1.0 - 1e3 * std::numeric_limits<double>::epsilon();
 
   double alpha = 1.0;
   Int bl = -1;
 
-  for (Int i = 0; i < x.size(); ++i) {
+  for (Int i = 0; i < n_; ++i) {
     if ((lo && model_.hasLb(i)) || (!lo && model_.hasUb(i))) {
       double c = (cor ? (*cor)[i] * weight : 0.0);
       if (x[i] + alpha * (dx[i] + c) < 0.0) {
@@ -533,26 +563,10 @@ void Solver::stepSizes() {
 
 void Solver::makeStep() {
   stepSizes();
-
-  // keep track of iterations with small stepsizes
-  if (std::min(alpha_primal_, alpha_dual_) < 0.05)
-    ++bad_iter_;
-  else
-    bad_iter_ = 0;
-
-  // update iterate
-  vectorAdd(it_->x, it_->delta.x, alpha_primal_);
-  vectorAdd(it_->xl, it_->delta.xl, alpha_primal_);
-  vectorAdd(it_->xu, it_->delta.xu, alpha_primal_);
-  vectorAdd(it_->y, it_->delta.y, alpha_dual_);
-  vectorAdd(it_->zl, it_->delta.zl, alpha_dual_);
-  vectorAdd(it_->zu, it_->delta.zu, alpha_dual_);
-
-  // compute new quantities
+  it_->makeStep(alpha_primal_, alpha_dual_);
   it_->residual1234();
   it_->computeMu();
   it_->indicators();
-
   printOutput();
 }
 
@@ -576,19 +590,22 @@ bool Solver::startingPoint() {
     x[i] = std::min(x[i], model_.ub(i));
   }
 
-  const std::vector<double> temp_scaling(n_, 1.0);
+  const std::vector<double> empty_scaling;
   std::vector<double> temp_m(m_);
 
-  if (options_.nla == kOptionNlaNormEq) {
+  // store b in y
+  y = model_.b();
+  if (norm2(y) < 1e-6) vectorAdd(y, 1e-3);
+
+  if (options_.nla == kHipoNormalEqString) {
     // use y to store b-A*x
-    y = model_.b();
     model_.A().alphaProductPlusY(-1.0, x, y);
 
     // solve A*A^T * dx = b-A*x with factorisation and store the result in
     // temp_m
 
     // factorise A*A^T
-    if (Int status = LS_->factorNE(model_.A(), temp_scaling)) {
+    if (Int status = LS_->factorNE(empty_scaling)) {
       logH_.printe("Error while factorising normal equations\n");
       info_.status = (Status)status;
       return true;
@@ -600,12 +617,12 @@ bool Solver::startingPoint() {
       return true;
     }
 
-  } else if (options_.nla == kOptionNlaAugmented) {
+  } else if (options_.nla == kHipoAugmentedString) {
     // obtain solution of A*A^T * dx = b-A*x by solving
     // [ -I  A^T] [...] = [ -x]
     // [  A   0 ] [ dx] = [ b ]
 
-    if (Int status = LS_->factorAS(model_.A(), temp_scaling)) {
+    if (Int status = LS_->factorAS(empty_scaling)) {
       logH_.printe("Error while factorising augmented system\n");
       info_.status = (Status)status;
       return true;
@@ -614,7 +631,7 @@ bool Solver::startingPoint() {
     std::vector<double> rhs_x(n_);
     for (Int i = 0; i < n_; ++i) rhs_x[i] = -x[i];
     std::vector<double> lhs_x(n_);
-    if (Int status = LS_->solveAS(rhs_x, model_.b(), lhs_x, temp_m)) {
+    if (Int status = LS_->solveAS(rhs_x, y, lhs_x, temp_m)) {
       logH_.printe("Error while solving augmented system\n");
       info_.status = (Status)status;
       return true;
@@ -661,10 +678,17 @@ bool Solver::startingPoint() {
   // y starting point
   // *********************************************************************
 
-  if (options_.nla == kOptionNlaNormEq) {
-    // compute A*c
+  std::vector<double> cPlusQx = model_.c();
+  if (norm2(cPlusQx) < 1e-6) vectorAdd(cPlusQx, 1e-3);
+  if (model_.qp()) model_.Q().alphaProductPlusY(model_.sense(), x, cPlusQx);
+
+  double max_norm_x = std::max(infNorm(x), std::max(infNorm(xl), infNorm(xu)));
+  if (infNorm(cPlusQx) > max_norm_x * 1e3) cPlusQx = model_.c();
+
+  if (options_.nla == kHipoNormalEqString) {
+    // compute A*(c+Qx)
     std::fill(temp_m.begin(), temp_m.end(), 0.0);
-    model_.A().alphaProductPlusY(1.0, model_.c(), temp_m);
+    model_.A().alphaProductPlusY(1.0, cPlusQx, temp_m);
 
     if (Int status = LS_->solveNE(temp_m, y)) {
       logH_.printe("Error while solvingF normal equations\n");
@@ -672,15 +696,15 @@ bool Solver::startingPoint() {
       return true;
     }
 
-  } else if (options_.nla == kOptionNlaAugmented) {
-    // obtain solution of A*A^T * y = A*c by solving
-    // [ -I  A^T] [...] = [ c ]
-    // [  A   0 ] [ y ] = [ 0 ]
+  } else if (options_.nla == kHipoAugmentedString) {
+    // obtain solution of A*A^T * y = A*(c+Qx) by solving
+    // [ -I  A^T] [...] = [ c+Qx ]
+    // [  A   0 ] [ y ] = [   0  ]
 
     std::vector<double> rhs_y(m_, 0.0);
     std::vector<double> lhs_x(n_);
 
-    if (Int status = LS_->solveAS(model_.c(), rhs_y, lhs_x, y)) {
+    if (Int status = LS_->solveAS(cPlusQx, rhs_y, lhs_x, y)) {
       logH_.printe("Error while solving augmented system\n");
       info_.status = (Status)status;
       return true;
@@ -691,8 +715,8 @@ bool Solver::startingPoint() {
   // *********************************************************************
   // zl, zu starting point
   // *********************************************************************
-  // compute c - A^T * y and store in zl
-  zl = model_.c();
+  // compute c + Q * x - A^T * y and store in zl
+  zl = cPlusQx;
   model_.A().alphaProductPlusY(-1.0, y, zl, true);
 
   // split result between zl and zu
@@ -874,11 +898,6 @@ bool Solver::centralityCorrectors() {
   double alpha_p_old, alpha_d_old;
   stepsToBoundary(alpha_p_old, alpha_d_old, it_->delta);
 
-  std::stringstream log_stream;
-
-  log_stream << " * Pred " << fix(alpha_p_old, 0, 2) << " "
-             << fix(alpha_d_old, 0, 2) << "\n";
-
   Int cor;
   for (cor = 0; cor < info_.correctors; ++cor) {
     // compute rhs for corrector
@@ -893,13 +912,9 @@ bool Solver::centralityCorrectors() {
     double wd = wp;
     bestWeight(it_->delta, corr, wp, wd, alpha_p, alpha_d);
 
-    log_stream << " * Corr " << fix(alpha_p, 0, 2) << " " << fix(alpha_d, 0, 2)
-               << ", weight " << fix(wp, 0, 2) << " " << fix(wd, 0, 2) << "\n";
-
     if (alpha_p < alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin &&
         alpha_d < alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // reject corrector
-      log_stream << "  ** Rejected\n";
       break;
     }
 
@@ -909,7 +924,6 @@ bool Solver::centralityCorrectors() {
       vectorAdd(it_->delta.xl, corr.xl, wp);
       vectorAdd(it_->delta.xu, corr.xu, wp);
       alpha_p_old = alpha_p;
-      log_stream << "  ** Primal accepted\n";
     }
     if (alpha_d >= alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // accept dual corrector
@@ -917,7 +931,6 @@ bool Solver::centralityCorrectors() {
       vectorAdd(it_->delta.zl, corr.zl, wd);
       vectorAdd(it_->delta.zu, corr.zu, wd);
       alpha_d_old = alpha_d;
-      log_stream << "  ** Dual accepted\n";
     }
 
     if (alpha_p > 0.95 && alpha_d > 0.95) {
@@ -930,8 +943,6 @@ bool Solver::centralityCorrectors() {
   }
 
   it_->data.back().correctors = cor;
-
-  logH_.printDevDetailed(log_stream);
 
   return false;
 }
@@ -997,11 +1008,16 @@ bool Solver::checkIterate() {
   return false;
 }
 
+bool Solver::checkStagnation() {
+  std::stringstream log_stream;
+  bool stagnation = it_->stagnation(log_stream);
+  logH_.printDevInfo(log_stream);
+  return stagnation;
+}
+
 bool Solver::checkBadIter() {
   bool terminate = false;
-
-  // check for bad iterations
-  bool too_many_bad_iter = bad_iter_ >= kMaxBadIter;
+  bool stagnation = iter_ > 0 ? checkStagnation() : false;
 
   // check for infeasibility
   bool mu_is_large =
@@ -1015,7 +1031,7 @@ bool Solver::checkBadIter() {
   bool clearly_infeasible =
       iter_ > 5 && (pobj_is_very_large || dobj_is_very_large);
 
-  if (too_many_bad_iter || mu_is_large || clearly_infeasible) {
+  if (stagnation || mu_is_large || clearly_infeasible) {
     bool pobj_is_larger =
         it_->pobj < -std::max(std::abs(it_->dobj) * kDivergeTol, 1.0);
     bool dobj_is_larger =
@@ -1031,9 +1047,15 @@ bool Solver::checkBadIter() {
       logH_.print("=== Primal infeasible\n");
       info_.status = kStatusPrimalInfeasible;
       terminate = true;
-    } else if (too_many_bad_iter) {
-      // Too many bad iterations in a row, abort the solver
-      info_.status = kStatusNoProgress;
+    } else if (stagnation) {
+      // stagnation detected, solution may still be good for highs kktCheck
+      if (info_.status != kStatusPDFeas && checkTerminationKkt()) {
+        logH_.printw(
+            "HiPO stagnated but HiGHS considers the solution acceptable\n");
+        logH_.print("=== Primal-dual feasible point found\n");
+        info_.status = kStatusPDFeas;
+      } else
+        info_.status = kStatusNoProgress;
       terminate = true;
     }
   }
@@ -1049,24 +1071,59 @@ bool Solver::checkTermination() {
   bool terminate = false;
 
   if (feasible && optimal) {
-    if (info_.status != kStatusPDFeas)
-      logH_.print("=== Primal-dual feasible point found\n");
-
-    info_.status = kStatusPDFeas;
-
-    if (options_.crossover == kOptionCrossoverOn ||
-        options_.crossover == kOptionCrossoverChoose) {
+    if (crossoverIsOn()) {
+      if (info_.status != kStatusPDFeas)
+        logH_.print("=== Primal-dual feasible point found\n");
+      info_.status = kStatusPDFeas;
       bool ready_for_crossover =
           it_->infeasAfterDropping() < options_.crossover_tol;
       if (ready_for_crossover) {
         logH_.print("=== Ready for crossover\n");
         terminate = true;
       }
+
     } else {
-      terminate = true;
+      terminate = model_.qp() ? true : checkTerminationKkt();
+      if (terminate) {
+        assert(info_.status != kStatusPDFeas);
+        logH_.print("=== Primal-dual feasible point found\n");
+        info_.status = kStatusPDFeas;
+      }
     }
   }
+
   return terminate;
+}
+
+bool Solver::checkTerminationKkt() {
+  assert(!model_.qp());
+
+  logH_.printDevInfo("Solution may be optimal, perform kktCheck\n");
+  HighsModelStatus model_status = HighsModelStatus::kOptimal;
+  HighsInfo highs_info;
+  HighsSolution highs_solution;
+
+  // Allow kktCheck to print only in debug mode (this is a copy of highs
+  // options, not the original)
+  Hoptions_.output_flag = logH_.debug(2);
+
+  if (!model_.lpOrig()) return false;
+
+  getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
+                           model_.m_orig(), model_.rhsOrig(),
+                           model_.constraintsOrig(), *this, model_status,
+                           highs_solution);
+
+  lpNoBasisKktCheck(model_status, highs_info, *model_.lpOrig(), highs_solution,
+                    Hoptions_, "During HiPO solve");
+
+  if (model_status == HighsModelStatus::kOptimal) {
+    logH_.printDevInfo("Check successfull\n");
+    return true;
+  } else
+    logH_.printDevInfo("Check failed\n");
+
+  return false;
 }
 
 bool Solver::checkInterrupt() {
@@ -1140,7 +1197,7 @@ void Solver::printInfo() const {
   log_stream << "\nRunning HiPO\n";
 
   // Print number of threads
-  if (options_.parallel == kOptionParallelOff)
+  if (options_.parallel == kHighsOffString)
     log_stream << textline("Threads:") << 1 << '\n';
   else
     log_stream << textline("Threads:") << highs::parallel::num_threads()
@@ -1166,32 +1223,6 @@ void Solver::printSummary() const {
     log_stream << textline("IPX iterations:") << integer(info_.ipx_info.iter)
                << "\n";
 
-  if (info_.status >= kStatusImprecise) {
-    log_stream << textline("Primal residual rel/abs:")
-               << sci(info_.p_res_rel, 0, 2) << " / "
-               << sci(info_.p_res_abs, 0, 2) << '\n';
-
-    log_stream << textline("Dual residual rel/abs:")
-               << sci(info_.d_res_rel, 0, 2) << " / "
-               << sci(info_.d_res_abs, 0, 2) << '\n';
-
-    log_stream << textline("Primal objective") << sci(info_.p_obj, 0, 8)
-               << '\n';
-    log_stream << textline("Dual objective") << sci(info_.d_obj, 0, 8) << '\n';
-
-    log_stream << textline("Primal-dual gap:") << sci(info_.pd_gap, 0, 2)
-               << '\n';
-  }
-
-  if (info_.ipx_used &&
-      (info_.ipx_info.status_crossover == IPX_STATUS_optimal ||
-       info_.ipx_info.status_crossover == IPX_STATUS_imprecise)) {
-    log_stream << textline("Basis solution primal infeas:")
-               << sci(info_.ipx_info.primal_infeas, 0, 2) << '\n';
-    log_stream << textline("Basis solution dual infeas:")
-               << sci(info_.ipx_info.dual_infeas, 0, 2) << '\n';
-  }
-
   if (logH_.debug(1)) {
     log_stream << textline("Correctors:") << integer(info_.correctors) << '\n';
     log_stream << textline("Factorisations:") << integer(info_.factor_number)
@@ -1205,8 +1236,10 @@ void Solver::printSummary() const {
                  << fix(info_.analyse_NE_time, 0, 2) << '\n';
       log_stream << textline("Matrix time:") << fix(info_.matrix_time, 0, 2)
                  << '\n';
-      log_stream << textline("Matrix structure time:")
-                 << fix(info_.matrix_structure_time, 0, 2) << '\n';
+      log_stream << textline("AS structure time:")
+                 << fix(info_.AS_structure_time, 0, 2) << '\n';
+      log_stream << textline("NE structure time:")
+                 << fix(info_.NE_structure_time, 0, 2) << '\n';
       log_stream << textline("Factorisation time:")
                  << fix(info_.factor_time, 0, 2) << '\n';
       log_stream << textline("Solve time:") << fix(info_.solve_time, 0, 2)
@@ -1237,9 +1270,7 @@ void Solver::getInteriorSolution(
   // prepare and return solution with internal format
 
   if (!info_.ipx_used) {
-    it_->extract(x, xl, xu, slack, y, zl, zu);
-    model_.unscale(x, xl, xu, slack, y, zl, zu);
-    model_.postprocess(slack, y);
+    model_.postprocess(x, xl, xu, slack, y, zl, zu, *it_);
   } else {
     ipx_lps_.GetInteriorSolution(x.data(), xl.data(), xu.data(), slack.data(),
                                  y.data(), zl.data(), zu.data());
@@ -1252,14 +1283,6 @@ Int Solver::getBasicSolution(std::vector<double>& x, std::vector<double>& slack,
   // interface to ipx getBasicSolution
   return ipx_lps_.GetBasicSolution(x.data(), slack.data(), y.data(), z.data(),
                                    cbasis, vbasis);
-}
-
-void Solver::getSolution(std::vector<double>& x, std::vector<double>& slack,
-                         std::vector<double>& y, std::vector<double>& z) const {
-  // prepare and return solution with format for crossover
-  it_->extract(x, slack, y, z);
-  model_.unscale(x, slack, y, z);
-  model_.postprocess(slack, y);
 }
 
 void Solver::maxCorrectors() {
@@ -1310,9 +1333,11 @@ bool Solver::statusAllowsCrossover() const {
 bool Solver::statusNeedsRefinement() const {
   return info_.status == kStatusNoProgress || info_.status == kStatusImprecise;
 }
+bool Solver::refinementIsOn() const {
+  return options_.refine_with_ipx && !model_.qp();
+}
 bool Solver::crossoverIsOn() const {
-  return options_.crossover == kOptionCrossoverOn ||
-         options_.crossover == kOptionCrossoverChoose;
+  return options_.crossover == kHighsOnString && !model_.qp();
 }
 bool Solver::solved() const { return statusIsSolved(); }
 bool Solver::stopped() const { return statusIsStopped(); }

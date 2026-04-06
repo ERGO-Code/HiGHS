@@ -38,7 +38,8 @@ class HPresolveAnalysis {
   // Transform options->presolve_rule_off into logical settings in
   // allow_rule_[*], commenting on the rules switched off
   void setup(const HighsLp* model_, const HighsOptions* options_,
-             const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_);
+             const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_,
+             const bool silent);
   void resetNumDeleted();
 
   std::string presolveReductionTypeToString(const HighsInt reduction_type);

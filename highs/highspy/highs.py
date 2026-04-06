@@ -740,8 +740,8 @@ class Highs(_Highs):
             super().changeColsIntegrality(N, idx, vartype)
 
         if name or name_prefix:
-            names = name or [f"{name_prefix}{i}" for i in indices]
-
+# Changed to fix #2887 names = name or [f"{name_prefix}{i}" for i in indices]
+            names = name or [f"{name_prefix}{i}".replace(" ", "")  for i in indices]
             for i, n in zip(idx, names):
                 super().passColName(int(i), str(n))
 

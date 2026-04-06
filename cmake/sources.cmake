@@ -15,6 +15,7 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
@@ -177,18 +178,17 @@ set(ipx_headers
   ipm/ipx/utils.h)
 
 set(hipo_sources 
-    ipm/hipo/ipm/CurtisReidScaling.cpp 
     ipm/hipo/ipm/IpmData.cpp 
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp 
     ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
+    ipm/hipo/ipm/PreProcess.cpp
     ipm/hipo/ipm/Refine.cpp
     ipm/hipo/ipm/Solver.cpp)
 
 set(hipo_headers
-    ipm/hipo/ipm/CurtisReidScaling.h
     ipm/hipo/ipm/IpmData.h
     ipm/hipo/ipm/FactorHiGHSSolver.h
     ipm/hipo/ipm/Parameters.h
@@ -199,6 +199,7 @@ set(hipo_headers
     ipm/hipo/ipm/LogHighs.h
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
+    ipm/hipo/ipm/PreProcess.h
     ipm/hipo/ipm/Solver.h
     ipm/hipo/ipm/Status.h)
 
@@ -331,7 +332,6 @@ set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BU
 set(highs_sources
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
-    io/FilereaderEms.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
@@ -389,6 +389,12 @@ set(highs_sources
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
     pdlp/CupdlpWrapper.cpp
+    pdlp/HiPdlpWrapper.cpp
+    pdlp/hipdlp/linalg.cc
+    pdlp/hipdlp/logger.cc
+    pdlp/hipdlp/pdhg.cc
+    pdlp/hipdlp/restart.cc
+    pdlp/hipdlp/scaling.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
@@ -446,7 +452,6 @@ set(highs_headers
     ../extern/zstr/zstr.hpp
     interfaces/highs_c_api.h
     io/Filereader.h
-    io/FilereaderEms.h
     io/FilereaderLp.h
     io/FilereaderMps.h
     io/HighsIO.h
@@ -522,6 +527,15 @@ set(highs_headers
     parallel/HighsTask.h
     parallel/HighsTaskExecutor.h
     pdlp/CupdlpWrapper.h
+    pdlp/HiPdlpTimer.h
+    pdlp/HiPdlpWrapper.h
+    pdlp/hipdlp/defs.hpp
+    pdlp/hipdlp/linalg.hpp
+    pdlp/hipdlp/logger.hpp
+    pdlp/hipdlp/pdhg.hpp
+    pdlp/hipdlp/restart.hpp
+    pdlp/hipdlp/scaling.hpp
+    pdlp/hipdlp/solver_results.hpp
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h

@@ -9,7 +9,7 @@ void inversePerm(const std::vector<Int>& perm, std::vector<Int>& iperm) {
   // perm[i] : i-th entry to use in the new order.
   // iperm[i]: where entry i is located in the new order.
 
-  for (Int i = 0; i < perm.size(); ++i) {
+  for (Int i = 0; i < static_cast<Int>(perm.size()); ++i) {
     iperm[perm[i]] = i;
   }
 }
@@ -208,12 +208,94 @@ Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
   return result;
 }
 
+Int maxDepthTree(const std::vector<Int>& parent) {
+  Int max_depth = 0;
+  Int n = parent.size();
+  std::vector<Int> depth(n, -1);
+  for (Int i = 0; i < n; ++i) {
+    Int node = i;
+    Int value = 1;
+    while (node != -1) {
+      if (value > depth[node]) {
+        depth[node] = value;
+      } else
+        break;
+
+      ++value;
+      node = parent[node];
+    }
+    if (parent[i] == -1) max_depth = std::max(max_depth, depth[i]);
+  }
+  return max_depth;
+}
+
+void fullFromLower(const std::vector<Int>& ptrL, const std::vector<Int>& rowsL,
+                   std::vector<Int>& ptrF, std::vector<Int>& rowsF) {
+  // Given a sparse matrix in lower triangular format, build the same matrix in
+  // full format, without diagonal entries.
+
+  std::vector<Int> rowsU(rowsL.size());
+  std::vector<Int> ptrU(ptrL.size());
+  transpose(ptrL, rowsL, ptrU, rowsU);
+
+  const Int n = ptrL.size() - 1;
+  std::vector<Int> work(n);
+  for (Int j = 0; j < n; ++j) {
+    for (Int el = ptrU[j]; el < ptrU[j + 1]; ++el) {
+      const Int i = rowsU[el];
+      if (i == j) continue;
+      ++work[j];
+      ++work[i];
+    }
+  }
+
+  ptrF.assign(n + 1, 0);
+  counts2Ptr(ptrF, work);
+  rowsF.assign(ptrF.back(), 0);
+  for (Int j = 0; j < n; ++j) {
+    for (Int el = ptrU[j]; el < ptrU[j + 1]; ++el) {
+      const Int i = rowsU[el];
+      if (i == j) continue;
+      rowsF[work[j]++] = i;
+      rowsF[work[i]++] = j;
+    }
+  }
+}
+
+double snFlops(double size, double clique_size) {
+  return (size + clique_size) * (size + clique_size) * size -
+         (size + clique_size) * size * (size + 1) +
+         size * (size + 1) * (2 * size + 1) / 6;
+}
+double snSpops(double clique_size) {
+  return clique_size * (clique_size + 1) / 2;
+}
+
 Clock::Clock() { start(); }
 void Clock::start() { t0 = std::chrono::high_resolution_clock::now(); }
 double Clock::stop() const {
   auto t1 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> d = t1 - t0;
   return d.count();
+}
+
+TaskGroupSpecial::~TaskGroupSpecial() {
+  // Using TaskGroup may throw an exception when tasks are cancelled. Not sure
+  // exactly why this happens, but for now this fix seems to work.
+
+  // No virtual destructor in TaskGroup. Do not call this class via pointer to
+  // the base!
+
+  cancel();
+
+  while (true) {
+    try {
+      taskWait();
+      break;
+    } catch (HighsTask::Interrupt) {
+      continue;
+    }
+  }
 }
 
 }  // namespace hipo
