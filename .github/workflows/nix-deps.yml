@@ -45,17 +45,15 @@ jobs:
               let
                 nixpkgs = builtins.getFlake "github:NixOS/nixpkgs/nixos-unstable";
                 localSrc = builtins.getEnv "GITHUB_WORKSPACE";
-
                 overlay = final: prev: {
                   highs = prev.highs.overrideAttrs (old: {
-                    src = prev.lib.cleanSource localSrc;
+                    src = final.lib.cleanSource localSrc;
                   });
                 };
-
                 pkgs = nixpkgs.legacyPackages.x86_64-linux.extend overlay;
               in
                 pkgs.lib.getAttrFromPath
-                  (prev.lib.strings.splitString "." "${{ matrix.package }}")
+                  (pkgs.lib.strings.splitString "." "${{ matrix.package }}")
                   pkgs
             '
 
