@@ -7,6 +7,39 @@ on:
   workflow_dispatch:
 
 jobs:
+
+  test-highspy:
+    name: pytest HiGHS own test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout HiGHS repo
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            substituters = https://cache.nixos.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+      - name: Run pytest against local highspy
+        run: |
+          nix shell --impure \
+            --expr '
+              let
+                nixpkgs = builtins.getFlake "github:NixOS/nixpkgs/nixos-unstable";
+                localSrc = builtins.getEnv "GITHUB_WORKSPACE";
+                overlay = final: prev: {
+                  highs = prev.highs.overrideAttrs (old: {
+                    src = prev.lib.cleanSource localSrc;
+                  });
+                };
+                pkgs = nixpkgs.legacyPackages.x86_64-linux.extend overlay;
+              in pkgs.python3.withPackages (ps: [ ps.highspy ps.pytest ])
+            ' --command pytest test/test_highspy.py -v
+
   test-revdeps:
     name: Build ${{ matrix.package }} against local HiGHS
     runs-on: ubuntu-latest
@@ -72,4 +105,4 @@ jobs:
                 };
                 pkgs = nixpkgs.legacyPackages.x86_64-linux.extend overlay;
               in pkgs.python3.withPackages (ps: [ ps.highspy ])
-            ' --command python3 -c "import highspy; print(highspy.__version__)"
+            ' --command python3 -c "import highspy; h = highspy.Highs(); h.silent(); h.addVar(0, 1); h.run(); assert h.getInfoValue('primal_solution_status')[1] == 2, 'solver failed'; print('OK')"
