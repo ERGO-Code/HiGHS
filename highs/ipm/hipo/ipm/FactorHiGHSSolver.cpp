@@ -177,8 +177,14 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
 // =========================================================================
 
 Int FactorHiGHSSolver::setup() {
+  Clock clock;
+
   if (Int status = setNla()) return status;
   setParallel();
+
+  std::stringstream log_stream;
+  log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
+  log_.print(log_stream);
 
   S_.print(log_, log_.debug(1));
 
@@ -206,8 +212,7 @@ Int FactorHiGHSSolver::chooseNla() {
     bool expect_AS_much_cheaper =
         model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
 
-    if ( expect_AS_much_cheaper || model_.nonSeparableQp() ||
-        model_.m() == 0) {
+    if (expect_AS_much_cheaper || model_.nonSeparableQp() || model_.m() == 0) {
       failure_NE = true;
       log_.printDevInfo("NE skipped\n");
     } else {
@@ -343,8 +348,8 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   if (options_.ordering != kHighsChooseString)
     orderings_to_try.push_back(options_.ordering);
   else {
-    orderings_to_try.push_back("amd");
-    orderings_to_try.push_back("metis");
+    orderings_to_try.push_back(kHipoAmdString);
+    orderings_to_try.push_back(kHipoMetisString);
     // rcm is much worse in general, so no point in trying for now
   }
 
