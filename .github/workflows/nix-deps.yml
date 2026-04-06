@@ -48,14 +48,6 @@ jobs:
 
                 overlay = final: prev: {
                   highs = prev.highs.overrideAttrs (old: {
-                    # Pull version from your Version.txt, same as your flake does
-                    version =
-                      let
-                        f  = builtins.readFile "${localSrc}/Version.txt";
-                        ls = prev.lib.strings.splitString "\n" f;
-                        t  = prev.lib.lists.take 3 ls;
-                        vs = map (v: builtins.elemAt (prev.lib.strings.splitString "=" v) 1) t;
-                      in prev.lib.concatStringsSep "." vs;
                     src = prev.lib.cleanSource localSrc;
                   });
                 };
