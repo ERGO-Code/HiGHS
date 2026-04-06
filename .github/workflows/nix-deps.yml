@@ -38,7 +38,7 @@ jobs:
                 };
                 pkgs = nixpkgs.legacyPackages.x86_64-linux.extend overlay;
               in pkgs.python3.withPackages (ps: [ ps.highspy ps.pytest ])
-            ' --command pytest test/test_highspy.py -v
+            ' --command pytest tests/test_highspy.py -v
 
   test-revdeps:
     name: Build ${{ matrix.package }} against local HiGHS
