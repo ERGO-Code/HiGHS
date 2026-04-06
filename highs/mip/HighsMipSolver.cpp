@@ -72,7 +72,10 @@ HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
-
+  // Start the timer local to HighsMipSolver - independent of the
+  // timer passed from Highs as a pointer that's used in
+  // HighsMipAnalysis
+  this->timer_.start();
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
     improving_solution_file_ =
@@ -1001,7 +1004,6 @@ void HighsMipSolver::initialiseAnalysis(const HighsMipAnalysis* from_analysis) {
     this->analysis_.timer_ = &this->timer_;
     this->analysis_.sub_solver_call_time_ = &this->sub_solver_call_time_;
     this->analysis_.setupMipTime(*options_mip_);
-    this->timer_.start();
   }
   this->analysis_.submip_ = this->submip;
 }
