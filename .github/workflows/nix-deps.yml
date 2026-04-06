@@ -1,0 +1,85 @@
+name: Test nixpkgs reverse dependencies
+
+on:
+  pull_request:
+  push:
+    # branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  test-revdeps:
+    name: Build ${{ matrix.package }} against local HiGHS
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - highs
+          - sleqp
+          - or-tools
+          - casadi
+          - python3Packages.highspy
+          - python3Packages.qpsolvers
+          - python3Packages.cvxpy
+
+    steps:
+      - name: Checkout HiGHS repo
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            # Cache hits dramatically speed up revdep builds since only
+            # highs itself needs to be rebuilt from source
+            substituters = https://cache.nixos.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+      - name: Build ${{ matrix.package }} with local HiGHS overlay
+        run: |
+          nix build --print-build-logs --no-link \
+            --impure \
+            --expr '
+              let
+                nixpkgs = builtins.getFlake "github:NixOS/nixpkgs/nixos-unstable";
+                localSrc = builtins.getEnv "GITHUB_WORKSPACE";
+
+                overlay = final: prev: {
+                  highs = prev.highs.overrideAttrs (old: {
+                    # Pull version from your Version.txt, same as your flake does
+                    version =
+                      let
+                        f  = builtins.readFile "${localSrc}/Version.txt";
+                        ls = prev.lib.strings.splitString "\n" f;
+                        t  = prev.lib.lists.take 3 ls;
+                        vs = map (v: builtins.elemAt (prev.lib.strings.splitString "=" v) 1) t;
+                      in prev.lib.concatStringsSep "." vs;
+                    src = prev.lib.cleanSource localSrc;
+                  });
+                };
+
+                pkgs = nixpkgs.legacyPackages.x86_64-linux.extend overlay;
+              in
+                pkgs.lib.getAttrFromPath
+                  (prev.lib.strings.splitString "." "${{ matrix.package }}")
+                  pkgs
+            '
+
+      - name: Smoke-test highspy import (Python packages only)
+        if: contains(matrix.package, 'python3Packages')
+        run: |
+          nix run --impure \
+            --expr '
+              let
+                nixpkgs = builtins.getFlake "github:NixOS/nixpkgs/nixos-unstable";
+                localSrc = builtins.getEnv "GITHUB_WORKSPACE";
+                overlay = final: prev: {
+                  highs = prev.highs.overrideAttrs (old: {
+                    src = prev.lib.cleanSource localSrc;
+                  });
+                };
+                pkgs = nixpkgs.legacyPackages.x86_64-linux.extend overlay;
+              in pkgs.python3.withPackages (ps: [ ps.highspy ])
+            ' -- -c "import highspy; print(highspy.__version__)"
