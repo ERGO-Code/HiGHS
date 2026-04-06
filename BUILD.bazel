@@ -33,19 +33,30 @@ cc_library(
 
 cuda_library(
     name = "cupdlp",
-    srcs = glob([
-        "highs/pdlp/cupdlp/cuda/*.cu",
-        "highs/pdlp/hipdlp/*.cu",
-    ]),
-    hdrs = glob([
-        "highs/pdlp/cupdlp/cuda/*.cuh",
-    ]),
-    defines = ["CUPDLP_GPU"],
-    target_compatible_with = requires_cuda(),
-    deps = [
-        "@local_cuda//:cublas",
-        "@local_cuda//:cusparse",
-    ],
+    srcs = select({
+        ":cupdlp_gpu_enabled": glob([
+            "highs/pdlp/cupdlp/cuda/*.cu",
+            "highs/pdlp/hipdlp/*.cu",
+        ]),
+        "//conditions:default": [],
+    }),
+    hdrs = select({
+        ":cupdlp_gpu_enabled": glob([
+            "highs/pdlp/cupdlp/cuda/*.cuh",
+        ]),
+        "//conditions:default": [],
+    }),
+    defines = select({
+        ":cupdlp_gpu_enabled": ["CUPDLP_GPU"],
+        "//conditions:default": [],
+    }),
+    deps = select({
+        ":cupdlp_gpu_enabled": [
+            "@local_cuda//:cublas",
+            "@local_cuda//:cusparse",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(
