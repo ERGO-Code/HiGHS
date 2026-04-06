@@ -122,7 +122,7 @@ class HighsTask {
     uintptr_t xormask = reinterpret_cast<uintptr_t>(owner) ^
                         reinterpret_cast<uintptr_t>(stealer);
     uintptr_t state =
-        metadata.stealer.fetch_xor(xormask, std::memory_order_relaxed);
+        metadata.stealer.fetch_xor(xormask, std::memory_order_acquire);
 
     assert(stealer != nullptr);
 

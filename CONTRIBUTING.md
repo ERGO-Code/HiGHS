@@ -25,3 +25,7 @@ HiGHS is open source for distribution rather than contribution. This applies par
 Please note that any pull requests to HiGHS must be made to the `latest` branch, so that full testing can take place befor updating `master`. This ensures that `master` is always good to be downloaded by users.
 
 Note that, under the terms of the MIT license, by contributing to HiGHS you assign away your rights to the content of your contribution.
+
+## AI generated contributions ##
+
+Whilst AI may be valuable for generating and communicating suggestions for code and build system developments, the review of AI-generated pull requests (other than the most trivial) would require resources that we don't have, so will not be accepted. If the suggestions are good, they will be implemented by HiGHS developers without the use of AI. 

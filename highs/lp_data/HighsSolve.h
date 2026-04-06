@@ -22,6 +22,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
                                           const HighsModel& model,
                                           HighsUserScaleData& user_scale_data);
 bool useIpm(const std::string& solver);
+bool usePdlp(const std::string& solver);
 bool useHipo(const HighsOptions& options,
              const std::string& specific_solver_option, const HighsLp& lp,
              const bool logging = false);

@@ -375,7 +375,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Ensure that any non-zero Hessian of dimension less than the
   // number of columns in the model is completed
   if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
-  //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
+  // if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
   //    writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
 
   // Clear solver status, solution, basis and info associated with any
@@ -4471,26 +4471,29 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         }
       } else {
         this->basis_.clear();
-        info_.objective_function_value =
-            model_.lp_.objectiveValue(solution_.col_value);
-        const bool is_qp = this->model_.isQp();
-        assert(!is_qp);
-        const bool get_residuals = true;
-        getKktFailures(this->options_, is_qp, this->model_.lp_,
-                       this->model_.lp_.col_cost_, this->solution_, this->info_,
-                       get_residuals);
-        if (info_.num_primal_infeasibilities == 0 &&
-            info_.num_dual_infeasibilities == 0) {
-          model_status_ = HighsModelStatus::kOptimal;
-        } else {
-          model_status_ = HighsModelStatus::kUnknown;
-        }
-        highsLogUser(
-            options_.log_options, HighsLogType::kInfo,
-            "\nPure postsolve yields primal %ssolution, but no basis: model "
-            "status is %s\n",
-            solution_.dual_valid ? "and dual " : "",
-            modelStatusToString(model_status_).c_str());
+        // callLpKktCheck will set LPs with model status
+        // HighsModelStatus::kUnknown; to HighsModelStatus::kOptimal
+        // if relative primal and dual infeasibilities, and the
+        // relative primal-dual objective error, are acceptable
+        //
+        // If there are no dual values, then dual infeasibility
+        // measures and the primal-dual objective error are undefined
+        // so set to infinity
+        //
+        // To prevent this from being done with MIPs - if spurious
+        // dual values have been set by a user! - set their model
+        // status to HighsModelStatus::kNotset
+        this->model_status_ = this->model_.lp_.isMip()
+                                  ? HighsModelStatus::kNotset
+                                  : HighsModelStatus::kUnknown;
+        this->callLpKktCheck(this->model_.lp_);
+        info_.valid = true;
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "\nPure postsolve yields primal %s basis: model "
+                     "status is %s\n",
+                     solution_.dual_valid ? "and dual solution, but no"
+                                          : "but no dual solution or",
+                     modelStatusToString(model_status_).c_str());
       }
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,

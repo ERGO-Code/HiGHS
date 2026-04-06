@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;  // false;  //
+const bool dev_run = false;  // true;  //
 const bool write_model = false;
 
 const double inf = kHighsInf;
@@ -490,7 +490,7 @@ TEST_CASE("lp-get-iis-time-limit-feasible", "[iis]") {
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
@@ -533,7 +533,7 @@ TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
       std::string(HIGHS_DIR) + "/check/instances/forest6.mps";
 
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
@@ -1021,4 +1021,43 @@ TEST_CASE("write-iis_model-file", "[iis]") {
   std::remove(test_mps.c_str());
   std::remove(test_sol.c_str());
   h.resetGlobalScheduler(true);
+}
+
+char iis_printed_log[kIoBufferSize];
+
+/*
+static void iisLogCallback0(HighsLogType type, const char* message,
+                            void* user_log_callback_data) {
+  if (dev_run) printf("iisLogCallback0: %s", message);
+}
+*/
+
+HighsCallbackFunctionType iisLogCallback1 =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      if (dev_run) printf("iisLogCallback1: %s", message.c_str());
+    };
+
+TEST_CASE("iis-callback", "[highs-callback]") {
+  std::string model = "galenet";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs highs;
+  highs.setOptionValue("log_to_console", dev_run);
+  HighsInt iis_strategy = kIisStrategyFromLp + kIisStrategyIrreducible;
+  highs.setOptionValue("iis_strategy", iis_strategy);
+  // Set both the deprecated and current logging callbacks
+  // REQUIRE(highs.setLogCallback(iisLogCallback0) == HighsStatus::kOk);
+  REQUIRE(highs.setCallback(iisLogCallback1) == HighsStatus::kOk);
+
+  REQUIRE(highs.startCallback(kCallbackLogging) == HighsStatus::kOk);
+  REQUIRE(highs.startCallback(kCallbackSimplexInterrupt) == HighsStatus::kOk);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  HighsIis iis;
+  REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
