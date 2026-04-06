@@ -735,11 +735,11 @@ class HighsOptions : public HighsOptionsStruct {
         &presolve, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kSolverString,
-                               "LP solver option: \"choose\", \"simplex\", "
-                               "\"ipm\", \"ipx\", \"hipo\" or \"pdlp\"",
-                               advanced, &solver, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kSolverString,
+        "LP/QP solver: \"choose\", \"simplex\", "
+        "\"ipm\", \"ipx\", \"hipo\", \"pdlp\", \"qpasm\" or \"hipdlp\", ",
+        advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -798,33 +798,38 @@ class HighsOptions : public HighsOptionsStruct {
         "kkt_tolerance",
         "If changed from its default value, this tolerance is used for all "
         "feasibility and optimality (KKT) measures",
-        advanced, &kkt_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "primal_feasibility_tolerance", "Primal feasibility tolerance",
-        advanced, &primal_feasibility_tolerance, 1e-10, kDefaultKktTolerance,
+        advanced, &kkt_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
+        "primal_feasibility_tolerance", "Primal feasibility tolerance",
+        advanced, &primal_feasibility_tolerance, kMinimumKktTolerance,
+        kDefaultKktTolerance, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
         "dual_feasibility_tolerance", "Dual feasibility tolerance", advanced,
-        &dual_feasibility_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        &dual_feasibility_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "primal_residual_tolerance", "Primal residual tolerance", advanced,
-        &primal_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        &primal_residual_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "dual_residual_tolerance", "Dual residual tolerance", advanced,
-        &dual_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        &dual_residual_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "optimality_tolerance", "Optimality tolerance", advanced,
-        &optimality_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
+        &optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1195,7 +1200,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "mip_feasibility_tolerance", "MIP integrality tolerance", advanced,
-        &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
+        &mip_feasibility_tolerance, kMinimumMipTolerance, kDefaultMipTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1274,7 +1280,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
-        &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        &ipm_optimality_tolerance, kMinimumIpmTolerance, kDefaultIpmTolerance,
         kHighsInf);
     records.push_back(record_double);
 
@@ -1332,7 +1338,7 @@ class HighsOptions : public HighsOptionsStruct {
         "Restart strategy for PDLP solver: 0 => off; "
         "1 => fixed; 2 => adaptive; 3 => Halpern",
         advanced, &pdlp_restart_strategy, kPdlpRestartStrategyMin,
-        kPdlpRestartStrategyHalpern, kPdlpRestartStrategyMax);
+        kPdlpRestartStrategyAdaptive, kPdlpRestartStrategyMax);
     records.push_back(record_int);
 
     record_int =
@@ -1347,26 +1353,28 @@ class HighsOptions : public HighsOptionsStruct {
         "Step size strategy for PDLP solver: 0 => fixed; "
         "1 => adaptive; 2 => Malitsky-Pock; 3 => PID",
         advanced, &pdlp_step_size_strategy, kPdlpStepSizeStrategyMin,
-        kPdlpStepSizeStrategyPid, kPdlpStepSizeStrategyMax);
+        kPdlpStepSizeStrategyAdaptive, kPdlpStepSizeStrategyMax);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
         "pdlp_optimality_tolerance", "PDLP optimality tolerance", advanced,
-        &pdlp_optimality_tolerance, 1e-12, kDefaultKktTolerance, kHighsInf);
+        &pdlp_optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
-        "qp_iteration_limit", "Iteration limit for QP solver", advanced,
-        &qp_iteration_limit, 0, kHighsIInf, kHighsIInf);
+        "qp_iteration_limit", "Iteration limit for the active set QP solver",
+        advanced, &qp_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("qp_nullspace_limit",
-                                     "Nullspace limit for QP solver", advanced,
-                                     &qp_nullspace_limit, 0, 4000, kHighsIInf);
+    record_int = new OptionRecordInt(
+        "qp_nullspace_limit", "Nullspace limit for the active set QP solver",
+        advanced, &qp_nullspace_limit, 0, 4000, kHighsIInf);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "qp_regularization_value", "Regularization value added to the Hessian",
+        "qp_regularization_value",
+        "Regularization value added to the Hessian in the active set QP solver",
         advanced, &qp_regularization_value, 0, kHessianRegularizationValue,
         kHighsInf);
     records.push_back(record_double);
@@ -1630,7 +1638,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "start_crossover_tolerance",
         "Tolerance to be satisfied before IPM crossover will start", advanced,
-        &start_crossover_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        &start_crossover_tolerance, kMinimumIpmTolerance, kDefaultIpmTolerance,
         kHighsInf);
     records.push_back(record_double);
 

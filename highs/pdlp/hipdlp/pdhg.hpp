@@ -33,8 +33,8 @@
 #include "scaling.hpp"
 #include "solver_results.hpp"
 
-const bool use_cupdlpx = true;
-const bool temp_setting = true;
+const bool kUseCupdlpx = true;
+const bool kTempSetting = true;
 
 // --- GPU Macros (Defined at file scope for visibility) ---
 #ifdef CUPDLP_GPU
@@ -78,7 +78,7 @@ struct StepSizeConfig;
 
 class PDLPSolver {
  public:
-  // --- Setup & Main Interface ---
+  // --- setup & Main Interface ---
   void setup(const HighsOptions& options, HighsTimer& timer);
   void passLp(const HighsLp* lp) { original_lp_ = lp; }
   void preprocessLp();
@@ -94,8 +94,8 @@ class PDLPSolver {
   // --- Getters ---
   TerminationStatus getTerminationCode() const { return results_.term_code; }
   HighsInt getIterationCount() const { return final_iter_count_; }
-  HighsInt getnCol() const { return lp_.num_col_; }
-  HighsInt getnRow() const { return lp_.num_row_; }
+  HighsInt getNumCol() const { return lp_.num_col_; }
+  HighsInt getNumRow() const { return lp_.num_row_; }
 
 #if PDLP_DEBUG_LOG
   FILE* debug_pdlp_log_file_ = nullptr;
@@ -113,17 +113,19 @@ class PDLPSolver {
 
   // Returns true if solver should terminate, false if it should continue
   // Updates 'status' if returning true.
-  bool runConvergenceCheckAndRestart(size_t iter, std::vector<double>& output_x,
-                                     std::vector<double>& output_y,
-                                     TerminationStatus& status);
-
+  bool runConvergenceCheck(size_t iter, std::vector<double>& output_x,
+                           std::vector<double>& output_y,
+                           TerminationStatus& status);
+  bool checkRestartCriteria(double current_fpe, double initial_fpe,
+                            double last_trial_fpe, int halpern_iteration,
+                            int final_iter_count);
   void performPdhgStep();
   void performHalpernStep();
   void accumulateAverages(size_t iter);
   void prepareNextIteration();  // Swaps pointers/vectors
 
   // --- Convergence & Math Helpers ---
-  double PowerMethod();
+  double powerMethod();
   void initializeStepSizes();
 
   // Convergence checks
@@ -178,7 +180,7 @@ class PDLPSolver {
 
   // Other utilities
   void printConstraintInfo();
-  bool CheckNumericalStability(const std::vector<double>& delta_x,
+  bool checkNumericalStability(const std::vector<double>& delta_x,
                                const std::vector<double>& delta_y);
   double computeMovement(const std::vector<double>& delta_primal,
                          const std::vector<double>& delta_dual);
@@ -249,9 +251,7 @@ class PDLPSolver {
   double best_primal_dual_residual_gap_ =
       std::numeric_limits<double>::infinity();
 
-  HighsTimer* highs_timer_p;
-  double last_logger_time = -kHighsInf;
-  const double kHipdlpLoggerFrequency = 5.0;
+  HighsTimer* highs_timer_p_;
 
 #if PDLP_PROFILE
   HipdlpTimer hipdlp_timer_;
