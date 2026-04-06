@@ -60,7 +60,7 @@ jobs:
       - name: Smoke-test highspy import (Python packages only)
         if: contains(matrix.package, 'python3Packages')
         run: |
-          nix run --impure \
+          nix shell --impure \
             --expr '
               let
                 nixpkgs = builtins.getFlake "github:NixOS/nixpkgs/nixos-unstable";
@@ -72,4 +72,4 @@ jobs:
                 };
                 pkgs = nixpkgs.legacyPackages.x86_64-linux.extend overlay;
               in pkgs.python3.withPackages (ps: [ ps.highspy ])
-            ' -- -c "import highspy; print(highspy.__version__)"
+            ' --command python3 -c "import highspy; print(highspy.__version__)"
