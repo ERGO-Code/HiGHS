@@ -1240,10 +1240,7 @@ HighsStatus Highs::calledOptimizeModel() {
       if (!solverValidForMip(options_.solver))
         warnSolverInvalid(options_, "MIP");
       global_sub_solver_call_time_->start(kSubSolverMip);
-      sub_solver_call_time_.num_call[kSubSolverMip]++;
-      sub_solver_call_time_.run_time[kSubSolverMip] = -timer_.read();
       call_status = callSolveMip();
-      sub_solver_call_time_.run_time[kSubSolverMip] += timer_.read();
       global_sub_solver_call_time_->stop(kSubSolverMip);
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
@@ -3917,21 +3914,9 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     // should be timed as such - and don't forget to indicate that in
     // optimizeModel when the HighsMipSolver instance is created
     this->global_sub_solver_call_time_->setSubMip(true);
-    HighsSubSolverCallTime sub_solver_call_time = this->sub_solver_call_time_;
-    double mip_solve_time = -sub_solver_call_time_.run_time[kSubSolverMip];
     return_status = this->optimizeModel();
     this->global_sub_solver_call_time_->setSubMip(false);
     
-    if (model_.lp_.isMip()) {
-      // If a MIP was solved, it counts as a sub-MIP, but the MIP and
-      // LP call-time data will be recorded as if it were a MIP so,
-      // extract the MIP solve time, revert
-      // this->sub_solver_call_time_ and update the sub-MIP record
-      mip_solve_time += sub_solver_call_time_.run_time[kSubSolverMip];
-      this->sub_solver_call_time_ = sub_solver_call_time;
-      this->sub_solver_call_time_.num_call[kSubSolverSubMip]++;
-      this->sub_solver_call_time_.run_time[kSubSolverSubMip] += mip_solve_time;
-    }
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
   }
@@ -4005,13 +3990,10 @@ HighsStatus Highs::callSolveQp() {
 
   if (use_hipo) {
 #ifdef HIPO
-    sub_solver_call_time_.num_call[kSubSolverHipo]++;
-    sub_solver_call_time_.run_time[kSubSolverHipo] = -timer_.read();
     this->global_sub_solver_call_time_->start(kSubSolverHipo);
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
     this->global_sub_solver_call_time_->stop(kSubSolverHipo);
-    sub_solver_call_time_.run_time[kSubSolverHipo] += timer_.read();
     if (return_status == HighsStatus::kError) return return_status;
 #else
     // shouldn't be possible to reach here
@@ -4022,8 +4004,6 @@ HighsStatus Highs::callSolveQp() {
     //
     // Run the QP solver
     this->global_sub_solver_call_time_->start(kSubSolverQpAsm);
-    sub_solver_call_time_.num_call[kSubSolverQpAsm]++;
-    sub_solver_call_time_.run_time[kSubSolverQpAsm] = -timer_.read();
 
     Instance instance(lp.num_col_, lp.num_row_);
 
@@ -4154,7 +4134,6 @@ HighsStatus Highs::callSolveQp() {
     QpAsmStatus status = solveqp(instance, settings, stats, model_status_,
                                  basis_, solution_, timer_);
     this->global_sub_solver_call_time_->stop(kSubSolverQpAsm);
-    sub_solver_call_time_.run_time[kSubSolverQpAsm] += timer_.read();
 
     // QP solver can fail, so should return something other than
     // QpAsmStatus::kOk
@@ -4221,7 +4200,6 @@ HighsStatus Highs::callSolveMip() {
   HighsStatus return_status =
       highsStatusFromHighsModelStatus(solver.modelstatus_);
   model_status_ = solver.modelstatus_;
-  this->sub_solver_call_time_.add(solver.sub_solver_call_time_);
   // Extract the solution
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution

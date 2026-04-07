@@ -4279,8 +4279,6 @@ void HighsSubSolverCallTime::initialise(HighsTimer& timer_) {
   this->submip.assign(num_thread, false);
   this->start_time.assign(num_thread, kHighsInf);
   this->clock_running.assign(num_thread, -kHighsIInf);
-  this->num_call.assign(kSubSolverCount, 0);
-  this->run_time.assign(kSubSolverCount, 0);
   this->name.assign(kSubSolverCount, "");
   this->name[kSubSolverDuSimplexBasis] = "Du simplex (basis)";
   this->name[kSubSolverDuSimplexNoBasis] = "Du simplex (no basis)";
@@ -4304,32 +4302,6 @@ void HighsSubSolverCallTime::initialise(HighsTimer& timer_) {
 
 void HighsSubSolverCallTime::setSubMip(const bool submip) {
   this->submip[highs::parallel::thread_num()] = submip;
-}
-
-void HighsSubSolverCallTime::add(
-    const HighsSubSolverCallTime& sub_solver_call_time,
-    const bool analytic_centre) {
-  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
-    HighsInt ToIx = Ix;
-    if (Ix == kSubSolverHipo) {
-      if (analytic_centre) ToIx = kSubSolverHipoAc;
-    } else if (Ix == kSubSolverIpx) {
-      if (analytic_centre) ToIx = kSubSolverIpxAc;
-    }
-    this->num_call[ToIx] += sub_solver_call_time.num_call[Ix];
-    this->run_time[ToIx] += sub_solver_call_time.run_time[Ix];
-  }
-}
-
-void HighsSubSolverCallTime::update(const HighsInt sub_solver_clock,
-				    const double time) {
-  assert(0 <= sub_solver_clock && sub_solver_clock < kSubSolverCount);
-  assert(time >= 0);
-  this->num_call[sub_solver_clock]++;
-  this->run_time[sub_solver_clock] += time;
-  HighsInt local_thread_num = highs::parallel::thread_num();
-  this->record[local_thread_num].num_call[sub_solver_clock]++;
-  this->record[local_thread_num].run_time[sub_solver_clock] += time;
 }
 
 void HighsSubSolverCallTime::start(const HighsInt sub_solver_clock) {
@@ -4360,6 +4332,7 @@ void HighsSubSolverCallTime::stop(const HighsInt sub_solver_clock) {
 }
 
 void Highs::reportSubSolverCallTime() const {
+  /*
   HighsInt num_thread = highs::parallel::num_threads();
   double mip_time = 0;
   const std::vector<HighsSubSolverCallTimeRecord>& record = this->sub_solver_call_time_.record;
@@ -4367,7 +4340,6 @@ void Highs::reportSubSolverCallTime() const {
     mip_time = std::max(record[thread_num].run_time[kSubSolverMip], mip_time);
   printf("Highs::reportSubSolverCallTime() mip_time = %g\n", mip_time);
 			
-  mip_time = this->sub_solver_call_time_.run_time[kSubSolverMip];
   std::stringstream ss;
   std::vector<bool> used_sub_solver;
   std::vector<HighsInt> used_thread;
@@ -4445,4 +4417,5 @@ void Highs::reportSubSolverCallTime() const {
 		   ss.str().c_str());
     }
   }
+  */
 }

@@ -412,18 +412,6 @@ void HighsMipSolverData::startAnalyticCenterComputation(
       ipm.setOptionValue("solver", kIpxString);
       ipm.optimizeLp();
     }
-    if (!mipsolver.submip) {
-      const HighsSubSolverCallTime& sub_solver_call_time =
-          ipm.getSubSolverCallTime();
-      const bool analytic_centre = true;
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
-                                               analytic_centre);
-      // Go through sub_solver_call_time to update any MIP clocks
-      const bool valid_basis = false;
-      const bool use_presolve = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                         use_presolve, analytic_centre);
-    }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
     analyticCenter = sol;
@@ -1165,17 +1153,6 @@ try_again:
     // HiPO or IPX to solve an LP without a basis, use simplex
     tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.optimizeLp();
-    if (!mipsolver.submip) {
-      const HighsSubSolverCallTime& sub_solver_call_time =
-          tmpSolver.getSubSolverCallTime();
-      const bool analytic_centre = false;
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
-                                               analytic_centre);
-      // Go through sub_solver_call_time to update any MIP clocks
-      const bool valid_basis = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                         use_presolve, analytic_centre);
-    }
     this->total_repair_lp_iterations =
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {

@@ -563,16 +563,6 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
     lpsolver.optimizeLp();
-    if (!mipsolver.submip) {
-      const HighsSubSolverCallTime& sub_solver_call_time =
-          lpsolver.getSubSolverCallTime();
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
-      // Go through sub_solver_call_time to update any MIP clocks
-      const bool valid_basis = true;
-      const bool use_presolve = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                         use_presolve);
-    }
   }
 }
 
@@ -1155,17 +1145,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
-  if (!mipsolver.submip) {
-    const HighsSubSolverCallTime& sub_solver_call_time =
-        lpsolver.getSubSolverCallTime();
-    mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
-    // Go through sub_solver_call_time to update any MIP clocks
-    std::string presolve;
-    lpsolver.getOptionValue("presolve", presolve);
-    const bool use_presolve = presolve != kHighsOffString;
-    mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                       use_presolve);
-  }
   if (mipsolver.analysis_.analyse_mip_time && !mipsolver.submip &&
       !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -1366,14 +1345,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
           ipm.setOptionValue("solver", kIpxString);
           ipm.optimizeLp();
         }
-        const HighsSubSolverCallTime& sub_solver_call_time =
-            ipm.getSubSolverCallTime();
-        mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
-        // Go through sub_solver_call_time to update any MIP clocks
-        const bool valid_basis = false;
-        mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                           use_presolve);
-
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }

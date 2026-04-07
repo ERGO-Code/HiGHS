@@ -45,43 +45,32 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // will generally be one after simplex, so have to deduce whether
   // there was one before
   HighsInt sub_solver_ix = -1;
-  if (std::signbit(solver_object.sub_solver_call_time_
-                       .run_time[kSubSolverDuSimplexBasis]))
+  HighsInt local_thread_num = highs::parallel::thread_num();
+  HighsSubSolverCallTimeRecord& use_record =
+    solver_object.sub_solver_call_time_.submip[local_thread_num] ?
+    solver_object.sub_solver_call_time_.submip_record[local_thread_num] :
+    solver_object.sub_solver_call_time_.record[local_thread_num];
+  if (std::signbit(use_record.run_time[kSubSolverDuSimplexBasis]))
     sub_solver_ix = kSubSolverDuSimplexBasis;
-  if (std::signbit(solver_object.sub_solver_call_time_
-                       .run_time[kSubSolverDuSimplexNoBasis]))
+  if (std::signbit(use_record.run_time[kSubSolverDuSimplexNoBasis]))
     sub_solver_ix = kSubSolverDuSimplexNoBasis;
-  if (std::signbit(solver_object.sub_solver_call_time_
-                       .run_time[kSubSolverPrSimplexBasis]))
+  if (std::signbit(use_record.run_time[kSubSolverPrSimplexBasis]))
     sub_solver_ix = kSubSolverPrSimplexBasis;
-  if (std::signbit(solver_object.sub_solver_call_time_
-                       .run_time[kSubSolverPrSimplexNoBasis]))
+  if (std::signbit(use_record.run_time[kSubSolverPrSimplexNoBasis]))
     sub_solver_ix = kSubSolverPrSimplexNoBasis;
   // Ensure that one clock has been identified
   assert(sub_solver_ix >= 0);
   // Check that only one clock was started
   if (sub_solver_ix != kSubSolverDuSimplexBasis)
-    assert(!std::signbit(solver_object.sub_solver_call_time_
-                             .run_time[kSubSolverDuSimplexBasis]));
+    assert(!std::signbit(use_record.run_time[kSubSolverDuSimplexBasis]));
   if (sub_solver_ix != kSubSolverDuSimplexNoBasis)
-    assert(!std::signbit(solver_object.sub_solver_call_time_
-                             .run_time[kSubSolverDuSimplexNoBasis]));
+    assert(!std::signbit(use_record.run_time[kSubSolverDuSimplexNoBasis]));
   if (sub_solver_ix != kSubSolverPrSimplexBasis)
-    assert(!std::signbit(solver_object.sub_solver_call_time_
-                             .run_time[kSubSolverPrSimplexBasis]));
+    assert(!std::signbit(use_record.run_time[kSubSolverPrSimplexBasis]));
   if (sub_solver_ix != kSubSolverPrSimplexNoBasis)
-    assert(!std::signbit(solver_object.sub_solver_call_time_
-                             .run_time[kSubSolverPrSimplexNoBasis]));
+    assert(!std::signbit(use_record.run_time[kSubSolverPrSimplexNoBasis]));
   // Update the call count and run time
-  //
-  // Bit of a hack so that HighsSubSolverCallTime::update can be used
-  // to update both serial and multi-threaded timers. Eventually when
-  // only the multi-threaded timer is used,
-  // HighsSubSolverCallTime::update won't be used, and the more
-  // natural local update will be used
-  const double tt = solver_object.sub_solver_call_time_.run_time[sub_solver_ix] + solver_object.timer_.read();
-  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] = 0;
-  solver_object.sub_solver_call_time_.update(sub_solver_ix, tt);
+  solver_object.sub_solver_call_time_.stop(sub_solver_ix);
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);
@@ -157,13 +146,14 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     }
   }
   assert(sub_solver_ix >= 0);
-  assert(solver_object.sub_solver_call_time_.run_time.size() > 0);
-  // Eventually use what's currently commented out
-  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] = -solver_object.timer_.read();
-  /*
   HighsInt local_thread_num = highs::parallel::thread_num();
-  solver_object.sub_solver_call_time_.record[local_thread_num].run_time[sub_solver_ix] = -solver_object.timer_.read();
-  */
+  HighsSubSolverCallTimeRecord& use_record =
+    solver_object.sub_solver_call_time_.submip[local_thread_num] ?
+    solver_object.sub_solver_call_time_.submip_record[local_thread_num] :
+    solver_object.sub_solver_call_time_.record[local_thread_num];
+  assert(use_record.run_time.size() > 0);
+  // Eventually use what's currently commented out
+  use_record.run_time[sub_solver_ix] = -solver_object.timer_.read();
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;

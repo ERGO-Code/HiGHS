@@ -78,7 +78,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       if (use_hipo) {
 #ifdef HIPO
         // Use HIPO to solve the LP
-	double tt = -solver_object.timer_.read();
         try {
           call_status = solveLpHipo(solver_object);
         } catch (const std::exception& exception) {
@@ -86,8 +85,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                       "Exception %s in solveLpHipo\n", exception.what());
           call_status = HighsStatus::kError;
         }
-	tt += solver_object.timer_.read();
-        sub_solver_call_time.update(kSubSolverHipo, tt);
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
 #else
@@ -96,7 +93,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         return HighsStatus::kError;
 #endif
       } else if (use_ipx) {
-	double tt = -solver_object.timer_.read();
         try {
           call_status = solveLpIpx(solver_object);
         } catch (const std::exception& exception) {
@@ -104,19 +100,12 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                       "Exception %s in solveLpIpx\n", exception.what());
           call_status = HighsStatus::kError;
         }
-	tt += solver_object.timer_.read();
-        sub_solver_call_time.update(kSubSolverIpx, tt);
-	
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpIpx");
       }
     } else {
       // Use cuPDLP-C or HiPDLP to solve the LP
       global_sub_solver_call_time->start(kSubSolverPdlp);
-      double tt = -solver_object.timer_.read();
-      sub_solver_call_time.num_call[kSubSolverPdlp]++;
-      sub_solver_call_time.run_time[kSubSolverPdlp] =
-          -solver_object.timer_.read();
       if (options.solver == kPdlpString) {
         try {
           call_status = solveLpCupdlp(solver_object);
@@ -134,8 +123,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
           call_status = HighsStatus::kError;
         }
       }
-      tt += solver_object.timer_.read();
-      sub_solver_call_time.update(kSubSolverPdlp, tt);
       global_sub_solver_call_time->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLp-Pdlp");

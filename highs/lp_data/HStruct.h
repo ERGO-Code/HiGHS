@@ -174,16 +174,10 @@ struct HighsSubSolverCallTime {
   std::vector<double> start_time;
   std::vector<HighsInt> clock_running;
   std::vector<std::string> name;
-  std::vector<HighsInt> num_call;
-  std::vector<double> run_time;
   // This vector is the data structure over threads
   std::vector<HighsSubSolverCallTimeRecord> record;
   std::vector<HighsSubSolverCallTimeRecord> submip_record;
   void initialise(HighsTimer& timer_);
-  void add(const HighsSubSolverCallTime& sub_solver_call_time,
-           const bool analytic_centre = false);
-  void update(const HighsInt sub_solver_clock,
-	      const double time);
   void start(const HighsInt sub_solver_clock);
   void stop(const HighsInt sub_solver_clock);
   void setSubMip(const bool submip);

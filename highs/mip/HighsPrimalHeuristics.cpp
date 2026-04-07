@@ -139,9 +139,6 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.dual_valid = false;
   if (!mipsolver.submip) {
     mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
-    // Remember to accumulate time for sub-MIP solves!
-    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] -=
-        mipsolver.timer_.read();
   }
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
@@ -162,9 +159,6 @@ bool HighsPrimalHeuristics::solveSubMip(
       std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
   if (!mipsolver.submip) {
     mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
-    mipsolver.sub_solver_call_time_.num_call[kSubSolverSubMip]++;
-    mipsolver.sub_solver_call_time_.run_time[kSubSolverSubMip] +=
-        mipsolver.timer_.read();
   }
   // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
   // pointer after calling HighsMipSolver::run(), and assert isn't
