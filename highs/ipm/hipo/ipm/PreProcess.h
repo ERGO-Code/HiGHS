@@ -65,7 +65,6 @@ struct PreprocessFixedVars : public PreprocessAction {
 };
 
 struct PreprocessScaling : public PreprocessAction {
-  Int CG_iter_scaling;
   bool scaled = false;
 
   void apply(Model& model) override;

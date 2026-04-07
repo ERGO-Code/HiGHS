@@ -388,20 +388,48 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   return false;
 }
 
+void HighsImplications::strengthenVarBound(VarBound& vbnd,
+                                           HighsInt multiplier) const {
+  // try to strengthen variable bound constraint x + a * y <= b by computing
+  // MIR cut. since x is a general-integer variable (with integral bounds) and
+  // its coefficient is 1.0, it is not shifted (or complemented). similarly,
+  // since y is a binary variable (i.e., its lower bound is 0.0), it does not
+  // need to be shifted, and we also do not try to complement it.
+  if (std::abs(vbnd.coef) == kHighsInf || std::abs(vbnd.constant) == kHighsInf)
+    return;
+  constexpr double f0min = 0.005;
+  constexpr double f0max = 0.995;
+  double downrhs = std::floor(multiplier * vbnd.constant);
+  double f0 = multiplier * vbnd.constant - downrhs;
+  if (f0 < f0min || f0 > f0max) return;
+  double downaj = std::floor(-multiplier * vbnd.coef + kHighsTiny);
+  double fj = -multiplier * vbnd.coef - downaj;
+  vbnd.constant = multiplier * downrhs;
+  vbnd.coef = -multiplier * (downaj + std::max(fj - f0, 0.0) / (1.0 - f0));
+};
+
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
                                double vubconstant) {
   addVUB(col, vubcol, vubcoef, vubconstant,
          mipsolver.mipdata_->getDomain().col_upper_[col]);
+         mipsolver.isColIntegral(col));
 }
 
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
-                               double vubconstant, double colupperbound) {
+                               double vubconstant, double colupperbound,
+                               bool colisintegral) {
   // assume that VUBs do not have infinite coefficients and infinite constant
   // terms since such VUBs effectively evaluate to NaN.
   assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
   if (tooManyVarBounds()) return;
 
   VarBound vub{vubcoef, vubconstant};
+
+  if (colisintegral) {
+    // try to strengthen VUB
+    strengthenVarBound(vub, HighsInt{1});
+    if (vub.coef == 0.0) return;
+  }
 
   mipsolver.mipdata_->debugSolution.checkVub(col, vubcol, vubcoef, vubconstant);
 
@@ -425,16 +453,24 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
                                double vlbconstant) {
   addVLB(col, vlbcol, vlbcoef, vlbconstant,
          mipsolver.mipdata_->getDomain().col_lower_[col]);
+         mipsolver.isColIntegral(col));
 }
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
-                               double vlbconstant, double colllowerbound) {
+                               double vlbconstant, double colllowerbound,
+                               bool colisintegral) {
   // assume that VLBs do not have infinite coefficients and infinite constant
   // terms since such VLBs effectively evaluate to NaN.
   assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
   if (tooManyVarBounds()) return;
 
   VarBound vlb{vlbcoef, vlbconstant};
+
+  if (colisintegral) {
+    // try to strengthen VLB
+    strengthenVarBound(vlb, HighsInt{-1});
+    if (vlb.coef == 0.0) return;
+  }
 
   mipsolver.mipdata_->debugSolution.checkVlb(col, vlbcol, vlbcoef, vlbconstant);
 

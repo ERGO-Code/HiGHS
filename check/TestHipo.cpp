@@ -13,20 +13,27 @@
 
 const bool dev_run = false;
 
-void runHipoTest(Highs& highs, const std::string& model,
-                 const double expected_obj) {
+void runHipoTest(
+    Highs& highs, const std::string& model, const double expected_obj,
+    const HighsModelStatus& expected_model_status = HighsModelStatus::kOptimal,
+    const std::string& presolve = kHighsOnString) {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("solver", kHipoString);
   highs.setOptionValue("timeless_log", kHighsOnString);
+  highs.setOptionValue("presolve", presolve);
 
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
   highs.readModel(filename);
 
   HighsStatus status = highs.run();
   REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == expected_model_status);
 
-  const double actual_obj = highs.getObjectiveValue();
-  REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) < 1e-4);
+  if (expected_model_status == HighsModelStatus::kOptimal) {
+    const double actual_obj = highs.getObjectiveValue();
+    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
+            1e-4);
+  }
 }
 
 TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
@@ -102,5 +109,14 @@ TEST_CASE("test-hipo-qp", "[highs_hipo]") {
   runHipoTest(highs, "qptestnw.lp", -6.4500);
   runHipoTest(highs, "qjh.lp", -5.2500);
   runHipoTest(highs, "primal1.mps", -3.501296e-2);
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-hipo-infeas", "[highs)hipo]") {
+  const HighsModelStatus expected_status = HighsModelStatus::kInfeasible;
+  Highs highs;
+  runHipoTest(highs, "bgetam.mps", 0, expected_status, "off");
+  runHipoTest(highs, "forest6.mps", 0, expected_status, "off");
+  runHipoTest(highs, "klein1.mps", 0, expected_status, "off");
   highs.resetGlobalScheduler(true);
 }

@@ -323,8 +323,17 @@ enum SubSolverIndex : int {
   kSubSolverCount
 };
 
-// Default KKT tolerance
+// Minimum and default KKT tolerance
+const double kMinimumKktTolerance = 1e-10;
 const double kDefaultKktTolerance = 1e-7;
+
+// Minimum and default MIP tolerance
+const double kMinimumMipTolerance = 1e-10;
+const double kDefaultMipTolerance = 1e-6;
+
+// Minimum and default IPM optimality tolerance
+const double kMinimumIpmTolerance = 1e-12;
+const double kDefaultIpmTolerance = 1e-1 * kDefaultKktTolerance;
 
 // Default QP Hessian regularization value
 const double kHessianRegularizationValue = 1e-7;
@@ -377,4 +386,46 @@ const int8_t kPivotUnit = 1;
 const int8_t kPivotRowSingleton = 2;
 const int8_t kPivotColSingleton = 3;
 const int8_t kPivotMarkowitz = 4;
+
+// For converting general LPs to form for PDLP
+//
+// Requires non-conforming names for cuPDLP-C
+enum ConstraintType { EQ = 0, LEQ, GEQ, BOUND, FREE };
+
+// Mask for switching off PDLP features
+enum PdlpFeaturesOff {
+  kPdlpAllFeaturesOn = 0,
+  kPdlpScalingOff = 1,
+  kPdlpRestartOff = 2,
+  kPdlpAdaptiveStepSizeOff = 4,
+  kPdlpAllFeaturesOff =
+      kPdlpScalingOff + kPdlpRestartOff + kPdlpAdaptiveStepSizeOff
+};
+
+enum PdlpScalingBit {
+  kPdlpScalingMin = 0,
+  kPdlpScalingRuiz = 1,
+  kPdlpScalingL2 = 2,
+  kPdlpScalingPC = 4,
+  kPdlpScalingMax = kPdlpScalingRuiz + kPdlpScalingL2 + kPdlpScalingPC
+};
+
+enum PdlpStepSizeStrategy {
+  kPdlpStepSizeStrategyFixed = 0,
+  kPdlpStepSizeStrategyMin = kPdlpStepSizeStrategyFixed,
+  kPdlpStepSizeStrategyAdaptive,
+  kPdlpStepSizeStrategyMalitskyPock,
+  kPdlpStepSizeStrategyPid,
+  kPdlpStepSizeStrategyMax = kPdlpStepSizeStrategyPid
+};
+
+enum PdlpRestartStrategy {
+  kPdlpRestartStrategyOff = 0,
+  kPdlpRestartStrategyMin = kPdlpRestartStrategyOff,
+  kPdlpRestartStrategyFixed,
+  kPdlpRestartStrategyAdaptive,
+  kPdlpRestartStrategyHalpern,
+  kPdlpRestartStrategyMax = kPdlpRestartStrategyHalpern
+};
+
 #endif /* LP_DATA_HCONST_H_ */

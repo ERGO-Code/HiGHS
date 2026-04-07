@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo" or "pdlp"
+- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "qpasm" or "hipdlp", 
 - Type: string
 - Default: "choose"
 
@@ -450,43 +450,62 @@
 - Range: {0, 2147483647}
 - Default: 128
 
-## [pdlp\_scaling](@id option-pdlp-scaling)
-- Scaling for PDLP solver: Default = true
-- Type: boolean
-- Default: "true"
-
 ## [pdlp\_iteration\_limit](@id option-pdlp-iteration-limit)
 - Iteration limit for PDLP solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
 
-## [pdlp\_e\_restart\_method](@id option-pdlp-e-restart-method)
-- Restart mode for PDLP solver: 0 => none; 1 => GPU (default); 2 => CPU 
+## [pdlp\_scaling\_mode](@id option-pdlp-scaling-mode)
+- Scaling mode for PDLP solver (default = 5): 1 => Ruiz; 2 => L2; 4 => PC
+- Type: integer
+- Range: {0, 7}
+- Default: 5
+
+## [pdlp\_ruiz\_iterations](@id option-pdlp-ruiz-iterations)
+- Number of Ruiz scaling iteraitons for PDLP solver
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 10
+
+## [pdlp\_restart\_strategy](@id option-pdlp-restart-strategy)
+- Restart strategy for PDLP solver: 0 => off; 1 => fixed; 2 => adaptive; 3 => Halpern
+- Type: integer
+- Range: {0, 3}
+- Default: 2
+
+## [pdlp\_cupdlpc\_restart\_method](@id option-pdlp-cupdlpc-restart-method)
+- Restart mode for cuPDLP-C solver: 0 => none; 1 => GPU (default); 2 => CPU 
 - Type: integer
 - Range: {0, 2}
+- Default: 1
+
+## [pdlp\_step\_size\_strategy](@id option-pdlp-step-size-strategy)
+- Step size strategy for PDLP solver: 0 => fixed; 1 => adaptive; 2 => Malitsky-Pock; 3 => PID
+- Type: integer
+- Range: {0, 3}
 - Default: 1
 
 ## [pdlp\_optimality\_tolerance](@id option-pdlp-optimality-tolerance)
 - PDLP optimality tolerance
 - Type: double
-- Range: [1e-12, inf]
+- Range: [1e-10, inf]
 - Default: 1e-07
 
 ## [qp\_iteration\_limit](@id option-qp-iteration-limit)
-- Iteration limit for QP solver
+- Iteration limit for the active set QP solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
 
 ## [qp\_nullspace\_limit](@id option-qp-nullspace-limit)
-- Nullspace limit for QP solver
+- Nullspace limit for the active set QP solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 4000
 
 ## [qp\_regularization\_value](@id option-qp-regularization-value)
-- Regularization value added to the Hessian
+- Regularization value added to the Hessian in the active set QP solver
 - Type: double
 - Range: [0, inf]
 - Default: 1e-07
@@ -496,6 +515,12 @@
 - Type: integer
 - Range: {0, 31}
 - Default: 0
+
+## [iis\_time\_limit](@id option-iis-time-limit)
+- Time limit for computing IIS (seconds)
+- Type: double
+- Range: [0, inf]
+- Default: inf
 
 ## [blend\_multi\_objectives](@id option-blend-multi-objectives)
 - Blend multiple objectives or apply lexicographically
