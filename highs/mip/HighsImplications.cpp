@@ -411,7 +411,7 @@ void HighsImplications::strengthenVarBound(VarBound& vbnd,
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
                                double vubconstant) {
   addVUB(col, vubcol, vubcoef, vubconstant,
-         mipsolver.mipdata_->getDomain().col_upper_[col]);
+         mipsolver.mipdata_->getDomain().col_upper_[col],
          mipsolver.isColIntegral(col));
 }
 
@@ -452,7 +452,7 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
                                double vlbconstant) {
   addVLB(col, vlbcol, vlbcoef, vlbconstant,
-         mipsolver.mipdata_->getDomain().col_lower_[col]);
+         mipsolver.mipdata_->getDomain().col_lower_[col],
          mipsolver.isColIntegral(col));
 }
 
