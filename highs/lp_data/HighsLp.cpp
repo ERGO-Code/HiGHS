@@ -491,7 +491,14 @@ void HighsLp::unapplyMods() {
   this->mods_.clear();
 }
 
-void HighsLpMods::clear() {
+void HighsLpMods::clearInfiniteCostRecord() {
+  this->save_inf_cost_variable_index.clear();
+  this->save_inf_cost_variable_cost.clear();
+  this->save_inf_cost_variable_lower.clear();
+  this->save_inf_cost_variable_upper.clear();
+}
+
+void HighsLpMods::clearSemiVariableRecord() {
   this->save_non_semi_variable_index.clear();
   this->save_inconsistent_semi_variable_index.clear();
   this->save_inconsistent_semi_variable_lower_bound_value.clear();
@@ -501,10 +508,11 @@ void HighsLpMods::clear() {
   this->save_relaxed_semi_variable_lower_bound_value.clear();
   this->save_tightened_semi_variable_upper_bound_index.clear();
   this->save_tightened_semi_variable_upper_bound_value.clear();
-  this->save_inf_cost_variable_index.clear();
-  this->save_inf_cost_variable_cost.clear();
-  this->save_inf_cost_variable_lower.clear();
-  this->save_inf_cost_variable_upper.clear();
+}
+
+void HighsLpMods::clear() {
+  this->clearInfiniteCostRecord();
+  this->clearSemiVariableRecord();
 }
 
 bool HighsLpMods::isClear() {

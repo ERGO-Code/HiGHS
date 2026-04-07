@@ -353,6 +353,7 @@ set(highs_sources
     lp_data/HighsModelUtils.cpp
     lp_data/HighsOptions.cpp
     lp_data/HighsRanging.cpp
+    lp_data/HighsReformulation.cpp
     lp_data/HighsSolution.cpp
     lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp

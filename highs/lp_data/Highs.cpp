@@ -981,9 +981,16 @@ HighsStatus Highs::run() {
 HighsStatus Highs::optimizeHighs() {
   // Level 1 of Highs::run()
   //
-  // Move the "mods" to here
-  return this->multi_linear_objective_.size() ? this->multiobjectiveSolve()
-                                              : this->optimizeModel();
+  HighsStatus optimize_status = doReformulation();
+  if (optimize_status == HighsStatus::kError) return optimize_status;
+
+  optimize_status = this->multi_linear_objective_.size()
+                        ? this->multiobjectiveSolve()
+                        : this->optimizeModel();
+
+  undoReformulation(optimize_status);
+
+  return optimize_status;
 }
 
 HighsStatus Highs::optimizeLp() {
@@ -1092,26 +1099,7 @@ HighsStatus Highs::calledOptimizeModel() {
   // Set undo_mods = false so that returnFromOptimizeModel() doesn't undo any
   // mods that must be preserved - such as when solving a MIP node
   bool undo_mods = false;
-  if (model_.lp_.has_infinite_cost_) {
-    // If the model has infinite costs, then try to remove them. The
-    // return_status indicates the success of this operation and, if
-    // it's unsuccessful, the model will not have been modified and
-    // optimizeModel() can simply return an error with model status
-    // HighsModelStatus::kUnknown
-    assert(model_.lp_.hasInfiniteCost(options_.infinite_cost));
-    HighsStatus return_status = handleInfCost();
-    if (return_status != HighsStatus::kOk) {
-      assert(return_status == HighsStatus::kError);
-      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kUnknown);
-      return return_status;
-    }
-    // Modifications have been performed, so must be undone before
-    // this call to optimizeModel() returns
-    assert(!model_.lp_.has_infinite_cost_);
-    undo_mods = true;
-  } else {
-    assert(!model_.lp_.hasInfiniteCost(options_.infinite_cost));
-  }
+  assert(!model_.lp_.has_infinite_cost_);
 
   // Ensure that all vectors in the model have exactly the right size
   exactResizeModel();
@@ -4782,12 +4770,8 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
   called_return_from_optimize_model = true;
 
   if (undo_mods) {
-    // Restore any infinite costs
-    this->restoreInfCost(return_status);
-
     // Unapply any modifications that have not yet been unapplied
     this->model_.lp_.unapplyMods();
-    //    undo_mods = false;
   }
 
   // Unless solved as a MIP, report on the solution

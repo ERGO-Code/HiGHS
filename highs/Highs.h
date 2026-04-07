@@ -1774,8 +1774,6 @@ class Highs {
   void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 
-  HighsStatus handleInfCost();
-  void restoreInfCost(HighsStatus& return_status);
   HighsStatus optionChangeAction();
 
   HighsStatus userScale(HighsUserScaleData& data);
@@ -1803,6 +1801,13 @@ class Highs {
 
   bool tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
                       const HighsInfo& presolved_lp_info) const;
+
+  // Reformulation methods
+  HighsStatus doReformulation();
+  void undoReformulation(HighsStatus& optimize_status);
+
+  HighsStatus handleInfiniteCost();
+  void restoreInfiniteCost(HighsStatus& optimize_status);
 };
 
 // Start of deprecated methods not in the Highs class
