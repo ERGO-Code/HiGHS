@@ -1245,7 +1245,7 @@ class Highs {
    * @brief Initialise the internal sub-solver call and time instance
    */
   void initialiseSubSolverCallTime() {
-    this->sub_solver_call_time_.initialise();
+    this->sub_solver_call_time_.initialise(this->timer_);
   }
 
   /**

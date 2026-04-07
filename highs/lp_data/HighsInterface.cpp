@@ -4271,7 +4271,12 @@ void HighsLinearObjective::clear() {
   this->priority = 0;
 }
 
-void HighsSubSolverCallTime::initialise() {
+void HighsSubSolverCallTime::initialise(HighsTimer& timer_) {
+  HighsInt num_thread = highs::parallel::num_threads();
+  this->timer = &timer_;
+  this->submip.assign(num_thread, false);
+  this->start_time.assign(num_thread, kHighsInf);
+  this->clock_running.assign(num_thread, -kHighsIInf);
   this->num_call.assign(kSubSolverCount, 0);
   this->run_time.assign(kSubSolverCount, 0);
   this->name.assign(kSubSolverCount, "");
@@ -4290,9 +4295,13 @@ void HighsSubSolverCallTime::initialise() {
   HighsSubSolverCallTimeRecord thread_record;
   thread_record.num_call.assign(kSubSolverCount, 0);
   thread_record.run_time.assign(kSubSolverCount, 0);
-  HighsInt num_thread = highs::parallel::num_threads();
   assert(num_thread > 0);
   this->record.assign(num_thread, thread_record);
+  this->submip_record.assign(num_thread, thread_record);
+}
+
+void HighsSubSolverCallTime::setSubMip(const bool submip) {
+  this->submip[highs::parallel::thread_num()] = submip;
 }
 
 void HighsSubSolverCallTime::add(
@@ -4319,6 +4328,33 @@ void HighsSubSolverCallTime::update(const HighsInt sub_solver_clock,
   HighsInt local_thread_num = highs::parallel::thread_num();
   this->record[local_thread_num].num_call[sub_solver_clock]++;
   this->record[local_thread_num].run_time[sub_solver_clock] += time;
+}
+
+void HighsSubSolverCallTime::start(const HighsInt sub_solver_clock) {
+  assert(0 <= sub_solver_clock && sub_solver_clock < kSubSolverCount);
+  HighsInt thread = highs::parallel::thread_num();
+  assert(this->clock_running[thread] < 0);
+  assert(!std::signbit(this->start_time[thread]));
+  this->start_time[thread] = -timer->read();
+  this->clock_running[thread] = sub_solver_clock;
+}
+
+void HighsSubSolverCallTime::stop(const HighsInt sub_solver_clock) {
+  assert(0 <= sub_solver_clock && sub_solver_clock < kSubSolverCount);
+  HighsInt thread = highs::parallel::thread_num();
+  assert(this->clock_running[thread] == sub_solver_clock);
+  assert(std::signbit(this->start_time[thread]));
+  double time_now = timer->read();
+  double time = time_now + this->start_time[thread];
+  this->clock_running[thread] = -kHighsIInf;
+  this->start_time[thread] = time_now;
+  if (submip[thread]) {
+    this->submip_record[thread].num_call[sub_solver_clock]++;
+    this->submip_record[thread].run_time[sub_solver_clock] += time;
+  } else {
+    this->record[thread].num_call[sub_solver_clock]++;
+    this->record[thread].run_time[sub_solver_clock] += time;
+  }
 }
 
 void Highs::reportSubSolverCallTime() const {

@@ -25,7 +25,7 @@ void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
 }
 
 void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
-  this->sub_solver_call_time_->initialise();
+  this->sub_solver_call_time_->initialise(*this->timer_);
   analyse_mip_time = kHighsAnalysisLevelMipTime & options.highs_analysis_level;
   if (analyse_mip_time) {
     // Set up the thread clocks
