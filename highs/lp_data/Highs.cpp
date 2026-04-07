@@ -48,7 +48,9 @@ HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return "deprecated"; }
 
-Highs::Highs() : callback_(this) {}
+Highs::Highs() : callback_(this) {
+  this->global_sub_solver_call_time_ = &this->sub_solver_call_time_;
+}
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -1019,7 +1021,6 @@ HighsStatus Highs::optimizeModel() {
 
   if (!options_.use_warm_start) this->clearSolver();
   this->initialiseSubSolverCallTime();
-  this->global_sub_solver_call_time_ = &this->sub_solver_call_time_;
   HighsStatus status = this->calledOptimizeModel();
   if (this->options_.log_dev_level > 0) this->reportSubSolverCallTime();
   return status;
@@ -2591,9 +2592,9 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       }
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
-      HighsLpSolverObject solver_object(
-          model_.lp_, modifiable_basis, solution_, info_, ekk_instance_,
-          callback_, options_, timer_, sub_solver_call_time_);
+      HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
+                                        info_, ekk_instance_, callback_,
+                                        options_, timer_);
       solver_object.setSubSolverCallTime(this->global_sub_solver_call_time_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
@@ -3916,7 +3917,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     this->global_sub_solver_call_time_->setSubMip(true);
     return_status = this->optimizeModel();
     this->global_sub_solver_call_time_->setSubMip(false);
-    
+
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
   }
@@ -3939,10 +3940,8 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
-                                    callback_, options_, timer_,
-                                    sub_solver_call_time_);
+                                    callback_, options_, timer_);
   solver_object.setSubSolverCallTime(this->global_sub_solver_call_time_);
-  
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());

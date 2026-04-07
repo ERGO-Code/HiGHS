@@ -179,9 +179,8 @@ struct HighsSubSolverCallTime {
   std::vector<HighsSubSolverCallTimeRecord> submip_record;
   void initialise(HighsTimer& timer_);
   void start(const HighsInt sub_solver_clock);
-  void stop(const HighsInt sub_solver_clock);
+  void stop(const HighsInt sub_solver_clock = -1);
   void setSubMip(const bool submip);
- 
 };
 
 struct HighsSimplexStats {
