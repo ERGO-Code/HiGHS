@@ -1453,6 +1453,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, callback_, options_,
                                       timer_, sub_solver_call_time_);
+    solver_object.setSubSolverCallTime(this->global_sub_solver_call_time_);
     const bool only_from_known_basis = true;
     return_status = interpretCallStatus(
         options_.log_options,
@@ -1824,6 +1825,7 @@ HighsStatus Highs::getRangingInterface() {
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
                                     ekk_instance_, callback_, options_, timer_,
                                     sub_solver_call_time_);
+  solver_object.setSubSolverCallTime(this->global_sub_solver_call_time_);
   solver_object.model_status_ = model_status_;
   return getRangingData(this->ranging_, solver_object);
 }

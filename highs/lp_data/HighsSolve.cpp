@@ -22,6 +22,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsOptions& options = solver_object.options_;
   HighsSubSolverCallTime& sub_solver_call_time =
       solver_object.sub_solver_call_time_;
+  HighsSubSolverCallTime* global_sub_solver_call_time =
+      solver_object.global_sub_solver_call_time_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);
@@ -110,6 +112,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       }
     } else {
       // Use cuPDLP-C or HiPDLP to solve the LP
+      global_sub_solver_call_time->start(kSubSolverPdlp);
       double tt = -solver_object.timer_.read();
       sub_solver_call_time.num_call[kSubSolverPdlp]++;
       sub_solver_call_time.run_time[kSubSolverPdlp] =
@@ -133,6 +136,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       }
       tt += solver_object.timer_.read();
       sub_solver_call_time.update(kSubSolverPdlp, tt);
+      global_sub_solver_call_time->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLp-Pdlp");
     }

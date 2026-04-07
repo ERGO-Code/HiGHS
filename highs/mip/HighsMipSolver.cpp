@@ -1002,7 +1002,7 @@ void HighsMipSolver::initialiseAnalysis(const HighsMipAnalysis* from_analysis) {
   } else {
     this->analysis_.model_name = orig_model_->model_name_;
     this->analysis_.timer_ = &this->timer_;
-    this->analysis_.sub_solver_call_time_ = &this->sub_solver_call_time_;
+    this->analysis_.sub_solver_call_time_ = this->global_sub_solver_call_time_;
     this->analysis_.setupMipTime(*options_mip_);
   }
   this->analysis_.submip_ = this->submip;

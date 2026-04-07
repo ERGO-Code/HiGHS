@@ -19,13 +19,7 @@
 
 const HighsInt check_mip_clock = -4;
 
-void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
-  model_name = lp.model_name_;
-  setupMipTime(options);
-}
-
 void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
-  this->sub_solver_call_time_->initialise(*this->timer_);
   analyse_mip_time = kHighsAnalysisLevelMipTime & options.highs_analysis_level;
   if (analyse_mip_time) {
     // Set up the thread clocks

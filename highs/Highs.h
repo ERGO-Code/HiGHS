@@ -1557,7 +1557,12 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
+  // This local HighsSubSolverCallTime instance is used to define the
+  // pointers in subsequent Highs instances (such as
+  // global_sub_solver_call_time_ below) and analysis classes
   HighsSubSolverCallTime sub_solver_call_time_;
+
+  HighsSubSolverCallTime* global_sub_solver_call_time_;
 
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether

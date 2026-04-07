@@ -41,7 +41,11 @@ class HighsLpSolverObject {
   HighsOptions& options_;
   HighsTimer& timer_;
   HighsSubSolverCallTime& sub_solver_call_time_;
+  HighsSubSolverCallTime* global_sub_solver_call_time_;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
+  void setSubSolverCallTime(HighsSubSolverCallTime* sub_solver_call_time) {
+    global_sub_solver_call_time_ = sub_solver_call_time;
+  }
 };
 
 #endif  // LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_

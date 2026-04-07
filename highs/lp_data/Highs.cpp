@@ -1019,6 +1019,7 @@ HighsStatus Highs::optimizeModel() {
 
   if (!options_.use_warm_start) this->clearSolver();
   this->initialiseSubSolverCallTime();
+  this->global_sub_solver_call_time_ = &this->sub_solver_call_time_;
   HighsStatus status = this->calledOptimizeModel();
   if (this->options_.log_dev_level > 0) this->reportSubSolverCallTime();
   return status;
@@ -1238,10 +1239,12 @@ HighsStatus Highs::calledOptimizeModel() {
       // Solve model as a MIP
       if (!solverValidForMip(options_.solver))
         warnSolverInvalid(options_, "MIP");
+      global_sub_solver_call_time_->start(kSubSolverMip);
       sub_solver_call_time_.num_call[kSubSolverMip]++;
       sub_solver_call_time_.run_time[kSubSolverMip] = -timer_.read();
       call_status = callSolveMip();
       sub_solver_call_time_.run_time[kSubSolverMip] += timer_.read();
+      global_sub_solver_call_time_->stop(kSubSolverMip);
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
       return returnFromOptimizeModel(return_status, undo_mods);
@@ -2594,6 +2597,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       HighsLpSolverObject solver_object(
           model_.lp_, modifiable_basis, solution_, info_, ekk_instance_,
           callback_, options_, timer_, sub_solver_call_time_);
+      solver_object.setSubSolverCallTime(this->global_sub_solver_call_time_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -3909,9 +3913,15 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     options_.mip_max_nodes = options_.mip_max_start_nodes;
     // Solve the model
     basis_.clear();
+    // If a MIP is solved, it counts as a sub-MIP, so indicate that it
+    // should be timed as such - and don't forget to indicate that in
+    // optimizeModel when the HighsMipSolver instance is created
+    this->global_sub_solver_call_time_->setSubMip(true);
     HighsSubSolverCallTime sub_solver_call_time = this->sub_solver_call_time_;
     double mip_solve_time = -sub_solver_call_time_.run_time[kSubSolverMip];
     return_status = this->optimizeModel();
+    this->global_sub_solver_call_time_->setSubMip(false);
+    
     if (model_.lp_.isMip()) {
       // If a MIP was solved, it counts as a sub-MIP, but the MIP and
       // LP call-time data will be recorded as if it were a MIP so,
@@ -3946,6 +3956,8 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_,
                                     sub_solver_call_time_);
+  solver_object.setSubSolverCallTime(this->global_sub_solver_call_time_);
+  
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
@@ -3995,8 +4007,10 @@ HighsStatus Highs::callSolveQp() {
 #ifdef HIPO
     sub_solver_call_time_.num_call[kSubSolverHipo]++;
     sub_solver_call_time_.run_time[kSubSolverHipo] = -timer_.read();
+    this->global_sub_solver_call_time_->start(kSubSolverHipo);
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
+    this->global_sub_solver_call_time_->stop(kSubSolverHipo);
     sub_solver_call_time_.run_time[kSubSolverHipo] += timer_.read();
     if (return_status == HighsStatus::kError) return return_status;
 #else
@@ -4007,6 +4021,7 @@ HighsStatus Highs::callSolveQp() {
   } else {
     //
     // Run the QP solver
+    this->global_sub_solver_call_time_->start(kSubSolverQpAsm);
     sub_solver_call_time_.num_call[kSubSolverQpAsm]++;
     sub_solver_call_time_.run_time[kSubSolverQpAsm] = -timer_.read();
 
@@ -4138,6 +4153,7 @@ HighsStatus Highs::callSolveQp() {
 
     QpAsmStatus status = solveqp(instance, settings, stats, model_status_,
                                  basis_, solution_, timer_);
+    this->global_sub_solver_call_time_->stop(kSubSolverQpAsm);
     sub_solver_call_time_.run_time[kSubSolverQpAsm] += timer_.read();
 
     // QP solver can fail, so should return something other than
