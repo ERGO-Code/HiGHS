@@ -4273,8 +4273,13 @@ void HighsLinearObjective::clear() {
 }
 
 void HighsSubSolverCallTime::initialise(HighsTimer& timer_) {
+  if (this->initialised)
+    printf("Re-initialising HighsSubSolverCallTime\n");
   HighsInt num_thread = highs::parallel::num_threads();
   this->timer = &timer_;
+  this->initialised = true;
+  this->mip_start_time = kHighsInf;
+  this->mip_clock_running = -kHighsIInf;
   this->submip.assign(num_thread, false);
   this->start_time.assign(num_thread, kHighsInf);
   this->clock_running.assign(num_thread, -kHighsIInf);
@@ -4304,12 +4309,26 @@ void HighsSubSolverCallTime::setSubMip(const bool submip) {
 }
 
 void HighsSubSolverCallTime::start(const HighsInt sub_solver_clock) {
+  // Start timing sub-solver sub_solver_clock
   assert(0 <= sub_solver_clock && sub_solver_clock < kSubSolverCount);
   HighsInt thread = highs::parallel::thread_num();
-  assert(this->clock_running[thread] < 0);
-  assert(!std::signbit(this->start_time[thread]));
-  this->start_time[thread] = -timer->read();
-  this->clock_running[thread] = sub_solver_clock;
+  double time_now = timer->read();
+  if (sub_solver_clock == kSubSolverMip) {
+    // The whole MIP solver time is recorded to put its sub-solver
+    // times in context, so the mechanism of recording the start time
+    // of the current (sub-)MIP sub-solver - and checking that it's
+    // the only one running - can't be used.
+    assert(thread == 0);
+    assert(this->mip_clock_running < 0);
+    assert(!std::signbit(this->mip_start_time));
+    this->mip_start_time = -time_now;
+    this->mip_clock_running = sub_solver_clock;
+  } else {
+    assert(this->clock_running[thread] < 0);
+    assert(!std::signbit(this->start_time[thread]));
+    this->start_time[thread] = -time_now;
+    this->clock_running[thread] = sub_solver_clock;
+  }
 }
 
 void HighsSubSolverCallTime::stop(const HighsInt sub_solver_clock) {
@@ -4317,12 +4336,21 @@ void HighsSubSolverCallTime::stop(const HighsInt sub_solver_clock) {
   HighsInt use_clock =
       sub_solver_clock < 0 ? this->clock_running[thread] : sub_solver_clock;
   assert(0 <= use_clock && use_clock < kSubSolverCount);
-  assert(this->clock_running[thread] == use_clock);
-  assert(std::signbit(this->start_time[thread]));
   double time_now = timer->read();
+  if (use_clock == kSubSolverMip) {
+    assert(thread == 0);
+    assert(this->mip_clock_running == kSubSolverMip);
+    assert(std::signbit(this->mip_start_time));
+    this->mip_clock_running =-kHighsIInf;
+    this->mip_start_time = time_now;
+    
+  } else {
+    assert(this->clock_running[thread] == use_clock);
+    assert(std::signbit(this->start_time[thread]));
+    this->clock_running[thread] = -kHighsIInf;
+    this->start_time[thread] = time_now;
+  }
   double time = time_now + this->start_time[thread];
-  this->clock_running[thread] = -kHighsIInf;
-  this->start_time[thread] = time_now;
   if (submip[thread]) {
     this->submip_record[thread].num_call[use_clock]++;
     this->submip_record[thread].run_time[use_clock] += time;

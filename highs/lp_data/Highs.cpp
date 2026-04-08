@@ -48,9 +48,7 @@ HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return "deprecated"; }
 
-Highs::Highs() : callback_(this) {
-  this->global_sub_solver_call_time_ = &this->sub_solver_call_time_;
-}
+Highs::Highs() : callback_(this) {}
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -851,17 +849,8 @@ HighsStatus Highs::presolve() {
     const bool force_presolve = true;
     // make sure global scheduler is initialized before calling presolve, since
     // MIP presolve may use parallelism
-    highs::parallel::initialize_scheduler(options_.threads);
-    max_threads = highs::parallel::num_threads();
-    if (options_.threads != 0 && max_threads != options_.threads) {
-      highsLogUser(
-          log_options, HighsLogType::kError,
-          "Option 'threads' is set to %d but global scheduler has already been "
-          "initialized to use %d threads. The previous scheduler instance can "
-          "be destroyed by calling Highs::resetGlobalScheduler().\n",
-          (int)options_.threads, max_threads);
-      return HighsStatus::kError;
-    }
+    return_status = this->initializeGlobalScheduler();
+    if (return_status != HighsStatus::kOk) return return_status;
     // If problem is a MIP and solve_relaxation is true, it's natural
     // to force LP presolve. It means that someone wanting the
     // presolved relaxation of a MIP just has to set solve_relaxation
@@ -993,35 +982,15 @@ HighsStatus Highs::optimizeLp() {
   assert(!model_.isQp());
   assert(!model_.lp_.hasSemiVariables());
   assert(!this->multi_linear_objective_.size());
-  return optimizeModel();
+  return calledOptimizeModel();
 }
 
 HighsStatus Highs::optimizeModel() {
   // Level 2a of Highs::run()
   //
-  highs::parallel::initialize_scheduler(options_.threads);
-
-  max_threads = highs::parallel::num_threads();
-  if (options_.threads != 0 && max_threads != options_.threads) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Option 'threads' is set to %d but global scheduler has already been "
-        "initialized to use %d threads. The previous scheduler instance can "
-        "be destroyed by calling Highs::resetGlobalScheduler().\n",
-        (int)options_.threads, max_threads);
-    return HighsStatus::kError;
-  }
-  assert(max_threads > 0);
-  if (max_threads <= 0)
-    highsLogDev(options_.log_options, HighsLogType::kWarning,
-                "WARNING: max_threads() returns %" HIGHSINT_FORMAT "\n",
-                max_threads);
-  highsLogDev(options_.log_options, HighsLogType::kDetailed,
-              "Running with %" HIGHSINT_FORMAT " thread(s)\n", max_threads);
-
-  if (!options_.use_warm_start) this->clearSolver();
-  this->initialiseSubSolverCallTime();
-  HighsStatus status = this->calledOptimizeModel();
+  HighsStatus status = this->initializeGlobalScheduler();
+  if (status != HighsStatus::kOk) return status;
+  status = this->calledOptimizeModel();
   //  if (this->options_.log_dev_level > 0)
     this->reportSubSolverCallTime();
   return status;
@@ -1063,6 +1032,7 @@ HighsStatus Highs::calledOptimizeModel() {
     }
   }
 
+  if (!options_.use_warm_start) this->clearSolver();
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 
@@ -4190,6 +4160,7 @@ HighsStatus Highs::callSolveMip() {
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
+  solver.setGlobalSubSolverCallTime(this->global_sub_solver_call_time_);
   // Set up the analysis (profiling) here, so that it's only done
   // for the root MIP
   solver.initialiseAnalysis();
@@ -4437,9 +4408,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         // Scrap the EKK data from solving the presolved LP
         ekk_instance_.invalidate();
         ekk_instance_.lp_name_ = "Postsolve LP";
-        // Set up the timing record so that adding the corresponding
-        // values after callSolveLp gives difference
-        this->initialiseSubSolverCallTime();
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(
             incumbent_lp,
@@ -4941,6 +4909,39 @@ HighsStatus Highs::closeLogFile() {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::initializeGlobalScheduler() {
+  highs::parallel::initialize_scheduler(this->options_.threads);
+  this->max_threads_ = highs::parallel::num_threads();
+  HighsLogOptions& log_options = this->options_.log_options;
+  if (this->options_.threads != 0 && this->max_threads_ != this->options_.threads) {
+    highsLogUser(log_options, HighsLogType::kError,
+		 "Option 'threads' is set to %d but global scheduler has already been "
+		 "initialized to use %d threads. The previous scheduler instance can "
+		 "be destroyed by calling Highs::resetGlobalScheduler().\n",
+		 int(options_.threads), int(this->max_threads_));
+    return HighsStatus::kError;
+  }
+  if (this->max_threads_ <= 0) {
+    highsLogDev(log_options, HighsLogType::kError,
+                "max_threads() returns %d\n",
+                int(this->max_threads_));
+    assert(this->max_threads_ > 0);
+    return HighsStatus::kError;
+  }
+  highsLogDev(log_options, HighsLogType::kDetailed,
+              "Running with %d thread(s)\n", int(max_threads_));
+  this->sub_solver_call_time_.initialise(this->timer_);
+  this->setGlobalSubSolverCallTime();
+  return HighsStatus::kOk;
+}
+
 void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
+}
+
+void Highs::setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time) {
+  this->global_sub_solver_call_time_ =
+    global_sub_solver_call_time ?
+    global_sub_solver_call_time :
+    &this->sub_solver_call_time_;
 }

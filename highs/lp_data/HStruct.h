@@ -170,6 +170,9 @@ struct HighsSubSolverCallTimeRecord {
 
 struct HighsSubSolverCallTime {
   HighsTimer* timer;
+  bool initialised = false;
+  double mip_start_time;
+  HighsInt mip_clock_running;
   std::vector<bool> submip;
   std::vector<double> start_time;
   std::vector<HighsInt> clock_running;

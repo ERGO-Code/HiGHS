@@ -82,6 +82,7 @@ void HighsMipSolver::run() {
         fopen(options_mip_->mip_improving_solution_file.c_str(), "w");
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  mipdata_->lp.setGlobalSubSolverCallTime(this->global_sub_solver_call_time_);
   analysis_.mipTimerStart(kMipClockPresolve);
   analysis_.mipTimerStart(kMipClockInit);
   mipdata_->init();
@@ -993,6 +994,11 @@ void HighsMipSolver::initialiseTerminator(const HighsMipSolver& mip_solver) {
   this->initialiseTerminator(mip_solver.mipdata_->terminatorConcurrency(),
                              mip_solver.mipdata_->terminatorMyInstance(),
                              mip_solver.terminator_.record);
+}
+
+void HighsMipSolver::setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time) {
+  assert(global_sub_solver_call_time);
+  this->global_sub_solver_call_time_ = global_sub_solver_call_time;
 }
 
 void HighsMipSolver::initialiseAnalysis(const HighsMipAnalysis* from_analysis) {

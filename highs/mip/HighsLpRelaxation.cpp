@@ -19,6 +19,10 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
+void HighsLpRelaxation::setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time) {
+  lpsolver.setGlobalSubSolverCallTime(global_sub_solver_call_time);
+}
+
 void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
                                    std::vector<double>& cut_lower,
                                    std::vector<double>& cut_upper,

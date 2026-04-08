@@ -152,6 +152,7 @@ class HighsMipSolver {
   HighsModelStatus terminationStatus() const {
     return this->termination_status_;
   }
+  void setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time);
   void initialiseAnalysis(const HighsMipAnalysis* from_analysis = nullptr);
 };
 
