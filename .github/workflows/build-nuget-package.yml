@@ -1,11 +1,11 @@
 name: build-nuget-package
 
 on:
+  workflow_dispatch:
   pull_request:
   release:
     types:
       - published
-  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
