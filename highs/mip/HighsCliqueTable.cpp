@@ -647,7 +647,7 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
 void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
                                  CliqueVar* cliquevars, HighsInt numcliquevars,
                                  bool equality, HighsInt origin) {
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
   mipsolver.mipdata_->debugSolution.checkClique(cliquevars, numcliquevars);
   const HighsInt maxNumCliqueVars = 100;
 
@@ -841,7 +841,7 @@ void HighsCliqueTable::extractCliques(
     HighsInt nbin, std::vector<HighsInt>& perm, std::vector<CliqueVar>& clique,
     double feastol) {
   HighsImplications& implics = mipsolver.mipdata_->implications;
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
   perm.resize(inds.size());
   std::iota(perm.begin(), perm.end(), 0);
@@ -1081,7 +1081,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   if (isFull()) return;
 
   HighsImplications& implics = mipsolver.mipdata_->implications;
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
   const double feastol = mipsolver.mipdata_->feastol;
 
@@ -1276,7 +1276,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
   double rhs;
 
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
     HighsInt start = mipsolver.mipdata_->ARstart_[i];
@@ -1380,7 +1380,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
   HighsInt nbin =
       mipsolver.mipdata_->objectiveFunction.getNumBinariesInObjective();
   if (nbin <= 1) return;
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
   if (globaldom.getObjectiveLowerBound() == -kHighsInf) return;
 
   const double* vals;
@@ -1603,7 +1603,9 @@ void HighsCliqueTable::vertexInfeasible(HighsDomain& globaldom, HighsInt col,
 
 void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                        const std::vector<double>& sol,
-                                       HighsCutPool& cutpool, double feastol) {
+                                       HighsCutPool& cutpool, double feastol,
+                                       HighsRandom& randgen,
+                                       int64_t& localNumNeighbourhoodQueries) {
   BronKerboschData data(sol);
   data.feastol = feastol;
   data.maxNeighbourhoodQueries = 1000000 +
@@ -1611,7 +1613,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                  mipsolver.mipdata_->total_lp_iterations * 1000;
   if (numNeighbourhoodQueries > data.maxNeighbourhoodQueries) return;
   data.maxNeighbourhoodQueries -= numNeighbourhoodQueries;
-  const HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  const HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
   for (HighsInt i : mipsolver.mipdata_->integral_cols) {
     if (colsubstituted[i] || colDeleted[i]) continue;
@@ -1698,9 +1700,9 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                    false, false);
   }
 
-  numNeighbourhoodQueries += data.numNeighbourhoodQueries;
+  localNumNeighbourhoodQueries += data.numNeighbourhoodQueries;
 
-  if (runcliquesubsumption) {
+  if (runcliquesubsumption && &randgen == &this->randgen) {
     for (std::vector<CliqueVar>& clique : data.cliques) {
       HighsInt nremoved = runCliqueSubsumption(globaldom, clique);
 
@@ -1841,7 +1843,7 @@ void HighsCliqueTable::cleanupFixed(HighsDomain& globaldom) {
   if (nfixings != oldnfixings) propagateAndCleanup(globaldom);
 }
 
-HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
+HighsInt HighsCliqueTable::getNumImplications(HighsInt col) const {
   // first count all cliques as one implication, so that cliques of size two
   // are accounted for already
   HighsInt i0 = CliqueVar(col, 0).index();
@@ -1860,7 +1862,7 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
   return numimplics;
 }
 
-HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) {
+HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) const {
   HighsInt iVal = CliqueVar(col, val).index();
 
   // each size two clique is one implication

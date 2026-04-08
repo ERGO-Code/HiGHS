@@ -64,6 +64,8 @@ class HighsPseudocost {
   std::vector<HighsInt> ncutoffsdown;
   std::vector<double> conflictscoreup;
   std::vector<double> conflictscoredown;
+  std::vector<bool> changed;
+  std::vector<HighsInt> indschanged;
 
   double conflict_weight;
   double conflict_avg_score;
@@ -111,11 +113,19 @@ class HighsPseudocost {
   void increaseConflictScoreUp(HighsInt col) {
     conflictscoreup[col] += conflict_weight;
     conflict_avg_score += conflict_weight;
+    if (!changed[col]) {
+      changed[col] = true;
+      indschanged.push_back(col);
+    }
   }
 
   void increaseConflictScoreDown(HighsInt col) {
     conflictscoredown[col] += conflict_weight;
     conflict_avg_score += conflict_weight;
+    if (!changed[col]) {
+      changed[col] = true;
+      indschanged.push_back(col);
+    }
   }
 
   void setMinReliable(HighsInt minreliable) { this->minreliable = minreliable; }
@@ -138,6 +148,10 @@ class HighsPseudocost {
       ncutoffsup[col] += 1;
     else
       ncutoffsdown[col] += 1;
+    if (!changed[col]) {
+      changed[col] = true;
+      indschanged.push_back(col);
+    }
   }
 
   void addObservation(HighsInt col, double delta, double objdelta) {
@@ -162,6 +176,10 @@ class HighsPseudocost {
       ++nsamplestotal;
       cost_total += d / static_cast<double>(nsamplestotal);
     }
+    if (!changed[col]) {
+      changed[col] = true;
+      indschanged.push_back(col);
+    }
   }
 
   void addInferenceObservation(HighsInt col, HighsInt ninferences,
@@ -177,6 +195,10 @@ class HighsPseudocost {
       d = ninferences - inferencesdown[col];
       ninferencesdown[col] += 1;
       inferencesdown[col] += d / ninferencesdown[col];
+    }
+    if (!changed[col]) {
+      changed[col] = true;
+      indschanged.push_back(col);
     }
   }
 
@@ -360,6 +382,153 @@ class HighsPseudocost {
 
   double getAvgInferencesDown(HighsInt col) const {
     return inferencesdown[col];
+  }
+
+  std::vector<HighsInt> getNSamplesUp() const { return nsamplesup; }
+
+  std::vector<HighsInt> getNSamplesDown() const { return nsamplesdown; }
+
+  std::vector<HighsInt> getNInferencesUp() const { return ninferencesup; }
+
+  std::vector<HighsInt> getNInferencesDown() const { return ninferencesdown; }
+
+  std::vector<HighsInt> getNCutoffsUp() const { return ncutoffsup; }
+
+  std::vector<HighsInt> getNCutoffsDown() const { return ncutoffsdown; }
+
+  void flushPseudoCostObservations(double& curr_observation,
+                                   const double& new_observation,
+                                   const HighsInt n_new, const HighsInt n_prev,
+                                   const HighsInt n_curr, bool inference) {
+    const HighsInt n = n_new - n_prev;
+    if (n > 0) {
+      const double r = static_cast<double>(n) / (n_curr + n);
+      const double average = (1 - r) * curr_observation + r * new_observation;
+      curr_observation = average;
+      if (inference) {
+        this->ninferencestotal += n;
+      } else {
+        this->nsamplestotal += n;
+      }
+    }
+  }
+
+  void flushCutoffObservations(HighsInt& curr_observation,
+                               const HighsInt& prev_observation,
+                               const HighsInt& new_observation) {
+    HighsInt delta = new_observation - prev_observation;
+    curr_observation += delta;
+    this->ncutoffstotal += delta;
+  }
+
+  void flushConflictObservations(double& curr_observation,
+                                 double new_observation,
+                                 double conflict_weight) {
+    double s = this->conflict_weight *
+               std::max(curr_observation / this->conflict_weight,
+                        new_observation / conflict_weight);
+    if (s > curr_observation + minThreshold) {
+      this->conflict_avg_score += s - curr_observation;
+    }
+    curr_observation = s;
+  }
+
+  void flushPseudoCost(HighsPseudocost& pseudocost,
+                       std::vector<HighsInt>& nsamplesup,
+                       std::vector<HighsInt>& nsamplesdown,
+                       std::vector<HighsInt>& ninferencesup,
+                       std::vector<HighsInt>& ninferencesdown,
+                       std::vector<HighsInt>& ncutoffsup,
+                       std::vector<HighsInt>& ncutoffsdown) {
+    int64_t orig_nsamplestotal = this->nsamplestotal;
+    int64_t orig_ninferencestotal = this->ninferencestotal;
+    assert(pseudocost.ncutoffsup.size() == ncutoffsup.size() &&
+           pseudocost.ncutoffsup.size() == this->ncutoffsup.size());
+    for (HighsInt col : pseudocost.indschanged) {
+      assert(col >= 0 &&
+             col < static_cast<HighsInt>(pseudocost.ncutoffsup.size()));
+      flushPseudoCostObservations(this->pseudocostup[col],
+                                  pseudocost.pseudocostup[col], nsamplesup[col],
+                                  pseudocost.nsamplesup[col],
+                                  this->nsamplesup[col], false);
+      flushPseudoCostObservations(
+          this->pseudocostdown[col], pseudocost.pseudocostdown[col],
+          nsamplesdown[col], pseudocost.nsamplesdown[col],
+          this->nsamplesdown[col], false);
+      flushPseudoCostObservations(
+          this->inferencesup[col], pseudocost.inferencesup[col],
+          ninferencesup[col], pseudocost.ninferencesup[col],
+          this->ninferencesup[col], true);
+      flushPseudoCostObservations(
+          this->inferencesdown[col], pseudocost.inferencesdown[col],
+          ninferencesdown[col], pseudocost.ninferencesdown[col],
+          this->ninferencesdown[col], true);
+      // Take the max conflict score (no way to guess num observations)
+      flushConflictObservations(this->conflictscoreup[col],
+                                pseudocost.conflictscoreup[col],
+                                pseudocost.conflict_weight);
+      flushConflictObservations(this->conflictscoredown[col],
+                                pseudocost.conflictscoredown[col],
+                                pseudocost.conflict_weight);
+      flushCutoffObservations(this->ncutoffsup[col], ncutoffsup[col],
+                              pseudocost.ncutoffsup[col]);
+      flushCutoffObservations(this->ncutoffsdown[col], ncutoffsdown[col],
+                              pseudocost.ncutoffsdown[col]);
+      pseudocost.changed[col] = false;
+    }
+    pseudocost.indschanged.clear();
+    if (this->ninferencestotal > orig_ninferencestotal) {
+      const double r = static_cast<double>(orig_ninferencestotal) /
+                       static_cast<double>(this->ninferencestotal);
+      this->inferences_total =
+          r * this->inferences_total + (1 - r) * pseudocost.inferences_total;
+    }
+    if (this->nsamplestotal > orig_nsamplestotal) {
+      const double r = static_cast<double>(orig_nsamplestotal) /
+                       static_cast<double>(this->nsamplestotal);
+      this->cost_total = r * this->cost_total + (1 - r) * pseudocost.cost_total;
+    }
+  }
+
+  void syncPseudoCost(HighsPseudocost& pseudocost) {
+    std::copy(pseudocostup.begin(), pseudocostup.end(),
+              pseudocost.pseudocostup.begin());
+    std::copy(pseudocostdown.begin(), pseudocostdown.end(),
+              pseudocost.pseudocostdown.begin());
+    std::copy(nsamplesup.begin(), nsamplesup.end(),
+              pseudocost.nsamplesup.begin());
+    std::copy(nsamplesdown.begin(), nsamplesdown.end(),
+              pseudocost.nsamplesdown.begin());
+    std::copy(inferencesup.begin(), inferencesup.end(),
+              pseudocost.inferencesup.begin());
+    std::copy(inferencesdown.begin(), inferencesdown.end(),
+              pseudocost.inferencesdown.begin());
+    std::copy(ninferencesup.begin(), ninferencesup.end(),
+              pseudocost.ninferencesup.begin());
+    std::copy(ninferencesdown.begin(), ninferencesdown.end(),
+              pseudocost.ninferencesdown.begin());
+    std::copy(ncutoffsup.begin(), ncutoffsup.end(),
+              pseudocost.ncutoffsup.begin());
+    std::copy(ncutoffsdown.begin(), ncutoffsdown.end(),
+              pseudocost.ncutoffsdown.begin());
+    std::copy(conflictscoreup.begin(), conflictscoreup.end(),
+              pseudocost.conflictscoreup.begin());
+    std::copy(conflictscoredown.begin(), conflictscoredown.end(),
+              pseudocost.conflictscoredown.begin());
+    pseudocost.conflict_weight = conflict_weight;
+    pseudocost.conflict_avg_score = conflict_avg_score;
+    pseudocost.cost_total = cost_total;
+    pseudocost.inferences_total = inferences_total;
+    pseudocost.nsamplestotal = nsamplestotal;
+    pseudocost.ninferencestotal = ninferencestotal;
+    pseudocost.ncutoffstotal = ncutoffstotal;
+  }
+
+  void removeChanged() {
+    for (HighsInt col : indschanged) {
+      changed[col] = false;
+    }
+    indschanged.clear();
   }
 };
 

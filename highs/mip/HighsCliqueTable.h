@@ -182,6 +182,10 @@ class HighsCliqueTable {
 
   HighsInt getNumEntries() const { return numEntries; }
 
+  HighsRandom& getRandgen() { return randgen; }
+
+  int64_t& getNumNeighbourhoodQueries() { return numNeighbourhoodQueries; }
+
   HighsInt partitionNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
                                   int64_t& numNeighbourhoodqueries, CliqueVar v,
                                   CliqueVar* q, HighsInt N) const;
@@ -287,7 +291,8 @@ class HighsCliqueTable {
 
   void separateCliques(const HighsMipSolver& mipsolver,
                        const std::vector<double>& sol, HighsCutPool& cutpool,
-                       double feastol);
+                       double feastol, HighsRandom& randgen,
+                       int64_t& localNumNeighbourhoodQueries);
 
   std::vector<std::vector<CliqueVar>> separateCliques(
       const std::vector<double>& sol, const HighsDomain& globaldom,
@@ -300,9 +305,9 @@ class HighsCliqueTable {
 
   void addImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 
-  HighsInt getNumImplications(HighsInt col);
+  HighsInt getNumImplications(HighsInt col) const;
 
-  HighsInt getNumImplications(HighsInt col, bool val);
+  HighsInt getNumImplications(HighsInt col, bool val) const;
 
   void runCliqueMerging(HighsDomain& globaldomain);
 

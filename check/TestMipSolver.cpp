@@ -1404,3 +1404,25 @@ TEST_CASE("issue-2173", "[highs_test_mip_solver]") {
   const double optimal_objective = -26770.8075489;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("parallel-mip-determinism", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/bell5.mps";
+  HighsInt num_runs = 6;
+  std::vector<HighsInt> lp_iters(num_runs);
+  for (HighsInt i = 0; i < num_runs; i++) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue("mip_rel_gap", 0);
+    highs.setOptionValue("threads", 2);
+    highs.setOptionValue("mip_search_concurrency", 2);
+    if (i % 2 == 0) highs.setOptionValue("mip_search_simulate_concurrency", 1);
+    highs.readModel(filename);
+    const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+    const double optimal_objective = 8966406.491519;
+    solve(highs, kHighsOffString, require_model_status, optimal_objective);
+    lp_iters[i] = highs.getInfo().simplex_iteration_count;
+    if (i > 0) {
+      REQUIRE(lp_iters[i] == lp_iters[0]);
+    }
+  }
+}
