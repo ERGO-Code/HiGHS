@@ -1022,7 +1022,8 @@ HighsStatus Highs::optimizeModel() {
   if (!options_.use_warm_start) this->clearSolver();
   this->initialiseSubSolverCallTime();
   HighsStatus status = this->calledOptimizeModel();
-  if (this->options_.log_dev_level > 0) this->reportSubSolverCallTime();
+  //  if (this->options_.log_dev_level > 0)
+    this->reportSubSolverCallTime();
   return status;
 }
 
