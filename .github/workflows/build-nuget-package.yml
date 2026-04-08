@@ -16,7 +16,7 @@ jobs:
   build_macos_intel:
     runs-on: macos-15-intel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory ${{runner.workspace}}/build
@@ -41,7 +41,7 @@ jobs:
   build_macos_arm:
     runs-on: macos-14  # macos-14 is arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory ${{runner.workspace}}/build
@@ -67,7 +67,7 @@ jobs:
   build_windows_32:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory ${{runner.workspace}}/build32
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     container: stabletec/build-core:debian-11
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory /__w/HiGHS/HiGHS/build
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container: stabletec/build-core:debian-11
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory /__w/HiGHS/HiGHS/build_linux_arm64
@@ -137,7 +137,7 @@ jobs:
     runs-on: windows-latest
     needs: [build_macos_intel, build_macos_arm, build_windows_32, build_linux, build_linux_arm64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS Windows native
         run: |
          cmake -E make_directory ${{runner.workspace}}/build
@@ -211,7 +211,7 @@ jobs:
 
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v4
 
       - name: Download nuget

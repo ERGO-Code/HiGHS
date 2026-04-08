@@ -15,7 +15,7 @@ jobs:
         os: [macos-latest, ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: bazelbuild/setup-bazelisk@v3
 
@@ -41,7 +41,7 @@ jobs:
   bazel-win_:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Bazelisk is available via Chocolatey (on Windows)
       - name: Install Bazelisk

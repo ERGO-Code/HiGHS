@@ -13,7 +13,7 @@ jobs:
       # matrix:
       #   python: [3.11]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory ${{runner.workspace}}/build
@@ -60,7 +60,7 @@ jobs:
   build_macos_arm:
     runs-on: macos-14  # macos-14 is arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory ${{runner.workspace}}/build

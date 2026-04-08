@@ -10,7 +10,7 @@ jobs:
   build_sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
@@ -31,7 +31,7 @@ jobs:
   build_sdist_mac:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build sdist
         run: |
@@ -51,7 +51,7 @@ jobs:
   build_sdist_win:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
         uses: actions/setup-python@v5
@@ -81,7 +81,7 @@ jobs:
           python: [3.14]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
         uses: actions/setup-python@v5
@@ -110,7 +110,7 @@ jobs:
         matrix:
           python: [3.11]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install python
         uses: actions/setup-python@v5
@@ -139,7 +139,7 @@ jobs:
       matrix:
         python: [3.11]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
         uses: actions/setup-python@v5
@@ -169,7 +169,7 @@ jobs:
       matrix:
         python: [3.11]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
         uses: actions/setup-python@v5
@@ -196,7 +196,7 @@ jobs:
   build_wheel_windows:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
         uses: actions/setup-python@v5
@@ -223,7 +223,7 @@ jobs:
   build_wheel_windows_313:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
         uses: actions/setup-python@v5

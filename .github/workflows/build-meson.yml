@@ -15,7 +15,7 @@ jobs:
         # windows-latest takes to long
         os: [ubuntu-latest] 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: "recursive"
           fetch-depth: 0
