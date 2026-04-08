@@ -19,7 +19,8 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-void HighsLpRelaxation::setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time) {
+void HighsLpRelaxation::setGlobalSubSolverCallTime(
+    HighsSubSolverCallTime* global_sub_solver_call_time) {
   assert(global_sub_solver_call_time->timer);
   lpsolver.setGlobalSubSolverCallTime(global_sub_solver_call_time);
 }
@@ -1285,9 +1286,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::kError;
     case HighsModelStatus::kIterationLimit: {
       if (!mipsolver.submip && resolve_on_error) {
-	// Highs instantiation
-	Highs ipm;
-	ipm.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+        // Highs instantiation
+        Highs ipm;
+        ipm.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
         ipm.setOptionValue("output_flag", false);
         // check if only root presolve is allowed
         const bool use_presolve =

@@ -4273,8 +4273,7 @@ void HighsLinearObjective::clear() {
 }
 
 void HighsSubSolverCallTime::initialise(HighsTimer& timer_) {
-  if (this->initialised)
-    printf("Re-initialising HighsSubSolverCallTime\n");
+  if (this->initialised) printf("Re-initialising HighsSubSolverCallTime\n");
   HighsInt num_thread = highs::parallel::num_threads();
   this->timer = &timer_;
   this->initialised = true;
@@ -4314,7 +4313,7 @@ void HighsSubSolverCallTime::start(const HighsInt sub_solver_clock) {
   // Start timing sub-solver sub_solver_clock
   assert(0 <= sub_solver_clock && sub_solver_clock < kSubSolverCount);
   HighsInt thread = highs::parallel::thread_num();
-  double time_now = timer->read();
+  double time_start = timer->read();
   if (sub_solver_clock == kSubSolverMip) {
     // The whole MIP solver time is recorded to put its sub-solver
     // times in context, so the mechanism of recording the start time
@@ -4323,7 +4322,7 @@ void HighsSubSolverCallTime::start(const HighsInt sub_solver_clock) {
     assert(thread == 0);
     assert(this->mip_clock_running < 0);
     assert(!std::signbit(this->mip_start_time));
-    this->mip_start_time = -time_now;
+    this->mip_start_time = -time_start;
     this->mip_clock_running = sub_solver_clock;
   } else if (sub_solver_clock == kSubSolverSubMip) {
     // The whole sub-MIP solver time is recorded to put its sub-solver
@@ -4333,15 +4332,16 @@ void HighsSubSolverCallTime::start(const HighsInt sub_solver_clock) {
     assert(thread == 0);
     assert(this->submip_clock_running < 0);
     assert(!std::signbit(this->submip_start_time));
-    this->submip_start_time = -time_now;
+    this->submip_start_time = -time_start;
     this->submip_clock_running = sub_solver_clock;
   } else {
     HighsInt clock_running = this->clock_running[thread];
-    if (clock_running >= 0) printf("HighsSubSolverCallTime::start clock %d (%s) running\n",
-			      int(clock_running), this->name[clock_running].c_str());
+    if (clock_running >= 0)
+      printf("HighsSubSolverCallTime::start clock %d (%s) running\n",
+             int(clock_running), this->name[clock_running].c_str());
     assert(clock_running < 0);
     assert(!std::signbit(this->start_time[thread]));
-    this->start_time[thread] = -time_now;
+    this->start_time[thread] = -time_start;
     this->clock_running[thread] = sub_solver_clock;
   }
 }
@@ -4351,27 +4351,30 @@ void HighsSubSolverCallTime::stop(const HighsInt sub_solver_clock) {
   HighsInt use_clock =
       sub_solver_clock < 0 ? this->clock_running[thread] : sub_solver_clock;
   assert(0 <= use_clock && use_clock < kSubSolverCount);
-  double time_now = timer->read();
+  double time_stop = timer->read();
+  double time_start = kHighsInf;
   if (use_clock == kSubSolverMip) {
     assert(thread == 0);
     assert(this->mip_clock_running == kSubSolverMip);
     assert(std::signbit(this->mip_start_time));
-    this->mip_clock_running =-kHighsIInf;
-    this->mip_start_time = time_now;
-    
+    time_start = -this->mip_start_time;
+    this->mip_clock_running = -kHighsIInf;
+    this->mip_start_time = time_stop;
   } else if (use_clock == kSubSolverSubMip) {
     assert(thread == 0);
     assert(this->submip_clock_running == kSubSolverSubMip);
     assert(std::signbit(this->submip_start_time));
-    this->submip_clock_running =-kHighsIInf;
-    this->submip_start_time = time_now;
+    time_start = -this->submip_start_time;
+    this->submip_clock_running = -kHighsIInf;
+    this->submip_start_time = time_stop;
   } else {
     assert(this->clock_running[thread] == use_clock);
     assert(std::signbit(this->start_time[thread]));
+    time_start = -this->start_time[thread];
     this->clock_running[thread] = -kHighsIInf;
-    this->start_time[thread] = time_now;
+    this->start_time[thread] = time_stop;
   }
-  double time = time_now + this->start_time[thread];
+  double time = time_stop - time_start;
   if (submip[thread]) {
     this->submip_record[thread].num_call[use_clock]++;
     this->submip_record[thread].run_time[use_clock] += time;
@@ -4384,78 +4387,127 @@ void HighsSubSolverCallTime::stop(const HighsInt sub_solver_clock) {
 void Highs::reportSubSolverCallTime() const {
   HighsInt num_thread = highs::parallel::num_threads();
   double mip_time = 0;
-  const std::vector<HighsSubSolverCallTimeRecord>& record = this->sub_solver_call_time_.record;
-  for (HighsInt thread_num = 0; thread_num < num_thread; thread_num++)
+  double max_sumip_time = 0;
+  const std::vector<HighsSubSolverCallTimeRecord>& record =
+      this->sub_solver_call_time_.record;
+  const std::vector<HighsSubSolverCallTimeRecord>& submip_record =
+      this->sub_solver_call_time_.submip_record;
+  for (HighsInt thread_num = 0; thread_num < num_thread; thread_num++) {
     mip_time = std::max(record[thread_num].run_time[kSubSolverMip], mip_time);
+    max_sumip_time =
+        std::max(record[thread_num].run_time[kSubSolverSubMip], max_sumip_time);
+  }
   printf("Highs::reportSubSolverCallTime() mip_time = %g\n", mip_time);
 
-  std::stringstream ss;
-  std::vector<bool> used_sub_solver(kSubSolverCount, false);
   std::vector<HighsInt> used_thread;
-  const std::vector<std::string>& name = this->sub_solver_call_time_.name;
   for (HighsInt thread_num = 0; thread_num < num_thread; thread_num++) {
-    const std::vector<HighsInt>& num_call = record[thread_num].num_call;
-    const std::vector<double>& run_time = record[thread_num].run_time;
     bool used = false;
-    for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) if (num_call[Ix]) used = true;
+    for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++)
+      if (record[thread_num].num_call[Ix]) used = true;
+    for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++)
+      if (submip_record[thread_num].num_call[Ix]) used = true;
     if (!used) continue;
     used_thread.push_back(thread_num);
-    ss.str(std::string());
-    ss << highsFormatToString("\nSub-solver timing: thread %d\n"
-                              "Solver                    Calls    Time       "
-                              "Time/call", int(thread_num));
-    if (mip_time > 0) ss << "  MIP%";
-    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-                 ss.str().c_str());
-    double sum_mip_sub_solve_time = 0;
-    for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
-      double pct = 0;
-      if (!num_call[Ix]) continue;
-      used_sub_solver[Ix] = true;
+  }
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "\nNumber of threads used = %d\n", int(used_thread.size()));
+
+  std::stringstream ss;
+  std::vector<bool> mip_used_sub_solver(kSubSolverCount, false);
+  std::vector<bool> submip_used_sub_solver(kSubSolverCount, false);
+  const std::vector<std::string>& name = this->sub_solver_call_time_.name;
+  for (HighsInt k = 0; k < 2; k++) {
+    for (HighsInt thread_ix = 0; thread_ix < HighsInt(used_thread.size());
+         thread_ix++) {
+      HighsInt thread_num = used_thread[thread_ix];
+      double ideal_time = k == 0
+                              ? mip_time
+                              : this->sub_solver_call_time_.record[thread_num]
+                                    .run_time[kSubSolverSubMip];
+      const std::vector<HighsSubSolverCallTimeRecord>& record =
+          k == 0 ? this->sub_solver_call_time_.record
+                 : this->sub_solver_call_time_.submip_record;
+      std::vector<bool>& used_sub_solver =
+          k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
+      const std::vector<HighsInt>& num_call = record[thread_num].num_call;
+      const std::vector<double>& run_time = record[thread_num].run_time;
       ss.str(std::string());
-      ss << highsFormatToString("%-21s %9d %11.4e %11.4e",
-                                name[Ix].c_str(), int(num_call[Ix]),
-                                run_time[Ix], run_time[Ix] / (1.0 * num_call[Ix]));
-      if (mip_time > 0 && Ix != kSubSolverMip) {
-	sum_mip_sub_solve_time += run_time[Ix];
-	ss << highsFormatToString(" %5.1f", 1e2 * run_time[Ix] / mip_time);
-      }
+      ss << highsFormatToString(
+          "\nSub-solver timing: thread %d\n"
+          "Solver                    Calls    Time       "
+          "Time/call",
+          int(thread_num));
+      if (ideal_time > 0) ss << (k == 0 ? "      MIP%" : "  Sub-MIP%");
       highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
                    ss.str().c_str());
+      double sum_mip_sub_solve_time = 0;
+      for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
+        double pct = 0;
+        if (!num_call[Ix]) continue;
+        used_sub_solver[Ix] = true;
+        ss.str(std::string());
+        ss << highsFormatToString("%-21s %9d %11.4e %11.4e", name[Ix].c_str(),
+                                  int(num_call[Ix]), run_time[Ix],
+                                  run_time[Ix] / (1.0 * num_call[Ix]));
+        if (ideal_time > 0 && Ix != kSubSolverMip) {
+          sum_mip_sub_solve_time += run_time[Ix];
+          ss << highsFormatToString("     %5.1f",
+                                    1e2 * run_time[Ix] / ideal_time);
+        }
+        highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                     ss.str().c_str());
+      }
+      if (ideal_time > 0)
+        highsLogUser(
+            options_.log_options, HighsLogType::kInfo,
+            "TOTAL                           %11.4e                 %5.1f\n",
+            sum_mip_sub_solve_time, 1e2 * sum_mip_sub_solve_time / ideal_time);
     }
-    if (mip_time > 0)
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "TOTAL (excluding AC)            %11.4e             %5.1f\n",
-                   sum_mip_sub_solve_time,
-                   1e2 * sum_mip_sub_solve_time / mip_time);
   }
-  printf("Number of threads used = %d\n", int(used_thread.size()));
   if (mip_time <= 0) return;
   // Determine the sub-solver percentage breakdown over all threads
   // when solving MIPs
   ss.str(std::string());
-  ss << highsFormatToString("\nSolver                ");
-  for (HighsInt thread_ix = 0; thread_ix < HighsInt(used_thread.size()); thread_ix++) {
+  ss << highsFormatToString("\nMIP sub-solver        ");
+  for (HighsInt thread_ix = 0; thread_ix < HighsInt(used_thread.size());
+       thread_ix++) {
     HighsInt thread_num = used_thread[thread_ix];
     ss << highsFormatToString("%5d", int(thread_num));
   }
   highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-                   ss.str().c_str());
-  for (HighsInt Ix = 1; Ix < kSubSolverCount; Ix++) {
-    if (!used_sub_solver[Ix]) continue;
-    ss.str(std::string());
-    ss << highsFormatToString("%-21s", name[Ix].c_str());
-    for (HighsInt thread_ix = 0; thread_ix < HighsInt(used_thread.size()); thread_ix++) {
-      HighsInt thread_num = used_thread[thread_ix];
-      HighsInt num_call = record[thread_num].num_call[Ix];
-      double run_time = record[thread_num].run_time[Ix];
-      if (num_call) {
-        ss << highsFormatToString(" %5.1f", 1e2 * run_time / mip_time);
-      } else {
-        ss << "      ";
+               ss.str().c_str());
+  for (HighsInt k = 0; k < 2; k++) {
+    if (k == 1) {
+      if (max_sumip_time <= 0) continue;
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Sub-MIP sub-solver    \n");
+    }
+    std::vector<bool>& used_sub_solver =
+        k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
+    const std::vector<HighsSubSolverCallTimeRecord>& record =
+        k == 0 ? this->sub_solver_call_time_.record
+               : this->sub_solver_call_time_.submip_record;
+    for (HighsInt Ix = 1; Ix < kSubSolverCount; Ix++) {
+      if (!used_sub_solver[Ix]) continue;
+      ss.str(std::string());
+      ss << highsFormatToString("%-21s", name[Ix].c_str());
+      for (HighsInt thread_ix = 0; thread_ix < HighsInt(used_thread.size());
+           thread_ix++) {
+        HighsInt thread_num = used_thread[thread_ix];
+        double ideal_time = k == 0
+                                ? mip_time
+                                : this->sub_solver_call_time_.record[thread_num]
+                                      .run_time[kSubSolverSubMip];
+        HighsInt num_call = record[thread_num].num_call[Ix];
+        double run_time = record[thread_num].run_time[Ix];
+        if (num_call && ideal_time > 0) {
+          ss << highsFormatToString(" %5.1f", 1e2 * run_time / ideal_time);
+        } else {
+          ss << "      ";
+        }
+        highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                     ss.str().c_str());
       }
-      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-                   ss.str().c_str());
     }
   }
 }

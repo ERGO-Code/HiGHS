@@ -1227,7 +1227,7 @@ class Highs {
    * @brief Clear the internal HighsBasis instance
    */
   HighsStatus setBasis();
-  
+
   /**
    * @brief Return a const reference to the internal sub-solver call and time
    * instance
@@ -1292,7 +1292,8 @@ class Highs {
    */
   static void resetGlobalScheduler(bool blocking = false);
 
-  void setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time = nullptr);
+  void setGlobalSubSolverCallTime(
+      HighsSubSolverCallTime* global_sub_solver_call_time = nullptr);
 
   // Start of advanced methods: only for internal use!
 

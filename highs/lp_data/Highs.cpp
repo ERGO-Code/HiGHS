@@ -992,7 +992,7 @@ HighsStatus Highs::optimizeModel() {
   if (status != HighsStatus::kOk) return status;
   status = this->calledOptimizeModel();
   //  if (this->options_.log_dev_level > 0)
-    this->reportSubSolverCallTime();
+  this->reportSubSolverCallTime();
   return status;
 }
 
@@ -4913,17 +4913,18 @@ HighsStatus Highs::initializeGlobalScheduler() {
   highs::parallel::initialize_scheduler(this->options_.threads);
   this->max_threads_ = highs::parallel::num_threads();
   HighsLogOptions& log_options = this->options_.log_options;
-  if (this->options_.threads != 0 && this->max_threads_ != this->options_.threads) {
-    highsLogUser(log_options, HighsLogType::kError,
-		 "Option 'threads' is set to %d but global scheduler has already been "
-		 "initialized to use %d threads. The previous scheduler instance can "
-		 "be destroyed by calling Highs::resetGlobalScheduler().\n",
-		 int(options_.threads), int(this->max_threads_));
+  if (this->options_.threads != 0 &&
+      this->max_threads_ != this->options_.threads) {
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Option 'threads' is set to %d but global scheduler has already been "
+        "initialized to use %d threads. The previous scheduler instance can "
+        "be destroyed by calling Highs::resetGlobalScheduler().\n",
+        int(options_.threads), int(this->max_threads_));
     return HighsStatus::kError;
   }
   if (this->max_threads_ <= 0) {
-    highsLogDev(log_options, HighsLogType::kError,
-                "max_threads() returns %d\n",
+    highsLogDev(log_options, HighsLogType::kError, "max_threads() returns %d\n",
                 int(this->max_threads_));
     assert(this->max_threads_ > 0);
     return HighsStatus::kError;
@@ -4941,10 +4942,10 @@ void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
 
-void Highs::setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time) {
+void Highs::setGlobalSubSolverCallTime(
+    HighsSubSolverCallTime* global_sub_solver_call_time) {
   assert(global_sub_solver_call_time);
-  this->global_sub_solver_call_time_ =
-    global_sub_solver_call_time ?
-    global_sub_solver_call_time :
-    &this->sub_solver_call_time_;
+  this->global_sub_solver_call_time_ = global_sub_solver_call_time
+                                           ? global_sub_solver_call_time
+                                           : &this->sub_solver_call_time_;
 }

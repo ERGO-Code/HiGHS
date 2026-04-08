@@ -1129,7 +1129,8 @@ try_again:
         mipsolver.options_mip_->time_limit - mipsolver.timer_.read(), 0.1);
     // Highs instantiation
     Highs tmpSolver;
-    tmpSolver.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+    tmpSolver.setGlobalSubSolverCallTime(
+        mipsolver.global_sub_solver_call_time_);
     const bool debug_report = false;
     if (debug_report) {
       tmpSolver.setOptionValue("log_dev_level", 2);

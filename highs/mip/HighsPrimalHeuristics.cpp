@@ -146,7 +146,6 @@ bool HighsPrimalHeuristics::solveSubMip(
   // Initialise termination_status_ and propagate any terminator to
   // the sub-MIP
   submipsolver.initialiseTerminator(mipsolver);
-  printf("HighsPrimalHeuristics::solveSubMip!\n");
   submipsolver.initialiseAnalysis(&mipsolver.analysis_);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
@@ -157,9 +156,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   //
   // Copy the pointer to global sub-solver data into the sub-MIP
   // solver
-  submipsolver.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+  submipsolver.setGlobalSubSolverCallTime(
+      mipsolver.global_sub_solver_call_time_);
   // Only start timing the submip if the calling MIP isn't a sub-MIP
-  if (!mipsolver.submip) mipsolver.global_sub_solver_call_time_->start(kSubSolverSubMip);
+  if (!mipsolver.submip)
+    mipsolver.global_sub_solver_call_time_->start(kSubSolverSubMip);
   // Ensure that sub-solver call time data accumulated in the sub-MIP record
   mipsolver.global_sub_solver_call_time_->setSubMip(true);
   submipsolver.run();
@@ -168,7 +169,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   // is a sub-MIP
   mipsolver.global_sub_solver_call_time_->setSubMip(mipsolver.submip);
   // Only stop timing the submip if the calling MIP isn't a sub-MIP
-  if (!mipsolver.submip) mipsolver.global_sub_solver_call_time_->stop(kSubSolverSubMip);
+  if (!mipsolver.submip)
+    mipsolver.global_sub_solver_call_time_->stop(kSubSolverSubMip);
 
   mipsolver.max_submip_level =
       std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);

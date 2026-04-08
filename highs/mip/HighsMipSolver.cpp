@@ -996,7 +996,8 @@ void HighsMipSolver::initialiseTerminator(const HighsMipSolver& mip_solver) {
                              mip_solver.terminator_.record);
 }
 
-void HighsMipSolver::setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time) {
+void HighsMipSolver::setGlobalSubSolverCallTime(
+    HighsSubSolverCallTime* global_sub_solver_call_time) {
   assert(global_sub_solver_call_time);
   this->global_sub_solver_call_time_ = global_sub_solver_call_time;
 }
