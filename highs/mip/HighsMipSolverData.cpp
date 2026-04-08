@@ -345,7 +345,10 @@ void HighsMipSolverData::startAnalyticCenterComputation(
   taskGroup.spawn([&]() {
     // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
+    //
+    // Highs instantiation
     Highs ipm;
+    ipm.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
     ipm.setOptionValue("output_flag", false);
     const std::vector<double>& sol = ipm.getSolution().col_value;
     // Don't use presolve - because this can lead to postsolve putting
@@ -1124,7 +1127,9 @@ try_again:
     this->total_repair_lp++;
     double time_available = std::max(
         mipsolver.options_mip_->time_limit - mipsolver.timer_.read(), 0.1);
+    // Highs instantiation
     Highs tmpSolver;
+    tmpSolver.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
     const bool debug_report = false;
     if (debug_report) {
       tmpSolver.setOptionValue("log_dev_level", 2);

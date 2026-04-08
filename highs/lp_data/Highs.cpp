@@ -1211,9 +1211,7 @@ HighsStatus Highs::calledOptimizeModel() {
       // Solve model as a MIP
       if (!solverValidForMip(options_.solver))
         warnSolverInvalid(options_, "MIP");
-      global_sub_solver_call_time_->start(kSubSolverMip);
       call_status = callSolveMip();
-      global_sub_solver_call_time_->stop(kSubSolverMip);
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
       return returnFromOptimizeModel(return_status, undo_mods);
@@ -4164,7 +4162,9 @@ HighsStatus Highs::callSolveMip() {
   // Set up the analysis (profiling) here, so that it's only done
   // for the root MIP
   solver.initialiseAnalysis();
+  global_sub_solver_call_time_->start(kSubSolverMip);
   solver.run();
+  global_sub_solver_call_time_->stop(kSubSolverMip);
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
@@ -4931,7 +4931,9 @@ HighsStatus Highs::initializeGlobalScheduler() {
   highsLogDev(log_options, HighsLogType::kDetailed,
               "Running with %d thread(s)\n", int(max_threads_));
   this->sub_solver_call_time_.initialise(this->timer_);
-  this->setGlobalSubSolverCallTime();
+  // For now pass &this->sub_solver_call_time_, rather than leaving
+  // the nullptr default to use it
+  this->setGlobalSubSolverCallTime(&this->sub_solver_call_time_);
   return HighsStatus::kOk;
 }
 
@@ -4940,6 +4942,7 @@ void Highs::resetGlobalScheduler(bool blocking) {
 }
 
 void Highs::setGlobalSubSolverCallTime(HighsSubSolverCallTime* global_sub_solver_call_time) {
+  assert(global_sub_solver_call_time);
   this->global_sub_solver_call_time_ =
     global_sub_solver_call_time ?
     global_sub_solver_call_time :

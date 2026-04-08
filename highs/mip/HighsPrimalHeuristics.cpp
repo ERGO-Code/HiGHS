@@ -154,7 +154,22 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.clqtableinit = &mipsolver.mipdata_->cliquetable;
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
   // Solve the sub-MIP
+  //
+  // Copy the pointer to global sub-solver data into the sub-MIP
+  // solver
+  submipsolver.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+  // Only start timing the submip if the calling MIP isn't a sub-MIP
+  if (!mipsolver.submip) mipsolver.global_sub_solver_call_time_->start(kSubSolverSubMip);
+  // Ensure that sub-solver call time data accumulated in the sub-MIP record
+  mipsolver.global_sub_solver_call_time_->setSubMip(true);
   submipsolver.run();
+  // Ensure that further sub-solver call time data are accumulated in
+  // the MIP or sub-MIP record, according to whether the calling MIP
+  // is a sub-MIP
+  mipsolver.global_sub_solver_call_time_->setSubMip(mipsolver.submip);
+  // Only stop timing the submip if the calling MIP isn't a sub-MIP
+  if (!mipsolver.submip) mipsolver.global_sub_solver_call_time_->stop(kSubSolverSubMip);
+
   mipsolver.max_submip_level =
       std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
   if (!mipsolver.submip) {
@@ -369,7 +384,9 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
                                }),
                 intcols.end());
 
+  // LP relaxation instantiation
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
+  heurlp.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
   heurlp.setAdjustSymmetricBranchingCol(false);
@@ -611,7 +628,9 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
   HighsDomain& localdom = heur.getLocalDomain();
   heur.setHeuristic(true);
 
+  // LP relaxation instantiation
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
+  heurlp.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
   heurlp.setAdjustSymmetricBranchingCol(false);
@@ -911,6 +930,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
   }
 
   if (numintcols != mipsolver.numCol()) {
+    // LP relaxation instantiation
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
     lprelax.loadModel();
@@ -1048,7 +1068,9 @@ void HighsPrimalHeuristics::randomizedRounding(
 
   if (mipsolver.mipdata_->integer_cols.size() !=
       static_cast<size_t>(mipsolver.numCol())) {
+    // LP relaxation instantiation
     HighsLpRelaxation lprelax(mipsolver);
+    lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
     lprelax.loadModel();
     lprelax.setIterationLimit(
         std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
@@ -1099,7 +1121,9 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
   std::vector<double> current_relax_solution = relaxationsol;
   HighsInt t = 0;
   const HighsLp& currentLp = *mipsolver.model_;
+  // LP relaxation instantiation
   HighsLpRelaxation lprelax(mipsolver.mipdata_->lp);
+  lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
   std::vector<std::pair<HighsInt, double>> current_fractional_integers =
       lprelax.getFractionalIntegers();
   std::vector<std::tuple<HighsInt, HighsInt, double>> current_infeasible_rows =
@@ -1462,7 +1486,9 @@ void HighsPrimalHeuristics::ziRound(const std::vector<double>& relaxationsol) {
 }
 
 void HighsPrimalHeuristics::feasibilityPump() {
+  // LP relaxation instantiation
   HighsLpRelaxation lprelax(mipsolver.mipdata_->lp);
+  lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
   std::unordered_set<std::vector<HighsInt>, HighsVectorHasher, HighsVectorEqual>
       referencepoints;
   std::vector<double> roundedsol;
