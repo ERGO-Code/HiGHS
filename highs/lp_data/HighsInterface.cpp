@@ -4280,6 +4280,8 @@ void HighsSubSolverCallTime::initialise(HighsTimer& timer_) {
   this->initialised = true;
   this->mip_start_time = kHighsInf;
   this->mip_clock_running = -kHighsIInf;
+  this->submip_start_time = kHighsInf;
+  this->submip_clock_running = -kHighsIInf;
   this->submip.assign(num_thread, false);
   this->start_time.assign(num_thread, kHighsInf);
   this->clock_running.assign(num_thread, -kHighsIInf);
@@ -4323,8 +4325,21 @@ void HighsSubSolverCallTime::start(const HighsInt sub_solver_clock) {
     assert(!std::signbit(this->mip_start_time));
     this->mip_start_time = -time_now;
     this->mip_clock_running = sub_solver_clock;
+  } else if (sub_solver_clock == kSubSolverSubMip) {
+    // The whole sub-MIP solver time is recorded to put its sub-solver
+    // times in context, so the mechanism of recording the start time
+    // of the current (sub-)MIP sub-solver - and checking that it's
+    // the only one running - can't be used.
+    assert(thread == 0);
+    assert(this->submip_clock_running < 0);
+    assert(!std::signbit(this->submip_start_time));
+    this->submip_start_time = -time_now;
+    this->submip_clock_running = sub_solver_clock;
   } else {
-    assert(this->clock_running[thread] < 0);
+    HighsInt clock_running = this->clock_running[thread];
+    if (clock_running >= 0) printf("HighsSubSolverCallTime::start clock %d (%s) running\n",
+			      int(clock_running), this->name[clock_running].c_str());
+    assert(clock_running < 0);
     assert(!std::signbit(this->start_time[thread]));
     this->start_time[thread] = -time_now;
     this->clock_running[thread] = sub_solver_clock;
@@ -4344,6 +4359,12 @@ void HighsSubSolverCallTime::stop(const HighsInt sub_solver_clock) {
     this->mip_clock_running =-kHighsIInf;
     this->mip_start_time = time_now;
     
+  } else if (use_clock == kSubSolverSubMip) {
+    assert(thread == 0);
+    assert(this->submip_clock_running == kSubSolverSubMip);
+    assert(std::signbit(this->submip_start_time));
+    this->submip_clock_running =-kHighsIInf;
+    this->submip_start_time = time_now;
   } else {
     assert(this->clock_running[thread] == use_clock);
     assert(std::signbit(this->start_time[thread]));
