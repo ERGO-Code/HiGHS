@@ -26,7 +26,7 @@ jobs:
       - name: check metadata
         run: pipx run twine check dist/*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cibw-sdist
           path: dist/*.tar.gz
@@ -63,7 +63,7 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cibw-wheels-${{ matrix.python }}-${{ matrix.buildplat[1] }}
           path: wheelhouse/*.whl

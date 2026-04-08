@@ -26,7 +26,7 @@ jobs:
           cd build && cpack
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-x64-apache
           path: build/*.tar.gz
@@ -55,7 +55,7 @@ jobs:
           cd build && cpack
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-arm64-apache
           path: build/*.tar.gz
@@ -84,7 +84,7 @@ jobs:
           cpack -C Release
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-x64-apache
           path: build/*.zip
@@ -114,7 +114,7 @@ jobs:
           cpack -C Release
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-win32-apache
           path: build/*.zip
@@ -135,7 +135,7 @@ jobs:
           cpack -C Release
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-arm64-apache
           path: build/*.zip
@@ -160,7 +160,7 @@ jobs:
           cd build && cpack
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-universal-apache
           path: build/*.tar.gz
@@ -187,7 +187,7 @@ jobs:
           cd build && cpack
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-x64-mit
           path: build/*.tar.gz
@@ -215,7 +215,7 @@ jobs:
           cd build && cpack
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-arm64-mit
           path: build/*.tar.gz
@@ -244,7 +244,7 @@ jobs:
           cpack -C Release
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-x64-mit
           path: build/*.zip
@@ -273,7 +273,7 @@ jobs:
           cpack -C Release
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-x64-shared-mit
           path: build/*.zip
@@ -303,7 +303,7 @@ jobs:
           cpack -C Release
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-win32-mit
           path: build/*.zip
@@ -324,7 +324,7 @@ jobs:
           cpack -C Release
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-arm64-mit
           path: build/*.zip
@@ -349,7 +349,7 @@ jobs:
           cd build && cpack
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-universal-mit
           path: build/*.tar.gz
