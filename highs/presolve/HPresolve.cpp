@@ -5099,32 +5099,40 @@ HPresolve::Result HPresolve::singletonColStuffing(
         return true;
       };
 
-  // lambda for computing candidates for stuffing
-  auto checkCandidates =
-      [&](HighsInt row, HighsInt direction, std::vector<candidate>& candidates,
-          HighsCDouble& sumLower, HighsCDouble& sumUpper, bool& sumLowerFinite,
-          bool& sumUpperFinite, bool& hasInteger, bool& allInteger,
-          double& minWeight, double& maxWeight) {
-        // compute candidates
-        if (computeCandidates(row, direction, candidates, sumLower, sumUpper,
-                              sumLowerFinite, sumUpperFinite, hasInteger,
-                              allInteger, minWeight, maxWeight, true)) {
-          // all columns need to have same weights if we only have integer
-          // columns
-          if (!hasInteger || (allInteger && minWeight == maxWeight))
-            return true;
-        } else
-          allInteger = false;
+  // lambda for computing and checking candidates for stuffing
+  auto checkCandidates = [&](HighsInt row, HighsInt direction,
+                             std::vector<candidate>& candidates,
+                             HighsCDouble& sumLower, HighsCDouble& sumUpper,
+                             bool& sumLowerFinite, bool& sumUpperFinite) {
+    // indicators for integer candidates and weights
+    bool hasInteger;
+    bool allInteger;
+    double minWeight;
+    double maxWeight;
 
-        // recompute candidates without integer columns
-        if (hasInteger && !allInteger &&
-            computeCandidates(row, direction, candidates, sumLower, sumUpper,
-                              sumLowerFinite, sumUpperFinite, hasInteger,
-                              allInteger, minWeight, maxWeight, false))
-          return true;
+    // compute candidates
+    if (computeCandidates(row, direction, candidates, sumLower, sumUpper,
+                          sumLowerFinite, sumUpperFinite, hasInteger,
+                          allInteger, minWeight, maxWeight, true)) {
+      // return if there are no integer columns
+      if (!hasInteger) return true;
+      // all columns need to have same weights if we only have integer
+      // columns
+      if (allInteger) {
+        if (minWeight != maxWeight) return false;
+        return true;
+      }
+    }
 
-        return false;
-      };
+    // recompute candidates without integer columns
+    if (hasInteger &&
+        computeCandidates(row, direction, candidates, sumLower, sumUpper,
+                          sumLowerFinite, sumUpperFinite, hasInteger,
+                          allInteger, minWeight, maxWeight, false))
+      return true;
+
+    return false;
+  };
 
   // lambda for actual stuffing
   auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
@@ -5137,15 +5145,10 @@ HPresolve::Result HPresolve::singletonColStuffing(
     HighsCDouble sumUpper;
     bool sumLowerFinite;
     bool sumUpperFinite;
-    bool hasInteger;
-    bool allInteger;
-    double minWeight;
-    double maxWeight;
 
     // compute candidates
     if (!checkCandidates(row, direction, candidates, sumLower, sumUpper,
-                         sumLowerFinite, sumUpperFinite, hasInteger, allInteger,
-                         minWeight, maxWeight))
+                         sumLowerFinite, sumUpperFinite))
       return Result::kOk;
 
     // sort candidates
