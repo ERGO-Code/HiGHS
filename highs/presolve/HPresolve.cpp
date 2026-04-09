@@ -5099,6 +5099,33 @@ HPresolve::Result HPresolve::singletonColStuffing(
         return true;
       };
 
+  // lambda for computing candidates for stuffing
+  auto checkCandidates =
+      [&](HighsInt row, HighsInt direction, std::vector<candidate>& candidates,
+          HighsCDouble& sumLower, HighsCDouble& sumUpper, bool& sumLowerFinite,
+          bool& sumUpperFinite, bool& hasInteger, bool& allInteger,
+          double& minWeight, double& maxWeight) {
+        // compute candidates
+        if (computeCandidates(row, direction, candidates, sumLower, sumUpper,
+                              sumLowerFinite, sumUpperFinite, hasInteger,
+                              allInteger, minWeight, maxWeight, true)) {
+          // all columns need to have same weights if we only have integer
+          // columns
+          if (!hasInteger || (allInteger && minWeight == maxWeight))
+            return true;
+        } else
+          allInteger = false;
+
+        // recompute candidates without integer columns
+        if (hasInteger && !allInteger &&
+            computeCandidates(row, direction, candidates, sumLower, sumUpper,
+                              sumLowerFinite, sumUpperFinite, hasInteger,
+                              allInteger, minWeight, maxWeight, false))
+          return true;
+
+        return false;
+      };
+
   // lambda for actual stuffing
   auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
     // skip row if rhs is not finite
@@ -5116,23 +5143,10 @@ HPresolve::Result HPresolve::singletonColStuffing(
     double maxWeight;
 
     // compute candidates
-    while (true) {
-      if (computeCandidates(row, direction, candidates, sumLower, sumUpper,
-                            sumLowerFinite, sumUpperFinite, hasInteger,
-                            allInteger, minWeight, maxWeight, true)) {
-        // all columns need to have same weights if we only have integer columns
-        if (!hasInteger || (allInteger && minWeight == maxWeight)) break;
-      }
-
-      // recompute candidates without integer columns
-      if (hasInteger &&
-          computeCandidates(row, direction, candidates, sumLower, sumUpper,
-                            sumLowerFinite, sumUpperFinite, hasInteger,
-                            allInteger, minWeight, maxWeight, false))
-        break;
-
+    if (!checkCandidates(row, direction, candidates, sumLower, sumUpper,
+                         sumLowerFinite, sumUpperFinite, hasInteger, allInteger,
+                         minWeight, maxWeight))
       return Result::kOk;
-    }
 
     // sort candidates
     sortCols(candidates);
