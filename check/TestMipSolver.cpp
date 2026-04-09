@@ -1416,7 +1416,7 @@ TEST_CASE("issue-2957", "[highs_test_mip_solver]") {
   lp.row_lower_ = {20.1};
   lp.row_upper_ = {kHighsInf};
   lp.a_matrix_.start_ = {0, 1, 2};
-  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.index_ = {0, 0};
   lp.a_matrix_.value_ = {1, 1};
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
