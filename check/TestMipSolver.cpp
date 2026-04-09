@@ -1419,11 +1419,10 @@ TEST_CASE("issue-2957", "[highs_test_mip_solver]") {
   lp.a_matrix_.index_ = {0, 1};
   lp.a_matrix_.value_ = {1, 1};
   Highs highs;
-  highs.passModel(lp);
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
   highs.setOptionValue("mip_abs_gap", 0);
-  highs.readModel(filename);
+  highs.passModel(lp);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = 28.2;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
