@@ -5100,7 +5100,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
                              std::vector<candidate>& candidates,
                              HighsCDouble& sumLower, HighsCDouble& sumUpper,
                              bool& sumLowerFinite, bool& sumUpperFinite) {
-    // indicators for integer candidates and weights
+    // number of integer candidates and weights
     size_t numIntegerCandidates;
     double minWeight;
     double maxWeight;
