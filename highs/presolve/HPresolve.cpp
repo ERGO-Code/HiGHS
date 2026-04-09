@@ -5017,12 +5017,9 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // lambda for storing a candidate
   auto addCandidate = [&](std::vector<candidate>& candidates, HighsInt col,
                           double val, HighsInt direction, double& minWeight,
-                          double& maxWeight, bool& hasInteger,
-                          bool& allInteger) {
-    hasInteger =
-        hasInteger || model->integrality_[col] == HighsVarType::kInteger;
-    allInteger =
-        allInteger && model->integrality_[col] == HighsVarType::kInteger;
+                          double& maxWeight, size_t& numIntegerCandidates) {
+    if (model->integrality_[col] == HighsVarType::kInteger)
+      numIntegerCandidates++;
     minWeight = std::min(minWeight, direction * val);
     maxWeight = std::max(maxWeight, direction * val);
     candidates.push_back(candidate{col, val, direction});
@@ -5038,66 +5035,65 @@ HPresolve::Result HPresolve::singletonColStuffing(
   };
 
   // lambda for computing candidates for stuffing
-  auto computeCandidates =
-      [&](HighsInt row, HighsInt direction, std::vector<candidate>& candidates,
-          HighsCDouble& sumLower, HighsCDouble& sumUpper, bool& sumLowerFinite,
-          bool& sumUpperFinite, bool& hasInteger, bool& allInteger,
-          double& minWeight, double& maxWeight, bool allowIntegerCandidates) {
-        // vectors for candidates and activity bounds
-        candidates.clear();
-        candidates.reserve(rowsize[row]);
-        sumLower = 0.0;
-        sumUpper = 0.0;
-        sumLowerFinite = true;
-        sumUpperFinite = true;
-        hasInteger = false;
-        allInteger = true;
-        minWeight = kHighsInf;
-        maxWeight = -kHighsInf;
+  auto computeCandidates = [&](HighsInt row, HighsInt direction,
+                               std::vector<candidate>& candidates,
+                               HighsCDouble& sumLower, HighsCDouble& sumUpper,
+                               bool& sumLowerFinite, bool& sumUpperFinite,
+                               size_t& numIntegerCandidates, double& minWeight,
+                               double& maxWeight, bool allowIntegerCandidates) {
+    // vectors for candidates and activity bounds
+    candidates.clear();
+    candidates.reserve(rowsize[row]);
+    sumLower = 0.0;
+    sumUpper = 0.0;
+    sumLowerFinite = true;
+    sumUpperFinite = true;
+    numIntegerCandidates = 0;
+    minWeight = kHighsInf;
+    maxWeight = -kHighsInf;
 
-        for (auto& nz : getRowVector(row)) {
-          // get column index, coefficient, cost and bounds
-          HighsInt j = nz.index();
-          double aj = direction * nz.value();
-          double cj = model->col_cost_[j];
-          double sumLowerBound = model->col_lower_[j];
-          double sumUpperBound = model->col_upper_[j];
-          bool isCandidate = allowIntegerCandidates ||
-                             model->integrality_[j] != HighsVarType::kInteger;
+    for (auto& nz : getRowVector(row)) {
+      // get column index, coefficient, cost and bounds
+      HighsInt j = nz.index();
+      double aj = direction * nz.value();
+      double cj = model->col_cost_[j];
+      double sumLowerBound = model->col_lower_[j];
+      double sumUpperBound = model->col_upper_[j];
+      bool isCandidate = allowIntegerCandidates ||
+                         model->integrality_[j] != HighsVarType::kInteger;
 
-          if (isSingleton(j)) {
-            // check singleton
-            if (aj > 0) {
-              if (cj >= 0)
-                // dual fixing: fix to lower bound
-                sumUpperBound = sumLowerBound;
-              else if (isCandidate) {
-                // candidate for stuffing
-                sumUpperBound = sumLowerBound;
-                addCandidate(candidates, j, aj, HighsInt{1}, minWeight,
-                             maxWeight, hasInteger, allInteger);
-              }
-            } else {
-              if (cj <= 0)
-                // dual fixing: fix to upper bound
-                sumLowerBound = sumUpperBound;
-              else if (isCandidate) {
-                // candidate for stuffing; multiply column with -1
-                sumLowerBound = sumUpperBound;
-                addCandidate(candidates, j, aj, HighsInt{-1}, minWeight,
-                             maxWeight, hasInteger, allInteger);
-              }
-            }
+      if (isSingleton(j)) {
+        // check singleton
+        if (aj > 0) {
+          if (cj >= 0)
+            // dual fixing: fix to lower bound
+            sumUpperBound = sumLowerBound;
+          else if (isCandidate) {
+            // candidate for stuffing
+            sumUpperBound = sumLowerBound;
+            addCandidate(candidates, j, aj, HighsInt{1}, minWeight, maxWeight,
+                         numIntegerCandidates);
           }
-          // update activities
-          if (aj < 0) std::swap(sumLowerBound, sumUpperBound);
-          updateActivityBounds(sumLower, sumUpper, sumLowerFinite,
-                               sumUpperFinite, aj, sumLowerBound,
-                               sumUpperBound);
-          if (!sumLowerFinite && !sumUpperFinite) return false;
+        } else {
+          if (cj <= 0)
+            // dual fixing: fix to upper bound
+            sumLowerBound = sumUpperBound;
+          else if (isCandidate) {
+            // candidate for stuffing; multiply column with -1
+            sumLowerBound = sumUpperBound;
+            addCandidate(candidates, j, aj, HighsInt{-1}, minWeight, maxWeight,
+                         numIntegerCandidates);
+          }
         }
-        return true;
-      };
+      }
+      // update activities
+      if (aj < 0) std::swap(sumLowerBound, sumUpperBound);
+      updateActivityBounds(sumLower, sumUpper, sumLowerFinite, sumUpperFinite,
+                           aj, sumLowerBound, sumUpperBound);
+      if (!sumLowerFinite && !sumUpperFinite) return false;
+    }
+    return true;
+  };
 
   // lambda for computing and checking candidates for stuffing
   auto checkCandidates = [&](HighsInt row, HighsInt direction,
@@ -5105,30 +5101,29 @@ HPresolve::Result HPresolve::singletonColStuffing(
                              HighsCDouble& sumLower, HighsCDouble& sumUpper,
                              bool& sumLowerFinite, bool& sumUpperFinite) {
     // indicators for integer candidates and weights
-    bool hasInteger;
-    bool allInteger;
+    size_t numIntegerCandidates;
     double minWeight;
     double maxWeight;
 
     // compute candidates
     if (computeCandidates(row, direction, candidates, sumLower, sumUpper,
-                          sumLowerFinite, sumUpperFinite, hasInteger,
-                          allInteger, minWeight, maxWeight, true)) {
+                          sumLowerFinite, sumUpperFinite, numIntegerCandidates,
+                          minWeight, maxWeight, true)) {
       // return if there are no integer columns
-      if (!hasInteger) return true;
+      if (numIntegerCandidates == 0) return true;
       // all columns need to have same weights if we only have integer
       // columns
-      if (allInteger) {
+      if (numIntegerCandidates == candidates.size()) {
         if (minWeight != maxWeight) return false;
         return true;
       }
     }
 
     // recompute candidates without integer columns
-    if (hasInteger &&
+    if (numIntegerCandidates > 0 &&
         computeCandidates(row, direction, candidates, sumLower, sumUpper,
-                          sumLowerFinite, sumUpperFinite, hasInteger,
-                          allInteger, minWeight, maxWeight, false))
+                          sumLowerFinite, sumUpperFinite, numIntegerCandidates,
+                          minWeight, maxWeight, false))
       return true;
 
     return false;
