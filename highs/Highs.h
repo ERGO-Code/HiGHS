@@ -1704,16 +1704,34 @@ class Highs {
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
   HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
                                          const HighsVarType* usr_inegrality);
+  // Interface to change costs in a general (and safe) way
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
+  // Interface to change costs without some safety checks,
+  // but with potential performance boosts
+  HighsStatus changeCostsInterfaceUnchecked(
+      HighsIndexCollection& index_collection,
+      std::vector<double>& usr_col_cost);
 
   bool feasibleWrtBounds(const bool columns = true) const;
+  // Interface to change column bounds in a general (and safe) way
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_col_lower,
                                        const double* usr_col_upper);
+  // Interface to change column bounds without some safety checks,
+  // but with potential performance boosts
+  HighsStatus changeColBoundsInterfaceUnchecked(
+      HighsIndexCollection& index_collection,
+      std::vector<double>& usr_col_lower, std::vector<double>& usr_col_upper);
+  // Interface to change row bounds in a general (and safe) way
   HighsStatus changeRowBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
+  // Interface to change row bounds without some safety checks,
+  // but with potential performance boosts
+  HighsStatus changeRowBoundsInterfaceUnchecked(
+      HighsIndexCollection& index_collection,
+      std::vector<double>& usr_row_lower, std::vector<double>& usr_row_upper);
   void changeCoefficientInterface(const HighsInt ext_row,
                                   const HighsInt ext_col,
                                   const double ext_new_value);

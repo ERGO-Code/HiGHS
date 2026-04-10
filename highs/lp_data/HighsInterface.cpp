@@ -913,16 +913,21 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
     return HighsStatus::kError;
   // Take a copy of the cost that can be normalised
   std::vector<double> local_colCost{cost, cost + num_cost};
+  return changeCostsInterfaceUnchecked(index_collection, local_colCost);
+}
+
+HighsStatus Highs::changeCostsInterfaceUnchecked(
+    HighsIndexCollection& index_collection, std::vector<double>& cost) {
   HighsStatus return_status = HighsStatus::kOk;
   bool local_has_infinite_cost = false;
   return_status = interpretCallStatus(
       options_.log_options,
-      assessCosts(options_, 0, index_collection, local_colCost,
-                  local_has_infinite_cost, options_.infinite_cost),
+      assessCosts(options_, 0, index_collection, cost, local_has_infinite_cost,
+                  options_.infinite_cost),
       return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
-  changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
+  changeLpCosts(lp, index_collection, cost, options_.infinite_cost);
 
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
@@ -977,16 +982,23 @@ HighsStatus Highs::changeColBoundsInterface(
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
                 col_lower, col_upper, NULL, local_colLower.data(),
                 local_colUpper.data(), NULL);
+  return changeColBoundsInterfaceUnchecked(index_collection, local_colLower,
+                                           local_colUpper);
+}
+
+HighsStatus Highs::changeColBoundsInterfaceUnchecked(
+    HighsIndexCollection& index_collection, std::vector<double>& col_lower,
+    std::vector<double>& col_upper) {
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
       options_.log_options,
-      assessBounds(options_, "col", 0, index_collection, local_colLower,
-                   local_colUpper, options_.infinite_bound),
+      assessBounds(options_, "col", 0, index_collection, col_lower, col_upper,
+                   options_.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
 
-  changeLpColBounds(lp, index_collection, local_colLower, local_colUpper);
+  changeLpColBounds(lp, index_collection, col_lower, col_upper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, true);
@@ -1028,16 +1040,23 @@ HighsStatus Highs::changeRowBoundsInterface(
     sortSetData(index_collection.set_num_entries_, index_collection.set_, lower,
                 upper, NULL, local_rowLower.data(), local_rowUpper.data(),
                 NULL);
+  return changeRowBoundsInterfaceUnchecked(index_collection, local_rowLower,
+                                           local_rowUpper);
+}
+
+HighsStatus Highs::changeRowBoundsInterfaceUnchecked(
+    HighsIndexCollection& index_collection, std::vector<double>& lower,
+    std::vector<double>& upper) {
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(
-      options_.log_options,
-      assessBounds(options_, "row", 0, index_collection, local_rowLower,
-                   local_rowUpper, options_.infinite_bound),
-      return_status, "assessBounds");
+  return_status =
+      interpretCallStatus(options_.log_options,
+                          assessBounds(options_, "row", 0, index_collection,
+                                       lower, upper, options_.infinite_bound),
+                          return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
 
-  changeLpRowBounds(lp, index_collection, local_rowLower, local_rowUpper);
+  changeLpRowBounds(lp, index_collection, lower, upper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, false);
