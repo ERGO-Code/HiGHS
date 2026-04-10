@@ -445,7 +445,8 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
 
   // round and update bounds
   return StatusResult(
-      changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
+      changeColBounds(col, std::ceil(model->col_lower_[col] - primal_feastol),
+                      std::floor(model->col_upper_[col] + primal_feastol)));
 }
 
 void HPresolve::link(HighsInt pos) {
@@ -5727,8 +5728,9 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
     if (colDeleted[col]) continue;
     // round and update bounds
     if (model->integrality_[col] != HighsVarType::kContinuous)
-      HPRESOLVE_CHECKED_CALL(
-          changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
+      HPRESOLVE_CHECKED_CALL(changeColBounds(
+          col, std::ceil(model->col_lower_[col] - primal_feastol),
+          std::floor(model->col_upper_[col] + primal_feastol)));
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
     changedColFlag[col] = false;
   }
