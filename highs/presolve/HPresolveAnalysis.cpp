@@ -7,34 +7,57 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "lp_data/HighsModelUtils.h"
 #include "presolve/HPresolve.h"
+#include "presolve/PresolveTimer.h"
 
 void HPresolveAnalysis::setup(const HighsLp* model_,
                               const HighsOptions* options_,
                               const HighsInt& numDeletedRows_,
                               const HighsInt& numDeletedCols_,
-                              const bool silent) {
+                              const bool silent, HighsTimer* timer) {
   model = model_;
   options = options_;
   numDeletedRows = &numDeletedRows_;
   numDeletedCols = &numDeletedCols_;
 
+  timer_ = timer;
+  analyse_presolve_time_ =
+      kHighsAnalysisLevelPresolveTime & options->highs_analysis_level &&
+      !model_->isMip();
+  if (analyse_presolve_time_) {
+    HighsTimerClock clock;
+    clock.timer_pointer_ = timer_;
+    PresolveTimer presolve_timer;
+    presolve_timer.initialisePresolveClocks(clock);
+    presolve_clocks_ = clock;
+  }
+
   this->allow_rule_.assign(kPresolveRuleCount, true);
 
-  if (options->presolve_rule_off || options_->log_dev_level) {
+  if (!silent && options_->log_dev_level) {
+    // State which rules can be off, and what bit to set
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Permitted suppression of presolve rules via "
+                 "presolve_rule_off option:\n");
+    HighsInt bit =
+        std::pow(int(2), static_cast<int>(kPresolveRuleFirstAllowOff));
+    for (HighsInt rule_type = kPresolveRuleFirstAllowOff;
+         rule_type < kPresolveRuleCount; rule_type++) {
+      // This is a rule that can be switched off
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "   Rule %2d (set bit %2d = %5d): %s\n", int(rule_type),
+                   int(rule_type), int(bit),
+                   utilPresolveRuleTypeToString(rule_type).c_str());
+      bit *= 2;
+    }
+  }
+  if (options->presolve_rule_off) {
     // Some presolve rules are off
     //
     // Transform options->presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
-    if (!silent) {
-      if (options->presolve_rule_off) {
-        highsLogUser(options->log_options, HighsLogType::kInfo,
-                     "Presolve rules not allowed:\n");
-      } else {
-        highsLogUser(options->log_options, HighsLogType::kInfo,
-                     "Permitted suppression of presolve rules via "
-                     "presolve_rule_off option:\n");
-      }
-    }
+    if (!silent)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Presolve rules not allowed:\n");
     HighsInt bit = 1;
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++) {
@@ -44,13 +67,11 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
         // This is a rule that can be switched off, so comment
         // positively if it is off
         allow_rule_[rule_type] = allow;
-        if (!silent)
-          if (!allow ||
-              (!options->presolve_rule_off && options_->log_dev_level))
-            highsLogUser(options->log_options, HighsLogType::kInfo,
-                         "   Rule %2d (set bit %2d = %5d): %s\n",
-                         int(rule_type), int(rule_type), int(bit),
-                         utilPresolveRuleTypeToString(rule_type).c_str());
+        if (!allow && !silent)
+          highsLogUser(options->log_options, HighsLogType::kInfo,
+                       "   Rule %2d (set bit %2d = %5d): %s\n", int(rule_type),
+                       int(rule_type), int(bit),
+                       utilPresolveRuleTypeToString(rule_type).c_str());
       } else if (!allow && !silent) {
         // This is a rule that cannot be switched off so, if an
         // attempt is made, don't allow it to be off and comment
@@ -236,4 +257,23 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
     }
   }
   return true;
+}
+
+void HPresolveAnalysis::presolveTimerStart(
+    const HighsInt presolve_clock) const {
+  if (!analyse_presolve_time_) return;
+  HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
+  presolve_clocks_.timer_pointer_->start(highs_timer_clock);
+}
+
+void HPresolveAnalysis::presolveTimerStop(const HighsInt presolve_clock) const {
+  if (!analyse_presolve_time_) return;
+  HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
+  presolve_clocks_.timer_pointer_->stop(highs_timer_clock);
+}
+
+void HPresolveAnalysis::reportPresolveTimer() {
+  if (!analyse_presolve_time_) return;
+  PresolveTimer presolve_timer;
+  presolve_timer.reportPresolveCoreClock(model->model_name_, presolve_clocks_);
 }

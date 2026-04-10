@@ -387,6 +387,7 @@ set(highs_headers_python
     highs/presolve/ICrashUtil.h
     highs/presolve/ICrashX.h
     highs/presolve/PresolveComponent.h
+    highs/presolve/PresolveTimer.h
     highs/qpsolver/a_asm.hpp
     highs/qpsolver/a_quass.hpp
     highs/qpsolver/basis.hpp
