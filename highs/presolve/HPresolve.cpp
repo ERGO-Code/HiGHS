@@ -3403,7 +3403,10 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
-  // todo: check for zero cost singleton and remove
+  // Remove if col is double-sided finite slack
+  HPRESOLVE_CHECKED_CALL(
+      redundantSingletonColDoubleSidedSlack(postsolve_stack, col));
+
   return Result::kOk;
 }
 
@@ -5143,6 +5146,55 @@ HPresolve::Result HPresolve::singletonColStuffing(
     highsLogDev(options->log_options, HighsLogType::kDetailed,
                 "Singleton column stuffing fixed %d columns\n",
                 static_cast<int>(numFixedCols));
+
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
+    HighsPostsolveStack& postsolve_stack, HighsInt col) {
+  // For a double-sided row b_0 <= a^Tx + cs <= b_1,
+  // where s is a singleton continuous column with 0 cost,
+  // relax s out as its value can be determined in postsolve.
+  // The row may now admit additional reductions afterwards.
+  // Dual fixing already handles single-sided row case with fixings.
+  if (model->integrality_[col] != HighsVarType::kContinuous ||
+      model->col_cost_[col] != 0.0 || colsize[col] != 1 ||
+      model->col_lower_[col] == -kHighsInf ||
+      model->col_upper_[col] == kHighsInf) {
+    return Result::kOk;
+  }
+  assert(!colDeleted[col]);
+
+  HighsInt nzPos = colhead[col];
+  HighsInt row = Arow[nzPos];
+  assert(!rowDeleted[row]);
+  if (!isRanged(row) || isEquation(row)) return Result::kOk;
+  double coef = Avalue[nzPos];
+
+  if (std::abs(coef) == kHighsInf) return Result::kOk;
+
+  storeRow(row);
+
+  double lb = model->col_lower_[col];
+  double ub = model->col_upper_[col];
+  double change_from_col_lb = coef * lb;
+  double change_from_col_ub = coef * ub;
+
+  double newRowLower =
+      model->row_lower_[row] - std::max(change_from_col_lb, change_from_col_ub);
+  double newRowUpper =
+      model->row_upper_[row] - std::min(change_from_col_lb, change_from_col_ub);
+
+  postsolve_stack.zeroObjSingletonContinuousCol(
+      row, col, model->row_lower_[row], model->row_upper_[row], lb, ub, coef,
+      getStoredRow());
+
+  model->row_lower_[row] = newRowLower;
+  model->row_upper_[row] = newRowUpper;
+
+  // Delete the singleton column
+  markColDeleted(col);
+  unlink(nzPos);
 
   return Result::kOk;
 }
