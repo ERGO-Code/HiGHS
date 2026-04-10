@@ -241,7 +241,7 @@ void assertLogical(const char* name, const HighsInt is) {
 void createBlendingLp(void* highs) {
   // Special variant of the blending LP, with redundant constraint so
   // that LP is reduced by presolve - but not to empty!
-  const double inf = Highs_getInfinity(highs);
+  const double kHighsInf = Highs_getInfinity(highs);
 
   HighsInt num_col = 2;
   HighsInt num_row = 3;
@@ -249,8 +249,8 @@ void createBlendingLp(void* highs) {
   HighsInt sense = -1;
   double col_cost[2] = {8, 10};
   double col_lower[2] = {0, 0};
-  double col_upper[2] = {inf, inf};
-  double row_lower[3] = {-inf, -inf, -inf};
+  double col_upper[2] = {kHighsInf, kHighsInf};
+  double row_lower[3] = {-kHighsInf, -kHighsInf, -kHighsInf};
   double row_upper[3] = {500, 120, 210};
   HighsInt a_index[6] = {0, 1, 0, 1, 0, 1};
   double a_value[6] = {0.5, 0.5, 0.3, 0.5, 0.7, 0.5};
@@ -488,9 +488,7 @@ void minimalApiQp() {
   HighsInt num_col = 3;
   HighsInt num_row = 1;
   HighsInt num_nz = 2;
-  HighsInt q_num_nz = 4;
   HighsInt a_format = kHighsMatrixFormatColwise;
-  HighsInt q_format = kHighsHessianFormatTriangular;
   HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
   double col_cost[3] = {0.0, -1.0, -3.0};
@@ -498,31 +496,56 @@ void minimalApiQp() {
   double col_upper[3] = {inf, inf, inf};
   double row_lower[1] = {-inf};
   double row_upper[1] = {2};
+
   HighsInt a_start[3] = {0, 1, 1};
   HighsInt a_index[2] = {0, 0};
   double a_value[2] = {1.0, 1.0};
+
+  // Start with triuangular Hessian, then 
+  HighsInt q_format = kHighsHessianFormatTriangular;
+  HighsInt q_num_nz = 4;
   HighsInt q_start[3] = {0, 2, 3};
   HighsInt q_index[4] = {0, 2, 1, 2};
   double q_value[4] = {2.0, -1.0, 0.2, 2.0};
 
+  double required_x[3] = {0.5, 5.0, 1.5};
+
   double* col_value = (double*)malloc(sizeof(double) * num_col);
+
   HighsInt model_status;
-  HighsInt return_status = Highs_qpCall(
-      num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
-      col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
-      a_value, q_start, q_index, q_value, col_value, NULL, NULL, NULL, NULL,
-      NULL, &model_status);
+  HighsInt return_status =
+    Highs_qpCall(num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
+		 col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
+		 a_value, q_start, q_index, q_value, col_value, NULL, NULL, NULL, NULL,
+		 NULL, &model_status);
   assert(return_status == kHighsStatusOk);
   assertIntValuesEqual("Model status for QP qph", model_status,
-                       kHighsModelStatusOptimal);
-  double required_x[3] = {0.5, 5.0, 1.5};
-  if (dev_run) {
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      printf("x%d1 = %g\n", (int)iCol, col_value[iCol]);
-      assertDoubleValuesEqual("Solution value for QP qph", col_value[iCol],
-                              required_x[iCol]);
-    }
+		       kHighsModelStatusOptimal);
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (dev_run) printf("x%d1 = %g\n", (int)iCol, col_value[iCol]);
+    assertDoubleValuesEqual("Solution value for QP qph", col_value[iCol],
+			    required_x[iCol]);
   }
+
+  HighsInt square_q_format = kHighsHessianFormatSquare;
+  HighsInt square_q_num_nz = 5;
+  HighsInt square_q_start[3] = {0, 2, 3};
+  HighsInt square_q_index[5] = {0, 2, 1, 0, 2};
+  double   square_q_value[5] = {2.0, -1.0, 0.2, -1.0, 2.0};
+
+  Highs_qpCall(num_col, num_row, num_nz, square_q_num_nz, a_format, square_q_format, sense, offset,
+	       col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
+	       a_value, square_q_start, square_q_index, square_q_value, col_value, NULL, NULL, NULL, NULL,
+	       NULL, &model_status);
+  assert(return_status == kHighsStatusOk);
+  assertIntValuesEqual("Model status for QP qph", model_status,
+		       kHighsModelStatusOptimal);
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (dev_run) printf("x%d1 = %g\n", (int)iCol, col_value[iCol]);
+    assertDoubleValuesEqual("Solution value for QP qph", col_value[iCol],
+			    required_x[iCol]);
+  }
+
   free(col_value);
 }
 
@@ -1513,23 +1536,33 @@ void testPassHessian() {
   HighsInt index[1] = {0};
   double value[1] = {-2.0};
   HighsInt return_status;
-  return_status = Highs_passHessian(highs, 1, 1, 1, start, index, value);
-  assertIntValuesEqual("Return of passHessian", return_status, kHighsStatusOk);
-  Highs_run(highs);
-  // Solving max -x^2 + 2x
+
   const double optimal_objective_value = 1;
   const double primal = 1;
   const double dual = 0;
-  assertIntValuesEqual("Status", Highs_getModelStatus(highs),
-                       kHighsModelStatusOptimal);  // kOptimal
   double col_value[1] = {-123.0};
   double col_dual[1] = {0.0};
-  Highs_getSolution(highs, col_value, col_dual, NULL, NULL);
-  double objective_value = Highs_getObjectiveValue(highs);
-  assertDoubleValuesEqual("Objective", objective_value,
-                          optimal_objective_value);
-  assertDoubleValuesEqual("Primal", col_value[0], primal);
-  assertDoubleValuesEqual("Dual", col_dual[0], dual);
+
+  for (HighsInt k = 0; k < 2; k++) {
+    HighsInt q_format = -1;
+    if (k == 0) {
+      q_format = 1;
+    } else {
+      q_format = 2;
+    }
+    return_status = Highs_passHessian(highs, 1, 1, q_format, start, index, value);
+    assertIntValuesEqual("Return of passHessian", return_status, kHighsStatusOk);
+    Highs_run(highs);
+    // Solving max -x^2 + 2x
+    assertIntValuesEqual("Status", Highs_getModelStatus(highs),
+			 kHighsModelStatusOptimal);  // kOptimal
+    Highs_getSolution(highs, col_value, col_dual, NULL, NULL);
+    double objective_value = Highs_getObjectiveValue(highs);
+    assertDoubleValuesEqual("Objective", objective_value,
+			    optimal_objective_value);
+    assertDoubleValuesEqual("Primal", col_value[0], primal);
+    assertDoubleValuesEqual("Dual", col_dual[0], dual);
+  }
 
   Highs_destroy(highs);
 }
