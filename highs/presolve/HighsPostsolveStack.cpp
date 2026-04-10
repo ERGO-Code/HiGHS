@@ -1365,4 +1365,71 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
   }
 }
 
+void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
+    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
+    HighsSolution& solution, HighsBasis& basis) {
+  // a (removed) cut may have been used in this reduction.
+  bool isModelRow = static_cast<size_t>(row) < solution.row_value.size();
+
+  assert(origRowLower != -kHighsInf && origRowUpper != kHighsInf);
+
+  // Get activity of row without removed singleton
+  HighsCDouble act = 0;
+  for (const auto& rowVal : rowValues) {
+    if (rowVal.index != col) {
+      act += rowVal.value * solution.col_value[rowVal.index];
+    }
+  }
+
+  // Determine domain of potential values
+  double col_lb = lb;
+  double col_ub = ub;
+  if (coef > 0) {
+    col_lb = std::max(col_lb, static_cast<double>((origRowLower - act) / coef));
+    col_ub = std::min(col_ub, static_cast<double>((origRowUpper - act) / coef));
+  } else {
+    col_lb = std::max(col_lb, static_cast<double>((origRowUpper - act) / coef));
+    col_ub = std::min(col_ub, static_cast<double>((origRowLower - act) / coef));
+  }
+
+  // Find a suitable value within the allowed interval
+  if (basis.valid && isModelRow) {
+    if (basis.row_status[row] == HighsBasisStatus::kLower) {
+      solution.col_value[col] = coef > 0 ? col_lb : col_ub;
+    } else if (basis.row_status[row] == HighsBasisStatus::kUpper) {
+      solution.col_value[col] = coef > 0 ? col_ub : col_lb;
+    } else if (0 >= col_lb && 0 <= col_ub) {
+      solution.col_value[col] = 0;
+    } else {
+      solution.col_value[col] = 0.5 * (col_lb + col_ub);
+    }
+  } else {
+    if (0 >= col_lb && 0 <= col_ub) {
+      solution.col_value[col] = 0;
+    } else {
+      solution.col_value[col] = 0.5 * (col_lb + col_ub);
+    }
+  }
+
+  if (isModelRow) {
+    solution.row_value[row] =
+        static_cast<double>(act + (solution.col_value[col] * coef));
+  }
+
+  if (!solution.dual_valid) return;
+
+  solution.col_dual[col] = (isModelRow) ? -coef * solution.row_dual[row] : 0;
+
+  if (!basis.valid) return;
+
+  if (solution.col_value[col] - options.dual_feasibility_tolerance <= lb) {
+    basis.col_status[col] = HighsBasisStatus::kLower;
+  } else if (solution.col_value[col] + options.dual_feasibility_tolerance >=
+             ub) {
+    basis.col_status[col] = HighsBasisStatus::kUpper;
+  } else {
+    basis.col_status[col] = HighsBasisStatus::kBasic;
+  }
+}
+
 }  // namespace presolve

@@ -417,6 +417,9 @@ class HPresolve {
   Result singletonColStuffing(HighsPostsolveStack& postsolve_stack,
                               HighsInt col);
 
+  Result redundantSingletonColDoubleSidedSlack(
+      HighsPostsolveStack& postsolve_stack, HighsInt col);
+
   Result enumerateSolutions(HighsPostsolveStack& postsolve_stack);
 
   double computeImpliedLowerBound(HighsInt col, HighsInt boundCol = -1,
