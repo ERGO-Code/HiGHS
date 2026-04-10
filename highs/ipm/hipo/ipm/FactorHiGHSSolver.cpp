@@ -389,16 +389,16 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       // no2hop improves the quality of ordering in general
       options[METIS_OPTION_NO2HOP] = 1;
 
-      logger_.printInfo("Running Metis\n");
+      logger_.printInfo("Running Metis for %s\n", nla.c_str());
       std::vector<Int> iperm(n);
 
       Int status =
           Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
                              options, permutations[i].data(), iperm.data());
 
-      logger_.printInfo("Metis done\n");
+      logger_.printInfo("Metis done for %s\n", nla.c_str());
       if (status != METIS_OK) {
-        logger_.printInfo("Error with Metis\n");
+        logger_.printInfo("Error with Metis for \n", nla.c_str());
         failure[i] = true;
       }
     } else if (orderings_to_try[i] == kHipoAmdString) {
@@ -406,23 +406,23 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       Highs_amd_defaults(control);
       double info[AMD_INFO];
 
-      logger_.printInfo("Running AMD\n");
+      logger_.printInfo("Running AMD for %s\n", nla.c_str());
       Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
                                    permutations[i].data(), control, info);
-      logger_.printInfo("AMD done\n");
+      logger_.printInfo("AMD done for %s\n", nla.c_str());
 
       if (status != AMD_OK) {
-        logger_.printInfo("Error with AMD\n");
+        logger_.printInfo("Error with AMD for %s\n", nla.c_str());
         failure[i] = true;
       }
     } else if (orderings_to_try[i] == kHipoRcmString) {
-      logger_.printInfo("Running RCM\n");
+      logger_.printInfo("Running RCM for %s\n", nla.c_str());
       Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
                                 full_rows.data(), permutations[i].data());
-      logger_.printInfo("RCM done\n");
+      logger_.printInfo("RCM done for %s\n", nla.c_str());
 
       if (status != 0) {
-        logger_.printInfo("Error with RCM\n");
+        logger_.printInfo("Error with RCM for %s\n", nla.c_str());
         failure[i] = true;
       }
     } else {
