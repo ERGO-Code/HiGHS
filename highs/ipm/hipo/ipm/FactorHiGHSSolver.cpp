@@ -208,7 +208,7 @@ Int FactorHiGHSSolver::chooseNla() {
   bool overflow_NE = false;
   bool overflow_AS = false;
 
-  auto run_structure_NE = [&]() {
+  auto run_analyse_NE = [&]() {
     bool expect_AS_much_cheaper =
         model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
 
@@ -216,22 +216,14 @@ Int FactorHiGHSSolver::chooseNla() {
       failure_NE = true;
       logger_.printInfo("NE skipped\n");
     } else {
-      Int status = kkt_.buildNEstructure();
-      if (status) {
-        failure_NE = true;
-        if (status == kStatusOverflow) {
-          logger_.printInfo("Integer overflow forming NE matrix\n");
-          overflow_NE = true;
-        }
-        return;
+      Int NE_status = kkt_.buildNEstructure();
+      if (!NE_status) NE_status = analyseNE(symb_NE);
+      if (NE_status) failure_NE = true;
+      if (NE_status == kStatusOverflow) {
+        logger_.printInfo("Integer overflow forming NE matrix\n");
+        overflow_NE = true;
       }
     }
-  };
-
-  auto run_analyse_NE = [&]() {
-    if (failure_NE) return;
-    Int NE_status = analyseNE(symb_NE);
-    if (NE_status) failure_NE = true;
   };
 
   auto run_analyse_AS = [&]() {
@@ -265,14 +257,13 @@ Int FactorHiGHSSolver::chooseNla() {
   // of nz of NE matrix and AS factor.
   if (options_.parallel == kHighsOffString) {
     run_analyse_AS();
-    run_structure_NE();
+    run_analyse_NE();
   } else {
     TaskGroupSpecial tg;
     tg.spawn([&]() { run_analyse_AS(); });
-    tg.spawn([&]() { run_structure_NE(); });
+    tg.spawn([&]() { run_analyse_NE(); });
     tg.taskWait();
   }
-  run_analyse_NE();
 
   Int status = kStatusOk;
 
@@ -358,7 +349,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
   if (nla == "NE") {
     if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
-      logger_.printInfo("NE interrupted\n");
+      logger_.printInfo("\tNE interrupted\n");
       return kStatusErrorAnalyse;
     }
   }
@@ -389,14 +380,14 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       // no2hop improves the quality of ordering in general
       options[METIS_OPTION_NO2HOP] = 1;
 
-      logger_.printInfo("Running Metis for %s\n", nla.c_str());
+      logger_.printInfo("\tRunning Metis for %s\n", nla.c_str());
       std::vector<Int> iperm(n);
 
       Int status =
           Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
                              options, permutations[i].data(), iperm.data());
 
-      logger_.printInfo("Metis done for %s\n", nla.c_str());
+      logger_.printInfo("\tMetis done for %s\n", nla.c_str());
       if (status != METIS_OK) {
         logger_.printInfo("Error with Metis for \n", nla.c_str());
         failure[i] = true;
@@ -406,20 +397,20 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       Highs_amd_defaults(control);
       double info[AMD_INFO];
 
-      logger_.printInfo("Running AMD for %s\n", nla.c_str());
+      logger_.printInfo("\tRunning AMD for %s\n", nla.c_str());
       Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
                                    permutations[i].data(), control, info);
-      logger_.printInfo("AMD done for %s\n", nla.c_str());
+      logger_.printInfo("\tAMD done for %s\n", nla.c_str());
 
       if (status != AMD_OK) {
         logger_.printInfo("Error with AMD for %s\n", nla.c_str());
         failure[i] = true;
       }
     } else if (orderings_to_try[i] == kHipoRcmString) {
-      logger_.printInfo("Running RCM for %s\n", nla.c_str());
+      logger_.printInfo("\tRunning RCM for %s\n", nla.c_str());
       Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
                                 full_rows.data(), permutations[i].data());
-      logger_.printInfo("RCM done for %s\n", nla.c_str());
+      logger_.printInfo("\tRCM done for %s\n", nla.c_str());
 
       if (status != 0) {
         logger_.printInfo("Error with RCM for %s\n", nla.c_str());
