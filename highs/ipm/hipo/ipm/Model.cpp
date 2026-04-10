@@ -3,7 +3,7 @@
 #include "Parameters.h"
 #include "Status.h"
 #include "ipm/IpxWrapper.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "model/HighsHessianUtils.h"
 
 namespace hipo {
@@ -177,7 +177,7 @@ void Model::computeNorms() {
   }
 }
 
-void Model::print(const LogHighs& log) const {
+void Model::print(const Logger& logger) const {
   std::stringstream log_stream;
 
   log_stream << textline("Rows:") << sci(m_, 0, 1) << '\n';
@@ -308,7 +308,7 @@ void Model::print(const LogHighs& log) const {
   log_stream << textline("Range of A:") << "[" << sci(Amin, 5, 1) << ", "
              << sci(Amax, 5, 1) << "]\n";
 
-  if (log.debug(1)) {
+  if (logger.debug(1)) {
     log_stream << textline("Inf-norm rows:") << "["
                << sci(norm_inf_row_min, 5, 1) << ", "
                << sci(norm_inf_row_max, 5, 1) << "]\n";
@@ -343,7 +343,7 @@ void Model::print(const LogHighs& log) const {
   log_stream << textline("Scaling coefficients:") << "[" << sci(scalemin, 5, 1)
              << ", " << sci(scalemax, 5, 1) << "]\n";
 
-  if (log.debug(1)) {
+  if (logger.debug(1)) {
     preprocessor_.print(log_stream);
     log_stream << textline("Free variables:") << integer(free_vars) << '\n';
 
@@ -353,7 +353,7 @@ void Model::print(const LogHighs& log) const {
                << "]\n";
   }
 
-  log.print(log_stream);
+  logger.print(log_stream.str().c_str());
 }
 
 Int Model::loadIntoIpx(ipx::LpSolver& lps) const {

@@ -26,7 +26,7 @@ class FactorHiGHSSolver : public LinearSolver {
   const Regularisation& regul_;
   Info& info_;
   IpmData& data_;
-  const LogHighs& log_;
+  const Logger& logger_;
   const Model& model_;
   Options& options_;
 
@@ -45,7 +45,7 @@ class FactorHiGHSSolver : public LinearSolver {
  public:
   FactorHiGHSSolver(KktMatrix& kkt, Options& options, const Model& model,
                     const Regularisation& regul, Info& info, IpmData& record,
-                    const LogHighs& log);
+                    const Logger& logger);
 
   // Override functions
   Int factorAS(const std::vector<double>& scaling) override;

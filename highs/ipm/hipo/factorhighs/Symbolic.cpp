@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "FactorHiGHSSettings.h"
-#include "ipm/hipo/auxiliary/Log.h"
 
 namespace hipo {
 
@@ -64,7 +63,7 @@ static std::string memoryString(double mem) {
   return ss.str();
 }
 
-void Symbolic::print(const Log& log, bool verbose) const {
+void Symbolic::print(const Logger& logger, bool verbose) const {
   std::stringstream log_stream;
   log_stream << "\nFactorisation statistics\n";
   log_stream << textline("Size:") << sci(n_, 0, 2) << '\n';
@@ -95,7 +94,7 @@ void Symbolic::print(const Log& log, bool verbose) const {
     log_stream << textline("Sn avg size:") << sci((double)n_ / sn_, 0, 1)
                << '\n';
   }
-  log.print(log_stream);
+  logger.print(log_stream.str().c_str());
 }
 
 }  // namespace hipo

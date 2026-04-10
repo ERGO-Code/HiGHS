@@ -5,8 +5,8 @@
 namespace hipo {
 
 KktMatrix::KktMatrix(const Model& m, const Regularisation& r, Info& i,
-                     const LogHighs& l)
-    : model{m}, regul{r}, info{i}, log{l} {}
+                     const Logger& l)
+    : model{m}, regul{r}, info{i}, logger{l} {}
 
 Int KktMatrix::buildASstructure() {
   // Build lower triangular structure of the augmented system.
@@ -20,7 +20,7 @@ Int KktMatrix::buildASstructure() {
   const Int nzA = A.numNz();
   const Int nzQ = Q.numNz();
 
-  log.printDevInfo("Building AS structure\n");
+  logger.printInfo("Building AS structure\n");
 
   const Int nzBlock11 = model.qp() ? nzQ : n;
 
@@ -101,7 +101,7 @@ Int KktMatrix::buildNEstructure() {
   const Int m = A.num_row_;
   const Int nzA = A.numNz();
 
-  log.printDevInfo("Building NE structure\n");
+  logger.printInfo("Building NE structure\n");
 
   // create partial row-wise representation without values, and array or
   // corresponding indices between cw and rw representation

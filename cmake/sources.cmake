@@ -183,7 +183,6 @@ set(hipo_sources
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp 
     ipm/hipo/ipm/KktMatrix.cpp
-    ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/PreProcess.cpp
     ipm/hipo/ipm/Refine.cpp
@@ -198,7 +197,6 @@ set(hipo_headers
     ipm/hipo/ipm/Iterate.h
     ipm/hipo/ipm/KktMatrix.h
     ipm/hipo/ipm/LinearSolver.h
-    ipm/hipo/ipm/LogHighs.h
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
     ipm/hipo/ipm/PreProcess.h
@@ -248,14 +246,14 @@ set(factor_highs_headers
 set(hipo_util_sources
     ipm/hipo/auxiliary/Auxiliary.cpp
     ipm/hipo/auxiliary/KrylovMethods.cpp
-    ipm/hipo/auxiliary/Log.cpp
+    ipm/hipo/auxiliary/Logger.cpp
     ipm/hipo/auxiliary/VectorOperations.cpp)
 
 set(hipo_util_headers
     ipm/hipo/auxiliary/Auxiliary.h
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
-    ipm/hipo/auxiliary/Log.h
+    ipm/hipo/auxiliary/Logger.h
     ipm/hipo/auxiliary/mycblas.h
     ipm/hipo/auxiliary/OrderingPrint.h
     ipm/hipo/auxiliary/VectorOperations.h)

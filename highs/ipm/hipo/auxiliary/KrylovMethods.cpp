@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "VectorOperations.h"
-#include "ipm/hipo/auxiliary/Log.h"
 
 namespace hipo {
 
@@ -182,7 +181,6 @@ Int Cg(const AbstractMatrix* M, const AbstractMatrix* P,
     ++iter;
 
     if (isNanVector(x)) {
-      // log->printDevInfo("CG: x is nan at iter %d\n", (int)iter);
       break;
     }
   }

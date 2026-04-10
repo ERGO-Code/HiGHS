@@ -9,7 +9,7 @@
 #include "HybridHybridFormatHandler.h"
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "parallel/HighsParallel.h"
 
 namespace hipo {
@@ -17,13 +17,13 @@ namespace hipo {
 Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
                      const std::vector<Int>& ptrM,
                      const std::vector<double>& valM, const Regul& regul,
-                     const Log* log, DataCollector& data,
+                     const Logger* logger, DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
                      CliqueStack* stack)
     : S_{S},
       sn_columns_{sn_columns},
       regul_{regul},
-      log_{log},
+      logger_{logger},
       data_{data},
       stack_{stack} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
@@ -33,8 +33,8 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
   n_ = ptrM.size() - 1;
 
   if (n_ != S_.size()) {
-    if (log_)
-      log_->printDevInfo(
+    if (logger_)
+      logger_->printInfo(
           "Matrix provided to Factorise has size incompatible with symbolic "
           "object.\n");
     return;
@@ -134,8 +134,8 @@ void Factorise::processSupernode(Int sn) {
   if (serial) {
     bool reallocation = false;
     clique_ptr = stack_->setup(S_.cliqueSize(sn), reallocation);
-    if (reallocation && log_)
-      log_->printDevInfo("Reallocation of CliqueStack\n");
+    if (reallocation && logger_)
+      logger_->printInfo("Reallocation of CliqueStack\n");
   }
 
   // initialise the format handler
@@ -185,7 +185,7 @@ void Factorise::processSupernode(Int sn) {
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
-        if (log_) log_->printDevInfo("Missing child supernode contribution\n");
+        if (logger_) logger_->printInfo("Missing child supernode contribution\n");
         flag_stop_.store(true, std::memory_order_relaxed);
         return;
       }
@@ -263,10 +263,10 @@ void Factorise::processSupernode(Int sn) {
   if (Int flag = FH->denseFactorise(reg_thresh)) {
     flag_stop_.store(true, std::memory_order_relaxed);
 
-    if (log_ && flag == kRetInvalidInput)
-      log_->printDevInfo("DenseFact: invalid input\n");
-    else if (log_ && flag == kRetInvalidPivot)
-      log_->printDevInfo("DenseFact: invalid pivot\n");
+    if (logger_ && flag == kRetInvalidInput)
+      logger_->printInfo("DenseFact: invalid input\n");
+    else if (logger_ && flag == kRetInvalidPivot)
+      logger_->printInfo("DenseFact: invalid pivot\n");
 
     return;
   }

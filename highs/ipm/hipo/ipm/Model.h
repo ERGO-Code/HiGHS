@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "LogHighs.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "PreProcess.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/ipx/lp_solver.h"
@@ -74,7 +74,7 @@ class Model {
   Int init(const HighsLp& lp, const HighsHessian& Q);
 
   // Print information of model
-  void print(const LogHighs& log) const;
+  void print(const Logger& logger) const;
 
   void printDense() const;
 

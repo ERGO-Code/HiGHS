@@ -5,7 +5,7 @@
 #include "Status.h"
 #include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "metis/metis.h"
 #include "parallel/HighsParallel.h"
 #include "rcm/rcm.h"
@@ -15,14 +15,14 @@ namespace hipo {
 FactorHiGHSSolver::FactorHiGHSSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
                                      const Regularisation& regul, Info& info,
-                                     IpmData& record, const LogHighs& log)
-    : FH_(&log, options.block_size),
+                                     IpmData& record, const Logger& logger)
+    : FH_(&logger, options.block_size),
       S_{},
       kkt_{kkt},
       regul_{regul},
       info_{info},
       data_{record},
-      log_{log},
+      logger_{logger},
       model_{model},
       options_{options} {}
 
@@ -48,7 +48,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   std::vector<Int> pivot_signs(n + m, -1);
   for (Int i = 0; i < m; ++i) pivot_signs[n + i] = 1;
 
-  log_.printDevInfo("Performing AS analyse phase\n");
+  logger_.printInfo("Performing AS analyse phase\n");
 
   Clock clock;
   Int status = chooseOrdering(kkt_.rowsAS, kkt_.ptrAS, pivot_signs, S,
@@ -68,7 +68,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(model_.A().num_row_, 1);
 
-  log_.printDevInfo("Performing NE analyse phase\n");
+  logger_.printInfo("Performing NE analyse phase\n");
 
   Clock clock;
   Int status = chooseOrdering(kkt_.rowsNE, kkt_.ptrNE, pivot_signs, S,
@@ -184,16 +184,16 @@ Int FactorHiGHSSolver::setup() {
 
   std::stringstream log_stream;
   log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
-  log_.print(log_stream);
+  logger_.print(log_stream.str().c_str());
 
-  S_.print(log_, log_.debug(1));
+  S_.print(logger_, logger_.debug(1));
 
   // Warn about large memory consumption
   if (S_.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
-    log_.printw("Large amount of memory required\n");
+    logger_.printw("Large amount of memory required\n");
   }
 
-  log_.print("\n");
+  logger_.print("\n");
 
   return kStatusOk;
 }
@@ -214,13 +214,13 @@ Int FactorHiGHSSolver::chooseNla() {
 
     if (expect_AS_much_cheaper || model_.nonSeparableQp() || model_.m() == 0) {
       failure_NE = true;
-      log_.printDevInfo("NE skipped\n");
+      logger_.printInfo("NE skipped\n");
     } else {
       Int status = kkt_.buildNEstructure();
       if (status) {
         failure_NE = true;
         if (status == kStatusOverflow) {
-          log_.printDevInfo("Integer overflow forming NE matrix\n");
+          logger_.printInfo("Integer overflow forming NE matrix\n");
           overflow_NE = true;
         }
         return;
@@ -242,13 +242,13 @@ Int FactorHiGHSSolver::chooseNla() {
 
     if (expect_NE_much_cheaper && can_skip_AS) {
       failure_AS = true;
-      log_.printDevInfo("AS skipped\n");
+      logger_.printInfo("AS skipped\n");
     } else {
       Int AS_status = kkt_.buildASstructure();
       if (!AS_status) AS_status = analyseAS(symb_AS);
       if (AS_status) failure_AS = true;
       if (AS_status == kStatusOverflow) {
-        log_.printDevInfo("Integer overflow forming AS matrix\n");
+        logger_.printInfo("Integer overflow forming AS matrix\n");
         overflow_AS = true;
       }
 
@@ -291,7 +291,7 @@ Int FactorHiGHSSolver::chooseNla() {
     else
       status = kStatusErrorAnalyse;
 
-    log_.printe("Both NE and AS failed analyse phase\n");
+    logger_.printe("Both NE and AS failed analyse phase\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
@@ -319,7 +319,7 @@ Int FactorHiGHSSolver::chooseNla() {
     }
   }
 
-  log_.print(log_stream);
+  logger_.print(log_stream.str().c_str());
 
   if (status == kStatusOk) {
     if (options_.nla == kHipoAugmentedString) {
@@ -358,7 +358,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
   if (nla == "NE") {
     if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
-      log_.printDevInfo("NE interrupted\n");
+      logger_.printInfo("NE interrupted\n");
       return kStatusErrorAnalyse;
     }
   }
@@ -383,22 +383,22 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
       // set logging of Metis depending on debug level
       options[METIS_OPTION_DBGLVL] = 0;
-      if (log_.debug(2))
+      if (logger_.debug(2))
         options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
 
       // no2hop improves the quality of ordering in general
       options[METIS_OPTION_NO2HOP] = 1;
 
-      log_.printDevInfo("Running Metis\n");
+      logger_.printInfo("Running Metis\n");
       std::vector<Int> iperm(n);
 
       Int status =
           Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
                              options, permutations[i].data(), iperm.data());
 
-      log_.printDevInfo("Metis done\n");
+      logger_.printInfo("Metis done\n");
       if (status != METIS_OK) {
-        log_.printDevInfo("Error with Metis\n");
+        logger_.printInfo("Error with Metis\n");
         failure[i] = true;
       }
     } else if (orderings_to_try[i] == kHipoAmdString) {
@@ -406,23 +406,23 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       Highs_amd_defaults(control);
       double info[AMD_INFO];
 
-      log_.printDevInfo("Running AMD\n");
+      logger_.printInfo("Running AMD\n");
       Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
                                    permutations[i].data(), control, info);
-      log_.printDevInfo("AMD done\n");
+      logger_.printInfo("AMD done\n");
 
       if (status != AMD_OK) {
-        log_.printDevInfo("Error with AMD\n");
+        logger_.printInfo("Error with AMD\n");
         failure[i] = true;
       }
     } else if (orderings_to_try[i] == kHipoRcmString) {
-      log_.printDevInfo("Running RCM\n");
+      logger_.printInfo("Running RCM\n");
       Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
                                 full_rows.data(), permutations[i].data());
-      log_.printDevInfo("RCM done\n");
+      logger_.printInfo("RCM done\n");
 
       if (status != 0) {
-        log_.printDevInfo("Error with RCM\n");
+        logger_.printInfo("Error with RCM\n");
         failure[i] = true;
       }
     } else {
@@ -433,9 +433,9 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
     failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
 
-    if (failure[i] && log_.debug(2)) {
-      log_.print("Failed symbolic:");
-      symbolics[i].print(log_, true);
+    if (failure[i] && logger_.debug(2)) {
+      logger_.print("Failed symbolic:");
+      symbolics[i].print(logger_, true);
     }
   };
 
@@ -518,7 +518,7 @@ Int FactorHiGHSSolver::setNla() {
   std::stringstream log_stream;
 
   if (options_.nla == kHipoNormalEqString && model_.nonSeparableQp()) {
-    log_.printw("Normal equations not available for non-separable QP\n");
+    logger_.printw("Normal equations not available for non-separable QP\n");
     options_.nla = kHighsChooseString;
   }
 
@@ -526,10 +526,10 @@ Int FactorHiGHSSolver::setNla() {
     Int status = kkt_.buildASstructure();
     if (!status) status = analyseAS(S_);
     if (status == kStatusOverflow) {
-      log_.printe("AS requested, integer overflow\n");
+      logger_.printe("AS requested, integer overflow\n");
       return kStatusOverflow;
     } else if (status) {
-      log_.printe("AS requested, failed analyse phase\n");
+      logger_.printe("AS requested, failed analyse phase\n");
       return kStatusErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "AS requested\n";
@@ -538,10 +538,10 @@ Int FactorHiGHSSolver::setNla() {
     Int status = kkt_.buildNEstructure();
     if (!status) status = analyseNE(S_);
     if (status == kStatusOverflow) {
-      log_.printe("NE requested, integer overflow\n");
+      logger_.printe("NE requested, integer overflow\n");
       return kStatusOverflow;
     } else if (status) {
-      log_.printe("NE requested, failed analyse phase\n");
+      logger_.printe("NE requested, failed analyse phase\n");
       return kStatusErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "NE requested\n";
@@ -552,12 +552,12 @@ Int FactorHiGHSSolver::setNla() {
   } else
     assert(1 == 0);
 
-  if (log_.debug(1))
+  if (logger_.debug(1))
     log_stream << textline("Ordering:")
                << (options_.nla == kHipoAugmentedString ? ordering_AS_
                                                         : ordering_NE_)
                << '\n';
-  log_.print(log_stream);
+  logger_.print(log_stream.str().c_str());
 
   kkt_.iperm = S_.iperm();
 
@@ -641,7 +641,7 @@ void FactorHiGHSSolver::setParallel() {
   } else
     assert(1 == 0);
 
-  log_.print(log_stream);
+  logger_.print(log_stream.str().c_str());
   S_.setParallel(parallel_tree, parallel_node);
 }
 

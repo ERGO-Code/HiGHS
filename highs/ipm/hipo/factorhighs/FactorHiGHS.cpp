@@ -3,27 +3,27 @@
 #include "Analyse.h"
 #include "DataCollector.h"
 #include "Factorise.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {
 
-FHsolver::FHsolver(const Log* log, Int block_size)
-    : log_{log}, nb_{block_size > 0 ? block_size : default_nb_} {
+FHsolver::FHsolver(const Logger* logger, Int block_size)
+    : logger_{logger}, nb_{block_size > 0 ? block_size : default_nb_} {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  if (log_)
-    log_->printw(
+  if (logger_)
+    logger_->printw(
         "Running in debug mode: COLLECTING EXPENSIVE FACTORISATION DATA\n");
 #endif
 #if HIPO_TIMING_LEVEL > 0
-  if (log_)
-    log_->printw("Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
+  if (logger_)
+    logger_->printw("Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
 #endif
 }
 
 FHsolver::~FHsolver() {
-  if (log_) {
-    data_.printTimes(*log_);
-    data_.printIter(*log_);
+  if (logger_) {
+    data_.printTimes(*logger_);
+    data_.printIter(*logger_);
   }
 }
 
@@ -38,14 +38,14 @@ Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
                       const std::vector<Int>& ptr,
                       const std::vector<Int>& signs,
                       const std::vector<Int>& perm) {
-  Analyse an_obj(rows, ptr, signs, nb_, log_, data_, perm);
+  Analyse an_obj(rows, ptr, signs, nb_, logger_, data_, perm);
   return an_obj.run(S);
 }
 
 Int FHsolver::factorise(const Symbolic& S, const std::vector<Int>& rows,
                         const std::vector<Int>& ptr,
                         const std::vector<double>& vals) {
-  Factorise fact_obj(S, rows, ptr, vals, regul_, log_, data_, sn_columns_,
+  Factorise fact_obj(S, rows, ptr, vals, regul_, logger_, data_, sn_columns_,
                      &serial_stack_);
   return fact_obj.run(N_);
 }

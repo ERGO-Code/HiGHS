@@ -5,7 +5,7 @@
 #include "DataCollector.h"
 #include "Numeric.h"
 #include "Symbolic.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 
 /*
 
@@ -37,13 +37,11 @@ Then, the factorization is performed as follows.
     FH.factorise(S, rows, ptr, val);
     FH.solve(x);
 
-Printing to screen is achieved using the interface in auxiliary/Log.h. Pass an
-object of type Log for normal printing:
+Printing to screen is achieved using the interface in auxiliary/Logger.h.
     ...
-    Log log;
-    FHsolver FH(&log);
+    Logger logger;
+    FHsolver FH(&logger);
     ...
-Pass an object of type LogHighs for Highs logging.
 Pass nothing to suppress all logging.
 
 To add static regularisation when the pivots are selected, use
@@ -58,7 +56,7 @@ input to the constructor.
 namespace hipo {
 
 class FHsolver {
-  const Log* log_;
+  const Logger* logger_;
   DataCollector data_;
   Regul regul_;
   Numeric N_;
@@ -74,7 +72,7 @@ class FHsolver {
 
  public:
   // Create object and initialise DataCollector
-  FHsolver(const Log* log = nullptr, Int block_size = default_nb_);
+  FHsolver(const Logger* logger = nullptr, Int block_size = default_nb_);
 
   // Print collected data (if any) and terminate DataCollector
   ~FHsolver();
