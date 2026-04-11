@@ -852,13 +852,6 @@ restart:
   std::vector<HighsInt> search_indices(1, 0);
   bool root_node = true;  // Don't separate the root node again
   while (!mipdata_->nodequeue.empty()) {
-    // Check all global sub-solvers have been set
-
-    for (HighsInt iLp = 0; iLp < static_cast<HighsInt>(mipdata_->lps.size());
-         iLp++) {
-      assert(mipdata_->lps[iLp].getGlobalSubSolverCallTime());
-    }
-
     // Possibly query existence of an external solution
     if (!submip)
       mipdata_->queryExternalSolution(
