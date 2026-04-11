@@ -94,22 +94,18 @@ void HighsMipSolver::runTask(F&& f, highs::parallel::TaskGroup& tg,
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
-
-  if (submip) {
-    analysis_.analyse_mip_time = false;
-  } else {
-    analysis_.timer_ = &this->timer_;
-    analysis_.sub_solver_call_time_ = &this->sub_solver_call_time_;
-    analysis_.setup(*orig_model_, *options_mip_);
-  }
-  timer_.start();
-
+  // Start the timer local to HighsMipSolver - independent of the
+  // timer passed from Highs as a pointer that's used in
+  // HighsMipAnalysis
+  this->timer_.start();
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
     improving_solution_file_ =
         fopen(options_mip_->mip_improving_solution_file.c_str(), "w");
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  for (HighsInt iLp = 0; iLp < static_cast<HighsInt>(mipdata_->lps.size()); iLp++)
+    mipdata_->lps[iLp].setGlobalSubSolverCallTime(this->global_sub_solver_call_time_);
   analysis_.mipTimerStart(kMipClockPresolve);
   analysis_.mipTimerStart(kMipClockInit);
   mipdata_->init();
@@ -1137,7 +1133,7 @@ void HighsMipSolver::cleanupSolve() {
 
   if (!timeless_log) analysis_.reportMipTimer();
 
-  analysis_.checkSubSolverCallTime(sub_solver_call_time_);
+  //  analysis_.checkSubSolverCallTime(sub_solver_call_time_);
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 
@@ -1326,4 +1322,23 @@ void HighsMipSolver::setParallelLock(bool lock) const {
   for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
     conflictpool.setAgeLock(lock);
   }
+}
+
+void HighsMipSolver::setGlobalSubSolverCallTime(
+    HighsSubSolverCallTime* global_sub_solver_call_time) {
+  assert(global_sub_solver_call_time);
+  this->global_sub_solver_call_time_ = global_sub_solver_call_time;
+}
+
+void HighsMipSolver::initialiseAnalysis(const HighsMipAnalysis* from_analysis) {
+  if (from_analysis) {
+    assert(this->submip);
+    this->analysis_ = *from_analysis;
+  } else {
+    this->analysis_.model_name = orig_model_->model_name_;
+    this->analysis_.timer_ = &this->timer_;
+    this->analysis_.sub_solver_call_time_ = this->global_sub_solver_call_time_;
+    this->analysis_.setupMipTime(*options_mip_);
+  }
+  this->analysis_.submip_ = this->submip;
 }
