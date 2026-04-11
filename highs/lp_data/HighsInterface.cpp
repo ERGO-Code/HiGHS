@@ -4273,7 +4273,6 @@ void HighsLinearObjective::clear() {
 }
 
 void HighsSubSolverCallTime::initialise(HighsTimer& timer_) {
-  if (this->initialised) printf("Re-initialising HighsSubSolverCallTime\n");
   HighsInt num_thread = highs::parallel::num_threads();
   this->timer = &timer_;
   this->initialised = true;
@@ -4422,14 +4421,13 @@ void Highs::reportSubSolverCallTime() const {
   const HighsInt to_k = max_sumip_time > 0 ? 2 : 1;
   const std::vector<std::string>& name = this->sub_solver_call_time_.name;
   for (HighsInt k = 0; k < to_k; k++) {
-
     if (k == 0) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
-		   "\nMIP sub-solver profiling: number of threads used = %d\n",
-		   int(num_threads_used));
+                   "\nMIP sub-solver profiling: number of threads used = %d\n",
+                   int(num_threads_used));
     } else {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
-		   "\nSub-MIP sub-solver profiling\n");
+                   "\nSub-MIP sub-solver profiling\n");
     }
     for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
          thread_ix++) {
@@ -4504,12 +4502,12 @@ void Highs::reportSubSolverCallTime() const {
       ss << highsFormatToString("\nSub-MIP sub-solver   ");
     }
     for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
-	 thread_ix++) {
+         thread_ix++) {
       HighsInt thread_num = used_thread[thread_ix];
       ss << highsFormatToString("%6d", int(thread_num));
     }
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-		 ss.str().c_str());
+                 ss.str().c_str());
     std::vector<bool>& used_sub_solver =
         k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
     const std::vector<HighsSubSolverCallTimeRecord>& record =
