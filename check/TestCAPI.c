@@ -501,7 +501,7 @@ void minimalApiQp() {
   HighsInt a_index[2] = {0, 0};
   double a_value[2] = {1.0, 1.0};
 
-  // Start with triuangular Hessian, then 
+  // Start with triangular Hessian, then 
   HighsInt q_format = kHighsHessianFormatTriangular;
   HighsInt q_num_nz = 4;
   HighsInt q_start[3] = {0, 2, 3};
@@ -1546,9 +1546,9 @@ void testPassHessian() {
   for (HighsInt k = 0; k < 2; k++) {
     HighsInt q_format = -1;
     if (k == 0) {
-      q_format = 1;
+      q_format = kHighsHessianFormatTriangular;
     } else {
-      q_format = 2;
+      q_format = kHighsHessianFormatSquare;
     }
     return_status = Highs_passHessian(highs, 1, 1, q_format, start, index, value);
     assertIntValuesEqual("Return of passHessian", return_status, kHighsStatusOk);

@@ -491,7 +491,7 @@ HighsStatus Highs::passModel(
     assert(q_value != NULL);
     HighsHessian& hessian = model.hessian_;
     hessian.dim_ = num_col;
-    hessian.format_ = HessianFormat::kTriangular;
+    hessian.format_ = static_cast<HessianFormat>(q_format);
     hessian.start_.assign(q_start, q_start + num_col);
     hessian.start_.resize(num_col + 1);
     hessian.start_[num_col] = q_num_nz;
@@ -556,7 +556,7 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   HighsInt num_col = model_.lp_.num_col_;
   if (dim != num_col) return HighsStatus::kError;
   hessian.dim_ = num_col;
-  hessian.format_ = HessianFormat::kTriangular;
+  hessian.format_ = static_cast<HessianFormat>(format);
   if (dim > 0) {
     assert(start != NULL);
     hessian.start_.assign(start, start + num_col);
