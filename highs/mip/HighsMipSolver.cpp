@@ -284,10 +284,15 @@ restart:
     if (num_new_workers <= 0) return;
     // Remove all cuts from non-global pool for copied LP
     mipdata_->lps.emplace_back(mipdata_->getLp());
+    // Have to set the global sub-solver call time pointer here for
+    // new worker 0, since
+    // HighsLpRelaxation::removeWorkerSpecificRows(); solves an LP
+    mipdata_->lps.back().setGlobalSubSolverCallTime(this->global_sub_solver_call_time_);
     mipdata_->lps.back().removeWorkerSpecificRows();
     for (HighsInt i = 0; i != num_new_workers; ++i) {
       if (i != 0) {
         mipdata_->lps.emplace_back(mipdata_->lps.back());
+	mipdata_->lps.back().setGlobalSubSolverCallTime(this->global_sub_solver_call_time_);
       }
       mipdata_->domains.emplace_back(mipdata_->getDomain());
       mipdata_->cutpools.emplace_back(
@@ -843,6 +848,12 @@ restart:
   std::vector<HighsInt> search_indices(1, 0);
   bool root_node = true;  // Don't separate the root node again
   while (!mipdata_->nodequeue.empty()) {
+    // Check all global sub-solvers have been set
+
+    for (HighsInt iLp = 0; iLp < static_cast<HighsInt>(mipdata_->lps.size()); iLp++) {
+      assert(mipdata_->lps[iLp].getGlobalSubSolverCallTime());
+    }
+    
     // Possibly query existence of an external solution
     if (!submip)
       mipdata_->queryExternalSolution(

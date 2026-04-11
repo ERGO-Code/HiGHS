@@ -1295,6 +1295,8 @@ class Highs {
   void setGlobalSubSolverCallTime(
       HighsSubSolverCallTime* global_sub_solver_call_time = nullptr);
 
+  HighsSubSolverCallTime* getGlobalSubSolverCallTime() const { return this->global_sub_solver_call_time_; }
+
   // Start of advanced methods: only for internal use!
 
   // Nested methods below Highs::run()

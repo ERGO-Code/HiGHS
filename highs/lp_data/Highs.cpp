@@ -982,6 +982,7 @@ HighsStatus Highs::optimizeLp() {
   assert(!model_.isQp());
   assert(!model_.lp_.hasSemiVariables());
   assert(!this->multi_linear_objective_.size());
+  assert(this->global_sub_solver_call_time_);
   return calledOptimizeModel();
 }
 

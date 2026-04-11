@@ -100,6 +100,8 @@ class HighsLpRelaxation {
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
 
+  HighsSubSolverCallTime* getGlobalSubSolverCallTime() const { return this->lpsolver.getGlobalSubSolverCallTime(); }
+
   void setGlobalSubSolverCallTime(
       HighsSubSolverCallTime* global_sub_solver_call_time);
 

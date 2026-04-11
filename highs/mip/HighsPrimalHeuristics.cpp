@@ -161,11 +161,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.run();
   worker.heur_stats.max_submip_level = std::max(
       submipsolver.max_submip_level + 1, worker.heur_stats.max_submip_level);
+  // Ensure that further sub-solver call time data are accumulated in
+  // the MIP or sub-MIP record, according to whether the calling MIP
+  // is a sub-MIP
+  mipsolver.global_sub_solver_call_time_->setSubMip(mipsolver.submip);
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
-    // Ensure that further sub-solver call time data are accumulated in
-    // the MIP or sub-MIP record, according to whether the calling MIP
-    // is a sub-MIP
-    mipsolver.global_sub_solver_call_time_->setSubMip(mipsolver.submip);
     // Only stop timing the submip if the calling MIP isn't a sub-MIP
     mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
   }
@@ -1191,9 +1191,9 @@ void HighsPrimalHeuristics::shifting(HighsMipWorker& worker,
   // LP relaxation instantiation
   HighsLpRelaxation lprelax(worker.getLpRelaxation());
   lprelax.setMipWorker(worker);
+  lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
   HighsRandom& randgen =
       mipsolver.mipdata_->parallelLockActive() ? worker.randgen : this->randgen;
-  lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
   std::vector<std::pair<HighsInt, double>> current_fractional_integers =
       lprelax.getFractionalIntegers();
   std::vector<std::tuple<HighsInt, HighsInt, double>> current_infeasible_rows =
