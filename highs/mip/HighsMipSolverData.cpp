@@ -403,7 +403,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
       (void)output_flag;
       ipm.setOptionValue("output_flag", !mipsolver.submip);
     }
-    const HighsInt sub_solver_clock = use_hipo ? kSubSolverHipoAc : kSubSolverIpxAc;
+    const HighsInt sub_solver_clock =
+        use_hipo ? kSubSolverHipoAc : kSubSolverIpxAc;
     mipsolver.global_sub_solver_call_time_->start(sub_solver_clock);
     ipm.optimizeLp();
     mipsolver.global_sub_solver_call_time_->stop(sub_solver_clock);

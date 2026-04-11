@@ -4338,12 +4338,13 @@ void HighsSubSolverCallTime::start(const HighsInt sub_solver_clock) {
     // Sometimes the analytic centre calculation is terminated, so the
     // clock is still running
     HighsInt clock_running = this->clock_running[thread];
-    if (clock_running >= 0 &&
-	clock_running != kSubSolverHipoAc &&
-	clock_running != kSubSolverIpxAc) {
-      printf("HighsSubSolverCallTime: clock %d (%s) running when starting clock %d (%s) \n",
-             int(clock_running), this->name[clock_running].c_str(),
-             int(sub_solver_clock), this->name[sub_solver_clock].c_str());
+    if (clock_running >= 0 && clock_running != kSubSolverHipoAc &&
+        clock_running != kSubSolverIpxAc) {
+      printf(
+          "HighsSubSolverCallTime: clock %d (%s) running when starting clock "
+          "%d (%s) \n",
+          int(clock_running), this->name[clock_running].c_str(),
+          int(sub_solver_clock), this->name[sub_solver_clock].c_str());
       assert(clock_running < 0);
       assert(!std::signbit(this->start_time[thread]));
     }
@@ -4416,7 +4417,8 @@ void Highs::reportSubSolverCallTime() const {
   }
   const double num_threads_used = used_thread.size();
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "\nSub-solver profiling: number of threads used = %d\n", int(num_threads_used));
+               "\nSub-solver profiling: number of threads used = %d\n",
+               int(num_threads_used));
 
   std::stringstream ss;
   std::vector<bool> mip_used_sub_solver(kSubSolverCount, false);
@@ -4476,27 +4478,28 @@ void Highs::reportSubSolverCallTime() const {
   // Lambda for horizontal rule
   auto hrule = [&]() {
     ss.str(std::string());
-    ss << "======================";
+    ss << "=======================";
     for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
-	 thread_ix++) ss << "=====";
+         thread_ix++)
+      ss << "=====";
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-		 ss.str().c_str());
+                 ss.str().c_str());
   };
   // Determine the sub-solver percentage breakdown over all threads
   // when solving MIPs
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-	       "\nPercent (sub-)MIP time by thread\n");
+               "\nPercent (sub-)MIP time by thread\n");
   for (HighsInt k = 0; k < to_k; k++) {
     if (k == 0) {
       ss.str(std::string());
       ss << highsFormatToString("\nMIP sub-solver       ");
       for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
-	   thread_ix++) {
-	HighsInt thread_num = used_thread[thread_ix];
-	ss << highsFormatToString("%6d", int(thread_num));
+           thread_ix++) {
+        HighsInt thread_num = used_thread[thread_ix];
+        ss << highsFormatToString("%6d", int(thread_num));
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-		   ss.str().c_str());
+                   ss.str().c_str());
     } else {
       if (max_sumip_time <= 0) continue;
       highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -4522,29 +4525,29 @@ void Highs::reportSubSolverCallTime() const {
         HighsInt num_call = record[thread_num].num_call[Ix];
         double run_time = record[thread_num].run_time[Ix];
         if (num_call && ideal_time > 0) {
-	  double pct = 1e2 * run_time / ideal_time;
-	  totalPct[thread_ix] += pct;
+          double pct = 1e2 * run_time / ideal_time;
+          totalPct[thread_ix] += pct;
           ss << highsFormatToString(" %5.1f", pct);
         } else {
           ss << "      ";
         }
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-		   ss.str().c_str());
-      hrule();
-      ss.str(std::string());
-      ss << "Total                 ";
-      for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
-	   thread_ix++) {
-	if (totalPct[thread_ix]) {
-	  ss << highsFormatToString(" %5.1f", totalPct[thread_ix]);
-	} else {
-	  ss << "      ";
-	}
-	highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-		     ss.str().c_str());
-      }
-      hrule();
+                   ss.str().c_str());
     }
+    hrule();
+    ss.str(std::string());
+    ss << "Total                ";
+    for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
+         thread_ix++) {
+      if (totalPct[thread_ix]) {
+        ss << highsFormatToString(" %5.1f", totalPct[thread_ix]);
+      } else {
+        ss << "      ";
+      }
+    }
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                 ss.str().c_str());
+    hrule();
   }
 }
