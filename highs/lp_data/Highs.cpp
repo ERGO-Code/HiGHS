@@ -3960,8 +3960,9 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
 HighsStatus Highs::callSolveQp() {
   // Check that the model is column-wise
   HighsLp& lp = model_.lp_;
-  HighsHessian& hessian = model_.hessian_;
   assert(model_.lp_.a_matrix_.isColwise());
+  HighsHessian& hessian = model_.hessian_;
+  assert(hessian.format_ == HessianFormat::kTriangular);
   if (hessian.dim_ > lp.num_col_) {
     highsLogDev(
         options_.log_options, HighsLogType::kError,

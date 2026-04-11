@@ -260,6 +260,15 @@ void triangularToSquareHessian(const HighsHessian& hessian,
     return;
   }
   assert(hessian.format_ == HessianFormat::kTriangular);
+  // Cannot use the following, since it puts the diagonal entry first
+  // in each column and, strangely, the active set QP solver seems to
+  // need the entries column-by-column in row order
+  /*
+  HighsHessian square_hessian = hessian.toSquare();
+  std::vector<HighsInt> nw_start = square_hessian.start_;
+  std::vector<HighsInt> nw_index = square_hessian.index_;
+  std::vector<double> nw_value = square_hessian.value_;
+  */
   const HighsInt nnz = hessian.start_[dim];
   const HighsInt square_nnz = nnz + (nnz - dim);
   start.resize(dim + 1);
