@@ -12,7 +12,7 @@
 
 #include "amd_internal.h"
 
-amd_int amd_post_tree
+amd_int Highs_amd_post_tree
 (
     amd_int root,			/* root of the tree */
     amd_int k,			/* start numbering at k */
@@ -42,7 +42,7 @@ amd_int amd_post_tree
     i = root ;
     for (f = Child [i] ; f != EMPTY ; f = Sibling [f])
     {
-	k = amd_post_tree (f, k, Child, Sibling, Order, Stack, nn) ;
+	k = Highs_amd_post_tree (f, k, Child, Sibling, Order, Stack, nn) ;
     }
     Order [i] = k++ ;
     return (k) ;

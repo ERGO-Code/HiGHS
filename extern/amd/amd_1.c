@@ -26,7 +26,7 @@
 
 #include "amd_internal.h"
 
-void amd_1
+void Highs_amd_1
 (
     amd_int n,		/* n > 0 */
     const amd_int Ap [ ],	/* input of size n+1, not modified */
