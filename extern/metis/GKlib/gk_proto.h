@@ -10,6 +10,8 @@
 #ifndef _GK_PROTO_H_
 #define _GK_PROTO_H_
 
+#include "gk_mangle.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,7 +31,7 @@ void gk_errexit(char *,...);
  *-------------------------------------------------------------*/
 uint64_t gk_randint64(unsigned *rng_state);
 uint32_t gk_randint32(unsigned *rng_state);
-int my_rand_r(unsigned *rng_state);
+int gk_rand_r(unsigned *rng_state);
 
 
 /* mcore.c */
