@@ -1318,6 +1318,50 @@ TEST_CASE("issue-2821", "[qpsolver]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("pass-square-hessian", "[qpsolver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  // Set up the same constraints as 2821, but use a Hessian with more
+  // entries and varied values
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+  lp.num_col_ = 5;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, -4, -4, -2, -2};
+  lp.col_lower_ = {0, 0, 0, 0, 0};
+  lp.col_upper_ = {inf, inf, inf, inf, inf};
+  lp.row_lower_ = {4, 0, 0};
+  lp.row_upper_ = {4, 0, 0};
+  lp.a_matrix_.start_ = {0, 1, 3, 4, 5, 7};
+  lp.a_matrix_.index_ = {0, 0, 2, 1, 1, 1, 2};
+  lp.a_matrix_.value_ = {1, 3, 1, 1, 1, -2, -1};
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {0, 3, 6, 9, 11, 12};
+  hessian.index_ = {0, 1, 3, 1, 2, 3, 2, 3, 4, 3, 4, 4};
+  hessian.value_ = {4, -1, 1, 8, -2, 3, 9, -3, 2, 6, -4, 5};
+  const double optimal_objective_value = -1.9875776398e-01;
+  REQUIRE(h.passModel(model) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(okValueDifference(info.objective_function_value,
+                            optimal_objective_value));
+  HighsHessian square_hessian = h.getModel().hessian_.toSquare();
+  REQUIRE(h.passHessian(square_hessian) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(okValueDifference(info.objective_function_value,
+                            optimal_objective_value));
+  model.hessian_ = square_hessian;
+  REQUIRE(h.passModel(model) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(okValueDifference(info.objective_function_value,
+                            optimal_objective_value));
+  
+  h.resetGlobalScheduler(true);
+}
+
 /*
 // This case causes a segfault with the meson build, but not with
 // cmake. Might be indicative of the bug causing the degeneracy

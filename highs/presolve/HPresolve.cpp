@@ -4982,7 +4982,11 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // count number of fixed columns
   HighsInt numFixedCols = 0;
 
-  typedef std::tuple<HighsInt, double, HighsInt> candidate;
+  struct candidate {
+    HighsInt col;
+    double val;
+    HighsInt multiplier;
+  };
 
   auto isSingleton = [&](HighsInt col) {
     return (!colDeleted[col] && colsize[col] == 1 &&
@@ -4991,9 +4995,9 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
   auto sortCols = [&](std::vector<candidate>& vec) {
     pdqsort(vec.begin(), vec.end(),
-            [&](const candidate& col1, const candidate& col2) {
-              return model->col_cost_[std::get<0>(col1)] / std::get<1>(col1) <
-                     model->col_cost_[std::get<0>(col2)] / std::get<1>(col2);
+            [&](const candidate& c1, const candidate& c2) {
+              return model->col_cost_[c1.col] / c1.val <
+                     model->col_cost_[c2.col] / c2.val;
             });
   };
 
@@ -5013,12 +5017,12 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // lambda for storing a candidate
   auto addCandidate = [&](std::vector<candidate>& candidates, HighsInt col,
                           double val, HighsInt direction, double& minWeight,
-                          double& maxWeight, bool& allInteger) {
-    allInteger =
-        allInteger && model->integrality_[col] == HighsVarType::kInteger;
+                          double& maxWeight, size_t& numIntegerCandidates) {
+    if (model->integrality_[col] == HighsVarType::kInteger)
+      numIntegerCandidates++;
     minWeight = std::min(minWeight, direction * val);
     maxWeight = std::max(maxWeight, direction * val);
-    candidates.push_back(std::make_tuple(col, val, direction));
+    candidates.push_back(candidate{col, val, direction});
   };
 
   // lambda for fixing a variable
@@ -5030,21 +5034,23 @@ HPresolve::Result HPresolve::singletonColStuffing(
     return Result::kOk;
   };
 
-  // lambda for actual stuffing
-  auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
-    // skip row if rhs is not finite
-    if (direction * rhs == kHighsInf) return Result::kOk;
-
+  // lambda for computing candidates for stuffing
+  auto computeCandidates = [&](HighsInt row, HighsInt direction,
+                               std::vector<candidate>& candidates,
+                               HighsCDouble& sumLower, HighsCDouble& sumUpper,
+                               bool& sumLowerFinite, bool& sumUpperFinite,
+                               size_t& numIntegerCandidates, double& minWeight,
+                               double& maxWeight, bool allowIntegerCandidates) {
     // vectors for candidates and activity bounds
-    std::vector<candidate> candidates;
+    candidates.clear();
     candidates.reserve(rowsize[row]);
-    HighsCDouble sumLower = 0.0;
-    HighsCDouble sumUpper = 0.0;
-    bool sumLowerFinite = true;
-    bool sumUpperFinite = true;
-    bool allInteger = true;
-    double minWeight = kHighsInf;
-    double maxWeight = -kHighsInf;
+    sumLower = 0.0;
+    sumUpper = 0.0;
+    sumLowerFinite = true;
+    sumUpperFinite = true;
+    numIntegerCandidates = 0;
+    minWeight = kHighsInf;
+    maxWeight = -kHighsInf;
 
     for (auto& nz : getRowVector(row)) {
       // get column index, coefficient, cost and bounds
@@ -5053,70 +5059,116 @@ HPresolve::Result HPresolve::singletonColStuffing(
       double cj = model->col_cost_[j];
       double sumLowerBound = model->col_lower_[j];
       double sumUpperBound = model->col_upper_[j];
+      bool isCandidate = allowIntegerCandidates ||
+                         model->integrality_[j] != HighsVarType::kInteger;
+
       if (isSingleton(j)) {
         // check singleton
         if (aj > 0) {
-          // use lower bound
-          sumUpperBound = sumLowerBound;
-          // candidate for stuffing?
-          if (cj < 0)
+          if (cj >= 0)
+            // dual fixing: fix to lower bound
+            sumUpperBound = sumLowerBound;
+          else if (isCandidate) {
+            // candidate for stuffing
+            sumUpperBound = sumLowerBound;
             addCandidate(candidates, j, aj, HighsInt{1}, minWeight, maxWeight,
-                         allInteger);
+                         numIntegerCandidates);
+          }
         } else {
-          // use upper bound
-          sumLowerBound = sumUpperBound;
-          // candidate for stuffing? multiply column with -1
-          if (cj > 0)
+          if (cj <= 0)
+            // dual fixing: fix to upper bound
+            sumLowerBound = sumUpperBound;
+          else if (isCandidate) {
+            // candidate for stuffing; multiply column with -1
+            sumLowerBound = sumUpperBound;
             addCandidate(candidates, j, aj, HighsInt{-1}, minWeight, maxWeight,
-                         allInteger);
+                         numIntegerCandidates);
+          }
         }
-      } else if (aj < 0)
-        std::swap(sumLowerBound, sumUpperBound);
+      }
       // update activities
+      if (aj < 0) std::swap(sumLowerBound, sumUpperBound);
       updateActivityBounds(sumLower, sumUpper, sumLowerFinite, sumUpperFinite,
                            aj, sumLowerBound, sumUpperBound);
-      if (!sumLowerFinite && !sumUpperFinite) return Result::kOk;
+      if (!sumLowerFinite && !sumUpperFinite) return false;
+    }
+    return true;
+  };
+
+  // lambda for computing and checking candidates for stuffing
+  auto checkCandidates = [&](HighsInt row, HighsInt direction,
+                             std::vector<candidate>& candidates,
+                             HighsCDouble& sumLower, HighsCDouble& sumUpper,
+                             bool& sumLowerFinite, bool& sumUpperFinite) {
+    // number of integer candidates and weights
+    size_t numIntegerCandidates;
+    double minWeight;
+    double maxWeight;
+
+    // compute candidates
+    if (computeCandidates(row, direction, candidates, sumLower, sumUpper,
+                          sumLowerFinite, sumUpperFinite, numIntegerCandidates,
+                          minWeight, maxWeight, true)) {
+      // return if there are no integer columns
+      if (numIntegerCandidates == 0) return true;
+      // all columns need to have same weights if we only have integer
+      // columns
+      if (numIntegerCandidates == candidates.size()) {
+        if (minWeight != maxWeight) return false;
+        return true;
+      }
     }
 
-    // all columns need to have same weights if we only have integer columns
-    if (allInteger && minWeight != maxWeight) return Result::kOk;
+    // recompute candidates without integer columns
+    if (numIntegerCandidates > 0 &&
+        computeCandidates(row, direction, candidates, sumLower, sumUpper,
+                          sumLowerFinite, sumUpperFinite, numIntegerCandidates,
+                          minWeight, maxWeight, false))
+      return true;
 
-    // remove integer columns if there are also continuous ones
-    if (!allInteger)
-      candidates.erase(
-          std::remove_if(candidates.begin(), candidates.end(),
-                         [&](const candidate& p) {
-                           return model->integrality_[std::get<0>(p)] ==
-                                  HighsVarType::kInteger;
-                         }),
-          candidates.end());
+    return false;
+  };
+
+  // lambda for actual stuffing
+  auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
+    // skip row if rhs is not finite
+    if (direction * rhs == kHighsInf) return Result::kOk;
+
+    // vectors for candidates and activity bounds
+    std::vector<candidate> candidates;
+    HighsCDouble sumLower;
+    HighsCDouble sumUpper;
+    bool sumLowerFinite;
+    bool sumUpperFinite;
+
+    // compute candidates
+    if (!checkCandidates(row, direction, candidates, sumLower, sumUpper,
+                         sumLowerFinite, sumUpperFinite))
+      return Result::kOk;
 
     // sort candidates
     sortCols(candidates);
 
     // check candidates
     for (const auto& t : candidates) {
-      // get variable index, coefficient and multiplier (-1 if sign was flipped)
-      HighsInt j = std::get<0>(t);
-      double aj = std::get<1>(t);
-      HighsInt multiplier = std::get<2>(t);
       // both bounds have to be finite
-      if (model->col_lower_[j] == -kHighsInf ||
-          model->col_upper_[j] == kHighsInf)
+      if (model->col_lower_[t.col] == -kHighsInf ||
+          model->col_upper_[t.col] == kHighsInf)
         break;
       // compute delta (bound difference)
-      HighsCDouble delta = multiplier * aj *
-                           (static_cast<HighsCDouble>(model->col_upper_[j]) -
-                            static_cast<HighsCDouble>(model->col_lower_[j]));
+      HighsCDouble delta =
+          t.multiplier * t.val *
+          (static_cast<HighsCDouble>(model->col_upper_[t.col]) -
+           static_cast<HighsCDouble>(model->col_lower_[t.col]));
       // check if variable can be fixed
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
         numFixedCols++;
-        HPRESOLVE_CHECKED_CALL(fixCol(j, multiplier));
+        HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
                  direction * rhs <= sumLower + primal_feastol) {
         numFixedCols++;
-        HPRESOLVE_CHECKED_CALL(fixCol(j, -multiplier));
+        HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
