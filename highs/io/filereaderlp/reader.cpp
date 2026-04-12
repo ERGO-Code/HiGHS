@@ -55,8 +55,7 @@ enum class RawTokenType {
   ASTERISK
 };
 
-/*
-  // Useful for debugging
+// Useful for debugging
 static std::string tokenTypeToString(const RawTokenType& type) {
   switch (type) {
   case RawTokenType::NONE:
@@ -95,7 +94,6 @@ static std::string tokenTypeToString(const RawTokenType& type) {
     return "Unknown";
   }
 }
-*/
 
 struct RawToken {
   RawTokenType type = RawTokenType::NONE;
@@ -178,9 +176,9 @@ static const std::unordered_map<std::string, LpSectionKeyword>
                       {"sos", LpSectionKeyword::SOS},
                       {"end", LpSectionKeyword::END}};
 
-enum class SosType { SOS1, SOS2 };
+enum class SosType { kSos1, kSos2 };
 
-enum class LpComparisonType { LEQ, L, EQ, G, GEQ };
+enum class LpComparisonType { kLeq, kLt, kEq, kGt, kGeq };
 
 struct ProcessedToken {
   ProcessedTokenType type;
@@ -266,28 +264,32 @@ class Reader {
       sectiontokens;
 
   Builder builder;
+  HighsLogOptions log_options_;
 
-  bool readnexttoken(RawToken&);
-  void nextrawtoken(size_t howmany = 1);
-  void processtokens();
-  void splittokens();
-  void processsections();
-  void processnonesec();
-  void processobjsec();
-  void processconsec();
-  void processboundssec();
-  void processbinsec();
-  void processgensec();
-  void processsemisec();
-  void processsossec();
-  void processendsec();
-  void parseexpression(std::vector<ProcessedToken>::iterator& it,
+  bool readNextToken(RawToken&);
+  void nextRawToken(size_t howmany = 1);
+  void processTokens();
+  void splitTokens();
+  void processSections();
+  void processNoneSection();
+  void processObjSection();
+  void processConSection();
+  void processBoundsSection();
+  void processBinSection();
+  void processGenSection();
+  void processSemiSection();
+  void processSosSection();
+  void processEndSection();
+  void parseExpression(std::vector<ProcessedToken>::iterator& it,
                        std::vector<ProcessedToken>::iterator end,
                        std::shared_ptr<Expression> expr, bool isobj);
 
-  //  void printRawTokens();
+  void printRawTokens();
  public:
-  Reader(const std::string& filename) {
+  Reader(const HighsLogOptions& log_options,
+	 const std::string& filename)
+    : log_options_(log_options)
+  {
 #ifdef ZLIB_FOUND
     try {
       file.open(filename);
@@ -307,7 +309,7 @@ class Reader {
 
 Model readinstance(const HighsLogOptions& log_options,
 		   const std::string& filename) {
-  Reader reader(filename);
+  Reader reader(log_options, filename);
   return reader.read();
 }
 
@@ -341,19 +343,19 @@ Model Reader::read() {
   // read first NRAWTOKEN token
   // if file ends early, then all remaining tokens are set to FLEND
   for (size_t i = 0; i < NRAWTOKEN; ++i)
-    while (!readnexttoken(rawtokens[i]))
+    while (!readNextToken(rawtokens[i]))
       ;
 
-  processtokens();
+  processTokens();
 
   linebuffer.clear();
   linebuffer.shrink_to_fit();
 
   // std::clog << "Splitting tokens..." << std::endl;
-  splittokens();
+  splitTokens();
 
   // std::clog << "Setting up model..." << std::endl;
-  processsections();
+  processSections();
   processedtokens.clear();
   processedtokens.shrink_to_fit();
 
@@ -363,15 +365,16 @@ Model Reader::read() {
 void Reader::lpAssert(const bool condition, const std::string& message) {
   if (!condition) {
     printf("LP file reader error: %s\n", message.c_str());
+    highsLogUser(this->log_options_, HighsLogType::kError, "LP file reader error: %s\n", message.c_str());
     throw std::invalid_argument("File not existent or illegal file format.");
   }
 }
 
-void Reader::processnonesec() {
+void Reader::processNoneSection() {
   lpAssert(sectiontokens.count(LpSectionKeyword::NONE) == 0);
 }
 
-void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
+void Reader::parseExpression(std::vector<ProcessedToken>::iterator& it,
                              std::vector<ProcessedToken>::iterator end,
                              std::shared_ptr<Expression> expr, bool isobj) {
   if (it != end && it->type == ProcessedTokenType::CONID) {
@@ -539,11 +542,11 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
   }
 }
 
-void Reader::processobjsec() {
+void Reader::processObjSection() {
   builder.model.objective = std::shared_ptr<Expression>(new Expression);
   if (sectiontokens.count(LpSectionKeyword::OBJMIN)) {
     builder.model.sense = ObjectiveSense::MIN;
-    parseexpression(sectiontokens[LpSectionKeyword::OBJMIN].first,
+    parseExpression(sectiontokens[LpSectionKeyword::OBJMIN].first,
                     sectiontokens[LpSectionKeyword::OBJMIN].second,
                     builder.model.objective, true);
     lpAssert(sectiontokens[LpSectionKeyword::OBJMIN].first ==
@@ -551,7 +554,7 @@ void Reader::processobjsec() {
                  .second);  // all section tokens should have been processed
   } else if (sectiontokens.count(LpSectionKeyword::OBJMAX)) {
     builder.model.sense = ObjectiveSense::MAX;
-    parseexpression(sectiontokens[LpSectionKeyword::OBJMAX].first,
+    parseExpression(sectiontokens[LpSectionKeyword::OBJMAX].first,
                     sectiontokens[LpSectionKeyword::OBJMAX].second,
                     builder.model.objective, true);
     lpAssert(sectiontokens[LpSectionKeyword::OBJMAX].first ==
@@ -560,7 +563,7 @@ void Reader::processobjsec() {
   }
 }
 
-void Reader::processconsec() {
+void Reader::processConSection() {
   if (!sectiontokens.count(LpSectionKeyword::CON)) return;
   std::vector<ProcessedToken>::iterator& begin(
       sectiontokens[LpSectionKeyword::CON].first);
@@ -569,7 +572,7 @@ void Reader::processconsec() {
   while (begin != end) {
     std::shared_ptr<Constraint> con =
         std::shared_ptr<Constraint>(new Constraint);
-    parseexpression(begin, end, con->expr, false);
+    parseExpression(begin, end, con->expr, false);
     // should not be at end of section yet, but a comparison operator should be
     // next
     lpAssert(begin != sectiontokens[LpSectionKeyword::CON].second);
@@ -582,13 +585,13 @@ void Reader::processconsec() {
     lpAssert(begin != sectiontokens[LpSectionKeyword::CON].second);
     lpAssert(begin->type == ProcessedTokenType::CONST);
     switch (dir) {
-      case LpComparisonType::EQ:
+      case LpComparisonType::kEq:
         con->lowerbound = con->upperbound = begin->value;
         break;
-      case LpComparisonType::LEQ:
+      case LpComparisonType::kLeq:
         con->upperbound = begin->value;
         break;
-      case LpComparisonType::GEQ:
+      case LpComparisonType::kGeq:
         con->lowerbound = begin->value;
         break;
       default:
@@ -599,7 +602,7 @@ void Reader::processconsec() {
   }
 }
 
-void Reader::processboundssec() {
+void Reader::processBoundsSection() {
   if (!sectiontokens.count(LpSectionKeyword::BOUNDS)) return;
   std::vector<ProcessedToken>::iterator& begin(
       sectiontokens[LpSectionKeyword::BOUNDS].first);
@@ -643,8 +646,8 @@ void Reader::processboundssec() {
         next2->type == ProcessedTokenType::VARID &&
         next3->type == ProcessedTokenType::COMP &&
         next4->type == ProcessedTokenType::CONST) {
-      lpAssert(next1->dir == LpComparisonType::LEQ);
-      lpAssert(next3->dir == LpComparisonType::LEQ);
+      lpAssert(next1->dir == LpComparisonType::kLeq);
+      lpAssert(next3->dir == LpComparisonType::kLeq);
 
       double lb = begin->value;
       double ub = next4->value;
@@ -668,16 +671,16 @@ void Reader::processboundssec() {
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       LpComparisonType dir = next1->dir;
 
-      lpAssert(dir != LpComparisonType::L && dir != LpComparisonType::G);
+      lpAssert(dir != LpComparisonType::kLt && dir != LpComparisonType::kGt);
 
       switch (dir) {
-        case LpComparisonType::LEQ:
+        case LpComparisonType::kLeq:
           var->lowerbound = value;
           break;
-        case LpComparisonType::GEQ:
+        case LpComparisonType::kGeq:
           var->upperbound = value;
           break;
-        case LpComparisonType::EQ:
+        case LpComparisonType::kEq:
           var->lowerbound = var->upperbound = value;
           break;
         default:
@@ -696,16 +699,16 @@ void Reader::processboundssec() {
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       LpComparisonType dir = next1->dir;
 
-      lpAssert(dir != LpComparisonType::L && dir != LpComparisonType::G);
+      lpAssert(dir != LpComparisonType::kLt && dir != LpComparisonType::kGt);
 
       switch (dir) {
-        case LpComparisonType::LEQ:
+        case LpComparisonType::kLeq:
           var->upperbound = value;
           break;
-        case LpComparisonType::GEQ:
+        case LpComparisonType::kGeq:
           var->lowerbound = value;
           break;
-        case LpComparisonType::EQ:
+        case LpComparisonType::kEq:
           var->lowerbound = var->upperbound = value;
           break;
         default:
@@ -719,7 +722,7 @@ void Reader::processboundssec() {
   }
 }
 
-void Reader::processbinsec() {
+void Reader::processBinSection() {
   const LpSectionKeyword this_section_keyword = LpSectionKeyword::BIN;
   if (!sectiontokens.count(this_section_keyword)) return;
   std::vector<ProcessedToken>::iterator& begin(
@@ -741,7 +744,7 @@ void Reader::processbinsec() {
   }
 }
 
-void Reader::processgensec() {
+void Reader::processGenSection() {
   const LpSectionKeyword this_section_keyword = LpSectionKeyword::GEN;
   if (!sectiontokens.count(this_section_keyword)) return;
   std::vector<ProcessedToken>::iterator& begin(
@@ -765,7 +768,7 @@ void Reader::processgensec() {
   }
 }
 
-void Reader::processsemisec() {
+void Reader::processSemiSection() {
   const LpSectionKeyword this_section_keyword = LpSectionKeyword::SEMI;
   if (!sectiontokens.count(this_section_keyword)) return;
   std::vector<ProcessedToken>::iterator& begin(
@@ -789,7 +792,7 @@ void Reader::processsemisec() {
   }
 }
 
-void Reader::processsossec() {
+void Reader::processSosSection() {
   const LpSectionKeyword this_section_keyword = LpSectionKeyword::SOS;
   if (!sectiontokens.count(this_section_keyword)) return;
   std::vector<ProcessedToken>::iterator& begin(
@@ -809,12 +812,12 @@ void Reader::processsossec() {
     // SOS type
     lpAssert(begin != end);
     lpAssert(begin->type == ProcessedTokenType::SOSTYPE);
-    sos->type = begin->sostype == SosType::SOS1 ? 1 : 2;
+    sos->type = begin->sostype == SosType::kSos1 ? 1 : 2;
     ++begin;
 
     while (begin != end) {
       // process all "var : weight" entries
-      // when processtokens() sees a string followed by a colon, it classifies
+      // when processTokens() sees a string followed by a colon, it classifies
       // this as a CONID but in a SOS section, this is actually a variable
       // identifier
       if (begin->type != ProcessedTokenType::CONID) break;
@@ -838,23 +841,23 @@ void Reader::processsossec() {
   }
 }
 
-void Reader::processendsec() {
+void Reader::processEndSection() {
   lpAssert(sectiontokens.count(LpSectionKeyword::END) == 0);
 }
 
-void Reader::processsections() {
-  processnonesec();
-  processobjsec();
-  processconsec();
-  processboundssec();
-  processgensec();
-  processbinsec();
-  processsemisec();
-  processsossec();
-  processendsec();
+void Reader::processSections() {
+  processNoneSection();
+  processObjSection();
+  processConSection();
+  processBoundsSection();
+  processGenSection();
+  processBinSection();
+  processSemiSection();
+  processSosSection();
+  processEndSection();
 }
 
-void Reader::splittokens() {
+void Reader::splitTokens() {
   LpSectionKeyword currentsection = LpSectionKeyword::NONE;
 
   bool debug_open_section = false;
@@ -920,7 +923,7 @@ void Reader::splittokens() {
   lpAssert(currentsection == LpSectionKeyword::NONE);
 }
 
-void Reader::processtokens() {
+void Reader::processTokens() {
   std::string svalue_lc;
   while (!rawtokens[0].istype(RawTokenType::FLEND)) {
     if (rawtokens[0].type == RawTokenType::STR) {
@@ -934,11 +937,11 @@ void Reader::processtokens() {
     if (rawtokens[0].istype(RawTokenType::SLASH) &&
         rawtokens[1].istype(RawTokenType::ASTERISK)) {
       do {
-        nextrawtoken(2);
+        nextRawToken(2);
       } while (!(rawtokens[0].istype(RawTokenType::ASTERISK) &&
                  rawtokens[1].istype(RawTokenType::SLASH)) &&
                !rawtokens[0].istype(RawTokenType::FLEND));
-      nextrawtoken(2);
+      nextRawToken(2);
       continue;
     }
 
@@ -956,7 +959,7 @@ void Reader::processtokens() {
       LpSectionKeyword keyword = parsesectionkeyword(svalue_lc + "-" + temp);
       if (keyword != LpSectionKeyword::NONE) {
         processedtokens.emplace_back(keyword);
-        nextrawtoken(3);
+        nextRawToken(3);
         continue;
       }
     }
@@ -969,7 +972,7 @@ void Reader::processtokens() {
       LpSectionKeyword keyword = parsesectionkeyword(svalue_lc + " " + temp);
       if (keyword != LpSectionKeyword::NONE) {
         processedtokens.emplace_back(keyword);
-        nextrawtoken(2);
+        nextRawToken(2);
         continue;
       }
     }
@@ -979,7 +982,7 @@ void Reader::processtokens() {
       LpSectionKeyword keyword = parsesectionkeyword(svalue_lc);
       if (keyword != LpSectionKeyword::NONE) {
         processedtokens.emplace_back(keyword);
-        nextrawtoken();
+        nextRawToken();
         continue;
       }
     }
@@ -992,8 +995,8 @@ void Reader::processtokens() {
       lpAssert(rawtokens[0].svalue[0] == 'S' || rawtokens[0].svalue[0] == 's');
       lpAssert(rawtokens[0].svalue[1] == '1' || rawtokens[0].svalue[1] == '2');
       processedtokens.emplace_back(
-          rawtokens[0].svalue[1] == '1' ? SosType::SOS1 : SosType::SOS2);
-      nextrawtoken(3);
+          rawtokens[0].svalue[1] == '1' ? SosType::kSos1 : SosType::kSos2);
+      nextRawToken(3);
       continue;
     }
 
@@ -1002,7 +1005,7 @@ void Reader::processtokens() {
         rawtokens[1].istype(RawTokenType::COLON)) {
       processedtokens.emplace_back(ProcessedTokenType::CONID,
                                    rawtokens[0].svalue);
-      nextrawtoken(2);
+      nextRawToken(2);
       continue;
     }
 
@@ -1011,7 +1014,7 @@ void Reader::processtokens() {
         rawtokens[1].istype(RawTokenType::COLON)) {
       processedtokens.emplace_back(ProcessedTokenType::CONID,
                                    rawtokens[0].svalue);
-      nextrawtoken(2);
+      nextRawToken(2);
       continue;
     }
 
@@ -1019,7 +1022,7 @@ void Reader::processtokens() {
     if (rawtokens[0].istype(RawTokenType::STR) &&
         iskeyword(svalue_lc, kLpKeywordFree, kLpKeywordFreeN)) {
       processedtokens.emplace_back(ProcessedTokenType::FREE);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
@@ -1027,7 +1030,7 @@ void Reader::processtokens() {
     if (rawtokens[0].istype(RawTokenType::STR) &&
         iskeyword(svalue_lc, kLpKeywordInf, kLpKeywordInfN)) {
       processedtokens.emplace_back(kHighsInf);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
@@ -1035,7 +1038,7 @@ void Reader::processtokens() {
     if (rawtokens[0].istype(RawTokenType::STR)) {
       processedtokens.emplace_back(ProcessedTokenType::VARID,
                                    rawtokens[0].svalue);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
@@ -1043,26 +1046,26 @@ void Reader::processtokens() {
     if (rawtokens[0].istype(RawTokenType::PLUS) ||
         rawtokens[0].istype(RawTokenType::MINUS)) {
       double sign = rawtokens[0].istype(RawTokenType::PLUS) ? 1.0 : -1.0;
-      nextrawtoken();
+      nextRawToken();
 
       // another + or - for #948, #950
       if (rawtokens[0].istype(RawTokenType::PLUS) ||
           rawtokens[0].istype(RawTokenType::MINUS)) {
         sign *= rawtokens[0].istype(RawTokenType::PLUS) ? 1.0 : -1.0;
-        nextrawtoken();
+        nextRawToken();
       }
 
       // +/- Constant
       if (rawtokens[0].istype(RawTokenType::CONS)) {
         processedtokens.emplace_back(sign * rawtokens[0].dvalue);
-        nextrawtoken();
+        nextRawToken();
         continue;
       }
 
       // + [, + + [, - - [
       if (rawtokens[0].istype(RawTokenType::BRKOP) && sign == 1.0) {
         processedtokens.emplace_back(ProcessedTokenType::BRKOP);
-        nextrawtoken();
+        nextRawToken();
         continue;
       }
 
@@ -1095,79 +1098,79 @@ void Reader::processtokens() {
     // constant
     if (rawtokens[0].istype(RawTokenType::CONS)) {
       processedtokens.emplace_back(rawtokens[0].dvalue);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
     // [
     if (rawtokens[0].istype(RawTokenType::BRKOP)) {
       processedtokens.emplace_back(ProcessedTokenType::BRKOP);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
     // ]
     if (rawtokens[0].istype(RawTokenType::BRKCL)) {
       processedtokens.emplace_back(ProcessedTokenType::BRKCL);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
     // /
     if (rawtokens[0].istype(RawTokenType::SLASH)) {
       processedtokens.emplace_back(ProcessedTokenType::SLASH);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
     // *
     if (rawtokens[0].istype(RawTokenType::ASTERISK)) {
       processedtokens.emplace_back(ProcessedTokenType::ASTERISK);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
     // ^
     if (rawtokens[0].istype(RawTokenType::HAT)) {
       processedtokens.emplace_back(ProcessedTokenType::HAT);
-      nextrawtoken();
+      nextRawToken();
       continue;
     }
 
     // <=
     if (rawtokens[0].istype(RawTokenType::LESS) &&
         rawtokens[1].istype(RawTokenType::EQUAL)) {
-      processedtokens.emplace_back(LpComparisonType::LEQ);
-      nextrawtoken(2);
+      processedtokens.emplace_back(LpComparisonType::kLeq);
+      nextRawToken(2);
       continue;
     }
 
     // <
     if (rawtokens[0].istype(RawTokenType::LESS)) {
-      processedtokens.emplace_back(LpComparisonType::L);
-      nextrawtoken();
+      processedtokens.emplace_back(LpComparisonType::kLt);
+      nextRawToken();
       continue;
     }
 
     // >=
     if (rawtokens[0].istype(RawTokenType::GREATER) &&
         rawtokens[1].istype(RawTokenType::EQUAL)) {
-      processedtokens.emplace_back(LpComparisonType::GEQ);
-      nextrawtoken(2);
+      processedtokens.emplace_back(LpComparisonType::kGeq);
+      nextRawToken(2);
       continue;
     }
 
     // >
     if (rawtokens[0].istype(RawTokenType::GREATER)) {
-      processedtokens.emplace_back(LpComparisonType::G);
-      nextrawtoken();
+      processedtokens.emplace_back(LpComparisonType::kGt);
+      nextRawToken();
       continue;
     }
 
     // =
     if (rawtokens[0].istype(RawTokenType::EQUAL)) {
-      processedtokens.emplace_back(LpComparisonType::EQ);
-      nextrawtoken();
+      processedtokens.emplace_back(LpComparisonType::kEq);
+      nextRawToken();
       continue;
     }
 
@@ -1182,7 +1185,7 @@ void Reader::processtokens() {
   }
 }
 
-void Reader::nextrawtoken(size_t howmany) {
+void Reader::nextRawToken(size_t howmany) {
   assert(howmany > 0);
   assert(howmany <= NRAWTOKEN);
   static_assert(NRAWTOKEN == 3,
@@ -1191,24 +1194,24 @@ void Reader::nextrawtoken(size_t howmany) {
     case 1: {
       rawtokens[0] = std::move(rawtokens[1]);
       rawtokens[1] = std::move(rawtokens[2]);
-      while (!readnexttoken(rawtokens[2]))
+      while (!readNextToken(rawtokens[2]))
         ;
       break;
     }
     case 2: {
       rawtokens[0] = std::move(rawtokens[2]);
-      while (!readnexttoken(rawtokens[1]))
+      while (!readNextToken(rawtokens[1]))
         ;
-      while (!readnexttoken(rawtokens[2]))
+      while (!readNextToken(rawtokens[2]))
         ;
       break;
     }
     case 3: {
-      while (!readnexttoken(rawtokens[0]))
+      while (!readNextToken(rawtokens[0]))
         ;
-      while (!readnexttoken(rawtokens[1]))
+      while (!readNextToken(rawtokens[1]))
         ;
-      while (!readnexttoken(rawtokens[2]))
+      while (!readNextToken(rawtokens[2]))
         ;
       break;
     }
@@ -1219,9 +1222,9 @@ void Reader::nextrawtoken(size_t howmany) {
         rawtokens[i] = std::move(rawtokens[i + howmany]);
       // read new tokens at end positions
       for (; i < NRAWTOKEN; ++i)
-        // call readnexttoken() to overwrite current token
+        // call readNextToken() to overwrite current token
         // if it didn't actually read a token (returns false), then call again
-        while (!readnexttoken(rawtokens[i]))
+        while (!readNextToken(rawtokens[i]))
           ;
     }
   }
@@ -1229,7 +1232,7 @@ void Reader::nextrawtoken(size_t howmany) {
 
 // return true, if token has been set; return false if skipped over whitespace
 // only
-bool Reader::readnexttoken(RawToken& t) {
+bool Reader::readNextToken(RawToken& t) {
   if (this->linebufferpos == this->linebuffer.size()) {
     // read next line if any are left.
     if (this->file.eof()) {
@@ -1368,16 +1371,14 @@ bool Reader::readnexttoken(RawToken& t) {
   return false;
 }
 
-/*
-  // Useful for debugging
+// Useful for debugging
 void Reader::printRawTokens() {
   for(int iToken=0; iToken < NRAWTOKEN; iToken++) {
     const RawToken& rawtoken = rawtokens[iToken];
-    printf("rawtokens[%d]: ", int(iToken));
-    printf("type = %-12s", tokenTypeToString(rawtoken.type).c_str());
-    printf("; svalue = %8s: ", rawtoken.svalue.c_str());
-    if (iToken < NRAWTOKEN-1) printf("; ");
+    highsLogDev(this->log_options_, HighsLogType::kInfo, "rawtokens[%d]: ", int(iToken));
+    highsLogDev(this->log_options_, HighsLogType::kInfo, "type = %-12s", tokenTypeToString(rawtoken.type).c_str());
+    highsLogDev(this->log_options_, HighsLogType::kInfo, "; svalue = %8s: ", rawtoken.svalue.c_str());
+    if (iToken < NRAWTOKEN-1) highsLogDev(this->log_options_, HighsLogType::kInfo, "; ");
   }
-  printf("\n");
+  highsLogDev(this->log_options_, HighsLogType::kInfo, "\n");
 }
-*/
