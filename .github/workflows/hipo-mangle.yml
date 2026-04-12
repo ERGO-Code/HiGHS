@@ -1,0 +1,80 @@
+name: hipo-mangle
+
+on: [push, pull_request]
+
+jobs:
+  check-metis:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Release]
+        all_tests: [OFF]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout METIS
+        uses: actions/checkout@v4
+        with:
+          repository: galabovaa/METIS
+          ref: 510-w
+          path: METIS
+
+      - name: Create installs dir
+        working-directory: ${{runner.workspace}}
+        run: |
+          mkdir installs
+          ls
+
+      - name: Install METIS
+        run: |
+          cmake \
+          -S $GITHUB_WORKSPACE/METIS \
+          -B build \
+          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
+          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
+          cmake --build build
+          cmake --install build
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+            -DALL_TESTS=${{ matrix.all_tests }}
+
+      - name: Build HiGHS
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . -j2
+
+      - name: Generate METIS symbols
+        working-directory: ${{runner.workspace}}
+        run: |
+          nm installs/lib/libmetis.a | grep -e "[tT] [^ ]+$" -oE | sort > metis.txt
+
+      - name: Generate HiGHS symbols
+        working-directory: ${{runner.workspace}}
+        run: |
+          nm build/lib/libhighs.a | grep -e "[tT] [^ ]+$" -oE | sort > highs.txt
+
+      - name: Compare symbols
+        working-directory: ${{runner.workspace}}
+        run: comm -12 highs.txt metis.txt > common.txt
+
+      - name: Check
+        working-directory: ${{runner.workspace}}
+        run: |
+          if [[ "$(wc -l < common.txt)" -eq 0 ]]; then 
+            exit 0
+          fi
+          echo "Metis symbols"
+          cat metis.txt
+          echo "Highs symbols"
+          cat highs.txt
+          echo "Common symbols"
+          cat compare.txt
+          exit 1
