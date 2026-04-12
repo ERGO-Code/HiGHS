@@ -163,19 +163,65 @@ else()
   if (CUPDLP_GPU)
 
     target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
-    set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
 
-    add_subdirectory(pdlp/cupdlp/cuda)
+    if (HIGHS_GPU_LIB)
+      # like in cuda CMakeLists
+      enable_language(CXX CUDA)
 
-    if (WIN32)
-      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
+      # Remove /MP flag from CUDA targets (nvcc doesn't support it)
+      if(MSVC)
+        string(REPLACE "/MP" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+        string(REPLACE "/bigobj" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+
+        foreach(flag_var
+          CMAKE_CUDA_FLAGS_DEBUG
+          CMAKE_CUDA_FLAGS_RELEASE
+          CMAKE_CUDA_FLAGS_RELWITHDEBINFO
+          CMAKE_CUDA_FLAGS_MINSIZEREL)
+          string(REPLACE "/MP" "" ${flag_var} "${${flag_var}}")
+          string(REPLACE "/bigobj" "" ${flag_var} "${${flag_var}}")
+        endforeach()
+      endif()
+
+      target_sources(highs PRIVATE
+        pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
+        pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
+        pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
+        pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu
+        pdlp/cupdlp/cupdlp_cs.c
+        pdlp/hipdlp/pdhg.cu)
+
+      set_target_properties(highs PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        #CUDA_ARCHITECTURES "60;70;75;80;86" )
+        #Deleted 60;70 due to errors
+        #nvcc fatal   : Unsupported gpu architecture 'compute_60'
+        #nvcc fatal   : Unsupported gpu architecture 'compute_70'
+        CUDA_ARCHITECTURES "75;80;86" )
+
+      # set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
+
+      target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
+
+      if (WIN32)
+        target_link_libraries(highs PRIVATE ${CUDA_LIBRARY})  # linking happens here
+      else() # linux
+        target_link_libraries(highs PRIVATE ${CUDA_LIBRARY} m)
+      endif()
+
     else()
-      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
+        set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
+        add_subdirectory(pdlp/cupdlp/cuda)
+
+        if (WIN32)
+            target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
+          else()
+            target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
+          endif()
+
+          set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+      endif()
     endif()
-
-    set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-  endif()
 
   target_include_directories(highs PRIVATE ${include_dirs})
 
@@ -250,21 +296,24 @@ else()
   endif()
 
   if(MSVC)
-    list(APPEND highs_compile_opts
-      "/bigobj" # Allow big object
-      "/DNOMINMAX"
-      "/DWIN32_LEAN_AND_MEAN=1"
-      "/D_CRT_SECURE_NO_WARNINGS"
-      "/D_CRT_SECURE_NO_DEPRECATE"
-      "/MP" # Build with multiple processes
-      "/Zc:preprocessor" # Enable preprocessor conformance mode
-      "/fp:precise"
-      )
+    if (NOT HIGHS_GPU_LIB)
+      list(APPEND highs_compile_opts
+        "/bigobj" # Allow big object
+        "/DNOMINMAX"
+        "/DWIN32_LEAN_AND_MEAN=1"
+        "/D_CRT_SECURE_NO_WARNINGS"
+        "/D_CRT_SECURE_NO_DEPRECATE"
+        "/MP" # Build with multiple processes
+        "/Zc:preprocessor" # Enable preprocessor conformance mode
+        "/fp:precise"
+        )
+    endif()
     if (CMAKE_BUILD_TYPE STREQUAL Release)
       list(APPEND highs_compile_opts
         "/DNDEBUG")
     endif()
     # MSVC warning suppressions
+    if (NOT HIGHS_GPU_LIB)
     list(APPEND highs_compile_opts
       "/wd4005" # 'macro-redefinition'
       "/wd4018" # 'expression' : signed/unsigned mismatch
@@ -287,6 +336,7 @@ else()
       "/wd4800" # 'type' : forcing value to bool 'true' or 'false' (performance warning)
       "/wd4996" # The compiler encountered a deprecated declaration.
       )
+    endif()
     target_compile_options(highs PRIVATE ${highs_compile_opts})
   # else()
   #   list(APPEND highs_compile_opts "-fwrapv")

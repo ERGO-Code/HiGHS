@@ -2,34 +2,27 @@
 """
 module(
     name = "highs",
-    version = "1.13.0",
+    version = "1.13.1",
 )
 
 bazel_dep(
     name = "bazel_skylib",
-    version = "1.8.2",
+    version = "1.9.0",
 )
 
 bazel_dep(
     name = "rules_cc",
-    version = "0.2.14",
+    version = "0.2.17",
 )
 
 bazel_dep(
     name = "zlib",
-    version = "1.3.1.bcr.5",
+    version = "1.3.2",
 )
 
 bazel_dep(
     name = "rules_cuda",
-    version = "0.2.5",
-)
-
-# Override the module with the latest rules_cuda
-git_override(
-    module_name = "rules_cuda",
-    remote = "https://github.com/bazel-contrib/rules_cuda.git",
-    commit = "3692ecb",
+    version = "0.3.0",
 )
 
 # Load the extension

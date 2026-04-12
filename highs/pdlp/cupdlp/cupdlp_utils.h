@@ -193,6 +193,19 @@ void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
               cupdlp_float *col_value, cupdlp_float *col_dual,
               cupdlp_float *row_value, cupdlp_float *row_dual);
 
+  void debugPdlpIterHeaderLog(FILE* file);
+  void debugPdlpDataInitialise(struct DebugPdlpData* debug_pdlp);
+  void debugPdlpIterLog(FILE* file, const int iter_num, const struct DebugPdlpData* debug_pdlp, const double beta, const double primal_step, const double dual_step);
+  void debugPdlpFeasOptLog(FILE* file,
+			   const int iter_num,
+			   const double primal_obj, const double dual_obj,
+			   const double gap, const double primal_feas, const double dual_feas,
+			   const char* type);
+  void debugPdlpRestartLog(FILE* file, const int iter_num, const double current_score, const double average_score);
+  void debugPdlpRestarScoretLog(FILE* file, const double weight_squared, const double primal_feas, const double dual_feas, const double obj_gap);
+  void debugPdlpFinalSolutionLog(FILE* file, const double* x, int nCols, const double* y, int nRows);
+
+
 #ifdef __cplusplus
 }
 #endif

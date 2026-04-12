@@ -122,17 +122,19 @@ class HighsImplications {
 
   bool tooManyVarBounds() const { return numVarBounds >= maxVarBounds; }
 
+  void strengthenVarBound(VarBound& vbnd, HighsInt multiplier) const;
+
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
               double vubconstant);
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
-              double colupperbound);
+              double colupperbound, bool colisinteger);
 
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
               double vlbconstant);
 
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
-              double collowerbound);
+              double collowerbound, bool colisinteger);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
     // Update variable bounds affected by transformation

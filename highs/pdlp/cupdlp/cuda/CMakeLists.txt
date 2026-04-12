@@ -1,3 +1,9 @@
+if (HIGHS_GPU_LIB)
+  return()
+endif()
+
+# separate libs for now
+
 enable_language(CXX CUDA)
 
 add_library(cudalin SHARED
@@ -5,6 +11,7 @@ add_library(cudalin SHARED
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cuda_kernels.cuh
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cudalinalg.cuh
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cudalinalg.cu
+       ../../hipdlp/pdhg.cu  
 )
 
 # latest has

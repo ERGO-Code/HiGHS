@@ -1,3 +1,6 @@
+The highlight of v1.14 is the extension of the HiPO interior point LP
+solver to handle convex QPs.
+
 ## Code changes
 
 Prompted by [#2821](https://github.com/ERGO-Code/HiGHS/issues/2821),
@@ -20,6 +23,10 @@ any duplicate entries in the Hessian are now summed.
   number of any summations, and `Highs::readModel` or
   `Highs::passHessian` will return `HighsStatus::kWarning`.
 
+Prompted by [#2849](https://github.com/ERGO-Code/HiGHS/issues/2849),
+console, file and callback logging are now independent, allowing any
+combination to be on/off.
+
 Following PR [#2854](https://github.com/ERGO-Code/HiGHS/pull/2854),
 HiPO is now capable of solving convex QP problems. Option
 solver="qpasm" selects the previous active-set QP solver, while
@@ -28,6 +35,27 @@ solver="hipo" or solver="ipm" selects the HiPO solver.
 Following PR [#2865](https://github.com/ERGO-Code/HiGHS/pull/2865),
 HiGHS performs logging during probing in MIP presolve and checks for
 time-out
+
+Following PR [#2870](https://github.com/ERGO-Code/HiGHS/pull/2870),
+dedicated time-out during IIS calculation (using HiGHS option
+`iis_time_limit`) has been enabled.
+
+Prompted by [#2883](https://github.com/ERGO-Code/HiGHS/issues/2883),
+the function signature for `Highs_getInfinity` in the C# API has been
+corrected.
+
+Prompted by [#2887](https://github.com/ERGO-Code/HiGHS/issues/2887),
+`addVariable` in `highspy` cannot create names with spaces, illegal
+variable or constraint names when writing MPS or LP files no longer
+leads to an error return - generic names are created - and the EMS
+file facility has been removed.
+
+Following PR [#2918](https://github.com/ERGO-Code/HiGHS/pull/2918),
+logging during IIS calculation has been improved.
+
+Following PR [#2934](https://github.com/ERGO-Code/HiGHS/pull/2934),
+HiPO uses infinity-norm equilibration of the rows and columns of the
+matrix rather than Curtis-Reid scaling.
 
 ## Build changes
 

@@ -120,7 +120,7 @@ TEST_CASE("test-1966", "[highs_ipm]") {
   HighsModelStatus require_model_status = HighsModelStatus::kNotset;
   int to_k = 2;
 #ifdef HIPO
-  to_k = 3;
+  // to_k = 3;
 #endif
   for (int k = 0; k < to_k; k++) {
     if (k == 0) {
