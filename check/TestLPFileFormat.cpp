@@ -7,11 +7,12 @@ const bool dev_run = false;
 
 TEST_CASE("lp-file-format-quad-no-space", "[LpFileFormat]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/qcqp.lp";
+  HighsLogOptions log_options;
 
   // HiGHS cannot handle quadratic constraints as there are in qcqp.lp
 
   // Test that filereaderlp does not throw an exception
-  REQUIRE_NOTHROW(readinstance(filename));
+  REQUIRE_NOTHROW(readinstance(log_options, filename));
 
   // Test that HiGHS returns an error when passes a QCQP problem
   Highs highs;

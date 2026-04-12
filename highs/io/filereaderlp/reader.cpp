@@ -248,7 +248,6 @@ struct ProcessedToken {
 // set to how many tokens we may need to look ahead
 #define NRAWTOKEN 3
 
-const double kHighsInf = std::numeric_limits<double>::infinity();
 class Reader {
  private:
 #ifdef ZLIB_FOUND
@@ -288,7 +287,7 @@ class Reader {
 
   //  void printRawTokens();
  public:
-  Reader(std::string filename) {
+  Reader(const std::string& filename) {
 #ifdef ZLIB_FOUND
     try {
       file.open(filename);
@@ -306,7 +305,8 @@ class Reader {
   void lpAssert(const bool condition, const std::string& message = "");
 };
 
-Model readinstance(std::string filename) {
+Model readinstance(const HighsLogOptions& log_options,
+		   const std::string& filename) {
   Reader reader(filename);
   return reader.read();
 }

@@ -21,6 +21,7 @@ void solveWriteReadSolve(Highs& highs, const double objective_value,
   const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
 
+  // #2880 Currently only testing MPS read
   const HighsInt to_k = 2;
   for (HighsInt k = 0; k < to_k; k++) {
     if (dev_run) printf("\nRun with k = %d\n==============\n\n", int(k));

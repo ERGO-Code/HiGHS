@@ -26,7 +26,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
   HighsLp& lp = model.lp_;
   HighsHessian& hessian = model.hessian_;
   try {
-    Model m = readinstance(filename);
+    Model m = readinstance(options.log_options, filename);
 
     if (!m.soss.empty()) {
       highsLogUser(options.log_options, HighsLogType::kError,
