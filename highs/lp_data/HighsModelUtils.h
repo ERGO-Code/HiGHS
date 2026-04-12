@@ -14,15 +14,22 @@
 #include "lp_data/HighsInfo.h"
 #include "model/HighsModel.h"
 
+// According to CPLEX (cf fix-2887) names in LP files cannot begin
+// with a digit or a full stop. However, HiGHS can read these, and
+// models like rgn have row names that are integers, so allow it
 const std::string kLegalLpFileColRowNameFirstChar =
     "abcdefghijklmnopqrstuvwxyz"
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "0123456789."
-    "!\"#$%&(),.;?@_‘’{}~";
-// According to CPLEX (cf fix-2887) names in LP files cannot begin
-// with a digit or a full stop. However, HiGHS can read these, and
-// models like rgn have row names that are integers, so allow it
+    "!\"#$%&(),.;?@_‘’{}~"
+    "[]";
 const std::string kLegalLpFileColRowNameChar = kLegalLpFileColRowNameFirstChar;
+// CVXPY wants to be able to use '[' and ']' in variable and
+// constraint names (https://github.com/cvxpy/cvxpy/issues/3282), and
+// HiGHS v1.14.0 doesn't permit this. However, CPLEX would also
+// automatically convert names "containing characters ... such as '+',
+// '-', '*', '^', and '['." Allow the use of '[' and ']' for now, but
+// try to wean CVXPY off their use
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,

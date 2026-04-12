@@ -567,22 +567,24 @@ TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
   std::remove(lp_file.c_str());
 }
 
-TEST_CASE("lp-square-bracket-in-name", "[highs_filereader]") {
+TEST_CASE("write-lp-file-with-square-bracket-in-name", "[highs_filereader]") {
+  // HiGHS can write LP files with names containing '[' or ']', but
+  // not read them
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string lp_file = test_name + ".lp";
-  
-  FILE* file = fopen(lp_file.c_str(), "w");
-  std::string file_content =
-      "Minimize\n obj: 2 x[0] + x[1] + x[2]\nSubject To\nr0: x[0] + x[1] +  x[2] >= "
-      "2\nr1: x[0] >= 1\nEnd\n";
-  if (dev_run) printf("Using .lp file\n%s", file_content.c_str());
-  fprintf(file, "%s", file_content.c_str());
-  fclose(file);
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {kHighsInf};
+  lp.col_names_ = {"x[0]"};
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
-  //  if (dev_run)
-    h.setOptionValue("log_dev_level", 1);
-  REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(lp_file) == HighsStatus::kOk);
+  if (dev_run) h.setOptionValue("log_dev_level", 1);
+  REQUIRE(h.readModel(lp_file) == HighsStatus::kError);
 
   //  std::remove(lp_file.c_str());
 }

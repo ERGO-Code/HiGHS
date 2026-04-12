@@ -4,7 +4,7 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = true;//false;
+const bool dev_run = true;  // false;
 const double double_equal_tolerance = 1e-5;
 
 void solveWriteReadSolve(Highs& highs, const double objective_value,
@@ -156,7 +156,7 @@ TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
       highs.changeColBounds(y, 0.0, kHighsInf);
     }
     REQUIRE(highs.addIndicatorConstraint(z, 0, 2, indices, values, 3.0, 7.0) ==
-	    HighsStatus::kOk);
+            HighsStatus::kOk);
 
     REQUIRE(highs.run() == HighsStatus::kError);
     highs.clearIndicatorConstraints();
