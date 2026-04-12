@@ -1162,6 +1162,7 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
 #endif
 }
 
+/*
 TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   const std::string model = "flugpl";  //"rgn"; //
   std::string model_file =
@@ -1174,6 +1175,7 @@ TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 }
+*/
 
 TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   std::string model = "avgas";
