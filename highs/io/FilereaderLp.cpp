@@ -290,7 +290,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                    sum_num_zero > 1 ? "s" : "");
 
   } catch (std::invalid_argument& ex) {
-    // lpassert in highs/io/filereaderlp/def.hpp throws
+    // lpassert in highs/io/filereaderlp/reader.cpp throws
     // std::invalid_argument whatever the error. Hence, unless
     // something is done specially - here or elsewhere -
     // FilereaderRetcode::kParserError will be returned.

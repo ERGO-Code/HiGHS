@@ -302,7 +302,6 @@ set(highs_headers_python
     highs/io/HMPSIO.h
     highs/io/LoadOptions.h
     highs/io/filereaderlp/builder.hpp
-    highs/io/filereaderlp/def.hpp
     highs/io/filereaderlp/model.hpp
     highs/io/filereaderlp/reader.hpp
     highs/ipm/IpxSolution.h

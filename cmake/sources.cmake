@@ -459,7 +459,6 @@ set(highs_headers
     io/HMPSIO.h
     io/LoadOptions.h
     io/filereaderlp/builder.hpp
-    io/filereaderlp/def.hpp
     io/filereaderlp/model.hpp
     io/filereaderlp/reader.hpp
     ipm/IpxSolution.h
