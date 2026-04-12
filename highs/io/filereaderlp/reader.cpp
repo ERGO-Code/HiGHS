@@ -10,12 +10,12 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
 #include "HConfig.h"  // for ZLIB_FOUND
 #include "builder.hpp"
-#include "def.hpp"
 #ifdef ZLIB_FOUND
 #include "../extern/zstr/zstr.hpp"
 #endif
@@ -297,12 +297,13 @@ class Reader {
 #else
     file.open(filename);
 #endif
-    lpassert(file.is_open());
+    lpAssert(file.is_open());
   };
 
   ~Reader() { file.close(); }
 
   Model read();
+  void lpAssert(const bool condition, const std::string& message = "");
 };
 
 Model readinstance(std::string filename) {
@@ -359,8 +360,15 @@ Model Reader::read() {
   return builder.model;
 }
 
+void Reader::lpAssert(const bool condition, const std::string& message) {
+  if (!condition) {
+    printf("LP file reader error: %s\n", message.c_str());
+    throw std::invalid_argument("File not existent or illegal file format.");
+  }
+}
+
 void Reader::processnonesec() {
-  lpassert(sectiontokens.count(LpSectionKeyword::NONE) == 0);
+  lpAssert(sectiontokens.count(LpSectionKeyword::NONE) == 0);
 }
 
 void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
@@ -434,7 +442,7 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
             next3->type == ProcessedTokenType::CONST) {
           std::string name = next1->name;
 
-          lpassert(next3->value == 2.0);
+          lpAssert(next3->value == 2.0);
 
           std::shared_ptr<QuadTerm> quadterm =
               std::shared_ptr<QuadTerm>(new QuadTerm());
@@ -453,7 +461,7 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
             next2->type == ProcessedTokenType::CONST) {
           std::string name = it->name;
 
-          lpassert(next2->value == 2.0);
+          lpAssert(next2->value == 2.0);
 
           std::shared_ptr<QuadTerm> quadterm =
               std::shared_ptr<QuadTerm>(new QuadTerm());
@@ -513,15 +521,15 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
         ++next2;
         if (next1 != end) ++next2;
 
-        lpassert(next2 != end);
-        lpassert(it->type == ProcessedTokenType::BRKCL);
-        lpassert(next1->type == ProcessedTokenType::SLASH);
-        lpassert(next2->type == ProcessedTokenType::CONST);
-        lpassert(next2->value == 2.0);
+        lpAssert(next2 != end);
+        lpAssert(it->type == ProcessedTokenType::BRKCL);
+        lpAssert(next1->type == ProcessedTokenType::SLASH);
+        lpAssert(next2->type == ProcessedTokenType::CONST);
+        lpAssert(next2->value == 2.0);
         it = ++next2;
       } else {
-        lpassert(it != end);
-        lpassert(it->type == ProcessedTokenType::BRKCL);
+        lpAssert(it != end);
+        lpAssert(it->type == ProcessedTokenType::BRKCL);
         ++it;
       }
       continue;
@@ -538,7 +546,7 @@ void Reader::processobjsec() {
     parseexpression(sectiontokens[LpSectionKeyword::OBJMIN].first,
                     sectiontokens[LpSectionKeyword::OBJMIN].second,
                     builder.model.objective, true);
-    lpassert(sectiontokens[LpSectionKeyword::OBJMIN].first ==
+    lpAssert(sectiontokens[LpSectionKeyword::OBJMIN].first ==
              sectiontokens[LpSectionKeyword::OBJMIN]
                  .second);  // all section tokens should have been processed
   } else if (sectiontokens.count(LpSectionKeyword::OBJMAX)) {
@@ -546,7 +554,7 @@ void Reader::processobjsec() {
     parseexpression(sectiontokens[LpSectionKeyword::OBJMAX].first,
                     sectiontokens[LpSectionKeyword::OBJMAX].second,
                     builder.model.objective, true);
-    lpassert(sectiontokens[LpSectionKeyword::OBJMAX].first ==
+    lpAssert(sectiontokens[LpSectionKeyword::OBJMAX].first ==
              sectiontokens[LpSectionKeyword::OBJMAX]
                  .second);  // all section tokens should have been processed
   }
@@ -564,15 +572,15 @@ void Reader::processconsec() {
     parseexpression(begin, end, con->expr, false);
     // should not be at end of section yet, but a comparison operator should be
     // next
-    lpassert(begin != sectiontokens[LpSectionKeyword::CON].second);
-    lpassert(begin->type == ProcessedTokenType::COMP);
+    lpAssert(begin != sectiontokens[LpSectionKeyword::CON].second);
+    lpAssert(begin->type == ProcessedTokenType::COMP);
     LpComparisonType dir = begin->dir;
     ++begin;
 
     // should still not be at end of section yet, but a right-hand-side value
     // should be next
-    lpassert(begin != sectiontokens[LpSectionKeyword::CON].second);
-    lpassert(begin->type == ProcessedTokenType::CONST);
+    lpAssert(begin != sectiontokens[LpSectionKeyword::CON].second);
+    lpAssert(begin->type == ProcessedTokenType::CONST);
     switch (dir) {
       case LpComparisonType::EQ:
         con->lowerbound = con->upperbound = begin->value;
@@ -584,7 +592,7 @@ void Reader::processconsec() {
         con->lowerbound = begin->value;
         break;
       default:
-        lpassert(false);
+        lpAssert(false);
     }
     builder.model.constraints.push_back(con);
     ++begin;
@@ -635,8 +643,8 @@ void Reader::processboundssec() {
         next2->type == ProcessedTokenType::VARID &&
         next3->type == ProcessedTokenType::COMP &&
         next4->type == ProcessedTokenType::CONST) {
-      lpassert(next1->dir == LpComparisonType::LEQ);
-      lpassert(next3->dir == LpComparisonType::LEQ);
+      lpAssert(next1->dir == LpComparisonType::LEQ);
+      lpAssert(next3->dir == LpComparisonType::LEQ);
 
       double lb = begin->value;
       double ub = next4->value;
@@ -660,7 +668,7 @@ void Reader::processboundssec() {
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       LpComparisonType dir = next1->dir;
 
-      lpassert(dir != LpComparisonType::L && dir != LpComparisonType::G);
+      lpAssert(dir != LpComparisonType::L && dir != LpComparisonType::G);
 
       switch (dir) {
         case LpComparisonType::LEQ:
@@ -673,7 +681,7 @@ void Reader::processboundssec() {
           var->lowerbound = var->upperbound = value;
           break;
         default:
-          lpassert(false);
+          lpAssert(false);
       }
       begin = next3;
       continue;
@@ -688,7 +696,7 @@ void Reader::processboundssec() {
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       LpComparisonType dir = next1->dir;
 
-      lpassert(dir != LpComparisonType::L && dir != LpComparisonType::G);
+      lpAssert(dir != LpComparisonType::L && dir != LpComparisonType::G);
 
       switch (dir) {
         case LpComparisonType::LEQ:
@@ -701,13 +709,13 @@ void Reader::processboundssec() {
           var->lowerbound = var->upperbound = value;
           break;
         default:
-          lpassert(false);
+          lpAssert(false);
       }
       begin = next3;
       continue;
     }
 
-    lpassert(false);
+    lpAssert(false);
   }
 }
 
@@ -721,10 +729,10 @@ void Reader::processbinsec() {
   for (; begin != end; ++begin) {
     if (begin->type == ProcessedTokenType::SECID) {
       // Possible to have repeat of keyword for this section type
-      lpassert(begin->keyword == this_section_keyword);
+      lpAssert(begin->keyword == this_section_keyword);
       continue;
     }
-    lpassert(begin->type == ProcessedTokenType::VARID);
+    lpAssert(begin->type == ProcessedTokenType::VARID);
     std::string name = begin->name;
     std::shared_ptr<Variable> var = builder.getvarbyname(name);
     var->type = VariableType::BINARY;
@@ -743,10 +751,10 @@ void Reader::processgensec() {
   for (; begin != end; ++begin) {
     if (begin->type == ProcessedTokenType::SECID) {
       // Possible to have repeat of keyword for this section type
-      lpassert(begin->keyword == this_section_keyword);
+      lpAssert(begin->keyword == this_section_keyword);
       continue;
     }
-    lpassert(begin->type == ProcessedTokenType::VARID);
+    lpAssert(begin->type == ProcessedTokenType::VARID);
     std::string name = begin->name;
     std::shared_ptr<Variable> var = builder.getvarbyname(name);
     if (var->type == VariableType::SEMICONTINUOUS) {
@@ -767,10 +775,10 @@ void Reader::processsemisec() {
   for (; begin != end; ++begin) {
     if (begin->type == ProcessedTokenType::SECID) {
       // Possible to have repeat of keyword for this section type
-      lpassert(begin->keyword == this_section_keyword);
+      lpAssert(begin->keyword == this_section_keyword);
       continue;
     }
-    lpassert(begin->type == ProcessedTokenType::VARID);
+    lpAssert(begin->type == ProcessedTokenType::VARID);
     std::string name = begin->name;
     std::shared_ptr<Variable> var = builder.getvarbyname(name);
     if (var->type == VariableType::GENERAL) {
@@ -794,13 +802,13 @@ void Reader::processsossec() {
     // sos1: S1 :: x1 : 1  x2 : 2  x3 : 3
 
     // name of SOS is mandatory
-    lpassert(begin->type == ProcessedTokenType::CONID);
+    lpAssert(begin->type == ProcessedTokenType::CONID);
     sos->name = begin->name;
     ++begin;
 
     // SOS type
-    lpassert(begin != end);
-    lpassert(begin->type == ProcessedTokenType::SOSTYPE);
+    lpAssert(begin != end);
+    lpAssert(begin->type == ProcessedTokenType::SOSTYPE);
     sos->type = begin->sostype == SosType::SOS1 ? 1 : 2;
     ++begin;
 
@@ -831,7 +839,7 @@ void Reader::processsossec() {
 }
 
 void Reader::processendsec() {
-  lpassert(sectiontokens.count(LpSectionKeyword::END) == 0);
+  lpAssert(sectiontokens.count(LpSectionKeyword::END) == 0);
 }
 
 void Reader::processsections() {
@@ -866,7 +874,7 @@ void Reader::splittokens() {
         // Current section is non-trivial, so mark its end, using the
         // value of currentsection to indicate that there is no open
         // section
-        lpassert(debug_open_section);
+        lpAssert(debug_open_section);
         sectiontokens[currentsection].second = it;
         debug_open_section = false;
         currentsection = LpSectionKeyword::NONE;
@@ -884,12 +892,12 @@ void Reader::splittokens() {
       // the current section
       if (currentsection != LpSectionKeyword::NONE &&
           currentsection != next->keyword) {
-        lpassert(debug_open_section);
+        lpAssert(debug_open_section);
         sectiontokens[currentsection].second = it;
         debug_open_section = false;
       }
       currentsection = LpSectionKeyword::NONE;
-      lpassert(!debug_open_section);
+      lpAssert(!debug_open_section);
       continue;
     }
     // Next section is non-empty
@@ -897,19 +905,19 @@ void Reader::splittokens() {
       // Section type change
       currentsection = it->keyword;
       // Make sure the new section type has not occurred previously
-      lpassert(sectiontokens.count(currentsection) == 0);
+      lpAssert(sectiontokens.count(currentsection) == 0);
       // Remember the beginning of the new section: its the token
       // following the current one
-      lpassert(!debug_open_section);
+      lpAssert(!debug_open_section);
       sectiontokens[currentsection].first = next;
       debug_open_section = true;
     }
     // Always ends with either an open section or a section type of
     // LpSectionKeyword::NONE
-    lpassert(debug_open_section != (currentsection == LpSectionKeyword::NONE));
+    lpAssert(debug_open_section != (currentsection == LpSectionKeyword::NONE));
   }
   // Check that the last section has been closed
-  lpassert(currentsection == LpSectionKeyword::NONE);
+  lpAssert(currentsection == LpSectionKeyword::NONE);
 }
 
 void Reader::processtokens() {
@@ -980,9 +988,9 @@ void Reader::processtokens() {
     if (rawtokens[0].istype(RawTokenType::STR) &&
         rawtokens[1].istype(RawTokenType::COLON) &&
         rawtokens[2].istype(RawTokenType::COLON)) {
-      lpassert(rawtokens[0].svalue.length() == 2);
-      lpassert(rawtokens[0].svalue[0] == 'S' || rawtokens[0].svalue[0] == 's');
-      lpassert(rawtokens[0].svalue[1] == '1' || rawtokens[0].svalue[1] == '2');
+      lpAssert(rawtokens[0].svalue.length() == 2);
+      lpAssert(rawtokens[0].svalue[0] == 'S' || rawtokens[0].svalue[0] == 's');
+      lpAssert(rawtokens[0].svalue[1] == '1' || rawtokens[0].svalue[1] == '2');
       processedtokens.emplace_back(
           rawtokens[0].svalue[1] == '1' ? SosType::SOS1 : SosType::SOS2);
       nextrawtoken(3);
@@ -1009,7 +1017,7 @@ void Reader::processtokens() {
 
     // check if free
     if (rawtokens[0].istype(RawTokenType::STR) &&
-        iskeyword(svalue_lc, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
+        iskeyword(svalue_lc, kLpKeywordFree, kLpKeywordFreeN)) {
       processedtokens.emplace_back(ProcessedTokenType::FREE);
       nextrawtoken();
       continue;
@@ -1017,7 +1025,7 @@ void Reader::processtokens() {
 
     // check if infinity
     if (rawtokens[0].istype(RawTokenType::STR) &&
-        iskeyword(svalue_lc, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
+        iskeyword(svalue_lc, kLpKeywordInf, kLpKeywordInfN)) {
       processedtokens.emplace_back(kHighsInf);
       nextrawtoken();
       continue;
@@ -1059,7 +1067,7 @@ void Reader::processtokens() {
       }
 
       // - [, + - [, - + [
-      if (rawtokens[0].istype(RawTokenType::BRKOP)) lpassert(false);
+      if (rawtokens[0].istype(RawTokenType::BRKOP)) lpAssert(false);
 
       // +/- variable name
       if (rawtokens[0].istype(RawTokenType::STR)) {
@@ -1075,13 +1083,13 @@ void Reader::processtokens() {
             "File appears to contain indicator constraints: cannot currently "
             "be handled by HiGHS\n");
       }
-      lpassert(false);
+      lpAssert(false);
     }
 
     // constant [
     if (rawtokens[0].istype(RawTokenType::CONS) &&
         rawtokens[1].istype(RawTokenType::BRKOP)) {
-      lpassert(false);
+      lpAssert(false);
     }
 
     // constant
@@ -1169,7 +1177,7 @@ void Reader::processtokens() {
     // catch all unknown symbols
     //
     //    printRawTokens();
-    lpassert(false);
+    lpAssert(false);
     break;
   }
 }
@@ -1325,7 +1333,7 @@ bool Reader::readnexttoken(RawToken& t) {
       return false;
 
     case '\0':  // empty line
-      lpassert(this->linebufferpos == this->linebuffer.size());
+      lpAssert(this->linebufferpos == this->linebuffer.size());
       return false;
   }
 
@@ -1356,7 +1364,7 @@ bool Reader::readnexttoken(RawToken& t) {
     return true;
   }
 
-  lpassert(false);
+  lpAssert(false);
   return false;
 }
 
