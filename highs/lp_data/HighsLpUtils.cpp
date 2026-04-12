@@ -3398,16 +3398,11 @@ HighsStatus withoutIndicatorConstraints(
     // Compute activity bounds: min_activity and max_activity of a^T x
     double min_activity = 0;
     double max_activity = 0;
-    bool finite_bounds = true;
     for (HighsInt iEl = from_el; iEl < to_el; iEl++) {
       const HighsInt col = matrix.index_[iEl];
       const double value = matrix.value_[iEl];
       const double lower = lp.col_lower_[col];
       const double upper = lp.col_upper_[col];
-      if (lower <= -kHighsInf || upper >= kHighsInf) {
-        finite_bounds = false;
-        break;
-      }
       if (value > 0) {
         min_activity += value * lower;
         max_activity += value * upper;
@@ -3416,30 +3411,32 @@ HighsStatus withoutIndicatorConstraints(
         max_activity += value * lower;
       }
     }
-    double M_upper;
-    double M_lower;
     HighsInt binary_col = indicators.col[indicator_n];
     HighsInt binary_value = indicators.value[indicator_n];
     double lower = indicators.lower[indicator_n];
     double upper = indicators.upper[indicator_n];
     std::string name = indicators.name[indicator_n];
-    bool ok_big_m = true;
-    if (finite_bounds) {
-      M_upper = upper < kHighsInf ? std::max(0.0, max_activity - upper) : 0;
-      M_lower = lower > -kHighsInf ? std::max(0.0, lower - min_activity) : 0;
-      ok_big_m =
-	M_lower <= kMaxIndicatorBigM &&
-	M_upper <= kMaxIndicatorBigM;
-    } else {
-      M_upper = kMaxIndicatorBigM;
-      M_lower = kMaxIndicatorBigM;
-      ok_big_m = false;
-    }
-    if (!ok_big_m) {
-      highsLogUser(log_options, HighsLogType::kError,
-		   "Indicator constraint %d has lower (%g) or upper (%g) big-M values that are not less than %g: reformulation not possible\n",
-		   int(indicator_n), M_lower, M_upper, kMaxIndicatorBigM);
+    double M_lower = lower > -kHighsInf ? std::max(0.0, lower - min_activity) : 0;
+    double M_upper = upper < kHighsInf ? std::max(0.0, max_activity - upper) : 0;
+    const bool both_excessive = M_lower > kMaxIndicatorBigM && M_upper > kMaxIndicatorBigM;
+    if (M_lower > kMaxIndicatorBigM ||
+	M_upper > kMaxIndicatorBigM) {
+      std::stringstream ss;
+      ss.str(std::string());
+      ss << highsFormatToString("Indicator constraint %d has", int(indicator_n));
+      if (M_lower > kMaxIndicatorBigM) 
+	ss << highsFormatToString(" lower activity of %g => lower big-M value of %g",
+				  min_activity, M_lower);
+      if (M_upper > kMaxIndicatorBigM) 
+	ss << highsFormatToString("%s upper activity of %g => upper big-M value of %g",
+				  both_excessive ? ";" : "",
+				  max_activity, M_upper);
+      ss << highsFormatToString(": big-M value%s exceed%s %g so reformulation not possible",
+				both_excessive ? "s" : "",
+				both_excessive ? "" : "s",
+				kMaxIndicatorBigM);
       //save_indicator_constraint_with_max_big_m.push_back(indicator_n);
+      highsLogUser(log_options, HighsLogType::kError, "%s\n", ss.str().c_str());
       return HighsStatus::kError;
     }
     // Upper bound constraint: z=v -> a^T x <= U

@@ -1113,6 +1113,13 @@ class Highs {
     return this->model_.lp_.indicators_.numIndicatorConstraints();
   }
 
+  /**
+   * @brief Clear any indicator constraints
+   */
+  void clearIndicatorConstraints() {
+    return this->model_.lp_.indicators_.clear();
+  }
+
   HighsStatus ensureColwise() {
     this->model_.lp_.ensureColwise();
     return HighsStatus::kOk;

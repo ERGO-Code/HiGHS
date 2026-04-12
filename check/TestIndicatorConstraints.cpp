@@ -121,27 +121,45 @@ TEST_CASE("indicator-simple-v0", "[highs_test_indicator]") {
 }
 
 TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
-  // min x
-  // s.t. z=0 -> x >= 5
-  //      z binary, x in [0, inf)
-  // Optimal: z=1, x=0, obj=0
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
 
-  highs.addVar(0.0, kHighsInf);  // x (col 0)
-  highs.addVar(0.0, 1.0);   // z (col 1)
+  HighsInt x = 0;
+  HighsInt y = 1;
+  HighsInt z = 2;
+  highs.addVar(0.0, 1.0);  // x (col 0)
+  highs.addVar(0.0, 1.0);  // y (col 1)
+  highs.addVar(0.0, 1.0);  // z (col 2)
 
-  highs.changeColCost(0, 1.0);
-  highs.changeColCost(1, 0.0);
-  highs.changeColIntegrality(1, HighsVarType::kInteger);
+  highs.changeColIntegrality(2, HighsVarType::kInteger);
 
-  // Indicator: z=0 -> x >= 5
-  HighsInt indices[] = {0};
-  double values[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(1, 0, 1, indices, values, 5.0, inf) ==
-          HighsStatus::kOk);
+  // Loop through the cases that yield just infinite upper big-M; just
+  // infinite lower big-M and both
+  //
+  // Indicator: z=0 -> 3 <= -x + y <= 7
+  HighsInt indices[] = {x, y};
+  double values[] = {-1.0, 1.0};
+  for (HighsInt k = 0; k < 3; k++) {
+    if (k == 0) {
+      // Infinite upper bound on x => infinite lower big-M
+      highs.changeColBounds(x, 0.0, kHighsInf);
+      highs.changeColBounds(y, 0.0, 1.0);
+    } else if (k == 1) {
+      // Infinite upper bound on y => infinite upper big-M
+      highs.changeColBounds(x, 0.0, 1.0);
+      highs.changeColBounds(y, 0.0, kHighsInf);
+    } else {
+      // Infinite upper bounds on x and y => infinite lower big-M and
+      // upper big-M
+      highs.changeColBounds(x, 0.0, kHighsInf);
+      highs.changeColBounds(y, 0.0, kHighsInf);
+    }
+    REQUIRE(highs.addIndicatorConstraint(z, 0, 2, indices, values, 3.0, 7.0) ==
+	    HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::kError);
+    REQUIRE(highs.run() == HighsStatus::kError);
+    highs.clearIndicatorConstraints();
+  }
 
   highs.resetGlobalScheduler(true);
 }
