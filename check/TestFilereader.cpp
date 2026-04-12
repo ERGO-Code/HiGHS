@@ -566,3 +566,21 @@ TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
 
   std::remove(lp_file.c_str());
 }
+
+TEST_CASE("lp-square-bracket-in-name", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string lp_file = test_name + ".lp";
+  
+  FILE* file = fopen(lp_file.c_str(), "w");
+  std::string file_content =
+      "Minimize\n obj: 2 x[0] + x[1] + x[2]\nSubject To\nr0: x[0] + x[1] +  x[2] >= "
+      "2\nr1: x[0] >= 1\nEnd\n";
+  if (dev_run) printf("Using .lp file\n%s", file_content.c_str());
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
+
+  //  std::remove(lp_file.c_str());
+}
