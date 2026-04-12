@@ -586,5 +586,5 @@ TEST_CASE("write-lp-file-with-square-bracket-in-name", "[highs_filereader]") {
   if (dev_run) h.setOptionValue("log_dev_level", 1);
   REQUIRE(h.readModel(lp_file) == HighsStatus::kError);
 
-  //  std::remove(lp_file.c_str());
+  std::remove(lp_file.c_str());
 }
