@@ -20,6 +20,12 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
+void HighsLpRelaxation::setGlobalSubSolverCallTime(
+    HighsSubSolverCallTime* global_sub_solver_call_time) {
+  assert(global_sub_solver_call_time->timer);
+  lpsolver.setGlobalSubSolverCallTime(global_sub_solver_call_time);
+}
+
 void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
                                    std::vector<double>& cut_lower,
                                    std::vector<double>& cut_upper,
@@ -610,16 +616,6 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
     lpsolver.optimizeLp();
-    if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
-      const HighsSubSolverCallTime& sub_solver_call_time =
-          lpsolver.getSubSolverCallTime();
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
-      // Go through sub_solver_call_time to update any MIP clocks
-      const bool valid_basis = true;
-      const bool use_presolve = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                         use_presolve);
-    }
   }
 }
 
@@ -1231,17 +1227,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
-  if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
-    const HighsSubSolverCallTime& sub_solver_call_time =
-        lpsolver.getSubSolverCallTime();
-    mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
-    // Go through sub_solver_call_time to update any MIP clocks
-    std::string presolve;
-    lpsolver.getOptionValue("presolve", presolve);
-    const bool use_presolve = presolve != kHighsOffString;
-    mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                       use_presolve);
-  }
   if (mipsolver.analysis_.analyse_mip_time && !mipsolver.submip &&
       !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -1383,10 +1368,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::kError;
     case HighsModelStatus::kIterationLimit: {
       if (!mipsolver.submip && resolve_on_error) {
-        // printf(
-        //     "error: lpsolver reached iteration limit, resolving with basis "
-        //     "from ipm\n");
+        // Highs instantiation
         Highs ipm;
+        ipm.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
         ipm.setOptionValue("output_flag", false);
         // check if only root presolve is allowed
         const bool use_presolve =
@@ -1448,14 +1432,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
           ipm.setOptionValue("solver", kIpxString);
           ipm.optimizeLp();
         }
-        const HighsSubSolverCallTime& sub_solver_call_time =
-            ipm.getSubSolverCallTime();
-        // mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time);
-        // Go through sub_solver_call_time to update any MIP clocks
-        const bool valid_basis = false;
-        // mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-        //                                    use_presolve);
-
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }

@@ -114,8 +114,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    const bool different_search = info.mip_node_count != scratch_num_nodes ||
-            info.simplex_iteration_count != scratch_num_simplex;
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
     REQUIRE(different_search);
     highs.clear();
   }
@@ -135,8 +136,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    const bool different_search = info.mip_node_count != scratch_num_nodes ||
-            info.simplex_iteration_count != scratch_num_simplex;
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
     REQUIRE(different_search);
     highs.clear();
   }
@@ -167,8 +169,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    const bool different_search = info.mip_node_count != scratch_num_nodes ||
-            info.simplex_iteration_count != scratch_num_simplex;
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
     REQUIRE(different_search);
     highs.clear();
   }
@@ -192,8 +195,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    const bool different_search = info.mip_node_count != scratch_num_nodes ||
-            info.simplex_iteration_count != scratch_num_simplex;
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
     REQUIRE(different_search);
     highs.clear();
   }
@@ -241,8 +245,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(starting_solution);
     REQUIRE(return_status == HighsStatus::kOk);
     highs.run();
-    const bool different_search = info.mip_node_count != scratch_num_nodes ||
-            info.simplex_iteration_count != scratch_num_simplex;
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
     REQUIRE(different_search);
     highs.clear();
   }
@@ -294,8 +299,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(num_entries, index.data(), value.data());
     REQUIRE(return_status == HighsStatus::kOk);
     highs.run();
-    const bool different_search = info.mip_node_count != scratch_num_nodes ||
-            info.simplex_iteration_count != scratch_num_simplex;
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
     REQUIRE(different_search);
     highs.clear();
   }

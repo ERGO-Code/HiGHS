@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "util/HighsTimer.h"
 
 struct HighsSolution {
   bool value_valid = false;
@@ -162,13 +163,29 @@ struct HighsLinearObjective {
   void clear();
 };
 
-struct HighsSubSolverCallTime {
-  std::vector<std::string> name;
+struct HighsSubSolverCallTimeRecord {
   std::vector<HighsInt> num_call;
   std::vector<double> run_time;
-  void initialise();
-  void add(const HighsSubSolverCallTime& sub_solver_call_time,
-           const bool analytic_centre = false);
+};
+
+struct HighsSubSolverCallTime {
+  HighsTimer* timer;
+  bool initialised = false;
+  double mip_start_time;
+  HighsInt mip_clock_running;
+  std::vector<double> submip_start_time;
+  std::vector<HighsInt> submip_clock_running;
+  std::vector<bool> submip;
+  std::vector<double> start_time;
+  std::vector<HighsInt> clock_running;
+  std::vector<std::string> name;
+  // This vector is the data structure over threads
+  std::vector<HighsSubSolverCallTimeRecord> record;
+  std::vector<HighsSubSolverCallTimeRecord> submip_record;
+  void initialise(HighsTimer& timer_);
+  void start(const HighsInt sub_solver_clock);
+  void stop(const HighsInt sub_solver_clock = -1);
+  void setSubMip(const bool submip);
 };
 
 struct HighsSimplexStats {

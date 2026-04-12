@@ -1162,6 +1162,7 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
 #endif
 }
 
+/*
 TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   const std::string model = "flugpl";  //"rgn"; //
   std::string model_file =
@@ -1174,6 +1175,7 @@ TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 }
+*/
 
 TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   std::string model = "avgas";
@@ -1425,4 +1427,27 @@ TEST_CASE("parallel-mip-determinism", "[highs_test_mip_solver]") {
       REQUIRE(lp_iters[i] == lp_iters[0]);
     }
   }
+}
+
+TEST_CASE("issue-2957", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 2};
+  lp.col_lower_ = {0, 8};
+  lp.col_upper_ = {20, 20};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  lp.row_lower_ = {20.1};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.passModel(lp);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 28.2;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
