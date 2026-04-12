@@ -579,7 +579,9 @@ TEST_CASE("lp-square-bracket-in-name", "[highs_filereader]") {
   fprintf(file, "%s", file_content.c_str());
   fclose(file);
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
+  //  if (dev_run)
+    h.setOptionValue("log_dev_level", 1);
   REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
 
   //  std::remove(lp_file.c_str());

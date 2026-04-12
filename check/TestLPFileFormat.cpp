@@ -12,7 +12,7 @@ TEST_CASE("lp-file-format-quad-no-space", "[LpFileFormat]") {
   // HiGHS cannot handle quadratic constraints as there are in qcqp.lp
 
   // Test that filereaderlp does not throw an exception
-  REQUIRE_NOTHROW(readinstance(log_options, filename));
+  REQUIRE_NOTHROW(readInstance(log_options, filename));
 
   // Test that HiGHS returns an error when passes a QCQP problem
   Highs highs;

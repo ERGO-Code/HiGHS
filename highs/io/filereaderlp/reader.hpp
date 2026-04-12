@@ -12,7 +12,7 @@ const std::string kLpKeywordFree[] = {"free"};
 const unsigned int kLpKeywordInfN = 2;
 const unsigned int kLpKeywordFreeN = 1;
 
-Model readinstance(const HighsLogOptions& log_options,
+Model readInstance(const HighsLogOptions& log_options,
 		   const std::string& filename);
 
 #endif
