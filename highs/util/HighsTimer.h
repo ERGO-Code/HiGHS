@@ -49,6 +49,10 @@ class HighsTimer {
    */
   void setPrintfFlag(const bool output_flag, const bool log_to_console) {
     this->printf_flag = output_flag ? log_to_console : false;
+    if (!this->printf_flag) {
+      printf("Over-ruling this->printf_flag\n");
+      this->printf_flag = true;
+    }
   }
 
   /**
