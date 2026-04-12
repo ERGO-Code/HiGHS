@@ -295,9 +295,10 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 HighsLp withoutSemiVariables(const HighsLp& lp, HighsSolution& solution,
                              const double primal_feasibility_tolerance);
 
-HighsLp withoutIndicatorConstraints(
-    const HighsLp& lp, const HighsLogOptions& log_options,
+HighsStatus withoutIndicatorConstraints(
+    const HighsLp& lp_, const HighsLogOptions& log_options,
     const double primal_feasibility_tolerance, HighsSolution& solution,
+    HighsLp& lp,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m);
 
 // Get subvectors from data structure of data0, data1, data2 and

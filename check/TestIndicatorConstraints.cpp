@@ -4,7 +4,7 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = false;
+const bool dev_run = true;//false;
 const double double_equal_tolerance = 1e-5;
 
 void solveWriteReadSolve(Highs& highs, const double objective_value,
@@ -120,7 +120,31 @@ TEST_CASE("indicator-simple-v0", "[highs_test_indicator]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {}
+TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
+  // min x
+  // s.t. z=0 -> x >= 5
+  //      z binary, x in [0, inf)
+  // Optimal: z=1, x=0, obj=0
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  highs.addVar(0.0, kHighsInf);  // x (col 0)
+  highs.addVar(0.0, 1.0);   // z (col 1)
+
+  highs.changeColCost(0, 1.0);
+  highs.changeColCost(1, 0.0);
+  highs.changeColIntegrality(1, HighsVarType::kInteger);
+
+  // Indicator: z=0 -> x >= 5
+  HighsInt indices[] = {0};
+  double values[] = {1.0};
+  REQUIRE(highs.addIndicatorConstraint(1, 0, 1, indices, values, 5.0, inf) ==
+          HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kError);
+
+  highs.resetGlobalScheduler(true);
+}
 
 TEST_CASE("indicator-range", "[highs_test_indicator]") {
   // min x

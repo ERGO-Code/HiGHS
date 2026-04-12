@@ -4241,10 +4241,13 @@ HighsStatus Highs::callSolveMip() {
   if (needs_reformulation) {
     // First reformulate indicator constraints (only adds rows)
     if (has_indicators) {
-      use_lp = withoutIndicatorConstraints(
+      HighsStatus return_status = withoutIndicatorConstraints(
           model_.lp_, options_.log_options,
           options_.primal_feasibility_tolerance, solution_,
+	  use_lp,
           model_.lp_.mods_.save_indicator_constraint_with_max_big_m);
+      // Error means that reformulation has failed
+      if (return_status == HighsStatus::kError) return return_status;
     }
     // Then reformulate semi-variables (adds cols + rows)
     if (has_semi_variables) {

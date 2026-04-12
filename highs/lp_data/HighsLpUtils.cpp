@@ -3364,11 +3364,12 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   return lp;
 }
 
-HighsLp withoutIndicatorConstraints(
+HighsStatus withoutIndicatorConstraints(
     const HighsLp& lp_, const HighsLogOptions& log_options,
     const double primal_feasibility_tolerance, HighsSolution& solution,
+    HighsLp& lp,
     std::vector<HighsInt> save_indicator_constraint_with_max_big_m) {
-  HighsLp lp = lp_;
+  lp = lp_;
   assert(lp.hasIndicatorConstraints());
   // Format of HighsIndicatorConstraints matrix should be rowwise
   assert(lp.indicators_.matrix.format_ == MatrixFormat::kRowwise);
@@ -3422,13 +3423,24 @@ HighsLp withoutIndicatorConstraints(
     double lower = indicators.lower[indicator_n];
     double upper = indicators.upper[indicator_n];
     std::string name = indicators.name[indicator_n];
+    bool ok_big_m = true;
     if (finite_bounds) {
       M_upper = upper < kHighsInf ? std::max(0.0, max_activity - upper) : 0;
       M_lower = lower > -kHighsInf ? std::max(0.0, lower - min_activity) : 0;
+      ok_big_m =
+	M_lower <= kMaxIndicatorBigM &&
+	M_upper <= kMaxIndicatorBigM;
     } else {
       M_upper = kMaxIndicatorBigM;
       M_lower = kMaxIndicatorBigM;
-      save_indicator_constraint_with_max_big_m.push_back(indicator_n);
+      ok_big_m = false;
+    }
+    if (!ok_big_m) {
+      highsLogUser(log_options, HighsLogType::kError,
+		   "Indicator constraint %d has lower (%g) or upper (%g) big-M values that are not less than %g: reformulation not possible\n",
+		   int(indicator_n), M_lower, M_upper, kMaxIndicatorBigM);
+      //save_indicator_constraint_with_max_big_m.push_back(indicator_n);
+      return HighsStatus::kError;
     }
     // Upper bound constraint: z=v -> a^T x <= U
     // v=1: a^T x <= U + M*(1-z) => a^T x + M*z <= U + M
@@ -3509,7 +3521,7 @@ HighsLp withoutIndicatorConstraints(
   // If there is an existing solution, make space for the activities
   // of the additional rows
   if (solution.value_valid) solution.row_value.resize(lp.num_row_);
-  return lp;
+  return HighsStatus::kOk;
 }
 
 void getSubVectors(const HighsIndexCollection& index_collection,
