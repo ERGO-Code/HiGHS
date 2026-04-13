@@ -362,6 +362,10 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   // - If ordering is "amd", "metis", "rcm" run only the ordering requested.
   // - If ordering is "choose", run "amd", "metis", and choose the best.
 
+  const std::string metis_2hop_string = "metis-2hop";
+  const std::string metis_pfactor_string = "metis-pfactor";
+  const std::string metis_2hop_pfactor_string = "metis-2hop-pfactor";
+
   // select which fill-reducing orderings should be tried
   std::vector<std::string> orderings_to_try;
   if (options_.ordering != kHighsChooseString)
@@ -369,6 +373,28 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   else {
     orderings_to_try.push_back(kHipoAmdString);
     orderings_to_try.push_back(kHipoMetisString);
+
+    if (options_.parallel != kHighsOffString) {
+      Int available_threads = highs::parallel::num_threads();
+
+      // The first 3 threads are used to run NE structure, amd on AS, metis on
+      // AS. If there are more threads, run more orderings
+      available_threads -= 3;
+
+      if (available_threads > 0) {
+        orderings_to_try.push_back(metis_2hop_string);
+        available_threads--;
+      }
+      if (available_threads > 0) {
+        orderings_to_try.push_back(metis_pfactor_string);
+        available_threads--;
+      }
+      if (available_threads > 0) {
+        orderings_to_try.push_back(metis_2hop_pfactor_string);
+        available_threads--;
+      }
+    }
+
     // rcm is much worse in general, so no point in trying for now
   }
 
@@ -394,61 +420,62 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
 
   auto run_ordering_and_analyse = [&](Int i) {
-    // compute ordering
-    if (orderings_to_try[i] == kHipoMetisString) {
+    logger_.printInfo("Running %s for %s\n", orderings_to_try[i].c_str(),
+                      nla.c_str());
+
+    if (orderings_to_try[i] == kHipoMetisString ||
+        orderings_to_try[i] == metis_2hop_string ||
+        orderings_to_try[i] == metis_pfactor_string ||
+        orderings_to_try[i] == metis_2hop_pfactor_string) {
       idx_t options[METIS_NOPTIONS];
       Highs_METIS_SetDefaultOptions(options);
       options[METIS_OPTION_SEED] = kMetisSeed;
 
-      // set logging of Metis depending on debug level
       options[METIS_OPTION_DBGLVL] = 0;
-      if (logger_.debug(2))
-        options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
 
       // no2hop improves the quality of ordering in general
       options[METIS_OPTION_NO2HOP] = 1;
 
-      logger_.printInfo("Running Metis for %s\n", nla.c_str());
-      std::vector<Int> iperm(n);
+      if (orderings_to_try[i] == metis_2hop_string)
+        options[METIS_OPTION_NO2HOP] = 0;
+      else if (orderings_to_try[i] == metis_pfactor_string)
+        options[METIS_OPTION_PFACTOR] = 200;
+      else if (orderings_to_try[i] == metis_2hop_pfactor_string) {
+        options[METIS_OPTION_NO2HOP] = 0;
+        options[METIS_OPTION_PFACTOR] = 200;
+      }
 
+      std::vector<Int> iperm(n);
       Int status =
           Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
                              options, permutations[i].data(), iperm.data());
+      if (status != METIS_OK) failure[i] = true;
 
-      logger_.printInfo("Metis done for %s\n", nla.c_str());
-      if (status != METIS_OK) {
-        logger_.printInfo("Error with Metis for \n", nla.c_str());
-        failure[i] = true;
-      }
     } else if (orderings_to_try[i] == kHipoAmdString) {
       double control[AMD_CONTROL];
       Highs_amd_defaults(control);
       double info[AMD_INFO];
-
-      logger_.printInfo("Running AMD for %s\n", nla.c_str());
       Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
                                    permutations[i].data(), control, info);
-      logger_.printInfo("AMD done for %s\n", nla.c_str());
+      if (status != AMD_OK) failure[i] = true;
 
-      if (status != AMD_OK) {
-        logger_.printInfo("Error with AMD for %s\n", nla.c_str());
-        failure[i] = true;
-      }
     } else if (orderings_to_try[i] == kHipoRcmString) {
-      logger_.printInfo("Running RCM for %s\n", nla.c_str());
       Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
                                 full_rows.data(), permutations[i].data());
-      logger_.printInfo("RCM done for %s\n", nla.c_str());
+      if (status != 0) failure[i] = true;
 
-      if (status != 0) {
-        logger_.printInfo("Error with RCM for %s\n", nla.c_str());
-        failure[i] = true;
-      }
     } else {
       assert(1 == 0);
     }
 
-    if (failure[i]) return;
+    logger_.printInfo("Finished %s for %s\n", orderings_to_try[i].c_str(),
+                      nla.c_str());
+
+    if (failure[i]) {
+      logger_.printInfo("Error with %s for %s\n", orderings_to_try[i].c_str(),
+                        nla.c_str());
+      return;
+    }
 
     failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
 
@@ -471,63 +498,59 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     if (!b) ++num_success;
   }
 
-  if (orderings_to_try.size() < 2) {
-    S = std::move(symbolics[0]);
-    ordering = orderings_to_try[0];
-
-  } else if (orderings_to_try.size() == 2) {
-    // if there's only one success, obvious choice
-    if (failure[0] && !failure[1]) {
-      S = std::move(symbolics[1]);
-      ordering = orderings_to_try[1];
-    } else if (!failure[0] && failure[1]) {
-      S = std::move(symbolics[0]);
-      ordering = orderings_to_try[0];
+  if (num_success > 0) {
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+      if (!failure[i])
+        logger_.printInfo(
+            "%20s for %s: %.2e %.2f\n", orderings_to_try[i].c_str(),
+            nla.c_str(), symbolics[i].flops(),
+            static_cast<double>(symbolics[i].size()) / symbolics[i].sn());
     }
 
-    else if (num_success > 1) {
-      // need to choose the better ordering
-
-      const double flops_0 = symbolics[0].flops();
-      const double flops_1 = symbolics[1].flops();
-      const double sn_avg_0 = symbolics[0].size() / symbolics[0].sn();
-      const double sn_avg_1 = symbolics[1].size() / symbolics[1].sn();
-      const double bytes_0 = symbolics[0].storage();
-      const double bytes_1 = symbolics[1].storage();
-
-      Int chosen = -1;
-
-      // selection rule:
-      // - if flops have a clear winner (+/- 20%), then choose it.
-      // - otherwise, choose the one with larger supernodes.
-
-      if (flops_0 > kFlopsOrderingThresh * flops_1)
-        chosen = 1;
-      else if (flops_1 > kFlopsOrderingThresh * flops_0)
-        chosen = 0;
-      else if (sn_avg_0 > sn_avg_1)
-        chosen = 0;
-      else
-        chosen = 1;
-
-      // fix selection if one or more require too much memory
-      const double bytes_thresh = kLargeStorageGB * 1024 * 1024 * 1024;
-      if (bytes_0 > bytes_thresh || bytes_1 > bytes_thresh) {
-        if (bytes_0 > bytes_1)
-          chosen = 1;
-        else
-          chosen = 0;
+    // find the ordering with best flops
+    double best_flops = kHighsInf;
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+      if (!failure[i] && symbolics[i].flops() < best_flops) {
+        best_flops = symbolics[i].flops();
       }
-
-      assert(chosen == 0 || chosen == 1);
-
-      S = std::move(symbolics[chosen]);
-      ordering = orderings_to_try[chosen];
     }
 
-  } else {
-    // only two orderings tried for now
-    assert(0 == 1);
+    // find orderings with flops within kFlopsOrderingThresh of the best
+    std::vector<Int> consider;
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+      if (!failure[i] &&
+          symbolics[i].flops() <= kFlopsOrderingThresh * best_flops) {
+        consider.push_back(i);
+      }
+    }
+
+    // among them, find the one with largest supernodes
+    double best_sn_size = 0.0;
+    Int chosen = -1;
+    for (Int i : consider) {
+      double sn_avg_size =
+          static_cast<double>(symbolics[i].size()) / symbolics[i].sn();
+      if (sn_avg_size > best_sn_size) {
+        best_sn_size = sn_avg_size;
+        chosen = i;
+      }
+    }
+
+    // fix selection if one or more require too much memory
+    const double bytes_thresh = kLargeStorageGB * 1024 * 1024 * 1024;
+    double best_memory = kHighsInf;
+    Int ind_best_memory = -1;
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+      if (symbolics[i].storage() < best_memory) {
+        best_memory = symbolics[i].storage();
+        ind_best_memory = i;
+      }
+    }
+
+    assert(chosen >= 0 && chosen < static_cast<Int>(orderings_to_try.size()));
+
+    S = std::move(symbolics[chosen]);
+    ordering = orderings_to_try[chosen];
   }
 
   return num_success > 0 ? kStatusOk : kStatusErrorAnalyse;
