@@ -208,11 +208,17 @@ Int FactorHiGHSSolver::chooseNla() {
   bool overflow_NE = false;
   bool overflow_AS = false;
 
-  auto run_structure_NE = [&]() {
-    bool expect_AS_much_cheaper =
-        model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
+  bool expect_AS_much_cheaper =
+      model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
+  bool expect_NE_much_cheaper =
+      model_.nzAS() > model_.nzNEub() * kNzBoundsRatio;
 
-    if (expect_AS_much_cheaper || model_.nonSeparableQp() || model_.m() == 0) {
+  bool can_skip_AS = !(model_.nonSeparableQp() || model_.m() == 0);
+  bool can_skip_NE = true;
+
+  auto run_structure_NE = [&]() {
+    if ((expect_AS_much_cheaper && can_skip_NE) || model_.nonSeparableQp() ||
+        model_.m() == 0) {
       failure_NE = true;
       logger_.printInfo("NE skipped\n");
     } else {
@@ -235,11 +241,6 @@ Int FactorHiGHSSolver::chooseNla() {
   };
 
   auto run_analyse_AS = [&]() {
-    bool expect_NE_much_cheaper =
-        model_.nzAS() > model_.nzNEub() * kNzBoundsRatio;
-
-    bool can_skip_AS = !(model_.nonSeparableQp() || model_.m() == 0);
-
     if (expect_NE_much_cheaper && can_skip_AS) {
       failure_AS = true;
       logger_.printInfo("AS skipped\n");
@@ -272,7 +273,20 @@ Int FactorHiGHSSolver::chooseNla() {
     tg.spawn([&]() { run_structure_NE(); });
     tg.taskWait();
   }
+
+  // if NE was skipped but AS failed, use NE
+  if (expect_AS_much_cheaper && failure_AS) {
+    can_skip_NE = false;
+    run_structure_NE();
+  }
+
   run_analyse_NE();
+
+  // if AS was skipped but NE failed, use AS
+  if (expect_NE_much_cheaper && failure_NE) {
+    can_skip_AS = false;
+    run_analyse_AS();
+  }
 
   Int status = kStatusOk;
 
