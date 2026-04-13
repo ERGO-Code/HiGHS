@@ -208,17 +208,22 @@ Int FactorHiGHSSolver::chooseNla() {
   bool overflow_NE = false;
   bool overflow_AS = false;
 
-  bool expect_AS_much_cheaper =
+  const bool AS_possible = true;
+  const bool NE_possible = !(model_.nonSeparableQp() || model_.m() == 0);
+
+  const bool expect_AS_much_cheaper =
       model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
-  bool expect_NE_much_cheaper =
+  const bool expect_NE_much_cheaper =
       model_.nzAS() > model_.nzNEub() * kNzBoundsRatio;
 
-  bool can_skip_AS = !(model_.nonSeparableQp() || model_.m() == 0);
-  bool can_skip_NE = true;
+  const bool skip_AS = NE_possible && expect_NE_much_cheaper;
+  const bool skip_NE = AS_possible && expect_AS_much_cheaper;
+
+  bool allow_skip_AS = true;
+  bool allow_skip_NE = true;
 
   auto run_structure_NE = [&]() {
-    if ((expect_AS_much_cheaper && can_skip_NE) || model_.nonSeparableQp() ||
-        model_.m() == 0) {
+    if (!NE_possible || (skip_NE && allow_skip_NE)) {
       failure_NE = true;
       logger_.printInfo("NE skipped\n");
     } else {
@@ -241,7 +246,7 @@ Int FactorHiGHSSolver::chooseNla() {
   };
 
   auto run_analyse_AS = [&]() {
-    if (expect_NE_much_cheaper && can_skip_AS) {
+    if (!AS_possible || (skip_AS && allow_skip_AS)) {
       failure_AS = true;
       logger_.printInfo("AS skipped\n");
     } else {
@@ -275,16 +280,16 @@ Int FactorHiGHSSolver::chooseNla() {
   }
 
   // if NE was skipped but AS failed, use NE
-  if (expect_AS_much_cheaper && failure_AS) {
-    can_skip_NE = false;
+  if (skip_NE && failure_AS) {
+    allow_skip_NE = false;
     run_structure_NE();
   }
 
   run_analyse_NE();
 
   // if AS was skipped but NE failed, use AS
-  if (expect_NE_much_cheaper && failure_NE) {
-    can_skip_AS = false;
+  if (skip_AS && failure_NE) {
+    allow_skip_AS = false;
     run_analyse_AS();
   }
 
