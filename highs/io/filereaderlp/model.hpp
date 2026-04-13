@@ -57,12 +57,22 @@ struct SOS {
   std::vector<std::pair<std::shared_ptr<Variable>, double>> entries;
 };
 
+struct IndicatorConstraint {
+  std::string name = "";
+  std::shared_ptr<Variable> binary;
+  double value = 0;
+  double lower = -std::numeric_limits<double>::infinity();
+  double upper = std::numeric_limits<double>::infinity();
+  std::shared_ptr<Expression> expr;
+};
+
 struct Model {
   std::shared_ptr<Expression> objective;
   ObjectiveSense sense = ObjectiveSense::MIN;
   std::vector<std::shared_ptr<Constraint>> constraints;
   std::vector<std::shared_ptr<Variable>> variables;
   std::vector<std::shared_ptr<SOS>> soss;
+  std::vector<std::shared_ptr<IndicatorConstraint>> indicator_constraints;
 };
 
 #endif

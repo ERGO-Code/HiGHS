@@ -573,8 +573,8 @@ void Reader::processConstraintSection() {
   std::vector<ProcessedToken>::iterator& end(
       sectiontokens[LpSectionKeyword::CON].second);
   bool processing_indicator = false;
-  std::shared_ptr<Constraint> indicator =
-    std::shared_ptr<Constraint>(new Constraint);
+  std::shared_ptr<IndicatorConstraint> indicator_constraint =
+    std::shared_ptr<IndicatorConstraint>(new IndicatorConstraint);
   while (begin != end) {
     std::shared_ptr<Constraint> con =
         std::shared_ptr<Constraint>(new Constraint);
@@ -607,7 +607,10 @@ void Reader::processConstraintSection() {
     if (processing_indicator) {
       // con is the constraint to go with indicator
       printf("2880: Processing indicator constraint\n");
-      lpAssert(false, "Not processing indicator");
+      indicator_constraint->expr = con->expr;
+      builder.model.indicator_constraints.push_back(indicator_constraint);
+      indicator_constraint = std::shared_ptr<IndicatorConstraint>(new IndicatorConstraint);
+      continue;
     }
     printf("2880: End of section = %s\n", end_of_section ? "T" : "F");
     if (!end_of_section) {
@@ -616,8 +619,13 @@ void Reader::processConstraintSection() {
       processing_indicator = begin->type == ProcessedTokenType::INDICATOR;
       if (processing_indicator) {
 	printf("2880: Found indicator\n");
-	// Record indicator as binary value for indicator constraint and go back to process corresponding constraint
-	indicator = con;
+	// Record name, binary and value for indicator constraint and
+	// go back to process corresponding constraint
+	lpAssert(con->expr->linterms.size() == 1, "IC unique binary");
+	lpAssert(con->lowerbound == con->upperbound, "IC binary fixed");
+	indicator_constraint->name = con->expr->name;
+	indicator_constraint->binary = con->expr->linterms[0]->var;
+	indicator_constraint->value = con->lowerbound;
 	++begin;
 	continue;
       } else {
