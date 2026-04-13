@@ -48,8 +48,8 @@ void Model::nzBounds() {
   NE_nz_lb_ = A_.num_row_;
   NE_nz_ub_ = A_.num_row_;
   for (Int col = 0; col < A_.num_col_; ++col) {
-    Int used = 0;
-    Int unused = 0;
+    Int64 used = 0;
+    Int64 unused = 0;
     for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
       const Int row = A_.index_[el];
       if (mark[row])
