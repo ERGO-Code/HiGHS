@@ -2,8 +2,6 @@
 
 namespace hipo {
 
-Logger::Logger(Int level) : dev_level_{level} {}
-
 void Logger::setOptions(const HighsLogOptions* log_options) {
   log_options_ = log_options;
 }

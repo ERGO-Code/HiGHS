@@ -12,11 +12,10 @@
 namespace hipo {
 
 class Logger {
-  const Int dev_level_ = 0;
   const HighsLogOptions* log_options_;
 
  public:
-  Logger(Int level = 0);
+  Logger() = default;
   void setOptions(const HighsLogOptions* log_options);
   bool debug(Int level) const;
 
