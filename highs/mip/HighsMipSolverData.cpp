@@ -410,7 +410,10 @@ void HighsMipSolverData::startAnalyticCenterComputation(
   taskGroup.spawn([&]() {
     // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
+    //
+    // Highs instantiation
     Highs ipm;
+    ipm.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
     ipm.setOptionValue("output_flag", false);
     const std::vector<double>& sol = ipm.getSolution().col_value;
     // Don't use presolve - because this can lead to postsolve putting
@@ -465,7 +468,11 @@ void HighsMipSolverData::startAnalyticCenterComputation(
       (void)output_flag;
       ipm.setOptionValue("output_flag", !mipsolver.submip);
     }
+    const HighsInt sub_solver_clock =
+        use_hipo ? kSubSolverHipoAc : kSubSolverIpxAc;
+    mipsolver.global_sub_solver_call_time_->start(sub_solver_clock);
     ipm.optimizeLp();
+    mipsolver.global_sub_solver_call_time_->stop(sub_solver_clock);
     if (ipm_logging) ipm.setOptionValue("output_flag", false);
     if (use_hipo && mip_ipm_solver == kHighsChooseString &&
         HighsInt(sol.size()) != mipsolver.numCol()) {
@@ -476,18 +483,6 @@ void HighsMipSolverData::startAnalyticCenterComputation(
       // HiPO has failed to get a solution, so try IPX
       ipm.setOptionValue("solver", kIpxString);
       ipm.optimizeLp();
-    }
-    if (!mipsolver.submip) {
-      const HighsSubSolverCallTime& sub_solver_call_time =
-          ipm.getSubSolverCallTime();
-      const bool analytic_centre = true;
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
-                                               analytic_centre);
-      // Go through sub_solver_call_time to update any MIP clocks
-      const bool valid_basis = false;
-      const bool use_presolve = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                         use_presolve, analytic_centre);
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
@@ -500,14 +495,14 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
   if (mipsolver.analysis_.analyse_mip_time) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - starting  analytic centre synch\n",
-                 mipsolver.analysis_.mipTimerRead());
+                 mipsolver.timer_.read());
     fflush(stdout);
   }
   taskGroup.sync();
   if (mipsolver.analysis_.analyse_mip_time) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed analytic centre synch\n",
-                 mipsolver.analysis_.mipTimerRead());
+                 mipsolver.timer_.read());
     fflush(stdout);
   }
   analyticCenterComputed = true;
@@ -1202,7 +1197,10 @@ try_again:
     this->total_repair_lp++;
     double time_available = std::max(
         mipsolver.options_mip_->time_limit - mipsolver.timer_.read(), 0.1);
+    // Highs instantiation
     Highs tmpSolver;
+    tmpSolver.setGlobalSubSolverCallTime(
+        mipsolver.global_sub_solver_call_time_);
     const bool debug_report = false;
     if (debug_report) {
       tmpSolver.setOptionValue("log_dev_level", 2);
@@ -1231,17 +1229,6 @@ try_again:
     // HiPO or IPX to solve an LP without a basis, use simplex
     tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.optimizeLp();
-    if (!mipsolver.submip) {
-      const HighsSubSolverCallTime& sub_solver_call_time =
-          tmpSolver.getSubSolverCallTime();
-      const bool analytic_centre = false;
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
-                                               analytic_centre);
-      // Go through sub_solver_call_time to update any MIP clocks
-      const bool valid_basis = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                         use_presolve, analytic_centre);
-    }
     this->total_repair_lp_iterations =
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
@@ -2162,7 +2149,7 @@ restart:
   if (analysis.analyse_mip_time) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - starting  separation\n",
-                 analysis.mip_clocks.timer_pointer_->read(0));
+                 mipsolver.timer_.read());
     fflush(stdout);
   }
   analysis.mipTimerStart(kMipClockRootSeparation);
@@ -2299,7 +2286,7 @@ restart:
   if (analysis.analyse_mip_time) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed separation\n",
-                 analysis.mip_clocks.timer_pointer_->read(0));
+                 mipsolver.timer_.read());
     fflush(stdout);
   }
 

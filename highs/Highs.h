@@ -1242,13 +1242,6 @@ class Highs {
   void reportSubSolverCallTime() const;
 
   /**
-   * @brief Initialise the internal sub-solver call and time instance
-   */
-  void initialiseSubSolverCallTime() {
-    this->sub_solver_call_time_.initialise();
-  }
-
-  /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
    * if successful, set the internal HighsBasis and HighsSolution
    * instance
@@ -1277,6 +1270,14 @@ class Highs {
   std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
 
   /**
+   * @brief Ensures that the global scheduler is initialized,
+   * returning HighsStatus::kError if it has already been initialised,
+   * but the threads option is nonzero and not equal to
+   * this->max_threads_
+   */
+  HighsStatus initializeGlobalScheduler();
+
+  /**
    * @brief Releases all resources held by the global scheduler instance. It is
    * not thread-safe to call this function while calling run() or presolve() on
    * any other Highs instance in any thread. After this function has terminated
@@ -1290,6 +1291,9 @@ class Highs {
    * which is usually not necessary.
    */
   static void resetGlobalScheduler(bool blocking = false);
+
+  void setGlobalSubSolverCallTime(
+      HighsSubSolverCallTime* global_sub_solver_call_time = nullptr);
 
   // Start of advanced methods: only for internal use!
 
@@ -1557,9 +1561,14 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
+  // This local HighsSubSolverCallTime instance is used to define the
+  // pointers in subsequent Highs instances (such as
+  // global_sub_solver_call_time_ below) and analysis classes
   HighsSubSolverCallTime sub_solver_call_time_;
 
-  HighsInt max_threads = 0;
+  HighsSubSolverCallTime* global_sub_solver_call_time_;
+
+  HighsInt max_threads_ = 0;
   // This is strictly for debugging. It's used to check whether
   // returnFromOptimizeModel() was called after the previous call to
   // Highs::optimizeModel() and, assuming that this is always done, it checks
