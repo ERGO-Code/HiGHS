@@ -22,7 +22,7 @@ void solveWriteReadSolve(Highs& highs, const double objective_value,
   const HighsSolution& solution = highs.getSolution();
 
   // #2880 Currently only testing MPS read
-  const HighsInt to_k = 2;
+  const HighsInt to_k = 3;
   for (HighsInt k = 0; k < to_k; k++) {
     if (dev_run) printf("\nRun with k = %d\n==============\n\n", int(k));
     if (k == 1) {
@@ -64,7 +64,8 @@ TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
   // Optimal: z=0, x=0, obj=0
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("log_dev_level", 1);
 
   highs.addVar(0.0, 10.0);  // x (col 0)
   highs.addVar(0.0, 1.0);   // z (col 1)
@@ -83,6 +84,17 @@ TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
           HighsStatus::kOk);
 
   REQUIRE(highs.getNumIndicatorConstraints() == 1);
+
+  // min
+  //  obj: +1 c0 
+  // st
+  //  r0:c1 = 1 ->  +1 c0 >= +5
+  // bounds
+  //  c0 <= 10
+  //  c1 <= 1
+  // bin
+  //  c1
+  // end
 
   const std::vector<double> col_value = {0, 0};
   const double objective_value = 0;

@@ -39,7 +39,7 @@ char* strdup(const char* s) {
 enum class RawTokenType {
   NONE,
   STR,
-  CONS,
+  CONSTANT,
   LESS,
   GREATER,
   EQUAL,
@@ -62,12 +62,12 @@ static std::string tokenTypeToString(const RawTokenType& type) {
     return "None";
   case RawTokenType::STR:
     return "String";
-  case RawTokenType::CONS:
-    return "Constraint ";
+  case RawTokenType::CONSTANT:
+    return "Constant";
   case RawTokenType::LESS:
-    return "<=";
+    return "<";
   case RawTokenType::GREATER:
-    return ">=";
+    return ">";
   case RawTokenType::EQUAL:
     return "=";
   case RawTokenType::COLON:
@@ -114,7 +114,7 @@ struct RawToken {
   RawToken& operator=(const std::pair<double, std::string> vs) {
     dvalue = vs.first;
     svalue = vs.second;
-    type = RawTokenType::CONS;
+    type = RawTokenType::CONSTANT;
     return *this;
   }
 };
@@ -133,7 +133,8 @@ enum class ProcessedTokenType {
   SLASH,
   ASTERISK,
   HAT,
-  SOSTYPE
+  SOSTYPE,
+  INDICATOR
 };
 
 enum class LpSectionKeyword {
@@ -571,6 +572,9 @@ void Reader::processConstraintSection() {
       sectiontokens[LpSectionKeyword::CON].first);
   std::vector<ProcessedToken>::iterator& end(
       sectiontokens[LpSectionKeyword::CON].second);
+  bool processing_indicator = false;
+  std::shared_ptr<Constraint> indicator =
+    std::shared_ptr<Constraint>(new Constraint);
   while (begin != end) {
     std::shared_ptr<Constraint> con =
         std::shared_ptr<Constraint>(new Constraint);
@@ -599,6 +603,30 @@ void Reader::processConstraintSection() {
       default:
         lpAssert(false, "Legal constraint comparison type");
     }
+    const bool end_of_section = begin == sectiontokens[LpSectionKeyword::CON].second;
+    if (processing_indicator) {
+      // con is the constraint to go with indicator
+      printf("2880: Processing indicator constraint\n");
+      lpAssert(false, "Not processing indicator");
+    }
+    printf("2880: End of section = %s\n", end_of_section ? "T" : "F");
+    if (!end_of_section) {
+      // Look to see whether this is an indicator constraint
+      ++begin;
+      processing_indicator = begin->type == ProcessedTokenType::INDICATOR;
+      if (processing_indicator) {
+	printf("2880: Found indicator\n");
+	// Record indicator as binary value for indicator constraint and go back to process corresponding constraint
+	indicator = con;
+	++begin;
+	continue;
+      } else {
+	// Wind back as this is normal constraint
+	printf("2880: Found normal constraint\n");
+	--begin;
+      }
+    }
+
     builder.model.constraints.push_back(con);
     ++begin;
   }
@@ -932,11 +960,13 @@ void Reader::splitTokens() {
 void Reader::processTokens() {
   std::string svalue_lc;
   while (!rawtokens[0].istype(RawTokenType::FLEND)) {
+    logRawTokens();
     if (rawtokens[0].type == RawTokenType::STR) {
       if (parseSectionKeyword(rawtokens[0].svalue) != LpSectionKeyword::NONE) {
-	// Found an LP section keyword so check it's not a constraint name!
+	// Found an LP section keyword so check it's not a constraint
+	// name, in which case change the type to constant from string
 	if (rawtokens[1].type == RawTokenType::COLON)
-	  rawtokens[0].type = RawTokenType::CONS;
+	  rawtokens[0].type = RawTokenType::CONSTANT;
       }
     }
     // Slash + asterisk: comment, skip everything up to next asterisk + slash
@@ -1018,7 +1048,7 @@ void Reader::processTokens() {
     }
 
     // constraint identifier - with numeric constant value as name?
-    if (rawtokens[0].istype(RawTokenType::CONS) &&
+    if (rawtokens[0].istype(RawTokenType::CONSTANT) &&
         rawtokens[1].istype(RawTokenType::COLON)) {
       processedtokens.emplace_back(ProcessedTokenType::CONID,
                                    rawtokens[0].svalue);
@@ -1050,6 +1080,14 @@ void Reader::processTokens() {
       continue;
     }
 
+    // -> so indicator
+    if (rawtokens[0].istype(RawTokenType::MINUS) &&
+	rawtokens[1].istype(RawTokenType::GREATER)) {
+      processedtokens.emplace_back(ProcessedTokenType::INDICATOR);
+      nextRawToken(2);
+      continue;
+    }
+
     // + or -
     if (rawtokens[0].istype(RawTokenType::PLUS) ||
         rawtokens[0].istype(RawTokenType::MINUS)) {
@@ -1064,7 +1102,7 @@ void Reader::processTokens() {
       }
 
       // +/- Constant
-      if (rawtokens[0].istype(RawTokenType::CONS)) {
+      if (rawtokens[0].istype(RawTokenType::CONSTANT)) {
         processedtokens.emplace_back(sign * rawtokens[0].dvalue);
         nextRawToken();
         continue;
@@ -1086,8 +1124,6 @@ void Reader::processTokens() {
         continue;
       }
 
-      // +/- (possibly twice) followed by something that isn't a constant,
-      // opening bracket, or string (variable name)
       if (rawtokens[0].istype(RawTokenType::GREATER)) {
         // ">" suggests that the file contains indicator constraints
         printf(
@@ -1098,13 +1134,13 @@ void Reader::processTokens() {
     }
 
     // constant [
-    if (rawtokens[0].istype(RawTokenType::CONS) &&
+    if (rawtokens[0].istype(RawTokenType::CONSTANT) &&
         rawtokens[1].istype(RawTokenType::BRKOP)) {
       lpAssert(false, "Next raw token types are constant and [");
     }
 
     // constant
-    if (rawtokens[0].istype(RawTokenType::CONS)) {
+    if (rawtokens[0].istype(RawTokenType::CONSTANT)) {
       processedtokens.emplace_back(rawtokens[0].dvalue);
       nextRawToken();
       continue;
