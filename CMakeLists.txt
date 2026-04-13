@@ -304,6 +304,11 @@ if (BUILD_CXX)
     # If you are writing a CLR program and want to link to highs, you'll want
     # to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
     option(STDCALL "Build highs with the __stdcall convention" OFF)
+
+    # Suppress VCRUNTIME140_1.dll dependency — keeps compat with Windows Server 2019 bare installs
+    add_compile_options(/d2FH4-)
+    add_link_options(/d2:-FH4-)
+
   endif()
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
