@@ -362,10 +362,6 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   // - If ordering is "amd", "metis", "rcm" run only the ordering requested.
   // - If ordering is "choose", run "amd", "metis", and choose the best.
 
-  const std::string metis_2hop_string = "metis-2hop";
-  const std::string metis_pfactor_string = "metis-pfactor";
-  const std::string metis_2hop_pfactor_string = "metis-2hop-pfactor";
-
   // select which fill-reducing orderings should be tried
   std::vector<std::string> orderings_to_try;
   if (options_.ordering != kHighsChooseString)
@@ -373,27 +369,6 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   else {
     orderings_to_try.push_back(kHipoAmdString);
     orderings_to_try.push_back(kHipoMetisString);
-
-    if (options_.parallel != kHighsOffString) {
-      Int available_threads = highs::parallel::num_threads();
-
-      // The first 3 threads are used to run NE structure, amd on AS, metis on
-      // AS. If there are more threads, run more orderings
-      available_threads -= 3;
-
-      if (available_threads > 0) {
-        orderings_to_try.push_back(metis_2hop_string);
-        available_threads--;
-      }
-      if (available_threads > 0) {
-        orderings_to_try.push_back(metis_pfactor_string);
-        available_threads--;
-      }
-      if (available_threads > 0) {
-        orderings_to_try.push_back(metis_2hop_pfactor_string);
-        available_threads--;
-      }
-    }
 
     // rcm is much worse in general, so no point in trying for now
   }
@@ -423,10 +398,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     logger_.printInfo("Running %s for %s\n", orderings_to_try[i].c_str(),
                       nla.c_str());
 
-    if (orderings_to_try[i] == kHipoMetisString ||
-        orderings_to_try[i] == metis_2hop_string ||
-        orderings_to_try[i] == metis_pfactor_string ||
-        orderings_to_try[i] == metis_2hop_pfactor_string) {
+    if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
       Highs_METIS_SetDefaultOptions(options);
       options[METIS_OPTION_SEED] = kMetisSeed;
@@ -435,15 +407,6 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
       // no2hop improves the quality of ordering in general
       options[METIS_OPTION_NO2HOP] = 1;
-
-      if (orderings_to_try[i] == metis_2hop_string)
-        options[METIS_OPTION_NO2HOP] = 0;
-      else if (orderings_to_try[i] == metis_pfactor_string)
-        options[METIS_OPTION_PFACTOR] = 200;
-      else if (orderings_to_try[i] == metis_2hop_pfactor_string) {
-        options[METIS_OPTION_NO2HOP] = 0;
-        options[METIS_OPTION_PFACTOR] = 200;
-      }
 
       std::vector<Int> iperm(n);
       Int status =
