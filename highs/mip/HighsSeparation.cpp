@@ -16,6 +16,7 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpAggregator.h"
 #include "mip/HighsLpRelaxation.h"
+#include "mip/HighsMachineSchedSeparator.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsModkSeparator.h"
 #include "mip/HighsPathSeparator.h"
@@ -31,6 +32,7 @@ HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
   separators.emplace_back(new HighsTableauSeparator(mipsolver));
   separators.emplace_back(new HighsPathSeparator(mipsolver));
   separators.emplace_back(new HighsModkSeparator(mipsolver));
+  separators.emplace_back(new HighsMachineSchedSeparator(mipsolver));
 }
 
 HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,

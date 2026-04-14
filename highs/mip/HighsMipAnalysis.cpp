@@ -42,6 +42,8 @@ void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
         std::make_pair(kPathAggrSepaString, kMipClockPathAggrSepa));
     sepa_name_clock.push_back(
         std::make_pair(kModKSepaString, kMipClockModKSepa));
+    sepa_name_clock.push_back(
+        std::make_pair(kMachineSchedSepaString, kMipClockMachineSchedSepa));
   }
 }
 
