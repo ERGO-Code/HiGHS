@@ -289,6 +289,37 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                    "lp file contains %d explicit zero%s\n", int(sum_num_zero),
                    sum_num_zero > 1 ? "s" : "");
 
+    // Process any indicator constraints
+    if (m.indicator_constraints.size()) {
+      HighsInt num_indicator_constraint = m.indicator_constraints.size();
+      for (HighsInt iIc = 0; iIc < num_indicator_constraint; iIc++) {
+        HighsInt col = varindex[m.indicator_constraints[iIc]->binary->name];
+        /*
+        // Ensure that the binary is just that!
+        if (!lp.varIsBinary(binary)) {
+           highsLogUser(options.log_options, HighsLogType::kError,
+                        "Indicator variable for indicator constraint %d is not
+        binary\n",
+        */
+        lp.indicators_.col.push_back(col);
+        lp.indicators_.value.push_back(m.indicator_constraints[iIc]->value);
+        lp.indicators_.lower.push_back(m.indicator_constraints[iIc]->lower);
+        lp.indicators_.upper.push_back(m.indicator_constraints[iIc]->upper);
+        lp.indicators_.name.push_back(m.indicator_constraints[iIc]->name);
+        HighsInt row_nnz = m.indicator_constraints[iIc]->expr->linterms.size();
+        std::vector<HighsInt> index;
+        std::vector<double> value;
+        lp.indicators_.matrix.format_ = MatrixFormat::kRowwise;
+        for (HighsInt iX = 0; iX < row_nnz; iX++) {
+          index.push_back(varindex[m.indicator_constraints[iIc]
+                                       ->expr->linterms[iX]
+                                       ->var->name]);
+          value.push_back(
+              m.indicator_constraints[iIc]->expr->linterms[iX]->coef);
+        }
+        lp.indicators_.matrix.addVec(row_nnz, index.data(), value.data());
+      }
+    }
   } catch (std::invalid_argument& ex) {
     // lpassert in highs/io/filereaderlp/reader.cpp throws
     // std::invalid_argument whatever the error. Hence, unless
@@ -469,16 +500,16 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     double range = upper - lower;
     if (range && range < kHighsInf) {
       // Ranged indicator constraint requires two rows
-      this->writeToFileVar(
-          file, name + kRangedRowNameExtensionLower + ":" + lp.col_names_[col]);
+      this->writeToFileVar(file, name + kRangedRowNameExtensionLower + ": " +
+                                     lp.col_names_[col]);
       this->writeToFile(file, " = %s -> ", value == 0 ? "0" : "1");
       writeConstraint(indicator_n, lp.indicators_.matrix, ">=", lower);
-      this->writeToFileVar(
-          file, name + kRangedRowNameExtensionUpper + ":" + lp.col_names_[col]);
+      this->writeToFileVar(file, name + kRangedRowNameExtensionUpper + ": " +
+                                     lp.col_names_[col]);
       this->writeToFile(file, " = %s -> ", value == 0 ? "0" : "1");
       writeConstraint(indicator_n, lp.indicators_.matrix, "<=", upper);
     } else {
-      this->writeToFileVar(file, name + ":" + lp.col_names_[col]);
+      this->writeToFileVar(file, name + ": " + lp.col_names_[col]);
       this->writeToFile(file, " = %s -> ", value == 0 ? "0" : "1");
       if (lower == upper) {
         writeConstraint(indicator_n, lp.indicators_.matrix, "=", upper);

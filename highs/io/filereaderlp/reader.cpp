@@ -606,19 +606,20 @@ void Reader::processConstraintSection() {
     const bool end_of_section = begin == sectiontokens[LpSectionKeyword::CON].second;
     if (processing_indicator) {
       // con is the constraint to go with indicator
-      printf("2880: Processing indicator constraint\n");
+      indicator_constraint->lower = con->lowerbound;
+      indicator_constraint->upper = con->upperbound;
       indicator_constraint->expr = con->expr;
       builder.model.indicator_constraints.push_back(indicator_constraint);
       indicator_constraint = std::shared_ptr<IndicatorConstraint>(new IndicatorConstraint);
+      processing_indicator = false;
+      ++begin;
       continue;
     }
-    printf("2880: End of section = %s\n", end_of_section ? "T" : "F");
     if (!end_of_section) {
       // Look to see whether this is an indicator constraint
       ++begin;
       processing_indicator = begin->type == ProcessedTokenType::INDICATOR;
       if (processing_indicator) {
-	printf("2880: Found indicator\n");
 	// Record name, binary and value for indicator constraint and
 	// go back to process corresponding constraint
 	lpAssert(con->expr->linterms.size() == 1, "IC unique binary");
@@ -630,7 +631,6 @@ void Reader::processConstraintSection() {
 	continue;
       } else {
 	// Wind back as this is normal constraint
-	printf("2880: Found normal constraint\n");
 	--begin;
       }
     }
@@ -968,7 +968,7 @@ void Reader::splitTokens() {
 void Reader::processTokens() {
   std::string svalue_lc;
   while (!rawtokens[0].istype(RawTokenType::FLEND)) {
-    logRawTokens();
+    //    logRawTokens();
     if (rawtokens[0].type == RawTokenType::STR) {
       if (parseSectionKeyword(rawtokens[0].svalue) != LpSectionKeyword::NONE) {
 	// Found an LP section keyword so check it's not a constraint
