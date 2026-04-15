@@ -663,6 +663,10 @@ if (DEBUG_MODE)    std::cout << "[DEBUG] iter=" << final_iter_count_ << " | FPE 
     if (do_restart) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
         updatePrimalWeightAtRestart(results_);
+if (DEBUG_MODE){
+  std::cout << "[Restart] Iter: " << final_iter_count_ 
+            << "| updated primal weight: " << primal_weight_ << std::endl;
+}
       }
 #ifdef CUPDLP_GPU
       CUDA_CHECK(cudaMemcpyAsync(d_x_anchor_, d_pdhg_primal_,
@@ -768,6 +772,9 @@ double PDLPSolver::computeFixedPointErrorGpu() {
       cublasDnrm2(cublas_handle_, a_num_cols_, d_delta_x_, 1, &primal_norm));
   CUBLAS_CHECK(
       cublasDnrm2(cublas_handle_, a_num_rows_, d_delta_y_, 1, &dual_norm));
+if (DEBUG_MODE) {
+  std::cout << "[DEBUG] primal norm: " << primal_norm << ", dual norm " << dual_norm << std::endl;
+}
   CUBLAS_CHECK(cublasDdot(cublas_handle_, a_num_cols_, d_delta_x_, 1,
                           d_AT_delta_y_, 1, &cross_term));
 
@@ -775,8 +782,13 @@ double PDLPSolver::computeFixedPointErrorGpu() {
   double dual_norm_sq = dual_norm * dual_norm;
 
   double movement =
-      primal_norm_sq * params_.omega + dual_norm_sq / params_.omega;
+      primal_norm_sq * primal_weight_ + dual_norm_sq / primal_weight_;
   double interaction = 2.0 * params_.eta * cross_term;
+
+  std::cout <<"primal weight: " << primal_weight_ << ", step size: " << params_.eta << std::endl;
+
+  std::cout << "movement: " << movement << ", interaction: " << interaction
+             << std::endl;
 
   return std::sqrt(std::max(0.0, movement + interaction));
 }
