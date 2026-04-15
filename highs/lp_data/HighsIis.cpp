@@ -366,6 +366,7 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
 }
 
 HighsStatus HighsIis::deduce(const HighsLp& lp, const HighsOptions& options,
+                             const HighsCallback& callback,
                              const HighsBasis& basis) {
   // The number of infeasible rows must be positive
   assert(this->row_index_.size() > 0);
@@ -425,7 +426,7 @@ HighsStatus HighsIis::deduce(const HighsLp& lp, const HighsOptions& options,
     if (has_row_names)
       to_lp.row_names_.push_back(lp.row_names_[from_row[iRow]]);
   }
-  HighsStatus return_status = this->compute(to_lp, options);
+  HighsStatus return_status = this->compute(to_lp, options, callback);
   // Indirect the values into the original LP
   for (HighsInt& colindex : this->col_index_) colindex = from_col[colindex];
   for (HighsInt& rowindex : this->row_index_) rowindex = from_row[rowindex];
@@ -590,6 +591,7 @@ HighsInt HighsIis::determineBoundStatus(const double lower, const double upper,
 }
 
 HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
+                              const HighsCallback& callback,
                               const HighsBasis* basis) {
   const HighsLogOptions& log_options = options.log_options;
   const bool col_priority = kIisStrategyColPriority & options.iis_strategy;
@@ -609,16 +611,33 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   }
 
   Highs highs;
-  const HighsInfo& info = highs.getInfo();
   highs.passOptions(options);
   highs.setOptionValue("output_flag", kIisDevReport);
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue(
       "time_limit",
       std::max(options.iis_time_limit - this->info_.sum_simplex_times, 0.0));
+  // Handle the callback propagation after setting output_flag false,
+  // otherwise deprecation message for setLogCallback is echoed
+  if (log_options.user_log_callback || callback.active[kCallbackLogging] ||
+      callback.active[kCallbackSimplexInterrupt]) {
+    // Setting the logging callbacks currently serves no purpose since
+    // output_flag is set to kIisDevReport which is false (unless
+    // developing) so that solves with this Highs instance are silent
+    /*
+    if (log_options.user_log_callback)
+      highs.setLogCallback(log_options.user_log_callback);
+    */
+    highs.setCallback(callback.user_callback, callback.user_callback_data);
+    if (callback.active[kCallbackLogging])
+      highs.startCallback(kCallbackLogging);
+    if (callback.active[kCallbackSimplexInterrupt])
+      highs.startCallback(kCallbackSimplexInterrupt);
+  }
   const HighsLp& incumbent_lp = highs.getLp();
   const HighsBasis& incumbent_basis = highs.getBasis();
   const HighsSolution& solution = highs.getSolution();
+  const HighsInfo& info = highs.getInfo();
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
   if (basis) highs.setBasis(*basis);
