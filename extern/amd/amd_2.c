@@ -19,7 +19,7 @@
 /* === clear_flag ========================================================== */
 /* ========================================================================= */
 
-static amd_int clear_flag (amd_int wflg, amd_int wbig, amd_int W [ ], amd_int n)
+static amd_int Highs_amd_clear_flag (amd_int wflg, amd_int wbig, amd_int W [ ], amd_int n)
 {
     amd_int x ;
     if (wflg < 2 || wflg >= wbig)
@@ -624,7 +624,7 @@ void Highs_amd_2
 
     /* initialize wflg */
     wbig = amd_int_max - n ;
-    wflg = clear_flag (0, wbig, W, n) ;
+    wflg = Highs_amd_clear_flag (0, wbig, W, n) ;
 
     /* --------------------------------------------------------------------- */
     /* initialize degree lists and eliminate dense and empty rows */
@@ -992,7 +992,7 @@ void Highs_amd_2
 	/* With the current value of wflg, wflg+n must not cause integer
 	 * overflow */
 
-	wflg = clear_flag (wflg, wbig, W, n) ;
+	wflg = Highs_amd_clear_flag (wflg, wbig, W, n) ;
 
 /* ========================================================================= */
 /* COMPUTE (W [e] - wflg) = |Le\Lme| FOR ALL ELEMENTS */
@@ -1274,7 +1274,7 @@ void Highs_amd_2
 	/* make sure that wflg+n does not cause integer overflow */
 	lemax =  MAX (lemax, degme) ;
 	wflg += lemax ;
-	wflg = clear_flag (wflg, wbig, W, n) ;
+	wflg = Highs_amd_clear_flag (wflg, wbig, W, n) ;
 	/*  at this point, W [0..n-1] < wflg holds */
 
 /* ========================================================================= */
@@ -1682,7 +1682,7 @@ void Highs_amd_2
 /* postorder the assembly tree */
 /* ========================================================================= */
 
-    amd_postorder (n, Pe, Nv, Elen,
+    Highs_amd_postorder (n, Pe, Nv, Elen,
 	W,			/* output order */
 	Head, Next, Last) ;	/* workspace */
 

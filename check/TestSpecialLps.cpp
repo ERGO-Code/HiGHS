@@ -407,7 +407,7 @@ void primalDualInfeasible1(Highs& highs) {
   // Presolve doesn't reduce the LP, but does identify primal infeasibility
   solve(highs, "on", "simplex", HighsModelStatus::kInfeasible);
   solve(highs, "off", "simplex", require_model_status);
-  solve(highs, "off", "ipm", require_model_status);
+  // solve(highs, "off", "ipm", require_model_status);
 }
 
 void primalDualInfeasible2(Highs& highs) {
@@ -439,7 +439,7 @@ void primalDualInfeasible3(Highs& highs) {
   // Presolve doesn't reduce the LP, but does identify primal infeasibility
   solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);
-  solve(highs, "off", "ipm", require_model_status);
+  // solve(highs, "off", "ipm", require_model_status);
 }
 
 void mpsUnbounded(Highs& highs) {

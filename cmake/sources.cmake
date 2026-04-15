@@ -178,7 +178,6 @@ set(ipx_headers
   ipm/ipx/utils.h)
 
 set(hipo_sources 
-    ipm/hipo/ipm/CurtisReidScaling.cpp 
     ipm/hipo/ipm/IpmData.cpp 
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
     ipm/hipo/ipm/Control.cpp
@@ -190,7 +189,6 @@ set(hipo_sources
     ipm/hipo/ipm/Solver.cpp)
 
 set(hipo_headers
-    ipm/hipo/ipm/CurtisReidScaling.h
     ipm/hipo/ipm/IpmData.h
     ipm/hipo/ipm/FactorHiGHSSolver.h
     ipm/hipo/ipm/Parameters.h
@@ -306,6 +304,7 @@ set(hipo_orderings_headers
     ../extern/metis/GKlib/gk_arch.h
     ../extern/metis/GKlib/gk_defs.h
     ../extern/metis/GKlib/gk_macros.h
+    ../extern/metis/GKlib/gk_mangle.h
     ../extern/metis/GKlib/gk_mkblas.h
     ../extern/metis/GKlib/gk_mkmemory.h
     ../extern/metis/GKlib/gk_mkpqueue.h
@@ -321,6 +320,7 @@ set(hipo_orderings_headers
     ../extern/metis/libmetis/defs.h
     ../extern/metis/libmetis/gklib_defs.h
     ../extern/metis/libmetis/macros.h
+    ../extern/metis/libmetis/metis_mangle.h
     ../extern/metis/libmetis/metislib.h
     ../extern/metis/libmetis/proto.h
     ../extern/metis/libmetis/stdheaders.h

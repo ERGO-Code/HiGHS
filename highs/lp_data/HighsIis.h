@@ -93,7 +93,7 @@ class HighsIis {
   void removeCol(const HighsInt col);
   void removeRow(const HighsInt row);
   HighsStatus deduce(const HighsLp& lp, const HighsOptions& options,
-                     const HighsBasis& basis);
+                     const HighsCallback& callback, const HighsBasis& basis);
   void setLp(const HighsLp& lp);
   HighsInt nonIsStatus() const;
   void setStatus(const HighsLp& lp);
@@ -101,6 +101,7 @@ class HighsIis {
                                 const bool is_row) const;
 
   HighsStatus compute(const HighsLp& lp, const HighsOptions& options,
+                      const HighsCallback& callback,
                       const HighsBasis* basis = nullptr);
   void processBoundRelaxation(Highs& highs, const bool row_deletion,
                               const bool drop_lower, const HighsInt iX,

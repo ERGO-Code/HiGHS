@@ -170,13 +170,51 @@ void Model::print(const LogHighs& log) const {
   // compute max and min entry of A in absolute value
   double Amin = kHighsInf;
   double Amax = 0.0;
-  for (double val : A_.value_) {
-    if (val != 0.0) {
-      Amin = std::min(Amin, std::abs(val));
-      Amax = std::max(Amax, std::abs(val));
+  std::vector<double> norm_inf_cols(n_);
+  std::vector<double> norm_inf_rows(m_);
+  std::vector<double> norm_one_cols(n_);
+  std::vector<double> norm_one_rows(m_);
+  for (Int col = 0; col < n_; ++col) {
+    for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
+      const Int row = A_.index_[el];
+      const double value = A_.value_[el];
+      if (value != 0.0) {
+        Amin = std::min(Amin, std::abs(value));
+        Amax = std::max(Amax, std::abs(value));
+        norm_inf_cols[col] = std::max(norm_inf_cols[col], std::abs(value));
+        norm_inf_rows[row] = std::max(norm_inf_rows[row], std::abs(value));
+        norm_one_cols[col] += std::abs(value);
+        norm_one_rows[row] += std::abs(value);
+      }
     }
   }
   if (std::isinf(Amin)) Amin = 0.0;
+
+  double norm_inf_col_min = kHighsInf;
+  double norm_inf_col_max = 0.0;
+  double norm_inf_row_min = kHighsInf;
+  double norm_inf_row_max = 0.0;
+  for (double d : norm_inf_cols) {
+    norm_inf_col_min = std::min(norm_inf_col_min, d);
+    norm_inf_col_max = std::max(norm_inf_col_max, d);
+  }
+  for (double d : norm_inf_rows) {
+    norm_inf_row_min = std::min(norm_inf_row_min, d);
+    norm_inf_row_max = std::max(norm_inf_row_max, d);
+  }
+
+  double norm_one_col_min = kHighsInf;
+  double norm_one_col_max = 0.0;
+  double norm_one_row_min = kHighsInf;
+  double norm_one_row_max = 0.0;
+  for (double d : norm_one_cols) {
+    norm_one_col_min = std::min(norm_one_col_min, d);
+    norm_one_col_max = std::max(norm_one_col_max, d);
+  }
+  for (double d : norm_one_rows) {
+    norm_one_row_min = std::min(norm_one_row_min, d);
+    norm_one_row_max = std::max(norm_one_row_max, d);
+  }
 
   // compute max and min entry of c
   double cmin = kHighsInf;
@@ -211,17 +249,14 @@ void Model::print(const LogHighs& log) const {
   }
   if (std::isinf(Qmin)) Qmin = 0.0;
 
-  // compute max and min for bounds
+  // compute max and min for bounds intervals
   double boundmin = kHighsInf;
   double boundmax = 0.0;
   for (Int i = 0; i < n_; ++i) {
-    if (lower_[i] != 0.0 && std::isfinite(lower_[i])) {
-      boundmin = std::min(boundmin, std::abs(lower_[i]));
-      boundmax = std::max(boundmax, std::abs(lower_[i]));
-    }
-    if (upper_[i] != 0.0 && std::isfinite(upper_[i])) {
-      boundmin = std::min(boundmin, std::abs(upper_[i]));
-      boundmax = std::max(boundmax, std::abs(upper_[i]));
+    if (std::isfinite(lower_[i]) && std::isfinite(upper_[i])) {
+      const double diff = std::abs(upper_[i] - lower_[i]);
+      boundmin = std::min(boundmin, diff);
+      boundmax = std::max(boundmax, diff);
     }
   }
   if (std::isinf(boundmin)) boundmin = 0.0;
@@ -243,59 +278,42 @@ void Model::print(const LogHighs& log) const {
 
   // print ranges
   log_stream << textline("Range of A:") << "[" << sci(Amin, 5, 1) << ", "
-             << sci(Amax, 5, 1) << "], ratio ";
-  if (Amin != 0.0)
-    log_stream << sci(Amax / Amin, 0, 1) << '\n';
-  else
-    log_stream << "-\n";
+             << sci(Amax, 5, 1) << "]\n";
+
+  if (log.debug(1)) {
+    log_stream << textline("Inf-norm rows:") << "["
+               << sci(norm_inf_row_min, 5, 1) << ", "
+               << sci(norm_inf_row_max, 5, 1) << "]\n";
+
+    log_stream << textline("Inf-norm cols:") << "["
+               << sci(norm_inf_col_min, 5, 1) << ", "
+               << sci(norm_inf_col_max, 5, 1) << "]\n";
+
+    log_stream << textline("One-norm rows:") << "["
+               << sci(norm_one_row_min, 5, 1) << ", "
+               << sci(norm_one_row_max, 5, 1) << "]\n";
+
+    log_stream << textline("One-norm cols:") << "["
+               << sci(norm_one_col_min, 5, 1) << ", "
+               << sci(norm_one_col_max, 5, 1) << "]\n";
+  }
 
   log_stream << textline("Range of b:") << "[" << sci(bmin, 5, 1) << ", "
-             << sci(bmax, 5, 1) << "], ratio ";
-  if (bmin != 0.0)
-    log_stream << sci(bmax / bmin, 0, 1) << '\n';
-  else
-    log_stream << "-\n";
+             << sci(bmax, 5, 1) << "]\n";
 
   log_stream << textline("Range of c:") << "[" << sci(cmin, 5, 1) << ", "
-             << sci(cmax, 5, 1) << "], ratio ";
-  if (cmin != 0.0)
-    log_stream << sci(cmax / cmin, 0, 1) << '\n';
-  else
-    log_stream << "-\n";
+             << sci(cmax, 5, 1) << "]\n";
 
   if (qp()) {
     log_stream << textline("Range of Q:") << "[" << sci(Qmin, 5, 1) << ", "
-               << sci(Qmax, 5, 1) << "], ratio ";
-    if (Qmin != 0.0)
-      log_stream << sci(Qmax / Qmin, 0, 1) << '\n';
-    else
-      log_stream << "-\n";
+               << sci(Qmax, 5, 1) << "]\n";
   }
 
-  log_stream << textline("Range of bounds:") << "[" << sci(boundmin, 5, 1)
-             << ", " << sci(boundmax, 5, 1) << "], ratio ";
-  if (boundmin != 0.0)
-    log_stream << sci(boundmax / boundmin, 0, 1) << '\n';
-  else
-    log_stream << "-\n";
+  log_stream << textline("Range of bound intervals:") << "["
+             << sci(boundmin, 5, 1) << ", " << sci(boundmax, 5, 1) << "]\n";
 
   log_stream << textline("Scaling coefficients:") << "[" << sci(scalemin, 5, 1)
-             << ", " << sci(scalemax, 5, 1) << "], ratio ";
-  if (scalemin != 0.0)
-    log_stream << sci(scalemax / scalemin, 0, 1) << '\n';
-  else
-    log_stream << "-\n";
-
-  if (log.debug(1)) {
-    log_stream << textline("Norm b unscaled") << sci(norm_unscaled_rhs_, 0, 1)
-               << '\n';
-    log_stream << textline("Norm b scaled") << sci(norm_scaled_rhs_, 0, 1)
-               << '\n';
-    log_stream << textline("Norm c unscaled") << sci(norm_unscaled_obj_, 0, 1)
-               << '\n';
-    log_stream << textline("Norm c scaled") << sci(norm_scaled_obj_, 0, 1)
-               << '\n';
-  }
+             << ", " << sci(scalemax, 5, 1) << "]\n";
 
   if (log.debug(1)) preprocessor_.print(log_stream);
 

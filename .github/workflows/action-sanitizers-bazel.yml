@@ -1,6 +1,7 @@
 name: action-sanitizers-bazel
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 
 jobs:
   asan:
