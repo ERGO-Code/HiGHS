@@ -1105,7 +1105,15 @@ class Highs {
                                      const double upper,
                                      const HighsInt num_nz,
                                      const HighsInt* indices,
-                                     const double* values);
+                                     const double* values,
+				     const std::string name = "");
+
+  /**
+   * @brief Return a const reference to the internal HighsIndicatorConstraints instance
+   */
+  const HighsIndicatorConstraints& getIndicatorConstraints() const {
+    return this->model_.lp_.indicators_;
+  }
 
   /**
    * @brief Return the number of indicator constraints

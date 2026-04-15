@@ -2725,13 +2725,14 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
 HighsStatus Highs::addIndicatorConstraint(
     const HighsInt binary_col, const HighsInt binary_value,
     const double lower, const double upper,
-    const HighsInt num_nz, const HighsInt* indices, const double* values) {
+    const HighsInt num_nz, const HighsInt* indices, const double* values,
+    const std::string name) {
   this->logHeader();
   HighsLp& lp = this->model_.lp_;
   HighsStatus return_status =
     assessIndicatorConstraintScalars(binary_col, binary_value, lower, upper,
 				     lp, this->options_.log_options);
-  if (return_status != HighsStatus::kOk) return return_status;
+  if (return_status == HighsStatus::kError) return return_status;
 
   HighsSparseMatrix matrix;
   matrix.format_ = MatrixFormat::kRowwise;
@@ -2746,7 +2747,7 @@ HighsStatus Highs::addIndicatorConstraint(
 				"Single indicator constraint matrix",
 				this->options_.small_matrix_value,
 				this->options_.large_matrix_value);
-  if (return_status != HighsStatus::kOk) return return_status;
+  if (return_status == HighsStatus::kError) return return_status;
 
   HighsIndicatorConstraints& indicators = lp.indicators_;
   // If this is the first IC, ensure that the matrix is rowwise
@@ -2757,14 +2758,14 @@ HighsStatus Highs::addIndicatorConstraint(
   indicators.matrix.addVec(num_nz, indices, values);
   indicators.lower.push_back(lower);
   indicators.upper.push_back(upper);
-  indicators.name.push_back("");
+  indicators.name.push_back(name.empty() ? "" : name);
   // Number of columns in lp.indicators_.matrix needs to be the same
   // as lp. This is so that, when transposed, the matrix has the
   // right number of columns.
   indicators.matrix.num_col_ = lp.num_col_;
 
   clearDerivedModelProperties();
-  return returnFromHighs(HighsStatus::kOk);
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {

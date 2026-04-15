@@ -823,7 +823,8 @@ HighsStatus HighsSparseMatrix::assessIndexBounds(
 HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                                       const std::string matrix_name,
                                       const double small_matrix_value,
-                                      const double large_matrix_value) {
+                                      const double large_matrix_value,
+				      const bool sum_duplicates) {
   assert(this->formatOk());
   // Identify main dimensions
   HighsInt vec_dim;
@@ -838,7 +839,7 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
   const bool partitioned = this->format_ == MatrixFormat::kRowwisePartitioned;
   return assessMatrix(log_options, matrix_name, vec_dim, num_vec, partitioned,
                       this->start_, this->p_end_, this->index_, this->value_,
-                      small_matrix_value, large_matrix_value);
+                      small_matrix_value, large_matrix_value, sum_duplicates);
 }
 
 void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,

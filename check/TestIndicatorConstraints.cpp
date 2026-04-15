@@ -282,35 +282,98 @@ TEST_CASE("indicator-multiple", "[highs_test_indicator]") {
 TEST_CASE("indicator-validation", "[highs_test_indicator]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  const HighsIndicatorConstraints& ic = highs.getIndicatorConstraints();
+  const std::vector<HighsInt>& ic_start = ic.matrix.start_;
+  const std::vector<HighsInt>& ic_index = ic.matrix.index_;
+  const std::vector<double>& ic_value = ic.matrix.value_;
 
-  highs.addVar(0.0, 10.0);  // x (col 0)
-  highs.addVar(0.0, 1.0);   // z (col 1)
-  highs.changeColIntegrality(1, HighsVarType::kInteger);
+  highs.addVar(0.0, 1.0);  // w (col 0)
+  highs.addVar(0.0, 2.0);  // x (col 1)
+  highs.addVar(0.0, 3.0);  // y (col 2)
+  highs.addVar(0.0, 1.0);  // z (col 3)
 
-  HighsInt indices[] = {0};
-  double values[] = {1.0};
+  const HighsInt w = 0;
+  const HighsInt x = 1;
+  const HighsInt y = 2;
+  const HighsInt z = 3;
+  const HighsInt invalid_var0 = -1;
+  const HighsInt invalid_var1 = 5;
+  const HighsInt valid_binary_value = 1;
+  const HighsInt invalid_binary_value = 2;
+
+  highs.changeColIntegrality(z, HighsVarType::kInteger);
+
+  HighsInt index[] = {w, x, y};
+  double value[] = {1.0, 1.0, 1.0};
+  HighsInt nnz = 3;
+
+  HighsInt num_ic = 0;
 
   // Invalid binary_col
-  REQUIRE(highs.addIndicatorConstraint(-1, 1, 0.0, inf, 1, indices, values) ==
+  REQUIRE(highs.addIndicatorConstraint(invalid_var0, valid_binary_value, 0.0, inf, nnz, index, value) ==
           HighsStatus::kError);
-  REQUIRE(highs.addIndicatorConstraint(5, 1, 0.0, inf, 1, indices, values) ==
+  REQUIRE(highs.getNumIndicatorConstraints() == num_ic);
+
+  REQUIRE(highs.addIndicatorConstraint(invalid_var1, valid_binary_value, 0.0, inf, nnz, index, value) ==
           HighsStatus::kError);
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
   // Invalid binary_value
-  REQUIRE(highs.addIndicatorConstraint(1, 2, 0.0, inf, 1, indices, values) ==
+  REQUIRE(highs.addIndicatorConstraint(z, invalid_binary_value, 0.0, inf, nnz, index, value) ==
           HighsStatus::kError);
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
   // Non-integer variable
-  REQUIRE(highs.addIndicatorConstraint(0, 1, 0.0, inf, 1, indices, values) ==
+  REQUIRE(highs.addIndicatorConstraint(x, 1, 0.0, inf, nnz, index, value) ==
           HighsStatus::kError);
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
-  // Free indicator constraintn
-  REQUIRE(highs.addIndicatorConstraint(1, 1, -inf, inf, 1, indices, values) ==
+  // Free indicator constraint
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, -inf, inf, nnz, index, value) ==
           HighsStatus::kError);
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
   // Valid call should succeed
-  REQUIRE(highs.addIndicatorConstraint(1, 1, 5.0, inf, 1, indices, values) ==
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value) ==
           HighsStatus::kOk);
+  num_ic++;
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
+
+  // Now pass a name
+  std::string name = "IC0";
+
+  // Small constraint coefficient should lead to warning
+  value[1] = 1e-15;
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value, name) ==
+          HighsStatus::kWarning);
+  num_ic++;
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
+  REQUIRE(ic_start[num_ic]-ic_start[num_ic-1] == 2);
+
+  name = "IC1";
+  // Large constraint coefficient should lead to error
+  value[1] = 1e15;
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value, name) ==
+          HighsStatus::kError);
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
+  value[1] = 1;
+
+  // Illegal index should lead to error
+  index[1] = invalid_var0;
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value, name) ==
+          HighsStatus::kError);
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
+
+  // Duplicated index should lead to warning
+  index[1] = w;
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value, name) ==
+          HighsStatus::kWarning);
+  num_ic++;
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
+  REQUIRE(ic_start[num_ic]-ic_start[num_ic-1] == 2);
+  HighsInt iEl = ic_start[num_ic];
+  REQUIRE(ic_index[iEl] == w);
+  REQUIRE(ic_value[iEl] == value[0] + value[1]);
   highs.resetGlobalScheduler(true);
 }
 
