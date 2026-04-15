@@ -1485,8 +1485,7 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
  */
 HighsInt Highs_addIndicatorConstraint(void* highs, const HighsInt binary_col,
                                       const HighsInt binary_value,
-				      const double lower,
-                                      const double upper,
+                                      const double lower, const double upper,
                                       const HighsInt num_nz,
                                       const HighsInt* index,
                                       const double* value);

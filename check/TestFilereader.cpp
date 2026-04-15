@@ -567,7 +567,8 @@ TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
   std::remove(lp_file.c_str());
 }
 
-TEST_CASE("write-read-lp-file-with-curved-bracket-in-name", "[highs_filereader]") {
+TEST_CASE("write-read-lp-file-with-curved-bracket-in-name",
+          "[highs_filereader]") {
   // LP files with names containing '[' or ']' are rejected by CPLEX,
   // but make surte that '(' and ')' are OK
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();

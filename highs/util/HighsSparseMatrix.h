@@ -71,7 +71,7 @@ class HighsSparseMatrix {
                      const std::string matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value,
-		     const bool sum_duplicates = false);
+                     const bool sum_duplicates = false);
   void assessSmallValues(const HighsLogOptions& log_options,
                          const double small_matrix_value);
   bool hasLargeValue(const double large_matrix_value);

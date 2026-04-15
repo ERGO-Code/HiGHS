@@ -59,15 +59,12 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const double infinite_bound,
                          const HighsVarType* integrality = nullptr);
 
-HighsStatus assessIndicatorConstraintScalars(const HighsInt binary_col,
-					     const HighsInt binary_value,
-					     const double lower,
-					     const double upper,
-					     const HighsLp& lp,
-					     const HighsLogOptions& log_options);
+HighsStatus assessIndicatorConstraintScalars(
+    const HighsInt binary_col, const HighsInt binary_value, const double lower,
+    const double upper, const HighsLp& lp, const HighsLogOptions& log_options);
 
 HighsStatus assessIndicatorConstraints(const HighsOptions& options,
-				       HighsLp& lp); 
+                                       HighsLp& lp);
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 

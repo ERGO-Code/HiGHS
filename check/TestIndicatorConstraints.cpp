@@ -310,17 +310,14 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
   HighsInt num_ic = 0;
 
   // Invalid binary_col
-  REQUIRE(highs.addIndicatorConstraint(invalid_var0, valid_binary_value, 0.0, inf, nnz, index, value) ==
-          HighsStatus::kError);
+  REQUIRE(highs.addIndicatorConstraint(invalid_var0, valid_binary_value, 0.0,
+                                       inf, nnz, index,
+                                       value) == HighsStatus::kError);
   REQUIRE(highs.getNumIndicatorConstraints() == num_ic);
 
-  REQUIRE(highs.addIndicatorConstraint(invalid_var1, valid_binary_value, 0.0, inf, nnz, index, value) ==
-          HighsStatus::kError);
-  REQUIRE(ic.numIndicatorConstraints() == num_ic);
-
-  // Invalid binary_value
-  REQUIRE(highs.addIndicatorConstraint(z, invalid_binary_value, 0.0, inf, nnz, index, value) ==
-          HighsStatus::kError);
+  REQUIRE(highs.addIndicatorConstraint(invalid_var1, valid_binary_value, 0.0,
+                                       inf, nnz, index,
+                                       value) == HighsStatus::kError);
   REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
   // Non-integer variable
@@ -328,14 +325,19 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
           HighsStatus::kError);
   REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
+  // Invalid binary_value
+  REQUIRE(highs.addIndicatorConstraint(z, invalid_binary_value, 0.0, inf, nnz,
+                                       index, value) == HighsStatus::kError);
+  REQUIRE(ic.numIndicatorConstraints() == num_ic);
+
   // Free indicator constraint
-  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, -inf, inf, nnz, index, value) ==
-          HighsStatus::kError);
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, -inf, inf, nnz,
+                                       index, value) == HighsStatus::kError);
   REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
   // Valid call should succeed
-  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value) ==
-          HighsStatus::kOk);
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz,
+                                       index, value) == HighsStatus::kOk);
   num_ic++;
   REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
@@ -344,36 +346,37 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
 
   // Small constraint coefficient should lead to warning
   value[1] = 1e-15;
-  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value, name) ==
-          HighsStatus::kWarning);
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz,
+                                       index, value,
+                                       name) == HighsStatus::kWarning);
   num_ic++;
   REQUIRE(ic.numIndicatorConstraints() == num_ic);
-  REQUIRE(ic_start[num_ic]-ic_start[num_ic-1] == 2);
+  REQUIRE(ic_start[num_ic] - ic_start[num_ic - 1] == 2);
 
   name = "IC1";
   // Large constraint coefficient should lead to error
   value[1] = 1e15;
-  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value, name) ==
-          HighsStatus::kError);
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz,
+                                       index, value,
+                                       name) == HighsStatus::kError);
   REQUIRE(ic.numIndicatorConstraints() == num_ic);
   value[1] = 1;
 
   // Illegal index should lead to error
   index[1] = invalid_var0;
-  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value, name) ==
-          HighsStatus::kError);
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz,
+                                       index, value,
+                                       name) == HighsStatus::kError);
   REQUIRE(ic.numIndicatorConstraints() == num_ic);
 
-  // Duplicated index should lead to warning
+  // Duplicated index should lead to error since (like regular
+  // constraints) duplicates aren't summed
   index[1] = w;
-  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz, index, value, name) ==
-          HighsStatus::kWarning);
-  num_ic++;
+  REQUIRE(highs.addIndicatorConstraint(z, valid_binary_value, 5.0, inf, nnz,
+                                       index, value,
+                                       name) == HighsStatus::kError);
   REQUIRE(ic.numIndicatorConstraints() == num_ic);
-  REQUIRE(ic_start[num_ic]-ic_start[num_ic-1] == 2);
-  HighsInt iEl = ic_start[num_ic];
-  REQUIRE(ic_index[iEl] == w);
-  REQUIRE(ic_value[iEl] == value[0] + value[1]);
+
   highs.resetGlobalScheduler(true);
 }
 

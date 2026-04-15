@@ -201,6 +201,9 @@ HighsStatus assessMatrix(
           // Sum the duplicate entry
           assert(matrix_index[previous_el] == component);
           matrix_value[previous_el] += matrix_value[el];
+          // If sum_duplicates is true, then no error occurs: the
+          // value is added into the previous occurrence and (of
+          // course) no new entry is created
           continue;
         }
         highsLogUser(log_options, HighsLogType::kError,
@@ -210,7 +213,8 @@ HighsStatus assessMatrix(
                      matrix_name.c_str(), ix, el, component);
         return HighsStatus::kError;
       }
-      // Not a duplicate
+      // Not a duplicate - or duplicate has been summed
+      //
       // Shift the index and value of the OK entry to the new
       // position in the index and value vectors, and increment
       // the new number of nonzeros

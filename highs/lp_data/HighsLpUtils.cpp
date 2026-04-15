@@ -470,29 +470,26 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 }
 
 HighsStatus assessIndicatorConstraints(const HighsOptions& options,
-				       HighsLp& lp) {
+                                       HighsLp& lp) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsIndicatorConstraints& ic = lp.indicators_;
   HighsInt num_ic = ic.numIndicatorConstraints();
   if (!num_ic) return return_status;
   const HighsLogOptions& log_options = options.log_options;
   for (HighsInt iIc = 0; iIc < num_ic; iIc++) {
-    return_status =
-      assessIndicatorConstraintScalars(ic.col[iIc], ic.value[iIc], ic.lower[iIc], ic.upper[iIc],
-				       lp, log_options);
+    return_status = assessIndicatorConstraintScalars(
+        ic.col[iIc], ic.value[iIc], ic.lower[iIc], ic.upper[iIc], lp,
+        log_options);
     if (return_status != HighsStatus::kOk) return return_status;
   }
   return ic.matrix.assess(log_options, "Indicator constraint matrix",
-			  options.small_matrix_value,
-			  options.large_matrix_value);
+                          options.small_matrix_value,
+                          options.large_matrix_value);
 }
 
-HighsStatus assessIndicatorConstraintScalars(const HighsInt col,
-					     const HighsInt value,
-					     const double lower,
-					     const double upper,
-					     const HighsLp& lp,
-					     const HighsLogOptions& log_options) {
+HighsStatus assessIndicatorConstraintScalars(
+    const HighsInt col, const HighsInt value, const double lower,
+    const double upper, const HighsLp& lp, const HighsLogOptions& log_options) {
   HighsStatus return_status = HighsStatus::kOk;
   // Validate col
   if (col < 0 || col >= lp.num_col_) {

@@ -2723,15 +2723,13 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
 }
 
 HighsStatus Highs::addIndicatorConstraint(
-    const HighsInt binary_col, const HighsInt binary_value,
-    const double lower, const double upper,
-    const HighsInt num_nz, const HighsInt* indices, const double* values,
-    const std::string name) {
+    const HighsInt binary_col, const HighsInt binary_value, const double lower,
+    const double upper, const HighsInt num_nz, const HighsInt* indices,
+    const double* values, const std::string name) {
   this->logHeader();
   HighsLp& lp = this->model_.lp_;
-  HighsStatus return_status =
-    assessIndicatorConstraintScalars(binary_col, binary_value, lower, upper,
-				     lp, this->options_.log_options);
+  HighsStatus return_status = assessIndicatorConstraintScalars(
+      binary_col, binary_value, lower, upper, lp, this->options_.log_options);
   if (return_status == HighsStatus::kError) return return_status;
 
   HighsSparseMatrix matrix;
@@ -2743,10 +2741,12 @@ HighsStatus Highs::addIndicatorConstraint(
     matrix.index_.push_back(indices[iEl]);
     matrix.value_.push_back(values[iEl]);
   }
-  return_status = matrix.assess(this->options_.log_options,
-				"Single indicator constraint matrix",
-				this->options_.small_matrix_value,
-				this->options_.large_matrix_value);
+  // Assess the row, not summing duplicates
+  return_status = matrix.assess(
+      this->options_.log_options, "Single indicator constraint",
+      this->options_.small_matrix_value, this->options_.large_matrix_value);
+  // Any small entries will reduce num_nz
+  HighsInt final_num_nz = matrix.start_[1];
   if (return_status == HighsStatus::kError) return return_status;
 
   HighsIndicatorConstraints& indicators = lp.indicators_;
@@ -2755,7 +2755,7 @@ HighsStatus Highs::addIndicatorConstraint(
     indicators.matrix.format_ = MatrixFormat::kRowwise;
   indicators.col.push_back(binary_col);
   indicators.value.push_back(binary_value);
-  indicators.matrix.addVec(num_nz, indices, values);
+  indicators.matrix.addVec(final_num_nz, indices, values);
   indicators.lower.push_back(lower);
   indicators.upper.push_back(upper);
   indicators.name.push_back(name.empty() ? "" : name);

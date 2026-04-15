@@ -1099,17 +1099,16 @@ class Highs {
    *
    * The binary variable must have integer integrality.
    */
-  HighsStatus addIndicatorConstraint(const HighsInt col,
-                                     const HighsInt value,
-				     const double lower,
-                                     const double upper,
+  HighsStatus addIndicatorConstraint(const HighsInt col, const HighsInt value,
+                                     const double lower, const double upper,
                                      const HighsInt num_nz,
                                      const HighsInt* indices,
                                      const double* values,
-				     const std::string name = "");
+                                     const std::string name = "");
 
   /**
-   * @brief Return a const reference to the internal HighsIndicatorConstraints instance
+   * @brief Return a const reference to the internal HighsIndicatorConstraints
+   * instance
    */
   const HighsIndicatorConstraints& getIndicatorConstraints() const {
     return this->model_.lp_.indicators_;

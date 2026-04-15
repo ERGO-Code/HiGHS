@@ -824,7 +824,7 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                                       const std::string matrix_name,
                                       const double small_matrix_value,
                                       const double large_matrix_value,
-				      const bool sum_duplicates) {
+                                      const bool sum_duplicates) {
   assert(this->formatOk());
   // Identify main dimensions
   HighsInt vec_dim;
