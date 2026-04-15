@@ -21,15 +21,8 @@ const std::string kLegalLpFileColRowNameFirstChar =
     "abcdefghijklmnopqrstuvwxyz"
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "0123456789."
-    "!\"#$%&(),.;?@_‘’{}~"
-    "[]";
+    "!\"#$%&(),.;?@_‘’{}~";
 const std::string kLegalLpFileColRowNameChar = kLegalLpFileColRowNameFirstChar;
-// CVXPY wants to be able to use '[' and ']' in variable and
-// constraint names (https://github.com/cvxpy/cvxpy/issues/3282), and
-// HiGHS v1.14.0 doesn't permit this. However, CPLEX would also
-// automatically convert names "containing characters ... such as '+',
-// '-', '*', '^', and '['." Allow the use of '[' and ']' for now, but
-// try to wean CVXPY off their use
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,

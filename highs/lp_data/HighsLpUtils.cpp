@@ -469,6 +469,66 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
+HighsStatus assessIndicatorConstraints(const HighsOptions& options,
+				       HighsLp& lp) {
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsIndicatorConstraints& ic = lp.indicators_;
+  HighsInt num_ic = ic.numIndicatorConstraints();
+  if (!num_ic) return return_status;
+  const HighsLogOptions& log_options = options.log_options;
+  for (HighsInt iIc = 0; iIc < num_ic; iIc++) {
+    return_status =
+      assessIndicatorConstraintScalars(ic.col[iIc], ic.value[iIc], ic.lower[iIc], ic.upper[iIc],
+				       lp, log_options);
+    if (return_status != HighsStatus::kOk) return return_status;
+  }
+  return ic.matrix.assess(log_options, "Indicator constraint matrix",
+			  options.small_matrix_value,
+			  options.large_matrix_value);
+}
+
+HighsStatus assessIndicatorConstraintScalars(const HighsInt col,
+					     const HighsInt value,
+					     const double lower,
+					     const double upper,
+					     const HighsLp& lp,
+					     const HighsLogOptions& log_options) {
+  HighsStatus return_status = HighsStatus::kOk;
+  // Validate col
+  if (col < 0 || col >= lp.num_col_) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "addIndicatorConstraint: col = %" HIGHSINT_FORMAT
+                 " is out of range [0, %" HIGHSINT_FORMAT ")\n",
+                 col, lp.num_col_);
+    return HighsStatus::kError;
+  }
+  // Validate value
+  if (value != 0 && value != 1) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "addIndicatorConstraint: value = %" HIGHSINT_FORMAT
+                 " is not 0 or 1\n",
+                 value);
+    return HighsStatus::kError;
+  }
+  // Validate that col has integer integrality
+  if (lp.integrality_.size() <= static_cast<size_t>(col) ||
+      lp.integrality_[col] != HighsVarType::kInteger) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "addIndicatorConstraint: col = %" HIGHSINT_FORMAT
+                 " is not an integer variable\n",
+                 col);
+    return HighsStatus::kError;
+  }
+  // Validate that the constraint is not free
+  if (lower <= -kHighsInf && upper >= kHighsInf) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "addIndicatorConstraint: cannot have indicator constraint "
+                 "that is free\n");
+    return HighsStatus::kError;
+  }
+  return return_status;
+}
+
 HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
                                 bool& made_semi_variable_mods) {
   made_semi_variable_mods = false;

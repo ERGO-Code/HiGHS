@@ -474,18 +474,18 @@ std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getPrimalRay(
 
 HighsStatus highs_addIndicatorConstraint(Highs* h, HighsInt binary_col,
                                          HighsInt binary_value,
+                                         double lower, double upper, 
                                          HighsInt num_nz,
                                          dense_array_t<HighsInt> indices,
-                                         dense_array_t<double> values,
-                                         double lower, double upper) {
+                                         dense_array_t<double> values) {
   py::buffer_info indices_info = indices.request();
   py::buffer_info values_info = values.request();
 
   HighsInt* indices_ptr = reinterpret_cast<HighsInt*>(indices_info.ptr);
   double* values_ptr = static_cast<double*>(values_info.ptr);
 
-  return h->addIndicatorConstraint(binary_col, binary_value, num_nz,
-                                   indices_ptr, values_ptr, lower, upper);
+  return h->addIndicatorConstraint(binary_col, binary_value, lower, upper, num_nz,
+                                   indices_ptr, values_ptr);
 }
 
 HighsStatus highs_addRow(Highs* h, double lower, double upper,

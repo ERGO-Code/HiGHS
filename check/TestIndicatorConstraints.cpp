@@ -65,8 +65,7 @@ TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
   // Optimal: z=0, x=0, obj=0
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  //  highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("log_dev_level", 1);
+  highs.setOptionValue("output_flag", dev_run);
 
   highs.addVar(0.0, 10.0);  // x (col 0)
   highs.addVar(0.0, 1.0);   // z (col 1)
@@ -81,7 +80,7 @@ TEST_CASE("indicator-simple-v1", "[highs_test_indicator]") {
   // Indicator: z=1 -> x >= 5
   HighsInt indices[] = {0};
   double values[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(1, 1, 5.0, inf, 1, indices, values) ==
           HighsStatus::kOk);
 
   REQUIRE(highs.getNumIndicatorConstraints() == 1);
@@ -123,7 +122,7 @@ TEST_CASE("indicator-simple-v0", "[highs_test_indicator]") {
   // Indicator: z=0 -> x >= 5
   HighsInt indices[] = {0};
   double values[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(1, 0, 1, indices, values, 5.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(1, 0, 5.0, inf, 1, indices, values) ==
           HighsStatus::kOk);
 
   const std::vector<double> col_value = {0, 1};
@@ -168,7 +167,7 @@ TEST_CASE("indicator-max-big-m", "[highs_test_indicator]") {
       highs.changeColBounds(x, 0.0, kHighsInf);
       highs.changeColBounds(y, 0.0, kHighsInf);
     }
-    REQUIRE(highs.addIndicatorConstraint(z, 0, 2, indices, values, 3.0, 7.0) ==
+    REQUIRE(highs.addIndicatorConstraint(z, 0, 3.0, 7.0, 2, indices, values) ==
             HighsStatus::kOk);
 
     REQUIRE(highs.run() == HighsStatus::kError);
@@ -184,7 +183,7 @@ TEST_CASE("indicator-range", "[highs_test_indicator]") {
   //      z binary, x in [0, 10]
   // Optimal: z=0, x=0, obj=0
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
 
   highs.addVar(0.0, 10.0);  // x (col 0)
   highs.addVar(0.0, 1.0);   // z (col 1)
@@ -196,7 +195,7 @@ TEST_CASE("indicator-range", "[highs_test_indicator]") {
   // Indicator: z=1 -> 3 <= x <= 7
   HighsInt indices[] = {0};
   double values[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 3.0, 7.0) ==
+  REQUIRE(highs.addIndicatorConstraint(1, 1, 3.0, 7.0, 1, indices, values) ==
           HighsStatus::kOk);
 
   const std::vector<double> col_value = {0, 0};
@@ -226,7 +225,7 @@ TEST_CASE("indicator-forced", "[highs_test_indicator]") {
 
   HighsInt indices[] = {0};
   double values[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(1, 1, 5.0, inf, 1, indices, values) ==
           HighsStatus::kOk);
 
   const std::vector<double> col_value = {5, 1};
@@ -258,13 +257,13 @@ TEST_CASE("indicator-multiple", "[highs_test_indicator]") {
   // z=1 -> x >= 3
   HighsInt idx0[] = {0};
   double val0[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(2, 1, 1, idx0, val0, 3.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(2, 1, 3.0, inf, 1, idx0, val0) ==
           HighsStatus::kOk);
 
   // z=1 -> y >= 4
   HighsInt idx1[] = {1};
   double val1[] = {1.0};
-  REQUIRE(highs.addIndicatorConstraint(2, 1, 1, idx1, val1, 4.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(2, 1, 4.0, inf, 1, idx1, val1) ==
           HighsStatus::kOk);
 
   REQUIRE(highs.getNumIndicatorConstraints() == 2);
@@ -292,25 +291,25 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
   double values[] = {1.0};
 
   // Invalid binary_col
-  REQUIRE(highs.addIndicatorConstraint(-1, 1, 1, indices, values, 0.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(-1, 1, 0.0, inf, 1, indices, values) ==
           HighsStatus::kError);
-  REQUIRE(highs.addIndicatorConstraint(5, 1, 1, indices, values, 0.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(5, 1, 0.0, inf, 1, indices, values) ==
           HighsStatus::kError);
 
   // Invalid binary_value
-  REQUIRE(highs.addIndicatorConstraint(1, 2, 1, indices, values, 0.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(1, 2, 0.0, inf, 1, indices, values) ==
           HighsStatus::kError);
 
   // Non-integer variable
-  REQUIRE(highs.addIndicatorConstraint(0, 1, 1, indices, values, 0.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(0, 1, 0.0, inf, 1, indices, values) ==
           HighsStatus::kError);
 
-  // Free indicator constraint
-  REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, -inf, inf) ==
+  // Free indicator constraintn
+  REQUIRE(highs.addIndicatorConstraint(1, 1, -inf, inf, 1, indices, values) ==
           HighsStatus::kError);
 
   // Valid call should succeed
-  REQUIRE(highs.addIndicatorConstraint(1, 1, 1, indices, values, 5.0, inf) ==
+  REQUIRE(highs.addIndicatorConstraint(1, 1, 5.0, inf, 1, indices, values) ==
           HighsStatus::kOk);
   highs.resetGlobalScheduler(true);
 }

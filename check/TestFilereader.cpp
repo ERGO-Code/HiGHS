@@ -567,9 +567,9 @@ TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
   std::remove(lp_file.c_str());
 }
 
-TEST_CASE("write-lp-file-with-square-bracket-in-name", "[highs_filereader]") {
-  // HiGHS can write LP files with names containing '[' or ']', but
-  // not read them
+TEST_CASE("write-read-lp-file-with-curved-bracket-in-name", "[highs_filereader]") {
+  // LP files with names containing '[' or ']' are rejected by CPLEX,
+  // but make surte that '(' and ')' are OK
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string lp_file = test_name + ".lp";
   HighsLp lp;
@@ -578,13 +578,13 @@ TEST_CASE("write-lp-file-with-square-bracket-in-name", "[highs_filereader]") {
   lp.col_cost_ = {1};
   lp.col_lower_ = {0};
   lp.col_upper_ = {kHighsInf};
-  lp.col_names_ = {"x[0]"};
+  lp.col_names_ = {"x(0)"};
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   REQUIRE(h.writeModel(lp_file) == HighsStatus::kOk);
   if (dev_run) h.setOptionValue("log_dev_level", 1);
-  REQUIRE(h.readModel(lp_file) == HighsStatus::kError);
+  REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
 
   std::remove(lp_file.c_str());
 }

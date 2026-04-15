@@ -2724,43 +2724,29 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
 
 HighsStatus Highs::addIndicatorConstraint(
     const HighsInt binary_col, const HighsInt binary_value,
-    const HighsInt num_nz, const HighsInt* indices, const double* values,
-    const double lower, const double upper) {
+    const double lower, const double upper,
+    const HighsInt num_nz, const HighsInt* indices, const double* values) {
   this->logHeader();
-  HighsLp& lp = model_.lp_;
-  // Validate binary_col
-  if (binary_col < 0 || binary_col >= lp.num_col_) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "addIndicatorConstraint: binary_col = %" HIGHSINT_FORMAT
-                 " is out of range [0, %" HIGHSINT_FORMAT ")\n",
-                 binary_col, lp.num_col_);
-    return HighsStatus::kError;
+  HighsLp& lp = this->model_.lp_;
+  HighsStatus return_status =
+    assessIndicatorConstraintScalars(binary_col, binary_value, lower, upper,
+				     lp, this->options_.log_options);
+  if (return_status != HighsStatus::kOk) return return_status;
+
+  HighsSparseMatrix matrix;
+  matrix.format_ = MatrixFormat::kRowwise;
+  matrix.num_col_ = lp.num_col_;
+  matrix.num_row_ = 1;
+  matrix.start_ = {0, num_nz};
+  for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
+    matrix.index_.push_back(indices[iEl]);
+    matrix.value_.push_back(values[iEl]);
   }
-  // Validate binary_value
-  if (binary_value != 0 && binary_value != 1) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "addIndicatorConstraint: binary_value = %" HIGHSINT_FORMAT
-                 " is not 0 or 1\n",
-                 binary_value);
-    return HighsStatus::kError;
-  }
-  // Validate that binary_col has integer integrality
-  if (lp.integrality_.size() <= static_cast<size_t>(binary_col) ||
-      (lp.integrality_[binary_col] != HighsVarType::kInteger &&
-       lp.integrality_[binary_col] != HighsVarType::kImplicitInteger)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "addIndicatorConstraint: binary_col = %" HIGHSINT_FORMAT
-                 " is not an integer variable\n",
-                 binary_col);
-    return HighsStatus::kError;
-  }
-  // Validate that the constraint is not free
-  if (lower <= -kHighsInf && upper >= kHighsInf) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "addIndicatorConstraint: cannot have indicator constraint "
-                 "that is free\n");
-    return HighsStatus::kError;
-  }
+  return_status = matrix.assess(this->options_.log_options,
+				"Single indicator constraint matrix",
+				this->options_.small_matrix_value,
+				this->options_.large_matrix_value);
+  if (return_status != HighsStatus::kOk) return return_status;
 
   HighsIndicatorConstraints& indicators = lp.indicators_;
   // If this is the first IC, ensure that the matrix is rowwise
