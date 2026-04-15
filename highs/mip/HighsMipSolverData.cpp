@@ -470,9 +470,11 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     const HighsInt sub_solver_clock =
         use_hipo ? kSubSolverHipoAc : kSubSolverIpxAc;
-    mipsolver.sub_solver_call_time_->start(sub_solver_clock);
+    if (mipsolver.sub_solver_call_time_)
+      mipsolver.sub_solver_call_time_->start(sub_solver_clock);
     ipm.optimizeLp();
-    mipsolver.sub_solver_call_time_->stop(sub_solver_clock);
+    if (mipsolver.sub_solver_call_time_)
+      mipsolver.sub_solver_call_time_->stop(sub_solver_clock);
     if (ipm_logging) ipm.setOptionValue("output_flag", false);
     if (use_hipo && mip_ipm_solver == kHighsChooseString &&
         HighsInt(sol.size()) != mipsolver.numCol()) {
@@ -1199,8 +1201,7 @@ try_again:
         mipsolver.options_mip_->time_limit - mipsolver.timer_.read(), 0.1);
     // Highs instantiation
     Highs tmpSolver;
-    tmpSolver.setSubSolverCallTime(
-        mipsolver.sub_solver_call_time_);
+    tmpSolver.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
     const bool debug_report = false;
     if (debug_report) {
       tmpSolver.setOptionValue("log_dev_level", 2);

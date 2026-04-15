@@ -29,8 +29,8 @@ class HighsMipAnalysis {
         sub_solver_call_time_(nullptr),
         analyse_mip_time(false) {}
 
-  HighsTimer* timer_;
-  HighsSubSolverCallTime* sub_solver_call_time_;
+  HighsTimer* timer_ = nullptr;
+  HighsSubSolverCallTime* sub_solver_call_time_ = nullptr;
   void setupMipTime(const HighsOptions& options);
   void mipTimerStart(const HighsInt mip_clock = 0) const;
   void mipTimerStop(const HighsInt mip_clock = 0) const;

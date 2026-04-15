@@ -106,8 +106,7 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   for (HighsInt iLp = 0; iLp < static_cast<HighsInt>(mipdata_->lps.size());
        iLp++)
-    mipdata_->lps[iLp].setSubSolverCallTime(
-        this->sub_solver_call_time_);
+    mipdata_->lps[iLp].setSubSolverCallTime(this->sub_solver_call_time_);
   analysis_.mipTimerStart(kMipClockPresolve);
   analysis_.mipTimerStart(kMipClockInit);
   mipdata_->init();
@@ -289,14 +288,12 @@ restart:
     // Have to set the global sub-solver call time pointer here for
     // new worker 0, since
     // HighsLpRelaxation::removeWorkerSpecificRows(); solves an LP
-    mipdata_->lps.back().setSubSolverCallTime(
-        this->sub_solver_call_time_);
+    mipdata_->lps.back().setSubSolverCallTime(this->sub_solver_call_time_);
     mipdata_->lps.back().removeWorkerSpecificRows();
     for (HighsInt i = 0; i != num_new_workers; ++i) {
       if (i != 0) {
         mipdata_->lps.emplace_back(mipdata_->lps.back());
-        mipdata_->lps.back().setSubSolverCallTime(
-            this->sub_solver_call_time_);
+        mipdata_->lps.back().setSubSolverCallTime(this->sub_solver_call_time_);
       }
       mipdata_->domains.emplace_back(mipdata_->getDomain());
       mipdata_->cutpools.emplace_back(
@@ -1335,7 +1332,6 @@ void HighsMipSolver::setParallelLock(bool lock) const {
 
 void HighsMipSolver::setSubSolverCallTime(
     HighsSubSolverCallTime* sub_solver_call_time) {
-  assert(sub_solver_call_time);
   this->sub_solver_call_time_ = sub_solver_call_time;
 }
 

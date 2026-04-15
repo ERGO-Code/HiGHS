@@ -4271,10 +4271,10 @@ void HighsLinearObjective::clear() {
   this->priority = 0;
 }
 
-void HighsSubSolverCallTime::initialise(HighsTimer& timer_) {
+void HighsSubSolverCallTime::initialize(HighsTimer& timer_) {
   HighsInt num_thread = highs::parallel::num_threads();
   this->timer = &timer_;
-  this->initialised = true;
+  this->initialized = true;
   this->mip_start_time = kHighsInf;
   this->mip_clock_running = -kHighsIInf;
   this->submip_start_time.assign(num_thread, kHighsInf);
@@ -4396,6 +4396,7 @@ void HighsSubSolverCallTime::stop(const HighsInt sub_solver_clock) {
 }
 
 void Highs::reportSubSolverCallTime() const {
+  if (!this->sub_solver_call_time_) return;
   HighsInt num_thread = highs::parallel::num_threads();
   double mip_time = 0;
   double max_sumip_time = 0;
@@ -4526,10 +4527,10 @@ void Highs::reportSubSolverCallTime() const {
       for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
            thread_ix++) {
         HighsInt thread_num = used_thread[thread_ix];
-        double ideal_time = k == 0
-                                ? mip_time
-                                : this->sub_solver_call_time_->record[thread_num]
-                                      .run_time[kSubSolverSubMip];
+        double ideal_time =
+            k == 0 ? mip_time
+                   : this->sub_solver_call_time_->record[thread_num]
+                         .run_time[kSubSolverSubMip];
         HighsInt num_call = record[thread_num].num_call[Ix];
         double run_time = record[thread_num].run_time[Ix];
         if (num_call && ideal_time > 0) {

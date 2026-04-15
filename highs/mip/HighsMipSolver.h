@@ -131,7 +131,7 @@ class HighsMipSolver {
   }
 
   mutable HighsTimer timer_;
-  HighsSubSolverCallTime* sub_solver_call_time_;
+  HighsSubSolverCallTime* sub_solver_call_time_ = nullptr;
 
   void cleanupSolve();
 
@@ -159,8 +159,7 @@ class HighsMipSolver {
     return this->termination_status_;
   }
   void setParallelLock(bool lock) const;
-  void setSubSolverCallTime(
-      HighsSubSolverCallTime* sub_solver_call_time);
+  void setSubSolverCallTime(HighsSubSolverCallTime* sub_solver_call_time);
   void initialiseAnalysis(const HighsMipAnalysis* from_analysis = nullptr);
 };
 

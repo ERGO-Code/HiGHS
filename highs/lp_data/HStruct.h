@@ -170,7 +170,7 @@ struct HighsSubSolverCallTimeRecord {
 
 struct HighsSubSolverCallTime {
   HighsTimer* timer;
-  bool initialised = false;
+  bool initialized = false;
   double mip_start_time;
   HighsInt mip_clock_running;
   std::vector<double> submip_start_time;
@@ -182,7 +182,7 @@ struct HighsSubSolverCallTime {
   // This vector is the data structure over threads
   std::vector<HighsSubSolverCallTimeRecord> record;
   std::vector<HighsSubSolverCallTimeRecord> submip_record;
-  void initialise(HighsTimer& timer_);
+  void initialize(HighsTimer& timer_);
   void start(const HighsInt sub_solver_clock);
   void stop(const HighsInt sub_solver_clock = -1);
   void setSubMip(const bool submip);

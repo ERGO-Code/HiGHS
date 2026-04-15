@@ -42,7 +42,8 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   solver_object.highs_info_.simplex_iteration_count =
       ekk_instance.iteration_count_;
   // Stop whichever clock was running
-  solver_object.sub_solver_call_time_->stop();
+  if (solver_object.sub_solver_call_time_)
+    solver_object.sub_solver_call_time_->stop();
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);
@@ -118,7 +119,8 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     }
   }
   assert(sub_solver_ix >= 0);
-  solver_object.sub_solver_call_time_->start(sub_solver_ix);
+  if (solver_object.sub_solver_call_time_)
+    solver_object.sub_solver_call_time_->start(sub_solver_ix);
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;

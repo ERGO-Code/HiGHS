@@ -1267,7 +1267,8 @@ class Highs {
    * but the threads option is nonzero and not equal to
    * this->max_threads_. Also sets up multi-threaded profiling
    */
-  HighsStatus initializeMultiThreading(HighsSubSolverCallTime* sub_solver_call_time);
+  HighsStatus initializeMultiThreading(
+      HighsSubSolverCallTime* sub_solver_call_time = nullptr);
 
   /**
    * @brief Releases all resources held by the global scheduler instance. It is

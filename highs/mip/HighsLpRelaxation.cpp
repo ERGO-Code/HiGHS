@@ -22,7 +22,6 @@
 
 void HighsLpRelaxation::setSubSolverCallTime(
     HighsSubSolverCallTime* sub_solver_call_time) {
-  assert(sub_solver_call_time->timer);
   lpsolver.setSubSolverCallTime(sub_solver_call_time);
 }
 
