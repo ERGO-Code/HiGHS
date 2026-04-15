@@ -131,7 +131,6 @@ class HighsMipSolver {
   }
 
   mutable HighsTimer timer_;
-  mutable HighsSubSolverCallTime sub_solver_call_time_;
   HighsSubSolverCallTime* global_sub_solver_call_time_;
 
   void cleanupSolve();
