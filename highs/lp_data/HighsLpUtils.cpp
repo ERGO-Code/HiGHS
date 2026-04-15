@@ -101,6 +101,12 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
                 highsStatusToString(return_status).c_str());
+
+  // Assess any indicator constraints
+  call_status = assessIndicatorConstraints(options, lp);
+  return_status =
+      interpretCallStatus(options.log_options, call_status, return_status,
+                          "assessIndicatorConstraints");
   return return_status;
 }
 

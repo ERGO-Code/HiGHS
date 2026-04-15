@@ -383,7 +383,8 @@ TEST_CASE("indicator-validation", "[highs_test_indicator]") {
 TEST_CASE("indicator-mps", "[highs_test_indicator]") {
   // Test reading an MPS file with INDICATORS section
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/water.mps";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/indicator-constraints.mps";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   highs.setOptionValue("output_flag", dev_run);

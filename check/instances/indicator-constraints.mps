@@ -1,10 +1,4 @@
-* SCIP STATISTICS
-*   Problem name     : model
-*   Variables        : 1220 (360 binary, 0 integer, 0 implicit integer, 860 continuous)
-*   Constraints      : 818
-NAME          model
-OBJSENSE
-  MIN
+NAME          water_20_gbdt_2_3_sk_0_0
 ROWS
  N  Obj 
  E  change_0_0 
