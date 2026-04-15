@@ -1229,14 +1229,6 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Return a const reference to the internal sub-solver call and time
-   * instance
-   */
-  const HighsSubSolverCallTime& getSubSolverCallTime() const {
-    return sub_solver_call_time_;
-  }
-
-  /**
    * @brief Report internal sub-solver call and time instance
    */
   void reportSubSolverCallTime() const;
@@ -1271,11 +1263,11 @@ class Highs {
 
   /**
    * @brief Ensures that the global scheduler is initialized,
-   * returning HighsStatus::kError if it has already been initialised,
+   * returning HighsStatus::kError if it has already been initialized,
    * but the threads option is nonzero and not equal to
-   * this->max_threads_
+   * this->max_threads_. Also sets up multi-threaded profiling
    */
-  HighsStatus initializeGlobalScheduler();
+  HighsStatus initializeMultiThreading(HighsSubSolverCallTime* sub_solver_call_time);
 
   /**
    * @brief Releases all resources held by the global scheduler instance. It is
@@ -1292,8 +1284,7 @@ class Highs {
    */
   static void resetGlobalScheduler(bool blocking = false);
 
-  void setGlobalSubSolverCallTime(
-      HighsSubSolverCallTime* global_sub_solver_call_time = nullptr);
+  void setSubSolverCallTime(HighsSubSolverCallTime* sub_solver_call_time);
 
   // Start of advanced methods: only for internal use!
 
@@ -1561,12 +1552,7 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
-  // This local HighsSubSolverCallTime instance is used to define the
-  // pointers in subsequent Highs instances (such as
-  // global_sub_solver_call_time_ below) and analysis classes
-  HighsSubSolverCallTime sub_solver_call_time_;
-
-  HighsSubSolverCallTime* global_sub_solver_call_time_;
+  HighsSubSolverCallTime* sub_solver_call_time_ = nullptr;
 
   HighsInt max_threads_ = 0;
   // This is strictly for debugging. It's used to check whether

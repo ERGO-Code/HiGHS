@@ -1453,7 +1453,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, callback_, options_,
                                       timer_);
-    solver_object.setSubSolverCallTime(this->global_sub_solver_call_time_);
+    solver_object.setSubSolverCallTime(this->sub_solver_call_time_);
     const bool only_from_known_basis = true;
     return_status = interpretCallStatus(
         options_.log_options,
@@ -1824,7 +1824,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
 HighsStatus Highs::getRangingInterface() {
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
                                     ekk_instance_, callback_, options_, timer_);
-  solver_object.setSubSolverCallTime(this->global_sub_solver_call_time_);
+  solver_object.setSubSolverCallTime(this->sub_solver_call_time_);
   solver_object.model_status_ = model_status_;
   return getRangingData(this->ranging_, solver_object);
 }
@@ -4400,9 +4400,9 @@ void Highs::reportSubSolverCallTime() const {
   double mip_time = 0;
   double max_sumip_time = 0;
   const std::vector<HighsSubSolverCallTimeRecord>& record =
-      this->sub_solver_call_time_.record;
+      this->sub_solver_call_time_->record;
   const std::vector<HighsSubSolverCallTimeRecord>& submip_record =
-      this->sub_solver_call_time_.submip_record;
+      this->sub_solver_call_time_->submip_record;
   for (HighsInt thread_num = 0; thread_num < num_thread; thread_num++) {
     mip_time = std::max(record[thread_num].run_time[kSubSolverMip], mip_time);
     max_sumip_time =
@@ -4424,7 +4424,7 @@ void Highs::reportSubSolverCallTime() const {
   std::vector<bool> mip_used_sub_solver(kSubSolverCount, false);
   std::vector<bool> submip_used_sub_solver(kSubSolverCount, false);
   const HighsInt to_k = max_sumip_time > 0 ? 2 : 1;
-  const std::vector<std::string>& name = this->sub_solver_call_time_.name;
+  const std::vector<std::string>& name = this->sub_solver_call_time_->name;
   for (HighsInt k = 0; k < to_k; k++) {
     if (k == 0) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -4439,12 +4439,12 @@ void Highs::reportSubSolverCallTime() const {
       HighsInt thread_num = used_thread[thread_ix];
       double ideal_time = k == 0
                               ? mip_time
-                              : this->sub_solver_call_time_.record[thread_num]
+                              : this->sub_solver_call_time_->record[thread_num]
                                     .run_time[kSubSolverSubMip];
       if (ideal_time <= 0) continue;
       const std::vector<HighsSubSolverCallTimeRecord>& record =
-          k == 0 ? this->sub_solver_call_time_.record
-                 : this->sub_solver_call_time_.submip_record;
+          k == 0 ? this->sub_solver_call_time_->record
+                 : this->sub_solver_call_time_->submip_record;
       std::vector<bool>& used_sub_solver =
           k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
       const std::vector<HighsInt>& num_call = record[thread_num].num_call;
@@ -4516,8 +4516,8 @@ void Highs::reportSubSolverCallTime() const {
     std::vector<bool>& used_sub_solver =
         k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
     const std::vector<HighsSubSolverCallTimeRecord>& record =
-        k == 0 ? this->sub_solver_call_time_.record
-               : this->sub_solver_call_time_.submip_record;
+        k == 0 ? this->sub_solver_call_time_->record
+               : this->sub_solver_call_time_->submip_record;
     std::vector<double> totalPct(num_threads_used, 0);
     for (HighsInt Ix = 1; Ix < kSubSolverCount; Ix++) {
       if (!used_sub_solver[Ix]) continue;
@@ -4528,7 +4528,7 @@ void Highs::reportSubSolverCallTime() const {
         HighsInt thread_num = used_thread[thread_ix];
         double ideal_time = k == 0
                                 ? mip_time
-                                : this->sub_solver_call_time_.record[thread_num]
+                                : this->sub_solver_call_time_->record[thread_num]
                                       .run_time[kSubSolverSubMip];
         HighsInt num_call = record[thread_num].num_call[Ix];
         double run_time = record[thread_num].run_time[Ix];
