@@ -267,12 +267,12 @@ class HighsPostsolveStack {
   const HighsInt* getOrigColsIndex() const { return origColIndex.data(); }
 
   HighsInt getOrigRowIndex(HighsInt row) const {
-    assert(row < (HighsInt)origRowIndex.size());
+    assert(static_cast<size_t>(row) < origRowIndex.size());
     return origRowIndex[row];
   }
 
   HighsInt getOrigColIndex(HighsInt col) const {
-    assert(col < (HighsInt)origColIndex.size());
+    assert(static_cast<size_t>(col) < origColIndex.size());
     return origColIndex[col];
   }
 
