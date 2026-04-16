@@ -15,7 +15,7 @@
 #ifndef _LIBMETIS_PROTO_H_
 #define _LIBMETIS_PROTO_H_
 
-#include "ipm/hipo/auxiliary/OrderingPrint.h"
+#include "metis_mangle.h"
 
 /* auxapi.c */
 

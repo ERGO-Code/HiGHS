@@ -10,6 +10,8 @@
 #ifndef _LIBMETIS_GKLIB_H_
 #define _LIBMETIS_GKLIB_H_
 
+#include "metis_mangle.h"
+
 /*************************************************************************
 * Define various data structure using GKlib's templates.
 **************************************************************************/
