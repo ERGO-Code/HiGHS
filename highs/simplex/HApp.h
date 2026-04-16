@@ -22,6 +22,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkk.h"
 #include "simplex/HSimplex.h"
 
@@ -42,8 +43,16 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   solver_object.highs_info_.simplex_iteration_count =
       ekk_instance.iteration_count_;
   // Stop whichever clock was running
-  if (solver_object.profiling_)
-    solver_object.profiling_->stop();
+  if (solver_object.profiling_) {
+    HighsInt profiling_clock = -1;
+    HighsInt thread = highs::parallel::thread_num();
+    HighsProfilingRecord& thread_record = solver_object.profiling_->submip[thread] ? solver_object.profiling_->submip_record[thread] : solver_object.profiling_->record[thread];
+    if (std::signbit(thread_record.start_time[kSubSolverDuSimplexBasis])) profiling_clock = kSubSolverDuSimplexBasis;
+    if (std::signbit(thread_record.start_time[kSubSolverDuSimplexNoBasis])) profiling_clock = kSubSolverDuSimplexNoBasis;
+    if (std::signbit(thread_record.start_time[kSubSolverPrSimplexBasis])) profiling_clock = kSubSolverPrSimplexBasis;
+    if (std::signbit(thread_record.start_time[kSubSolverPrSimplexNoBasis])) profiling_clock = kSubSolverPrSimplexNoBasis;
+    solver_object.profiling_->stop(profiling_clock);
+  }
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);

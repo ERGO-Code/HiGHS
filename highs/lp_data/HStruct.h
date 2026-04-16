@@ -166,6 +166,7 @@ struct HighsLinearObjective {
 struct HighsProfilingRecord {
   std::vector<HighsInt> num_call;
   std::vector<double> run_time;
+  std::vector<double> start_time;
 };
 
 struct HighsProfiling {
@@ -173,20 +174,14 @@ struct HighsProfiling {
   bool initialized = false;
   bool mip_ = false;
   HighsInt num_profiling_clock_ = -1;
-  double mip_start_time;
-  HighsInt mip_clock_running;
-  std::vector<double> submip_start_time;
-  std::vector<HighsInt> submip_clock_running;
   std::vector<bool> submip;
-  std::vector<double> start_time;
-  std::vector<HighsInt> clock_running;
   std::vector<std::string> name;
   // This vector is the data structure over threads
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
   void initialize(HighsTimer& timer_, const bool mip_profiling = false);
   void start(const HighsInt profiling_clock);
-  void stop(const HighsInt profiling_clock = -1);
+  void stop(const HighsInt profiling_clock);
   double read(const HighsInt profiling_clock);
   bool running(const HighsInt profiling_clock);
   void setSubMip(const bool submip);
