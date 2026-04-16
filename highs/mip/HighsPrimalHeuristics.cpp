@@ -133,7 +133,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.value_valid = false;
   solution.dual_valid = false;
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
-    mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
+    mipsolver.profiling_->start(kMipClockSubMipSolve);
   }
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
@@ -141,7 +141,6 @@ bool HighsPrimalHeuristics::solveSubMip(
   // Initialise termination_status_ and propagate any terminator to
   // the sub-MIP
   submipsolver.initialiseTerminator(mipsolver);
-  submipsolver.initialiseAnalysis(&mipsolver.analysis_);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(worker.getPseudocost(), 1);
   submipsolver.pscostinit = &pscostinit;
@@ -172,7 +171,7 @@ bool HighsPrimalHeuristics::solveSubMip(
       submipsolver.max_submip_level + 1, worker.heur_stats.max_submip_level);
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
     // Only stop timing the submip if the calling MIP isn't a sub-MIP
-    mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
+    mipsolver.profiling_->stop(kMipClockSubMipSolve);
   }
   // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
   // pointer after calling HighsMipSolver::run(), and assert isn't

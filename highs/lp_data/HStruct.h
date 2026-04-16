@@ -171,6 +171,7 @@ struct HighsProfilingRecord {
 struct HighsProfiling {
   HighsTimer* timer;
   bool initialized = false;
+  bool mip_ = false;
   double mip_start_time;
   HighsInt mip_clock_running;
   std::vector<double> submip_start_time;
@@ -182,10 +183,13 @@ struct HighsProfiling {
   // This vector is the data structure over threads
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
-  void initialize(HighsTimer& timer_);
+  void initialize(HighsTimer& timer_, const bool mip_profiling = false);
   void start(const HighsInt profiling_clock);
   void stop(const HighsInt profiling_clock = -1);
+  double read(const HighsInt profiling_clock);
+  bool running(const HighsInt profiling_clock);
   void setSubMip(const bool submip);
+  //  HighsInt getSepaClockIndex(const std::string& name);
 };
 
 struct HighsSimplexStats {

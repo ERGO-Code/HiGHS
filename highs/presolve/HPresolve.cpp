@@ -1589,7 +1589,7 @@ std::pair<int64_t, HighsInt> HPresolve::computeProbingScore(
 }
 
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
-  mipsolver->analysis_.mipTimerStart(kMipClockProbingPresolve);
+  mipsolver->profiling_->start(kMipClockProbingPresolve);
   probingEarlyAbort = false;
 
   HighsInt oldNumProbed = numProbed;
@@ -1598,7 +1598,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   bool firstCall = false;
   Result prepareResult = prepareProbing(postsolve_stack, firstCall);
   if (prepareResult != Result::kOk) {
-    mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+    mipsolver->profiling_->stop(kMipClockProbingPresolve);
     return prepareResult;
   }
 
@@ -1824,7 +1824,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         implications.storeLiftingOpportunity = nullptr;
 
       if (domain.infeasible()) {
-        mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+        mipsolver->profiling_->stop(kMipClockProbingPresolve);
         return Result::kPrimalInfeasible;
       }
     }
@@ -1858,7 +1858,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     }
   }
 
-  mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+  mipsolver->profiling_->stop(kMipClockProbingPresolve);
   return checkLimits(postsolve_stack);
 }
 
@@ -5203,13 +5203,13 @@ HPresolve::Result HPresolve::enumerateSolutions(
     HighsPostsolveStack& postsolve_stack) {
   // enumerate all solutions for pure binary constraints with a small number of
   // variables
-  mipsolver->analysis_.mipTimerStart(kMipClockEnumerationPresolve);
+  mipsolver->profiling_->start(kMipClockEnumerationPresolve);
 
   // prepare probing
   bool firstCall = false;
   Result prepareResult = prepareProbing(postsolve_stack, firstCall);
   if (prepareResult != Result::kOk) {
-    mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+    mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
     return prepareResult;
   }
 
@@ -5458,7 +5458,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
 
   auto handleInfeasibility = [&](bool infeasible) {
     if (infeasible) {
-      mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+      mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
       return Result::kPrimalInfeasible;
     }
     return Result::kOk;
@@ -5669,7 +5669,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
                 static_cast<int>(numBndsTightened),
                 static_cast<int>(numVarsSubstituted));
 
-  mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+  mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
 
   return checkLimits(postsolve_stack);
 }

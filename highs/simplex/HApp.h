@@ -104,23 +104,24 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(retained_ekk_data_ok);
     return_status = HighsStatus::kError;
   }
-  HighsInt profiling_clock = -1;
-  if (options.simplex_strategy == kSimplexStrategyPrimal) {
-    if (basis.valid) {
-      profiling_clock = kSubSolverPrSimplexBasis;
+  if (solver_object.profiling_) {
+    HighsInt profiling_clock = -1;
+    if (options.simplex_strategy == kSimplexStrategyPrimal) {
+      if (basis.valid) {
+	profiling_clock = kSubSolverPrSimplexBasis;
+      } else {
+	profiling_clock = kSubSolverPrSimplexNoBasis;
+      }
     } else {
-      profiling_clock = kSubSolverPrSimplexNoBasis;
+      if (basis.valid) {
+	profiling_clock = kSubSolverDuSimplexBasis;
+      } else {
+	profiling_clock = kSubSolverDuSimplexNoBasis;
+      }
     }
-  } else {
-    if (basis.valid) {
-      profiling_clock = kSubSolverDuSimplexBasis;
-    } else {
-      profiling_clock = kSubSolverDuSimplexNoBasis;
-    }
-  }
-  assert(profiling_clock >= 0);
-  if (solver_object.profiling_)
+    assert(profiling_clock >= 0);
     solver_object.profiling_->start(profiling_clock);
+  }
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;

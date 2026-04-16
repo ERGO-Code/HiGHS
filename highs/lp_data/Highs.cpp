@@ -4949,7 +4949,8 @@ HighsStatus Highs::initializeMultiThreading(
   // Possibly initialize the multithreaded profiling. noting that
   // profiling is null by default
   if (profiling) {
-    profiling->initialize(this->timer_);
+    const bool mip_profiling = kHighsAnalysisLevelMipTime & this->options_.highs_analysis_level;
+    profiling->initialize(this->timer_, mip_profiling);
     this->setProfiling(profiling);
   }
   return HighsStatus::kOk;

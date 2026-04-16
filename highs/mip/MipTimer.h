@@ -11,10 +11,10 @@
 #ifndef MIP_MIPTIMER_H_
 #define MIP_MIPTIMER_H_
 
-// Clocks for profiling the MIP dual mip solver
-enum iClockMip {
+// Clocks for profiling the MIP solver
+enum iClockMip : int {
   kMipClockTotal = 0,
-  kMipClockPresolve,
+  kMipClockPresolve = kSubSolverCount,
   kMipClockSolve,
   kMipClockPostsolve,
   // Level 1
@@ -117,6 +117,9 @@ enum iClockMip {
 const HighsInt kNumThreadMipClock = kNumMipClock - 1;
 
 const double tolerance_percent_report = 0.1;
+
+inline void initialiseMipProfilingNames(std::vector<std::string>& name) {
+};
 
 class MipTimer {
  public:
@@ -223,6 +226,7 @@ class MipTimer {
     clock[kMipClockRootSeparationEvaluateRootLp] =
         timer_pointer->clock_def("Evaluate root LP");
 
+    /*
     clock[kMipClockImplboundSepa] =
         timer_pointer->clock_def(kImplboundSepaString.c_str());
     clock[kMipClockCliqueSepa] =
@@ -233,7 +237,7 @@ class MipTimer {
         timer_pointer->clock_def(kPathAggrSepaString.c_str());
     clock[kMipClockModKSepa] =
         timer_pointer->clock_def(kModKSepaString.c_str());
-
+    */
     // Presolve - Should correspond to kMipClockRunPresolve
     clock[kMipClockProbingPresolve] =
         timer_pointer->clock_def("Probing - presolve");

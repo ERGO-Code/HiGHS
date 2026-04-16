@@ -15,6 +15,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsMipSolver.h"  // For getGapString
+#include "mip/MipTimer.h"
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
 #include "simplex/HSimplex.h"
@@ -4271,7 +4272,7 @@ void HighsLinearObjective::clear() {
   this->priority = 0;
 }
 
-void HighsProfiling::initialize(HighsTimer& timer_) {
+void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
   HighsInt num_thread = highs::parallel::num_threads();
   this->timer = &timer_;
   this->initialized = true;
@@ -4295,6 +4296,10 @@ void HighsProfiling::initialize(HighsTimer& timer_) {
   this->name[kSubSolverQpAsm] = "QP ASM";
   this->name[kSubSolverMip] = "MIP";
   this->name[kSubSolverSubMip] = "Sub-MIP";
+  this->mip_ = mip_profiling;
+  if (this->mip_) {
+    initialiseMipProfilingNames(this->name);
+  }
   HighsProfilingRecord thread_record;
   thread_record.num_call.assign(kSubSolverCount, 0);
   thread_record.run_time.assign(kSubSolverCount, 0);
@@ -4394,6 +4399,17 @@ void HighsProfiling::stop(const HighsInt profiling_clock) {
     this->record[thread].run_time[use_clock] += time;
   }
 }
+
+double HighsProfiling::read(const HighsInt profiling_clock) {
+  assert(1==2);
+  return 0;
+}
+bool HighsProfiling::running(const HighsInt profiling_clock) {
+  assert(1==3);
+  return false;
+}
+
+//HighsInt HighsProfiling::getSepaClockIndex(const std::string& name) {  assert(1==4);  return 0;}
 
 void Highs::reportProfiling() const {
   if (!this->profiling_) return;

@@ -17,6 +17,7 @@
 HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
                                const std::string& name)
     : numCutsFound(0), numCalls(0) {
+  /*
   this->clockIndex = -1;
   // Don't get the clock index when analyse_mip_time is false - as
   // will generally be the case, and always so for sub-MIPs
@@ -24,6 +25,7 @@ HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
     this->clockIndex = mipsolver.analysis_.getSepaClockIndex(name);
     assert(this->clockIndex > 0);
   }
+  */
 }
 
 void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
