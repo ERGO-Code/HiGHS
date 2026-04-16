@@ -106,7 +106,7 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   for (HighsInt iLp = 0; iLp < static_cast<HighsInt>(mipdata_->lps.size());
        iLp++)
-    mipdata_->lps[iLp].setSubSolverCallTime(this->sub_solver_call_time_);
+    mipdata_->lps[iLp].setProfiling(this->profiling_);
   analysis_.mipTimerStart(kMipClockPresolve);
   analysis_.mipTimerStart(kMipClockInit);
   mipdata_->init();
@@ -288,12 +288,12 @@ restart:
     // Have to set the global sub-solver call time pointer here for
     // new worker 0, since
     // HighsLpRelaxation::removeWorkerSpecificRows(); solves an LP
-    mipdata_->lps.back().setSubSolverCallTime(this->sub_solver_call_time_);
+    mipdata_->lps.back().setProfiling(this->profiling_);
     mipdata_->lps.back().removeWorkerSpecificRows();
     for (HighsInt i = 0; i != num_new_workers; ++i) {
       if (i != 0) {
         mipdata_->lps.emplace_back(mipdata_->lps.back());
-        mipdata_->lps.back().setSubSolverCallTime(this->sub_solver_call_time_);
+        mipdata_->lps.back().setProfiling(this->profiling_);
       }
       mipdata_->domains.emplace_back(mipdata_->getDomain());
       mipdata_->cutpools.emplace_back(
@@ -1139,7 +1139,7 @@ void HighsMipSolver::cleanupSolve() {
 
   if (!timeless_log) analysis_.reportMipTimer();
 
-  //  analysis_.checkSubSolverCallTime(sub_solver_call_time_);
+  //  analysis_.checkProfiling(profiling_);
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 
@@ -1330,9 +1330,9 @@ void HighsMipSolver::setParallelLock(bool lock) const {
   }
 }
 
-void HighsMipSolver::setSubSolverCallTime(
-    HighsSubSolverCallTime* sub_solver_call_time) {
-  this->sub_solver_call_time_ = sub_solver_call_time;
+void HighsMipSolver::setProfiling(
+    HighsProfiling* profiling) {
+  this->profiling_ = profiling;
 }
 
 void HighsMipSolver::initialiseAnalysis(const HighsMipAnalysis* from_analysis) {
@@ -1342,7 +1342,6 @@ void HighsMipSolver::initialiseAnalysis(const HighsMipAnalysis* from_analysis) {
   } else {
     this->analysis_.model_name = orig_model_->model_name_;
     this->analysis_.timer_ = &this->timer_;
-    this->analysis_.sub_solver_call_time_ = this->sub_solver_call_time_;
     this->analysis_.setupMipTime(*options_mip_);
   }
   this->analysis_.submip_ = this->submip;

@@ -1229,9 +1229,9 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Report internal sub-solver call and time instance
+   * @brief Report profiling
    */
-  void reportSubSolverCallTime() const;
+  void reportProfiling() const;
 
   /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
@@ -1268,7 +1268,7 @@ class Highs {
    * this->max_threads_. Also sets up multi-threaded profiling
    */
   HighsStatus initializeMultiThreading(
-      HighsSubSolverCallTime* sub_solver_call_time = nullptr);
+      HighsProfiling* profiling = nullptr);
 
   /**
    * @brief Releases all resources held by the global scheduler instance. It is
@@ -1285,7 +1285,7 @@ class Highs {
    */
   static void resetGlobalScheduler(bool blocking = false);
 
-  void setSubSolverCallTime(HighsSubSolverCallTime* sub_solver_call_time);
+  void setProfiling(HighsProfiling* profiling);
 
   // Start of advanced methods: only for internal use!
 
@@ -1553,7 +1553,7 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
-  HighsSubSolverCallTime* sub_solver_call_time_ = nullptr;
+  HighsProfiling* profiling_ = nullptr;
 
   HighsInt max_threads_ = 0;
   // This is strictly for debugging. It's used to check whether

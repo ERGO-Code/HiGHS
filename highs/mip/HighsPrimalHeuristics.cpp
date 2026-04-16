@@ -151,23 +151,23 @@ bool HighsPrimalHeuristics::solveSubMip(
   //
   // Copy the pointer to global sub-solver data into the sub-MIP
   // solver
-  submipsolver.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+  submipsolver.setProfiling(mipsolver.profiling_);
   // Only start timing the submip if the calling MIP isn't a sub-MIP
   if (!mipsolver.submip)
-    if (mipsolver.sub_solver_call_time_)
-      mipsolver.sub_solver_call_time_->start(kSubSolverSubMip);
+    if (mipsolver.profiling_)
+      mipsolver.profiling_->start(kSubSolverSubMip);
   // Ensure that sub-solver call time data accumulated in the sub-MIP record
-  if (mipsolver.sub_solver_call_time_)
-    mipsolver.sub_solver_call_time_->setSubMip(true);
+  if (mipsolver.profiling_)
+    mipsolver.profiling_->setSubMip(true);
   submipsolver.run();
   // Ensure that further sub-solver call time data are accumulated in
   // the MIP or sub-MIP record, according to whether the calling MIP
   // is a sub-MIP
-  if (mipsolver.sub_solver_call_time_)
-    mipsolver.sub_solver_call_time_->setSubMip(mipsolver.submip);
+  if (mipsolver.profiling_)
+    mipsolver.profiling_->setSubMip(mipsolver.submip);
   if (!mipsolver.submip)
-    if (mipsolver.sub_solver_call_time_)
-      mipsolver.sub_solver_call_time_->stop(kSubSolverSubMip);
+    if (mipsolver.profiling_)
+      mipsolver.profiling_->stop(kSubSolverSubMip);
   worker.heur_stats.max_submip_level = std::max(
       submipsolver.max_submip_level + 1, worker.heur_stats.max_submip_level);
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
@@ -404,7 +404,7 @@ void HighsPrimalHeuristics::RENS(HighsMipWorker& worker,
   // LP relaxation instantiation
   HighsLpRelaxation heurlp(worker.getLpRelaxation());
   heurlp.setMipWorker(worker);
-  heurlp.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+  heurlp.setProfiling(mipsolver.profiling_);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(worker.upper_limit);
   heurlp.setAdjustSymmetricBranchingCol(false);
@@ -672,7 +672,7 @@ void HighsPrimalHeuristics::RINS(HighsMipWorker& worker,
   // LP relaxation instantiation
   HighsLpRelaxation heurlp(worker.getLpRelaxation());
   heurlp.setMipWorker(worker);
-  heurlp.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+  heurlp.setProfiling(mipsolver.profiling_);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(worker.upper_limit);
   heurlp.setAdjustSymmetricBranchingCol(false);
@@ -995,7 +995,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
     // LP relaxation instantiation
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.setMipWorker(worker);
-    lprelax.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+    lprelax.setProfiling(mipsolver.profiling_);
     lprelax.loadModel();
     lprelax.setIterationLimit(
         std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
@@ -1140,7 +1140,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     // LP relaxation instantiation
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.setMipWorker(worker);
-    lprelax.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+    lprelax.setProfiling(mipsolver.profiling_);
     lprelax.loadModel();
     lprelax.setIterationLimit(
         std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
@@ -1196,7 +1196,7 @@ void HighsPrimalHeuristics::shifting(HighsMipWorker& worker,
   // LP relaxation instantiation
   HighsLpRelaxation lprelax(worker.getLpRelaxation());
   lprelax.setMipWorker(worker);
-  lprelax.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+  lprelax.setProfiling(mipsolver.profiling_);
   HighsRandom& randgen =
       mipsolver.mipdata_->parallelLockActive() ? worker.randgen : this->randgen;
   std::vector<std::pair<HighsInt, double>> current_fractional_integers =
@@ -1564,7 +1564,7 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
   // LP relaxation instantiation
   HighsLpRelaxation lprelax(worker.getLpRelaxation());
   lprelax.setMipWorker(worker);
-  lprelax.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+  lprelax.setProfiling(mipsolver.profiling_);
   std::unordered_set<std::vector<HighsInt>, HighsVectorHasher, HighsVectorEqual>
       referencepoints;
   std::vector<double> roundedsol;

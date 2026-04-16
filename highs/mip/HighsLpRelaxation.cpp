@@ -20,9 +20,9 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-void HighsLpRelaxation::setSubSolverCallTime(
-    HighsSubSolverCallTime* sub_solver_call_time) {
-  lpsolver.setSubSolverCallTime(sub_solver_call_time);
+void HighsLpRelaxation::setProfiling(
+    HighsProfiling* profiling) {
+  lpsolver.setProfiling(profiling);
 }
 
 void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
@@ -1369,7 +1369,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (!mipsolver.submip && resolve_on_error) {
         // Highs instantiation
         Highs ipm;
-        ipm.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+        ipm.setProfiling(mipsolver.profiling_);
         ipm.setOptionValue("output_flag", false);
         // check if only root presolve is allowed
         const bool use_presolve =

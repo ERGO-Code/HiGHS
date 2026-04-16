@@ -413,7 +413,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //
     // Highs instantiation
     Highs ipm;
-    ipm.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+    ipm.setProfiling(mipsolver.profiling_);
     ipm.setOptionValue("output_flag", false);
     const std::vector<double>& sol = ipm.getSolution().col_value;
     // Don't use presolve - because this can lead to postsolve putting
@@ -468,13 +468,13 @@ void HighsMipSolverData::startAnalyticCenterComputation(
       (void)output_flag;
       ipm.setOptionValue("output_flag", !mipsolver.submip);
     }
-    const HighsInt sub_solver_clock =
+    const HighsInt profiling_clock =
         use_hipo ? kSubSolverHipoAc : kSubSolverIpxAc;
-    if (mipsolver.sub_solver_call_time_)
-      mipsolver.sub_solver_call_time_->start(sub_solver_clock);
+    if (mipsolver.profiling_)
+      mipsolver.profiling_->start(profiling_clock);
     ipm.optimizeLp();
-    if (mipsolver.sub_solver_call_time_)
-      mipsolver.sub_solver_call_time_->stop(sub_solver_clock);
+    if (mipsolver.profiling_)
+      mipsolver.profiling_->stop(profiling_clock);
     if (ipm_logging) ipm.setOptionValue("output_flag", false);
     if (use_hipo && mip_ipm_solver == kHighsChooseString &&
         HighsInt(sol.size()) != mipsolver.numCol()) {
@@ -1201,7 +1201,7 @@ try_again:
         mipsolver.options_mip_->time_limit - mipsolver.timer_.read(), 0.1);
     // Highs instantiation
     Highs tmpSolver;
-    tmpSolver.setSubSolverCallTime(mipsolver.sub_solver_call_time_);
+    tmpSolver.setProfiling(mipsolver.profiling_);
     const bool debug_report = false;
     if (debug_report) {
       tmpSolver.setOptionValue("log_dev_level", 2);

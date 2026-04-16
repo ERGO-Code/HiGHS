@@ -163,12 +163,12 @@ struct HighsLinearObjective {
   void clear();
 };
 
-struct HighsSubSolverCallTimeRecord {
+struct HighsProfilingRecord {
   std::vector<HighsInt> num_call;
   std::vector<double> run_time;
 };
 
-struct HighsSubSolverCallTime {
+struct HighsProfiling {
   HighsTimer* timer;
   bool initialized = false;
   double mip_start_time;
@@ -180,11 +180,11 @@ struct HighsSubSolverCallTime {
   std::vector<HighsInt> clock_running;
   std::vector<std::string> name;
   // This vector is the data structure over threads
-  std::vector<HighsSubSolverCallTimeRecord> record;
-  std::vector<HighsSubSolverCallTimeRecord> submip_record;
+  std::vector<HighsProfilingRecord> record;
+  std::vector<HighsProfilingRecord> submip_record;
   void initialize(HighsTimer& timer_);
-  void start(const HighsInt sub_solver_clock);
-  void stop(const HighsInt sub_solver_clock = -1);
+  void start(const HighsInt profiling_clock);
+  void stop(const HighsInt profiling_clock = -1);
   void setSubMip(const bool submip);
 };
 

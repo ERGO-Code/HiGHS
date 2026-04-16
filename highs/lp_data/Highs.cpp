@@ -989,17 +989,17 @@ HighsStatus Highs::optimizeLp() {
 HighsStatus Highs::optimizeModel() {
   // Level 2a of Highs::run()
   //
-  HighsSubSolverCallTime sub_solver_call_time;
-  // Ultimately, the use of HighsSubSolverCallTime should be dependent
+  HighsProfiling profiling;
+  // Ultimately, the use of HighsProfiling should be dependent
   // on log_dev_level being positive, so that it's off by default.
-  HighsSubSolverCallTime* sub_solver_call_time_p =
+  HighsProfiling* profiling_p =
       //    this->options_.log_dev_level = 0 ? nullptr :
-      &sub_solver_call_time;
-  HighsStatus status = this->initializeMultiThreading(sub_solver_call_time_p);
+      &profiling;
+  HighsStatus status = this->initializeMultiThreading(profiling_p);
   if (status != HighsStatus::kOk) return status;
   status = this->calledOptimizeModel();
   //  if (this->options_.log_dev_level > 0)
-  this->reportSubSolverCallTime();
+  this->reportProfiling();
   return status;
 }
 
@@ -2571,7 +2571,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
                                         info_, ekk_instance_, callback_,
                                         options_, timer_);
-      solver_object.setSubSolverCallTime(this->sub_solver_call_time_);
+      solver_object.setProfiling(this->profiling_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -3890,11 +3890,11 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     // If a MIP is solved, it counts as a sub-MIP, so indicate that it
     // should be timed as such - and don't forget to indicate that in
     // optimizeModel when the HighsMipSolver instance is created
-    if (this->sub_solver_call_time_)
-      this->sub_solver_call_time_->setSubMip(true);
+    if (this->profiling_)
+      this->profiling_->setSubMip(true);
     return_status = this->optimizeModel();
-    if (this->sub_solver_call_time_)
-      this->sub_solver_call_time_->setSubMip(false);
+    if (this->profiling_)
+      this->profiling_->setSubMip(false);
 
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
@@ -3919,7 +3919,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_);
-  solver_object.setSubSolverCallTime(this->sub_solver_call_time_);
+  solver_object.setProfiling(this->profiling_);
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
@@ -3968,12 +3968,12 @@ HighsStatus Highs::callSolveQp() {
 
   if (use_hipo) {
 #ifdef HIPO
-    if (this->sub_solver_call_time_)
-      this->sub_solver_call_time_->start(kSubSolverHipo);
+    if (this->profiling_)
+      this->profiling_->start(kSubSolverHipo);
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
-    if (this->sub_solver_call_time_)
-      this->sub_solver_call_time_->stop(kSubSolverHipo);
+    if (this->profiling_)
+      this->profiling_->stop(kSubSolverHipo);
     if (return_status == HighsStatus::kError) return return_status;
 #else
     // shouldn't be possible to reach here
@@ -3983,8 +3983,8 @@ HighsStatus Highs::callSolveQp() {
   } else {
     //
     // Run the QP solver
-    if (this->sub_solver_call_time_)
-      this->sub_solver_call_time_->start(kSubSolverQpAsm);
+    if (this->profiling_)
+      this->profiling_->start(kSubSolverQpAsm);
 
     Instance instance(lp.num_col_, lp.num_row_);
 
@@ -4114,8 +4114,8 @@ HighsStatus Highs::callSolveQp() {
 
     QpAsmStatus status = solveqp(instance, settings, stats, model_status_,
                                  basis_, solution_, timer_);
-    if (this->sub_solver_call_time_)
-      this->sub_solver_call_time_->stop(kSubSolverQpAsm);
+    if (this->profiling_)
+      this->profiling_->stop(kSubSolverQpAsm);
 
     // QP solver can fail, so should return something other than
     // QpAsmStatus::kOk
@@ -4172,13 +4172,13 @@ HighsStatus Highs::callSolveMip() {
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
-  solver.setSubSolverCallTime(this->sub_solver_call_time_);
+  solver.setProfiling(this->profiling_);
   // Set up the analysis (profiling) here, so that it's only done
   // for the root MIP
   solver.initialiseAnalysis();
-  if (this->sub_solver_call_time_) sub_solver_call_time_->start(kSubSolverMip);
+  if (this->profiling_) profiling_->start(kSubSolverMip);
   solver.run();
-  if (this->sub_solver_call_time_) sub_solver_call_time_->stop(kSubSolverMip);
+  if (this->profiling_) profiling_->stop(kSubSolverMip);
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
@@ -4924,7 +4924,7 @@ HighsStatus Highs::closeLogFile() {
 }
 
 HighsStatus Highs::initializeMultiThreading(
-    HighsSubSolverCallTime* sub_solver_call_time) {
+    HighsProfiling* profiling) {
   highs::parallel::initialize_scheduler(this->options_.threads);
   this->max_threads_ = highs::parallel::num_threads();
   HighsLogOptions& log_options = this->options_.log_options;
@@ -4947,10 +4947,10 @@ HighsStatus Highs::initializeMultiThreading(
   highsLogDev(log_options, HighsLogType::kDetailed,
               "Running with %d thread(s)\n", int(max_threads_));
   // Possibly initialize the multithreaded profiling. noting that
-  // sub_solver_call_time is null by default
-  if (sub_solver_call_time) {
-    sub_solver_call_time->initialize(this->timer_);
-    this->setSubSolverCallTime(sub_solver_call_time);
+  // profiling is null by default
+  if (profiling) {
+    profiling->initialize(this->timer_);
+    this->setProfiling(profiling);
   }
   return HighsStatus::kOk;
 }
@@ -4959,6 +4959,6 @@ void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
 
-void Highs::setSubSolverCallTime(HighsSubSolverCallTime* sub_solver_call_time) {
-  this->sub_solver_call_time_ = sub_solver_call_time;
+void Highs::setProfiling(HighsProfiling* profiling) {
+  this->profiling_ = profiling;
 }
