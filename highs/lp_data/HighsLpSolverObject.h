@@ -41,6 +41,7 @@ class HighsLpSolverObject {
   HighsProfiling* profiling_ = nullptr;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
   void setProfiling(HighsProfiling* profiling) {
+    assert(profiling);
     profiling_ = profiling;
   }
 };

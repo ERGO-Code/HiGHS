@@ -990,15 +990,9 @@ HighsStatus Highs::optimizeModel() {
   // Level 2a of Highs::run()
   //
   HighsProfiling profiling;
-  // Ultimately, the use of HighsProfiling should be dependent
-  // on log_dev_level being positive, so that it's off by default.
-  HighsProfiling* profiling_p =
-      //    this->options_.log_dev_level = 0 ? nullptr :
-      &profiling;
-  HighsStatus status = this->initializeMultiThreading(profiling_p);
+  HighsStatus status = this->initializeMultiThreading(&profiling);
   if (status != HighsStatus::kOk) return status;
   status = this->calledOptimizeModel();
-  //  if (this->options_.log_dev_level > 0)
   this->reportProfiling();
   return status;
 }
@@ -4176,9 +4170,9 @@ HighsStatus Highs::callSolveMip() {
   // Set up the analysis (profiling) here, so that it's only done
   // for the root MIP
   solver.initialiseAnalysis();
-  if (this->profiling_) profiling_->start(kSubSolverMip);
+  profiling_->start(kSubSolverMip);
   solver.run();
-  if (this->profiling_) profiling_->stop(kSubSolverMip);
+  profiling_->stop(kSubSolverMip);
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
@@ -4923,8 +4917,7 @@ HighsStatus Highs::closeLogFile() {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::initializeMultiThreading(
-    HighsProfiling* profiling) {
+HighsStatus Highs::initializeMultiThreading(HighsProfiling* profiling) {
   highs::parallel::initialize_scheduler(this->options_.threads);
   this->max_threads_ = highs::parallel::num_threads();
   HighsLogOptions& log_options = this->options_.log_options;
@@ -4961,5 +4954,6 @@ void Highs::resetGlobalScheduler(bool blocking) {
 }
 
 void Highs::setProfiling(HighsProfiling* profiling) {
+  assert(profiling);
   this->profiling_ = profiling;
 }

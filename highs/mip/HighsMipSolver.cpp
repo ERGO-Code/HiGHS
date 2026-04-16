@@ -107,28 +107,23 @@ void HighsMipSolver::run() {
   for (HighsInt iLp = 0; iLp < static_cast<HighsInt>(mipdata_->lps.size());
        iLp++)
     mipdata_->lps[iLp].setProfiling(this->profiling_);
-  if (profiling_) {
-    profiling_->start(kMipClockPresolve);
-    if (profiling_->mip_) profiling_->start(kMipClockInit);
-  }
+  assert(profiling_);
+  profiling_->start(kMipClockPresolve);
+  profiling_->start(kMipClockInit);
   mipdata_->init();
 #ifdef HIGHS_DEBUGSOL
   mipdata_->debugSolution.activate();
   bool debugSolActive = false;
   std::swap(mipdata_->debugSolution.debugSolActive, debugSolActive);
 #endif
-  if (profiling_ && profiling_->mip_) {
-    profiling_->stop(kMipClockInit);
-    profiling_->start(kMipClockRunPresolve);
-  }
+  profiling_->stop(kMipClockInit);
+  profiling_->start(kMipClockRunPresolve);
   mipdata_->runMipPresolve(options_mip_->presolve_reduction_limit);
-  if (profiling_) {
-    if (profiling_->mip_) profiling_->stop(kMipClockRunPresolve);
-    profiling_->stop(kMipClockPresolve);
-    if (!submip)
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		   "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
-  }
+  profiling_->stop(kMipClockRunPresolve);
+  profiling_->stop(kMipClockPresolve);
+  if (profiling_->mip_ && !submip)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		 "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
   // Identify whether time limit has been reached (in presolve)
   if (modelstatus_ == HighsModelStatus::kNotset &&
       timer_.read() >= options_mip_->time_limit)
@@ -148,27 +143,19 @@ void HighsMipSolver::run() {
     return;
   }
 
-  if (profiling_) {
-    profiling_->start(kMipClockSolve);
-    if (profiling_->mip_) {
-      if (!submip)
-	highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		     "MIP-Timing: %11.2g - starting  setup\n", timer_.read());
-      profiling_->start(kMipClockRunSetup);
-    }
-  }
+  profiling_->start(kMipClockSolve);
+  if (profiling_->mip_ && !submip)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		 "MIP-Timing: %11.2g - starting  setup\n", timer_.read());
+  profiling_->start(kMipClockRunSetup);
 #ifdef HIGHS_DEBUGSOL
   mipdata_->debugSolution.debugSolActive = debugSolActive;
 #endif
   mipdata_->runSetup();
-  if (profiling_) {
-    if (profiling_->mip_) {
-      profiling_->stop(kMipClockRunSetup);
-      if (!submip)
-	highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		     "MIP-Timing: %11.2g - completed setup\n", timer_.read());
-    }
-  }
+  profiling_->stop(kMipClockRunSetup);
+  if (profiling_->mip_ && !submip)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		 "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 
   if (mipdata_->getDomain().infeasible()) {
     cleanupSolve();
@@ -220,10 +207,9 @@ restart:
     }
     // End of pre-root-node heuristics
     if (profiling_->mip_ && !submip)
-      if (profiling_->mip_ & !submip)
-        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                     "MIP-Timing: %11.2g - starting evaluate root node\n",
-                     timer_.read());
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		   "MIP-Timing: %11.2g - starting evaluate root node\n",
+		   timer_.read());
     profiling_->start(kMipClockEvaluateRootNode);
 
     mipdata_->evaluateRootNode(master_worker);
@@ -234,11 +220,6 @@ restart:
       cleanupSolve();
       return;
     }
-    // Sometimes the analytic centre calculation is not completed when
-    // evaluateRootNode returns, so stop its clock if it's running
-    if (profiling_->mip_ &&
-        profiling_->running(kMipClockIpxSolveLp))
-      profiling_->stop(kMipClockIpxSolveLp);
     if (profiling_->mip_ && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - completed evaluate root node\n",
@@ -1114,14 +1095,13 @@ void HighsMipSolver::cleanupSolve() {
   if (!timeless_log) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "  Timing            %.2f\n", timer_.read());
-    if (profiling_->mip_)
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "                    %.2f (presolve)\n"
-                   "                    %.2f (solve)\n"
-                   "                    %.2f (postsolve)\n",
-                   profiling_->read(kMipClockPresolve),
-                   profiling_->read(kMipClockSolve),
-                   profiling_->read(kMipClockPostsolve));
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		 "                    %.2f (presolve)\n"
+		 "                    %.2f (solve)\n"
+		 "                    %.2f (postsolve)\n",
+		 profiling_->read(kPresolveTime),
+		 profiling_->read(kSolveTime),
+		 profiling_->read(kPostsolveTime));
   }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Max sub-MIP depth %d\n"
@@ -1342,8 +1322,8 @@ void HighsMipSolver::setParallelLock(bool lock) const {
   }
 }
 
-void HighsMipSolver::setProfiling(
-    HighsProfiling* profiling) {
+void HighsMipSolver::setProfiling(HighsProfiling* profiling) {
+  assert(profiling);
   this->profiling_ = profiling;
 }
 

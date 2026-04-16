@@ -14,11 +14,12 @@
 // Clocks for profiling the MIP solver
 enum iClockMip : int {
   kMipClockTotal = 0,
-  kMipClockPresolve = kSubSolverCount,
+  kMipClockPresolve = kToSubSolver,
   kMipClockSolve,
   kMipClockPostsolve,
   // Level 1
-  kMipClockInit,
+  kFromMipClock, 
+  kMipClockInit = kFromMipClock,
   kMipClockRunPresolve,
   kMipClockRunSetup,
   kMipClockFeasibilityJump,
@@ -111,18 +112,16 @@ enum iClockMip : int {
 
   kMipClockProbingImplications,
 
-  kNumMipClock  //!< Number of MIP clocks
+  kLastMipClock = kMipClockProbingImplications,
+  kToMipClock = kLastMipClock+1
 };
 
-const HighsInt kNumThreadMipClock = kNumMipClock - 1;
+const HighsInt kNumThreadMipClock = kLastMipClock;
 
 const double tolerance_percent_report = 0.1;
 
 inline void initialiseMipProfilingNames(std::vector<std::string>& name) {
-  name.resize(kNumMipClock);
-  name[kMipClockPresolve] = "MIP presolve";
-  name[kMipClockSolve] = "MIP solve";
-  name[kMipClockPostsolve] = "MIP postsolve";
+  assert(name.size() == static_cast<size_t>(kToMipClock));
   // Level 1 - Should correspond to kMipClockTotal
   name[kMipClockInit] = "Initialise";
   name[kMipClockRunPresolve] = "Run presolve";
@@ -212,7 +211,7 @@ class MipTimer {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = mip_timer_clock.clock_;
 
-    clock.resize(kNumMipClock);
+    clock.resize(kLastMipClock);
     clock[kMipClockTotal] = 0;
     clock[kMipClockPresolve] = timer_pointer->clock_def("MIP presolve");
     clock[kMipClockSolve] = timer_pointer->clock_def("MIP solve");
