@@ -172,6 +172,7 @@ struct HighsProfiling {
   HighsTimer* timer;
   bool initialized = false;
   bool mip_ = false;
+  HighsInt num_profiling_clock_ = -1;
   double mip_start_time;
   HighsInt mip_clock_running;
   std::vector<double> submip_start_time;
