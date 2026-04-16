@@ -4314,7 +4314,13 @@ void HighsProfiling::setSubMip(const bool submip) {
 
 void HighsProfiling::start(const HighsInt profiling_clock) {
   // Start timing sub-solver profiling_clock
-  assert(0 <= profiling_clock && profiling_clock < kSubSolverCount);
+  bool profiling_clock_ok = 0 <= profiling_clock && profiling_clock < kSubSolverCount;
+  if (!profiling_clock_ok) {
+    printf("HighsProfiling::start called with clock %d not in (0, %d)\n",
+	   int(profiling_clock), int(kSubSolverCount));
+    return;
+  }
+  //  assert(profiling_clock_ok);
   HighsInt thread = highs::parallel::thread_num();
   double time_start = timer->read();
   if (profiling_clock == kSubSolverMip) {
@@ -4363,7 +4369,13 @@ void HighsProfiling::stop(const HighsInt profiling_clock) {
   HighsInt thread = highs::parallel::thread_num();
   HighsInt use_clock =
       profiling_clock < 0 ? this->clock_running[thread] : profiling_clock;
-  assert(0 <= use_clock && use_clock < kSubSolverCount);
+  bool profiling_clock_ok = 0 <= use_clock && use_clock < kSubSolverCount;
+  //  assert(0 <= use_clock && use_clock < kSubSolverCount);
+  if (!profiling_clock_ok) {
+    printf("HighsProfiling::stop called with clock %d not in (0, %d)\n",
+				  int(use_clock), int(kSubSolverCount));
+    return;
+  }
   double time_stop = timer->read();
   double time_start = kHighsInf;
   if (use_clock == kSubSolverMip) {
@@ -4405,6 +4417,12 @@ double HighsProfiling::read(const HighsInt profiling_clock) {
   return 0;
 }
 bool HighsProfiling::running(const HighsInt profiling_clock) {
+  bool profiling_clock_ok = 0 <= profiling_clock && profiling_clock < kSubSolverCount;
+  if (!profiling_clock_ok) {
+    printf("HighsProfiling::running called with clock %d not in (0, %d)\n",
+	   int(profiling_clock), int(kSubSolverCount));
+    return false;
+  }
   assert(1==3);
   return false;
 }

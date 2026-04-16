@@ -26,6 +26,7 @@ HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
     assert(this->clockIndex > 0);
   }
   */
+  this->clockIndex = 999;
 }
 
 void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,

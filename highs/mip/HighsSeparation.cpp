@@ -32,6 +32,8 @@ HighsSeparation::HighsSeparation(HighsMipWorker& mipworker)
         mipworker.mipsolver_.profiling_->getSepaClockIndex(kCliqueSepaString);
   }
   */
+  implBoundClock = 990;
+  cliqueClock = 991;
   separators.emplace_back(new HighsTableauSeparator(mipworker.mipsolver_));
   separators.emplace_back(new HighsPathSeparator(mipworker.mipsolver_));
   separators.emplace_back(new HighsModkSeparator(mipworker.mipsolver_));
