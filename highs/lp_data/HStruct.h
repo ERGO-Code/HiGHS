@@ -172,6 +172,7 @@ struct HighsProfilingRecord {
 struct HighsProfiling {
   HighsTimer* timer;
   bool initialized = false;
+  std::string model_name = "";
   bool mip_ = false;
   HighsInt num_profiling_clock_ = -1;
   std::vector<bool> submip;

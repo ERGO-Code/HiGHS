@@ -4167,9 +4167,6 @@ HighsStatus Highs::callSolveMip() {
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.setProfiling(this->profiling_);
-  // Set up the analysis (profiling) here, so that it's only done
-  // for the root MIP
-  solver.initialiseAnalysis();
   profiling_->start(kSubSolverMip);
   solver.run();
   profiling_->stop(kSubSolverMip);
@@ -4944,6 +4941,7 @@ HighsStatus Highs::initializeMultiThreading(HighsProfiling* profiling) {
   if (profiling) {
     const bool mip_profiling = kHighsAnalysisLevelMipTime & this->options_.highs_analysis_level;
     profiling->initialize(this->timer_, mip_profiling);
+    profiling->model_name = this->model_.lp_.model_name_;
     this->setProfiling(profiling);
   }
   return HighsStatus::kOk;

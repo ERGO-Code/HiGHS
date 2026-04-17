@@ -11,7 +11,6 @@
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
-#include "mip/HighsMipAnalysis.h"
 #include "parallel/HighsParallel.h"
 
 struct HighsMipSolverData;
@@ -67,8 +66,6 @@ class HighsMipSolver {
   const HighsImplications* implicinit;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
-
-  HighsMipAnalysis analysis_;
 
   HighsModelStatus termination_status_;
   HighsTerminator terminator_;
@@ -160,7 +157,6 @@ class HighsMipSolver {
   }
   void setParallelLock(bool lock) const;
   void setProfiling(HighsProfiling* profiling);
-  void initialiseAnalysis(const HighsMipAnalysis* from_analysis = nullptr);
 };
 
 std::array<char, 128> getGapString(const double gap_,

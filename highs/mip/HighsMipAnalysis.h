@@ -16,41 +16,4 @@
 #include "lp_data/HighsLp.h"
 #include "util/HighsTimer.h"
 
-struct HighsMipTimerClock {
-  HighsTimer* timer_pointer_;
-  std::vector<HighsInt> mip_clock_;
-  std::vector<HighsInt> submip_clock_;
-};
-
-class HighsMipAnalysis {
- public:
-  HighsMipAnalysis()
-      : timer_(nullptr),
-        analyse_mip_time(false) {}
-
-  HighsTimer* timer_ = nullptr;
-  void setupMipTime(const HighsOptions& options);
-  void mipTimerStart(const HighsInt mip_clock = 0) const;
-  void mipTimerStop(const HighsInt mip_clock = 0) const;
-  bool mipTimerRunning(const HighsInt mip_clock = 0) const;
-  double mipTimerRead(const HighsInt mip_clock = 0) const;
-  HighsInt mipTimerNumCall(const HighsInt mip_clock = 0) const;
-  void reportMipSolveLpClock(const bool header);
-  void reportMipTimer();
-
-  HighsInt getSepaClockIndex(const std::string& name) const;
-  std::string model_name;
-  HighsTimerClock mip_clocks;
-  std::vector<HighsTimerClock> thread_mip_clocks;
-
-  bool submip_;
-  std::vector<HighsTimerClock> thread_mip_clocks_;
-  std::vector<HighsTimerClock> thread_submip_clocks_;
-
-  bool analyse_mip_time;
-  std::vector<double> dive_time;
-  std::vector<double> node_search_time;
-  std::vector<std::pair<std::string, HighsInt>> sepa_name_clock;
-};
-
 #endif /* MIP_HIGHSMIPANALYSIS_H_ */

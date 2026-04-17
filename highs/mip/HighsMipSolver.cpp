@@ -97,7 +97,7 @@ void HighsMipSolver::run() {
   max_submip_level = std::max(submip_level, max_submip_level);
   // Start the timer local to HighsMipSolver - independent of the
   // timer passed from Highs as a pointer that's used in
-  // HighsMipAnalysis
+  // HighsProfiling
   this->timer_.start();
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -1348,14 +1348,3 @@ void HighsMipSolver::setProfiling(HighsProfiling* profiling) {
   this->profiling_ = profiling;
 }
 
-void HighsMipSolver::initialiseAnalysis(const HighsMipAnalysis* from_analysis) {
-  if (from_analysis) {
-    assert(this->submip);
-    this->analysis_ = *from_analysis;
-  } else {
-    this->analysis_.model_name = orig_model_->model_name_;
-    this->analysis_.timer_ = &this->timer_;
-    this->analysis_.setupMipTime(*options_mip_);
-  }
-  this->analysis_.submip_ = this->submip;
-}

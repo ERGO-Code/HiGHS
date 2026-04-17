@@ -36,10 +36,10 @@ void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
   HighsInt currNumCuts = cutpool.getNumCuts();
 
   if (!lpRelaxation.getMipSolver().mipdata_->parallelLockActive())
-    lpRelaxation.getMipSolver().analysis_.mipTimerStart(clockIndex);
+    lpRelaxation.getMipSolver().profiling_->start(clockIndex);
   separateLpSolution(lpRelaxation, lpAggregator, transLp, cutpool);
   if (!lpRelaxation.getMipSolver().mipdata_->parallelLockActive())
-    lpRelaxation.getMipSolver().analysis_.mipTimerStop(clockIndex);
+    lpRelaxation.getMipSolver().profiling_->stop(clockIndex);
 
   numCutsFound += cutpool.getNumCuts() - currNumCuts;
 }
