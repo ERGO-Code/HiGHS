@@ -1290,6 +1290,7 @@ class Highs {
    * its pointer to Highs
    */
   void initializeProfiling(HighsProfiling* profiling);
+  void initializeSingleThreadedProfiling(HighsProfiling* profiling);
 
   /**
    * @brief Checks that pointer is not nullptr, and copies it to Highs

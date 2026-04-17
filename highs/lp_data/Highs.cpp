@@ -2562,11 +2562,19 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       }
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
+      // May not have profiling set up - if Highs::setBasis is called
+      // before Highs::run, so have to do it here, and has to be
+      // single-threaded
+      HighsProfiling profiling;
+      const bool no_profiling = !this->profiling_;
+      if (no_profiling) 
+	this->initializeSingleThreadedProfiling(&profiling);
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
                                         info_, ekk_instance_, callback_,
                                         options_, timer_);
       solver_object.setProfiling(this->profiling_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
+      if (no_profiling) this->profiling_ = nullptr;
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
       basis_ = std::move(modifiable_basis);
@@ -4942,6 +4950,12 @@ HighsStatus Highs::initializeMultiThreading(HighsProfiling* profiling) {
 
 void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
+}
+
+void Highs::initializeSingleThreadedProfiling(HighsProfiling* profiling) {
+  if (!profiling) return;
+  profiling->multi_threaded = false;
+  this->initializeProfiling(profiling);
 }
 
 void Highs::initializeProfiling(HighsProfiling* profiling) {
