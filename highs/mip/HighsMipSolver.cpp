@@ -1102,19 +1102,17 @@ void HighsMipSolver::cleanupSolve() {
       HighsInt submip_calls = profiling_->numCall(clock, kSubMipRecord);
       double total_time = mip_time + submip_time;
       // Only log postsolve if it's written as nonzero
-      if (clock != kPostsolveTime || total_time >= 5e-3) {
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		   "                    %.2f (%s)\n",
+		   total_time, profiling_->name[clock].c_str());
+      if (mip_calls > 1 || submip_calls > 0) {
 	highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		     "                    %.2f (%s)\n",
-		     total_time, profiling_->name[clock].c_str());
-	if (mip_calls > 1 || submip_calls > 0) {
+		     "                        MIP    time [calls] = %.2f [%d]\n",
+		     mip_time, int(mip_calls));
+	if (submip_calls > 0) 
 	  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		       "                        MIP    time [calls] = %.2f [%d]\n",
-		       mip_time, int(mip_calls));
-	  if (submip_calls > 0) 
-	    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-			 "                        subMIP time [calls] = %.2f [%d]\n",
-			 submip_time, int(submip_calls));
-	}
+		       "                        subMIP time [calls] = %.2f [%d]\n",
+		       submip_time, int(submip_calls));
       }
     };
     double total = timer_.read();
