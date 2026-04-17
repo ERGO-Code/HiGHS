@@ -180,11 +180,14 @@ struct HighsProfiling {
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
   void initialize(HighsTimer& timer_, const bool mip_profiling = false);
-  void start(const HighsInt profiling_clock);
+  void start(const HighsInt profiling_clock, const bool restart = false);
   void stop(const HighsInt profiling_clock);
-  double read(const HighsInt profiling_clock);
-  bool running(const HighsInt profiling_clock);
-  HighsInt numCall(const HighsInt profiling_clock);
+  double read(const HighsInt profiling_clock,
+	      const HighsInt record_type = kChooseRecord);
+  bool running(const HighsInt profiling_clock,
+	      const HighsInt record_type = kChooseRecord);
+  HighsInt numCall(const HighsInt profiling_clock,
+	      const HighsInt record_type = kChooseRecord);
   void setSubMip(const bool submip);
   //  HighsInt getSepaClockIndex(const std::string& name);
 };

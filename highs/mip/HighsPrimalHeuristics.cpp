@@ -154,6 +154,9 @@ bool HighsPrimalHeuristics::solveSubMip(
   // Stop the solve timer so that presolve/solve/postsolve for the
   // sub-MIP are timed independently
   assert(mipsolver.profiling_->running(kSolveTime));
+  const HighsInt thread = highs::parallel::thread_num();
+  printf("HPH stop  kSolveTime submip[%2d] = %s\n",
+	 int(thread), mipsolver.profiling_->submip[thread] ? "T" : "F");
   mipsolver.profiling_->stop(kSolveTime);
   // Only start timing the submip if the calling MIP isn't a sub-MIP
   if (!mipsolver.submip)
@@ -169,13 +172,17 @@ bool HighsPrimalHeuristics::solveSubMip(
     mipsolver.profiling_->stop(kSubSolverSubMip);
   worker.heur_stats.max_submip_level = std::max(
       submipsolver.max_submip_level + 1, worker.heur_stats.max_submip_level);
+  printf("Solved sub-MIP on thread %2d with max depth worker (%d) submipsolver(%d)\n", int(thread), int(worker.heur_stats.max_submip_level), int(submipsolver.max_submip_level));
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
     // Only stop timing the submip if the calling MIP isn't a sub-MIP
     mipsolver.profiling_->stop(kMipClockSubMipSolve);
   }
   // Re-start the solve timer now that presolve/solve/postsolve for the
   // sub-MIP have been timed independently
-  mipsolver.profiling_->start(kSolveTime);
+  printf("HPH re-start kSolveTime submip[%2d] = %s\n",
+	 int(thread), mipsolver.profiling_->submip[thread] ? "T" : "F");
+  const bool restart = true;
+  mipsolver.profiling_->start(kSolveTime, restart);
   // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
   // pointer after calling HighsMipSolver::run(), and assert isn't
   // triggered for anything in ctest, but use direct test of

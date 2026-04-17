@@ -145,6 +145,9 @@ void HighsMipSolver::run() {
     return;
   }
 
+  const HighsInt thread = highs::parallel::thread_num();
+  printf("HMS start kSolveTime submip[%2d] = %s\n",
+	 int(thread), profiling_->submip[thread] ? "T" : "F");
   profiling_->start(kSolveTime);
   if (profiling_->mip_ && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
@@ -990,8 +993,12 @@ void HighsMipSolver::cleanupSolve() {
   mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve
   // determines the model status
-  if (profiling_->running(kSolveTime))
+  if (profiling_->running(kSolveTime)) {
+    const HighsInt thread = highs::parallel::thread_num();
+    printf("HMS stop  kSolveTime submip[%2d] = %s\n",
+	 int(thread), profiling_->submip[thread] ? "T" : "F");
     profiling_->stop(kSolveTime);
+  }
   // Need to complete the calculation of P-D integral, checking for NO
   // gap change
   mipdata_->updatePrimalDualIntegral(
@@ -1094,22 +1101,34 @@ void HighsMipSolver::cleanupSolve() {
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
   if (!timeless_log) {
+    auto callRecord = [&](HighsInt clock) {
+      double mip_time = profiling_->read(clock, kMipRecord);
+      double submip_time = profiling_->read(clock, kSubMipRecord);
+      HighsInt mip_calls = profiling_->numCall(clock, kMipRecord);
+      HighsInt submip_calls = profiling_->numCall(clock, kSubMipRecord);
+      double total_time = mip_time + submip_time;
+      // Only log postsolve if it's written as nonzero
+      if (clock != kPostsolveTime || total_time >= 5e-3) {
+	highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		     "                    %.2f (%s)\n",
+		     total_time, profiling_->name[clock].c_str());
+	if (mip_calls > 1 || submip_calls > 0) {
+	  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		       "                        MIP    time [calls] = %.2f [%d]\n",
+		       mip_time, int(mip_calls));
+	  if (submip_calls > 0) 
+	    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+			 "                        subMIP time [calls] = %.2f [%d]\n",
+			 submip_time, int(submip_calls));
+	}
+      }
+    };
     double total = timer_.read();
-    double presolve = profiling_->read(kPresolveTime);
-    double solve = profiling_->read(kSolveTime);
-    double postsolve = profiling_->read(kPostsolveTime);
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "  Timing            %.2f\n", total);
-    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "                    %.2f [%d] (presolve)\n"
-		 "                    %.2f [%d] (solve)\n",
-		 presolve, int(profiling_->numCall(kPresolveTime)),
-		 solve, int(profiling_->numCall(kSolveTime)));
-    // Only log postsolve if it's written as nonzero
-    if (postsolve >= 5e-3) 
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		   "                    %.2f (postsolve)\n",
-		   postsolve);
+    callRecord(kPresolveTime);
+    callRecord(kSolveTime);
+    callRecord(kPostsolveTime);
   }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Max sub-MIP depth %d\n"

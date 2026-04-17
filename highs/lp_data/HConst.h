@@ -307,6 +307,12 @@ enum IisStatus : int {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum MipChooseSubMipRecord : int {
+  kMipRecord = -1,
+  kChooseRecord,
+  kSubMipRecord
+};
+
 enum PresolveSolvePostsolveIndex : int {
   kPresolveTime = 0,
   kSolveTime,
