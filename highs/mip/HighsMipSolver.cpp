@@ -94,6 +94,7 @@ void HighsMipSolver::runTask(F&& f, highs::parallel::TaskGroup& tg,
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
+  max_submip_level = std::max(submip_level, max_submip_level);
   // Start the timer local to HighsMipSolver - independent of the
   // timer passed from Highs as a pointer that's used in
   // HighsMipAnalysis
@@ -145,9 +146,6 @@ void HighsMipSolver::run() {
     return;
   }
 
-  const HighsInt thread = highs::parallel::thread_num();
-  printf("HMS start kSolveTime submip[%2d] = %s\n",
-	 int(thread), profiling_->submip[thread] ? "T" : "F");
   profiling_->start(kSolveTime);
   if (profiling_->mip_ && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
@@ -993,12 +991,8 @@ void HighsMipSolver::cleanupSolve() {
   mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve
   // determines the model status
-  if (profiling_->running(kSolveTime)) {
-    const HighsInt thread = highs::parallel::thread_num();
-    printf("HMS stop  kSolveTime submip[%2d] = %s\n",
-	 int(thread), profiling_->submip[thread] ? "T" : "F");
+  if (profiling_->running(kSolveTime)) 
     profiling_->stop(kSolveTime);
-  }
   // Need to complete the calculation of P-D integral, checking for NO
   // gap change
   mipdata_->updatePrimalDualIntegral(
