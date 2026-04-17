@@ -145,6 +145,10 @@ bool Solver::initialise() {
   // initialise linear solver
   LS_.reset(new FactorHiGHSSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->data, logger_));
+  if (!LS_) {
+    info_.status = kStatusError;
+    return true;
+  }
   if (Int status = LS_->setup()) {
     info_.status = (Status)status;
     return true;
