@@ -4333,8 +4333,10 @@ void HighsProfiling::start(const HighsInt profiling_clock) {
     // Check for starting a clock that's currently running - except
     // for analytic centre calculation that may by stopped by
     // terminating the task
-    printf("HighsProfiling: clock running when starting clock %d (%s) \n",
-          int(profiling_clock), this->name[profiling_clock].c_str());
+    printf("HighsProfiling: clock running for thread %d when starting %s clock %d (%s) \n",
+	   int(thread), 
+	   this->submip[thread] ? "sub-MIP" : "MIP",
+	   int(profiling_clock), this->name[profiling_clock].c_str());
     assert(!clock_running);
   }
   thread_record.start_time[profiling_clock] = -time_start;
@@ -4350,8 +4352,10 @@ void HighsProfiling::stop(const HighsInt profiling_clock) {
   const bool clock_running = std::signbit(time_start);
   if (!clock_running) {
     // Check for stopping a clock that's currently stopped
-    printf("HighsProfiling: clock not running when stopping clock %d (%s) \n",
-          int(profiling_clock), this->name[profiling_clock].c_str());
+    printf("HighsProfiling: clock not running for thread %d when stopping %s clock %d (%s) \n",
+	   int(thread), 
+	   this->submip[thread] ? "sub-MIP" : "MIP",
+	   int(profiling_clock), this->name[profiling_clock].c_str());
     assert(clock_running);
   } else {
     thread_record.num_call[profiling_clock]++;
@@ -4373,6 +4377,14 @@ double HighsProfiling::read(const HighsInt profiling_clock) {
   }
   // Clock is stopped, so return the record time
   return this->record[thread].run_time[profiling_clock];
+}
+
+HighsInt HighsProfiling::numCall(const HighsInt profiling_clock) {
+  assert(profiling_clock >= 0);
+  if (profiling_clock >= this->num_profiling_clock_) return -kHighsIInf;
+  HighsInt thread = highs::parallel::thread_num();
+  HighsProfilingRecord& thread_record = this->submip[thread] ? this->submip_record[thread] : this->record[thread];
+  return this->record[thread].num_call[profiling_clock] + this->running(profiling_clock) ? 1 : 0;
 }
 
 bool HighsProfiling::running(const HighsInt profiling_clock) {

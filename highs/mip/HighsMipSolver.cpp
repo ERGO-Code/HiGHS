@@ -108,7 +108,9 @@ void HighsMipSolver::run() {
        iLp++)
     mipdata_->lps[iLp].setProfiling(this->profiling_);
   assert(profiling_);
-  profiling_->start(kMipClockPresolve);
+  // The solve time clock shouldn't be running on entry
+  assert(!profiling_->running(kSolveTime));
+  profiling_->start(kPresolveTime);
   profiling_->start(kMipClockInit);
   mipdata_->init();
 #ifdef HIGHS_DEBUGSOL
@@ -120,7 +122,7 @@ void HighsMipSolver::run() {
   profiling_->start(kMipClockRunPresolve);
   mipdata_->runMipPresolve(options_mip_->presolve_reduction_limit);
   profiling_->stop(kMipClockRunPresolve);
-  profiling_->stop(kMipClockPresolve);
+  profiling_->stop(kPresolveTime);
   if (profiling_->mip_ && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
 		 "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
@@ -143,7 +145,7 @@ void HighsMipSolver::run() {
     return;
   }
 
-  profiling_->start(kMipClockSolve);
+  profiling_->start(kSolveTime);
   if (profiling_->mip_ && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
 		 "MIP-Timing: %11.2g - starting  setup\n", timer_.read());
@@ -988,15 +990,14 @@ void HighsMipSolver::cleanupSolve() {
   mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve
   // determines the model status
-  if (profiling_->running(kMipClockSolve))
-    profiling_->stop(kMipClockSolve);
-
+  if (profiling_->running(kSolveTime))
+    profiling_->stop(kSolveTime);
   // Need to complete the calculation of P-D integral, checking for NO
   // gap change
   mipdata_->updatePrimalDualIntegral(
       mipdata_->lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
       mipdata_->upper_bound, false);
-  profiling_->start(kMipClockPostsolve);
+  profiling_->start(kPostsolveTime);
 
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
@@ -1038,7 +1039,7 @@ void HighsMipSolver::cleanupSolve() {
       modelstatus_ = HighsModelStatus::kInfeasible;
   }
 
-  profiling_->stop(kMipClockPostsolve);
+  profiling_->stop(kPostsolveTime);
   timer_.stop();
 
   std::string solutionstatus = "-";
@@ -1093,15 +1094,22 @@ void HighsMipSolver::cleanupSolve() {
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
   if (!timeless_log) {
+    double total = timer_.read();
+    double presolve = profiling_->read(kPresolveTime);
+    double solve = profiling_->read(kSolveTime);
+    double postsolve = profiling_->read(kPostsolveTime);
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "  Timing            %.2f\n", timer_.read());
+                 "  Timing            %.2f\n", total);
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "                    %.2f (presolve)\n"
-		 "                    %.2f (solve)\n"
-		 "                    %.2f (postsolve)\n",
-		 profiling_->read(kPresolveTime),
-		 profiling_->read(kSolveTime),
-		 profiling_->read(kPostsolveTime));
+		 "                    %.2f [%d] (presolve)\n"
+		 "                    %.2f [%d] (solve)\n",
+		 presolve, int(profiling_->numCall(kPresolveTime)),
+		 solve, int(profiling_->numCall(kSolveTime)));
+    // Only log postsolve if it's written as nonzero
+    if (postsolve >= 5e-3) 
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		   "                    %.2f (postsolve)\n",
+		   postsolve);
   }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Max sub-MIP depth %d\n"

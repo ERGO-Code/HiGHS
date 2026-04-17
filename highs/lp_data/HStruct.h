@@ -184,6 +184,7 @@ struct HighsProfiling {
   void stop(const HighsInt profiling_clock);
   double read(const HighsInt profiling_clock);
   bool running(const HighsInt profiling_clock);
+  HighsInt numCall(const HighsInt profiling_clock);
   void setSubMip(const bool submip);
   //  HighsInt getSepaClockIndex(const std::string& name);
 };

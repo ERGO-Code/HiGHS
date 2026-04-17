@@ -151,28 +151,31 @@ bool HighsPrimalHeuristics::solveSubMip(
   // Copy the pointer to global sub-solver data into the sub-MIP
   // solver
   submipsolver.setProfiling(mipsolver.profiling_);
+  // Stop the solve timer so that presolve/solve/postsolve for the
+  // sub-MIP are timed independently
+  assert(mipsolver.profiling_->running(kSolveTime));
+  mipsolver.profiling_->stop(kSolveTime);
   // Only start timing the submip if the calling MIP isn't a sub-MIP
   if (!mipsolver.submip)
-    if (mipsolver.profiling_)
-      mipsolver.profiling_->start(kSubSolverSubMip);
+    mipsolver.profiling_->start(kSubSolverSubMip);
   // Ensure that sub-solver call time data accumulated in the sub-MIP record
-  if (mipsolver.profiling_)
-    mipsolver.profiling_->setSubMip(true);
+  mipsolver.profiling_->setSubMip(true);
   submipsolver.run();
   // Ensure that further sub-solver call time data are accumulated in
   // the MIP or sub-MIP record, according to whether the calling MIP
   // is a sub-MIP
-  if (mipsolver.profiling_)
     mipsolver.profiling_->setSubMip(mipsolver.submip);
   if (!mipsolver.submip)
-    if (mipsolver.profiling_)
-      mipsolver.profiling_->stop(kSubSolverSubMip);
+    mipsolver.profiling_->stop(kSubSolverSubMip);
   worker.heur_stats.max_submip_level = std::max(
       submipsolver.max_submip_level + 1, worker.heur_stats.max_submip_level);
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
     // Only stop timing the submip if the calling MIP isn't a sub-MIP
     mipsolver.profiling_->stop(kMipClockSubMipSolve);
   }
+  // Re-start the solve timer now that presolve/solve/postsolve for the
+  // sub-MIP have been timed independently
+  mipsolver.profiling_->start(kSolveTime);
   // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
   // pointer after calling HighsMipSolver::run(), and assert isn't
   // triggered for anything in ctest, but use direct test of
