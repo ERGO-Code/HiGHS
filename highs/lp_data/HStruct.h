@@ -171,15 +171,20 @@ struct HighsProfilingRecord {
 
 struct HighsProfiling {
   HighsTimer* timer;
-  bool initialized = false;
+  // multi_threaded_ is set false before calling initialize, otherwise
+  // call to highs::parallel::num_threads() is made, assuming that
+  // initialize_scheduler has been called
+  bool multi_threaded = true;
   std::string model_name = "";
   bool mip_ = false;
   HighsInt num_profiling_clock_ = -1;
-  std::vector<bool> submip;
   std::vector<std::string> name;
-  // This vector is the data structure over threads
+  // These vectors are over threads
+  std::vector<bool> submip;
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
+  bool initialized = false;
+
   void initialize(HighsTimer& timer_, const bool mip_profiling = false);
   void start(const HighsInt profiling_clock, const bool restart = false);
   void stop(const HighsInt profiling_clock);

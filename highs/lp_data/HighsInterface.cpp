@@ -4273,10 +4273,7 @@ void HighsLinearObjective::clear() {
 }
 
 void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
-  HighsInt num_thread = highs::parallel::num_threads();
   this->timer = &timer_;
-  this->initialized = true;
-  this->submip.assign(num_thread, false);
   this->num_profiling_clock_ = kToPresolveSolvePostsolve;
   this->name.assign(this->num_profiling_clock_, "");
   this->name[kPresolveTime] = "Presolve";
@@ -4311,9 +4308,12 @@ void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
   thread_record.num_call.assign(this->num_profiling_clock_, 0);
   thread_record.run_time.assign(this->num_profiling_clock_, 0);
   thread_record.start_time.assign(this->num_profiling_clock_, 1);
+  HighsInt num_thread = this->multi_threaded ? highs::parallel::num_threads() : 1;
   assert(num_thread > 0);
+  this->submip.assign(num_thread, false);
   this->record.assign(num_thread, thread_record);
   this->submip_record.assign(num_thread, thread_record);
+  this->initialized = true;
 }
 
 void HighsProfiling::setSubMip(const bool submip) {

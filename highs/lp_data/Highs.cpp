@@ -4936,14 +4936,7 @@ HighsStatus Highs::initializeMultiThreading(HighsProfiling* profiling) {
   }
   highsLogDev(log_options, HighsLogType::kDetailed,
               "Running with %d thread(s)\n", int(max_threads_));
-  // Possibly initialize the multithreaded profiling. noting that
-  // profiling is null by default
-  if (profiling) {
-    const bool mip_profiling = kHighsAnalysisLevelMipTime & this->options_.highs_analysis_level;
-    profiling->initialize(this->timer_, mip_profiling);
-    profiling->model_name = this->model_.lp_.model_name_;
-    this->setProfiling(profiling);
-  }
+  this->initializeProfiling(profiling);
   return HighsStatus::kOk;
 }
 
