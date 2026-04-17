@@ -4951,6 +4951,15 @@ void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
 
+void Highs::initializeProfiling(HighsProfiling* profiling) {
+  if (!profiling) return;
+  const bool mip_profiling = kHighsAnalysisLevelMipTime &
+    this->options_.highs_analysis_level;
+  profiling->initialize(this->timer_, mip_profiling);
+  profiling->model_name = this->model_.lp_.model_name_;
+  this->setProfiling(profiling);
+}
+
 void Highs::setProfiling(HighsProfiling* profiling) {
   assert(profiling);
   this->profiling_ = profiling;

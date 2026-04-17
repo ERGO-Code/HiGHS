@@ -1285,6 +1285,15 @@ class Highs {
    */
   static void resetGlobalScheduler(bool blocking = false);
 
+  /**
+   * @brief If profiling is not nullptr, sets up profiling and copies
+   * its pointer to Highs
+   */
+  void initializeProfiling(HighsProfiling* profiling);
+
+  /**
+   * @brief Checks that pointer is not nullptr, and copies it to Highs
+   */
   void setProfiling(HighsProfiling* profiling);
 
   // Start of advanced methods: only for internal use!
