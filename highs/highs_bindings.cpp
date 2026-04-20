@@ -1332,6 +1332,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("clear", &Highs::clear)
       .def("clearModel", &Highs::clearModel)
       .def("clearSolver", &Highs::clearSolver)
+      .def("releaseMemory", &Highs::releaseMemory)
       .def("passModel", &highs_passModel)
       .def("passModel", &highs_passModelPointers)
       .def("passModel", &highs_passLp)
