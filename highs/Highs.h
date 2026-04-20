@@ -90,6 +90,16 @@ class Highs {
   HighsStatus clearSolverDualData();
 
   /**
+   * @brief Release all retained memory back to the allocator
+   *
+   * Clears all solver state and shrinks internal vectors to free
+   * unused capacity. Useful in long-running services that reuse a
+   * Highs instance across multiple solves to prevent unbounded RSS
+   * growth from heap fragmentation.
+   */
+  HighsStatus releaseMemory();
+
+  /**
    * Methods for model input
    */
 

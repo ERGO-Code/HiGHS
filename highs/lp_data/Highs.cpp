@@ -58,6 +58,7 @@ HighsStatus Highs::clear() {
 HighsStatus Highs::clearModel() {
   model_.clear();
   multi_linear_objective_.clear();
+  saved_objective_and_solution_.clear();
   return clearSolver();
 }
 
@@ -65,6 +66,7 @@ HighsStatus Highs::clearSolver() {
   HighsStatus return_status = HighsStatus::kOk;
   clearDerivedModelProperties();
   invalidateSolverData();
+  ekk_instance_.clear();
   return returnFromHighs(return_status);
 }
 
@@ -72,6 +74,43 @@ HighsStatus Highs::clearSolverDualData() {
   HighsStatus return_status = HighsStatus::kOk;
   clearDerivedModelProperties();
   invalidateSolverDualData();
+  return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::releaseMemory() {
+  HighsStatus return_status = HighsStatus::kOk;
+  clearModel();
+  saved_objective_and_solution_.shrink_to_fit();
+  solution_.col_value.shrink_to_fit();
+  solution_.col_dual.shrink_to_fit();
+  solution_.row_value.shrink_to_fit();
+  solution_.row_dual.shrink_to_fit();
+  basis_.col_status.shrink_to_fit();
+  basis_.row_status.shrink_to_fit();
+  ranging_.col_cost_up.value_.shrink_to_fit();
+  ranging_.col_cost_up.objective_.shrink_to_fit();
+  ranging_.col_cost_up.in_var_.shrink_to_fit();
+  ranging_.col_cost_up.ou_var_.shrink_to_fit();
+  ranging_.col_cost_dn.value_.shrink_to_fit();
+  ranging_.col_cost_dn.objective_.shrink_to_fit();
+  ranging_.col_cost_dn.in_var_.shrink_to_fit();
+  ranging_.col_cost_dn.ou_var_.shrink_to_fit();
+  ranging_.col_bound_up.value_.shrink_to_fit();
+  ranging_.col_bound_up.objective_.shrink_to_fit();
+  ranging_.col_bound_up.in_var_.shrink_to_fit();
+  ranging_.col_bound_up.ou_var_.shrink_to_fit();
+  ranging_.col_bound_dn.value_.shrink_to_fit();
+  ranging_.col_bound_dn.objective_.shrink_to_fit();
+  ranging_.col_bound_dn.in_var_.shrink_to_fit();
+  ranging_.col_bound_dn.ou_var_.shrink_to_fit();
+  ranging_.row_bound_up.value_.shrink_to_fit();
+  ranging_.row_bound_up.objective_.shrink_to_fit();
+  ranging_.row_bound_up.in_var_.shrink_to_fit();
+  ranging_.row_bound_up.ou_var_.shrink_to_fit();
+  ranging_.row_bound_dn.value_.shrink_to_fit();
+  ranging_.row_bound_dn.objective_.shrink_to_fit();
+  ranging_.row_bound_dn.in_var_.shrink_to_fit();
+  ranging_.row_bound_dn.ou_var_.shrink_to_fit();
   return returnFromHighs(return_status);
 }
 
@@ -3773,12 +3812,12 @@ void Highs::invalidateSolution() {
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  this->solution_.invalidate();
+  this->solution_.clear();
 }
 
 void Highs::invalidateBasis() {
   info_.basis_validity = kBasisValidityInvalid;
-  this->basis_.invalidate();
+  this->basis_.clear();
 }
 
 void Highs::invalidateInfo() { info_.invalidate(); }
