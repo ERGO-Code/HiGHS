@@ -2043,6 +2043,36 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         e1 *= x - 4 <= 3
         self.assertEqualExpr(e1, [x], [1], None, [-self.h.inf, 7])
 
+    def test_divide(self):
+        x, y = self.x[0:2]
+
+        expr = x / 4
+        self.assertEqualExpr(expr, [x], [0.25])
+
+        expr = (x + 2 * y + 8) / 4
+        self.assertEqualExpr(expr, [x, y], [0.25, 0.5], 2)
+
+        expr = (4 <= x + 2 * y <= 8) / 2
+        self.assertEqualExpr(expr, [x, y], [0.5, 1], None, [2, 4])
+
+        expr = (x + 2 * y) / highs_linear_expression(4)
+        self.assertEqualExpr(expr, [x, y], [0.25, 0.5])
+
+        expr = x + 2 * y + 8
+        expr /= 4
+        self.assertEqualExpr(expr, [x, y], [0.25, 0.5], 2)
+
+        expr = 4 <= x + 2 * y <= 8
+        expr /= -2
+        self.assertEqualExpr(expr, [x, y], [-0.5, -1], None, [-4, -2])
+
+        self.assertRaises(Exception, lambda: x / y)
+        self.assertRaises(Exception, lambda: (x + y) / (x + 1))
+        self.assertRaises(Exception, lambda: 2 / x)
+        self.assertRaises(Exception, lambda: 2 / (x + y))
+        self.assertRaises(ZeroDivisionError, lambda: x / 0)
+        self.assertRaises(ZeroDivisionError, lambda: (x + y) / highs_linear_expression(0))
+
     def test_simplify(self):
         x, y, z = self.x[0:3]
 

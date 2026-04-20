@@ -1701,6 +1701,15 @@ class highs_var(object):
         else:
             return highs_linear_expression(self).__ge__(other)
 
+    # self / scalar
+    def __truediv__(self, other: Union[float, int, highs_linear_expression]):
+        expr = highs_linear_expression(self)
+        expr /= other
+        return expr
+
+    # scalar / self
+    def __rtruediv__(self, other: Union[float, int, highs_linear_expression]):
+        raise Exception("Only division of a linear expression by a scalar is allowed.")
 
 # highs constraint
 class highs_cons(object):
@@ -2243,6 +2252,32 @@ class highs_linear_expression(object):
 
             self.constant = (self.constant or 0.0) - float(other)
             return self
+        
+    # expr / scalar
+    def __truediv__(self, other: Union[float, int, highs_linear_expression]):
+        copy = highs_linear_expression(self)
+        copy /= other
+        return copy
+
+    # expr /= scalar
+    def __itruediv__(self, other: Union[float, int, highs_linear_expression]):
+        if isinstance(other, (float, int)):
+            divisor = float(other)
+
+        elif isinstance(other, highs_linear_expression) and other.idxs == [] and other.constant is not None:
+            divisor = float(other.constant)
+
+        else:
+            raise Exception("Only division by a scalar is allowed.")
+
+        if divisor == 0:
+            raise ZeroDivisionError("division by zero")
+
+        return self.__imul__(1.0 / divisor)
+
+    # scalar / expr
+    def __rtruediv__(self, other: Union[float, int, highs_var, highs_linear_expression]):
+        raise Exception("Only division of a linear expression by a scalar is allowed.")        
 
     def __imul__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         if isinstance(other, (float, int)):
