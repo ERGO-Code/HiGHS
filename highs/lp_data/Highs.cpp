@@ -924,6 +924,8 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::run() {
+  printf("On Entry to Highs::run()   this->profiling_ = %p; initialized = %s\n", (void*)(this->profiling_),
+	 this->profiling_ ? (this->profiling_->initialized ? "T" : "F") : "-");
   // Level 0 of Highs::run()
   //
   // Action the file operations associated with running HiGHS, and
@@ -4952,10 +4954,18 @@ void Highs::initializeSingleThreadedProfiling(HighsProfiling* profiling) {
 
 void Highs::initializeProfiling(HighsProfiling* profiling) {
   if (!profiling) return;
+  if (this->profiling_) {
+    printf("Highs::initializeProfiling this->profiling_ = %p; initialized = %s\n",
+	   (void*)(this->profiling_), this->profiling_->initialized ? "T" : "F");
+    // Only initialize profiling if it's nullptr
+    //assert(this->profiling_->initialized);
+    if (this->profiling_->initialized) return;
+  }
   const bool mip_profiling = kHighsAnalysisLevelMipTime &
     this->options_.highs_analysis_level;
+  printf("Highs::initializeProfiling with profiling = %p\n", (void*)(profiling));
   profiling->initialize(this->timer_, mip_profiling);
-  profiling->model_name = this->model_.lp_.model_name_;
+  profiling->model_name_ = this->model_.lp_.model_name_;
   this->setProfiling(profiling);
 }
 

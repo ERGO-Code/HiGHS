@@ -175,7 +175,7 @@ struct HighsProfiling {
   // call to highs::parallel::num_threads() is made, assuming that
   // initialize_scheduler has been called
   bool multi_threaded = true;
-  std::string model_name = "";
+  std::string model_name_ = "";
   bool mip_ = false;
   HighsInt num_profiling_clock_ = -1;
   std::vector<std::string> name;
@@ -185,6 +185,7 @@ struct HighsProfiling {
   bool initialized = false;
 
   void initialize(HighsTimer& timer_, const bool mip_profiling = false);
+  bool corrupted();
   HighsProfilingRecord* getHighsProfilingRecord(const bool submip = false);
   HighsInt numThread();
   HighsInt myThread();
