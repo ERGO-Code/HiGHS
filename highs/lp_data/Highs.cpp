@@ -3889,15 +3889,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     options_.mip_max_nodes = options_.mip_max_start_nodes;
     // Solve the model
     basis_.clear();
-    // If a MIP is solved, it counts as a sub-MIP, so indicate that it
-    // should be timed as such - and don't forget to indicate that in
-    // optimizeModel when the HighsMipSolver instance is created
-    if (this->profiling_)
-      this->profiling_->setSubMip(true);
     return_status = this->optimizeModel();
-    if (this->profiling_)
-      this->profiling_->setSubMip(false);
-
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
   }

@@ -180,12 +180,14 @@ struct HighsProfiling {
   HighsInt num_profiling_clock_ = -1;
   std::vector<std::string> name;
   // These vectors are over threads
-  std::vector<bool> submip;
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
   bool initialized = false;
 
   void initialize(HighsTimer& timer_, const bool mip_profiling = false);
+  HighsProfilingRecord* getHighsProfilingRecord(const bool submip = false);
+  HighsInt numThread();
+  HighsInt myThread();
   void start(const HighsInt profiling_clock, const bool restart = false);
   void stop(const HighsInt profiling_clock);
   double read(const HighsInt profiling_clock,
@@ -194,7 +196,6 @@ struct HighsProfiling {
 	      const HighsInt record_type = kChooseRecord);
   HighsInt numCall(const HighsInt profiling_clock,
 	      const HighsInt record_type = kChooseRecord);
-  void setSubMip(const bool submip);
   //  HighsInt getSepaClockIndex(const std::string& name);
 };
 

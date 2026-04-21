@@ -4308,92 +4308,99 @@ void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
   thread_record.num_call.assign(this->num_profiling_clock_, 0);
   thread_record.run_time.assign(this->num_profiling_clock_, 0);
   thread_record.start_time.assign(this->num_profiling_clock_, 1);
-  HighsInt num_thread = this->multi_threaded ? highs::parallel::num_threads() : 1;
+  HighsInt num_thread = this->numThread();
   assert(num_thread > 0);
-  this->submip.assign(num_thread, false);
   this->record.assign(num_thread, thread_record);
   this->submip_record.assign(num_thread, thread_record);
   this->initialized = true;
 }
 
-void HighsProfiling::setSubMip(const bool submip) {
-  this->submip[highs::parallel::thread_num()] = submip;
+HighsProfilingRecord* HighsProfiling::getHighsProfilingRecord(const bool submip) {
+  HighsInt thread = this->myThread();
+  if (submip) return &this->submip_record[thread];
+  return &this->record[thread];
+}
+
+HighsInt HighsProfiling::numThread() {
+  return this->multi_threaded ? highs::parallel::num_threads() : 1;
+}
+
+HighsInt HighsProfiling::myThread() {
+  return this->multi_threaded ? highs::parallel::thread_num(): 0;
 }
 
 void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return;
   // Start timing sub-solver profiling_clock
-  HighsInt thread = highs::parallel::thread_num();
+  HighsInt thread = this->myThread();
   double time_start = timer->read();
 
-  HighsProfilingRecord& thread_record = this->submip[thread] ? this->submip_record[thread] : this->record[thread];
-  const bool clock_running = std::signbit(thread_record.start_time[profiling_clock]);
+  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
+  const bool clock_running = std::signbit(thread_record->start_time[profiling_clock]);
   if (clock_running && profiling_clock != kSubSolverHipoAc && profiling_clock != kSubSolverIpxAc) {
     // Check for starting a clock that's currently running - except
     // for analytic centre calculation that may by stopped by
     // terminating the task
-    printf("HighsProfiling: clock running for thread %d when starting %s clock %d (%s) \n",
+    printf("HighsProfiling: clock running for thread %d when starting clock %d (%s) \n",
 	   int(thread), 
-	   this->submip[thread] ? "sub-MIP" : "MIP",
 	   int(profiling_clock), this->name[profiling_clock].c_str());
     assert(!clock_running);
   }
-  thread_record.start_time[profiling_clock] = -time_start;
-  if (restart) thread_record.num_call[profiling_clock]--;
+  thread_record->start_time[profiling_clock] = -time_start;
+  if (restart) thread_record->num_call[profiling_clock]--;
 }
 
 void HighsProfiling::stop(const HighsInt profiling_clock) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return;
-  HighsInt thread = highs::parallel::thread_num();
-  HighsProfilingRecord& thread_record = this->submip[thread] ? this->submip_record[thread] : this->record[thread];
+  HighsInt thread = this->myThread();
+  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
   double time_stop = timer->read();
-  double time_start = thread_record.start_time[profiling_clock];
+  double time_start = thread_record->start_time[profiling_clock];
   const bool clock_running = std::signbit(time_start);
   if (!clock_running) {
     // Check for stopping a clock that's currently stopped
-    printf("HighsProfiling: clock not running for thread %d when stopping %s clock %d (%s) \n",
+    printf("HighsProfiling: clock not running for thread %d when stopping clock %d (%s) \n",
 	   int(thread), 
-	   this->submip[thread] ? "sub-MIP" : "MIP",
 	   int(profiling_clock), this->name[profiling_clock].c_str());
     assert(clock_running);
   } else {
-    thread_record.num_call[profiling_clock]++;
-    thread_record.run_time[profiling_clock] += (time_stop+time_start);
+    thread_record->num_call[profiling_clock]++;
+    thread_record->run_time[profiling_clock] += (time_stop+time_start);
   }
-  thread_record.start_time[profiling_clock] = time_stop;
+  thread_record->start_time[profiling_clock] = time_stop;
 }
 
 double HighsProfiling::read(const HighsInt profiling_clock, const HighsInt record_type) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return -kHighsInf;
-  HighsInt thread = highs::parallel::thread_num();
-  const bool submip_record = record_type == kSubMipRecord || (record_type == kChooseRecord && this->submip[thread]);
-  HighsProfilingRecord& thread_record = submip_record ? this->submip_record[thread] : this->record[thread];
+  HighsInt thread = this->myThread();
+  //  const bool submip_record = record_type == kSubMipRecord || (record_type == kChooseRecord && this->submip[thread]);
+  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
   // If the clock is running, work out current running time
   const double current_running_time = this->running(profiling_clock, record_type) ?
-    thread_record.start_time[profiling_clock] + timer->read() : 0;
-  return thread_record.run_time[profiling_clock] + current_running_time;
+    thread_record->start_time[profiling_clock] + timer->read() : 0;
+  return thread_record->run_time[profiling_clock] + current_running_time;
 }
 
 HighsInt HighsProfiling::numCall(const HighsInt profiling_clock, const HighsInt record_type) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return -kHighsIInf;
-  HighsInt thread = highs::parallel::thread_num();
-  const bool submip_record = record_type == kSubMipRecord || (record_type == kChooseRecord && this->submip[thread]);
-  HighsProfilingRecord& thread_record = submip_record ? this->submip_record[thread] : this->record[thread];
+  HighsInt thread = this->myThread();
+  //  const bool submip_record = record_type == kSubMipRecord || (record_type == kChooseRecord && this->submip[thread]);
+  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
   const HighsInt this_call_counts = this->running(profiling_clock, record_type) ? 1 : 0;
-  return thread_record.num_call[profiling_clock] + this_call_counts;
+  return thread_record->num_call[profiling_clock] + this_call_counts;
 }
 
 bool HighsProfiling::running(const HighsInt profiling_clock, const HighsInt record_type) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return false;
-  HighsInt thread = highs::parallel::thread_num();
-  const bool submip_record = record_type == kSubMipRecord || (record_type == kChooseRecord && this->submip[thread]);
-  HighsProfilingRecord& thread_record = submip_record ? this->submip_record[thread] : this->record[thread];
-  double time_start = thread_record.start_time[profiling_clock];
+  HighsInt thread = this->myThread();
+  //  const bool submip_record = record_type == kSubMipRecord || (record_type == kChooseRecord && this->submip[thread]);
+  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
+  double time_start = thread_record->start_time[profiling_clock];
   const bool clock_running = std::signbit(time_start);
   return clock_running;
 }
@@ -4402,7 +4409,7 @@ bool HighsProfiling::running(const HighsInt profiling_clock, const HighsInt reco
 
 void Highs::reportProfiling() const {
   //  if (this->options_.log_dev_level == 0) return;
-  HighsInt num_thread = highs::parallel::num_threads();
+  HighsInt num_thread = this->profiling_->numThread();
   double mip_time = 0;
   double max_sumip_time = 0;
   const std::vector<HighsProfilingRecord>& record =
