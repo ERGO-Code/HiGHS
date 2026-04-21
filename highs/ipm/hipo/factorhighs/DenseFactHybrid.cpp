@@ -5,7 +5,6 @@
 #include "ReturnValues.h"
 #include "Swaps.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/Log.h"
 
 namespace hipo {
 
