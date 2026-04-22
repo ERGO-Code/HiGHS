@@ -4,26 +4,81 @@ import numpy as np
 from numbers import Integral
 from itertools import product
 from threading import Thread, local, RLock, Lock
-from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast, Union, Tuple
+from typing import Literal, Optional, Any, overload, Callable, Sequence, Mapping, Iterable, Iterator, SupportsIndex, cast, Union, Tuple, TYPE_CHECKING
 from weakref import proxy
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 from ._core import (
     ObjSense,
     HighsVarType,
     HighsStatus,
-    HighsLinearObjective,
-    cb,  # type: ignore
+    cb, # type: ignore
     _Highs,  # type: ignore
-    kHighsInf,
-    kHighsUndefined
+    kHighsInf
 )
 
-# backwards typing support information for HighspyArray
-np_version = tuple(map(int, np.__version__.split('.')))
-if sys.version_info >= (3, 9) and np_version >= (1,22,0):
+# TYPE_CHECKING: provide precise generic types for static analysis
+# Runtime: use plain types compatible with Python 3.8 and older numpy
+if TYPE_CHECKING:
     ndarray_object_type = np.ndarray[Any, np.dtype[np.object_]]
+
+    # Leaf types that resolve to a single scalar
+    HighspyLeafTypes: TypeAlias = Union[int, Integral, "highs_var", "highs_cons", "highs_linear_expression"]
+
+    # Recursive index type: nested Mappings with leaf values
+    HighspyNestedIndex: TypeAlias = Union[
+        HighspyLeafTypes,
+        Mapping[Any, "HighspyNestedIndex"],
+        Sequence[HighspyLeafTypes],
+        np.ndarray[Any, np.dtype[Any]],
+    ]
+
+    # Recursive result type mirroring the nesting structure
+    HighspyNestedResult: TypeAlias = Union[
+        float, bool,
+        Mapping[Any, "HighspyNestedResult"],
+        np.ndarray[Any, np.dtype[np.float64]],
+    ]
+
+    HighspyIndexCollectionTypes: TypeAlias = Union[
+        int, 
+        Integral,
+        "highs_var",
+        "highs_cons",
+        "highs_linear_expression",
+        Mapping[Any, HighspyNestedIndex],
+        Sequence[Union[int, Integral, "highs_var", "highs_cons", "highs_linear_expression"]],
+        np.ndarray[Any, np.dtype[Any]],
+    ]
 else:
-    ndarray_object_type = np.ndarray
+    np_version = tuple(map(int, np.__version__.split('.')))
+    if sys.version_info >= (3, 9) and np_version >= (1,22,0):
+        ndarray_object_type = np.ndarray[Any, np.dtype[np.object_]]
+    else:
+        ndarray_object_type = np.ndarray
+
+    HighspyIndexCollectionTypes: TypeAlias = Union[
+        int,
+        Integral,
+        "highs_var",
+        "highs_cons",
+        "highs_linear_expression",
+        Mapping[Any, Any],
+        Sequence[Any],
+        np.ndarray,
+    ]
+
+# Shared aliases keep the typing readable
+HighspyScalarTypes: TypeAlias = Union[float, int]
+HighspyExpressionTypes: TypeAlias = "highs_linear_expression"
+HighspyLinearExpressionInputTypes: TypeAlias = Union[HighspyScalarTypes, "highs_var", "highs_linear_expression"]
+HighspyExpressionInputTypes: TypeAlias = Union["highs_var", "highs_linear_expression"]
+HighspyConstraintTypes: TypeAlias = "highs_linear_expression"
+HighspyArrayItemTypes: TypeAlias = Union["highs_var", "highs_linear_expression"]
 
 class Highs(_Highs):
     """
@@ -50,7 +105,7 @@ class Highs(_Highs):
         super().setOptionValue("output_flag", not turn_off_output)
 
     # solve
-    def solve(self):
+    def solve(self) -> Optional[HighsStatus]:
         """Runs the solver on the current problem.
 
         Returns:
@@ -61,7 +116,7 @@ class Highs(_Highs):
         else:
             return self.joinSolve(self.startSolve())
 
-    def startSolve(self):
+    def startSolve(self) -> Thread:
         """
         Starts the solver in a separate thread.  Useful for handling KeyboardInterrupts.
         Do not attempt to modify the model while the solver is running.
@@ -86,7 +141,7 @@ class Highs(_Highs):
         else:
             raise Exception("Solver is already running.")
 
-    def is_solver_running(self):
+    def is_solver_running(self) -> bool:
         is_running = True
         try:
             # try to acquire lock, if we can't, solver is already running
@@ -98,7 +153,7 @@ class Highs(_Highs):
 
     # internal solve method for use with threads
     # will set the status of the solver when finished and release the shared lock
-    def __solve(self):
+    def __solve(self) -> None:
         try:
             self.__solver_stopped.acquire(True)
             self.__solver_started.release()  # allow main thread to continue
@@ -110,7 +165,7 @@ class Highs(_Highs):
         finally:
             self.__solver_stopped.release()
 
-    def joinSolve(self, solver_thread: Optional[Thread] = None, interrupt_limit: int = 5):
+    def joinSolve(self, solver_thread: Optional[Thread] = None, interrupt_limit: int = 5) -> Optional[HighsStatus]:
         """
         Waits for the solver to finish. If solver_thread is provided, it will handle KeyboardInterrupts.
 
@@ -121,8 +176,9 @@ class Highs(_Highs):
         Returns:
             A HighsStatus object containing the solve status.
         """
+        result: Tuple[bool, Optional[HighsStatus]] = (False, None)
+
         if solver_thread is not None and interrupt_limit <= 0:
-            result = (False, None)
 
             try:
                 while not result[0]:
@@ -134,8 +190,6 @@ class Highs(_Highs):
                 self.cancelSolve()
 
         elif interrupt_limit > 0:
-            result = (False, None)
-
             for count in range(interrupt_limit):
                 try:
                     while not result[0]:
@@ -160,8 +214,8 @@ class Highs(_Highs):
 
         return self.__solver_status
 
-    def wait(self, timeout: float = -1.0):
-        result = False, None
+    def wait(self, timeout: float = -1.0) -> Tuple[bool, Optional[HighsStatus]]:
+        result: Tuple[bool, Optional[HighsStatus]] = (False, None)
 
         try:
             result = (
@@ -174,14 +228,14 @@ class Highs(_Highs):
                 self.__solver_status = None  # reset status
                 self.__solver_stopped.release()
 
-    def optimize(self):
+    def optimize(self) -> Optional[HighsStatus]:
         """
         Alias for the solve method.
         """
         return self.solve()
 
 
-    def getObjective(self) -> Tuple[highs_linear_expression, ObjSense]:
+    def getObjective(self) -> Tuple[HighspyExpressionTypes, ObjSense]:
         """
         Retrieves the current objective function (as a linear expression) and sense.
         """
@@ -198,7 +252,7 @@ class Highs(_Highs):
 
 
     # reset the objective
-    def setObjective(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None, sense: Optional[ObjSense] = None):
+    def setObjective(self, obj: Optional[HighspyExpressionInputTypes] = None, sense: Optional[ObjSense] = None):
         """
         Updates the costs.
 
@@ -232,7 +286,7 @@ class Highs(_Highs):
             super().changeObjectiveSense(sense)
 
     # reset the objective and sense, then solve
-    def minimize(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None):
+    def minimize(self, obj: Optional[HighspyExpressionInputTypes] = None) -> Optional[HighsStatus]:
         """
         Solves a minimization of the objective and optionally updates the costs.
 
@@ -249,7 +303,7 @@ class Highs(_Highs):
         return self.solve()
 
     # reset the objective and sense, then solve
-    def maximize(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None):
+    def maximize(self, obj: Optional[HighspyExpressionInputTypes] = None) -> Optional[HighsStatus]:
         """
         Solves a maximization of the objective and optionally updates the costs.
 
@@ -266,16 +320,56 @@ class Highs(_Highs):
         return self.solve()
 
     @staticmethod
+    @overload
     def internal_get_value(
         array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
-        index_collection: Union[
-            Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], Sequence[Any], np.ndarray[Any, np.dtype[Any]]
-        ],
+        index_collection: Union[int, Integral, highs_var, highs_cons],
+    ) -> float: ...
+
+    @staticmethod
+    @overload
+    def internal_get_value(
+        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
+        index_collection: highs_linear_expression,
+    ) -> Union[float, bool]: ...
+
+    @staticmethod
+    @overload
+    def internal_get_value(
+        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
+        index_collection: Mapping[Any, Mapping[Any, Union[int, Integral, highs_var, highs_cons]]],
+    ) -> Mapping[Any, Mapping[Any, float]]: ...
+
+    @staticmethod
+    @overload
+    def internal_get_value(
+        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
+        index_collection: Mapping[Any, Union[int, Integral, highs_var, highs_cons]],
+    ) -> Mapping[Any, float]: ...
+
+    @staticmethod
+    @overload
+    def internal_get_value(
+        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
+        index_collection: Mapping[Any, Any],
+    ) -> Mapping[Any, Any]: ...
+
+    @staticmethod
+    @overload
+    def internal_get_value(
+        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
+        index_collection: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]],
+    ) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
+    @staticmethod
+    def internal_get_value(
+        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
+        index_collection: HighspyIndexCollectionTypes,
     ) -> Union[float, bool, Mapping[Any, Any], np.ndarray[Any, np.dtype[np.float64]]]:
         """
         Internal method to get the value of an index from an array of values. Could be value or dual, variable or constraint.
         """
-        if isinstance(index_collection, (Integral, highs_var, highs_cons)):
+        if isinstance(index_collection, (int, Integral, highs_var, highs_cons)):
             return array_values[int(index_collection)]
 
         elif isinstance(index_collection, highs_linear_expression):
@@ -288,10 +382,13 @@ class Highs(_Highs):
             return np.asarray([Highs.internal_get_value(array_values, v) for v in index_collection])
 
     @overload
-    def val(self, var: Union[Integral, highs_var, highs_cons]) -> float: ...
+    def val(self, var: Union[int, Integral, highs_var, highs_cons]) -> float: ...
 
     @overload
     def val(self, var: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def val(self, var: Mapping[Any, Union[int, Integral, highs_var, highs_cons]]) -> Mapping[Any, float]: ...
 
     @overload
     def val(self, var: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
@@ -301,7 +398,7 @@ class Highs(_Highs):
 
     def val(
         self,
-        var: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], Sequence[Any], np.ndarray[Any, np.dtype[Any]]],
+        var: HighspyIndexCollectionTypes,
     ):
         """
         Gets the value of a variable/index or expression in the solution.
@@ -315,10 +412,13 @@ class Highs(_Highs):
         return Highs.internal_get_value(super().getSolution().col_value, var)
 
     @overload
-    def vals(self, idxs: Union[Integral, highs_var, highs_cons]) -> float: ...
+    def vals(self, idxs: Union[int, Integral, highs_var, highs_cons]) -> float: ...
 
     @overload
     def vals(self, idxs: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def vals(self, idxs: Mapping[Any, Union[int, Integral, highs_var, highs_cons]]) -> Mapping[Any, float]: ...
 
     @overload
     def vals(self, idxs: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
@@ -328,7 +428,7 @@ class Highs(_Highs):
 
     def vals(
         self,
-        idxs: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], Sequence[Any], np.ndarray[Any, np.dtype[Any]]],
+        idxs: HighspyIndexCollectionTypes,
     ):
         """
         Gets the values of multiple variables in the solution.
@@ -341,7 +441,7 @@ class Highs(_Highs):
         """
         return Highs.internal_get_value(super().getSolution().col_value, idxs)
 
-    def variableName(self, var: Union[Integral, highs_var]):
+    def variableName(self, var: Union[int, Integral, highs_var]):
         """
         Retrieves the name of a specific variable.
 
@@ -361,12 +461,12 @@ class Highs(_Highs):
         return name
 
     @overload
-    def variableNames(self, idxs: Mapping[Any, Union[highs_var, Integral]]) -> dict[Any, str]: ...
+    def variableNames(self, idxs: Mapping[Any, Union[highs_var, int, Integral]]) -> dict[Any, str]: ...
 
     @overload
-    def variableNames(self, idxs: Iterable[Union[highs_var, Integral]]) -> list[str]: ...
+    def variableNames(self, idxs: Iterable[Union[highs_var, int, Integral]]) -> list[str]: ...
 
-    def variableNames(self, idxs: Iterable[Union[highs_var, Integral]]):
+    def variableNames(self, idxs: Iterable[Union[highs_var, int, Integral]]):
         """
         Retrieves the names of multiple variables.
 
@@ -381,7 +481,7 @@ class Highs(_Highs):
             If idxs is an iterable, returns a list of names for the specified variables.
         """
         if isinstance(idxs, Mapping):
-            convert: Mapping[Any, Union[highs_var, Integral]] = idxs
+            convert: Mapping[Any, Union[highs_var, int, Integral]] = idxs
             return {key: self.variableName(v) for key, v in convert.items()}
         else:
             return [self.variableName(v) for v in idxs]
@@ -395,9 +495,24 @@ class Highs(_Highs):
         """
         return super().getLp().col_names_
 
+    @overload
+    def variableValue(self, var: Union[int, Integral, highs_var]) -> float: ...
+
+    @overload
+    def variableValue(self, var: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def variableValue(self, var: Mapping[Any, Union[int, Integral, highs_var, highs_cons]]) -> Mapping[Any, float]: ...
+
+    @overload
+    def variableValue(self, var: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
+
+    @overload
+    def variableValue(self, var: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
     def variableValue(
         self,
-        var: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        var: HighspyIndexCollectionTypes,
     ):
         """
         Retrieves the value of a specific variable in the solution.
@@ -410,9 +525,24 @@ class Highs(_Highs):
         """
         return self.val(var)
 
+    @overload
+    def variableValues(self, idxs: Union[int, Integral, highs_var]) -> float: ...
+
+    @overload
+    def variableValues(self, idxs: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def variableValues(self, idxs: Mapping[Any, Union[int, Integral, highs_var, highs_cons]]) -> Mapping[Any, float]: ...
+
+    @overload
+    def variableValues(self, idxs: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
+
+    @overload
+    def variableValues(self, idxs: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
     def variableValues(
         self,
-        idxs: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        idxs: HighspyIndexCollectionTypes,
     ):
         """
         Retrieves the values of multiple variables in the solution.
@@ -434,9 +564,24 @@ class Highs(_Highs):
         """
         return super().getSolution().col_value
 
+    @overload
+    def variableDual(self, var: Union[int, Integral, highs_var]) -> float: ...
+
+    @overload
+    def variableDual(self, var: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def variableDual(self, var: Mapping[Any, Union[int, Integral, highs_var, highs_cons]]) -> Mapping[Any, float]: ...
+
+    @overload
+    def variableDual(self, var: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
+
+    @overload
+    def variableDual(self, var: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
     def variableDual(
         self,
-        var: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        var: HighspyIndexCollectionTypes,
     ):
         """
         Retrieves the dual value of a specific variable/index or expression in the solution.
@@ -449,9 +594,24 @@ class Highs(_Highs):
         """
         return Highs.internal_get_value(super().getSolution().col_dual, var)
 
+    @overload
+    def variableDuals(self, idxs: Union[int, Integral, highs_var]) -> float: ...
+
+    @overload
+    def variableDuals(self, idxs: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def variableDuals(self, idxs: Mapping[Any, Union[int, Integral, highs_var, highs_cons]]) -> Mapping[Any, float]: ...
+
+    @overload
+    def variableDuals(self, idxs: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
+
+    @overload
+    def variableDuals(self, idxs: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
     def variableDuals(
         self,
-        idxs: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        idxs: HighspyIndexCollectionTypes,
     ):
         """
         Retrieves the dual values of multiple variables in the solution.
@@ -473,9 +633,24 @@ class Highs(_Highs):
         """
         return super().getSolution().col_dual
 
+    @overload
+    def constrValue(self, con: Union[int, Integral, highs_cons]) -> float: ...
+
+    @overload
+    def constrValue(self, con: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def constrValue(self, con: Mapping[Any, Union[int, Integral, highs_cons]]) -> Mapping[Any, float]: ...
+
+    @overload
+    def constrValue(self, con: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
+
+    @overload
+    def constrValue(self, con: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
     def constrValue(
         self,
-        con: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        con: HighspyIndexCollectionTypes,
     ):
         """
         Retrieves the value of a specific constraint in the solution.
@@ -488,9 +663,24 @@ class Highs(_Highs):
         """
         return Highs.internal_get_value(super().getSolution().row_value, con)
 
+    @overload
+    def constrValues(self, cons: Union[int, Integral, highs_cons]) -> float: ...
+
+    @overload
+    def constrValues(self, cons: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def constrValues(self, cons: Mapping[Any, Union[int, Integral, highs_cons]]) -> Mapping[Any, float]: ...
+
+    @overload
+    def constrValues(self, cons: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
+
+    @overload
+    def constrValues(self, cons: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
     def constrValues(
         self,
-        cons: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        cons: HighspyIndexCollectionTypes,
     ):
         """
         Retrieves the values of multiple constraints in the solution.
@@ -512,9 +702,24 @@ class Highs(_Highs):
         """
         return super().getSolution().row_value
 
+    @overload
+    def constrDual(self, con: Union[int, Integral, highs_cons]) -> float: ...
+
+    @overload
+    def constrDual(self, con: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def constrDual(self, con: Mapping[Any, Union[int, Integral, highs_cons]]) -> Mapping[Any, float]: ...
+
+    @overload
+    def constrDual(self, con: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
+
+    @overload
+    def constrDual(self, con: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
     def constrDual(
         self,
-        con: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        con: HighspyIndexCollectionTypes,
     ):
         """
         Retrieves the dual value of a specific constraint in the solution.
@@ -527,9 +732,24 @@ class Highs(_Highs):
         """
         return Highs.internal_get_value(super().getSolution().row_dual, con)
 
+    @overload
+    def constrDuals(self, cons: Union[int, Integral, highs_cons]) -> float: ...
+
+    @overload
+    def constrDuals(self, cons: highs_linear_expression) -> Union[float, bool]: ...
+
+    @overload
+    def constrDuals(self, cons: Mapping[Any, Union[int, Integral, highs_cons]]) -> Mapping[Any, float]: ...
+
+    @overload
+    def constrDuals(self, cons: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
+
+    @overload
+    def constrDuals(self, cons: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+
     def constrDuals(
         self,
-        cons: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        cons: HighspyIndexCollectionTypes,
     ):
         """
         Retrieves the dual values of multiple constraints in the solution.
@@ -591,33 +811,46 @@ class Highs(_Highs):
     def addVariables(
         self,
         *nvars: int,
+        out_array: Literal[True] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> HighspyArray: ...
 
     @overload
     def addVariables(
         self,
-        *nvars: Mapping[Any, Any],
+        *nvars: int,
+        out_array: Literal[False],
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> dict[Any, highs_var]: ...
 
     @overload
     def addVariables(
         self,
-        *nvars: Sequence[Any],
+        *nvars: Union[Mapping[Any, Any], Sequence[Any]],
+        out_array: Literal[False] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
-    ) -> Union[dict[Any, highs_var], HighspyArray]: ...
+    ) -> dict[Any, highs_var]: ...
+
+    @overload
+    def addVariables(
+        self,
+        *nvars: Union[Mapping[Any, Any], Sequence[Any]],
+        out_array: Literal[True],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
+    ) -> HighspyArray: ...
 
     @overload
     def addVariables(
         self,
         *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        out_array: Optional[bool] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> Optional[Union[dict[Any, highs_var], HighspyArray]]: ...
 
     def addVariables(
         self,
         *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        out_array: Optional[bool] = None,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> Optional[Union[dict[Any, highs_var], HighspyArray]]:
         """
@@ -640,6 +873,9 @@ class Highs(_Highs):
         """
         if len(nvars) == 0:
             return None
+        
+        if out_array is not None and not isinstance(out_array, bool):
+            raise TypeError(f"out_array expected bool or None, got {type(out_array).__name__}")
 
         # if all nvars are scalars, we can assume they are the dimensions
         shape = [n for n in nvars if isinstance(n, int)]
@@ -706,18 +942,14 @@ class Highs(_Highs):
             else:
                 raise Exception("Invalid parameter.")
 
-        def ensure_bool(x: Any) -> bool:
-            if isinstance(x, bool):
-                return x
-            raise Exception("Invalid parameter.")
-
         lb = ensure_real(kwargs.get("lb", 0.0))
         ub = ensure_real(kwargs.get("ub", kHighsInf))
         obj = ensure_real(kwargs.get("obj", 0))
         vartype = ensure_HighsVarType(kwargs.get("type", HighsVarType.kContinuous))
         name_prefix = ensure_str_or_none(kwargs.get("name_prefix", None))
         name = ensure_optional_str(kwargs.get("name", None))
-        out_array = ensure_bool(kwargs.get("out_array", all(isinstance(n, int) for n in nvars)))
+        if out_array is None:
+            out_array = all(isinstance(n, int) for n in nvars)
 
         start_idx = self.numVariables
         idx = np.arange(start_idx, start_idx + N, dtype=np.int32)
@@ -740,7 +972,7 @@ class Highs(_Highs):
             super().changeColsIntegrality(N, idx, vartype)
 
         if name or name_prefix:
-# Changed to fix #2887 names = name or [f"{name_prefix}{i}" for i in indices]
+            # Changed to fix #2887 names = name or [f"{name_prefix}{i}" for i in indices]
             names = name or [f"{name_prefix}{i}".replace(" ", "")  for i in indices]
             for i, n in zip(idx, names):
                 super().passColName(int(i), str(n))
@@ -755,72 +987,82 @@ class Highs(_Highs):
     def addIntegrals(
         self,
         *nvars: int,
+        out_array: Optional[bool] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> HighspyArray: ...
 
     @overload
     def addIntegrals(
         self,
-        *nvars: Mapping[Any, Any],
+        *nvars: Union[Mapping[Any, Any], Sequence[Any]],
+        out_array: Literal[False] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> dict[Any, highs_var]: ...
 
     @overload
     def addIntegrals(
         self,
-        *nvars: Sequence[Any],
+        *nvars: Union[Mapping[Any, Any], Sequence[Any]],
+        out_array: Literal[True],
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
-    ) -> Union[dict[Any, highs_var], HighspyArray]: ...
+    ) -> HighspyArray: ...
 
     @overload
     def addIntegrals(
         self,
         *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        out_array: Optional[bool] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> Optional[Union[dict[Any, highs_var], HighspyArray]]: ...
 
     def addIntegrals(
         self,
         *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        out_array: Optional[bool] = None,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ):
         """
         Alias for the addVariables method, for integer variables.
         """
         kwargs.setdefault("type", HighsVarType.kInteger)
-        return self.addVariables(*nvars, **kwargs)
+        return self.addVariables(*nvars, out_array=out_array, **kwargs)
 
     @overload
     def addBinaries(
         self,
         *nvars: int,
+        out_array: Optional[bool] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> HighspyArray: ...
 
     @overload
     def addBinaries(
         self,
-        *nvars: Mapping[Any, Any],
+        *nvars: Union[Mapping[Any, Any], Sequence[Any]],
+        out_array: Literal[False] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> dict[Any, highs_var]: ...
 
     @overload
     def addBinaries(
         self,
-        *nvars: Sequence[Any],
+        *nvars: Union[Mapping[Any, Any], Sequence[Any]],
+        out_array: Literal[True],
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
-    ) -> Union[dict[Any, highs_var], HighspyArray]: ...
+    ) -> HighspyArray: ...
 
     @overload
     def addBinaries(
         self,
         *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        out_array: Optional[bool] = ...,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> Optional[Union[dict[Any, highs_var], HighspyArray]]: ...
 
     def addBinaries(
         self,
         *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        out_array: Optional[bool] = None,
         **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ):
         """
@@ -830,7 +1072,7 @@ class Highs(_Highs):
         kwargs.setdefault("ub", 1)
         kwargs.setdefault("type", HighsVarType.kInteger)
 
-        return self.addVariables(*nvars, **kwargs)
+        return self.addVariables(*nvars, out_array=out_array, **kwargs)
 
     def addIntegral(self, lb: float = 0.0, ub: float = kHighsInf, obj: float = 0.0, name: Optional[str] = None):
         """
@@ -846,8 +1088,8 @@ class Highs(_Highs):
 
     def deleteVariable(
         self,
-        var_or_index: Union[Integral, highs_var],
-        *args: Union[Mapping[Any, highs_var], Iterable[highs_var], highs_var],
+        var_or_index: Union[int, Integral, highs_var, HighspyArrayItemTypes],
+        *args: Union[Mapping[Any, highs_var], Iterable[Union[highs_var, HighspyArrayItemTypes]], highs_var, HighspyArray, HighspyArrayItemTypes],
     ):
         """
         Deletes a variable from the model and updates the indices of subsequent variables in provided collections.
@@ -875,21 +1117,31 @@ class Highs(_Highs):
                     elif var.index == index:
                         var.index = -1
 
+            elif isinstance(collection, HighspyArray):
+                for i in collection:
+                    if isinstance(i, highs_var):
+                        if i.index > index:
+                            i.index -= 1
+                        elif i.index == index:
+                            i.index = -1
+
             elif isinstance(collection, Iterable):
                 # Update indices in an iterable of variables
                 for var in collection:
-                    if var.index > index:
-                        var.index -= 1
-                    elif var.index == index:
-                        var.index = -1
+                    if isinstance(var, highs_var):
+                        if var.index > index:
+                            var.index -= 1
+                        elif var.index == index:
+                            var.index = -1
 
             # If the collection is a single highs_var object, check and update if necessary
-            elif collection.index > index:
-                collection.index -= 1
-            elif collection.index == index:
-                collection.index = -1
+            elif isinstance(collection, highs_var):
+                if collection.index > index:
+                    collection.index -= 1
+                elif collection.index == index:
+                    collection.index = -1
 
-    def getVariables(self):
+    def getVariables(self) -> list[highs_var]:
         """
         Retrieves all variables in the model.
 
@@ -899,7 +1151,7 @@ class Highs(_Highs):
         return [highs_var(i, self) for i in range(self.numVariables)]
 
     @property
-    def inf(self):
+    def inf(self) -> float:
         """
         Represents infinity in the context of the solver.
 
@@ -909,7 +1161,7 @@ class Highs(_Highs):
         return kHighsInf
 
     @property
-    def numVariables(self):
+    def numVariables(self) -> int:
         """
         Gets the number of variables in the model.
 
@@ -919,7 +1171,7 @@ class Highs(_Highs):
         return super().getNumCol()
 
     @property
-    def numConstrs(self):
+    def numConstrs(self) -> int:
         """
         Gets the number of constraints in the model.
 
@@ -931,7 +1183,7 @@ class Highs(_Highs):
     #
     # add constraints
     #
-    def addConstr(self, expr: highs_linear_expression, name: Optional[str] = None):
+    def addConstr(self, expr: highs_linear_expression, name: Optional[str] = None) -> highs_cons:
         """
         Adds a constraint to the model.
 
@@ -940,7 +1192,7 @@ class Highs(_Highs):
             name: Optional name of the constraint.
 
         Returns:
-            A highs_con object representing the added constraint.
+            A highs_cons object representing the added constraint.
         """
         con = self.__addRow(expr, self.numConstrs)
 
@@ -970,9 +1222,16 @@ class Highs(_Highs):
         **kwargs: Optional[Union[str, Sequence[str]]],
     ) -> list[highs_cons]: ...
 
+    @overload
     def addConstrs(
         self,
-        *args: Union[highs_linear_expression, Iterable[highs_linear_expression]],
+        *args: HighspyArray,
+        **kwargs: Optional[Union[str, Sequence[str]]],
+    ) -> list[highs_cons]: ...
+
+    def addConstrs(
+        self,
+        *args: Union[highs_linear_expression, Iterable[highs_linear_expression], HighspyArray],
         **kwargs: Optional[Union[str, Sequence[str]]],
     ):
         """
@@ -995,12 +1254,14 @@ class Highs(_Highs):
         generator = args[0] if len(args) == 1 and isinstance(args[0], Iterable) else args
         initial_rows = self.numConstrs
 
+        cons: Union[dict[Any, highs_cons], list[highs_cons]]
+
         try:
             if isinstance(generator, Mapping):
                 mt: Mapping[Any, highs_linear_expression] = generator
                 cons = {key: self.__addRow(expr, initial_rows + count) for count, (key, expr) in enumerate(mt.items())}
             else:
-                it: Iterable[Any] = generator
+                it: Iterable[highs_linear_expression] = cast(Iterable[highs_linear_expression], generator)
                 cons = [self.__addRow(expr, initial_rows + count) for count, expr in enumerate(it)]
 
             # TODO: Mapping support with constraint names can be improved, e.g., by allowing a name collection to be passed
@@ -1024,7 +1285,7 @@ class Highs(_Highs):
 
         return cons
 
-    def __addRow(self, expr: highs_linear_expression, idx: int):
+    def __addRow(self, expr: highs_linear_expression, idx: int) -> highs_cons:
         """
         Internal method to add a constraint to the model.
         """
@@ -1037,8 +1298,8 @@ class Highs(_Highs):
 
     def expr(
         self,
-        optional: Optional[Union[float, int, highs_var, highs_linear_expression]] = None,
-    ):
+        optional: Optional[HighspyLinearExpressionInputTypes] = None,
+    ) -> highs_linear_expression:
         """
         Creates a new highs_linear_expression object.
 
@@ -1047,7 +1308,7 @@ class Highs(_Highs):
         """
         return highs_linear_expression(optional)
 
-    def getExpr(self, cons: Union[Integral, highs_cons]):
+    def getExpr(self, cons: Union[int, Integral, highs_cons]) -> highs_linear_expression:
         """
         Retrieves the highs_linear_expression of a constraint.
 
@@ -1073,7 +1334,7 @@ class Highs(_Highs):
         expr.vals = list(val)
         return expr
 
-    def chgCoeff(self, cons: Union[highs_cons, Integral], var: Union[highs_var, Integral], val: float):
+    def chgCoeff(self, cons: Union[highs_cons, int, Integral], var: Union[highs_var, int, Integral], val: float):
         """
         Changes the coefficient of a variable in a constraint.
 
@@ -1084,7 +1345,7 @@ class Highs(_Highs):
         """
         super().changeCoeff(int(cons), int(var), val)
 
-    def getConstrs(self):
+    def getConstrs(self) -> list[highs_cons]:
         """
         Retrieves all constraints in the model.
 
@@ -1095,7 +1356,7 @@ class Highs(_Highs):
 
     def removeConstr(
         self,
-        cons_or_index: Union[highs_cons, Integral],
+        cons_or_index: Union[highs_cons, int, Integral],
         *args: Union[Mapping[Any, highs_cons], Sequence[highs_cons], highs_cons],
     ):
         """
@@ -1154,27 +1415,33 @@ class Highs(_Highs):
         """
         super().changeObjectiveSense(ObjSense.kMaximize)
 
-    def setInteger(self, var_or_collection: Union[highs_var, int, Iterable[Union[highs_var, int]]]):
+    def setInteger(self, var_or_collection: Union[highs_var, int, HighspyArrayItemTypes, Iterable[Union[highs_var, int, HighspyArrayItemTypes]], HighspyArray]):
         """
         Sets a variable/collection to integer.
 
         Args:
             var_or_collection: A highs_var object/collection representing the variable to be set as integer.
         """
-        if isinstance(var_or_collection, Iterable):
+        if isinstance(var_or_collection, HighspyArray):
+            idx = var_or_collection.idx()
+            super().changeColsIntegrality(len(idx), idx, np.full(len(idx), HighsVarType.kInteger, dtype=np.uint8))
+        elif isinstance(var_or_collection, Iterable):
             idx = np.fromiter(map(int, var_or_collection), dtype=np.int32)
             super().changeColsIntegrality(len(idx), idx, np.full(len(idx), HighsVarType.kInteger, dtype=np.uint8))
         else:
             super().changeColIntegrality(int(var_or_collection), HighsVarType.kInteger)
 
-    def setContinuous(self, var_or_collection: Union[highs_var, int, Iterable[Union[highs_var, int]]]):
+    def setContinuous(self, var_or_collection: Union[highs_var, int, HighspyArrayItemTypes, Iterable[Union[highs_var, int, HighspyArrayItemTypes]], HighspyArray]):
         """
         Sets a variable/collection to continuous.
 
         Args:
             var_or_collection: A highs_var object/collection representing the variable to be set as continuous.
         """
-        if isinstance(var_or_collection, Iterable):
+        if isinstance(var_or_collection, HighspyArray):
+            idx = var_or_collection.idx()
+            super().changeColsIntegrality(len(idx), idx, np.full(len(idx), HighsVarType.kContinuous, dtype=np.uint8))
+        elif isinstance(var_or_collection, Iterable):
             idx = np.fromiter(map(int, var_or_collection), dtype=np.int32)
             super().changeColsIntegrality(
                 len(idx),
@@ -1185,10 +1452,25 @@ class Highs(_Highs):
             super().changeColIntegrality(int(var_or_collection), HighsVarType.kContinuous)
 
     @staticmethod
+    def idx(*args) -> np.ndarray[Any, np.dtype[np.int32]]:
+        """Convert highs_var/highs_cons to a flat int32 index array.
+
+        Can be called as:
+            - ``h.idx(array)`` with a HighspyArray, numpy array, list, or tuple
+            - ``h.idx(a, b, c)`` with individual highs_var or highs_cons objects
+
+        Returns:
+            A flat int32 numpy array of the underlying indices.
+        """
+        if len(args) == 1 and not isinstance(args[0], (highs_var, highs_cons)):
+            return np.asarray(args[0]).ravel().astype(np.int32)
+        return np.array(args, dtype=np.int32).ravel()
+
+    @staticmethod
     def qsum(
-        items: Union[Iterable[Union[highs_var, highs_linear_expression]], np.ndarray[Any, np.dtype[np.object_]]],
-        initial: Optional[Union[float, int, highs_var, highs_linear_expression]] = None,
-    ):
+        items: Union[Iterable[HighspyArrayItemTypes], np.ndarray[Any, np.dtype[np.object_]]],
+        initial: Optional[HighspyExpressionInputTypes] = None,
+    ) -> HighspyExpressionTypes:
         """
         Performs a faster sum for highs_linear_expressions.
 
@@ -1202,8 +1484,8 @@ class Highs(_Highs):
             for v in X.flat:
                 expr += cast(Union[highs_var, highs_linear_expression], v)
         else:
-            for v in items:
-                expr += v
+            for item in items:
+                expr += item
 
         return expr
 
@@ -1254,7 +1536,7 @@ class Highs(_Highs):
         self.__solver_should_stop = True
 
     @property
-    def HandleKeyboardInterrupt(self):
+    def HandleKeyboardInterrupt(self) -> bool:
         """
         Get/Set whether the solver should handle KeyboardInterrupt (i.e., cancel solve on Ctrl+C). Also enables/disables HandleUserInterrupt.
         """
@@ -1266,7 +1548,7 @@ class Highs(_Highs):
         self.HandleUserInterrupt = value
 
     @property
-    def HandleUserInterrupt(self):
+    def HandleUserInterrupt(self) -> bool:
         """
         Get/Set whether the solver should handle user interrupts (i.e., cancel solve on user request)
         """
@@ -1289,97 +1571,30 @@ class Highs(_Highs):
         if self.__solver_should_stop:
             e.interrupt()
 
-    @property
-    def cbLogging(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackLogging)]
 
-    @property
-    def cbSimplexInterrupt(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackSimplexInterrupt)]
+    # Callback descriptors support +=/-= syntax, e.g., h.cbLogging += my_callback
+    class _callbackDescriptor:
+        def __init__(self, callback_type: cb.HighsCallbackType):
+            self.callback_type = callback_type
 
-    @property
-    def cbIpmInterrupt(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackIpmInterrupt)]
+        def __get__(self, obj: Any, objtype: Any = None) -> Any:
+            return self if obj is None else obj.callbacks[int(self.callback_type)]
 
-    @property
-    def cbMipSolution(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipSolution)]
+        def __set__(self, obj: Any, value: Any) -> None:
+            if obj.callbacks[int(self.callback_type)] is not value:
+                raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
 
-    @property
-    def cbMipImprovingSolution(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipImprovingSolution)]
+    cbLogging: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackLogging)  # type: ignore[assignment]
+    cbSimplexInterrupt: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackSimplexInterrupt)  # type: ignore[assignment]
+    cbIpmInterrupt: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackIpmInterrupt)  # type: ignore[assignment]
+    cbMipSolution: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipSolution)  # type: ignore[assignment]
+    cbMipImprovingSolution: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipImprovingSolution)  # type: ignore[assignment]
+    cbMipLogging: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipLogging)  # type: ignore[assignment]
+    cbMipInterrupt: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipInterrupt)  # type: ignore[assignment]
+    cbMipGetCutPool: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipGetCutPool)  # type: ignore[assignment]
+    cbMipDefineLazyConstraints: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipDefineLazyConstraints)  # type: ignore[assignment]
+    cbMipUserSolution: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipUserSolution)  # type: ignore[assignment]
 
-    @property
-    def cbMipLogging(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipLogging)]
-
-    @property
-    def cbMipInterrupt(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipInterrupt)]
-
-    @property
-    def cbMipGetCutPool(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipGetCutPool)]
-
-    @property
-    def cbMipDefineLazyConstraints(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipDefineLazyConstraints)]
-
-    @property
-    def cbMipUserSolution(self):
-        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipUserSolution)]
-
-    # callback setters are required for +=/-= syntax
-    # e.g., h.cbLogging += my_callback
-    @cbLogging.setter
-    def cbLogging(self, value: HighsCallback):
-        if self.cbLogging is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbSimplexInterrupt.setter
-    def cbSimplexInterrupt(self, value: HighsCallback):
-        if self.cbSimplexInterrupt is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbIpmInterrupt.setter
-    def cbIpmInterrupt(self, value: HighsCallback):
-        if self.cbIpmInterrupt is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbMipSolution.setter
-    def cbMipSolution(self, value: HighsCallback):
-        if self.cbMipSolution is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbMipImprovingSolution.setter
-    def cbMipImprovingSolution(self, value: HighsCallback):
-        if self.cbMipImprovingSolution is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbMipLogging.setter
-    def cbMipLogging(self, value: HighsCallback):
-        if self.cbMipLogging is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbMipInterrupt.setter
-    def cbMipInterrupt(self, value: HighsCallback):
-        if self.cbMipInterrupt is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbMipGetCutPool.setter
-    def cbMipGetCutPool(self, value: HighsCallback):
-        if self.cbMipGetCutPool is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbMipDefineLazyConstraints.setter
-    def cbMipDefineLazyConstraints(self, value: HighsCallback):
-        if self.cbMipDefineLazyConstraints is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
-
-    @cbMipUserSolution.setter
-    def cbMipUserSolution(self, value: HighsCallback):
-        if self.cbMipUserSolution is not value:
-            raise Exception("Cannot set callback directly.  Use .subscribe(callback) instead.")
 
 
 
@@ -1412,7 +1627,7 @@ class HighsCallbackEvent(object):
 
     def val(
         self,
-        var_expr: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
+        var_expr: HighspyIndexCollectionTypes,
     ):
         """
         Gets the value(s) of a variable/index or expression in the callback solution.
@@ -1547,35 +1762,39 @@ class HighspyArray(ndarray_object_type):
     This provides additional type information for static analysis, and also allows faster sum operations.
     """
 
-    def __new__(cls, input_array: np.ndarray[Any, np.dtype[np.object_]], highs: Optional[Highs]):
-        obj = np.asarray(input_array).view(cls)
+    highs: Optional[Highs]
+
+    def __new__(cls, input_array: np.ndarray[Any, np.dtype[np.object_]], highs: Optional[Highs]) -> HighspyArray:
+        obj = cast(HighspyArray, np.asarray(input_array).view(cls))
         obj.highs = highs
         return obj
 
     def __array_finalize__(self, obj: Optional[Any]):
         self.highs = getattr(obj, "highs", None)
 
-    @overload
-    def __getitem__(self, key: Union[SupportsIndex, tuple[SupportsIndex, ...]]) -> highs_linear_expression: ...  # type: ignore
+    @overload  # type: ignore[override]
+    def __getitem__(self, key: Union[SupportsIndex, tuple[SupportsIndex, ...]]) -> HighspyArrayItemTypes: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(
         self,
         key: Union[
+            slice,
+            Sequence[int],
             np.ndarray[Any, np.dtype[np.integer[Any]]],
             np.ndarray[Any, np.dtype[np.bool_]],
-            tuple[Union[np.ndarray[Any, np.dtype[np.integer[Any]]], np.ndarray[Any, np.dtype[np.bool_]]], ...],
+            tuple[Union[None, slice, SupportsIndex, np.ndarray[Any, np.dtype[Any]]], ...],
         ],
     ) -> HighspyArray: ...
 
     @overload
-    def __getitem__(self, key: Union[None, slice, SupportsIndex, tuple[Union[None, slice, SupportsIndex], ...]]) -> HighspyArray: ...
+    def __getitem__(self, key: Any) -> Union[HighspyArray, HighspyArrayItemTypes]: ...  # type: ignore[overload-overlap]
 
-    @overload
-    def __getitem__(self, key: Any) -> HighspyArray: ...  # type: ignore
+    def __getitem__(self, key: Any) -> Union[HighspyArray, HighspyArrayItemTypes]:  # type: ignore[override]
+        return super(HighspyArray, self).__getitem__(key)  # type: ignore[return-value]
 
-    def __getitem__(self, key: Any) -> Union[HighspyArray, highs_linear_expression]:  # type: ignore
-        return super(HighspyArray, self).__getitem__(key)  # type: ignore
+    def __iter__(self) -> Iterator[HighspyArrayItemTypes]:  # type: ignore[override]
+        return super().__iter__()  # type: ignore[return-value]
 
     def __ge__(self, other: Any) -> HighspyArray:  # type: ignore
         return cast(HighspyArray, np.greater_equal(self, other, dtype=np.object_))
@@ -1583,16 +1802,16 @@ class HighspyArray(ndarray_object_type):
     def __le__(self, other: Any) -> HighspyArray:  # type: ignore
         return cast(HighspyArray, np.less_equal(self, other, dtype=np.object_))
 
-    def __eq__(self, other: Any) -> HighspyArray:
+    def __eq__(self, other: Any) -> HighspyArray:  # type: ignore[override]
         return cast(HighspyArray, np.equal(self, other, dtype=np.object_))
 
-    @overload
+    @overload  # type: ignore[override]
     def sum(self, axis: None = None, dtype: Optional[Any] = None, out: None = ...) -> highs_linear_expression: ...
 
     @overload
     def sum(self, axis: Any, dtype: Optional[Any] = None, out: HighspyArray = ...) -> HighspyArray: ...
 
-    def sum(  # type: ignore
+    def sum(  # type: ignore[override]
         self,
         axis: Optional[int] = None,
         dtype: Optional[Any] = None,
@@ -1606,6 +1825,18 @@ class HighspyArray(ndarray_object_type):
                 return self.highs.qsum(self, unused_kwargs.get("initial", None))
         else:
             raise Exception("Cannot sum without a Highs object.")
+
+    def idx(self) -> np.ndarray[Any, np.dtype[np.int32]]:
+        """Convert to a flat int32 index array for passing to the HiGHS C++ API.
+
+        Each element's ``__index__`` method is called to extract its integer
+        index (e.g., ``highs_var.index`` or ``highs_cons.index``).
+        The result is always 1-D, regardless of the array's shape.
+
+        Returns:
+            A new flat int32 numpy array of the underlying indices.
+        """
+        return self.ravel().astype(np.int32)
 
 
 # highs variable
@@ -1624,7 +1855,7 @@ class highs_var(object):
         return f"highs_var({self.index})"
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.highs.variableName(self)
 
     @name.setter
@@ -1632,6 +1863,9 @@ class highs_var(object):
         self.highs.passColName(self.index, value)
 
     def __int__(self):
+        return int(self.index)
+
+    def __index__(self) -> int:
         return int(self.index)
 
     def __hash__(self):
@@ -1681,14 +1915,22 @@ class highs_var(object):
             return highs_linear_expression(self).__le__(other)
 
     # self == other
-    def __eq__(self, other: Any) -> highs_linear_expression:  # type: ignore
-        if isinstance(other, highs_linear_expression):
+    @overload  # type: ignore[override]
+    def __eq__(self, other: None) -> bool: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __eq__(self, other: HighspyLinearExpressionInputTypes) -> highs_linear_expression: ...  # type: ignore[override]
+
+    def __eq__(self, other: Any) -> Union[bool, highs_linear_expression]:  # type: ignore[override]
+        if other is None:
+            return True
+        elif isinstance(other, highs_linear_expression):
             return other.__eq__(self)
         else:
             return highs_linear_expression(self).__eq__(other)
 
     # self != other
-    def __ne__(self, other: Optional[Any]):
+    def __ne__(self, other: Optional[Any]) -> bool:  # type: ignore[override]
         if other is None:
             return True
         else:
@@ -1729,17 +1971,20 @@ class highs_cons(object):
     def __int__(self):
         return int(self.index)
 
+    def __index__(self) -> int:
+        return int(self.index)
+
     def __hash__(self):
         return int(self.index)
 
-    def expr(self):
+    def expr(self) -> highs_linear_expression:
         """
         Retrieves the expression of the constraint.
         """
         return self.highs.getExpr(self)
 
     @property
-    def name(self):
+    def name(self) -> str:
         status, name = self.highs.getRowName(self.index)
 
         if status != HighsStatus.kOk:
@@ -1891,14 +2136,23 @@ class highs_linear_expression(object):
             return f"{self.bounds[0]} <= {v} <= {self.bounds[1]}"
 
     # self != other
-    def __ne__(self, other: Optional[Any]):
+    def __ne__(self, other: Optional[Any]) -> bool:  # type: ignore[override]
         if other is None:
             return True
         else:
             raise Exception("Invalid comparison.")
 
     # self == other
-    def __eq__(self, other: Any) -> highs_linear_expression:  # type: ignore
+    @overload  # type: ignore[override]
+    def __eq__(self, other: None) -> bool: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __eq__(self, other: HighspyLinearExpressionInputTypes) -> highs_linear_expression: ...  # type: ignore[override]
+
+    @overload
+    def __eq__(self, other: Sequence[Union[float, int]]) -> highs_linear_expression: ...  # type: ignore[override]
+
+    def __eq__(self, other: Any) -> Union[bool, highs_linear_expression]:  # type: ignore[override]
         if self.bounds is not None:
             raise Exception("Bounds have already been set.")
 
@@ -2142,6 +2396,10 @@ class highs_linear_expression(object):
         copy = highs_linear_expression(self)
         copy -= other
         return copy
+
+    # support for typing, but return error    
+    def __int__(self):
+        raise TypeError("Cannot convert to int")
 
     def unique_elements(self):
         """
@@ -2453,8 +2711,8 @@ class highs_linear_expression(object):
 
 
 def qsum(
-    items: Iterable[Union[highs_var, highs_linear_expression]],
-    initial: Optional[Union[float, int, highs_var, highs_linear_expression]] = None,
+    items: Iterable[HighspyArrayItemTypes],
+    initial: Optional[HighspyExpressionInputTypes] = None,
 ):
     """
     Performs a faster sum for highs_linear_expressions.

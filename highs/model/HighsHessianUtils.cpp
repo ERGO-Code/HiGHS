@@ -403,10 +403,17 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   upper_off_diagonal.assign(dim, 0);
   // Should be no duplicates
   HighsInt debug_num_duplicate = 0;
-  HighsInt num_non_symmetric = 0;
   HighsInt num_summation = 0;
   HighsInt num_upper_triangle = 0;
   HighsInt num_hessian_el = 0;
+  const double kSquareHessianAsymmetryTolerance = 1e-10;
+  HighsInt num_illegal_asymmetry = 0;
+  double min_illegal_asymmetry = kHighsInf;
+  double max_illegal_asymmetry = 0;
+  HighsInt num_ok_asymmetry = 0;
+  double min_ok_asymmetry = kHighsInf;
+  double max_ok_asymmetry = 0;
+
   //  const bool expensive_2821_check = true;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     for (HighsInt iEl = from_hessian.start_[iCol];
@@ -427,9 +434,23 @@ HighsStatus normaliseHessian(const HighsOptions& options,
       upper_off_diagonal[iRow] = upper.value_[iEl];
       if (square) {
         // When square, ensure that the upper triangular value matches
-        // the corresponding lower triangular value
-        if (upper_off_diagonal[iRow] != lower_on_below_diagonal[iRow])
-          num_non_symmetric++;
+        // the corresponding lower triangular value to within the
+        // tolaernace used by JuMP
+        const double asymmetry =
+            std::fabs(upper_off_diagonal[iRow] - lower_on_below_diagonal[iRow]);
+        if (asymmetry > kSquareHessianAsymmetryTolerance) {
+          num_illegal_asymmetry++;
+          min_illegal_asymmetry = std::min(asymmetry, min_illegal_asymmetry);
+          max_illegal_asymmetry = std::max(asymmetry, max_illegal_asymmetry);
+        } else if (asymmetry) {
+          num_ok_asymmetry++;
+          min_ok_asymmetry = std::min(asymmetry, min_ok_asymmetry);
+          max_ok_asymmetry = std::max(asymmetry, max_ok_asymmetry);
+          double average =
+              (upper_off_diagonal[iRow] + lower_on_below_diagonal[iRow]) * 0.5;
+          upper_off_diagonal[iRow] = average;
+          lower_on_below_diagonal[iRow] = average;
+        }
         // Don't zero the upper off diagonal entry, so that it's
         // possible to check that nonzeros in the lower off diagonal
         // match the upper off diagonal entry
@@ -505,11 +526,24 @@ HighsStatus normaliseHessian(const HighsOptions& options,
 
   bool warning_found = false;
   bool error_found = false;
-  if (num_non_symmetric) {
+  if (num_ok_asymmetry) {
+    assert(square);
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Square Hessian contains %d non-symmetr%s in [%.2g, %.2g] "
+                 "within tolerance of %.1g\n",
+                 int(num_ok_asymmetry), num_ok_asymmetry == 1 ? "y" : "ies",
+                 min_ok_asymmetry, max_ok_asymmetry,
+                 kSquareHessianAsymmetryTolerance);
+  }
+  if (num_illegal_asymmetry) {
     assert(square);
     highsLogUser(options.log_options, HighsLogType::kError,
-                 "Square Hessian contains %d non-symmetr%s\n",
-                 int(num_non_symmetric), num_non_symmetric == 1 ? "y" : "ies");
+                 "Square Hessian contains %d non-symmetr%s in [%.2g, %.2g] "
+                 "exceeding tolerance of %.1g\n",
+                 int(num_illegal_asymmetry),
+                 num_illegal_asymmetry == 1 ? "y" : "ies",
+                 min_illegal_asymmetry, max_illegal_asymmetry,
+                 kSquareHessianAsymmetryTolerance);
     error_found = true;
   }
   if (num_upper_triangle) {

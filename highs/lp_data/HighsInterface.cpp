@@ -2103,16 +2103,13 @@ HighsStatus Highs::getIisInterface() {
     return_status = this->elasticityFilter(-1.0, -1.0, 1.0, nullptr, nullptr,
                                            nullptr, true);
   }
-  // Do not continue if not using kIisStrategyIrreducible or if time limit is
-  // reached
-  if (!(kIisStrategyIrreducible & this->options_.iis_strategy) ||
-      (this->iis_.status_ == kIisModelStatusTimeLimit))
+  // Do not continue if not using kIisStrategyIrreducible
+  if (!(kIisStrategyIrreducible & this->options_.iis_strategy))
     return this->getIisInterfaceReturn(return_status, original_options,
                                        original_callback_active);
-
   // If neither ray and lp options were requested or if they fail to produce a
   // valid IS, make one consisting of all constraints
-  if (!this->iis_.valid_) {
+  if (!this->iis_.valid_ || iis_.status_ != kIisModelStatusReducible) {
     this->iis_.valid_ = true;
     this->iis_.status_ = kIisModelStatusReducible;
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
@@ -2533,11 +2530,12 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
 
   if (write_model) this->writeModel("elastic.mps");
   // Initial logging
-  if (get_iis)
+  if (get_iis) {
     highsLogUser(
         options_.log_options, HighsLogType::kInfo,
         "Running elasticity filter to identify an infeasible subset of rows\n");
-
+    iis.reportIteration(options_, HighsInt(0), HighsInt(0), true);
+  }
   // Working with a copy of the IIS so clear this->iis_
   this->iis_.clear();
   // Lambda for gathering data when solving an LP
@@ -2607,6 +2605,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   std::unordered_set<HighsInt> row_set;
 
   for (;;) {
+    loop_k++;
     if (kIisDevReport)
       printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
     HighsInt num_fixed = 0;
@@ -2653,19 +2652,18 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
         }
       }
     }
-    // Report on iteration
-    bool force = loop_k == 0;
-    iis.reportIteration(options_, loop_k + 1, HighsInt(row_set.size()), force);
 
     if (num_fixed == 0) {
       // No elastic variables were positive, so problem is feasible
       iis.status_ = kIisModelStatusFeasible;
+      iis.reportIteration(options_, loop_k, HighsInt(row_set.size()), true);
       break;
     }
     HighsStatus run_status = solveLp();
+    HighsModelStatus model_status = this->getModelStatus();
     if (run_status != HighsStatus::kOk) {
       // Solve failed
-      if (this->model_status_ == HighsModelStatus::kTimeLimit) {
+      if (model_status == HighsModelStatus::kTimeLimit) {
         iis.status_ = kIisModelStatusTimeLimit;
 
         highsLogUser(
@@ -2686,14 +2684,10 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
           original_col_lower, original_col_upper, original_integrality);
     }
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
-    HighsModelStatus model_status = this->getModelStatus();
-    if (model_status == HighsModelStatus::kInfeasible) break;
-    loop_k++;
+    bool terminate = (model_status == HighsModelStatus::kInfeasible);
+    iis.reportIteration(options_, loop_k, HighsInt(row_set.size()), terminate);
+    if (terminate) break;
   }
-
-  // Final report
-  iis.reportIteration(options_, loop_k + 1, HighsInt(row_set.size()), true);
-
   HighsInt num_enforced_col_ecol = 0;
   HighsInt num_enforced_row_ecol = 0;
   if (has_elastic_columns) {
@@ -2743,12 +2737,14 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   if (iis.status_ == kIisModelStatusFeasible) {
     assert(num_enforced_col_ecol == 0 && num_enforced_row_ecol == 0);
     assert(num_iis_row == 0);
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Elasticity filter failed to reproduce infeasibility\n");
+  } else {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Elasticity filter after %d passes found an infeasible subset "
+                 "of %d rows\n",
+                 int(loop_k), row_set.size());
   }
-
-  highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Elasticity filter after %d passes found an infeasible subset "
-               "of %d rows\n",
-               int(loop_k + 1), row_set.size());
 
   iis.valid_ = true;
   iis.strategy_ = this->options_.iis_strategy;
