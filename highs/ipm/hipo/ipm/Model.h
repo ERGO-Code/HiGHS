@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "LogHighs.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "PreProcess.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/ipx/lp_solver.h"
@@ -49,8 +49,8 @@ class Model {
   HighsSparseMatrix A_{};
   HighsHessian Q_{};
   std::vector<char> constraints_{};
-  Int num_dense_cols_{};
-  double max_col_density_{};
+
+  Int64 AS_nz_, NE_nz_lb_, NE_nz_ub_;
 
   std::vector<double> colscale_, rowscale_;
 
@@ -66,7 +66,6 @@ class Model {
       inf_norm_rows_;
 
   void preprocess();
-  void denseColumns();
   Int checkData() const;
   void computeNorms();
 
@@ -75,7 +74,7 @@ class Model {
   Int init(const HighsLp& lp, const HighsHessian& Q);
 
   // Print information of model
-  void print(const LogHighs& log) const;
+  void print(const Logger& logger) const;
 
   void printDense() const;
 
@@ -88,6 +87,8 @@ class Model {
   double normScaledObj() const { return norm_scaled_obj_; }
   double normUnscaledObj() const { return norm_unscaled_obj_; }
   double normUnscaledRhs() const { return norm_unscaled_rhs_; }
+
+  void nzBounds();
 
   // Check if variable has finite lower/upper bound
   bool hasLb(Int j) const { return std::isfinite(lower_[j]); }
@@ -115,12 +116,13 @@ class Model {
   bool ready() const { return ready_; }
   bool scaled() const { return !colscale_.empty(); }
   double offset() const { return offset_; }
-  double maxColDensity() const { return max_col_density_; }
-  Int numDenseCols() const { return num_dense_cols_; }
   double oneNormRows(Int i) const { return one_norm_rows_[i]; }
   double oneNormCols(Int i) const { return one_norm_cols_[i]; }
   double infNormRows(Int i) const { return inf_norm_rows_[i]; }
   double infNormCols(Int i) const { return inf_norm_cols_[i]; }
+  Int64 nzAS() const { return AS_nz_; }
+  Int64 nzNElb() const { return NE_nz_lb_; }
+  Int64 nzNEub() const { return NE_nz_ub_; }
 
   Int loadIntoIpx(ipx::LpSolver& lps) const;
 
