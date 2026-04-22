@@ -4315,9 +4315,16 @@ void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
   this->initialized = true;
 }
 
-bool HighsProfiling::corrupted() {
-  printf("HighsProfiling::corrupted name.size() = %zu; model_name = %s; record.size() = %zu\n", this->name.size(), model_name_.c_str(), this->record.size());
-  return false;//this->name.size() != 15;
+void HighsProfiling::clear() {
+  this->timer = nullptr;
+  this->multi_threaded = true;
+  this->model_name_ = "";
+  this->mip_ = false;
+  this->num_profiling_clock_ = -1;
+  this->name.clear();
+  this->record.clear();
+  this->submip_record.clear();
+  this->initialized = false;
 }
 
 HighsProfilingRecord* HighsProfiling::getHighsProfilingRecord(const bool submip) {

@@ -1265,10 +1265,9 @@ class Highs {
    * @brief Ensures that the global scheduler is initialized,
    * returning HighsStatus::kError if it has already been initialized,
    * but the threads option is nonzero and not equal to
-   * this->max_threads_. Also sets up multi-threaded profiling
+   * this->max_threads_.
    */
-  HighsStatus initializeMultiThreading(
-      HighsProfiling* profiling = nullptr);
+  HighsStatus initializeMultiThreading();
 
   /**
    * @brief Releases all resources held by the global scheduler instance. It is
@@ -1291,6 +1290,12 @@ class Highs {
    */
   void initializeProfiling(HighsProfiling* profiling);
   void initializeSingleThreadedProfiling(HighsProfiling* profiling);
+
+  /**
+   * @brief If Highs::profiling_ is not nullptr, clears profiling and
+   * sets Highs::profiling_ to nullptr
+   */
+  void clearProfiling();
 
   /**
    * @brief Checks that pointer is not nullptr, and copies it to Highs

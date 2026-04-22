@@ -45,10 +45,6 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Stop whichever clock was running
   if (solver_object.profiling_) {
     HighsInt profiling_clock = -1;
-    printf("returnFromSolveLpSimplex: solver_object.profiling_ = %p\n", (void*)(solver_object.profiling_));
-    if (solver_object.profiling_->corrupted()) {
-      printf("Profiling corrupted\n");
-    }
     HighsProfilingRecord* thread_record = solver_object.profiling_->getHighsProfilingRecord();
     if (std::signbit(thread_record->start_time[kSubSolverDuSimplexBasis])) profiling_clock = kSubSolverDuSimplexBasis;
     if (std::signbit(thread_record->start_time[kSubSolverDuSimplexNoBasis])) profiling_clock = kSubSolverDuSimplexNoBasis;
@@ -132,10 +128,6 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       }
     }
     assert(profiling_clock >= 0);
-    printf("\n          solveLpSimplex: solver_object.profiling_ = %p\n", (void*)(solver_object.profiling_));
-    if (solver_object.profiling_->corrupted()) {
-      printf("Profiling corrupted\n");
-    }
     solver_object.profiling_->start(profiling_clock);
   }
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for

@@ -982,20 +982,27 @@ HighsStatus Highs::optimizeHighs() {
 
 HighsStatus Highs::optimizeLp() {
   // Solve what's in the HighsLp instance Highs::model_.lp_
-  assert(!model_.isQp());
-  assert(!model_.lp_.hasSemiVariables());
+  assert(!this->model_.isQp());
+  assert(!this->model_.lp_.hasSemiVariables());
   assert(!this->multi_linear_objective_.size());
-  return calledOptimizeModel();
+  return this->calledOptimizeModel();
 }
 
 HighsStatus Highs::optimizeModel() {
   // Level 2a of Highs::run()
   //
-  HighsProfiling profiling;
-  HighsStatus status = this->initializeMultiThreading(&profiling);
+  HighsStatus status = this->initializeMultiThreading();
   if (status != HighsStatus::kOk) return status;
+
+  const bool already_profiling = this->profiling_;
+  HighsProfiling profiling;
+  if (!already_profiling) this->initializeProfiling(&profiling);
   status = this->calledOptimizeModel();
-  this->reportProfiling();
+  if (!already_profiling) {
+    this->reportProfiling();
+    // Clear profiling, since profiling is destroyed
+    this->clearProfiling();
+  }
   return status;
 }
 
@@ -2568,15 +2575,18 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       // before Highs::run, so have to do it here, and has to be
       // single-threaded
       HighsProfiling profiling;
-      const bool no_profiling = !this->profiling_;
-      if (no_profiling) 
+      const bool already_profiling = this->profiling_;
+      if (!already_profiling) 
 	this->initializeSingleThreadedProfiling(&profiling);
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
                                         info_, ekk_instance_, callback_,
                                         options_, timer_);
       solver_object.setProfiling(this->profiling_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
-      if (no_profiling) this->profiling_ = nullptr;
+      if (!already_profiling) {
+	// Clear profiling, since profiling is destroyed
+	this->clearProfiling();
+      }
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
       basis_ = std::move(modifiable_basis);
@@ -4916,7 +4926,7 @@ HighsStatus Highs::closeLogFile() {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::initializeMultiThreading(HighsProfiling* profiling) {
+HighsStatus Highs::initializeMultiThreading() {
   highs::parallel::initialize_scheduler(this->options_.threads);
   this->max_threads_ = highs::parallel::num_threads();
   HighsLogOptions& log_options = this->options_.log_options;
@@ -4938,7 +4948,7 @@ HighsStatus Highs::initializeMultiThreading(HighsProfiling* profiling) {
   }
   highsLogDev(log_options, HighsLogType::kDetailed,
               "Running with %d thread(s)\n", int(max_threads_));
-  this->initializeProfiling(profiling);
+  
   return HighsStatus::kOk;
 }
 
@@ -4958,7 +4968,10 @@ void Highs::initializeProfiling(HighsProfiling* profiling) {
     printf("Highs::initializeProfiling this->profiling_ = %p; initialized = %s\n",
 	   (void*)(this->profiling_), this->profiling_->initialized ? "T" : "F");
     // Only initialize profiling if it's nullptr
-    //assert(this->profiling_->initialized);
+    if (!this->profiling_->initialized) {
+      printf("Highs::initializeProfiling this->profiling_ is %p, but profiling_->initialized = F\n", (void*)(this->profiling_));
+    }
+    assert(this->profiling_->initialized);
     if (this->profiling_->initialized) return;
   }
   const bool mip_profiling = kHighsAnalysisLevelMipTime &
@@ -4967,6 +4980,12 @@ void Highs::initializeProfiling(HighsProfiling* profiling) {
   profiling->initialize(this->timer_, mip_profiling);
   profiling->model_name_ = this->model_.lp_.model_name_;
   this->setProfiling(profiling);
+}
+
+void Highs::clearProfiling() {
+  if (!this->profiling_) return;
+  this->profiling_->clear();
+  this->profiling_ = nullptr;
 }
 
 void Highs::setProfiling(HighsProfiling* profiling) {

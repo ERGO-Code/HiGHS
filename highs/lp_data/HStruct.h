@@ -185,7 +185,7 @@ struct HighsProfiling {
   bool initialized = false;
 
   void initialize(HighsTimer& timer_, const bool mip_profiling = false);
-  bool corrupted();
+  void clear();
   HighsProfilingRecord* getHighsProfilingRecord(const bool submip = false);
   HighsInt numThread();
   HighsInt myThread();
