@@ -80,13 +80,18 @@ HighsStatus Highs::clearSolverDualData() {
 HighsStatus Highs::releaseMemory() {
   HighsStatus return_status = HighsStatus::kOk;
   clearModel();
+  saved_objective_and_solution_.clear();
   saved_objective_and_solution_.shrink_to_fit();
+  solution_.clear();
   solution_.col_value.shrink_to_fit();
   solution_.col_dual.shrink_to_fit();
   solution_.row_value.shrink_to_fit();
   solution_.row_dual.shrink_to_fit();
+  basis_.clear();
   basis_.col_status.shrink_to_fit();
   basis_.row_status.shrink_to_fit();
+  ranging_.clear();
+  iis_.clear();
   ranging_.col_cost_up.value_.shrink_to_fit();
   ranging_.col_cost_up.objective_.shrink_to_fit();
   ranging_.col_cost_up.in_var_.shrink_to_fit();
@@ -3812,12 +3817,12 @@ void Highs::invalidateSolution() {
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  this->solution_.clear();
+  this->solution_.invalidate();
 }
 
 void Highs::invalidateBasis() {
   info_.basis_validity = kBasisValidityInvalid;
-  this->basis_.clear();
+  this->basis_.invalidate();
 }
 
 void Highs::invalidateInfo() { info_.invalidate(); }
