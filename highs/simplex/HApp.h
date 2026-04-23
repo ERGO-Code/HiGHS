@@ -45,11 +45,16 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Stop whichever clock was running
   if (solver_object.profiling_) {
     HighsInt profiling_clock = -1;
-    HighsProfilingRecord* thread_record = solver_object.profiling_->getHighsProfilingRecord();
-    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexBasis])) profiling_clock = kSubSolverDuSimplexBasis;
-    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexNoBasis])) profiling_clock = kSubSolverDuSimplexNoBasis;
-    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexBasis])) profiling_clock = kSubSolverPrSimplexBasis;
-    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexNoBasis])) profiling_clock = kSubSolverPrSimplexNoBasis;
+    HighsProfilingRecord* thread_record =
+        solver_object.profiling_->getHighsProfilingRecord();
+    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexBasis]))
+      profiling_clock = kSubSolverDuSimplexBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexNoBasis]))
+      profiling_clock = kSubSolverDuSimplexNoBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexBasis]))
+      profiling_clock = kSubSolverPrSimplexBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexNoBasis]))
+      profiling_clock = kSubSolverPrSimplexNoBasis;
     solver_object.profiling_->stop(profiling_clock);
   }
   // Ensure that the incumbent LP is neither moved, nor scaled
@@ -116,15 +121,15 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     HighsInt profiling_clock = -1;
     if (options.simplex_strategy == kSimplexStrategyPrimal) {
       if (basis.valid) {
-	profiling_clock = kSubSolverPrSimplexBasis;
+        profiling_clock = kSubSolverPrSimplexBasis;
       } else {
-	profiling_clock = kSubSolverPrSimplexNoBasis;
+        profiling_clock = kSubSolverPrSimplexNoBasis;
       }
     } else {
       if (basis.valid) {
-	profiling_clock = kSubSolverDuSimplexBasis;
+        profiling_clock = kSubSolverDuSimplexBasis;
       } else {
-	profiling_clock = kSubSolverDuSimplexNoBasis;
+        profiling_clock = kSubSolverDuSimplexNoBasis;
       }
     }
     assert(profiling_clock >= 0);

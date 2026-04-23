@@ -18,7 +18,7 @@ enum iClockMip : int {
   kMipClockSolve,
   kMipClockPostsolve,
   // Level 1
-  kFromMipClock, 
+  kFromMipClock,
   kMipClockInit = kFromMipClock,
   kMipClockRunPresolve,
   kMipClockRunSetup,
@@ -113,7 +113,7 @@ enum iClockMip : int {
   kMipClockProbingImplications,
 
   kLastMipClock = kMipClockProbingImplications,
-  kToMipClock = kLastMipClock+1
+  kToMipClock = kLastMipClock + 1
 };
 
 const HighsInt kNumThreadMipClock = kLastMipClock;
@@ -153,19 +153,25 @@ inline void initialiseMipProfilingNames(std::vector<std::string>& name) {
   name[kMipClockEvaluateRootNode0] = "kMipClockEvaluateRootNode0";
   name[kMipClockEvaluateRootNode1] = "kMipClockEvaluateRootNode1";
   name[kMipClockEvaluateRootNode2] = "kMipClockEvaluateRootNode2";
-  
+
   // Separation
   name[kMipClockRootSeparationRound] = "Separation";
-  name[kMipClockRootSeparationFinishAnalyticCentreComputation] = "A-centre - finish";
+  name[kMipClockRootSeparationFinishAnalyticCentreComputation] =
+      "A-centre - finish";
   name[kMipClockRootSeparationCentralRounding] = "Central rounding";
   name[kMipClockRootSeparationEvaluateRootLp] = "Evaluate root LP";
 
   /*
-    clock[kMipClockImplboundSepa] = timer_pointer->clock_def(kImplboundSepaString.c_str());
-    clock[kMipClockCliqueSepa] = timer_pointer->clock_def(kCliqueSepaString.c_str());
-    clock[kMipClockTableauSepa] = timer_pointer->clock_def(kTableauSepaString.c_str());
-    clock[kMipClockPathAggrSepa] = timer_pointer->clock_def(kPathAggrSepaString.c_str());
-    clock[kMipClockModKSepa] = timer_pointer->clock_def(kModKSepaString.c_str());
+    clock[kMipClockImplboundSepa] =
+    timer_pointer->clock_def(kImplboundSepaString.c_str());
+    clock[kMipClockCliqueSepa] =
+    timer_pointer->clock_def(kCliqueSepaString.c_str());
+    clock[kMipClockTableauSepa] =
+    timer_pointer->clock_def(kTableauSepaString.c_str());
+    clock[kMipClockPathAggrSepa] =
+    timer_pointer->clock_def(kPathAggrSepaString.c_str());
+    clock[kMipClockModKSepa] =
+    timer_pointer->clock_def(kModKSepaString.c_str());
   */
   // Presolve - Should correspond to kMipClockRunPresolve
   name[kMipClockProbingPresolve] = "Probing - presolve";
@@ -187,7 +193,7 @@ inline void initialiseMipProfilingNames(std::vector<std::string>& name) {
   name[kMipClockBacktrackPlunge] = "Backtrack plunge";
   name[kMipClockPerformAging2] = "Perform aging 2";
 
-    // Primal heuristics - Should correspond to kMipDiveClockPrimalHeuristics
+  // Primal heuristics - Should correspond to kMipDiveClockPrimalHeuristics
   name[kMipClockDiveRandomizedRounding] = "Dive Randomized rounding";
   name[kMipClockDiveRens] = "Dive RENS";
   name[kMipClockDiveRins] = "Dive RINS";

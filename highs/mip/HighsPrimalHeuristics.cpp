@@ -153,24 +153,24 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.setProfiling(mipsolver.profiling_);
   // Stop the solve timer so that presolve/solve/postsolve for the
   // sub-MIP are timed independently
-  assert(mipsolver.profiling_->running(kSolveTime));
-  mipsolver.profiling_->stop(kSolveTime);
+  const bool was_running_solve = mipsolver.profiling_->running(kSolveTime);
+  if (was_running_solve) mipsolver.profiling_->stop(kSolveTime);
   // Only start timing the submip if the calling MIP isn't a sub-MIP
-  if (!mipsolver.submip)
-    mipsolver.profiling_->start(kSubSolverSubMip);
+  if (!mipsolver.submip) mipsolver.profiling_->start(kSubSolverSubMip);
   submipsolver.run();
-  if (!mipsolver.submip)
-    mipsolver.profiling_->stop(kSubSolverSubMip);
+  if (!mipsolver.submip) mipsolver.profiling_->stop(kSubSolverSubMip);
   worker.heur_stats.max_submip_level = std::max(
       submipsolver.max_submip_level, worker.heur_stats.max_submip_level);
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
     // Only stop timing the submip if the calling MIP isn't a sub-MIP
     mipsolver.profiling_->stop(kMipClockSubMipSolve);
   }
-  // Re-start the solve timer now that presolve/solve/postsolve for the
-  // sub-MIP have been timed independently
-  const bool restart = true;
-  mipsolver.profiling_->start(kSolveTime, restart);
+  if (was_running_solve) {
+    // Re-start the solve timer now that presolve/solve/postsolve for the
+    // sub-MIP have been timed independently
+    const bool restart = true;
+    mipsolver.profiling_->start(kSolveTime, restart);
+  }
   // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
   // pointer after calling HighsMipSolver::run(), and assert isn't
   // triggered for anything in ctest, but use direct test of

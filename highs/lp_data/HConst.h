@@ -335,7 +335,7 @@ enum SubSolverIndex : int {
   kSubSolverQpAsm,
   kSubSolverSubMip,
   kLastSubSolver = kSubSolverSubMip,
-  kToSubSolver = kLastSubSolver+1
+  kToSubSolver = kLastSubSolver + 1
 };
 
 // Minimum and default KKT tolerance

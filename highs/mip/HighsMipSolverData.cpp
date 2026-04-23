@@ -470,11 +470,9 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     const HighsInt profiling_clock =
         use_hipo ? kSubSolverHipoAc : kSubSolverIpxAc;
-    if (mipsolver.profiling_)
-      mipsolver.profiling_->start(profiling_clock);
+    if (mipsolver.profiling_) mipsolver.profiling_->start(profiling_clock);
     ipm.optimizeLp();
-    if (mipsolver.profiling_)
-      mipsolver.profiling_->stop(profiling_clock);
+    if (mipsolver.profiling_) mipsolver.profiling_->stop(profiling_clock);
     if (ipm_logging) ipm.setOptionValue("output_flag", false);
     if (use_hipo && mip_ipm_solver == kHighsChooseString &&
         HighsInt(sol.size()) != mipsolver.numCol()) {
@@ -2205,11 +2203,9 @@ restart:
         profiling->stop(kMipClockRootSeparation);
         return clockOff(profiling);
       }
-      profiling->start(
-          kMipClockRootSeparationFinishAnalyticCentreComputation);
+      profiling->start(kMipClockRootSeparationFinishAnalyticCentreComputation);
       finishAnalyticCenterComputation(tg);
-      profiling->stop(
-          kMipClockRootSeparationFinishAnalyticCentreComputation);
+      profiling->stop(kMipClockRootSeparationFinishAnalyticCentreComputation);
 
       profiling->start(kMipClockRootSeparationCentralRounding);
       heuristics.centralRounding(worker);

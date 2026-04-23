@@ -192,11 +192,11 @@ struct HighsProfiling {
   void start(const HighsInt profiling_clock, const bool restart = false);
   void stop(const HighsInt profiling_clock);
   double read(const HighsInt profiling_clock,
-	      const HighsInt record_type = kChooseRecord);
+              const HighsInt record_type = kChooseRecord);
   bool running(const HighsInt profiling_clock,
-	      const HighsInt record_type = kChooseRecord);
+               const HighsInt record_type = kChooseRecord);
   HighsInt numCall(const HighsInt profiling_clock,
-	      const HighsInt record_type = kChooseRecord);
+                   const HighsInt record_type = kChooseRecord);
   //  HighsInt getSepaClockIndex(const std::string& name);
 };
 

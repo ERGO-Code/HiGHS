@@ -20,8 +20,7 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-void HighsLpRelaxation::setProfiling(
-    HighsProfiling* profiling) {
+void HighsLpRelaxation::setProfiling(HighsProfiling* profiling) {
   assert(profiling);
   lpsolver.setProfiling(profiling);
 }
@@ -1149,7 +1148,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
 
-  if (mipsolver.profiling_->mip_ && !mipsolver.submip && !this->solved_first_lp) {
+  if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
+      !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - start first LP solve (with%s basis)\n",
                  mipsolver.timer_.read(), valid_basis ? "" : "out");
@@ -1226,7 +1226,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
-  if (mipsolver.profiling_->mip_ && !mipsolver.submip && !this->solved_first_lp) {
+  if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
+      !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - finish first LP solve\n",
                  mipsolver.timer_.read());
