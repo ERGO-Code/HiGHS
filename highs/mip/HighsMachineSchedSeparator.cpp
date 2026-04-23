@@ -64,7 +64,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
 
   HighsInt numRows = 0;
   HighsInt maxRows = std::min(1000, 2 * mipsolver.numRow());
-  adjacency.reserve(maxRows);
+  adjacency.reserve(maxRows + 2);
   for (HighsInt row = 0; row != mipsolver.numRow(); row++) {
     double rowLower = mipsolver.model_->row_lower_[row];
     double rowUpper = mipsolver.model_->row_upper_[row];
@@ -79,6 +79,11 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     double binCoef = 0;
     for (HighsInt i = start; i != end; i++) {
       HighsInt col = mipsolver.mipdata_->ARindex_[i];
+      if (mipsolver.mipdata_->domain.col_lower_[col] == -kHighsInf) {
+        // TODO: Could some jobs be modelled in reverse?
+        machineSchedRow = false;
+        break;
+      }
       if (mipsolver.mipdata_->domain.isBinary(col)) {
         if (binCol != -1) {
           machineSchedRow = false;
@@ -135,7 +140,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
         numRows++;
       }
     }
-    if (numRows > maxRows) break;
+    if (numRows >= maxRows) break;
   }
 
   // A clique of size 3 needs at least 6 arcs
