@@ -7,7 +7,7 @@
 #include "DataCollector.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {
 
@@ -82,7 +82,7 @@ class Analyse {
   // block size
   Int nb_{};
 
-  const Log* log_;
+  const Logger* logger_;
   DataCollector& data_;
 
   // Functions to perform analyse phase
@@ -110,7 +110,7 @@ class Analyse {
  public:
   // Constructor: matrix must be in lower triangular format
   Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-          const std::vector<Int>& signs, Int nb, const Log* log,
+          const std::vector<Int>& signs, Int nb, const Logger* logger,
           DataCollector& data, const std::vector<Int>& perm);
 
   // Run analyse phase and save the result in Symbolic object S

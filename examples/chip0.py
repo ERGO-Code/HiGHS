@@ -8,8 +8,8 @@ import highspy
 
 h = highspy.Highs()
 
-x1 = h.addVar(obj = 10)
-x2 = h.addVar(obj = 25)
+x1 = h.addVariable(obj = 10)
+x2 = h.addVariable(obj = 25)
 
 h.addConstr(x1 + 2*x2 <= 80)
 h.addConstr(x1 + 4*x2 <= 120)

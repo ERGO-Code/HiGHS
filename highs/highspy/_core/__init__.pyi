@@ -4,10 +4,22 @@ import typing
 from . import cb
 from . import simplex_constants
 
+# allow static typing for row/col indices to use __index__
+class _SupportsIndex(typing.Protocol):
+    @property
+    def index(self) -> int: ...
+
+HighsIndexType = typing.Union[int, _SupportsIndex]
+HighsFloatArrayType = typing.Union[list[float], numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]]
+HighsIntArrayType = typing.Union[list[int], numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]], numpy.ndarray[typing.Any, numpy.dtype[numpy.int64]]]
+
 __all__ = [
     "BasisValidity",
     "HIGHS_VERSION_MAJOR",
     "HIGHS_VERSION_MINOR",
+    "HighsIndexType",
+    "HighsFloatArrayType",
+    "HighsIntArrayType",
     "HIGHS_VERSION_PATCH",
     "HessianFormat",
     "HighsBasis",
@@ -34,6 +46,7 @@ __all__ = [
     "HighsStatus",
     "HighsVarType",
     "IisBoundStatus",
+    "IisStatus",
     "IisStrategy",
     "MatrixFormat",
     "ObjSense",
@@ -150,23 +163,40 @@ class HighsBasisStatus:
 class HighsHessian:
     dim_: int
     format_: HessianFormat
-    index_: list[int]
-    start_: list[int]
-    value_: list[float]
+
+    @property
+    def index_(self) -> list[int]: ...
+    @index_.setter
+    def index_(self, value: HighsIntArrayType) -> None: ...
+
+    @property
+    def start_(self) -> list[int]: ...
+    @start_.setter
+    def start_(self, value: HighsIntArrayType) -> None: ...
+
+    @property
+    def value_(self) -> list[float]: ...
+    @value_.setter
+    def value_(self, value: HighsFloatArrayType) -> None: ...
 
     def __init__(self) -> None: ...
 
 class HighsIis:
-    col_bound: list[int]
-    col_index: list[int]
-    info: list[HighsIisInfo]
-    row_bound: list[int]
-    row_index: list[int]
-    strategy: int
-    valid: bool
+    valid_: bool
+    status_: int
+    strategy_: int
+    col_bound_: list[int]
+    col_index_: list[int]
+    col_status_: list[int]
+    row_bound_: list[int]
+    row_index_: list[int]
+    row_status_: list[int]
+    info_: HighsIisInfo
+    model_ : HighsModel
 
     def __init__(self) -> None: ...
     def invalidate(self) -> None: ...
+    def clear(self) -> None: ...
 
 class HighsIisInfo:
     simplex_iterations: int
@@ -262,10 +292,7 @@ class HighsLogType:
 
 class HighsLp:
     a_matrix_: HighsSparseMatrix
-    col_cost_: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
-    col_lower_: list[float]
     col_names_: list[str]
-    col_upper_: list[float]
     integrality_: list[HighsVarType]
     is_moved_: bool
     is_scaled_: bool
@@ -274,11 +301,34 @@ class HighsLp:
     num_col_: int
     num_row_: int
     offset_: float
-    row_lower_: list[float]
     row_names_: list[str]
-    row_upper_: list[float]
     scale_: HighsScale
     sense_: ObjSense
+
+    @property
+    def col_cost_(self) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
+    @col_cost_.setter
+    def col_cost_(self, value: HighsFloatArrayType) -> None: ...
+
+    @property
+    def col_lower_(self) -> list[float]: ...
+    @col_lower_.setter
+    def col_lower_(self, value: HighsFloatArrayType) -> None: ...
+
+    @property
+    def col_upper_(self) -> list[float]: ...
+    @col_upper_.setter
+    def col_upper_(self, value: HighsFloatArrayType) -> None: ...
+
+    @property
+    def row_lower_(self) -> list[float]: ...
+    @row_lower_.setter
+    def row_lower_(self, value: HighsFloatArrayType) -> None: ...
+
+    @property
+    def row_upper_(self) -> list[float]: ...
+    @row_upper_.setter
+    def row_upper_(self, value: HighsFloatArrayType) -> None: ...
 
     def __init__(self) -> None: ...
 
@@ -294,10 +344,14 @@ class HighsModel:
 class HighsLinearObjective:
     weight: float
     offset: float
-    coefficients: list[float]
     abs_tolerance: float
     rel_tolerance: float
     priority: int
+
+    @property
+    def coefficients(self) -> list[float]: ...
+    @coefficients.setter
+    def coefficients(self, value: HighsFloatArrayType) -> None: ...
 
     def __init__(self) -> None: ...
 
@@ -525,23 +579,55 @@ class HighsScale:
     pass
 
 class HighsSolution:
-    col_dual: list[float]
-    col_value: list[float]
     dual_valid: bool
-    row_dual: list[float]
-    row_value: list[float]
     value_valid: bool
+
+    @property
+    def col_dual(self) -> list[float]: ...
+    @col_dual.setter
+    def col_dual(self, value: HighsFloatArrayType) -> None: ...
+
+    @property
+    def col_value(self) -> list[float]: ...
+    @col_value.setter
+    def col_value(self, value: HighsFloatArrayType) -> None: ...
+
+    @property
+    def row_dual(self) -> list[float]: ...
+    @row_dual.setter
+    def row_dual(self, value: HighsFloatArrayType) -> None: ...
+
+    @property
+    def row_value(self) -> list[float]: ...
+    @row_value.setter
+    def row_value(self, value: HighsFloatArrayType) -> None: ...
 
     def __init__(self) -> None: ...
 
 class HighsSparseMatrix:
     format_: MatrixFormat
-    index_: list[int]
     num_col_: int
     num_row_: int
-    p_end_: list[int]
-    start_: list[int]
-    value_: list[float]
+
+    @property
+    def index_(self) -> list[int]: ...
+    @index_.setter
+    def index_(self, value: HighsIntArrayType) -> None: ...
+
+    @property
+    def p_end_(self) -> list[int]: ...
+    @p_end_.setter
+    def p_end_(self, value: HighsIntArrayType) -> None: ...
+
+    @property
+    def start_(self) -> list[int]: ...
+    @start_.setter
+    def start_(self, value: HighsIntArrayType) -> None: ...
+    
+    @property
+    def value_(self) -> list[float]: ...
+    @value_.setter
+    def value_(self, value: HighsFloatArrayType) -> None: ...
 
     def __init__(self) -> None: ...
 
@@ -637,20 +723,58 @@ class IisBoundStatus:
     @property
     def value(self) -> int: ...
 
+
+class IisStatus:
+    """
+    Members:
+      kIisStatusNotInConflict
+      kIisStatusMaybeInConflict
+      kIisStatusInConflict
+    """
+
+    __members__: typing.ClassVar[dict[str, IisStatus]]
+    kIisStatusNotInConflict: typing.ClassVar[IisStatus]
+    kIisStatusMaybeInConflict: typing.ClassVar[IisStatus]
+    kIisStatusInConflict: typing.ClassVar[IisStatus]
+
+    def __eq__(self, other: typing.Any) -> bool: ...
+    def __getstate__(self) -> int: ...
+    def __hash__(self) -> int: ...
+    def __index__(self) -> int: ...
+    def __init__(self, value: int) -> None: ...
+    def __int__(self) -> int: ...
+    def __ne__(self, other: typing.Any) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __setstate__(self, state: int) -> None: ...
+    def __str__(self) -> str: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+
+
 class IisStrategy:
     """
     Members:
       kIisStrategyMin
-      kIisStrategyFromLpRowPriority
-      kIisStrategyFromLpColPriority
+      kIisStrategyLight
+      kIisStrategyFromRay
+      kIisStrategyFromLp
+      kIisStrategyIrreducible
+      kIisStrategyColPriority
+      kIisStrategyRelaxation
       kIisStrategyMax
     """
 
     __members__: typing.ClassVar[dict[str, IisStrategy]]
-    kIisStrategyFromLpColPriority: typing.ClassVar[IisStrategy]
-    kIisStrategyFromLpRowPriority: typing.ClassVar[IisStrategy]
-    kIisStrategyMax: typing.ClassVar[IisStrategy]
     kIisStrategyMin: typing.ClassVar[IisStrategy]
+    kIisStrategyLight: typing.ClassVar[IisStrategy]
+    kIisStrategyFromRay: typing.ClassVar[IisStrategy]
+    kIisStrategyFromLp: typing.ClassVar[IisStrategy]
+    kIisStrategyIrreducible: typing.ClassVar[IisStrategy]
+    kIisStrategyColPriority: typing.ClassVar[IisStrategy]
+    kIisStrategyRelaxation: typing.ClassVar[IisStrategy]
+    kIisStrategyMax: typing.ClassVar[IisStrategy]
 
     def __eq__(self, other: typing.Any) -> bool: ...
     def __getstate__(self) -> int: ...
@@ -757,37 +881,37 @@ class _Highs:
         lower_bound: float,
         upper_bound: float,
         num_elements: int,
-        indices: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        values: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        indices: HighsIntArrayType,
+        values: HighsFloatArrayType,
     ) -> HighsStatus: ...
     def addCols(
         self,
         num_cols: int,
-        costs: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        lower_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        upper_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        costs: HighsFloatArrayType,
+        lower_bounds: HighsFloatArrayType,
+        upper_bounds: HighsFloatArrayType,
         num_elements: int,
-        starts: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        indices: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        values: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        starts: HighsIntArrayType,
+        indices: HighsIntArrayType,
+        values: HighsFloatArrayType,
     ) -> HighsStatus: ...
     def addRow(
         self,
         lower_bound: float,
         upper_bound: float,
         num_elements: int,
-        indices: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        values: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        indices: HighsIntArrayType,
+        values: HighsFloatArrayType,
     ) -> HighsStatus: ...
     def addRows(
         self,
         num_rows: int,
-        lower_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        upper_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        lower_bounds: HighsFloatArrayType,
+        upper_bounds: HighsFloatArrayType,
         num_elements: int,
-        starts: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        indices: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        values: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        starts: HighsIntArrayType,
+        indices: HighsIntArrayType,
+        values: HighsFloatArrayType,
     ) -> HighsStatus: ...
     def addLinearObjective(self, linear_objective: HighsLinearObjective) -> HighsStatus: ...
     def getNumLinearObjectives(self) -> int: ...
@@ -796,44 +920,44 @@ class _Highs:
     def addVars(
         self,
         num_vars: int,
-        lower_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        upper_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        lower_bounds: HighsFloatArrayType,
+        upper_bounds: HighsFloatArrayType,
     ) -> HighsStatus: ...
     def basisStatusToString(self, basis_status: HighsBasisStatus) -> str: ...
     def basisValidityToString(self, validity: int) -> str: ...
-    def changeCoeff(self, row: int, col: int, value: float) -> HighsStatus: ...
-    def changeColBounds(self, col: int, lower_bound: float, upper_bound: float) -> HighsStatus: ...
-    def changeColCost(self, col: int, cost: float) -> HighsStatus: ...
-    def changeColIntegrality(self, col: int, var_type: HighsVarType) -> HighsStatus: ...
+    def changeCoeff(self, row: HighsIndexType, col: HighsIndexType, value: float) -> HighsStatus: ...
+    def changeColBounds(self, col: HighsIndexType, lower_bound: float, upper_bound: float) -> HighsStatus: ...
+    def changeColCost(self, col: HighsIndexType, cost: float) -> HighsStatus: ...
+    def changeColIntegrality(self, col: HighsIndexType, var_type: HighsVarType) -> HighsStatus: ...
     def changeColsBounds(
         self,
         num_cols: int,
-        cols: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        lower_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        upper_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        cols: HighsIntArrayType,
+        lower_bounds: HighsFloatArrayType,
+        upper_bounds: HighsFloatArrayType,
     ) -> HighsStatus: ...
     def changeColsCost(
         self,
         num_cols: int,
-        cols: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        costs: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        cols: HighsIntArrayType,
+        costs: HighsFloatArrayType,
     ) -> HighsStatus: ...
     def changeColsIntegrality(
         self,
         num_cols: int,
-        cols: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
+        cols: HighsIntArrayType,
         var_types: numpy.ndarray[typing.Any, numpy.dtype[numpy.uint8]],
     ) -> HighsStatus: ...
     def changeObjectiveOffset(self, offset: float) -> HighsStatus: ...
     def changeObjectiveSense(self, sense: ObjSense) -> HighsStatus: ...
-    def changeRowBounds(self, row: int, lower_bound: float, upper_bound: float) -> HighsStatus: ...
+    def changeRowBounds(self, row: HighsIndexType, lower_bound: float, upper_bound: float) -> HighsStatus: ...
     def clear(self) -> HighsStatus: ...
     def clearModel(self) -> HighsStatus: ...
     def clearLinearObjectives(self) -> HighsStatus: ...
     def clearSolver(self) -> HighsStatus: ...
     def crossover(self, solution: HighsSolution) -> HighsStatus: ...
-    def deleteCols(self, num_cols: int, cols: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]]) -> HighsStatus: ...
-    def deleteRows(self, num_rows: int, rows: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]]) -> HighsStatus: ...
+    def deleteCols(self, num_cols: int, cols: HighsIntArrayType) -> HighsStatus: ...
+    def deleteRows(self, num_rows: int, rows: HighsIntArrayType) -> HighsStatus: ...
     def deleteVars(self, num_vars: int, vars: list[int]) -> HighsStatus: ...
     def feasibilityRelaxation(
         self,
@@ -845,12 +969,12 @@ class _Highs:
         local_rhs_penalty: typing.Any = ...,
     ) -> HighsStatus: ...
     def getBasis(self) -> HighsBasis: ...
-    def getCol(self, col: int) -> tuple[HighsStatus, float, float, float, int]: ...
+    def getCol(self, col: HighsIndexType) -> tuple[HighsStatus, float, float, float, int]: ...
     def getColByName(self, name: str) -> tuple[HighsStatus, int]: ...
     def getColEntries(
-        self, col: int
+        self, col: HighsIndexType
     ) -> tuple[HighsStatus, numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]], numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]]: ...
-    def getColName(self, col: int) -> tuple[HighsStatus, str]: ...
+    def getColName(self, col: HighsIndexType) -> tuple[HighsStatus, str]: ...
     def getCols(
         self, num_cols: int, cols: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]]
     ) -> tuple[
@@ -870,11 +994,11 @@ class _Highs:
         numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
     ]: ...
     def getHessianNumNz(self) -> int: ...
-    def getIis(self, iis: HighsIis) -> HighsStatus: ...
+    def getIis(self) -> tuple[HighsStatus, HighsIis]: ...
     def getInfinity(self) -> float: ...
     def getInfo(self) -> HighsInfo: ...
     def getInfoType(self, info: str) -> tuple[HighsStatus, HighsInfoType]: ...
-    def getInfoValue(self, info: str) -> tuple[HighsStatus, object]: ...
+    def getInfoValue(self, info: str) -> tuple[HighsStatus, int | float]: ...
     def getLp(self) -> HighsLp: ...
     def getModel(self) -> HighsModel: ...
     def getModelPresolveStatus(self) -> HighsPresolveStatus: ...
@@ -886,16 +1010,17 @@ class _Highs:
     def getObjectiveSense(self) -> tuple[HighsStatus, ObjSense]: ...
     def getObjectiveValue(self) -> float: ...
     def getOptionType(self, name: str) -> tuple[HighsStatus, HighsOptionType]: ...
-    def getOptionValue(self, name: str) -> tuple[HighsStatus, object]: ...
+    def getOptionValue(self, name: str) -> tuple[HighsStatus, bool | int | float | str]: ...
     def getOptions(self) -> HighsOptions: ...
     def getPresolvedLp(self) -> HighsLp: ...
+    def getFixedLp(self) -> tuple[HighsStatus, HighsLp]: ...
     def getRanging(self) -> tuple[HighsStatus, HighsRanging]: ...
-    def getRow(self, row_index: int) -> tuple[HighsStatus, float, float, int]: ...
+    def getRow(self, row_index: HighsIndexType) -> tuple[HighsStatus, float, float, int]: ...
     def getRowByName(self, row_name: str) -> tuple[HighsStatus, int]: ...
     def getRowEntries(
-        self, row_index: int
+        self, row_index: HighsIndexType
     ) -> tuple[HighsStatus, numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]], numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]]: ...
-    def getRowName(self, row_index: int) -> tuple[HighsStatus, str]: ...
+    def getRowName(self, row_index: HighsIndexType) -> tuple[HighsStatus, str]: ...
     def getRows(
         self, num_rows: int, row_indices: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]]
     ) -> tuple[
@@ -918,7 +1043,7 @@ class _Highs:
     def getSolution(self) -> HighsSolution: ...
     def githash(self) -> str: ...
     def modelStatusToString(self, model_status: HighsModelStatus) -> str: ...
-    def passColName(self, col_index: int, col_name: str) -> HighsStatus: ...
+    def passColName(self, col_index: HighsIndexType, col_name: str) -> HighsStatus: ...
     @typing.overload
     def passHessian(self, hessian: HighsHessian) -> HighsStatus: ...
     @typing.overload
@@ -927,9 +1052,9 @@ class _Highs:
         dim: int,
         nnz: int,
         format: int,
-        q_start: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        q_index: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        q_value: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        q_start: HighsIntArrayType,
+        q_index: HighsIntArrayType,
+        q_value: HighsFloatArrayType,
     ) -> HighsStatus: ...
     @typing.overload
     def passModel(self, model: HighsModel) -> HighsStatus: ...
@@ -940,22 +1065,22 @@ class _Highs:
         num_rows: int,
         nnz: int,
         qnnz: int,
-        a_format: int,
-        q_format: int,
-        sense: int,
+        a_format: typing.Union[int, typing.SupportsInt],
+        q_format: typing.Union[int, typing.SupportsInt],
+        sense: typing.Union[int, typing.SupportsInt],
         offset: float,
-        col_costs: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        col_lower_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        col_upper_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        row_lower_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        row_upper_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        a_start: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        a_index: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        a_value: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        q_start: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        q_index: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        q_value: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        integrality: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
+        col_costs: HighsFloatArrayType,
+        col_lower_bounds: HighsFloatArrayType,
+        col_upper_bounds: HighsFloatArrayType,
+        row_lower_bounds: HighsFloatArrayType,
+        row_upper_bounds: HighsFloatArrayType,
+        a_start: HighsIntArrayType,
+        a_index: HighsIntArrayType,
+        a_value: HighsFloatArrayType,
+        q_start: HighsIntArrayType,
+        q_index: HighsIntArrayType,
+        q_value: HighsFloatArrayType,
+        integrality: HighsIntArrayType,
     ) -> HighsStatus: ...
     @typing.overload
     def passModel(self, lp: HighsLp) -> HighsStatus: ...
@@ -968,18 +1093,18 @@ class _Highs:
         a_format: int,
         sense: int,
         offset: float,
-        col_costs: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        col_lower_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        col_upper_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        row_lower_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        row_upper_bounds: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        a_start: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        a_index: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        a_value: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
-        integrality: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
+        col_costs: HighsFloatArrayType,
+        col_lower_bounds: HighsFloatArrayType,
+        col_upper_bounds: HighsFloatArrayType,
+        row_lower_bounds: HighsFloatArrayType,
+        row_upper_bounds: HighsFloatArrayType,
+        a_start: HighsIntArrayType,
+        a_index: HighsIntArrayType,
+        a_value: HighsFloatArrayType,
+        integrality: HighsIntArrayType,
     ) -> HighsStatus: ...
     def passOptions(self, options: HighsOptions) -> HighsStatus: ...
-    def passRowName(self, row_index: int, row_name: str) -> HighsStatus: ...
+    def passRowName(self, row_index: HighsIndexType, row_name: str) -> HighsStatus: ...
     @typing.overload
     def postsolve(self, solution: HighsSolution, basis: HighsBasis) -> HighsStatus: ...
     @typing.overload
@@ -1000,28 +1125,21 @@ class _Highs:
     def setCallback(
         self,
         callback: typing.Callable[
-            [cb.HighsCallbackType, str, cb.HighsCallbackDataOut, cb.HighsCallbackDataIn, typing.Any],
+            [cb.HighsCallbackType, str, cb.HighsCallbackOutput, cb.HighsCallbackInput, typing.Any],
             None,
         ]
         | None,
         callback_data: typing.Any | None,
     ) -> HighsStatus: ...
-    @typing.overload
-    def setOptionValue(self, option_name: str, option_value: bool) -> HighsStatus: ...
-    @typing.overload
-    def setOptionValue(self, option_name: str, option_value: int) -> HighsStatus: ...
-    @typing.overload
-    def setOptionValue(self, option_name: str, option_value: float) -> HighsStatus: ...
-    @typing.overload
-    def setOptionValue(self, option_name: str, option_value: str) -> HighsStatus: ...
+    def setOptionValue(self, option_name: str, option_value: bool | int | float | str | typing.SupportsInt) -> HighsStatus: ...
     @typing.overload
     def setSolution(self, solution: HighsSolution) -> HighsStatus: ...
     @typing.overload
     def setSolution(
         self,
         num_entries: int,
-        indices: numpy.ndarray[typing.Any, numpy.dtype[numpy.int32]],
-        values: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+        indices: HighsIntArrayType,
+        values: HighsFloatArrayType,
     ) -> HighsStatus: ...
     def solutionStatusToString(self, solution_status: int) -> str: ...
     def startCallback(self, callback_type: cb.HighsCallbackType) -> HighsStatus: ...
