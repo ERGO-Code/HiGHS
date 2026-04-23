@@ -12,6 +12,7 @@
 
 #include <unordered_map>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsCutGeneration.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
@@ -156,6 +157,11 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       potentialNeighbours.emplace_back(std::get<0>(arc.first));
     }
   }
+  pdqsort(potentialNeighbours.begin(), potentialNeighbours.end(),
+          [&](const HighsInt c1, const HighsInt c2) {
+            return degrees[c1] > degrees[c2];
+          });
+
   std::vector<HighsInt> neighbours;
   neighbours.reserve(largestDegree + 1);
   neighbours.emplace_back(largestDegreeCol);
