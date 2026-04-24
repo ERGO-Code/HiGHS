@@ -1443,6 +1443,200 @@ HPresolve::Result HPresolve::dominatedColumns(
   return Result::kOk;
 }
 
+void HPresolve::createPrecedenceGraph(bool generateUb) const {
+  HighsImplications& implications = mipsolver->mipdata_->implications;
+  HighsSparseMatrix& precedenceLb = implications.getPrecedenceDirectedGraphLb();
+
+  std::vector<HighsInt> precedenceArcs;
+  precedenceArcs.reserve(mipsolver->numRow());
+  std::vector<HighsInt> numArcs(mipsolver->numCol(), 0);
+
+  // Want to store all rows of the form x <= y + c, c \in \R
+  for (HighsInt row = 0; row != model->num_row_; ++row) {
+    if (rowDeleted[row] || rowsize[row] != 2 || isEquation(row)) continue;
+    HighsInt x = -1;
+    double xCoef = 0;
+    HighsInt y = -1;
+    double yCoef = 0;
+    for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+      // get column index and coefficient
+      const HighsInt col = nonzero.index();
+      const double val = nonzero.value();
+      if (val > 0) {
+        x = col;
+        xCoef = val;
+      } else if (val < 0) {
+        y = col;
+        yCoef = val;
+      }
+    }
+    if (x == -1 || y == -1 || colDeleted[x] || colDeleted[y] ||
+        std::max(std::fabs(yCoef), std::fabs(xCoef)) <=
+            options->small_matrix_value ||
+        std::fabs(std::fabs(yCoef) - std::fabs(xCoef)) >
+            options->small_matrix_value ||
+        xCoef * yCoef >= 0)
+      continue;
+    if (model->row_upper_[row] != kHighsInf ||
+        model->row_lower_[row] != -kHighsInf) {
+      precedenceArcs.emplace_back(row);
+    }
+    if (model->row_upper_[row] != kHighsInf) {
+      numArcs[x]++;
+    }
+    if (model->row_lower_[row] != -kHighsInf) {
+      numArcs[y]++;
+    }
+  }
+
+  if (precedenceArcs.empty()) {
+    precedenceLb.clear();
+    implications.getPrecedenceDirectedGraphUb().clear();
+    return;
+  }
+
+  precedenceLb.num_col_ = mipsolver->numCol();
+  precedenceLb.num_row_ = mipsolver->numCol();
+  precedenceLb.format_ = MatrixFormat::kColwise;
+  precedenceLb.p_end_.clear();
+  std::vector<HighsInt>& start = precedenceLb.start_;
+  start.assign(mipsolver->numCol() + 1, 0);
+  std::vector<HighsInt>& index = precedenceLb.index_;
+  std::vector<double>& value = precedenceLb.value_;
+  for (HighsInt col = 0; col != mipsolver->numCol(); col++) {
+    start[col + 1] = start[col] + numArcs[col];
+  }
+  index.resize(start.back());
+  value.resize(start.back());
+  std::vector<HighsInt> pos = start;
+  for (const HighsInt row : precedenceArcs) {
+    HighsInt x = -1;
+    HighsInt y = -1;
+    double scale = 0;
+    for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+      // get column index and coefficient
+      const HighsInt col = nonzero.index();
+      const double val = nonzero.value();
+      if (val > 0) {
+        x = col;
+        scale = val;
+      } else if (val < 0) {
+        y = col;
+      }
+    }
+    if (model->row_upper_[row] != kHighsInf) {
+      const HighsInt p = pos[x]++;
+      index[p] = y;
+      value[p] = model->row_upper_[row] / scale;
+    }
+    if (model->row_lower_[row] != -kHighsInf) {
+      const HighsInt p = pos[y]++;
+      index[p] = x;
+      value[p] = -model->row_lower_[row] / scale;
+    }
+  }
+
+  if (generateUb) {
+    implications.getPrecedenceDirectedGraphUb().createRowwise(precedenceLb);
+  }
+}
+
+void HPresolve::strongConnect(
+    const std::vector<HighsInt>& start, const std::vector<HighsInt>& index,
+    const std::vector<double>& value, const double eps, HighsInt v,
+    HighsInt& time, std::vector<HighsInt>& dfsNum,
+    std::vector<HighsInt>& lowLink, std::vector<HighsInt>& stack,
+    std::vector<bool>& onStack,
+    std::vector<HighsInt>& stronglyConnectedComponents) {
+  dfsNum[v] = time;
+  lowLink[v] = time;
+  ++time;
+  stack.push_back(v);
+  onStack[v] = true;
+
+  for (HighsInt i = start[v]; i != start[v + 1]; ++i) {
+    if (std::abs(value[i]) > eps) continue;
+    const HighsInt w = index[i];
+    if (dfsNum[w] == -1) {
+      strongConnect(start, index, value, eps, w, time, dfsNum, lowLink, stack,
+                    onStack, stronglyConnectedComponents);
+      lowLink[v] = std::min(lowLink[v], lowLink[w]);
+    } else if (onStack[w]) {
+      lowLink[v] = std::min(lowLink[v], dfsNum[w]);
+    }
+  }
+
+  if (lowLink[v] != dfsNum[v]) return;
+
+  HighsInt u = v;
+  std::vector<HighsInt> stronglyConnectedComponent;
+  while (true) {
+    HighsInt w = stack.back();
+    stack.pop_back();
+    onStack[w] = false;
+    stronglyConnectedComponent.push_back(w);
+    u = std::min(u, w);
+    if (w == v) break;
+  }
+
+  for (const HighsInt w : stronglyConnectedComponent) {
+    stronglyConnectedComponents[w] = u;
+  }
+}
+
+void HPresolve::tarjan(const std::vector<HighsInt>& start,
+                       const std::vector<HighsInt>& index,
+                       const std::vector<double>& value, const double eps,
+                       std::vector<HighsInt>& stronglyConnectedComponents) {
+  const HighsInt n = static_cast<HighsInt>(stronglyConnectedComponents.size());
+  std::vector<HighsInt> dfsNum(n, -1);
+  std::vector<HighsInt> lowLink(n, -1);
+  std::vector<HighsInt> stack;
+  stack.reserve(n);
+  std::vector<bool> onStack(n, false);
+  HighsInt time = 0;
+
+  for (HighsInt col = 0; col != n; ++col) {
+    if (colDeleted[col]) continue;
+    if (dfsNum[col] == -1)
+      strongConnect(start, index, value, eps, col, time, dfsNum, lowLink, stack,
+                    onStack, stronglyConnectedComponents);
+  }
+}
+
+HPresolve::Result HPresolve::findPrecedenceCycles(
+    HighsPostsolveStack& postsolve_stack) {
+  HighsImplications& implications = mipsolver->mipdata_->implications;
+  HighsSparseMatrix& precedenceLb = implications.getPrecedenceDirectedGraphLb();
+
+  const HighsInt n = precedenceLb.num_col_;
+  if (n == 0) return Result::kOk;
+
+  // Run Tarjan's algorithm to find any strongly connected components
+  // If there is a cycle, e.g. x <= y, y <= z, z <= x, then we
+  // can conclude that x = y = z.
+  std::vector<HighsInt> stronglyConnectedComponents(n, -1);
+  tarjan(precedenceLb.start_, precedenceLb.index_, precedenceLb.value_,
+         options->small_matrix_value, stronglyConnectedComponents);
+
+  // Apply substitutions for all strongly connected components
+  for (HighsInt substCol = 0; substCol != n; ++substCol) {
+    if (colDeleted[substCol]) continue;
+    const HighsInt stayCol = stronglyConnectedComponents[substCol];
+    if (stayCol == -1 || stayCol == substCol) continue;
+
+    postsolve_stack.doubletonEquation(
+        -1, substCol, stayCol, 1.0, -1, 0, model->col_lower_[substCol],
+        model->col_upper_[substCol], 0.0, false, false,
+        HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
+
+    markColDeleted(substCol);
+    substitute(substCol, stayCol, 0.0, 1.0);
+  }
+
+  return checkLimits(postsolve_stack);
+}
+
 HPresolve::Result HPresolve::prepareProbing(
     HighsPostsolveStack& postsolve_stack, bool& firstCall) {
   HighsDomain& domain = mipsolver->mipdata_->domain;
@@ -1473,6 +1667,9 @@ HPresolve::Result HPresolve::prepareProbing(
 
   // prepare for domain propagation
   mipsolver->mipdata_->setupDomainPropagation();
+
+  // Extract precedence constraints to be used for faster propagation
+  createPrecedenceGraph(true);
 
   // first call?
   firstCall = !mipsolver->mipdata_->cliquesExtracted;
@@ -5942,6 +6139,15 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         if (problemSizeReduction() > 0.05) continue;
       }
 
+      // Find substitutions from the precedence graph
+      if (mipsolver != nullptr &&
+          analysis_.allow_rule_[kPresolveRulePrecedenceCycles]) {
+        storeCurrentProblemSize();
+        createPrecedenceGraph(false);
+        HPRESOLVE_CHECKED_CALL(findPrecedenceCycles(postsolve_stack));
+        if (problemSizeReduction() > 0.05) continue;
+      }
+
       // enumerate solutions
       if (mipsolver != nullptr &&
           analysis_.allow_rule_[kPresolveRuleEnumeration]) {
@@ -6341,6 +6547,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
     mipsolver->mipdata_->domain.addConflictPool(
         mipsolver->mipdata_->conflictPool);
+    createPrecedenceGraph(true);
 
     if (mipsolver->mipdata_->numRestarts != 0) {
       std::vector<HighsInt> cutinds;

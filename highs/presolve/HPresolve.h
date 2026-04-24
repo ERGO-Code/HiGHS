@@ -374,6 +374,23 @@ class HPresolve {
 
   void addToMatrix(const HighsInt row, const HighsInt col, const double val);
 
+  void createPrecedenceGraph(bool generateUb) const;
+
+  void strongConnect(const std::vector<HighsInt>& start,
+                     const std::vector<HighsInt>& index,
+                     const std::vector<double>& value, double eps, HighsInt v,
+                     HighsInt& time, std::vector<HighsInt>& dfsNum,
+                     std::vector<HighsInt>& lowLink,
+                     std::vector<HighsInt>& stack, std::vector<bool>& onStack,
+                     std::vector<HighsInt>& stronglyConnectedComponents);
+
+  void tarjan(const std::vector<HighsInt>& start,
+              const std::vector<HighsInt>& index,
+              const std::vector<double>& value, double eps,
+              std::vector<HighsInt>& stronglyConnectedComponents);
+
+  Result findPrecedenceCycles(HighsPostsolveStack& postsolve_stack);
+
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 
   Result finaliseProbing(HighsPostsolveStack& postsolve_stack, bool firstCall,

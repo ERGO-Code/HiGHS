@@ -508,6 +508,8 @@ void HighsImplications::rebuild(HighsInt ncols,
   implications.resize(2 * ncols);
   colsubstituted.resize(ncols);
   substitutions.clear();
+  precedenceLbs.clear();
+  precedenceUbs.clear();
   vubs.clear();
   vubs.shrink_to_fit();
   vubs.resize(ncols);
@@ -911,5 +913,32 @@ void HighsImplications::applyImplications(HighsDomain& domain,
     for (HighsDomainChange& domchg : implications[loc].implics) {
       if (checkImplication(domchg)) break;
     }
+  }
+}
+
+void HighsImplications::applyPrecedenceGraph(
+    HighsDomain& domain, const HighsDomainChange& boundchg) const {
+  if (precedenceLbs.num_col_ == 0 || precedenceUbs.num_col_ == 0) return;
+  const HighsSparseMatrix& precedence =
+      boundchg.boundtype == HighsBoundType::kLower ? precedenceLbs
+                                                   : precedenceUbs;
+  const HighsInt start = precedence.start_[boundchg.column];
+  const HighsInt end = precedence.start_[boundchg.column + 1];
+
+  for (HighsInt i = start; i < end; ++i) {
+    const HighsInt col = precedence.index_[i];
+    const double shift = precedence.value_[i];
+    if (boundchg.boundtype == HighsBoundType::kLower) {
+      const double newLb = domain.col_lower_[boundchg.column] - shift;
+      if (domain.col_lower_[col] < newLb - domain.feastol()) {
+        domain.changeBound({newLb, col, HighsBoundType::kLower}, HighsDomain::Reason::unspecified());
+      }
+    } else if (boundchg.boundtype == HighsBoundType::kUpper) {
+      const double newUb = domain.col_upper_[boundchg.column] + shift;
+      if (domain.col_upper_[col] > newUb + domain.feastol()) {
+        domain.changeBound({newUb, col, HighsBoundType::kUpper}, HighsDomain::Reason::unspecified());
+      }
+    }
+    if (domain.infeasible()) return;
   }
 }

@@ -1515,6 +1515,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Probing";
   } else if (rule_type == kPresolveRuleEnumeration) {
     return "Enumeration";
+  } else if (rule_type == kPresolveRulePrecedenceCycles) {
+    return "Precedence cycles";
   }
   assert(1 == 0);
   return "????";

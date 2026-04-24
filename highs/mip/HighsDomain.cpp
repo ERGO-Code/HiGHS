@@ -2010,6 +2010,10 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
           *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
     }
   }
+
+  if (!infeasible()) {
+    mipsolver->mipdata_->implications.applyPrecedenceGraph(*this, boundchg);
+  }
 }
 
 bool HighsDomain::checkChangeBound(HighsBoundType boundtype, HighsInt col,
