@@ -4465,25 +4465,25 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
 
     // check if variable is implied integer
     HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
-  }
 
-  // shift "binary" variables to have a lower bound of zero
-  if (model->integrality_[col] != HighsVarType::kContinuous &&
-      model->col_lower_[col] != 0.0 &&
-      (model->col_lower_[col] != -kHighsInf ||
-       model->col_upper_[col] != kHighsInf) &&
-      model->col_upper_[col] - model->col_lower_[col] > 0.5 &&
-      model->col_upper_[col] - model->col_lower_[col] < 1.5) {
-    // substitute with the bound that is smaller in magnitude and only
-    // substitute if bound is not large for an integer
-    if (std::abs(model->col_upper_[col]) > std::abs(model->col_lower_[col])) {
-      if (std::abs(model->col_lower_[col]) < 1000.5)
-        HPRESOLVE_CHECKED_CALL(
-            transformColumn(postsolve_stack, col, 1.0, model->col_lower_[col]));
-    } else {
-      if (std::abs(model->col_upper_[col]) < 1000.5)
-        HPRESOLVE_CHECKED_CALL(transformColumn(postsolve_stack, col, -1.0,
-                                               model->col_upper_[col]));
+    // shift "binary" variables to have a lower bound of zero
+    if (model->integrality_[col] != HighsVarType::kContinuous &&
+        model->col_lower_[col] != 0.0 &&
+        (model->col_lower_[col] != -kHighsInf ||
+         model->col_upper_[col] != kHighsInf) &&
+        model->col_upper_[col] - model->col_lower_[col] > 0.5 &&
+        model->col_upper_[col] - model->col_lower_[col] < 1.5) {
+      // substitute with the bound that is smaller in magnitude and only
+      // substitute if bound is not large for an integer
+      if (std::abs(model->col_upper_[col]) > std::abs(model->col_lower_[col])) {
+        if (std::abs(model->col_lower_[col]) < 1000.5)
+          HPRESOLVE_CHECKED_CALL(transformColumn(postsolve_stack, col, 1.0,
+                                                 model->col_lower_[col]));
+      } else {
+        if (std::abs(model->col_upper_[col]) < 1000.5)
+          HPRESOLVE_CHECKED_CALL(transformColumn(postsolve_stack, col, -1.0,
+                                                 model->col_upper_[col]));
+      }
     }
   }
 
