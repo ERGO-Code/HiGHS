@@ -193,6 +193,8 @@ struct HighsProfiling {
   HighsProfilingRecord* getHighsProfilingRecord(const bool submip = false);
   HighsInt numThread();
   HighsInt myThread();
+  void setSubMip(const bool submip);
+  bool isSubMip();
   void start(const HighsInt profiling_clock, const bool restart = false);
   void stop(const HighsInt profiling_clock);
   double read(const HighsInt profiling_clock,

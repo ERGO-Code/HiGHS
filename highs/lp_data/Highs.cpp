@@ -3912,7 +3912,19 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     options_.mip_max_nodes = options_.mip_max_start_nodes;
     // Solve the model
     basis_.clear();
+    if (this->profiling_) {
+      // Account for this thread solve as being a sub-MIP
+      //
+      // Should not already be a sub-MIP, as handling a user-supplied
+      // solution
+      assert(!this->profiling_->isSubMip());
+      this->profiling_->setSubMip(true);
+    }
     return_status = this->optimizeModel();
+    if (this->profiling_) {
+      // Revert to this thread solve being a MIP
+      this->profiling_->setSubMip(false);
+    }
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
   }

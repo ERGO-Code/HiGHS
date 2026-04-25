@@ -4340,6 +4340,14 @@ HighsInt HighsProfiling::myThread() {
   return this->multi_threaded ? highs::parallel::thread_num() : 0;
 }
 
+void HighsProfiling::setSubMip(const bool submip) {
+  this->submip[this->myThread()] = submip;
+}
+
+bool HighsProfiling::isSubMip() {
+  return this->submip[this->myThread()];
+}
+
 void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return;
