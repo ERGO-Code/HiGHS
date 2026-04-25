@@ -190,11 +190,11 @@ struct HighsProfiling {
 
   void initialize(HighsTimer& timer_, const bool mip_profiling = false);
   void clear();
-  HighsProfilingRecord* getHighsProfilingRecord(const bool submip = false);
   HighsInt numThread();
   HighsInt myThread();
   void setSubMip(const bool submip);
   bool isSubMip();
+  HighsProfilingRecord* getHighsProfilingRecord(const HighsInt record_type = kChooseRecord);
   void start(const HighsInt profiling_clock, const bool restart = false);
   void stop(const HighsInt profiling_clock);
   double read(const HighsInt profiling_clock,

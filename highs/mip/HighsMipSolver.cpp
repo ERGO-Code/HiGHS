@@ -1040,18 +1040,6 @@ void HighsMipSolver::cleanupSolve() {
   profiling_->stop(kPostsolveTime);
   timer_.stop();
 
-  std::string solutionstatus = "-";
-
-  if (havesolution) {
-    // Surely this definition of feasible is unnecessary
-    bool lc_feasible =
-        bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
-        integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
-        row_violation_ <= options_mip_->mip_feasibility_tolerance;
-    assert(feasible == lc_feasible);
-    solutionstatus = feasible ? "feasible" : "infeasible";
-  }
-
   gap_ = fabs(primal_bound_ - dual_bound_);
   if (primal_bound_ == 0.0)
     gap_ = dual_bound_ == 0.0 ? 0.0 : kHighsInf;
@@ -1060,37 +1048,58 @@ void HighsMipSolver::cleanupSolve() {
   else
     gap_ = kHighsInf;
 
+  // 
+  if (options_mip_->output_flag) {
+    // solutionstatus is only used in solvingReport, but depends on
+    // values of havesolution and feasible that are local to
+    // HighsMipSolver::cleanupSolve
+    const std::string solutionstatus = havesolution ?
+      (feasible ? "feasible" : "infeasible") : "-";
+    solvingReport(solutionstatus);
+  }
+
+  //  if (!timeless_log) analysis_.reportMipTimer();
+
+  //  analysis_.checkProfiling(profiling_);
+
+  assert(modelstatus_ != HighsModelStatus::kNotset);
+
+  if (improving_solution_file_ != nullptr) fclose(improving_solution_file_);
+}
+
+void HighsMipSolver::solvingReport(const std::string& solutionstatus) const {
+
   std::array<char, 128> gapString =
-      getGapString(gap_, primal_bound_, options_mip_);
+    getGapString(gap_, primal_bound_, options_mip_);
 
   bool timeless_log = options_mip_->timeless_log;
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "\nSolving report\n");
+	       "\nSolving report\n");
   if (this->orig_model_->model_name_.length())
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "  Model             %s\n",
-                 this->orig_model_->model_name_.c_str());
+		 "  Model             %s\n",
+		 this->orig_model_->model_name_.c_str());
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Status            %s\n"
-               "  Primal bound      %.12g\n"
-               "  Dual bound        %.12g\n"
-               "  Gap               %s\n",
-               utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, gapString.data());
+	       "  Status            %s\n"
+	       "  Primal bound      %.12g\n"
+	       "  Dual bound        %.12g\n"
+	       "  Gap               %s\n",
+	       utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
+	       dual_bound_, gapString.data());
   if (!timeless_log)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "  P-D integral      %.12g\n",
-                 mipdata_->primal_dual_integral.value);
+		 "  P-D integral      %.12g\n",
+		 mipdata_->primal_dual_integral.value);
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Solution status   %s\n", solutionstatus.c_str());
+	       "  Solution status   %s\n", solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "                    %.12g (objective)\n"
-                 "                    %.12g (bound viol.)\n"
-                 "                    %.12g (int. viol.)\n"
-                 "                    %.12g (row viol.)\n",
-                 solution_objective_, bound_violation_, integrality_violation_,
-                 row_violation_);
+		 "                    %.12g (objective)\n"
+		 "                    %.12g (bound viol.)\n"
+		 "                    %.12g (int. viol.)\n"
+		 "                    %.12g (row viol.)\n",
+		 solution_objective_, bound_violation_, integrality_violation_,
+		 row_violation_);
   if (!timeless_log) {
     auto callRecord = [&](HighsInt clock) {
       double mip_time = profiling_->read(clock, kMipRecord);
@@ -1100,18 +1109,18 @@ void HighsMipSolver::cleanupSolve() {
       double total_time = mip_time + submip_time;
       // Only log postsolve if it's written as nonzero
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "                    %.2f (%s)\n", total_time,
-                   profiling_->name[clock].c_str());
+		   "                    %.2f (%s)\n", total_time,
+		   profiling_->name[clock].c_str());
       if (mip_calls > 1 || submip_calls > 0) {
-        highsLogUser(
-            options_mip_->log_options, HighsLogType::kInfo,
-            "                        MIP    time [calls] = %.2f [%d]\n",
-            mip_time, int(mip_calls));
-        if (submip_calls > 0)
-          highsLogUser(
-              options_mip_->log_options, HighsLogType::kInfo,
-              "                        subMIP time [calls] = %.2f [%d]\n",
-              submip_time, int(submip_calls));
+	highsLogUser(
+		     options_mip_->log_options, HighsLogType::kInfo,
+		     "                        MIP    time [calls] = %.2f [%d]\n",
+		     mip_time, int(mip_calls));
+	if (submip_calls > 0)
+	  highsLogUser(
+		       options_mip_->log_options, HighsLogType::kInfo,
+		       "                        subMIP time [calls] = %.2f [%d]\n",
+		       submip_time, int(submip_calls));
       }
     };
     double total = timer_.read();
@@ -1146,14 +1155,6 @@ void HighsMipSolver::cleanupSolve() {
                  (long long unsigned)mipdata_->sb_lp_iterations,
                  (long long unsigned)mipdata_->sepa_lp_iterations,
                  (long long unsigned)mipdata_->heuristic_lp_iterations);
-
-  //  if (!timeless_log) analysis_.reportMipTimer();
-
-  //  analysis_.checkProfiling(profiling_);
-
-  assert(modelstatus_ != HighsModelStatus::kNotset);
-
-  if (improving_solution_file_ != nullptr) fclose(improving_solution_file_);
 }
 
 // Only called in Highs::runPresolve

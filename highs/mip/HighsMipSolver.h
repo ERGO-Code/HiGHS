@@ -131,6 +131,7 @@ class HighsMipSolver {
   HighsProfiling* profiling_ = nullptr;
 
   void cleanupSolve();
+  void solvingReport(const std::string& solutionstatus) const;
 
   void runMipPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;

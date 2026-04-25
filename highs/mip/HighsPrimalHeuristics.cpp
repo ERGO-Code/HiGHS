@@ -157,7 +157,13 @@ bool HighsPrimalHeuristics::solveSubMip(
   if (was_running_solve) mipsolver.profiling_->stop(kSolveTime);
   // Only start timing the submip if the calling MIP isn't a sub-MIP
   if (!mipsolver.submip) mipsolver.profiling_->start(kSubSolverSubMip);
+  // Ensure that sub-solver call time data accumulate in the sub-MIP record
+  mipsolver.profiling_->setSubMip(true);
   submipsolver.run();
+  // Ensure that further sub-solver call time data accumulate in the
+  // MIP or sub-MIP record, according to whether the calling MIP is a
+  // sub-MIP
+  mipsolver.profiling_->setSubMip(mipsolver.submip);
   if (!mipsolver.submip) mipsolver.profiling_->stop(kSubSolverSubMip);
   worker.heur_stats.max_submip_level = std::max(
       submipsolver.max_submip_level, worker.heur_stats.max_submip_level);
