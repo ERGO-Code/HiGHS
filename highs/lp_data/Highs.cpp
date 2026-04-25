@@ -79,8 +79,13 @@ HighsStatus Highs::clearSolverDualData() {
 
 HighsStatus Highs::releaseMemory() {
   HighsStatus return_status = HighsStatus::kOk;
+  // 1. Clear all model and solver state (same as clear()).
   clearModel();
-  saved_objective_and_solution_.clear();
+
+  // 2. Clear and shrink vectors that clearModel/clearSolver only
+  //    invalidate or leave with residual capacity.  After this block the
+  //    instance holds zero allocated heap memory for solver state —
+  //    equivalent to a freshly constructed Highs.
   saved_objective_and_solution_.shrink_to_fit();
   solution_.clear();
   solution_.col_value.shrink_to_fit();
@@ -91,7 +96,6 @@ HighsStatus Highs::releaseMemory() {
   basis_.col_status.shrink_to_fit();
   basis_.row_status.shrink_to_fit();
   ranging_.clear();
-  iis_.clear();
   ranging_.col_cost_up.value_.shrink_to_fit();
   ranging_.col_cost_up.objective_.shrink_to_fit();
   ranging_.col_cost_up.in_var_.shrink_to_fit();
@@ -116,6 +120,15 @@ HighsStatus Highs::releaseMemory() {
   ranging_.row_bound_dn.objective_.shrink_to_fit();
   ranging_.row_bound_dn.in_var_.shrink_to_fit();
   ranging_.row_bound_dn.ou_var_.shrink_to_fit();
+  iis_.clear();
+
+  // 3. Shrink standard form LP vectors.
+  standard_form_cost_.shrink_to_fit();
+  standard_form_rhs_.shrink_to_fit();
+
+  // 4. Reset timer clocks (accumulated timing data).
+  timer_.zeroAllClocks();
+
   return returnFromHighs(return_status);
 }
 
