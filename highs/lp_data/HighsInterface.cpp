@@ -4306,6 +4306,7 @@ void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
   thread_record.start_time.assign(this->num_profiling_clock_, 1);
   HighsInt num_thread = this->numThread();
   assert(num_thread > 0);
+  this->submip.assign(num_thread, false);
   this->record.assign(num_thread, thread_record);
   this->submip_record.assign(num_thread, thread_record);
   this->initialized = true;
@@ -4318,6 +4319,7 @@ void HighsProfiling::clear() {
   this->mip_ = false;
   this->num_profiling_clock_ = -1;
   this->name.clear();
+  this->submip.clear();
   this->record.clear();
   this->submip_record.clear();
   this->initialized = false;
