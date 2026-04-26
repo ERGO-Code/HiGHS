@@ -490,6 +490,9 @@ if(NOT(${HIGHSINT64} STREQUAL "OFF"))
   message(STATUS "HIGHSINT64: " ${HIGHSINT64})
 endif()
 
+# Optional hot-kernel microbenchmark suite (check/perf/).
+option(HIGHS_PERF "Build hot-kernel microbenchmarks" OFF)
+
 # At the moment there is a threading bug on Windows; this is the workaround
 option(HIGHS_NO_DEFAULT_THREADS "Disable multithreading" OFF)
 
@@ -879,6 +882,10 @@ else(FAST_BUILD)
   if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(check)
+  endif()
+
+  if(HIGHS_PERF)
+    add_subdirectory(check/perf)
   endif()
 
   include(python-highs)
