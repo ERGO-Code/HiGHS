@@ -135,6 +135,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
     mipsolver.profiling_->start(kMipClockSubMipSolve);
   }
+  mipsolver.profiling_->solveCall("MIP", mipsolver.submip);
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true, mipsolver.submip_level + 1);

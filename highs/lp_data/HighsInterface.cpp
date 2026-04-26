@@ -4431,6 +4431,26 @@ bool HighsProfiling::running(const HighsInt profiling_clock,
   return clock_running;
 }
 
+void HighsProfiling::solveCall(const std::string& model, const bool submip) {
+  const bool local_submip_ok = this->isSubMip() == submip;
+  if (!local_submip_ok) {
+    printf("Solving %3s for %4sMIP on thread %d with isSubMip() = %4sMIP\n",
+	   model.c_str(),
+	   submip ? "sub-" : "",
+	   int(myThread()),
+	   isSubMip() ? "sub-" : "");
+    exit(1);
+  }
+  assert(local_submip_ok);
+  if (myThread() != 0 || submip) {
+    printf("Solving %3s for %4sMIP on thread %d\n",
+	   model.c_str(),
+	   submip ? "sub-" : "",
+	   int(myThread()));
+  }
+}
+
+
 // HighsInt HighsProfiling::getSepaClockIndex(const std::string& name) {
 // assert(1==4);  return 0;}
 
