@@ -931,12 +931,14 @@ void HighsImplications::applyPrecedenceGraph(
     if (boundchg.boundtype == HighsBoundType::kLower) {
       const double newLb = domain.col_lower_[boundchg.column] - shift;
       if (domain.col_lower_[col] < newLb - domain.feastol()) {
-        domain.changeBound({newLb, col, HighsBoundType::kLower}, HighsDomain::Reason::unspecified());
+        domain.changeBound({newLb, col, HighsBoundType::kLower},
+                           HighsDomain::Reason::unspecified());
       }
     } else if (boundchg.boundtype == HighsBoundType::kUpper) {
       const double newUb = domain.col_upper_[boundchg.column] + shift;
       if (domain.col_upper_[col] > newUb + domain.feastol()) {
-        domain.changeBound({newUb, col, HighsBoundType::kUpper}, HighsDomain::Reason::unspecified());
+        domain.changeBound({newUb, col, HighsBoundType::kUpper},
+                           HighsDomain::Reason::unspecified());
       }
     }
     if (domain.infeasible()) return;
