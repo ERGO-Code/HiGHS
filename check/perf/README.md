@@ -56,3 +56,26 @@ perf stat -e cache-misses,cache-references,instructions,cycles \
 1. Add the timed function in `perf_<area>.cpp` and a header.
 2. Wire it from `perf_main.cpp::main` and the kernel-name dispatch.
 3. Add it to `CMakeLists.txt`.
+
+## End-to-end energy-model workload
+
+For optimisations whose benefit only shows up over a long simplex run, the
+microbenchmarks above aren't enough. `scripts/build_scigrid_mps.py` builds a
+parametric LP from PyPSA's bundled SciGRID-DE network (~585 buses, ~850
+lines, ~1400 generators); `scripts/run_endtoend.sh` builds the MPS, runs
+the `highs` CLI, and emits a one-line summary you can diff before/after a
+change.
+
+```sh
+pip install --user 'pypsa<0.30' linopy highspy   # one-time
+
+# Quick (~50 s):
+check/perf/scripts/run_endtoend.sh 168
+
+# Real workload (~6 min, 1.25 M variables):
+check/perf/scripts/run_endtoend.sh 504
+```
+
+Baseline numbers are recorded at `results/scigrid_baseline.md`. The MPS
+files (~14 MB / ~99 MB / ~300 MB) are not committed — the script regenerates
+them on demand.
