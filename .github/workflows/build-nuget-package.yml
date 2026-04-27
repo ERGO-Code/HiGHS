@@ -158,31 +158,31 @@ jobs:
           ls -R ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes macos-x64
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: macos-x64
           path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes macos-arm64
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: macos-arm64
           path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes win-x32
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: win-x32
           path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes/win-x32
 
       - name: Download runtimes
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-x64
           path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-arm64
           path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
@@ -190,7 +190,7 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
 
@@ -212,10 +212,10 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
 
       - name: Download nuget
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: nuget
 

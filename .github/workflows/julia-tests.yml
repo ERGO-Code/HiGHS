@@ -70,7 +70,7 @@ jobs:
           version: "1.10"
           arch: ${{ matrix.arch }}
       # Download and setup the artifact
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.triplet }}
           path: ${{ github.workspace }}/products
@@ -78,7 +78,7 @@ jobs:
         run: tar -xzf products/HiGHS.*.${{ matrix.triplet }}.tar.gz -C products
       # We also need to download the JLL package, because it contains the new
       # dependencies
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.triplet }}-jll
           path: ${{ github.workspace }}/HiGHS_jll

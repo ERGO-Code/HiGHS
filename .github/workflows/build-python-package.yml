@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.9
 
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -112,7 +112,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -140,7 +140,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -169,7 +169,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -195,7 +195,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.14
 
@@ -222,7 +222,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.13
 

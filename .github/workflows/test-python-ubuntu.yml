@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -43,10 +43,10 @@ jobs:
         os: [ubuntu-latest]
         python: [3.12]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -74,9 +74,9 @@ jobs:
         os: [ubuntu-latest]
         python: [3.12]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -113,9 +113,9 @@ jobs:
         os: [ubuntu-latest]
         python: [3.12]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -126,7 +126,7 @@ jobs:
         run: mkdir ${{github.workspace}}/install-openblas
 
       - name: Checkout OpenBLAS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: OpenMathLib/OpenBLAS
           ref: v0.3.30
