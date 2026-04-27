@@ -252,7 +252,7 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
     ipm/hipo/auxiliary/Logger.h
-    ipm/hipo/auxiliary/mycblas.h
+    # ipm/hipo/auxiliary/mycblas.h
     ipm/hipo/auxiliary/OrderingPrint.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
