@@ -17,15 +17,15 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/archive
+        run: cmake -E make_directory ${{runner.workspace}}/archive
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/archive_unzipped
+        run: cmake -E make_directory ${{runner.workspace}}/archive_unzipped
 
       - name:  Generate archive artifact
         run: |
           pwd
-          cd ${{github.workspace}}
+          cd ${{runner.workspace}}
           pwd
           tar -czvf source-archive.tar.gz HiGHS
 
@@ -33,12 +33,12 @@ jobs:
 
       - name: unzip archive
         run: |
-          cd ${{github.workspace}}
-          tar -xvzf source-archive.tar.gz -C ${{github.workspace}}/archive_unzipped
+          cd ${{runner.workspace}}
+          tar -xvzf source-archive.tar.gz -C ${{runner.workspace}}/archive_unzipped
 
       - name: ls unziped archive
         run: |
-          cd ${{github.workspace}}/archive_unzipped
+          cd ${{runner.workspace}}/archive_unzipped
           pwd
           ls
           cd HiGHS
@@ -46,7 +46,7 @@ jobs:
 
       - name: copy archive
         run: |
-          cp ${{github.workspace}}/source-archive.tar.gz .
+          cp ${{runner.workspace}}/source-archive.tar.gz .
           ls
 
       - name: Release
