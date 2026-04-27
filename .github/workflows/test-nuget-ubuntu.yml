@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     container: stabletec/build-core:debian-11
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory /__w/HiGHS/HiGHS/build
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     container: stabletec/build-core:debian-11
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory /__w/HiGHS/HiGHS/build
