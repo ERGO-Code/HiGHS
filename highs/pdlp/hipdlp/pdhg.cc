@@ -29,8 +29,8 @@
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
 
-#define PDHG_CHECK_INTERVAL 40
-#define DEBUG_MODE true
+#define PDHG_CHECK_INTERVAL 200
+#define DEBUG_MODE false
 static constexpr double kDivergentMovement = 1e10;
 
 using namespace std;
@@ -660,10 +660,11 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     if (do_restart) {
       if (params_.step_size_strategy == StepSizeStrategy::PID) {
         updatePrimalWeightAtRestart(results_);
-if (DEBUG_MODE){
-  std::cout << "[Restart] Iter: " << final_iter_count_ 
-            << "| updated primal weight: " << primal_weight_ << std::endl;
-}
+        if (DEBUG_MODE) {
+          std::cout << "[Restart] Iter: " << final_iter_count_
+                    << "| updated primal weight: " << primal_weight_
+                    << std::endl;
+        }
       }
 #ifdef CUPDLP_GPU
       CUDA_CHECK(cudaMemcpyAsync(d_x_anchor_, d_pdhg_primal_,
@@ -769,9 +770,6 @@ double PDLPSolver::computeFixedPointErrorGpu() {
       cublasDnrm2(cublas_handle_, a_num_cols_, d_delta_x_, 1, &primal_norm));
   CUBLAS_CHECK(
       cublasDnrm2(cublas_handle_, a_num_rows_, d_delta_y_, 1, &dual_norm));
-if (DEBUG_MODE) {
-  std::cout << "[DEBUG] primal norm: " << primal_norm << ", dual norm " << dual_norm << std::endl;
-}
   CUBLAS_CHECK(cublasDdot(cublas_handle_, a_num_cols_, d_delta_x_, 1,
                           d_AT_delta_y_, 1, &cross_term));
 
@@ -782,10 +780,12 @@ if (DEBUG_MODE) {
       primal_norm_sq * primal_weight_ + dual_norm_sq / primal_weight_;
   double interaction = 2.0 * params_.eta * cross_term;
 
-  std::cout <<"primal weight: " << primal_weight_ << ", step size: " << params_.eta << std::endl;
-
-  std::cout << "movement: " << movement << ", interaction: " << interaction
-             << std::endl;
+  if (DEBUG_MODE) {
+    std::cout << "primal weight: " << primal_weight_
+              << ", step size: " << params_.eta << std::endl;
+    std::cout << "movement: " << movement
+              << ", interaction: " << interaction << std::endl;
+  }
 
   return std::sqrt(std::max(0.0, movement + interaction));
 }
@@ -796,7 +796,11 @@ bool PDLPSolver::runConvergenceCheck(size_t iter, std::vector<double>& output_x,
                                      TerminationStatus& status) {
   // 1. Compute Average Iterate (GPU or CPU)
 #ifdef CUPDLP_GPU
-  computeAverageIterateGpu();
+  const bool use_average_iterate =
+      !(params_.use_halpern_restart && iter > 0);
+  if (use_average_iterate) {
+    computeAverageIterateGpu();
+  }
 #else
   computeAverageIterate(Ax_avg_, ATy_avg_);
 #endif
@@ -1038,11 +1042,8 @@ void PDLPSolver::accumulateAverages(size_t iter) {
 
 #ifdef CUPDLP_GPU
   if (params_.use_halpern_restart) {
-    // If Halpern, we average the 'current' blended iterate
-    launchKernelUpdateAverages_wrapper(d_x_sum_, d_y_sum_, d_x_current_,
-                                       d_y_current_, dMeanStepSize,
-                                       lp_.num_col_, lp_.num_row_, gpu_stream_);
-    sum_weights_gpu_ += dMeanStepSize;
+    // The GPU Halpern path checks only the major iterate, so maintaining
+    // running averages here adds kernels and SpMVs without affecting stopping.
   } else {
     // If standard, we average the 'next' iterate computed by PDHG
     updateAverageIteratesGpu(inner_iter);

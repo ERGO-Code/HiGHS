@@ -89,7 +89,7 @@ class RestartScheme {
   double duality_gap_last_candidate_ = 0.0;
 
   double sufficient_decay_factor_ = 0.2;
-  double necessary_decay_factor_ = 0.8;
+  double necessary_decay_factor_ = 0.5;
   double artificial_restart_threshold_ = 0.36;
 };
 
