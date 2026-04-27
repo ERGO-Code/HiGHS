@@ -277,15 +277,12 @@ void Model::print(const Logger& logger) const {
   // compute max and min for bounds intervals
   double boundmin = kHighsInf;
   double boundmax = 0.0;
-  Int free_vars = 0;
   for (Int i = 0; i < n_; ++i) {
     if (std::isfinite(lower_[i]) && std::isfinite(upper_[i])) {
       const double diff = std::abs(upper_[i] - lower_[i]);
       boundmin = std::min(boundmin, diff);
       boundmax = std::max(boundmax, diff);
     }
-
-    if (!std::isfinite(lower_[i]) && !std::isfinite(upper_[i])) free_vars++;
   }
   if (std::isinf(boundmin)) boundmin = 0.0;
 
@@ -345,7 +342,6 @@ void Model::print(const Logger& logger) const {
 
   if (logger.debug(1)) {
     preprocessor_.print(log_stream);
-    log_stream << textline("Free variables:") << integer(free_vars) << '\n';
 
     log_stream << "Expected nnz: ";
     log_stream << "AS " << sci(AS_nz_, 0, 1) << "; ";
@@ -419,6 +415,34 @@ void Model::printDense() const {
     printf("\n");
   }
   printf("offset %6.2f\n", offset_);
+}
+
+void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
+                           std::vector<double>& xu, const Logger& logger) {
+  for (Int i = 0; i < n_; ++i) {
+    if (is_free_[i]) {
+      if (x[i] < lower_[i] * kFreeVarsCloseRatio) {
+        // getting close to lower bound
+        const double new_lower = std::min(lower_[i] * kFreeVarsIncreaseBound,
+                                          x[i] / kFreeVarsCloseRatio);
+        logger.printDetailed(
+            "Free var %d is at %.1e with lb %.1e, lb changed to %.1e\n", i,
+            x[i], lower_[i], new_lower);
+        lower_[i] = new_lower;
+        xl[i] = x[i] - lower_[i];
+      }
+      if (x[i] > upper_[i] * kFreeVarsCloseRatio) {
+        // getting close to upper bound
+        const double new_upper = std::max(upper_[i] * kFreeVarsIncreaseBound,
+                                          x[i] / kFreeVarsCloseRatio);
+        logger.printDetailed(
+            "Free var %d is at %.1e with ub %.1e, ub changed to %.1e\n", i,
+            x[i], upper_[i], new_upper);
+        upper_[i] = new_upper;
+        xu[i] = upper_[i] - x[i];
+      }
+    }
+  }
 }
 
 }  // namespace hipo

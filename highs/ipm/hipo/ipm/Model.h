@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "ipm/hipo/auxiliary/Logger.h"
 #include "PreProcess.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsLp.h"
 #include "model/HighsHessian.h"
@@ -65,6 +65,8 @@ class Model {
   std::vector<double> one_norm_cols_, one_norm_rows_, inf_norm_cols_,
       inf_norm_rows_;
 
+  std::vector<bool> is_free_;
+
   void preprocess();
   Int checkData() const;
   void computeNorms();
@@ -89,6 +91,9 @@ class Model {
   double normUnscaledRhs() const { return norm_unscaled_rhs_; }
 
   void nzBounds();
+
+  void adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
+                      std::vector<double>& xu, const Logger& logger);
 
   // Check if variable has finite lower/upper bound
   bool hasLb(Int j) const { return std::isfinite(lower_[j]); }
@@ -123,6 +128,7 @@ class Model {
   Int64 nzAS() const { return AS_nz_; }
   Int64 nzNElb() const { return NE_nz_lb_; }
   Int64 nzNEub() const { return NE_nz_ub_; }
+  bool free(Int i) const { return is_free_[i]; }
 
   Int loadIntoIpx(ipx::LpSolver& lps) const;
 
@@ -131,6 +137,7 @@ class Model {
   friend struct PreprocessFixedVars;
   friend struct PreprocessScaling;
   friend struct PreprocessFormulation;
+  friend struct PreprocessFreeVars;
 };
 
 }  // namespace hipo

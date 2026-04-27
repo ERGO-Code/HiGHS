@@ -80,6 +80,15 @@ struct PreprocessFormulation : public PreprocessAction {
   void print(std::stringstream& stream) const override;
 };
 
+struct PreprocessFreeVars : public PreprocessAction {
+  Int free_vars{};
+
+  void apply(Model& model) override;
+  void undo(PreprocessorPoint& point, const Model& model,
+            const Iterate& it) const override;
+  void print(std::stringstream& stream) const override;
+};
+
 struct Preprocessor {
   std::vector<std::unique_ptr<PreprocessAction>> stack;
 
