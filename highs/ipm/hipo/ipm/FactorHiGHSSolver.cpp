@@ -408,39 +408,26 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
       std::vector<Int> iperm(n);
       Int status =
-<<<<<<< HEAD
           HighsExternalDeps::metis::nodeND(
               &n, full_ptr.data(), full_rows.data(), NULL, options,
               permutations[i].data(), iperm.data());
-=======
-          Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
-                             options, permutations[i].data(), iperm.data());
       if (status != METIS_OK) failure[i] = true;
->>>>>>> latest
 
     } else if (orderings_to_try[i] == kHipoAmdString) {
       double control[AMD_CONTROL];
       HighsExternalDeps::amd::set_defaults(control);
       double info[AMD_INFO];
-<<<<<<< HEAD
 
-      log_.printDevInfo("Running AMD\n");
+      // log_.printDevInfo("Running AMD\n");
       Int status =
           HighsExternalDeps::amd::order(n, full_ptr.data(), full_rows.data(),
-=======
-      Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
->>>>>>> latest
                                         permutations[i].data(), control, info);
       if (status != AMD_OK) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoRcmString) {
-<<<<<<< HEAD
-      log_.printDevInfo("Running RCM\n");
+      // log_.printDevInfo("Running RCM\n");
       Int status = HighsExternalDeps::rcm::genrcm(
           n, full_ptr.back(), full_ptr.data(),
-=======
-      Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
->>>>>>> latest
           full_rows.data(), permutations[i].data());
       if (status != 0) failure[i] = true;
 
