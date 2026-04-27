@@ -166,9 +166,9 @@ if (BUILD_OPENBLAS)
     get_property(all_targets DIRECTORY ${openblas_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
     message(STATUS "OpenBLAS targets: ${all_targets}")
 
-    if (ALL_TESTS)
-        set(BUILD_TESTING ON)
-    endif()
+    # if (ALL_TESTS)
+    #     set(BUILD_TESTING ON)
+    # endif()
 
     set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_BACKUP})
 
