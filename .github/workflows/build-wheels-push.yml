@@ -28,6 +28,7 @@ jobs:
         with:
           name: cibw-sdist
           path: dist/*.tar.gz
+          compression-level: 0
 
   build_wheels:
     name: Build wheel for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
@@ -58,6 +59,7 @@ jobs:
         with:
           name: cibw-wheels-${{ matrix.python }}-${{ matrix.buildplat[1] }}
           path: wheelhouse/*.whl
+          compression-level: 0   # wheels are already zips; don't double-compress
 
   build_wheels_extras:
     name: Build highspy-extras wheels for ${{ matrix.buildplat[1] }}
@@ -121,6 +123,7 @@ jobs:
         with:
           name: cibw-extras-wheels-${{ matrix.buildplat[1] }}
           path: wheelhouse/*.whl
+          compression-level: 0   # wheels are already zips; don't double-compress
 
   build_sdist_extras:
     name: Build highspy-extras source distribution
@@ -136,6 +139,7 @@ jobs:
         with:
           name: cibw-extras-sdist
           path: highspy-extras/dist/*.tar.gz
+          compression-level: 0
 
   upload_testpypi:
     name: Publish highspy to TestPyPI
