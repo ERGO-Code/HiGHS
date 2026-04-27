@@ -9,47 +9,56 @@ concurrency:
 jobs:
   win-vcpkg:
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [Release, Debug]
-        all_tests: [OFF]
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install OpenBLAS
-        shell: pwsh
-        run: vcpkg install openblas[threads]
 
       - name: Configure CMake
         shell: pwsh
         run: |
           cmake `
           -S "$env:GITHUB_WORKSPACE" `
-          -B "${{ runner.workspace }}/build" `
+          -B "${{ github.workspace }}/build" `
           -DHIPO=ON `
-          -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-          -DALL_TESTS=${{ matrix.all_tests }}
+          -DALL_TESTS=OFF
 
-      - name: Build
+      - name: Build Release
         shell: pwsh
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
-          cmake --build . --parallel --config ${{ matrix.config }}
+          cmake --build . --parallel --config Release
 
-      - name: Test executable
+      - name: Test executable (Release)
         shell: pwsh
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
-          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
+          & ".\Release\bin\highs.exe" --solver=hipo `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
-      - name: Ctest
+      - name: Ctest (Release)
         shell: pwsh
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
-          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
+          ctest --parallel --timeout 300 --output-on-failure -C Release
+
+      - name: Build Debug
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --parallel --config Debug
+
+      - name: Test executable (Debug)
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          & ".\Debug\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
+      - name: Ctest (Debug)
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure -C Debug
 
   macos:
     runs-on: macos-latest
@@ -63,26 +72,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
           -DALL_TESTS=${{ matrix.all_tests }}
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --parallel
 
       - name: Test executable
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Ctest
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
@@ -114,26 +123,26 @@ jobs:
           sudo apt install libopenblas-dev
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
           -DALL_TESTS=${{ matrix.all_tests }}
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --parallel
 
       - name: Test executable
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Ctest
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
@@ -156,31 +165,33 @@ jobs:
           sudo apt install libblas-dev
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
           -DALL_TESTS=${{ matrix.all_tests }}
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --parallel
 
       - name: Test executable
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Ctest
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
   ubuntu_debug:
     runs-on: ${{ matrix.os }}
+    env:
+      VCPKG_INSTALLATION_ROOT: ""
 
     strategy:
       fail-fast: false
@@ -193,31 +204,34 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
             -DALL_TESTS=${{ matrix.all_tests }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }}
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . -j2
 
       - name: Test executable
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Ctest
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure
 
   windows_debug:
     runs-on: [windows-latest]
+    env:
+      VCPKG_INSTALLATION_ROOT: ""
+
     strategy:
       fail-fast: false
       matrix:
@@ -233,7 +247,7 @@ jobs:
         run: |
           cmake `
           -S "$env:GITHUB_WORKSPACE" `
-          -B "${{ runner.workspace }}/build" `
+          -B "${{ github.workspace }}/build" `
           -A ${{ matrix.arch }} `
           -DHIPO=ON `
           -DALL_TESTS=${{ matrix.all_tests }} `
@@ -241,19 +255,19 @@ jobs:
 
       - name: Build
         shell: pwsh
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --parallel --config ${{ matrix.config }}
 
       - name: Test executable
         shell: pwsh
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Ctest
         shell: pwsh
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}

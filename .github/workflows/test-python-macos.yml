@@ -54,7 +54,7 @@ jobs:
 
       - name: Test Python Interface
         run: |
-          python3 -m pip install ./highspy-extras
+          python3 -m pip install -v ./highspy-extras
           python3 -m pip install .
           pytest -v ./highspy
           pytest check/test_highspy_hipo.py

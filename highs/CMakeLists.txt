@@ -12,8 +12,9 @@ if(HIPO)
   set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
   set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
 endif()
-# set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
-# set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers})
+
+# set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
+# set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
 
 
 # Configure the config windows version file
@@ -160,10 +161,26 @@ else()
       set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
   endif()
 
-  if (${BUILD_SHARED_EXTRAS_LIB})
-    target_compile_definitions(highs PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
-  else()
-    target_link_libraries(highs PRIVATE highs_extras)
+  if (HIPO)
+    if (BUILD_SHARED_EXTRAS_LIB)
+      target_compile_definitions(highs PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
+
+      if (NOT HIPO_PYTHON)
+        if(APPLE)
+          set_target_properties(highs PROPERTIES
+            INSTALL_RPATH "@loader_path;@loader_path/../${CMAKE_INSTALL_LIBDIR}"
+            BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
+          )
+        elseif(UNIX)
+          set_target_properties(highs PROPERTIES
+            INSTALL_RPATH "$ORIGIN"
+            BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
+          )
+        endif()
+      endif()
+    else()
+      target_link_libraries(highs PRIVATE highs_extras)
+    endif()
   endif()
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})

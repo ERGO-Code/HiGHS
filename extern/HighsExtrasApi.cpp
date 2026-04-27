@@ -149,7 +149,7 @@ HIGHS_EXTRAS_API void highs_extras_dtrsm(
 }
 
 HIGHS_EXTRAS_API void highs_extras_openblas_set_num_threads(int num_threads) {
-#if defined(__APPLE__) && defined(HIPO_USES_OPENBLAS)
+#if defined(HIPO_USES_OPENBLAS)
   openblas_set_num_threads(num_threads);
 #endif
 }

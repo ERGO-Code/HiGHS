@@ -18,17 +18,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake and Build
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
           cmake --build . --parallel
 
       - name: Run
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
@@ -44,17 +44,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake and Build
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
           cmake --build . --parallel
 
       - name: Run
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
@@ -70,17 +70,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake and Build
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           cmake --build . --parallel
 
       - name: Run
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
@@ -96,17 +96,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake and Build
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           cmake --build . --parallel
 
       - name: Run
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
@@ -125,10 +125,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
             -DALL_TESTS=${{ matrix.all_tests }} \
@@ -139,15 +139,15 @@ jobs:
 
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . -j2
 
       - name: Test executable
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Test hipo
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ./bin/unit_tests [highs_hipo]

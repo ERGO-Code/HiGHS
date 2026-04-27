@@ -76,6 +76,10 @@ void cblas_dtrsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
                  const double alpha, const double* a, const blasint lda,
                  double* b, const blasint ldb);
 
+#if defined(HIPO_USES_OPENBLAS)
+void openblas_set_num_threads(int num_threads);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

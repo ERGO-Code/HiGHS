@@ -20,25 +20,7 @@ std::string get_parent_directory(const std::string& path) {
   if (pos == 0) return path.substr(0, 1);
   return path.substr(0, pos);
 }
-
-std::string join_paths(const std::string& base, const std::string& leaf) {
-  if (base.empty()) return leaf;
-  if (leaf.empty()) return base;
-
-  const char last = base.back();
-  const char first = leaf.front();
-  const bool base_has_sep = last == '/' || last == '\\';
-  const bool leaf_has_sep = first == '/' || first == '\\';
-
-  if (base_has_sep && leaf_has_sep) return base + leaf.substr(1);
-  if (base_has_sep || leaf_has_sep) return base + leaf;
-#ifdef _WIN32
-  return base + "\\" + leaf;
-#else
-  return base + "/" + leaf;
-#endif
 }
-}  // namespace
 
 // arrays are assumed to be contiguous c-style arrays of correct type
 // * c_style forces the array to be stored in C-style contiguous order
@@ -1012,21 +994,10 @@ std::string highs_locatePythonPackage(const std::string module_name) {
 }
 
 PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
-    auto extras_module = highs_locatePythonPackage("highspy_extras");
+  HighsExternalDeps::tryLoad(highs_locatePythonPackage("highspy_extras"));
 
-  if (!extras_module.empty()) {
-    bool loaded = HighsExternalDeps::tryLoad(extras_module);
-
-    /// TODO: Remove DEBUG prints
-    if (loaded) {
-        py::print("Successfully loaded highs extras");
-    } else {
-      py::print("Failed to load highs extras; skipping optional DLL preload");
-      py::print(HighsExternalDeps::getLastError());
-    }
-  } else {
-    py::print("highs extras not available; skipping optional DLL preload");
-  }
+  // static function to get the load status of the extras library
+  m.def("getExtrasLoadStatus", &HighsExternalDeps::getLoadStatus);
 
   // To keep a smaller diff, for reviewers, the declarations are not moved, but
   // keep in mind:

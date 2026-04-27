@@ -33,7 +33,7 @@ cmake -DCMAKE_INSTALL_PREFIX=${prefix} \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=${BUILD_SHARED} \
     -DZLIB_USE_STATIC_LIBS=${BUILD_STATIC} \
-    -DHIPO=ON \
+    -DHIPO=ON -DBUILD_SHARED_EXTRAS_LIB=OFF \
     -DBLAS_LIBRARIES="${libdir}/libopenblas.${dlext}" \
     ..
 
@@ -53,7 +53,6 @@ install_license ../LICENSE.txt
 
 products = [
     LibraryProduct("libhighs", :libhighs),
-    LibraryProduct("libhighs_extras", :libhighs_extras),
     ExecutableProduct("highs", :highs),
 ]
 

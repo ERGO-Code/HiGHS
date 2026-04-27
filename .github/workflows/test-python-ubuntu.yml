@@ -44,6 +44,7 @@ jobs:
         python: [3.12]
     steps:
       - uses: actions/checkout@v4
+
       - name: Install correct python version
         uses: actions/setup-python@v5
         with:
@@ -122,7 +123,7 @@ jobs:
         run: python3 -m pip install pytest
 
       - name: Create install dir for openblas
-        run: mkdir ${{runner.workspace}}/install-openblas
+        run: mkdir ${{github.workspace}}/install-openblas
 
       - name: Checkout OpenBLAS
         uses: actions/checkout@v4
@@ -132,13 +133,13 @@ jobs:
           path: pathtoopenblas
 
       - name: Configure openblas
-        working-directory: ${{runner.workspace}}/HiGHS/pathtoopenblas
+        working-directory: ${{github.workspace}}/pathtoopenblas
         run: |
-          make -j2 PREFIX=${{runner.workspace}}/install-openblas
-          make install PREFIX=${{runner.workspace}}/install-openblas
-          ls ${{runner.workspace}}/install-openblas
+          make -j2 PREFIX=${{github.workspace}}/install-openblas
+          make install PREFIX=${{github.workspace}}/install-openblas
+          ls ${{github.workspace}}/install-openblas
           echo ""
-          ls ${{runner.workspace}}/install-openblas/lib
+          ls ${{github.workspace}}/install-openblas/lib
           echo ""
 
         # Can pass path with an additional
@@ -148,7 +149,7 @@ jobs:
         run: |
           python3 -m pip install ./highspy-extras \
               --config-settings=cmake.define.BUILD_OPENBLAS=OFF \
-              --config-settings=cmake.define.BLAS_LIBRARIES=${{runner.workspace}}/install-openblas/lib/libopenblas.a
+              --config-settings=cmake.define.BLAS_LIBRARIES=${{github.workspace}}/install-openblas/lib/libopenblas.a
           python3 -m pip install .
           pytest -v ./highspy
           pytest check/test_highspy_hipo.py

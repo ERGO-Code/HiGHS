@@ -17,7 +17,7 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_STATIC_EXE=ON \
@@ -45,7 +45,7 @@ jobs:
       matrix:
         arch: [arm64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build
         run: |
@@ -74,7 +74,7 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -104,7 +104,7 @@ jobs:
       matrix:
         arch: [Win32]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -125,7 +125,7 @@ jobs:
       matrix:
         arch: [ARM64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -151,7 +151,7 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build Universal Binary
         run: |
           cmake -B build -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
@@ -179,7 +179,7 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -DBUILD_STATIC_EXE=ON
@@ -206,7 +206,7 @@ jobs:
       matrix:
         arch: [arm64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build
         run: |
@@ -234,7 +234,7 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -263,7 +263,7 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -293,7 +293,7 @@ jobs:
       matrix:
         arch: [Win32]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -314,7 +314,7 @@ jobs:
       matrix:
         arch: [ARM64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -340,7 +340,7 @@ jobs:
   build-macos-mit:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build Universal Binary
         run: |
           cmake -B build -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \

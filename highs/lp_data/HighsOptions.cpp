@@ -17,41 +17,6 @@
 #include "HighsExternalDeps.h"
 #include "util/stringutil.h"
 
-#ifdef __linux__
-#include <unistd.h>
-
-#include <climits>
-
-static std::string getExecutableDir() {
-  char buf[PATH_MAX];
-  ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-  if (len == -1) return ".";
-  buf[len] = '\0';
-  std::string path(buf);
-  size_t pos = path.find_last_of('/');
-  return path.substr(0, pos);
-}
-#endif
-
-bool hipoAvailable() {
-  if (HighsExternalDeps::tryLoad(".") == false) {
-#ifdef __linux__
-    const std::string exeDir = getExecutableDir();
-    const std::string libDir = exeDir + "/../lib";
-    const std::string lib64Dir = exeDir + "/../lib64";
-
-    if (HighsExternalDeps::tryLoad(exeDir) == false &&
-        HighsExternalDeps::tryLoad(libDir) == false &&
-        HighsExternalDeps::tryLoad(lib64Dir) == false)
-      std::cout << HighsExternalDeps::getLastError() << std::endl;
-#else
-    std::cout << HighsExternalDeps::getLastError() << std::endl;
-#endif
-  }
-
-  return HighsExternalDeps::isAvailable();
-}
-
 void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
                       const std::string& log_file) {
@@ -114,21 +79,9 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
-// #ifndef HIPO
-// static void noHipoErrorLog(const HighsLogOptions& report_log_options,
-//                            const string& option_name) {
-//   highsLogUser(
-//       report_log_options, HighsLogType::kError,
-//       "The HiPO solver was requested via the \"%s\" option, but this build "
-//       "was compiled without HiPO support. Reconfigure with -DFAST_BUILD=ON "
-//       "and -DHIPO=ON to enable HiPO.\n",
-//       option_name.c_str());
-// }
-// #endif
-
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
-  if (value == kHipoString && !hipoAvailable()) {
+  if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
     if (HighsExternalDeps::isAvailableAtCompile()) {
       highsLogUser(
           report_log_options, HighsLogType::kError,
@@ -150,22 +103,24 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
     return false;
   }
   if (value == kHighsChooseString || value == kSimplexString ||
-      value == kIpmString || (value == kHipoString && hipoAvailable()) ||
+      value == kIpmString ||
+      (value == kHipoString && HighsExternalDeps::isAvailable()) ||
       value == kIpxString || value == kPdlpString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" for LP solver option (\"%s\") is not one of "
-               "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kSolverString.c_str(),
-               hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
-               kHighsChooseString.c_str(), kSimplexString.c_str(),
-               kIpmString.c_str(), kIpxString.c_str(), kPdlpString.c_str());
+  highsLogUser(
+      report_log_options, HighsLogType::kWarning,
+      "Value \"%s\" for LP solver option (\"%s\") is not one of "
+      "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kSolverString.c_str(),
+      HighsExternalDeps::isAvailable() ? (kHipoString + "\", \"").c_str() : "",
+      kHighsChooseString.c_str(), kSimplexString.c_str(), kIpmString.c_str(),
+      kIpxString.c_str(), kPdlpString.c_str());
   return false;
 }
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
-  if (value == kHipoString && !hipoAvailable()) {
+  if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
     if (HighsExternalDeps::isAvailableAtCompile()) {
       highsLogUser(
           report_log_options, HighsLogType::kError,
@@ -188,22 +143,24 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
   }
 
   if (value == kHighsChooseString || value == kSimplexString ||
-      value == kIpmString || (value == kHipoString && hipoAvailable()) ||
+      value == kIpmString ||
+      (value == kHipoString && HighsExternalDeps::isAvailable()) ||
       value == kIpxString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
-               "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kMipLpSolverString.c_str(),
-               hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
-               kHighsChooseString.c_str(), kSimplexString.c_str(),
-               kIpmString.c_str(), kIpxString.c_str());
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
+      "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kMipLpSolverString.c_str(),
+      HighsExternalDeps::isAvailable() ? (kHipoString + "\", \"").c_str() : "",
+      kHighsChooseString.c_str(), kSimplexString.c_str(), kIpmString.c_str(),
+      kIpxString.c_str());
   return false;
 }
 
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
-  if (value == kHipoString && !hipoAvailable()) {
+  if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
     if (HighsExternalDeps::isAvailableAtCompile()) {
       highsLogUser(
           report_log_options, HighsLogType::kError,
@@ -225,15 +182,16 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
     return false;
   }
   if (value == kHighsChooseString || value == kIpmString ||
-      (value == kHipoString && hipoAvailable()) || value == kIpxString)
+      (value == kHipoString && HighsExternalDeps::isAvailable()) ||
+      value == kIpxString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
-               "%s\"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kMipIpmSolverString.c_str(),
-               hipoAvailable() ? (kHipoString + "\", \"").c_str() : "",
-               kHighsChooseString.c_str(), kIpmString.c_str(),
-               kIpxString.c_str());
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
+      "%s\"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kMipIpmSolverString.c_str(),
+      HighsExternalDeps::isAvailable() ? (kHipoString + "\", \"").c_str() : "",
+      kHighsChooseString.c_str(), kIpmString.c_str(), kIpxString.c_str());
   return false;
 }
 

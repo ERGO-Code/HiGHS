@@ -24,11 +24,11 @@ jobs:
       #   run: brew install gfortran gcc
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
           
       - name: Configure CMake
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --version
           gfortran-14 --version
@@ -36,12 +36,12 @@ jobs:
 
       - name: Build
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake --build . --parallel
 
       - name: Test
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ls 
           ./bin/fortrantest

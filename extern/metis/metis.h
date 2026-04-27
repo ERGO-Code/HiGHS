@@ -63,31 +63,16 @@
   #define COMPILER_GCC
 #endif
 
-/* Include c99 int definitions and need constants. When building the library,
+/* Include c99 int definitions and needed constants. When building the library,
  * these are already defined by GKlib; hence the test for _GKLIB_H_ */
 #ifndef _GKLIB_H_
-#ifdef COMPILER_MSC
-#include <limits.h>
-
-typedef __int32 int32_t;
-typedef __int64 int64_t;
-#define PRId32       "I32d"
-#define PRId64       "I64d"
-#define SCNd32       "ld"
-#define SCNd64       "I64d"
-
-#ifdef _WIN32
+#ifdef __cplusplus
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+#endif
 #include <stdint.h>
-#else
-#define INT32_MIN    ((int32_t)_I32_MIN)
-#define INT32_MAX    _I32_MAX
-#define INT64_MIN    ((int64_t)_I64_MIN)
-#define INT64_MAX    _I64_MAX
-#endif
-
-#else
 #include <inttypes.h>
-#endif
 #endif
 
 

@@ -151,11 +151,9 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
     std::cout << " Githash " << HIGHS_GITHASH << ". ";
     std::cout << kHighsCopyrightStatement << std::endl;
 
-#ifdef HIPO
     if (HighsExternalDeps::isAvailable()) {
       std::cout << HighsExternalDeps::getCopyrightInfo() << std::endl;
     }
-#endif
 
     exit(0);
   }

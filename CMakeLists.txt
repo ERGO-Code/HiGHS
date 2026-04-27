@@ -17,6 +17,7 @@ set(CMAKE_CXX_COMPILER_NAMES clang++ g++ icpx c++ ${CMAKE_CXX_COMPILER_NAMES})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+include(vcpkg) # vcpkg must be configured BEFORE project()
 include(set-version)
 set_version(VERSION ${CMAKE_CURRENT_SOURCE_DIR})
 

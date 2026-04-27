@@ -88,14 +88,6 @@ HIGHS_EXTRAS_API int highs_extras_amd_order(amd_int n, const amd_int Ap[],
                                             const amd_int Ai[], amd_int P[],
                                             double Control[], double Info[]);
 
-// rcm
-// HIGHS_EXTRAS_API int highs_extras_genrcm(HighsInt node_num,
-//                                                   HighsInt adj_num,
-//                                                   const HighsInt adj_row[],
-//                                                   const HighsInt adj[],
-//                                                   HighsInt perm[]);
-
-
 // blas
 HIGHS_EXTRAS_API void highs_extras_daxpy(const blasint n, const double alpha,
                                          const double* x, const blasint incx,
@@ -187,10 +179,6 @@ struct amd {
     using defaults_t = decltype(&highs_extras_amd_defaults);
     using order_t = decltype(&highs_extras_amd_order);
 };
-
-//struct rcm {
-//    using genrcm_t = decltype(&highs_extras_genrcm);
-//};
 
 struct blas {
     using daxpy_t = decltype(&highs_extras_daxpy);

@@ -41,7 +41,7 @@ set_target_properties(_core PROPERTIES
 
 target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
 
-if (${BUILD_SHARED_EXTRAS_LIB})
+if (BUILD_SHARED_EXTRAS_LIB)
   target_compile_definitions(_core PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
 else()
   target_link_libraries(_core PRIVATE highs_extras)
@@ -62,11 +62,13 @@ endif()
 # The install directory is the output (wheel) directory
 install(TARGETS _core
         RUNTIME DESTINATION highspy
-        LIBRARY DESTINATION highspy)
+        LIBRARY DESTINATION highspy
+        COMPONENT python)
 
 # Only needed if the wheel is built with a shared library, but can be left in for static linking as well.
 # Include highs library (but ignore .lib file)
 install(TARGETS highs
         RUNTIME DESTINATION highspy
         LIBRARY DESTINATION highspy
-        NAMELINK_SKIP)
+        NAMELINK_SKIP
+        COMPONENT python)

@@ -5,6 +5,7 @@ option(BUILD_SHARED_EXTRAS_LIB "Build shared extras library" ON)
 
 # configure the version
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
+include(vcpkg)
 include(set-version)
 set_version(VERSION ${CMAKE_CURRENT_LIST_DIR}/..)
 
@@ -18,34 +19,6 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/../highs/HConfig.h.in ${PROJECT_BINARY_
 
 # print the version for debugging
 message(STATUS "Configuring highs_extras version ${VERSION}")
-
-
-# support vcpkg for external dependencies
-if(WIN32 AND DEFINED ENV{VCPKG_ROOT})
-  file(TO_CMAKE_PATH "$ENV{VCPKG_ROOT}" VCPKG_ROOT_CMAKE)
-
-  if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    set(CMAKE_TOOLCHAIN_FILE
-      "${VCPKG_ROOT_CMAKE}/scripts/buildsystems/vcpkg.cmake"
-      CACHE FILEPATH "vcpkg toolchain file")
-  endif()
-
-  if(NOT DEFINED VCPKG_TARGET_TRIPLET)
-    if(DEFINED ENV{VCPKG_TARGET_TRIPLET})
-      set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}"
-        CACHE STRING "vcpkg triplet")
-    else()
-      set(VCPKG_TARGET_TRIPLET "x64-windows-static"
-        CACHE STRING "vcpkg triplet")
-    endif()
-  endif()
-
-  if(NOT DEFINED OpenBLAS_DIR)
-    set(OpenBLAS_DIR
-      "${VCPKG_ROOT_CMAKE}/installed/${VCPKG_TARGET_TRIPLET}/share/openblas"
-      CACHE PATH "Path to OpenBLAS CMake package")
-  endif()
-endif()
 
 include(FindHipoDeps)
 
@@ -171,7 +144,7 @@ function(highs_extras_link_blas target_name)
   message(FATAL_ERROR "OpenBLAS not found for highs_extras")
 endfunction()
 
-if (${BUILD_SHARED_EXTRAS_LIB})
+if (BUILD_SHARED_EXTRAS_LIB)
   add_library(highs_extras SHARED
       ${highs_extras_sources}
       ${highs_extras_headers})
@@ -196,14 +169,15 @@ highs_extras_link_blas(highs_extras)
 if(MSVC)
   target_compile_options(highs_extras PRIVATE "/bigobj")
 else()
-  target_compile_options(highs_extras PRIVATE "-ftemplate-depth=2048")
+  target_compile_options(highs_extras PRIVATE 
+    $<$<COMPILE_LANGUAGE:CXX>:-ftemplate-depth=2048>)
 endif()
 
 set_target_properties(highs_extras PROPERTIES
     OUTPUT_NAME "highs_extras"
     POSITION_INDEPENDENT_CODE ON)
 
-if(${BUILD_SHARED_EXTRAS_LIB})
+if(BUILD_SHARED_EXTRAS_LIB)
   set_target_properties(highs_extras PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     C_VISIBILITY_PRESET hidden

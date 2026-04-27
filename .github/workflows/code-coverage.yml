@@ -16,11 +16,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install lcov
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug \
                 -DHIGHS_COVERAGE=ON \
@@ -30,19 +30,19 @@ jobs:
                 -D CMAKE_CXX_COMPILER=g++
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cmake --build . -j2
 
       - name: Test
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: ctest --parallel --timeout 300 --output-on-failure
 
         # Coverage with HiPO will be different
       - name: Generate Report
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           lcov -d . -c -o cov.info --ignore-errors empty
@@ -57,7 +57,7 @@ jobs:
           mv cov.info coverage.info
 
       - name: Genhtml Results Summary
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           genhtml -o coverage coverage.info
@@ -70,6 +70,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: ERGO-Code/HiGHS
           fail_ci_if_error: true # optional (default = false)
-          files: ${{runner.workspace}}/build/coverage.info # optional
+          files: ${{github.workspace}}/build/coverage.info # optional
           # name: codecov-umbrella # optional
           verbose: true # optional (default = false)
