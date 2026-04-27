@@ -10,8 +10,8 @@ jobs:
   #     matrix:
   #       os: [ubuntu-latest]
 
-    steps:
-      - uses: actions/checkout@v6
+  #   steps:
+  #     - uses: actions/checkout@v6
 
   #     - uses: bazelbuild/setup-bazelisk@v3
 
@@ -24,11 +24,11 @@ jobs:
   #     - name: Bazel test
   #       run: bazel test -c dbg --config=asan --runs_per_test 3 //...
 
-      # - name: Upload bazel-testlogs
-      #   uses: actions/upload-artifact@v7
-      #   with:
-      #     name: bazel-testlogs-asan
-      #     path: bazel-testlogs/
+  #     # - name: Upload bazel-testlogs
+  #     #   uses: actions/upload-artifact@v7
+  #     #   with:
+  #     #     name: bazel-testlogs-asan
+  #     #     path: bazel-testlogs/
 
   tsan:
     runs-on: ${{ matrix.os }}
@@ -65,13 +65,8 @@ jobs:
   #     matrix:
   #       os: [ubuntu-latest]
 
-<<<<<<< HEAD
-    steps:
-      - uses: actions/checkout@v6
-=======
   #   steps:
-  #     - uses: actions/checkout@v4
->>>>>>> latest
+  #     - uses: actions/checkout@v6
 
   #     - uses: bazelbuild/setup-bazelisk@v3
 
@@ -84,19 +79,11 @@ jobs:
   #     - name: Bazel test
   #       run: bazel test -c dbg --config=lsan --runs_per_test 3 //...
 
-<<<<<<< HEAD
-      # - name: Upload bazel-testlogs
-      #   uses: actions/upload-artifact@v7
-      #   with:
-      #     name: bazel-testlogs-lsan
-      #     path: bazel-testlogs/
-=======
   #     # - name: Upload bazel-testlogs
-  #     #   uses: actions/upload-artifact@v4
+  #     #   uses: actions/upload-artifact@v7
   #     #   with:
   #     #     name: bazel-testlogs-lsan
   #     #     path: bazel-testlogs/
->>>>>>> latest
 
   # ubsan:
   #   runs-on: ${{ matrix.os }}
@@ -104,13 +91,8 @@ jobs:
   #     matrix:
   #       os: [ubuntu-latest]
 
-<<<<<<< HEAD
-    steps:
-      - uses: actions/checkout@v6
-=======
   #   steps:
-  #     - uses: actions/checkout@v4
->>>>>>> latest
+  #     - uses: actions/checkout@v6
 
   #     - uses: bazelbuild/setup-bazelisk@v3
 
@@ -123,16 +105,8 @@ jobs:
   #     - name: Bazel test
   #       run: bazel test -c dbg --config=ubsan --runs_per_test 3000 //...
 
-<<<<<<< HEAD
-      # - name: Upload bazel-testlogs
-      #   uses: actions/upload-artifact@v7
-      #   with:
-      #     name: bazel-testlogs-ubsan
-      #     path: bazel-testlogs/
-=======
   #     # - name: Upload bazel-testlogs
-  #     #   uses: actions/upload-artifact@v4
+  #     #   uses: actions/upload-artifact@v7
   #     #   with:
   #     #     name: bazel-testlogs-ubsan
   #     #     path: bazel-testlogs/
->>>>>>> latest
