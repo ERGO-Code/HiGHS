@@ -19,8 +19,11 @@ x = h.addBinaries(G.edges, obj=nx.get_edge_attributes(G, 'weight'))
 #                        {  1  if n = orig
 #   sum(out) - sum(in) = { -1  if n = dest
 #                        {  0     otherwise
-rhs  = lambda n: 1 if n == orig else -1 if n == dest else 0
-flow = lambda E: h.qsum((x[e] for e in E))
+def rhs(n):
+    return 1 if n == orig else -1 if n == dest else 0
+
+def flow(E):
+    return h.qsum((x[e] for e in E))
 
 h.addConstrs(flow(G.out_edges(n)) - flow(G.in_edges(n)) == rhs(n) for n in G.nodes)
 h.minimize()

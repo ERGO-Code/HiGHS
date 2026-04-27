@@ -38,4 +38,3 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   }
   h.resetGlobalScheduler(true);
 }
-

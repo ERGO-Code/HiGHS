@@ -20,7 +20,12 @@ enum class Device { CPU, GPU };
 
 enum class ScalingMethod { NONE, RUIZ, POCK_CHAMBOLLE, L2_NORM, COMBINED };
 
-enum class RestartStrategy { NO_RESTART, FIXED_RESTART, ADAPTIVE_RESTART, HALPERN_RESTART};
+enum class RestartStrategy {
+  NO_RESTART,
+  FIXED_RESTART,
+  ADAPTIVE_RESTART,
+  HALPERN_RESTART
+};
 
 enum class StepSizeStrategy { FIXED, ADAPTIVE, MALITSKY_POCK, PID };
 
@@ -67,7 +72,8 @@ struct PrimalDualParams {
   HighsInt fixed_restart_interval;
 
   bool use_halpern_restart = false;
-  double halpern_gamma = 1.0; // 0: standard Halpern, 1: full reflection, in between: over relaxation
+  double halpern_gamma = 1.0;  // 0: standard Halpern, 1: full reflection, in
+                               // between: over relaxation
 
   // Scaling parameters
   bool use_ruiz_scaling = false;
@@ -191,8 +197,8 @@ struct DetailedTimings {
                  "  - Matrix multiply:     %6.2f s (%3.0f)\n",
                  matrix_multiply_time, matrix_multiply_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "  - Projection:          %6.2f s (%3.0f)\n",
-                 projection_time, projection_time / total_time * 100);
+                 "  - Projection:          %6.2f s (%3.0f)\n", projection_time,
+                 projection_time / total_time * 100);
     highsLogUser(log_options, HighsLogType::kInfo,
                  "  - Step size adjust:    %6.2f s (%3.0f)\n",
                  step_size_adjustment_time,

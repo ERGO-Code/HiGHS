@@ -44,7 +44,7 @@ from ._core import (
     kBasisValidityValid,
 )
 
-from .highs import Highs
+from .highs import Highs, HighsCallbackEvent, HighsCallback, HighspyArray, highs_var, highs_cons, highs_linear_expression
 
 __all__ = [
     "__doc__",
@@ -63,6 +63,7 @@ __all__ = [
     "HighsLogType",
     "IisStrategy",
     "IisBoundStatus",
+    "IisStatus",
     "HighsSparseMatrix",
     "HighsLp",
     "HighsHessian",
@@ -80,6 +81,7 @@ __all__ = [
     "kHighsInf",
     "kHighsIInf",
     "kHighsUndefined",
+    "HighsLinearObjective",
     "HIGHS_VERSION_MAJOR",
     "HIGHS_VERSION_MINOR",
     "HIGHS_VERSION_PATCH",
@@ -90,4 +92,10 @@ __all__ = [
     "kSolutionStatusFeasible",
     "kBasisValidityInvalid",
     "kBasisValidityValid",
+    "HighsCallbackEvent",
+    "HighsCallback",
+    "HighspyArray",
+    "highs_var",
+    "highs_cons",
+    "highs_linear_expression",
 ]

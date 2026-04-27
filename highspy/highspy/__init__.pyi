@@ -1,5 +1,5 @@
 from __future__ import annotations
-from highspy._core import (
+from ._core import (
     BasisValidity,
     HessianFormat,
     HighsBasis,
@@ -22,8 +22,11 @@ from highspy._core import (
     HighsSparseMatrix,
     HighsStatus,
     HighsVarType,
-    MatrixFormat,
+    IisBoundStatus,
+    IisStatus,
+    IisStrategy,
     ObjSense,
+    MatrixFormat,
     SolutionStatus,
     cb,
     simplex_constants,
@@ -39,6 +42,9 @@ __all__: list[str] = [
     "SolutionStatus",
     "BasisValidity",
     "HighsModelStatus",
+    "IisBoundStatus",
+    "IisStatus",
+    "IisStrategy",
     "HighsPresolveStatus",
     "HighsBasisStatus",
     "HighsVarType",
@@ -60,6 +66,7 @@ __all__: list[str] = [
     "HighsRanging",
     "kHighsInf",
     "kHighsIInf",
+    "kHighsUndefined",
     "HighsLinearObjective",
     "HIGHS_VERSION_MAJOR",
     "HIGHS_VERSION_MINOR",
@@ -86,6 +93,7 @@ kBasisValidityInvalid: _core.BasisValidity
 kBasisValidityValid: _core.BasisValidity
 kHighsIInf: int
 kHighsInf: float
+kHighsUndefined: float
 kSolutionStatusFeasible: _core.SolutionStatus
 kSolutionStatusInfeasible: _core.SolutionStatus
 kSolutionStatusNone: _core.SolutionStatus

@@ -20,6 +20,7 @@
 #else
 #define HIGHS_ORDERING_PRINT(...)
 #endif
+#include "metis_mangle.h"
 
 /* auxapi.c */
 
