@@ -619,21 +619,11 @@ void PreprocessFormulation::print(std::stringstream& stream) const {
 
 void PreprocessFreeVars::apply(Model& model) {
   Int& n = model.n_;
-  Int& m = model.m_;
-  HighsSparseMatrix& A = model.A_;
-  std::vector<double>& b = model.b_;
-  std::vector<double>& c = model.c_;
   std::vector<double>& lower = model.lower_;
   std::vector<double>& upper = model.upper_;
-  std::vector<char>& constraints = model.constraints_;
-  HighsHessian& Q = model.Q_;
   std::vector<bool>& is_free = model.is_free_;
 
-  n_pre = n;
-  m_pre = m;
-
   is_free.assign(n, false);
-
   for (Int i = 0; i < n; ++i) {
     if (!std::isfinite(lower[i]) && !std::isfinite(upper[i]) &&
         lower[i] != upper[i]) {
@@ -644,17 +634,10 @@ void PreprocessFreeVars::apply(Model& model) {
       upper[i] = kFreeVarsInitialBound;
     }
   }
-
-  n_post = n;
-  m_post = m;
 }
 
 void PreprocessFreeVars::undo(PreprocessorPoint& point, const Model& model,
-                              const Iterate& it) const {
-  point.assertConsistency(n_post, m_post);
-  //
-  point.assertConsistency(n_pre, m_pre);
-}
+                              const Iterate& it) const {}
 
 void PreprocessFreeVars::print(std::stringstream& stream) const {
   if (free_vars > 0) stream << "Found " << free_vars << " free variables\n";
