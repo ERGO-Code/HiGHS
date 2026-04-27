@@ -1492,6 +1492,8 @@ void HPresolve::createPrecedenceGraph(bool generateUb) const {
   if (precedenceArcs.empty()) {
     precedenceLb.clear();
     implications.getPrecedenceDirectedGraphUb().clear();
+    implications.getPrecedenceLbSource().clear();
+    implications.getPrecedenceUbSource().clear();
     return;
   }
 
@@ -1508,6 +1510,9 @@ void HPresolve::createPrecedenceGraph(bool generateUb) const {
   }
   index.resize(start.back());
   value.resize(start.back());
+  std::vector<std::pair<HighsInt, bool>>& precedenceLbReason =
+      implications.getPrecedenceLbSource();
+  precedenceLbReason.resize(start.back());
   std::vector<HighsInt> pos = start;
   for (const HighsInt row : precedenceArcs) {
     HighsInt x = -1;
@@ -1528,16 +1533,55 @@ void HPresolve::createPrecedenceGraph(bool generateUb) const {
       const HighsInt p = pos[x]++;
       index[p] = y;
       value[p] = model->row_upper_[row] / scale;
+      precedenceLbReason[p] = {row, true};
     }
     if (model->row_lower_[row] != -kHighsInf) {
       const HighsInt p = pos[y]++;
       index[p] = x;
       value[p] = -model->row_lower_[row] / scale;
+      precedenceLbReason[p] = {row, false};
     }
   }
 
   if (generateUb) {
-    implications.getPrecedenceDirectedGraphUb().createRowwise(precedenceLb);
+    HighsSparseMatrix& precedenceUb =
+        implications.getPrecedenceDirectedGraphUb();
+    precedenceUb.num_col_ = mipsolver->numCol();
+    precedenceUb.num_row_ = mipsolver->numCol();
+    precedenceUb.p_end_.clear();
+    std::vector<std::pair<HighsInt, bool>>& precedenceUbReason =
+        implications.getPrecedenceUbSource();
+    precedenceUbReason.resize(start.back());
+
+    vector<HighsInt>& u_start = precedenceUb.start_;
+    vector<HighsInt>& u_index = precedenceUb.index_;
+    vector<double>& u_value = precedenceUb.value_;
+
+    std::vector<HighsInt> u_end;
+    u_start.resize(mipsolver->numCol() + 1);
+    u_end.assign(mipsolver->numCol(), 0);
+    for (HighsInt col = 0; col < mipsolver->numCol(); col++) {
+      for (HighsInt i = start[col]; i < start[col + 1]; i++) {
+        const HighsInt col2 = index[i];
+        u_end[col2]++;
+      }
+    }
+    u_start[0] = 0;
+    for (HighsInt col = 0; col < mipsolver->numCol(); col++) {
+      u_start[col + 1] = u_start[col] + u_end[col];
+      u_end[col] = u_start[col];
+    }
+    u_index.resize(start.back());
+    u_value.resize(start.back());
+    for (HighsInt col = 0; col < mipsolver->numCol(); col++) {
+      for (HighsInt i = start[col]; i < start[col + 1]; i++) {
+        const HighsInt col2 = index[i];
+        HighsInt j = u_end[col2]++;
+        u_index[j] = col;
+        u_value[j] = value[i];
+        precedenceUbReason[j] = precedenceLbReason[i];
+      }
+    }
   }
 }
 

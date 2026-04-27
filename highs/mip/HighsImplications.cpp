@@ -510,6 +510,8 @@ void HighsImplications::rebuild(HighsInt ncols,
   substitutions.clear();
   precedenceLbs.clear();
   precedenceUbs.clear();
+  precedenceLbSource.clear();
+  precedenceUbSource.clear();
   vubs.clear();
   vubs.shrink_to_fit();
   vubs.resize(ncols);
@@ -931,14 +933,22 @@ void HighsImplications::applyPrecedenceGraph(
     if (boundchg.boundtype == HighsBoundType::kLower) {
       const double newLb = domain.col_lower_[boundchg.column] - shift;
       if (domain.col_lower_[col] < newLb - domain.feastol()) {
-        domain.changeBound({newLb, col, HighsBoundType::kLower},
-                           HighsDomain::Reason::unspecified());
+        const HighsDomain::Reason reason =
+            precedenceLbSource[i].second ? HighsDomain::Reason::modelRowUpper(
+                                               precedenceLbSource[i].first)
+                                         : HighsDomain::Reason::modelRowLower(
+                                               precedenceLbSource[i].first);
+        domain.changeBound({newLb, col, HighsBoundType::kLower}, reason);
       }
     } else if (boundchg.boundtype == HighsBoundType::kUpper) {
       const double newUb = domain.col_upper_[boundchg.column] + shift;
       if (domain.col_upper_[col] > newUb + domain.feastol()) {
-        domain.changeBound({newUb, col, HighsBoundType::kUpper},
-                           HighsDomain::Reason::unspecified());
+        const HighsDomain::Reason reason =
+            precedenceUbSource[i].second ? HighsDomain::Reason::modelRowUpper(
+                                               precedenceUbSource[i].first)
+                                         : HighsDomain::Reason::modelRowLower(
+                                               precedenceUbSource[i].first);
+        domain.changeBound({newUb, col, HighsBoundType::kUpper}, reason);
       }
     }
     if (domain.infeasible()) return;
