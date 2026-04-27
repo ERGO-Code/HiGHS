@@ -24,7 +24,7 @@
 #include "macros.h"
 #include "proto.h"
 
-#include "ipm/hipo/auxiliary/OrderingPrint.h"
+#include "OrderingPrint.h"
 
 
 #if defined(COMPILER_MSC) && (_MSC_VER < 1900)

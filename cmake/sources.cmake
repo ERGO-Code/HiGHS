@@ -253,7 +253,6 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/KrylovMethods.h
     ipm/hipo/auxiliary/Logger.h
     # ipm/hipo/auxiliary/mycblas.h
-    ipm/hipo/auxiliary/OrderingPrint.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
 set(hipo_orderings_sources

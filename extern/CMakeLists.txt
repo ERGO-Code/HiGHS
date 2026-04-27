@@ -89,7 +89,8 @@ set(highs_extras_headers
     metis/libmetis/proto.h
     metis/libmetis/stdheaders.h
     metis/libmetis/struct.h
-    metis/metis.h)
+    metis/metis.h
+    OrderingPrint.h)
 
 function(highs_extras_link_blas target_name)
   if(APPLE)
