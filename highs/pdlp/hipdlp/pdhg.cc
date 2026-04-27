@@ -29,11 +29,7 @@
 #include "pdlp_gpu_debug.hpp"
 #include "restart.hpp"
 
-<<<<<<< ours
 #define PDHG_CHECK_INTERVAL 200
-=======
-#define PDHG_CHECK_INTERVAL 40
->>>>>>> theirs
 #define DEBUG_MODE false
 static constexpr double kDivergentMovement = 1e10;
 
@@ -604,12 +600,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 #else
       fpe_ = computeFixedPointError();
 #endif
-
-//print fpe
-if (DEBUG_MODE){
-  std::cout << "[Restart Check] Iter: " << final_iter_count_ + PDHG_CHECK_INTERVAL 
-            << "| FPE: " << fpe_ << "| Initial FPE: " << initial_fpe_ << "| Last Trial FPE: " << last_trial_fpe << std::endl;
-} 
       initial_fpe_ = fpe_;
       do_restart = false;
     }
@@ -790,7 +780,6 @@ double PDLPSolver::computeFixedPointErrorGpu() {
       primal_norm_sq * primal_weight_ + dual_norm_sq / primal_weight_;
   double interaction = 2.0 * params_.eta * cross_term;
 
-<<<<<<< ours
   if (DEBUG_MODE) {
     std::cout << "primal weight: " << primal_weight_
               << ", step size: " << params_.eta << std::endl;
@@ -798,14 +787,6 @@ double PDLPSolver::computeFixedPointErrorGpu() {
               << ", interaction: " << interaction << std::endl;
   }
 
-=======
-if (DEBUG_MODE){
-  std::cout <<"primal weight: " << primal_weight_ << ", step size: " << params_.eta << std::endl;
-
-  std::cout << "movement: " << movement << ", interaction: " << interaction
-             << std::endl;
-}
->>>>>>> theirs
   return std::sqrt(std::max(0.0, movement + interaction));
 }
 #endif
@@ -1697,119 +1678,6 @@ double PDLPSolver::powerMethod() {
   return op_norm_sq;
 }
 
-#ifdef CUPDLP_GPU
-double PDLPSolver::powerMethodGpu() {
-  if (a_num_rows_ == 0 || a_num_cols_ == 0) return 1.0;
-
-  const int max_iter = 5000;
-  const double tolerance = 1e-4;
-  const double one = 1.0;
-  const double zero = 0.0;
-
-  double* d_eigenvector = nullptr;
-  double* d_next_eigenvector = nullptr;
-  double* d_dual_product = nullptr;
-  void* d_buffer_at = nullptr;
-  void* d_buffer_a = nullptr;
-  size_t buffer_size_at = 0;
-  size_t buffer_size_a = 0;
-
-  CUDA_CHECK(cudaMalloc(&d_eigenvector, a_num_rows_ * sizeof(double)));
-  CUDA_CHECK(cudaMalloc(&d_next_eigenvector, a_num_rows_ * sizeof(double)));
-  CUDA_CHECK(cudaMalloc(&d_dual_product, a_num_cols_ * sizeof(double)));
-
-  std::vector<double> eigenvector_h(a_num_rows_);
-  std::mt19937 engine_fixed_seed(12345);
-  std::uniform_real_distribution<double> distribution(-1.0, 1.0);
-  for (HighsInt i = 0; i < a_num_rows_; ++i) {
-    eigenvector_h[i] = distribution(engine_fixed_seed);
-  }
-
-  CUDA_CHECK(cudaMemcpy(d_eigenvector, eigenvector_h.data(),
-                        a_num_rows_ * sizeof(double), cudaMemcpyHostToDevice));
-
-  cusparseDnVecDescr_t vecEigen = nullptr;
-  cusparseDnVecDescr_t vecNextEigen = nullptr;
-  cusparseDnVecDescr_t vecDual = nullptr;
-  CUSPARSE_CHECK(cusparseCreateDnVec(&vecEigen, a_num_rows_, d_eigenvector,
-                                     CUDA_R_64F));
-  CUSPARSE_CHECK(cusparseCreateDnVec(&vecNextEigen, a_num_rows_,
-                                     d_next_eigenvector, CUDA_R_64F));
-  CUSPARSE_CHECK(cusparseCreateDnVec(&vecDual, a_num_cols_, d_dual_product,
-                                     CUDA_R_64F));
-
-  CUSPARSE_CHECK(cusparseSpMV_bufferSize(
-      cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &one, mat_a_T_csr_,
-      vecEigen, &zero, vecDual, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
-      &buffer_size_at));
-  CUSPARSE_CHECK(cusparseSpMV_bufferSize(
-      cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &one, mat_a_csr_,
-      vecDual, &zero, vecNextEigen, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
-      &buffer_size_a));
-
-  CUDA_CHECK(cudaMalloc(&d_buffer_at, buffer_size_at));
-  CUDA_CHECK(cudaMalloc(&d_buffer_a, buffer_size_a));
-
-  double sigma_max_sq = 1.0;
-
-  for (int iter = 0; iter < max_iter; ++iter) {
-    CUDA_CHECK(cudaMemcpy(d_next_eigenvector, d_eigenvector,
-                          a_num_rows_ * sizeof(double),
-                          cudaMemcpyDeviceToDevice));
-
-    double eigenvector_norm = 0.0;
-    CUBLAS_CHECK(cublasDnrm2(cublas_handle_, a_num_rows_, d_next_eigenvector, 1,
-                             &eigenvector_norm));
-    if (!(eigenvector_norm > 0.0) || !std::isfinite(eigenvector_norm)) break;
-
-    double inv_eigenvector_norm = 1.0 / eigenvector_norm;
-    CUBLAS_CHECK(cublasDscal(cublas_handle_, a_num_rows_, &inv_eigenvector_norm,
-                             d_next_eigenvector, 1));
-
-    CUSPARSE_CHECK(cusparseDnVecSetValues(vecNextEigen, d_next_eigenvector));
-    CUSPARSE_CHECK(cusparseDnVecSetValues(vecDual, d_dual_product));
-
-    CUSPARSE_CHECK(cusparseSpMV(cusparse_handle_,
-                                CUSPARSE_OPERATION_NON_TRANSPOSE, &one,
-                                mat_a_T_csr_, vecNextEigen, &zero, vecDual,
-                                CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
-                                d_buffer_at));
-
-    CUSPARSE_CHECK(cusparseDnVecSetValues(vecEigen, d_eigenvector));
-    CUSPARSE_CHECK(cusparseSpMV(cusparse_handle_,
-                                CUSPARSE_OPERATION_NON_TRANSPOSE, &one,
-                                mat_a_csr_, vecDual, &zero, vecEigen,
-                                CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
-                                d_buffer_a));
-
-    CUBLAS_CHECK(cublasDdot(cublas_handle_, a_num_rows_, d_next_eigenvector, 1,
-                            d_eigenvector, 1, &sigma_max_sq));
-
-    double neg_sigma_sq = -sigma_max_sq;
-    CUBLAS_CHECK(cublasDscal(cublas_handle_, a_num_rows_, &neg_sigma_sq,
-                             d_next_eigenvector, 1));
-    CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_rows_, &one, d_eigenvector,
-                             1, d_next_eigenvector, 1));
-
-    double residual_norm = 0.0;
-    CUBLAS_CHECK(cublasDnrm2(cublas_handle_, a_num_rows_, d_next_eigenvector, 1,
-                             &residual_norm));
-    if (residual_norm < tolerance) break;
-  }
-
-  CUDA_CHECK(cudaFree(d_buffer_at));
-  CUDA_CHECK(cudaFree(d_buffer_a));
-  CUSPARSE_CHECK(cusparseDestroyDnVec(vecEigen));
-  CUSPARSE_CHECK(cusparseDestroyDnVec(vecNextEigen));
-  CUSPARSE_CHECK(cusparseDestroyDnVec(vecDual));
-  CUDA_CHECK(cudaFree(d_eigenvector));
-  CUDA_CHECK(cudaFree(d_next_eigenvector));
-  CUDA_CHECK(cudaFree(d_dual_product));
-
-  return sigma_max_sq;
-}
-#endif
-
 void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.initialise(options.log_dev_level, options.log_options, &timer);
   logger_.printHeader();
@@ -1992,12 +1860,8 @@ void PDLPSolver::initializeStepSizes() {
     params_.step_size_strategy = StepSizeStrategy::FIXED;
   }
 
-  // Use GPU power method when available; otherwise fall back to CPU.
-#ifdef CUPDLP_GPU
-  double op_norm_sq = powerMethodGpu();
-#else
+  // Use power method for fixed/PID step size initialization.
   double op_norm_sq = powerMethod();
-#endif
 
   stepsize_.power_method_lambda = op_norm_sq;
 
@@ -2008,8 +1872,6 @@ void PDLPSolver::initializeStepSizes() {
   stepsize_.primal_step = base_step / params_.omega;
   stepsize_.dual_step = base_step * params_.omega;
 
-  //print op_norm_sq
-  std::cout << "Power method estimate of ||A||^2: " << op_norm_sq << std::endl;
   highsLogDev(params_.log_options_, HighsLogType::kInfo,
               "Initial step sizes from power method lambda = %g: primal step= "
               "%g; dual step = %g, eta = %g, omega = %g\n",
