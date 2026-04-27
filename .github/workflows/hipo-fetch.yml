@@ -197,6 +197,7 @@ jobs:
         config: [Release]
         all_tests: [ON]
 
+
     steps:
       - uses: actions/checkout@v4
 
