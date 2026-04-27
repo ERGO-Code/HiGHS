@@ -8,8 +8,8 @@ import typing
 import numpy as np
 
 __all__ = [
-    "HighsCallbackDataIn",
-    "HighsCallbackDataOut",
+    "HighsCallbackInput",
+    "HighsCallbackOutput",
     "HighsCallbackType",
     "kCallbackIpmInterrupt",
     "kCallbackLogging",
@@ -22,7 +22,7 @@ __all__ = [
     "kCallbackMipLogging",
     "kCallbackMipSolution",
     "kCallbackSimplexInterrupt",
-    "kCallbackMipUserSolution"
+    "kCallbackMipUserSolution",
     "kNumCallbackType",
 ]
 
@@ -31,7 +31,9 @@ class HighsCallbackInput:
     user_has_solution: bool
     user_solution: np.ndarray[typing.Any, np.dtype[np.float64]]
     def __init__(self) -> None: ...
+    @typing.overload
     def setSolution(self, value: np.ndarray[typing.Any, np.dtype[np.float64]]) -> highspy.HighsStatus: ...
+    @typing.overload
     def setSolution(self, index: np.ndarray[typing.Any, np.dtype[np.integer]], value: np.ndarray[typing.Any, np.dtype[np.float64]]) -> highspy.HighsStatus: ...
     def repairSolution(self) -> highspy.HighsStatus: ...
 
