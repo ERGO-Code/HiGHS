@@ -2140,14 +2140,13 @@ void HPresolve::addToMatrix(
   rowsizeInteger.resize(model->num_row_, 0);
   rowsizeImplInt.resize(model->num_row_, 0);
 
-  rowDualLower.resize(model->num_row_);
-  rowDualUpper.resize(model->num_row_);
-  std::transform(
-      row_lower.begin(), row_lower.end(), rowDualLower.begin() + oldNumRows,
-      [](double lower) { return lower == -kHighsInf ? 0.0 : -kHighsInf; });
-  std::transform(
-      row_upper.begin(), row_upper.end(), rowDualUpper.begin() + oldNumRows,
-      [](double upper) { return upper == kHighsInf ? 0.0 : kHighsInf; });
+  rowDualLower.resize(model->num_row_, -kHighsInf);
+  rowDualUpper.resize(model->num_row_, kHighsInf);
+  for (HighsInt i = oldNumRows; i < model->num_row_; i++) {
+    if (model->row_lower_[i] == -kHighsInf) rowDualLower[i] = 0.0;
+    if (model->row_upper_[i] == kHighsInf) rowDualUpper[i] = 0.0;
+  }
+
   implRowDualLower.resize(model->num_row_, -kHighsInf);
   implRowDualUpper.resize(model->num_row_, kHighsInf);
   rowDualLowerSource.resize(model->num_row_, -1);
