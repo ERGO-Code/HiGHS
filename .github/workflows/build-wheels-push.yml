@@ -87,7 +87,12 @@ jobs:
       - name: Get vcpkg commit
         id: vcpkg-commit
         shell: bash
-        run: echo "commit=$(git -C "$VCPKG_INSTALLATION_ROOT" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          commit=$(git -C "$VCPKG_INSTALLATION_ROOT" rev-parse HEAD 2>/dev/null || echo "")
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "vcpkg commit: $commit"
+
+        # run: echo "commit=$(git -C "$VCPKG_INSTALLATION_ROOT" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.3.1
