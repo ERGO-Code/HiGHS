@@ -2122,8 +2122,8 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 }
 
 void HPresolve::addToMatrix(
-    HighsPostsolveStack& postsolve_stack,
-    const std::vector<double>& row_lower, const std::vector<double>& row_upper,
+    HighsPostsolveStack& postsolve_stack, const std::vector<double>& row_lower,
+    const std::vector<double>& row_upper,
     const std::vector<std::vector<row_entry>>& row_entries) {
   HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
   HighsInt oldNumRows = model->num_row_;
