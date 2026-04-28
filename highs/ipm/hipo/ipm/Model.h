@@ -128,7 +128,7 @@ class Model {
   Int64 nzAS() const { return AS_nz_; }
   Int64 nzNElb() const { return NE_nz_lb_; }
   Int64 nzNEub() const { return NE_nz_ub_; }
-  bool free(Int i) const { return is_free_[i]; }
+  bool isFree(Int i) const { return is_free_[i]; }
 
   Int loadIntoIpx(ipx::LpSolver& lps) const;
 

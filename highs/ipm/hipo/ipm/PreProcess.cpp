@@ -483,11 +483,11 @@ void PreprocessScaling::undo(PreprocessorPoint& point, const Model& model,
 
     // set variables that were ignored
     for (Int i = 0; i < n_post; ++i) {
-      if (!model.hasLb(i) || model.is_free_[i]) {
+      if (!model.hasLb(i) || model.isFree(i)) {
         point.xl[i] = kHighsInf;
         point.zl[i] = 0.0;
       }
-      if (!model.hasUb(i) || model.is_free_[i]) {
+      if (!model.hasUb(i) || model.isFree(i)) {
         point.xu[i] = kHighsInf;
         point.zu[i] = 0.0;
       }
@@ -561,11 +561,11 @@ void PreprocessFormulation::undo(PreprocessorPoint& point, const Model& model,
 
   // force unused entries to have correct value
   for (Int i = 0; i < n_pre; ++i) {
-    if (!model.hasLb(i) || model.is_free_[i]) {
+    if (!model.hasLb(i) || model.isFree(i)) {
       point.xl[i] = kHighsInf;
       point.zl[i] = 0.0;
     }
-    if (!model.hasUb(i) || model.is_free_[i]) {
+    if (!model.hasUb(i) || model.isFree(i)) {
       point.xu[i] = kHighsInf;
       point.zu[i] = 0.0;
     }
