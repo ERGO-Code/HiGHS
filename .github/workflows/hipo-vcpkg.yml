@@ -1,4 +1,4 @@
-name: hipo
+name: hipo-vcpkg
 
 on: [push, pull_request]
 
@@ -11,11 +11,6 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v6
-      - name: Install OpenBLAS
-        shell: pwsh
-        run: vcpkg install openblas[threads]:x64-windows-static
-
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -23,7 +18,6 @@ jobs:
           -S "$env:GITHUB_WORKSPACE" `
           -B "${{ github.workspace }}/build" `
           -DHIPO=ON `
-          -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
           -DALL_TESTS=OFF `
           -DHIGHS_VCPKG=ON
 
@@ -65,42 +59,7 @@ jobs:
         run: |
           ctest --parallel --timeout 300 --output-on-failure -C Debug
 
-  macos:
-    runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [Release, Debug]
-        all_tests: [ON, OFF]
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON \
-          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
-          -DALL_TESTS=${{ matrix.all_tests }}
-
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake --build . --parallel
-
-      - name: Test executable
-        working-directory: ${{github.workspace}}/build
-        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
-
-      - name: Ctest
-        working-directory: ${{github.workspace}}/build
-        run: |
-          ctest --parallel --timeout 300 --output-on-failure
-
-  ubuntu_openblas:
+  ubuntu_vcpkg:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -135,49 +94,8 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
           -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
-          -DALL_TESTS=${{ matrix.all_tests }}
-
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake --build . --parallel
-
-      - name: Test executable
-        working-directory: ${{github.workspace}}/build
-        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
-
-      - name: Ctest
-        working-directory: ${{github.workspace}}/build
-        run: |
-          ctest --parallel --timeout 300 --output-on-failure
-
-  ubuntu_cblas:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # config: [Release, Debug]
-        config: [Release]
-        all_tests: [OFF]
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install BLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libblas-dev
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON \
-          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
-          -DALL_TESTS=${{ matrix.all_tests }}
+          -DALL_TESTS=${{ matrix.all_tests }} \
+          -DHIGHS_VCPKG=ON
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -203,6 +121,7 @@ jobs:
         config: [Debug]
         all_tests: [ON]
 
+
     steps:
       - uses: actions/checkout@v6
 
@@ -214,7 +133,8 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
             -DALL_TESTS=${{ matrix.all_tests }} \
-            -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+            -DHIGHS_VCPKG=ON
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -232,6 +152,7 @@ jobs:
 
   windows_debug:
     runs-on: [windows-latest]
+
     strategy:
       fail-fast: false
       matrix:
@@ -242,10 +163,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install OpenBLAS
-        shell: pwsh
-        run: vcpkg install openblas[threads]:x64-windows-static
-
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -255,7 +172,7 @@ jobs:
           -A ${{ matrix.arch }} `
           -DHIPO=ON `
           -DALL_TESTS=${{ matrix.all_tests }} `
-          -DBUILD_OPENBLAS=ON
+          -DHIGHS_VCPKG=ON
 
       - name: Build
         shell: pwsh
