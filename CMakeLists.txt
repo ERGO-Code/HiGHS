@@ -21,7 +21,7 @@ option(HIGHS_VCPKG "Vcpkg integration: " OFF)
 message(STATUS "HIGHS_VCPKG: ${HIGHS_VCPKG}")
 if (HIGHS_VCPKG)
   include(vcpkg) # vcpkg must be configured BEFORE project()
-endif
+endif()
 
 include(set-version)
 set_version(VERSION ${CMAKE_CURRENT_SOURCE_DIR})

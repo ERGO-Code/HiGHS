@@ -188,8 +188,8 @@ jobs:
       - name: check metadata
         run: pipx run twine check dist/*
 
-      - name: Pre-install vcpkg dependencies
-        run: vcpkg install openblas[threads]:x64-windows-static --host-triplet=x64-windows-static
+      # - name: Pre-install vcpkg dependencies
+      #   run: vcpkg install openblas[threads]:x64-windows-static --host-triplet=x64-windows-static
 
       - name: install highspy and highspy_extras
         run: python -m pip install (Get-ChildItem dist\*.tar.gz)
