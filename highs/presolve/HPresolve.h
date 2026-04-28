@@ -379,7 +379,7 @@ class HPresolve {
 
   void addToMatrix(const HighsInt row, const HighsInt col, const double val);
 
-  void addToMatrix(HighsPostsolveStack& postsolve_stack,
+  bool addToMatrix(HighsPostsolveStack& postsolve_stack,
                    const std::vector<double>& row_lower,
                    const std::vector<double>& row_upper,
                    const std::vector<std::vector<row_entry>>& row_entries);

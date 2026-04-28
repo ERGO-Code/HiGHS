@@ -1027,8 +1027,6 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
 
     mipsolver->mipdata_->debugSolution.shrink(newColIndex);
     numProbes.resize(model->num_col_);
-    // Need to set the constraint matrix dimensions
-    model->setMatrixDimensions();
   }
   // Need to set the constraint matrix dimensions
   model->setMatrixDimensions();
@@ -2121,12 +2119,13 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
   }
 }
 
-void HPresolve::addToMatrix(
+bool HPresolve::addToMatrix(
     HighsPostsolveStack& postsolve_stack, const std::vector<double>& row_lower,
     const std::vector<double>& row_upper,
     const std::vector<std::vector<row_entry>>& row_entries) {
   // update number of rows
   HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
+  if (num_rows == 0) return true;
   HighsInt oldNumRows = model->num_row_;
   model->num_row_ += num_rows;
 
@@ -2140,35 +2139,38 @@ void HPresolve::addToMatrix(
                            row_upper.end());
 
   // initialise row sizes
-  rowroot.resize(model->num_row_, -1);
-  rowsize.resize(model->num_row_, 0);
-  rowsizeInteger.resize(model->num_row_, 0);
-  rowsizeImplInt.resize(model->num_row_, 0);
+  if (!okResize(rowroot, model->num_row_, HighsInt{-1})) return false;
+  if (!okResize(rowsize, model->num_row_, HighsInt{0})) return false;
+  if (!okResize(rowsizeInteger, model->num_row_, HighsInt{0})) return false;
+  if (!okResize(rowsizeImplInt, model->num_row_, HighsInt{0})) return false;
 
   // initialise row duals
-  rowDualLower.resize(model->num_row_, -kHighsInf);
-  rowDualUpper.resize(model->num_row_, kHighsInf);
+  if (!okResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
+  if (!okResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
   for (HighsInt i = oldNumRows; i < model->num_row_; i++) {
-    if (model->row_lower_[i] == -kHighsInf) rowDualLower[i] = 0.0;
-    if (model->row_upper_[i] == kHighsInf) rowDualUpper[i] = 0.0;
+    if (model->row_lower_[i] == -kHighsInf) rowDualUpper[i] = 0;
+    if (model->row_upper_[i] == kHighsInf) rowDualLower[i] = 0;
   }
 
   // initialise implied row duals
-  implRowDualLower.resize(model->num_row_, -kHighsInf);
-  implRowDualUpper.resize(model->num_row_, kHighsInf);
-  rowDualLowerSource.resize(model->num_row_, -1);
-  rowDualUpperSource.resize(model->num_row_, -1);
-  colImplSourceByRow.resize(model->num_row_);
+  if (!okResize(implRowDualLower, model->num_row_, -kHighsInf)) return false;
+  if (!okResize(implRowDualUpper, model->num_row_, kHighsInf)) return false;
+  if (!okResize(rowDualLowerSource, model->num_row_, HighsInt{-1}))
+    return false;
+  if (!okResize(rowDualUpperSource, model->num_row_, HighsInt{-1}))
+    return false;
+  if (!okResize(colImplSourceByRow, model->num_row_, std::set<HighsInt>{}))
+    return false;
 
   // initialise flags
-  changedRowFlag.resize(model->num_row_, false);
-  rowDeleted.resize(model->num_row_, false);
+  if (!okResize(changedRowFlag, model->num_row_, uint8_t{1})) return false;
+  if (!okResize(rowDeleted, model->num_row_, uint8_t{0})) return false;
 
   // resize vectors for implied row bounds
   impliedRowBounds.setNumSums(model->num_row_);
 
   // resize vector for equations
-  eqiters.resize(model->num_row_, equations.end());
+  if (!okResize(eqiters, model->num_row_, equations.end())) return false;
 
   for (HighsInt i = 0; i < num_rows; i++) {
     // new row index
@@ -2185,6 +2187,8 @@ void HPresolve::addToMatrix(
     if (isEquation(row))
       eqiters[row] = equations.emplace(rowsize[row], row).first;
   }
+
+  return true;
 }
 
 HighsTripletListSlice HPresolve::getColumnVector(HighsInt col) const {
