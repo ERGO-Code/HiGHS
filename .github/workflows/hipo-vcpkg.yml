@@ -15,7 +15,7 @@ jobs:
         shell: pwsh
         run: |
           cmake `
-          -S "$env:GITHUB_WORKSPACE" `
+          -S "${{ github.workspace }}" `
           -B "${{ github.workspace }}/build" `
           -DHIPO=ON `
           -DALL_TESTS=OFF `

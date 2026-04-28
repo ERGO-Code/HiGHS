@@ -1,6 +1,11 @@
 # Fetch OpenBLAS
 message(STATUS "Running FindHipoDeps, BUILD_OPENBLAS=${BUILD_OPENBLAS}")
 
+if(APPLE)
+  set(BUILD_OPENBLAS OFF CACHE BOOL "OpenBLAS not required on macOS" FORCE)
+  set(BUILD_OPENBLAS OFF)  # also override the normal variable in current scope
+endif()
+
 if (BUILD_OPENBLAS)
     include(FetchContent)
     set(FETCHCONTENT_QUIET OFF)
