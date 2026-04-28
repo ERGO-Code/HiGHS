@@ -7,7 +7,7 @@ if (BUILD_OPENBLAS)
     set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
     # set(BUILD_SHARED_LIBS ON)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-    set(BUILD_TESTING OFF)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
     set(CMAKE_Fortran_COMPILER OFF)
 
     # Define the size-minimizing flags as a list
@@ -167,7 +167,7 @@ if (BUILD_OPENBLAS)
     message(STATUS "OpenBLAS targets: ${all_targets}")
 
     if (ALL_TESTS)
-        set(BUILD_TESTING ON)
+        set(BUILD_TESTING ON CACHE BOOL "" FORCE)
     endif()
 
     # set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_BACKUP})
