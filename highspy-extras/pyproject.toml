@@ -8,7 +8,7 @@ backend-path = ["."]
 
 [project]
 name = "highspy-extras"
-version = "1.13.1.dev14"
+version = "1.13.1.dev15"
 description = "HiGHS external dependencies extension for highspy"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
