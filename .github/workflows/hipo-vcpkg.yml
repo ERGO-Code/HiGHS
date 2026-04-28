@@ -11,11 +11,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      - uses: actions/checkout@v6
+
       - name: Configure CMake
         shell: pwsh
         run: |
           cmake `
-          -S "${{ github.workspace }}" `
+          -S "$env:GITHUB_WORKSPACE" `
           -B "${{ github.workspace }}/build" `
           -DHIPO=ON `
           -DALL_TESTS=OFF `
@@ -70,22 +72,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # no default blas available on runner
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev
-
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
@@ -121,7 +107,6 @@ jobs:
         config: [Debug]
         all_tests: [ON]
 
-
     steps:
       - uses: actions/checkout@v6
 
@@ -131,7 +116,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
             -DALL_TESTS=${{ matrix.all_tests }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
             -DHIGHS_VCPKG=ON
@@ -152,7 +137,6 @@ jobs:
 
   windows_debug:
     runs-on: [windows-latest]
-
     strategy:
       fail-fast: false
       matrix:

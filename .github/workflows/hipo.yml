@@ -24,8 +24,7 @@ jobs:
           -B "${{ github.workspace }}/build" `
           -DHIPO=ON `
           -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-          -DALL_TESTS=OFF `
-          -DHIGHS_VCPKG=ON
+          -DALL_TESTS=OFF
 
       - name: Build Release
         shell: pwsh
