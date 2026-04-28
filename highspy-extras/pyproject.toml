@@ -79,7 +79,7 @@ sdist.exclude = [
 [tool.cibuildwheel]
 build = "*"
 archs = ["auto64", "auto32"]
-repair-wheel-command = ""
+# repair-wheel-command = ""
 build-verbosity = 1
 
 # All github runners have vcpkg pre-installed
