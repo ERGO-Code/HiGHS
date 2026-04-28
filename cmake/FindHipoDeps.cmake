@@ -314,6 +314,12 @@ else()
         find_package(OpenBLAS CONFIG)
         if(OpenBLAS_FOUND)
             message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
+
+            # Ubuntu's OpenBLASConfig.cmake sets OpenBLAS_LIBRARIES, not OPENBLAS_LIB
+            if(NOT OPENBLAS_LIB AND OpenBLAS_LIBRARIES)
+                set(OPENBLAS_LIB ${OpenBLAS_LIBRARIES})
+                set(OPENBLAS_INCLUDE_DIR ${OpenBLAS_INCLUDE_DIRS})
+            endif()
         endif()
     endif()
 

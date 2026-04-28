@@ -111,16 +111,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # no default blas available on runner
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
       - name: Install OpenBLAS
         shell: bash
         run: |
@@ -209,10 +199,16 @@ jobs:
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
+      - name: Install OpenBLAS
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install libopenblas-dev
+
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
             -DALL_TESTS=${{ matrix.all_tests }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }}
 
