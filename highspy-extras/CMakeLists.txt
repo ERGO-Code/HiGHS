@@ -13,7 +13,10 @@ else()
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${_PARENT_DIR}/cmake")
-include(vcpkg)
+
+if (HIGHS_VCPKG)
+    include(vcpkg)
+endif()
 
 project(highs_extras LANGUAGES C CXX)
 

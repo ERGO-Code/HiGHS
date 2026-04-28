@@ -5,7 +5,9 @@ option(BUILD_SHARED_EXTRAS_LIB "Build shared extras library" ON)
 
 # configure the version
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
-include(vcpkg)
+if (HIGHS_VCPKG)
+  include(vcpkg)
+endif()
 include(set-version)
 set_version(VERSION ${CMAKE_CURRENT_LIST_DIR}/..)
 
