@@ -156,6 +156,11 @@ class HPresolve {
     explicit operator Result() const { return my_result; };
   };
 
+  struct row_entry {
+    HighsInt col;
+    double val;
+  };
+
   HighsPresolveStatus presolve_status_;
   HPresolveAnalysis analysis_;
 
@@ -373,6 +378,11 @@ class HPresolve {
   void shrinkProblem(HighsPostsolveStack& postsolve_stack);
 
   void addToMatrix(const HighsInt row, const HighsInt col, const double val);
+
+  void addToMatrix(HighsPostsolveStack& postsolve_stack,
+                   const std::vector<double>& row_lower,
+                   const std::vector<double>& row_upper,
+                   const std::vector<std::vector<row_entry>>& row_entries);
 
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 
