@@ -2125,21 +2125,27 @@ void HPresolve::addToMatrix(
     HighsPostsolveStack& postsolve_stack, const std::vector<double>& row_lower,
     const std::vector<double>& row_upper,
     const std::vector<std::vector<row_entry>>& row_entries) {
+  // update number of rows
   HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
   HighsInt oldNumRows = model->num_row_;
   model->num_row_ += num_rows;
+
+  // resize postsolve vectors
   postsolve_stack.appendCutsToModel(num_rows);
 
+  // add row bounds
   model->row_lower_.insert(model->row_lower_.end(), row_lower.begin(),
                            row_lower.end());
   model->row_upper_.insert(model->row_upper_.end(), row_upper.begin(),
                            row_upper.end());
 
+  // initialise row sizes
   rowroot.resize(model->num_row_, -1);
   rowsize.resize(model->num_row_, 0);
   rowsizeInteger.resize(model->num_row_, 0);
   rowsizeImplInt.resize(model->num_row_, 0);
 
+  // initialise row duals
   rowDualLower.resize(model->num_row_, -kHighsInf);
   rowDualUpper.resize(model->num_row_, kHighsInf);
   for (HighsInt i = oldNumRows; i < model->num_row_; i++) {
@@ -2147,27 +2153,35 @@ void HPresolve::addToMatrix(
     if (model->row_upper_[i] == kHighsInf) rowDualUpper[i] = 0.0;
   }
 
+  // initialise implied row duals
   implRowDualLower.resize(model->num_row_, -kHighsInf);
   implRowDualUpper.resize(model->num_row_, kHighsInf);
   rowDualLowerSource.resize(model->num_row_, -1);
   rowDualUpperSource.resize(model->num_row_, -1);
-
   colImplSourceByRow.resize(model->num_row_);
 
+  // initialise flags
   changedRowFlag.resize(model->num_row_, false);
   rowDeleted.resize(model->num_row_, false);
 
+  // resize vectors for implied row bounds
   impliedRowBounds.setNumSums(model->num_row_);
 
+  // resize vector for equations
   eqiters.resize(model->num_row_, equations.end());
 
-  for (HighsInt i = 0; i < num_rows; ++i) {
+  for (HighsInt i = 0; i < num_rows; i++) {
+    // new row index
     HighsInt row = oldNumRows + i;
+
+    // add non-zeros
     for (const auto& entry : row_entries[i])
       addToMatrix(row, entry.col, entry.val);
 
+    // add row singleton
     if (rowsize[row] == 1) singletonRows.push_back(row);
 
+    // add equation
     if (isEquation(row))
       eqiters[row] = equations.emplace(rowsize[row], row).first;
   }
