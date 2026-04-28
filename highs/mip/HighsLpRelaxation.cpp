@@ -1423,7 +1423,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
           (void)output_flag;
           ipm.setOptionValue("output_flag", !mipsolver.submip);
         }
-    mipsolver.profiling_->solveCall("LP", mipsolver.submip);
+        mipsolver.profiling_->solveCall("LP", mipsolver.submip);
         ipm.optimizeLp();
         if (ipm_logging) ipm.setOptionValue("output_flag", false);
         if (use_hipo && !ipm.getBasis().valid) {
@@ -1433,7 +1433,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                       "basis: status = %s Try IPX\n",
                       ipm.modelStatusToString(ipm.getModelStatus()).c_str());
           ipm.setOptionValue("solver", kIpxString);
-    mipsolver.profiling_->solveCall("LP", mipsolver.submip);
+          mipsolver.profiling_->solveCall("LP", mipsolver.submip);
           ipm.optimizeLp();
         }
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");

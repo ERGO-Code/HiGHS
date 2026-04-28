@@ -4337,16 +4337,15 @@ void HighsProfiling::setSubMip(const bool submip) {
   this->submip[this->myThread()] = submip;
 }
 
-bool HighsProfiling::isSubMip() {
-  return this->submip[this->myThread()];
-}
+bool HighsProfiling::isSubMip() { return this->submip[this->myThread()]; }
 
 // Gets the MIP or sub-MIP record according to record_type which, by
 // default is kChooseRecord so this->submip is used
-HighsProfilingRecord* HighsProfiling::getHighsProfilingRecord(const HighsInt record_type) {
+HighsProfilingRecord* HighsProfiling::getHighsProfilingRecord(
+    const HighsInt record_type) {
   HighsInt thread = this->myThread();
   if (record_type == kSubMipRecord ||
-    (record_type == kChooseRecord && this->submip[thread]))
+      (record_type == kChooseRecord && this->submip[thread]))
     return &this->submip_record[thread];
   return &this->record[thread];
 }
@@ -4402,7 +4401,8 @@ double HighsProfiling::read(const HighsInt profiling_clock,
                             const HighsInt record_type) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return -kHighsInf;
-  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord(record_type);
+  HighsProfilingRecord* thread_record =
+      this->getHighsProfilingRecord(record_type);
   // If the clock is running, work out current running time
   const double current_running_time =
       this->running(profiling_clock, record_type)
@@ -4415,7 +4415,8 @@ HighsInt HighsProfiling::numCall(const HighsInt profiling_clock,
                                  const HighsInt record_type) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return -kHighsIInf;
-  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord(record_type);
+  HighsProfilingRecord* thread_record =
+      this->getHighsProfilingRecord(record_type);
   const HighsInt this_call_counts =
       this->running(profiling_clock, record_type) ? 1 : 0;
   return thread_record->num_call[profiling_clock] + this_call_counts;
@@ -4425,31 +4426,36 @@ bool HighsProfiling::running(const HighsInt profiling_clock,
                              const HighsInt record_type) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return false;
-  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord(record_type);
+  HighsProfilingRecord* thread_record =
+      this->getHighsProfilingRecord(record_type);
   double time_start = thread_record->start_time[profiling_clock];
   const bool clock_running = std::signbit(time_start);
   return clock_running;
 }
 
 void HighsProfiling::solveCall(const std::string& model, const bool submip) {
+  const bool printing = false;
   const bool local_submip_ok = this->isSubMip() == submip;
+  HighsInt thread = this->myThread();
   if (!local_submip_ok) {
     printf("Solving %3s for %4sMIP on thread %d with isSubMip() = %4sMIP\n",
-	   model.c_str(),
-	   submip ? "sub-" : "",
-	   int(myThread()),
-	   isSubMip() ? "sub-" : "");
+           model.c_str(), submip ? "sub-" : "", int(thread),
+           isSubMip() ? "sub-" : "");
     exit(1);
   }
   assert(local_submip_ok);
-  if (myThread() != 0 || submip) {
-    printf("Solving %3s for %4sMIP on thread %d\n",
-	   model.c_str(),
-	   submip ? "sub-" : "",
-	   int(myThread()));
+  if (thread != 0 || submip) {
+    if (model == "MIP") {
+      if (printing)
+        printf("Solving MIP for %4sMIP on thread %d\n", submip ? "sub-" : "",
+               int(thread));
+    } else {
+      if (printing)
+        printf("Solving %3s for %4sMIP on thread %d\n", model.c_str(),
+               submip ? "sub-" : "", int(thread));
+    }
   }
 }
-
 
 // HighsInt HighsProfiling::getSepaClockIndex(const std::string& name) {
 // assert(1==4);  return 0;}
@@ -4484,6 +4490,7 @@ void Highs::reportProfiling() const {
   std::vector<bool> submip_used_sub_solver(kToSubSolver, false);
   const HighsInt to_k = max_sumip_time > 0 ? 2 : 1;
   const std::vector<std::string>& name = this->profiling_->name;
+  double sum_sum_mip_sub_solve_time = 0;
   for (HighsInt k = 0; k < to_k; k++) {
     if (k == 0) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -4533,7 +4540,8 @@ void Highs::reportProfiling() const {
         highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
                      ss.str().c_str());
       }
-      if (ideal_time > 0)
+      sum_sum_mip_sub_solve_time += sum_mip_sub_solve_time;
+      if (ideal_time > 0 && sum_mip_sub_solve_time > 0)
         highsLogUser(
             options_.log_options, HighsLogType::kInfo,
             "TOTAL                           %11.4e                 %5.1f\n",
@@ -4541,6 +4549,7 @@ void Highs::reportProfiling() const {
     }
   }
   if (mip_time <= 0) return;
+  if (sum_sum_mip_sub_solve_time <= 0) return;
   // Lambda for horizontal rule
   auto hrule = [&]() {
     ss.str(std::string());
