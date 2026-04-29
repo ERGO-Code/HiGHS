@@ -4,7 +4,7 @@ import highspy
 hscb = highspy.cb 
 
 h = highspy.Highs()
-h.setOptionValue("output_flag", False);
+h.setOptionValue("output_flag", False)
 
 inf = highspy.kHighsInf
 lp = highspy.HighsLp()
@@ -60,11 +60,11 @@ solution = h.getSolution()
 print(f"Solution: ({solution.col_value[0]}, {solution.col_value[1]}) for min -f0 + 1e-4 f1")
 
 # Switch to lexicographic optimization 
-h.setOptionValue("blend_multi_objectives", False);
+h.setOptionValue("blend_multi_objectives", False)
 
 linear_objective0.coefficients = np.array([1.0001, 1], dtype=np.double)
-linear_objective0.abs_tolerance = 1e-5;
-linear_objective0.rel_tolerance = 0.05;
+linear_objective0.abs_tolerance = 1e-5
+linear_objective0.rel_tolerance = 0.05
 linear_objective1.weight = 1e-3
 
 h.clearLinearObjectives()
@@ -94,7 +94,7 @@ h.run()
 solution = h.getSolution()
 print(f"Solution: ({solution.col_value[0]}, {solution.col_value[1]}) for min f1 and 1.0001 x + y >= 8.00049")
 
-linear_objective0.abs_tolerance = -1;
+linear_objective0.abs_tolerance = -1
 h.clearLinearObjectives()
 h.addLinearObjective(linear_objective0)
 h.addLinearObjective(linear_objective1)

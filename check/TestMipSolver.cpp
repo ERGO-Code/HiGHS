@@ -1427,3 +1427,35 @@ TEST_CASE("issue-2957", "[highs_test_mip_solver]") {
   const double optimal_objective = 28.2;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
+  //   min  2*b + 99999*y
+  //   s.t. a + b = 10
+  //        a - 100*y <= 0
+  //        a, b >= 0;  y binary
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsInt a = 0;
+  HighsInt b = 1;
+  HighsInt y = 2;
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 1};
+  lp.col_cost_ = {0, 2, 99999};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+                     HighsVarType::kInteger};
+  lp.row_lower_ = {10, -kHighsInf};
+  lp.row_upper_ = {10, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {a, b, a, y};
+  lp.a_matrix_.value_ = {1, 1, 1, -100};
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getInfo().objective_function_value == 20);
+  REQUIRE(highs.getSolution().col_value[y] == 0.0);
+
+  highs.resetGlobalScheduler(true);
+}

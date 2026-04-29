@@ -14,7 +14,7 @@ authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
 
 requires-python = ">=3.8"
-dependencies = ["numpy"]
+dependencies = ["numpy", "typing_extensions; python_version < '3.10'"]
 
 classifiers = [
   # "Development Status :: 4 - Beta",
@@ -49,6 +49,7 @@ sdist.include = [
   "highs/highspy/highs.py",
   "highs/highspy/__init__.py",
   "highs/highspy/__init__.pyi",
+  "highs/highspy/py.typed",
   "highs/highspy/_core/*.pyi",
   "tests/test_highspy.py",
   "Version.txt",
