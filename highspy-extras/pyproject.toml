@@ -8,13 +8,12 @@ backend-path = ["."]
 
 [project]
 name = "highspy-extras"
-version = "1.13.1.dev15"
+version = "1.14.0.dev1"
 description = "HiGHS external dependencies extension for highspy"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
 
 requires-python = ">=3.8"
-# dependencies = ["highspy>=1.12.0"]
 
 classifiers = [
   "License :: OSI Approved :: Apache Software License",
@@ -82,33 +81,4 @@ sdist.exclude = [
 [tool.cibuildwheel]
 build = "*"
 archs = ["auto64", "auto32"]
-# repair-wheel-command = ""
 build-verbosity = 1
-
-# # All github runners have vcpkg pre-installed
-# # Assume either VCPKG_ROOT xor VCPKG_INSTALLATION_ROOT is defined
-# environment-pass = ["VCPKG_ROOT", "VCPKG_INSTALLATION_ROOT", "VCPKG_DEFAULT_BINARY_CACHE", "VCPKG_COMMIT"]
-
-# [tool.cibuildwheel.linux]
-# before-all = "yum install -y zip unzip"
-# environment = { VCPKG_ROOT = "/host$VCPKG_ROOT$VCPKG_INSTALLATION_ROOT", VCPKG_DEFAULT_BINARY_CACHE = "/host$VCPKG_DEFAULT_BINARY_CACHE" }
-
-# # cannot use host vcpkg on i686 and musllinux — install vcpkg inside the
-# # container once via before-all; the binary cache avoids rebuilding OpenBLAS
-# # for each Python version.
-# [[tool.cibuildwheel.overrides]]
-# select = "*-manylinux_i686"
-# inherit.environment = "none"
-# before-all = "yum install -y zip unzip ninja-build cmake && export LDFLAGS=\"${LDFLAGS:-} -ldl\" && git clone https://github.com/microsoft/vcpkg.git /opt/vcpkg && if [ -n \"$VCPKG_COMMIT\" ]; then git -C /opt/vcpkg checkout $VCPKG_COMMIT; fi && /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics"
-# environment = { VCPKG_ROOT = "/opt/vcpkg", VCPKG_FORCE_SYSTEM_BINARIES = "1" }
-
-# # Disable DLSYM in vcpkg bootstrap so it uses system curl-dev headers;
-# # the FetchContent'd curl 7.55.1 headers lack proper musl/aarch64 support.
-# [[tool.cibuildwheel.overrides]]
-# select = "*-musllinux_*"
-# inherit.environment = "none"
-# before-all = "apk add --no-cache zip unzip curl curl-dev build-base linux-headers perl ninja cmake && git clone https://github.com/microsoft/vcpkg.git /opt/vcpkg && if [ -n \"$VCPKG_COMMIT\" ]; then git -C /opt/vcpkg checkout $VCPKG_COMMIT; fi && sed -i '/cmakeConfigOptions=/s/\"$/ -DVCPKG_LIBCURL_DLSYM=OFF\"/' /opt/vcpkg/scripts/bootstrap.sh && /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics"
-# environment = { VCPKG_ROOT = "/opt/vcpkg", VCPKG_FORCE_SYSTEM_BINARIES = "1" }
-
-# [tool.cibuildwheel.windows]
-# environment = { VCPKG_ROOT = "$VCPKG_ROOT$VCPKG_INSTALLATION_ROOT" }

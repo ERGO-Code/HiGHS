@@ -136,7 +136,7 @@ function(highs_extras_link_blas target_name)
 
   if(TARGET BLAS::BLAS)
     string(TOLOWER "${BLAS_LIBRARIES}" highs_extras_blas_lower)
-    # allow other blas
+    # allow other blas?
     # if(NOT (highs_extras_blas_lower MATCHES "openblas"))
       # message(FATAL_ERROR "OpenBLAS is required for highs_extras")
     # endif()

@@ -4,7 +4,6 @@ endif()
 
 # Define library.
 include(sources)
-
 set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
@@ -12,10 +11,6 @@ if(HIPO)
   set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
   set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
 endif()
-
-# set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
-# set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
-
 
 # Configure the config windows version file
 if(MSVC)
@@ -461,4 +456,3 @@ if(FAST_BUILD)
 else()
   target_link_libraries(libhighs Threads::Threads)
 endif()
-

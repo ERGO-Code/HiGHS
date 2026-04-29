@@ -1,5 +1,5 @@
 /*!
-\file metis.h 
+\file metis.h
 \brief This file contains function prototypes and constant definitions for METIS
  *
 \author George
@@ -8,7 +8,7 @@
 */
 
 #ifndef HIGHS_METIS_ORDERING_H
-#define HIGHS_METIS_ORDERING_H 
+#define HIGHS_METIS_ORDERING_H
 
 /****************************************************************************
 * A set of defines that can be modified by the user

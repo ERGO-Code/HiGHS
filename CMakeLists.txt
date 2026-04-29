@@ -736,7 +736,6 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
 
 endif()
 
-
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
   option(CI "CI extended tests" ON)

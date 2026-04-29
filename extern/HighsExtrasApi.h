@@ -20,7 +20,7 @@
 #define HIGHS_EXTRAS_API __declspec(dllexport)
 #elif defined(HIGHS_SHARED_EXTRAS_LIBRARY)
 #define HIGHS_EXTRAS_API __declspec(dllimport)
-#else 
+#else
 #define HIGHS_EXTRAS_API
 #endif
 #else
@@ -51,7 +51,7 @@
 
 // Note: We use extern "C" here to disable C++ name mangling, allowing
 // GetProcAddress/dlsym to find the function by its simple name.
-// 
+//
 // While extern "C" is typically for C-compatible interfaces,
 // using C++ types (references, classes) works here because:
 // 1. Both highspy and highspy-extras are built with the same C++ compiler/ABI

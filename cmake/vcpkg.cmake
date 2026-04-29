@@ -104,7 +104,7 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT "$ENV{VCPKG_ROOT}" STREQUAL "")
       set(CMAKE_MSVC_RUNTIME_LIBRARY
         "MultiThreaded$<$<CONFIG:Debug>:Debug>"
         CACHE STRING "MSVC runtime library")
-        
+
     elseif(APPLE AND DEFINED _vcpkg_arch)
       set(VCPKG_TARGET_TRIPLET "${_vcpkg_arch}-osx"
         CACHE STRING "vcpkg triplet")

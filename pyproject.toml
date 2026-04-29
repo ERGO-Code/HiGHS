@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
-version = "1.13.1.dev15"
+version = "1.14.0.dev1"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
@@ -32,7 +32,7 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest", "numpy"]
-extras = ["highspy-extras==1.13.1.dev9"]
+extras = ["highspy-extras==1.14.0.dev1"]
 
 [tool.scikit-build]
 wheel.expand-macos-universal-tags = true
@@ -86,7 +86,7 @@ sdist.exclude = [
   "interfaces/*csharp*",
   "interfaces/*fortran*",
   "flake.*",
-  "highs.pc.in",
+  "highs.pc.in"
 ]
 
 # # A set of patterns to exclude from the wheel. This is additive to the SDist

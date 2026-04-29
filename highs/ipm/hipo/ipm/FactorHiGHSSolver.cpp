@@ -418,14 +418,12 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       HighsExternalDeps::amd::set_defaults(control);
       double info[AMD_INFO];
 
-      // log_.printDevInfo("Running AMD\n");
       Int status =
           HighsExternalDeps::amd::order(n, full_ptr.data(), full_rows.data(),
                                         permutations[i].data(), control, info);
       if (status != AMD_OK) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoRcmString) {
-      // log_.printDevInfo("Running RCM\n");
       Int status = HighsExternalDeps::rcm::genrcm(
           n, full_ptr.back(), full_ptr.data(),
           full_rows.data(), permutations[i].data());
