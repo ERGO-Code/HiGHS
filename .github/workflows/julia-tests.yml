@@ -117,4 +117,5 @@ jobs:
           JULIA_CPU_THREADS: 2
         run: |
           using Pkg
-          Pkg.test("HiGHS")
+          Pkg.status("ParallelTestRunner")
+          Pkg.test("HiGHS"; test_args=["--help"])
