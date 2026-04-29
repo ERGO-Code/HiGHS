@@ -174,6 +174,9 @@ if (BUILD_OPENBLAS)
     get_property(all_targets DIRECTORY ${openblas_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
     message(STATUS "OpenBLAS targets: ${all_targets}")
 
+    set_property(DIRECTORY ${openblas_SOURCE_DIR}
+        PROPERTY CTEST_EXCLUDE_FROM_MAIN TRUE)
+
     if (ALL_TESTS)
         set(BUILD_TESTING ON CACHE BOOL "" FORCE)
     endif()
