@@ -645,6 +645,7 @@ if (DEBUG_MODE){
     }
 
     CUDA_CHECK(cudaGraphLaunch(graphExec, gpu_stream_));
+    CUDA_CHECK(cudaStreamSynchronize(gpu_stream_));
 #else
     for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
       performHalpernPdhgStep(false, i);
@@ -1989,12 +1990,19 @@ void AdaptiveLinesearchParams::initialise() {
 // =============================================================================
 
 void PDLPSolver::initializeStepSizes() {
+<<<<<<< HEAD
   // Align the initial geometry with cuPDLPx: start from a neutral primal
   // weight and let restart/PID updates adapt it afterwards.
+=======
+>>>>>>> 1dcb9ab540a44c45949a17184be471bf6989d087
   primal_weight_ = 1.0;
   best_primal_weight_ = primal_weight_;
   stepsize_.beta = primal_weight_ * primal_weight_;
   params_.omega = primal_weight_;
+<<<<<<< HEAD
+=======
+  
+>>>>>>> 1dcb9ab540a44c45949a17184be471bf6989d087
 
   if (params_.step_size_strategy != StepSizeStrategy::FIXED &&
       params_.step_size_strategy != StepSizeStrategy::PID) {
@@ -2099,6 +2107,13 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   stepsize_.dual_step = eta * primal_weight_;
   params_.omega = primal_weight_;
   restart_scheme_.updateBeta(stepsize_.beta);
+
+  // === POST-RESTART DEBUG OUTPUT ===
+  printf("[restart][post] iter=%d primal_weight=%.6e step_size=%.6e "
+         "primal_step=%.6e dual_step=%.6e\n",
+         final_iter_count_,
+         primal_weight_, 1.0,
+         stepsize_.primal_step, stepsize_.dual_step);
 }
 
 std::vector<double> PDLPSolver::updateX(const std::vector<double>& x,
