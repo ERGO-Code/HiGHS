@@ -2128,6 +2128,7 @@ bool HPresolve::addToMatrix(
   if (num_rows == 0) return true;
   HighsInt oldNumRows = model->num_row_;
   model->num_row_ += num_rows;
+  model->a_matrix_.num_row_ += num_rows;
 
   // resize postsolve vectors
   postsolve_stack.appendCutsToModel(num_rows);
@@ -5930,6 +5931,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     // Start of main presolve loop
     //
     while (true) {
+      // FOR DEBUGGING NEW METHOD!
       std::vector<double> row_lower, row_upper;
       std::vector<std::vector<row_entry>> rows;
       for (HighsInt i = 0; i < static_cast<HighsInt>(0.01 * model->num_row_);
@@ -5942,7 +5944,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         row_upper.push_back(model->row_upper_[i]);
         rows.push_back(row);
       }
-      if (!addToMatrix(postsolve_stack, row_lower, row_upper, rows)) return;
+      if (!addToMatrix(postsolve_stack, row_lower, row_upper, rows))
+        return Result::kOk;
 
       HighsInt currSize =
           model->num_col_ - numDeletedCols + model->num_row_ - numDeletedRows;
