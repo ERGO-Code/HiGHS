@@ -1990,20 +1990,11 @@ void AdaptiveLinesearchParams::initialise() {
 // =============================================================================
 
 void PDLPSolver::initializeStepSizes() {
-<<<<<<< HEAD
-  // Align the initial geometry with cuPDLPx: start from a neutral primal
-  // weight and let restart/PID updates adapt it afterwards.
-=======
->>>>>>> 1dcb9ab540a44c45949a17184be471bf6989d087
   primal_weight_ = 1.0;
   best_primal_weight_ = primal_weight_;
   stepsize_.beta = primal_weight_ * primal_weight_;
   params_.omega = primal_weight_;
-<<<<<<< HEAD
-=======
   
->>>>>>> 1dcb9ab540a44c45949a17184be471bf6989d087
-
   if (params_.step_size_strategy != StepSizeStrategy::FIXED &&
       params_.step_size_strategy != StepSizeStrategy::PID) {
     logger_.info(
