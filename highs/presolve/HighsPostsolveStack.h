@@ -277,6 +277,7 @@ class HighsPostsolveStack {
   }
 
   void appendCutsToModel(HighsInt numCuts) {
+    if (numCuts <= 0) return;
     size_t currNumRow = origRowIndex.size();
     size_t newNumRow = currNumRow + numCuts;
     origRowIndex.resize(newNumRow);
@@ -285,6 +286,7 @@ class HighsPostsolveStack {
   }
 
   void removeCutsFromModel(HighsInt numCuts) {
+    if (numCuts <= 0) return;
     origNumRow -= numCuts;
 
     size_t origRowIndexSize = origRowIndex.size();

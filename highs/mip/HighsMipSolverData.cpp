@@ -1278,7 +1278,7 @@ void HighsMipSolverData::performRestart() {
   HighsInt numLpRows = lp.getLp().num_row_;
   HighsInt numModelRows = mipsolver.numRow();
   HighsInt numCuts = numLpRows - numModelRows;
-  if (numCuts > 0) postSolveStack.appendCutsToModel(numCuts);
+  postSolveStack.appendCutsToModel(numCuts);
   auto integrality = std::move(presolvedModel.integrality_);
   double offset = presolvedModel.offset_;
   presolvedModel = lp.getLp();

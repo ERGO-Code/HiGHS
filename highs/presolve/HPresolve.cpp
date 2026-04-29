@@ -125,6 +125,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okReserve(liftingOpportunities, model->num_row_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
+  numAppendedRows = 0;
   // initialize substitution opportunities
   for (HighsInt row = 0; row != model->num_row_; ++row) {
     if (!isDualImpliedFree(row)) continue;
@@ -686,9 +687,13 @@ HPresolve::Result HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col,
     // do not use the implied bound if this a not a model row, since the
     // row can be removed and should not be used, e.g., to identify a
     // column as implied free
-    bool useImplBound = mipsolver == nullptr ||
-                        mipsolver->mipdata_->postSolveStack.getOrigRowIndex(
-                            row) < mipsolver->orig_model_->num_row_;
+    bool useImplBound =
+        mipsolver == nullptr ||
+        mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) <
+            mipsolver->orig_model_->num_row_ ||
+        mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
+            mipsolver->mipdata_->postSolveStack.getOrigNumRow() -
+                numAppendedRows;
 
     if (direction * val > 0) {
       // upper bound
@@ -2127,6 +2132,7 @@ bool HPresolve::addToMatrix(
   HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
   if (num_rows == 0) return true;
   HighsInt oldNumRows = model->num_row_;
+  numAppendedRows += num_rows;
   model->num_row_ += num_rows;
   model->a_matrix_.num_row_ += num_rows;
 
@@ -6426,6 +6432,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
 
   shrinkProblem(postsolve_stack);
 
+  postsolve_stack.removeCutsFromModel(numAppendedRows);
+
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->cliquetable.setPresolveFlag(false);
     mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
@@ -6439,7 +6447,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       cutinds.reserve(model->num_col_);
       cutvals.reserve(model->num_col_);
       HighsInt numcuts = 0;
-      for (HighsInt i = model->num_row_ - 1; i >= 0; --i) {
+      for (HighsInt i = model->num_row_ - numAppendedRows - 1; i >= 0; --i) {
         // check if we already reached the original rows
         if (postsolve_stack.getOrigRowIndex(i) <
             mipsolver->orig_model_->num_row_)
