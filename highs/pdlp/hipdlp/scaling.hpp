@@ -41,6 +41,8 @@ class Scaling {
   bool isScaled() const { return is_scaled_; }
   const std::vector<double>& getColScaling() const { return col_scale_; }
   const std::vector<double>& getRowScaling() const { return row_scale_; }
+  double getConstraintBoundScaling() const { return constraint_bound_scale_; }
+  double getObjectiveVectorScaling() const { return objective_vector_scale_; }
 
   double getNormCost() const { return norm_cost_; }
   double getNormRhs() const { return norm_rhs_; }
@@ -51,6 +53,8 @@ class Scaling {
   std::vector<double> col_scale_;
   std::vector<double> row_scale_;
   bool is_scaled_ = false;
+  double constraint_bound_scale_ = 1.0;
+  double objective_vector_scale_ = 1.0;
 
   double norm_cost_;
   double norm_rhs_;
@@ -59,6 +63,7 @@ class Scaling {
   void applyRuizScaling();
   void applyPockChambolleScaling();
   void applyL2Scaling();
+  void applyBoundObjectiveScaling();
 
   // Helper function to apply scaling factors to the problem
   void applyScaling(const std::vector<double>& col_scaling,
