@@ -18,7 +18,7 @@ jobs:
         all_tests: [ON]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -52,7 +52,7 @@ jobs:
   #       all_tests: [ON]
 
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v6
 
   #     - name: Create Build Environment
   #       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -100,7 +100,7 @@ jobs:
         all_tests: [ON]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -145,7 +145,7 @@ jobs:
   #       all_tests: [ON]
 
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v6
 
   #     - name: Create Build Environment
   #       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -194,7 +194,7 @@ jobs:
         all_tests: [ON]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -260,7 +260,7 @@ jobs:
         arch: ["x64", "Win32"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure CMake
         shell: pwsh
@@ -303,7 +303,7 @@ jobs:
         arch: ["ARM64"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure CMake
         shell: pwsh
@@ -344,7 +344,7 @@ jobs:
         config: [Release]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure CMake
         shell: pwsh

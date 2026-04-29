@@ -16,7 +16,7 @@ jobs:
         all_tests: [OFF]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install OpenBLAS
         shell: pwsh
@@ -60,7 +60,7 @@ jobs:
         all_tests: [ON, OFF]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -95,7 +95,7 @@ jobs:
         all_tests: [OFF]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # no default blas available on runner
 
@@ -147,7 +147,7 @@ jobs:
         all_tests: [OFF]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install BLAS
         shell: bash
@@ -190,7 +190,7 @@ jobs:
         all_tests: [ON]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -226,7 +226,7 @@ jobs:
         arch: ["x64"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure CMake
         shell: pwsh
