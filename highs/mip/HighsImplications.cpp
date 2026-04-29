@@ -930,9 +930,11 @@ void HighsImplications::applyPrecedenceGraph(
   for (HighsInt i = start; i < end; ++i) {
     const HighsInt col = precedence.index_[i];
     const double shift = precedence.value_[i];
+    double range = 0.2 * domain.col_upper_[col] - domain.col_lower_[col] +
+                   domain.feastol();
     if (boundchg.boundtype == HighsBoundType::kLower) {
       const double newLb = domain.col_lower_[boundchg.column] - shift;
-      if (domain.col_lower_[col] < newLb - domain.feastol()) {
+      if (domain.col_lower_[col] < newLb - range) {
         const HighsDomain::Reason reason =
             precedenceLbSource[i].second ? HighsDomain::Reason::modelRowUpper(
                                                precedenceLbSource[i].first)
@@ -942,7 +944,7 @@ void HighsImplications::applyPrecedenceGraph(
       }
     } else if (boundchg.boundtype == HighsBoundType::kUpper) {
       const double newUb = domain.col_upper_[boundchg.column] + shift;
-      if (domain.col_upper_[col] > newUb + domain.feastol()) {
+      if (domain.col_upper_[col] > newUb + range) {
         const HighsDomain::Reason reason =
             precedenceUbSource[i].second ? HighsDomain::Reason::modelRowUpper(
                                                precedenceUbSource[i].first)

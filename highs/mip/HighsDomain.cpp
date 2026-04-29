@@ -2011,7 +2011,11 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     }
   }
 
-  if (!infeasible()) {
+  if (!infeasible() && !binary &&
+      (std::abs(boundchg.boundval - oldbound) - feastol()) /
+              std::max(feastol(), col_upper_[boundchg.column] -
+                                      col_lower_[boundchg.column]) >=
+          0.2) {
     mipsolver->mipdata_->implications.applyPrecedenceGraph(*this, boundchg);
   }
 }
