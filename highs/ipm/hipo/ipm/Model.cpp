@@ -423,8 +423,7 @@ void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
     if (is_free_[i]) {
       if (x[i] < lower_[i] * kFreeVarsCloseRatio) {
         // getting close to lower bound
-        const double new_lower = std::min(lower_[i] * kFreeVarsIncreaseBound,
-                                          x[i] / kFreeVarsCloseRatio);
+        const double new_lower = x[i] / kFreeVarsCloseRatio;
         logger.printDetailed(
             "Free var %d is at %.1e with lb %.1e, lb changed to %.1e\n", i,
             x[i], lower_[i], new_lower);
@@ -433,8 +432,7 @@ void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
       }
       if (x[i] > upper_[i] * kFreeVarsCloseRatio) {
         // getting close to upper bound
-        const double new_upper = std::max(upper_[i] * kFreeVarsIncreaseBound,
-                                          x[i] / kFreeVarsCloseRatio);
+        const double new_upper = x[i] / kFreeVarsCloseRatio;
         logger.printDetailed(
             "Free var %d is at %.1e with ub %.1e, ub changed to %.1e\n", i,
             x[i], upper_[i], new_upper);

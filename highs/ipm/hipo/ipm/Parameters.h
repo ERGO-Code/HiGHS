@@ -54,7 +54,6 @@ const double kSmallBoundDiff = 1e-3;
 // parameters for free variables
 const double kFreeVarsInitialBound = 1e4;
 const double kFreeVarsCloseRatio = 0.5;
-const double kFreeVarsIncreaseBound = 10.0;
 
 // static regularisation
 struct Regularisation {
