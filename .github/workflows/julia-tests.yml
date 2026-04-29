@@ -19,11 +19,11 @@ jobs:
         triplet: ['x86_64-linux-gnu-cxx11', 'aarch64-apple-darwin', 'x86_64-w64-mingw32-cxx11']
     steps:
       - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: "1.7"
           arch: x64
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - run: |
           git fetch --tags
           echo "HIGHS_RELEASE=$(git describe --tags $(git rev-list --tags --max-count=1) | sed 's/^v//')" >> $GITHUB_ENV
@@ -65,7 +65,7 @@ jobs:
             arch: x64
     steps:
       - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: "1.10"
           arch: ${{ matrix.arch }}
@@ -113,9 +113,8 @@ jobs:
           run(`$(HiGHS_jll.highs()) --solver=hipo $file`)
           run(`$(HiGHS_jll.highs()) $file`)
       - shell: julia --color=yes {0}
-        env:
-          JULIA_CPU_THREADS: 2
         run: |
           using Pkg
-          Pkg.status("ParallelTestRunner")
-          Pkg.test("HiGHS"; test_args=["--help"])
+          Pkg.test("HiGHS")
+
+        # Pkg.test("HiGHS"; test_args=["--jobs=2"];)

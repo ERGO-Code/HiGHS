@@ -3,8 +3,8 @@ name: build-wheels-push
 on:
   pull_request:
   push:
-    # tags:
-    #   - 'v*'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - name: Build sdist
         shell: bash
         run: pipx run build --sdist
@@ -47,7 +48,6 @@ jobs:
           - [macos-14, macosx_arm64]
           - [windows-2022, win_amd64]
           - [windows-2022, win32]
-        # python: ["cp312"]
         python: ["cp38", "cp39", "cp310", "cp311", "cp312", "cp313", "cp314"]
     steps:
       - uses: actions/checkout@v6
@@ -60,7 +60,7 @@ jobs:
         with:
           name: cibw-wheels-${{ matrix.python }}-${{ matrix.buildplat[1] }}
           path: wheelhouse/*.whl
-          compression-level: 0   # wheels are already zips; don't double-compress
+          compression-level: 0
 
   build_wheels_extras:
     name: Build highspy-extras wheels for ${{ matrix.buildplat[1] }}
@@ -83,56 +83,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # # Pin the in-container vcpkg to the same version as the host runner so
-      # # that i686/musllinux builds (which can't reuse the host vcpkg) stay
-      # # reproducible and share the same port versions.
-      # - name: Get vcpkg commit
-      #   id: vcpkg-commit
-      #   shell: bash
-      #   run: |
-      #     commit=$(git -C "$VCPKG_INSTALLATION_ROOT" rev-parse HEAD 2>/dev/null || echo "")
-      #     echo "commit=$commit" >> "$GITHUB_OUTPUT"
-      #     echo "vcpkg commit: $commit"
-
-      #   # run: echo "commit=$(git -C "$VCPKG_INSTALLATION_ROOT" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.3.1
         with:
           package-dir: ./highspy-extras
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-          # CIBW_BUILD: "cp3*-${{ matrix.buildplat[1] }}"
-          # VCPKG_COMMIT: "${{ steps.vcpkg-commit.outputs.commit }}"
-
-      # - uses: actions/setup-python@v6
-      #   with:
-      #     python-version: '3.12'
-
-      # - name: Verify wheels
-      #   shell: python
-      #   run: |
-      #     import zipfile, glob, sys
-
-      #     bad = []
-      #     for w in glob.glob('wheelhouse/*.whl'):
-      #         try:
-      #             zipfile.ZipFile(w).testzip()
-      #         except Exception as e:
-      #             bad.append(f"{w}: {e}")
-
-      #     if bad:
-      #         print("CORRUPT:", *bad, sep="\n")
-      #         sys.exit(1)
-
-      #     print("All wheels OK:", glob.glob('wheelhouse/*.whl'))
-
       - uses: actions/upload-artifact@v7
         with:
-          # name: cibw-extras-wheels-${{ matrix.buildplat[1] }}
           name: cibw-extras-wheels-${{ matrix.python }}-${{ matrix.buildplat[1] }}
           path: wheelhouse/*.whl
-          compression-level: 0   # wheels are already zips; don't double-compress
+          compression-level: 0
 
   build_sdist_extras:
     name: Build highspy-extras source distribution
