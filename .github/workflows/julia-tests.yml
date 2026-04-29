@@ -115,6 +115,7 @@ jobs:
       - shell: julia --color=yes {0}
         run: |
           using Pkg
-          Pkg.test("HiGHS"; test_args=["--jobs=2"])
+          Pkg.test("HiGHS")
 
-        # Pkg.test("HiGHS")
+        # does not work, hardcoded in HiGHS.jl atm
+        # Pkg.test("HiGHS"; test_args=["--jobs=2"])

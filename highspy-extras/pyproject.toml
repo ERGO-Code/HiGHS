@@ -36,9 +36,6 @@ build.verbose = true
 wheel.expand-macos-universal-tags = true
 wheel.packages = ["highspy_extras"]
 wheel.exclude = ["include", "lib*/", "bin", "LICENSE.txt", "README.md"]
-cmake.args = [
-    "-DBUILD_OPENBLAS=ON",
-]
 
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.
@@ -77,6 +74,9 @@ sdist.exclude = [
   "flake.*",
   "highs.pc.in",
 ]
+
+[tool.scikit-build.cmake.define]
+BUILD_OPENBLAS = "ON"
 
 [tool.cibuildwheel]
 build = "*"
