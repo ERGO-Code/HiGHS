@@ -628,6 +628,7 @@ if (DEBUG_MODE){
     }
 
     CUDA_CHECK(cudaGraphLaunch(graphExec, gpu_stream_));
+    CUDA_CHECK(cudaStreamSynchronize(gpu_stream_));
 #else
     for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
       performHalpernPdhgStep(false, i);
@@ -740,7 +741,7 @@ double PDLPSolver::computeFixedPointError() {
   }
 
   double movement =
-      primal_norm_sq * params_.omega + dual_norm_sq / params_.omega;
+      primal_norm_sq * primal_weight_ + dual_norm_sq / primal_weight_;
   double interaction = 2.0 * params_.eta * cross_term;
 
   return std::sqrt(std::max(0.0, movement + interaction));
@@ -1959,18 +1960,11 @@ void AdaptiveLinesearchParams::initialise() {
 // =============================================================================
 
 void PDLPSolver::initializeStepSizes() {
-  double cost_norm_sq = linalg::vectorNormSquared(lp_.col_cost_);
-  double rhs_norm_sq = linalg::vectorNormSquared(lp_.row_lower_);
-
-  if (std::min(cost_norm_sq, rhs_norm_sq) > 1e-6) {
-    stepsize_.beta = cost_norm_sq / rhs_norm_sq;
-  } else {
-    stepsize_.beta = 1.0;
-  }
-
-  // Match initial primal weight calculation from cuPDLPx
-  params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
-  primal_weight_ = params_.omega;
+  primal_weight_ = 1.0;
+  best_primal_weight_ = primal_weight_;
+  stepsize_.beta = primal_weight_ * primal_weight_;
+  params_.omega = primal_weight_;
+  
 
   if (params_.step_size_strategy != StepSizeStrategy::FIXED &&
       params_.step_size_strategy != StepSizeStrategy::PID) {
@@ -2075,6 +2069,13 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   stepsize_.dual_step = eta * primal_weight_;
   params_.omega = primal_weight_;
   restart_scheme_.updateBeta(stepsize_.beta);
+
+  // === POST-RESTART DEBUG OUTPUT ===
+  printf("[restart][post] iter=%d primal_weight=%.6e step_size=%.6e "
+         "primal_step=%.6e dual_step=%.6e\n",
+         final_iter_count_,
+         primal_weight_, 1.0,
+         stepsize_.primal_step, stepsize_.dual_step);
 }
 
 std::vector<double> PDLPSolver::updateX(const std::vector<double>& x,
