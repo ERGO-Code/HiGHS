@@ -64,7 +64,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   };
 
   HighsInt numRows = 0;
-  HighsInt maxRows = std::min(1000, 2 * mipsolver.numRow());
+  const HighsInt maxRows = std::min(HighsInt{1000}, 2 * mipsolver.numRow());
   adjacency.reserve(maxRows + 2);
   for (HighsInt row = 0; row != mipsolver.numRow(); row++) {
     double rowLower = mipsolver.model_->row_lower_[row];
