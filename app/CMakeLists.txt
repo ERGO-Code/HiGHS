@@ -20,10 +20,12 @@ if(FAST_BUILD)
 
     set_target_properties(highs-bin PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-    if (BUILD_SHARED_EXTRAS_LIB)
-      target_compile_definitions(highs-bin PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
-    else()
-      target_link_libraries(highs-bin PRIVATE highs_extras)
+    if (HIPO)
+      if (BUILD_SHARED_EXTRAS_LIB)
+        target_compile_definitions(highs-bin PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
+      else()
+        target_link_libraries(highs-bin PRIVATE highs_extras)
+      endif()
     endif()
 
     if(UNIX)
