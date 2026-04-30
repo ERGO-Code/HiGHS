@@ -112,6 +112,20 @@ __global__ void kernelScaleVector(
   }
 }
 
+__global__ void kernelComputeSolutionDelta(
+    const double* __restrict__ d_primal_new,
+    const double* __restrict__ d_primal_old,
+    double* __restrict__ d_delta_primal,
+    const double* __restrict__ d_dual_new,
+    const double* __restrict__ d_dual_old,
+    double* __restrict__ d_delta_dual, int n_cols, int n_rows) {
+  const int n = n_cols > n_rows ? n_cols : n_rows;
+  CUDA_GRID_STRIDE_LOOP(i, n) {
+    if (i < n_cols) d_delta_primal[i] = d_primal_new[i] - d_primal_old[i];
+    if (i < n_rows) d_delta_dual[i] = d_dual_new[i] - d_dual_old[i];
+  }
+}
+
 // === KERNEL 4: Primal Convergence Check (Row-wise) ===
 __global__ void kernelCheckPrimal(
   double* d_results,
@@ -215,10 +229,15 @@ __global__ void kernelCheckDual(
     local_dual_obj_part += obj_term;
   }
 
-  // Atomic accumulation
-  atomicAdd(&d_results[IDX_DUAL_FEAS], local_dual_feas_sq);
-  atomicAdd(&d_results[IDX_PRIMAL_OBJ], local_primal_obj);
-  atomicAdd(&d_results[IDX_DUAL_OBJ], local_dual_obj_part);
+  FULL_WARP_REDUCE(local_dual_feas_sq);
+  FULL_WARP_REDUCE(local_primal_obj);
+  FULL_WARP_REDUCE(local_dual_obj_part);
+
+  if ((threadIdx.x & 31) == 0) {
+    atomicAdd(&d_results[IDX_DUAL_FEAS], local_dual_feas_sq);
+    atomicAdd(&d_results[IDX_PRIMAL_OBJ], local_primal_obj);
+    atomicAdd(&d_results[IDX_DUAL_OBJ], local_dual_obj_part);
+  }
 }
 
 // ============================================================================
@@ -386,6 +405,22 @@ void launchKernelScaleVector_wrapper(
     kernelScaleVector<<<config.x, block_size, 0, stream>>>(
         d_out, d_in, scale, n);
     
+    cudaGetLastError();
+}
+
+void launchKernelComputeSolutionDelta_wrapper(
+    const double* d_primal_new, const double* d_primal_old,
+    double* d_delta_primal, const double* d_dual_new,
+    const double* d_dual_old, double* d_delta_dual, int n_cols, int n_rows,
+    cudaStream_t stream) {
+    const int block_size = 256;
+    const int n = n_cols > n_rows ? n_cols : n_rows;
+    dim3 config = GetLaunchConfig(n, block_size);
+
+    kernelComputeSolutionDelta<<<config.x, block_size, 0, stream>>>(
+        d_primal_new, d_primal_old, d_delta_primal, d_dual_new, d_dual_old,
+        d_delta_dual, n_cols, n_rows);
+
     cudaGetLastError();
 }
 

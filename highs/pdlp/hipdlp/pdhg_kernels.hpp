@@ -28,6 +28,12 @@ void launchKernelUpdateAverages_wrapper(double* d_x_sum, double* d_y_sum,
 void launchKernelScaleVector_wrapper(double* d_out, const double* d_in,
                                      double scale, int n, cudaStream_t stream);
 
+void launchKernelComputeSolutionDelta_wrapper(
+    const double* d_primal_new, const double* d_primal_old,
+    double* d_delta_primal, const double* d_dual_new,
+    const double* d_dual_old, double* d_delta_dual, int n_cols, int n_rows,
+    cudaStream_t stream);
+
 void launchCheckConvergenceKernels_wrapper(
     double* d_results, double* d_slack_pos, double* d_slack_neg,
     const double* d_x, const double* d_y, const double* d_ax,

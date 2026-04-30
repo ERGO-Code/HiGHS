@@ -771,23 +771,9 @@ double PDLPSolver::computeFixedPointError() {
 
 #ifdef CUPDLP_GPU
 double PDLPSolver::computeFixedPointErrorGpu() {
-  double alpha_minus_one = -1.0;
-
-  // 1. delta_x = x_next_ - reflected_x_
-  // (Assuming d_pdhg_primal_ maps to x_next_ and d_x_next_ is used as
-  // reflected_x_ in your minor/major steps)
-  CUDA_CHECK(cudaMemcpyAsync(d_delta_x_, d_pdhg_primal_,
-                             a_num_cols_ * sizeof(double),
-                             cudaMemcpyDeviceToDevice, gpu_stream_));
-  CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_cols_, &alpha_minus_one,
-                           d_x_next_, 1, d_delta_x_, 1));
-
-  // 2. delta_y = y_next_ - reflected_y_
-  CUDA_CHECK(cudaMemcpyAsync(d_delta_y_, d_pdhg_dual_, 
-                             a_num_rows_ * sizeof(double),
-                              cudaMemcpyDeviceToDevice, gpu_stream_));
-  CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_rows_, &alpha_minus_one,
-                           d_y_next_, 1, d_delta_y_, 1));
+  launchKernelComputeSolutionDelta_wrapper(
+      d_pdhg_primal_, d_x_next_, d_delta_x_, d_pdhg_dual_, d_y_next_,
+      d_delta_y_, a_num_cols_, a_num_rows_, gpu_stream_);
 
   // 3. AT_delta_y = A^T * delta_y
   linalgGpuATy(d_delta_y_, d_AT_delta_y_);
