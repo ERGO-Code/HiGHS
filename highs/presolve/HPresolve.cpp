@@ -2177,11 +2177,17 @@ bool HPresolve::addToMatrix(
   if (!okResize(model->row_names_, model->num_row_, std::string{}))
     return false;
 
+  // resize vector for equations
+  if (!okResize(eqiters, model->num_row_, equations.end())) return false;
+
   // resize vectors for implied row bounds
   impliedRowBounds.setNumSums(model->num_row_);
 
-  // resize vector for equations
-  if (!okResize(eqiters, model->num_row_, equations.end())) return false;
+  // set bound arrays again (pointers may get invalidated by reallocation)
+  impliedDualRowBounds.setBoundArrays(
+      rowDualLower.data(), rowDualUpper.data(), implRowDualLower.data(),
+      implRowDualUpper.data(), rowDualLowerSource.data(),
+      rowDualUpperSource.data());
 
   for (HighsInt i = 0; i < num_rows; i++) {
     // new row index

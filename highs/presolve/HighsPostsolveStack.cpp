@@ -527,8 +527,8 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
           : computeStatus(solution.row_dual[row], basis.row_status[row],
                           options.dual_feasibility_tolerance);
 
-  auto computeRowDualAndStatus = [&](bool tighened) {
-    if (tighened) {
+  auto computeRowDualAndStatus = [&](bool tightened) {
+    if (tightened) {
       if (solution.isModelRow(duplicateRow)) {
         solution.row_dual[duplicateRow] =
             solution.row_dual[row] / duplicateRowScale;
