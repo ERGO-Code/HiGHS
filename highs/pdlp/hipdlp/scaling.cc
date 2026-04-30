@@ -22,8 +22,6 @@ void Scaling::initialize(const HighsLp& lp) {
   col_scale_.assign(lp.num_col_, 1.0);
   row_scale_.assign(lp.num_row_, 1.0);
   is_scaled_ = false;
-  constraint_bound_scale_ = 1.0;
-  objective_vector_scale_ = 1.0;
 
   // use linalg to compute norms
   norm_cost_ = linalg::computeCostNorm(lp, 2.0);
@@ -53,10 +51,6 @@ void Scaling::scaleProblem() {
     applyL2Scaling();
     is_scaled_ = true;
   }
-
-  highsLogDev(params_->log_options_, HighsLogType::kInfo,
-              "Applying bound-objective scaling...\n");
-  applyBoundObjectiveScaling();
 }
 
 void Scaling::applyRuizScaling() {
@@ -234,45 +228,6 @@ void Scaling::applyL2Scaling() {
   }
 }
 
-void Scaling::applyBoundObjectiveScaling() {
-  double rhs_norm_sq = 0.0;
-  for (HighsInt i = 0; i < lp_->num_row_; ++i) {
-    const double lower = lp_->row_lower_[i];
-    const double upper = lp_->row_upper_[i];
-    if (std::isfinite(lower) && lower != upper) rhs_norm_sq += lower * lower;
-    if (std::isfinite(upper)) rhs_norm_sq += upper * upper;
-  }
-
-  const double rhs_norm = std::sqrt(rhs_norm_sq);
-  const double obj_norm = computeNorm(lp_->col_cost_.data(), lp_->num_col_, 2.0);
-
-  constraint_bound_scale_ = 1.0 / (1.0 + rhs_norm);
-  objective_vector_scale_ = 1.0 / (1.0 + obj_norm);
-
-  for (HighsInt i = 0; i < lp_->num_row_; ++i) {
-    if (lp_->row_lower_[i] > -kHighsInf) {
-      lp_->row_lower_[i] *= constraint_bound_scale_;
-    }
-    if (lp_->row_upper_[i] < kHighsInf) {
-      lp_->row_upper_[i] *= constraint_bound_scale_;
-    }
-  }
-
-  for (HighsInt i = 0; i < lp_->num_col_; ++i) {
-    lp_->col_cost_[i] *= objective_vector_scale_;
-    if (lp_->col_lower_[i] > -kHighsInf) {
-      lp_->col_lower_[i] *= constraint_bound_scale_;
-    }
-    if (lp_->col_upper_[i] < kHighsInf) {
-      lp_->col_upper_[i] *= constraint_bound_scale_;
-    }
-  }
-
-  if (constraint_bound_scale_ != 1.0 || objective_vector_scale_ != 1.0) {
-    is_scaled_ = true;
-  }
-}
-
 void Scaling::applyScaling(const std::vector<double>& col_scaling,
                            const std::vector<double>& row_scaling) {
   // Scale cost vector: c_scaled = c / col_scaling
@@ -318,12 +273,12 @@ void Scaling::unscaleSolution(std::vector<double>& x,
 
   // Unscale primal variables: x_original = x_scaled / col_scale
   for (size_t i = 0; i < x.size(); ++i) {
-    x[i] /= (col_scale_[i] * constraint_bound_scale_);
+    x[i] /= col_scale_[i];
   }
 
   // Unscale dual variables: y_original = y_scaled / row_scale
   for (size_t i = 0; i < y.size(); ++i) {
-    y[i] /= (row_scale_[i] * objective_vector_scale_);
+    y[i] /= row_scale_[i];
   }
 }
 
