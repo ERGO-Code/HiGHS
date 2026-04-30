@@ -5946,8 +5946,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       // FOR DEBUGGING NEW METHOD!
       std::vector<double> row_lower, row_upper;
       std::vector<std::vector<row_entry>> rows;
-      for (HighsInt i = 0; i < static_cast<HighsInt>(0.01 * model->num_row_);
+      for (HighsInt i = 0; i < static_cast<HighsInt>(0.1 * model->num_row_);
            i++) {
+        if (rowDeleted[i]) continue;
         std::vector<row_entry> row;
         for (const auto& rowNz : getRowVector(i)) {
           row.push_back(row_entry{rowNz.index(), rowNz.value()});
