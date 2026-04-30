@@ -785,7 +785,7 @@ double PDLPSolver::computeFixedPointErrorGpu() {
   // 2. delta_y = y_next_ - reflected_y_
   CUDA_CHECK(cudaMemcpyAsync(d_delta_y_, d_pdhg_dual_, 
                              a_num_rows_ * sizeof(double),
-                             cudaMemcpyDeviceToDevice, gpu_stream_));
+                              cudaMemcpyDeviceToDevice, gpu_stream_));
   CUBLAS_CHECK(cublasDaxpy(cublas_handle_, a_num_rows_, &alpha_minus_one,
                            d_y_next_, 1, d_delta_y_, 1));
 
@@ -1361,8 +1361,7 @@ double PDLPSolver::computePrimalFeasibility(
     }
   }
 
-  return linalg::vectorNorm(primal_residual) /
-         scaling_.getConstraintBoundScaling();
+  return linalg::vectorNorm(primal_residual);
 }
 
 void PDLPSolver::computeDualSlacks(const std::vector<double>& dualResidual,
@@ -1448,8 +1447,7 @@ double PDLPSolver::computeDualFeasibility(const std::vector<double>& ATy_vector,
     }
   }
 
-  double dual_feasibility = linalg::vectorNorm(dual_residual) /
-                            scaling_.getObjectiveVectorScaling();
+  double dual_feasibility = linalg::vectorNorm(dual_residual);
 
   return dual_feasibility;
 }
@@ -1515,10 +1513,7 @@ double PDLPSolver::computeDualObjective(const std::vector<double>& y,
     }
   }
 
-  return dual_obj /
-             (scaling_.getConstraintBoundScaling() *
-              scaling_.getObjectiveVectorScaling()) +
-         lp_.offset_;
+  return dual_obj;
 }
 
 bool PDLPSolver::checkConvergence(
@@ -1545,10 +1540,7 @@ bool PDLPSolver::checkConvergence(
   for (HighsInt i = 0; i < lp_.num_col_; ++i) {
     primal_obj += lp_.col_cost_[i] * x[i];
   }
-  primal_obj /=
-      scaling_.getConstraintBoundScaling() *
-      scaling_.getObjectiveVectorScaling();
-  results.primal_obj = primal_obj + lp_.offset_;
+  results.primal_obj = primal_obj;
 
   // Pass the now-populated slack vectors to computeDualObjective
   double dual_obj = computeDualObjective(y, dSlackPos, dSlackNeg);
@@ -1944,11 +1936,10 @@ void PDLPSolver::unscaleSolution(std::vector<double>& x,
   y_current_ = y;
 
   const std::vector<double>& col_scale = scaling_.getColScaling();
-  const double objective_scale = scaling_.getObjectiveVectorScaling();
   if (!dSlackPos_.empty() && col_scale.size() == dSlackPos_.size()) {
     for (size_t i = 0; i < dSlackPos_.size(); ++i) {
-      dSlackPos_[i] *= col_scale[i] / objective_scale;
-      dSlackNeg_[i] *= col_scale[i] / objective_scale;
+      dSlackPos_[i] *= col_scale[i];
+      dSlackNeg_[i] *= col_scale[i];
     }
   }
 }
@@ -2837,16 +2828,13 @@ bool PDLPSolver::checkConvergenceGpu(const HighsInt iter, const double* d_x,
                              cudaMemcpyDeviceToHost, gpu_stream_));
   CUDA_CHECK(cudaStreamSynchronize(gpu_stream_));
 
-  const double constraint_scale = scaling_.getConstraintBoundScaling();
-  const double objective_scale = scaling_.getObjectiveVectorScaling();
-  const double combined_scale = constraint_scale * objective_scale;
   double primal_feas_sq = h_results[0];
   double dual_feas_sq = h_results[1];
-  double primal_obj = h_results[2] / combined_scale + lp_.offset_;
-  double dual_obj = h_results[3] / combined_scale + lp_.offset_;
+  double primal_obj = h_results[2] + lp_.offset_;
+  double dual_obj = h_results[3] + lp_.offset_;
 
-  results.primal_feasibility = std::sqrt(primal_feas_sq) / constraint_scale;
-  results.dual_feasibility = std::sqrt(dual_feas_sq) / objective_scale;
+  results.primal_feasibility = std::sqrt(primal_feas_sq);
+  results.dual_feasibility = std::sqrt(dual_feas_sq);
   results.primal_obj = primal_obj;
   results.dual_obj = dual_obj;
 
