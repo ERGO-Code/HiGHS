@@ -81,120 +81,83 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
 
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
-  if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
-    if (HighsExternalDeps::isAvailableAtCompile()) {
-      highsLogUser(
-          report_log_options, HighsLogType::kError,
-          "The HiPO solver was requested via the \"%s\" option, but this build "
-          "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-          "and -DHIPO=ON to enable HiPO.\n",
-          kSolverString.c_str());
-    } else {
-      highsLogUser(
-          report_log_options, HighsLogType::kError,
-          "The HiPO solver was requested via the \"%s\" option, but the "
-          "HiPO dependencies are missing. Install with highspy[hipo] or "
-          "install "
-          "highspy-extras. Note, that using HiPO changes the HiGHS license "
-          "from "
-          " MIT to Apache, due to the dependencies' licensing.\n",
-          kSolverString.c_str());
-    }
-    return false;
-  }
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
       (value == kHipoString && HighsExternalDeps::isAvailable()) ||
       value == kIpxString || value == kPdlpString || value == kQpAsmString ||
       value == kHiPdlpString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kWarning,
-      "Value \"%s\" for LP solver option (\"%s\") is not one of "
-      "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kSolverString.c_str(),
-      HighsExternalDeps::isAvailable() ? (kHipoString + "\", \"").c_str() : "",
-      kHighsChooseString.c_str(), kSimplexString.c_str(), kIpmString.c_str(),
-      kIpxString.c_str(), kPdlpString.c_str(), kQpAsmString.c_str(),
-      kHiPdlpString.c_str());
-  return false;
+  else if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
+    HighsExternalDeps::logUnavailable(
+        report_log_options, HighsLogType::kError,
+        "The HiPO solver was requested via the \"%s\" option.",
+        kSolverString.c_str());
+    return false;
+  } else {
+    highsLogUser(report_log_options, HighsLogType::kWarning,
+                 "Value \"%s\" for LP solver option (\"%s\") is not one of "
+                 "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+                 value.c_str(), kSolverString.c_str(),
+                 HighsExternalDeps::isAvailable()
+                     ? (kHipoString + "\", \"").c_str()
+                     : "",
+                 kHighsChooseString.c_str(), kSimplexString.c_str(),
+                 kIpmString.c_str(), kIpxString.c_str(), kPdlpString.c_str(),
+                 kQpAsmString.c_str(), kHiPdlpString.c_str());
+    return false;
+  }
 }
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
-  if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
-    if (HighsExternalDeps::isAvailableAtCompile()) {
-      highsLogUser(
-          report_log_options, HighsLogType::kError,
-          "The HiPO solver was requested via the \"%s\" option, but this build "
-          "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-          "and -DHIPO=ON to enable HiPO.\n",
-          kMipLpSolverString.c_str());
-    } else {
-      highsLogUser(
-          report_log_options, HighsLogType::kError,
-          "The HiPO solver was requested via the \"%s\" option, but the "
-          "HiPO dependencies are missing. Install with highspy[hipo] or "
-          "install "
-          "highspy-extras. Note, that using HiPO changes the HiGHS license "
-          "from "
-          "MIT to Apache, due to the dependencies' licensing.\n",
-          kMipLpSolverString.c_str());
-    }
-    return false;
-  }
-
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
       (value == kHipoString && HighsExternalDeps::isAvailable()) ||
       value == kIpxString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
-      "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kMipLpSolverString.c_str(),
-      HighsExternalDeps::isAvailable() ? (kHipoString + "\", \"").c_str() : "",
-      kHighsChooseString.c_str(), kSimplexString.c_str(), kIpmString.c_str(),
-      kIpxString.c_str());
-  return false;
+  else if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
+    HighsExternalDeps::logUnavailable(
+        report_log_options, HighsLogType::kError,
+        "The HiPO solver was requested via the \"%s\" option.",
+        kMipLpSolverString.c_str());
+    return false;
+  } else {
+    highsLogUser(report_log_options, HighsLogType::kError,
+                 "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
+                 "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
+                 value.c_str(), kMipLpSolverString.c_str(),
+                 HighsExternalDeps::isAvailable()
+                     ? (kHipoString + "\", \"").c_str()
+                     : "",
+                 kHighsChooseString.c_str(), kSimplexString.c_str(),
+                 kIpmString.c_str(), kIpxString.c_str());
+    return false;
+  }
 }
 
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
-  if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
-    if (HighsExternalDeps::isAvailableAtCompile()) {
-      highsLogUser(
-          report_log_options, HighsLogType::kError,
-          "The HiPO solver was requested via the \"%s\" option, but this build "
-          "was compiled without HiPO support. Reconfigure with FAST_BUILD=ON "
-          "and -DHIPO=ON to enable HiPO.\n",
-          kMipIpmSolverString.c_str());
-    } else {
-      highsLogUser(
-          report_log_options, HighsLogType::kError,
-          "The HiPO solver was requested via the \"%s\" option, but the "
-          "HiPO dependencies are missing. Install with highspy[hipo] or "
-          "install "
-          "highspy-extras. Note, that using HiPO changes the HiGHS license "
-          "from "
-          "MIT to Apache, due to the dependencies' licensing.\n",
-          kMipIpmSolverString.c_str());
-    }
-    return false;
-  }
   if (value == kHighsChooseString || value == kIpmString ||
       (value == kHipoString && HighsExternalDeps::isAvailable()) ||
       value == kIpxString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
-      "%s\"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kMipIpmSolverString.c_str(),
-      HighsExternalDeps::isAvailable() ? (kHipoString + "\", \"").c_str() : "",
-      kHighsChooseString.c_str(), kIpmString.c_str(), kIpxString.c_str());
-  return false;
+  else if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
+    HighsExternalDeps::logUnavailable(
+        report_log_options, HighsLogType::kError,
+        "The HiPO solver was requested via the \"%s\" option.",
+        kMipIpmSolverString.c_str());
+    return false;
+  } else {
+    highsLogUser(
+        report_log_options, HighsLogType::kError,
+        "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
+        "%s\"%s\", \"%s\" or \"%s\"\n",
+        value.c_str(), kMipIpmSolverString.c_str(),
+        HighsExternalDeps::isAvailable() ? (kHipoString + "\", \"").c_str()
+                                         : "",
+        kHighsChooseString.c_str(), kIpmString.c_str(), kIpxString.c_str());
+    return false;
+  }
 }
 
 bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
@@ -389,11 +352,10 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
 OptionStatus checkOption(const HighsLogOptions& report_log_options,
                          const OptionRecordInt& option) {
   if (option.lower_bound > option.upper_bound) {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "checkOption: Option \"%s\" has inconsistent bounds [%" HIGHSINT_FORMAT
-        ", %" HIGHSINT_FORMAT "]\n",
-        option.name.c_str(), option.lower_bound, option.upper_bound);
+    highsLogUser(report_log_options, HighsLogType::kError,
+                 "checkOption: Option \"%s\" has inconsistent bounds "
+                 "[%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT "]\n",
+                 option.name.c_str(), option.lower_bound, option.upper_bound);
     return OptionStatus::kIllegalValue;
   }
   if (option.default_value < option.lower_bound ||
@@ -614,10 +576,10 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
     bool value_bool;
     bool return_status = boolFromString(value_trim, value_bool);
     if (!return_status) {
-      highsLogUser(
-          report_log_options, HighsLogType::kError,
-          "setLocalOptionValue: Value \"%s\" cannot be interpreted as a bool\n",
-          value_trim.c_str());
+      highsLogUser(report_log_options, HighsLogType::kError,
+                   "setLocalOptionValue: Value \"%s\" cannot be interpreted "
+                   "as a bool\n",
+                   value_trim.c_str());
       return OptionStatus::kIllegalValue;
     }
     return setLocalOptionValue(((OptionRecordBool*)option_records[index])[0],
@@ -1135,13 +1097,13 @@ void reportOption(FILE* file, const HighsLogOptions& log_options,
 
   if (!report_only_deviations || option.default_value != *option.value) {
     if (file_type == HighsFileType::kMd) {
-      fprintf(
-          file,
-          "## [%s](@id option-%s)\n- %s\n- Type: string\n- Default: \"%s\"\n\n",
-          highsInsertMdEscapes(option.name).c_str(),
-          highsInsertMdId(option.name).c_str(),
-          highsInsertMdEscapes(option.description).c_str(),
-          option.default_value.c_str());
+      fprintf(file,
+              "## [%s](@id option-%s)\n- %s\n- Type: string\n- Default: "
+              "\"%s\"\n\n",
+              highsInsertMdEscapes(option.name).c_str(),
+              highsInsertMdId(option.name).c_str(),
+              highsInsertMdEscapes(option.description).c_str(),
+              option.default_value.c_str());
     } else if (file_type == HighsFileType::kFull) {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",

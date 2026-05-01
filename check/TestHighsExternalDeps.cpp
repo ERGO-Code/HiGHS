@@ -22,10 +22,14 @@ TEST_CASE("HighsExternalDeps-compile-time", "[highs_external_deps]") {
   // isAvailableAtCompile should be consistent with build config
   bool compile = HighsExternalDeps::isAvailableAtCompile();
 
-  // If compile-time available, runtime must also be available
+// If compile-time aware and statically linked, it must be available
+// If compile-time aware and dynamically linked, it may or may not be available
+// at runtime
+#if !defined(HIGHS_SHARED_EXTRAS_LIBRARY)
   if (compile) {
     REQUIRE(HighsExternalDeps::isAvailable());
   }
+#endif
 }
 
 TEST_CASE("HighsExternalDeps-getCopyrightInfo", "[highs_external_deps]") {

@@ -29,6 +29,32 @@ bool HighsExternalDeps::tryLoad() {
   return tryLoad(empty_path);
 }
 
+void HighsExternalDeps::logUnavailable(const HighsLogOptions& log_options,
+                                       const HighsLogType type,
+                                       const char* format, ...) {
+  if (!isAvailable()) {
+    va_list argptr;
+    va_start(argptr, format);
+    std::array<char, kIoBufferSize> msgbuffer = {};
+    int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
+    va_end(argptr);
+
+    if (!isAvailableAtCompile()) {
+      highsLogUser(log_options, type, "%s%s%s", msgbuffer.data(),
+                   (len > 0) ? " " : "",
+                   "This build was compiled without external dependencies. "
+                   "Reconfigure with -DHIPO=ON to enable.\n");
+    } else {
+      highsLogUser(
+          log_options, type, "%s%s%s", msgbuffer.data(), (len > 0) ? " " : "",
+          "The external dependencies are missing. Please install "
+          "highs_extras library. For example, in Python use `pip install "
+          "highspy[extras]`. Note, this changes the HiGHS license from MIT "
+          "to Apache, due to the dependencies' licensing.\n");
+    }
+  }
+}
+
 #ifdef HIGHS_SHARED_EXTRAS_LIBRARY
 // Platform-specific includes for dynamic loading
 #if defined(_WIN32) || defined(_WIN64)
@@ -171,9 +197,7 @@ bool HighsExternalDeps::tryLoad(const std::string& path) {
         std::string extras_version = get_version();
         if (extras_version != highs_version) {
           inst.status_ = "Extras: ABI version mismatch: expected " +
-                         highs_version + ", got " + extras_version +
-                         ". Please reinstall: pip install --force-reinstall "
-                         "highspy[extras]";
+                         highs_version + ", got " + extras_version + ".";
           inst.unload();
           ok = false;
         } else {

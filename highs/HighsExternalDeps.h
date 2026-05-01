@@ -13,6 +13,7 @@
 #include <string>
 
 #include "HighsExtrasApi.h"
+#include "io/HighsIO.h"
 #include "rcm/rcm.h"
 #include "util/HighsInt.h"
 
@@ -199,6 +200,9 @@ struct HighsExternalDeps {
   HighsExternalDeps& operator=(const HighsExternalDeps&) = delete;
 
   static bool tryLoad();
+  static void logUnavailable(const HighsLogOptions& log_options,
+                             const HighsLogType type, const char* format = "",
+                             ...);
 
 // Exclude dependencies
 #ifndef HIPO
@@ -215,7 +219,7 @@ struct HighsExternalDeps {
 // Shared library support
 #elif defined(HIGHS_SHARED_EXTRAS_LIBRARY)
   static inline bool isAvailable() { return tryLoad(); }
-  static constexpr bool isAvailableAtCompile() { return false; }
+  static constexpr bool isAvailableAtCompile() { return true; }
 
   static bool tryLoad(const std::string& path);
   static void unload();
@@ -234,7 +238,6 @@ struct HighsExternalDeps {
   static inline const std::string getLoadStatus() {
     return "Extras: Available at compile time";
   }
-
 #endif
 
  private:
