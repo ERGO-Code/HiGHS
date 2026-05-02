@@ -53,7 +53,7 @@ void HighsExternalDeps::logUnavailable(const HighsLogOptions& log_options,
   }
 }
 
-#ifdef HIGHS_SHARED_EXTRAS_LIBRARY
+#if defined(HIPO) && defined(HIGHS_SHARED_EXTRAS_LIBRARY)
 // Platform-specific includes for dynamic loading
 #if defined(_WIN32) || defined(_WIN64)
 #define WIN32_LEAN_AND_MEAN
