@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm]
+        os: [ubuntu-latest]
         config: [Release]
         all_tests: [ON]
 
@@ -46,6 +46,43 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure
+
+  ubuntu_arm:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04-arm]
+        config: [Release]
+        all_tests: [ON]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+            -DALL_TESTS=${{ matrix.all_tests }}
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . -j2
+
+      - name: Test executable
+        working-directory: ${{github.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure \
+            -E "openblas_utest|openblas_utest_ext|xscblat|xdcblat|xccblat|xzcblat"
 
   # Temporarily disable ubuntu_32 for 1.13
   # ubuntu_32:

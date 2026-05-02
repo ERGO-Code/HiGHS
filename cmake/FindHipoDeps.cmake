@@ -166,9 +166,16 @@ if (BUILD_OPENBLAS)
             # -DCMAKE_C_FLAGS_DEBUG="-O2 -fomit-frame-pointer"
             # -DCORE_OPTIMIZATION="-O3"
     )
+    set(NO_LAPACKE ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(openblas)
     get_property(all_targets DIRECTORY ${openblas_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
     message(STATUS "OpenBLAS targets: ${all_targets}")
+
+    foreach(_lapacke_target LAPACKE genlapacke)
+        if(TARGET ${_lapacke_target})
+            set_target_properties(${_lapacke_target} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+        endif()
+    endforeach()
 
     set_property(DIRECTORY ${openblas_SOURCE_DIR}
         PROPERTY CTEST_EXCLUDE_FROM_MAIN TRUE)
