@@ -62,12 +62,13 @@ jobs:
           ctest --parallel --timeout 300 --output-on-failure -C Debug
 
   ubuntu_vcpkg:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
         config: [Release, Debug]
-        all_tests: [OFF]
+        all_tests: [OFF, ON]
 
     steps:
       - uses: actions/checkout@v6

@@ -55,7 +55,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04-arm]
         config: [Release]
-        all_tests: [ON]
+        all_tests: [OFF]
 
     steps:
       - uses: actions/checkout@v6
