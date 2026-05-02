@@ -4,13 +4,8 @@ endif()
 
 # Define library.
 include(sources)
-set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
-set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
-
-if(HIPO)
-  set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
-  set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
-endif()
+set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
+set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
 
 # Configure the config windows version file
 if(MSVC)
@@ -158,8 +153,6 @@ else()
 
   if (HIPO)
     if (BUILD_SHARED_EXTRAS_LIB)
-      target_compile_definitions(highs PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
-
       if (NOT HIPO_PYTHON)
         if(APPLE)
           set_target_properties(highs PROPERTIES
@@ -174,7 +167,9 @@ else()
         endif()
       endif()
     else()
-      target_link_libraries(highs PRIVATE highs_extras)
+      # PUBLIC: propagate link dependency in the highs library, so that 
+      # consumers don't need to explicitly link against highs_extras
+      target_link_libraries(highs PUBLIC highs_extras)
     endif()
   endif()
 
@@ -307,6 +302,12 @@ else()
     )
     target_link_libraries(highs PRIVATE ZLIB::ZLIB)
   endif()
+
+  # allow consumers of highs to be aware of potential external dependencies
+  # without forcing them to explicitly call target_include_directories
+  target_include_directories(highs PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
+  )
 
   # install the header files of highs
   foreach(file ${headers})

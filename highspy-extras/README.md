@@ -2,7 +2,7 @@
 
 Extension package for [highspy](https://pypi.org/project/highspy/) that enables access to external dependencies with licensing terms different from HiGHS, such as Apache 2.0.
 
-The HiPO Interior Point Method (IPM) solver currently uses these external dependencies to provide enhanced performance for linear programming problems. Other algorithms may also rely on `highspy-extras` in the future.
+The HiPO Interior Point Method (IPM) solver currently uses these external dependencies to provide enhanced performance for linear and quadratic programming problems. Other algorithms may also rely on `highspy_extras` in the future.
 
 ## Installation
 
@@ -22,7 +22,7 @@ At present, the optional dependency installs support needed for HiPO.
 
 ## Usage
 
-When `highspy-extras` is installed, HiGHS can use algorithms that depend on these external libraries. At present this primarily means the HiPO solver. You can explicitly select HiPO:
+When `highspy_extras` is installed, HiGHS can use algorithms that depend on these external libraries. At present this primarily means the HiPO solver. You can explicitly select HiPO:
 
 ```python
 import highspy

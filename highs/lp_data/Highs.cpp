@@ -3978,25 +3978,17 @@ HighsStatus Highs::callSolveQp() {
   HighsStatus return_status;
 
   // Choose solver
-  bool use_hipo = false;
-  if (options_.solver == kHipoString || options_.solver == kIpmString) {
-    use_hipo = HighsExternalDeps::isAvailable();
-  } else
-    use_hipo = false;
+  bool use_hipo =
+      (options_.solver == kHipoString || options_.solver == kIpmString) &&
+      HighsExternalDeps::isAvailable();
 
   if (use_hipo) {
-#ifdef HIPO
     sub_solver_call_time_.num_call[kSubSolverHipo]++;
     sub_solver_call_time_.run_time[kSubSolverHipo] = -timer_.read();
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
     sub_solver_call_time_.run_time[kSubSolverHipo] += timer_.read();
     if (return_status == HighsStatus::kError) return return_status;
-#else
-    // shouldn't be possible to reach here
-    assert(1 == 0);
-#endif
-
   } else {
     //
     // Run the QP solver

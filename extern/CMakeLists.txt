@@ -159,6 +159,13 @@ else()
       ${highs_extras_headers})
 endif()
 
+target_compile_definitions(highs_extras PRIVATE HIGHS_EXTRAS_VERSION="${VERSION}")
+
+if (DEFINED BLA_VENDOR)
+  # Pass the BLA_VENDOR string to C++ as a macro
+  target_compile_definitions(highs_extras PRIVATE BLA_VENDOR_STR="${BLA_VENDOR}")
+endif()
+
 target_include_directories(highs_extras PUBLIC
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)

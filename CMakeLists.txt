@@ -86,6 +86,7 @@ message(STATUS "Build C++ executable: ${BUILD_CXX_EXE}")
 option(BUILD_TESTING "Build Tests" ON)
 option(BUILD_SHARED_EXTRAS_LIB "Build shared extras library" ON)
 message(STATUS "Build shared extras library: ${BUILD_SHARED_EXTRAS_LIB}")
+set(HIGHS_SHARED_EXTRAS_LIBRARY ${BUILD_SHARED_EXTRAS_LIB})
 
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")

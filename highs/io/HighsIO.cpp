@@ -14,9 +14,10 @@
 #include <cstdarg>
 #include <cstdio>
 
+#include "HighsExternalDeps.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-#include "HighsExternalDeps.h"
+
 
 void highsLogHeader(const HighsLogOptions& log_options,
                     const bool log_githash) {
@@ -28,15 +29,12 @@ void highsLogHeader(const HighsLogOptions& log_options,
                (int)HIGHS_VERSION_MINOR, (int)HIGHS_VERSION_PATCH,
                githash_text.c_str(), kHighsCopyrightStatement.c_str());
 
-#ifdef HIPO
   if (HighsExternalDeps::isAvailable()) {
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                  HighsExternalDeps::getCopyrightInfo().c_str());
     highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s \n",
                  HighsExternalDeps::blas::blas_library().c_str());
   }
-#endif
-
 }
 
 std::array<char, 32> highsDoubleToString(const double val,

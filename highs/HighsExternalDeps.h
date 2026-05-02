@@ -10,18 +10,39 @@
  */
 #ifndef HIGHS_EXTERNAL_DEPS_H_
 #define HIGHS_EXTERNAL_DEPS_H_
+#include <stdexcept>
 #include <string>
 
+#include "HConfig.h"
 #include "HighsExtrasApi.h"
 #include "io/HighsIO.h"
 #include "rcm/rcm.h"
 #include "util/HighsInt.h"
 
 // support dynamic or static function calls
+#ifdef HIPO
 #ifdef HIGHS_SHARED_EXTRAS_LIBRARY
 #define HIGHS_EXTERN_CALL(fn_member, fn_direct) fn_member
 #else
 #define HIGHS_EXTERN_CALL(fn_member, fn_direct) fn_direct
+#endif
+#else
+// for non-HIPO build, avoid linker issues - but these should never be called
+// will throw exception if called, should check isAvailable() beforehand
+namespace highs_detail {
+template <class FnPtr>
+struct extern_call_stub;
+
+template <class R, class... Args>
+struct extern_call_stub<R (*)(Args...)> {
+  [[noreturn]] R operator()(Args...) const {
+    throw std::runtime_error("External dependency call should be unreachable");
+  }
+};
+}  // namespace highs_detail
+
+#define HIGHS_EXTERN_CALL(fn_member, fn_direct) \
+  (::highs_detail::extern_call_stub<decltype(+fn_direct)>{})
 #endif
 
 /**

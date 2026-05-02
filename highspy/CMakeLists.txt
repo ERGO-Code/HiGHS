@@ -41,11 +41,6 @@ set_target_properties(_core PROPERTIES
 
 target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
 
-if (BUILD_SHARED_EXTRAS_LIB)
-  target_compile_definitions(_core PRIVATE HIGHS_SHARED_EXTRAS_LIBRARY)
-else()
-  target_link_libraries(_core PRIVATE highs_extras)
-endif()
 
 target_include_directories(_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../highs>

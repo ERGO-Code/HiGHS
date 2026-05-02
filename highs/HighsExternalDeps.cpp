@@ -11,8 +11,6 @@
 
 #include "HighsExternalDeps.h"
 
-#include "HConfig.h"
-
 // c++11 does not support inline static definition
 HighsExternalDeps::amd HighsExternalDeps::amd_;
 HighsExternalDeps::blas HighsExternalDeps::blas_;

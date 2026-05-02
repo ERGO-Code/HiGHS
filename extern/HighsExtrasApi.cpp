@@ -155,8 +155,8 @@ HIGHS_EXTRAS_API void highs_extras_openblas_set_num_threads(int num_threads) {
 }
 
 HIGHS_EXTRAS_API const char* highs_extras_blas_library() {
-#ifdef BLAS_LIBRARIES
-  return BLAS_LIBRARIES;
+#ifdef BLA_VENDOR_STR
+  return BLA_VENDOR_STR;
 #else
 #ifdef HIPO_USES_OPENBLAS
   return "OpenBLAS";

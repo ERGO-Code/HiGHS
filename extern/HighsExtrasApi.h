@@ -14,32 +14,22 @@
 #include "HConfig.h"
 
 // Export macro for shared library
-// Building vs importing vs static linking is determined by build macros:
+// Building / importing / static linking is determined by build macros:
 #if defined(_WIN32) || defined(_WIN64)
-#ifdef HIGHS_EXTRAS_LIBRARY_BUILD
-#define HIGHS_EXTRAS_API __declspec(dllexport)
+#define HIGHS_EXTRAS_EXPORT __declspec(dllexport)
+#define HIGHS_EXTRAS_IMPORT __declspec(dllimport)
+#else
+#define HIGHS_EXTRAS_EXPORT __attribute__((visibility("default")))
+#define HIGHS_EXTRAS_IMPORT __attribute__((visibility("default")))
+#endif
+
+#if defined(HIGHS_EXTRAS_LIBRARY_BUILD)
+#define HIGHS_EXTRAS_API HIGHS_EXTRAS_EXPORT
 #elif defined(HIGHS_SHARED_EXTRAS_LIBRARY)
-#define HIGHS_EXTRAS_API __declspec(dllimport)
+#define HIGHS_EXTRAS_API HIGHS_EXTRAS_IMPORT
 #else
 #define HIGHS_EXTRAS_API
 #endif
-#else
-#if defined(HIGHS_EXTRAS_LIBRARY_BUILD) || defined(HIGHS_SHARED_EXTRAS_LIBRARY)
-#define HIGHS_EXTRAS_API __attribute__((visibility("default")))
-#else
-#define HIGHS_EXTRAS_API
-#endif
-#endif
-
-// Helper macros for stringification
-#define HIGHS_EXTRAS_X_STRINGIFY(x) #x
-#define HIGHS_EXTRAS_X_TOSTRING(x) HIGHS_EXTRAS_X_STRINGIFY(x)
-
-// Version string
-#define HIGHS_EXTRAS_VERSION                                                    \
-  HIGHS_EXTRAS_X_TOSTRING(HIGHS_VERSION_MAJOR)                                  \
-  "." HIGHS_EXTRAS_X_TOSTRING(HIGHS_VERSION_MINOR) "." HIGHS_EXTRAS_X_TOSTRING( \
-      HIGHS_VERSION_PATCH)
 
 // C++ API with actual types (outside extern "C" block)
 // These use C++ references and HiGHS types directly
@@ -60,17 +50,16 @@
 extern "C" {
 
 /**
-* Get the version string of the HiGHS extras library, used to verify
-* compatibility with the main HiGHS library.
-*
-* @return Version string (e.g., "1.12.0")
-*/
+ * Get the version string of the HiGHS extras library, used to verify
+ * compatibility with the main HiGHS library.
+ *
+ * @return Version string (e.g., "1.12.0")
+ */
 HIGHS_EXTRAS_API const char* highs_extras_get_version(void);
 
 // If the external dependencies have a variety copyright statements, we can
 // return them all here, or the most restrictive one.
 HIGHS_EXTRAS_API const char* highs_extras_get_copyright(void);
-
 
 // metis
 HIGHS_EXTRAS_API int highs_extras_metis_set_default_options(idx_t* options);
@@ -79,7 +68,6 @@ HIGHS_EXTRAS_API int highs_extras_metis_nodend(idx_t* nvtxs, const idx_t* xadj,
                                                const idx_t* adjncy, idx_t* vwgt,
                                                idx_t* options, idx_t* perm,
                                                idx_t* iperm);
-
 
 // amd
 HIGHS_EXTRAS_API void highs_extras_amd_defaults(double Control[]);
@@ -170,35 +158,35 @@ struct core {
 };
 
 struct metis {
-    using set_default_options_t =
-            decltype(&highs_extras_metis_set_default_options);
-    using nodend_t = decltype(&highs_extras_metis_nodend);
+  using set_default_options_t =
+      decltype(&highs_extras_metis_set_default_options);
+  using nodend_t = decltype(&highs_extras_metis_nodend);
 };
 
 struct amd {
-    using defaults_t = decltype(&highs_extras_amd_defaults);
-    using order_t = decltype(&highs_extras_amd_order);
+  using defaults_t = decltype(&highs_extras_amd_defaults);
+  using order_t = decltype(&highs_extras_amd_order);
 };
 
 struct blas {
-    using daxpy_t = decltype(&highs_extras_daxpy);
-    using dcopy_t = decltype(&highs_extras_dcopy);
-    using dscal_t = decltype(&highs_extras_dscal);
-    using dswap_t = decltype(&highs_extras_dswap);
-    using dgemv_t = decltype(&highs_extras_dgemv);
-    using dtpsv_t = decltype(&highs_extras_dtpsv);
-    using dtrsv_t = decltype(&highs_extras_dtrsv);
-    using dger_t = decltype(&highs_extras_dger);
-    using dgemm_t = decltype(&highs_extras_dgemm);
-    using dsyrk_t = decltype(&highs_extras_dsyrk);
-    using dtrsm_t = decltype(&highs_extras_dtrsm);
-    using openblas_set_num_threads_t =
-            decltype(&highs_extras_openblas_set_num_threads);
-    using library_t = decltype(&highs_extras_blas_library);
+  using daxpy_t = decltype(&highs_extras_daxpy);
+  using dcopy_t = decltype(&highs_extras_dcopy);
+  using dscal_t = decltype(&highs_extras_dscal);
+  using dswap_t = decltype(&highs_extras_dswap);
+  using dgemv_t = decltype(&highs_extras_dgemv);
+  using dtpsv_t = decltype(&highs_extras_dtpsv);
+  using dtrsv_t = decltype(&highs_extras_dtrsv);
+  using dger_t = decltype(&highs_extras_dger);
+  using dgemm_t = decltype(&highs_extras_dgemm);
+  using dsyrk_t = decltype(&highs_extras_dsyrk);
+  using dtrsm_t = decltype(&highs_extras_dtrsm);
+  using openblas_set_num_threads_t =
+      decltype(&highs_extras_openblas_set_num_threads);
+  using library_t = decltype(&highs_extras_blas_library);
 };
 
 }  // namespace highs_extras_api
 
-#endif // __cplusplus
+#endif  // __cplusplus
 
 #endif  // HIGHS_EXTRAS_C_API_H_
