@@ -24,6 +24,7 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
   HIPO_CLOCK_CREATE;
 
   const Int nb = S_.blockSize();
+  const Int small_thresh = std::min(nb, 10);
 
   for (Int sn = 0; sn < S_.sn(); ++sn) {
     // leading size of supernode
@@ -44,47 +45,32 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
     // index to access snColumns[sn]
     Int64 SnCol_ind{};
 
-    // go through blocks of columns for this supernode
-    for (Int j = 0; j < n_blocks; ++j) {
-      // number of columns in the block
-      const Int jb = std::min(nb, sn_size - nb * j);
-
-      // number of entries in diagonal part
-      const Int diag_entries = jb * jb;
-
-      // index to access vector x
-      const Int x_start = sn_start + nb * j;
+    if (sn_size < small_thresh) {
+      // Fast solve
+      // If supernode is small, avoid making BLAS calls
+      const Int jb = sn_size;
+      const Int x_start = sn_start;
 
 #ifdef HIPO_PIVOTING
       HIPO_CLOCK_START(2);
       // apply swaps to portion of rhs that is affected
-      const Int* current_swaps = &swaps_[sn][nb * j];
+      const Int* current_swaps = swaps_[sn].data();
       permuteWithSwaps(&x[x_start], current_swaps, jb);
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
 #endif
 
-      HIPO_CLOCK_START(2);
-      callAndTime_dtrsv('U', 'T', 'U', jb, &sn_columns_[sn][SnCol_ind], jb,
-                        &x[x_start], 1, data_);
-
-      SnCol_ind += diag_entries;
-
-      // temporary space for gemv
-      const Int gemv_space = ldSn - nb * j - jb;
-      std::vector<double> y(gemv_space);
-      if (gemv_space > 0) {
-        callAndTime_dgemv('T', jb, gemv_space, 1.0, &sn_columns_[sn][SnCol_ind],
-                          jb, &x[x_start], 1, 0.0, y.data(), 1, data_);
-        SnCol_ind += jb * gemv_space;
-        HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
-
-        HIPO_CLOCK_START(2);
-        // scatter solution of gemv
-        for (Int i = 0; i < gemv_space; ++i) {
-          const Int row = S_.rows(start_row + nb * j + jb + i);
-          x[row] -= y[i];
+      for (Int row = 0; row < jb; ++row) {
+        for (Int col = 0; col < row; ++col) {
+          x[x_start + row] -=
+              sn_columns_[sn][col + jb * row] * x[x_start + col];
         }
-        HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
+      }
+
+      for (Int row = jb; row < ldSn; ++row) {
+        for (Int col = 0; col < jb; ++col) {
+          x[S_.rows(start_row + row)] -=
+              sn_columns_[sn][col + jb * row] * x[x_start + col];
+        }
       }
 
 #ifdef HIPO_PIVOTING
@@ -93,6 +79,60 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
       permuteWithSwaps(&x[x_start], current_swaps, jb, true);
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
 #endif
+
+    } else {
+      // go through blocks of columns for this supernode
+      for (Int j = 0; j < n_blocks; ++j) {
+        // number of columns in the block
+        const Int jb = std::min(nb, sn_size - nb * j);
+
+        // number of entries in diagonal part
+        const Int diag_entries = jb * jb;
+
+        // index to access vector x
+        const Int x_start = sn_start + nb * j;
+
+#ifdef HIPO_PIVOTING
+        HIPO_CLOCK_START(2);
+        // apply swaps to portion of rhs that is affected
+        const Int* current_swaps = &swaps_[sn][nb * j];
+        permuteWithSwaps(&x[x_start], current_swaps, jb);
+        HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
+#endif
+
+        HIPO_CLOCK_START(2);
+        callAndTime_dtrsv('U', 'T', 'U', jb, &sn_columns_[sn][SnCol_ind], jb,
+                          &x[x_start], 1, data_);
+
+        SnCol_ind += diag_entries;
+
+        // temporary space for gemv
+        const Int gemv_space = ldSn - nb * j - jb;
+        std::vector<double> y(gemv_space);
+        if (gemv_space > 0) {
+          callAndTime_dgemv('T', jb, gemv_space, 1.0,
+                            &sn_columns_[sn][SnCol_ind], jb, &x[x_start], 1,
+                            0.0, y.data(), 1, data_);
+
+          SnCol_ind += jb * gemv_space;
+          HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
+
+          HIPO_CLOCK_START(2);
+          // scatter solution of gemv
+          for (Int i = 0; i < gemv_space; ++i) {
+            const Int row = S_.rows(start_row + nb * j + jb + i);
+            x[row] -= y[i];
+          }
+          HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
+        }
+
+#ifdef HIPO_PIVOTING
+        HIPO_CLOCK_START(2);
+        // apply inverse swaps
+        permuteWithSwaps(&x[x_start], current_swaps, jb, true);
+        HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
+#endif
+      }
     }
   }
 }
