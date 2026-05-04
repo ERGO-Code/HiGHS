@@ -509,9 +509,6 @@ void HighsImplications::rebuild(HighsInt ncols,
   colsubstituted.resize(ncols);
   substitutions.clear();
   precedenceLbs.clear();
-  precedenceUbs.clear();
-  precedenceLbSource.clear();
-  precedenceUbSource.clear();
   vubs.clear();
   vubs.shrink_to_fit();
   vubs.resize(ncols);
@@ -915,44 +912,5 @@ void HighsImplications::applyImplications(HighsDomain& domain,
     for (HighsDomainChange& domchg : implications[loc].implics) {
       if (checkImplication(domchg)) break;
     }
-  }
-}
-
-void HighsImplications::applyPrecedenceGraph(
-    HighsDomain& domain, const HighsDomainChange& boundchg) const {
-  if (precedenceLbs.num_col_ == 0 || precedenceUbs.num_col_ == 0) return;
-  const HighsSparseMatrix& precedence =
-      boundchg.boundtype == HighsBoundType::kLower ? precedenceLbs
-                                                   : precedenceUbs;
-  const HighsInt start = precedence.start_[boundchg.column];
-  const HighsInt end = precedence.start_[boundchg.column + 1];
-
-  for (HighsInt i = start; i < end; ++i) {
-    const HighsInt col = precedence.index_[i];
-    const double shift = precedence.value_[i];
-    double range = 0.2 * domain.col_upper_[col] - domain.col_lower_[col] +
-                   domain.feastol();
-    if (boundchg.boundtype == HighsBoundType::kLower) {
-      const double newLb = domain.col_lower_[boundchg.column] - shift;
-      if (domain.col_lower_[col] < newLb - range) {
-        const HighsDomain::Reason reason =
-            precedenceLbSource[i].second ? HighsDomain::Reason::modelRowUpper(
-                                               precedenceLbSource[i].first)
-                                         : HighsDomain::Reason::modelRowLower(
-                                               precedenceLbSource[i].first);
-        domain.changeBound({newLb, col, HighsBoundType::kLower}, reason);
-      }
-    } else if (boundchg.boundtype == HighsBoundType::kUpper) {
-      const double newUb = domain.col_upper_[boundchg.column] + shift;
-      if (domain.col_upper_[col] > newUb + range) {
-        const HighsDomain::Reason reason =
-            precedenceUbSource[i].second ? HighsDomain::Reason::modelRowUpper(
-                                               precedenceUbSource[i].first)
-                                         : HighsDomain::Reason::modelRowLower(
-                                               precedenceUbSource[i].first);
-        domain.changeBound({newUb, col, HighsBoundType::kUpper}, reason);
-      }
-    }
-    if (domain.infeasible()) return;
   }
 }

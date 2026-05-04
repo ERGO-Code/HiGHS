@@ -1443,17 +1443,20 @@ HPresolve::Result HPresolve::dominatedColumns(
   return Result::kOk;
 }
 
-void HPresolve::createPrecedenceGraph(bool generateUb) const {
+void HPresolve::createPrecedenceGraph() const {
   HighsImplications& implications = mipsolver->mipdata_->implications;
   HighsSparseMatrix& precedenceLb = implications.getPrecedenceDirectedGraphLb();
 
-  std::vector<HighsInt> precedenceArcs;
-  precedenceArcs.reserve(mipsolver->numRow());
+  std::vector<HighsInt> precedenceModelArcs;
+  precedenceModelArcs.reserve(mipsolver->numRow());
   std::vector<HighsInt> numArcs(mipsolver->numCol(), 0);
 
-  // Want to store all rows of the form x <= y + c, c \in \R
+  // Want to store all rows of the form x <= y
   for (HighsInt row = 0; row != model->num_row_; ++row) {
-    if (rowDeleted[row] || rowsize[row] != 2 || isEquation(row)) continue;
+    if (rowDeleted[row] || rowsize[row] != 2 || isEquation(row) ||
+        (model->row_upper_[row] != 0 && model->row_lower_[row] != 0)) {
+      continue;
+    }
     HighsInt x = -1;
     double xCoef = 0;
     HighsInt y = -1;
@@ -1475,25 +1478,26 @@ void HPresolve::createPrecedenceGraph(bool generateUb) const {
             options->small_matrix_value ||
         std::fabs(std::fabs(yCoef) - std::fabs(xCoef)) >
             options->small_matrix_value ||
-        xCoef * yCoef >= 0)
+        xCoef * yCoef >= 0) {
       continue;
-    if (model->row_upper_[row] != kHighsInf ||
-        model->row_lower_[row] != -kHighsInf) {
-      precedenceArcs.emplace_back(row);
     }
-    if (model->row_upper_[row] != kHighsInf) {
+    precedenceModelArcs.emplace_back(row);
+    if (model->row_upper_[row] == 0) {
       numArcs[x]++;
     }
-    if (model->row_lower_[row] != -kHighsInf) {
+    if (model->row_lower_[row] == 0) {
       numArcs[y]++;
     }
   }
 
-  if (precedenceArcs.empty()) {
+  // Want to store all cliques of the form x <= y
+  std::vector<HighsInt> precedenceCliqueArcs;
+  precedenceCliqueArcs.reserve(mipsolver->mipdata_->cliquetable.numCliques());
+  mipsolver->mipdata_->cliquetable.findPrecedenceCliques(precedenceCliqueArcs,
+                                                         numArcs);
+
+  if (precedenceModelArcs.empty() && precedenceCliqueArcs.empty()) {
     precedenceLb.clear();
-    implications.getPrecedenceDirectedGraphUb().clear();
-    implications.getPrecedenceLbSource().clear();
-    implications.getPrecedenceUbSource().clear();
     return;
   }
 
@@ -1509,80 +1513,38 @@ void HPresolve::createPrecedenceGraph(bool generateUb) const {
     start[col + 1] = start[col] + numArcs[col];
   }
   index.resize(start.back());
-  value.resize(start.back());
-  std::vector<std::pair<HighsInt, bool>>& precedenceLbReason =
-      implications.getPrecedenceLbSource();
-  precedenceLbReason.resize(start.back());
+  value.resize(start.back(), 0);
   std::vector<HighsInt> pos = start;
-  for (const HighsInt row : precedenceArcs) {
+  for (const HighsInt row : precedenceModelArcs) {
     HighsInt x = -1;
     HighsInt y = -1;
-    double scale = 0;
     for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
       // get column index and coefficient
       const HighsInt col = nonzero.index();
       const double val = nonzero.value();
       if (val > 0) {
         x = col;
-        scale = val;
       } else if (val < 0) {
         y = col;
       }
     }
-    if (model->row_upper_[row] != kHighsInf) {
+    if (model->row_upper_[row] == 0) {
       const HighsInt p = pos[x]++;
       index[p] = y;
-      value[p] = model->row_upper_[row] / scale;
-      precedenceLbReason[p] = {row, true};
     }
-    if (model->row_lower_[row] != -kHighsInf) {
+    if (model->row_lower_[row] == 0) {
       const HighsInt p = pos[y]++;
       index[p] = x;
-      value[p] = -model->row_lower_[row] / scale;
-      precedenceLbReason[p] = {row, false};
     }
   }
 
-  if (generateUb) {
-    HighsSparseMatrix& precedenceUb =
-        implications.getPrecedenceDirectedGraphUb();
-    precedenceUb.num_col_ = mipsolver->numCol();
-    precedenceUb.num_row_ = mipsolver->numCol();
-    precedenceUb.p_end_.clear();
-    std::vector<std::pair<HighsInt, bool>>& precedenceUbReason =
-        implications.getPrecedenceUbSource();
-    precedenceUbReason.resize(start.back());
+  mipsolver->mipdata_->cliquetable.extractPrecedenceCliques(
+      precedenceCliqueArcs, start, index, value, pos);
 
-    vector<HighsInt>& u_start = precedenceUb.start_;
-    vector<HighsInt>& u_index = precedenceUb.index_;
-    vector<double>& u_value = precedenceUb.value_;
-
-    std::vector<HighsInt> u_end;
-    u_start.resize(mipsolver->numCol() + 1);
-    u_end.assign(mipsolver->numCol(), 0);
-    for (HighsInt col = 0; col < mipsolver->numCol(); col++) {
-      for (HighsInt i = start[col]; i < start[col + 1]; i++) {
-        const HighsInt col2 = index[i];
-        u_end[col2]++;
-      }
-    }
-    u_start[0] = 0;
-    for (HighsInt col = 0; col < mipsolver->numCol(); col++) {
-      u_start[col + 1] = u_start[col] + u_end[col];
-      u_end[col] = u_start[col];
-    }
-    u_index.resize(start.back());
-    u_value.resize(start.back());
-    for (HighsInt col = 0; col < mipsolver->numCol(); col++) {
-      for (HighsInt i = start[col]; i < start[col + 1]; i++) {
-        const HighsInt col2 = index[i];
-        HighsInt j = u_end[col2]++;
-        u_index[j] = col;
-        u_value[j] = value[i];
-        precedenceUbReason[j] = precedenceLbReason[i];
-      }
-    }
-  }
+  // if (generateUb) {
+  //   HighsSparseMatrix& precedenceUb =
+  //    implications.getPrecedenceDirectedGraphUb().createRowWise(precedenceLb);
+  // }
 }
 
 void HPresolve::strongConnect(
@@ -1650,6 +1612,7 @@ void HPresolve::tarjan(const std::vector<HighsInt>& start,
 
 HPresolve::Result HPresolve::findPrecedenceCycles(
     HighsPostsolveStack& postsolve_stack) {
+  createPrecedenceGraph();
   HighsImplications& implications = mipsolver->mipdata_->implications;
   HighsSparseMatrix& precedenceLb = implications.getPrecedenceDirectedGraphLb();
 
@@ -1711,9 +1674,6 @@ HPresolve::Result HPresolve::prepareProbing(
 
   // prepare for domain propagation
   mipsolver->mipdata_->setupDomainPropagation();
-
-  // Extract precedence constraints to be used for faster propagation
-  createPrecedenceGraph(true);
 
   // first call?
   firstCall = !mipsolver->mipdata_->cliquesExtracted;
@@ -6187,7 +6147,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       if (mipsolver != nullptr &&
           analysis_.allow_rule_[kPresolveRulePrecedenceCycles]) {
         storeCurrentProblemSize();
-        createPrecedenceGraph(false);
         HPRESOLVE_CHECKED_CALL(findPrecedenceCycles(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
       }
@@ -6591,7 +6550,6 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
     mipsolver->mipdata_->domain.addConflictPool(
         mipsolver->mipdata_->conflictPool);
-    createPrecedenceGraph(true);
 
     if (mipsolver->mipdata_->numRestarts != 0) {
       std::vector<HighsInt> cutinds;

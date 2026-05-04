@@ -2234,3 +2234,50 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
   newCliqueTable.substitutions = init.substitutions;
   *this = std::move(newCliqueTable);
 }
+
+void HighsCliqueTable::findPrecedenceCliques(
+    std::vector<HighsInt>& precedenceCliqueArcs,
+    std::vector<HighsInt>& numArcs) const {
+  // Find x <= y cliques
+  for (HighsInt i = 0; i != static_cast<HighsInt>(cliques.size()); ++i) {
+    const Clique& clique = cliques[i];
+
+    // Sip cliques that are deleted, not size two, or equalities
+    if (clique.start == -1 || clique.end - clique.start != 2 ||
+        clique.equality) {
+      continue;
+    }
+
+    const CliqueVar v1 = cliqueentries[clique.start];
+    const CliqueVar v2 = cliqueentries[clique.start + 1];
+
+    // Skip cliques that have at least one column not in the problem, and can
+    // not be made into the form x <= y
+    if (colDeleted[v1.col] || colDeleted[v2.col] || colsubstituted[v1.col] ||
+        colsubstituted[v2.col] || v1.col == v2.col || v1.val + v2.val != 1) {
+      continue;
+    }
+    precedenceCliqueArcs.emplace_back(i);
+    if (v1.val == 1) {
+      numArcs[v1.col]++;
+    } else {
+      numArcs[v2.col]++;
+    }
+  }
+}
+
+void HighsCliqueTable::extractPrecedenceCliques(
+    std::vector<HighsInt>& precedenceCliqueArcs, std::vector<HighsInt>& start,
+    std::vector<HighsInt>& index, std::vector<double>& value,
+    std::vector<HighsInt> pos) const {
+  for (const HighsInt i : precedenceCliqueArcs) {
+    const Clique& clique = cliques[i];
+    const CliqueVar v1 = cliqueentries[clique.start];
+    const CliqueVar v2 = cliqueentries[clique.start + 1];
+    const HighsInt x = v1.val == 1 ? v1.col : v2.col;
+    const HighsInt y = v1.val == 1 ? v2.col : v1.col;
+    const HighsInt p = pos[x]++;
+    index[p] = y;
+    value[p] = 0;
+  }
+}

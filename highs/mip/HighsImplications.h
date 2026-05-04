@@ -53,9 +53,6 @@ class HighsImplications {
   std::vector<HighsHashTree<HighsInt, VarBound>> vubs;
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
   HighsSparseMatrix precedenceLbs;
-  HighsSparseMatrix precedenceUbs;
-  std::vector<std::pair<HighsInt, bool>> precedenceLbSource;
-  std::vector<std::pair<HighsInt, bool>> precedenceUbSource;
 
  public:
   const HighsMipSolver& mipsolver;
@@ -93,9 +90,6 @@ class HighsImplications {
     vlbs.shrink_to_fit();
     vlbs.resize(numcol);
     precedenceLbs.clear();
-    precedenceUbs.clear();
-    precedenceLbSource.clear();
-    precedenceUbSource.clear();
     numVarBounds = 0;
     maxVarBounds = calcMaxVarBounds(numcol);
 
@@ -198,20 +192,7 @@ class HighsImplications {
 
   void applyImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 
-  void applyPrecedenceGraph(HighsDomain& domain,
-                            const HighsDomainChange& boundchg) const;
-
   HighsSparseMatrix& getPrecedenceDirectedGraphLb() { return precedenceLbs; }
-
-  HighsSparseMatrix& getPrecedenceDirectedGraphUb() { return precedenceUbs; }
-
-  std::vector<std::pair<HighsInt, bool>>& getPrecedenceLbSource() {
-    return precedenceLbSource;
-  }
-
-  std::vector<std::pair<HighsInt, bool>>& getPrecedenceUbSource() {
-    return precedenceUbSource;
-  }
 };
 
 #endif

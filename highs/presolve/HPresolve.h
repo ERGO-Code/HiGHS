@@ -374,7 +374,7 @@ class HPresolve {
 
   void addToMatrix(const HighsInt row, const HighsInt col, const double val);
 
-  void createPrecedenceGraph(bool generateUb) const;
+  void createPrecedenceGraph() const;
 
   void strongConnect(const std::vector<HighsInt>& start,
                      const std::vector<HighsInt>& index,
