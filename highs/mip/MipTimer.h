@@ -491,7 +491,7 @@ class MipTimer {
   void reportMipSeparationClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockImplboundSepa, kMipClockCliqueSepa, kMipClockTableauSepa,
-        kMipClockPathAggrSepa, kMipClockModKSepa, kMipClockMachineSchedSepa};
+        kMipClockPathAggrSepa,  kMipClockModKSepa,   kMipClockMachineSchedSepa};
     reportMipClockList("MipSeparation", mip_clock_list, mip_timer_clock,
                        kMipClockTotal);  //, tolerance_percent_report);
   };
