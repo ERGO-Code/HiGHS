@@ -1494,7 +1494,7 @@ void HPresolve::createPrecedenceGraph() const {
   std::vector<HighsInt> precedenceCliqueArcs;
   precedenceCliqueArcs.reserve(mipsolver->mipdata_->cliquetable.numCliques());
   mipsolver->mipdata_->cliquetable.findPrecedenceCliques(precedenceCliqueArcs,
-                                                         numArcs);
+                                                         numArcs, colDeleted);
 
   if (precedenceModelArcs.empty() && precedenceCliqueArcs.empty()) {
     precedenceLb.clear();
@@ -1632,9 +1632,22 @@ HPresolve::Result HPresolve::findPrecedenceCycles(
     const HighsInt stayCol = stronglyConnectedComponents[substCol];
     if (stayCol == -1 || stayCol == substCol) continue;
 
+    // possibly tighten bounds of the column that stays
+    bool lowerTightened = model->col_lower_[substCol] >
+                          model->col_lower_[stayCol] + primal_feastol;
+    if (lowerTightened)
+      HPRESOLVE_CHECKED_CALL(
+          changeColLower(stayCol, model->col_lower_[substCol]));
+
+    bool upperTightened = model->col_upper_[substCol] <
+                          model->col_upper_[stayCol] - primal_feastol;
+    if (upperTightened)
+      HPRESOLVE_CHECKED_CALL(
+          changeColUpper(stayCol, model->col_upper_[substCol]));
+
     postsolve_stack.doubletonEquation(
         -1, substCol, stayCol, 1.0, -1, 0, model->col_lower_[substCol],
-        model->col_upper_[substCol], 0.0, false, false,
+        model->col_upper_[substCol], 0.0, lowerTightened, upperTightened,
         HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
 
     markColDeleted(substCol);

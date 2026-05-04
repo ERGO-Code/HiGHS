@@ -317,8 +317,10 @@ class HighsCliqueTable {
 
   void buildFrom(const HighsLp* origModel, const HighsCliqueTable& init);
 
-  void findPrecedenceCliques(std::vector<HighsInt>& precedenceCliqueArcs,
-                             std::vector<HighsInt>& numArcs) const;
+  void findPrecedenceCliques(
+      std::vector<HighsInt>& precedenceCliqueArcs,
+      std::vector<HighsInt>& numArcs,
+      const std::vector<uint8_t>& colPresolveDeleted) const;
 
   void extractPrecedenceCliques(std::vector<HighsInt>& precedenceCliqueArcs,
                                 std::vector<HighsInt>& start,

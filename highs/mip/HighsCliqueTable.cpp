@@ -2237,7 +2237,8 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
 
 void HighsCliqueTable::findPrecedenceCliques(
     std::vector<HighsInt>& precedenceCliqueArcs,
-    std::vector<HighsInt>& numArcs) const {
+    std::vector<HighsInt>& numArcs,
+    const std::vector<uint8_t>& colPresolveDeleted) const {
   // Find x <= y cliques
   for (HighsInt i = 0; i != static_cast<HighsInt>(cliques.size()); ++i) {
     const Clique& clique = cliques[i];
@@ -2254,7 +2255,8 @@ void HighsCliqueTable::findPrecedenceCliques(
     // Skip cliques that have at least one column not in the problem, and can
     // not be made into the form x <= y
     if (colDeleted[v1.col] || colDeleted[v2.col] || colsubstituted[v1.col] ||
-        colsubstituted[v2.col] || v1.col == v2.col || v1.val + v2.val != 1) {
+        colsubstituted[v2.col] || v1.col == v2.col || v1.val + v2.val != 1 ||
+        colPresolveDeleted[v1.col] || colPresolveDeleted[v2.col]) {
       continue;
     }
     precedenceCliqueArcs.emplace_back(i);
