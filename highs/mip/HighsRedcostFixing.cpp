@@ -245,7 +245,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         HighsInt range = direction * (lastBound - bound);
         if (range > maxNumSteps)
           step = (range + maxNumSteps - 1) >> maxNumStepsExp;
-        double shift = direction * (step - 10 * mipsolver.mipdata_->feastol);
+        double shift = direction * (1 - 10 * mipsolver.mipdata_->feastol);
         step *= direction;
 
         for (HighsInt lurkingBound = bound;
