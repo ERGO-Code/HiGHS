@@ -115,4 +115,9 @@ jobs:
       - shell: julia --color=yes {0}
         run: |
           using Pkg
-          Pkg.test("HiGHS")
+          # HiGHS uses (N+1)/2 threads. HiGHS.jl parallelises the tests and, in
+          # the default setting, it may use up to 4 parallel jobs. This means
+          # HiGHS may attempt to start up to 2(N+1) threads and we get unhandled
+          # exceptions on macOS and a SIGTERM on linux. To work around this
+          # issue, limit the number of parallel tests in HiGHS.jl to 1.
+          Pkg.test("HiGHS"; test_args=["--jobs=1"])
