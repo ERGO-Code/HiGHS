@@ -12,13 +12,13 @@ version = "1.14.0.dev1"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
+license = "MIT"
 
 requires-python = ">=3.8"
 dependencies = ["numpy", "typing_extensions; python_version < '3.10'"]
 
 classifiers = [
   # "Development Status :: 4 - Beta",
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
