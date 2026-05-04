@@ -4466,12 +4466,13 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     // check if variable is implied integer
     HPRESOLVE_CHECKED_CALL(static_cast<Result>(convertImpliedInteger(col)));
 
-    // shift integral variables to have a lower bound of zero
+    // shift "binary" variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
         model->col_lower_[col] != 0.0 &&
         (model->col_lower_[col] != -kHighsInf ||
          model->col_upper_[col] != kHighsInf) &&
-        model->col_upper_[col] - model->col_lower_[col] > 0.5) {
+        model->col_upper_[col] - model->col_lower_[col] > 0.5 &&
+        model->col_upper_[col] - model->col_lower_[col] < 1.5) {
       // substitute with the bound that is smaller in magnitude and only
       // substitute if bound is not large for an integer
       if (std::abs(model->col_upper_[col]) > std::abs(model->col_lower_[col])) {

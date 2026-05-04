@@ -95,6 +95,7 @@ enum iClockMip {
   kMipClockTableauSepa,
   kMipClockPathAggrSepa,
   kMipClockModKSepa,
+  kMipClockMachineSchedSepa,
 
   // LP solves
   kMipClockDuSimplexBasisSolveLp,
@@ -233,6 +234,8 @@ class MipTimer {
         timer_pointer->clock_def(kPathAggrSepaString.c_str());
     clock[kMipClockModKSepa] =
         timer_pointer->clock_def(kModKSepaString.c_str());
+    clock[kMipClockMachineSchedSepa] =
+        timer_pointer->clock_def(kMachineSchedSepaString.c_str());
 
     // Presolve - Should correspond to kMipClockRunPresolve
     clock[kMipClockProbingPresolve] =
@@ -488,7 +491,7 @@ class MipTimer {
   void reportMipSeparationClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockImplboundSepa, kMipClockCliqueSepa, kMipClockTableauSepa,
-        kMipClockPathAggrSepa, kMipClockModKSepa};
+        kMipClockPathAggrSepa,  kMipClockModKSepa,   kMipClockMachineSchedSepa};
     reportMipClockList("MipSeparation", mip_clock_list, mip_timer_clock,
                        kMipClockTotal);  //, tolerance_percent_report);
   };
