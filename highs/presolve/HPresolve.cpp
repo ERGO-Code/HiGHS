@@ -1469,11 +1469,15 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
 
   if (infeasible) return Result::kPrimalInfeasible;
 
+  std::vector<bool> fixValsAtLower(model->num_col_);
+
   for (HighsInt i = 0; i != numNodes; ++i) {
     if (infeasibleNodes[i]) {
       const HighsInt col = i / 2;
+      // TODO: Are these the correct way around????
       if (i % 2 == 0) {
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+        fixValsAtLower[col] = true;
       } else {
         HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
       }
@@ -1494,32 +1498,24 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
     // This decides whether to substitute x = y, or x = 1 - y
     const bool sameVals = substLower == stayLower;
 
-    // Possibly tighten bounds of the column that stays
-    // (may have fixed one of the columns in the infeasible check)
-    const bool lowerTightened = (sameVals ? model->col_lower_[substCol]
-                                          : 1 - model->col_upper_[substCol]) >
-                                model->col_lower_[stayCol] + primal_feastol;
-    if (lowerTightened)
-      HPRESOLVE_CHECKED_CALL(
-          changeColLower(stayCol, sameVals ? model->col_lower_[substCol]
-                                           : 1 - model->col_upper_[substCol]));
-
-    const bool upperTightened = (sameVals ? model->col_upper_[substCol]
-                                          : 1 - model->col_lower_[substCol]) <
-                                model->col_upper_[stayCol] - primal_feastol;
-    if (upperTightened)
-      HPRESOLVE_CHECKED_CALL(
-          changeColUpper(stayCol, sameVals ? model->col_upper_[substCol]
-                                           : 1 - model->col_lower_[substCol]));
+    // If stayCol is deleted, then it must have been fixed above.
+    if (colDeleted[stayCol]) {
+      // TODO: Check if these are the wrong way around
+      if ((fixValsAtLower[stayCol] && sameVals) ||
+          (!fixValsAtLower[stayCol] && !sameVals)) {
+        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, substCol));
+      } else {
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, substCol));
+      }
+      continue;
+    }
 
     postsolve_stack.doubletonEquation(
-        -1, substCol, stayCol, 1.0, substLower == stayLower ? -1 : 1,
-        substLower == stayLower ? 0 : 1, model->col_lower_[substCol],
-        model->col_upper_[substCol], 0.0, lowerTightened, upperTightened,
-        HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
+        -1, substCol, stayCol, 1.0, sameVals ? -1 : 1, sameVals ? 0 : 1,
+        model->col_lower_[substCol], model->col_upper_[substCol], 0.0, false,
+        false, HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
     markColDeleted(substCol);
-    substitute(substCol, stayCol, substLower == stayLower ? 0.0 : 1.0,
-               substLower == stayLower ? 1.0 : -1.0);
+    substitute(substCol, stayCol, sameVals ? 0.0 : 1.0, sameVals ? 1.0 : -1.0);
 
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
