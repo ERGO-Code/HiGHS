@@ -2369,6 +2369,7 @@ void HighsCliqueTable::strongConnect(
       stackNextClique[currStackPos] = j + 1;
       stackNextCliqueVar[currStackPos] = 0;
     }
+    const HighsInt parentPos = predStack[currStackPos];
     if (found) {
       const HighsInt negatedNewNode = negatedNode(newNode);
       HighsInt infeasibleNode = -1;
@@ -2418,9 +2419,9 @@ void HighsCliqueTable::strongConnect(
     }
 
     if (!stack.empty()) {
-      newNode = stack[predStack[currStackPos]];
+      newNode = stack[parentPos];
       lowLink[newNode] = std::min(lowLink[currNode], lowLink[newNode]);
-      currStackPos = predStack[currStackPos];
+      currStackPos = parentPos;
     }
   }
   startPos = label;
