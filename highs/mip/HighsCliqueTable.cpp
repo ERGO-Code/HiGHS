@@ -2408,6 +2408,9 @@ void HighsCliqueTable::strongConnect(
       while (true) {
         newNode = stack.back();
         stack.pop_back();
+        stackNextClique.pop_back();
+        stackNextCliqueVar.pop_back();
+        predStack.pop_back();
         onStack[newNode] = false;
         stronglyConnectedComponents[newNode] = currNode;
         if (newNode == currNode) break;
