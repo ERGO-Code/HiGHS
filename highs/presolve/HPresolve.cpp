@@ -1446,17 +1446,30 @@ HPresolve::Result HPresolve::dominatedColumns(
 HPresolve::Result HPresolve::stronglyConnectedComponents(
     HighsPostsolveStack& postsolve_stack) {
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
-  if (cliquetable.numCliques() <= 0) return Result::kOk;
 
-  HighsInt num_nodes = 2 * model->num_col_;
-  std::vector<HighsInt> stronglyConnectedComponents(num_nodes);
-  std::vector<bool> infeasibleNodes(num_nodes);
+  if (!mipsolver->mipdata_->cliquesExtracted) {
+    bool firstCall = false;
+    HPRESOLVE_CHECKED_CALL(prepareProbing(postsolve_stack, firstCall));
+    HighsInt numVarsFixed = 0;
+    HighsInt numBndsTightened = 0;
+    HighsInt numVarsSubstituted = 0;
+    HighsInt liftedNonzeros = 0;
+    HPRESOLVE_CHECKED_CALL(finaliseProbing(postsolve_stack, firstCall,
+                                           numVarsFixed, numBndsTightened,
+                                           numVarsSubstituted, liftedNonzeros));
+  }
+
+  if (cliquetable.numCliques() <= 1) return Result::kOk;
+
+  HighsInt numNodes = 2 * model->num_col_;
+  std::vector<HighsInt> stronglyConnectedComponents(numNodes);
+  std::vector<bool> infeasibleNodes(numNodes);
   bool infeasible = false;
   cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, infeasible);
 
   if (infeasible) return Result::kPrimalInfeasible;
 
-  for (HighsInt i = 0; i != num_nodes; ++i) {
+  for (HighsInt i = 0; i != numNodes; ++i) {
     if (infeasibleNodes[i]) {
       const HighsInt col = i / 2;
       if (i % 2 == 0) {
@@ -1468,7 +1481,7 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
   }
 
   // Apply substitutions for all strongly connected components
-  for (HighsInt substNode = 0; substNode != num_nodes; ++substNode) {
+  for (HighsInt substNode = 0; substNode != numNodes; ++substNode) {
     const HighsInt substCol = substNode / 2;
     if (colDeleted[substCol]) continue;
     const HighsInt stayNode = stronglyConnectedComponents[substNode];
@@ -5957,6 +5970,14 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HPRESOLVE_CHECKED_CALL(dominatedColumns(postsolve_stack));
         if (problemSizeReduction() > 0.0)
           HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
+        if (problemSizeReduction() > 0.05) continue;
+      }
+
+      // extract strongly connected components from the clique table
+      if (mipsolver != nullptr &&
+          analysis_.allow_rule_[kPresolveRuleStronglyConnectedComponents]) {
+        storeCurrentProblemSize();
+        HPRESOLVE_CHECKED_CALL(stronglyConnectedComponents(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
       }
 

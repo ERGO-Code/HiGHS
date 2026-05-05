@@ -278,6 +278,7 @@ enum PresolveRuleType : int {
   kPresolveRuleParallelRowsAndCols,
   kPresolveRuleSparsify,
   kPresolveRuleProbing,
+  kPresolveRuleStronglyConnectedComponents,
   kPresolveRuleEnumeration,
   kPresolveRuleMax = kPresolveRuleEnumeration,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
