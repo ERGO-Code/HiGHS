@@ -2238,7 +2238,7 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
 void HighsCliqueTable::strongConnect(
     HighsInt startNode, HighsInt& startPos, std::vector<bool>& onStack,
     std::vector<HighsInt>& index, std::vector<HighsInt>& lowLink,
-    std::vector<bool>& infeasibleCols, std::vector<HighsInt>& stack,
+    std::vector<bool>& infeasibleNodes, std::vector<HighsInt>& stack,
     std::vector<HighsInt>& predStack, std::vector<HighsInt>& stackNextClique,
     std::vector<HighsInt>& stackNextCliqueVar,
     const std::vector<HighsInt>& cliqueStart,
@@ -2302,14 +2302,14 @@ void HighsCliqueTable::strongConnect(
                                               : -cliqueFirstEntry[cliqueId]) -
               1;
           assert(firstEntry != currNode);
-          if (onStack[firstEntry] && !infeasibleCols[firstEntry]) {
+          if (onStack[firstEntry] && !infeasibleNodes[firstEntry]) {
             // The node we entered the clique on is still in the stack, so
             // there is a way from that node to the current node.
             // Since both assignments together violate the clique,
             // and the second is implied by the first, the first is infeasible
             infeasibleNode = firstEntry;
           } else if (index[firstEntry] >= startPos &&
-                     !infeasibleCols[startNode]) {
+                     !infeasibleNodes[startNode]) {
             // The first entry point of the clique was implied by startNode,
             // so startNode implies two other variables in the clique,
             // which cannot be feasible
@@ -2317,12 +2317,12 @@ void HighsCliqueTable::strongConnect(
           }
           if (infeasibleNode >= 0) {
             // Identified an infeasible node
-            if (infeasibleCols[otherSide(infeasibleNode)]) {
+            if (infeasibleNodes[otherSide(infeasibleNode)]) {
               // If both sides are infeasible then the whole problem is
               infeasible = true;
               return;
             }
-            infeasibleCols[infeasibleNode] = true;
+            infeasibleNodes[infeasibleNode] = true;
             if (cliqueCurrExit[cliqueId] > 0 &&
                 currNode != otherSide(cliqueCurrExit[cliqueId] - 1) &&
                 onStack[cliqueCurrExit[cliqueId] - 1] &&
@@ -2379,23 +2379,23 @@ void HighsCliqueTable::strongConnect(
       HighsInt infeasibleNode = -1;
       assert(newNode >= 0);
       assert(!onStack[newNode]);
-      if (onStack[negatedNewNode] && !infeasibleCols[negatedNewNode]) {
+      if (onStack[negatedNewNode] && !infeasibleNodes[negatedNewNode]) {
         // The negated node is on the stack -> negated assignment is infeasible
         // as it implied its non-negated assignment
         infeasibleNode = negatedNewNode;
       } else if (index[negatedNewNode] >= startPos &&
-                 !infeasibleCols[startNode]) {
+                 !infeasibleNodes[startNode]) {
         // The negated node was also reached from the same start node ->
         // startNode is infeasible
         infeasibleNode = startNode;
       }
       if (infeasibleNode >= 0) {
-        if (infeasibleCols[otherSide(infeasibleNode)]) {
+        if (infeasibleNodes[otherSide(infeasibleNode)]) {
           // Both assignments for a column are infeasible.
           infeasible = true;
           return;
         }
-        infeasibleCols[infeasibleNode] = true;
+        infeasibleNodes[infeasibleNode] = true;
       }
       // Put the adjacent node on the stack
       stack[stackSize] = newNode;
@@ -2439,7 +2439,7 @@ void HighsCliqueTable::strongConnect(
 
 void HighsCliqueTable::tarjan(
     std::vector<HighsInt>& stronglyConnectedComponents,
-    std::vector<bool>& infeasibleCols, bool& infeasible) {
+    std::vector<bool>& infeasibleNodes, bool& infeasible) {
   // Run an iterative version of tarjan's algorithm to detect strongly connected
   // components (directed cycles) in the clique table.
   // Each column x is represented by two nodes lb(x) = 2x and ub(x) = 2x + 1
@@ -2502,10 +2502,10 @@ void HighsCliqueTable::tarjan(
 
   for (HighsInt i = 0; i != n; ++i) {
     if (index[i] == -1) {
-      strongConnect(i, startPos, onStack, index, lowLink, infeasibleCols, stack,
-                    predStack, stackNextClique, stackNextCliqueVar, cliqueStart,
-                    cliqueIndex, n, cliqueFirstEntry, cliqueCurrExit,
-                    stronglyConnectedComponents, infeasible);
+      strongConnect(i, startPos, onStack, index, lowLink, infeasibleNodes,
+                    stack, predStack, stackNextClique, stackNextCliqueVar,
+                    cliqueStart, cliqueIndex, n, cliqueFirstEntry,
+                    cliqueCurrExit, stronglyConnectedComponents, infeasible);
     }
     if (infeasible) break;
   }
