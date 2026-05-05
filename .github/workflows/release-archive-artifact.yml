@@ -22,16 +22,6 @@ jobs:
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/archive_unzipped
 
-      - name: working dir
-        run: |
-          pwd
-          echo ${{runner.workspace}}
-          echo ""
-          ls ${{runner.workspace}}/HiGHS
-
-        # ls
-        # echo $GITHUB_WORKSPACE
-
       - name:  Generate archive artifact
         run: |
           pwd

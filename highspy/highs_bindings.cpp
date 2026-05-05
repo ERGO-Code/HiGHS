@@ -8,9 +8,19 @@
 
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
+#include "HighsExternalDeps.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
+
+namespace {
+std::string get_parent_directory(const std::string& path) {
+  const std::string::size_type pos = path.find_last_of("/\\");
+  if (pos == std::string::npos) return "";
+  if (pos == 0) return path.substr(0, 1);
+  return path.substr(0, pos);
+}
+}
 
 // arrays are assumed to be contiguous c-style arrays of correct type
 // * c_style forces the array to be stored in C-style contiguous order
@@ -38,7 +48,7 @@ std::function<void(Base&, dense_array_t<T>)> make_setter_ptr(
     if (buf.ndim != 1) {
       throw std::runtime_error("Expected a 1D array");
     }
-    
+
     (self.*member) = std::move(std::vector<T>(static_cast<T*>(buf.ptr),
                                    static_cast<T*>(buf.ptr) + buf.shape[0]));
   };
@@ -969,7 +979,26 @@ HighsStatus highs_setcbSparseSolution(HighsCallbackInput* cb,
     return HighsStatus::kError;
 }
 
+std::string highs_locatePythonPackage(const std::string module_name) {
+  py::gil_scoped_acquire gil;
+
+  py::object find_spec =
+      py::module_::import("importlib.util").attr("find_spec")(module_name);
+
+  if (find_spec.is_none()) {
+    return "";
+  }
+
+  const std::string origin = py::str(find_spec.attr("origin"));
+  return get_parent_directory(origin);
+}
+
 PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
+  HighsExternalDeps::tryLoad(highs_locatePythonPackage("highspy_extras"));
+
+  // static function to get the load status of the extras library
+  m.def("getExtrasLoadStatus", &HighsExternalDeps::getLoadStatus);
+
   // To keep a smaller diff, for reviewers, the declarations are not moved, but
   // keep in mind:
   // C++ enum classes :: don't need .export_values()
@@ -1749,7 +1778,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kDevex", EdgeWeightMode::kDevex)
       .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
       .value("kCount", EdgeWeightMode::kCount);
-  
+
   py::module_ callbacks = m.def_submodule("cb", "Callback interface submodule");
   // Types for interface
   py::enum_<HighsCallbackType>(callbacks, "HighsCallbackType",

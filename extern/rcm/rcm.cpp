@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "ipm/hipo/auxiliary/OrderingPrint.h"
+#include "OrderingPrint.h"
 
 // offset from C to Fortran numbering
 const HighsInt offset = 1;

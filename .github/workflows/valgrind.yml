@@ -20,21 +20,21 @@ jobs:
         run: sudo apt-get update && sudo apt-get install valgrind
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DALL_TESTS=ON
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cmake --build . --parallel 
 
       - name: Test
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           valgrind \
@@ -46,7 +46,7 @@ jobs:
           2>&1 | tee logfile
 
       - name: Check log for Errors
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cat logfile
@@ -69,21 +69,21 @@ jobs:
         run: sudo apt-get update && sudo apt-get install valgrind
       
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake All
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DALL_TESTS=ON
 
       - name: Build All
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cmake --build . --parallel 
 
       - name: Test
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           valgrind \
@@ -97,7 +97,7 @@ jobs:
           2>&1 | tee logfile2
 
       - name: Check log for Errors
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cat logfile2
@@ -120,21 +120,21 @@ jobs:
         run: sudo apt-get update && sudo apt-get install valgrind
       
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake All
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug 
 
       - name: Build All
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cmake --build . --parallel 
 
       - name: Test cpp example
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           valgrind \
@@ -148,7 +148,7 @@ jobs:
           2>&1 | tee logfile2
 
       - name: Check log for Errors
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cat logfile2
@@ -159,7 +159,7 @@ jobs:
           exit 1
       
       - name: Test C example
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           valgrind \
@@ -173,7 +173,7 @@ jobs:
           2>&1 | tee logfile2
 
       - name: Check log for Errors
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cat logfile2
