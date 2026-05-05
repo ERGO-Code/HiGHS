@@ -1492,7 +1492,7 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
                                            : 1 - model->col_upper_[substCol]));
 
     const bool upperTightened = (sameVals ? model->col_upper_[substCol]
-                                          : 1 - model->col_lower_[substCol]) > <
+                                          : 1 - model->col_lower_[substCol]) <
                                 model->col_upper_[stayCol] - primal_feastol;
     if (upperTightened)
       HPRESOLVE_CHECKED_CALL(
