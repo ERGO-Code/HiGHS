@@ -59,6 +59,7 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
 #endif
 
+      HIPO_CLOCK_START(2);
       for (Int row = 0; row < jb; ++row) {
         for (Int col = 0; col < row; ++col) {
           x[x_start + row] -=
@@ -72,6 +73,7 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
               sn_columns_[sn][col + jb * row] * x[x_start + col];
         }
       }
+      HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
 #ifdef HIPO_PIVOTING
       HIPO_CLOCK_START(2);
