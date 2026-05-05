@@ -47,6 +47,8 @@ const Int kBlockParallelThreshold = 5;
 
 const Int kMinConsecutiveSums = 1;
 
+const Int kSolveThreshold = 10;
+
 // regularisation
 const double kDynamicDiagCoeff = 1e-24;
 
