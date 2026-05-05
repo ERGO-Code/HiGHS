@@ -2255,10 +2255,6 @@ void HighsCliqueTable::strongConnect(
   HighsInt newNode = -1;
   HighsInt currStackPos = 0;
 
-  // TODO: Just reserve stack size??? Then can push_back and pop?
-
-  auto isLb = [&](const HighsInt i) -> bool { return i % 2 == 0; };
-
   auto otherSide = [&](const HighsInt i) -> HighsInt {
     return i + 1 - 2 * (i % 2);
   };
