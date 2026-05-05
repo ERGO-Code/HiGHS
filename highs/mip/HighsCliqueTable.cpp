@@ -2245,9 +2245,15 @@ void HighsCliqueTable::strongConnect(
     const std::vector<HighsInt>& cliqueIndex, HighsInt n,
     std::vector<HighsInt>& cliqueFirstEntry,
     std::vector<HighsInt>& cliqueCurrExit,
-    std::vector<HighsInt>& stronglyConnectedComponents, bool& infeasible) {
+    std::vector<HighsInt>& stronglyConnectedComponents,
+    bool& infeasible) const {
+  // Do a DFS dive to find strongly connected components or infeasible
+  // assignments
   HighsInt label = startPos;
   stack.push_back(startNode);
+  // cliqueStart[node] contains indices to cliqueIndex, which contain
+  // the actual clique Ids relevant to node, and which index
+  // cliqueFirstEntry / cliqueCurrExit.
   stackNextClique.push_back(cliqueStart[startNode]);
   stackNextCliqueVar.push_back(0);
   predStack.push_back(-1);
@@ -2306,7 +2312,7 @@ void HighsCliqueTable::strongConnect(
           } else if (index[firstEntry] >= startPos &&
                      !infeasibleNodes[startNode]) {
             // The first entry point of the clique was implied by startNode,
-            // so startNode implies two other variables in the clique,
+            // so startNode implies two variables in the clique,
             // which cannot be feasible
             infeasibleNode = startNode;
           }

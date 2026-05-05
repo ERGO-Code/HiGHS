@@ -1443,6 +1443,68 @@ HPresolve::Result HPresolve::dominatedColumns(
   return Result::kOk;
 }
 
+HPresolve::Result HPresolve::stronglyConnectedComponents(
+    HighsPostsolveStack& postsolve_stack) {
+  HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
+  if (cliquetable.numCliques() <= 0) return Result::kOk;
+
+  HighsInt num_nodes = 2 * model->num_col_;
+  std::vector<HighsInt> stronglyConnectedComponents(num_nodes);
+  std::vector<bool> infeasibleNodes(num_nodes);
+  bool infeasible = false;
+  cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, infeasible);
+
+  if (infeasible) return Result::kPrimalInfeasible;
+
+  for (HighsInt i = 0; i != num_nodes; ++i) {
+    if (infeasibleNodes[i]) {
+      const HighsInt col = i / 2;
+      if (i % 2 == 0) {
+        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+      } else {
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+      }
+    }
+  }
+
+  // Apply substitutions for all strongly connected components
+  for (HighsInt substNode = 0; substNode != num_nodes; ++substNode) {
+    const HighsInt substCol = substNode / 2;
+    if (colDeleted[substCol]) continue;
+    const HighsInt stayNode = stronglyConnectedComponents[substNode];
+    const HighsInt stayCol = stayNode / 2;
+    if (stayCol == -1 || stayCol == substCol) continue;
+
+    bool substLower = substNode % 2 == 0;
+    bool stayLower = stayNode % 2 == 0;
+
+    // Possibly tighten bounds of the column that stays
+    // (may have fixed one of the columns in the infeasible check)
+    const bool lowerTightened = model->col_lower_[substCol] >
+                                model->col_lower_[stayCol] + primal_feastol;
+    if (lowerTightened)
+      HPRESOLVE_CHECKED_CALL(
+          changeColLower(stayCol, model->col_lower_[substCol]));
+
+    const bool upperTightened = model->col_upper_[substCol] <
+                                model->col_upper_[stayCol] - primal_feastol;
+    if (upperTightened)
+      HPRESOLVE_CHECKED_CALL(
+          changeColUpper(stayCol, model->col_upper_[substCol]));
+
+    postsolve_stack.doubletonEquation(
+        -1, substCol, stayCol, 1.0, substLower == stayLower ? -1 : 1,
+        substLower == stayLower ? 0 : 1, model->col_lower_[substCol],
+        model->col_upper_[substCol], 0.0, lowerTightened, upperTightened,
+        HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
+    markColDeleted(substCol);
+    substitute(substCol, stayCol, substLower == stayLower ? 0.0 : 1.0,
+               substLower == stayLower ? 1.0 : -1.0);
+
+    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+  }
+}
+
 HPresolve::Result HPresolve::prepareProbing(
     HighsPostsolveStack& postsolve_stack, bool& firstCall) {
   HighsDomain& domain = mipsolver->mipdata_->domain;
