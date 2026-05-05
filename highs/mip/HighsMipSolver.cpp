@@ -844,6 +844,10 @@ presolve::HighsPostsolveStack HighsMipSolver::getPostsolveStack() const {
   return mipdata_->postSolveStack;
 }
 
+ HighsInt HighsMipSolver::getNumAppendedRows() const {
+      return model_->num_row_ - mipdata_->postSolveStack.getOrigRowIndexSize();
+  }
+
 void HighsMipSolver::callbackGetCutPool() const {
   assert(callback_->user_callback);
   assert(callback_->callbackActive(kCallbackMipGetCutPool));

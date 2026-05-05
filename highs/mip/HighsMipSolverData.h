@@ -308,6 +308,9 @@ struct HighsMipSolverData {
   void terminatorTerminate();
   bool terminatorTerminated() const;
   void terminatorReport() const;
+  HighsInt getNumActiveAppendedRows() const {
+    return mipsolver.numRow() - postSolveStack.getOrigRowIndexSize();
+  }
 };
 
 #endif

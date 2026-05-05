@@ -255,6 +255,7 @@ class HighsPostsolveStack {
   std::vector<Nonzero> colValues;
   HighsInt origNumCol = -1;
   HighsInt origNumRow = -1;
+  HighsInt numRowsAppendedByPresolve = 0;
 
   void reductionAdded(ReductionType type) {
     size_t position = reductionValues.getCurrentDataSize();
@@ -276,6 +277,10 @@ class HighsPostsolveStack {
     return origColIndex[col];
   }
 
+  HighsInt getOrigRowIndexSize() const {
+    return static_cast<HighsInt>(origRowIndex.size());
+  }
+
   void appendCutsToModel(HighsInt numCuts) {
     if (numCuts <= 0) return;
     size_t currNumRow = origRowIndex.size();
@@ -287,20 +292,40 @@ class HighsPostsolveStack {
 
   void removeCutsFromModel(HighsInt numCuts) {
     if (numCuts <= 0) return;
+    HighsInt numOrigRows = computeNumOrigRows(numCuts);
     origNumRow -= numCuts;
+    origRowIndex.resize(numOrigRows);
+  }
 
-    size_t origRowIndexSize = origRowIndex.size();
+  void appendRowsToModel(HighsInt numCuts) {
+    if (numCuts <= 0) return;
+    size_t currNumRow = origRowIndex.size();
+    size_t newNumRow = currNumRow + numCuts;
+    origRowIndex.resize(newNumRow);
+    for (size_t i = currNumRow; i != newNumRow; ++i) origRowIndex[i] = i;
+    numRowsAppendedByPresolve += numCuts;
+  }
+
+  HighsInt computeNumOrigRows(HighsInt numRowsAppended) {
+    HighsInt origRowIndexSize = static_cast<HighsInt>(origRowIndex.size());
+    HighsInt oldOrigRowIndexSize = origRowIndexSize;
+    if (numRowsAppended <= 0) return origRowIndexSize;
+
     for (size_t i = origRowIndex.size(); i > 0; --i) {
       if (origRowIndex[i - 1] < origNumRow) break;
       --origRowIndexSize;
     }
 
-    origRowIndex.resize(origRowIndexSize);
+    return origRowIndexSize;
   }
 
   HighsInt getOrigNumRow() const { return origNumRow; }
 
   HighsInt getOrigNumCol() const { return origNumCol; }
+
+  HighsInt getNumRowsAppendedByPresolve() const {
+    return numRowsAppendedByPresolve;
+  }
 
   void initializeIndexMaps(HighsInt numRow, HighsInt numCol);
 
@@ -602,6 +627,28 @@ class HighsPostsolveStack {
 #endif
   }
 
+  template <typename T>
+  void undoIterateBackwards2(std::vector<T>& values,
+                             const std::vector<HighsInt>& index,
+                             HighsInt origSize) {
+    values.resize(origSize);
+    // #ifdef DEBUG_EXTRA
+    //  Fill vector with NaN for debugging purposes
+    std::vector<T> valuesNew;
+    valuesNew.resize(origSize, HighsBasisStatus::kNotSet);
+    for (size_t i = index.size(); i > 0; --i) {
+      assert(static_cast<size_t>(index[i - 1]) >= i - 1);
+      valuesNew[index[i - 1]] = values[i - 1];
+    }
+    std::copy(valuesNew.cbegin(), valuesNew.cend(), values.begin());
+    // #else
+    /*    for (size_t i = index.size(); i > 0; --i) {
+          assert(static_cast<size_t>(index[i - 1]) >= i - 1);
+          values[index[i - 1]] = values[i - 1];
+        }*/
+    // #endif
+  }
+
   /// check if vector contains NaN or Inf
   bool containsNanOrInf(const std::vector<double>& v) const {
     return std::find_if(v.cbegin(), v.cend(), [](const double& d) {
@@ -624,21 +671,25 @@ class HighsPostsolveStack {
     undoIterateBackwards(solution.col_value, origColIndex, origNumCol);
 
     assert(origNumRow >= 0);
-    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow);
+    assert(numRowsAppendedByPresolve >= 0);
+    undoIterateBackwards(solution.row_value, origRowIndex,
+                         origNumRow + numRowsAppendedByPresolve);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
 
-      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow);
+      undoIterateBackwards(solution.row_dual, origRowIndex,
+                           origNumRow + numRowsAppendedByPresolve);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
       undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
 
-      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow);
+      undoIterateBackwards2(basis.row_status, origRowIndex,
+                            origNumRow + numRowsAppendedByPresolve);
     }
 
     // now undo the changes
@@ -752,6 +803,30 @@ class HighsPostsolveStack {
     if (report_col >= 0)
       printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
              solution.col_value[report_col]);
+
+    std::vector<double> row_value;
+    row_value.resize(origNumRow);
+    for (size_t i = 0; i < origNumRow; i++) {
+      row_value[i] = solution.row_value[origRowIndex[i]];
+    }
+    solution.row_value = std::move(row_value);
+
+    std::vector<double> row_dual;
+    row_dual.resize(origNumRow);
+    for (size_t i = 0; i < origNumRow; i++) {
+      row_dual[i] = solution.row_dual[origRowIndex[i]];
+    }
+    solution.row_dual = std::move(row_dual);
+
+    std::vector<HighsBasisStatus> row_status;
+    row_status.resize(origNumRow);
+    for (size_t i = 0; i < origNumRow; i++) {
+      if (origRowIndex[i] > origNumRow)
+        row_status[i] = HighsBasisStatus::kNonbasic;
+      else
+        row_status[i] = basis.row_status[origRowIndex[i]];
+    }
+    basis.row_status = std::move(row_status);
 
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf

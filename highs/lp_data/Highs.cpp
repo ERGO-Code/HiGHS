@@ -3627,6 +3627,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     presolve_.data_.reduced_lp_ = solver.getPresolvedModel();
     presolve_.data_.postSolveStack = solver.getPostsolveStack();
     presolve_.presolve_status_ = presolve_return_status;
+    HighsInt numActiveAddedRows = solver.getNumAppendedRows();
     //    presolve_.data_.presolve_log_ =
   } else {
     // Use presolve for LP
@@ -3696,6 +3697,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
     return HighsPostsolveStatus::kNoPrimalSolutionError;
   const bool have_dual_solution =
       presolve_.data_.recovered_solution_.dual_valid;
+  //presolve_.data_.postSolveStack.removeCutsFromModel(presolve_.data_.reduced_lp_.rows_appended_by_presolve_);
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);

@@ -226,6 +226,7 @@ void HighsLp::clear() {
   this->cost_row_location_ = -1;
   this->has_infinite_cost_ = false;
   this->mods_.clear();
+  this->rows_appended_by_presolve_ = 0;
 }
 
 void HighsLp::clearScale() {
