@@ -199,6 +199,7 @@ set(highs_sources_python
     highs/lp_data/HighsModelUtils.cpp
     highs/lp_data/HighsOptions.cpp
     highs/lp_data/HighsRanging.cpp
+    highs/lp_data/HighsReformulation.cpp
     highs/lp_data/HighsSolution.cpp
     highs/lp_data/HighsSolutionDebug.cpp
     highs/lp_data/HighsSolve.cpp
