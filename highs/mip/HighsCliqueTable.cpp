@@ -2253,7 +2253,6 @@ void HighsCliqueTable::strongConnect(
   predStack[0] = -1;
   HighsInt stackSize = 1;
   HighsInt newNode = -1;
-  HighsInt cliqueCurrIndex = -1;
   HighsInt currStackPos = 0;
 
   // TODO: Just reserve stack size??? Then can push_back and pop?
@@ -2265,7 +2264,8 @@ void HighsCliqueTable::strongConnect(
   };
 
   while (stackSize > 0) {
-    HighsInt currNode = stack[currStackPos];
+    const HighsInt currNode = stack[currStackPos];
+    HighsInt cliqueId = -1;
     assert(lowLink[currNode] <= index[currNode]);
     bool found = false;
     if (index[currNode] == -1) {
@@ -2287,18 +2287,19 @@ void HighsCliqueTable::strongConnect(
 
     for (HighsInt j = stackNextClique[currStackPos];
          j < cliqueStart[currNode + 1]; ++j) {
-      HighsInt clique = cliqueIndex[j];
-      cliqueCurrIndex = j;
-      HighsInt cliqueLen = cliques[clique].end - cliques[clique].start;
+      cliqueId = cliqueIndex[j];
+      const HighsInt cliqueLen =
+          cliques[cliqueId].end - cliques[cliqueId].start;
       if (stackNextCliqueVar[currStackPos] == cliqueStart[currNode]) {
         // This clique has not been looked at before
-        if (cliqueFirstEntry[j] == -1) {
+        if (cliqueFirstEntry[cliqueId] == -1) {
           // This clique has not been entered before
-          cliqueFirstEntry[j] = currNode;
+          cliqueFirstEntry[cliqueId] = currNode;
         } else {
           HighsInt infeasibleNode = -1;
-          HighsInt firstEntry = cliqueFirstEntry[j] > 0 ? cliqueFirstEntry[j]
-                                                        : -cliqueFirstEntry[j];
+          HighsInt firstEntry = cliqueFirstEntry[cliqueId] > 0
+                                    ? cliqueFirstEntry[cliqueId]
+                                    : -cliqueFirstEntry[cliqueId];
           assert(firstEntry != currNode);
           if (onStack[firstEntry] && !infeasibleCols[firstEntry]) {
             // The node we entered the clique on is still in the stack, so
@@ -2329,10 +2330,10 @@ void HighsCliqueTable::strongConnect(
               // node and still on stack: update low link
               lowLink[currNode] = index[cliqueCurrExit[j]];
             }
-          } else if (cliqueFirstEntry[j] >= 0) {
+          } else if (cliqueFirstEntry[cliqueId] >= 0) {
             // Clique is entered for the second time. Only edge to
             // negation of first is left to investigate
-            newNode = otherSide(cliqueFirstEntry[j]);
+            newNode = otherSide(cliqueFirstEntry[cliqueId]);
             if (index[newNode] == -1) {
               // node was not investigated next
               found = true;
@@ -2341,15 +2342,15 @@ void HighsCliqueTable::strongConnect(
               lowLink[currNode] = index[newNode];
             }
             // negative value means we've entered clique at least two times
-            cliqueFirstEntry[j] = -cliqueFirstEntry[j];
+            cliqueFirstEntry[cliqueId] = -cliqueFirstEntry[cliqueId];
           } else {
             stackNextClique[currStackPos] = cliqueLen;
           }
         }
       }
       for (HighsInt i = stackNextCliqueVar[currStackPos]; i < cliqueLen; ++i) {
-        const CliqueVar var = cliqueentries[i + cliques[clique].start];
-        if (var.col == currNode || colDeleted[var.col]) continue;
+        const CliqueVar var = cliqueentries[i + cliques[cliqueId].start];
+        if (2 * var.col + var.val == currNode || colDeleted[var.col]) continue;
         newNode = 2 * var.col + (1 - var.val);
         if (index[newNode] == -1) {
           // Break when first unvisited node is reached
@@ -2369,11 +2370,11 @@ void HighsCliqueTable::strongConnect(
         }
         break;
       }
-      stackNextCliqueVar[currStackPos] = j + 1;
+      stackNextClique[currStackPos] = j + 1;
       stackNextCliqueVar[currStackPos] = 0;
     }
     if (found) {
-      HighsInt negatedNewNode = otherSide(newNode);
+      const HighsInt negatedNewNode = otherSide(newNode);
       HighsInt infeasibleNode = -1;
       assert(newNode >= 0);
       assert(!onStack[newNode]);
@@ -2399,7 +2400,7 @@ void HighsCliqueTable::strongConnect(
       stack[stackSize] = newNode;
       stackNextClique[stackSize] = cliqueStart[newNode];
       stackNextCliqueVar[stackSize] = 0;
-      cliqueCurrExit[cliqueCurrIndex] = newNode;
+      cliqueCurrExit[cliqueId] = newNode;
       predStack[stackSize] = currStackPos;
       currStackPos = stackSize;
       stackSize++;
@@ -2461,13 +2462,13 @@ void HighsCliqueTable::tarjan(
   std::vector<HighsInt> cliqueIndex(cliqueStart.back(), 0);
   std::vector<HighsInt> pos = cliqueStart;
   for (HighsInt i = 0; i != n; ++i) {
-    invertedHashList[i].for_each([&](HighsInt cliqueId) {
+    invertedHashList[i].for_each([&](const HighsInt cliqueId) {
       const HighsInt p = pos[i]++;
-      index[p] = cliqueId;
+      cliqueIndex[p] = cliqueId;
     });
-    invertedHashListSizeTwo[i].for_each([&](HighsInt cliqueId) {
+    invertedHashListSizeTwo[i].for_each([&](const HighsInt cliqueId) {
       const HighsInt p = pos[i]++;
-      index[p] = cliqueId;
+      cliqueIndex[p] = cliqueId;
     });
   }
 
@@ -2478,8 +2479,8 @@ void HighsCliqueTable::tarjan(
   std::vector<HighsInt> predStack(n, -1);  // stack of predecessor
   std::vector<HighsInt> index(n, -1);
   std::vector<HighsInt> lowLink(n, -1);
-  std::vector<HighsInt> cliqueFirstEntry(cliqueStart.back(), -1);
-  std::vector<HighsInt> cliqueCurrExit(cliqueStart.back(), -1);
+  std::vector<HighsInt> cliqueFirstEntry(cliques.size(), -1);
+  std::vector<HighsInt> cliqueCurrExit(cliques.size(), -1);
   std::vector<bool> onStack(n, false);
 
   HighsInt startPos = 0;
