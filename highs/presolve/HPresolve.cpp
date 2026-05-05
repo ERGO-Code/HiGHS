@@ -1475,22 +1475,29 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
     const HighsInt stayCol = stayNode / 2;
     if (stayCol == -1 || stayCol == substCol) continue;
 
-    bool substLower = substNode % 2 == 0;
-    bool stayLower = stayNode % 2 == 0;
+    const bool substLower = substNode % 2 == 0;
+    const bool stayLower = stayNode % 2 == 0;
+    // Decides whether the nodes have the same value in the clique table.
+    // This decides whether to substitute x = y, or x = 1 - y
+    const bool sameVals = substLower == stayLower;
 
     // Possibly tighten bounds of the column that stays
     // (may have fixed one of the columns in the infeasible check)
-    const bool lowerTightened = model->col_lower_[substCol] >
+    const bool lowerTightened = (sameVals ? model->col_lower_[substCol]
+                                          : 1 - model->col_upper_[substCol]) >
                                 model->col_lower_[stayCol] + primal_feastol;
     if (lowerTightened)
       HPRESOLVE_CHECKED_CALL(
-          changeColLower(stayCol, model->col_lower_[substCol]));
+          changeColLower(stayCol, sameVals ? model->col_lower_[substCol]
+                                           : 1 - model->col_upper_[substCol]));
 
-    const bool upperTightened = model->col_upper_[substCol] <
+    const bool upperTightened = (sameVals ? model->col_upper_[substCol]
+                                          : 1 - model->col_lower_[substCol]) > <
                                 model->col_upper_[stayCol] - primal_feastol;
     if (upperTightened)
       HPRESOLVE_CHECKED_CALL(
-          changeColUpper(stayCol, model->col_upper_[substCol]));
+          changeColUpper(stayCol, sameVals ? model->col_upper_[substCol]
+                                           : 1 - model->col_lower_[substCol]));
 
     postsolve_stack.doubletonEquation(
         -1, substCol, stayCol, 1.0, substLower == stayLower ? -1 : 1,
@@ -1503,6 +1510,7 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
 
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::prepareProbing(
