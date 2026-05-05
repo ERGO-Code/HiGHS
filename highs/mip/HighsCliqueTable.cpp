@@ -2324,8 +2324,8 @@ void HighsCliqueTable::strongConnect(
             }
             infeasibleCols[infeasibleNode] = true;
             if (cliqueCurrExit[cliqueId] > 0 &&
-                currNode != otherSide(cliqueCurrExit[cliqueId] -1) &&
-                onStack[cliqueCurrExit[cliqueId] -1] &&
+                currNode != otherSide(cliqueCurrExit[cliqueId] - 1) &&
+                onStack[cliqueCurrExit[cliqueId] - 1] &&
                 index[cliqueCurrExit[cliqueId] - 1] < lowLink[currNode]) {
               // Last exited node from clique is not negation of the current
               // node and still on stack: update low link
@@ -2344,9 +2344,8 @@ void HighsCliqueTable::strongConnect(
             }
             // negative value means we've entered clique at least two times
             cliqueFirstEntry[cliqueId] = -cliqueFirstEntry[cliqueId];
-          } else {
-            stackNextCliqueVar[currStackPos] = cliqueLen;
           }
+          stackNextCliqueVar[currStackPos] = cliqueLen;
         }
       }
       for (HighsInt i = stackNextCliqueVar[currStackPos]; i < cliqueLen; ++i) {
@@ -2357,6 +2356,7 @@ void HighsCliqueTable::strongConnect(
           // Break when first unvisited node is reached
           stackNextCliqueVar[currStackPos] = i + 1;
           found = true;
+          break;
         }
         if (onStack[newNode] && index[newNode] < lowLink[currNode]) {
           lowLink[currNode] = index[newNode];
@@ -2445,8 +2445,7 @@ void HighsCliqueTable::tarjan(
   // Each column x is represented by two nodes lb(x) = 2x and ub(x) = 2x + 1
   // lb(x) means the lb of x should be changed, i.e., x fixed to 1.
 
-  const HighsInt n =
-      2 * static_cast<HighsInt>(stronglyConnectedComponents.size());
+  const HighsInt n = static_cast<HighsInt>(stronglyConnectedComponents.size());
 
   // Extract clique indices from HighsHashTree (saves iterating multiple times)
   std::vector<HighsInt> numCliquesPerVar(n, 0);
