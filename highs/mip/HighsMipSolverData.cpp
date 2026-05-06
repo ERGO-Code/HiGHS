@@ -692,7 +692,9 @@ void HighsMipSolverData::removeFixedIndices() {
 }
 
 void HighsMipSolverData::init() {
-  postSolveStack.initializeIndexMaps(mipsolver.numRow(), mipsolver.numCol(), mipsolver.model_->num_rows_appended_by_presolve_);
+  postSolveStack.initializeIndexMaps(
+      mipsolver.numRow(), mipsolver.numCol(),
+      mipsolver.model_->num_rows_appended_by_presolve_);
   mipsolver.orig_model_ = mipsolver.model_;
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;
@@ -1304,7 +1306,8 @@ void HighsMipSolverData::performRestart() {
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
-    HighsInt numRow = basis.row_status.size() - lp.getLp().num_rows_appended_by_presolve_;
+    HighsInt numRow =
+        basis.row_status.size() - lp.getLp().num_rows_appended_by_presolve_;
     for (HighsInt i = 0; i < numRow; ++i)
       root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
           basis.row_status[i];
@@ -1405,26 +1408,35 @@ void HighsMipSolverData::performRestart() {
 void HighsMipSolverData::basisTransfer() {
   // if a root basis is given, construct a basis for the root LP from
   // in the reduced problem space after presolving
-  if (mipsolver.rootbasis) {
-    const HighsInt numRow = mipsolver.numRow();
-    const HighsInt numCol = mipsolver.numCol();
-    firstrootbasis.col_status.assign(numCol, HighsBasisStatus::kNonbasic);
-    firstrootbasis.row_status.assign(numRow, HighsBasisStatus::kNonbasic);
-    firstrootbasis.valid = true;
-    firstrootbasis.alien = true;
-    firstrootbasis.useful = true;
+  if (mipsolver.rootbasis == nullptr) return;
 
-    for (HighsInt i = 0; i < numRow; ++i) {
-      HighsBasisStatus status =
-          mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
-      firstrootbasis.row_status[i] = status;
-    }
+  const HighsInt numRow = mipsolver.numRow();
+  const HighsInt numCol = mipsolver.numCol();
+  firstrootbasis.col_status.assign(numCol, HighsBasisStatus::kNonbasic);
+  firstrootbasis.row_status.assign(numRow, HighsBasisStatus::kNonbasic);
+  firstrootbasis.valid = true;
+  firstrootbasis.alien = true;
+  firstrootbasis.useful = true;
+  HighsInt numBasicVars = 0;
 
-    for (HighsInt i = 0; i < numCol; ++i) {
-      HighsBasisStatus status =
-          mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
-      firstrootbasis.col_status[i] = status;
-    }
+  auto sol = lp.getLpSolver().getSolution();
+
+  for (HighsInt i = 0; i < numCol; ++i) {
+    HighsBasisStatus status =
+        mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
+    firstrootbasis.col_status[i] = status;
+    if (status == HighsBasisStatus::kBasic) numBasicVars++;
+  }
+  for (HighsInt i = 0; i < postSolveStack.getOrigNumRow(); ++i) {
+    HighsBasisStatus status =
+        mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
+    firstrootbasis.row_status[i] = status;
+    if (status == HighsBasisStatus::kBasic) numBasicVars++;
+  }
+
+  for (HighsInt i = 0; i < numRow - numBasicVars; i++) {
+    firstrootbasis.row_status[postSolveStack.getOrigNumRow() + i] =
+        HighsBasisStatus::kBasic;
   }
 }
 
