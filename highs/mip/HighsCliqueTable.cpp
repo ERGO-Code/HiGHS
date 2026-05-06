@@ -2252,8 +2252,8 @@ void HighsCliqueTable::strongConnect(
   HighsInt label = startPos;
   stack.push_back(startNode);
   // cliqueStart[node] contains indices to cliqueIndex, which contain
-  // the actual clique Ids relevant to node, and which index
-  // cliqueFirstEntry / cliqueCurrExit.
+  // the actual clique Ids relevant to node, and which index both
+  // cliqueFirstEntry and cliqueCurrExit.
   stackNextClique.push_back(cliqueStart[startNode]);
   stackNextCliqueVar.push_back(0);
   predStack.push_back(-1);
@@ -2513,6 +2513,7 @@ void HighsCliqueTable::tarjan(
 
   for (HighsInt i = 0; i != n; ++i) {
     if (index[i] == -1) {
+      if (colDeleted[i / 2]) continue;
       strongConnect(i, startPos, onStack, index, lowLink, infeasibleNodes,
                     stack, predStack, stackNextClique, stackNextCliqueVar,
                     cliqueStart, cliqueIndex, n, cliqueFirstEntry,

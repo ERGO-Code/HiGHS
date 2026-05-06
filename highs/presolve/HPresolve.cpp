@@ -1449,7 +1449,9 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
 
   // Need to get the clique table into an appropriate state
   // TODO: This is excessive. Create custom function? How to get bounds for
-  // fixed columns?
+  // TODO: fixed columns?
+  // TODO: Skip if clique table not changed enough since last call
+  // TODO: Second run with topological sort like SCIP?
   bool firstCall = false;
   HPRESOLVE_CHECKED_CALL(prepareProbing(postsolve_stack, firstCall));
   HighsInt numVarsFixed = 0;
@@ -1479,10 +1481,12 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
       if (colDeleted[col]) continue;
       if (i % 2 == 0) {
         // Node is ~x, i.e., x = 0 is infeasible -> x = 1
+        printf("Fixing node %d = 1\n", col);
         HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
         fixValsAtUpper[col] = true;
       } else {
         // Node is x, i.e., x = 1 is infeasible -> x = 0
+        printf("Fixing node %d = 0\n", col);
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
         fixValsAtLower[col] = true;
       }
@@ -1508,14 +1512,17 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
     if (colDeleted[stayCol]) {
       if ((fixValsAtLower[stayCol] && sameVals) ||
           (fixValsAtUpper[stayCol] && !sameVals)) {
+        printf("Fixing node %d = 0\n", substCol);
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, substCol));
       } else if ((fixValsAtUpper[stayCol] && sameVals) ||
                  (fixValsAtLower[stayCol] && !sameVals)) {
+        printf("Fixing node %d = 1\n", substCol);
         HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, substCol));
       }
       continue;
     }
 
+    printf("Fixing node %d = %d\n", substCol, stayCol);
     postsolve_stack.doubletonEquation(
         -1, substCol, stayCol, 1.0, sameVals ? -1 : 1, sameVals ? 0 : 1,
         model->col_lower_[substCol], model->col_upper_[substCol], 0.0, false,
