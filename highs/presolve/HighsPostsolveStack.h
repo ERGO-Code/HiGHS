@@ -277,10 +277,6 @@ class HighsPostsolveStack {
     return origColIndex[col];
   }
 
-  HighsInt getOrigRowIndexSize() const {
-    return static_cast<HighsInt>(origRowIndex.size());
-  }
-
   void appendCutsToModel(HighsInt numCuts) {
     if (numCuts <= 0) return;
     size_t currNumRow = origRowIndex.size();
@@ -302,21 +298,21 @@ class HighsPostsolveStack {
     size_t currNumRow = origRowIndex.size();
     size_t newNumRow = currNumRow + numCuts;
     origRowIndex.resize(newNumRow);
-    for (size_t i = currNumRow; i != newNumRow; ++i) origRowIndex[i] = origNumRow + numRowsAppendedByPresolve + static_cast<HighsInt>(i - currNumRow);
-    //numRowsAppendedByPresolve += numCuts;
+    for (size_t i = currNumRow; i != newNumRow; ++i)
+      origRowIndex[i] = origNumRow + numRowsAppendedByPresolve +
+                        static_cast<HighsInt>(i - currNumRow);
   }
 
   HighsInt computeNumOrigRows(HighsInt numRowsAppended) {
-    HighsInt origRowIndexSize = static_cast<HighsInt>(origRowIndex.size());
-    HighsInt oldOrigRowIndexSize = origRowIndexSize;
-    if (numRowsAppended <= 0) return origRowIndexSize;
+    HighsInt numOrig = static_cast<HighsInt>(origRowIndex.size());
+    if (numRowsAppended <= 0) return numOrig;
 
     for (size_t i = origRowIndex.size(); i > 0; --i) {
       if (origRowIndex[i - 1] < origNumRow) break;
-      --origRowIndexSize;
+      --numOrig;
     }
 
-    return origRowIndexSize;
+    return numOrig;
   }
 
   HighsInt getOrigNumRow() const { return origNumRow; }
@@ -628,28 +624,6 @@ class HighsPostsolveStack {
 #endif
   }
 
-  template <typename T>
-  void undoIterateBackwards2(std::vector<T>& values,
-                             const std::vector<HighsInt>& index,
-                             HighsInt origSize) {
-    values.resize(origSize);
-    // #ifdef DEBUG_EXTRA
-    //  Fill vector with NaN for debugging purposes
-    std::vector<T> valuesNew;
-    valuesNew.resize(origSize, HighsBasisStatus::kNotSet);
-    for (size_t i = index.size(); i > 0; --i) {
-      assert(static_cast<size_t>(index[i - 1]) >= i - 1);
-      if (index[i - 1] < origSize) valuesNew[index[i - 1]] = values[i - 1];
-    }
-    std::copy(valuesNew.cbegin(), valuesNew.cend(), values.begin());
-    // #else
-    /*    for (size_t i = index.size(); i > 0; --i) {
-          assert(static_cast<size_t>(index[i - 1]) >= i - 1);
-          values[index[i - 1]] = values[i - 1];
-        }*/
-    // #endif
-  }
-
   /// check if vector contains NaN or Inf
   bool containsNanOrInf(const std::vector<double>& v) const {
     return std::find_if(v.cbegin(), v.cend(), [](const double& d) {
@@ -687,7 +661,7 @@ class HighsPostsolveStack {
       // if basis is given, expand basis status values to original index space
       undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
 
-      undoIterateBackwards2(basis.row_status, origRowIndex, origNumRow);
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow);
     }
 
     // now undo the changes
@@ -805,29 +779,6 @@ class HighsPostsolveStack {
     solution.row_value.resize(origNumRow + numRowsAppendedByPresolve);
     solution.row_dual.resize(origNumRow + numRowsAppendedByPresolve);
     basis.row_status.resize(origNumRow + numRowsAppendedByPresolve);
-      /*std::vector<double> row_value;
-      row_value.resize(origNumRow);
-      for (size_t i = 0; i < origNumRow; i++) {
-        row_value[i] = solution.row_value[origRowIndex[i]];
-      }
-      solution.row_value = std::move(row_value);
-
-      std::vector<double> row_dual;
-      row_dual.resize(origNumRow);
-      for (size_t i = 0; i < origNumRow; i++) {
-        row_dual[i] = solution.row_dual[origRowIndex[i]];
-      }
-      solution.row_dual = std::move(row_dual);
-
-      std::vector<HighsBasisStatus> row_status;
-      row_status.resize(origNumRow);
-      for (size_t i = 0; i < origNumRow; i++) {
-        if (origRowIndex[i] > origNumRow)
-          row_status[i] = HighsBasisStatus::kNonbasic;
-        else
-          row_status[i] = basis.row_status[origRowIndex[i]];
-      }
-      basis.row_status = std::move(row_status);*/
 
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf

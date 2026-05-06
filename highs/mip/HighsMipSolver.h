@@ -151,7 +151,6 @@ class HighsMipSolver {
   HighsModelStatus terminationStatus() const {
     return this->termination_status_;
   }
-  HighsInt getNumAppendedRows() const;
 };
 
 std::array<char, 128> getGapString(const double gap_,
