@@ -18,8 +18,9 @@
 namespace presolve {
 
 void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
-                                              HighsInt numCol) {
-  origNumRow = numRow;
+                                              HighsInt numCol, HighsInt numRowPresolve) {
+    numRowsAppendedByPresolve = numRowPresolve;
+  origNumRow = numRow - numRowPresolve;
   origNumCol = numCol;
 
   origRowIndex.resize(numRow);

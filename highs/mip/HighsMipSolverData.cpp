@@ -692,7 +692,7 @@ void HighsMipSolverData::removeFixedIndices() {
 }
 
 void HighsMipSolverData::init() {
-  postSolveStack.initializeIndexMaps(mipsolver.numRow(), mipsolver.numCol());
+  postSolveStack.initializeIndexMaps(mipsolver.numRow(), mipsolver.numCol(), mipsolver.model_->num_rows_appended_by_presolve_);
   mipsolver.orig_model_ = mipsolver.model_;
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;

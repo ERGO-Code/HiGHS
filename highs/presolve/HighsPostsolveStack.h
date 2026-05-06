@@ -302,8 +302,8 @@ class HighsPostsolveStack {
     size_t currNumRow = origRowIndex.size();
     size_t newNumRow = currNumRow + numCuts;
     origRowIndex.resize(newNumRow);
-    for (size_t i = currNumRow; i != newNumRow; ++i) origRowIndex[i] = i;
-    numRowsAppendedByPresolve += numCuts;
+    for (size_t i = currNumRow; i != newNumRow; ++i) origRowIndex[i] = origNumRow + numRowsAppendedByPresolve + static_cast<HighsInt>(i - currNumRow);
+    //numRowsAppendedByPresolve += numCuts;
   }
 
   HighsInt computeNumOrigRows(HighsInt numRowsAppended) {
@@ -327,7 +327,8 @@ class HighsPostsolveStack {
     return numRowsAppendedByPresolve;
   }
 
-  void initializeIndexMaps(HighsInt numRow, HighsInt numCol);
+  void initializeIndexMaps(HighsInt numRow, HighsInt numCol,
+                           HighsInt numRowPresolve);
 
   void compressIndexMaps(const std::vector<HighsInt>& newRowIndex,
                          const std::vector<HighsInt>& newColIndex);
@@ -622,7 +623,7 @@ class HighsPostsolveStack {
 #else
     for (size_t i = index.size(); i > 0; --i) {
       assert(static_cast<size_t>(index[i - 1]) >= i - 1);
-      values[index[i - 1]] = values[i - 1];
+      if (index[i - 1] < origSize) values[index[i - 1]] = values[i - 1];
     }
 #endif
   }
@@ -638,7 +639,7 @@ class HighsPostsolveStack {
     valuesNew.resize(origSize, HighsBasisStatus::kNotSet);
     for (size_t i = index.size(); i > 0; --i) {
       assert(static_cast<size_t>(index[i - 1]) >= i - 1);
-      valuesNew[index[i - 1]] = values[i - 1];
+      if (index[i - 1] < origSize) valuesNew[index[i - 1]] = values[i - 1];
     }
     std::copy(valuesNew.cbegin(), valuesNew.cend(), values.begin());
     // #else
@@ -672,24 +673,21 @@ class HighsPostsolveStack {
 
     assert(origNumRow >= 0);
     assert(numRowsAppendedByPresolve >= 0);
-    undoIterateBackwards(solution.row_value, origRowIndex,
-                         origNumRow + numRowsAppendedByPresolve);
+    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
 
-      undoIterateBackwards(solution.row_dual, origRowIndex,
-                           origNumRow + numRowsAppendedByPresolve);
+      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
       undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
 
-      undoIterateBackwards2(basis.row_status, origRowIndex,
-                            origNumRow + numRowsAppendedByPresolve);
+      undoIterateBackwards2(basis.row_status, origRowIndex, origNumRow);
     }
 
     // now undo the changes
@@ -804,29 +802,32 @@ class HighsPostsolveStack {
       printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
              solution.col_value[report_col]);
 
-    std::vector<double> row_value;
-    row_value.resize(origNumRow);
-    for (size_t i = 0; i < origNumRow; i++) {
-      row_value[i] = solution.row_value[origRowIndex[i]];
-    }
-    solution.row_value = std::move(row_value);
+    solution.row_value.resize(origNumRow + numRowsAppendedByPresolve);
+    solution.row_dual.resize(origNumRow + numRowsAppendedByPresolve);
+    basis.row_status.resize(origNumRow + numRowsAppendedByPresolve);
+      /*std::vector<double> row_value;
+      row_value.resize(origNumRow);
+      for (size_t i = 0; i < origNumRow; i++) {
+        row_value[i] = solution.row_value[origRowIndex[i]];
+      }
+      solution.row_value = std::move(row_value);
 
-    std::vector<double> row_dual;
-    row_dual.resize(origNumRow);
-    for (size_t i = 0; i < origNumRow; i++) {
-      row_dual[i] = solution.row_dual[origRowIndex[i]];
-    }
-    solution.row_dual = std::move(row_dual);
+      std::vector<double> row_dual;
+      row_dual.resize(origNumRow);
+      for (size_t i = 0; i < origNumRow; i++) {
+        row_dual[i] = solution.row_dual[origRowIndex[i]];
+      }
+      solution.row_dual = std::move(row_dual);
 
-    std::vector<HighsBasisStatus> row_status;
-    row_status.resize(origNumRow);
-    for (size_t i = 0; i < origNumRow; i++) {
-      if (origRowIndex[i] > origNumRow)
-        row_status[i] = HighsBasisStatus::kNonbasic;
-      else
-        row_status[i] = basis.row_status[origRowIndex[i]];
-    }
-    basis.row_status = std::move(row_status);
+      std::vector<HighsBasisStatus> row_status;
+      row_status.resize(origNumRow);
+      for (size_t i = 0; i < origNumRow; i++) {
+        if (origRowIndex[i] > origNumRow)
+          row_status[i] = HighsBasisStatus::kNonbasic;
+        else
+          row_status[i] = basis.row_status[origRowIndex[i]];
+      }
+      basis.row_status = std::move(row_status);*/
 
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf
