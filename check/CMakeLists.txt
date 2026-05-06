@@ -105,6 +105,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   add_executable(unit_tests ${TEST_SOURCES})
 
+  target_include_directories(unit_tests PRIVATE
+    ${PROJECT_SOURCE_DIR}/third_party/PSLP/include
+    )
+
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
 
   if (UNIX)
@@ -113,6 +117,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
   if (FAST_BUILD)
+    target_link_libraries(unit_tests highs Catch PSLP)
     target_link_libraries(unit_tests highs Catch)
 
     if (CUPDLP_GPU)
@@ -131,6 +136,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         endif()
     endif()
   else()
+    target_link_libraries(unit_tests libhighs Catch PSLP)
     target_link_libraries(unit_tests libhighs Catch)
   endif()
 

@@ -48,6 +48,11 @@ class Logger {
   void printIterationStats(const HighsInt iter,
                            const SolverResults& current_results,
                            const double current_eta, const bool forced = false);
+  void printRestartMetrics(int iter, double rel_primal, double rel_dual,
+                           double rel_gap, double fpe, double init_fpe,
+                           double last_trial_fpe, double primal_dist,
+                           double dual_dist, double ratio_infeas,
+                           double pw, double best_pw) const;
   void printSummary(const SolverResults& results, HighsInt total_iter,
                     double total_time) const;
   void setLogOptions(HighsLogOptions log_options) {

@@ -11,6 +11,7 @@
 #include "logger.hpp"
 
 #include <iostream>
+#include <cstdio>
 #include <map>
 #include <sstream>
 
@@ -222,4 +223,16 @@ std::string integer(const HighsInt i, HighsInt width) {
   s.width(width);
   s << i;
   return s.str();
+}
+
+void Logger::printRestartMetrics(int iter, double rel_primal, double rel_dual,
+                                 double rel_gap, double fpe, double init_fpe,
+                                 double last_trial_fpe, double primal_dist,
+                                 double dual_dist, double ratio_infeas,
+                                 double pw, double best_pw) const {
+  printf("[restart][metrics] iter=%d rel_p=% .3e rel_d=% .3e rel_gap=% .3e "
+         "fpe=% .3e init_fpe=% .3e last_fpe=% .3e "
+         "pdist=% .3e ddist=% .3e ratio=% .3e pw=% .3e best_pw=% .3e\n",
+         iter, rel_primal, rel_dual, rel_gap, fpe, init_fpe, last_trial_fpe,
+         primal_dist, dual_dist, ratio_infeas, pw, best_pw);
 }

@@ -876,6 +876,8 @@ else(FAST_BUILD)
     add_subdirectory(examples)
   endif()
 
+  add_subdirectory(third_party/PSLP EXCLUDE_FROM_ALL)
+
   if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(check)

@@ -23,6 +23,7 @@
 #include <memory>
 #include <tuple>
 #include <vector>
+#include <string>
 
 #include "linalg.hpp"
 #include "logger.hpp"
@@ -237,6 +238,8 @@ class PDLPSolver {
   bool halpern_dual_slack_next_valid_ = false;
   double initial_fpe_ = 0.0;  // For Halpern restart
   double fpe_ = 0.0;
+  double last_trial_fpe_ = std::numeric_limits<double>::infinity();
+  std::string last_restart_reason_;
 
   // Scalars
   HighsInt final_iter_count_ = 0;

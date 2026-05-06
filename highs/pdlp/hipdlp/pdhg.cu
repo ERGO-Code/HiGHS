@@ -229,15 +229,9 @@ __global__ void kernelCheckDual(
     local_dual_obj_part += obj_term;
   }
 
-  FULL_WARP_REDUCE(local_dual_feas_sq);
-  FULL_WARP_REDUCE(local_primal_obj);
-  FULL_WARP_REDUCE(local_dual_obj_part);
-
-  if ((threadIdx.x & 31) == 0) {
-    atomicAdd(&d_results[IDX_DUAL_FEAS], local_dual_feas_sq);
-    atomicAdd(&d_results[IDX_PRIMAL_OBJ], local_primal_obj);
-    atomicAdd(&d_results[IDX_DUAL_OBJ], local_dual_obj_part);
-  }
+  atomicAdd(&d_results[IDX_DUAL_FEAS], local_dual_feas_sq);
+  atomicAdd(&d_results[IDX_PRIMAL_OBJ], local_primal_obj);
+  atomicAdd(&d_results[IDX_DUAL_OBJ], local_dual_obj_part);
 }
 
 // ============================================================================

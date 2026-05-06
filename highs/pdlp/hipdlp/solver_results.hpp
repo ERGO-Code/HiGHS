@@ -60,6 +60,13 @@ struct SolverResults {
   double primal_feasibility_last_restart = 0.0;
   double dual_feasibility_last_restart = 0.0;
   double duality_gap_last_restart = 0.0;
+  // --- Additional Metrics ---
+  double relative_primal_feasibility = 0.0;
+  double relative_dual_feasibility = 0.0;
+  double relative_duality_gap = 0.0;
+  double fixed_point_error = 0.0;
+  double initial_fixed_point_error = 0.0;
+  double last_trial_fixed_point_error = 0.0;
 };
 
 #endif  // PDLP_HIPDLP_SOLVER_RESULTS_HPP

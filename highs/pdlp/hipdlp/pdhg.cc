@@ -573,7 +573,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   TerminationStatus termination_status = TerminationStatus::NOTSET;
   bool do_restart = false;
-  double last_trial_fpe = std::numeric_limits<double>::infinity();
+  // Use member-stored last_trial_fpe_ so it is visible to convergence checks
   final_iter_count_ = 0;
 
   // =========================================================================
@@ -621,7 +621,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 //print fpe
 if (DEBUG_MODE){
   std::cout << "[Restart Check] Iter: " << final_iter_count_ + PDHG_CHECK_INTERVAL 
-            << "| FPE: " << fpe_ << "| Initial FPE: " << initial_fpe_ << "| Last Trial FPE: " << last_trial_fpe << std::endl;
+            << "| FPE: " << fpe_ << "| Initial FPE: " << initial_fpe_ << "| Last Trial FPE: " << last_trial_fpe_ << std::endl;
 } 
       initial_fpe_ = fpe_;
       do_restart = false;
@@ -675,9 +675,9 @@ if (DEBUG_MODE){
     // =======================================================================
     // RESTART CHECK
     // =======================================================================
-    do_restart = checkRestartCriteria(fpe_, initial_fpe_, last_trial_fpe,
-                                      halpern_iteration_, final_iter_count_);
-    last_trial_fpe = fpe_;
+    do_restart = checkRestartCriteria(fpe_, initial_fpe_, last_trial_fpe_,
+                      halpern_iteration_, final_iter_count_);
+    last_trial_fpe_ = fpe_;
 
     // -- Perform Restart --
     if (do_restart) {
@@ -718,7 +718,7 @@ if (DEBUG_MODE){
 #endif
 
       halpern_iteration_ = 0;
-      last_trial_fpe = std::numeric_limits<double>::infinity();
+      last_trial_fpe_ = std::numeric_limits<double>::infinity();
     }
   }
 
@@ -933,22 +933,26 @@ bool PDLPSolver::checkRestartCriteria(double current_fpe, double initial_fpe,
                                       int halpern_iteration,
                                       int final_iter_count) {
   if (final_iter_count == PDHG_CHECK_INTERVAL) {
+    last_restart_reason_ = "first_check";
     return true;
   }
 
   if (final_iter_count > PDHG_CHECK_INTERVAL) {
     if (current_fpe <=
         restart_scheme_.getSufficientDecayFactor() * initial_fpe) {
+      last_restart_reason_ = "sufficient_decay";
       return true;
     }
     if (current_fpe <=
         restart_scheme_.getNecessaryDecayFactor() * initial_fpe) {
       if (current_fpe > last_trial_fpe) {
+        last_restart_reason_ = "necessary_decay_worse_than_last_trial";
         return true;
       }
     }
     if (halpern_iteration >=
         restart_scheme_.getArtificialRestartThreshold() * final_iter_count) {
+      last_restart_reason_ = "artificial_restart_threshold";
       return true;
     }
   }
@@ -1542,6 +1546,17 @@ bool PDLPSolver::checkConvergence(
       (1.0 + std::abs(results.primal_obj) + std::abs(dual_obj));
   results.relative_obj_gap = relative_obj_gap;
 
+    // Additional relative metrics and fixed-point errors
+    results.relative_primal_feasibility =
+      results.primal_feasibility / (1.0 + unscaled_rhs_norm_);
+    results.relative_dual_feasibility =
+      results.dual_feasibility / (1.0 + unscaled_c_norm_);
+    results.relative_duality_gap =
+      std::abs(duality_gap) / (1.0 + std::abs(primal_obj) + std::abs(dual_obj));
+    results.fixed_point_error = fpe_;
+    results.initial_fixed_point_error = initial_fpe_;
+    results.last_trial_fixed_point_error = last_trial_fpe_;
+
 #if PDLP_DEBUG_LOG
   debugPdlpFeasOptLog(debug_pdlp_log_file_, iter, results.primal_obj, dual_obj,
                       relative_obj_gap,
@@ -2086,11 +2101,17 @@ void PDLPSolver::updatePrimalWeightAtRestart(const SolverResults& results) {
   restart_scheme_.updateBeta(stepsize_.beta);
 
   // === POST-RESTART DEBUG OUTPUT ===
-  printf("[restart][post] iter=%d primal_weight=%.6e step_size=%.6e "
-         "primal_step=%.6e dual_step=%.6e\n",
-         final_iter_count_,
-         primal_weight_, 1.0,
-         stepsize_.primal_step, stepsize_.dual_step);
+    // Print restart metrics via logger for easier debugging and capture
+    logger_.printRestartMetrics(final_iter_count_, rel_primal, rel_dual,
+           results.relative_obj_gap, fpe_, initial_fpe_,
+           last_trial_fpe_, primal_dist, dual_dist,
+           ratio_infeas, primal_weight_,
+           best_primal_weight_);
+    printf("[restart][post] iter=%d primal_weight=%.6e step_size=%.6e "
+      "primal_step=%.6e dual_step=%.6e\n",
+      final_iter_count_,
+      primal_weight_, 1.0,
+      stepsize_.primal_step, stepsize_.dual_step);
 }
 
 std::vector<double> PDLPSolver::updateX(const std::vector<double>& x,
@@ -2828,6 +2849,17 @@ bool PDLPSolver::checkConvergenceGpu(const HighsInt iter, const double* d_x,
   results.duality_gap = std::abs(duality_gap);
   results.relative_obj_gap =
       std::abs(duality_gap) / (1.0 + std::abs(primal_obj) + std::abs(dual_obj));
+
+    // Additional relative metrics and fixed-point errors
+    results.relative_primal_feasibility =
+      results.primal_feasibility / (1.0 + unscaled_rhs_norm_);
+    results.relative_dual_feasibility =
+      results.dual_feasibility / (1.0 + unscaled_c_norm_);
+    results.relative_duality_gap =
+      std::abs(duality_gap) / (1.0 + std::abs(primal_obj) + std::abs(dual_obj));
+    results.fixed_point_error = fpe_;
+    results.initial_fixed_point_error = initial_fpe_;
+    results.last_trial_fixed_point_error = last_trial_fpe_;
 
 #if PDLP_DEBUG_LOG
   debugPdlpFeasOptLog(debug_pdlp_log_file_, iter, primal_obj, dual_obj,
