@@ -2437,9 +2437,21 @@ void HighsCliqueTable::tarjan(
     std::vector<HighsInt>& stronglyConnectedComponents,
     std::vector<bool>& infeasibleNodes, bool& infeasible) {
   // Run an iterative version of tarjan's algorithm to detect strongly connected
-  // components (directed cycles) in the clique table.
-  // Each column x is represented by two nodes lb(x) = 2x and ub(x) = 2x + 1
-  // lb(x) means the lb of x should be changed, i.e., x fixed to 1.
+  // components (directed cycles) in the clique table and infeasible
+  // literal assignments.
+  // Each binary column (col) is represented by two literal nodes
+  // 2 * col     = ~x (x = 0)
+  // 2 * col + 1 = x  (x = 1)
+  // For a clique x_1 + .... + x_k {<=,=} 1 (equalities can always be relaxed)
+  // x_i -> ~x_j \forall j != i
+  // Cycle example:
+  // x + ~y <= 1, y + ~z <= 1, z + ~x <= 1
+  // x implies y, which implies z, which implies x
+  // Therefore x = y = z
+  // Implication example:
+  // x + ~y <= 1, y + ~z <= 1, z + x <= 1
+  // x implies y, which implies z, which implies ~x.
+  // Therefore, x -> ~x, which cannot be true, and we can fix x = 0
 
   const HighsInt n = static_cast<HighsInt>(stronglyConnectedComponents.size());
 

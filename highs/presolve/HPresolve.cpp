@@ -1447,17 +1447,18 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
     HighsPostsolveStack& postsolve_stack) {
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
-  if (!mipsolver->mipdata_->cliquesExtracted) {
-    bool firstCall = false;
-    HPRESOLVE_CHECKED_CALL(prepareProbing(postsolve_stack, firstCall));
-    HighsInt numVarsFixed = 0;
-    HighsInt numBndsTightened = 0;
-    HighsInt numVarsSubstituted = 0;
-    HighsInt liftedNonzeros = 0;
-    HPRESOLVE_CHECKED_CALL(finaliseProbing(postsolve_stack, firstCall,
-                                           numVarsFixed, numBndsTightened,
-                                           numVarsSubstituted, liftedNonzeros));
-  }
+  // Need to get the clique table into an appropriate state
+  // TODO: This is excessive. Create custom function? How to get bounds for
+  // fixed columns?
+  bool firstCall = false;
+  HPRESOLVE_CHECKED_CALL(prepareProbing(postsolve_stack, firstCall));
+  HighsInt numVarsFixed = 0;
+  HighsInt numBndsTightened = 0;
+  HighsInt numVarsSubstituted = 0;
+  HighsInt liftedNonzeros = 0;
+  HPRESOLVE_CHECKED_CALL(finaliseProbing(postsolve_stack, firstCall,
+                                         numVarsFixed, numBndsTightened,
+                                         numVarsSubstituted, liftedNonzeros));
 
   if (cliquetable.numCliques() <= 1) return Result::kOk;
 
@@ -1470,16 +1471,19 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
   if (infeasible) return Result::kPrimalInfeasible;
 
   std::vector<bool> fixValsAtLower(model->num_col_);
+  std::vector<bool> fixValsAtUpper(model->num_col_);
 
   for (HighsInt i = 0; i != numNodes; ++i) {
     if (infeasibleNodes[i]) {
       const HighsInt col = i / 2;
-      // TODO: Are these the correct way around????
       if (i % 2 == 0) {
+        // Node is ~x, i.e., x = 0 is infeasible -> x = 1
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+        fixValsAtUpper[col] = true;
+      } else {
+        // Node is x, i.e., x = 1 is infeasible -> x = 0
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
         fixValsAtLower[col] = true;
-      } else {
-        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
       }
     }
   }
@@ -1498,13 +1502,14 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
     // This decides whether to substitute x = y, or x = 1 - y
     const bool sameVals = substLower == stayLower;
 
-    // If stayCol is deleted, then it must have been fixed above.
+    // If stayCol is deleted, then it might have been fixed in code above via
+    // infeasible assignment detection. Fix all values to the same.
     if (colDeleted[stayCol]) {
-      // TODO: Check if these are the wrong way around
       if ((fixValsAtLower[stayCol] && sameVals) ||
-          (!fixValsAtLower[stayCol] && !sameVals)) {
+          (fixValsAtUpper[stayCol] && !sameVals)) {
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, substCol));
-      } else {
+      } else if ((fixValsAtUpper[stayCol] && sameVals) ||
+                 (fixValsAtLower[stayCol] && !sameVals)) {
         HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, substCol));
       }
       continue;
