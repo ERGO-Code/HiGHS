@@ -828,9 +828,8 @@ void IPM::PrintHeader() {
     << "  " << Format("pinf", 9)
     << "  " << Format("dinf", 9)
     << "  " << Format("gap", 8);
-    //  h_logging_stream << "  " << Format("mu", 8);
   if (!control_.timelessLog())
-    h_logging_stream << "  " << Format("time", 7);
+    h_logging_stream << "   " << Format("time", 7);
   control_.hLog(h_logging_stream);
   control_.Debug()
     << "  " << Format("stepsizes", 9)
@@ -868,7 +867,7 @@ void IPM::PrintOutput() {
       << "  " << Scientific(logging_gap, 8, 2);
     //    h_logging_stream << "  " << Scientific(iterate_->mu(), 8, 2);
     if (!control_.timelessLog())
-      h_logging_stream << "  " << Fixed(control_.Elapsed(), 6, 0) << "s";
+      h_logging_stream << "  " << time(control_.Elapsed());
     control_.hLog(h_logging_stream);
     control_.Debug()
       << "  " << Fixed(step_primal_, 4, 2) << " " << Fixed(step_dual_, 4, 2)

@@ -20,11 +20,12 @@ class SolveHandler {
  protected:
   const Symbolic& S_;
   const std::vector<std::vector<double>>& sn_columns_;
-  DataCollector* data_;
+  DataCollector& data_;
 
  public:
   SolveHandler(const Symbolic& S,
-               const std::vector<std::vector<double>>& sn_columns);
+               const std::vector<std::vector<double>>& sn_columns,
+               DataCollector& data);
 
   // avoid copies
   SolveHandler(const SolveHandler&) = delete;
@@ -40,8 +41,6 @@ class SolveHandler {
   virtual void forwardSolve(std::vector<double>& x) const = 0;
   virtual void backwardSolve(std::vector<double>& x) const = 0;
   virtual void diagSolve(std::vector<double>& x) const = 0;
-
-  void setData(DataCollector* data);
 };
 
 }  // namespace hipo

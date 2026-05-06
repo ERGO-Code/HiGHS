@@ -36,7 +36,7 @@ void HighsDebugSol::activate() {
       std::string varname;
       double varval;
       std::string line;
-      bool incolsection;
+      bool incolsection = false;
       std::map<std::string, int> nametoidx;
 
       for (HighsInt i = 0; i != mipsolver->orig_model_->num_col_; ++i)
@@ -62,7 +62,6 @@ void HighsDebugSol::activate() {
           debugOrigSolution[it->second] = varval;
           highsLogDev(mipsolver->options_mip_->log_options, HighsLogType::kInfo,
                       "%s = %g\n", varname.c_str(), varval);
-          debugOrigSolution[it->second] = varval;
         }
       }
       debugSolution = debugOrigSolution;

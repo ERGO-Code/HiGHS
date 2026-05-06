@@ -8,6 +8,7 @@
 #include "Parameters.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/VectorOperations.h"
+#include "model/HighsHessian.h"
 #include "util/HighsSparseMatrix.h"
 
 namespace hipo {
@@ -23,11 +24,10 @@ namespace hipo {
 //
 // The linear solver may also define functions:
 // - setup: perform any preliminary calculation (e.g. symbolic factorisation)
-// - refine: apply iterative refinement to the solution
-// - terminate: perform any final action
 // - flops: return number of flops needed for factorisation
 // - spops: return number of sparse ops needed for factorisation
 // - nz: return number of nonzeros in factorisation
+// - getReg: extract regularisation
 //
 // NB: forming the normal equations or augmented system is delegated to the
 // linear solver chosen, so that only the appropriate data (upper triangle,
@@ -51,16 +51,14 @@ class LinearSolver {
   // Pure virtual functions.
   // These need to be defined by any derived class.
   // =================================================================
-  virtual Int factorAS(const HighsSparseMatrix& A,
-                       const std::vector<double>& scaling) = 0;
+  virtual Int factorAS(const std::vector<double>& scaling) = 0;
 
   virtual Int solveAS(const std::vector<double>& rhs_x,
                       const std::vector<double>& rhs_y,
                       std::vector<double>& lhs_x,
                       std::vector<double>& lhs_y) = 0;
 
-  virtual Int factorNE(const HighsSparseMatrix& A,
-                       const std::vector<double>& scaling) = 0;
+  virtual Int factorNE(const std::vector<double>& scaling) = 0;
 
   virtual Int solveNE(const std::vector<double>& rhs,
                       std::vector<double>& lhs) = 0;
@@ -72,18 +70,10 @@ class LinearSolver {
   // These may be overridden by derived classes, if needed.
   // =================================================================
   virtual Int setup() { return 0; }
-
-  virtual void refine(const HighsSparseMatrix& A,
-                      const std::vector<double>& scaling,
-                      const std::vector<double>& rhs_x,
-                      const std::vector<double>& rhs_y,
-                      std::vector<double>& lhs_x, std::vector<double>& lhs_y) {}
-
-  virtual void terminate() {}
-
   virtual double flops() const { return 0; }
   virtual double spops() const { return 0; }
   virtual double nz() const { return 0; }
+  virtual void getReg(std::vector<double>& reg){};
 };
 
 }  // namespace hipo

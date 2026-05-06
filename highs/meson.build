@@ -193,10 +193,9 @@ _ipx_srcs = [
 ]
 
 _srcs = [
-    '../extern/filereaderlp/reader.cpp',
+    'io/filereaderlp/reader.cpp',
     'interfaces/highs_c_api.cpp',
     'io/Filereader.cpp',
-    'io/FilereaderEms.cpp',
     'io/FilereaderLp.cpp',
     'io/FilereaderMps.cpp',
     'io/HMPSIO.cpp',
@@ -253,6 +252,12 @@ _srcs = [
     'model/HighsModel.cpp',
     'parallel/HighsTaskExecutor.cpp',
     'pdlp/CupdlpWrapper.cpp',
+    'pdlp/HiPdlpWrapper.cpp',
+    'pdlp/hipdlp/linalg.cc',
+    'pdlp/hipdlp/logger.cc',
+    'pdlp/hipdlp/pdhg.cc',
+    'pdlp/hipdlp/restart.cc',
+    'pdlp/hipdlp/scaling.cc',
     'presolve/HPresolve.cpp',
     'presolve/HPresolveAnalysis.cpp',
     'presolve/HighsPostsolveStack.cpp',
@@ -346,14 +351,14 @@ if get_option('with_fortran')
   _fsrcs = [
     'interfaces/highs_fortran_api.f90'
   ]
-  fortran_lib = library('FortranHighs',
-                        _fsrcs,
-                        dependencies: _deps,
-                        cpp_args: _args,
-                        link_with: highslib,
-                        include_directories: _incdirs,
-                        pic: true,
-                        install: do_install)
+  library('FortranHighs',
+          _fsrcs,
+          dependencies: _deps,
+          cpp_args: _args,
+          link_with: highslib,
+          include_directories: _incdirs,
+          pic: true,
+          install: do_install)
 endif
 
 # C#
@@ -362,14 +367,14 @@ if get_option('with_csharp')
   _cs_srcs = [
     'interfaces/highs_csharp_api.cs'
   ]
-  cs_lib = library('HighsCsharp',
-                        _cs_srcs,
-                        dependencies: _deps,
-                        cpp_args: _args,
-                        link_with: highslib,
-                        include_directories: _incdirs,
-                        pic: true,
-                        install: do_install)
+  library('HighsCsharp',
+          _cs_srcs,
+          dependencies: _deps,
+          cpp_args: _args,
+          link_with: highslib,
+          include_directories: _incdirs,
+          pic: true,
+          install: do_install)
 endif
 
 highspy_cpp = files([

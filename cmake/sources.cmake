@@ -1,11 +1,11 @@
 set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/filereader>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/pdqsort>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/interfaces>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io/filereader>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/ipx>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/basiclu>
@@ -15,6 +15,7 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
@@ -177,17 +178,17 @@ set(ipx_headers
   ipm/ipx/utils.h)
 
 set(hipo_sources 
-    ipm/hipo/ipm/CurtisReidScaling.cpp 
     ipm/hipo/ipm/IpmData.cpp 
     ipm/hipo/ipm/FactorHiGHSSolver.cpp 
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp 
     ipm/hipo/ipm/LogHighs.cpp
     ipm/hipo/ipm/Model.cpp
+    ipm/hipo/ipm/PreProcess.cpp
+    ipm/hipo/ipm/Refine.cpp
     ipm/hipo/ipm/Solver.cpp)
 
 set(hipo_headers
-    ipm/hipo/ipm/CurtisReidScaling.h
     ipm/hipo/ipm/IpmData.h
     ipm/hipo/ipm/FactorHiGHSSolver.h
     ipm/hipo/ipm/Parameters.h
@@ -198,12 +199,14 @@ set(hipo_headers
     ipm/hipo/ipm/LogHighs.h
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
+    ipm/hipo/ipm/PreProcess.h
     ipm/hipo/ipm/Solver.h
     ipm/hipo/ipm/Status.h)
 
 set(factor_highs_sources
     ipm/hipo/factorhighs/Analyse.cpp
     ipm/hipo/factorhighs/CallAndTimeBlas.cpp
+    ipm/hipo/factorhighs/CliqueStack.cpp
     ipm/hipo/factorhighs/DataCollector.cpp
     ipm/hipo/factorhighs/DenseFactHybrid.cpp
     ipm/hipo/factorhighs/DenseFactKernel.cpp
@@ -217,12 +220,12 @@ set(factor_highs_sources
     ipm/hipo/factorhighs/Numeric.cpp
     ipm/hipo/factorhighs/SolveHandler.cpp
     ipm/hipo/factorhighs/Swaps.cpp
-    ipm/hipo/factorhighs/SymScaling.cpp
     ipm/hipo/factorhighs/Symbolic.cpp)
 
 set(factor_highs_headers
     ipm/hipo/factorhighs/Analyse.h
     ipm/hipo/factorhighs/CallAndTimeBlas.h
+    ipm/hipo/factorhighs/CliqueStack.h
     ipm/hipo/factorhighs/DataCollector.h
     ipm/hipo/factorhighs/DenseFact.h
     ipm/hipo/factorhighs/DgemmParallel.h
@@ -237,7 +240,6 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/ReturnValues.h
     ipm/hipo/factorhighs/SolveHandler.h
     ipm/hipo/factorhighs/Swaps.h
-    ipm/hipo/factorhighs/SymScaling.h
     ipm/hipo/factorhighs/Symbolic.h
     ipm/hipo/factorhighs/Timing.h)
 
@@ -253,22 +255,90 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/KrylovMethods.h
     ipm/hipo/auxiliary/Log.h
     ipm/hipo/auxiliary/mycblas.h
+    ipm/hipo/auxiliary/OrderingPrint.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
+set(hipo_orderings_sources
+    ../extern/amd/amd_1.c
+    ../extern/amd/amd_2.c
+    ../extern/amd/amd_aat.c
+    ../extern/amd/amd_control.c
+    ../extern/amd/amd_defaults.c
+    ../extern/amd/amd_info.c
+    ../extern/amd/amd_order.c
+    ../extern/amd/amd_post_tree.c
+    ../extern/amd/amd_postorder.c
+    ../extern/amd/amd_preprocess.c
+    ../extern/amd/amd_valid.c
+    ../extern/amd/SuiteSparse_config.c
+    ../extern/metis/GKlib/error.c
+    ../extern/metis/GKlib/mcore.c
+    ../extern/metis/GKlib/memory.c
+    ../extern/metis/GKlib/random.c
+    ../extern/metis/libmetis/auxapi.c
+    ../extern/metis/libmetis/balance.c
+    ../extern/metis/libmetis/bucketsort.c
+    ../extern/metis/libmetis/coarsen.c
+    ../extern/metis/libmetis/compress.c
+    ../extern/metis/libmetis/contig.c
+    ../extern/metis/libmetis/fm.c
+    ../extern/metis/libmetis/gklib.c
+    ../extern/metis/libmetis/graph.c
+    ../extern/metis/libmetis/initpart.c
+    ../extern/metis/libmetis/mcutil.c
+    ../extern/metis/libmetis/mmd.c
+    ../extern/metis/libmetis/ometis.c
+    ../extern/metis/libmetis/options.c
+    ../extern/metis/libmetis/refine.c
+    ../extern/metis/libmetis/separator.c
+    ../extern/metis/libmetis/sfm.c
+    ../extern/metis/libmetis/srefine.c
+    ../extern/metis/libmetis/util.c
+    ../extern/metis/libmetis/wspace.c
+    ../extern/rcm/rcm.cpp)
+
+set(hipo_orderings_headers
+    ../extern/amd/amd_internal.h
+    ../extern/amd/amd.h
+    ../extern/amd/SuiteSparse_config.h
+    ../extern/metis/GKlib/gk_arch.h
+    ../extern/metis/GKlib/gk_defs.h
+    ../extern/metis/GKlib/gk_macros.h
+    ../extern/metis/GKlib/gk_mkblas.h
+    ../extern/metis/GKlib/gk_mkmemory.h
+    ../extern/metis/GKlib/gk_mkpqueue.h
+    ../extern/metis/GKlib/gk_mkrandom.h
+    ../extern/metis/GKlib/gk_mksort.h
+    ../extern/metis/GKlib/gk_ms_inttypes.h
+    ../extern/metis/GKlib/gk_ms_stat.h
+    ../extern/metis/GKlib/gk_ms_stdint.h
+    ../extern/metis/GKlib/gk_proto.h
+    ../extern/metis/GKlib/gk_struct.h
+    ../extern/metis/GKlib/gk_types.h
+    ../extern/metis/GKlib/GKlib.h
+    ../extern/metis/libmetis/defs.h
+    ../extern/metis/libmetis/gklib_defs.h
+    ../extern/metis/libmetis/macros.h
+    ../extern/metis/libmetis/metislib.h
+    ../extern/metis/libmetis/proto.h
+    ../extern/metis/libmetis/stdheaders.h
+    ../extern/metis/libmetis/struct.h
+    ../extern/metis/metis.h
+    ../extern/rcm/rcm.h)
+
 # redefinition of 'kHighsInf'
-set_source_files_properties (../extern/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 set(highs_sources
-    ../extern/filereaderlp/reader.cpp
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
-    io/FilereaderEms.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
     io/HMpsFF.cpp
     io/HMPSIO.cpp
     io/LoadOptions.cpp
+    io/filereaderlp/reader.cpp
     ipm/IpxWrapper.cpp
     lp_data/Highs.cpp
     lp_data/HighsCallback.cpp
@@ -319,6 +389,12 @@ set(highs_sources
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
     pdlp/CupdlpWrapper.cpp
+    pdlp/HiPdlpWrapper.cpp
+    pdlp/hipdlp/linalg.cc
+    pdlp/hipdlp/logger.cc
+    pdlp/hipdlp/pdhg.cc
+    pdlp/hipdlp/restart.cc
+    pdlp/hipdlp/scaling.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
@@ -371,22 +447,21 @@ set(highs_sources
 
 # add catch header?
 set(highs_headers
-    ../extern/filereaderlp/builder.hpp
-    ../extern/filereaderlp/def.hpp
-    ../extern/filereaderlp/model.hpp
-    ../extern/filereaderlp/reader.hpp
     ../extern/pdqsort/pdqsort.h
     ../extern/zstr/strict_fstream.hpp
     ../extern/zstr/zstr.hpp
     interfaces/highs_c_api.h
     io/Filereader.h
-    io/FilereaderEms.h
     io/FilereaderLp.h
     io/FilereaderMps.h
     io/HighsIO.h
     io/HMpsFF.h
     io/HMPSIO.h
     io/LoadOptions.h
+    io/filereaderlp/builder.hpp
+    io/filereaderlp/def.hpp
+    io/filereaderlp/model.hpp
+    io/filereaderlp/reader.hpp
     ipm/IpxSolution.h
     ipm/IpxWrapper.h
     lp_data/HConst.h
@@ -452,6 +527,15 @@ set(highs_headers
     parallel/HighsTask.h
     parallel/HighsTaskExecutor.h
     pdlp/CupdlpWrapper.h
+    pdlp/HiPdlpTimer.h
+    pdlp/HiPdlpWrapper.h
+    pdlp/hipdlp/defs.hpp
+    pdlp/hipdlp/linalg.hpp
+    pdlp/hipdlp/logger.hpp
+    pdlp/hipdlp/pdhg.hpp
+    pdlp/hipdlp/restart.hpp
+    pdlp/hipdlp/scaling.hpp
+    pdlp/hipdlp/solver_results.hpp
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h

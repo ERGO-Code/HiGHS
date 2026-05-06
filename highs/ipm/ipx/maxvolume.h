@@ -21,7 +21,7 @@ public:
 
     // The remaining statistics are only set by RunSequential() and count the
     // final pass over the tableau matrix. They are meaningful only if no
-    // updates occured in the final pass; this is guaranteed if parameter
+    // updates occurred in the final pass; this is guaranteed if parameter
     // max_passes was larger than passes().
 
     Int tblnnz() const;              // nnz of tableau matrix

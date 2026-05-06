@@ -17,10 +17,9 @@
 #define HIGHS_HAVE_BITSCAN_REVERSE
 #endif
 
-#define HIGHS_GITHASH "bdf95f2e0"
+#define HIGHS_GITHASH "9eb316f4de"
 #define HIGHS_VERSION_MAJOR 1
-#define HIGHS_VERSION_MINOR 9
+#define HIGHS_VERSION_MINOR 14
 #define HIGHS_VERSION_PATCH 0
-/* #undef HIGHS_DIR */
 
 #endif /* HCONFIG_H_ */

@@ -28,40 +28,17 @@ class Numeric {
   // symbolic object
   const Symbolic* S_;
 
-  // object to handle solve phase in different formats
-  mutable std::unique_ptr<SolveHandler> SH_;
-
-  // lower triangle of original matrix, permuted
-  std::vector<Int> rowsA_{};
-  std::vector<Int> ptrA_{};
-  std::vector<double> valA_{};
-
-  // norms of columns of matrix
-  std::vector<double> inf_norm_cols_, one_norm_cols_;
-
   DataCollector* data_ = nullptr;
 
   friend class Factorise;
 
- public:
   // dynamic regularisation applied to the matrix
   std::vector<double> total_reg_{};
 
-  // Full solve with refinement
-  // Return also number of solves and final residual
-  Int solve(std::vector<double>& x, Int* solve_count = nullptr,
-            double* omega = nullptr) const;
-
-  // Iterative refinement
-  std::pair<Int, double> refine(const std::vector<double>& rhs,
-                                std::vector<double>& x) const;
-  std::vector<double> residual(const std::vector<double>& rhs,
-                               const std::vector<double>& x) const;
-  std::vector<double> residualQuad(const std::vector<double>& rhs,
-                                   const std::vector<double>& x) const;
-  double computeOmega(const std::vector<double>& b,
-                      const std::vector<double>& x,
-                      const std::vector<double>& res) const;
+ public:
+  // Full solve
+  Int solve(std::vector<double>& x) const;
+  void getReg(std::vector<double>& reg);
 };
 
 }  // namespace hipo

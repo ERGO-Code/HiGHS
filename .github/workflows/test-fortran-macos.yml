@@ -1,6 +1,10 @@
 name: test-fortran-macos
 
-on: [push, pull_request]
+on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   fast_build_release:

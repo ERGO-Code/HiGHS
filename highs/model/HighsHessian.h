@@ -30,6 +30,8 @@ class HighsHessian {
   bool operator==(const HighsHessian& hessian) const;
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
+  void alphaProductPlusY(const double alpha, const std::vector<double>& x,
+                         std::vector<double>& y) const;
   double objectiveValue(const std::vector<double>& solution) const;
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void exactResize();
@@ -42,6 +44,9 @@ class HighsHessian {
   bool scaleOk(const HighsInt cost_scale, const double small_matrix_value,
                const double large_matrix_value) const;
   HighsInt numNz() const;
+  bool empty() const;
+  bool isDiagonal() const;
+  double diag(HighsInt i) const;
 
   void print() const;
 };

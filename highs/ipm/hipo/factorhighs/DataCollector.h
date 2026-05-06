@@ -52,8 +52,8 @@ struct IterData {
 
 class DataCollector {
   // Record of times and BLAS calls
-  std::vector<double> times{};
-  std::vector<Int> blas_calls{};
+  std::vector<double> times_{};
+  std::vector<Int> blas_calls_{};
 
   // record of data of ipm iterations
   std::vector<IterData> iter_data_record_{};

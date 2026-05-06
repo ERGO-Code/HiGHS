@@ -3,7 +3,6 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-#include "io/FilereaderEms.h"
 #include "io/HMPSIO.h"
 #include "io/HMpsFF.h"
 #include "io/HighsIO.h"
@@ -24,7 +23,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   const bool run_first_tests = true;
 
   const bool test_garbage_mps = true;
-  const bool test_garbage_ems = true;
   const bool test_garbage_lp = true;
 
   Highs highs;
@@ -89,14 +87,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
       REQUIRE(read_status == HighsStatus::kError);
     }
 
-    if (test_garbage_ems) {
-      if (dev_run) printf("\ngarbage.ems\n");
-      model_file =
-          std::string(HIGHS_DIR) + "/check/instances/" + model + ".ems";
-      read_status = highs.readModel(model_file);
-      REQUIRE(read_status == HighsStatus::kError);
-    }
-
     if (test_garbage_lp) {
       // Since #2316, reading an LP file of garbage yields an empty
       // model, since the absence of an objecive is (rightly) no
@@ -143,6 +133,8 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   REQUIRE(read_status == HighsStatus::kError);
 
   model = "1451";
+  // Vanilla .lp file, but for constraint named "end" which tests code
+  // to permit keywords as constraint names
   if (dev_run) printf("\n%s.lp\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);
@@ -210,7 +202,7 @@ TEST_CASE("filereader-free-format-parser-lp", "[highs_filereader]") {
 }
 
 // No commas in test case name.
-TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
+TEST_CASE("filereader-read-mps-lp", "[highs_filereader]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
@@ -228,25 +220,6 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   std::string filename_lp = test_name + ".lp";
   status = highs.writeModel(filename_lp);
   REQUIRE(status == HighsStatus::kOk);
-
-  /*
-  bool are_the_same;
-  // Write ems
-  std::string filename_ems = test_name + ".ems";
-  status = highs.writeModel(filename_ems);
-  REQUIRE(status == HighsStatus::kOk);
-
-  // Read ems and compare with mps
-  std::cout << "Reading " << filename_ems << std::endl;
-  status = highs.readModel(filename_ems);
-  REQUIRE(status == HighsStatus::kOk);
-
-  std::cout << "Compare LP from .ems and .mps" << std::endl;
-  are_the_same = lp_mps == highs.getLp();
-  REQUIRE(are_the_same);
-
-  std::remove(filename_ems.c_str());
-  */
 
   status = highs.run();
   REQUIRE(status == HighsStatus::kOk);
@@ -501,7 +474,7 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   lp.col_names_ = {"Column", "Column"};
   lp.row_names_ = {"Row0", "Row1"};
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.writeModel("") == HighsStatus::kError);
+  REQUIRE(h.writeModel("") == HighsStatus::kWarning);
 
   lp.col_names_ = {"Column0", ""};
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
@@ -520,8 +493,8 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   lp.row_names_[1] = "Row 1";
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
-  REQUIRE(h.writeSolution("", 1) == HighsStatus::kError);
-  REQUIRE(h.writeModel("") == HighsStatus::kError);
+  REQUIRE(h.writeSolution("", 1) == HighsStatus::kWarning);
+  REQUIRE(h.writeModel("") == HighsStatus::kOk);
 
   h.resetGlobalScheduler(true);
 }

@@ -1,27 +1,16 @@
 #include "ipm/ipx/timer.h"
-
+#include <cstdio>
 namespace ipx {
 
-Timer::Timer() {
-    Reset();
+Timer::Timer(const double offset)
+    : offset_(offset) {
+    Reset(true);
 }
 
-double Timer::Elapsed() const {
-    return toc(t0_);
-}
-
-void Timer::Reset() {
-    t0_ = tic();
-}
-
-Timer::TimePoint Timer::tic() {
-    return std::chrono::high_resolution_clock::now();
-}
-
-double Timer::toc(TimePoint start) {
-    TimePoint end = tic();
-    std::chrono::duration<double> diff = end-start;
-    return diff.count();
+void Timer::Reset(const bool first) {
+  if (!first) offset_ -= t0_;
+  t0_ = read();
+  if (!first) offset_ += t0_;
 }
 
 }  // namespace ipx

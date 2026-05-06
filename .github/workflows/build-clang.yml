@@ -2,6 +2,10 @@ name: build-clang
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   debug:
     runs-on: ${{ matrix.os }}

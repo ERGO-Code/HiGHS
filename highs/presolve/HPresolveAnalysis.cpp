@@ -11,7 +11,8 @@
 void HPresolveAnalysis::setup(const HighsLp* model_,
                               const HighsOptions* options_,
                               const HighsInt& numDeletedRows_,
-                              const HighsInt& numDeletedCols_) {
+                              const HighsInt& numDeletedCols_,
+                              const bool silent) {
   model = model_;
   options = options_;
   numDeletedRows = &numDeletedRows_;
@@ -19,13 +20,21 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
 
   this->allow_rule_.assign(kPresolveRuleCount, true);
 
-  if (options->presolve_rule_off) {
+  if (options->presolve_rule_off || options_->log_dev_level) {
     // Some presolve rules are off
     //
     // Transform options->presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Presolve rules not allowed:\n");
+    if (!silent) {
+      if (options->presolve_rule_off) {
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "Presolve rules not allowed:\n");
+      } else {
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "Permitted suppression of presolve rules via "
+                     "presolve_rule_off option:\n");
+      }
+    }
     HighsInt bit = 1;
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++) {
@@ -35,17 +44,21 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
         // This is a rule that can be switched off, so comment
         // positively if it is off
         allow_rule_[rule_type] = allow;
-        if (!allow)
-          highsLogUser(options->log_options, HighsLogType::kInfo,
-                       "   Rule %2d (bit %4d): %s\n", (int)rule_type, (int)bit,
-                       utilPresolveRuleTypeToString(rule_type).c_str());
-      } else if (!allow) {
+        if (!silent)
+          if (!allow ||
+              (!options->presolve_rule_off && options_->log_dev_level))
+            highsLogUser(options->log_options, HighsLogType::kInfo,
+                         "   Rule %2d (set bit %2d = %5d): %s\n",
+                         int(rule_type), int(rule_type), int(bit),
+                         utilPresolveRuleTypeToString(rule_type).c_str());
+      } else if (!allow && !silent) {
         // This is a rule that cannot be switched off so, if an
         // attempt is made, don't allow it to be off and comment
         // negatively
         highsLogUser(options->log_options, HighsLogType::kWarning,
-                     "Cannot disallow rule %2d (bit %4d): %s\n", (int)rule_type,
-                     (int)bit, utilPresolveRuleTypeToString(rule_type).c_str());
+                     "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
+                     int(rule_type), int(rule_type), int(bit),
+                     utilPresolveRuleTypeToString(rule_type).c_str());
       }
       bit *= 2;
     }
@@ -175,32 +188,33 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
   if (report && sum_removed_row + sum_removed_col) {
     const std::string rule =
         "-------------------------------------------------------";
-    highsLogDev(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "%-25s      Rows      Cols     Calls\n",
-                "Presolve rule removed");
-    highsLogDev(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
+    highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "%-25s      Rows      Cols     Calls\n",
+                 "Presolve rule removed");
+    highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++)
       if (presolve_log_.rule[rule_type].call ||
           presolve_log_.rule[rule_type].row_removed ||
           presolve_log_.rule[rule_type].col_removed)
-        highsLogDev(log_options, HighsLogType::kInfo, "%-25s %9d %9d %9d\n",
-                    utilPresolveRuleTypeToString(rule_type).c_str(),
-                    (int)presolve_log_.rule[rule_type].row_removed,
-                    (int)presolve_log_.rule[rule_type].col_removed,
-                    (int)presolve_log_.rule[rule_type].call);
-    highsLogDev(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
-    highsLogDev(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
-                "Total reductions", (int)sum_removed_row, (int)sum_removed_col);
-    highsLogDev(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
-    highsLogDev(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
-                "Original  model", (int)original_num_row_,
-                (int)original_num_col_);
-    highsLogDev(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
-                "Presolved model", (int)(original_num_row_ - sum_removed_row),
-                (int)(original_num_col_ - sum_removed_col));
-    highsLogDev(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
+        highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d %9d\n",
+                     utilPresolveRuleTypeToString(rule_type).c_str(),
+                     (int)presolve_log_.rule[rule_type].row_removed,
+                     (int)presolve_log_.rule[rule_type].col_removed,
+                     (int)presolve_log_.rule[rule_type].call);
+    highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
+    highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
+                 "Total reductions", (int)sum_removed_row,
+                 (int)sum_removed_col);
+    highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
+    highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
+                 "Original  model", (int)original_num_row_,
+                 (int)original_num_col_);
+    highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
+                 "Presolved model", (int)(original_num_row_ - sum_removed_row),
+                 (int)(original_num_col_ - sum_removed_col));
+    highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
   }
   if (original_num_row_ == model->num_row_ &&
       original_num_col_ == model->num_col_) {

@@ -2,6 +2,10 @@ name: test-csharp-win
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   fast_build_release:
     runs-on: windows-2022

@@ -1,5 +1,10 @@
 name: sanitizers-cmake
+
 on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   gcc_relwithdebinfo:
@@ -104,3 +109,42 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+  hipo:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        config: [Debug]
+        all_tests: [ON]
+        sanitizer: [Address, Thread, Leak]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+            -DALL_TESTS=${{ matrix.all_tests }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+            -DDEBUG_MEMORY=${{ matrix.sanitizer }}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . -j2
+
+      - name: Test executable
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test hipo
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ./bin/unit_tests [highs_hipo]

@@ -11,8 +11,9 @@
 
 #include "Highs.h"
 
-void HighsIis::invalidate() {
+void HighsIis::clearData() {
   this->valid_ = false;
+  this->status_ = kIisModelStatusUnknown;
   this->strategy_ = kIisStrategyMin;
   this->col_index_.clear();
   this->row_index_.clear();
@@ -20,8 +21,23 @@ void HighsIis::invalidate() {
   this->row_bound_.clear();
   this->col_status_.clear();
   this->row_status_.clear();
-  this->info_.clear();
   this->model_.clear();
+}
+
+void HighsIis::clear() {
+  this->clearData();
+  this->info_.clear();
+}
+
+void HighsIis::clearLogInfo() {
+  this->info_.iis_last_disptime = -kHighsInf;
+  this->info_.iis_num_disp_lines = 0;
+}
+
+void HighsIis::invalid(const HighsLp& lp) {
+  this->clear();
+  this->col_status_.assign(lp.num_col_, kIisStatusMaybeInConflict);
+  this->row_status_.assign(lp.num_row_, kIisStatusMaybeInConflict);
 }
 
 std::string HighsIis::iisBoundStatusToString(HighsInt bound_status) const {
@@ -34,7 +50,16 @@ std::string HighsIis::iisBoundStatusToString(HighsInt bound_status) const {
   return "*****";
 }
 
-void HighsIis::report(const std::string message, const HighsLp& lp) const {
+std::string HighsIis::iisModelStatusToString(HighsInt model_status) const {
+  if (model_status == kIisModelStatusFeasible) return "Feasible";
+  if (model_status == kIisModelStatusUnknown) return "Unknown";
+  if (model_status == kIisModelStatusTimeLimit) return "Time limit reached";
+  if (model_status == kIisModelStatusReducible) return "Reducible";
+  if (model_status == kIisModelStatusIrreducible) return "Irreducible";
+  return "*****";
+}
+
+void HighsIis::report(const std::string& message, const HighsLp& lp) const {
   HighsInt num_iis_col = this->col_index_.size();
   HighsInt num_iis_row = this->row_index_.size();
   if (num_iis_col > 10 || num_iis_row > 10) return;
@@ -57,6 +82,52 @@ void HighsIis::report(const std::string message, const HighsLp& lp) const {
            iisBoundStatusToString(this->row_bound_[iRow]).c_str(),
            lp.row_lower_[iRow], lp.row_upper_[iRow]);
   printf("\n");
+}
+
+void HighsIis::reportIteration(const HighsOptions& options, const HighsInt iter,
+                               const HighsInt num_rows_remaining,
+                               const bool force) {
+  const bool output_flag = *options.log_options.output_flag;
+  if (!output_flag) return;
+  const double min_interval = 5.0;
+  const double runtime = info_.sum_simplex_times;
+  if (!force && info_.iis_last_disptime > -0.5 * kHighsInf &&
+      runtime - info_.iis_last_disptime < min_interval)
+    return;
+  // Update last time only when we actually print a line
+  info_.iis_last_disptime = runtime;
+  const int gap = 17;
+  const int w_iter = int(strlen("Iteration")) + 2;
+  const int w_rows = int(strlen("Rows")) + gap;
+  const int w_time = int(strlen("Runtime")) + gap;
+
+  // Print header every 20 lines (and on first line)
+  if (info_.iis_num_disp_lines % 20 == 0) {
+    highsLogUser(options.log_options, HighsLogType::kInfo, "%*s%*s%*s\n",
+                 w_iter, "Iteration", w_rows, "Rows", w_time, "Runtime");
+  }
+  ++info_.iis_num_disp_lines;
+  const std::string time_string = highsFormatToString("%.2fs", runtime);
+  highsLogUser(options.log_options, HighsLogType::kInfo, "%*d%*d%*s\n", w_iter,
+               int(iter), w_rows, int(num_rows_remaining), w_time,
+               time_string.c_str());
+}
+
+void HighsIis::reportFinal(const HighsOptions& options) const {
+  const bool output_flag = *options.log_options.output_flag;
+  if (!output_flag) return;
+  const HighsLogOptions& log_options = options.log_options;
+  // Align colons by padding labels to the same width
+  const int kLabelWidth = 19;
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %s\n", kLabelWidth,
+               "IIS status", iisModelStatusToString(status_).c_str());
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %d\n", kLabelWidth,
+               "Rows", int(row_index_.size()));
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %d\n", kLabelWidth,
+               "Columns", int(col_index_.size()));
+  highsLogUser(log_options, HighsLogType::kInfo, "%-*s : %.2fs\n", kLabelWidth,
+               "HiGHS run time", info_.sum_simplex_times);
 }
 
 void HighsIis::addCol(const HighsInt col, const HighsInt status) {
@@ -84,10 +155,8 @@ void HighsIis::removeRow(const HighsInt row) {
 }
 
 bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
-  this->invalidate();
-  const bool col_priority =
-      //      options.iis_strategy == kIisStrategyFromRayColPriority ||
-      options.iis_strategy == kIisStrategyFromLpColPriority;
+  this->clear();
+  const bool col_priority = kIisStrategyColPriority & options.iis_strategy;
   for (HighsInt k = 0; k < 2; k++) {
     if ((col_priority && k == 0) || (!col_priority && k == 1)) {
       // Loop over columns first
@@ -113,22 +182,29 @@ bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
   }
   HighsInt num_iis_col = this->col_index_.size();
   HighsInt num_iis_row = this->row_index_.size();
-  // If one is found then we're done
+  // If one is found then we've found an IIS
   if (num_iis_col + num_iis_row > 0) {
     // Should have found exactly 1
-    assert((num_iis_col == 1 || num_iis_row == 1) &&
-           num_iis_col + num_iis_row < 2);
+    assert(num_iis_col + num_iis_row == 1);
     this->valid_ = true;
+    this->status_ = kIisModelStatusIrreducible;
     this->strategy_ = options.iis_strategy;
     return true;
   }
   // Now look for empty rows that cannot have zero activity
   std::vector<HighsInt> count;
-  count.assign(lp.num_row_, 0);
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-      count[lp.a_matrix_.index_[iEl]]++;
+  // Get the row counts
+  if (lp.a_matrix_.isColwise()) {
+    count.assign(lp.num_row_, 0);
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+        count[lp.a_matrix_.index_[iEl]]++;
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      count.push_back(lp.a_matrix_.start_[iRow + 1] -
+                      lp.a_matrix_.start_[iRow]);
   }
   assert(this->row_index_.size() == 0);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
@@ -139,7 +215,9 @@ bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
       this->addRow(iRow, kIisBoundStatusUpper);
     }
     if (this->row_index_.size() > 0) {
+      // If one is found then we've found an IIS
       this->valid_ = true;
+      this->status_ = kIisModelStatusIrreducible;
       this->strategy_ = options.iis_strategy;
       return true;
     }
@@ -149,7 +227,7 @@ bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
 
 bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
   // Look for infeasible rows based on row value bounds
-  this->invalidate();
+  this->clear();
   std::vector<double> lower_value;
   std::vector<double> upper_value;
   if (lp.a_matrix_.isColwise()) {
@@ -210,9 +288,33 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
       break;
     }
   }
-  if (this->row_index_.size() == 0) return false;
+  if (this->row_index_.size() == 0) {
+    // Nothing found, but IIS data still valid
+    this->clear();
+    this->valid_ = true;
+    this->status_ = kIisModelStatusUnknown;
+    this->strategy_ = options.iis_strategy;
+    return false;
+  }
   assert(below_lower || above_upper);
   assert(!(below_lower && above_upper));
+  // Found an infeasible row
+  const HighsInt iRow = this->row_index_[0];
+  const std::string row_name_string =
+      lp.row_names_.size() > 0 ? "(" + lp.row_names_[iRow] + ")" : "";
+  if (below_lower) {
+    highsLogUser(
+        options.log_options, HighsLogType::kInfo,
+        "LP row %d %shas maximum row value of %g, below lower bound of %g\n",
+        int(iRow), row_name_string.c_str(), upper_value[iRow],
+        lp.row_lower_[iRow]);
+  } else {
+    highsLogUser(
+        options.log_options, HighsLogType::kInfo,
+        "LP row %d %shas minimum row value of %g, above upper bound of %g\n",
+        int(iRow), row_name_string.c_str(), lower_value[iRow],
+        lp.row_upper_[iRow]);
+  }
   double value;
   auto setColBound = [&]() {
     if (below_lower) {
@@ -229,23 +331,7 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
       }
     }
   };
-  // Found an infeasible row
-  HighsInt iRow = this->row_index_[0];
-  const std::string row_name_string =
-      lp.row_names_.size() > 0 ? "(" + lp.row_names_[iRow] + ")" : "";
-  if (below_lower) {
-    highsLogUser(
-        options.log_options, HighsLogType::kInfo,
-        "LP row %d %shas maximum row value of %g, below lower bound of %g\n",
-        int(iRow), row_name_string.c_str(), upper_value[iRow],
-        lp.row_lower_[iRow]);
-  } else {
-    highsLogUser(
-        options.log_options, HighsLogType::kInfo,
-        "LP row %d %shas minimum row value of %g, above upper bound of %g\n",
-        int(iRow), row_name_string.c_str(), lower_value[iRow],
-        lp.row_upper_[iRow]);
-  }
+
   if (lp.a_matrix_.isColwise()) {
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
@@ -268,32 +354,38 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
       }
     }
   }
+
   // There must be at least one column in the IIS
   assert(this->col_index_.size() > 0);
   assert(this->col_index_.size() == this->col_bound_.size());
   assert(this->row_index_.size() == this->row_bound_.size());
-  this->strategy_ = options.iis_strategy;
   this->valid_ = true;
-  return this->valid_;
+  this->status_ = kIisModelStatusIrreducible;
+  this->strategy_ = options.iis_strategy;
+  return true;
 }
 
-HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
-                              const HighsBasis& basis,
-                              const std::vector<HighsInt>& infeasible_row) {
-  // Check for trivial IIS should have been done earlier
-  assert(!this->trivial(lp, options));
+HighsStatus HighsIis::deduce(const HighsLp& lp, const HighsOptions& options,
+                             const HighsCallback& callback,
+                             const HighsBasis& basis) {
   // The number of infeasible rows must be positive
-  assert(infeasible_row.size() > 0);
+  assert(this->row_index_.size() > 0);
   // Identify the LP corresponding to the set of infeasible rows
-  std::vector<HighsInt> from_row = infeasible_row;
+  std::vector<HighsInt> from_row = this->row_index_;
   std::vector<HighsInt> from_col;
   std::vector<HighsInt> to_row;
   to_row.assign(lp.num_row_, -1);
+  // Only uses this->row_index_ to initialise from_row, so can clear
+  this->clearData();
+  // ToDo Exploit the known col_index_ and row_bound_ HighsIis
+  // information
+  //
+  // To get the IIS data needs the matrix to be column-wise
   assert(lp.a_matrix_.isColwise());
-  // Determine how to detect whether a row is in infeasible_row and
-  // (then) gather information about it
-  for (HighsInt iX = 0; iX < HighsInt(infeasible_row.size()); iX++)
-    to_row[infeasible_row[iX]] = iX;
+  // Determine how to detect whether a row is in from_row and (then)
+  // gather information about it
+  for (HighsInt iX = 0; iX < HighsInt(from_row.size()); iX++)
+    to_row[from_row[iX]] = iX;
   // Identify the columns (from_col) with nonzeros in the infeasible
   // rows
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -334,16 +426,15 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
     if (has_row_names)
       to_lp.row_names_.push_back(lp.row_names_[from_row[iRow]]);
   }
-  if (this->compute(to_lp, options) != HighsStatus::kOk)
-    return HighsStatus::kError;
+  HighsStatus return_status = this->compute(to_lp, options, callback);
   // Indirect the values into the original LP
   for (HighsInt& colindex : this->col_index_) colindex = from_col[colindex];
   for (HighsInt& rowindex : this->row_index_) rowindex = from_row[rowindex];
   if (kIisDevReport) this->report("On exit", lp);
-  return HighsStatus::kOk;
+  return return_status;
 }
 
-void HighsIis::getLp(const HighsLp& lp) {
+void HighsIis::setLp(const HighsLp& lp) {
   HighsLp& iis_lp = this->model_.lp_;
   iis_lp.clear();
   HighsInt iis_num_col = this->col_index_.size();
@@ -434,43 +525,129 @@ void HighsIis::getLp(const HighsLp& lp) {
   }
   iis_lp.num_col_ = iis_lp.col_cost_.size();
   iis_lp.num_row_ = iis_lp.row_lower_.size();
+  // The IIS LP matrix will have the same format as the incumbent LP
+  iis_lp.a_matrix_.format_ = lp.a_matrix_.format_;
   iis_lp.a_matrix_.num_col_ = iis_lp.num_col_;
   iis_lp.a_matrix_.num_row_ = iis_lp.num_row_;
   iis_lp.model_name_ = lp.model_name_ + "_IIS";
 }
 
-void HighsIis::getStatus(const HighsLp& lp) {
+HighsInt HighsIis::nonIsStatus() const {
+  const bool is_feasible = this->status_ == kIisModelStatusFeasible;
+  const bool has_is = this->col_index_.size() || this->row_index_.size();
+  // If the model is known to be feasible, then there should be no IS,
+  // and all columns and rows are kIisStatusNotInConflict
+  if (is_feasible) assert(!has_is);
+  if (has_is) assert(this->status_ >= kIisModelStatusTimeLimit);
+  // If there is an IS, then all columns and rows not in the IS are
+  // kIisStatusNotInConflict
+  const HighsInt default_iis_status = is_feasible || has_is
+                                          ? kIisStatusNotInConflict
+                                          : kIisStatusMaybeInConflict;
+  return default_iis_status;
+}
+
+void HighsIis::setStatus(const HighsLp& lp) {
   if (!this->valid_) return;
-  this->col_status_.assign(lp.num_col_, kIisStatusNotInConflict);
-  this->row_status_.assign(lp.num_row_, kIisStatusNotInConflict);
-  HighsInt iis_num_col = this->col_index_.size();
-  HighsInt iis_num_row = this->row_index_.size();
+  const HighsInt non_is_status = nonIsStatus();
+  const HighsInt in_is_status = this->status_ == kIisModelStatusIrreducible
+                                    ? kIisStatusInConflict
+                                    : kIisStatusMaybeInConflict;
+  this->col_status_.assign(lp.num_col_, non_is_status);
+  this->row_status_.assign(lp.num_row_, non_is_status);
+  const HighsInt iis_num_col = this->col_index_.size();
+  const HighsInt iis_num_row = this->row_index_.size();
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++)
-    this->col_status_[this->col_index_[iisCol]] = kIisStatusInConflict;
+    this->col_status_[this->col_index_[iisCol]] = in_is_status;
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++)
-    this->row_status_[this->row_index_[iisRow]] = kIisStatusInConflict;
+    this->row_status_[this->row_index_[iisRow]] = in_is_status;
+}
+
+HighsInt HighsIis::determineBoundStatus(const double lower, const double upper,
+                                        const bool is_row) const {
+  HighsInt iss_bound_status = kIisBoundStatusNull;
+  if (lower <= -kHighsInf) {
+    if (upper >= kHighsInf) {
+      if (is_row) {
+        // Free rows can be dropped
+        iss_bound_status = kIisBoundStatusDropped;
+      } else {
+        // Free columns can only be dropped if they are empty
+        iss_bound_status = kIisBoundStatusFree;
+      }
+    } else {
+      iss_bound_status = kIisBoundStatusUpper;
+    }
+  } else {
+    if (upper >= kHighsInf) {
+      iss_bound_status = kIisBoundStatusLower;
+    } else {
+      // FX or BX
+      iss_bound_status = kIisBoundStatusBoxed;
+    }
+  }
+  assert(iss_bound_status != kIisBoundStatusNull);
+  return iss_bound_status;
 }
 
 HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
+                              const HighsCallback& callback,
                               const HighsBasis* basis) {
   const HighsLogOptions& log_options = options.log_options;
-  const bool row_priority =
-      //      options.iis_strategy == kIisStrategyFromRayRowPriority ||
-      options.iis_strategy == kIisStrategyFromLpRowPriority;
+  const bool col_priority = kIisStrategyColPriority & options.iis_strategy;
+  const bool row_priority = !col_priority;
   // Initially all columns and rows are candidates for the IIS
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
+  HighsInt num_rows = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    HighsInt col_status = this->determineBoundStatus(
+        lp.col_lower_[iCol], lp.col_upper_[iCol], false);
+    this->addCol(iCol, col_status);
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    HighsInt row_status = this->determineBoundStatus(lp.row_lower_[iRow],
+                                                     lp.row_upper_[iRow], true);
+    this->addRow(iRow, row_status);
+    if (row_status != kIisBoundStatusDropped) num_rows++;
+  }
+
   Highs highs;
-  const HighsInfo& info = highs.getInfo();
+  highs.passOptions(options);
   highs.setOptionValue("output_flag", kIisDevReport);
   highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue(
+      "time_limit",
+      std::max(options.iis_time_limit - this->info_.sum_simplex_times, 0.0));
+  // Handle the callback propagation after setting output_flag false,
+  // otherwise deprecation message for setLogCallback is echoed
+  if (log_options.user_log_callback || callback.active[kCallbackLogging] ||
+      callback.active[kCallbackSimplexInterrupt]) {
+    // Setting the logging callbacks currently serves no purpose since
+    // output_flag is set to kIisDevReport which is false (unless
+    // developing) so that solves with this Highs instance are silent
+    /*
+    if (log_options.user_log_callback)
+      highs.setLogCallback(log_options.user_log_callback);
+    */
+    highs.setCallback(callback.user_callback, callback.user_callback_data);
+    if (callback.active[kCallbackLogging])
+      highs.startCallback(kCallbackLogging);
+    if (callback.active[kCallbackSimplexInterrupt])
+      highs.startCallback(kCallbackSimplexInterrupt);
+  }
   const HighsLp& incumbent_lp = highs.getLp();
   const HighsBasis& incumbent_basis = highs.getBasis();
   const HighsSolution& solution = highs.getSolution();
+  const HighsInfo& info = highs.getInfo();
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
   if (basis) highs.setBasis(*basis);
 
+  // Initial logging
+  this->clearLogInfo();
+  HighsInt iter = 0;
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "\nRunning deletion filter to identify an IIS\n");
+  this->reportIteration(options, iter, num_rows, true);
   // Zero the objective
   std::vector<double> cost;
   cost.assign(lp.num_col_, 0);
@@ -483,14 +660,14 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   bool row_deletion = false;
   HighsInt iX = -1;
   bool drop_lower = false;
-
   // Lambda for gathering data when solving an LP
   auto solveLp = [&]() -> HighsStatus {
-    HighsIisInfo iis_info;
-    iis_info.simplex_time = -highs.getRunTime();
-    iis_info.simplex_iterations = -info.simplex_iteration_count;
-    run_status = highs.run();
-    assert(run_status == HighsStatus::kOk);
+    double simplex_time = -highs.getRunTime();
+    HighsInt simplex_iterations = -info.simplex_iteration_count;
+    run_status = highs.optimizeModel();
+    simplex_time += highs.getRunTime();
+    simplex_iterations += info.simplex_iteration_count;
+    this->info_.update(simplex_time, simplex_iterations);
     if (run_status != HighsStatus::kOk) return run_status;
     HighsModelStatus model_status = highs.getModelStatus();
     if (use_sensitivity_filter &&
@@ -505,7 +682,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       highs.getOptionValue("simplex_strategy", simplex_strategy);
       highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
       // Solve the LP
-      run_status = highs.run();
+      run_status = highs.optimizeModel();
       if (run_status != HighsStatus::kOk) return run_status;
       highs.writeSolution("", kSolutionStylePretty);
       const HighsInt* basic_index = highs.getBasicVariablesArray();
@@ -583,16 +760,26 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       highs.setOptionValue("simplex_strategy", simplex_strategy);
       assert(!num_zero_dual);
     }
-    iis_info.simplex_time += highs.getRunTime();
-    iis_info.simplex_iterations += info.simplex_iteration_count;
-    this->info_.push_back(iis_info);
+
     return run_status;
   };
 
   run_status = solveLp();
-  if (run_status != HighsStatus::kOk) return run_status;
+  // If we fail to establish infeasibility, return the initial subset
+  if (run_status != HighsStatus::kOk) {
+    this->valid_ = true;
+    this->strategy_ = options.iis_strategy;
+    if (highs.getModelStatus() == HighsModelStatus::kTimeLimit) {
+      this->status_ = IisModelStatus::kIisModelStatusTimeLimit;
+    } else {
+      this->status_ = IisModelStatus::kIisModelStatusReducible;
+    }
+    return HighsStatus::kWarning;
+  }
 
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  IisModelStatus iis_status = kIisModelStatusIrreducible;
+  HighsStatus search_return_status = HighsStatus::kOk;
 
   // Pass twice: rows before columns, or columns before rows, according to
   // row_priority
@@ -602,16 +789,25 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     // Perform deletion pass
     HighsInt num_index = row_deletion ? lp.num_row_ : lp.num_col_;
     for (iX = 0; iX < num_index; iX++) {
+      // Get logging info
+      iter++;
+      const bool force = row_deletion && (iX == (num_index - 1));
+      // Get status
       const HighsInt ix_status =
           row_deletion ? this->row_bound_[iX] : this->col_bound_[iX];
+      // Skip if status is already free or dropped
       if (ix_status == kIisBoundStatusDropped ||
-          ix_status == kIisBoundStatusFree)
+          ix_status == kIisBoundStatusFree) {
+        // Possibly report
+        this->reportIteration(options, iter, num_rows, force);
         continue;
+      }
+
       double lower = row_deletion ? lp.row_lower_[iX] : lp.col_lower_[iX];
       double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
-      // Record whether the upper bound has been dropped due to the lower bound
-      // being kept
-      if (lower > -kHighsInf) {
+      // Record whether the upper bound has been dropped due to the lower
+      // bound being kept
+      if (lower > -kHighsInf && iis_status != kIisModelStatusTimeLimit) {
         // Drop the lower bound temporarily
         bool drop_lower = true;
         run_status = row_deletion
@@ -620,56 +816,18 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
         assert(run_status == HighsStatus::kOk);
         // Solve the LP
         run_status = solveLp();
-        if (run_status != HighsStatus::kOk) return run_status;
-        HighsModelStatus model_status = highs.getModelStatus();
-        if (model_status == HighsModelStatus::kOptimal) {
-          // Now feasible, so restore the lower bound
-          run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
-                                    : highs.changeColBounds(iX, lower, upper);
-          assert(run_status == HighsStatus::kOk);
-          // If the lower bound must be kept, then any finite upper bound
-          // must be dropped
-          const bool apply_reciprocal_rule = true;
-          if (apply_reciprocal_rule) {
-            if (upper < kHighsInf) {
-              // Drop the upper bound permanently
-              upper = kHighsInf;
-              run_status = row_deletion
-                               ? highs.changeRowBounds(iX, lower, upper)
-                               : highs.changeColBounds(iX, lower, upper);
-              assert(run_status == HighsStatus::kOk);
-            }
-            assert(upper >= kHighsInf);
-            // Since upper = kHighsInf, allow the loop to run so that
-            // bound status is set as if upper were set to kHighsInf
-            // by relaxing it and finding that the LP was still
-            // infeasible
-          }
-        } else {
-          // Bound can be dropped permanently
-          assert(model_status == HighsModelStatus::kInfeasible);
-          lower = -kHighsInf;
-        }
+        this->processBoundRelaxation(highs, row_deletion, true, iX, lower,
+                                     upper, iis_status, search_return_status);
       }
-      if (upper < kHighsInf) {
+      if (upper < kHighsInf && iis_status != kIisModelStatusTimeLimit) {
         // Drop the upper bound temporarily
         run_status = row_deletion ? highs.changeRowBounds(iX, lower, kHighsInf)
                                   : highs.changeColBounds(iX, lower, kHighsInf);
         assert(run_status == HighsStatus::kOk);
         // Solve the LP
         run_status = solveLp();
-        if (run_status != HighsStatus::kOk) return run_status;
-        HighsModelStatus model_status = highs.getModelStatus();
-        if (model_status == HighsModelStatus::kOptimal) {
-          // Now feasible, so restore the upper bound
-          run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
-                                    : highs.changeColBounds(iX, lower, upper);
-          assert(run_status == HighsStatus::kOk);
-        } else {
-          // Bound can be dropped permanently
-          assert(model_status == HighsModelStatus::kInfeasible);
-          upper = kHighsInf;
-        }
+        this->processBoundRelaxation(highs, row_deletion, false, iX, lower,
+                                     upper, iis_status, search_return_status);
       }
       const bool debug_bound_change = true;
       if (debug_bound_change) {
@@ -691,37 +849,21 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
         assert(check_lower == lower);
         assert(check_upper == upper);
       }
-      HighsInt iss_bound_status = kIisBoundStatusNull;
-      if (lower <= -kHighsInf) {
-        if (upper >= kHighsInf) {
-          if (row_deletion) {
-            // Free rows can be dropped
-            iss_bound_status = kIisBoundStatusDropped;
-          } else {
-            // Free columns can only be dropped if they are empty
-            iss_bound_status = kIisBoundStatusFree;
-          }
-        } else {
-          iss_bound_status = kIisBoundStatusUpper;
-        }
-      } else {
-        if (upper >= kHighsInf) {
-          iss_bound_status = kIisBoundStatusLower;
-        } else {
-          // FX or BX: shouldn't happen
-          iss_bound_status = kIisBoundStatusBoxed;
-        }
-      }
-      assert(iss_bound_status != kIisBoundStatusNull);
-      assert(iss_bound_status != kIisBoundStatusBoxed);
+      HighsInt iss_bound_status =
+          this->determineBoundStatus(lower, upper, row_deletion);
       if (row_deletion) {
         this->row_bound_[iX] = iss_bound_status;
+        if (iss_bound_status == kIisBoundStatusDropped) num_rows--;
       } else {
         this->col_bound_[iX] = iss_bound_status;
       }
-      highsLogUser(log_options, HighsLogType::kInfo, "%s %d has status %s\n",
-                   type.c_str(), int(iX),
-                   iisBoundStatusToString(iss_bound_status).c_str());
+      // Possibly report on iteration
+      this->reportIteration(options, iter, num_rows, force);
+      if (kIisDevReport) {
+        highsLogUser(log_options, HighsLogType::kInfo, "%s %d has status %s\n",
+                     type.c_str(), int(iX),
+                     iisBoundStatusToString(iss_bound_status).c_str());
+      }
     }
     if (k == 1) continue;
     // End of first pass: look to simplify second pass
@@ -739,8 +881,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
           }
         }
         if (empty_col) {
-          highsLogUser(log_options, HighsLogType::kInfo,
-                       "Col %d has status Dropped: Empty\n", int(iCol));
+          if (kIisDevReport) {
+            highsLogUser(log_options, HighsLogType::kInfo,
+                         "Col %d has status Dropped: Empty\n", int(iCol));
+          }
           this->col_bound_[iCol] = kIisBoundStatusDropped;
           run_status = highs.changeColBounds(iCol, -kHighsInf, kHighsInf);
           assert(run_status == HighsStatus::kOk);
@@ -766,26 +910,152 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       iss_num_row++;
     }
   }
+  // Return final result
+  this->valid_ = true;
+  this->status_ = iis_status;
+  this->strategy_ = options.iis_strategy;
   this->col_index_.resize(iss_num_col);
   this->col_bound_.resize(iss_num_col);
   this->row_index_.resize(iss_num_row);
   this->row_bound_.resize(iss_num_row);
-  this->valid_ = true;
-  this->strategy_ = options.iis_strategy;
-  return HighsStatus::kOk;
+  return search_return_status;
+}
+
+void HighsIis::processBoundRelaxation(Highs& highs, const bool row_deletion,
+                                      const bool drop_lower, const HighsInt iX,
+                                      double& lower, double& upper,
+                                      IisModelStatus& iis_status,
+                                      HighsStatus& search_return_status) {
+  // Declare run_status
+  HighsStatus run_status;
+  // Get model status
+  HighsModelStatus model_status = highs.getModelStatus();
+  if (model_status == HighsModelStatus::kOptimal) {
+    // Now feasible, so restore the bound
+    run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
+                              : highs.changeColBounds(iX, lower, upper);
+    assert(run_status == HighsStatus::kOk);
+    // If the lower bound must be kept, then any finite upper bound
+    // must be dropped
+    const bool apply_reciprocal_rule = drop_lower && (upper < kHighsInf);
+    if (apply_reciprocal_rule) {
+      // Drop the upper bound permanently
+      upper = kHighsInf;
+      run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
+                                : highs.changeColBounds(iX, lower, upper);
+      assert(run_status == HighsStatus::kOk);
+    }
+    if (drop_lower) {
+      assert(upper >= kHighsInf);
+    }
+    // Since upper = kHighsInf, allow the loop to run so that
+    // bound status is set as if upper were set to kHighsInf
+    // by relaxing it and finding that the LP was still
+    // infeasible
+  } else if (model_status == HighsModelStatus::kInfeasible) {
+    // Bound can be dropped permanently
+    if (drop_lower) {
+      lower = -kHighsInf;
+    } else {
+      upper = kHighsInf;
+    }
+  } else if (model_status == HighsModelStatus::kTimeLimit) {
+    // Time limit reached, so restore the bound and set iis status to
+    // kIisModelStatusTimeLimit
+    run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
+                              : highs.changeColBounds(iX, lower, upper);
+    assert(run_status == HighsStatus::kOk);
+    iis_status = kIisModelStatusTimeLimit;
+    search_return_status = HighsStatus::kWarning;
+  } else {
+    // Unknown failure, so restore the bound and set iis status to
+    // kIisModelStatusReducible
+    run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)
+                              : highs.changeColBounds(iX, lower, upper);
+    assert(run_status == HighsStatus::kOk);
+    iis_status = kIisModelStatusReducible;
+    search_return_status = HighsStatus::kWarning;
+  }
+}
+
+bool HighsIis::indexStatusOk(const HighsLp& lp) const {
+  HighsInt num_col = lp.num_col_;
+  HighsInt num_row = lp.num_row_;
+  bool col_status_size_ok =
+      this->col_status_.size() == static_cast<size_t>(num_col);
+  bool row_status_size_ok =
+      this->row_status_.size() == static_cast<size_t>(num_row);
+  assert(col_status_size_ok);
+  assert(row_status_size_ok);
+  if (!col_status_size_ok) return indexStatusOkReturn(false);
+  if (!row_status_size_ok) return indexStatusOkReturn(false);
+  HighsInt num_iis_col = this->col_index_.size();
+  HighsInt num_iis_row = this->row_index_.size();
+  // Determine whether this is an IIS or just an IS
+  bool true_iis = false;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (this->col_status_[iCol] == kIisStatusInConflict) {
+      true_iis = true;
+      break;
+    }
+  }
+  if (!true_iis) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      if (this->row_status_[iRow] == kIisStatusInConflict) {
+        true_iis = true;
+        break;
+      }
+    }
+  }
+  // Now check that cols and rows in the IIS are kIisStatusInConflict
+  // or kIisStatusMaybeInConflict, according to true_iis, and that all
+  // other cols and rows are kIisStatusNotConflict
+  std::vector<HighsInt> col_status = col_status_;
+  std::vector<HighsInt> row_status = row_status_;
+  const HighsInt illegal_status = -99;
+  for (HighsInt iX = 0; iX < num_iis_col; iX++) {
+    HighsInt iCol = this->col_index_[iX];
+    if (col_status_[iCol] !=
+        (true_iis ? kIisStatusInConflict : kIisStatusMaybeInConflict))
+      return indexStatusOkReturn(false);
+    col_status[iCol] = illegal_status;
+  }
+  for (HighsInt iX = 0; iX < num_iis_row; iX++) {
+    HighsInt iRow = this->row_index_[iX];
+    if (row_status_[iRow] !=
+        (true_iis ? kIisStatusInConflict : kIisStatusMaybeInConflict))
+      return indexStatusOkReturn(false);
+    row_status[iRow] = illegal_status;
+  }
+  const HighsInt non_is_status = nonIsStatus();
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (col_status[iCol] > illegal_status && col_status[iCol] != non_is_status)
+      return indexStatusOkReturn(false);
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (row_status[iRow] > illegal_status && row_status[iRow] != non_is_status)
+      return indexStatusOkReturn(false);
+  }
+  return indexStatusOkReturn(true);
 }
 
 bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
   const HighsLp& iis_lp = this->model_.lp_;
   HighsInt iis_num_col = this->col_index_.size();
   HighsInt iis_num_row = this->row_index_.size();
-  if (!(iis_lp.num_col_ == iis_num_col)) return false;
-  if (!(iis_lp.num_row_ == iis_num_row)) return false;
+  if (!(iis_lp.num_col_ == iis_num_col)) return lpDataOkReturn(false);
+  if (!(iis_lp.num_row_ == iis_num_row)) return lpDataOkReturn(false);
 
   const bool colwise = lp.a_matrix_.isColwise();
 
+  const HighsInt illegal_index = -1;
+  const double illegal_value = kHighsInf;
+  // iis_row/col give the row/col in the IIS for each row/col in the
+  // LP, or an illegal index if the LP row/col isn't in the IIS
   std::vector<HighsInt> iis_row;
-  iis_row.assign(lp.num_row_, -1);
+  iis_row.assign(lp.num_row_, illegal_index);
+  std::vector<HighsInt> iis_col;
+  iis_col.assign(lp.num_col_, illegal_index);
   double bound;
   for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
     HighsInt iRow = this->row_index_[iisRow];
@@ -795,32 +1065,31 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
         row_bound == kIisBoundStatusLower || row_bound == kIisBoundStatusBoxed
             ? lp.row_lower_[iRow]
             : -kHighsInf;
-    if (iis_lp.row_lower_[iisRow] != bound) return false;
+    if (iis_lp.row_lower_[iisRow] != bound) return lpDataOkReturn(false);
     bound =
         row_bound == kIisBoundStatusUpper || row_bound == kIisBoundStatusBoxed
             ? lp.row_upper_[iRow]
             : kHighsInf;
-    if (iis_lp.row_upper_[iisRow] != bound) return false;
+    if (iis_lp.row_upper_[iisRow] != bound) return lpDataOkReturn(false);
   }
 
   // Work through the LP columns checking the zero costs and bounds
   for (HighsInt iisCol = 0; iisCol < iis_num_col; iisCol++) {
     HighsInt iCol = this->col_index_[iisCol];
-    if (iis_lp.col_cost_[iisCol]) return false;
+    iis_col[iCol] = iisCol;
+    if (iis_lp.col_cost_[iisCol]) return lpDataOkReturn(false);
     HighsInt col_bound = this->col_bound_[iisCol];
     bound =
         col_bound == kIisBoundStatusLower || col_bound == kIisBoundStatusBoxed
             ? lp.col_lower_[iCol]
             : -kHighsInf;
-    if (iis_lp.col_lower_[iisCol] != bound) return false;
+    if (iis_lp.col_lower_[iisCol] != bound) return lpDataOkReturn(false);
     bound =
         col_bound == kIisBoundStatusUpper || col_bound == kIisBoundStatusBoxed
             ? lp.col_upper_[iCol]
             : kHighsInf;
-    if (iis_lp.col_upper_[iisCol] != bound) return false;
+    if (iis_lp.col_upper_[iisCol] != bound) return lpDataOkReturn(false);
   }
-  const HighsInt illegal_index = -1;
-  const double illegal_value = kHighsInf;
   std::vector<HighsInt> index;
   std::vector<double> value;
   // Work through the LP matrix, checking the matrix index/value
@@ -842,8 +1111,9 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
         HighsInt iRow = lp.a_matrix_.index_[iEl];
         HighsInt iisRow = iis_row[iRow];
         if (iisRow >= 0) {
-          if (index[iisRow] != iRow) return false;
-          if (value[iisRow] != lp.a_matrix_.value_[iEl]) return false;
+          if (index[iisRow] != iRow) return lpDataOkReturn(false);
+          if (value[iisRow] != lp.a_matrix_.value_[iEl])
+            return lpDataOkReturn(false);
           index[iisRow] = illegal_index;
           value[iisRow] = illegal_value;
         }
@@ -853,22 +1123,23 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
     for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
       HighsInt iRow = this->row_index_[iisRow];
       // Use index/value to scatter the IIS matrix row
-      index.assign(iis_num_row, illegal_index);
-      value.assign(iis_num_row, illegal_value);
+      index.assign(iis_num_col, illegal_index);
+      value.assign(iis_num_col, illegal_value);
       for (HighsInt iEl = iis_lp.a_matrix_.start_[iisRow];
            iEl < iis_lp.a_matrix_.start_[iisRow + 1]; iEl++) {
         HighsInt iisCol = iis_lp.a_matrix_.index_[iEl];
-        HighsInt iCol = this->row_index_[iisCol];
+        HighsInt iCol = this->col_index_[iisCol];
         index[iisCol] = iCol;
         value[iisCol] = iis_lp.a_matrix_.value_[iEl];
       }
       for (HighsInt iEl = lp.a_matrix_.start_[iRow];
            iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
         HighsInt iCol = lp.a_matrix_.index_[iEl];
-        HighsInt iisCol = iis_row[iCol];
+        HighsInt iisCol = iis_col[iCol];
         if (iisCol >= 0) {
-          if (index[iisCol] != iCol) return false;
-          if (value[iisCol] != lp.a_matrix_.value_[iEl]) return false;
+          if (index[iisCol] != iCol) return lpDataOkReturn(false);
+          if (value[iisCol] != lp.a_matrix_.value_[iEl])
+            return lpDataOkReturn(false);
           index[iisCol] = illegal_index;
           value[iisCol] = illegal_value;
         }
@@ -894,39 +1165,41 @@ bool HighsIis::lpDataOk(const HighsLp& lp, const HighsOptions& options) const {
            iEl < iis_lp.a_matrix_.start_[iisCol + 1]; iEl++) {
         HighsInt iisRow = iis_lp.a_matrix_.index_[iEl];
         HighsInt iRow = this->row_index_[iisRow];
-        if (index[iRow] != iisRow) return false;
-        if (value[iRow] != iis_lp.a_matrix_.value_[iEl]) return false;
+        if (index[iRow] != iisRow) return lpDataOkReturn(false);
+        if (value[iRow] != iis_lp.a_matrix_.value_[iEl])
+          return lpDataOkReturn(false);
       }
     }
   } else {
     for (HighsInt iisRow = 0; iisRow < iis_num_row; iisRow++) {
       HighsInt iRow = this->row_index_[iisRow];
       // Use index/value to scatter the LP matrix row
-      index.assign(lp.num_row_, illegal_index);
-      value.assign(lp.num_row_, illegal_value);
+      index.assign(lp.num_col_, illegal_index);
+      value.assign(lp.num_col_, illegal_value);
       for (HighsInt iEl = lp.a_matrix_.start_[iRow];
            iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
         HighsInt iCol = lp.a_matrix_.index_[iEl];
-        HighsInt iisCol = iis_row[iCol];
+        HighsInt iisCol = iis_col[iCol];
         index[iCol] = iisCol;
         value[iCol] = lp.a_matrix_.value_[iEl];
       }
       for (HighsInt iEl = iis_lp.a_matrix_.start_[iisRow];
            iEl < iis_lp.a_matrix_.start_[iisRow + 1]; iEl++) {
         HighsInt iisCol = iis_lp.a_matrix_.index_[iEl];
-        HighsInt iCol = this->row_index_[iisCol];
-        if (index[iCol] != iisCol) return false;
-        if (value[iCol] != iis_lp.a_matrix_.value_[iEl]) return false;
+        HighsInt iCol = this->col_index_[iisCol];
+        if (index[iCol] != iisCol) return lpDataOkReturn(false);
+        if (value[iCol] != iis_lp.a_matrix_.value_[iEl])
+          return lpDataOkReturn(false);
       }
     }
   }
-  return true;
+  return lpDataOkReturn(true);
 }
 
 bool HighsIis::lpOk(const HighsOptions& options) const {
   // Check that the IIS LP is OK (infeasible and optimal if
   // any bound is relaxed)
-  if (!this->valid_) return true;
+  if (!this->valid_) return lpOkReturn(true);
   HighsInt num_iis_col = this->col_index_.size();
   HighsInt num_iis_row = this->row_index_.size();
   // If an LP has a row with inconsistent bounds, or an empty row with
@@ -942,15 +1215,17 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
   h.setOptionValue("output_flag", false);
   h.passModel(iis_lp);
   h.writeModel("");
-  h.run();
-  if (h.getModelStatus() != HighsModelStatus::kInfeasible) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "HighsIis: IIS LP is not infeasible\n");
-    return false;
+  HighsStatus status = h.optimizeModel();
+  if (status != HighsStatus::kOk ||
+      h.getModelStatus() != HighsModelStatus::kInfeasible) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "HighsIis: Failed to prove infeasibility for IIS LP\n");
+    return lpOkReturn(false);
   }
+  if (!(this->status_ == kIisModelStatusIrreducible)) return lpOkReturn(true);
   auto optimal = [&]() -> bool {
     if (options.log_dev_level > 0) h.writeModel("");
-    h.run();
+    h.optimizeModel();
     return h.getModelStatus() == HighsModelStatus::kOptimal;
   };
   for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
@@ -958,12 +1233,12 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
     if (this->col_bound_[iisCol] == kIisBoundStatusLower) {
       h.changeColBounds(iisCol, -kHighsInf, iis_lp.col_upper_[iisCol]);
       if (!optimal()) {
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "HighsIis: IIS column %d (LP column %d): relaxing lower "
                      "bound of %g yield IIS LP with status %s\n",
                      int(iisCol), int(iCol), iis_lp.col_lower_[iisCol],
                      h.modelStatusToString(h.getModelStatus()).c_str());
-        return false;
+        return lpOkReturn(false);
       }
       h.changeColBounds(iisCol, iis_lp.col_lower_[iisCol],
                         iis_lp.col_upper_[iisCol]);
@@ -971,12 +1246,12 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
     if (this->col_bound_[iisCol] == kIisBoundStatusUpper) {
       h.changeColBounds(iisCol, iis_lp.col_lower_[iisCol], kHighsInf);
       if (!optimal()) {
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "HighsIis: IIS column %d (LP column %d): relaxing upper "
                      "bound of %g yield IIS LP with status %s\n",
                      int(iisCol), int(iCol), iis_lp.col_upper_[iisCol],
                      h.modelStatusToString(h.getModelStatus()).c_str());
-        return false;
+        return lpOkReturn(false);
       }
       h.changeColBounds(iisCol, iis_lp.col_lower_[iisCol],
                         iis_lp.col_upper_[iisCol]);
@@ -992,7 +1267,7 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
                      "of %g yield IIS LP with status %s\n",
                      int(iisRow), int(iRow), iis_lp.row_lower_[iisRow],
                      h.modelStatusToString(h.getModelStatus()).c_str());
-        return false;
+        return lpOkReturn(false);
       }
       h.changeRowBounds(iisRow, iis_lp.row_lower_[iisRow],
                         iis_lp.row_upper_[iisRow]);
@@ -1001,15 +1276,15 @@ bool HighsIis::lpOk(const HighsOptions& options) const {
       h.changeRowBounds(iisRow, iis_lp.row_lower_[iisRow], kHighsInf);
       if (!optimal()) {
         highsLogUser(log_options, HighsLogType::kError,
-                     "HighsIis: IIS rowumn %d (LP rowumn %d): relaxing upper "
+                     "HighsIis: IIS row %d (LP row %d): relaxing upper "
                      "bound of %g yield IIS LP with status %s\n",
                      int(iisRow), int(iRow), iis_lp.row_upper_[iisRow],
                      h.modelStatusToString(h.getModelStatus()).c_str());
-        return false;
+        return lpOkReturn(false);
       }
       h.changeRowBounds(iisRow, iis_lp.row_lower_[iisRow],
                         iis_lp.row_upper_[iisRow]);
     }
   }
-  return true;
+  return lpOkReturn(true);
 }

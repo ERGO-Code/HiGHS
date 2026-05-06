@@ -22,7 +22,6 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
   const std::string mip_model = "flugpl";  //"rgn";//
   std::string model = "avgas";
   Highs highs;
-  const HighsInfo& info = highs.getInfo();
   highs.setOptionValue("output_flag", dev_run);
   //    REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
   //    HighsStatus::kOk);
@@ -33,19 +32,15 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
         std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
     highs.readModel(filename);
     HighsLp unscaled_lp = highs.getLp();
-    const bool is_lp = !unscaled_lp.isMip();
-    //    highs.writeModel("unscaled.mps");
 
     highs.run();
     double unscaled_objective = highs.getInfo().objective_function_value;
 
     HighsInt user_bound_scale = 1;
-    double user_bound_scale_value = std::pow(2, user_bound_scale);
     REQUIRE(highs.setOptionValue("user_bound_scale", user_bound_scale) ==
             HighsStatus::kOk);
 
     HighsInt user_objective_scale = 4;
-    double user_objective_scale_value = std::pow(2, user_objective_scale);
     REQUIRE(highs.setOptionValue("user_objective_scale",
                                  user_objective_scale) == HighsStatus::kOk);
 
@@ -64,9 +59,59 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("chip-user-bound-scale", "[highs_user_scale]") {
+  Highs highs;
+  const HighsSolution& solution = highs.getSolution();
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {82, 125};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4};
+  double chip_solution0 = 39;
+  double chip_solution1 = 21.5;
+
+  // Pass twice: once for LP; once for MIP
+  for (int k = 0; k < 2; k++) {
+    highs.passModel(lp);
+
+    highs.run();
+
+    REQUIRE(solution.col_value[0] == chip_solution0);
+    REQUIRE(solution.col_value[1] == chip_solution1);
+
+    REQUIRE(highs.setOptionValue("user_bound_scale", 3) == HighsStatus::kOk);
+
+    highs.clearSolver();
+    highs.run();
+    REQUIRE(solution.col_value[0] == chip_solution0);
+    REQUIRE(solution.col_value[1] == chip_solution1);
+
+    REQUIRE(highs.setOptionValue("user_bound_scale", -3) == HighsStatus::kOk);
+
+    highs.clearSolver();
+    highs.run();
+    REQUIRE(solution.col_value[0] == chip_solution0);
+    REQUIRE(solution.col_value[1] == chip_solution1);
+
+    // Add integrality, and change the solution
+    lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+    chip_solution0 = 40;
+    chip_solution1 = 21;
+  }
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   Highs highs;
-  const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
@@ -272,8 +317,6 @@ void testQp(Highs& h, const double cost, const double value,
 
 TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   Highs h;
-  const HighsInfo& info = h.getInfo();
-  const HighsSolution& solution = h.getSolution();
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("qp_regularization_value", 0);
   h.setOptionValue("presolve", kHighsOffString);
@@ -302,7 +345,6 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   // so don't get the same objective value in testUserScale
   const bool small_cost_test = all_test || false;
   const double small_cost = 0.5e-4;
-  const double small_hessian = 1e-4;
   const double small_col_lower = 1e-8;
   const double large_cost = 1e8;
   const double large_hessian = 1e4;

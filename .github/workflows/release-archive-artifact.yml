@@ -5,6 +5,10 @@ on:
     # tags:
     #   - "v*.*.*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,7 +29,7 @@ jobs:
           echo ""
           ls ${{runner.workspace}}/HiGHS
 
-        # ls 
+        # ls
         # echo $GITHUB_WORKSPACE
 
       - name:  Generate archive artifact
@@ -34,7 +38,7 @@ jobs:
           cd ${{runner.workspace}}
           pwd
           tar -czvf source-archive.tar.gz HiGHS
-          
+
         # --exclude='./archive'
 
       - name: unzip archive

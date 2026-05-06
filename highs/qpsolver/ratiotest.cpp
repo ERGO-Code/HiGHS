@@ -24,6 +24,7 @@ static RatiotestResult ratiotest_textbook(Runtime& rt, const QpVector& p,
   RatiotestResult result;
   result.limitingconstraint = -1;
   result.alpha = alphastart;
+  result.nowactiveatlower = false;
 
   // check ratio towards variable bounds
   for (HighsInt j = 0; j < p.num_nz; j++) {

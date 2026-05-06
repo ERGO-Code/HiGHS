@@ -25,7 +25,7 @@ enum Status {
   // Failed status: solver has some error or interrupt
   kStatusFailed,
   kStatusError,
-  kStatusOoM,
+  kStatusOverflow,
   kStatusErrorAnalyse,
   kStatusErrorFactorise,
   kStatusErrorSolve,
@@ -66,7 +66,7 @@ inline std::string statusString(Status status) {
       {kStatusNoProgress, "no progress"},
       {kStatusImprecise, "imprecise"},
       {kStatusError, "internal error"},
-      {kStatusOoM, "out of memory"},
+      {kStatusOverflow, "integer overflow"},
       {kStatusErrorAnalyse, "error in analyse phase"},
       {kStatusErrorFactorise, "error in factorise phase"},
       {kStatusErrorSolve, "error in solve phase"},

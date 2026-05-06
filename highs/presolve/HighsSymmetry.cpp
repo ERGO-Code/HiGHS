@@ -474,7 +474,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
 
     // as long as the entry is fixed to zero
     // the frontier stays at the same column
-    // if we ecounter an entry that is not fixed to zero
+    // if we encounter an entry that is not fixed to zero
     // we need to proceed with the next column and found a frontier step
     if (notZeroFixed) {
       // found a frontier step. Now we first check for the current column

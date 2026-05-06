@@ -8,6 +8,7 @@
 #ifndef SIMPLEX_HAPP_H_
 #define SIMPLEX_HAPP_H_
 
+#include <cmath>
 // todo: clear includes.
 // #include <cstring>
 // #include <fstream>
@@ -43,16 +44,34 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Identify which clock to stop. Can't inspect the basis, as there
   // will generally be one after simplex, so have to deduce whether
   // there was one before
-  const HighsInt sub_solver_ix =
-      solver_object.sub_solver_call_time_.run_time[kSubSolverSimplexBasis] < 0
-          ? kSubSolverSimplexBasis
-          : kSubSolverSimplexNoBasis;
-  const HighsInt sub_solver_not_ix = sub_solver_ix == kSubSolverSimplexBasis
-                                         ? kSubSolverSimplexNoBasis
-                                         : kSubSolverSimplexBasis;
-  assert(solver_object.sub_solver_call_time_.run_time[sub_solver_not_ix] >= 0);
-  (void)sub_solver_not_ix;
-  assert(solver_object.sub_solver_call_time_.run_time[sub_solver_ix] < 0);
+  HighsInt sub_solver_ix = -1;
+  if (std::signbit(solver_object.sub_solver_call_time_
+                       .run_time[kSubSolverDuSimplexBasis]))
+    sub_solver_ix = kSubSolverDuSimplexBasis;
+  if (std::signbit(solver_object.sub_solver_call_time_
+                       .run_time[kSubSolverDuSimplexNoBasis]))
+    sub_solver_ix = kSubSolverDuSimplexNoBasis;
+  if (std::signbit(solver_object.sub_solver_call_time_
+                       .run_time[kSubSolverPrSimplexBasis]))
+    sub_solver_ix = kSubSolverPrSimplexBasis;
+  if (std::signbit(solver_object.sub_solver_call_time_
+                       .run_time[kSubSolverPrSimplexNoBasis]))
+    sub_solver_ix = kSubSolverPrSimplexNoBasis;
+  // Ensure that one clock has been identified
+  assert(sub_solver_ix >= 0);
+  // Check that only one clock was started
+  if (sub_solver_ix != kSubSolverDuSimplexBasis)
+    assert(!std::signbit(solver_object.sub_solver_call_time_
+                             .run_time[kSubSolverDuSimplexBasis]));
+  if (sub_solver_ix != kSubSolverDuSimplexNoBasis)
+    assert(!std::signbit(solver_object.sub_solver_call_time_
+                             .run_time[kSubSolverDuSimplexNoBasis]));
+  if (sub_solver_ix != kSubSolverPrSimplexBasis)
+    assert(!std::signbit(solver_object.sub_solver_call_time_
+                             .run_time[kSubSolverPrSimplexBasis]));
+  if (sub_solver_ix != kSubSolverPrSimplexNoBasis)
+    assert(!std::signbit(solver_object.sub_solver_call_time_
+                             .run_time[kSubSolverPrSimplexNoBasis]));
   // Update the call count and run time
   solver_object.sub_solver_call_time_.num_call[sub_solver_ix]++;
   solver_object.sub_solver_call_time_.run_time[sub_solver_ix] +=
@@ -117,8 +136,21 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(retained_ekk_data_ok);
     return_status = HighsStatus::kError;
   }
-  const HighsInt sub_solver_ix =
-      basis.valid ? kSubSolverSimplexBasis : kSubSolverSimplexNoBasis;
+  HighsInt sub_solver_ix = -1;
+  if (options.simplex_strategy == kSimplexStrategyPrimal) {
+    if (basis.valid) {
+      sub_solver_ix = kSubSolverPrSimplexBasis;
+    } else {
+      sub_solver_ix = kSubSolverPrSimplexNoBasis;
+    }
+  } else {
+    if (basis.valid) {
+      sub_solver_ix = kSubSolverDuSimplexBasis;
+    } else {
+      sub_solver_ix = kSubSolverDuSimplexNoBasis;
+    }
+  }
+  assert(sub_solver_ix >= 0);
   assert(solver_object.sub_solver_call_time_.run_time.size() > 0);
   solver_object.sub_solver_call_time_.run_time[sub_solver_ix] =
       -solver_object.timer_.read();
@@ -409,6 +441,19 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
                       (int)ekk_instance.iteration_count_);
         }
       } else {
+        // There are unscaled primal infeasibilities, so use dual
+        // simplex
+        assert(num_unscaled_primal_infeasibilities > 0);
+        if (options.simplex_strategy != kSimplexStrategyDual)
+          highsLogDev(
+              options.log_options, HighsLogType::kInfo,
+              "Forcing change from %s to %s\n",
+              ekk_instance.simplexStrategyToString(options.simplex_strategy)
+                  .c_str(),
+              ekk_instance.simplexStrategyToString(kSimplexStrategyDual)
+                  .c_str());
+
+        options.simplex_strategy = kSimplexStrategyDual;
         // Using dual simplex, so force Devex if starting from an advanced
         // basis with no steepest edge weights
         if ((status.has_basis || basis.valid) &&

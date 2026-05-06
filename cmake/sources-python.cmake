@@ -1,11 +1,11 @@
 set(include_dirs_python
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/filereader>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/pdqsort>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/interfaces>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io/filereader>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/ipx>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/ipm/basiclu>
@@ -15,6 +15,7 @@ set(include_dirs_python
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/parallel>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
@@ -176,16 +177,15 @@ set(ipx_sources_python
   highs/ipm/ipx/utils.h)
 
 set(highs_sources_python
-    extern/filereaderlp/reader.cpp
     highs/interfaces/highs_c_api.cpp
     highs/io/Filereader.cpp
-    highs/io/FilereaderEms.cpp
     highs/io/FilereaderLp.cpp
     highs/io/FilereaderMps.cpp
     highs/io/HighsIO.cpp
     highs/io/HMpsFF.cpp
     highs/io/HMPSIO.cpp
     highs/io/LoadOptions.cpp
+    highs/io/filereaderlp/reader.cpp
     highs/ipm/IpxWrapper.cpp
     highs/lp_data/Highs.cpp
     highs/lp_data/HighsCallback.cpp
@@ -235,6 +235,12 @@ set(highs_sources_python
     highs/model/HighsModel.cpp
     highs/parallel/HighsTaskExecutor.cpp
     highs/pdlp/CupdlpWrapper.cpp
+    highs/pdlp/HiPdlpWrapper.cpp
+    highs/pdlp/hipdlp/linalg.cc
+    highs/pdlp/hipdlp/logger.cc
+    highs/pdlp/hipdlp/pdhg.cc
+    highs/pdlp/hipdlp/restart.cc
+    highs/pdlp/hipdlp/scaling.cc
     highs/presolve/HighsPostsolveStack.cpp
     highs/presolve/HighsSymmetry.cpp
     highs/presolve/HPresolve.cpp
@@ -286,20 +292,19 @@ set(highs_sources_python
     highs/util/stringutil.cpp)
 
 set(highs_headers_python
-    extern/filereaderlp/builder.hpp
-    extern/filereaderlp/def.hpp
-    extern/filereaderlp/model.hpp
-    extern/filereaderlp/reader.hpp
     extern/pdqsort/pdqsort.h
     highs/interfaces/highs_c_api.h
     highs/io/Filereader.h
-    highs/io/FilereaderEms.h
     highs/io/FilereaderLp.h
     highs/io/FilereaderMps.h
     highs/io/HighsIO.h
     highs/io/HMpsFF.h
     highs/io/HMPSIO.h
     highs/io/LoadOptions.h
+    highs/io/filereaderlp/builder.hpp
+    highs/io/filereaderlp/def.hpp
+    highs/io/filereaderlp/model.hpp
+    highs/io/filereaderlp/reader.hpp
     highs/ipm/IpxSolution.h
     highs/ipm/IpxWrapper.h
     highs/lp_data/HConst.h
@@ -365,6 +370,15 @@ set(highs_headers_python
     highs/parallel/HighsTask.h
     highs/parallel/HighsTaskExecutor.h
     highs/pdlp/CupdlpWrapper.h
+    highs/pdlp/HiPdlpTimer.h
+    highs/pdlp/HiPdlpWrapper.h
+    highs/pdlp/hipdlp/defs.hpp
+    highs/pdlp/hipdlp/linalg.hpp
+    highs/pdlp/hipdlp/logger.hpp
+    highs/pdlp/hipdlp/pdhg.hpp
+    highs/pdlp/hipdlp/restart.hpp
+    highs/pdlp/hipdlp/scaling.hpp
+    highs/pdlp/hipdlp/solver_results.hpp
     highs/presolve/HighsPostsolveStack.h
     highs/presolve/HighsSymmetry.h
     highs/presolve/HPresolve.h

@@ -145,17 +145,21 @@ static const char* const kHighsCallbackDataOutCutpoolUpperName =
     "cutpool_upper";
 
 const HighsInt kHighsIisStrategyLight = 0;
-const HighsInt kHighsIisStrategyFromLpRowPriority = 1;  // WIP
-const HighsInt kHighsIisStrategyFromLpColPriority = 2;  // WIP
+// Forces full IIS calculation as before - ie with the
+// kIisStrategyIrreducible = 4 bit set, as well as the
+// kIisStrategyFromLp = 2 bit set, and possibly the
+// kIisStrategyColPriority = 8 bit set
+const HighsInt kHighsIisStrategyFromLpRowPriority = 6;
+const HighsInt kHighsIisStrategyFromLpColPriority = 14;
 
 const HighsInt kHighsIisBoundFree = 1;
 const HighsInt kHighsIisBoundLower = 2;
 const HighsInt kHighsIisBoundUpper = 3;
 const HighsInt kHighsIisBoundBoxed = 4;
 
-const HighsInt kHighsIisStatusInConflict = 0;
-const HighsInt kHighsIisStatusNotInConflict = 1;
-const HighsInt kHighsIisStatusMaybeInConflict = 2;
+const HighsInt kHighsIisStatusNotInConflict = -1;
+const HighsInt kHighsIisStatusMaybeInConflict = 0;
+const HighsInt kHighsIisStatusInConflict = 1;
 
 #ifdef __cplusplus
 extern "C" {
@@ -2249,6 +2253,29 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               double* row_upper, HighsInt* a_start,
                               HighsInt* a_index, double* a_value,
                               HighsInt* integrality);
+/**
+ * Get the name of a column of the presolved LP.
+ *
+ * @param col   The index of the column to query.
+ * @param name  A pointer in which to store the name of the column. This must
+ *              have length `kHighsMaximumStringLength`.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getPresolvedColName(const void* highs, const HighsInt col,
+                                   char* name);
+
+/**
+ * Get the name of a row of the presolved LP.
+ *
+ * @param row   The index of the row to query.
+ * @param name  A pointer in which to store the name of the row. This must
+ *              have length `kHighsMaximumStringLength`.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getPresolvedRowName(const void* highs, const HighsInt row,
+                                   char* name);
 
 /**
  * Get the data from a HiGHS IIS LP.
@@ -2536,7 +2563,7 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 /**
  * Return the HiGHS compilation date.
  *
- * @returns Thse HiGHS compilation date.
+ * @returns The HiGHS compilation date.
  */
 static const char* Highs_compilationDate(void);
 

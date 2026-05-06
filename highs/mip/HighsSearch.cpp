@@ -45,8 +45,7 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
     objval += sol[i] * mipsolver.colCost(i);
     assert(std::isfinite(sol[i]));
 
-    if (!integerfeasible || mipsolver.variableType(i) != HighsVarType::kInteger)
-      continue;
+    if (!integerfeasible || !mipsolver.isColInteger(i)) continue;
 
     if (fractionality(sol[i]) > mipsolver.mipdata_->feastol) {
       integerfeasible = false;
@@ -82,7 +81,7 @@ double HighsSearch::getCutoffBound() const {
 void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
                                        const std::vector<double>& relaxsol) {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    if (mipsolver.variableType(i) != HighsVarType::kInteger) continue;
+    if (!mipsolver.isColInteger(i)) continue;
     if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
 
     double intval = std::floor(basesol[i] + 0.5);
@@ -101,7 +100,7 @@ void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
 
 void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    if (mipsolver.variableType(i) != HighsVarType::kInteger) continue;
+    if (!mipsolver.isColInteger(i)) continue;
     if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
 
     double downval = std::floor(lpsol[i] + mipsolver.mipdata_->feastol);
@@ -138,7 +137,7 @@ void HighsSearch::branchDownwards(HighsInt col, double newub,
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
-  assert(mipsolver.variableType(col) != HighsVarType::kContinuous);
+  assert(mipsolver.isColIntegral(col));
 
   currnode.opensubtrees = 1;
   currnode.branching_point = branchpoint;
@@ -161,7 +160,7 @@ void HighsSearch::branchUpwards(HighsInt col, double newlb,
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
-  assert(mipsolver.variableType(col) != HighsVarType::kContinuous);
+  assert(mipsolver.isColIntegral(col));
 
   currnode.opensubtrees = 1;
   currnode.branching_point = branchpoint;
@@ -413,7 +412,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
     auto analyzeSolution = [&](double objdelta,
                                const std::vector<double>& sol) {
-      HighsInt numChangedCols = localdom.getChangedCols().size();
+      size_t numChangedCols = localdom.getChangedCols().size();
       HighsInt domchgStackSize = localdom.getDomainChangeStack().size();
       const auto& domchgstack = localdom.getDomainChangeStack();
 
@@ -829,9 +828,9 @@ void HighsSearch::resetLocalDomain() {
 #ifndef NDEBUG
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     assert(lp->getLpSolver().getLp().col_lower_[i] == localdom.col_lower_[i] ||
-           mipsolver.variableType(i) == HighsVarType::kContinuous);
+           mipsolver.isColContinuous(i));
     assert(lp->getLpSolver().getLp().col_upper_[i] == localdom.col_upper_[i] ||
-           mipsolver.variableType(i) == HighsVarType::kContinuous);
+           mipsolver.isColContinuous(i));
   }
 #endif
 }
@@ -919,10 +918,10 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       assert(lp->getLpSolver().getLp().col_lower_[i] ==
                  localdom.col_lower_[i] ||
-             mipsolver.variableType(i) == HighsVarType::kContinuous);
+             mipsolver.isColContinuous(i));
       assert(lp->getLpSolver().getLp().col_upper_[i] ==
                  localdom.col_upper_[i] ||
-             mipsolver.variableType(i) == HighsVarType::kContinuous);
+             mipsolver.isColContinuous(i));
     }
 #endif
     int64_t oldnumiters = lp->getNumLpIterations();
@@ -1518,7 +1517,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
         // repropagate the node, as it may have become infeasible due to
         // conflicts
         HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
-        HighsInt oldNumChangedCols = localdom.getChangedCols().size();
+        size_t oldNumChangedCols = localdom.getChangedCols().size();
         localdom.propagate();
         if (!localdom.infeasible() &&
             oldNumDomchgs != localdom.getNumDomainChanges()) {
@@ -1565,7 +1564,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     if (fallbackbranch)
       currnode.branching_point = currnode.branchingdecision.boundval;
 
-    HighsInt numChangedCols = localdom.getChangedCols().size();
+    size_t numChangedCols = localdom.getChangedCols().size();
     bool passStabilizerToChildNode =
         orbitsValidInChildNode(currnode.branchingdecision);
     localdom.changeBound(currnode.branchingdecision);
@@ -1695,7 +1694,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       currnode.branching_point = currnode.branchingdecision.boundval;
 
     HighsInt domchgPos = domchgstack.size();
-    HighsInt numChangedCols = localdom.getChangedCols().size();
+    size_t numChangedCols = localdom.getChangedCols().size();
     bool passStabilizerToChildNode =
         orbitsValidInChildNode(currnode.branchingdecision);
     localdom.changeBound(currnode.branchingdecision);

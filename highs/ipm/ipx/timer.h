@@ -4,19 +4,20 @@
 #include <chrono>
 
 namespace ipx {
+    using namespace std::chrono;
 
 class Timer {
 public:
-    Timer();
-    double Elapsed() const;
-    void Reset();
+    Timer(const double offset=0);
+    double Elapsed() const { return toc(t0_); }
+    void Reset(const bool first = false);
 
 private:
-    typedef std::chrono::time_point<std::chrono::high_resolution_clock>
-        TimePoint;
-    static TimePoint tic();
-    static double toc(TimePoint start);
-    TimePoint t0_;
+    static double toc(double start) { return read() - start; }
+    static double read() { return duration_cast<duration<double>>(high_resolution_clock::now().time_since_epoch()).count(); }
+    double t0_;
+public:
+    double offset_;
 };
 
 }  // namespace ipx

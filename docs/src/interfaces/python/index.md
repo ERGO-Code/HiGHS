@@ -18,13 +18,6 @@ To use `highspy` within a Python program, it must be imported
 import highspy
 ```
 
-When using `highspy`, it is likely that `numpy` structures will be needed,
-so must also be imported
-
-```python
-import numpy as np
-```
-
 ## Initialize
 
 HiGHS must be initialized before making calls to the HiGHS Python library:

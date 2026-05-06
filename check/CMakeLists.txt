@@ -48,7 +48,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestHighsRbTree.cpp
       TestHighsSparseMatrix.cpp
       TestHighsVersion.cpp
-      TestHipo.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
@@ -69,6 +68,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestNames.cpp
       TestOptions.cpp
       TestPdlp.cpp
+      TestPdlpHi.cpp
       TestPresolve.cpp
       TestQpSolver.cpp
       TestRanging.cpp
@@ -82,18 +82,16 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestUserScale.cpp
       Avgas.cpp)
 
+
+  if (HIPO)
+      list(APPEND TEST_SOURCES TestHipo.cpp)
+  endif()
+
   set(OPT_LEVEL_CHANGED OFF)
 
   if(CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3")
     # message(MESSAGE "User has overridden the default optimization level for Release mode.")
     set(OPT_LEVEL_CHANGED ON)
-  endif()
-
-  if (LINUX AND NOT OPT_LEVEL_CHANGED AND CMAKE_CXX_COMPILER_ID STREQUAL "g++" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if (NOT ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
-        NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
-        set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
-    endif()
   endif()
 
   if (BUILD_EXTRA_UNIT_TESTS)
@@ -118,13 +116,19 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     target_link_libraries(unit_tests highs Catch)
 
     if (CUPDLP_GPU)
-        if (WIN32)
-            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY})
-        else()
-            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY} m)
-        endif()
+        # Link unit tests to cuda too!
         target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/cuda)
         set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        if (WIN32)
+            target_link_libraries(unit_tests ${CUDA_LIBRARY})
+        else()
+            target_link_libraries(unit_tests ${CUDA_LIBRARY} m)
+        endif()
+
+        # If cudalin is used, link to cudalin too.
+        if (NOT HIGHS_GPU_LIB)
+            target_link_libraries(unit_tests cudalin)
+        endif()
     endif()
   else()
     target_link_libraries(unit_tests libhighs Catch)
@@ -155,7 +159,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
   # Check whether test executable builds OK.
-  if (NOT HIGHS_COVERAGE)
+  if ((NOT HIGHS_COVERAGE) AND
+        (NOT BUILD_OPENBLAS OR
+        (LINUX AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64")))
     add_test(NAME unit-test-build
             COMMAND ${CMAKE_COMMAND}
                     --build ${HIGHS_BINARY_DIR}
@@ -254,8 +260,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   set(failInstances
       )
-  
-  set(mipInstances 
+
+  set(mipInstances
       "small_mip\;3.2368421\;"
       "flugpl\;1201500\;"
       "lseu\;1120|1119.9999999\;"
@@ -280,7 +286,17 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   #   "--parallel=on"
       )
 
-  if (UNIX AND NOT APPLE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+  if ((CMAKE_SIZEOF_VOID_P EQUAL 4) OR
+        (CMAKE_C_FLAGS MATCHES "-m32" OR CMAKE_CXX_FLAGS MATCHES "-m32"))
+    set(IS_32 ON)
+  else()
+    set(IS_32 OFF)
+  endif()
+
+  if (UNIX AND NOT APPLE AND
+        NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM"
+        AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64"
+        AND NOT IS_32)
     if (CUPDLP_GPU)
         set(pdlpInstances
             "25fv47\; 5.501847\;"
@@ -314,7 +330,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             "standgub\; 1.25769944\;"
             )
     endif()
-  elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+  elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM" AND
+            NOT (CMAKE_SIZEOF_VOID_P EQUAL 4) AND
+            CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
     if (CUPDLP_GPU)
         set(pdlpInstances
             "25fv47\; 5.50184\;"
@@ -431,7 +449,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv64")
         add_instancetests(successRiscVInstances "Optimal")
     endif()
-  else()
+  elseif(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64") AND
+             NOT IS_32)
     add_instancetests(successInstances "Optimal")
   endif()
 

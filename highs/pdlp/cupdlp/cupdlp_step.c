@@ -77,6 +77,8 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
   if (work->settings->nLogLevel>0) 
     cupdlp_printf("Power Method:\n");
 
+  // work->buffer is a CUPDLPvec*, but a pointer to its values is
+  // needed for some linalg calls
   cupdlp_float *q = work->buffer->data;
 
   cupdlp_initvec(q, 1.0, lp->nRows);
@@ -86,9 +88,23 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
   CUPDLPvec *aty = iterates->aty[iter % 2];
 
   double res = 0.0;
+  double previous_lambda = 0.0;
+  // q is stored in work->buffer->data
+  //
+  // z is stored in ax->data
+  //
+  // y is stored in aty->data
+  //
+  int log_iters = work->settings->nLogLevel > 1;
+
+  if (log_iters)
+    cupdlp_printf("It       lambda   dl_lambda    residual\n");
   for (cupdlp_int iter = 0; iter < 20; ++iter) {
     // z = A*A'*q
+    //
+    // as y = A'q...
     ATy(work, aty, work->buffer);
+    // ... then z = Ay
     Ax(work, ax, aty);
 
     // q = z / norm(z)
@@ -97,17 +113,31 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
     cupdlp_twoNorm(work, lp->nRows, q, &qNorm);
     cupdlp_scaleVector(work, 1.0 / qNorm, q, lp->nRows);
 
+    // Now compute the Rayleigh quotient of q which, since q'q=1 is
+    //
+    // lambda = q'AA'q = w^Tw = ||w||_2
+    //
+    // where w = A'q
+    //
+    // aty is no longer needed, so w is stored in aty->data
     ATy(work, aty, work->buffer);
 
     cupdlp_twoNormSquared(work, lp->nCols, aty->data, lambda);
 
     cupdlp_float alpha = -(*lambda);
+    // Now compute the residual between z = A*A'*q (old q) and
+    // lambda.q (new q) to just to log progress
+    //
+    // z := z - lambda.q
     cupdlp_axpy(work, lp->nRows, &alpha, q, ax->data);
 
     cupdlp_twoNormSquared(work, lp->nCols, ax->data, &res);
 
-     if (work->settings->nLogLevel>0) 
-      cupdlp_printf("% d  %e  %.3f\n", iter, *lambda, res);
+    double dl_lambda = fabs(*lambda - previous_lambda);
+    previous_lambda = *lambda;
+
+    if (log_iters)
+      cupdlp_printf("%2d %12.6g %11.4g %11.4g\n", iter, *lambda, dl_lambda, res);
   }
 
 exit_cleanup:
@@ -288,6 +318,7 @@ cupdlp_retcode PDHG_Init_Step_Sizes(CUPDLPwork *pdhg) {
 
   if (stepsize->eLineSearchMethod == PDHG_FIXED_LINESEARCH) {
     CUPDLP_CALL(PDHG_Power_Method(pdhg, &stepsize->dPrimalStep));
+    cupdlp_float power_method_lambda = stepsize->dPrimalStep;
     // PDLP Intial primal weight = norm(cost) / norm(rhs) = sqrt(beta)
     // cupdlp_float a = twoNormSquared(problem->cost, problem->nCols);
     // cupdlp_float b = twoNormSquared(problem->rhs, problem->nRows);
@@ -306,6 +337,9 @@ cupdlp_retcode PDHG_Init_Step_Sizes(CUPDLPwork *pdhg) {
     stepsize->dDualStep = stepsize->dPrimalStep;
     stepsize->dPrimalStep /= sqrt(stepsize->dBeta);
     stepsize->dDualStep *= sqrt(stepsize->dBeta);
+    if (pdhg->settings->nLogLevel > 1)
+      cupdlp_printf("Initial step sizes from power method lambda = %g: primal = %g; dual = %g\n",
+		    power_method_lambda, stepsize->dPrimalStep, stepsize->dDualStep);	  
   } else {
     stepsize->dTheta = 1.0;
 
@@ -366,6 +400,23 @@ void PDHG_Compute_Average_Iterate(CUPDLPwork *work) {
   // ATyCPU(work, iterates->atyAverage, iterates->yAverage);
   Ax(work, iterates->axAverage, iterates->xAverage);
   ATy(work, iterates->atyAverage, iterates->yAverage);
+
+#if PDLP_DEBUG_LOG
+  // print norm of x_average
+  cupdlp_float debug_pdlp_data_x_average_norm = 0.0;
+  cupdlp_twoNormSquared(work, lp->nCols, iterates->xAverage
+->data, &debug_pdlp_data_x_average_norm);
+  work->debug_pdlp_data_.x_average_norm = debug_pdlp_data_x_average_norm;
+
+  cupdlp_float debug_pdlp_data_ax_average_norm = 0.0;
+  cupdlp_twoNormSquared(work, lp->nRows, iterates->axAverage->data, &debug_pdlp_data_ax_average_norm);
+  work->debug_pdlp_data_.ax_average_norm = debug_pdlp_data_ax_average_norm;
+
+  // Uncomment this once Yanyu is computing aty_average_norm 
+  cupdlp_float debug_pdlp_data_aty_average_norm = 0.0;
+  cupdlp_twoNormSquared(work, lp->nCols, iterates->atyAverage->data, &debug_pdlp_data_aty_average_norm);
+  work->debug_pdlp_data_.aty_average_norm = debug_pdlp_data_aty_average_norm;
+#endif
 }
 
 void PDHG_Update_Average(CUPDLPwork *work) {

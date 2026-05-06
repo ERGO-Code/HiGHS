@@ -293,6 +293,7 @@ struct HighsMipSolverData {
   bool checkLimits(int64_t nodeOffset = 0) const;
   void limitsToBounds(double& dual_bound, double& primal_bound,
                       double& mip_rel_gap) const;
+  void updateLowerBound(double new_lower_bound);
   void setCallbackDataOut(const double mipsolver_objective_value) const;
   bool interruptFromCallbackWithData(const int callback_type,
                                      const double mipsolver_objective_value,

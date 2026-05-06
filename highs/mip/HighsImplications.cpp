@@ -300,9 +300,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0) &&
       mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
-    bool infeasible;
-
-    infeasible = computeImplications(col, 1);
+    bool infeasible = computeImplications(col, 1);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
     if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
@@ -390,8 +388,36 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   return false;
 }
 
+void HighsImplications::strengthenVarBound(VarBound& vbnd,
+                                           HighsInt multiplier) const {
+  // try to strengthen variable bound constraint x + a * y <= b by computing
+  // MIR cut. since x is a general-integer variable (with integral bounds) and
+  // its coefficient is 1.0, it is not shifted (or complemented). similarly,
+  // since y is a binary variable (i.e., its lower bound is 0.0), it does not
+  // need to be shifted, and we also do not try to complement it.
+  if (std::abs(vbnd.coef) == kHighsInf || std::abs(vbnd.constant) == kHighsInf)
+    return;
+  constexpr double f0min = 0.005;
+  constexpr double f0max = 0.995;
+  double downrhs = std::floor(multiplier * vbnd.constant);
+  double f0 = multiplier * vbnd.constant - downrhs;
+  if (f0 < f0min || f0 > f0max) return;
+  double downaj = std::floor(-multiplier * vbnd.coef + kHighsTiny);
+  double fj = -multiplier * vbnd.coef - downaj;
+  vbnd.constant = multiplier * downrhs;
+  vbnd.coef = -multiplier * (downaj + std::max(fj - f0, 0.0) / (1.0 - f0));
+};
+
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
                                double vubconstant) {
+  addVUB(col, vubcol, vubcoef, vubconstant,
+         mipsolver.mipdata_->domain.col_upper_[col],
+         mipsolver.isColIntegral(col));
+}
+
+void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
+                               double vubconstant, double colupperbound,
+                               bool colisintegral) {
   // assume that VUBs do not have infinite coefficients and infinite constant
   // terms since such VUBs effectively evaluate to NaN.
   assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
@@ -399,12 +425,16 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
 
   VarBound vub{vubcoef, vubconstant};
 
+  if (colisintegral) {
+    // try to strengthen VUB
+    strengthenVarBound(vub, HighsInt{1});
+    if (vub.coef == 0.0) return;
+  }
+
   mipsolver.mipdata_->debugSolution.checkVub(col, vubcol, vubcoef, vubconstant);
 
   double minBound = vub.minValue();
-  if (minBound >=
-      mipsolver.mipdata_->domain.col_upper_[col] - mipsolver.mipdata_->feastol)
-    return;
+  if (minBound >= colupperbound - mipsolver.mipdata_->feastol) return;
 
   auto insertresult = vubs[col].insert_or_get(vubcol, vub);
 
@@ -421,6 +451,14 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
                                double vlbconstant) {
+  addVLB(col, vlbcol, vlbcoef, vlbconstant,
+         mipsolver.mipdata_->domain.col_lower_[col],
+         mipsolver.isColIntegral(col));
+}
+
+void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
+                               double vlbconstant, double colllowerbound,
+                               bool colisintegral) {
   // assume that VLBs do not have infinite coefficients and infinite constant
   // terms since such VLBs effectively evaluate to NaN.
   assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
@@ -428,20 +466,24 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
 
   VarBound vlb{vlbcoef, vlbconstant};
 
+  if (colisintegral) {
+    // try to strengthen VLB
+    strengthenVarBound(vlb, HighsInt{-1});
+    if (vlb.coef == 0.0) return;
+  }
+
   mipsolver.mipdata_->debugSolution.checkVlb(col, vlbcol, vlbcoef, vlbconstant);
 
   double maxBound = vlb.maxValue();
-  if (vlb.maxValue() <=
-      mipsolver.mipdata_->domain.col_lower_[col] + mipsolver.mipdata_->feastol)
-    return;
+  if (maxBound <= colllowerbound + mipsolver.mipdata_->feastol) return;
 
   auto insertresult = vlbs[col].insert_or_get(vlbcol, vlb);
 
   if (!insertresult.second) {
     VarBound& currentvlb = *insertresult.first;
 
-    double currentMaxNound = currentvlb.maxValue();
-    if (maxBound > currentMaxNound + mipsolver.mipdata_->feastol) {
+    double currentMaxBound = currentvlb.maxValue();
+    if (maxBound > currentMaxBound + mipsolver.mipdata_->feastol) {
       currentvlb.coef = vlbcoef;
       currentvlb.constant = vlbconstant;
     }
@@ -650,9 +692,8 @@ void HighsImplications::separateImpliedBounds(
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
           cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
-                         mipsolver.variableType(implics[i].column) !=
-                             HighsVarType::kContinuous,
-                         false, false, false);
+                         !mipsolver.isColContinuous(implics[i].column), false,
+                         false, false);
         }
       }
     }
@@ -701,9 +742,8 @@ void HighsImplications::separateImpliedBounds(
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
           cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
-                         mipsolver.variableType(implics[i].column) !=
-                             HighsVarType::kContinuous,
-                         false, false, false);
+                         !mipsolver.isColContinuous(implics[i].column), false,
+                         false, false);
         }
       }
     }
@@ -715,8 +755,11 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   double lb = mipsolver.mipdata_->domain.col_lower_[col];
 
   if (ub == lb) {
-    numVarBounds -= vlbs.size();
-    numVarBounds -= vubs.size();
+    HighsInt numVubs = 0;
+    vubs[col].for_each([&](HighsInt vubCol, VarBound& vub) { numVubs++; });
+    HighsInt numVlbs = 0;
+    vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) { numVlbs++; });
+    numVarBounds -= numVubs + numVlbs;
     vlbs[col].clear();
     vubs[col].clear();
     return;
@@ -827,5 +870,46 @@ void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
                                            static_cast<double>(maxub),
                                            HighsDomain::Reason::unspecified());
     infeasible = mipsolver.mipdata_->domain.infeasible();
+  }
+}
+
+void HighsImplications::applyImplications(HighsDomain& domain,
+                                          const HighsInt col,
+                                          const HighsInt val) {
+  assert(domain.isFixed(col));
+
+  auto checkImplication = [&](const HighsDomainChange& domchg) -> bool {
+    assert(!domain.infeasible());
+    if (domain.isFixed(domchg.column)) return false;
+    const bool isint =
+        domain.variableType(domchg.column) != HighsVarType::kContinuous;
+    // Directly change bounds on all integer columns. Only change continuous
+    // columns that fix the column, as changing their domains risks
+    // suppressing further bound changes found in propagation, e.g.,
+    // change [0, 100] -> [0, 50], propagation could tighten to [0, 48], but
+    // such a tightening would not be applied due to min boundRange improvement.
+    if (domchg.boundtype == HighsBoundType::kLower) {
+      if ((!isint && domchg.boundval >
+                         domain.col_upper_[domchg.column] - domain.feastol()) ||
+          (isint && domchg.boundval >
+                        domain.col_lower_[domchg.column] + domain.feastol())) {
+        domain.changeBound(domchg, HighsDomain::Reason::cliqueTable(col, val));
+      }
+    } else {
+      if ((!isint && domchg.boundval <
+                         domain.col_lower_[domchg.column] + domain.feastol()) ||
+          (isint && domchg.boundval <
+                        domain.col_upper_[domchg.column] - domain.feastol())) {
+        domain.changeBound(domchg, HighsDomain::Reason::cliqueTable(col, val));
+      }
+    }
+    return domain.infeasible();
+  };
+
+  HighsInt loc = 2 * col + val;
+  if (implications[loc].computed) {
+    for (HighsDomainChange& domchg : implications[loc].implics) {
+      if (checkImplication(domchg)) break;
+    }
   }
 }

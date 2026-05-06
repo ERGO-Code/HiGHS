@@ -100,6 +100,18 @@ class HighsMipSolver {
     return model_->integrality_[col];
   }
 
+  bool isColIntegral(const HighsInt col) const {
+    return variableType(col) != HighsVarType::kContinuous;
+  }
+
+  bool isColInteger(const HighsInt col) const {
+    return variableType(col) == HighsVarType::kInteger;
+  }
+
+  bool isColContinuous(const HighsInt col) const {
+    return variableType(col) == HighsVarType::kContinuous;
+  }
+
   HighsMipSolver(HighsCallback& callback, const HighsOptions& options,
                  const HighsLp& lp, const HighsSolution& solution,
                  bool submip = false, HighsInt submip_level = 0);

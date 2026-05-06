@@ -4,8 +4,6 @@
 #include "DataCollector.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
-// TO DO: what happens when Int is 64 bit? Does BLAS behave correctly?
-
 namespace hipo {
 
 // level 1

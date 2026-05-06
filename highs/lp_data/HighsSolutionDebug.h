@@ -16,7 +16,7 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
-HighsDebugStatus debugHighsLpSolution(const std::string message,
+HighsDebugStatus debugHighsLpSolution(const std::string& message,
                                       const HighsLpSolverObject& solver_object);
 
 HighsDebugStatus debugHighsSolution(const string message,
@@ -31,7 +31,7 @@ HighsDebugStatus debugHighsSolution(
     const HighsModelStatus model_status, const HighsInfo& info);
 
 HighsDebugStatus debugHighsSolution(
-    const std::string message, const HighsOptions& options, const HighsLp& lp,
+    const std::string& message, const HighsOptions& options, const HighsLp& lp,
     const HighsHessian& hessian, const HighsSolution& solution,
     const HighsBasis& basis, const HighsModelStatus model_status,
     const HighsInfo& highs_info, const bool check_model_status_and_highs_info);

@@ -167,6 +167,8 @@ class HighsInfo : public HighsInfoStruct {
   void invalidatePrimalKkt();
   void invalidateDualKkt();
 
+  bool equal(const HighsInfo& info_) const;
+
  private:
   void deleteRecords() {
     for (auto record : records) delete record;

@@ -1,4 +1,4 @@
-# HiGHS CMake Build Instructions 
+# HiGHS CMake Build Instructions
 
 | OS       | C++   | Fortran | Python   | CSharp Example | .NET |
 |:-------- | :---: | :------: | :----: | :----: | :----: |
@@ -57,7 +57,7 @@
 - [CMake Options](#cmake-options)
 - [Integrating HiGHS in your CMake Project](#integrating-highs-in-your-cmake-project)
 
-## Introduction 
+## Introduction
 
 HiGHS can be built from source using CMake: <http://www.cmake.org/>. CMake works by generating native Makefiles or build projects that can be used in the compiler environment of your choice.
 
@@ -69,7 +69,7 @@ You'll need:
 * `CMake >= 3.15`.
 * A C++11 compiler
 
-## Supported compilers 
+## Supported compilers
 
 Here is a list of the supported compilers:
 
@@ -84,14 +84,14 @@ To build the C++ library and executable run
 
 ``` bash
 cd HiGHS
-cmake -S. -B build 
+cmake -S. -B build
 cmake --build build --parallel
 ```
 
 This generates HiGHS in the `build` directory and creates the [executable](@ref Executable) `build/bin/highs`, or `build/Release/bin/highs.exe` on Windows. To perform a quick test to see whether the compilation was successful, run `ctest` from within the build folder.
 
 ``` bash
-ctest 
+ctest
 ```
 
 On Windows, the configuration type must be specified:
@@ -99,27 +99,33 @@ On Windows, the configuration type must be specified:
 ctest -C Release
 ```
 
+The default compiler for HiGHS on Windows is MSVC, to use `mingw64` some additional cmake flags are required:
+``` bash
+cmake -D CMAKE_CXX_COMPILER=g++ -D CMAKE_C_COMPILER=gcc -G "MinGW Makefiles" -S. -B build
+```
+
+
 ## Install
 
 The default installation location may need administrative
 permissions. To install, after building and testing, run
 
 ``` bash
-cmake --install build 
+cmake --install build
 ```
 
-form the root directory. 
+form the root directory.
 
 To install in a specified installation directory run CMake with the
 `CMAKE_INSTALL_PREFIX` flag set:
 
 ``` bash
-cmake -S. -B build -DCMAKE_INSTALL_PREFIX=/path/to/highs_install 
+cmake -S. -B build -DCMAKE_INSTALL_PREFIX=/path/to/highs_install
 cmake --build build --parallel
 cmake --install build
 ```
 
-## Windows 
+## Windows
 
 By default, CMake builds the debug version of the binaries. These are generated in a directory `Debug`. To build a release version, add the option `--config Release`
 
@@ -164,7 +170,7 @@ For example, to generate build files in a new
 subdirectory called 'build', run:
 
 ```shell
-cmake -S. -Bbuild 
+cmake -S. -Bbuild
 ```
 and then build with:
 
@@ -191,11 +197,11 @@ Following is a list of available options:
 cmake -S. -Bbuild -LH
 ``` -->
 
-HiGHS can be integrated into other CMake-based projects. 
+HiGHS can be integrated into other CMake-based projects.
 
 # Integrating HiGHS in your CMake Project
 
-If you already have HiGHS installed on your system, you can use `find_package()` to include HiGHS in your C++ CMake project. 
+If you already have HiGHS installed on your system, you can use `find_package()` to include HiGHS in your C++ CMake project.
 
 ```
 project(LOAD_HIGHS LANGUAGES CXX)
@@ -208,7 +214,7 @@ add_executable(main main.cpp)
 target_link_libraries(main highs::highs)
 ```
 
-The line 
+The line
 ```
 set(HIGHS_DIR path_to_highs_install/lib/cmake/highs)
 ```
@@ -217,7 +223,7 @@ adds the HiGHS installation path to `HIGHS_DIR`. This is equivalent to building 
 cmake -DHIGHS_DIR=path_to_highs_install/lib/cmake/highs ..
 ```
 
-Alternatively, if you wish to include the code of HiGHS within your project, FetchContent is also available as follows: 
+Alternatively, if you wish to include the code of HiGHS within your project, FetchContent is also available as follows:
 
 ```
 project(LOAD_HIGHS LANGUAGES CXX)

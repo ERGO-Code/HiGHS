@@ -68,6 +68,81 @@ void HighsInfo::invalidateDualKkt() {
   primal_dual_objective_error = kHighsIllegalComplementarityViolation;
 }
 
+bool HighsInfo::equal(const HighsInfo& info_) const {
+  if (info_.valid != this->valid) return false;
+  if (info_.mip_node_count != this->mip_node_count) return false;
+  if (info_.simplex_iteration_count != this->simplex_iteration_count)
+    return false;
+  if (info_.ipm_iteration_count != this->ipm_iteration_count) return false;
+  if (info_.crossover_iteration_count != this->crossover_iteration_count)
+    return false;
+  if (info_.pdlp_iteration_count != this->pdlp_iteration_count) return false;
+  if (info_.qp_iteration_count != this->qp_iteration_count) return false;
+  if (info_.primal_solution_status != this->primal_solution_status)
+    return false;
+  if (info_.dual_solution_status != this->dual_solution_status) return false;
+  if (info_.basis_validity != this->basis_validity) return false;
+  if (info_.objective_function_value != this->objective_function_value)
+    return false;
+  if (info_.mip_dual_bound != this->mip_dual_bound) return false;
+  if (info_.mip_gap != this->mip_gap) return false;
+  if (info_.max_integrality_violation != this->max_integrality_violation)
+    return false;
+  if (info_.num_primal_infeasibilities != this->num_primal_infeasibilities)
+    return false;
+  if (info_.max_primal_infeasibility != this->max_primal_infeasibility)
+    return false;
+  if (info_.sum_primal_infeasibilities != this->sum_primal_infeasibilities)
+    return false;
+  if (info_.num_dual_infeasibilities != this->num_dual_infeasibilities)
+    return false;
+  if (info_.max_dual_infeasibility != this->max_dual_infeasibility)
+    return false;
+  if (info_.sum_dual_infeasibilities != this->sum_dual_infeasibilities)
+    return false;
+  if (info_.num_relative_primal_infeasibilities !=
+      this->num_relative_primal_infeasibilities)
+    return false;
+  if (info_.max_relative_primal_infeasibility !=
+      this->max_relative_primal_infeasibility)
+    return false;
+  if (info_.num_relative_dual_infeasibilities !=
+      this->num_relative_dual_infeasibilities)
+    return false;
+  if (info_.max_relative_dual_infeasibility !=
+      this->max_relative_dual_infeasibility)
+    return false;
+  if (info_.num_primal_residual_errors != this->num_primal_residual_errors)
+    return false;
+  if (info_.max_primal_residual_error != this->max_primal_residual_error)
+    return false;
+  if (info_.num_dual_residual_errors != this->num_dual_residual_errors)
+    return false;
+  if (info_.max_dual_residual_error != this->max_dual_residual_error)
+    return false;
+  if (info_.num_relative_primal_residual_errors !=
+      this->num_relative_primal_residual_errors)
+    return false;
+  if (info_.max_relative_primal_residual_error !=
+      this->max_relative_primal_residual_error)
+    return false;
+  if (info_.num_relative_dual_residual_errors !=
+      this->num_relative_dual_residual_errors)
+    return false;
+  if (info_.max_relative_dual_residual_error !=
+      this->max_relative_dual_residual_error)
+    return false;
+  if (info_.num_complementarity_violations !=
+      this->num_complementarity_violations)
+    return false;
+  if (info_.max_complementarity_violation !=
+      this->max_complementarity_violation)
+    return false;
+  if (info_.primal_dual_objective_error != this->primal_dual_objective_error)
+    return false;
+  return true;
+}
+
 static std::string infoEntryTypeToString(const HighsInfoType type) {
   if (type == HighsInfoType::kInt64) {
     return "int64_t";

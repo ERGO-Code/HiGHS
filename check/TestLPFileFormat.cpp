@@ -1,7 +1,7 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-#include "filereaderlp/reader.hpp"
+#include "io/filereaderlp/reader.hpp"
 
 const bool dev_run = false;
 

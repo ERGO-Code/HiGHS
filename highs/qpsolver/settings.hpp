@@ -61,6 +61,7 @@ struct Settings {
   Eventhandler<Statistics&> iteration_log;
   Eventhandler<QpModelStatus&> qp_model_status_log;
   Eventhandler<HighsInt&> nullspace_limit_log;
+  Eventhandler<std::pair<HighsInt, double>&> degeneracy_fail_log;
 
   HighsInt nullspace_limit = 4000;
 

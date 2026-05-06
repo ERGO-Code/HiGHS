@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
-version = "1.12.0"
+version = "1.14.0"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
@@ -26,6 +26,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Typing :: Typed",
 ]
 
@@ -210,3 +211,11 @@ enable = ["cpython-freethreading"]
 test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
 build-verbosity = 1
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = """
+  delocate-wheel --require-archs {delocate_archs} \
+    --ignore-missing-dependencies \
+    -e libunwind \
+    -w {dest_dir} -v {wheel}
+"""

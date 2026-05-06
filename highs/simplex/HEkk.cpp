@@ -192,6 +192,7 @@ void HEkk::clearEkkDataInfo() {
   info.backtracking_basis_.clear();
   info.backtracking_basis_costs_shifted_ = false;
   info.backtracking_basis_costs_perturbed_ = false;
+  info.backtracking_basis_bounds_shifted_ = false;
   info.backtracking_basis_bounds_perturbed_ = false;
   info.backtracking_basis_workShift_.clear();
   info.backtracking_basis_workLowerShift_.clear();
@@ -221,6 +222,7 @@ void HEkk::clearEkkDataInfo() {
   info.allow_bound_perturbation = true;
   info.costs_shifted = false;
   info.costs_perturbed = false;
+  info.bounds_shifted = false;
   info.bounds_perturbed = false;
 
   info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
@@ -1052,8 +1054,8 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     algorithm_name = "primal";
     reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_,
                                  true);
-    highsLogUser(options_->log_options, HighsLogType::kInfo,
-                 "Using EKK primal simplex solver\n");
+    highsLogUser(options_->log_options, HighsLogType::kInfo, "Using %s\n",
+                 simplexStrategyToString(kSimplexStrategyPrimal).c_str());
     HEkkPrimal primal_solver(*this);
     call_status = primal_solver.solve(force_phase2);
     assert(called_return_from_solve_);
@@ -1066,17 +1068,17 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     // Solve, depending on the particular strategy
     if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "Using EKK parallel dual simplex solver - SIP with "
-                   "concurrency of %d\n",
+                   "Using %s with concurrency of %d\n",
+                   simplexStrategyToString(kSimplexStrategyDualTasks).c_str(),
                    int(info_.num_concurrency));
     } else if (simplex_strategy == kSimplexStrategyDualMulti) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "Using EKK parallel dual simplex solver - PAMI with "
-                   "concurrency of %d\n",
+                   "Using %s with concurrency of %d\n",
+                   simplexStrategyToString(kSimplexStrategyDualMulti).c_str(),
                    int(info_.num_concurrency));
     } else {
-      highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "Using EKK dual simplex solver - serial\n");
+      highsLogUser(options_->log_options, HighsLogType::kInfo, "Using %s\n",
+                   simplexStrategyToString(kSimplexStrategyDual).c_str());
     }
     HEkkDual dual_solver(*this);
     call_status = dual_solver.solve(force_phase2);
@@ -1101,7 +1103,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   if (return_status == HighsStatus::kError)
     return returnFromEkkSolve(return_status);
   highsLogDev(options_->log_options, HighsLogType::kInfo,
-              "EKK %s simplex solver returns %" HIGHSINT_FORMAT
+              "%s simplex solver returns %" HIGHSINT_FORMAT
               " primal and %" HIGHSINT_FORMAT
               " dual infeasibilities: "
               "Status %s\n",
@@ -1877,6 +1879,8 @@ bool HEkk::getBacktrackingBasis() {
   basis_ = info_.backtracking_basis_;
   info_.costs_shifted = (info_.backtracking_basis_costs_shifted_ != 0);
   info_.costs_perturbed = (info_.backtracking_basis_costs_perturbed_ != 0);
+  info_.bounds_shifted = (info_.backtracking_basis_bounds_shifted_ != 0);
+  info_.bounds_perturbed = (info_.backtracking_basis_bounds_perturbed_ != 0);
   info_.workShift_ = info_.backtracking_basis_workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt iVar = 0; iVar < num_tot; iVar++)
@@ -1901,6 +1905,7 @@ void HEkk::putBacktrackingBasis(
   info_.backtracking_basis_.basicIndex_ = basicIndex_before_compute_factor;
   info_.backtracking_basis_costs_shifted_ = info_.costs_shifted;
   info_.backtracking_basis_costs_perturbed_ = info_.costs_perturbed;
+  info_.backtracking_basis_bounds_shifted_ = info_.bounds_shifted;
   info_.backtracking_basis_bounds_perturbed_ = info_.bounds_perturbed;
   info_.backtracking_basis_workShift_ = info_.workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
@@ -2291,6 +2296,29 @@ bool HEkk::lpFactorRowCompatible(const HighsInt expectedNumRow) const {
   return consistent_num_row;
 }
 
+std::string HEkk::simplexStrategyToString(
+    const HighsInt simplex_strategy) const {
+  assert(kSimplexStrategyMin <= simplex_strategy &&
+         simplex_strategy <= kSimplexStrategyMax);
+  if (simplex_strategy == kSimplexStrategyChoose)
+    return "choose simplex solver";
+  if (simplex_strategy == kSimplexStrategyDual) return "dual simplex solver";
+  if (simplex_strategy == kSimplexStrategyDualPlain)
+    return "serial dual simplex solver";
+  if (simplex_strategy == kSimplexStrategyDualTasks)
+    return "parallel dual simplex solver - SIP";
+  if (simplex_strategy == kSimplexStrategyDualMulti)
+    return "parallel dual simplex solver - PAMI";
+  if (simplex_strategy == kSimplexStrategyPrimal)
+    return "primal simplex solver";
+  return "Unknown";
+}
+
+void HEkk::zeroBasicDuals() {
+  for (HighsInt iRow = 0; iRow < lp_.num_row_; iRow++)
+    info_.workDual_[basis_.basicIndex_[iRow]] = 0;
+}
+
 void HEkk::setNonbasicMove() {
   const bool have_solution = false;
   // Don't have a simplex basis since nonbasicMove is not set up.
@@ -2539,6 +2567,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
                            const HighsInt solve_phase, const bool perturb) {
   initialiseLpColBound();
   initialiseLpRowBound();
+  info_.bounds_shifted = false;
   info_.bounds_perturbed = false;
   // Primal simplex bounds are either from the LP or perturbed
   if (algorithm == SimplexAlgorithm::kPrimal) {
@@ -3518,7 +3547,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kInfeasible: {
       // Primal infeasibility has been identified in primal phase 1,
       // or proved in dual phase 2. There should be no primal
-      // perturbations
+      // perturbations or shifts
+      assert(!info_.bounds_shifted);
       assert(!info_.bounds_perturbed);
       if (exit_algorithm_ == SimplexAlgorithm::kPrimal) {
         // Reset the simplex costs and recompute duals after primal
@@ -3535,6 +3565,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // Dual simplex has identified dual infeasibility in phase
       // 1. There should be no dual perturbations
       assert(exit_algorithm_ == SimplexAlgorithm::kDual);
+      assert(!info_.costs_shifted);
       assert(!info_.costs_perturbed);
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -3548,7 +3579,10 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // Primal simplex has identified unboundedness in phase 2. There
       // should be no primal or dual perturbations
       assert(exit_algorithm_ == SimplexAlgorithm::kPrimal);
-      assert(!info_.costs_perturbed && !info_.bounds_perturbed);
+      assert(!info_.costs_shifted);
+      assert(!info_.costs_perturbed);
+      assert(!info_.bounds_shifted);
+      assert(!info_.bounds_perturbed);
       computeSimplexInfeasible();
       // Primal solution should be feasible
       assert(info_.num_primal_infeasibilities == 0);
@@ -3578,13 +3612,14 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     default: {
       highsLogDev(
           options_->log_options, HighsLogType::kError,
-          "EKK %s simplex solver returns status %s\n",
+          "%s simplex solver returns status %s\n",
           exit_algorithm_ == SimplexAlgorithm::kPrimal ? "primal" : "dual",
           utilModelStatusToString(model_status_).c_str());
       return HighsStatus::kError;
       break;
     }
   }
+  this->zeroBasicDuals();
   assert(info_.num_primal_infeasibilities >= 0);
   assert(info_.num_dual_infeasibilities >= 0);
   if (info_.num_primal_infeasibilities == 0) {
@@ -3597,6 +3632,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   } else {
     return_dual_solution_status_ = kSolutionStatusInfeasible;
   }
+  assert(debugNoShiftsOrPerturbations());
   computePrimalObjectiveValue();
   if (!options_->log_dev_level) {
     const bool force = true;

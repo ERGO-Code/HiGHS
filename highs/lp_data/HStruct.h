@@ -16,17 +16,6 @@
 
 #include "lp_data/HConst.h"
 
-struct HighsFiles {
-  bool empty = true;
-  std::string read_solution_file = "";
-  std::string read_basis_file = "";
-  std::string write_model_file = "";
-  std::string write_iis_model_file = "";
-  std::string write_solution_file = "";
-  std::string write_basis_file = "";
-  void clear();
-};
-
 struct HighsSolution {
   bool value_valid = false;
   bool dual_valid = false;
@@ -197,8 +186,8 @@ struct HighsSimplexStats {
 };
 
 struct HighsUserScaleData {
-  HighsInt user_objective_scale;
-  HighsInt user_bound_scale;
+  HighsInt user_objective_scale = 0;
+  HighsInt user_bound_scale = 0;
   double infinite_cost;
   double infinite_bound;
   double small_matrix_value;
@@ -211,7 +200,7 @@ struct HighsUserScaleData {
   HighsInt num_large_matrix_values;
   HighsInt suggested_user_objective_scale;
   HighsInt suggested_user_bound_scale;
-  bool applied;
+  bool applied = false;
   void initialise(const HighsInt& user_objective_scale_,
                   const HighsInt& user_bound_scale_,
                   const double& infinite_cost_, const double& infinite_bound_,

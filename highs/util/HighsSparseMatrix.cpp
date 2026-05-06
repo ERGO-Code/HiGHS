@@ -890,12 +890,12 @@ void HighsSparseMatrix::considerRowScaling(
         row_scale_value =
             min(max(min_allow_row_scale, row_scale_value), max_allow_row_scale);
         row_scale[iRow] = row_scale_value;
-        // Scale the rowumn
+        // Scale the row
         for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
              iEl++)
           this->value_[iEl] *= row_scale[iRow];
       } else {
-        // Empty rowumn
+        // Empty row
         row_scale[iRow] = 1;
       }
     }
@@ -1151,10 +1151,10 @@ void HighsSparseMatrix::alphaProductPlusY(const double alpha,
                                           const std::vector<double>& x,
                                           std::vector<double>& y,
                                           const bool transpose) const {
-  assert(x.size() >= static_cast<size_t>(transpose) ? this->num_row_
-                                                    : this->num_col_);
-  assert(y.size() >= static_cast<size_t>(transpose) ? this->num_col_
-                                                    : this->num_row_);
+  assert(x.size() >=
+         static_cast<size_t>(transpose ? this->num_row_ : this->num_col_));
+  assert(y.size() >=
+         static_cast<size_t>(transpose ? this->num_col_ : this->num_row_));
   if (this->isColwise()) {
     if (transpose) {
       for (int iCol = 0; iCol < this->num_col_; iCol++)

@@ -18,7 +18,7 @@ double Control::elapsed() const { return timer_ ? timer_->read() : -1.0; }
 Int Control::interruptCheck(const Int ipm_iteration_count) const {
   HighsTaskExecutor::getThisWorkerDeque()->checkInterrupt();
 
-  if (options_ && options_->time_limit > 0 &&
+  if (options_ && options_->time_limit >= 0 &&
       elapsed() > options_->time_limit) {
     return kStatusTimeLimit;
   }
