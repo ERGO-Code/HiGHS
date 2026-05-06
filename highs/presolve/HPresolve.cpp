@@ -1476,6 +1476,7 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
   for (HighsInt i = 0; i != numNodes; ++i) {
     if (infeasibleNodes[i]) {
       const HighsInt col = i / 2;
+      if (colDeleted[col]) continue;
       if (i % 2 == 0) {
         // Node is ~x, i.e., x = 0 is infeasible -> x = 1
         HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
