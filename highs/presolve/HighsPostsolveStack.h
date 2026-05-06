@@ -319,10 +319,6 @@ class HighsPostsolveStack {
 
   HighsInt getOrigNumCol() const { return origNumCol; }
 
-  HighsInt getNumRowsAppendedByPresolve() const {
-    return numRowsAppendedByPresolve;
-  }
-
   void initializeIndexMaps(HighsInt numRow, HighsInt numCol,
                            HighsInt numRowPresolve);
 
