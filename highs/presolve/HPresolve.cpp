@@ -1447,28 +1447,16 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
     HighsPostsolveStack& postsolve_stack) {
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
-  // Need to get the clique table into an appropriate state
-  // TODO: This is excessive. Create custom function? How to get bounds for
-  // TODO: fixed columns?
-  // TODO: Skip if clique table not changed enough since last call
-  // TODO: Second run with topological sort like SCIP?
-  bool firstCall = false;
-  HPRESOLVE_CHECKED_CALL(prepareProbing(postsolve_stack, firstCall));
-  HighsInt numVarsFixed = 0;
-  HighsInt numBndsTightened = 0;
-  HighsInt numVarsSubstituted = 0;
-  HighsInt liftedNonzeros = 0;
-  HPRESOLVE_CHECKED_CALL(finaliseProbing(postsolve_stack, firstCall,
-                                         numVarsFixed, numBndsTightened,
-                                         numVarsSubstituted, liftedNonzeros));
-
-  if (cliquetable.numCliques() <= 1) return Result::kOk;
+  // TODO: Skip call if clique table isn't changed much?
+  if (!mipsolver->mipdata_->cliquesExtracted || cliquetable.numCliques() <= 1)
+    return Result::kOk;
 
   HighsInt numNodes = 2 * model->num_col_;
   std::vector<HighsInt> stronglyConnectedComponents(numNodes);
   std::vector<bool> infeasibleNodes(numNodes);
   bool infeasible = false;
-  cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, infeasible);
+  cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, colDeleted,
+                     infeasible);
 
   if (infeasible) return Result::kPrimalInfeasible;
 
@@ -5982,14 +5970,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         if (problemSizeReduction() > 0.05) continue;
       }
 
-      // extract strongly connected components from the clique table
-      if (mipsolver != nullptr &&
-          analysis_.allow_rule_[kPresolveRuleStronglyConnectedComponents]) {
-        storeCurrentProblemSize();
-        HPRESOLVE_CHECKED_CALL(stronglyConnectedComponents(postsolve_stack));
-        if (problemSizeReduction() > 0.05) continue;
-      }
-
       // enumerate solutions
       if (mipsolver != nullptr &&
           analysis_.allow_rule_[kPresolveRuleEnumeration]) {
@@ -6006,6 +5986,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                      (problemSizeReduction() > 1.0 || probingEarlyAbort);
         trySparsify = true;
         if (problemSizeReduction() > 0.05 || tryProbing) continue;
+        // Extract strongly connected components from the clique table
+        if (analysis_.allow_rule_[kPresolveRuleStronglyConnectedComponents]) {
+          HPRESOLVE_CHECKED_CALL(stronglyConnectedComponents(postsolve_stack));
+          if (problemSizeReduction() > 0.05) continue;
+        }
         HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
       }
 

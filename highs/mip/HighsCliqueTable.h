@@ -327,10 +327,13 @@ class HighsCliqueTable {
       const std::vector<HighsInt>& cliqueIndex, HighsInt n,
       std::vector<HighsInt>& cliqueFirstEntry,
       std::vector<HighsInt>& cliqueCurrExit,
-      std::vector<HighsInt>& stronglyConnectedComponents, bool& infeasible) const;
+      std::vector<HighsInt>& stronglyConnectedComponents,
+      const std::vector<uint8_t>& colDeletedPresolve, bool& infeasible) const;
 
   void tarjan(std::vector<HighsInt>& stronglyConnectedComponents,
-              std::vector<bool>& infeasibleNodes, bool& infeasible);
+              std::vector<bool>& infeasibleNodes,
+              const std::vector<uint8_t>& colDeletedPresolve,
+              bool& infeasible) const;
 
   HighsInt numCliques() const { return cliques.size() - freeslots.size(); }
 
