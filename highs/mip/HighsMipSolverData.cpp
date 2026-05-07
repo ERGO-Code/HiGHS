@@ -694,7 +694,7 @@ void HighsMipSolverData::removeFixedIndices() {
 void HighsMipSolverData::init() {
   postSolveStack.initializeIndexMaps(
       mipsolver.numRow(), mipsolver.numCol(),
-      mipsolver.model_->num_rows_appended_by_presolve_);
+      mipsolver.model_->rows_appended_by_presolve_);
   mipsolver.orig_model_ = mipsolver.model_;
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;
@@ -1279,7 +1279,7 @@ void HighsMipSolverData::performRestart() {
   sb_lp_iterations_before_run = sb_lp_iterations;
   HighsInt numLpRows = lp.getLp().num_row_;
   HighsInt numModelRows = mipsolver.numRow();
-  HighsInt numCuts = numLpRows - numModelRows;
+  HighsInt numCuts = numLpRows - numModelRows + postSolveStack.numAppended();
   postSolveStack.appendCutsToModel(numCuts);
   auto integrality = std::move(presolvedModel.integrality_);
   double offset = presolvedModel.offset_;
@@ -1298,7 +1298,7 @@ void HighsMipSolverData::performRestart() {
     // for the presolved model after the restart
     root_basis.col_status.resize(postSolveStack.getOrigNumCol());
     root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
-                                 HighsBasisStatus::kBasic);
+                                 HighsBasisStatus::kNonbasic);
     root_basis.valid = true;
     root_basis.useful = true;
 
@@ -1306,11 +1306,10 @@ void HighsMipSolverData::performRestart() {
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
-    HighsInt numRow =
-        basis.row_status.size() - lp.getLp().num_rows_appended_by_presolve_;
-    for (HighsInt i = 0; i < numRow; ++i)
-      root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
-          basis.row_status[i];
+    for (HighsInt i = 0; i < mipsolver.numRow(); ++i)
+      //if (postSolveStack.getOrigRowIndex(i) < root_basis.row_status.size())
+        root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
+            basis.row_status[i];
 
     mipsolver.rootbasis = &root_basis;
   }
@@ -1438,6 +1437,13 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.row_status[postSolveStack.getOrigNumRow() + i] =
         HighsBasisStatus::kBasic;
   }
+
+  /*for (HighsInt i = 0; i < numRow; ++i) {
+    HighsBasisStatus status =
+        mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
+    firstrootbasis.row_status[i] = status;
+    if (status == HighsBasisStatus::kBasic) numBasicVars++;
+  }*/
 }
 
 const std::vector<double>& HighsMipSolverData::getSolution() const {

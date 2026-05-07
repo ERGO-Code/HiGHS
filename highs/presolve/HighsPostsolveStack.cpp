@@ -17,11 +17,13 @@
 
 namespace presolve {
 
-void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow, HighsInt numCol,
-                                              HighsInt numRowPresolve) {
-  numRowsAppendedByPresolve = numRowPresolve;
-  origNumRow = numRow - numRowPresolve;
+void HighsPostsolveStack::initializeIndexMaps(
+    HighsInt numRow, HighsInt numCol,
+    const std::vector<HighsInt>& rowsAppendedByPresolve) {
+  origNumRow = numRow;
   origNumCol = numCol;
+
+  for (HighsInt row : rowsAppendedByPresolve) rowsAppended[row] = row;
 
   origRowIndex.resize(numRow);
   std::iota(origRowIndex.begin(), origRowIndex.end(), 0);
@@ -39,10 +41,15 @@ void HighsPostsolveStack::compressIndexMaps(
   // store original index at new index position otherwise
   HighsInt numRow = origRowIndex.size();
   for (size_t i = 0; i != newRowIndex.size(); ++i) {
-    if (newRowIndex[i] == -1)
+    bool rowIsAppended =
+        rowsAppended.find(origRowIndex[i]) != rowsAppended.end();
+    if (newRowIndex[i] == -1) {
       --numRow;
-    else
+      if (rowIsAppended) rowsAppended[origRowIndex[i]] = -1;
+    } else {
       origRowIndex[newRowIndex[i]] = origRowIndex[i];
+      if (rowIsAppended) rowsAppended[origRowIndex[i]] = newRowIndex[i];
+    }
   }
   // resize original index array to new size
   origRowIndex.resize(numRow);

@@ -56,7 +56,7 @@ class HighsLp {
   HighsInt cost_row_location_;
   bool has_infinite_cost_;
   HighsLpMods mods_;
-  HighsInt num_rows_appended_by_presolve_;
+  std::vector<HighsInt> rows_appended_by_presolve_;
 
   bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;

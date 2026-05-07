@@ -2132,12 +2132,13 @@ bool HPresolve::addToMatrix(
   HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
   if (num_rows == 0) return true;
   HighsInt oldNumRows = model->num_row_;
+  HighsInt oldNumRowsAppended = numAppendedRows;
   numAppendedRows += num_rows;
   model->num_row_ += num_rows;
   model->a_matrix_.num_row_ += num_rows;
 
   // resize postsolve vectors
-  postsolve_stack.appendRowsToModel(num_rows);
+  postsolve_stack.appendRowsToModel2(num_rows);
 
   // add row bounds
   model->row_lower_.insert(model->row_lower_.end(), row_lower.begin(),
@@ -6439,10 +6440,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
 
   shrinkProblem(postsolve_stack);
 
-  /*postsolve_stack.removeCutsFromModel(model->rows_appended_by_presolve_ +
-                                      numAppendedRows);*/
-  model->num_rows_appended_by_presolve_ +=
-      model->num_row_ - postsolve_stack.computeNumOrigRows(numAppendedRows);
+   postsolve_stack.removeCutsFromModel(numAppendedRows);
+
+  postsolve_stack.getAppendedRows(model->rows_appended_by_presolve_);
 
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->cliquetable.setPresolveFlag(false);
@@ -6538,7 +6538,8 @@ void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
                                           size_t& numreductions) {
   shrinkProblemEnabled = false;
   HighsPostsolveStack stack;
-  stack.initializeIndexMaps(flagRow.size(), flagCol.size(), model->num_rows_appended_by_presolve_);
+  stack.initializeIndexMaps(flagRow.size(), flagCol.size(),
+                            model->rows_appended_by_presolve_);
   setReductionLimit(numreductions);
   presolve(stack);
   numreductions = stack.numReductions();
@@ -8227,7 +8228,8 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   model.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
 
   HighsPostsolveStack postsolve_stack;
-  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_, lp.num_rows_appended_by_presolve_);
+  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_,
+                                      lp.rows_appended_by_presolve_);
   {
     HPresolve presolve;
     presolve.okSetInput(model, options, options.presolve_reduction_limit);
@@ -8303,7 +8305,8 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     HPresolve presolve;
     presolve.okSetInput(model, options, options.presolve_reduction_limit);
     HighsPostsolveStack tmp;
-    tmp.initializeIndexMaps(model.num_row_, model.num_col_, model.num_rows_appended_by_presolve_);
+    tmp.initializeIndexMaps(model.num_row_, model.num_col_,
+                            model.rows_appended_by_presolve_);
     presolve.setReductionLimit(reductionLim);
     presolve.run(tmp);
 
