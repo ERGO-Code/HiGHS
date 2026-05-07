@@ -24,7 +24,6 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
   HIPO_CLOCK_CREATE;
 
   const Int nb = S_.blockSize();
-  const Int small_thresh = std::min(nb, kSolveThreshold);
 
   for (Int sn = 0; sn < S_.sn(); ++sn) {
     // leading size of supernode
@@ -45,7 +44,7 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
     // index to access snColumns[sn]
     Int64 SnCol_ind{};
 
-    if (sn_size < small_thresh) {
+    if (sn_size < nb) {
       // Fast solve
       // If supernode is small, avoid making BLAS calls
       const Int jb = sn_size;
@@ -148,7 +147,6 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
   HIPO_CLOCK_CREATE;
 
   const Int nb = S_.blockSize();
-  const Int small_thresh = std::min(nb, kSolveThreshold);
 
   // go through the sn in reverse order
   for (Int sn = S_.sn() - 1; sn >= 0; --sn) {
@@ -171,7 +169,7 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
     // initialised with the total number of entries of snColumns[sn]
     Int64 SnCol_ind = sn_columns_[sn].size() - extra_space_frontal;
 
-    if (sn_size < small_thresh) {
+    if (sn_size < nb) {
       // Fast solve
       // If supernode is small, avoid making BLAS calls
       const Int jb = sn_size;
