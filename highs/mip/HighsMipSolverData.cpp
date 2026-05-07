@@ -2540,7 +2540,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     if (this->terminatorTerminated()) return true;
 
   // Possible user interrupt
-  if (!mipsolver.submip && mipsolver.callback_->user_callback) {
+  if (!mipsolver.submip && !parallelLockActive() &&
+      mipsolver.callback_->user_callback) {
     mipsolver.callback_->clearHighsCallbackOutput();
     if (interruptFromCallbackWithData(kCallbackMipInterrupt,
                                       mipsolver.solution_objective_,
