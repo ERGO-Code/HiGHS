@@ -16,7 +16,7 @@
 
 HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
     : mipworker(mipworker),
-      mipsolver(mipworker.mipsolver_),
+      mipsolver(mipworker.getMipSolver()),
       lp(nullptr),
       localdom(mipworker.getGlobalDomain()),
       pseudocost(pseudocost) {
@@ -1926,10 +1926,10 @@ HighsDomain& HighsSearch::getDomain() const {
 }
 
 HighsConflictPool& HighsSearch::getConflictPool() const {
-  return *mipworker.conflictpool_;
+  return mipworker.getConflictPool();
 }
 
-HighsCutPool& HighsSearch::getCutPool() const { return *mipworker.cutpool_; }
+HighsCutPool& HighsSearch::getCutPool() const { return mipworker.getCutPool(); }
 
 const HighsNodeQueue& HighsSearch::getNodeQueue() const {
   return mipsolver.mipdata_->nodequeue;

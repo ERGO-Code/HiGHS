@@ -1452,10 +1452,10 @@ void HighsMipSolverData::performRestart() {
 
   // Ensure master worker is pointing to the correct cut and conflict pools
   if (mipsolver.options_mip_->mip_search_concurrency > 1) {
-    mipsolver.mipdata_->workers[0].cutpool_ = &getCutPool();
-    mipsolver.mipdata_->workers[0].conflictpool_ = &getConflictPool();
-    mipsolver.mipdata_->workers[0].globaldom_ = &getDomain();
-    mipsolver.mipdata_->workers[0].pseudocost_ = &getPseudoCost();
+    mipsolver.mipdata_->workers[0].setCutPool(&getCutPool());
+    mipsolver.mipdata_->workers[0].setConflictPool(&getConflictPool());
+    mipsolver.mipdata_->workers[0].setGlobalDomain(&getDomain());
+    mipsolver.mipdata_->workers[0].setPseudocost(&getPseudoCost());
     mipsolver.mipdata_->workers[0].upper_bound = upper_bound;
     mipsolver.mipdata_->workers[0].upper_limit = upper_limit;
     mipsolver.mipdata_->workers[0].optimality_limit = optimality_limit;
@@ -2834,11 +2834,6 @@ bool HighsMipSolverData::terminatorTerminated() const {
   if (this->terminatorActive())
     mipsolver.termination_status_ = mipsolver.terminator_.terminationStatus();
   return mipsolver.termination_status_ != HighsModelStatus::kNotset;
-}
-
-bool HighsMipSolverData::terminatorTerminatedWorker(
-    const HighsMipWorker& worker) const {
-  return worker.heur_stats.termination_status_ != HighsModelStatus::kNotset;
 }
 
 void HighsMipSolverData::terminatorReport() const {

@@ -24,15 +24,15 @@
 
 HighsSeparation::HighsSeparation(HighsMipWorker& mipworker)
     : mipworker_(mipworker) {
-  if (mipworker.mipsolver_.analysis_.analyse_mip_time) {
+  const HighsMipSolver& mipsolver = mipworker.getMipSolver();
+  if (mipsolver.analysis_.analyse_mip_time) {
     implBoundClock =
-        mipworker.mipsolver_.analysis_.getSepaClockIndex(kImplboundSepaString);
-    cliqueClock =
-        mipworker.mipsolver_.analysis_.getSepaClockIndex(kCliqueSepaString);
+        mipsolver.analysis_.getSepaClockIndex(kImplboundSepaString);
+    cliqueClock = mipsolver.analysis_.getSepaClockIndex(kCliqueSepaString);
   }
-  separators.emplace_back(new HighsTableauSeparator(mipworker.mipsolver_));
-  separators.emplace_back(new HighsPathSeparator(mipworker.mipsolver_));
-  separators.emplace_back(new HighsModkSeparator(mipworker.mipsolver_));
+  separators.emplace_back(new HighsTableauSeparator(mipsolver));
+  separators.emplace_back(new HighsPathSeparator(mipsolver));
+  separators.emplace_back(new HighsModkSeparator(mipsolver));
 }
 
 HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
@@ -108,7 +108,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
       mipdata.parallelLockActive() ? mipworker_.randgen
                                    : mipdata.cliquetable.getRandgen(),
       mipdata.parallelLockActive()
-          ? mipworker_.sepa_stats.numNeighbourhoodQueries
+          ? mipworker_.getNumNeighbourhoodQueries()
           : mipdata.cliquetable.getNumNeighbourhoodQueries());
   if (!mipdata.parallelLockActive())
     lp->getMipSolver().analysis_.mipTimerStop(cliqueClock);
@@ -146,10 +146,10 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
-  mipworker_.cutpool_->separate(sol.col_value, propdomain, cutset,
-                                mipdata.feastol, mipdata.cutpools);
+  mipworker_.getCutPool().separate(sol.col_value, propdomain, cutset,
+                                   mipdata.feastol, mipdata.cutpools);
   // Also separate the global cut pool
-  if (mipworker_.cutpool_ != &mipdata.getCutPool()) {
+  if (&mipworker_.getCutPool() != &mipdata.getCutPool()) {
     mipdata.getCutPool().separate(sol.col_value, propdomain, cutset,
                                   mipdata.feastol, mipdata.cutpools, true);
   }
@@ -189,7 +189,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
       nlpiters += lp->getNumLpIterations();
 
       if (mipsolver.mipdata_->parallelLockActive()) {
-        mipworker_.sepa_stats.sepa_lp_iterations += nlpiters;
+        mipworker_.getSepaLpIterations() += nlpiters;
       } else {
         mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
         mipsolver.mipdata_->total_lp_iterations += nlpiters;
@@ -218,6 +218,6 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     //        (HighsInt)status);
     lp->performAging(true);
 
-    mipworker_.cutpool_->performAging();
+    mipworker_.getCutPool().performAging();
   }
 }

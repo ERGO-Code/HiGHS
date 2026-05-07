@@ -248,9 +248,9 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
 
 void HighsLpRelaxation::loadModel() {
   HighsLp lpmodel = *mipsolver.model_;
-  lpmodel.col_lower_ = worker_ ? worker_->globaldom_->col_lower_
+  lpmodel.col_lower_ = worker_ ? worker_->getGlobalDomain().col_lower_
                                : mipsolver.mipdata_->getDomain().col_lower_;
-  lpmodel.col_upper_ = worker_ ? worker_->globaldom_->col_upper_
+  lpmodel.col_upper_ = worker_ ? worker_->getGlobalDomain().col_upper_
                                : mipsolver.mipdata_->getDomain().col_upper_;
   lpmodel.offset_ = 0;
   lprows.clear();

@@ -144,3 +144,59 @@ bool HighsMipWorker::trySolution(const std::vector<double>& solution,
 
   return addIncumbent(solution, static_cast<double>(obj), solution_source);
 }
+
+void HighsMipWorker::resetSepaStats() {
+  sepa_stats.numNeighbourhoodQueries = 0;
+  sepa_stats.sepa_lp_iterations = 0;
+}
+
+void HighsMipWorker::updateHeurStatsLpIters(int64_t lp_iters,
+                                            int64_t total_repair_lp,
+                                            int64_t total_repair_lp_feasible,
+                                            int64_t total_repair_lp_iters) {
+  heur_stats.lp_iterations += lp_iters;
+  heur_stats.total_repair_lp += total_repair_lp;
+  heur_stats.total_repair_lp_feasible += total_repair_lp_feasible;
+  heur_stats.total_repair_lp_iterations += total_repair_lp_iters;
+}
+
+void HighsMipWorker::updateHeurStatsInfeasObservations(double fixingRate) {
+  heur_stats.infeasObservations += fixingRate;
+  ++heur_stats.numInfeasObservations;
+}
+
+void HighsMipWorker::updateHeurStatsSuccessObservations(double fixingRate) {
+  heur_stats.successObservations += fixingRate;
+  ++heur_stats.numSuccessObservations;
+}
+
+void HighsMipWorker::getHeurStatsValues(
+    int64_t& total_repair_lp, int64_t& total_repair_lp_feasible,
+    int64_t& total_repair_lp_iterations, int64_t& lp_iterations,
+    double& successObservations, HighsInt& numSuccessObservations,
+    double& infeasObservations, HighsInt& numInfeasObservations,
+    HighsInt& max_submip_level, HighsModelStatus& termination_status) const {
+  total_repair_lp = heur_stats.total_repair_lp;
+  total_repair_lp_feasible = heur_stats.total_repair_lp_feasible;
+  total_repair_lp_iterations = heur_stats.total_repair_lp_iterations;
+  lp_iterations = heur_stats.lp_iterations;
+  successObservations = heur_stats.successObservations;
+  numSuccessObservations = heur_stats.numSuccessObservations;
+  infeasObservations = heur_stats.infeasObservations;
+  numInfeasObservations = heur_stats.numInfeasObservations;
+  max_submip_level = heur_stats.max_submip_level;
+  termination_status = heur_stats.termination_status_;
+}
+
+void HighsMipWorker::resetHeurStats() {
+  heur_stats.total_repair_lp = 0;
+  heur_stats.total_repair_lp_feasible = 0;
+  heur_stats.total_repair_lp_iterations = 0;
+  heur_stats.lp_iterations = 0;
+  heur_stats.max_submip_level = 0;
+  heur_stats.termination_status_ = HighsModelStatus::kNotset;
+  heur_stats.successObservations = 0;
+  heur_stats.numSuccessObservations = 0;
+  heur_stats.infeasObservations = 0;
+  heur_stats.numInfeasObservations = 0;
+}
