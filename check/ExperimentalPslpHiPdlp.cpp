@@ -58,6 +58,11 @@ bool isModeValid(const std::string& mode) {
   return mode == "plain" || mode == "pslp";
 }
 
+bool modelStatusHasReliableObjective(const HighsModelStatus model_status) {
+  return model_status == HighsModelStatus::kOptimal ||
+         model_status == HighsModelStatus::kModelEmpty;
+}
+
 HighsStatus setCommonHiPdlpOptions(Highs& highs, std::string& error_message) {
   HighsStatus status = highs.setOptionValue("output_flag", kExperimentalOutputFlag);
   if (status != HighsStatus::kOk) {
@@ -314,11 +319,14 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
                              result.solve_time, error_message);
     result.iterations = info.pdlp_iteration_count;
     if (status != HighsStatus::kOk) return status;
-    if (solution.col_value.size() != static_cast<size_t>(original_lp.num_col_)) {
+    if (modelStatusHasReliableObjective(result.model_status) &&
+        solution.col_value.size() != static_cast<size_t>(original_lp.num_col_)) {
       error_message = "Plain HiPDLP solution has invalid column dimension";
       return HighsStatus::kError;
     }
-    result.objective = original_lp.objectiveValue(solution.col_value);
+    if (modelStatusHasReliableObjective(result.model_status)) {
+      result.objective = original_lp.objectiveValue(solution.col_value);
+    }
     result.total_time =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - total_start)
             .count();
@@ -426,8 +434,7 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
     }
   }
 
-  if (result.model_status == HighsModelStatus::kOptimal ||
-      result.model_status == HighsModelStatus::kModelEmpty) {
+  if (modelStatusHasReliableObjective(result.model_status)) {
     ensurePostsolveVectorsSized(reduced_lp, reduced_solution);
     postsolve(presolver, dataOrNull(reduced_solution.col_value),
               dataOrNull(reduced_solution.row_dual),
