@@ -90,7 +90,8 @@ static HighsBasisStatus computeRowStatus(double dual,
 }
 
 void HighsPostsolveStack::FreeColSubstitution::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& rowValues,
     const std::vector<Nonzero>& colValues, HighsSolution& solution,
     HighsBasis& basis) {
   // compute primal values
@@ -105,7 +106,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
   assert(colCoef != 0);
   // Row values aren't fully postsolved, so why do this?
-  if (solution.isModelRow(row))
+  if (postsolveStack.isOrigRow(row))
     solution.row_value[row] =
         static_cast<double>(rowValue + colCoef * solution.col_value[col]);
   solution.col_value[col] = static_cast<double>((rhs - rowValue) / colCoef);
@@ -114,11 +115,11 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
   if (!solution.dual_valid) return;
 
   // compute the row dual value such that reduced cost of basic column is 0
-  if (solution.isModelRow(row)) {
+  if (postsolveStack.isOrigRow(row)) {
     solution.row_dual[row] = 0;
     HighsCDouble dualval = colCost;
     for (const auto& colVal : colValues) {
-      if (solution.isModelRow(colVal.index))
+      if (postsolveStack.isOrigRow(colVal.index))
         dualval -= colVal.value * solution.row_dual[colVal.index];
     }
     solution.row_dual[row] = static_cast<double>(dualval / colCoef);
@@ -130,7 +131,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
   if (!basis.valid) return;
 
   basis.col_status[col] = HighsBasisStatus::kBasic;
-  if (solution.isModelRow(row))
+  if (postsolveStack.isOrigRow(row))
     basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
 }
 
@@ -155,8 +156,9 @@ static HighsBasisStatus computeStatus(double dual,
 }
 
 void HighsPostsolveStack::DoubletonEquation::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& colValues,
-    HighsSolution& solution, HighsBasis& basis) const {
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& colValues, HighsSolution& solution,
+    HighsBasis& basis) const {
   // retrieve the row and column index, the row side and the two
   // coefficients then compute the primal values
   solution.col_value[colSubst] = static_cast<double>(
@@ -180,10 +182,10 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   // multiplier of this row i implicitly increases the dual multiplier of this
   // doubleton equation row with that scale.
   HighsCDouble rowDual = 0.0;
-  if (solution.isModelRow(row)) {
+  if (postsolveStack.isOrigRow(row)) {
     solution.row_dual[row] = 0;
     for (const auto& colVal : colValues) {
-      if (solution.isModelRow(colVal.index))
+      if (postsolveStack.isOrigRow(colVal.index))
         rowDual -= colVal.value * solution.row_dual[colVal.index];
     }
     rowDual /= coefSubst;
@@ -200,7 +202,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
     // so alter the dual multiplier of the row to make the dual multiplier of
     // column zero
     double rowDualDelta = solution.col_dual[col] / coef;
-    if (solution.isModelRow(row))
+    if (postsolveStack.isOrigRow(row))
       solution.row_dual[row] = static_cast<double>(rowDual + rowDualDelta);
     solution.col_dual[col] = 0.0;
     solution.col_dual[colSubst] = static_cast<double>(
@@ -221,7 +223,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
     // otherwise make the reduced cost of the substituted column zero and make
     // that column basic
     double rowDualDelta = solution.col_dual[colSubst] / coefSubst;
-    if (solution.isModelRow(row))
+    if (postsolveStack.isOrigRow(row))
       solution.row_dual[row] = static_cast<double>(rowDual + rowDualDelta);
     solution.col_dual[colSubst] = 0.0;
     solution.col_dual[col] =
@@ -232,15 +234,17 @@ void HighsPostsolveStack::DoubletonEquation::undo(
 
   if (!basis.valid) return;
 
-  if (solution.isModelRow(row))
+  if (postsolveStack.isOrigRow(row))
     basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
 }
 
 void HighsPostsolveStack::EqualityRowAddition::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& eqRowValues,
-    HighsSolution& solution, HighsBasis& basis) const {
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& eqRowValues, HighsSolution& solution,
+    HighsBasis& basis) const {
   // (removed) cuts may have been used in this reduction.
-  if (!solution.isModelRow(row) || !solution.isModelRow(addedEqRow)) return;
+  if (!postsolveStack.isOrigRow(row) || !postsolveStack.isOrigRow(addedEqRow))
+    return;
 
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
@@ -256,11 +260,12 @@ void HighsPostsolveStack::EqualityRowAddition::undo(
 }
 
 void HighsPostsolveStack::EqualityRowAdditions::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& eqRowValues,
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& eqRowValues,
     const std::vector<Nonzero>& targetRows, HighsSolution& solution,
     HighsBasis& basis) const {
   // a (removed) cut may have been used in this reduction.
-  if (!solution.isModelRow(addedEqRow)) return;
+  if (!postsolveStack.isOrigRow(addedEqRow)) return;
 
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
@@ -271,7 +276,7 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
   // used for adding the equation
   HighsCDouble eqRowDual = solution.row_dual[addedEqRow];
   for (const auto& targetRow : targetRows) {
-    if (solution.isModelRow(targetRow.index))
+    if (postsolveStack.isOrigRow(targetRow.index))
       eqRowDual += static_cast<HighsCDouble>(targetRow.value) *
                    solution.row_dual[targetRow.index];
   }
@@ -281,8 +286,9 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
 }
 
 void HighsPostsolveStack::ForcingColumn::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& colValues,
-    HighsSolution& solution, HighsBasis& basis) const {
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& colValues, HighsSolution& solution,
+    HighsBasis& basis) const {
   HighsInt nonbasicRow = -1;
   HighsBasisStatus nonbasicRowStatus = HighsBasisStatus::kNonbasic;
   double colValFromNonbasicRow = colBound;
@@ -295,7 +301,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
     for (const auto& colVal : colValues) {
       // Row values aren't fully postsolved, so how can this work?
       debug_num_use_row_value++;
-      if (solution.isModelRow(colVal.index)) {
+      if (postsolveStack.isOrigRow(colVal.index)) {
         double colValFromRow = solution.row_value[colVal.index] / colVal.value;
         if (direction * colValFromRow > direction * colValFromNonbasicRow) {
           nonbasicRow = colVal.index;
@@ -345,10 +351,11 @@ void HighsPostsolveStack::ForcingColumn::undo(
 }
 
 void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
-    HighsSolution& solution, HighsBasis& basis) const {
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+    HighsBasis& basis) const {
   // a (removed) cut may have been used in this reduction.
-  if (!solution.isModelRow(row)) return;
+  if (!postsolveStack.isOrigRow(row)) return;
 
   // we use the row value as storage for the scaled value implied on the
   // column dual
@@ -363,9 +370,9 @@ void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
   if (basis.valid) basis.row_status[row] = HighsBasisStatus::kBasic;
 }
 
-void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
-                                             HighsSolution& solution,
-                                             HighsBasis& basis) const {
+void HighsPostsolveStack::SingletonRow::undo(
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    HighsSolution& solution, HighsBasis& basis) const {
   // nothing to do if the rows dual value is zero in the dual solution or
   // there is no dual solution
   if (!solution.dual_valid) return;
@@ -381,7 +388,7 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
       (!colUpperTightened || colStatus != HighsBasisStatus::kUpper)) {
     // the tightened bound is not used in the basic solution
     // hence we simply make the row basic and give it a dual multiplier of 0
-    if (solution.isModelRow(row)) {
+    if (postsolveStack.isOrigRow(row)) {
       if (basis.valid) basis.row_status[row] = HighsBasisStatus::kBasic;
       solution.row_dual[row] = 0;
     }
@@ -390,13 +397,13 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
 
   // choose the row dual value such that the columns reduced cost becomes
   // zero
-  if (solution.isModelRow(row))
+  if (postsolveStack.isOrigRow(row))
     solution.row_dual[row] = solution.col_dual[col] / coef;
   solution.col_dual[col] = 0;
 
   if (!basis.valid) return;
 
-  if (solution.isModelRow(row)) {
+  if (postsolveStack.isOrigRow(row)) {
     switch (colStatus) {
       case HighsBasisStatus::kLower:
         assert(colLowerTightened);
@@ -426,10 +433,10 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
 }
 
 // column fixed to lower or upper bound
-void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
-                                         const std::vector<Nonzero>& colValues,
-                                         HighsSolution& solution,
-                                         HighsBasis& basis) const {
+void HighsPostsolveStack::FixedCol::undo(
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& colValues, HighsSolution& solution,
+    HighsBasis& basis) const {
   // set solution value
   solution.col_value[col] = fixValue;
 
@@ -439,7 +446,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
 
   HighsCDouble reducedCost = colCost;
   for (const auto& colVal : colValues) {
-    if (solution.isModelRow(colVal.index))
+    if (postsolveStack.isOrigRow(colVal.index))
       reducedCost -= colVal.value * solution.row_dual[colVal.index];
   }
 
@@ -455,11 +462,11 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
   }
 }
 
-void HighsPostsolveStack::RedundantRow::undo(const HighsOptions& options,
-                                             HighsSolution& solution,
-                                             HighsBasis& basis) const {
+void HighsPostsolveStack::RedundantRow::undo(
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    HighsSolution& solution, HighsBasis& basis) const {
   // a (removed) cut may have been used in this reduction.
-  if (!solution.isModelRow(row)) return;
+  if (!postsolveStack.isOrigRow(row)) return;
 
   // set row dual to zero if dual solution requested
   if (!solution.dual_valid) return;
@@ -470,8 +477,9 @@ void HighsPostsolveStack::RedundantRow::undo(const HighsOptions& options,
 }
 
 void HighsPostsolveStack::ForcingRow::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
-    HighsSolution& solution, HighsBasis& basis) const {
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+    HighsBasis& basis) const {
   if (!solution.dual_valid) return;
 
   // compute the row dual multiplier and determine the new basic column
@@ -490,7 +498,7 @@ void HighsPostsolveStack::ForcingRow::undo(
   }
 
   if (basicCol != -1) {
-    if (solution.isModelRow(row))
+    if (postsolveStack.isOrigRow(row))
       solution.row_dual[row] = solution.row_dual[row] + dualDelta;
     for (const auto& rowVal : rowValues) {
       solution.col_dual[rowVal.index] = static_cast<double>(
@@ -500,7 +508,7 @@ void HighsPostsolveStack::ForcingRow::undo(
     solution.col_dual[basicCol] = 0;
 
     if (basis.valid) {
-      if (solution.isModelRow(row))
+      if (postsolveStack.isOrigRow(row))
         basis.row_status[row] =
             (rowType == RowType::kGeq ? HighsBasisStatus::kLower
                                       : HighsBasisStatus::kUpper);
@@ -510,18 +518,17 @@ void HighsPostsolveStack::ForcingRow::undo(
   }
 }
 
-void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
-                                             HighsSolution& solution,
-                                             HighsBasis& basis) const {
-    bool ismodel = isOrigRow(row);
+void HighsPostsolveStack::DuplicateRow::undo(
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    HighsSolution& solution, HighsBasis& basis) const {
   // (removed) cuts may have been used in this reduction.
-  if (!solution.isModelRow(row)) return;
+  if (!postsolveStack.isOrigRow(row)) return;
 
   if (!solution.dual_valid) return;
   if (!rowUpperTightened && !rowLowerTightened) {
     // simple case of row2 being redundant, in which case it just gets a
     // dual multiplier of 0 and is made basic
-    if (solution.isModelRow(duplicateRow)) {
+    if (postsolveStack.isOrigRow(duplicateRow)) {
       solution.row_dual[duplicateRow] = 0.0;
       if (basis.valid)
         basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
@@ -538,7 +545,7 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
 
   auto computeRowDualAndStatus = [&](bool tightened) {
     if (tightened) {
-      if (solution.isModelRow(duplicateRow)) {
+      if (postsolveStack.isOrigRow(duplicateRow)) {
         solution.row_dual[duplicateRow] =
             solution.row_dual[row] / duplicateRowScale;
         if (basis.valid) {
@@ -550,7 +557,7 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
       }
       solution.row_dual[row] = 0.0;
       if (basis.valid) basis.row_status[row] = HighsBasisStatus::kBasic;
-    } else if (solution.isModelRow(duplicateRow)) {
+    } else if (postsolveStack.isOrigRow(duplicateRow)) {
       solution.row_dual[duplicateRow] = 0.0;
       if (basis.valid)
         basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
@@ -564,7 +571,7 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
   switch (rowStatus) {
     case HighsBasisStatus::kBasic:
       // if row is basic the parallel row is also basic
-      if (solution.isModelRow(duplicateRow)) {
+      if (postsolveStack.isOrigRow(duplicateRow)) {
         solution.row_dual[duplicateRow] = 0.0;
         if (basis.valid)
           basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
@@ -1300,8 +1307,9 @@ void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
 }
 
 void HighsPostsolveStack::SlackColSubstitution::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
-    HighsSolution& solution, HighsBasis& basis) {
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+    HighsBasis& basis) {
   bool debug_print = false;
   // May have to determine row dual and basis status unless doing
   // primal-only transformation in MIP solver, in which case row may
@@ -1320,7 +1328,7 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
 
   assert(colCoef != 0);
   // Row values aren't fully postsolved, so why do this?
-  if (solution.isModelRow(row))
+  if (postsolveStack.isOrigRow(row))
     solution.row_value[row] =
         static_cast<double>(rowValue + colCoef * solution.col_value[col]);
 
@@ -1330,14 +1338,14 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
   if (!solution.dual_valid) return;
 
   // Row retains its dual value, and column has this dual value scaled by coeff
-  if (solution.isModelRow(row))
+  if (postsolveStack.isOrigRow(row))
     solution.col_dual[col] = -solution.row_dual[row] / colCoef;
 
   // Set basis status if necessary
   if (!basis.valid) return;
 
   // If row is basic, then slack is basic, otherwise row retains its status
-  if (solution.isModelRow(row)) {
+  if (postsolveStack.isOrigRow(row)) {
     HighsBasisStatus save_row_basis_status = basis.row_status[row];
     if (basis.row_status[row] == HighsBasisStatus::kBasic) {
       basis.col_status[col] = HighsBasisStatus::kBasic;

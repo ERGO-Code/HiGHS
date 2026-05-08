@@ -64,8 +64,6 @@ class HighsPostsolveStack {
   double debug_prev_row_lower = 0;
   double debug_prev_row_upper = 0;
 
-  bool isOrigRow(HighsInt row) const { return false; }
-
  private:
   /// transform a column x by a linear mapping with a new column x'.
   /// I.e. substitute x = a * x' + b
@@ -86,7 +84,8 @@ class HighsPostsolveStack {
     HighsInt col;
     RowType rowType;
 
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& rowValues,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
               HighsBasis& basis);
@@ -106,7 +105,8 @@ class HighsPostsolveStack {
     bool upperTightened;
     RowType rowType;
 
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
               HighsBasis& basis) const;
   };
@@ -116,7 +116,8 @@ class HighsPostsolveStack {
     HighsInt addedEqRow;
     double eqRowScale;
 
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& eqRowValues, HighsSolution& solution,
               HighsBasis& basis) const;
   };
@@ -124,7 +125,8 @@ class HighsPostsolveStack {
   struct EqualityRowAdditions {
     HighsInt addedEqRow;
 
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& eqRowValues,
               const std::vector<Nonzero>& targetRows, HighsSolution& solution,
               HighsBasis& basis) const;
@@ -136,7 +138,8 @@ class HighsPostsolveStack {
     bool colLowerTightened;
     bool colUpperTightened;
 
-    void undo(const HighsOptions& options, HighsSolution& solution,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options, HighsSolution& solution,
               HighsBasis& basis) const;
   };
 
@@ -147,7 +150,8 @@ class HighsPostsolveStack {
     HighsInt col;
     HighsBasisStatus fixType;
 
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
               HighsBasis& basis) const;
   };
@@ -155,7 +159,8 @@ class HighsPostsolveStack {
   struct RedundantRow {
     HighsInt row;
 
-    void undo(const HighsOptions& options, HighsSolution& solution,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options, HighsSolution& solution,
               HighsBasis& basis) const;
   };
 
@@ -164,7 +169,8 @@ class HighsPostsolveStack {
     HighsInt row;
     RowType rowType;
 
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& rowValues, HighsSolution& solution,
               HighsBasis& basis) const;
   };
@@ -176,7 +182,8 @@ class HighsPostsolveStack {
     bool atInfiniteUpper;
     bool colIntegral;
 
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
               HighsBasis& basis) const;
   };
@@ -184,7 +191,8 @@ class HighsPostsolveStack {
   struct ForcingColumnRemovedRow {
     double rhs;
     HighsInt row;
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& rowValues, HighsSolution& solution,
               HighsBasis& basis) const;
   };
@@ -196,7 +204,8 @@ class HighsPostsolveStack {
     bool rowLowerTightened;
     bool rowUpperTightened;
 
-    void undo(const HighsOptions& options, HighsSolution& solution,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options, HighsSolution& solution,
               HighsBasis& basis) const;
   };
 
@@ -224,7 +233,8 @@ class HighsPostsolveStack {
     HighsInt row;
     HighsInt col;
 
-    void undo(const HighsOptions& options,
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
               const std::vector<Nonzero>& rowValues, HighsSolution& solution,
               HighsBasis& basis);
   };
@@ -262,6 +272,10 @@ class HighsPostsolveStack {
   void reductionAdded(ReductionType type) {
     size_t position = reductionValues.getCurrentDataSize();
     reductions.emplace_back(type, position);
+  }
+
+  bool isOrigRow(HighsInt row) const {
+    return row < origNumRow && rowsAppended.find(row) == rowsAppended.end();
   }
 
  public:
@@ -683,21 +697,21 @@ class HighsPostsolveStack {
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, colValues, solution, basis);
+          reduction.undo(*this, options, rowValues, colValues, solution, basis);
           break;
         }
         case ReductionType::kDoubletonEquation: {
           DoubletonEquation reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
+          reduction.undo(*this, options, colValues, solution, basis);
           break;
         }
         case ReductionType::kEqualityRowAddition: {
           EqualityRowAddition reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(*this, options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kEqualityRowAdditions: {
@@ -705,53 +719,53 @@ class HighsPostsolveStack {
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, colValues, solution, basis);
+          reduction.undo(*this, options, rowValues, colValues, solution, basis);
           break;
         }
         case ReductionType::kSingletonRow: {
           SingletonRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
+          reduction.undo(*this, options, solution, basis);
           break;
         }
         case ReductionType::kFixedCol: {
           FixedCol reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
+          reduction.undo(*this, options, colValues, solution, basis);
           break;
         }
         case ReductionType::kRedundantRow: {
           RedundantRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
+          reduction.undo(*this, options, solution, basis);
           break;
         }
         case ReductionType::kForcingRow: {
           ForcingRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(*this, options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kForcingColumn: {
           ForcingColumn reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
+          reduction.undo(*this, options, colValues, solution, basis);
           break;
         }
         case ReductionType::kForcingColumnRemovedRow: {
           ForcingColumnRemovedRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(*this, options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kDuplicateRow: {
           DuplicateRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
+          reduction.undo(*this, options, solution, basis);
           break;
         }
         case ReductionType::kDuplicateColumn: {
@@ -764,7 +778,7 @@ class HighsPostsolveStack {
           SlackColSubstitution reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(*this, options, rowValues, solution, basis);
           break;
         }
         default:
@@ -866,21 +880,21 @@ class HighsPostsolveStack {
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, colValues, solution, basis);
+          reduction.undo(*this, options, rowValues, colValues, solution, basis);
           break;
         }
         case ReductionType::kDoubletonEquation: {
           DoubletonEquation reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
+          reduction.undo(*this, options, colValues, solution, basis);
           break;
         }
         case ReductionType::kEqualityRowAddition: {
           EqualityRowAddition reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(*this, options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kEqualityRowAdditions: {
@@ -888,53 +902,53 @@ class HighsPostsolveStack {
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, colValues, solution, basis);
+          reduction.undo(*this, options, rowValues, colValues, solution, basis);
           break;
         }
         case ReductionType::kSingletonRow: {
           SingletonRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
+          reduction.undo(*this, options, solution, basis);
           break;
         }
         case ReductionType::kFixedCol: {
           FixedCol reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
+          reduction.undo(*this, options, colValues, solution, basis);
           break;
         }
         case ReductionType::kRedundantRow: {
           RedundantRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
+          reduction.undo(*this, options, solution, basis);
           break;
         }
         case ReductionType::kForcingRow: {
           ForcingRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(*this, options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kForcingColumn: {
           ForcingColumn reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
+          reduction.undo(*this, options, colValues, solution, basis);
           break;
         }
         case ReductionType::kForcingColumnRemovedRow: {
           ForcingColumnRemovedRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(*this, options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kDuplicateRow: {
           DuplicateRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
+          reduction.undo(*this, options, solution, basis);
           break;
         }
         case ReductionType::kDuplicateColumn: {
@@ -946,7 +960,7 @@ class HighsPostsolveStack {
           SlackColSubstitution reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(*this, options, rowValues, solution, basis);
           break;
         }
       }
