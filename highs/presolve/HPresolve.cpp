@@ -2138,7 +2138,7 @@ bool HPresolve::addToMatrix(
   model->a_matrix_.num_row_ += num_rows;
 
   // resize postsolve vectors
-  postsolve_stack.appendRowsToModel2(num_rows);
+  postsolve_stack.appendRowsToModel(num_rows);
 
   // add row bounds
   model->row_lower_.insert(model->row_lower_.end(), row_lower.begin(),
@@ -6440,7 +6440,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
 
   shrinkProblem(postsolve_stack);
 
-   postsolve_stack.removeCutsFromModel(numAppendedRows);
+  postsolve_stack.removeCutsFromModel(numAppendedRows);
 
   postsolve_stack.getAppendedRows(model->rows_appended_by_presolve_);
 
@@ -6457,7 +6457,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       cutinds.reserve(model->num_col_);
       cutvals.reserve(model->num_col_);
       HighsInt numcuts = 0;
-      for (HighsInt i = postsolve_stack.getOrigRowIndexSize() - 1; i >= 0; --i) {
+      for (HighsInt i = postsolve_stack.getOrigRowIndexSize() - 1; i >= 0;
+           --i) {
         // check if we already reached the original rows
         if (postsolve_stack.getOrigRowIndex(i) <
             mipsolver->orig_model_->num_row_)

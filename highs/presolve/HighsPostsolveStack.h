@@ -295,19 +295,7 @@ class HighsPostsolveStack {
     origRowIndex.resize(numOrigRows);
   }
 
-  void appendRowsToModel(HighsInt startRow, HighsInt numRows) {
-    if (numRows <= 0) return;
-    size_t currNumRow = origRowIndex.size();
-    size_t newNumRow = currNumRow + numRows;
-    origRowIndex.resize(newNumRow);
-    for (size_t i = currNumRow; i != newNumRow; ++i) {
-      origRowIndex[i] =
-          origNumRow + startRow + static_cast<HighsInt>(i - currNumRow);
-      rowsAppended[origRowIndex[i]] = static_cast<HighsInt>(i);
-    }
-  }
-
-  void appendRowsToModel2(HighsInt numRows) {
+  void appendRowsToModel(HighsInt numRows) {
     if (numRows <= 0) return;
     size_t currNumRow = origRowIndex.size();
     appendCutsToModel(numRows);
@@ -318,12 +306,10 @@ class HighsPostsolveStack {
   HighsInt computeNumOrigRows(HighsInt numRowsAppended) {
     HighsInt numOrig = static_cast<HighsInt>(origRowIndex.size());
     if (numRowsAppended <= 0) return numOrig;
-
     for (size_t i = origRowIndex.size(); i > 0; --i) {
       if (origRowIndex[i - 1] < origNumRow - numRowsAppended) break;
       --numOrig;
     }
-
     return numOrig;
   }
 
@@ -331,14 +317,6 @@ class HighsPostsolveStack {
     appendedRows.clear();
     for (const auto& elm : rowsAppended)
       if (elm.second != -1) appendedRows.push_back(elm.second);
-  }
-
-  HighsInt numAppended() {
-    /*HighsInt cnt = 0;
-    for (const auto& elm : rowsAppended)
-      if (elm.second != -1) cnt++;
-    return cnt;*/
-    return rowsAppended.size();
   }
 
   HighsInt getOrigNumRow() const { return origNumRow; }
@@ -668,24 +646,21 @@ class HighsPostsolveStack {
     undoIterateBackwards(solution.col_value, origColIndex, origNumCol);
 
     assert(origNumRow >= 0);
-    undoIterateBackwards(solution.row_value, origRowIndex,
-                         origNumRow + rowsAppended.size());
+    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
 
-      undoIterateBackwards(solution.row_dual, origRowIndex,
-                           origNumRow + rowsAppended.size());
+      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
       undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
 
-      undoIterateBackwards(basis.row_status, origRowIndex,
-                           origNumRow + rowsAppended.size());
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow);
     }
 
     // now undo the changes
@@ -799,18 +774,6 @@ class HighsPostsolveStack {
     if (report_col >= 0)
       printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
              solution.col_value[report_col]);
-
-    for (const auto& elm : rowsAppended) {
-      if (elm.second == -1) {
-        solution.row_value[elm.first] = 0.0;
-        if (perform_dual_postsolve) solution.row_dual[elm.first] = 0.0;
-        if (perform_basis_postsolve)
-          basis.row_status[elm.first] = HighsBasisStatus::kLower;
-      }
-    }
-    solution.row_value.resize(origNumRow);
-    solution.row_dual.resize(origNumRow);
-    basis.row_status.resize(origNumRow);
 
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf
