@@ -10,12 +10,8 @@
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "ReturnValues.h"
-#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
-#include "metis/metis.h"
-#include "rcm/rcm.h"
-
 namespace hipo {
 
 const Int64 int32_limit = std::numeric_limits<int32_t>::max();

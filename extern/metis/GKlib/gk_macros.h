@@ -10,7 +10,11 @@
 #ifndef _GK_MACROS_H_
 #define _GK_MACROS_H_
 
-#include "ipm/hipo/auxiliary/OrderingPrint.h"
+#ifndef NDEBUG
+#define HIGHS_ORDERING_PRINT(...) printf(__VA_ARGS__)
+#else
+#define HIGHS_ORDERING_PRINT(...)
+#endif
 
 /*-------------------------------------------------------------
  * Usefull commands 

@@ -1099,11 +1099,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       bool use_hipo = mip_lp_solver == kHipoString;
       // Later still, pass mip_lp_solver and take action on failure in
       // solveLp
-#ifndef HIPO
-      // Shouldn't be possible to choose HiPO if it's not in the build
-      assert(!use_hipo);
-      use_hipo = false;
-#endif
       use_solver = use_hipo ? kHipoString : kIpxString;
     } else {
       use_solver = kSimplexString;
@@ -1328,11 +1323,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
             mip_ipm_solver == kHipoString;
         // Later still, pass mip_ipm_solver and take action on failure in
         // solveLp
-#ifndef HIPO
-        // Shouldn't be possible to choose HiPO if it's not in the build
-        assert(!use_hipo);
-        use_hipo = false;
-#endif
         const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
         ipm.setOptionValue("solver", ipm_solver);
         ipm.setOptionValue("ipm_iteration_limit", 200);
