@@ -2873,7 +2873,7 @@ bool Highs::qFormatOk(const HighsInt num_nz, const HighsInt format) {
   if (!num_nz) return true;
   const bool ok_format =
       format == static_cast<HighsInt>(HessianFormat::kTriangular) ||
-      static_cast<HighsInt>(HessianFormat::kSquare);
+      format == static_cast<HighsInt>(HessianFormat::kSquare);
   if (!ok_format)
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Non-empty Hessian matrix has illegal format = %d\n",
