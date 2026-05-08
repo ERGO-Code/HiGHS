@@ -313,7 +313,7 @@ Int FactorHiGHSSolver::chooseNla() {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
     double ops_NE = symb_NE.flops() + symb_NE.spops() * kSpopsWeight;
-    double ops_AS = symb_AS.flops() + symb_AS.spops() + kSpopsWeight;
+    double ops_AS = symb_AS.flops() + symb_AS.spops() * kSpopsWeight;
 
     // Average size of supernodes
     double sn_size_NE = (double)symb_NE.size() / symb_NE.sn();
