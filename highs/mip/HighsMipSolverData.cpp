@@ -1302,9 +1302,9 @@ void HighsMipSolverData::performRestart() {
           basis.col_status[i];
 
     for (HighsInt i = 0; i < mipsolver.numRow(); ++i)
-      //if (postSolveStack.getOrigRowIndex(i) < root_basis.row_status.size())
-        root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
-            basis.row_status[i];
+      // if (postSolveStack.getOrigRowIndex(i) < root_basis.row_status.size())
+      root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
+          basis.row_status[i];
 
     mipsolver.rootbasis = &root_basis;
   }
@@ -1408,20 +1408,18 @@ void HighsMipSolverData::basisTransfer() {
   const HighsInt numCol = mipsolver.numCol();
   firstrootbasis.col_status.assign(numCol, HighsBasisStatus::kNonbasic);
   firstrootbasis.row_status.assign(numRow, HighsBasisStatus::kNonbasic);
-  firstrootbasis.valid = true;
+  firstrootbasis.valid = false;
   firstrootbasis.alien = true;
-  firstrootbasis.useful = true;
+  firstrootbasis.useful = false;
   HighsInt numBasicVars = 0;
 
-  auto sol = lp.getLpSolver().getSolution();
-
-  for (HighsInt i = 0; i < numCol; ++i) {
+  /*for (HighsInt i = 0; i < numCol; ++i) {
     HighsBasisStatus status =
         mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
     firstrootbasis.col_status[i] = status;
     if (status == HighsBasisStatus::kBasic) numBasicVars++;
   }
-  for (HighsInt i = 0; i < postSolveStack.getOrigNumRow(); ++i) {
+  for (HighsInt i = 0; i < postSolveStack.getOrigRowIndexSize(); ++i) {
     HighsBasisStatus status =
         mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
     firstrootbasis.row_status[i] = status;
@@ -1429,9 +1427,9 @@ void HighsMipSolverData::basisTransfer() {
   }
 
   for (HighsInt i = 0; i < numRow - numBasicVars; i++) {
-    firstrootbasis.row_status[postSolveStack.getOrigNumRow() + i] =
+    firstrootbasis.row_status[postSolveStack.getOrigRowIndexSize() + i] =
         HighsBasisStatus::kBasic;
-  }
+  }*/
 
   /*for (HighsInt i = 0; i < numRow; ++i) {
     HighsBasisStatus status =
@@ -1439,6 +1437,10 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.row_status[i] = status;
     if (status == HighsBasisStatus::kBasic) numBasicVars++;
   }*/
+
+  for (HighsInt i = 0; i < numRow; ++i) {
+    firstrootbasis.row_status[i] = HighsBasisStatus::kBasic;
+  }
 }
 
 const std::vector<double>& HighsMipSolverData::getSolution() const {

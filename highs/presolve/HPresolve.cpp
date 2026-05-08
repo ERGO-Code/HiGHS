@@ -6457,7 +6457,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       cutinds.reserve(model->num_col_);
       cutvals.reserve(model->num_col_);
       HighsInt numcuts = 0;
-      for (HighsInt i = model->num_row_ - numAppendedRows - 1; i >= 0; --i) {
+      for (HighsInt i = postsolve_stack.getOrigRowIndexSize() - 1; i >= 0; --i) {
         // check if we already reached the original rows
         if (postsolve_stack.getOrigRowIndex(i) <
             mipsolver->orig_model_->num_row_)
@@ -6484,10 +6484,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
         for (HighsInt j : rowpositions) unlink(j);
       }
 
-      model->num_row_ -= numcuts;
-      model->row_lower_.resize(model->num_row_);
-      model->row_upper_.resize(model->num_row_);
-      model->row_names_.resize(model->num_row_);
+      shrinkProblem(postsolve_stack);
     }
   }
 
