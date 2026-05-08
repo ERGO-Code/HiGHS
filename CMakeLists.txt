@@ -852,6 +852,7 @@ if(NOT FAST_BUILD)
   add_subdirectory(app)
   if(BUILD_TESTING)
     enable_testing()
+    add_subdirectory(third_party/PSLP EXCLUDE_FROM_ALL)
     add_subdirectory(check)
   endif()
 

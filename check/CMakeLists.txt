@@ -28,6 +28,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   # Make test executable
   set(TEST_SOURCES
+      ExperimentalPslpHiPdlp.cpp
       TestAlienBasis.cpp
       TestBasis.cpp
       TestBasisSolves.cpp
@@ -104,51 +105,68 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
   add_executable(unit_tests ${TEST_SOURCES})
+  add_executable(hipdlp_pslp_bench HiPdlpPslpBench.cpp
+                                   ExperimentalPslpHiPdlp.cpp)
 
   target_include_directories(unit_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/third_party/PSLP/include
     )
+  target_include_directories(hipdlp_pslp_bench PRIVATE
+    ${PROJECT_SOURCE_DIR}/third_party/PSLP/include
+    )
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
+  set_target_properties(hipdlp_pslp_bench PROPERTIES UNITY_BUILD OFF)
 
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
+      target_compile_options(hipdlp_pslp_bench PRIVATE "-Wno-unused-variable")
+      target_compile_options(hipdlp_pslp_bench PRIVATE "-Wno-unused-const-variable")
   endif()
 
   if (FAST_BUILD)
     target_link_libraries(unit_tests highs Catch PSLP)
-    target_link_libraries(unit_tests highs Catch)
+    target_link_libraries(hipdlp_pslp_bench highs PSLP)
 
     if (CUPDLP_GPU)
         # Link unit tests to cuda too!
         target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/cuda)
+        target_include_directories(hipdlp_pslp_bench PRIVATE ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/cuda)
         set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        set_target_properties(hipdlp_pslp_bench PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
         if (WIN32)
             target_link_libraries(unit_tests ${CUDA_LIBRARY})
+            target_link_libraries(hipdlp_pslp_bench ${CUDA_LIBRARY})
         else()
             target_link_libraries(unit_tests ${CUDA_LIBRARY} m)
+            target_link_libraries(hipdlp_pslp_bench ${CUDA_LIBRARY} m)
         endif()
 
         # If cudalin is used, link to cudalin too.
         if (NOT HIGHS_GPU_LIB)
             target_link_libraries(unit_tests cudalin)
+            target_link_libraries(hipdlp_pslp_bench cudalin)
         endif()
     endif()
   else()
     target_link_libraries(unit_tests libhighs Catch PSLP)
-    target_link_libraries(unit_tests libhighs Catch)
+    target_link_libraries(hipdlp_pslp_bench libhighs PSLP)
   endif()
 
   include(GNUInstallDirs)
   if(APPLE)
       set_target_properties(unit_tests PROPERTIES INSTALL_RPATH
       "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+      set_target_properties(hipdlp_pslp_bench PROPERTIES INSTALL_RPATH
+      "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
   elseif(UNIX)
       cmake_path(RELATIVE_PATH CMAKE_INSTALL_FULL_LIBDIR
           BASE_DIRECTORY ${CMAKE_INSTALL_FULL_BINDIR}
           OUTPUT_VARIABLE libdir_relative_path)
       set_target_properties(unit_tests PROPERTIES 
+      INSTALL_RPATH "$ORIGIN/${libdir_relative_path}")
+      set_target_properties(hipdlp_pslp_bench PROPERTIES 
       INSTALL_RPATH "$ORIGIN/${libdir_relative_path}")
   endif()
 
