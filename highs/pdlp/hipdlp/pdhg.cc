@@ -513,12 +513,30 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   // Copy initial input x,y to internal state
   x_current_ = x;
   y_current_ = y;
+  linalg::projectBounds(lp_, x_current_);
 
   if (params_.use_halpern_restart) {
     x_anchor_ = x_current_;
     y_anchor_ = y_current_;
     halpern_iteration_ = 0;
 #ifdef CUPDLP_GPU
+<<<<<<< HEAD
+=======
+  if (!params_.use_halpern_restart) {
+    CUDA_CHECK(cudaMemset(d_x_sum_, 0, lp_.num_col_ * sizeof(double)));
+    CUDA_CHECK(cudaMemset(d_y_sum_, 0, lp_.num_row_ * sizeof(double)));
+    CUDA_CHECK(cudaMemset(d_x_avg_, 0, lp_.num_col_ * sizeof(double)));
+    CUDA_CHECK(cudaMemset(d_y_avg_, 0, lp_.num_row_ * sizeof(double)));
+  }
+  sum_weights_gpu_ = 0.0;
+  CUDA_CHECK(cudaMemcpy(d_x_current_, x_current_.data(),
+                        lp_.num_col_ * sizeof(double),
+                        cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(d_y_current_, y_current_.data(),
+                        lp_.num_row_ * sizeof(double),
+                        cudaMemcpyHostToDevice));
+  if (params_.use_halpern_restart) {
+>>>>>>> dbcb7bc627 (Fix HiPDLP false convergence at iteration 0)
     CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_x_current_,
                           lp_.num_col_ * sizeof(double),
                           cudaMemcpyDeviceToDevice));
@@ -542,7 +560,6 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   linalgGpuAx(d_x_current_, d_ax_current_);
   linalgGpuATy(d_y_current_, d_aty_current_);
 #else
-  linalg::projectBounds(lp_, x_current_);
   linalg::ax(lp_, x_current_, Ax_cache_);
   linalg::aTy(lp_, y_current_, ATy_cache_);
 #endif
@@ -827,9 +844,12 @@ bool PDLPSolver::runConvergenceCheck(size_t iter, std::vector<double>& output_x,
         iter, x_current_, y_current_, Ax_cache_, ATy_cache_, params_.tolerance,
         current_results, "[L]", dSlackPos_, dSlackNeg_);
   }
-  average_converged = checkConvergence(iter, x_avg_, y_avg_, Ax_avg_, ATy_avg_,
-                                       params_.tolerance, average_results,
-                                       "[A]", dSlackPosAvg_, dSlackNegAvg_);
+  if (!params_.use_halpern_restart) {
+    average_converged =
+        checkConvergence(iter, x_avg_, y_avg_, Ax_avg_, ATy_avg_,
+                         params_.tolerance, average_results, "[A]",
+                         dSlackPosAvg_, dSlackNegAvg_);
+  }
 #endif
 
   // 3. Handle Convergence Success
