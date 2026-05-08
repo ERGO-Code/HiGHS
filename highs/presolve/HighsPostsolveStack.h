@@ -64,6 +64,8 @@ class HighsPostsolveStack {
   double debug_prev_row_lower = 0;
   double debug_prev_row_upper = 0;
 
+  bool isOrigRow(HighsInt row) const { return false; }
+
  private:
   /// transform a column x by a linear mapping with a new column x'.
   /// I.e. substitute x = a * x' + b

@@ -513,6 +513,7 @@ void HighsPostsolveStack::ForcingRow::undo(
 void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
                                              HighsBasis& basis) const {
+    bool ismodel = isOrigRow(row);
   // (removed) cuts may have been used in this reduction.
   if (!solution.isModelRow(row)) return;
 
