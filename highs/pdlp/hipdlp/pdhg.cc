@@ -519,9 +519,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     x_anchor_ = x_current_;
     y_anchor_ = y_current_;
     halpern_iteration_ = 0;
-#ifdef CUPDLP_GPU
-<<<<<<< HEAD
-=======
+  }
+
+  #ifdef CUPDLP_GPU
   if (!params_.use_halpern_restart) {
     CUDA_CHECK(cudaMemset(d_x_sum_, 0, lp_.num_col_ * sizeof(double)));
     CUDA_CHECK(cudaMemset(d_y_sum_, 0, lp_.num_row_ * sizeof(double)));
@@ -529,40 +529,29 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     CUDA_CHECK(cudaMemset(d_y_avg_, 0, lp_.num_row_ * sizeof(double)));
   }
   sum_weights_gpu_ = 0.0;
+
   CUDA_CHECK(cudaMemcpy(d_x_current_, x_current_.data(),
                         lp_.num_col_ * sizeof(double),
                         cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_y_current_, y_current_.data(),
                         lp_.num_row_ * sizeof(double),
                         cudaMemcpyHostToDevice));
+
   if (params_.use_halpern_restart) {
->>>>>>> dbcb7bc627 (Fix HiPDLP false convergence at iteration 0)
     CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_x_current_,
                           lp_.num_col_ * sizeof(double),
                           cudaMemcpyDeviceToDevice));
     CUDA_CHECK(cudaMemcpy(d_y_anchor_, d_y_current_,
                           lp_.num_row_ * sizeof(double),
                           cudaMemcpyDeviceToDevice));
-#endif
   }
 
-  // Pre-calculate ax and aTy for current iterate
-#ifdef CUPDLP_GPU
-  CUDA_CHECK(cudaMemset(d_x_sum_, 0, lp_.num_col_ * sizeof(double)));
-  CUDA_CHECK(cudaMemset(d_y_sum_, 0, lp_.num_row_ * sizeof(double)));
-  CUDA_CHECK(cudaMemset(d_x_avg_, 0, lp_.num_col_ * sizeof(double)));
-  CUDA_CHECK(cudaMemset(d_y_avg_, 0, lp_.num_row_ * sizeof(double)));
-  sum_weights_gpu_ = 0.0;
-  CUDA_CHECK(cudaMemcpy(d_x_current_, x.data(), lp_.num_col_ * sizeof(double),
-                        cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(d_y_current_, y.data(), lp_.num_row_ * sizeof(double),
-                        cudaMemcpyHostToDevice));
   linalgGpuAx(d_x_current_, d_ax_current_);
   linalgGpuATy(d_y_current_, d_aty_current_);
-#else
+  #else
   linalg::ax(lp_, x_current_, Ax_cache_);
   linalg::aTy(lp_, y_current_, ATy_cache_);
-#endif
+  #endif
 
   TerminationStatus termination_status = TerminationStatus::NOTSET;
   bool do_restart = false;
