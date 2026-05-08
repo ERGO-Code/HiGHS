@@ -843,9 +843,9 @@ void HEkkDual::majorUpdatePrimal() {
         // Update steepest edge weights
         HVector* Row = finish->row_ep;
         double Kai = -2 / finish->alpha_row;
-        ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in, Col,
-                                                    new_pivotal_edge_weight,
-                                                    Kai, Row->array.data());
+        ekk_instance_.updateDualSteepestEdgeWeights(
+            finish->row_out, finish->variable_in, Col, new_pivotal_edge_weight,
+            Kai, Row->array.data());
       } else if (edge_weight_mode == EdgeWeightMode::kDevex &&
                  !new_devex_framework) {
         // Update Devex weights
