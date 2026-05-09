@@ -328,7 +328,6 @@ void semiModel0(HighsLp& lp) {
   lp.integrality_ = {continuous, continuous, semi_continuous, continuous};
 }
 
-/*
 TEST_CASE("3015", "[highs_test_semi_variables]") {
     std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/3015.mps";
@@ -350,4 +349,3 @@ TEST_CASE("3015", "[highs_test_semi_variables]") {
   highs.resetGlobalScheduler(true);
 
 }
-*/
