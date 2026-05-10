@@ -81,7 +81,7 @@ struct PreprocessFormulation : public PreprocessAction {
 };
 
 struct PreprocessFreeVars : public PreprocessAction {
-  Int free_vars{};
+  Int free_vars_count{};
 
   void apply(Model& model) override;
   void undo(PreprocessorPoint& point, const Model& model,

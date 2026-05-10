@@ -419,26 +419,24 @@ void Model::printDense() const {
 
 void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
                            std::vector<double>& xu, const Logger& logger) {
-  for (Int i = 0; i < n_; ++i) {
-    if (is_free_[i]) {
-      if (x[i] < lower_[i] * kFreeVarsCloseRatio) {
-        // getting close to lower bound
-        const double new_lower = x[i] / kFreeVarsCloseRatio;
-        logger.printDetailed(
-            "Free var %d is at %.1e with lb %.1e, lb changed to %.1e\n", i,
-            x[i], lower_[i], new_lower);
-        lower_[i] = new_lower;
-        xl[i] = x[i] - lower_[i];
-      }
-      if (x[i] > upper_[i] * kFreeVarsCloseRatio) {
-        // getting close to upper bound
-        const double new_upper = x[i] / kFreeVarsCloseRatio;
-        logger.printDetailed(
-            "Free var %d is at %.1e with ub %.1e, ub changed to %.1e\n", i,
-            x[i], upper_[i], new_upper);
-        upper_[i] = new_upper;
-        xu[i] = upper_[i] - x[i];
-      }
+  for (Int i : free_variables_) {
+    if (x[i] < lower_[i] * kFreeVarsCloseRatio) {
+      // getting close to lower bound
+      const double new_lower = x[i] / kFreeVarsCloseRatio;
+      logger.printDetailed(
+          "Free var %5d is at %8.1e with lb %8.1e, lb changed to %8.1e\n", i, x[i],
+          lower_[i], new_lower);
+      lower_[i] = new_lower;
+      xl[i] = x[i] - lower_[i];
+    }
+    if (x[i] > upper_[i] * kFreeVarsCloseRatio) {
+      // getting close to upper bound
+      const double new_upper = x[i] / kFreeVarsCloseRatio;
+      logger.printDetailed(
+          "Free var %5d is at %8.1e with ub %8.1e, ub changed to %8.1e\n", i, x[i],
+          upper_[i], new_upper);
+      upper_[i] = new_upper;
+      xu[i] = upper_[i] - x[i];
     }
   }
 }

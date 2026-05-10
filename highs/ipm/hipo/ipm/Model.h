@@ -65,7 +65,7 @@ class Model {
   std::vector<double> one_norm_cols_, one_norm_rows_, inf_norm_cols_,
       inf_norm_rows_;
 
-  std::vector<bool> is_free_;
+  std::vector<Int> free_variables_;
 
   void preprocess();
   Int checkData() const;
@@ -128,7 +128,7 @@ class Model {
   Int64 nzAS() const { return AS_nz_; }
   Int64 nzNElb() const { return NE_nz_lb_; }
   Int64 nzNEub() const { return NE_nz_ub_; }
-  bool isFree(Int i) const { return is_free_[i]; }
+  const std::vector<Int>& freeVars() const { return free_variables_; }
 
   Int loadIntoIpx(ipx::LpSolver& lps) const;
 

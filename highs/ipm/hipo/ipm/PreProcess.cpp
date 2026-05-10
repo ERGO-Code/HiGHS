@@ -483,14 +483,20 @@ void PreprocessScaling::undo(PreprocessorPoint& point, const Model& model,
 
     // set variables that were ignored
     for (Int i = 0; i < n_post; ++i) {
-      if (!model.hasLb(i) || model.isFree(i)) {
+      if (!model.hasLb(i)) {
         point.xl[i] = kHighsInf;
         point.zl[i] = 0.0;
       }
-      if (!model.hasUb(i) || model.isFree(i)) {
+      if (!model.hasUb(i)) {
         point.xu[i] = kHighsInf;
         point.zu[i] = 0.0;
       }
+    }
+    for (Int i : model.freeVars()) {
+      point.xl[i] = kHighsInf;
+      point.zl[i] = 0.0;
+      point.xu[i] = kHighsInf;
+      point.zu[i] = 0.0;
     }
   }
   point.assertConsistency(n_pre, m_pre);
@@ -561,14 +567,20 @@ void PreprocessFormulation::undo(PreprocessorPoint& point, const Model& model,
 
   // force unused entries to have correct value
   for (Int i = 0; i < n_pre; ++i) {
-    if (!model.hasLb(i) || model.isFree(i)) {
+    if (!model.hasLb(i)) {
       point.xl[i] = kHighsInf;
       point.zl[i] = 0.0;
     }
-    if (!model.hasUb(i) || model.isFree(i)) {
+    if (!model.hasUb(i)) {
       point.xu[i] = kHighsInf;
       point.zu[i] = 0.0;
     }
+  }
+  for (Int i : model.freeVars()) {
+    point.xl[i] = kHighsInf;
+    point.zl[i] = 0.0;
+    point.xu[i] = kHighsInf;
+    point.zu[i] = 0.0;
   }
 
   // For the Lagrange multipliers, use slacks from zl and zu, to get correct
@@ -621,15 +633,15 @@ void PreprocessFreeVars::apply(Model& model) {
   Int& n = model.n_;
   std::vector<double>& lower = model.lower_;
   std::vector<double>& upper = model.upper_;
-  std::vector<bool>& is_free = model.is_free_;
+  std::vector<Int>& free_variables = model.free_variables_;
 
-  is_free.assign(n, false);
+  free_variables.clear();
   for (Int i = 0; i < n; ++i) {
     if (!std::isfinite(lower[i]) && !std::isfinite(upper[i]) &&
         lower[i] != upper[i]) {
       // free variable
-      is_free[i] = true;
-      ++free_vars;
+      free_variables.push_back(i);
+      ++free_vars_count;
       lower[i] = -kFreeVarsInitialBound;
       upper[i] = kFreeVarsInitialBound;
     }
@@ -640,7 +652,8 @@ void PreprocessFreeVars::undo(PreprocessorPoint& point, const Model& model,
                               const Iterate& it) const {}
 
 void PreprocessFreeVars::print(std::stringstream& stream) const {
-  if (free_vars > 0) stream << "Found " << free_vars << " free variables\n";
+  if (free_vars_count > 0)
+    stream << "Found " << free_vars_count << " free variables\n";
 }
 
 #define APPLY_ACTION(T)                                      \
