@@ -182,9 +182,11 @@ Int FactorHiGHSSolver::setup() {
   if (Int status = setNla()) return status;
   setParallel();
 
-  std::stringstream log_stream;
-  log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
-  logger_.print(log_stream.str().c_str());
+  if (!options_.timeless_log) {
+    std::stringstream log_stream;
+    log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
+    logger_.print(log_stream.str().c_str());
+  }
 
   S_.print(logger_, logger_.debug(1));
 
