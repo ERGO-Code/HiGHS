@@ -76,6 +76,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const bool get_residuals) {
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double mip_feasibility_tolerance = options.mip_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
   double optimality_tolerance = options.optimality_tolerance;
@@ -285,7 +286,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       // variables with small positive bound interval lengths,
       // mid_status is returned as kHighsSolutionNo.
       getVariableKktFailures(primal_feasibility_tolerance,
-                             dual_feasibility_tolerance, lower, upper, value,
+                             dual_feasibility_tolerance,
+			     mip_feasibility_tolerance,
+			     lower, upper, value,
                              dual, integrality, primal_infeasibility,
                              dual_infeasibility, at_status, mid_status);
       if (pass == 0) {
@@ -549,6 +552,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 // are not valid.
 void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
+                            const double mip_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
                             const HighsVarType integrality,
@@ -616,7 +620,7 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
   // Account for semi-variables
   const bool semi_variable = integrality == HighsVarType::kSemiContinuous ||
                              integrality == HighsVarType::kSemiInteger;
-  if (semi_variable && std::fabs(value) < primal_feasibility_tolerance)
+  if (semi_variable && std::fabs(value) < mip_feasibility_tolerance)
     primal_infeasibility = 0;
 }
 
@@ -626,6 +630,7 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
                                HighsPrimalDualErrors& primal_dual_errors) {
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double mip_feasibility_tolerance = options.mip_feasibility_tolerance;
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
   double optimality_tolerance = options.optimality_tolerance;
@@ -755,7 +760,9 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
     dual *= (HighsInt)lp.sense_;
 
     getVariableKktFailures(primal_feasibility_tolerance,
-                           dual_feasibility_tolerance, lower, upper, value,
+                           dual_feasibility_tolerance,
+                           mip_feasibility_tolerance,
+			   lower, upper, value,
                            dual, integrality, primal_infeasibility,
                            dual_infeasibility, at_status, mid_status);
 

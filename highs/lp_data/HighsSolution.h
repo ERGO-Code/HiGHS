@@ -84,6 +84,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
 void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
+                            const double mip_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
                             const HighsVarType integrality,
