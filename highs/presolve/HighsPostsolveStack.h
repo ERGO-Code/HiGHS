@@ -669,6 +669,8 @@ class HighsPostsolveStack {
       // index space
       undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
 
+      for (const auto& elm : rowsAppended)
+        if (elm.second != -1) solution.row_dual[elm.second] = 0;
       undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow);
     }
 
@@ -676,6 +678,9 @@ class HighsPostsolveStack {
       // if basis is given, expand basis status values to original index space
       undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
 
+      for (const auto& elm : rowsAppended)
+        if (elm.second != -1)
+          basis.row_status[elm.second] = HighsBasisStatus::kLower;
       undoIterateBackwards(basis.row_status, origRowIndex, origNumRow);
     }
 
