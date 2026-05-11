@@ -2731,7 +2731,17 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
 
   if (domchgVal == 0) return false;
 
-  pdqsort(resolveBuffer.begin(), resolveBuffer.end());
+  if (resolveBuffer.size() > 1) {
+    for (auto it = resolveBuffer.begin() + 1; it != resolveBuffer.end(); ++it) {
+      auto val = *it;
+      auto jt = it;
+      while (jt != resolveBuffer.begin() && val < *(jt - 1)) {
+        *jt = *(jt - 1);
+        --jt;
+      }
+      *jt = val;
+    }
+  }
 
   // to explain the bound change we start from the bound constraint,
   // multiply it by the columns coefficient in the constraint. Then the
@@ -2838,7 +2848,17 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
 
   if (domchgVal == 0) return false;
 
-  pdqsort(resolveBuffer.begin(), resolveBuffer.end());
+  if (resolveBuffer.size() > 1) {
+    for (auto it = resolveBuffer.begin() + 1; it != resolveBuffer.end(); ++it) {
+      auto val = *it;
+      auto jt = it;
+      while (jt != resolveBuffer.begin() && val < *(jt - 1)) {
+        *jt = *(jt - 1);
+        --jt;
+      }
+      *jt = val;
+    }
+  }
 
   assert(domchgVal != 0);
 
@@ -3309,7 +3329,17 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
     resolveBuffer.push_back(cand);
   }
 
-  pdqsort(resolveBuffer.begin(), resolveBuffer.end());
+  if (resolveBuffer.size() > 1) {
+    for (auto it = resolveBuffer.begin() + 1; it != resolveBuffer.end(); ++it) {
+      auto val = *it;
+      auto jt = it;
+      while (jt != resolveBuffer.begin() && val < *(jt - 1)) {
+        *jt = *(jt - 1);
+        --jt;
+      }
+      *jt = val;
+    }
+  }
 
   // compute the lower bound of M that is necessary
   double Mupper = rhs - std::max(10.0, std::fabs(rhs)) *
@@ -3356,7 +3386,17 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
     resolveBuffer.push_back(cand);
   }
 
-  pdqsort(resolveBuffer.begin(), resolveBuffer.end());
+  if (resolveBuffer.size() > 1) {
+    for (auto it = resolveBuffer.begin() + 1; it != resolveBuffer.end(); ++it) {
+      auto val = *it;
+      auto jt = it;
+      while (jt != resolveBuffer.begin() && val < *(jt - 1)) {
+        *jt = *(jt - 1);
+        --jt;
+      }
+      *jt = val;
+    }
+  }
 
   // compute the lower bound of M that is necessary
   double Mlower = rhs + std::max(10.0, std::fabs(rhs)) *

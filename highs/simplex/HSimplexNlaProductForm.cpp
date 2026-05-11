@@ -16,7 +16,7 @@
 
 using std::fabs;
 const HighsInt kProductFormExtraEntries = 1000;
-const HighsInt kProductFormMaxUpdates = 50;
+const HighsInt kProductFormMaxUpdates = 100;
 const double kProductFormPivotTolerance = 1e-8;
 
 void ProductFormUpdate::clear() {

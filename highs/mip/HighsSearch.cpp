@@ -29,6 +29,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
   inheuristic = false;
   inbranching = false;
   countTreeWeight = true;
+  roundBuffer.resize(mipsolver.numCol());
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
   // the infeasibility flag is overwritten and lost when setDomainChangeStack is
@@ -996,7 +997,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
                   &localdom);
             }
             HighsRedcostFixing::propagateRedCost(mipsolver, localdom, *lp);
-            localdom.propagate();
+            if (!localdom.getChangedCols().empty()) localdom.propagate();
             if (localdom.infeasible()) {
               result = NodeResult::kDomainInfeasible;
               localdom.clearChangedCols();
@@ -1097,9 +1098,9 @@ HighsSearch::NodeResult HighsSearch::branch() {
     if (minrel > 0) {
       int64_t sbiters = getStrongBranchingLpIterations();
       sbmaxiters =
-          100000 + ((getTotalLpIterations() - getHeuristicLpIterations() -
-                     getStrongBranchingLpIterations()) >>
-                    1);
+          50000 + ((getTotalLpIterations() - getHeuristicLpIterations() -
+                    getStrongBranchingLpIterations()) >>
+                   1);
       if (sbiters > sbmaxiters) {
         pseudocost.setMinReliable(0);
       } else if (sbiters > (sbmaxiters >> 1)) {

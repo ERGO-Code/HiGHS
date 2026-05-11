@@ -17,6 +17,7 @@
 #include "lp_data/HConst.h"
 #include "util/FactorTimer.h"
 #include "util/HFactorDebug.h"
+#include "util/HPreFetch.h"
 #include "util/HVector.h"
 #include "util/HVectorBase.h"
 #include "util/HighsTimer.h"
@@ -1559,12 +1560,18 @@ void HFactor::ftranL(HVector& rhs, const double expected_density,
     for (HighsInt i = 0; i < num_row; i++) {
       HighsInt pivotRow = l_pivot_index[i];
       const double pivot_multiplier = rhs_array[pivotRow];
-      if (fabs(pivot_multiplier) > kHighsTiny) {
+      if (HIGHS_LIKELY(fabs(pivot_multiplier) > kHighsTiny)) {
         rhs_index[rhs_count++] = pivotRow;
         const HighsInt start = l_start[i];
         const HighsInt end = l_start[i + 1];
-        for (HighsInt k = start; k < end; k++)
+        for (HighsInt k = start; k < end; k++) {
+          if (k + HPC_PREFETCH_DIST < end) {
+            HPC_PREFETCH_RD(&l_index[k + HPC_PREFETCH_DIST]);
+            HPC_PREFETCH_RD(&l_value[k + HPC_PREFETCH_DIST]);
+            HPC_PREFETCH_WR(&rhs_array[l_index[k + HPC_PREFETCH_DIST]]);
+          }
           rhs_array[l_index[k]] -= pivot_multiplier * l_value[k];
+        }
       } else
         rhs_array[pivotRow] = 0;
     }
@@ -1607,13 +1614,19 @@ void HFactor::btranL(HVector& rhs, const double expected_density,
     for (HighsInt i = num_row - 1; i >= 0; i--) {
       HighsInt pivotRow = l_pivot_index[i];
       const double pivot_multiplier = rhs_array[pivotRow];
-      if (fabs(pivot_multiplier) > kHighsTiny) {
+      if (HIGHS_LIKELY(fabs(pivot_multiplier) > kHighsTiny)) {
         rhs_index[rhs_count++] = pivotRow;
         rhs_array[pivotRow] = pivot_multiplier;
         const HighsInt start = lr_start[i];
         const HighsInt end = lr_start[i + 1];
-        for (HighsInt k = start; k < end; k++)
+        for (HighsInt k = start; k < end; k++) {
+          if (k + HPC_PREFETCH_DIST < end) {
+            HPC_PREFETCH_RD(&lr_index[k + HPC_PREFETCH_DIST]);
+            HPC_PREFETCH_RD(&lr_value[k + HPC_PREFETCH_DIST]);
+            HPC_PREFETCH_WR(&rhs_array[lr_index[k + HPC_PREFETCH_DIST]]);
+          }
           rhs_array[lr_index[k]] -= pivot_multiplier * lr_value[k];
+        }
       } else
         rhs_array[pivotRow] = 0;
     }
@@ -2192,9 +2205,10 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
     u_total_x += pf_index.size() - pf_start.back();
     pf_start.push_back(pf_index.size());
 
-    // 8. Update the sorted ep
+    // 8. Update the sorted ep - insertion sort (only last element may be out of place)
     sorted_pp.push_back(make_pair(p_logic[cp], cp));
-    pdqsort(sorted_pp.begin(), sorted_pp.end());
+    for (HighsInt si = (HighsInt)sorted_pp.size() - 1; si > 0 && sorted_pp[si] < sorted_pp[si - 1]; si--)
+      std::swap(sorted_pp[si], sorted_pp[si - 1]);
   }
 
   // Now modify the U matrix

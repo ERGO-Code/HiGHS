@@ -148,30 +148,28 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
   const HighsMipSolver& mipsolver = lp->getMipSolver();
 
   if (lp->scaledOptimal(status) && !lp->getFractionalIntegers().empty()) {
-    // double firstobj = lp->getObjective();
+    // Reset separator budgets for tree node separation
+    for (auto& separator : separators) separator->resetTries();
+
     double firstobj = mipsolver.mipdata_->rootlpsolobj;
 
+    HighsInt nrounds = 0;
     while (lp->getObjective() < mipsolver.mipdata_->optimality_limit) {
       double lastobj = lp->getObjective();
 
       size_t nlpiters = -lp->getNumLpIterations();
       HighsInt ncuts = separationRound(propdomain, status);
+      ++nrounds;
       nlpiters += lp->getNumLpIterations();
       mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
       mipsolver.mipdata_->total_lp_iterations += nlpiters;
-      // printf("separated %" HIGHSINT_FORMAT " cuts\n", ncuts);
 
-      // printf(
-      //     "separation round %" HIGHSINT_FORMAT " at node %" HIGHSINT_FORMAT "
-      //     added %" HIGHSINT_FORMAT " cuts objective changed " "from %g to %g,
-      //     first obj is %g\n", nrounds, (HighsInt)nnodes, ncuts, lastobj,
-      //     lp->getObjective(), firstobj);
       if (ncuts == 0 || !lp->scaledOptimal(status) ||
           lp->getFractionalIntegers().empty())
         break;
 
-      // if the objective improved considerably we continue
-      if ((lp->getObjective() - firstobj) <=
+      // No forced rounds at tree nodes: cuts rarely help deeper in the tree
+      if (nrounds >= 1 && (lp->getObjective() - firstobj) <=
           std::max((lastobj - firstobj), mipsolver.mipdata_->feastol) * 1.01)
         break;
     }

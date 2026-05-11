@@ -1602,41 +1602,6 @@ void HighsSparseMatrix::update(const HighsInt var_in, const HighsInt var_out,
   }
 }
 
-double HighsSparseMatrix::computeDot(const std::vector<double>& array,
-                                     const HighsInt use_col) const {
-  assert(this->isColwise());
-  double result = 0;
-  if (use_col < this->num_col_) {
-    for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1];
-         iEl++)
-      result += array[this->index_[iEl]] * this->value_[iEl];
-  } else {
-    result = array[use_col - this->num_col_];
-  }
-  return result;
-}
-
-void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
-                                  const double multiplier) const {
-  assert(this->isColwise());
-  if (use_col < this->num_col_) {
-    for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1];
-         iEl++) {
-      HighsInt iRow = this->index_[iEl];
-      double value0 = column.array[iRow];
-      double value1 = value0 + multiplier * this->value_[iEl];
-      if (value0 == 0) column.index[column.count++] = iRow;
-      column.array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
-    }
-  } else {
-    HighsInt iRow = use_col - this->num_col_;
-    double value0 = column.array[iRow];
-    double value1 = value0 + multiplier;
-    if (value0 == 0) column.index[column.count++] = iRow;
-    column.array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
-  }
-}
-
 void HighsSparseMatrix::priceByRowDenseResult(
     std::vector<double>& result, const HVector& column,
     const HighsInt from_index, const HighsInt debug_report) const {

@@ -123,10 +123,39 @@ class HighsSparseMatrix {
     return computeDot(column.array, use_col);
   }
 
-  double computeDot(const std::vector<double>& array,
-                    const HighsInt use_col) const;
-  void collectAj(HVector& column, const HighsInt use_col,
-                 const double multiplier) const;
+  inline double computeDot(const std::vector<double>& array,
+                           const HighsInt use_col) const {
+    double result = 0;
+    if (use_col < this->num_col_) {
+      for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1];
+           iEl++)
+        result += array[this->index_[iEl]] * this->value_[iEl];
+    } else {
+      result = array[use_col - this->num_col_];
+    }
+    return result;
+  }
+
+  inline void collectAj(HVector& column, const HighsInt use_col,
+                        const double multiplier) const {
+    if (use_col < this->num_col_) {
+      for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1];
+           iEl++) {
+        HighsInt iRow = this->index_[iEl];
+        double value0 = column.array[iRow];
+        double value1 = value0 + multiplier * this->value_[iEl];
+        if (value0 == 0) column.index[column.count++] = iRow;
+        column.array[iRow] =
+            (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+      }
+    } else {
+      HighsInt iRow = use_col - this->num_col_;
+      double value0 = column.array[iRow];
+      double value1 = value0 + multiplier;
+      if (value0 == 0) column.index[column.count++] = iRow;
+      column.array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+    }
+  }
 
  private:
   void priceByRowDenseResult(

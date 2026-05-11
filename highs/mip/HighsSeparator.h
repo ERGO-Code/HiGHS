@@ -45,6 +45,8 @@ class HighsSeparator {
                                   HighsTransformedLp& transLp,
                                   HighsCutPool& cutpool) = 0;
 
+  virtual void resetTries() {}
+
   void run(HighsLpRelaxation& lpRelaxation, HighsLpAggregator& lpAggregator,
            HighsTransformedLp& transLp, HighsCutPool& cutpool);
 

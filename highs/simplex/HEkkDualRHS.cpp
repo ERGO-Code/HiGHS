@@ -153,7 +153,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
             setP.push_back(make_pair(-myInfeas / myWeight, iRow));
             // Shrink
             if (setP.size() >= chooseCHECK) {
-              pdqsort(setP.begin(), setP.end());
+              std::partial_sort(setP.begin(), setP.begin() + chLimit, setP.end());
               setP.resize(chLimit);
               cutoffMerit = -setP.back().first;
             }
@@ -167,33 +167,21 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
     if (workCount) {
       randomStart = ekk_instance_.random_.integer(workCount);
     } else {
-      // workCount = 0
       randomStart = 0;
     }
     double cutoffMerit = 0;
-    // Now
     for (HighsInt section = 0; section < 2; section++) {
       const HighsInt start = (section == 0) ? randomStart : 0;
       const HighsInt end = (section == 0) ? workCount : randomStart;
       for (HighsInt i = start; i < end; i++) {
-        // Was
-        //    for (HighsInt i = 0; i < workCount; i++) {
-        // Continue
         HighsInt iRow = workIndex[i];
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = edge_weight[iRow];
-          /*
-          const double myMerit = myInfeas / myWeight;
-          printf("CHUZR: iRow = %6" HIGHSINT_FORMAT "; Infeas = %11.4g; Weight =
-          %11.4g; Merit = %11.4g\n", iRow, myInfeas, myWeight, myMerit);
-          */
           if (cutoffMerit * myWeight < myInfeas) {
-            // Save
             setP.push_back(make_pair(-myInfeas / myWeight, iRow));
-            // Shrink
             if (setP.size() >= chooseCHECK) {
-              pdqsort(setP.begin(), setP.end());
+              std::partial_sort(setP.begin(), setP.begin() + chLimit, setP.end());
               setP.resize(chLimit);
               cutoffMerit = -setP.back().first;
             }
@@ -203,8 +191,13 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
     }
   }
 
-  // Store the setP
-  pdqsort(setP.begin(), setP.end());
+  // Final partial sort (only need top chLimit sorted)
+  if ((HighsInt)setP.size() > chLimit) {
+    std::partial_sort(setP.begin(), setP.begin() + chLimit, setP.end());
+    setP.resize(chLimit);
+  } else {
+    std::sort(setP.begin(), setP.end());
+  }
   if ((HighsInt)(setP.size()) > chLimit) setP.resize(chLimit);
   *chCount = static_cast<HighsInt>(setP.size());
   for (size_t i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;

@@ -40,6 +40,7 @@ class HighsSearch {
   HighsCDouble treeweight;
   std::vector<HighsInt> inds;
   std::vector<double> vals;
+  std::vector<double> roundBuffer;
   HighsInt depthoffset;
   bool inbranching;
   bool inheuristic;
