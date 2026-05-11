@@ -51,6 +51,10 @@ const double kSmallScalingCoeff = 1e-4;
 const double kLargeScalingCoeff = 1e4;
 const double kSmallBoundDiff = 1e-3;
 
+// parameters for free variables
+const double kFreeVarsInitialBound = 1e4;
+const double kFreeVarsCloseRatio = 0.5;
+
 // static regularisation
 struct Regularisation {
   double primal = 1e-12;

@@ -191,6 +191,8 @@ bool Solver::prepareIter() {
 
   ++iter_;
 
+  model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_);
+
   // Clear Newton direction
   it_->clearDir();
 
