@@ -1138,7 +1138,7 @@ void HighsMipSolverData::runSetup() {
       debugsolobj +=
           mipsolver.colCost(i) * HighsCDouble(debugSolution.debugSolution[i]);
     debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
-    debugSolution.registerDomain(domain);
+    debugSolution.registerDomain(getDomain());
     assert(checkSolution(debugSolution.debugSolution));
   }
 #endif
