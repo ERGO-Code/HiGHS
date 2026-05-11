@@ -2993,7 +2993,8 @@ HighsStatus calculateColDualsQuad(const HighsLp& lp, HighsSolution& solution) {
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-      col_dual_quad[col] += solution.row_dual[row] * lp.a_matrix_.value_[i];
+      col_dual_quad[col] += static_cast<HighsCDouble>(solution.row_dual[row]) *
+                            lp.a_matrix_.value_[i];
     }
     col_dual_quad[col] += lp.col_cost_[col];
   }
@@ -3026,7 +3027,8 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp,
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-      row_value_quad[row] += col_value[col] * lp.a_matrix_.value_[i];
+      row_value_quad[row] +=
+          static_cast<HighsCDouble>(col_value[col]) * lp.a_matrix_.value_[i];
       if (row == report_row) {
         printf(
             "calculateRowValuesQuad: Row %d becomes %g due to contribution of "
@@ -3190,7 +3192,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
               " (limit %" HIGHSINT_FORMAT
               "); average "
               "column count = %0.2g (limit %" HIGHSINT_FORMAT
-              "): LP is %s a candidate for LiDSE\n",
+              "): LP %s a candidate for LiDSE\n",
               lp.model_name_.c_str(), max_col_num_en, max_allowed_col_num_en,
               average_col_num_en, max_average_col_num_en,
               LiDSE_candidate ? "is" : "is not");
@@ -3361,7 +3363,6 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
 }
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
-  HighsLp row_wise_lp = lp;
   vector<HighsInt>& a_start = lp.a_matrix_.start_;
   vector<HighsInt>& a_index = lp.a_matrix_.index_;
   vector<double>& a_value = lp.a_matrix_.value_;

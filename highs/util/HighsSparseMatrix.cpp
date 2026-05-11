@@ -101,7 +101,7 @@ HighsInt HighsSparseMatrix::numNz() const {
 
 void HighsSparseMatrix::range(double& min_value, double& max_value) const {
   assert(this->formatOk());
-  for (HighsInt iEl = 0; iEl < this->start_[this->num_col_]; iEl++) {
+  for (HighsInt iEl = 0; iEl < this->numNz(); iEl++) {
     double value = fabs(this->value_[iEl]);
     min_value = min(min_value, value);
     max_value = max(max_value, value);
@@ -781,7 +781,7 @@ HighsStatus HighsSparseMatrix::assessIndexBounds(
     //    num_vec = this->num_row_;
   }
   HighsInt num_nz = this->numNz();
-  for (HighsInt iEl = 1; iEl < num_nz; iEl++) {
+  for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
     if (this->index_[iEl] < 0 || this->index_[iEl] >= vec_dim) {
       highsLogUser(log_options, HighsLogType::kError,
                    "Matrix index[%d] = %d is not in legal range of [0, %d)\n",

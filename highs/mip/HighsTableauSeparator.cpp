@@ -197,7 +197,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       break;
 
     assert(lpAggregator.isEmpty());
-    for (std::pair<HighsInt, double> rowWeight : fracvar.row_ep)
+    for (const auto& rowWeight : fracvar.row_ep)
       lpAggregator.addRow(rowWeight.first, rowWeight.second);
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
