@@ -840,6 +840,12 @@ HighsStatus Highs::presolve() {
                  "be presolved independently\n");
     return HighsStatus::kError;
   }
+  if (model_.isQp()) {
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Model is a QP, for which no presolve techniques are implemented\n");
+    return HighsStatus::kError;
+  }
   HighsStatus return_status = HighsStatus::kOk;
 
   this->reportModelStats();
