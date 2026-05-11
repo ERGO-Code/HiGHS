@@ -336,7 +336,8 @@ TEST_CASE("3015", "[highs_test_semi_variables]") {
   
   
   Highs highs;
-  //  if (!dev_run) highs.setOptionValue("output_flag", false);
+  // highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
   highs.readModel(filename);
   HighsStatus status = highs.run();
   double objective_value = highs.getObjectiveValue();
