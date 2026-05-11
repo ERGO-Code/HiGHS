@@ -112,31 +112,31 @@ struct HighsExternalDeps {
                              const double* A, blasint lda, const double* x,
                              blasint incx, double beta, double* y,
                              blasint incy) {
-      HIGHS_EXTERN_CALL(blas_.dgemv_, cblas_dgemv)(order, trans, m, n, alpha, A,
-                                                   lda, x, incx, beta, y, incy);
+      HIGHS_EXTERN_CALL(blas_.dgemv_, cblas_dgemv)
+      (order, trans, m, n, alpha, A, lda, x, incx, beta, y, incy);
     }
 
     static inline void dtpsv(CBLAS_ORDER order, CBLAS_UPLO uplo,
                              CBLAS_TRANSPOSE transa, CBLAS_DIAG diag, blasint n,
                              const double* ap, double* x, blasint incx) {
-      HIGHS_EXTERN_CALL(blas_.dtpsv_, cblas_dtpsv)(order, uplo, transa, diag, n,
-                                                   ap, x, incx);
+      HIGHS_EXTERN_CALL(blas_.dtpsv_, cblas_dtpsv)
+      (order, uplo, transa, diag, n, ap, x, incx);
     }
 
     static inline void dtrsv(CBLAS_ORDER order, CBLAS_UPLO uplo,
                              CBLAS_TRANSPOSE transa, const enum CBLAS_DIAG diag,
                              blasint n, const double* a, blasint lda, double* x,
                              blasint incx) {
-      HIGHS_EXTERN_CALL(blas_.dtrsv_, cblas_dtrsv)(order, uplo, transa, diag, n,
-                                                   a, lda, x, incx);
+      HIGHS_EXTERN_CALL(blas_.dtrsv_, cblas_dtrsv)
+      (order, uplo, transa, diag, n, a, lda, x, incx);
     }
 
     static inline void dger(CBLAS_ORDER order, blasint m, blasint n,
                             double alpha, const double* x, blasint incx,
                             const double* y, blasint incy, double* A,
                             blasint lda) {
-      HIGHS_EXTERN_CALL(blas_.dger_, cblas_dger)(order, m, n, alpha, x, incx, y,
-                                                 incy, A, lda);
+      HIGHS_EXTERN_CALL(blas_.dger_, cblas_dger)
+      (order, m, n, alpha, x, incx, y, incy, A, lda);
     }
 
     static inline void dgemm(CBLAS_ORDER order, CBLAS_TRANSPOSE transa,
@@ -144,16 +144,16 @@ struct HighsExternalDeps {
                              blasint k, double alpha, const double* A,
                              blasint lda, const double* B, blasint ldb,
                              double beta, double* C, blasint ldc) {
-      HIGHS_EXTERN_CALL(blas_.dgemm_, cblas_dgemm)(
-          order, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+      HIGHS_EXTERN_CALL(blas_.dgemm_, cblas_dgemm)
+      (order, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
     }
 
     static inline void dsyrk(CBLAS_ORDER order, CBLAS_UPLO uplo,
                              CBLAS_TRANSPOSE trans, blasint n, blasint k,
                              double alpha, const double* A, blasint lda,
                              double beta, double* C, blasint ldc) {
-      HIGHS_EXTERN_CALL(blas_.dsyrk_, cblas_dsyrk)(order, uplo, trans, n, k,
-                                                   alpha, A, lda, beta, C, ldc);
+      HIGHS_EXTERN_CALL(blas_.dsyrk_, cblas_dsyrk)
+      (order, uplo, trans, n, k, alpha, A, lda, beta, C, ldc);
     }
 
     static inline void dtrsm(CBLAS_ORDER order, CBLAS_SIDE side,
@@ -161,13 +161,14 @@ struct HighsExternalDeps {
                              CBLAS_DIAG diag, blasint m, blasint n,
                              double alpha, const double* A, blasint lda,
                              double* B, blasint ldb) {
-      HIGHS_EXTERN_CALL(blas_.dtrsm_, cblas_dtrsm)(
-          order, side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb);
+      HIGHS_EXTERN_CALL(blas_.dtrsm_, cblas_dtrsm)
+      (order, side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb);
     }
 
     static inline void openblas_set_num_threads(int num_threads) {
       HIGHS_EXTERN_CALL(blas_.set_num_threads_,
-                        highs_extras_openblas_set_num_threads)(num_threads);
+                        highs_extras_openblas_set_num_threads)
+      (num_threads);
     }
 
     static inline std::string blas_library() {
