@@ -364,7 +364,8 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
   // if we have such structure when all columns in the row are negated
 
   for (HighsInt i = 0; i < numRows; ++i) {
-    if (rowIsSetPacking[i] == kRowNotPacking) rowIsSetPacking[i] = kRowUndetermined;
+    if (rowIsSetPacking[i] == kRowNotPacking)
+      rowIsSetPacking[i] = kRowUndetermined;
   }
 
   for (HighsInt j = 1; j < rowLength; ++j) {
@@ -398,6 +399,8 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
         }
 
         if (overlap == rowLength) {
+          // mark with value 2, for negated set packing row with at most one
+          // zero
           rowIsSetPacking[i] = kRowPackingNegated;
           ++numSetPackingRows;
           if (numSetPackingRows == numRows) break;
