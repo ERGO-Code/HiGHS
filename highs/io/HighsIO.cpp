@@ -18,7 +18,6 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-
 void highsLogHeader(const HighsLogOptions& log_options,
                     const bool log_githash) {
   const std::string githash_string(HIGHS_GITHASH);
