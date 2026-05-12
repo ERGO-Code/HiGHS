@@ -839,12 +839,13 @@ class HighsPostsolveStack {
     if (perform_dual_postsolve) solution.row_dual.resize(origNumRow);
 
     if (perform_basis_postsolve) {
-      HighsInt numBasics = 0;
+      HighsInt numColBasics = 0;
+      HighsInt numRowBasics = 0;
       for (auto e : basis.col_status)
-        if (e == HighsBasisStatus::kBasic) numBasics++;
+        if (e == HighsBasisStatus::kBasic) numColBasics++;
       for (auto e : basis.row_status)
-        if (e == HighsBasisStatus::kBasic) numBasics++;
-      assert(numBasics == origNumRow + numRowsAppended);
+        if (e == HighsBasisStatus::kBasic) numRowBasics++;
+      assert(numColBasics + numRowBasics == origNumRow + numRowsAppended);
 
       /*for (HighsInt i = 0; i < static_cast<HighsInt>(origRowIndex.size());
            ++i) {
@@ -853,16 +854,18 @@ class HighsPostsolveStack {
         row_status[i] = basis.row_status[origIndex];
       }*/
 
-      /*for (const auto& elm : rowsAppended)
-        basis.row_status[elm.first] = HighsBasisStatus::kLower;*/
+      for (const auto& elm : rowsAppended)
+        if (elm.first < origNumRow)
+          basis.row_status[elm.first] = HighsBasisStatus::kLower;
       basis.row_status.resize(origNumRow);
 
-      numBasics = 0;
+      numColBasics = 0;
+      numRowBasics = 0;
       for (auto e : basis.col_status)
-        if (e == HighsBasisStatus::kBasic) numBasics++;
+        if (e == HighsBasisStatus::kBasic) numColBasics++;
       for (auto e : basis.row_status)
-        if (e == HighsBasisStatus::kBasic) numBasics++;
-      assert(numBasics == origNumRow);
+        if (e == HighsBasisStatus::kBasic) numRowBasics++;
+      assert(numColBasics + numRowBasics == origNumRow);
     }
 
 #ifdef DEBUG_EXTRA
